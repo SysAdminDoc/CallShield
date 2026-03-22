@@ -129,7 +129,7 @@ fun BlockedCallItem(
         ) {
             // Icon
             Icon(
-                imageVector = if (call.isCall) Icons.Default.PhoneDisabled else Icons.Default.SmsOff,
+                imageVector = if (call.isCall) Icons.Default.PhoneDisabled else Icons.Default.SpeakerNotesOff,
                 contentDescription = null,
                 tint = if (call.isCall) CatRed else CatMauve,
                 modifier = Modifier.size(32.dp)
@@ -170,7 +170,7 @@ fun BlockedCallItem(
 
             // Actions
             IconButton(onClick = onBlock) {
-                Icon(Icons.Default.BlockFlipped, "Block permanently", tint = CatYellow)
+                Icon(Icons.Default.Block, "Block permanently", tint = CatYellow)
             }
             IconButton(onClick = onDelete) {
                 Icon(Icons.Default.Close, "Remove", tint = CatOverlay)

@@ -90,7 +90,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
         SettingsCard("Blocking") {
             SettingsToggle("Block Spam Calls", "Reject calls from known spam numbers", Icons.Default.PhoneDisabled, blockCalls) { viewModel.setBlockCalls(it) }
             HorizontalDivider(color = CatOverlay.copy(alpha = 0.2f))
-            SettingsToggle("Block Spam SMS", "Filter texts from spam numbers and content", Icons.Default.SmsOff, blockSms) { viewModel.setBlockSms(it) }
+            SettingsToggle("Block Spam SMS", "Filter texts from spam numbers and content", Icons.Default.SpeakerNotesOff, blockSms) { viewModel.setBlockSms(it) }
             HorizontalDivider(color = CatOverlay.copy(alpha = 0.2f))
             SettingsToggle("Block Unknown Numbers", "Reject calls with hidden/no caller ID", Icons.Default.QuestionMark, blockUnknown) { viewModel.setBlockUnknown(it) }
         }
@@ -104,7 +104,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
         SettingsCard("Detection Engines") {
             SettingsToggle("STIR/SHAKEN", "Block calls failing carrier caller ID auth (Android 11+)", Icons.Default.VerifiedUser, stirShaken) { viewModel.setStirShaken(it) }
             HorizontalDivider(color = CatOverlay.copy(alpha = 0.2f))
-            SettingsToggle("Neighbor Spoofing", "Flag calls matching your area code + exchange", Icons.Default.Nearby, neighborSpoof) { viewModel.setNeighborSpoof(it) }
+            SettingsToggle("Neighbor Spoofing", "Flag calls matching your area code + exchange", Icons.Default.NearMe, neighborSpoof) { viewModel.setNeighborSpoof(it) }
             HorizontalDivider(color = CatOverlay.copy(alpha = 0.2f))
             SettingsToggle("Heuristic Analysis", "VoIP ranges, premium rate, wangiri, rapid-fire", Icons.Default.Psychology, heuristics) { viewModel.setHeuristics(it) }
             HorizontalDivider(color = CatOverlay.copy(alpha = 0.2f))

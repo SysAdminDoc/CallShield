@@ -44,13 +44,8 @@ fun BlocklistScreen(viewModel: MainViewModel) {
             containerColor = Surface,
             contentColor = CatText,
             edgePadding = 8.dp,
-            indicator = { tabPositions ->
-                if (tabIndex < tabPositions.size) {
-                    TabRowDefaults.SecondaryIndicator(
-                        modifier = Modifier.tabIndicatorOffset(tabPositions[tabIndex]),
-                        color = CatGreen
-                    )
-                }
+            indicator = {
+                TabRowDefaults.SecondaryIndicator(color = CatGreen)
             }
         ) {
             Tab(selected = tabIndex == 0, onClick = { tabIndex = 0 }, text = { Text("Blocklist") })

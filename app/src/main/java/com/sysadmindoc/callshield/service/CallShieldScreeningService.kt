@@ -42,7 +42,8 @@ class CallShieldScreeningService : CallScreeningService() {
             // STIR/SHAKEN
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && repo.stirShakenEnabled.first()) {
                 val verstat = callDetails.callerNumberVerificationStatus
-                if (verstat == Call.Details.VERIFICATION_STATUS_FAILED) {
+                @Suppress("DEPRECATION")
+                if (verstat == android.telecom.Connection.VERIFICATION_STATUS_FAILED) {
                     respondBlock(callDetails, number, "stir_shaken_failed")
                     return@launch
                 }
