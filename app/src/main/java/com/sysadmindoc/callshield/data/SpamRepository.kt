@@ -50,6 +50,8 @@ class SpamRepository(private val context: Context) {
         private val KEY_FREQ_ESCALATION = booleanPreferencesKey("freq_escalation_enabled")
         private val KEY_FREQ_THRESHOLD = intPreferencesKey("freq_threshold")
         private val KEY_ONBOARDING_DONE = booleanPreferencesKey("onboarding_done")
+        private val KEY_AUTO_CLEANUP = booleanPreferencesKey("auto_cleanup_enabled")
+        private val KEY_CLEANUP_DAYS = intPreferencesKey("cleanup_retention_days")
 
         @Volatile
         private var INSTANCE: SpamRepository? = null
@@ -77,8 +79,12 @@ class SpamRepository(private val context: Context) {
     val freqEscalationEnabled: Flow<Boolean> = dataStore.data.map { it[KEY_FREQ_ESCALATION] ?: true }
     val freqThreshold: Flow<Int> = dataStore.data.map { it[KEY_FREQ_THRESHOLD] ?: 3 }
     val onboardingDone: Flow<Boolean> = dataStore.data.map { it[KEY_ONBOARDING_DONE] ?: false }
+    val autoCleanupEnabled: Flow<Boolean> = dataStore.data.map { it[KEY_AUTO_CLEANUP] ?: false }
+    val cleanupDays: Flow<Int> = dataStore.data.map { it[KEY_CLEANUP_DAYS] ?: 30 }
 
     suspend fun setOnboardingDone() = dataStore.edit { it[KEY_ONBOARDING_DONE] = true }
+    suspend fun setAutoCleanup(enabled: Boolean) = dataStore.edit { it[KEY_AUTO_CLEANUP] = enabled }
+    suspend fun setCleanupDays(days: Int) = dataStore.edit { it[KEY_CLEANUP_DAYS] = days }
     suspend fun setBlockCalls(enabled: Boolean) = dataStore.edit { it[KEY_BLOCK_CALLS] = enabled }
     suspend fun setBlockSms(enabled: Boolean) = dataStore.edit { it[KEY_BLOCK_SMS] = enabled }
     suspend fun setBlockUnknown(enabled: Boolean) = dataStore.edit { it[KEY_BLOCK_UNKNOWN] = enabled }
@@ -372,6 +378,15 @@ class SpamRepository(private val context: Context) {
     }
 
     suspend fun removeFromWhitelist(entry: WhitelistEntry) = dao.deleteWhitelistEntry(entry)
+
+    // ── Auto-cleanup ──────────────────────────────────────────────────
+    suspend fun cleanupOldLogs() {
+        if (autoCleanupEnabled.first()) {
+            val days = cleanupDays.first().coerceAtLeast(7)
+            val cutoff = System.currentTimeMillis() - days * 86_400_000L
+            dao.deleteLogOlderThan(cutoff)
+        }
+    }
 
     // ── SMS keyword rules ────────────────────────────────────────────
     fun getAllKeywordRules(): Flow<List<SmsKeywordRule>> = dao.getAllKeywordRules()

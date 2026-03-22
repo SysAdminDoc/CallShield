@@ -78,6 +78,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     val timeBlockStart = repo.timeBlockStart.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 22)
     val timeBlockEnd = repo.timeBlockEnd.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 7)
     val freqEscalationEnabled = repo.freqEscalationEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+    val autoCleanupEnabled = repo.autoCleanupEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+    val cleanupDays = repo.cleanupDays.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 30)
 
     private val _syncState = MutableStateFlow<SyncState>(SyncState.Idle)
     val syncState: StateFlow<SyncState> = _syncState
@@ -195,6 +197,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun setTimeBlockStart(h: Int) = viewModelScope.launch { repo.setTimeBlockStart(h) }
     fun setTimeBlockEnd(h: Int) = viewModelScope.launch { repo.setTimeBlockEnd(h) }
     fun setFreqEscalation(v: Boolean) = viewModelScope.launch { repo.setFreqEscalation(v) }
+    fun setAutoCleanup(v: Boolean) = viewModelScope.launch { repo.setAutoCleanup(v) }
+    fun setCleanupDays(d: Int) = viewModelScope.launch { repo.setCleanupDays(d) }
 }
 
 sealed class SyncState {

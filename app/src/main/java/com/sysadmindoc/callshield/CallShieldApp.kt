@@ -1,9 +1,13 @@
 package com.sysadmindoc.callshield
 
 import android.app.Application
+import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.service.DigestWorker
 import com.sysadmindoc.callshield.service.NotificationHelper
 import com.sysadmindoc.callshield.service.SyncWorker
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class CallShieldApp : Application() {
     override fun onCreate() {
@@ -11,5 +15,10 @@ class CallShieldApp : Application() {
         NotificationHelper.createChannels(this)
         SyncWorker.schedule(this)
         DigestWorker.schedule(this)
+
+        // Auto-cleanup old log entries on launch
+        CoroutineScope(Dispatchers.IO).launch {
+            try { SpamRepository.getInstance(this@CallShieldApp).cleanupOldLogs() } catch (_: Exception) {}
+        }
     }
 }

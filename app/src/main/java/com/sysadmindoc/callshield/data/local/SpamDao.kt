@@ -112,6 +112,10 @@ interface SpamDao {
     @Delete
     suspend fun deleteWhitelistEntry(entry: WhitelistEntry)
 
+    // Auto-cleanup
+    @Query("DELETE FROM call_log WHERE timestamp < :before")
+    suspend fun deleteLogOlderThan(before: Long)
+
     // SMS keyword rules
     @Query("SELECT * FROM sms_keyword_rules WHERE enabled = 1")
     suspend fun getActiveKeywordRules(): List<SmsKeywordRule>

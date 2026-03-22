@@ -36,6 +36,8 @@ fun SettingsScreen(viewModel: MainViewModel) {
     val smsContent by viewModel.smsContentEnabled.collectAsState()
     val contactWhitelist by viewModel.contactWhitelistEnabled.collectAsState()
     val aggressiveMode by viewModel.aggressiveModeEnabled.collectAsState()
+    val autoCleanup by viewModel.autoCleanupEnabled.collectAsState()
+    val cleanupDays by viewModel.cleanupDays.collectAsState()
     val timeBlock by viewModel.timeBlockEnabled.collectAsState()
     val timeStart by viewModel.timeBlockStart.collectAsState()
     val timeEnd by viewModel.timeBlockEnd.collectAsState()
@@ -134,6 +136,24 @@ fun SettingsScreen(viewModel: MainViewModel) {
         // Power mode
         SettingsCard("Power Mode") {
             SettingsToggle("Aggressive Blocking", "Lower thresholds. More spam blocked, possible false positives. Contacts always safe.", Icons.Default.Security, aggressiveMode, tintColor = CatRed) { viewModel.setAggressiveMode(it) }
+        }
+
+        // Auto-cleanup
+        SettingsCard("Log Cleanup") {
+            SettingsToggle("Auto-cleanup old entries", "Remove blocked log entries older than retention period", Icons.Default.AutoDelete, autoCleanup) { viewModel.setAutoCleanup(it) }
+            if (autoCleanup) {
+                Spacer(Modifier.height(8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Keep for:", style = MaterialTheme.typography.bodySmall, color = CatSubtext)
+                    listOf(7, 14, 30, 90).forEach { days ->
+                        FilterChip(
+                            selected = cleanupDays == days, onClick = { viewModel.setCleanupDays(days) },
+                            label = { Text("${days}d") },
+                            colors = FilterChipDefaults.filterChipColors(selectedContainerColor = CatGreen.copy(alpha = 0.2f), selectedLabelColor = CatGreen)
+                        )
+                    }
+                }
+            }
         }
 
         // Backup/restore

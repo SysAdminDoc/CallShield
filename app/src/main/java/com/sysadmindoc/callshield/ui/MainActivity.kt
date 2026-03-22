@@ -1,6 +1,7 @@
 package com.sysadmindoc.callshield.ui
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -10,11 +11,15 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sysadmindoc.callshield.ui.screens.details.NumberDetailScreen
@@ -36,7 +41,13 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         requestPermissions()
-        setContent { CallShieldTheme { CallShieldRoot() } }
+
+        // Deep link: tel: intent opens number detail
+        val deepLinkNumber = intent?.data?.schemeSpecificPart?.takeIf {
+            intent?.action == Intent.ACTION_VIEW && intent?.data?.scheme == "tel"
+        }
+
+        setContent { CallShieldTheme { CallShieldRoot(deepLinkNumber = deepLinkNumber) } }
     }
 
     private fun requestPermissions() {
@@ -58,9 +69,14 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun CallShieldRoot(viewModel: MainViewModel = viewModel()) {
+fun CallShieldRoot(viewModel: MainViewModel = viewModel(), deepLinkNumber: String? = null) {
     val onboardingDone by viewModel.onboardingDone.collectAsState()
     val selectedNumber by viewModel.selectedNumber.collectAsState()
+
+    // Handle deep link
+    LaunchedEffect(deepLinkNumber) {
+        if (deepLinkNumber != null) viewModel.openNumberDetail(deepLinkNumber)
+    }
 
     when {
         !onboardingDone -> OnboardingScreen(onComplete = { viewModel.completeOnboarding() })
@@ -77,13 +93,48 @@ fun CallShieldRoot(viewModel: MainViewModel = viewModel()) {
 @Composable
 fun CallShieldApp(viewModel: MainViewModel) {
     var selectedTab by remember { mutableIntStateOf(0) }
+    var showSearch by remember { mutableStateOf(false) }
+    val searchQuery by viewModel.searchQuery.collectAsState()
+    val searchResults by viewModel.searchResults.collectAsState()
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("CallShield", color = CatGreen) },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Black)
-            )
+            if (showSearch) {
+                // Global search bar
+                TopAppBar(
+                    title = {
+                        OutlinedTextField(
+                            value = searchQuery,
+                            onValueChange = { viewModel.setSearchQuery(it) },
+                            placeholder = { Text("Search numbers, reasons...", color = CatOverlay) },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = CatGreen, cursorColor = CatGreen,
+                                unfocusedBorderColor = CatOverlay.copy(alpha = 0.3f)
+                            ),
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                            keyboardActions = KeyboardActions(onSearch = {})
+                        )
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = { showSearch = false; viewModel.setSearchQuery("") }) {
+                            Icon(Icons.Default.ArrowBack, "Close", tint = CatSubtext)
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Black)
+                )
+            } else {
+                TopAppBar(
+                    title = { Text("CallShield", color = CatGreen) },
+                    actions = {
+                        IconButton(onClick = { showSearch = true }) {
+                            Icon(Icons.Default.Search, "Search", tint = CatSubtext)
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Black)
+                )
+            }
         },
         bottomBar = {
             NavigationBar(containerColor = Surface) {
@@ -98,16 +149,54 @@ fun CallShieldApp(viewModel: MainViewModel) {
         containerColor = Black
     ) { padding ->
         Box(modifier = Modifier.padding(padding)) {
-            AnimatedContent(targetState = selectedTab, transitionSpec = {
-                fadeIn() togetherWith fadeOut()
-            }, label = "tabs") { tab ->
-                when (tab) {
-                    0 -> DashboardScreen(viewModel)
-                    1 -> RecentCallsScreen(viewModel)
-                    2 -> BlockedLogScreen(viewModel)
-                    3 -> BlocklistScreen(viewModel)
-                    4 -> StatsScreen(viewModel)
-                    5 -> SettingsScreen(viewModel)
+            if (showSearch && searchQuery.length >= 2) {
+                // Search results overlay
+                SearchResultsView(results = searchResults, onTap = { viewModel.openNumberDetail(it.number) })
+            } else {
+                AnimatedContent(targetState = selectedTab, transitionSpec = {
+                    fadeIn() togetherWith fadeOut()
+                }, label = "tabs") { tab ->
+                    when (tab) {
+                        0 -> DashboardScreen(viewModel)
+                        1 -> RecentCallsScreen(viewModel)
+                        2 -> BlockedLogScreen(viewModel)
+                        3 -> BlocklistScreen(viewModel)
+                        4 -> StatsScreen(viewModel)
+                        5 -> SettingsScreen(viewModel)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun SearchResultsView(results: List<com.sysadmindoc.callshield.data.model.SpamNumber>, onTap: (com.sysadmindoc.callshield.data.model.SpamNumber) -> Unit) {
+    if (results.isEmpty()) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.Center) {
+            Text("No results", color = CatSubtext)
+        }
+    } else {
+        androidx.compose.foundation.lazy.LazyColumn(
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(results.size) { i ->
+                val number = results[i]
+                Card(
+                    onClick = { onTap(number) },
+                    colors = CardDefaults.cardColors(containerColor = SurfaceVariant),
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
+                ) {
+                    Row(modifier = Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                        Icon(Icons.Default.Warning, null, tint = CatRed, modifier = Modifier.size(24.dp))
+                        Spacer(Modifier.width(12.dp))
+                        Column {
+                            Text(com.sysadmindoc.callshield.data.PhoneFormatter.format(number.number), fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
+                            Text("${number.type} - ${number.reports} reports", style = MaterialTheme.typography.bodySmall, color = CatSubtext)
+                            if (number.description.isNotEmpty()) Text(number.description, style = MaterialTheme.typography.labelSmall, color = CatOverlay, maxLines = 1)
+                        }
+                    }
                 }
             }
         }
