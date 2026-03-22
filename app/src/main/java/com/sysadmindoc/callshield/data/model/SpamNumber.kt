@@ -67,6 +67,11 @@ data class SpamNumberJson(
     val description: String = ""
 )
 
+data class NumberCount(
+    val number: String,
+    val cnt: Int
+)
+
 @JsonClass(generateAdapter = false)
 data class SpamPrefixJson(
     val prefix: String,

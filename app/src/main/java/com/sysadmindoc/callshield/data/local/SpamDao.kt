@@ -4,6 +4,8 @@ import androidx.room.*
 import com.sysadmindoc.callshield.data.model.BlockedCall
 import com.sysadmindoc.callshield.data.model.SpamNumber
 import com.sysadmindoc.callshield.data.model.SpamPrefix
+import com.sysadmindoc.callshield.data.model.NumberCount
+import com.sysadmindoc.callshield.data.model.SmsKeywordRule
 import com.sysadmindoc.callshield.data.model.WhitelistEntry
 import com.sysadmindoc.callshield.data.model.WildcardRule
 import kotlinx.coroutines.flow.Flow
@@ -109,4 +111,28 @@ interface SpamDao {
 
     @Delete
     suspend fun deleteWhitelistEntry(entry: WhitelistEntry)
+
+    // SMS keyword rules
+    @Query("SELECT * FROM sms_keyword_rules WHERE enabled = 1")
+    suspend fun getActiveKeywordRules(): List<SmsKeywordRule>
+
+    @Query("SELECT * FROM sms_keyword_rules ORDER BY id DESC")
+    fun getAllKeywordRules(): Flow<List<SmsKeywordRule>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertKeywordRule(rule: SmsKeywordRule)
+
+    @Delete
+    suspend fun deleteKeywordRule(rule: SmsKeywordRule)
+
+    @Query("UPDATE sms_keyword_rules SET enabled = :enabled WHERE id = :id")
+    suspend fun setKeywordRuleEnabled(id: Long, enabled: Boolean)
+
+    // Grouped blocked numbers — count per number
+    @Query("SELECT number, COUNT(*) as cnt FROM call_log WHERE wasBlocked = 1 GROUP BY number ORDER BY cnt DESC LIMIT :limit")
+    suspend fun getGroupedBlockedNumbers(limit: Int = 50): List<NumberCount>
+
+    // Search across log
+    @Query("SELECT * FROM call_log WHERE number LIKE '%' || :query || '%' OR matchReason LIKE '%' || :query || '%' ORDER BY timestamp DESC LIMIT 100")
+    fun searchLog(query: String): Flow<List<BlockedCall>>
 }

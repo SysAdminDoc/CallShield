@@ -7,8 +7,8 @@ import androidx.room.RoomDatabase
 import com.sysadmindoc.callshield.data.model.*
 
 @Database(
-    entities = [SpamNumber::class, SpamPrefix::class, BlockedCall::class, WildcardRule::class, WhitelistEntry::class],
-    version = 4,
+    entities = [SpamNumber::class, SpamPrefix::class, BlockedCall::class, WildcardRule::class, WhitelistEntry::class, SmsKeywordRule::class],
+    version = 5,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

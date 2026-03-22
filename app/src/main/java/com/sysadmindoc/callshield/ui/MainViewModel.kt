@@ -9,6 +9,7 @@ import com.sysadmindoc.callshield.data.BlocklistExporter
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.model.BlockedCall
 import com.sysadmindoc.callshield.data.model.SpamNumber
+import com.sysadmindoc.callshield.data.model.SmsKeywordRule
 import com.sysadmindoc.callshield.data.model.WhitelistEntry
 import com.sysadmindoc.callshield.data.model.WildcardRule
 import com.sysadmindoc.callshield.service.CallLogScanner
@@ -40,6 +41,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val whitelistEntries: StateFlow<List<WhitelistEntry>> = repo.getAllWhitelist()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val keywordRules: StateFlow<List<SmsKeywordRule>> = repo.getAllKeywordRules()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     // Onboarding
@@ -139,6 +143,13 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch { repo.addWildcardRule(pattern, isRegex, description) }
     }
     fun deleteWildcardRule(rule: WildcardRule) { viewModelScope.launch { repo.deleteWildcardRule(rule) } }
+
+    // SMS keyword rules
+    fun addKeywordRule(keyword: String, caseSensitive: Boolean = false, description: String = "") {
+        viewModelScope.launch { repo.addKeywordRule(keyword, caseSensitive, description) }
+    }
+    fun deleteKeywordRule(rule: SmsKeywordRule) { viewModelScope.launch { repo.deleteKeywordRule(rule) } }
+    fun toggleKeywordRule(id: Long, enabled: Boolean) { viewModelScope.launch { repo.toggleKeywordRule(id, enabled) } }
     fun toggleWildcardRule(id: Long, enabled: Boolean) { viewModelScope.launch { repo.toggleWildcardRule(id, enabled) } }
 
     // Whitelist

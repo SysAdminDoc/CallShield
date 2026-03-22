@@ -182,6 +182,14 @@ class SpamRepository(private val context: Context) {
         val numberResult = isSpam(number, smsBody = body)
         if (numberResult.isSpam) return numberResult
 
+        // Custom SMS keyword rules
+        val keywords = dao.getActiveKeywordRules()
+        for (rule in keywords) {
+            if (rule.matches(body)) {
+                return SpamCheckResult(true, "keyword", "sms_spam", "Keyword: ${rule.keyword}")
+            }
+        }
+
         if (smsContentEnabled.first()) {
             val smsResult = SmsContentAnalyzer.analyze(body)
             val threshold = if (aggressiveModeEnabled.first()) 25 else 50
@@ -364,6 +372,19 @@ class SpamRepository(private val context: Context) {
     }
 
     suspend fun removeFromWhitelist(entry: WhitelistEntry) = dao.deleteWhitelistEntry(entry)
+
+    // ── SMS keyword rules ────────────────────────────────────────────
+    fun getAllKeywordRules(): Flow<List<SmsKeywordRule>> = dao.getAllKeywordRules()
+
+    suspend fun addKeywordRule(keyword: String, caseSensitive: Boolean = false, description: String = "") {
+        dao.insertKeywordRule(SmsKeywordRule(keyword = keyword, caseSensitive = caseSensitive, description = description))
+    }
+
+    suspend fun deleteKeywordRule(rule: SmsKeywordRule) = dao.deleteKeywordRule(rule)
+    suspend fun toggleKeywordRule(id: Long, enabled: Boolean) = dao.setKeywordRuleEnabled(id, enabled)
+
+    // ── Search log ───────────────────────────────────────────────────
+    fun searchLog(query: String): Flow<List<BlockedCall>> = dao.searchLog(query)
 
     fun normalizeNumber(number: String): String {
         val hasPlus = number.startsWith("+")
