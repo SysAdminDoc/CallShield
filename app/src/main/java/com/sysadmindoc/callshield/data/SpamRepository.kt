@@ -1,6 +1,7 @@
 package com.sysadmindoc.callshield.data
 
 import android.content.Context
+import android.content.Intent
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
@@ -8,11 +9,15 @@ import com.sysadmindoc.callshield.data.local.AppDatabase
 import com.sysadmindoc.callshield.data.local.SpamDao
 import com.sysadmindoc.callshield.data.model.*
 import com.sysadmindoc.callshield.data.remote.GitHubDataSource
+import com.sysadmindoc.callshield.service.CallerIdOverlayService
+import com.sysadmindoc.callshield.service.NotificationHelper
+import com.sysadmindoc.callshield.ui.widget.CallShieldWidget
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
+import java.util.Calendar
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "callshield_prefs")
 
@@ -34,6 +39,13 @@ class SpamRepository(private val context: Context) {
         private val KEY_SMS_CONTENT = booleanPreferencesKey("sms_content_analysis_enabled")
         private val KEY_CONTACT_WHITELIST = booleanPreferencesKey("contact_whitelist_enabled")
         private val KEY_AGGRESSIVE_MODE = booleanPreferencesKey("aggressive_mode_enabled")
+        // Feature 9: Time-based blocking
+        private val KEY_TIME_BLOCK = booleanPreferencesKey("time_block_enabled")
+        private val KEY_TIME_BLOCK_START = intPreferencesKey("time_block_start_hour") // 0-23
+        private val KEY_TIME_BLOCK_END = intPreferencesKey("time_block_end_hour")
+        // Feature 10: Frequency auto-escalation
+        private val KEY_FREQ_ESCALATION = booleanPreferencesKey("freq_escalation_enabled")
+        private val KEY_FREQ_THRESHOLD = intPreferencesKey("freq_threshold")
 
         @Volatile
         private var INSTANCE: SpamRepository? = null
@@ -55,6 +67,11 @@ class SpamRepository(private val context: Context) {
     val smsContentEnabled: Flow<Boolean> = dataStore.data.map { it[KEY_SMS_CONTENT] ?: true }
     val contactWhitelistEnabled: Flow<Boolean> = dataStore.data.map { it[KEY_CONTACT_WHITELIST] ?: true }
     val aggressiveModeEnabled: Flow<Boolean> = dataStore.data.map { it[KEY_AGGRESSIVE_MODE] ?: false }
+    val timeBlockEnabled: Flow<Boolean> = dataStore.data.map { it[KEY_TIME_BLOCK] ?: false }
+    val timeBlockStart: Flow<Int> = dataStore.data.map { it[KEY_TIME_BLOCK_START] ?: 22 }
+    val timeBlockEnd: Flow<Int> = dataStore.data.map { it[KEY_TIME_BLOCK_END] ?: 7 }
+    val freqEscalationEnabled: Flow<Boolean> = dataStore.data.map { it[KEY_FREQ_ESCALATION] ?: true }
+    val freqThreshold: Flow<Int> = dataStore.data.map { it[KEY_FREQ_THRESHOLD] ?: 3 }
 
     suspend fun setBlockCalls(enabled: Boolean) = dataStore.edit { it[KEY_BLOCK_CALLS] = enabled }
     suspend fun setBlockSms(enabled: Boolean) = dataStore.edit { it[KEY_BLOCK_SMS] = enabled }
@@ -65,12 +82,16 @@ class SpamRepository(private val context: Context) {
     suspend fun setSmsContent(enabled: Boolean) = dataStore.edit { it[KEY_SMS_CONTENT] = enabled }
     suspend fun setContactWhitelist(enabled: Boolean) = dataStore.edit { it[KEY_CONTACT_WHITELIST] = enabled }
     suspend fun setAggressiveMode(enabled: Boolean) = dataStore.edit { it[KEY_AGGRESSIVE_MODE] = enabled }
+    suspend fun setTimeBlock(enabled: Boolean) = dataStore.edit { it[KEY_TIME_BLOCK] = enabled }
+    suspend fun setTimeBlockStart(hour: Int) = dataStore.edit { it[KEY_TIME_BLOCK_START] = hour }
+    suspend fun setTimeBlockEnd(hour: Int) = dataStore.edit { it[KEY_TIME_BLOCK_END] = hour }
+    suspend fun setFreqEscalation(enabled: Boolean) = dataStore.edit { it[KEY_FREQ_ESCALATION] = enabled }
 
-    // ── Primary spam check (calls) ─────────────────────────────────────
+    // ── Primary spam check ─────────────────────────────────────────────
     suspend fun isSpam(number: String, smsBody: String? = null): SpamCheckResult {
         val normalized = normalizeNumber(number)
 
-        // Contact whitelist — always check first, always pass
+        // Contact whitelist
         if (contactWhitelistEnabled.first() && SpamHeuristics.isInContacts(context, normalized)) {
             return SpamCheckResult(false, matchSource = "contact_whitelist")
         }
@@ -81,7 +102,7 @@ class SpamRepository(private val context: Context) {
             return SpamCheckResult(true, "user_blocklist", userBlocked.type, userBlocked.description)
         }
 
-        // Database match (exact number)
+        // Database match
         val dbMatch = dao.findByNumber(normalized)
         if (dbMatch != null) {
             return SpamCheckResult(true, "database", dbMatch.type, dbMatch.description)
@@ -95,7 +116,29 @@ class SpamRepository(private val context: Context) {
             }
         }
 
-        // Heuristic engine (on-device analysis)
+        // Feature 8: Wildcard/regex rules
+        val wildcards = dao.getActiveWildcardRules()
+        for (rule in wildcards) {
+            if (rule.matches(normalized)) {
+                return SpamCheckResult(true, "wildcard", "blocked", rule.description)
+            }
+        }
+
+        // Feature 9: Time-based blocking (block all non-contact unknowns during sleep hours)
+        if (timeBlockEnabled.first() && isInBlockedTimeWindow()) {
+            return SpamCheckResult(true, "time_block", "unknown", "Blocked during quiet hours")
+        }
+
+        // Feature 10: Frequency auto-escalation
+        if (freqEscalationEnabled.first()) {
+            val freq = dao.getNumberFrequency(normalized)
+            val threshold = freqThreshold.first()
+            if (freq >= threshold) {
+                return SpamCheckResult(true, "frequency", "repeat_caller", "Called $freq times - auto-blocked")
+            }
+        }
+
+        // Heuristic engine
         if (heuristicsEnabled.first()) {
             val recentBlocked = dao.getRecentBlockedNumbers(System.currentTimeMillis() - 3600_000)
             val hResult = SpamHeuristics.analyze(
@@ -105,7 +148,6 @@ class SpamRepository(private val context: Context) {
                 recentBlockedNumbers = recentBlocked.map { it.number to it.timestamp }
             )
 
-            // In aggressive mode, lower the threshold
             val threshold = if (aggressiveModeEnabled.first()) 30 else 60
 
             if (hResult.score >= threshold) {
@@ -117,18 +159,21 @@ class SpamRepository(private val context: Context) {
                     confidence = hResult.score
                 )
             }
+
+            // Feature 7: Caller ID overlay for suspicious but not blocked
+            if (hResult.score >= 30 && hResult.score < threshold) {
+                showCallerIdOverlay(normalized, hResult.score, hResult.reasons.firstOrNull() ?: "suspicious")
+            }
         }
 
         return SpamCheckResult(false)
     }
 
-    // ── SMS-specific check (includes content analysis) ─────────────────
+    // ── SMS-specific check ─────────────────────────────────────────────
     suspend fun isSpamSms(number: String, body: String): SpamCheckResult {
-        // First run the standard number check with SMS body
         val numberResult = isSpam(number, smsBody = body)
         if (numberResult.isSpam) return numberResult
 
-        // Additional SMS-only content analysis even if number is clean
         if (smsContentEnabled.first()) {
             val smsResult = SmsContentAnalyzer.analyze(body)
             val threshold = if (aggressiveModeEnabled.first()) 25 else 50
@@ -146,6 +191,29 @@ class SpamRepository(private val context: Context) {
         return SpamCheckResult(false)
     }
 
+    private suspend fun isInBlockedTimeWindow(): Boolean {
+        val start = timeBlockStart.first()
+        val end = timeBlockEnd.first()
+        val now = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
+
+        return if (start <= end) {
+            now in start until end // e.g., 9-17
+        } else {
+            now >= start || now < end // e.g., 22-7 (overnight)
+        }
+    }
+
+    private fun showCallerIdOverlay(number: String, confidence: Int, reason: String) {
+        try {
+            val intent = Intent(context, CallerIdOverlayService::class.java).apply {
+                putExtra("number", number)
+                putExtra("confidence", confidence)
+                putExtra("reason", reason)
+            }
+            context.startService(intent)
+        } catch (_: Exception) {}
+    }
+
     private fun classifyHeuristicReasons(reasons: List<String>): String {
         return when {
             "premium_rate" in reasons -> "premium_scam"
@@ -159,7 +227,7 @@ class SpamRepository(private val context: Context) {
         }
     }
 
-    // Sync from GitHub
+    // ── Sync ───────────────────────────────────────────────────────────
     suspend fun syncFromGitHub(): SyncResult = withContext(Dispatchers.IO) {
         try {
             val currentSha = dataStore.data.first()[KEY_LAST_SHA]
@@ -178,39 +246,32 @@ class SpamRepository(private val context: Context) {
             }
 
             val database = result.getOrThrow()
-
             dao.deleteBySource("github")
             dao.deleteAllPrefixes()
 
             val numbers = database.numbers.map { json ->
                 SpamNumber(
                     number = normalizeNumber(json.number),
-                    type = json.type,
-                    reports = json.reports,
-                    firstSeen = json.firstSeen,
-                    lastSeen = json.lastSeen,
-                    description = json.description,
-                    source = "github"
+                    type = json.type, reports = json.reports,
+                    firstSeen = json.firstSeen, lastSeen = json.lastSeen,
+                    description = json.description, source = "github"
                 )
             }
             dao.insertNumbers(numbers)
 
             val prefixes = database.prefixes.map { json ->
-                SpamPrefix(
-                    prefix = json.prefix,
-                    type = json.type,
-                    description = json.description
-                )
+                SpamPrefix(prefix = json.prefix, type = json.type, description = json.description)
             }
             dao.insertPrefixes(prefixes)
 
             dataStore.edit {
                 it[KEY_LAST_SYNC] = System.currentTimeMillis()
                 it[KEY_DB_VERSION] = database.version
-                if (remoteResult.isSuccess) {
-                    it[KEY_LAST_SHA] = remoteResult.getOrThrow()
-                }
+                if (remoteResult.isSuccess) it[KEY_LAST_SHA] = remoteResult.getOrThrow()
             }
+
+            // Refresh widget after sync
+            CallShieldWidget.refreshAll(context)
 
             SyncResult(true, "Synced ${numbers.size} numbers, ${prefixes.size} prefixes")
         } catch (e: Exception) {
@@ -218,50 +279,56 @@ class SpamRepository(private val context: Context) {
         }
     }
 
-    // User blocklist management
+    // ── Blocklist management ───────────────────────────────────────────
     suspend fun blockNumber(number: String, type: String = "unknown", description: String = "") {
         val normalized = normalizeNumber(number)
         val existing = dao.findByNumber(normalized)
         if (existing != null) {
             dao.insertNumber(existing.copy(isUserBlocked = true))
         } else {
-            dao.insertNumber(
-                SpamNumber(
-                    number = normalized,
-                    type = type,
-                    description = description,
-                    source = "user",
-                    isUserBlocked = true
-                )
-            )
+            dao.insertNumber(SpamNumber(
+                number = normalized, type = type, description = description,
+                source = "user", isUserBlocked = true
+            ))
         }
     }
 
     suspend fun unblockNumber(number: SpamNumber) {
-        if (number.source == "user") {
-            dao.deleteNumber(number)
-        } else {
-            dao.insertNumber(number.copy(isUserBlocked = false))
-        }
+        if (number.source == "user") dao.deleteNumber(number)
+        else dao.insertNumber(number.copy(isUserBlocked = false))
     }
 
-    // Call log
+    // ── Wildcard rules (Feature 8) ─────────────────────────────────────
+    fun getAllWildcardRules(): Flow<List<WildcardRule>> = dao.getAllWildcardRules()
+
+    suspend fun addWildcardRule(pattern: String, isRegex: Boolean = false, description: String = "") {
+        dao.insertWildcardRule(WildcardRule(pattern = pattern, isRegex = isRegex, description = description))
+    }
+
+    suspend fun deleteWildcardRule(rule: WildcardRule) = dao.deleteWildcardRule(rule)
+
+    suspend fun toggleWildcardRule(id: Long, enabled: Boolean) = dao.setWildcardRuleEnabled(id, enabled)
+
+    // ── Call log ───────────────────────────────────────────────────────
     suspend fun logBlockedCall(
-        number: String,
-        isCall: Boolean = true,
-        smsBody: String? = null,
-        matchReason: String = "",
-        confidence: Int = 100
+        number: String, isCall: Boolean = true, smsBody: String? = null,
+        matchReason: String = "", confidence: Int = 100
     ) {
-        dao.insertBlockedCall(
-            BlockedCall(
-                number = normalizeNumber(number),
-                isCall = isCall,
-                smsBody = smsBody,
-                matchReason = matchReason,
-                confidence = confidence
-            )
-        )
+        dao.insertBlockedCall(BlockedCall(
+            number = normalizeNumber(number), isCall = isCall,
+            smsBody = smsBody, matchReason = matchReason, confidence = confidence
+        ))
+        // Refresh widget
+        CallShieldWidget.refreshAll(context)
+        // Send notification
+        NotificationHelper.notifyBlocked(context, number, matchReason, isCall)
+    }
+
+    // Feature 4: After-call spam rating for unblocked unknown numbers
+    fun promptSpamRating(number: String) {
+        if (number.isNotEmpty()) {
+            NotificationHelper.notifySpamRating(context, number)
+        }
     }
 
     fun getBlockedCalls(): Flow<List<BlockedCall>> = dao.getBlockedCalls()
@@ -275,7 +342,7 @@ class SpamRepository(private val context: Context) {
     suspend fun clearCallLog() = dao.clearCallLog()
     suspend fun deleteBlockedCall(call: BlockedCall) = dao.deleteBlockedCall(call)
 
-    private fun normalizeNumber(number: String): String {
+    fun normalizeNumber(number: String): String {
         val hasPlus = number.startsWith("+")
         val digits = number.filter { it.isDigit() }
         return if (hasPlus) "+$digits" else digits
@@ -290,7 +357,4 @@ data class SpamCheckResult(
     val confidence: Int = 100
 )
 
-data class SyncResult(
-    val success: Boolean,
-    val message: String
-)
+data class SyncResult(val success: Boolean, val message: String)

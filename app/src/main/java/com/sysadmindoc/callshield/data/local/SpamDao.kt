@@ -4,6 +4,7 @@ import androidx.room.*
 import com.sysadmindoc.callshield.data.model.BlockedCall
 import com.sysadmindoc.callshield.data.model.SpamNumber
 import com.sysadmindoc.callshield.data.model.SpamPrefix
+import com.sysadmindoc.callshield.data.model.WildcardRule
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -11,9 +12,6 @@ interface SpamDao {
     // Spam numbers
     @Query("SELECT * FROM spam_numbers WHERE number = :number LIMIT 1")
     suspend fun findByNumber(number: String): SpamNumber?
-
-    @Query("SELECT * FROM spam_numbers WHERE :number LIKE number || '%' OR number = :number LIMIT 1")
-    suspend fun findByNumberFuzzy(number: String): SpamNumber?
 
     @Query("SELECT * FROM spam_numbers ORDER BY reports DESC")
     fun getAllSpamNumbers(): Flow<List<SpamNumber>>
@@ -71,7 +69,26 @@ interface SpamDao {
     @Delete
     suspend fun deleteBlockedCall(call: BlockedCall)
 
-    // For rapid-fire detection — recent blocked numbers
     @Query("SELECT * FROM call_log WHERE timestamp > :since ORDER BY timestamp DESC")
     suspend fun getRecentBlockedNumbers(since: Long): List<BlockedCall>
+
+    // Feature 10: Frequency tracking — count how many times a number appears in log
+    @Query("SELECT COUNT(*) FROM call_log WHERE number = :number")
+    suspend fun getNumberFrequency(number: String): Int
+
+    // Wildcard rules (Feature 8)
+    @Query("SELECT * FROM wildcard_rules WHERE enabled = 1")
+    suspend fun getActiveWildcardRules(): List<WildcardRule>
+
+    @Query("SELECT * FROM wildcard_rules ORDER BY id DESC")
+    fun getAllWildcardRules(): Flow<List<WildcardRule>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertWildcardRule(rule: WildcardRule)
+
+    @Delete
+    suspend fun deleteWildcardRule(rule: WildcardRule)
+
+    @Query("UPDATE wildcard_rules SET enabled = :enabled WHERE id = :id")
+    suspend fun setWildcardRuleEnabled(id: Long, enabled: Boolean)
 }

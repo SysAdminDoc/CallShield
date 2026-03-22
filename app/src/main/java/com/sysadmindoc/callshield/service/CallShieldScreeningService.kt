@@ -32,14 +32,14 @@ class CallShieldScreeningService : CallScreeningService() {
                 return@launch
             }
 
-            // Contact whitelist — always allow contacts through
+            // Contact whitelist
             if (repo.contactWhitelistEnabled.first() &&
                 SpamHeuristics.isInContacts(applicationContext, number)) {
                 respondAllow(callDetails)
                 return@launch
             }
 
-            // STIR/SHAKEN verification (API 30+)
+            // STIR/SHAKEN
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && repo.stirShakenEnabled.first()) {
                 val verstat = callDetails.callerNumberVerificationStatus
                 if (verstat == Call.Details.VERIFICATION_STATUS_FAILED) {
@@ -48,29 +48,26 @@ class CallShieldScreeningService : CallScreeningService() {
                 }
             }
 
-            // Full spam check (database + heuristics)
+            // Full spam check (database + wildcards + time + frequency + heuristics + overlay)
             val result = repo.isSpam(number)
             if (result.isSpam) {
                 respondBlock(callDetails, number, result.matchSource, result.confidence)
             } else {
+                // Feature 4: Prompt spam rating for unblocked calls from non-contacts
+                if (!SpamHeuristics.isInContacts(applicationContext, number)) {
+                    repo.promptSpamRating(number)
+                }
                 respondAllow(callDetails)
             }
         }
     }
 
     private suspend fun respondBlock(
-        callDetails: Call.Details,
-        number: String,
-        reason: String,
-        confidence: Int = 100
+        callDetails: Call.Details, number: String,
+        reason: String, confidence: Int = 100
     ) {
         val repo = SpamRepository.getInstance(applicationContext)
-        repo.logBlockedCall(
-            number = number,
-            isCall = true,
-            matchReason = reason,
-            confidence = confidence
-        )
+        repo.logBlockedCall(number = number, isCall = true, matchReason = reason, confidence = confidence)
 
         val response = CallResponse.Builder()
             .setDisallowCall(true)

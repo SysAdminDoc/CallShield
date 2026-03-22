@@ -1,19 +1,19 @@
 package com.sysadmindoc.callshield.ui.screens.main
 
 import androidx.compose.animation.*
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.sysadmindoc.callshield.service.CallLogScanner
 import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.SyncState
 import com.sysadmindoc.callshield.ui.theme.*
@@ -31,10 +31,12 @@ fun DashboardScreen(viewModel: MainViewModel) {
     val smsContent by viewModel.smsContentEnabled.collectAsState()
     val stirShaken by viewModel.stirShakenEnabled.collectAsState()
     val neighborSpoof by viewModel.neighborSpoofEnabled.collectAsState()
+    val scanResult by viewModel.scanResult.collectAsState()
 
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
@@ -63,11 +65,7 @@ fun DashboardScreen(viewModel: MainViewModel) {
                     color = if (shieldActive) CatGreen else CatRed
                 )
                 Spacer(Modifier.height(4.dp))
-                Text(
-                    text = "$spamCount numbers in database",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = CatSubtext
-                )
+                Text("$spamCount numbers in database", style = MaterialTheme.typography.bodyMedium, color = CatSubtext)
                 val engineCount = listOf(true, stirShaken, heuristics, smsContent, neighborSpoof).count { it }
                 Text(
                     text = "$engineCount detection engines active" + if (aggressiveMode) " | AGGRESSIVE" else "",
@@ -78,24 +76,9 @@ fun DashboardScreen(viewModel: MainViewModel) {
         }
 
         // Stats row
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            StatCard(
-                modifier = Modifier.weight(1f),
-                title = "Today",
-                value = blockedToday.toString(),
-                icon = Icons.Default.Today,
-                color = CatBlue
-            )
-            StatCard(
-                modifier = Modifier.weight(1f),
-                title = "Total Blocked",
-                value = totalBlocked.toString(),
-                icon = Icons.Default.Block,
-                color = CatPeach
-            )
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            StatCard(Modifier.weight(1f), "Today", blockedToday.toString(), Icons.Default.Today, CatBlue)
+            StatCard(Modifier.weight(1f), "Total Blocked", totalBlocked.toString(), Icons.Default.Block, CatPeach)
         }
 
         // Quick toggles
@@ -105,64 +88,42 @@ fun DashboardScreen(viewModel: MainViewModel) {
             shape = RoundedCornerShape(16.dp)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text(
-                    "Quick Controls",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold
-                )
+                Text("Quick Controls", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 Spacer(Modifier.height(8.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(Icons.Default.Phone, null, tint = CatSubtext, modifier = Modifier.size(20.dp))
-                    Text("Block Calls", modifier = Modifier.weight(1f))
-                    Switch(
-                        checked = blockCallsEnabled,
-                        onCheckedChange = { viewModel.setBlockCalls(it) },
-                        colors = SwitchDefaults.colors(checkedTrackColor = CatGreen)
-                    )
-                }
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(Icons.Default.Sms, null, tint = CatSubtext, modifier = Modifier.size(20.dp))
-                    Text("Block SMS", modifier = Modifier.weight(1f))
-                    Switch(
-                        checked = blockSmsEnabled,
-                        onCheckedChange = { viewModel.setBlockSms(it) },
-                        colors = SwitchDefaults.colors(checkedTrackColor = CatGreen)
-                    )
-                }
+                QuickToggle(Icons.Default.Phone, "Block Calls", blockCallsEnabled) { viewModel.setBlockCalls(it) }
+                QuickToggle(Icons.Default.Sms, "Block SMS", blockSmsEnabled) { viewModel.setBlockSms(it) }
             }
         }
 
-        // Sync button
-        Button(
-            onClick = { viewModel.sync() },
-            modifier = Modifier.fillMaxWidth(),
-            enabled = syncState !is SyncState.Syncing,
-            colors = ButtonDefaults.buttonColors(containerColor = CatGreen),
-            shape = RoundedCornerShape(12.dp)
-        ) {
-            when (syncState) {
-                is SyncState.Syncing -> {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(18.dp),
-                        strokeWidth = 2.dp,
-                        color = Black
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Text("Syncing...", color = Black)
-                }
-                else -> {
+        // Action buttons row
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            // Sync button
+            Button(
+                onClick = { viewModel.sync() },
+                modifier = Modifier.weight(1f),
+                enabled = syncState !is SyncState.Syncing,
+                colors = ButtonDefaults.buttonColors(containerColor = CatGreen),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                if (syncState is SyncState.Syncing) {
+                    CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp, color = Black)
+                } else {
                     Icon(Icons.Default.Sync, null, tint = Black)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Sync Database", color = Black, fontWeight = FontWeight.Bold)
                 }
+                Spacer(Modifier.width(6.dp))
+                Text("Sync", color = Black, fontWeight = FontWeight.Bold)
+            }
+
+            // Feature 3: Scan call log button
+            Button(
+                onClick = { viewModel.scanCallLog() },
+                modifier = Modifier.weight(1f),
+                colors = ButtonDefaults.buttonColors(containerColor = CatBlue),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Icon(Icons.Default.Search, null, tint = Black)
+                Spacer(Modifier.width(6.dp))
+                Text("Scan Log", color = Black, fontWeight = FontWeight.Bold)
             }
         }
 
@@ -174,46 +135,68 @@ fun DashboardScreen(viewModel: MainViewModel) {
                 is SyncState.Error -> (syncState as SyncState.Error).message
                 else -> ""
             }
-            Text(
-                text = message,
-                color = if (isSuccess) CatGreen else CatRed,
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.padding(horizontal = 4.dp)
-            )
+            Text(message, color = if (isSuccess) CatGreen else CatRed, style = MaterialTheme.typography.bodySmall)
+        }
+
+        // Feature 3: Scan results
+        scanResult?.let { result ->
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = SurfaceVariant),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text("Call Log Scan", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        "Scanned ${result.totalScanned} unique numbers, found ${result.spamFound} spam",
+                        color = if (result.spamFound > 0) CatRed else CatGreen
+                    )
+                    for (spam in result.spamNumbers.take(5)) {
+                        Spacer(Modifier.height(4.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(spam.number, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                                Text(
+                                    "${spam.callCount}x | ${spam.matchReason}",
+                                    style = MaterialTheme.typography.bodySmall, color = CatSubtext
+                                )
+                            }
+                            TextButton(onClick = { viewModel.blockNumber(spam.number, spam.type) }) {
+                                Text("Block", color = CatRed)
+                            }
+                        }
+                    }
+                    if (result.spamNumbers.size > 5) {
+                        Text("+ ${result.spamNumbers.size - 5} more...", color = CatOverlay, style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            }
         }
     }
 }
 
 @Composable
-fun StatCard(
-    modifier: Modifier = Modifier,
-    title: String,
-    value: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    color: androidx.compose.ui.graphics.Color
-) {
-    Card(
-        modifier = modifier,
-        colors = CardDefaults.cardColors(containerColor = SurfaceVariant),
-        shape = RoundedCornerShape(16.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
+fun QuickToggle(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, checked: Boolean, onChanged: (Boolean) -> Unit) {
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Icon(icon, null, tint = CatSubtext, modifier = Modifier.size(20.dp))
+        Text(label, modifier = Modifier.weight(1f))
+        Switch(checked = checked, onCheckedChange = onChanged, colors = SwitchDefaults.colors(checkedTrackColor = CatGreen))
+    }
+}
+
+@Composable
+fun StatCard(modifier: Modifier, title: String, value: String, icon: androidx.compose.ui.graphics.vector.ImageVector, color: androidx.compose.ui.graphics.Color) {
+    Card(modifier = modifier, colors = CardDefaults.cardColors(containerColor = SurfaceVariant), shape = RoundedCornerShape(16.dp)) {
+        Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Icon(icon, null, tint = color, modifier = Modifier.size(28.dp))
             Spacer(Modifier.height(8.dp))
-            Text(
-                text = value,
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                color = color
-            )
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodySmall,
-                color = CatSubtext
-            )
+            Text(value, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, color = color)
+            Text(title, style = MaterialTheme.typography.bodySmall, color = CatSubtext)
         }
     }
 }
