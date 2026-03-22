@@ -1,24 +1,220 @@
 {
-  "version": 1,
+  "version": 2,
   "updated": "2026-03-22",
   "description": "CallShield community spam number database",
-  "sources": ["ftc_complaints", "fcc_complaints", "community_reports"],
+  "sources": [
+    "ftc_complaints",
+    "fcc_complaints",
+    "community_reports"
+  ],
   "numbers": [
-    {
-      "number": "+18005551234",
-      "type": "robocall",
-      "reports": 142,
-      "first_seen": "2025-01-15",
-      "last_seen": "2026-03-20",
-      "description": "Auto warranty scam"
+{
+      "number": "+12676769910",
+      "type": "debt_collector",
+      "reports": 2,
+      "first_seen": "2026-03-19",
+      "last_seen": "2026-03-19",
+      "description": "[Robocall] Reducing your debt (credit cards, mortgage, student loans)"
     },
     {
-      "number": "+18005559876",
+      "number": "+16304746119",
+      "type": "robocall",
+      "reports": 2,
+      "first_seen": "2026-03-19",
+      "last_seen": "2026-03-19",
+      "description": "No Subject Provided"
+    },
+    {
+      "number": "+12145217018",
+      "type": "scam",
+      "reports": 2,
+      "first_seen": "2026-03-19",
+      "last_seen": "2026-03-19",
+      "description": "Medical  & prescriptions"
+    },
+    {
+      "number": "+18553372806",
+      "type": "robocall",
+      "reports": 2,
+      "first_seen": "2026-03-19",
+      "last_seen": "2026-03-19",
+      "description": "[Robocall] Other"
+    },
+    {
+      "number": "+17342513117",
+      "type": "robocall",
+      "reports": 2,
+      "first_seen": "2026-03-19",
+      "last_seen": "2026-03-19",
+      "description": "No Subject Provided"
+    },
+    {
+      "number": "+18306678251",
+      "type": "debt_collector",
+      "reports": 2,
+      "first_seen": "2026-03-19",
+      "last_seen": "2026-03-19",
+      "description": "[Robocall] Reducing your debt (credit cards, mortgage, student loans)"
+    },
+    {
+      "number": "+12036829540",
+      "type": "robocall",
+      "reports": 2,
+      "first_seen": "2026-03-19",
+      "last_seen": "2026-03-19",
+      "description": "Other"
+    },
+    {
+      "number": "+19043443974",
+      "type": "robocall",
+      "reports": 2,
+      "first_seen": "2026-03-19",
+      "last_seen": "2026-03-19",
+      "description": "[Robocall] No Subject Provided"
+    },
+    {
+      "number": "+19137219811",
+      "type": "robocall",
+      "reports": 2,
+      "first_seen": "2026-03-19",
+      "last_seen": "2026-03-19",
+      "description": "[Robocall] Other"
+    },
+    {
+      "number": "+17373222732",
+      "type": "robocall",
+      "reports": 2,
+      "first_seen": "2026-03-19",
+      "last_seen": "2026-03-19",
+      "description": "[Robocall] No Subject Provided"
+    },
+    {
+      "number": "+12109697514",
+      "type": "scam",
+      "reports": 2,
+      "first_seen": "2026-03-19",
+      "last_seen": "2026-03-19",
+      "description": "Medical  & prescriptions"
+    },
+    {
+      "number": "+16307495403",
+      "type": "robocall",
+      "reports": 2,
+      "first_seen": "2026-03-19",
+      "last_seen": "2026-03-19",
+      "description": "No Subject Provided"
+    },
+    {
+      "number": "+18338672750",
+      "type": "debt_collector",
+      "reports": 2,
+      "first_seen": "2026-03-19",
+      "last_seen": "2026-03-19",
+      "description": "[Robocall] Reducing your debt (credit cards, mortgage, student loans)"
+    },
+    {
+      "number": "+12142398459",
+      "type": "scam",
+      "reports": 2,
+      "first_seen": "2026-03-19",
+      "last_seen": "2026-03-19",
+      "description": "[Robocall] Medical  & prescriptions"
+    },
+    {
+      "number": "+13057351311",
+      "type": "robocall",
+      "reports": 2,
+      "first_seen": "2026-03-19",
+      "last_seen": "2026-03-19",
+      "description": "Other"
+    },
+    {
+      "number": "+15128937672",
       "type": "telemarketer",
-      "reports": 87,
-      "first_seen": "2025-06-01",
-      "last_seen": "2026-03-18",
-      "description": "Solar panel sales"
+      "reports": 2,
+      "first_seen": "2026-03-19",
+      "last_seen": "2026-03-19",
+      "description": "Energy, solar,  & utilities"
+    },
+    {
+      "number": "+18884710373",
+      "type": "debt_collector",
+      "reports": 2,
+      "first_seen": "2026-03-19",
+      "last_seen": "2026-03-19",
+      "description": "[Robocall] Reducing your debt (credit cards, mortgage, student loans)"
+    },
+    {
+      "number": "+16158233903",
+      "type": "robocall",
+      "reports": 2,
+      "first_seen": "2026-03-19",
+      "last_seen": "2026-03-19",
+      "description": "[Robocall] Other"
+    },
+    {
+      "number": "+19169752439",
+      "type": "robocall",
+      "reports": 2,
+      "first_seen": "2026-03-19",
+      "last_seen": "2026-03-19",
+      "description": "[Robocall] Other"
+    },
+    {
+      "number": "+14408917326",
+      "type": "robocall",
+      "reports": 2,
+      "first_seen": "2026-03-19",
+      "last_seen": "2026-03-19",
+      "description": "Other"
+    },
+    {
+      "number": "+16329385774",
+      "type": "robocall",
+      "reports": 2,
+      "first_seen": "2026-03-19",
+      "last_seen": "2026-03-19",
+      "description": "Other"
+    },
+    {
+      "number": "+19202893782",
+      "type": "robocall",
+      "reports": 2,
+      "first_seen": "2026-03-19",
+      "last_seen": "2026-03-19",
+      "description": "[Robocall] No Subject Provided"
+    },
+    {
+      "number": "+18666223911",
+      "type": "robocall",
+      "reports": 2,
+      "first_seen": "2026-03-19",
+      "last_seen": "2026-03-19",
+      "description": "Other"
+    },
+    {
+      "number": "+16609747593",
+      "type": "robocall",
+      "reports": 2,
+      "first_seen": "2026-03-19",
+      "last_seen": "2026-03-19",
+      "description": "[Robocall] Other"
+    },
+    {
+      "number": "+17069535668",
+      "type": "debt_collector",
+      "reports": 1,
+      "first_seen": "2026-03-19",
+      "last_seen": "2026-03-19",
+      "description": "[Robocall] Reducing your debt (credit cards, mortgage, student loans)"
+    },
+    {
+      "number": "+18335797077",
+      "type": "debt_collector",
+      "reports": 1,
+      "first_seen": "2026-03-19",
+      "last_seen": "2026-03-19",
+      "description": "[Robocall] Reducing your debt (credit cards, mortgage, student loans)"
     }
   ],
   "prefixes": [
