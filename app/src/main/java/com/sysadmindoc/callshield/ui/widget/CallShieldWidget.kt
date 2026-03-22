@@ -56,6 +56,7 @@ class CallShieldWidget : AppWidgetProvider() {
             } catch (_: Exception) {}
         }
 
+        // Set click listeners immediately, counts update async
         manager.updateAppWidget(widgetId, views)
     }
 

@@ -37,6 +37,12 @@ class CallerIdOverlayService : Service() {
     }
 
     private fun showOverlay(number: String, confidence: Int, reason: String) {
+        // Check overlay permission before attempting to show
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M &&
+            !android.provider.Settings.canDrawOverlays(this)) {
+            stopSelf()
+            return
+        }
         windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
 
         overlayView = LinearLayout(this).apply {

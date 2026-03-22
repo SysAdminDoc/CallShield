@@ -16,6 +16,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.util.Calendar
 
@@ -25,6 +27,7 @@ class SpamRepository(private val context: Context) {
     private val dao: SpamDao = AppDatabase.getInstance(context).spamDao()
     private val remote = GitHubDataSource()
     private val dataStore = context.dataStore
+    private val syncMutex = Mutex()
 
     companion object {
         private val KEY_LAST_SYNC = longPreferencesKey("last_sync_timestamp")
@@ -104,16 +107,13 @@ class SpamRepository(private val context: Context) {
             return SpamCheckResult(false, matchSource = "contact_whitelist")
         }
 
-        // User blocklist
-        val userBlocked = dao.findByNumber(normalized)
-        if (userBlocked?.isUserBlocked == true) {
-            return SpamCheckResult(true, "user_blocklist", userBlocked.type, userBlocked.description)
-        }
-
-        // Database match
-        val dbMatch = dao.findByNumber(normalized)
-        if (dbMatch != null) {
-            return SpamCheckResult(true, "database", dbMatch.type, dbMatch.description)
+        // User blocklist + database match (single query)
+        val dbEntry = dao.findByNumber(normalized)
+        if (dbEntry != null) {
+            if (dbEntry.isUserBlocked) {
+                return SpamCheckResult(true, "user_blocklist", dbEntry.type, dbEntry.description)
+            }
+            return SpamCheckResult(true, "database", dbEntry.type, dbEntry.description)
         }
 
         // Prefix match
@@ -140,7 +140,7 @@ class SpamRepository(private val context: Context) {
         // Feature 10: Frequency auto-escalation
         if (freqEscalationEnabled.first()) {
             val freq = dao.getNumberFrequency(normalized)
-            val threshold = freqThreshold.first()
+            val threshold = freqThreshold.first().coerceAtLeast(2)
             if (freq >= threshold) {
                 return SpamCheckResult(true, "frequency", "repeat_caller", "Called $freq times - auto-blocked")
             }
@@ -200,14 +200,15 @@ class SpamRepository(private val context: Context) {
     }
 
     private suspend fun isInBlockedTimeWindow(): Boolean {
-        val start = timeBlockStart.first()
-        val end = timeBlockEnd.first()
+        val start = timeBlockStart.first().coerceIn(0, 23)
+        val end = timeBlockEnd.first().coerceIn(0, 23)
+        if (start == end) return false // Same hour = disabled
         val now = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
 
-        return if (start <= end) {
-            now in start until end // e.g., 9-17
+        return if (start < end) {
+            now in start..end // e.g., 9-17 (inclusive)
         } else {
-            now >= start || now < end // e.g., 22-7 (overnight)
+            now >= start || now <= end // e.g., 22-7 (overnight, inclusive)
         }
     }
 
@@ -237,6 +238,7 @@ class SpamRepository(private val context: Context) {
 
     // ── Sync ───────────────────────────────────────────────────────────
     suspend fun syncFromGitHub(): SyncResult = withContext(Dispatchers.IO) {
+        syncMutex.withLock {
         try {
             val currentSha = dataStore.data.first()[KEY_LAST_SHA]
             val remoteResult = remote.checkForUpdate()
@@ -285,6 +287,7 @@ class SpamRepository(private val context: Context) {
         } catch (e: Exception) {
             SyncResult(false, "Error: ${e.message}")
         }
+        } // syncMutex
     }
 
     // ── Blocklist management ───────────────────────────────────────────

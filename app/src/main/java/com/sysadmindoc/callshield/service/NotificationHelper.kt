@@ -8,10 +8,6 @@ import android.content.Intent
 import androidx.core.app.NotificationCompat
 import com.sysadmindoc.callshield.ui.MainActivity
 
-/**
- * Manages notification channels and creates block/spam rating notifications.
- * Features 4 & 5: After-call spam rating + notification quick actions.
- */
 object NotificationHelper {
     const val CHANNEL_BLOCKED = "blocked_calls"
     const val CHANNEL_RATING = "spam_rating"
@@ -21,18 +17,20 @@ object NotificationHelper {
     const val EXTRA_NUMBER = "extra_number"
     const val EXTRA_NOTIF_ID = "extra_notif_id"
 
-    private var nextNotifId = 2000
+    // Stable notification IDs derived from number hash — no counter overflow
+    private fun stableId(number: String, salt: Int = 0): Int {
+        return (number.hashCode() xor (salt * 0x9E3779B9.toInt())) and 0x7FFFFFFF
+    }
 
     fun createChannels(context: Context) {
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-
         nm.createNotificationChannel(
             NotificationChannel(CHANNEL_BLOCKED, "Blocked Calls & SMS", NotificationManager.IMPORTANCE_LOW).apply {
                 description = "Notifications when spam calls/texts are blocked"
             }
         )
         nm.createNotificationChannel(
-            NotificationChannel(CHANNEL_RATING, "Spam Rating", NotificationManager.IMPORTANCE_HIGH).apply {
+            NotificationChannel(CHANNEL_RATING, "Spam Rating", NotificationManager.IMPORTANCE_DEFAULT).apply {
                 description = "Rate calls as spam after they end"
             }
         )
@@ -40,33 +38,29 @@ object NotificationHelper {
 
     fun notifyBlocked(context: Context, number: String, reason: String, isCall: Boolean) {
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        val notifId = nextNotifId++
+        val nid = stableId(number, if (isCall) 1 else 2)
         val typeText = if (isCall) "call" else "SMS"
 
         val openIntent = PendingIntent.getActivity(
-            context, 0,
-            Intent(context, MainActivity::class.java),
-            PendingIntent.FLAG_IMMUTABLE
+            context, 0, Intent(context, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE
         )
 
-        // Block permanently action
         val blockIntent = PendingIntent.getBroadcast(
-            context, notifId,
+            context, stableId(number, 10),
             Intent(context, SpamActionReceiver::class.java).apply {
                 action = ACTION_BLOCK
                 putExtra(EXTRA_NUMBER, number)
-                putExtra(EXTRA_NOTIF_ID, notifId)
+                putExtra(EXTRA_NOTIF_ID, nid)
             },
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
-        // Report to community action
         val reportIntent = PendingIntent.getBroadcast(
-            context, notifId + 10000,
+            context, stableId(number, 20),
             Intent(context, SpamActionReceiver::class.java).apply {
                 action = ACTION_REPORT
                 putExtra(EXTRA_NUMBER, number)
-                putExtra(EXTRA_NOTIF_ID, notifId)
+                putExtra(EXTRA_NOTIF_ID, nid)
             },
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
@@ -81,34 +75,29 @@ object NotificationHelper {
             .addAction(android.R.drawable.ic_menu_send, "Report", reportIntent)
             .build()
 
-        nm.notify(notifId, notif)
+        nm.notify(nid, notif)
     }
 
-    /**
-     * Feature 4: After-call spam rating.
-     * Shows a notification after an unblocked call from an unknown number ends,
-     * asking the user to rate it as spam or safe.
-     */
     fun notifySpamRating(context: Context, number: String) {
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        val notifId = nextNotifId++
+        val nid = stableId(number, 30)
 
         val blockIntent = PendingIntent.getBroadcast(
-            context, notifId,
+            context, stableId(number, 31),
             Intent(context, SpamActionReceiver::class.java).apply {
                 action = ACTION_BLOCK
                 putExtra(EXTRA_NUMBER, number)
-                putExtra(EXTRA_NOTIF_ID, notifId)
+                putExtra(EXTRA_NOTIF_ID, nid)
             },
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
         val safeIntent = PendingIntent.getBroadcast(
-            context, notifId + 20000,
+            context, stableId(number, 32),
             Intent(context, SpamActionReceiver::class.java).apply {
                 action = ACTION_SAFE
                 putExtra(EXTRA_NUMBER, number)
-                putExtra(EXTRA_NOTIF_ID, notifId)
+                putExtra(EXTRA_NOTIF_ID, nid)
             },
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
@@ -122,6 +111,6 @@ object NotificationHelper {
             .addAction(android.R.drawable.ic_menu_myplaces, "Safe", safeIntent)
             .build()
 
-        nm.notify(notifId, notif)
+        nm.notify(nid, notif)
     }
 }

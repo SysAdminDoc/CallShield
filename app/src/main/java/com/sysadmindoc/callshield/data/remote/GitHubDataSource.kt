@@ -38,7 +38,7 @@ class GitHubDataSource {
             val url = buildRawUrl(owner, repo)
             val request = Request.Builder()
                 .url(url)
-                .header("Cache-Control", "no-cache")
+                .header("Cache-Control", "no-store, max-age=0")
                 .build()
 
             val response = client.newCall(request).execute()

@@ -82,7 +82,6 @@ object SpamHeuristics {
         "849",  // Dominican Republic
         "876",  // Jamaica (heavily abused)
         "268",  // Antigua
-        "284",  // BVI
         "473",  // Grenada
     )
 

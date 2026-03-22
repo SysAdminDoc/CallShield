@@ -36,11 +36,13 @@ object CallLogScanner {
                 "${CallLog.Calls.DATE} DESC"
             )
 
-            cursor?.use {
+            cursor?.use { c ->
+                val colIndex = c.getColumnIndex(CallLog.Calls.NUMBER)
+                if (colIndex < 0) return@use
                 var count = 0
-                while (it.moveToNext() && count < limit) {
-                    val number = it.getString(0) ?: continue
-                    val clean = number.filter { c -> c.isDigit() || c == '+' }
+                while (c.moveToNext() && count < limit) {
+                    val number = c.getString(colIndex) ?: continue
+                    val clean = number.filter { ch -> ch.isDigit() || ch == '+' }
                     if (clean.length >= 7) {
                         numbers[clean] = (numbers[clean] ?: 0) + 1
                     }

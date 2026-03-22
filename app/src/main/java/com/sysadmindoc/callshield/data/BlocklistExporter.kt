@@ -84,7 +84,11 @@ object BlocklistExporter {
     }
 
     suspend fun importFromUri(context: Context, uri: Uri): Int {
-        val json = context.contentResolver.openInputStream(uri)?.bufferedReader()?.readText() ?: return 0
-        return importNumbers(context, json)
+        return try {
+            val json = context.contentResolver.openInputStream(uri)?.bufferedReader()?.readText() ?: return 0
+            importNumbers(context, json)
+        } catch (_: Exception) {
+            0
+        }
     }
 }
