@@ -8,6 +8,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -16,10 +17,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.sysadmindoc.callshield.ui.screens.details.NumberDetailScreen
 import com.sysadmindoc.callshield.ui.screens.main.BlockedLogScreen
 import com.sysadmindoc.callshield.ui.screens.main.BlocklistScreen
 import com.sysadmindoc.callshield.ui.screens.main.DashboardScreen
+import com.sysadmindoc.callshield.ui.screens.onboarding.OnboardingScreen
 import com.sysadmindoc.callshield.ui.screens.settings.SettingsScreen
+import com.sysadmindoc.callshield.ui.screens.stats.StatsScreen
 import com.sysadmindoc.callshield.ui.theme.*
 
 class MainActivity : ComponentActivity() {
@@ -31,12 +35,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         requestPermissions()
-
-        setContent {
-            CallShieldTheme {
-                CallShieldApp()
-            }
-        }
+        setContent { CallShieldTheme { CallShieldRoot() } }
     }
 
     private fun requestPermissions() {
@@ -50,20 +49,32 @@ class MainActivity : ComponentActivity() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             permissions.add(Manifest.permission.POST_NOTIFICATIONS)
         }
-
         val needed = permissions.filter {
             ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
         }
+        if (needed.isNotEmpty()) permissionLauncher.launch(needed.toTypedArray())
+    }
+}
 
-        if (needed.isNotEmpty()) {
-            permissionLauncher.launch(needed.toTypedArray())
-        }
+@Composable
+fun CallShieldRoot(viewModel: MainViewModel = viewModel()) {
+    val onboardingDone by viewModel.onboardingDone.collectAsState()
+    val selectedNumber by viewModel.selectedNumber.collectAsState()
+
+    when {
+        !onboardingDone -> OnboardingScreen(onComplete = { viewModel.completeOnboarding() })
+        selectedNumber != null -> NumberDetailScreen(
+            number = selectedNumber!!,
+            viewModel = viewModel,
+            onBack = { viewModel.closeNumberDetail() }
+        )
+        else -> CallShieldApp(viewModel)
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CallShieldApp(viewModel: MainViewModel = viewModel()) {
+fun CallShieldApp(viewModel: MainViewModel) {
     var selectedTab by remember { mutableIntStateOf(0) }
 
     Scaffold(
@@ -75,61 +86,44 @@ fun CallShieldApp(viewModel: MainViewModel = viewModel()) {
         },
         bottomBar = {
             NavigationBar(containerColor = Surface) {
-                NavigationBarItem(
-                    selected = selectedTab == 0,
-                    onClick = { selectedTab = 0 },
-                    icon = { Icon(Icons.Default.Shield, null) },
-                    label = { Text("Dashboard") },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = CatGreen,
-                        selectedTextColor = CatGreen,
-                        indicatorColor = CatGreen.copy(alpha = 0.15f)
-                    )
-                )
-                NavigationBarItem(
-                    selected = selectedTab == 1,
-                    onClick = { selectedTab = 1 },
-                    icon = { Icon(Icons.Default.History, null) },
-                    label = { Text("Log") },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = CatBlue,
-                        selectedTextColor = CatBlue,
-                        indicatorColor = CatBlue.copy(alpha = 0.15f)
-                    )
-                )
-                NavigationBarItem(
-                    selected = selectedTab == 2,
-                    onClick = { selectedTab = 2 },
-                    icon = { Icon(Icons.Default.Block, null) },
-                    label = { Text("Blocklist") },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = CatRed,
-                        selectedTextColor = CatRed,
-                        indicatorColor = CatRed.copy(alpha = 0.15f)
-                    )
-                )
-                NavigationBarItem(
-                    selected = selectedTab == 3,
-                    onClick = { selectedTab = 3 },
-                    icon = { Icon(Icons.Default.Settings, null) },
-                    label = { Text("Settings") },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = CatMauve,
-                        selectedTextColor = CatMauve,
-                        indicatorColor = CatMauve.copy(alpha = 0.15f)
-                    )
-                )
+                NavItem(selectedTab == 0, { selectedTab = 0 }, Icons.Default.Shield, "Dashboard", CatGreen)
+                NavItem(selectedTab == 1, { selectedTab = 1 }, Icons.Default.History, "Log", CatBlue)
+                NavItem(selectedTab == 2, { selectedTab = 2 }, Icons.Default.Block, "Blocklist", CatRed)
+                NavItem(selectedTab == 3, { selectedTab = 3 }, Icons.Default.BarChart, "Stats", CatPeach)
+                NavItem(selectedTab == 4, { selectedTab = 4 }, Icons.Default.Settings, "Settings", CatMauve)
             }
         },
         containerColor = Black
     ) { padding ->
         Box(modifier = Modifier.padding(padding)) {
-            when (selectedTab) {
-                0 -> DashboardScreen(viewModel)
-                1 -> BlockedLogScreen(viewModel)
-                2 -> BlocklistScreen(viewModel)
-                3 -> SettingsScreen(viewModel)
+            AnimatedContent(targetState = selectedTab, transitionSpec = {
+                fadeIn() togetherWith fadeOut()
+            }, label = "tabs") { tab ->
+                when (tab) {
+                    0 -> DashboardScreen(viewModel)
+                    1 -> BlockedLogScreen(viewModel)
+                    2 -> BlocklistScreen(viewModel)
+                    3 -> StatsScreen(viewModel)
+                    4 -> SettingsScreen(viewModel)
+                }
             }
         }
     }
+}
+
+@Composable
+fun RowScope.NavItem(
+    selected: Boolean, onClick: () -> Unit,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String, color: androidx.compose.ui.graphics.Color
+) {
+    NavigationBarItem(
+        selected = selected, onClick = onClick,
+        icon = { Icon(icon, null) },
+        label = { Text(label, style = MaterialTheme.typography.labelSmall) },
+        colors = NavigationBarItemDefaults.colors(
+            selectedIconColor = color, selectedTextColor = color,
+            indicatorColor = color.copy(alpha = 0.15f)
+        )
+    )
 }

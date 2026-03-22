@@ -8,11 +8,14 @@ import com.sysadmindoc.callshield.data.BlocklistExporter
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.model.BlockedCall
 import com.sysadmindoc.callshield.data.model.SpamNumber
+import com.sysadmindoc.callshield.data.model.WhitelistEntry
 import com.sysadmindoc.callshield.data.model.WildcardRule
 import com.sysadmindoc.callshield.service.CallLogScanner
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val repo = SpamRepository.getInstance(app)
 
@@ -34,6 +37,27 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     val wildcardRules: StateFlow<List<WildcardRule>> = repo.getAllWildcardRules()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val whitelistEntries: StateFlow<List<WhitelistEntry>> = repo.getAllWhitelist()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // Onboarding
+    val onboardingDone: StateFlow<Boolean> = repo.onboardingDone
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true) // default true to avoid flash
+
+    // Search
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery: StateFlow<String> = _searchQuery
+    val searchResults: StateFlow<List<SpamNumber>> = _searchQuery
+        .debounce(300)
+        .flatMapLatest { query ->
+            if (query.length >= 2) repo.searchNumbers(query) else flowOf(emptyList())
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // Detail navigation
+    private val _selectedNumber = MutableStateFlow<String?>(null)
+    val selectedNumber: StateFlow<String?> = _selectedNumber
 
     // Settings
     val blockCallsEnabled = repo.blockCallsEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
@@ -63,7 +87,19 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     val importResult: StateFlow<String?> = _importResult
 
     init {
-        viewModelScope.launch { _spamCount.value = repo.getSpamCount() }
+        viewModelScope.launch {
+            _spamCount.value = repo.getSpamCount()
+            // Auto-sync on first launch
+            if (_spamCount.value == 0) sync()
+        }
+    }
+
+    fun completeOnboarding() {
+        viewModelScope.launch {
+            repo.setOnboardingDone()
+            // Trigger first sync after onboarding
+            sync()
+        }
     }
 
     fun sync() {
@@ -77,13 +113,16 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    // Feature 3: Call log scanner
-    fun scanCallLog() {
-        viewModelScope.launch {
-            _scanResult.value = CallLogScanner.scan(getApplication())
-        }
-    }
+    fun scanCallLog() { viewModelScope.launch { _scanResult.value = CallLogScanner.scan(getApplication()) } }
 
+    // Search
+    fun setSearchQuery(query: String) { _searchQuery.value = query }
+
+    // Detail navigation
+    fun openNumberDetail(number: String) { _selectedNumber.value = number }
+    fun closeNumberDetail() { _selectedNumber.value = null }
+
+    // Blocklist
     fun blockNumber(number: String, type: String = "unknown", description: String = "") {
         viewModelScope.launch { repo.blockNumber(number, type, description) }
     }
@@ -91,19 +130,25 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun deleteLogEntry(call: BlockedCall) { viewModelScope.launch { repo.deleteBlockedCall(call) } }
     fun clearLog() { viewModelScope.launch { repo.clearCallLog() } }
 
-    // Feature 8: Wildcard rules
+    // Wildcards
     fun addWildcardRule(pattern: String, isRegex: Boolean, description: String) {
         viewModelScope.launch { repo.addWildcardRule(pattern, isRegex, description) }
     }
     fun deleteWildcardRule(rule: WildcardRule) { viewModelScope.launch { repo.deleteWildcardRule(rule) } }
     fun toggleWildcardRule(id: Long, enabled: Boolean) { viewModelScope.launch { repo.toggleWildcardRule(id, enabled) } }
 
-    // Feature 12: Export/import
+    // Whitelist
+    fun addToWhitelist(number: String, description: String = "") {
+        viewModelScope.launch { repo.addToWhitelist(number, description) }
+    }
+    fun removeFromWhitelist(entry: WhitelistEntry) {
+        viewModelScope.launch { repo.removeFromWhitelist(entry) }
+    }
+
+    // Export/import
     fun exportBlocklist() {
         val numbers = userBlockedNumbers.value
-        if (numbers.isNotEmpty()) {
-            BlocklistExporter.exportAndShare(getApplication(), numbers)
-        }
+        if (numbers.isNotEmpty()) BlocklistExporter.exportAndShare(getApplication(), numbers)
     }
     fun importBlocklist(uri: Uri) {
         viewModelScope.launch {
@@ -112,7 +157,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    // Settings setters
+    // Settings
     fun setBlockCalls(v: Boolean) = viewModelScope.launch { repo.setBlockCalls(v) }
     fun setBlockSms(v: Boolean) = viewModelScope.launch { repo.setBlockSms(v) }
     fun setBlockUnknown(v: Boolean) = viewModelScope.launch { repo.setBlockUnknown(v) }

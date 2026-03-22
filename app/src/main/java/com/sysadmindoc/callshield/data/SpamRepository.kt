@@ -46,6 +46,7 @@ class SpamRepository(private val context: Context) {
         // Feature 10: Frequency auto-escalation
         private val KEY_FREQ_ESCALATION = booleanPreferencesKey("freq_escalation_enabled")
         private val KEY_FREQ_THRESHOLD = intPreferencesKey("freq_threshold")
+        private val KEY_ONBOARDING_DONE = booleanPreferencesKey("onboarding_done")
 
         @Volatile
         private var INSTANCE: SpamRepository? = null
@@ -72,7 +73,9 @@ class SpamRepository(private val context: Context) {
     val timeBlockEnd: Flow<Int> = dataStore.data.map { it[KEY_TIME_BLOCK_END] ?: 7 }
     val freqEscalationEnabled: Flow<Boolean> = dataStore.data.map { it[KEY_FREQ_ESCALATION] ?: true }
     val freqThreshold: Flow<Int> = dataStore.data.map { it[KEY_FREQ_THRESHOLD] ?: 3 }
+    val onboardingDone: Flow<Boolean> = dataStore.data.map { it[KEY_ONBOARDING_DONE] ?: false }
 
+    suspend fun setOnboardingDone() = dataStore.edit { it[KEY_ONBOARDING_DONE] = true }
     suspend fun setBlockCalls(enabled: Boolean) = dataStore.edit { it[KEY_BLOCK_CALLS] = enabled }
     suspend fun setBlockSms(enabled: Boolean) = dataStore.edit { it[KEY_BLOCK_SMS] = enabled }
     suspend fun setBlockUnknown(enabled: Boolean) = dataStore.edit { it[KEY_BLOCK_UNKNOWN] = enabled }
@@ -90,6 +93,11 @@ class SpamRepository(private val context: Context) {
     // ── Primary spam check ─────────────────────────────────────────────
     suspend fun isSpam(number: String, smsBody: String? = null): SpamCheckResult {
         val normalized = normalizeNumber(number)
+
+        // Manual whitelist — always allow
+        if (dao.findWhitelistEntry(normalized) != null) {
+            return SpamCheckResult(false, matchSource = "manual_whitelist")
+        }
 
         // Contact whitelist
         if (contactWhitelistEnabled.first() && SpamHeuristics.isInContacts(context, normalized)) {
@@ -341,6 +349,18 @@ class SpamRepository(private val context: Context) {
     suspend fun getSpamCount(): Int = dao.getSpamCount()
     suspend fun clearCallLog() = dao.clearCallLog()
     suspend fun deleteBlockedCall(call: BlockedCall) = dao.deleteBlockedCall(call)
+
+    // ── Search ─────────────────────────────────────────────────────────
+    fun searchNumbers(query: String): Flow<List<SpamNumber>> = dao.searchNumbers(query)
+
+    // ── Whitelist management ───────────────────────────────────────────
+    fun getAllWhitelist(): Flow<List<WhitelistEntry>> = dao.getAllWhitelist()
+
+    suspend fun addToWhitelist(number: String, description: String = "") {
+        dao.insertWhitelistEntry(WhitelistEntry(number = normalizeNumber(number), description = description))
+    }
+
+    suspend fun removeFromWhitelist(entry: WhitelistEntry) = dao.deleteWhitelistEntry(entry)
 
     fun normalizeNumber(number: String): String {
         val hasPlus = number.startsWith("+")

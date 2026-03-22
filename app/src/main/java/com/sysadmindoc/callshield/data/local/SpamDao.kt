@@ -4,6 +4,7 @@ import androidx.room.*
 import com.sysadmindoc.callshield.data.model.BlockedCall
 import com.sysadmindoc.callshield.data.model.SpamNumber
 import com.sysadmindoc.callshield.data.model.SpamPrefix
+import com.sysadmindoc.callshield.data.model.WhitelistEntry
 import com.sysadmindoc.callshield.data.model.WildcardRule
 import kotlinx.coroutines.flow.Flow
 
@@ -91,4 +92,21 @@ interface SpamDao {
 
     @Query("UPDATE wildcard_rules SET enabled = :enabled WHERE id = :id")
     suspend fun setWildcardRuleEnabled(id: Long, enabled: Boolean)
+
+    // Search
+    @Query("SELECT * FROM spam_numbers WHERE number LIKE '%' || :query || '%' OR description LIKE '%' || :query || '%' ORDER BY reports DESC LIMIT 100")
+    fun searchNumbers(query: String): Flow<List<SpamNumber>>
+
+    // Whitelist
+    @Query("SELECT * FROM whitelist ORDER BY addedTimestamp DESC")
+    fun getAllWhitelist(): Flow<List<WhitelistEntry>>
+
+    @Query("SELECT * FROM whitelist WHERE number = :number LIMIT 1")
+    suspend fun findWhitelistEntry(number: String): WhitelistEntry?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertWhitelistEntry(entry: WhitelistEntry)
+
+    @Delete
+    suspend fun deleteWhitelistEntry(entry: WhitelistEntry)
 }

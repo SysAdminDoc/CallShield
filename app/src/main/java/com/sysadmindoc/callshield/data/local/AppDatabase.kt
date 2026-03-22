@@ -4,14 +4,11 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
-import com.sysadmindoc.callshield.data.model.BlockedCall
-import com.sysadmindoc.callshield.data.model.SpamNumber
-import com.sysadmindoc.callshield.data.model.SpamPrefix
-import com.sysadmindoc.callshield.data.model.WildcardRule
+import com.sysadmindoc.callshield.data.model.*
 
 @Database(
-    entities = [SpamNumber::class, SpamPrefix::class, BlockedCall::class, WildcardRule::class],
-    version = 3,
+    entities = [SpamNumber::class, SpamPrefix::class, BlockedCall::class, WildcardRule::class, WhitelistEntry::class],
+    version = 4,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
