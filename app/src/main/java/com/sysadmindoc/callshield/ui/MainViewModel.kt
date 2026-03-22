@@ -14,6 +14,7 @@ import com.sysadmindoc.callshield.data.model.SmsKeywordRule
 import com.sysadmindoc.callshield.data.model.WhitelistEntry
 import com.sysadmindoc.callshield.data.model.WildcardRule
 import com.sysadmindoc.callshield.service.CallLogScanner
+import com.sysadmindoc.callshield.service.SmsInboxScanner
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -91,6 +92,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val _scanResult = MutableStateFlow<CallLogScanner.ScanResult?>(null)
     val scanResult: StateFlow<CallLogScanner.ScanResult?> = _scanResult
 
+    private val _smsScanResult = MutableStateFlow<SmsInboxScanner.ScanResult?>(null)
+    val smsScanResult: StateFlow<SmsInboxScanner.ScanResult?> = _smsScanResult
+
     private val _importResult = MutableStateFlow<String?>(null)
     val importResult: StateFlow<String?> = _importResult
 
@@ -125,6 +129,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun scanCallLog() { viewModelScope.launch { _scanResult.value = CallLogScanner.scan(getApplication()) } }
+    fun scanSmsInbox() { viewModelScope.launch { _smsScanResult.value = SmsInboxScanner.scan(getApplication()) } }
 
     // Search
     fun setSearchQuery(query: String) { _searchQuery.value = query }

@@ -34,6 +34,7 @@ fun DashboardScreen(viewModel: MainViewModel) {
     val stirShaken by viewModel.stirShakenEnabled.collectAsState()
     val neighborSpoof by viewModel.neighborSpoofEnabled.collectAsState()
     val scanResult by viewModel.scanResult.collectAsState()
+    val smsScanResult by viewModel.smsScanResult.collectAsState()
 
     Column(
         modifier = Modifier
@@ -122,17 +123,29 @@ fun DashboardScreen(viewModel: MainViewModel) {
                 Text("Sync", color = Black, fontWeight = FontWeight.Bold)
             }
 
-            // Feature 3: Scan call log button
+            // Scan call log
             Button(
                 onClick = { viewModel.scanCallLog() },
                 modifier = Modifier.weight(1f),
                 colors = ButtonDefaults.buttonColors(containerColor = CatBlue),
                 shape = RoundedCornerShape(12.dp)
             ) {
-                Icon(Icons.Default.Search, null, tint = Black)
+                Icon(Icons.Default.Phone, null, tint = Black)
                 Spacer(Modifier.width(6.dp))
-                Text("Scan Log", color = Black, fontWeight = FontWeight.Bold)
+                Text("Scan Calls", color = Black, fontWeight = FontWeight.Bold)
             }
+        }
+
+        // SMS scan button
+        Button(
+            onClick = { viewModel.scanSmsInbox() },
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.buttonColors(containerColor = CatMauve),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Icon(Icons.Default.Sms, null, tint = Black)
+            Spacer(Modifier.width(6.dp))
+            Text("Scan SMS Inbox", color = Black, fontWeight = FontWeight.Bold)
         }
 
         // Sync status
@@ -181,6 +194,40 @@ fun DashboardScreen(viewModel: MainViewModel) {
                     }
                     if (result.spamNumbers.size > 5) {
                         Text("+ ${result.spamNumbers.size - 5} more...", color = CatOverlay, style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            }
+        }
+
+        // SMS scan results
+        smsScanResult?.let { result ->
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = SurfaceVariant),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text("SMS Inbox Scan", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        "Scanned ${result.totalScanned} messages, found ${result.spamFound} spam",
+                        color = if (result.spamFound > 0) CatRed else CatGreen
+                    )
+                    for (sms in result.spamMessages.take(5)) {
+                        Spacer(Modifier.height(4.dp))
+                        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(com.sysadmindoc.callshield.data.PhoneFormatter.format(sms.number), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                                Text(sms.body, style = MaterialTheme.typography.bodySmall, color = CatSubtext, maxLines = 1)
+                                Text(sms.matchReason.replace("_", " "), style = MaterialTheme.typography.labelSmall, color = CatPeach)
+                            }
+                            TextButton(onClick = { viewModel.blockNumber(sms.number, sms.type) }) {
+                                Text("Block", color = CatRed)
+                            }
+                        }
+                    }
+                    if (result.spamMessages.size > 5) {
+                        Text("+ ${result.spamMessages.size - 5} more...", color = CatOverlay, style = MaterialTheme.typography.bodySmall)
                     }
                 }
             }

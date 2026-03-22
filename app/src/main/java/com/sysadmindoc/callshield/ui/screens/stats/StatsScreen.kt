@@ -16,6 +16,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.sysadmindoc.callshield.data.PhoneFormatter
+import com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup
 import com.sysadmindoc.callshield.data.model.BlockedCall
 import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.theme.*
@@ -128,6 +129,39 @@ fun StatsScreen(viewModel: MainViewModel) {
                             Text("${i + 1}.", color = CatOverlay, modifier = Modifier.width(24.dp), style = MaterialTheme.typography.bodySmall)
                             Text(PhoneFormatter.format(number), modifier = Modifier.weight(1f), fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodyMedium)
                             Text("${count}x", color = CatRed, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
+        }
+
+        // Area code heatmap
+        val areaCodeCounts = remember(blockedCalls) {
+            blockedCalls.mapNotNull { AreaCodeLookup.getAreaCode(it.number) }
+                .groupBy { it }
+                .mapValues { it.value.size }
+                .entries.sortedByDescending { it.value }
+                .take(15)
+        }
+        if (areaCodeCounts.isNotEmpty()) {
+            Card(colors = CardDefaults.cardColors(containerColor = SurfaceVariant), shape = RoundedCornerShape(16.dp)) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text("Spam by Area Code", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    Spacer(Modifier.height(8.dp))
+                    val maxAc = areaCodeCounts.first().value.coerceAtLeast(1)
+                    areaCodeCounts.forEach { (ac, count) ->
+                        val loc = AreaCodeLookup.lookup("+1$ac") ?: ac
+                        val fraction = count.toFloat() / maxAc
+                        Row(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Text(ac, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall, modifier = Modifier.width(36.dp), color = CatPeach)
+                            Text(loc, style = MaterialTheme.typography.labelSmall, color = CatSubtext, modifier = Modifier.width(120.dp))
+                            LinearProgressIndicator(
+                                progress = { fraction },
+                                modifier = Modifier.weight(1f).height(8.dp).clip(RoundedCornerShape(4.dp)),
+                                color = CatPeach, trackColor = CatOverlay.copy(alpha = 0.2f)
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text("$count", style = MaterialTheme.typography.labelSmall, color = CatPeach, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
