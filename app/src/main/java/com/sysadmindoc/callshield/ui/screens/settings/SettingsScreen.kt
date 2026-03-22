@@ -156,6 +156,20 @@ fun SettingsScreen(viewModel: MainViewModel) {
             }
         }
 
+        // Export log
+        SettingsCard("Export") {
+            Button(
+                onClick = { viewModel.exportLog() },
+                colors = ButtonDefaults.buttonColors(containerColor = CatBlue),
+                shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.Default.FileDownload, null, tint = Black)
+                Spacer(Modifier.width(6.dp))
+                Text("Export Blocked Log as CSV", color = Black, fontWeight = FontWeight.Bold)
+            }
+            Text("Export all blocked calls/SMS as a CSV file for analysis.", style = MaterialTheme.typography.labelSmall, color = CatOverlay)
+        }
+
         // Backup/restore
         SettingsCard("Backup & Restore") {
             val restoreLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
@@ -197,7 +211,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text("About", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 Spacer(Modifier.height(8.dp))
-                Text("CallShield v2.2.0", color = CatSubtext)
+                Text("CallShield v2.5.0", color = CatSubtext)
                 Spacer(Modifier.height(4.dp))
                 Text("Open-source spam blocker with 11-layer detection, area code lookup, recent calls, daily digest, backup/restore, caller ID overlay, wildcard rules, quiet hours, community reporting. No API keys, no tracking.", style = MaterialTheme.typography.bodySmall, color = CatOverlay)
             }

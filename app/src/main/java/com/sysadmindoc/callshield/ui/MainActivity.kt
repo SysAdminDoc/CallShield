@@ -27,6 +27,7 @@ import com.sysadmindoc.callshield.ui.screens.main.BlockedLogScreen
 import com.sysadmindoc.callshield.ui.screens.main.BlocklistScreen
 import com.sysadmindoc.callshield.ui.screens.main.DashboardScreen
 import com.sysadmindoc.callshield.ui.screens.onboarding.OnboardingScreen
+import com.sysadmindoc.callshield.ui.screens.lookup.LookupScreen
 import com.sysadmindoc.callshield.ui.screens.recent.RecentCallsScreen
 import com.sysadmindoc.callshield.ui.screens.settings.SettingsScreen
 import com.sysadmindoc.callshield.ui.screens.stats.StatsScreen
@@ -141,9 +142,9 @@ fun CallShieldApp(viewModel: MainViewModel) {
                 NavItem(selectedTab == 0, { selectedTab = 0 }, Icons.Default.Shield, "Home", CatGreen)
                 NavItem(selectedTab == 1, { selectedTab = 1 }, Icons.Default.Phone, "Recent", CatBlue)
                 NavItem(selectedTab == 2, { selectedTab = 2 }, Icons.Default.History, "Log", CatPeach)
-                NavItem(selectedTab == 3, { selectedTab = 3 }, Icons.Default.Block, "Blocklist", CatRed)
-                NavItem(selectedTab == 4, { selectedTab = 4 }, Icons.Default.BarChart, "Stats", CatYellow)
-                NavItem(selectedTab == 5, { selectedTab = 5 }, Icons.Default.Settings, "Settings", CatMauve)
+                NavItem(selectedTab == 3, { selectedTab = 3 }, Icons.Default.Search, "Lookup", CatYellow)
+                NavItem(selectedTab == 4, { selectedTab = 4 }, Icons.Default.Block, "Blocklist", CatRed)
+                NavItem(selectedTab == 5, { selectedTab = 5 }, Icons.Default.Settings, "More", CatMauve)
             }
         },
         containerColor = Black
@@ -160,8 +161,8 @@ fun CallShieldApp(viewModel: MainViewModel) {
                         0 -> DashboardScreen(viewModel)
                         1 -> RecentCallsScreen(viewModel)
                         2 -> BlockedLogScreen(viewModel)
-                        3 -> BlocklistScreen(viewModel)
-                        4 -> StatsScreen(viewModel)
+                        3 -> LookupScreen()
+                        4 -> BlocklistScreen(viewModel)
                         5 -> SettingsScreen(viewModel)
                     }
                 }

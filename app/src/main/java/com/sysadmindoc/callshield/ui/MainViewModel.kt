@@ -6,6 +6,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.sysadmindoc.callshield.data.BackupRestore
 import com.sysadmindoc.callshield.data.BlocklistExporter
+import com.sysadmindoc.callshield.data.LogExporter
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.model.BlockedCall
 import com.sysadmindoc.callshield.data.model.SpamNumber
@@ -199,6 +200,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun setFreqEscalation(v: Boolean) = viewModelScope.launch { repo.setFreqEscalation(v) }
     fun setAutoCleanup(v: Boolean) = viewModelScope.launch { repo.setAutoCleanup(v) }
     fun setCleanupDays(d: Int) = viewModelScope.launch { repo.setCleanupDays(d) }
+
+    // Log export
+    fun exportLog() {
+        val calls = blockedCalls.value
+        if (calls.isNotEmpty()) LogExporter.exportAsCsv(getApplication(), calls)
+    }
 }
 
 sealed class SyncState {
