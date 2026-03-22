@@ -221,7 +221,97 @@
     {
       "prefix": "+1900",
       "type": "premium",
-      "description": "Premium rate numbers - often scam"
+      "description": "US premium rate numbers"
+    },
+    {
+      "prefix": "+1976",
+      "type": "premium",
+      "description": "US legacy premium rate numbers"
+    },
+    {
+      "prefix": "+232",
+      "type": "wangiri",
+      "description": "Sierra Leone - wangiri/callback scam hotspot"
+    },
+    {
+      "prefix": "+252",
+      "type": "wangiri",
+      "description": "Somalia - wangiri/callback scam hotspot"
+    },
+    {
+      "prefix": "+222",
+      "type": "wangiri",
+      "description": "Mauritania - wangiri/callback scam hotspot"
+    },
+    {
+      "prefix": "+375",
+      "type": "wangiri",
+      "description": "Belarus - wangiri/callback scam hotspot"
+    },
+    {
+      "prefix": "+876",
+      "type": "scam",
+      "description": "Jamaica - heavily abused for lottery/romance scams"
+    },
+    {
+      "prefix": "+809",
+      "type": "wangiri",
+      "description": "Dominican Republic - wangiri/callback scam hotspot"
+    },
+    {
+      "prefix": "+829",
+      "type": "wangiri",
+      "description": "Dominican Republic - wangiri/callback scam hotspot"
+    },
+    {
+      "prefix": "+849",
+      "type": "wangiri",
+      "description": "Dominican Republic - wangiri/callback scam hotspot"
+    },
+    {
+      "prefix": "+284",
+      "type": "wangiri",
+      "description": "British Virgin Islands - premium rate scam"
+    },
+    {
+      "prefix": "+649",
+      "type": "wangiri",
+      "description": "Turks and Caicos - premium rate scam"
+    },
+    {
+      "prefix": "+473",
+      "type": "wangiri",
+      "description": "Grenada - wangiri/callback scam hotspot"
+    },
+    {
+      "prefix": "+268",
+      "type": "wangiri",
+      "description": "Antigua and Barbuda - premium rate scam"
+    },
+    {
+      "prefix": "+767",
+      "type": "wangiri",
+      "description": "Dominica - premium rate scam"
+    },
+    {
+      "prefix": "+263",
+      "type": "wangiri",
+      "description": "Zimbabwe - wangiri/callback scam hotspot"
+    },
+    {
+      "prefix": "+248",
+      "type": "wangiri",
+      "description": "Seychelles - wangiri/callback scam hotspot"
+    },
+    {
+      "prefix": "+381",
+      "type": "wangiri",
+      "description": "Serbia - wangiri/callback scam hotspot"
+    },
+    {
+      "prefix": "+371",
+      "type": "wangiri",
+      "description": "Latvia - wangiri/callback scam hotspot"
     }
   ]
 }

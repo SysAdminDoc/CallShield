@@ -150,8 +150,10 @@ fun BlockedCallItem(
                     color = CatSubtext
                 )
                 if (call.matchReason.isNotEmpty()) {
+                    val reasonText = call.matchReason.replace("_", " ").replaceFirstChar { it.uppercase() }
+                    val confidenceText = if (call.confidence < 100) " (${call.confidence}%)" else ""
                     Text(
-                        text = call.matchReason.replace("_", " ").replaceFirstChar { it.uppercase() },
+                        text = "$reasonText$confidenceText",
                         style = MaterialTheme.typography.labelSmall,
                         color = CatPeach
                     )

@@ -2,7 +2,6 @@ package com.sysadmindoc.callshield.ui.screens.settings
 
 import android.app.role.RoleManager
 import android.content.Context
-import android.content.Intent
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -30,6 +29,10 @@ fun SettingsScreen(viewModel: MainViewModel) {
     val blockUnknown by viewModel.blockUnknownEnabled.collectAsState()
     val stirShaken by viewModel.stirShakenEnabled.collectAsState()
     val neighborSpoof by viewModel.neighborSpoofEnabled.collectAsState()
+    val heuristics by viewModel.heuristicsEnabled.collectAsState()
+    val smsContent by viewModel.smsContentEnabled.collectAsState()
+    val contactWhitelist by viewModel.contactWhitelistEnabled.collectAsState()
+    val aggressiveMode by viewModel.aggressiveModeEnabled.collectAsState()
 
     val roleManager = remember {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -84,71 +87,88 @@ fun SettingsScreen(viewModel: MainViewModel) {
         }
 
         // Blocking settings
-        Card(
-            colors = CardDefaults.cardColors(containerColor = SurfaceVariant),
-            shape = RoundedCornerShape(16.dp)
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text(
-                    "Blocking",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Spacer(Modifier.height(8.dp))
-                SettingsToggle(
-                    title = "Block Spam Calls",
-                    subtitle = "Reject calls from known spam numbers",
-                    icon = Icons.Default.PhoneDisabled,
-                    checked = blockCalls,
-                    onCheckedChange = { viewModel.setBlockCalls(it) }
-                )
-                HorizontalDivider(color = CatOverlay.copy(alpha = 0.2f))
-                SettingsToggle(
-                    title = "Block Spam SMS",
-                    subtitle = "Filter text messages from spam numbers",
-                    icon = Icons.Default.SmsOff,
-                    checked = blockSms,
-                    onCheckedChange = { viewModel.setBlockSms(it) }
-                )
-                HorizontalDivider(color = CatOverlay.copy(alpha = 0.2f))
-                SettingsToggle(
-                    title = "Block Unknown Numbers",
-                    subtitle = "Reject calls with hidden/no caller ID",
-                    icon = Icons.Default.QuestionMark,
-                    checked = blockUnknown,
-                    onCheckedChange = { viewModel.setBlockUnknown(it) }
-                )
-            }
+        SettingsCard("Blocking") {
+            SettingsToggle(
+                title = "Block Spam Calls",
+                subtitle = "Reject calls from known spam numbers",
+                icon = Icons.Default.PhoneDisabled,
+                checked = blockCalls,
+                onCheckedChange = { viewModel.setBlockCalls(it) }
+            )
+            HorizontalDivider(color = CatOverlay.copy(alpha = 0.2f))
+            SettingsToggle(
+                title = "Block Spam SMS",
+                subtitle = "Filter text messages from spam numbers and content",
+                icon = Icons.Default.SmsOff,
+                checked = blockSms,
+                onCheckedChange = { viewModel.setBlockSms(it) }
+            )
+            HorizontalDivider(color = CatOverlay.copy(alpha = 0.2f))
+            SettingsToggle(
+                title = "Block Unknown Numbers",
+                subtitle = "Reject calls with hidden/no caller ID",
+                icon = Icons.Default.QuestionMark,
+                checked = blockUnknown,
+                onCheckedChange = { viewModel.setBlockUnknown(it) }
+            )
         }
 
-        // Detection settings
-        Card(
-            colors = CardDefaults.cardColors(containerColor = SurfaceVariant),
-            shape = RoundedCornerShape(16.dp)
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text(
-                    "Detection",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Spacer(Modifier.height(8.dp))
-                SettingsToggle(
-                    title = "STIR/SHAKEN Verification",
-                    subtitle = "Block calls that fail carrier caller ID verification (Android 11+)",
-                    icon = Icons.Default.VerifiedUser,
-                    checked = stirShaken,
-                    onCheckedChange = { viewModel.setStirShaken(it) }
-                )
-                HorizontalDivider(color = CatOverlay.copy(alpha = 0.2f))
-                SettingsToggle(
-                    title = "Neighbor Spoofing Detection",
-                    subtitle = "Flag calls from numbers similar to yours",
-                    icon = Icons.Default.Nearby,
-                    checked = neighborSpoof,
-                    onCheckedChange = { viewModel.setNeighborSpoof(it) }
-                )
-            }
+        // Safety
+        SettingsCard("Safety") {
+            SettingsToggle(
+                title = "Contact Whitelist",
+                subtitle = "Never block numbers in your contacts",
+                icon = Icons.Default.Contacts,
+                checked = contactWhitelist,
+                onCheckedChange = { viewModel.setContactWhitelist(it) }
+            )
+        }
+
+        // Detection engines
+        SettingsCard("Detection Engines") {
+            SettingsToggle(
+                title = "STIR/SHAKEN Verification",
+                subtitle = "Block calls that fail carrier caller ID authentication (Android 11+)",
+                icon = Icons.Default.VerifiedUser,
+                checked = stirShaken,
+                onCheckedChange = { viewModel.setStirShaken(it) }
+            )
+            HorizontalDivider(color = CatOverlay.copy(alpha = 0.2f))
+            SettingsToggle(
+                title = "Neighbor Spoofing Detection",
+                subtitle = "Flag calls from numbers matching your area code + exchange",
+                icon = Icons.Default.Nearby,
+                checked = neighborSpoof,
+                onCheckedChange = { viewModel.setNeighborSpoof(it) }
+            )
+            HorizontalDivider(color = CatOverlay.copy(alpha = 0.2f))
+            SettingsToggle(
+                title = "Heuristic Analysis",
+                subtitle = "On-device detection: VoIP ranges, premium rate, wangiri, rapid-fire patterns",
+                icon = Icons.Default.Psychology,
+                checked = heuristics,
+                onCheckedChange = { viewModel.setHeuristics(it) }
+            )
+            HorizontalDivider(color = CatOverlay.copy(alpha = 0.2f))
+            SettingsToggle(
+                title = "SMS Content Analysis",
+                subtitle = "Scan message text for spam keywords, phishing links, scam patterns",
+                icon = Icons.Default.TextSnippet,
+                checked = smsContent,
+                onCheckedChange = { viewModel.setSmsContent(it) }
+            )
+        }
+
+        // Aggressive mode
+        SettingsCard("Power Mode") {
+            SettingsToggle(
+                title = "Aggressive Blocking",
+                subtitle = "Lower detection thresholds. Blocks more spam but may have false positives. Contacts are always safe.",
+                icon = Icons.Default.Security,
+                checked = aggressiveMode,
+                onCheckedChange = { viewModel.setAggressiveMode(it) },
+                tintColor = CatRed
+            )
         }
 
         // About
@@ -163,14 +183,33 @@ fun SettingsScreen(viewModel: MainViewModel) {
                     fontWeight = FontWeight.SemiBold
                 )
                 Spacer(Modifier.height(8.dp))
-                Text("CallShield v1.0.0", color = CatSubtext)
+                Text("CallShield v1.1.0", color = CatSubtext)
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    "Open-source spam call & text blocker. Database hosted on GitHub, synced to your device.",
+                    "Open-source spam call & text blocker with 8-layer detection. " +
+                    "Database hosted on GitHub, heuristics run on-device. No API keys, no tracking.",
                     style = MaterialTheme.typography.bodySmall,
                     color = CatOverlay
                 )
             }
+        }
+    }
+}
+
+@Composable
+fun SettingsCard(title: String, content: @Composable ColumnScope.() -> Unit) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = SurfaceVariant),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+            Spacer(Modifier.height(8.dp))
+            content()
         }
     }
 }
@@ -181,7 +220,8 @@ fun SettingsToggle(
     subtitle: String,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
+    onCheckedChange: (Boolean) -> Unit,
+    tintColor: androidx.compose.ui.graphics.Color = CatSubtext
 ) {
     Row(
         modifier = Modifier
@@ -189,7 +229,7 @@ fun SettingsToggle(
             .padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(icon, null, tint = CatSubtext, modifier = Modifier.size(24.dp))
+        Icon(icon, null, tint = tintColor, modifier = Modifier.size(24.dp))
         Spacer(Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(title, style = MaterialTheme.typography.bodyLarge)

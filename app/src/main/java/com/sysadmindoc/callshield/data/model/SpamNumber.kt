@@ -45,7 +45,8 @@ data class BlockedCall(
     val wasBlocked: Boolean = true,
     val isCall: Boolean = true,
     val smsBody: String? = null,
-    val matchReason: String = ""
+    val matchReason: String = "",
+    val confidence: Int = 100
 )
 
 @JsonClass(generateAdapter = false)

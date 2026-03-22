@@ -26,6 +26,11 @@ fun DashboardScreen(viewModel: MainViewModel) {
     val syncState by viewModel.syncState.collectAsState()
     val blockCallsEnabled by viewModel.blockCallsEnabled.collectAsState()
     val blockSmsEnabled by viewModel.blockSmsEnabled.collectAsState()
+    val aggressiveMode by viewModel.aggressiveModeEnabled.collectAsState()
+    val heuristics by viewModel.heuristicsEnabled.collectAsState()
+    val smsContent by viewModel.smsContentEnabled.collectAsState()
+    val stirShaken by viewModel.stirShakenEnabled.collectAsState()
+    val neighborSpoof by viewModel.neighborSpoofEnabled.collectAsState()
 
     Column(
         modifier = Modifier
@@ -62,6 +67,12 @@ fun DashboardScreen(viewModel: MainViewModel) {
                     text = "$spamCount numbers in database",
                     style = MaterialTheme.typography.bodyMedium,
                     color = CatSubtext
+                )
+                val engineCount = listOf(true, stirShaken, heuristics, smsContent, neighborSpoof).count { it }
+                Text(
+                    text = "$engineCount detection engines active" + if (aggressiveMode) " | AGGRESSIVE" else "",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (aggressiveMode) CatRed else CatOverlay
                 )
             }
         }

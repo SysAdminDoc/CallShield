@@ -10,7 +10,7 @@ import com.sysadmindoc.callshield.data.model.SpamPrefix
 
 @Database(
     entities = [SpamNumber::class, SpamPrefix::class, BlockedCall::class],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

@@ -70,4 +70,8 @@ interface SpamDao {
 
     @Delete
     suspend fun deleteBlockedCall(call: BlockedCall)
+
+    // For rapid-fire detection — recent blocked numbers
+    @Query("SELECT * FROM call_log WHERE timestamp > :since ORDER BY timestamp DESC")
+    suspend fun getRecentBlockedNumbers(since: Long): List<BlockedCall>
 }

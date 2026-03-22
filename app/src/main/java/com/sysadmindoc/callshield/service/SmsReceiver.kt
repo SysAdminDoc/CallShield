@@ -25,16 +25,16 @@ class SmsReceiver : BroadcastReceiver() {
                 val sender = messages[0].originatingAddress ?: return@launch
                 val body = messages.joinToString("") { it.messageBody ?: "" }
 
-                val result = repo.isSpam(sender)
+                // Use enhanced SMS check (number + content analysis)
+                val result = repo.isSpamSms(sender, body)
                 if (result.isSpam) {
-                    // Log the blocked SMS
                     repo.logBlockedCall(
                         number = sender,
                         isCall = false,
                         smsBody = body,
-                        matchReason = result.matchSource
+                        matchReason = result.matchSource,
+                        confidence = result.confidence
                     )
-                    // Abort broadcast to prevent SMS from reaching inbox
                     abortBroadcast()
                 }
             } finally {

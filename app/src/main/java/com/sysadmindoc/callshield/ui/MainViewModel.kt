@@ -40,6 +40,14 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
     val neighborSpoofEnabled: StateFlow<Boolean> = repo.neighborSpoofEnabled
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+    val heuristicsEnabled: StateFlow<Boolean> = repo.heuristicsEnabled
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+    val smsContentEnabled: StateFlow<Boolean> = repo.smsContentEnabled
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+    val contactWhitelistEnabled: StateFlow<Boolean> = repo.contactWhitelistEnabled
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+    val aggressiveModeEnabled: StateFlow<Boolean> = repo.aggressiveModeEnabled
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
     private val _syncState = MutableStateFlow<SyncState>(SyncState.Idle)
     val syncState: StateFlow<SyncState> = _syncState
@@ -67,27 +75,19 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun blockNumber(number: String, type: String = "unknown", description: String = "") {
-        viewModelScope.launch {
-            repo.blockNumber(number, type, description)
-        }
+        viewModelScope.launch { repo.blockNumber(number, type, description) }
     }
 
     fun unblockNumber(number: SpamNumber) {
-        viewModelScope.launch {
-            repo.unblockNumber(number)
-        }
+        viewModelScope.launch { repo.unblockNumber(number) }
     }
 
     fun deleteLogEntry(call: BlockedCall) {
-        viewModelScope.launch {
-            repo.deleteBlockedCall(call)
-        }
+        viewModelScope.launch { repo.deleteBlockedCall(call) }
     }
 
     fun clearLog() {
-        viewModelScope.launch {
-            repo.clearCallLog()
-        }
+        viewModelScope.launch { repo.clearCallLog() }
     }
 
     fun setBlockCalls(enabled: Boolean) = viewModelScope.launch { repo.setBlockCalls(enabled) }
@@ -95,10 +95,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun setBlockUnknown(enabled: Boolean) = viewModelScope.launch { repo.setBlockUnknown(enabled) }
     fun setStirShaken(enabled: Boolean) = viewModelScope.launch { repo.setStirShaken(enabled) }
     fun setNeighborSpoof(enabled: Boolean) = viewModelScope.launch { repo.setNeighborSpoof(enabled) }
-
-    private fun getBlockedCountSince(since: Long): Flow<Int> = repo.getBlockedCalls().map { calls ->
-        calls.count { it.wasBlocked && it.timestamp > since }
-    }
+    fun setHeuristics(enabled: Boolean) = viewModelScope.launch { repo.setHeuristics(enabled) }
+    fun setSmsContent(enabled: Boolean) = viewModelScope.launch { repo.setSmsContent(enabled) }
+    fun setContactWhitelist(enabled: Boolean) = viewModelScope.launch { repo.setContactWhitelist(enabled) }
+    fun setAggressiveMode(enabled: Boolean) = viewModelScope.launch { repo.setAggressiveMode(enabled) }
 }
 
 sealed class SyncState {
