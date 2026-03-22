@@ -16,6 +16,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.sysadmindoc.callshield.data.PhoneFormatter
+import com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup
 import com.sysadmindoc.callshield.data.model.BlockedCall
 import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.theme.*
@@ -37,6 +38,8 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
     val firstSeen = numberCalls.minByOrNull { it.timestamp }?.timestamp
     val lastSeen = numberCalls.maxByOrNull { it.timestamp }?.timestamp
     val dateFormat = remember { SimpleDateFormat("MMM d, yyyy h:mm a", Locale.getDefault()) }
+    val location = remember(number) { AreaCodeLookup.lookup(number) }
+    val areaCode = remember(number) { AreaCodeLookup.getAreaCode(number) }
 
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
@@ -51,6 +54,21 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
             Column {
                 Text(PhoneFormatter.format(number), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
                 Text(PhoneFormatter.formatWithCountryCode(number), style = MaterialTheme.typography.bodySmall, color = CatSubtext)
+                if (location != null) {
+                    Text(location, style = MaterialTheme.typography.bodySmall, color = CatOverlay)
+                }
+            }
+        }
+
+        // Block area code quick action
+        if (areaCode != null) {
+            OutlinedButton(
+                onClick = { viewModel.addWildcardRule("+1$areaCode*", false, "Block area code $areaCode" + if (location != null) " ($location)" else "") },
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Icon(Icons.Default.FilterAlt, null, tint = CatYellow)
+                Spacer(Modifier.width(6.dp))
+                Text("Block all $areaCode numbers", color = CatYellow)
             }
         }
 

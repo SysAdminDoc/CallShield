@@ -136,14 +136,50 @@ fun SettingsScreen(viewModel: MainViewModel) {
             SettingsToggle("Aggressive Blocking", "Lower thresholds. More spam blocked, possible false positives. Contacts always safe.", Icons.Default.Security, aggressiveMode, tintColor = CatRed) { viewModel.setAggressiveMode(it) }
         }
 
+        // Backup/restore
+        SettingsCard("Backup & Restore") {
+            val restoreLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+                uri?.let { viewModel.restore(it) }
+            }
+            val restoreResult by viewModel.restoreResult.collectAsState()
+
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(
+                    onClick = { viewModel.backup() },
+                    colors = ButtonDefaults.buttonColors(containerColor = CatGreen),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(Icons.Default.Backup, null, tint = Black)
+                    Spacer(Modifier.width(6.dp))
+                    Text("Backup", color = Black, fontWeight = FontWeight.Bold)
+                }
+                OutlinedButton(
+                    onClick = { restoreLauncher.launch("application/json") },
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(Icons.Default.Restore, null, tint = CatBlue)
+                    Spacer(Modifier.width(6.dp))
+                    Text("Restore", color = CatBlue)
+                }
+            }
+            restoreResult?.let {
+                Spacer(Modifier.height(4.dp))
+                Text(it, style = MaterialTheme.typography.bodySmall, color = CatGreen)
+            }
+            Spacer(Modifier.height(4.dp))
+            Text("Includes blocklist, whitelist, wildcard rules.", style = MaterialTheme.typography.labelSmall, color = CatOverlay)
+        }
+
         // About
         Card(colors = CardDefaults.cardColors(containerColor = SurfaceVariant), shape = RoundedCornerShape(16.dp)) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text("About", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 Spacer(Modifier.height(8.dp))
-                Text("CallShield v2.0.0", color = CatSubtext)
+                Text("CallShield v2.2.0", color = CatSubtext)
                 Spacer(Modifier.height(4.dp))
-                Text("Open-source spam blocker with 11-layer detection, caller ID overlay, call log scanning, wildcard rules, quiet hours, and community reporting. No API keys, no tracking.", style = MaterialTheme.typography.bodySmall, color = CatOverlay)
+                Text("Open-source spam blocker with 11-layer detection, area code lookup, recent calls, daily digest, backup/restore, caller ID overlay, wildcard rules, quiet hours, community reporting. No API keys, no tracking.", style = MaterialTheme.typography.bodySmall, color = CatOverlay)
             }
         }
     }

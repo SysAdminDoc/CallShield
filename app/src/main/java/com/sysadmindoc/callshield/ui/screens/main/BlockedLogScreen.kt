@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.sysadmindoc.callshield.data.PhoneFormatter
+import com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup
 import com.sysadmindoc.callshield.data.model.BlockedCall
 import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.theme.*
@@ -86,6 +87,7 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
 @Composable
 fun BlockedCallItem(call: BlockedCall, onTap: () -> Unit, onDelete: () -> Unit, onBlock: () -> Unit) {
     val dateFormat = remember { SimpleDateFormat("MMM d, h:mm a", Locale.getDefault()) }
+    val location = remember(call.number) { AreaCodeLookup.lookup(call.number) }
 
     Card(
         colors = CardDefaults.cardColors(containerColor = SurfaceVariant),
@@ -102,7 +104,10 @@ fun BlockedCallItem(call: BlockedCall, onTap: () -> Unit, onDelete: () -> Unit, 
             Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(PhoneFormatter.format(call.number), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
-                Text(dateFormat.format(Date(call.timestamp)), style = MaterialTheme.typography.bodySmall, color = CatSubtext)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(dateFormat.format(Date(call.timestamp)), style = MaterialTheme.typography.bodySmall, color = CatSubtext)
+                    if (location != null) Text(location, style = MaterialTheme.typography.labelSmall, color = CatOverlay)
+                }
                 if (call.matchReason.isNotEmpty()) {
                     val reasonText = call.matchReason.replace("_", " ").replaceFirstChar { it.uppercase() }
                     val confidenceText = if (call.confidence < 100) " (${call.confidence}%)" else ""

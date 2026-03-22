@@ -1,6 +1,7 @@
 package com.sysadmindoc.callshield
 
 import android.app.Application
+import com.sysadmindoc.callshield.service.DigestWorker
 import com.sysadmindoc.callshield.service.NotificationHelper
 import com.sysadmindoc.callshield.service.SyncWorker
 
@@ -9,5 +10,6 @@ class CallShieldApp : Application() {
         super.onCreate()
         NotificationHelper.createChannels(this)
         SyncWorker.schedule(this)
+        DigestWorker.schedule(this)
     }
 }

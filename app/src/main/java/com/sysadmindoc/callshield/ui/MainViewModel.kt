@@ -4,6 +4,7 @@ import android.app.Application
 import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.sysadmindoc.callshield.data.BackupRestore
 import com.sysadmindoc.callshield.data.BlocklistExporter
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.model.BlockedCall
@@ -86,6 +87,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val _importResult = MutableStateFlow<String?>(null)
     val importResult: StateFlow<String?> = _importResult
 
+    private val _restoreResult = MutableStateFlow<String?>(null)
+    val restoreResult: StateFlow<String?> = _restoreResult
+
     init {
         viewModelScope.launch {
             _spamCount.value = repo.getSpamCount()
@@ -154,6 +158,15 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             val count = BlocklistExporter.importFromUri(getApplication(), uri)
             _importResult.value = "Imported $count numbers"
+        }
+    }
+
+    // Backup/restore
+    fun backup() { viewModelScope.launch { BackupRestore.shareBackup(getApplication()) } }
+    fun restore(uri: Uri) {
+        viewModelScope.launch {
+            val result = BackupRestore.restoreFromUri(getApplication(), uri)
+            _restoreResult.value = result.message
         }
     }
 

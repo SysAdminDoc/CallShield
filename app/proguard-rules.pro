@@ -17,6 +17,10 @@
 # BlocklistExporter data classes used by Moshi reflection
 -keep class com.sysadmindoc.callshield.data.BlocklistExporter$ExportData { *; }
 -keep class com.sysadmindoc.callshield.data.BlocklistExporter$ExportNumber { *; }
+-keep class com.sysadmindoc.callshield.data.BackupRestore$Backup { *; }
+-keep class com.sysadmindoc.callshield.data.BackupRestore$BackupNumber { *; }
+-keep class com.sysadmindoc.callshield.data.BackupRestore$BackupWhitelist { *; }
+-keep class com.sysadmindoc.callshield.data.BackupRestore$BackupWildcard { *; }
 
 # Keep services and receivers registered in manifest
 -keep class com.sysadmindoc.callshield.service.** { *; }
