@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "updated": "2026-03-22",
+  "description": "CallShield community spam number database",
+  "sources": ["ftc_complaints", "fcc_complaints", "community_reports"],
+  "numbers": [
+    {
+      "number": "+18005551234",
+      "type": "robocall",
+      "reports": 142,
+      "first_seen": "2025-01-15",
+      "last_seen": "2026-03-20",
+      "description": "Auto warranty scam"
+    },
+    {
+      "number": "+18005559876",
+      "type": "telemarketer",
+      "reports": 87,
+      "first_seen": "2025-06-01",
+      "last_seen": "2026-03-18",
+      "description": "Solar panel sales"
+    }
+  ],
+  "prefixes": [
+    {
+      "prefix": "+1900",
+      "type": "premium",
+      "description": "Premium rate numbers - often scam"
+    }
+  ]
+}
