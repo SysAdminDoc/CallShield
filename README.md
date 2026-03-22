@@ -14,15 +14,15 @@ Open-source spam call and text blocker for Android with an **11-layer detection 
 
 | # | Layer | Details |
 |---|-------|---------|
-| 1 | **Contact Whitelist** | Numbers in your contacts always pass through |
-| 2 | **User Blocklist** | Your personal block list with descriptions |
-| 3 | **Database Match** | Known spam from FTC/FCC complaints and community reports |
-| 4 | **Prefix Rules** | 19 rules — US premium rate, wangiri country codes |
-| 5 | **Wildcard/Regex** | Custom pattern rules like `+1832555*` or full regex |
-| 6 | **Quiet Hours** | Block all non-contact calls during set hours (e.g., 10 PM - 7 AM) |
-| 7 | **Frequency Auto-Block** | Numbers that call 3+ times get auto-blocked |
-| 8 | **STIR/SHAKEN** | Blocks calls failing carrier caller ID authentication (Android 11+) |
-| 9 | **Neighbor Spoofing** | Detects calls spoofing your area code + exchange |
+| 1 | **Manual Whitelist** | Always-allow list for specific numbers you trust |
+| 2 | **Contact Whitelist** | Numbers in your phone's contacts always pass through |
+| 3 | **User Blocklist** | Your personal block list with descriptions |
+| 4 | **Database Match** | Known spam from FTC/FCC complaints and community reports |
+| 5 | **Prefix Rules** | 19 rules — US premium rate, wangiri country codes |
+| 6 | **Wildcard/Regex** | Custom pattern rules like `+1832555*` or full regex |
+| 7 | **Quiet Hours** | Block all non-contact calls during set hours (e.g., 10 PM - 7 AM) |
+| 8 | **Frequency Auto-Block** | Numbers that call 3+ times get auto-blocked |
+| 9 | **STIR/SHAKEN** | Blocks calls failing carrier caller ID authentication (Android 11+) |
 | 10 | **Heuristic Engine** | VoIP spam ranges, international premium, rapid-fire, toll-free abuse |
 | 11 | **SMS Content Analysis** | 30+ regex patterns: phishing links, URL shorteners, scam keywords |
 
@@ -31,26 +31,38 @@ Open-source spam call and text blocker for Android with an **11-layer detection 
 ### Detection & Blocking
 - 11-layer detection engine with confidence scoring
 - Wildcard and regex blocking rules
+- Manual whitelist (always-allow specific numbers beyond contacts)
 - Time-based quiet hours (block unknowns during sleep)
-- Repeat caller auto-escalation
+- Repeat caller auto-escalation (3+ calls = auto-blocked)
 - Aggressive mode (lower thresholds, contacts always safe)
 - Block hidden/unknown caller ID
 
 ### Awareness
 - **Caller ID overlay** — warning banner for suspicious but not-blocked calls
 - **After-call spam rating** — "Was this spam?" notification for unknown callers
-- **Call log scanner** — scan existing call history for known spam
+- **Call log scanner** — scan your existing call history for known spam numbers
+- **Number detail screen** — tap any number for full history, timeline, and actions
 - **Notification quick actions** — Block forever / Report directly from notification
+
+### Statistics
+- **Weekly bar chart** — visualize spam trends over the last 7 days
+- **Type breakdown** — see which detection layers are catching the most spam
+- **Top offenders** — ranked list of the most persistent spam numbers
 
 ### Community
 - **Report to community** — one-tap opens pre-filled GitHub Issue
 - **Export/import blocklist** — share your blocklist as JSON with friends
 - **Home screen widget** — blocked count today + total
+- **Search** — find numbers across the entire spam database
 
-### Design
+### User Experience
+- First-launch onboarding wizard with call screener setup
+- Auto-sync on first launch
+- Phone number formatting — `(212) 555-1234` throughout the app
 - AMOLED black theme with Catppuccin Mocha accents
+- Staggered entrance animations and smooth tab transitions
+- 5-tab navigation: Dashboard, Log, Blocklist, Stats, Settings
 - Individual toggles for every detection engine
-- Blocked call/SMS log with match reasons and confidence %
 
 ## Requirements
 
@@ -74,10 +86,10 @@ Open-source spam call and text blocker for Android with an **11-layer detection 
 ## Building
 
 ```bash
-./gradlew assembleDebug
+./gradlew assembleRelease
 ```
 
-Requires JDK 17.
+Requires JDK 17+. Signed APK output at `app/build/outputs/apk/release/app-release.apk`.
 
 ## License
 
