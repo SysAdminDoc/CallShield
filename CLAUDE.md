@@ -15,7 +15,7 @@ Open-source Android spam call/text blocker. GitHub-hosted spam database, 11-laye
 - **Min SDK**: 29 (Android 10), **Target SDK**: 35
 
 ## Version
-v2.5.0
+v1.0.0
 
 ## 11 Detection Layers (in order)
 1. Manual whitelist (always-allow list)

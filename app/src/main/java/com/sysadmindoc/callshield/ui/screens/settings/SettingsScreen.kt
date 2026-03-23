@@ -206,14 +206,11 @@ fun SettingsScreen(viewModel: MainViewModel) {
             Text("Includes blocklist, whitelist, wildcard rules.", style = MaterialTheme.typography.labelSmall, color = CatOverlay)
         }
 
-        // About
+        // About — moved to More hub, keeping minimal reference
         Card(colors = CardDefaults.cardColors(containerColor = SurfaceVariant), shape = RoundedCornerShape(16.dp)) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text("About", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                Spacer(Modifier.height(8.dp))
-                Text("CallShield v2.5.0", color = CatSubtext)
-                Spacer(Modifier.height(4.dp))
-                Text("Open-source spam blocker with 11-layer detection, area code lookup, recent calls, daily digest, backup/restore, caller ID overlay, wildcard rules, quiet hours, community reporting. No API keys, no tracking.", style = MaterialTheme.typography.bodySmall, color = CatOverlay)
+                Text("CallShield v1.0.0", color = CatSubtext, style = MaterialTheme.typography.bodySmall)
+                Text("Open-source spam blocker. No API keys, no tracking.", style = MaterialTheme.typography.labelSmall, color = CatOverlay)
             }
         }
     }
