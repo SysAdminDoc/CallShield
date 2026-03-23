@@ -18,7 +18,7 @@ object CommunityContributor {
 
     // Set this to your deployed Cloudflare Worker URL
     // Users can also self-host the worker and change this URL
-    private const val WORKER_URL = "https://callshield-reports.workers.dev"
+    private const val WORKER_URL = "https://callshield-reports.snafumatthew.workers.dev"
 
     private val client = OkHttpClient.Builder()
         .connectTimeout(10, TimeUnit.SECONDS)
