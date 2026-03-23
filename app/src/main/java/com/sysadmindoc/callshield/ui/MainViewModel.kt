@@ -137,7 +137,15 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun scanCallLog() { viewModelScope.launch { _scanResult.value = CallLogScanner.scan(getApplication()) } }
-    fun scanSmsInbox() { viewModelScope.launch { _smsScanResult.value = SmsInboxScanner.scan(getApplication()) } }
+    fun scanSmsInbox() {
+        viewModelScope.launch {
+            try {
+                _smsScanResult.value = SmsInboxScanner.scan(getApplication())
+            } catch (_: Exception) {
+                _smsScanResult.value = SmsInboxScanner.ScanResult(0, 0, emptyList())
+            }
+        }
+    }
 
     // Search
     fun setSearchQuery(query: String) { _searchQuery.value = query }

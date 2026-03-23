@@ -25,7 +25,7 @@ class GitHubDataSource {
         const val DEFAULT_REPO_NAME = "CallShield"
         const val DATA_PATH = "data/spam_numbers.json"
 
-        fun buildRawUrl(owner: String, repo: String, branch: String = "main"): String {
+        fun buildRawUrl(owner: String, repo: String, branch: String = "master"): String {
             return "https://raw.githubusercontent.com/$owner/$repo/$branch/$DATA_PATH"
         }
     }
