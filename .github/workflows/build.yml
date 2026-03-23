@@ -42,7 +42,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  update-ftc:
+  update-database:
     runs-on: ubuntu-latest
     # Run weekly on Monday at 6am UTC
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
@@ -55,15 +55,15 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Update FTC Data
+      - name: Update from all sources (FTC + FCC + PhoneBlock)
         run: |
           pip install requests
-          python scripts/update_ftc.py
+          python scripts/import_all_sources.py --max 50000
 
       - name: Commit and Push
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add data/
-          git diff --staged --quiet || git commit -m "Update FTC spam data $(date +%Y-%m-%d)"
+          git diff --staged --quiet || git commit -m "Update spam database from all sources $(date +%Y-%m-%d)"
           git push

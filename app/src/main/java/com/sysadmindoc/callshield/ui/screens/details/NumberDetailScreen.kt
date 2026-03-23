@@ -24,7 +24,7 @@ import androidx.compose.ui.unit.dp
 import com.sysadmindoc.callshield.data.PhoneFormatter
 import com.sysadmindoc.callshield.data.SpamCheckResult
 import com.sysadmindoc.callshield.data.SpamRepository
-import com.sysadmindoc.callshield.data.remote.WebLookup
+import com.sysadmindoc.callshield.data.remote.ExternalLookup
 import com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup
 import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.screens.lookup.SpamScoreGauge
@@ -64,8 +64,8 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
         liveResult = withContext(Dispatchers.IO) { SpamRepository.getInstance(context).isSpam(number) }
     }
 
-    // Web lookup
-    var webResult by remember { mutableStateOf<WebLookup.LookupResult?>(null) }
+    // Multi-source lookup
+    var webResult by remember { mutableStateOf<ExternalLookup.MultiLookupResult?>(null) }
     var webLoading by remember { mutableStateOf(false) }
 
     Column(
@@ -192,7 +192,7 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
             }
         }
 
-        // Web lookup
+        // Multi-source online lookup
         Card(colors = CardDefaults.cardColors(containerColor = SurfaceVariant), shape = RoundedCornerShape(16.dp)) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -201,29 +201,45 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
                         TextButton(onClick = {
                             webLoading = true
                             kotlinx.coroutines.MainScope().launch {
-                                webResult = WebLookup.lookup(number)
+                                webResult = ExternalLookup.lookupAll(number)
                                 webLoading = false
                             }
-                        }) { Text("Check", color = CatBlue) }
+                        }) { Text("Check 3 Sources", color = CatBlue) }
                     }
                 }
                 if (webLoading) {
-                    CircularProgressIndicator(Modifier.size(20.dp).align(Alignment.CenterHorizontally), strokeWidth = 2.dp, color = CatBlue)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp, color = CatBlue)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Checking SkipCalls, PhoneBlock, WhoCalledMe...", style = MaterialTheme.typography.bodySmall, color = CatSubtext)
+                    }
                 }
                 webResult?.let { wr ->
-                    if (wr.spamReports > 0) {
-                        Text("${wr.spamReports} online reports", color = CatRed, fontWeight = FontWeight.SemiBold)
+                    if (wr.totalReports > 0) {
+                        Text("${wr.totalReports} reports across ${wr.sources.size} sources", color = CatRed, fontWeight = FontWeight.SemiBold)
                     } else {
-                        Text("No online reports found", color = CatGreen, style = MaterialTheme.typography.bodySmall)
+                        Text("Clean across all sources", color = CatGreen, style = MaterialTheme.typography.bodySmall)
+                    }
+                    Spacer(Modifier.height(4.dp))
+                    wr.sources.forEach { src ->
+                        Row(modifier = Modifier.padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                if (src.isSpam) Icons.Default.Warning else Icons.Default.CheckCircle,
+                                null, tint = if (src.isSpam) CatRed else CatGreen, modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text(src.source, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold, modifier = Modifier.width(90.dp))
+                            Text(
+                                if (src.reports > 0) "${src.reports} reports" else if (src.isSpam) "Flagged" else "Clean",
+                                style = MaterialTheme.typography.bodySmall, color = CatSubtext
+                            )
+                        }
                     }
                     if (wr.communityNotes.isNotEmpty()) {
                         Spacer(Modifier.height(4.dp))
-                        wr.communityNotes.forEach { note ->
-                            Text("\"$note\"", style = MaterialTheme.typography.bodySmall, color = CatSubtext, maxLines = 2)
+                        wr.communityNotes.take(3).forEach { note ->
+                            Text(note, style = MaterialTheme.typography.labelSmall, color = CatOverlay, maxLines = 1)
                         }
-                    }
-                    if (wr.source.isNotEmpty()) {
-                        Text("Source: ${wr.source}", style = MaterialTheme.typography.labelSmall, color = CatOverlay)
                     }
                 }
             }
