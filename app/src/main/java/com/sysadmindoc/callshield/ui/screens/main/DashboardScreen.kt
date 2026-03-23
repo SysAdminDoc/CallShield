@@ -91,7 +91,7 @@ fun DashboardScreen(viewModel: MainViewModel) {
                 )
                 Icon(
                     imageVector = if (shieldActive) Icons.Default.Shield else Icons.Default.ShieldMoon,
-                    contentDescription = null,
+                    contentDescription = if (shieldActive) "Protection active" else "Protection disabled",
                     tint = if (shieldActive) CatGreen else CatRed,
                     modifier = Modifier.size(64.dp).graphicsLayer { if (shieldActive) { scaleX = pulseScale; scaleY = pulseScale } }
                 )

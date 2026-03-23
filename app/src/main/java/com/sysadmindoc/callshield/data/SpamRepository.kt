@@ -269,12 +269,10 @@ class SpamRepository(private val context: Context) {
         try {
             val currentSha = dataStore.data.first()[KEY_LAST_SHA]
             val remoteResult = remote.checkForUpdate()
+            val newSha = remoteResult.getOrNull()
 
-            if (remoteResult.isSuccess) {
-                val remoteSha = remoteResult.getOrThrow()
-                if (remoteSha == currentSha) {
-                    return@withContext SyncResult(false, "Already up to date")
-                }
+            if (newSha != null && newSha == currentSha) {
+                return@withContext SyncResult(false, "Already up to date")
             }
 
             val result = remote.fetchSpamDatabase()
@@ -304,7 +302,7 @@ class SpamRepository(private val context: Context) {
             dataStore.edit {
                 it[KEY_LAST_SYNC] = System.currentTimeMillis()
                 it[KEY_DB_VERSION] = database.version
-                if (remoteResult.isSuccess) it[KEY_LAST_SHA] = remoteResult.getOrThrow()
+                if (newSha != null) it[KEY_LAST_SHA] = newSha
             }
 
             // Refresh widget after sync

@@ -1,5 +1,6 @@
 package com.sysadmindoc.callshield.ui.screens.details
 
+import androidx.activity.compose.BackHandler
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -37,6 +38,7 @@ import java.util.*
 
 @Composable
 fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> Unit) {
+    BackHandler { onBack() }
     val context = LocalContext.current
     val blockedCalls by viewModel.blockedCalls.collectAsState()
     val allSpam by viewModel.allSpamNumbers.collectAsState()

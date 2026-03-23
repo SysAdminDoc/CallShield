@@ -1,5 +1,6 @@
 package com.sysadmindoc.callshield.ui.screens.more
 
+import androidx.activity.compose.BackHandler
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.layout.*
@@ -23,6 +24,8 @@ import com.sysadmindoc.callshield.ui.theme.*
 @Composable
 fun MoreScreen(viewModel: MainViewModel) {
     var currentView by remember { mutableIntStateOf(0) }
+
+    if (currentView != 0) BackHandler { currentView = 0 }
 
     when (currentView) {
         1 -> { Column(Modifier.fillMaxSize()) { MoreTopBar("Statistics") { currentView = 0 }; StatsScreen(viewModel) } }
