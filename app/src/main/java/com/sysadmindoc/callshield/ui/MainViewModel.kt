@@ -5,6 +5,7 @@ import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.sysadmindoc.callshield.data.BackupRestore
+import com.sysadmindoc.callshield.data.BlockingProfiles
 import com.sysadmindoc.callshield.data.BlocklistExporter
 import com.sysadmindoc.callshield.data.LogExporter
 import com.sysadmindoc.callshield.data.SpamRepository
@@ -205,6 +206,16 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun setFreqEscalation(v: Boolean) = viewModelScope.launch { repo.setFreqEscalation(v) }
     fun setAutoCleanup(v: Boolean) = viewModelScope.launch { repo.setAutoCleanup(v) }
     fun setCleanupDays(d: Int) = viewModelScope.launch { repo.setCleanupDays(d) }
+
+    // Profiles
+    fun applyProfile(profile: BlockingProfiles.Profile) {
+        viewModelScope.launch { BlockingProfiles.apply(getApplication(), profile) }
+    }
+
+    // Share spam warning
+    fun shareAsSpam(number: String, reason: String = "") {
+        com.sysadmindoc.callshield.data.SpamSharer.share(getApplication(), number, reason)
+    }
 
     // Log export
     fun exportLog() {

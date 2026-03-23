@@ -205,15 +205,20 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
             }
         }
 
-        // Whitelist / call actions
+        // Whitelist / call / share actions
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedButton(onClick = { viewModel.addToWhitelist(number, "Whitelisted from detail") }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp)) {
-                Icon(Icons.Default.CheckCircle, null, tint = CatGreen); Spacer(Modifier.width(6.dp)); Text("Whitelist", color = CatGreen)
+                Icon(Icons.Default.CheckCircle, null, tint = CatGreen); Spacer(Modifier.width(4.dp)); Text("Whitelist", color = CatGreen, style = MaterialTheme.typography.labelSmall)
             }
             OutlinedButton(onClick = {
                 context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:$number")).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) })
             }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp)) {
-                Icon(Icons.Default.Phone, null, tint = CatBlue); Spacer(Modifier.width(6.dp)); Text("Call", color = CatBlue)
+                Icon(Icons.Default.Phone, null, tint = CatBlue); Spacer(Modifier.width(4.dp)); Text("Call", color = CatBlue, style = MaterialTheme.typography.labelSmall)
+            }
+            OutlinedButton(onClick = {
+                viewModel.shareAsSpam(number, dbEntry?.type ?: liveResult?.type ?: "")
+            }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp)) {
+                Icon(Icons.Default.Share, null, tint = CatYellow); Spacer(Modifier.width(4.dp)); Text("Share", color = CatYellow, style = MaterialTheme.typography.labelSmall)
             }
         }
     }

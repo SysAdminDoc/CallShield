@@ -47,8 +47,10 @@ class MainActivity : ComponentActivity() {
         val deepLinkNumber = intent?.data?.schemeSpecificPart?.takeIf {
             intent?.action == Intent.ACTION_VIEW && intent?.data?.scheme == "tel"
         }
+        // App shortcuts
+        val shortcutAction = intent?.action
 
-        setContent { CallShieldTheme { CallShieldRoot(deepLinkNumber = deepLinkNumber) } }
+        setContent { CallShieldTheme { CallShieldRoot(deepLinkNumber = deepLinkNumber, shortcutAction = shortcutAction) } }
     }
 
     private fun requestPermissions() {
@@ -70,13 +72,18 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun CallShieldRoot(viewModel: MainViewModel = viewModel(), deepLinkNumber: String? = null) {
+fun CallShieldRoot(viewModel: MainViewModel = viewModel(), deepLinkNumber: String? = null, shortcutAction: String? = null) {
     val onboardingDone by viewModel.onboardingDone.collectAsState()
     val selectedNumber by viewModel.selectedNumber.collectAsState()
 
-    // Handle deep link
-    LaunchedEffect(deepLinkNumber) {
+    // Handle deep link and shortcuts
+    var initialTab by remember { mutableIntStateOf(0) }
+    LaunchedEffect(deepLinkNumber, shortcutAction) {
         if (deepLinkNumber != null) viewModel.openNumberDetail(deepLinkNumber)
+        when (shortcutAction) {
+            "com.sysadmindoc.callshield.LOOKUP" -> initialTab = 3
+            "com.sysadmindoc.callshield.SCAN" -> { initialTab = 0; viewModel.scanCallLog() }
+        }
     }
 
     when {
@@ -86,14 +93,14 @@ fun CallShieldRoot(viewModel: MainViewModel = viewModel(), deepLinkNumber: Strin
             viewModel = viewModel,
             onBack = { viewModel.closeNumberDetail() }
         )
-        else -> CallShieldApp(viewModel)
+        else -> CallShieldApp(viewModel, initialTab)
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CallShieldApp(viewModel: MainViewModel) {
-    var selectedTab by remember { mutableIntStateOf(0) }
+fun CallShieldApp(viewModel: MainViewModel, startTab: Int = 0) {
+    var selectedTab by remember { mutableIntStateOf(startTab) }
     var showSearch by remember { mutableStateOf(false) }
     val searchQuery by viewModel.searchQuery.collectAsState()
     val searchResults by viewModel.searchResults.collectAsState()

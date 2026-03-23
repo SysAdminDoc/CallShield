@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="lookup"
+        android:enabled="true"
+        android:shortcutShortLabel="@string/shortcut_lookup"
+        android:shortcutLongLabel="@string/shortcut_lookup_long"
+        android:icon="@drawable/ic_launcher_foreground">
+        <intent
+            android:action="com.sysadmindoc.callshield.LOOKUP"
+            android:targetPackage="com.sysadmindoc.callshield"
+            android:targetClass="com.sysadmindoc.callshield.ui.MainActivity" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="scan"
+        android:enabled="true"
+        android:shortcutShortLabel="@string/shortcut_scan"
+        android:shortcutLongLabel="@string/shortcut_scan_long"
+        android:icon="@drawable/ic_launcher_foreground">
+        <intent
+            android:action="com.sysadmindoc.callshield.SCAN"
+            android:targetPackage="com.sysadmindoc.callshield"
+            android:targetClass="com.sysadmindoc.callshield.ui.MainActivity" />
+    </shortcut>
+</shortcuts>

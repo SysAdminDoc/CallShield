@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.sysadmindoc.callshield.data.BlockingProfiles
 import com.sysadmindoc.callshield.service.CallLogScanner
 import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.SyncState
@@ -101,6 +102,35 @@ fun DashboardScreen(viewModel: MainViewModel) {
                 Spacer(Modifier.height(8.dp))
                 QuickToggle(Icons.Default.Phone, "Block Calls", blockCallsEnabled) { viewModel.setBlockCalls(it) }
                 QuickToggle(Icons.Default.Sms, "Block SMS", blockSmsEnabled) { viewModel.setBlockSms(it) }
+            }
+        }
+
+        // Blocking profiles
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = SurfaceVariant),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text("Quick Profiles", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Spacer(Modifier.height(8.dp))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    BlockingProfiles.Profile.entries.forEach { profile ->
+                        val color = when (profile) {
+                            BlockingProfiles.Profile.WORK -> CatBlue
+                            BlockingProfiles.Profile.PERSONAL -> CatGreen
+                            BlockingProfiles.Profile.SLEEP -> CatMauve
+                            BlockingProfiles.Profile.MAX -> CatRed
+                            BlockingProfiles.Profile.OFF -> CatOverlay
+                        }
+                        AssistChip(
+                            onClick = { viewModel.applyProfile(profile) },
+                            label = { Text(profile.label, style = MaterialTheme.typography.labelSmall) },
+                            colors = AssistChipDefaults.assistChipColors(containerColor = color.copy(alpha = 0.15f), labelColor = color),
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
             }
         }
 

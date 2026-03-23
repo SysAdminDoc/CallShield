@@ -1,4 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">CallShield</string>
+    <string name="shortcut_lookup">Lookup</string>
+    <string name="shortcut_lookup_long">Check a number</string>
+    <string name="shortcut_scan">Scan</string>
+    <string name="shortcut_scan_long">Scan call log</string>
 </resources>
