@@ -85,6 +85,9 @@ class SpamRepository(private val context: Context) {
     suspend fun setOnboardingDone() = dataStore.edit { it[KEY_ONBOARDING_DONE] = true }
     suspend fun setAutoCleanup(enabled: Boolean) = dataStore.edit { it[KEY_AUTO_CLEANUP] = enabled }
     suspend fun setCleanupDays(days: Int) = dataStore.edit { it[KEY_CLEANUP_DAYS] = days }
+
+    // Last sync timestamp for freshness indicator
+    val lastSyncTimestamp: Flow<Long> = dataStore.data.map { it[KEY_LAST_SYNC] ?: 0L }
     suspend fun setBlockCalls(enabled: Boolean) = dataStore.edit { it[KEY_BLOCK_CALLS] = enabled }
     suspend fun setBlockSms(enabled: Boolean) = dataStore.edit { it[KEY_BLOCK_SMS] = enabled }
     suspend fun setBlockUnknown(enabled: Boolean) = dataStore.edit { it[KEY_BLOCK_UNKNOWN] = enabled }

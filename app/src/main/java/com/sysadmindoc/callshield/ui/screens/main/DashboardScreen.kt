@@ -13,6 +13,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.sysadmindoc.callshield.data.BlockingProfiles
@@ -36,6 +37,7 @@ fun DashboardScreen(viewModel: MainViewModel) {
     val neighborSpoof by viewModel.neighborSpoofEnabled.collectAsState()
     val scanResult by viewModel.scanResult.collectAsState()
     val smsScanResult by viewModel.smsScanResult.collectAsState()
+    val lastSync by viewModel.lastSyncTimestamp.collectAsState()
 
     Column(
         modifier = Modifier
@@ -44,6 +46,31 @@ fun DashboardScreen(viewModel: MainViewModel) {
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        // Permission check banner
+        val context = LocalContext.current
+        val missingPerms = remember {
+            listOf(
+                android.Manifest.permission.READ_CALL_LOG,
+                android.Manifest.permission.READ_CONTACTS,
+                android.Manifest.permission.RECEIVE_SMS
+            ).filter {
+                androidx.core.content.ContextCompat.checkSelfPermission(context, it) != android.content.pm.PackageManager.PERMISSION_GRANTED
+            }
+        }
+        if (missingPerms.isNotEmpty()) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = CatRed.copy(alpha = 0.15f)),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Warning, null, tint = CatRed, modifier = Modifier.size(24.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("${missingPerms.size} permissions missing. Open Settings to grant.", color = CatRed, style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        }
+
         // Shield status card
         Card(
             modifier = Modifier.fillMaxWidth(),
@@ -82,6 +109,21 @@ fun DashboardScreen(viewModel: MainViewModel) {
                     style = MaterialTheme.typography.bodySmall,
                     color = if (aggressiveMode) CatRed else CatOverlay
                 )
+                // Sync freshness
+                if (lastSync > 0) {
+                    val ago = System.currentTimeMillis() - lastSync
+                    val freshText = when {
+                        ago < 3_600_000 -> "Synced just now"
+                        ago < 86_400_000 -> "Synced ${ago / 3_600_000}h ago"
+                        else -> "Synced ${ago / 86_400_000}d ago"
+                    }
+                    val freshColor = when {
+                        ago < 86_400_000 -> CatGreen
+                        ago < 172_800_000 -> CatYellow
+                        else -> CatRed
+                    }
+                    Text(freshText, style = MaterialTheme.typography.labelSmall, color = freshColor)
+                }
             }
         }
 

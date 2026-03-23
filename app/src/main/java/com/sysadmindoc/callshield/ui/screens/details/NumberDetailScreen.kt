@@ -23,12 +23,14 @@ import androidx.compose.ui.unit.dp
 import com.sysadmindoc.callshield.data.PhoneFormatter
 import com.sysadmindoc.callshield.data.SpamCheckResult
 import com.sysadmindoc.callshield.data.SpamRepository
+import com.sysadmindoc.callshield.data.remote.WebLookup
 import com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup
 import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.screens.lookup.SpamScoreGauge
 import com.sysadmindoc.callshield.ui.screens.lookup.detectionIcon
 import com.sysadmindoc.callshield.ui.theme.*
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.*
@@ -59,6 +61,10 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
     LaunchedEffect(number) {
         liveResult = withContext(Dispatchers.IO) { SpamRepository.getInstance(context).isSpam(number) }
     }
+
+    // Web lookup
+    var webResult by remember { mutableStateOf<WebLookup.LookupResult?>(null) }
+    var webLoading by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
@@ -179,6 +185,43 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
                         if (call.smsBody != null) {
                             Text(call.smsBody, style = MaterialTheme.typography.bodySmall, color = CatSubtext.copy(alpha = 0.7f), maxLines = 2, modifier = Modifier.padding(start = 24.dp))
                         }
+                    }
+                }
+            }
+        }
+
+        // Web lookup
+        Card(colors = CardDefaults.cardColors(containerColor = SurfaceVariant), shape = RoundedCornerShape(16.dp)) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Online Lookup", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                    if (webResult == null && !webLoading) {
+                        TextButton(onClick = {
+                            webLoading = true
+                            kotlinx.coroutines.MainScope().launch {
+                                webResult = WebLookup.lookup(number)
+                                webLoading = false
+                            }
+                        }) { Text("Check", color = CatBlue) }
+                    }
+                }
+                if (webLoading) {
+                    CircularProgressIndicator(Modifier.size(20.dp).align(Alignment.CenterHorizontally), strokeWidth = 2.dp, color = CatBlue)
+                }
+                webResult?.let { wr ->
+                    if (wr.spamReports > 0) {
+                        Text("${wr.spamReports} online reports", color = CatRed, fontWeight = FontWeight.SemiBold)
+                    } else {
+                        Text("No online reports found", color = CatGreen, style = MaterialTheme.typography.bodySmall)
+                    }
+                    if (wr.communityNotes.isNotEmpty()) {
+                        Spacer(Modifier.height(4.dp))
+                        wr.communityNotes.forEach { note ->
+                            Text("\"$note\"", style = MaterialTheme.typography.bodySmall, color = CatSubtext, maxLines = 2)
+                        }
+                    }
+                    if (wr.source.isNotEmpty()) {
+                        Text("Source: ${wr.source}", style = MaterialTheme.typography.labelSmall, color = CatOverlay)
                     }
                 }
             }
