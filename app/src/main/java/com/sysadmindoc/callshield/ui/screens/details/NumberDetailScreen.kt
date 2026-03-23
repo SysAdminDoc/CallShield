@@ -266,20 +266,31 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
             }
         }
 
-        // One-tap anonymous community contribution
+        // Community contribution buttons
         val contributeResult by viewModel.contributeResult.collectAsState()
-        Button(
-            onClick = { viewModel.contributeToDatabase(number, dbEntry?.type ?: liveResult?.type ?: "spam") },
-            modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(containerColor = CatGreen),
-            shape = RoundedCornerShape(12.dp)
-        ) {
-            Icon(Icons.Default.Favorite, null, tint = Black)
-            Spacer(Modifier.width(6.dp))
-            Text("Contribute to Community Database", color = Black, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium)
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(
+                onClick = { viewModel.contributeToDatabase(number, dbEntry?.type ?: liveResult?.type ?: "spam") },
+                modifier = Modifier.weight(1f),
+                colors = ButtonDefaults.buttonColors(containerColor = CatGreen),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Icon(Icons.Default.Favorite, null, tint = Black)
+                Spacer(Modifier.width(4.dp))
+                Text("Report Spam", color = Black, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelSmall)
+            }
+            OutlinedButton(
+                onClick = { viewModel.reportNotSpam(number) },
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Icon(Icons.Default.ThumbUp, null, tint = CatBlue)
+                Spacer(Modifier.width(4.dp))
+                Text("Not Spam", color = CatBlue, style = MaterialTheme.typography.labelSmall)
+            }
         }
         contributeResult?.let {
-            Text(it, style = MaterialTheme.typography.bodySmall, color = if ("success" in it.lowercase() || "contributed" in it.lowercase()) CatGreen else CatRed)
+            Text(it, style = MaterialTheme.typography.bodySmall, color = if ("not spam" in it.lowercase() || "contributed" in it.lowercase()) CatGreen else CatRed)
         }
 
         // FTC complaint

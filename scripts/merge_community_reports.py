@@ -58,7 +58,16 @@ def main():
             spam_type = report.get("type", "unknown")
             reported_at = report.get("reported_at", datetime.now().strftime("%Y-%m-%d"))[:10]
 
-            if number in existing:
+            # Handle false positive reports — subtract votes
+            if spam_type == "not_spam":
+                if number in existing:
+                    existing[number]["reports"] = max(0, existing[number]["reports"] - 1)
+                    # Remove from database if reports drop to 0
+                    if existing[number]["reports"] <= 0:
+                        del existing[number]
+                        print(f"  Removed {number} (false positive)")
+                updated += 1
+            elif number in existing:
                 existing[number]["reports"] += 1
                 if reported_at > existing[number].get("last_seen", ""):
                     existing[number]["last_seen"] = reported_at
