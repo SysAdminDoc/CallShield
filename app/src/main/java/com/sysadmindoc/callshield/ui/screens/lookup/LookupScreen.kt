@@ -43,6 +43,18 @@ import kotlinx.coroutines.withContext
 fun LookupScreen() {
     val context = LocalContext.current
     var numberInput by remember { mutableStateOf("") }
+
+    // Auto-paste from clipboard if it contains a phone number
+    LaunchedEffect(Unit) {
+        try {
+            val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+            val clip = clipboard.primaryClip?.getItemAt(0)?.text?.toString() ?: ""
+            val digits = clip.filter { it.isDigit() }
+            if (digits.length in 7..15 && numberInput.isEmpty()) {
+                numberInput = clip.trim()
+            }
+        } catch (_: Exception) {}
+    }
     var result by remember { mutableStateOf<SpamCheckResult?>(null) }
     var checking by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()

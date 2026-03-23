@@ -54,8 +54,19 @@ class CallShieldScreeningService : CallScreeningService() {
             if (result.isSpam) {
                 respondBlock(callDetails, number, result.matchSource, result.confidence)
             } else {
-                // Feature 4: Prompt spam rating for unblocked calls from non-contacts
                 if (!SpamHeuristics.isInContacts(applicationContext, number)) {
+                    // Show caller ID info overlay for unknown numbers
+                    val location = com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup.lookup(number)
+                    if (location != null) {
+                        try {
+                            val intent = android.content.Intent(applicationContext, CallerIdOverlayService::class.java).apply {
+                                putExtra("number", number)
+                                putExtra("confidence", 0)
+                                putExtra("reason", location)
+                            }
+                            applicationContext.startService(intent)
+                        } catch (_: Exception) {}
+                    }
                     repo.promptSpamRating(number)
                 }
                 respondAllow(callDetails)

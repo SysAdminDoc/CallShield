@@ -42,10 +42,11 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         requestPermissions()
 
-        // Deep link: tel: intent opens number detail
-        val deepLinkNumber = intent?.data?.schemeSpecificPart?.takeIf {
-            intent?.action == Intent.ACTION_VIEW && intent?.data?.scheme == "tel"
-        }
+        // Deep link: tel: intent or notification tap opens number detail
+        val deepLinkNumber = intent?.getStringExtra("open_number")
+            ?: intent?.data?.schemeSpecificPart?.takeIf {
+                intent?.action == Intent.ACTION_VIEW && intent?.data?.scheme == "tel"
+            }
         // App shortcuts
         val shortcutAction = intent?.action
 

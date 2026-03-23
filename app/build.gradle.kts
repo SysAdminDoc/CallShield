@@ -13,8 +13,8 @@ android {
         applicationId = "com.sysadmindoc.callshield"
         minSdk = 29
         targetSdk = 35
-        versionCode = 12
-        versionName = "2.9.0"
+        versionCode = 13
+        versionName = "3.0.0"
     }
 
     signingConfigs {

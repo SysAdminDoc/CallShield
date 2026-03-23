@@ -67,7 +67,12 @@ object NotificationHelper {
         val typeText = if (isCall) "call" else "SMS"
 
         val openIntent = PendingIntent.getActivity(
-            context, 0, Intent(context, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE
+            context, stableId(number, 40),
+            Intent(context, MainActivity::class.java).apply {
+                putExtra("open_number", number)
+                flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
+            },
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
         val blockIntent = PendingIntent.getBroadcast(

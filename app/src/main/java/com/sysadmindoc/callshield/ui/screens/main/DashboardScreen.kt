@@ -302,7 +302,38 @@ fun DashboardScreen(viewModel: MainViewModel) {
                 }
             }
         }
+
+        // Smart suggestions
+        val blockedCalls by viewModel.blockedCalls.collectAsState()
+        val topAreaCodes = remember(blockedCalls) {
+            blockedCalls.mapNotNull { com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup.getAreaCode(it.number) }
+                .groupBy { it }.mapValues { it.value.size }
+                .filter { it.value >= 5 }
+                .entries.sortedByDescending { it.value }.take(3)
+        }
+        if (topAreaCodes.isNotEmpty()) {
+            Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = CatYellow.copy(alpha = 0.08f)), shape = RoundedCornerShape(16.dp)) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Lightbulb, null, tint = CatYellow, modifier = Modifier.size(20.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("Smart Suggestions", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    topAreaCodes.forEach { (ac, count) ->
+                        val loc = com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup.lookup("+1$ac") ?: ac
+                        Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Text("$count spam from $ac ($loc)", style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+                            TextButton(onClick = { viewModel.addWildcardRule("+1$ac*", false, "Block $ac ($loc)") }) {
+                                Text("Block $ac", color = CatYellow, style = MaterialTheme.typography.labelSmall)
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
+
 }
 
 @Composable
