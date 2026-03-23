@@ -6,7 +6,7 @@
 
 <p align="center">
   <strong>Open-source spam call and text blocker for Android</strong><br>
-  11-layer detection engine | 32,933 spam numbers | No API keys | No tracking
+  11-layer detection engine | 32,933 spam numbers | Real-time multi-source lookup | No API keys
 </p>
 
 <p align="center">
@@ -19,124 +19,127 @@
 
 ---
 
-CallShield blocks spam calls and texts using an **11-layer on-device detection engine** powered by a community-maintained spam database hosted right here on GitHub. Everything runs locally on your phone — no accounts, no cloud processing, no data collection.
+CallShield blocks spam calls and texts using an **11-layer on-device detection engine** powered by a 32,933-number spam database and real-time lookups against 3 external sources. Community-maintained, GitHub-hosted, no accounts, no tracking.
 
 ## How It Works
 
-1. **GitHub-hosted database** — spam numbers and prefix rules stored in `data/spam_numbers.json`
-2. **App syncs locally** — fetches the database and caches it for instant offline lookups
-3. **11-layer detection** — every call and SMS passes through multiple detection engines in order
-4. **Contact safe** — numbers in your contacts are never blocked, regardless of other signals
-5. **Community-driven** — report spam numbers via GitHub Issues to protect everyone
+1. **32,933 confirmed spam numbers** — sourced from 1.75M FCC consumer complaints, filtered to 3+ independent reports each
+2. **11-layer detection** — every call and SMS checked against database, heuristics, STIR/SHAKEN, keyword rules, and more
+3. **Real-time overlay** — incoming calls trigger parallel lookups against SkipCalls, PhoneBlock, and WhoCalledMe with live-updating spam score
+4. **Callback-aware** — won't block callbacks from numbers you recently called, or urgent repeated callers
+5. **Community-driven** — one-tap anonymous contribution via Cloudflare Worker, daily merge into database
 
-## 11 Detection Layers
-
-Every incoming call and SMS is checked against these layers, in order. The first match wins.
+## Detection Layers
 
 | # | Layer | How It Works |
 |---|-------|-------------|
-| 1 | **Manual Whitelist** | Numbers you've explicitly marked as always-allow. Bypasses everything. |
-| 2 | **Contact Whitelist** | Numbers in your phone's contacts always pass through. Zero false positives for people you know. |
-| 3 | **User Blocklist** | Your personal block list — numbers you've manually blocked with descriptions. |
-| 4 | **Database Match** | Exact number lookup against FTC/FCC complaint data and community reports synced from this repo. |
-| 5 | **Prefix Rules** | 19 rules blocking entire number ranges — US premium rate (+1900), wangiri country codes (Sierra Leone, Somalia, Jamaica, Dominican Republic, Grenada, and more). |
-| 6 | **Wildcard / Regex** | Custom pattern rules you define. Block patterns like `+1832555*` or full regex like `^\+1832\d{7}$`. |
-| 7 | **Quiet Hours** | Block all non-contact calls during configurable hours (e.g., 10 PM - 7 AM). |
-| 8 | **Frequency Auto-Block** | Numbers that appear 3+ times in your blocked log get automatically blocked. |
-| 9 | **STIR/SHAKEN** | Blocks calls where the carrier's caller ID authentication fails — catches spoofed numbers. Android 11+ only. |
-| 10 | **Heuristic Engine** | On-device scoring: VoIP spam ranges, international premium rate, rapid-fire calling (3+ calls/hour), neighbor spoofing, toll-free abuse patterns. Returns a confidence score. |
-| 11 | **SMS Content Analysis** | 30+ regex patterns scanning message text for phishing links, URL shorteners (bit.ly, tinyurl), suspicious TLDs (.xyz, .top), urgency language, financial scam keywords, excessive caps. Plus your custom keyword rules. |
+| 1 | **Manual Whitelist** | Numbers you've explicitly marked as always-allow |
+| 2 | **Contact Whitelist** | Numbers in your phone's contacts always pass through |
+| 3 | **Callback Detection** | Numbers you recently called (24h) are allowed — they're callbacks, not spam |
+| 4 | **Repeated Urgent Caller** | If same number calls 2x in 5 minutes, allowed through — likely urgent |
+| 5 | **User Blocklist** | Your personal block list with descriptions |
+| 6 | **Database Match** | 32,933 confirmed spam numbers from FCC/FTC complaints and community reports |
+| 7 | **Prefix Rules** | 19 rules — US premium rate (+1900), wangiri country codes (Sierra Leone, Jamaica, etc.) |
+| 8 | **Wildcard / Regex** | Custom pattern rules like `+1832555*` or full regex |
+| 9 | **SMS Keyword Rules** | Block texts containing specific words you define |
+| 10 | **Quiet Hours** | Block all non-contact calls during configurable hours |
+| 11 | **Frequency Auto-Block** | Numbers that call 3+ times get automatically blocked |
+| 12 | **STIR/SHAKEN** | Blocks calls failing carrier caller ID authentication (Android 11+) |
+| 13 | **Heuristic Engine** | VoIP spam ranges, international premium, neighbor spoofing, rapid-fire, toll-free abuse |
+| 14 | **SMS Content Analysis** | 30+ regex patterns for phishing links, URL shorteners, scam keywords + custom keywords |
+
+## Live Caller ID Overlay
+
+When a call comes in, CallShield shows a real-time overlay that queries **3 spam databases simultaneously**:
+
+```
+┌──────────────────────────────────┐
+│ LIKELY SPAM                      │
+│ (212) 555-1234                   │
+│ New York, NY                     │
+│ Spam Score: 80% (17 reports)     │
+│ ⚠ SkipCalls: Flagged            │
+│ ⚠ PhoneBlock: 5 reports         │
+│ ⚠ WhoCalledMe: 12 reports       │
+│ All sources checked              │
+│ [Search Google] [Block] [Dismiss]│
+└──────────────────────────────────┘
+```
+
+- Shows instantly with area code, then updates live as each source responds
+- Color-coded: green (safe) → yellow → orange → red (spam)
+- **Search Google** opens browser with spam search
+- **Block** blocks the number AND reports it to the community database
 
 ## Features
 
 ### Number Lookup
-- **Instant spam check** — type or paste any number, get a verdict through all 11 layers
-- **Spam Score Gauge** — animated 0-100 arc widget with color coding (green/yellow/orange/red)
-- **Auto-paste clipboard** — opens with your clipboard number pre-filled
-- **Area code lookup** — 330+ US/CA area codes mapped to city and state
-- **Reverse web lookup** — scrapes public phone databases for community reports
-- **Haptic feedback** — distinct vibration for spam vs clean results
-- **Detection method icons** — unique icon per layer (database, heuristic, STIR/SHAKEN, keyword, etc.)
+- Instant spam check through all detection layers with animated spam score gauge (0-100)
+- Auto-paste from clipboard, area code lookup (330+ US/CA), haptic feedback
+- Multi-source reverse lookup: SkipCalls + PhoneBlock + WhoCalledMe queried in parallel
+- Per-source pass/fail indicators with report counts
 
-### Caller ID & Awareness
-- **Caller ID overlay** — shows area code/location for ALL incoming non-contact calls, spam warning for suspicious ones
-- **Google search button** — on the overlay, one-tap to search Google for the calling number
-- **After-call spam rating** — "Was this spam?" notification for unknown callers after each call
-- **Contact name resolution** — shows contact display name in number detail and recent calls
-- **Notification deep link** — tap a blocked notification to open the number's full detail screen
-
-### Recent Calls
-- Pulls from your phone's actual call log with call type icons (incoming, outgoing, missed, rejected)
-- Every number annotated with spam indicators, area code location, and contact name
-- Tap any entry to open the full number detail screen
-
-### Blocked Log
-- **Swipe-to-dismiss** — swipe left to delete, right to block permanently
-- **Log grouping** — toggle to collapse repeated numbers with count badges
-- **Long-press to copy** — copy any number to clipboard
-- **Filter chips** — filter by all, calls, or SMS with counts
-- **Area code location** on every entry
-- **Staggered entrance animations** — smooth reveal on scroll
+### Recent Calls & Blocked Log
+- Recent calls pulled from phone's call log with contact names, risk indicator dots (green/yellow/red), call type icons
+- Blocked log with swipe-to-dismiss, log grouping, long-press copy, filter chips
+- **Expandable action buttons** on every entry: Search Google, Check Databases, Copy, Detail
+- Staggered entrance animations
 
 ### Scanners
-- **Call log scanner** — scan your existing call history for known spam numbers
-- **SMS inbox scanner** — scan existing text messages against all detection layers including keyword rules
-- Results shown inline on dashboard with one-tap block buttons
+- Call log scanner + SMS inbox scanner — scan existing history for known spam
+- Results shown on dashboard with one-tap block buttons
 
 ### Rules Management (5 tabs)
-- **Blocklist** — manually blocked numbers with descriptions, export/import as JSON
-- **Wildcards** — glob patterns (`+1832555*`) or full regex with enable/disable toggle
-- **Keywords** — SMS keyword blocking rules with case-sensitivity option
-- **Whitelist** — always-allow numbers that bypass all 11 detection layers
-- **Database** — browse the full synced spam database
+- Blocklist, Wildcards, Keywords, Whitelist, Database
+- Export/import blocklists as JSON, enable/disable toggles per rule
 
 ### Statistics
-- **Weekly bar chart** — spam trends over the last 7 days with spring-animated bars
-- **Type breakdown** — which detection layers are catching the most spam, with progress bars
-- **Top offenders** — ranked list of the most persistent spam numbers
-- **Area code heatmap** — top 15 area codes by spam volume with city/state labels
+- Weekly bar chart, type breakdown, top offenders, area code heatmap, time-of-day heatmap
 
 ### Smart Features
-- **Smart suggestions** — detects area code patterns in your blocked calls. When 5+ spam calls share an area code, suggests blocking it with one tap
-- **Blocking profiles** — one-tap presets: Work (allow unknowns), Personal (block unknowns), Sleep (contacts only + quiet hours), Maximum (aggressive + everything), Off
-- **Frequency auto-escalation** — repeat callers automatically blocked after threshold
-- **Aggressive mode** — lowers heuristic thresholds. Contacts always safe regardless
-
-### Data & Backup
-- **Full backup/restore** — all blocklist, whitelist, and wildcard rules in one JSON file
-- **Export/import blocklist** — share blocklists with friends
-- **CSV log export** — export entire blocked log as CSV for analysis or evidence
-- **Auto-cleanup** — configurable log retention (7, 14, 30, or 90 days)
-- **Auto-sync** — database syncs from GitHub every 6 hours via WorkManager
-- **Daily digest notification** — 24-hour summary of blocked calls and texts
+- Smart suggestions — detects area code spam patterns, one-tap block entire area code
+- Blocking profiles: Work / Personal / Sleep / Maximum / Off
+- Callback detection + repeated urgent caller allow-through
+- FTC Do Not Call complaint filing (one-tap deep link)
 
 ### Community
-- **One-tap anonymous contribution** — tap "Report Spam" to anonymously submit a number to the community database. No account, no browser, one button. Powered by Cloudflare Workers.
-- **False positive reporting** — tap "Not Spam" to whitelist a number locally AND report the false positive to the community. Numbers with enough "Not Spam" reports get removed from the database.
-- **Live community endpoint** — [`callshield-reports.snafumatthew.workers.dev`](https://callshield-reports.snafumatthew.workers.dev)
-- **Share as spam** — share a number as a warning to any app (messages, social media, email)
-- **Home screen widget** — blocked count today + total, taps open the app
-- **Global search** — search across the spam database from the top app bar
-- **Deep link handling** — receive `tel:` intents to check any number
+- **One-tap anonymous contribution** — Report Spam or Not Spam buttons, powered by [Cloudflare Worker](https://callshield-reports.snafumatthew.workers.dev)
+- False positive reporting subtracts votes, numbers with 0 reports get removed
+- Share spam warnings to any app
+- GitHub Issues for detailed reports
 
-### System Integration
-- **Quick Settings tile** — toggle protection on/off from the notification shade
-- **App shortcuts** — long-press app icon for "Quick Lookup" and "Scan"
-- **Notification grouping** — blocked notifications grouped under a summary, rate-limited (max 1 per 5 seconds)
-- **Material You monochrome icon** — themed icon on Android 13+ launchers
-- **Notification quick actions** — "Block forever" and "Report" buttons directly in notifications
+### Data & System
+- Full backup/restore, CSV log export, auto-cleanup (7/14/30/90 days)
+- Auto-sync every 6 hours, daily digest notification
+- Quick Settings tile, app shortcuts, home screen widget
+- Notification grouping + rate limiting, deep link handling
+- Protection test validates all layers and permissions
+- Onboarding wizard, permission check banner, sync freshness indicator
 
-### User Experience
-- First-launch onboarding wizard with call screener setup
-- Permission check banner when critical permissions are missing
-- Phone number formatting — `(212) 555-1234` throughout the app
-- AMOLED black theme with Catppuccin Mocha accents
-- Animated dashboard — pulsing shield, counter rollup animations
-- Sync freshness indicator with color coding
-- 6-tab navigation: Home, Recent, Log, Lookup, Blocklist, More
-- More hub: Statistics, Settings, Protection Test, What's New, Quick Links, About
-- Protection test — validates all detection layers and permissions in one tap
-- Full changelog with version history
+## Data Sources
+
+### Database Seeding (32,933 numbers)
+| Source | Records | Method |
+|--------|---------|--------|
+| **FCC Consumer Complaints** | 1,753,601 processed → 32,933 with 3+ reports | Socrata API bulk download |
+| **FTC Do Not Call** | ~50/day | `api.ftc.gov` (DEMO_KEY) |
+| **Community Reports** | Growing | Anonymous via Cloudflare Worker |
+
+### Real-Time Lookup (per call)
+| Source | What It Returns | Auth |
+|--------|----------------|------|
+| **SkipCalls** | `is_spam: true/false`, 1M+ numbers | None |
+| **PhoneBlock.net** | Votes, rating (A-E), blacklist status | None |
+| **WhoCalledMe** | Report count, community notes | None (scrape) |
+
+## Privacy
+
+All detection runs on-device. No personal data is collected. Network requests:
+- Syncing spam database from GitHub (public)
+- Real-time lookups against free public APIs (user's number is queried, not stored by CallShield)
+- Community reports sent to Cloudflare Worker (phone number only, no user identity)
+
+No API keys. No accounts. No analytics. No ads.
 
 ## Requirements
 
@@ -144,35 +147,13 @@ Every incoming call and SMS is checked against these layers, in order. The first
 - STIR/SHAKEN requires Android 11+ (API 30)
 - Caller ID overlay requires "Display over other apps" permission
 
-## Report a Spam Number
-
-1. [Open an Issue](../../issues/new?template=spam_report.md) with the phone number
-2. Or submit a PR editing `data/spam_numbers.json` directly
-3. Or tap "Report" on any blocked notification or number detail screen in the app
-
-## Data Sources
-
-- **FTC Do Not Call Complaints** — auto-imported from FTC public API via `scripts/update_ftc.py`
-- **FCC Consumer Complaints** — aggregated via `scripts/import_blocklists.py`
-- **Prefix Rules** — 19 curated rules for premium rate and wangiri scam country codes
-- **Community Reports** — submitted via GitHub Issues and Pull Requests
-- **On-Device Heuristics** — VoIP ranges, spam patterns, SMS content analysis, custom keyword rules
-
-## Privacy
-
-CallShield does not collect, transmit, or store any personal data on external servers. All detection runs entirely on-device. The only network requests are:
-- Syncing the spam database from this GitHub repository (public, no auth)
-- Optional reverse phone lookup via public web sources (user-initiated only)
-
-No API keys. No accounts. No analytics. No ads.
-
 ## Building
 
 ```bash
 ./gradlew assembleRelease
 ```
 
-Requires JDK 17+. Signed APK output at `app/build/outputs/apk/release/app-release.apk`.
+Requires JDK 17+. Signed APK at `app/build/outputs/apk/release/app-release.apk`.
 
 ## Tech Stack
 
@@ -186,8 +167,10 @@ Requires JDK 17+. Signed APK output at `app/build/outputs/apk/release/app-releas
 | JSON | Moshi |
 | Settings | DataStore Preferences |
 | Background | WorkManager |
+| Community API | Cloudflare Workers |
 | Min SDK | 29 (Android 10) |
 | Target SDK | 35 |
+| Lines of Code | ~6,600 |
 
 ## License
 
