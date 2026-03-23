@@ -3,6 +3,11 @@ package com.sysadmindoc.callshield.ui.screens.recent
 import android.content.Context
 import android.provider.CallLog
 import androidx.compose.animation.*
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Intent
+import android.widget.Toast
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -104,48 +109,80 @@ fun RecentCallItem(call: RecentCall, onClick: () -> Unit) {
         else -> CatSubtext
     }
 
+    val context = LocalContext.current
+    var expanded by remember { mutableStateOf(false) }
+
     Card(
         colors = CardDefaults.cardColors(containerColor = if (call.isSpam) CatRed.copy(alpha = 0.08f) else SurfaceVariant),
         shape = RoundedCornerShape(12.dp),
-        modifier = Modifier.clickable(onClick = onClick)
+        modifier = Modifier.clickable { expanded = !expanded }
     ) {
-        Row(modifier = Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            // Risk indicator dot
-            val riskColor = when {
-                call.contactName != null -> CatGreen // Known contact
-                call.isSpam -> CatRed               // Known spam
-                else -> CatYellow                    // Unknown
-            }
-            Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(riskColor))
-            Spacer(Modifier.width(8.dp))
-            Icon(typeIcon, null, tint = typeColor, modifier = Modifier.size(24.dp))
-            Spacer(Modifier.width(8.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        if (call.contactName != null) {
-                            Text(call.contactName, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium, color = CatGreen)
+        Column {
+            Row(modifier = Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                val riskColor = when {
+                    call.contactName != null -> CatGreen
+                    call.isSpam -> CatRed
+                    else -> CatYellow
+                }
+                Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(riskColor))
+                Spacer(Modifier.width(8.dp))
+                Icon(typeIcon, null, tint = typeColor, modifier = Modifier.size(24.dp))
+                Spacer(Modifier.width(8.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            if (call.contactName != null) {
+                                Text(call.contactName, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium, color = CatGreen)
+                            }
+                            Text(PhoneFormatter.format(call.number), fontWeight = if (call.contactName == null) FontWeight.SemiBold else FontWeight.Normal, style = if (call.contactName == null) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.bodySmall)
                         }
-                        Text(PhoneFormatter.format(call.number), fontWeight = if (call.contactName == null) FontWeight.SemiBold else FontWeight.Normal, style = if (call.contactName == null) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.bodySmall)
+                        if (call.isSpam) {
+                            Icon(Icons.Default.Warning, null, tint = CatRed, modifier = Modifier.size(14.dp))
+                        }
                     }
-                    if (call.isSpam) {
-                        Icon(Icons.Default.Warning, null, tint = CatRed, modifier = Modifier.size(14.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(dateFormat.format(Date(call.date)), style = MaterialTheme.typography.bodySmall, color = CatSubtext)
+                        if (call.duration > 0) Text("${call.duration}s", style = MaterialTheme.typography.bodySmall, color = CatOverlay)
                     }
+                    if (location != null) Text(location, style = MaterialTheme.typography.labelSmall, color = CatOverlay)
+                    if (call.isSpam) Text(call.spamReason.replace("_", " "), style = MaterialTheme.typography.labelSmall, color = CatRed)
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(dateFormat.format(Date(call.date)), style = MaterialTheme.typography.bodySmall, color = CatSubtext)
-                    if (call.duration > 0) {
-                        Text("${call.duration}s", style = MaterialTheme.typography.bodySmall, color = CatOverlay)
+                Icon(if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore, "Expand", tint = CatOverlay, modifier = Modifier.size(20.dp))
+            }
+
+            AnimatedVisibility(visible = expanded) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, bottom = 10.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    val digits = call.number.filter { it.isDigit() }
+                    RecentActionButton(Icons.Default.Search, "Google", CatBlue) {
+                        context.startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://www.google.com/search?q=${android.net.Uri.encode("$digits phone number spam")}")).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) })
                     }
-                }
-                if (location != null) {
-                    Text(location, style = MaterialTheme.typography.labelSmall, color = CatOverlay)
-                }
-                if (call.isSpam) {
-                    Text(call.spamReason.replace("_", " "), style = MaterialTheme.typography.labelSmall, color = CatRed)
+                    RecentActionButton(Icons.Default.Storage, "Databases", CatGreen) { onClick() }
+                    RecentActionButton(Icons.Default.ContentCopy, "Copy", CatSubtext) {
+                        (context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as ClipboardManager)
+                            .setPrimaryClip(ClipData.newPlainText("Phone", call.number))
+                        Toast.makeText(context, "Copied", Toast.LENGTH_SHORT).show()
+                    }
+                    RecentActionButton(Icons.Default.Info, "Detail", CatMauve) { onClick() }
                 }
             }
         }
+    }
+}
+
+@Composable
+fun RecentActionButton(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, color: androidx.compose.ui.graphics.Color, onClick: () -> Unit) {
+    OutlinedButton(
+        onClick = onClick,
+        modifier = Modifier.height(32.dp),
+        shape = RoundedCornerShape(8.dp),
+        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+    ) {
+        Icon(icon, label, tint = color, modifier = Modifier.size(14.dp))
+        Spacer(Modifier.width(4.dp))
+        Text(label, color = color, style = MaterialTheme.typography.labelSmall)
     }
 }
 
