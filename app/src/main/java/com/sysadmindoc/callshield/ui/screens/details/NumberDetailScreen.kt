@@ -248,6 +248,20 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
             }
         }
 
+        // FTC complaint
+        OutlinedButton(
+            onClick = {
+                val ftcUrl = "https://www.donotcall.gov/report.html"
+                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(ftcUrl)).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) })
+            },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Icon(Icons.Default.Gavel, null, tint = CatSubtext)
+            Spacer(Modifier.width(6.dp))
+            Text("File FTC Do Not Call Complaint", color = CatSubtext, style = MaterialTheme.typography.labelSmall)
+        }
+
         // Whitelist / call / share actions
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedButton(onClick = { viewModel.addToWhitelist(number, "Whitelisted from detail") }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp)) {

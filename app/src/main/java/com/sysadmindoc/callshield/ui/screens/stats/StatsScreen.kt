@@ -168,6 +168,47 @@ fun StatsScreen(viewModel: MainViewModel) {
             }
         }
 
+        // Time-of-day heatmap (stolen from Nomorobo concept)
+        if (blockedCalls.size >= 5) {
+            val hourCounts = remember(blockedCalls) {
+                IntArray(24).also { hours ->
+                    blockedCalls.forEach { call ->
+                        val hour = java.util.Calendar.getInstance().apply { timeInMillis = call.timestamp }.get(java.util.Calendar.HOUR_OF_DAY)
+                        hours[hour]++
+                    }
+                }
+            }
+            val maxHour = hourCounts.max().coerceAtLeast(1)
+            Card(colors = CardDefaults.cardColors(containerColor = SurfaceVariant), shape = RoundedCornerShape(16.dp)) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text("Spam by Hour", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    Text("When spam calls concentrate", style = MaterialTheme.typography.labelSmall, color = CatOverlay)
+                    Spacer(Modifier.height(8.dp))
+                    Row(modifier = Modifier.fillMaxWidth().height(60.dp), horizontalArrangement = Arrangement.spacedBy(1.dp), verticalAlignment = Alignment.Bottom) {
+                        hourCounts.forEachIndexed { hour, count ->
+                            val fraction = count.toFloat() / maxHour
+                            val barColor = when {
+                                fraction > 0.7f -> CatRed
+                                fraction > 0.4f -> CatPeach
+                                fraction > 0f -> CatBlue.copy(alpha = 0.5f)
+                                else -> CatOverlay.copy(alpha = 0.1f)
+                            }
+                            Box(
+                                modifier = Modifier.weight(1f).fillMaxHeight(fraction.coerceAtLeast(0.02f)).clip(RoundedCornerShape(topStart = 2.dp, topEnd = 2.dp)).background(barColor)
+                            )
+                        }
+                    }
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("12a", style = MaterialTheme.typography.labelSmall, color = CatOverlay)
+                        Text("6a", style = MaterialTheme.typography.labelSmall, color = CatOverlay)
+                        Text("12p", style = MaterialTheme.typography.labelSmall, color = CatOverlay)
+                        Text("6p", style = MaterialTheme.typography.labelSmall, color = CatOverlay)
+                        Text("12a", style = MaterialTheme.typography.labelSmall, color = CatOverlay)
+                    }
+                }
+            }
+        }
+
         if (blockedCalls.isEmpty()) {
             Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {

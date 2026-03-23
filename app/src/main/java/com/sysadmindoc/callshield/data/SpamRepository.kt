@@ -116,6 +116,16 @@ class SpamRepository(private val context: Context) {
             return SpamCheckResult(false, matchSource = "contact_whitelist")
         }
 
+        // Dialed number recognition — don't block callbacks from numbers user recently called
+        if (CallbackDetector.wasRecentlyDialed(context, normalized)) {
+            return SpamCheckResult(false, matchSource = "recently_dialed")
+        }
+
+        // Repeated call allow-through — if same number calls 2x in 5 min, likely urgent
+        if (CallbackDetector.isRepeatedUrgentCall(context, normalized)) {
+            return SpamCheckResult(false, matchSource = "repeated_urgent")
+        }
+
         // User blocklist + database match (single query)
         val dbEntry = dao.findByNumber(normalized)
         if (dbEntry != null) {
