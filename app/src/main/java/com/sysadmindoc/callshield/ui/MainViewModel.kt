@@ -230,6 +230,15 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    fun reportNotSpam(number: String) {
+        viewModelScope.launch {
+            // Whitelist locally AND report as false positive to community
+            repo.addToWhitelist(number, "Reported as not spam")
+            val result = CommunityContributor.reportNotSpam(number)
+            _contributeResult.value = result.message
+        }
+    }
+
     // Share spam warning
     fun shareAsSpam(number: String, reason: String = "") {
         com.sysadmindoc.callshield.data.SpamSharer.share(getApplication(), number, reason)

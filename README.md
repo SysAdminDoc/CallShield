@@ -6,14 +6,15 @@
 
 <p align="center">
   <strong>Open-source spam call and text blocker for Android</strong><br>
-  11-layer detection engine | GitHub-hosted database | No API keys | No tracking
+  11-layer detection engine | 32,933 spam numbers | No API keys | No tracking
 </p>
 
 <p align="center">
   <a href="https://github.com/SysAdminDoc/CallShield/releases/latest"><img src="https://img.shields.io/github/v/release/SysAdminDoc/CallShield?style=flat-square&color=a6e3a1" alt="Release"></a>
+  <img src="https://img.shields.io/badge/Spam%20Numbers-32%2C933-f38ba8?style=flat-square" alt="32,933 Numbers">
   <img src="https://img.shields.io/badge/Android-10%2B-89b4fa?style=flat-square" alt="Android 10+">
   <img src="https://img.shields.io/badge/License-MIT-cba6f7?style=flat-square" alt="MIT License">
-  <img src="https://img.shields.io/badge/API%20Keys-None-f38ba8?style=flat-square" alt="No API Keys">
+  <img src="https://img.shields.io/badge/API%20Keys-None-fab387?style=flat-square" alt="No API Keys">
 </p>
 
 ---
@@ -110,7 +111,9 @@ Every incoming call and SMS is checked against these layers, in order. The first
 - **Daily digest notification** — 24-hour summary of blocked calls and texts
 
 ### Community
-- **Report to community** — one-tap from notifications or number detail opens pre-filled GitHub Issue
+- **One-tap anonymous contribution** — tap "Report Spam" to anonymously submit a number to the community database. No account, no browser, one button. Powered by Cloudflare Workers.
+- **False positive reporting** — tap "Not Spam" to whitelist a number locally AND report the false positive to the community. Numbers with enough "Not Spam" reports get removed from the database.
+- **Live community endpoint** — [`callshield-reports.snafumatthew.workers.dev`](https://callshield-reports.snafumatthew.workers.dev)
 - **Share as spam** — share a number as a warning to any app (messages, social media, email)
 - **Home screen widget** — blocked count today + total, taps open the app
 - **Global search** — search across the spam database from the top app bar

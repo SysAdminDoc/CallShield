@@ -3,6 +3,8 @@ package com.sysadmindoc.callshield.ui.screens.main
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.widget.Toast
 import androidx.compose.animation.*
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -172,12 +174,13 @@ fun BlockedCallItem(call: BlockedCall, onTap: () -> Unit) {
     val context = LocalContext.current
     val dateFormat = remember { SimpleDateFormat("MMM d, h:mm a", Locale.getDefault()) }
     val location = remember(call.number) { AreaCodeLookup.lookup(call.number) }
+    var expanded by remember { mutableStateOf(false) }
 
     Card(
         colors = CardDefaults.cardColors(containerColor = SurfaceVariant),
         shape = RoundedCornerShape(12.dp),
         modifier = Modifier.combinedClickable(
-            onClick = onTap,
+            onClick = { expanded = !expanded },
             onLongClick = {
                 val clip = ClipData.newPlainText("Phone Number", call.number)
                 (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(clip)
@@ -185,30 +188,75 @@ fun BlockedCallItem(call: BlockedCall, onTap: () -> Unit) {
             }
         )
     ) {
-        Row(modifier = Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                imageVector = if (call.isCall) Icons.Default.PhoneDisabled else Icons.Default.SpeakerNotesOff,
-                contentDescription = if (call.isCall) "Blocked call" else "Blocked SMS",
-                tint = if (call.isCall) CatRed else CatMauve,
-                modifier = Modifier.size(32.dp)
-            )
-            Spacer(Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(PhoneFormatter.format(call.number), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(dateFormat.format(Date(call.timestamp)), style = MaterialTheme.typography.bodySmall, color = CatSubtext)
-                    if (location != null) Text(location, style = MaterialTheme.typography.labelSmall, color = CatOverlay)
+        Column {
+            Row(modifier = Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = if (call.isCall) Icons.Default.PhoneDisabled else Icons.Default.SpeakerNotesOff,
+                    contentDescription = if (call.isCall) "Blocked call" else "Blocked SMS",
+                    tint = if (call.isCall) CatRed else CatMauve,
+                    modifier = Modifier.size(32.dp)
+                )
+                Spacer(Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(PhoneFormatter.format(call.number), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(dateFormat.format(Date(call.timestamp)), style = MaterialTheme.typography.bodySmall, color = CatSubtext)
+                        if (location != null) Text(location, style = MaterialTheme.typography.labelSmall, color = CatOverlay)
+                    }
+                    if (call.matchReason.isNotEmpty()) {
+                        val reasonText = call.matchReason.replace("_", " ").replaceFirstChar { it.uppercase() }
+                        val confidenceText = if (call.confidence < 100) " (${call.confidence}%)" else ""
+                        Text("$reasonText$confidenceText", style = MaterialTheme.typography.labelSmall, color = CatPeach)
+                    }
+                    if (call.smsBody != null) {
+                        Text(call.smsBody, style = MaterialTheme.typography.bodySmall, color = CatSubtext, maxLines = 2)
+                    }
                 }
-                if (call.matchReason.isNotEmpty()) {
-                    val reasonText = call.matchReason.replace("_", " ").replaceFirstChar { it.uppercase() }
-                    val confidenceText = if (call.confidence < 100) " (${call.confidence}%)" else ""
-                    Text("$reasonText$confidenceText", style = MaterialTheme.typography.labelSmall, color = CatPeach)
-                }
-                if (call.smsBody != null) {
-                    Text(call.smsBody, style = MaterialTheme.typography.bodySmall, color = CatSubtext, maxLines = 2)
+                Icon(
+                    if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                    "Expand", tint = CatOverlay, modifier = Modifier.size(20.dp)
+                )
+            }
+
+            // Expandable action buttons
+            AnimatedVisibility(visible = expanded) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, bottom = 10.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    val digits = call.number.filter { it.isDigit() }
+                    // Search Google
+                    SmallActionButton(Icons.Default.Search, "Google", CatBlue) {
+                        val url = "https://www.google.com/search?q=${Uri.encode("$digits phone number spam")}"
+                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) })
+                    }
+                    // Check databases (open number detail)
+                    SmallActionButton(Icons.Default.Storage, "Databases", CatGreen) { onTap() }
+                    // Copy
+                    SmallActionButton(Icons.Default.ContentCopy, "Copy", CatSubtext) {
+                        (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager)
+                            .setPrimaryClip(ClipData.newPlainText("Phone", call.number))
+                        Toast.makeText(context, "Copied", Toast.LENGTH_SHORT).show()
+                    }
+                    // Detail
+                    SmallActionButton(Icons.Default.Info, "Detail", CatMauve) { onTap() }
                 }
             }
         }
+    }
+}
+
+@Composable
+fun SmallActionButton(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, color: androidx.compose.ui.graphics.Color, onClick: () -> Unit) {
+    OutlinedButton(
+        onClick = onClick,
+        modifier = Modifier.height(32.dp),
+        shape = RoundedCornerShape(8.dp),
+        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+    ) {
+        Icon(icon, label, tint = color, modifier = Modifier.size(14.dp))
+        Spacer(Modifier.width(4.dp))
+        Text(label, color = color, style = MaterialTheme.typography.labelSmall)
     }
 }
 

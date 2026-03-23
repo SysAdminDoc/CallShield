@@ -10,14 +10,14 @@ import java.util.concurrent.TimeUnit
 
 /**
  * One-tap anonymous community contribution.
- * Sends blocked numbers to the CallShield Cloudflare Worker,
+ * Sends reports to the CallShield Cloudflare Worker,
  * which stores them in data/reports/ via GitHub API.
  * No user account or API key needed from the app side.
+ *
+ * Supports both spam reports AND false positive reports ("not_spam").
  */
 object CommunityContributor {
 
-    // Set this to your deployed Cloudflare Worker URL
-    // Users can also self-host the worker and change this URL
     private const val WORKER_URL = "https://callshield-reports.snafumatthew.workers.dev"
 
     private val client = OkHttpClient.Builder()
@@ -28,13 +28,23 @@ object CommunityContributor {
     data class ContributeResult(val success: Boolean, val message: String)
 
     /**
-     * Anonymously contribute a spam number to the community database.
-     * One button press — no account, no signup, no tracking.
+     * Report a number as spam.
      */
-    suspend fun contribute(number: String, type: String = "spam"): ContributeResult = withContext(Dispatchers.IO) {
+    suspend fun contribute(number: String, type: String = "spam"): ContributeResult {
+        return post(number, type)
+    }
+
+    /**
+     * Report a false positive — this number is NOT spam.
+     * The merge script will subtract votes from this number.
+     */
+    suspend fun reportNotSpam(number: String): ContributeResult {
+        return post(number, "not_spam")
+    }
+
+    private suspend fun post(number: String, type: String): ContributeResult = withContext(Dispatchers.IO) {
         try {
             val normalized = normalizeForReport(number) ?: return@withContext ContributeResult(false, "Invalid number")
-
             val json = """{"number":"$normalized","type":"$type"}"""
             val body = json.toRequestBody("application/json".toMediaType())
 
@@ -45,7 +55,8 @@ object CommunityContributor {
 
             val response = client.newCall(request).execute()
             if (response.isSuccessful) {
-                ContributeResult(true, "Contributed anonymously")
+                val msg = if (type == "not_spam") "Reported as not spam" else "Contributed anonymously"
+                ContributeResult(true, msg)
             } else {
                 ContributeResult(false, "Server error (${response.code})")
             }
@@ -56,12 +67,11 @@ object CommunityContributor {
 
     private fun normalizeForReport(number: String): String? {
         val digits = number.filter { it.isDigit() }
-        val normalized = when {
+        return when {
             digits.length == 10 -> "+1$digits"
             digits.length == 11 && digits.startsWith("1") -> "+$digits"
             digits.length in 7..15 -> "+$digits"
             else -> null
         }
-        return normalized
     }
 }
