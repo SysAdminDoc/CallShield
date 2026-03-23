@@ -266,6 +266,22 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
             }
         }
 
+        // One-tap anonymous community contribution
+        val contributeResult by viewModel.contributeResult.collectAsState()
+        Button(
+            onClick = { viewModel.contributeToDatabase(number, dbEntry?.type ?: liveResult?.type ?: "spam") },
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.buttonColors(containerColor = CatGreen),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Icon(Icons.Default.Favorite, null, tint = Black)
+            Spacer(Modifier.width(6.dp))
+            Text("Contribute to Community Database", color = Black, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium)
+        }
+        contributeResult?.let {
+            Text(it, style = MaterialTheme.typography.bodySmall, color = if ("success" in it.lowercase() || "contributed" in it.lowercase()) CatGreen else CatRed)
+        }
+
         // FTC complaint
         OutlinedButton(
             onClick = {

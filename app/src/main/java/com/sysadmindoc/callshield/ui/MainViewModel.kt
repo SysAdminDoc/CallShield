@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.sysadmindoc.callshield.data.BackupRestore
 import com.sysadmindoc.callshield.data.BlockingProfiles
 import com.sysadmindoc.callshield.data.BlocklistExporter
+import com.sysadmindoc.callshield.data.CommunityContributor
 import com.sysadmindoc.callshield.data.LogExporter
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.model.BlockedCall
@@ -216,6 +217,17 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     // Profiles
     fun applyProfile(profile: BlockingProfiles.Profile) {
         viewModelScope.launch { BlockingProfiles.apply(getApplication(), profile) }
+    }
+
+    // Anonymous community contribution
+    private val _contributeResult = MutableStateFlow<String?>(null)
+    val contributeResult: StateFlow<String?> = _contributeResult
+
+    fun contributeToDatabase(number: String, type: String = "spam") {
+        viewModelScope.launch {
+            val result = CommunityContributor.contribute(number, type)
+            _contributeResult.value = result.message
+        }
     }
 
     // Share spam warning
