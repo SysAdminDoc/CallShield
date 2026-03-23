@@ -51,7 +51,7 @@ fun DashboardScreen(viewModel: MainViewModel) {
             shape = RoundedCornerShape(20.dp)
         ) {
             Column(
-                modifier = Modifier.padding(24.dp),
+                modifier = Modifier.fillMaxWidth().padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 val shieldActive = blockCallsEnabled || blockSmsEnabled
@@ -114,22 +114,18 @@ fun DashboardScreen(viewModel: MainViewModel) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text("Quick Profiles", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 Spacer(Modifier.height(8.dp))
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    BlockingProfiles.Profile.entries.forEach { profile ->
-                        val color = when (profile) {
-                            BlockingProfiles.Profile.WORK -> CatBlue
-                            BlockingProfiles.Profile.PERSONAL -> CatGreen
-                            BlockingProfiles.Profile.SLEEP -> CatMauve
-                            BlockingProfiles.Profile.MAX -> CatRed
-                            BlockingProfiles.Profile.OFF -> CatOverlay
-                        }
-                        AssistChip(
-                            onClick = { viewModel.applyProfile(profile) },
-                            label = { Text(profile.label, style = MaterialTheme.typography.labelSmall) },
-                            colors = AssistChipDefaults.assistChipColors(containerColor = color.copy(alpha = 0.15f), labelColor = color),
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
+                // Row 1: Work, Personal, Sleep
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    ProfileChip(Modifier.weight(1f), "Work", CatBlue) { viewModel.applyProfile(BlockingProfiles.Profile.WORK) }
+                    ProfileChip(Modifier.weight(1f), "Personal", CatGreen) { viewModel.applyProfile(BlockingProfiles.Profile.PERSONAL) }
+                    ProfileChip(Modifier.weight(1f), "Sleep", CatMauve) { viewModel.applyProfile(BlockingProfiles.Profile.SLEEP) }
+                }
+                Spacer(Modifier.height(6.dp))
+                // Row 2: Maximum, Off
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    ProfileChip(Modifier.weight(1f), "Maximum", CatRed) { viewModel.applyProfile(BlockingProfiles.Profile.MAX) }
+                    ProfileChip(Modifier.weight(1f), "Off", CatOverlay) { viewModel.applyProfile(BlockingProfiles.Profile.OFF) }
+                    Spacer(Modifier.weight(1f))
                 }
             }
         }
@@ -271,6 +267,19 @@ fun QuickToggle(icon: androidx.compose.ui.graphics.vector.ImageVector, label: St
         Icon(icon, null, tint = CatSubtext, modifier = Modifier.size(20.dp))
         Text(label, modifier = Modifier.weight(1f))
         Switch(checked = checked, onCheckedChange = onChanged, colors = SwitchDefaults.colors(checkedTrackColor = CatGreen))
+    }
+}
+
+@Composable
+fun ProfileChip(modifier: Modifier, label: String, color: androidx.compose.ui.graphics.Color, onClick: () -> Unit) {
+    OutlinedButton(
+        onClick = onClick,
+        modifier = modifier.height(36.dp),
+        shape = RoundedCornerShape(10.dp),
+        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+        colors = ButtonDefaults.outlinedButtonColors(contentColor = color)
+    ) {
+        Text(label, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, maxLines = 1)
     }
 }
 

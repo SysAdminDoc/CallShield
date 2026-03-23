@@ -3,6 +3,8 @@ package com.sysadmindoc.callshield.service
 import android.content.Context
 import android.net.Uri
 import com.sysadmindoc.callshield.data.SpamRepository
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * Scans existing SMS inbox for spam messages.
@@ -23,7 +25,7 @@ object SmsInboxScanner {
         val type: String
     )
 
-    suspend fun scan(context: Context, limit: Int = 200): ScanResult {
+    suspend fun scan(context: Context, limit: Int = 200): ScanResult = withContext(Dispatchers.IO) {
         val repo = SpamRepository.getInstance(context)
         val spamList = mutableListOf<ScannedSms>()
         var scanned = 0
@@ -34,11 +36,13 @@ object SmsInboxScanner {
                 arrayOf("address", "body", "date"),
                 null, null, "date DESC"
             )
-            cursor?.use { c ->
+            if (cursor == null) return@withContext ScanResult(0, 0, emptyList())
+
+            cursor.use { c ->
                 val addrIdx = c.getColumnIndex("address")
                 val bodyIdx = c.getColumnIndex("body")
                 val dateIdx = c.getColumnIndex("date")
-                if (addrIdx < 0 || bodyIdx < 0) return@use
+                if (addrIdx < 0 || bodyIdx < 0) return@withContext ScanResult(0, 0, emptyList())
 
                 while (c.moveToNext() && scanned < limit) {
                     val address = c.getString(addrIdx) ?: continue
@@ -46,21 +50,29 @@ object SmsInboxScanner {
                     val date = if (dateIdx >= 0) c.getLong(dateIdx) else 0L
                     scanned++
 
-                    val result = repo.isSpamSms(address, body)
-                    if (result.isSpam) {
-                        spamList.add(ScannedSms(
-                            number = address,
-                            body = body.take(100),
-                            date = date,
-                            matchReason = result.matchSource,
-                            type = result.type
-                        ))
+                    try {
+                        val result = repo.isSpamSms(address, body)
+                        if (result.isSpam) {
+                            spamList.add(ScannedSms(
+                                number = address,
+                                body = body.take(100),
+                                date = date,
+                                matchReason = result.matchSource,
+                                type = result.type
+                            ))
+                        }
+                    } catch (_: Exception) {
+                        // Skip messages that fail to check
                     }
                 }
             }
-        } catch (_: SecurityException) {}
+        } catch (_: SecurityException) {
+            return@withContext ScanResult(0, 0, emptyList())
+        } catch (_: Exception) {
+            return@withContext ScanResult(scanned, spamList.size, spamList)
+        }
 
         spamList.sortByDescending { it.date }
-        return ScanResult(scanned, spamList.size, spamList)
+        ScanResult(scanned, spamList.size, spamList)
     }
 }

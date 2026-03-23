@@ -4,7 +4,18 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
+    <!-- Shield -->
     <path
         android:fillColor="#FFFFFFFF"
-        android:pathData="M54,20 L30,32 L30,52 C30,70 40,84 54,90 C68,84 78,70 78,52 L78,32 Z" />
+        android:pathData="M54,16 L26,30 L26,54 C26,76 38,90 54,96 C70,90 82,76 82,54 L82,30 Z" />
+    <!-- Phone cutout -->
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M46,42 L46,58 C46,59.1 46.9,60 48,60 L60,60 C61.1,60 62,59.1 62,58 L62,42 C62,40.9 61.1,40 60,40 L48,40 C46.9,40 46,40.9 46,42 Z M49,43 L59,43 L59,57 L49,57 Z" />
+    <!-- Block slash cutout -->
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M43,63 L45,61 L63,39 L65,37 L63,39 Z"
+        android:strokeColor="#FF000000"
+        android:strokeWidth="2.5" />
 </vector>
