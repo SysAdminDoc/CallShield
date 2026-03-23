@@ -34,6 +34,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         System.currentTimeMillis() - 86_400_000
     ).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
+    val blockedThisWeek: StateFlow<Int> = repo.getBlockedCountSince(
+        System.currentTimeMillis() - 7 * 86_400_000
+    ).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
     val allSpamNumbers: StateFlow<List<SpamNumber>> = repo.getAllSpamNumbers()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 

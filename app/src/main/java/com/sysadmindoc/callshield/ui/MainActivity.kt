@@ -29,8 +29,7 @@ import com.sysadmindoc.callshield.ui.screens.main.DashboardScreen
 import com.sysadmindoc.callshield.ui.screens.onboarding.OnboardingScreen
 import com.sysadmindoc.callshield.ui.screens.lookup.LookupScreen
 import com.sysadmindoc.callshield.ui.screens.recent.RecentCallsScreen
-import com.sysadmindoc.callshield.ui.screens.settings.SettingsScreen
-import com.sysadmindoc.callshield.ui.screens.stats.StatsScreen
+import com.sysadmindoc.callshield.ui.screens.more.MoreScreen
 import com.sysadmindoc.callshield.ui.theme.*
 
 class MainActivity : ComponentActivity() {
@@ -170,7 +169,7 @@ fun CallShieldApp(viewModel: MainViewModel, startTab: Int = 0) {
                         2 -> BlockedLogScreen(viewModel)
                         3 -> LookupScreen()
                         4 -> BlocklistScreen(viewModel)
-                        5 -> SettingsScreen(viewModel)
+                        5 -> MoreScreen(viewModel)
                     }
                 }
             }

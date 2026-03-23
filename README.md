@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="logo.png" width="128" alt="CallShield Logo">
+</p>
+
 # CallShield
 
 Open-source spam call and text blocker for Android with an **11-layer detection engine**. Uses a community-maintained spam database hosted right here on GitHub — no API keys, no accounts, no tracking. Everything runs on-device.

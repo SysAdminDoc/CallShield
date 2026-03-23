@@ -17,6 +17,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import android.net.Uri
+import android.provider.ContactsContract
 import com.sysadmindoc.callshield.data.PhoneFormatter
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup
@@ -33,7 +35,8 @@ data class RecentCall(
     val date: Long,
     val duration: Int,
     val isSpam: Boolean = false,
-    val spamReason: String = ""
+    val spamReason: String = "",
+    val contactName: String? = null
 )
 
 @Composable
@@ -108,9 +111,13 @@ fun RecentCallItem(call: RecentCall, onClick: () -> Unit) {
             Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(PhoneFormatter.format(call.number), fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodyMedium)
+                    Column(modifier = Modifier.weight(1f)) {
+                        if (call.contactName != null) {
+                            Text(call.contactName, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium, color = CatGreen)
+                        }
+                        Text(PhoneFormatter.format(call.number), fontWeight = if (call.contactName == null) FontWeight.SemiBold else FontWeight.Normal, style = if (call.contactName == null) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.bodySmall)
+                    }
                     if (call.isSpam) {
-                        Spacer(Modifier.width(6.dp))
                         Icon(Icons.Default.Warning, null, tint = CatRed, modifier = Modifier.size(14.dp))
                     }
                 }
@@ -152,13 +159,19 @@ private suspend fun loadRecentCalls(context: Context): List<RecentCall> = withCo
                 val clean = number.filter { it.isDigit() || it == '+' }
                 if (clean.length < 5) continue
                 val spamResult = repo.isSpam(clean)
+                val contactName = try {
+                    val uri = Uri.withAppendedPath(ContactsContract.PhoneLookup.CONTENT_FILTER_URI, Uri.encode(clean))
+                    val cc = context.contentResolver.query(uri, arrayOf(ContactsContract.PhoneLookup.DISPLAY_NAME), null, null, null)
+                    cc?.use { if (it.moveToFirst()) it.getString(0) else null }
+                } catch (_: Exception) { null }
                 calls.add(RecentCall(
                     number = clean,
                     type = if (typeIdx >= 0) c.getInt(typeIdx) else 0,
                     date = if (dateIdx >= 0) c.getLong(dateIdx) else 0,
                     duration = if (durIdx >= 0) c.getInt(durIdx) else 0,
                     isSpam = spamResult.isSpam,
-                    spamReason = spamResult.matchSource
+                    spamReason = spamResult.matchSource,
+                    contactName = contactName
                 ))
                 count++
             }

@@ -35,6 +35,7 @@ fun DashboardScreen(viewModel: MainViewModel) {
     val smsContent by viewModel.smsContentEnabled.collectAsState()
     val stirShaken by viewModel.stirShakenEnabled.collectAsState()
     val neighborSpoof by viewModel.neighborSpoofEnabled.collectAsState()
+    val blockedThisWeek by viewModel.blockedThisWeek.collectAsState()
     val scanResult by viewModel.scanResult.collectAsState()
     val smsScanResult by viewModel.smsScanResult.collectAsState()
     val lastSync by viewModel.lastSyncTimestamp.collectAsState()
@@ -128,9 +129,10 @@ fun DashboardScreen(viewModel: MainViewModel) {
         }
 
         // Stats row
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             StatCard(Modifier.weight(1f), "Today", blockedToday.toString(), Icons.Default.Today, CatBlue)
-            StatCard(Modifier.weight(1f), "Total Blocked", totalBlocked.toString(), Icons.Default.Block, CatPeach)
+            StatCard(Modifier.weight(1f), "This Week", blockedThisWeek.toString(), Icons.Default.DateRange, CatMauve)
+            StatCard(Modifier.weight(1f), "Total", totalBlocked.toString(), Icons.Default.Block, CatPeach)
         }
 
         // Quick toggles
