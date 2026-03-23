@@ -22,24 +22,18 @@ import com.sysadmindoc.callshield.ui.theme.*
 
 @Composable
 fun MoreScreen(viewModel: MainViewModel) {
-    var currentView by remember { mutableIntStateOf(0) } // 0=hub, 1=stats, 2=settings
+    var currentView by remember { mutableIntStateOf(0) }
 
     when (currentView) {
-        1 -> {
-            Column(modifier = Modifier.fillMaxSize()) {
-                MoreTopBar("Statistics") { currentView = 0 }
-                StatsScreen(viewModel)
-            }
-        }
-        2 -> {
-            Column(modifier = Modifier.fillMaxSize()) {
-                MoreTopBar("Settings") { currentView = 0 }
-                SettingsScreen(viewModel)
-            }
-        }
+        1 -> { Column(Modifier.fillMaxSize()) { MoreTopBar("Statistics") { currentView = 0 }; StatsScreen(viewModel) } }
+        2 -> { Column(Modifier.fillMaxSize()) { MoreTopBar("Settings") { currentView = 0 }; SettingsScreen(viewModel) } }
+        3 -> { Column(Modifier.fillMaxSize()) { MoreTopBar("What's New") { currentView = 0 }; ChangelogScreen() } }
+        4 -> { Column(Modifier.fillMaxSize()) { MoreTopBar("Protection Test") { currentView = 0 }; ProtectionTestScreen() } }
         else -> MoreHub(
             onStats = { currentView = 1 },
-            onSettings = { currentView = 2 }
+            onSettings = { currentView = 2 },
+            onChangelog = { currentView = 3 },
+            onTest = { currentView = 4 }
         )
     }
 }
@@ -56,7 +50,7 @@ fun MoreTopBar(title: String, onBack: () -> Unit) {
 }
 
 @Composable
-fun MoreHub(onStats: () -> Unit, onSettings: () -> Unit) {
+fun MoreHub(onStats: () -> Unit, onSettings: () -> Unit, onChangelog: () -> Unit, onTest: () -> Unit) {
     val context = LocalContext.current
 
     Column(
@@ -73,6 +67,16 @@ fun MoreHub(onStats: () -> Unit, onSettings: () -> Unit) {
             icon = Icons.Default.Settings, title = "Settings",
             subtitle = "Detection engines, quiet hours, backup, cleanup",
             color = CatMauve, onClick = onSettings
+        )
+        MoreNavCard(
+            icon = Icons.Default.Verified, title = "Protection Test",
+            subtitle = "Verify all detection layers and permissions work",
+            color = CatGreen, onClick = onTest
+        )
+        MoreNavCard(
+            icon = Icons.Default.NewReleases, title = "What's New",
+            subtitle = "Changelog and version history",
+            color = CatPeach, onClick = onChangelog
         )
 
         Spacer(Modifier.height(8.dp))
@@ -104,7 +108,7 @@ fun MoreHub(onStats: () -> Unit, onSettings: () -> Unit) {
         Card(colors = CardDefaults.cardColors(containerColor = SurfaceVariant), shape = RoundedCornerShape(16.dp)) {
             Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 Text("CallShield", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = CatGreen)
-                Text("v2.8.0", style = MaterialTheme.typography.bodyMedium, color = CatSubtext)
+                Text("v3.0.0", style = MaterialTheme.typography.bodyMedium, color = CatSubtext)
                 Spacer(Modifier.height(8.dp))
                 Text(
                     "Open-source spam call & text blocker with 11-layer detection engine. " +
@@ -114,14 +118,22 @@ fun MoreHub(onStats: () -> Unit, onSettings: () -> Unit) {
                 )
                 Spacer(Modifier.height(12.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    AboutStat("Detection", "11", CatGreen)
-                    AboutStat("Layers", "layers", CatGreen)
-                    AboutStat("Files", "43", CatBlue)
-                    AboutStat("Lines", "5.8K", CatPeach)
+                    AboutStat("11", "Layers", CatGreen)
+                    AboutStat("46", "Files", CatBlue)
+                    AboutStat("6K+", "Lines", CatPeach)
+                    AboutStat("13", "Releases", CatYellow)
                 }
                 Spacer(Modifier.height(8.dp))
                 Text("Made by SysAdminDoc", style = MaterialTheme.typography.labelSmall, color = CatOverlay)
                 Text("MIT License", style = MaterialTheme.typography.labelSmall, color = CatOverlay)
+                Spacer(Modifier.height(8.dp))
+                HorizontalDivider(color = CatOverlay.copy(alpha = 0.2f))
+                Spacer(Modifier.height(8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Lock, null, tint = CatGreen, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Privacy: All detection runs on-device. No data is sent to any server. The only network request is syncing the spam database from GitHub.", style = MaterialTheme.typography.labelSmall, color = CatOverlay)
+                }
             }
         }
     }
