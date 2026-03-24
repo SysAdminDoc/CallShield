@@ -1,5 +1,5 @@
 {
-  "generated": "2026-03-24T14:31:06.006962+00:00",
+  "generated": "2026-03-24T15:29:19.660828+00:00",
   "window_hours": 24,
   "count": 5,
   "numbers": [
@@ -7,6 +7,7 @@
       "number": "+13042635785",
       "type": "robocall",
       "reports": 453,
+      "first_seen": "0021-01-03",
       "last_seen": "2105-05-13",
       "description": "FCC: Robocalls"
     },
@@ -14,6 +15,7 @@
       "number": "+12054090895",
       "type": "robocall",
       "reports": 33,
+      "first_seen": "2014-12-05",
       "last_seen": "2104-12-24",
       "description": "FCC: Robocalls"
     },
@@ -21,6 +23,7 @@
       "number": "+18442409758",
       "type": "robocall",
       "reports": 13,
+      "first_seen": "2015-07-12",
       "last_seen": "2915-10-15",
       "description": "FCC: Robocalls"
     },
@@ -28,6 +31,7 @@
       "number": "+12107149755",
       "type": "robocall",
       "reports": 12,
+      "first_seen": "2016-02-19",
       "last_seen": "2106-05-17",
       "description": "FCC: Robocalls"
     },
@@ -35,6 +39,7 @@
       "number": "+17862985682",
       "type": "robocall",
       "reports": 12,
+      "first_seen": "2015-08-04",
       "last_seen": "2105-08-27",
       "description": "FCC: Robocalls"
     }
