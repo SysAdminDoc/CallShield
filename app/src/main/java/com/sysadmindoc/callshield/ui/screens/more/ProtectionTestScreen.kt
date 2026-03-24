@@ -142,11 +142,29 @@ private suspend fun runTests(context: Context): List<TestResult> = withContext(D
     val smsResult = repo.isSpamSms("+15555555555", "You have WON a FREE gift card! Claim now at bit.ly/scam")
     results.add(TestResult("SMS Content Analysis", smsResult.isSpam, if (smsResult.isSpam) "Correctly detected spam SMS (${smsResult.matchSource})" else "SMS analysis may be disabled"))
 
+    // ML scorer test
+    val mlResult = com.sysadmindoc.callshield.data.SpamMLScorer.isSpam("+15555550000")
+    results.add(TestResult("ML Spam Scorer", mlResult, if (mlResult) "Correctly flagged 555-0000 pattern" else "ML scorer may be disabled or weights not loaded"))
+
+    // ML scorer — should NOT flag a normal number
+    val mlClean = !com.sysadmindoc.callshield.data.SpamMLScorer.isSpam("+12125551234")
+    results.add(TestResult("ML False Positive", mlClean, if (mlClean) "Normal number correctly passed" else "False positive — threshold may be too low"))
+
+    // Hot list data check
+    val hotRangesLoaded = com.sysadmindoc.callshield.data.SpamHeuristics.hasHotRanges()
+    results.add(TestResult("Hot List Data", hotRangesLoaded, if (hotRangesLoaded) "Hot campaign ranges loaded" else "Empty — will populate on next 30-min sync"))
+
     // Overlay permission
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
         val canOverlay = android.provider.Settings.canDrawOverlays(context)
         results.add(TestResult("Overlay Permission", canOverlay, if (canOverlay) "Can display caller ID overlay" else "Not granted — overlay won't show"))
     }
+
+    // Notification listener (for RCS filter)
+    val notifListenerEnabled = android.provider.Settings.Secure.getString(
+        context.contentResolver, "enabled_notification_listeners"
+    )?.contains(context.packageName) ?: false
+    results.add(TestResult("Notification Access (RCS)", notifListenerEnabled, if (notifListenerEnabled) "RCS filter can monitor messages" else "Not granted — RCS filter won't work"))
 
     results
 }

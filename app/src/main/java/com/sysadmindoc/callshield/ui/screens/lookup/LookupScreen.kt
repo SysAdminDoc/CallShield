@@ -65,7 +65,7 @@ fun LookupScreen() {
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Text("Number Lookup", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = CatGreen)
-        Text("Check any phone number against all 11 detection layers", style = MaterialTheme.typography.bodySmall, color = CatSubtext)
+        Text("Check any phone number against all 15 detection layers + ML", style = MaterialTheme.typography.bodySmall, color = CatSubtext)
 
         OutlinedTextField(
             value = numberInput, onValueChange = { numberInput = it },
@@ -201,9 +201,11 @@ fun DetailRow(label: String, value: String, icon: androidx.compose.ui.graphics.v
 }
 
 fun detectionIcon(source: String): androidx.compose.ui.graphics.vector.ImageVector = when {
-    "database" in source -> Icons.Default.Storage
-    "heuristic" in source -> Icons.Default.Psychology
-    "sms_content" in source -> Icons.Default.TextSnippet
+    "database" in source || "hot_list" in source -> Icons.Default.Storage
+    "heuristic" in source || "hot_campaign" in source -> Icons.Default.Psychology
+    "sms_content" in source || "spam_domain" in source -> Icons.Default.Sms
+    "ml_scorer" in source -> Icons.Default.SmartToy
+    "rcs_" in source -> Icons.Default.MarkChatRead
     "prefix" in source -> Icons.Default.FilterAlt
     "wildcard" in source -> Icons.Default.Code
     "stir" in source -> Icons.Default.VerifiedUser
@@ -212,6 +214,7 @@ fun detectionIcon(source: String): androidx.compose.ui.graphics.vector.ImageVect
     "time" in source -> Icons.Default.Bedtime
     "user" in source -> Icons.Default.Person
     "keyword" in source -> Icons.Default.TextFields
+    "context_trust" in source -> Icons.Default.Handshake
     else -> Icons.Default.Warning
 }
 

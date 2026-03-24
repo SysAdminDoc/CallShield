@@ -92,15 +92,18 @@ fun StatsScreen(viewModel: MainViewModel) {
                     typeBreakdown.take(8).forEach { (type, count) ->
                         val fraction = count.toFloat() / totalBlocked.coerceAtLeast(1)
                         val color = when {
-                            "database" in type -> CatGreen
-                            "heuristic" in type -> CatBlue
-                            "sms_content" in type -> CatMauve
+                            "database" in type || "hot_list" in type -> CatGreen
+                            "heuristic" in type || "hot_campaign" in type -> CatBlue
+                            "sms_content" in type || "spam_domain" in type -> CatMauve
+                            "ml_scorer" in type -> CatTeal
+                            "rcs_" in type -> CatLavender
                             "stir" in type -> CatYellow
                             "prefix" in type -> CatPeach
                             "user" in type -> CatRed
                             "wildcard" in type -> CatYellow
                             "time" in type -> CatMauve
                             "frequency" in type -> CatPeach
+                            "keyword" in type -> CatMauve
                             else -> CatSubtext
                         }
                         Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
