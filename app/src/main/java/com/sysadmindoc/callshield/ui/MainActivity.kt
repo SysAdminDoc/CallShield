@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -127,7 +128,7 @@ fun CallShieldApp(viewModel: MainViewModel, startTab: Int = 0) {
                     },
                     navigationIcon = {
                         IconButton(onClick = { showSearch = false; viewModel.setSearchQuery("") }) {
-                            Icon(Icons.Default.ArrowBack, "Close", tint = CatSubtext)
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, "Close", tint = CatSubtext)
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = Black)

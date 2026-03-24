@@ -250,7 +250,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
         // About
         Card(colors = CardDefaults.cardColors(containerColor = SurfaceVariant), shape = RoundedCornerShape(16.dp)) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text("CallShield v1.2.4", color = CatSubtext, style = MaterialTheme.typography.bodySmall)
+                Text("CallShield v1.2.5", color = CatSubtext, style = MaterialTheme.typography.bodySmall)
                 Text("Open-source spam blocker. No subscriptions, no tracking.", style = MaterialTheme.typography.labelSmall, color = CatOverlay)
             }
         }
