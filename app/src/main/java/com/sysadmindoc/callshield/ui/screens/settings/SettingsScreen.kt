@@ -42,6 +42,9 @@ fun SettingsScreen(viewModel: MainViewModel) {
     val timeStart by viewModel.timeBlockStart.collectAsState()
     val timeEnd by viewModel.timeBlockEnd.collectAsState()
     val freqEscalation by viewModel.freqEscalationEnabled.collectAsState()
+    val mlScorer by viewModel.mlScorerEnabled.collectAsState()
+    val rcsFilter by viewModel.rcsFilterEnabled.collectAsState()
+    val abstractApiKey by viewModel.abstractApiKey.collectAsState()
 
     val roleManager = remember {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) context.getSystemService(Context.ROLE_SERVICE) as? RoleManager else null
@@ -113,6 +116,22 @@ fun SettingsScreen(viewModel: MainViewModel) {
             SettingsToggle("SMS Content Analysis", "Spam keywords, phishing links, scam patterns", Icons.Default.TextSnippet, smsContent) { viewModel.setSmsContent(it) }
             HorizontalDivider(color = CatOverlay.copy(alpha = 0.2f))
             SettingsToggle("Repeat Caller Auto-Block", "Auto-block numbers that call 3+ times", Icons.Default.Repeat, freqEscalation) { viewModel.setFreqEscalation(it) }
+            HorizontalDivider(color = CatOverlay.copy(alpha = 0.2f))
+            SettingsToggle("ML Spam Scorer", "On-device logistic regression model. No internet required.", Icons.Default.SmartToy, mlScorer) { viewModel.setMlScorer(it) }
+            HorizontalDivider(color = CatOverlay.copy(alpha = 0.2f))
+            SettingsToggle("RCS Message Filter", "Block RCS spam via Notification Access. Covers Google/Samsung Messages.", Icons.Default.MarkChatRead, rcsFilter) { viewModel.setRcsFilter(it) }
+            if (rcsFilter) {
+                Spacer(Modifier.height(4.dp))
+                OutlinedButton(
+                    onClick = { context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) },
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Default.NotificationsActive, null, tint = CatMauve)
+                    Spacer(Modifier.width(6.dp))
+                    Text("Grant Notification Access", color = CatMauve)
+                }
+            }
         }
 
         // Feature 9: Time-based blocking
@@ -206,11 +225,31 @@ fun SettingsScreen(viewModel: MainViewModel) {
             Text("Includes blocklist, whitelist, wildcard rules.", style = MaterialTheme.typography.labelSmall, color = CatOverlay)
         }
 
-        // About — moved to More hub, keeping minimal reference
+        // Advanced — optional API key for caller name lookup
+        SettingsCard("Advanced") {
+            var apiKeyInput by remember { mutableStateOf(abstractApiKey) }
+            Text("AbstractAPI Key (optional)", style = MaterialTheme.typography.bodyMedium)
+            Text("Free 250 lookups/month for carrier & line-type enrichment in the caller ID overlay. Never used for blocking.", style = MaterialTheme.typography.bodySmall, color = CatSubtext)
+            Spacer(Modifier.height(8.dp))
+            OutlinedTextField(
+                value = apiKeyInput,
+                onValueChange = { apiKeyInput = it },
+                label = { Text("API Key") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                trailingIcon = {
+                    TextButton(onClick = { viewModel.setAbstractApiKey(apiKeyInput.trim()) }) {
+                        Text("Save", color = CatBlue)
+                    }
+                }
+            )
+        }
+
+        // About
         Card(colors = CardDefaults.cardColors(containerColor = SurfaceVariant), shape = RoundedCornerShape(16.dp)) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text("CallShield v1.0.0", color = CatSubtext, style = MaterialTheme.typography.bodySmall)
-                Text("Open-source spam blocker. No API keys, no tracking.", style = MaterialTheme.typography.labelSmall, color = CatOverlay)
+                Text("CallShield v1.1.0", color = CatSubtext, style = MaterialTheme.typography.bodySmall)
+                Text("Open-source spam blocker. No subscriptions, no tracking.", style = MaterialTheme.typography.labelSmall, color = CatOverlay)
             }
         }
     }

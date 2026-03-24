@@ -9,11 +9,13 @@ Sources:
   1. FTC Do Not Call API (api.ftc.gov) — no key, DEMO_KEY
   2. FCC Unwanted Calls Dataset (opendata.fcc.gov) — Socrata API, no key
   3. PhoneBlock.net community database — no key
-  4. Existing CallShield database — preserves community reports
+  4. ToastedSpam US/Canada blocklist — no key, curated plain-text list
+  5. Existing CallShield database — preserves community reports
 
 Usage:
     python import_all_sources.py
-    python import_all_sources.py --max 50000
+    python import_all_sources.py --max 500000
+    python import_all_sources.py --max 500000 --min-reports 2
 """
 
 import json
@@ -179,8 +181,81 @@ def fetch_phoneblock() -> list[dict]:
     return list(numbers.values())
 
 
-# ── Merge ──────────────────────────────────────────────────────────────
-def merge_into_database(all_numbers: list[dict]):
+# ── Source 4: ToastedSpam (US/Canada curated plain-text blocklist) ────
+def fetch_toastedspam() -> list[dict]:
+    print("\n[ToastedSpam US/Canada Blocklist]")
+    try:
+        resp = requests.get("http://www.toastedspam.com/deny", timeout=30)
+        if resp.status_code != 200:
+            print(f"  HTTP {resp.status_code}, skipping")
+            return []
+    except Exception as e:
+        print(f"  Error: {e}")
+        return []
+
+    numbers = {}
+    for line in resp.text.splitlines():
+        line = line.strip()
+        if not line or line.startswith('#') or line.startswith(';') or line.startswith('//'):
+            continue
+        normalized = normalize_phone(line)
+        if normalized and normalized not in numbers:
+            numbers[normalized] = {
+                "number": normalized,
+                "type": "robocall",
+                "reports": 2,  # Curated list = elevated confidence
+                "first_seen": datetime.now().strftime("%Y-%m-%d"),
+                "last_seen": datetime.now().strftime("%Y-%m-%d"),
+                "description": "ToastedSpam community blocklist",
+            }
+
+    print(f"  Fetched {len(numbers):,} numbers")
+    return list(numbers.values())
+
+
+# ── Source 5: ScamCallers community text lists (GitHub mirror) ─────────
+def fetch_community_text_lists() -> list[dict]:
+    print("\n[Community Text Blocklists]")
+    sources = [
+        # Repo-hosted plain-text spam number lists (one number per line, +1XXXXXXXXXX)
+        ("https://raw.githubusercontent.com/sunlei/denylist/master/denylist.txt", "sunlei/denylist"),
+    ]
+    numbers = {}
+    for url, name in sources:
+        try:
+            resp = requests.get(url, timeout=20)
+            if not resp.ok:
+                print(f"  {name}: HTTP {resp.status_code}, skipping")
+                continue
+            count = 0
+            for line in resp.text.splitlines():
+                line = line.strip()
+                if not line or line.startswith('#'):
+                    continue
+                normalized = normalize_phone(line)
+                if normalized:
+                    if normalized in numbers:
+                        numbers[normalized]["reports"] += 1
+                    else:
+                        numbers[normalized] = {
+                            "number": normalized,
+                            "type": "robocall",
+                            "reports": 1,
+                            "first_seen": datetime.now().strftime("%Y-%m-%d"),
+                            "last_seen": datetime.now().strftime("%Y-%m-%d"),
+                            "description": f"Community list: {name}",
+                        }
+                        count += 1
+            print(f"  {name}: {count:,} numbers")
+        except Exception as e:
+            print(f"  {name}: Error — {e}")
+
+    print(f"  Total from community lists: {len(numbers):,} unique numbers")
+    return list(numbers.values())
+
+
+def merge_into_database(all_numbers: list[dict], min_reports: int = 1):
+    """Merge numbers. min_reports filters low-confidence single-source entries."""
     if DB_FILE.exists():
         with open(DB_FILE) as f:
             db = json.load(f)
@@ -189,7 +264,7 @@ def merge_into_database(all_numbers: list[dict]):
             "version": 1,
             "updated": datetime.now().strftime("%Y-%m-%d"),
             "description": "CallShield community spam number database",
-            "sources": ["ftc_complaints", "fcc_complaints", "phoneblock", "community_reports"],
+            "sources": ["ftc_complaints", "fcc_complaints", "phoneblock", "toastedspam", "community_reports"],
             "numbers": [],
             "prefixes": [],
         }
@@ -211,9 +286,18 @@ def merge_into_database(all_numbers: list[dict]):
             existing[num] = entry
             added += 1
 
+    # Apply min_reports filter — keep existing DB entries that already passed
+    # but filter newly-added single-report entries if min_reports > 1
+    if min_reports > 1:
+        before = len(existing)
+        existing = {k: v for k, v in existing.items() if v.get("reports", 0) >= min_reports}
+        filtered = before - len(existing)
+        print(f"  Filtered {filtered:,} entries below min_reports={min_reports}")
+
     db["numbers"] = list(existing.values())
-    db["version"] += 1
+    db["version"] = db.get("version", 0) + 1
     db["updated"] = datetime.now().strftime("%Y-%m-%d")
+    db["sources"] = ["ftc_complaints", "fcc_complaints", "phoneblock", "toastedspam", "community_reports"]
     db["numbers"].sort(key=lambda x: x.get("reports", 0), reverse=True)
 
     with open(DB_FILE, "w") as f:
@@ -239,7 +323,8 @@ def merge_into_database(all_numbers: list[dict]):
 
 def main():
     parser = argparse.ArgumentParser(description="Import spam numbers from all sources")
-    parser.add_argument("--max", type=int, default=50000, help="Max records per source")
+    parser.add_argument("--max", type=int, default=500000, help="Max records to fetch from FCC")
+    parser.add_argument("--min-reports", type=int, default=2, help="Minimum reports to include a number (default: 2)")
     args = parser.parse_args()
 
     print("=" * 50)
@@ -249,18 +334,26 @@ def main():
     all_numbers = []
 
     # Source 1: FTC
-    ftc = fetch_ftc(max_records=min(args.max, 5000))  # FTC caps at ~50 per day
+    ftc = fetch_ftc(max_records=min(args.max, 5000))  # FTC API is slow; bulk is via CSV
     all_numbers.extend(ftc)
 
-    # Source 2: FCC (biggest source)
+    # Source 2: FCC (biggest source — pull up to --max records)
     fcc = fetch_fcc(max_records=args.max)
     all_numbers.extend(fcc)
 
-    # Source 3: PhoneBlock
+    # Source 3: PhoneBlock (per-number lookup — seed only, real-time in app)
     pb = fetch_phoneblock()
     all_numbers.extend(pb)
 
-    # Deduplicate
+    # Source 4: ToastedSpam
+    ts = fetch_toastedspam()
+    all_numbers.extend(ts)
+
+    # Source 5: Community text lists
+    cl = fetch_community_text_lists()
+    all_numbers.extend(cl)
+
+    # Deduplicate across all sources (accumulate reports)
     deduped = {}
     for n in all_numbers:
         num = n["number"]
@@ -270,7 +363,7 @@ def main():
             deduped[num] = n
 
     print(f"\nTotal unique numbers from all sources: {len(deduped):,}")
-    merge_into_database(list(deduped.values()))
+    merge_into_database(list(deduped.values()), min_reports=args.min_reports)
     print("\nDone! Commit and push to update the live database.")
 
 

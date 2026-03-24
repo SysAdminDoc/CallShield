@@ -91,6 +91,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     val lastSyncTimestamp = repo.lastSyncTimestamp.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0L)
 
+    val mlScorerEnabled = repo.mlScorerEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+    val rcsFilterEnabled = repo.rcsFilterEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+    val abstractApiKey = repo.abstractApiKey.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
+
     private val _syncState = MutableStateFlow<SyncState>(SyncState.Idle)
     val syncState: StateFlow<SyncState> = _syncState
 
@@ -221,6 +225,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun setFreqEscalation(v: Boolean) = viewModelScope.launch { repo.setFreqEscalation(v) }
     fun setAutoCleanup(v: Boolean) = viewModelScope.launch { repo.setAutoCleanup(v) }
     fun setCleanupDays(d: Int) = viewModelScope.launch { repo.setCleanupDays(d) }
+    fun setMlScorer(v: Boolean) = viewModelScope.launch { repo.setMlScorer(v) }
+    fun setRcsFilter(v: Boolean) = viewModelScope.launch { repo.setRcsFilter(v) }
+    fun setAbstractApiKey(key: String) = viewModelScope.launch { repo.setAbstractApiKey(key) }
 
     // Profiles
     fun applyProfile(profile: BlockingProfiles.Profile) {

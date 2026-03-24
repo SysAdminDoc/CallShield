@@ -55,15 +55,24 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Update from all sources (FTC + FCC + PhoneBlock)
+      - name: Update from all sources (FTC + FCC + PhoneBlock + ToastedSpam)
         run: |
           pip install requests
-          python scripts/import_all_sources.py --max 50000
+          python scripts/import_all_sources.py --max 500000 --min-reports 2
+
+      - name: Retrain spam ML model weights
+        run: python scripts/train_spam_model.py
+
+      - name: Extract spam domains from community reports
+        run: python scripts/extract_spam_domains.py
+
+      - name: Generate hot list + campaign ranges
+        run: python scripts/generate_hot_list.py
 
       - name: Commit and Push
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add data/
-          git diff --staged --quiet || git commit -m "Update spam database from all sources $(date +%Y-%m-%d)"
+          git diff --staged --quiet || git commit -m "Update spam database + retrain ML model $(date +%Y-%m-%d)"
           git push

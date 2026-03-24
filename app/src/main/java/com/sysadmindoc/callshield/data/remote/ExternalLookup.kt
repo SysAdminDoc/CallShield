@@ -16,13 +16,15 @@ import java.util.concurrent.TimeUnit
  * Sources:
  *   1. SkipCalls (1M+ spam numbers, free, no signup)
  *   2. PhoneBlock.net (community DB, no auth)
- *   3. WhoCalledMe (web scrape, existing)
+ *   3. WhoCalledMe (web scrape)
+ *   4. OpenCNAM (caller name lookup, 60 req/hr free, no signup)
  */
 object ExternalLookup {
 
     data class MultiLookupResult(
         val isSpam: Boolean = false,
         val totalReports: Int = 0,
+        val callerName: String = "",        // CNAM from OpenCNAM
         val sources: List<SourceResult> = emptyList(),
         val communityNotes: List<String> = emptyList()
     )
@@ -47,21 +49,27 @@ object ExternalLookup {
         val digits = number.filter { it.isDigit() }
         if (digits.length < 7) return@coroutineScope MultiLookupResult()
 
-        val results = listOf(
-            async { checkSkipCalls(digits) },
-            async { checkPhoneBlock(digits) },
-            async { checkWhoCalledMe(digits) }
-        ).awaitAll()
+        val skipCallsDeferred  = async { checkSkipCalls(digits) }
+        val phoneBlockDeferred = async { checkPhoneBlock(digits) }
+        val whoCalledDeferred  = async { checkWhoCalledMe(digits) }
+        val cnamDeferred       = async { fetchCallerName(digits) }
 
-        val allSources = results.filterNotNull()
-        val totalReports = allSources.sumOf { it.reports }
-        val isSpam = allSources.any { it.isSpam } || totalReports >= 3
+        val spamResults = listOf(
+            skipCallsDeferred.await(),
+            phoneBlockDeferred.await(),
+            whoCalledDeferred.await()
+        ).filterNotNull()
+
+        val callerName = cnamDeferred.await()
+        val totalReports = spamResults.sumOf { it.reports }
+        val isSpam = spamResults.any { it.isSpam } || totalReports >= 3
 
         MultiLookupResult(
             isSpam = isSpam,
             totalReports = totalReports,
-            sources = allSources,
-            communityNotes = allSources.flatMap {
+            callerName = callerName,
+            sources = spamResults,
+            communityNotes = spamResults.flatMap {
                 if (it.detail.isNotEmpty()) listOf("${it.source}: ${it.detail}") else emptyList()
             }
         )
@@ -143,6 +151,35 @@ object ExternalLookup {
             } else null
         } catch (_: Exception) {
             null
+        }
+    }
+
+    // ── OpenCNAM — Caller Name (CNAM) lookup ─────────────────────────
+    // Free tier: 60 requests/hour with no signup. Returns the caller's
+    // registered name (e.g., "IRS SCAM", "CREDIT CARD SERVICES") which
+    // is shown in the Caller ID overlay.
+    private suspend fun fetchCallerName(digits: String): String = withContext(Dispatchers.IO) {
+        try {
+            // Normalize to E.164 — OpenCNAM expects +1XXXXXXXXXX
+            val e164 = when {
+                digits.length == 10 -> "+1$digits"
+                digits.length == 11 && digits.startsWith("1") -> "+$digits"
+                else -> return@withContext ""
+            }
+            val url = "https://api.opencnam.com/v3/phone/$e164?format=json"
+            val request = Request.Builder().url(url)
+                .header("User-Agent", "CallShield/1.0")
+                .header("Accept", "application/json")
+                .build()
+            val response = client.newCall(request).execute()
+            if (!response.isSuccessful) return@withContext ""
+
+            val body = response.body?.string() ?: return@withContext ""
+            // Response: {"number":"+15551234567","name":"JOHN DOE"}
+            val nameMatch = Regex(""""name"\s*:\s*"([^"]+)"""").find(body)
+            nameMatch?.groupValues?.get(1)?.trim() ?: ""
+        } catch (_: Exception) {
+            ""
         }
     }
 }

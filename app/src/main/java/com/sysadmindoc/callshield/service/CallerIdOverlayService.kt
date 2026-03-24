@@ -38,6 +38,7 @@ class CallerIdOverlayService : Service() {
     private var headerText: TextView? = null
     private var scoreText: TextView? = null
     private var statusText: TextView? = null
+    private var callerNameText: TextView? = null
     private var sourcesContainer: LinearLayout? = null
     private var progressBar: ProgressBar? = null
 
@@ -111,25 +112,36 @@ class CallerIdOverlayService : Service() {
             }
             addView(sourcesContainer)
 
+            // Caller name (populated by OpenCNAM lookup)
+            callerNameText = TextView(context).apply {
+                text = ""
+                setTextColor(Color.parseColor("#FFB4BEFE"))
+                textSize = 13f
+                typeface = Typeface.DEFAULT_BOLD
+                visibility = android.view.View.GONE
+                setPadding(0, 4, 0, 0)
+            }
+            addView(callerNameText)
+
             // Status text
             statusText = TextView(context).apply {
-                text = "Querying SkipCalls, PhoneBlock, WhoCalledMe..."
+                text = "Querying SkipCalls, PhoneBlock, WhoCalledMe, OpenCNAM..."
                 setTextColor(Color.parseColor("#666666")); textSize = 10f
                 setPadding(0, 4, 0, 0)
             }
             addView(statusText)
 
-            // Buttons
+            // Buttons — row 1
             addView(LinearLayout(context).apply {
                 orientation = LinearLayout.HORIZONTAL
                 setPadding(0, 12, 0, 0)
 
                 // Google search
                 addView(Button(context).apply {
-                    text = "Search Google"
+                    text = "Search"
                     setTextColor(Color.parseColor("#FF89B4FA"))
                     setBackgroundColor(Color.parseColor("#20FFFFFF"))
-                    textSize = 11f; isAllCaps = false; setPadding(20, 6, 20, 6)
+                    textSize = 11f; isAllCaps = false; setPadding(16, 6, 16, 6)
                     setOnClickListener {
                         try { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/search?q=${Uri.encode("$digits phone number spam")}")).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }) } catch (_: Exception) {}
                         dismiss()
@@ -143,7 +155,7 @@ class CallerIdOverlayService : Service() {
                     text = "Block"
                     setTextColor(Color.parseColor("#FFF38BA8"))
                     setBackgroundColor(Color.parseColor("#20FFFFFF"))
-                    textSize = 11f; isAllCaps = false; setPadding(20, 6, 20, 6)
+                    textSize = 11f; isAllCaps = false; setPadding(16, 6, 16, 6)
                     setOnClickListener {
                         CoroutineScope(Dispatchers.IO).launch {
                             com.sysadmindoc.callshield.data.SpamRepository.getInstance(context).blockNumber(number, "spam", "Blocked from overlay")
@@ -160,9 +172,28 @@ class CallerIdOverlayService : Service() {
                     text = "Dismiss"
                     setTextColor(Color.parseColor("#FF6C7086"))
                     setBackgroundColor(Color.TRANSPARENT)
-                    textSize = 11f; isAllCaps = false; setPadding(20, 6, 20, 6)
+                    textSize = 11f; isAllCaps = false; setPadding(16, 6, 16, 6)
                     setOnClickListener { dismiss() }
                 })
+            })
+
+            // Buttons — row 2: SIT tone
+            addView(Button(context).apply {
+                text = "\uD83D\uDD08 Play SIT Tone (anti-autodialer)"
+                setTextColor(Color.parseColor("#FFA6ADC8"))
+                setBackgroundColor(Color.parseColor("#15FFFFFF"))
+                textSize = 10f; isAllCaps = false; setPadding(16, 4, 16, 4)
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply { topMargin = 4 }
+                setOnClickListener {
+                    if (!SitTonePlayer.isPlaying()) {
+                        CoroutineScope(Dispatchers.IO).launch {
+                            SitTonePlayer.play(context)
+                        }
+                    }
+                }
             })
         }
 
@@ -181,12 +212,13 @@ class CallerIdOverlayService : Service() {
 
     /**
      * Query all sources in parallel and update the overlay as each responds.
+     * Now includes OpenCNAM caller name lookup as a 4th source.
      */
     private fun runLiveLookups(number: String) {
         var completed = 0
         var totalReports = 0
         var anySpam = false
-        val totalSources = 3
+        val totalSources = 4  // SkipCalls + PhoneBlock + WhoCalledMe + OpenCNAM
 
         fun updateScore() {
             handler.post {
@@ -225,7 +257,7 @@ class CallerIdOverlayService : Service() {
             if (isSpam) anySpam = true
             handler.post {
                 sourcesContainer?.addView(TextView(this).apply {
-                    val icon = if (isSpam) "\u26A0" else "\u2713" // warning or checkmark
+                    val icon = if (isSpam) "\u26A0" else "\u2713"
                     val info = if (reports > 0) "$reports reports" else if (isSpam) "Flagged" else "Clean"
                     text = "$icon $name: $info"
                     setTextColor(Color.parseColor(if (isSpam) "#FFF38BA8" else "#FFA6E3A1"))
@@ -243,7 +275,19 @@ class CallerIdOverlayService : Service() {
                 for (src in result.sources) {
                     addSourceResult(src.source, src.isSpam, src.reports, src.detail)
                 }
-                // Fill remaining if some sources returned null
+
+                // Show caller name from OpenCNAM if available
+                if (result.callerName.isNotBlank()) {
+                    handler.post {
+                        callerNameText?.text = result.callerName
+                        callerNameText?.visibility = android.view.View.VISIBLE
+                    }
+                }
+                // Count OpenCNAM as completed (it's bundled in lookupAll)
+                completed++
+                updateScore()
+
+                // Fill remaining if some spam sources returned null
                 while (completed < totalSources) {
                     completed++
                     updateScore()
@@ -265,7 +309,8 @@ class CallerIdOverlayService : Service() {
 
     private fun removeOverlay() {
         try { overlayView?.let { windowManager?.removeView(it) } } catch (_: Exception) {}
-        overlayView = null; headerText = null; scoreText = null; statusText = null; sourcesContainer = null; progressBar = null
+        overlayView = null; headerText = null; scoreText = null; statusText = null
+        callerNameText = null; sourcesContainer = null; progressBar = null
     }
 
     override fun onDestroy() {
