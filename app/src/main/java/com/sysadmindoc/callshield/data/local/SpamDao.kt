@@ -66,6 +66,9 @@ interface SpamDao {
     @Query("SELECT COUNT(*) FROM call_log WHERE wasBlocked = 1 AND timestamp > :since")
     fun getBlockedCountSince(since: Long): Flow<Int>
 
+    @Query("SELECT COUNT(*) FROM call_log WHERE wasBlocked = 1 AND timestamp > :since")
+    suspend fun getBlockedCountSinceSync(since: Long): Int
+
     @Query("DELETE FROM call_log")
     suspend fun clearCallLog()
 

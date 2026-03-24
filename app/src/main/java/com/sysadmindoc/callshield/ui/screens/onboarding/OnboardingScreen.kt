@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.PhoneCallback
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -35,11 +37,13 @@ fun OnboardingScreen(onComplete: () -> Unit) {
     val context = LocalContext.current
     var currentPage by remember { mutableIntStateOf(0) }
 
+    val permLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {}
+
     val pages = listOf(
-        OnboardingPage(Icons.Default.Shield, "Welcome to CallShield", "Open-source spam call & text blocker with 11-layer detection. No API keys, no tracking.", CatGreen),
-        OnboardingPage(Icons.Default.Security, "Powerful Detection", "Database matching, heuristic analysis, SMS content scanning, STIR/SHAKEN verification, and more.", CatBlue),
-        OnboardingPage(Icons.Default.PhoneCallback, "Set as Call Screener", "CallShield needs to be your default call screening app to block spam calls.", CatMauve),
-        OnboardingPage(Icons.Default.Sync, "Stay Updated", "Spam database syncs automatically from GitHub every 6 hours. Community-driven and always growing.", CatPeach),
+        OnboardingPage(Icons.Default.Shield, "Welcome to CallShield", "Open-source spam call & text blocker with 15-layer detection + ML scorer. No API keys, no tracking.", CatGreen),
+        OnboardingPage(Icons.Default.Security, "Powerful Detection", "Database matching, heuristic analysis, on-device ML, SMS content scanning, RCS filter, STIR/SHAKEN, and more.", CatBlue),
+        OnboardingPage(Icons.AutoMirrored.Filled.PhoneCallback, "Set as Call Screener", "CallShield needs to be your default call screening app to block spam calls.", CatMauve),
+        OnboardingPage(Icons.Default.Sync, "Stay Updated", "Spam database syncs weekly from GitHub. Hot list refreshes every 30 minutes. Community-driven.", CatPeach),
     )
 
     val roleManager = remember {
@@ -65,6 +69,27 @@ fun OnboardingScreen(onComplete: () -> Unit) {
                 Spacer(Modifier.height(12.dp))
                 Text(p.subtitle, style = MaterialTheme.typography.bodyLarge, color = CatSubtext, textAlign = TextAlign.Center)
 
+                // Permission request on page 2
+                if (page == 1) {
+                    Spacer(Modifier.height(24.dp))
+                    Button(
+                        onClick = {
+                            permLauncher.launch(arrayOf(
+                                android.Manifest.permission.READ_CALL_LOG,
+                                android.Manifest.permission.READ_CONTACTS,
+                                android.Manifest.permission.RECEIVE_SMS,
+                                android.Manifest.permission.READ_PHONE_STATE,
+                            ))
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = CatBlue),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(Icons.Default.Security, null, tint = Black)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Grant Permissions", color = Black, fontWeight = FontWeight.Bold)
+                    }
+                }
+
                 // Call screener button on page 3
                 if (page == 2) {
                     Spacer(Modifier.height(24.dp))
@@ -77,7 +102,7 @@ fun OnboardingScreen(onComplete: () -> Unit) {
                         colors = ButtonDefaults.buttonColors(containerColor = CatMauve),
                         shape = RoundedCornerShape(12.dp)
                     ) {
-                        Icon(Icons.Default.PhoneCallback, null, tint = Black)
+                        Icon(Icons.AutoMirrored.Filled.PhoneCallback, null, tint = Black)
                         Spacer(Modifier.width(8.dp))
                         Text("Set as Call Screener", color = Black, fontWeight = FontWeight.Bold)
                     }
@@ -125,7 +150,7 @@ fun OnboardingScreen(onComplete: () -> Unit) {
                 )
                 if (currentPage < pages.lastIndex) {
                     Spacer(Modifier.width(4.dp))
-                    Icon(Icons.Default.ArrowForward, null, tint = Black, modifier = Modifier.size(18.dp))
+                    Icon(Icons.AutoMirrored.Filled.ArrowForward, null, tint = Black, modifier = Modifier.size(18.dp))
                 }
             }
         }

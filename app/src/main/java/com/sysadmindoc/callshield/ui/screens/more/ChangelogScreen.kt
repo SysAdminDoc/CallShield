@@ -17,6 +17,34 @@ fun ChangelogScreen() {
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
+        VersionEntry("1.2.3", "UX Polish + Performance", listOf(
+            "Onboarding: updated to reflect 15-layer detection + ML scorer",
+            "Onboarding: permission request button on detection page",
+            "Dashboard: engine count now includes ML scorer, RCS filter, repeat caller",
+            "Widget: replaced full record load with efficient count query",
+            "Recent Calls: batch spam checks per unique number (was 1 query per call)",
+            "Recent Calls: batch contact lookups per unique number",
+        ))
+        VersionEntry("1.2.2", "Audit Round 2", listOf(
+            "Fix CommunityContributor JSON injection",
+            "Fix BootReceiver: schedule DigestWorker on boot",
+            "Fix HotListSyncWorker: one bad entry no longer breaks sync",
+            "Fix DigestWorker: database errors no longer crash worker",
+            "Migrate all deprecated Material icons to AutoMirrored variants",
+            "Fix extract_spam_domains.py double-slice",
+            "Fix generate_hot_list.py missing first_seen field",
+        ))
+        VersionEntry("1.2.1", "Audit Round 1", listOf(
+            "Fix SmsContentAnalyzer regex crash + URL loop early-exit",
+            "Fix CallerIdOverlayService handler posts after destroy",
+            "Fix CallShieldTileService runBlocking ANR",
+            "Fix UrlSafetyChecker JSON injection",
+            "Fix LogExporter CSV corruption",
+            "Fix SpamMLScorer thread safety",
+            "Fix NumberDetailScreen coroutine leak",
+            "Fix BlocklistScreen: validate regex before adding",
+            "Fix merge_community_reports.py data loss on exception",
+        ))
         VersionEntry("1.2.0", "ML Scorer + RCS + Hot List", listOf(
             "On-device 15-feature ML spam scorer (logistic regression, threshold 0.7)",
             "RCS notification filter via NotificationListenerService",
