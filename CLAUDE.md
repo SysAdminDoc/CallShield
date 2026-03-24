@@ -3,7 +3,7 @@
 ## Overview
 Open-source Android spam call/text blocker. No subscriptions, no API keys required, no tracking.
 
-**Released:** v1.2.2 (versionCode 5)
+**Released:** v1.2.3 (versionCode 6)
 
 ---
 

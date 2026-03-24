@@ -16,6 +16,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.CallMade
+import androidx.compose.material.icons.automirrored.filled.CallReceived
+import androidx.compose.material.icons.automirrored.filled.PhoneMissed
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -66,7 +69,7 @@ fun RecentCallsScreen(viewModel: MainViewModel) {
         } else if (calls.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(Icons.Default.PhoneMissed, null, tint = CatOverlay, modifier = Modifier.size(64.dp))
+                    Icon(Icons.AutoMirrored.Filled.PhoneMissed, null, tint = CatOverlay, modifier = Modifier.size(64.dp))
                     Spacer(Modifier.height(12.dp))
                     Text("No recent calls", color = CatSubtext)
                     Text("Call log is empty or permission denied", color = CatOverlay, style = MaterialTheme.typography.bodySmall)
@@ -95,9 +98,9 @@ fun RecentCallItem(call: RecentCall, onClick: () -> Unit) {
     val location = remember(call.number) { AreaCodeLookup.lookup(call.number) }
 
     val typeIcon = when (call.type) {
-        CallLog.Calls.INCOMING_TYPE -> Icons.Default.CallReceived
-        CallLog.Calls.OUTGOING_TYPE -> Icons.Default.CallMade
-        CallLog.Calls.MISSED_TYPE -> Icons.Default.PhoneMissed
+        CallLog.Calls.INCOMING_TYPE -> Icons.AutoMirrored.Filled.CallReceived
+        CallLog.Calls.OUTGOING_TYPE -> Icons.AutoMirrored.Filled.CallMade
+        CallLog.Calls.MISSED_TYPE -> Icons.AutoMirrored.Filled.PhoneMissed
         CallLog.Calls.REJECTED_TYPE -> Icons.Default.CallEnd
         else -> Icons.Default.Phone
     }
@@ -201,27 +204,49 @@ private suspend fun loadRecentCalls(context: Context): List<RecentCall> = withCo
             val dateIdx = c.getColumnIndex(CallLog.Calls.DATE)
             val durIdx = c.getColumnIndex(CallLog.Calls.DURATION)
             if (numIdx < 0) return@use
-            var count = 0
-            while (c.moveToNext() && count < 100) {
+
+            // First pass: collect raw call log entries
+            data class RawCall(val number: String, val type: Int, val date: Long, val duration: Int)
+            val rawCalls = mutableListOf<RawCall>()
+            while (c.moveToNext() && rawCalls.size < 100) {
                 val number = c.getString(numIdx) ?: continue
                 val clean = number.filter { it.isDigit() || it == '+' }
                 if (clean.length < 5) continue
-                val spamResult = repo.isSpam(clean)
-                val contactName = try {
-                    val uri = Uri.withAppendedPath(ContactsContract.PhoneLookup.CONTENT_FILTER_URI, Uri.encode(clean))
-                    val cc = context.contentResolver.query(uri, arrayOf(ContactsContract.PhoneLookup.DISPLAY_NAME), null, null, null)
-                    cc?.use { if (it.moveToFirst()) it.getString(0) else null }
-                } catch (_: Exception) { null }
-                calls.add(RecentCall(
+                rawCalls.add(RawCall(
                     number = clean,
                     type = if (typeIdx >= 0) c.getInt(typeIdx) else 0,
                     date = if (dateIdx >= 0) c.getLong(dateIdx) else 0,
                     duration = if (durIdx >= 0) c.getInt(durIdx) else 0,
-                    isSpam = spamResult.isSpam,
-                    spamReason = spamResult.matchSource,
-                    contactName = contactName
                 ))
-                count++
+            }
+
+            // Batch spam check: only check unique numbers once
+            val uniqueNumbers = rawCalls.map { it.number }.distinct()
+            val spamCache = uniqueNumbers.associateWith { repo.isSpam(it) }
+
+            // Batch contact lookup
+            val contactCache = mutableMapOf<String, String?>()
+            for (num in uniqueNumbers) {
+                if (num in contactCache) continue
+                contactCache[num] = try {
+                    val uri = Uri.withAppendedPath(ContactsContract.PhoneLookup.CONTENT_FILTER_URI, Uri.encode(num))
+                    val cc = context.contentResolver.query(uri, arrayOf(ContactsContract.PhoneLookup.DISPLAY_NAME), null, null, null)
+                    cc?.use { if (it.moveToFirst()) it.getString(0) else null }
+                } catch (_: Exception) { null }
+            }
+
+            // Build final list
+            for (raw in rawCalls) {
+                val spamResult = spamCache[raw.number]
+                calls.add(RecentCall(
+                    number = raw.number,
+                    type = raw.type,
+                    date = raw.date,
+                    duration = raw.duration,
+                    isSpam = spamResult?.isSpam ?: false,
+                    spamReason = spamResult?.matchSource ?: "",
+                    contactName = contactCache[raw.number]
+                ))
             }
         }
     } catch (_: SecurityException) {}

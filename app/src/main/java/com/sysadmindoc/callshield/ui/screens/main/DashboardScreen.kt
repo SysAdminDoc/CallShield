@@ -35,6 +35,9 @@ fun DashboardScreen(viewModel: MainViewModel) {
     val smsContent by viewModel.smsContentEnabled.collectAsState()
     val stirShaken by viewModel.stirShakenEnabled.collectAsState()
     val neighborSpoof by viewModel.neighborSpoofEnabled.collectAsState()
+    val mlScorer by viewModel.mlScorerEnabled.collectAsState()
+    val rcsFilter by viewModel.rcsFilterEnabled.collectAsState()
+    val freqEscalation by viewModel.freqEscalationEnabled.collectAsState()
     val blockedThisWeek by viewModel.blockedThisWeek.collectAsState()
     val scanResult by viewModel.scanResult.collectAsState()
     val smsScanResult by viewModel.smsScanResult.collectAsState()
@@ -104,7 +107,7 @@ fun DashboardScreen(viewModel: MainViewModel) {
                 )
                 Spacer(Modifier.height(4.dp))
                 Text("$spamCount numbers in database", style = MaterialTheme.typography.bodyMedium, color = CatSubtext)
-                val engineCount = listOf(true, stirShaken, heuristics, smsContent, neighborSpoof).count { it }
+                val engineCount = listOf(true, stirShaken, heuristics, smsContent, neighborSpoof, mlScorer, rcsFilter, freqEscalation).count { it }
                 Text(
                     text = "$engineCount detection engines active" + if (aggressiveMode) " | AGGRESSIVE" else "",
                     style = MaterialTheme.typography.bodySmall,

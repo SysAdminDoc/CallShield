@@ -15,7 +15,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 /**
- * Feature 6: Home screen widget.
+ * Home screen widget.
  * Shows shield status, blocked count today, and total blocked.
  */
 class CallShieldWidget : AppWidgetProvider() {
@@ -38,26 +38,24 @@ class CallShieldWidget : AppWidgetProvider() {
         views.setOnClickPendingIntent(R.id.widget_title, intent)
         views.setOnClickPendingIntent(R.id.widget_blocked_today, intent)
 
-        // Fetch counts async
+        // Set click listeners immediately, counts update async
+        manager.updateAppWidget(widgetId, views)
+
+        // Fetch counts async using efficient count queries
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val dao = AppDatabase.getInstance(context).spamDao()
                 val todaySince = System.currentTimeMillis() - 86_400_000
-                val recentBlocked = dao.getRecentBlockedNumbers(todaySince)
-                val todayCount = recentBlocked.count { it.wasBlocked }
-
-                // Get total from all time
-                val allRecent = dao.getRecentBlockedNumbers(0)
-                val totalCount = allRecent.count { it.wasBlocked }
+                val todayCount = dao.getBlockedCountSinceSync(todaySince)
+                val totalCount = dao.getBlockedCountSinceSync(0)
 
                 views.setTextViewText(R.id.widget_blocked_today, todayCount.toString())
                 views.setTextViewText(R.id.widget_total, "$totalCount total blocked")
                 manager.updateAppWidget(widgetId, views)
-            } catch (_: Exception) {}
+            } catch (_: Exception) {
+                // Widget will show stale data — acceptable
+            }
         }
-
-        // Set click listeners immediately, counts update async
-        manager.updateAppWidget(widgetId, views)
     }
 
     companion object {
