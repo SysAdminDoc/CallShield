@@ -20,8 +20,8 @@ object LogExporter {
 
         for (call in calls) {
             val date = dateFormat.format(Date(call.timestamp))
-            val body = call.smsBody?.replace("\"", "\"\"")?.replace(",", " ") ?: ""
-            sb.appendLine("\"${call.number}\",\"$date\",\"${call.type}\",${call.isCall},\"${call.matchReason}\",${call.confidence},\"$body\"")
+            val body = csvEscape(call.smsBody ?: "")
+            sb.appendLine("${csvEscape(call.number)},${csvEscape(date)},${csvEscape(call.type)},${call.isCall},${csvEscape(call.matchReason)},${call.confidence},$body")
         }
 
         val file = File(context.cacheDir, "callshield_log_${System.currentTimeMillis()}.csv")
@@ -37,5 +37,10 @@ object LogExporter {
         context.startActivity(Intent.createChooser(intent, "Export log").apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         })
+    }
+
+    private fun csvEscape(value: String): String {
+        val escaped = value.replace("\"", "\"\"").replace("\n", " ").replace("\r", "")
+        return "\"$escaped\""
     }
 }

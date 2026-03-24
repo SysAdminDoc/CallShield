@@ -111,20 +111,20 @@ fun MoreHub(onStats: () -> Unit, onSettings: () -> Unit, onChangelog: () -> Unit
         Card(colors = CardDefaults.cardColors(containerColor = SurfaceVariant), shape = RoundedCornerShape(16.dp)) {
             Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 Text("CallShield", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = CatGreen)
-                Text("v1.0.0", style = MaterialTheme.typography.bodyMedium, color = CatSubtext)
+                Text("v1.2.1", style = MaterialTheme.typography.bodyMedium, color = CatSubtext)
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    "Open-source spam call & text blocker with 11-layer detection engine. " +
+                    "Open-source spam call & text blocker with 15-layer detection engine + ML scorer. " +
                     "No API keys, no accounts, no tracking. Everything runs on-device.",
                     style = MaterialTheme.typography.bodySmall, color = CatOverlay,
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center
                 )
                 Spacer(Modifier.height(12.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    AboutStat("11", "Layers", CatGreen)
-                    AboutStat("46", "Files", CatBlue)
-                    AboutStat("6K+", "Lines", CatPeach)
-                    AboutStat("13", "Releases", CatYellow)
+                    AboutStat("15", "Layers", CatGreen)
+                    AboutStat("56", "Files", CatBlue)
+                    AboutStat("8K+", "Lines", CatPeach)
+                    AboutStat("15", "Releases", CatYellow)
                 }
                 Spacer(Modifier.height(8.dp))
                 Text("Made by SysAdminDoc", style = MaterialTheme.typography.labelSmall, color = CatOverlay)
