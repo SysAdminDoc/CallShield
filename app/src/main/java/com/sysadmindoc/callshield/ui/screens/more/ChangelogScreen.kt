@@ -17,6 +17,19 @@ fun ChangelogScreen() {
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
+        VersionEntry("1.2.5", "Backup & Proguard", listOf(
+            "Backup/restore now includes SMS keyword rules (was missing)",
+            "Backup format bumped to v2 for keyword rules support",
+            "Added proguard keep rules for GitHubDataSource JSON models",
+            "Added proguard keep rule for BackupKeyword data class",
+        ))
+        VersionEntry("1.2.4", "README + Testing + Polish", listOf(
+            "Complete README rewrite for v1.2.x features",
+            "Protection test: ML scorer, hot list data, notification access checks",
+            "Detection icons for ML scorer, RCS, hot list, campaign ranges",
+            "StatsScreen: type breakdown colors for all new detection methods",
+            "Theme: added Catppuccin Teal and Lavender colors",
+        ))
         VersionEntry("1.2.3", "UX Polish + Performance", listOf(
             "Onboarding: updated to reflect 15-layer detection + ML scorer",
             "Onboarding: permission request button on detection page",

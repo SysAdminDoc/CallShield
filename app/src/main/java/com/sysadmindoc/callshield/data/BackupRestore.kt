@@ -21,17 +21,19 @@ object BackupRestore {
     private val moshi = Moshi.Builder().addLast(KotlinJsonAdapterFactory()).build()
 
     data class Backup(
-        val version: Int = 1,
+        val version: Int = 2,
         val app: String = "CallShield",
         val timestamp: Long = System.currentTimeMillis(),
         val blockedNumbers: List<BackupNumber> = emptyList(),
         val whitelistNumbers: List<BackupWhitelist> = emptyList(),
-        val wildcardRules: List<BackupWildcard> = emptyList()
+        val wildcardRules: List<BackupWildcard> = emptyList(),
+        val keywordRules: List<BackupKeyword> = emptyList()
     )
 
     data class BackupNumber(val number: String, val type: String, val description: String, val source: String)
     data class BackupWhitelist(val number: String, val description: String)
     data class BackupWildcard(val pattern: String, val isRegex: Boolean, val description: String, val enabled: Boolean)
+    data class BackupKeyword(val keyword: String, val caseSensitive: Boolean, val description: String, val enabled: Boolean)
 
     suspend fun createBackup(context: Context): String = withContext(Dispatchers.IO) {
         val dao = AppDatabase.getInstance(context).spamDao()
@@ -45,11 +47,15 @@ object BackupRestore {
         val wildcards = dao.getAllWildcardRules().first().map {
             BackupWildcard(it.pattern, it.isRegex, it.description, it.enabled)
         }
+        val keywords = dao.getAllKeywordRules().first().map {
+            BackupKeyword(it.keyword, it.caseSensitive, it.description, it.enabled)
+        }
 
         val backup = Backup(
             blockedNumbers = numbers,
             whitelistNumbers = whitelist,
-            wildcardRules = wildcards
+            wildcardRules = wildcards,
+            keywordRules = keywords
         )
 
         val adapter = moshi.adapter(Backup::class.java).indent("  ")
@@ -103,7 +109,13 @@ object BackupRestore {
                 rulesRestored++
             }
 
-            RestoreResult(true, "Restored $numbersRestored numbers, $whitelistRestored whitelist, $rulesRestored rules")
+            var keywordsRestored = 0
+            for (k in backup.keywordRules) {
+                dao.insertKeywordRule(SmsKeywordRule(keyword = k.keyword, caseSensitive = k.caseSensitive, description = k.description, enabled = k.enabled))
+                keywordsRestored++
+            }
+
+            RestoreResult(true, "Restored $numbersRestored numbers, $whitelistRestored whitelist, $rulesRestored wildcard rules, $keywordsRestored keyword rules")
         } catch (e: Exception) {
             RestoreResult(false, "Error: ${e.message}")
         }
