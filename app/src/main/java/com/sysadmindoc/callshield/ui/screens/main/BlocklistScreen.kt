@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -129,7 +130,7 @@ fun BlocklistScreen(viewModel: MainViewModel) {
 fun EmptyState(title: String, subtitle: String) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(Icons.Default.PlaylistAdd, null, tint = CatOverlay, modifier = Modifier.size(64.dp))
+            Icon(Icons.AutoMirrored.Filled.PlaylistAdd, null, tint = CatOverlay, modifier = Modifier.size(64.dp))
             Spacer(Modifier.height(12.dp))
             Text(title, color = CatSubtext)
             Text(subtitle, color = CatOverlay, style = MaterialTheme.typography.bodySmall)

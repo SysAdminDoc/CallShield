@@ -101,6 +101,7 @@ def main():
                         "number": num,
                         "type": entry.get("type", "robocall"),
                         "reports": entry.get("reports", 1),
+                        "first_seen": entry.get("first_seen", last_seen),
                         "last_seen": last_seen,
                         "description": entry.get("description", "Community reported"),
                     }

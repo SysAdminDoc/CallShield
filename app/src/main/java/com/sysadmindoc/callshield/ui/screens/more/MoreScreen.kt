@@ -8,6 +8,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -47,7 +49,7 @@ fun MoreTopBar(title: String, onBack: () -> Unit) {
         modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "Back", tint = CatSubtext) }
+        IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = CatSubtext) }
         Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
     }
 }
@@ -111,7 +113,7 @@ fun MoreHub(onStats: () -> Unit, onSettings: () -> Unit, onChangelog: () -> Unit
         Card(colors = CardDefaults.cardColors(containerColor = SurfaceVariant), shape = RoundedCornerShape(16.dp)) {
             Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 Text("CallShield", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = CatGreen)
-                Text("v1.2.1", style = MaterialTheme.typography.bodyMedium, color = CatSubtext)
+                Text("v1.2.2", style = MaterialTheme.typography.bodyMedium, color = CatSubtext)
                 Spacer(Modifier.height(8.dp))
                 Text(
                     "Open-source spam call & text blocker with 15-layer detection engine + ML scorer. " +
@@ -172,7 +174,7 @@ fun QuickLink(icon: androidx.compose.ui.graphics.vector.ImageVector, label: Stri
         Icon(icon, null, tint = color, modifier = Modifier.size(20.dp))
         Spacer(Modifier.width(12.dp))
         Text(label, color = CatText, modifier = Modifier.weight(1f))
-        Icon(Icons.Default.OpenInNew, null, tint = CatOverlay, modifier = Modifier.size(16.dp))
+        Icon(Icons.AutoMirrored.Filled.OpenInNew, null, tint = CatOverlay, modifier = Modifier.size(16.dp))
     }
 }
 
