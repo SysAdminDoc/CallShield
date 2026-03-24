@@ -25,8 +25,8 @@ object NotificationHelper {
     private const val STATUS_ID = 2
     private const val RATE_LIMIT_MS = 5_000L // Min 5s between block notifications
 
-    private var lastNotifTime = 0L
-    private var blockedSinceLastNotif = 0
+    @Volatile private var lastNotifTime = 0L
+    @Volatile private var blockedSinceLastNotif = 0
 
     private fun stableId(number: String, salt: Int = 0): Int {
         return (number.hashCode() xor (salt * 0x9E3779B9.toInt())) and 0x7FFFFFFF

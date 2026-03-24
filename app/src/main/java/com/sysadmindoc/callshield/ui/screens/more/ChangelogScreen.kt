@@ -17,6 +17,28 @@ fun ChangelogScreen() {
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
+        VersionEntry("1.2.0", "ML Scorer + RCS + Hot List", listOf(
+            "On-device 15-feature ML spam scorer (logistic regression, threshold 0.7)",
+            "RCS notification filter via NotificationListenerService",
+            "30-minute hot list sync: trending numbers, campaign ranges, spam domains",
+            "SIT tone player for anti-autodialer during caller ID overlay",
+            "URL safety checker (URLhaus) — phishing/malware notifications",
+            "SMS context trust — allow known conversations automatically",
+            "AbstractAPI carrier/line-type enrichment (optional key)",
+            "OpenCNAM caller name lookup in overlay",
+            "Hot campaign range detection in heuristic engine",
+            "Spam domain blocklist in SMS content analysis",
+            "Weekly ML model retraining + domain extraction in CI",
+            "30-minute hot list refresh in merge-reports workflow",
+        ))
+        VersionEntry("1.1.0", "Live Caller ID + Community Database", listOf(
+            "Live multi-source caller ID overlay (SkipCalls, PhoneBlock, WhoCalledMe)",
+            "Real-time spam score with parallel lookups",
+            "Anonymous community spam reporting via Cloudflare Worker",
+            "FCC database expanded to 32,933 confirmed spam numbers",
+            "Expandable action buttons on log and recent entries",
+            "False positive reporting to community database",
+        ))
         VersionEntry("1.0.0", "Initial Release", listOf(
             "11-layer detection engine with confidence scoring",
             "Number Lookup with animated spam score gauge",

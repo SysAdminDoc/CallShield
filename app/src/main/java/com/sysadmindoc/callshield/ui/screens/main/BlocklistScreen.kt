@@ -254,7 +254,15 @@ fun AddWildcardDialog(onDismiss: () -> Unit, onAdd: (String, Boolean, String) ->
                 Text("Use regex", style = MaterialTheme.typography.bodySmall)
             }
         } },
-        confirmButton = { Button(onClick = { if (pattern.isNotBlank()) onAdd(pattern, isRegex, desc) }, colors = ButtonDefaults.buttonColors(containerColor = CatYellow)) { Text("Add", color = Black) } },
+        confirmButton = { Button(onClick = {
+            if (pattern.isNotBlank()) {
+                if (isRegex) {
+                    try { Regex(pattern); onAdd(pattern, true, desc) } catch (_: Exception) { /* invalid regex — don't add */ }
+                } else {
+                    onAdd(pattern, false, desc)
+                }
+            }
+        }, colors = ButtonDefaults.buttonColors(containerColor = CatYellow)) { Text("Add", color = Black) } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel", color = CatSubtext) } }
     )
 }

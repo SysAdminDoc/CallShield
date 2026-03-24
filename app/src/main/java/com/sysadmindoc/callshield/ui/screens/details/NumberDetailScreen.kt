@@ -30,6 +30,7 @@ import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.screens.lookup.SpamScoreGauge
 import com.sysadmindoc.callshield.ui.screens.lookup.detectionIcon
 import com.sysadmindoc.callshield.ui.theme.*
+import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -67,6 +68,7 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
     // Multi-source lookup
     var webResult by remember { mutableStateOf<ExternalLookup.MultiLookupResult?>(null) }
     var webLoading by remember { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
 
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
@@ -200,7 +202,7 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
                     if (webResult == null && !webLoading) {
                         TextButton(onClick = {
                             webLoading = true
-                            kotlinx.coroutines.MainScope().launch {
+                            coroutineScope.launch {
                                 webResult = ExternalLookup.lookupAll(number)
                                 webLoading = false
                             }

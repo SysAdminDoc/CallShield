@@ -67,7 +67,8 @@ object UrlSafetyChecker {
             // Normalize — ensure it starts with http/https
             val normalizedUrl = if (url.startsWith("www.")) "https://$url" else url
 
-            val jsonBody = """{"url":"$normalizedUrl"}""".toRequestBody(JSON_TYPE)
+            val escapedUrl = normalizedUrl.replace("\\", "\\\\").replace("\"", "\\\"")
+            val jsonBody = """{"url":"$escapedUrl"}""".toRequestBody(JSON_TYPE)
             val request = Request.Builder()
                 .url("https://urlhaus-api.abuse.ch/v1/url/")
                 .post(jsonBody)

@@ -60,7 +60,9 @@ object SpamMLScorer {
 
     @Volatile
     private var weights: DoubleArray? = null
+    @Volatile
     private var bias: Double = -2.5
+    @Volatile
     private var threshold: Double = 0.7  // Conservative threshold
 
     /**

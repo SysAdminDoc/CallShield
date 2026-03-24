@@ -89,7 +89,7 @@ object SitTonePlayer {
             }
             // Play the sequence twice for robustness against dialers that
             // sample the first 100ms and may miss the initial segment.
-            Thread.sleep(300)
+            Thread.sleep(300L)
             for ((freq, durationMs) in SIT_SEGMENTS) {
                 playTone(freq, durationMs)
                 Thread.sleep(SEGMENT_GAP_MS.toLong())

@@ -45,6 +45,7 @@ def main():
     existing = {n["number"]: n for n in db["numbers"]}
     added = 0
     updated = 0
+    processed_files = []
 
     for report_file in report_files:
         try:
@@ -53,6 +54,7 @@ def main():
 
             number = report.get("number", "")
             if not number:
+                processed_files.append(report_file)
                 continue
 
             spam_type = report.get("type", "unknown")
@@ -83,8 +85,7 @@ def main():
                 }
                 added += 1
 
-            # Delete processed report
-            os.remove(report_file)
+            processed_files.append(report_file)
 
         except Exception as e:
             print(f"  Error processing {report_file.name}: {e}")
@@ -96,6 +97,13 @@ def main():
 
     with open(DB_FILE, "w") as f:
         json.dump(db, f, indent=2)
+
+    # Delete processed report files only after DB is safely persisted
+    for report_file in processed_files:
+        try:
+            os.remove(report_file)
+        except OSError:
+            pass
 
     # Remove reports dir if empty
     if REPORTS_DIR.exists() and not list(REPORTS_DIR.iterdir()):

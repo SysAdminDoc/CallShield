@@ -60,7 +60,7 @@ object SmsContentAnalyzer {
         // Health scams
         Regex("(?i)(miracle (cure|pill|drug|weight))"),
         Regex("(?i)(lose \\d+ (lbs?|pounds|kg) (in|fast|quick))"),
-        Regex("(?i)(pharmacy|viagra|cialis|prescription).{0,20}(discount|cheap|free|order))"),
+        Regex("(?i)(pharmacy|viagra|cialis|prescription).{0,20}(discount|cheap|free|order)"),
 
         // Generic spam signals
         Regex("(?i)(unsubscribe|opt.?out|stop to (end|cancel|quit|unsubscribe))"),
@@ -109,18 +109,18 @@ object SmsContentAnalyzer {
                 if (domain.isNotEmpty() && domain in spamDomains) {
                     score += 50
                     reasons.add("spam_domain")
-                    break
+                    continue
                 }
             }
             if (SHORTENER_DOMAINS.any { url.contains(it) }) {
                 score += 35
                 reasons.add("shortened_url")
-                break
+                continue
             }
             if (SUSPICIOUS_TLDS.any { url.endsWith(it) || url.contains("$it/") }) {
                 score += 30
                 reasons.add("suspicious_tld")
-                break
+                continue
             }
         }
 

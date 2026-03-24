@@ -302,6 +302,7 @@ class CallerIdOverlayService : Service() {
     }
 
     private fun dismiss() {
+        handler.removeCallbacksAndMessages(null)
         removeOverlay()
         scope.cancel()
         stopSelf()
@@ -314,6 +315,7 @@ class CallerIdOverlayService : Service() {
     }
 
     override fun onDestroy() {
+        handler.removeCallbacksAndMessages(null)
         removeOverlay()
         scope.cancel()
         super.onDestroy()
