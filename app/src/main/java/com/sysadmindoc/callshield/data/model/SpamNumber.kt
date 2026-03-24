@@ -72,6 +72,13 @@ data class NumberCount(
     val cnt: Int
 )
 
+/** A trending number from the 30-minute hot list sync. */
+data class HotNumber(
+    val number: String,
+    val type: String = "robocall",
+    val description: String = "Trending community report"
+)
+
 @JsonClass(generateAdapter = false)
 data class SpamPrefixJson(
     val prefix: String,

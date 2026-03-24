@@ -13,6 +13,7 @@ object NotificationHelper {
     const val CHANNEL_BLOCKED = "blocked_calls"
     const val CHANNEL_RATING = "spam_rating"
     const val CHANNEL_STATUS = "protection_status"
+    const val CHANNEL_PHISHING = "phishing_warning"
     const val ACTION_BLOCK = "com.sysadmindoc.callshield.ACTION_BLOCK"
     const val ACTION_REPORT = "com.sysadmindoc.callshield.ACTION_REPORT"
     const val ACTION_SAFE = "com.sysadmindoc.callshield.ACTION_SAFE"
@@ -46,6 +47,11 @@ object NotificationHelper {
         nm.createNotificationChannel(
             NotificationChannel(CHANNEL_STATUS, "Protection Status", NotificationManager.IMPORTANCE_MIN).apply {
                 description = "Persistent protection status indicator"
+            }
+        )
+        nm.createNotificationChannel(
+            NotificationChannel(CHANNEL_PHISHING, "Phishing URL Warning", NotificationManager.IMPORTANCE_HIGH).apply {
+                description = "Alert when a received SMS contains a known malicious URL"
             }
         )
     }
@@ -147,6 +153,32 @@ object NotificationHelper {
             .setAutoCancel(true)
             .addAction(android.R.drawable.ic_menu_close_clear_cancel, "Spam - Block it", blockIntent)
             .addAction(android.R.drawable.ic_menu_myplaces, "Safe", safeIntent)
+            .build()
+
+        nm.notify(nid, notif)
+    }
+
+    fun notifyPhishingUrl(context: Context, sender: String, threats: String) {
+        val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val nid = stableId(sender, 50)
+
+        val openIntent = PendingIntent.getActivity(
+            context, stableId(sender, 51),
+            Intent(context, MainActivity::class.java).apply {
+                putExtra("open_number", sender)
+                flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
+            },
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+
+        val notif = NotificationCompat.Builder(context, CHANNEL_PHISHING)
+            .setSmallIcon(android.R.drawable.ic_dialog_alert)
+            .setContentTitle("⚠ Phishing URL detected")
+            .setContentText("SMS from ${PhoneFormatter.format(sender)} contains a $threats link")
+            .setStyle(NotificationCompat.BigTextStyle()
+                .bigText("An SMS from ${PhoneFormatter.format(sender)} contains a URL flagged by URLhaus as $threats. Do not tap any links in this message."))
+            .setContentIntent(openIntent)
+            .setAutoCancel(true)
             .build()
 
         nm.notify(nid, notif)

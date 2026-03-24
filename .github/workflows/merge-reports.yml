@@ -2,7 +2,8 @@ name: Merge Community Reports
 
 on:
   schedule:
-    - cron: '0 8 * * *'  # Daily at 8am UTC
+    - cron: '0 8 * * *'    # Daily full merge at 8am UTC
+    - cron: '*/30 * * * *' # Hot list refresh every 30 minutes
   workflow_dispatch:
 
 permissions:
@@ -19,13 +20,22 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Merge reports into database
+      - name: Merge reports into database (daily only)
+        # Only run full merge on the 8am schedule or manual trigger
+        if: github.event.schedule == '0 8 * * *' || github.event_name == 'workflow_dispatch'
         run: python scripts/merge_community_reports.py
+
+      - name: Extract spam domains from SMS reports (daily only)
+        if: github.event.schedule == '0 8 * * *' || github.event_name == 'workflow_dispatch'
+        run: python scripts/extract_spam_domains.py
+
+      - name: Generate hot list + campaign ranges (every run)
+        run: python scripts/generate_hot_list.py
 
       - name: Commit and Push
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add data/
-          git diff --staged --quiet || git commit -m "Merge community reports $(date +%Y-%m-%d)"
+          git diff --staged --quiet || git commit -m "Update hot list + merge community reports $(date +%Y-%m-%dT%H:%M)"
           git push

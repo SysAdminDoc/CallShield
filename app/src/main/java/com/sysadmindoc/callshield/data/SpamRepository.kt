@@ -52,6 +52,9 @@ class SpamRepository(private val context: Context) {
         private val KEY_ONBOARDING_DONE = booleanPreferencesKey("onboarding_done")
         private val KEY_AUTO_CLEANUP = booleanPreferencesKey("auto_cleanup_enabled")
         private val KEY_CLEANUP_DAYS = intPreferencesKey("cleanup_retention_days")
+        private val KEY_ABSTRACT_API_KEY = stringPreferencesKey("abstract_api_key")
+        private val KEY_ML_SCORER = booleanPreferencesKey("ml_scorer_enabled")
+        private val KEY_RCS_FILTER = booleanPreferencesKey("rcs_filter_enabled")
 
         @Volatile
         private var INSTANCE: SpamRepository? = null
@@ -81,6 +84,15 @@ class SpamRepository(private val context: Context) {
     val onboardingDone: Flow<Boolean> = dataStore.data.map { it[KEY_ONBOARDING_DONE] ?: false }
     val autoCleanupEnabled: Flow<Boolean> = dataStore.data.map { it[KEY_AUTO_CLEANUP] ?: false }
     val cleanupDays: Flow<Int> = dataStore.data.map { it[KEY_CLEANUP_DAYS] ?: 30 }
+    // Optional AbstractAPI key for carrier/number-type enrichment in the Caller ID overlay.
+    // Never used in the blocking pipeline — blocking stays 100% local/offline.
+    val abstractApiKey: Flow<String> = dataStore.data.map { it[KEY_ABSTRACT_API_KEY] ?: "" }
+    suspend fun setAbstractApiKey(key: String) = dataStore.edit { it[KEY_ABSTRACT_API_KEY] = key }
+
+    val mlScorerEnabled: Flow<Boolean> = dataStore.data.map { it[KEY_ML_SCORER] ?: true }
+    val rcsFilterEnabled: Flow<Boolean> = dataStore.data.map { it[KEY_RCS_FILTER] ?: true }
+    suspend fun setMlScorer(enabled: Boolean) = dataStore.edit { it[KEY_ML_SCORER] = enabled }
+    suspend fun setRcsFilter(enabled: Boolean) = dataStore.edit { it[KEY_RCS_FILTER] = enabled }
 
     suspend fun setOnboardingDone() = dataStore.edit { it[KEY_ONBOARDING_DONE] = true }
     suspend fun setAutoCleanup(enabled: Boolean) = dataStore.edit { it[KEY_AUTO_CLEANUP] = enabled }
@@ -193,6 +205,18 @@ class SpamRepository(private val context: Context) {
             }
         }
 
+        // Layer 15: On-device ML spam scorer
+        if (mlScorerEnabled.first() && SpamMLScorer.isSpam(normalized)) {
+            val mlConf = SpamMLScorer.confidence(normalized)
+            return SpamCheckResult(
+                isSpam = true,
+                matchSource = "ml_scorer",
+                type = "robocall",
+                description = "ML model: ${mlConf}% spam probability",
+                confidence = mlConf
+            )
+        }
+
         return SpamCheckResult(false)
     }
 
@@ -200,6 +224,13 @@ class SpamRepository(private val context: Context) {
     suspend fun isSpamSms(number: String, body: String): SpamCheckResult {
         val numberResult = isSpam(number, smsBody = body)
         if (numberResult.isSpam) return numberResult
+
+        // Prior conversation trust — if user has sent to or regularly received
+        // from this number, bypass keyword/content analysis entirely.
+        // Checked after number-based blocking so a user-blocked number still blocks.
+        if (SmsContextChecker.isTrustedSender(context, number)) {
+            return SpamCheckResult(false, matchSource = "sms_context")
+        }
 
         // Custom SMS keyword rules
         val keywords = dao.getActiveKeywordRules()
@@ -389,6 +420,12 @@ class SpamRepository(private val context: Context) {
     }
 
     suspend fun removeFromWhitelist(entry: WhitelistEntry) = dao.deleteWhitelistEntry(entry)
+
+    // ── Hot list (30-minute trending sync) ────────────────────────────
+    suspend fun replaceHotList(numbers: List<SpamNumber>) = withContext(Dispatchers.IO) {
+        dao.deleteBySource("hot_list")
+        if (numbers.isNotEmpty()) dao.insertNumbers(numbers)
+    }
 
     // ── Auto-cleanup ──────────────────────────────────────────────────
     suspend fun cleanupOldLogs() {

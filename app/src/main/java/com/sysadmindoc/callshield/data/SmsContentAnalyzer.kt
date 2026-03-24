@@ -75,6 +75,23 @@ object SmsContentAnalyzer {
     // URL pattern
     private val URL_PATTERN = Regex("https?://[^\\s]+|www\\.[^\\s]+|[a-zA-Z0-9][a-zA-Z0-9-]*\\.[a-zA-Z]{2,}/[^\\s]*")
 
+    // ── Spam Domain Blocklist ─────────────────────────────────────────
+    // Community-reported phishing/spam domains. Loaded from GitHub's
+    // spam_domains.json and refreshed every 30 minutes by HotListSyncWorker.
+    @Volatile
+    private var spamDomains: Set<String> = emptySet()
+
+    fun updateSpamDomains(domains: Collection<String>) {
+        spamDomains = domains.toHashSet()
+    }
+
+    /** Extract root domain from a URL string (strips scheme, www, path, port). */
+    private fun extractDomain(url: String): String {
+        val lower = url.lowercase()
+            .removePrefix("https://").removePrefix("http://").removePrefix("www.")
+        return lower.split("/")[0].split("?")[0].split("#")[0].split(":")[0]
+    }
+
     fun analyze(body: String): SmsAnalysisResult {
         var score = 0
         val reasons = mutableListOf<String>()
@@ -86,6 +103,15 @@ object SmsContentAnalyzer {
         // Check for URL shorteners (high spam signal)
         val urls = URL_PATTERN.findAll(body).map { it.value.lowercase() }.toList()
         for (url in urls) {
+            // Community-reported spam domain — highest confidence
+            if (spamDomains.isNotEmpty()) {
+                val domain = extractDomain(url)
+                if (domain.isNotEmpty() && domain in spamDomains) {
+                    score += 50
+                    reasons.add("spam_domain")
+                    break
+                }
+            }
             if (SHORTENER_DOMAINS.any { url.contains(it) }) {
                 score += 35
                 reasons.add("shortened_url")

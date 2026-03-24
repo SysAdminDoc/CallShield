@@ -1,0 +1,41 @@
+{
+  "version": 2,
+  "description": "CallShield logistic regression spam scorer v2 — 15 features. Will be retrained from database on first CI run.",
+  "feature_names": [
+    "toll_free",
+    "high_spam_npa",
+    "voip_range",
+    "repeated_digits_ratio",
+    "sequential_asc_ratio",
+    "all_same_digit",
+    "nxx_555",
+    "last4_zero",
+    "invalid_nxx",
+    "subscriber_all_same",
+    "alternating_pattern",
+    "sequential_desc_ratio",
+    "nxx_below_200",
+    "low_digit_entropy",
+    "subscriber_sequential"
+  ],
+  "weights": [
+    1.2,
+    0.8,
+    1.8,
+    1.5,
+    0.6,
+    2.1,
+    1.4,
+    0.9,
+    2.0,
+    1.2,
+    1.8,
+    0.5,
+    1.0,
+    1.5,
+    0.8
+  ],
+  "bias": -2.5,
+  "threshold": 0.7,
+  "note": "Initial heuristic weights (v2, 15 features). Retrained weekly by CI from spam_numbers.json."
+}

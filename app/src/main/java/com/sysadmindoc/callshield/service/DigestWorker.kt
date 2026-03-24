@@ -26,11 +26,28 @@ class DigestWorker(
         val calls = recent.count { it.isCall && it.wasBlocked }
         val sms = recent.count { !it.isCall && it.wasBlocked }
 
+        // Source breakdown from matchReason prefix
+        val bySource = recent.filter { it.wasBlocked }.groupBy { call ->
+            when {
+                call.matchReason.startsWith("database") || call.matchReason.startsWith("user_blocklist") || call.matchReason.startsWith("hot_list") -> "database"
+                call.matchReason.startsWith("heuristic") -> "heuristic"
+                call.matchReason.startsWith("ml_scorer") -> "ML"
+                call.matchReason.startsWith("sms_content") || call.matchReason.startsWith("keyword") -> "content"
+                call.matchReason.startsWith("rcs_") -> "RCS filter"
+                else -> "other"
+            }
+        }
+        val breakdown = bySource.entries
+            .sortedByDescending { it.value.size }
+            .joinToString(" · ") { "${it.value.size} ${it.key}" }
+
         val nm = applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val notif = NotificationCompat.Builder(applicationContext, NotificationHelper.CHANNEL_BLOCKED)
             .setSmallIcon(android.R.drawable.ic_menu_info_details)
             .setContentTitle("CallShield Daily Summary")
             .setContentText("Blocked $blocked spam today ($calls calls, $sms texts)")
+            .setStyle(NotificationCompat.BigTextStyle()
+                .bigText("Blocked $blocked spam today — $calls calls, $sms texts\n$breakdown"))
             .setAutoCancel(true)
             .build()
 

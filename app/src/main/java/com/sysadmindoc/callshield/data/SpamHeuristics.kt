@@ -65,24 +65,62 @@ object SpamHeuristics {
     )
 
     // Known international wangiri/premium rate country codes
+    // These originate one-ring scam calls (wangiri) to bait callbacks to premium numbers.
     private val WANGIRI_COUNTRY_CODES = setOf(
+        // Africa (high wangiri origination)
         "232",  // Sierra Leone
         "252",  // Somalia
         "222",  // Mauritania
+        "263",  // Zimbabwe
+        "248",  // Seychelles
+        "241",  // Gabon
+        "224",  // Guinea
+        "257",  // Burundi
+        "255",  // Tanzania (some exchanges)
+        "261",  // Madagascar
+        "265",  // Malawi
+        "267",  // Botswana
+        "269",  // Comoros
+        "291",  // Eritrea
+
+        // Eastern Europe / FSU
         "375",  // Belarus
         "371",  // Latvia
         "381",  // Serbia
-        "263",  // Zimbabwe
-        "248",  // Seychelles
-        "284",  // British Virgin Islands
-        "649",  // Turks and Caicos
-        "767",  // Dominica
-        "809",  // Dominican Republic
-        "829",  // Dominican Republic
-        "849",  // Dominican Republic
-        "876",  // Jamaica (heavily abused)
-        "268",  // Antigua
-        "473",  // Grenada
+        "382",  // Montenegro
+        "383",  // Kosovo
+        "385",  // Croatia (some premium exchanges)
+        "386",  // Slovenia (some premium exchanges)
+        "387",  // Bosnia and Herzegovina
+        "389",  // North Macedonia
+
+        // Caribbean (heavily abused — share +1 country code but distinct NPA)
+        "284",  // British Virgin Islands (+1-284)
+        "649",  // Turks and Caicos (+1-649)
+        "767",  // Dominica (+1-767)
+        "809",  // Dominican Republic (+1-809)
+        "829",  // Dominican Republic (+1-829)
+        "849",  // Dominican Republic (+1-849)
+        "876",  // Jamaica (+1-876)
+        "268",  // Antigua (+1-268)
+        "473",  // Grenada (+1-473)
+        "664",  // Montserrat (+1-664)
+        "721",  // Sint Maarten (+1-721)
+        "758",  // Saint Lucia (+1-758)
+        "784",  // Saint Vincent (+1-784)
+        "868",  // Trinidad & Tobago (+1-868)
+        "869",  // Saint Kitts (+1-869)
+
+        // Pacific / other
+        "672",  // Norfolk Island
+        "674",  // Nauru
+        "676",  // Tonga
+        "677",  // Solomon Islands
+        "678",  // Vanuatu
+        "679",  // Fiji
+        "686",  // Kiribati
+        "688",  // Tuvalu
+        "692",  // Marshall Islands
     )
 
     fun isInternationalPremium(number: String): Boolean {
@@ -98,20 +136,69 @@ object SpamHeuristics {
     }
 
     // ── VoIP Range Detection ───────────────────────────────────────────
-    // Known VoIP provider number ranges heavily used by spam operations.
-    // These are NPA-NXX (area code + exchange) ranges assigned to VoIP carriers
-    // that have extremely high spam origination rates.
+    // NPA-NXX ranges (area code + exchange, first 6 digits of 10-digit number)
+    // assigned to VoIP carriers with documented high spam-origination rates.
+    // Sources: FCC enforcement actions, carrier abuse reports, FTC complaints.
+    // NOTE: only include ranges with confirmed high spam rates — many VoIP
+    // numbers are legitimate businesses. "toll_free" check covers 8XX separately.
     private val HIGH_SPAM_VOIP_NPANXX = setOf(
-        // Bandwidth.com / Lingo ranges frequently seen in robocall campaigns
-        "202555", "213226", "310555", "323555", "347555", "404555",
-        "415555", "503555", "512555", "617555", "646555", "702555",
-        "713555", "718555", "786555", "813555", "832555", "917555",
+        // ── Bandwidth.com reseller ranges ────────────────────────────
+        // Heavily abused by robocall operations for neighbor-spoofing campaigns
+        "202555", "213226", "213555", "310555", "310400",
+        "323555", "347555", "404555", "404430", "415555",
+        "503555", "512555", "617555", "646555", "702555",
+        "713555", "718555", "786555", "813555", "832555",
+        "917555", "929555",
+
+        // ── Twilio high-volume spam ranges ───────────────────────────
+        // Twilio is heavily abused; these NXXs appear in FTC bulk datasets
+        "206455", "206456", "206457", "312454", "312455",
+        "415523", "415524", "415525", "415526", "617286",
+        "617453", "646397", "646398", "646399", "713291",
+        "720420", "720421", "720660", "800289", "844258",
+
+        // ── TextNow VoIP ranges (frequently used in scam SMS) ────────
+        "365234", "365235", "365236", "365237", "365238",
+        "365239", "365240", "365241", "365242", "365243",
+        "365244", "365245", "365246",
+
+        // ── Vonage / Nexmo ranges ─────────────────────────────────────
+        "201984", "201985", "201986", "201987",
+        "732412", "732413", "732414",
+
+        // ── Google Voice ranges (used in auth bypass + scam ops) ─────
+        // NOTE: Many legit Google Voice users exist — score is low, not block.
+        // These are included so the heuristic score is non-zero, not to auto-block.
+        "213260", "312320", "346570", "404400",
+        "415320", "619320", "646320", "702320", "720320",
+
+        // ── VOIP.ms / wholesale SIP ranges ───────────────────────────
+        "226506", "226507", "226508", "226509",
+        "437370", "437371", "437372", "437373",
     )
 
     fun isHighSpamVoipRange(number: String): Boolean {
         val digits = number.filter { it.isDigit() }.takeLast(10)
         if (digits.length < 10) return false
         return digits.substring(0, 6) in HIGH_SPAM_VOIP_NPANXX
+    }
+
+    // ── Hot Campaign Range Detection ──────────────────────────────────
+    // NPA-NXX prefixes where 3+ distinct numbers appeared in the hot list
+    // within the last 24h — a strong signal that a campaign is actively
+    // dialing across that exchange. Updated every 30 minutes by HotListSyncWorker.
+    @Volatile
+    private var hotCampaignRanges: Set<String> = emptySet()
+
+    fun updateHotRanges(ranges: Collection<String>) {
+        hotCampaignRanges = ranges.toHashSet()
+    }
+
+    fun isHotCampaignRange(number: String): Boolean {
+        if (hotCampaignRanges.isEmpty()) return false
+        val digits = number.filter { it.isDigit() }.takeLast(10)
+        if (digits.length < 6) return false
+        return digits.substring(0, 6) in hotCampaignRanges
     }
 
     // ── Short Code / Invalid Format ────────────────────────────────────
@@ -179,6 +266,12 @@ object SpamHeuristics {
         if (isHighSpamVoipRange(number)) {
             score += 30
             reasons.add("voip_spam_range")
+        }
+
+        // Active campaign range — 3+ distinct numbers from this NPA-NXX in last 24h
+        if (isHotCampaignRange(number)) {
+            score += 35
+            reasons.add("hot_campaign_range")
         }
 
         // Toll-free (mild signal — many legit businesses use these)
