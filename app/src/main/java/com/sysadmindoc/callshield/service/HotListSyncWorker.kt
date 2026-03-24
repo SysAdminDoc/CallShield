@@ -39,14 +39,16 @@ class HotListSyncWorker(
 
             val hotNumbers = hotResult.getOrThrow()
             if (hotNumbers.isNotEmpty()) {
-                repo.replaceHotList(hotNumbers.map { hot ->
-                    SpamNumber(
-                        number      = repo.normalizeNumber(hot.number),
-                        type        = hot.type,
-                        reports     = 1,
-                        description = hot.description,
-                        source      = "hot_list"
-                    )
+                repo.replaceHotList(hotNumbers.mapNotNull { hot ->
+                    try {
+                        SpamNumber(
+                            number      = repo.normalizeNumber(hot.number),
+                            type        = hot.type,
+                            reports     = 1,
+                            description = hot.description,
+                            source      = "hot_list"
+                        )
+                    } catch (_: Exception) { null }
                 })
             }
 

@@ -45,7 +45,8 @@ object CommunityContributor {
     private suspend fun post(number: String, type: String): ContributeResult = withContext(Dispatchers.IO) {
         try {
             val normalized = normalizeForReport(number) ?: return@withContext ContributeResult(false, "Invalid number")
-            val json = """{"number":"$normalized","type":"$type"}"""
+            val escapedType = type.replace("\\", "\\\\").replace("\"", "\\\"")
+            val json = """{"number":"$normalized","type":"$escapedType"}"""
             val body = json.toRequestBody("application/json".toMediaType())
 
             val request = Request.Builder()

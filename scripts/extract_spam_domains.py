@@ -78,7 +78,7 @@ def main():
 
     # Filter to domains with enough independent reports, rank by frequency
     spam_domains = [
-        d for d, c in domain_counts.most_common(MAX_DOMAINS * 2)
+        d for d, c in domain_counts.most_common()
         if c >= MIN_REPORTS
     ][:MAX_DOMAINS]
 

@@ -13,6 +13,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.PhoneCallback
+import androidx.compose.material.icons.automirrored.filled.TextSnippet
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -71,7 +73,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = CatBlue), shape = RoundedCornerShape(12.dp)
                     ) {
-                        Icon(Icons.Default.PhoneCallback, null, tint = Black)
+                        Icon(Icons.AutoMirrored.Filled.PhoneCallback, null, tint = Black)
                         Spacer(Modifier.width(6.dp))
                         Text("Call Screener", color = Black, fontWeight = FontWeight.Bold)
                     }
@@ -113,7 +115,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
             HorizontalDivider(color = CatOverlay.copy(alpha = 0.2f))
             SettingsToggle("Heuristic Analysis", "VoIP ranges, premium rate, wangiri, rapid-fire", Icons.Default.Psychology, heuristics) { viewModel.setHeuristics(it) }
             HorizontalDivider(color = CatOverlay.copy(alpha = 0.2f))
-            SettingsToggle("SMS Content Analysis", "Spam keywords, phishing links, scam patterns", Icons.Default.TextSnippet, smsContent) { viewModel.setSmsContent(it) }
+            SettingsToggle("SMS Content Analysis", "Spam keywords, phishing links, scam patterns", Icons.AutoMirrored.Filled.TextSnippet, smsContent) { viewModel.setSmsContent(it) }
             HorizontalDivider(color = CatOverlay.copy(alpha = 0.2f))
             SettingsToggle("Repeat Caller Auto-Block", "Auto-block numbers that call 3+ times", Icons.Default.Repeat, freqEscalation) { viewModel.setFreqEscalation(it) }
             HorizontalDivider(color = CatOverlay.copy(alpha = 0.2f))
@@ -248,7 +250,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
         // About
         Card(colors = CardDefaults.cardColors(containerColor = SurfaceVariant), shape = RoundedCornerShape(16.dp)) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text("CallShield v1.2.1", color = CatSubtext, style = MaterialTheme.typography.bodySmall)
+                Text("CallShield v1.2.2", color = CatSubtext, style = MaterialTheme.typography.bodySmall)
                 Text("Open-source spam blocker. No subscriptions, no tracking.", style = MaterialTheme.typography.labelSmall, color = CatOverlay)
             }
         }

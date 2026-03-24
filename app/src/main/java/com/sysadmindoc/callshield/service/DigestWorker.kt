@@ -16,6 +16,7 @@ class DigestWorker(
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
+        try {
         val dao = AppDatabase.getInstance(applicationContext).spamDao()
         val since = System.currentTimeMillis() - 86_400_000 // Last 24h
         val recent = dao.getRecentBlockedNumbers(since)
@@ -53,6 +54,9 @@ class DigestWorker(
 
         nm.notify(9999, notif)
         return Result.success()
+        } catch (_: Exception) {
+            return Result.success() // Don't retry digest on failure
+        }
     }
 
     companion object {
