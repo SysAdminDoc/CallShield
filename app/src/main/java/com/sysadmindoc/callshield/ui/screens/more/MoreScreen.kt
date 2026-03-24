@@ -113,7 +113,7 @@ fun MoreHub(onStats: () -> Unit, onSettings: () -> Unit, onChangelog: () -> Unit
         Card(colors = CardDefaults.cardColors(containerColor = SurfaceVariant), shape = RoundedCornerShape(16.dp)) {
             Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 Text("CallShield", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = CatGreen)
-                Text("v1.2.3", style = MaterialTheme.typography.bodyMedium, color = CatSubtext)
+                Text("v1.2.4", style = MaterialTheme.typography.bodyMedium, color = CatSubtext)
                 Spacer(Modifier.height(8.dp))
                 Text(
                     "Open-source spam call & text blocker with 15-layer detection engine + ML scorer. " +

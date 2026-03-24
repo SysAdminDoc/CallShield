@@ -194,6 +194,8 @@ object SpamHeuristics {
         hotCampaignRanges = ranges.toHashSet()
     }
 
+    fun hasHotRanges(): Boolean = hotCampaignRanges.isNotEmpty()
+
     fun isHotCampaignRange(number: String): Boolean {
         if (hotCampaignRanges.isEmpty()) return false
         val digits = number.filter { it.isDigit() }.takeLast(10)

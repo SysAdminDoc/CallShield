@@ -20,6 +20,8 @@ val CatBlue = Color(0xFF89B4FA)
 val CatYellow = Color(0xFFF9E2AF)
 val CatMauve = Color(0xFFCBA6F7)
 val CatPeach = Color(0xFFFAB387)
+val CatTeal = Color(0xFF94E2D5)
+val CatLavender = Color(0xFFB4BEFE)
 val CatText = Color(0xFFCDD6F4)
 val CatSubtext = Color(0xFFBAC2DE)
 val CatOverlay = Color(0xFF6C7086)
@@ -54,7 +56,9 @@ fun CallShieldTheme(content: @Composable () -> Unit) {
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
+            @Suppress("DEPRECATION")
             window.statusBarColor = Black.toArgb()
+            @Suppress("DEPRECATION")
             window.navigationBarColor = Black.toArgb()
             WindowCompat.getInsetsController(window, view).apply {
                 isAppearanceLightStatusBars = false

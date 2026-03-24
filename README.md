@@ -6,7 +6,7 @@
 
 <p align="center">
   <strong>Open-source spam call and text blocker for Android</strong><br>
-  11-layer detection engine | 32,933 spam numbers | Real-time multi-source lookup | No API keys
+  15-layer detection + ML scorer | 32,933 spam numbers | Real-time caller ID | RCS filter | No API keys
 </p>
 
 <p align="center">
@@ -19,15 +19,16 @@
 
 ---
 
-CallShield blocks spam calls and texts using an **11-layer on-device detection engine** powered by a 32,933-number spam database and real-time lookups against 3 external sources. Community-maintained, GitHub-hosted, no accounts, no tracking.
+CallShield blocks spam calls and texts using a **15-layer on-device detection engine** with an ML spam scorer, RCS notification filter, and real-time caller ID overlay. Powered by a 32,933-number database with 30-minute hot list updates. Community-maintained, no accounts, no tracking.
 
 ## How It Works
 
-1. **32,933 confirmed spam numbers** — sourced from 1.75M FCC consumer complaints, filtered to 3+ independent reports each
-2. **11-layer detection** — every call and SMS checked against database, heuristics, STIR/SHAKEN, keyword rules, and more
-3. **Real-time overlay** — incoming calls trigger parallel lookups against SkipCalls, PhoneBlock, and WhoCalledMe with live-updating spam score
-4. **Callback-aware** — won't block callbacks from numbers you recently called, or urgent repeated callers
-5. **Community-driven** — one-tap anonymous contribution via Cloudflare Worker, daily merge into database
+1. **32,933 confirmed spam numbers** — sourced from 1.75M FCC consumer complaints (2+ reports each), FTC Do Not Call, ToastedSpam, and community reports
+2. **15-layer detection + ML** — database, heuristics, on-device logistic regression, SMS content analysis, RCS filter, STIR/SHAKEN, and more
+3. **Real-time caller ID overlay** — parallel lookups against SkipCalls, PhoneBlock, WhoCalledMe + OpenCNAM caller name, with SIT tone anti-autodialer
+4. **30-minute hot list** — trending spam numbers and campaign ranges refresh every 30 minutes via GitHub Actions
+5. **Callback-aware** — won't block callbacks from numbers you recently called, or urgent repeated callers
+6. **Community-driven** — one-tap anonymous contribution via Cloudflare Worker, daily merge into database
 
 ## Detection Layers
 
@@ -35,22 +36,29 @@ CallShield blocks spam calls and texts using an **11-layer on-device detection e
 |---|-------|-------------|
 | 1 | **Manual Whitelist** | Numbers you've explicitly marked as always-allow |
 | 2 | **Contact Whitelist** | Numbers in your phone's contacts always pass through |
-| 3 | **Callback Detection** | Numbers you recently called (24h) are allowed — they're callbacks, not spam |
-| 4 | **Repeated Urgent Caller** | If same number calls 2x in 5 minutes, allowed through — likely urgent |
+| 3 | **Callback Detection** | Numbers you recently called (24h) are allowed — they're callbacks |
+| 4 | **Repeated Urgent Caller** | Same number calls 2x in 5 minutes → allowed through |
 | 5 | **User Blocklist** | Your personal block list with descriptions |
-| 6 | **Database Match** | 32,933 confirmed spam numbers from FCC/FTC complaints and community reports |
-| 7 | **Prefix Rules** | 19 rules — US premium rate (+1900), wangiri country codes (Sierra Leone, Jamaica, etc.) |
+| 6 | **Database Match** | 32,933 confirmed spam numbers + hot list (refreshed every 30 min) |
+| 7 | **Prefix Rules** | Wangiri country codes, US premium rate (+1900), international premium |
 | 8 | **Wildcard / Regex** | Custom pattern rules like `+1832555*` or full regex |
-| 9 | **SMS Keyword Rules** | Block texts containing specific words you define |
-| 10 | **Quiet Hours** | Block all non-contact calls during configurable hours |
-| 11 | **Frequency Auto-Block** | Numbers that call 3+ times get automatically blocked |
-| 12 | **STIR/SHAKEN** | Blocks calls failing carrier caller ID authentication (Android 11+) |
-| 13 | **Heuristic Engine** | VoIP spam ranges, international premium, neighbor spoofing, rapid-fire, toll-free abuse |
-| 14 | **SMS Content Analysis** | 30+ regex patterns for phishing links, URL shorteners, scam keywords + custom keywords |
+| 9 | **Quiet Hours** | Block all non-contact calls during configurable hours |
+| 10 | **Frequency Auto-Block** | Numbers that call 3+ times get automatically blocked |
+| 11 | **Heuristic Engine** | VoIP ranges, neighbor spoofing, rapid-fire, hot campaign range detection |
+| 12 | **Caller ID Overlay** | Suspicious calls (score 30-59) get live multi-source lookup |
+| 13 | **SMS Keyword Rules** | Block texts containing specific words you define |
+| 14 | **SMS Content Analysis** | 30+ regex patterns, URL shorteners, suspicious TLDs, spam domain blocklist |
+| 15 | **ML Spam Scorer** | 15-feature on-device logistic regression model (weekly retrained) |
+
+### Additional Layers
+- **SMS Context Trust** — messages from numbers you've texted or received from on 2+ days are allowed
+- **RCS Filter** — NotificationListenerService monitors Google/Samsung Messages for RCS spam
+- **URL Safety** — URLhaus (abuse.ch) checks for phishing/malware URLs in SMS/RCS (post-decision, notification only)
+- **STIR/SHAKEN** — blocks calls failing carrier caller ID verification (Android 11+)
 
 ## Live Caller ID Overlay
 
-When a call comes in, CallShield shows a real-time overlay that queries **3 spam databases simultaneously**:
+When a call comes in, CallShield shows a real-time overlay that queries **4 sources simultaneously**:
 
 ```
 ┌──────────────────────────────────┐
@@ -58,94 +66,129 @@ When a call comes in, CallShield shows a real-time overlay that queries **3 spam
 │ (212) 555-1234                   │
 │ New York, NY                     │
 │ Spam Score: 80% (17 reports)     │
+│ JOHN DOE (OpenCNAM)             │
 │ ⚠ SkipCalls: Flagged            │
 │ ⚠ PhoneBlock: 5 reports         │
 │ ⚠ WhoCalledMe: 12 reports       │
 │ All sources checked              │
-│ [Search Google] [Block] [Dismiss]│
+│ [Search] [Block] [Dismiss]       │
+│ 🔈 Play SIT Tone (anti-dialer)  │
 └──────────────────────────────────┘
 ```
 
 - Shows instantly with area code, then updates live as each source responds
+- **OpenCNAM** caller name lookup (free, 60 req/hr)
+- **SIT Tone** — ITU-T E.180 three-tone sequence tricks autodialers into removing your number
 - Color-coded: green (safe) → yellow → orange → red (spam)
-- **Search Google** opens browser with spam search
-- **Block** blocks the number AND reports it to the community database
+
+## ML Spam Scorer
+
+On-device 15-feature logistic regression model — no TFLite, no heavy ML libraries. Pure math, runs in microseconds.
+
+| Feature | Description |
+|---------|------------|
+| toll_free | 800/888/877/etc. prefix |
+| high_spam_npa | Area code in high FTC/FCC complaint set |
+| voip_range | NPA-NXX in known VoIP spam carrier range |
+| repeated_digits_ratio | Fraction of most-common digit |
+| sequential_asc/desc_ratio | Sequential digit pairs |
+| all_same_digit | All 10 digits identical |
+| nxx_555 | Exchange is 555 (test numbers) |
+| last4_zero | Subscriber is 0000 |
+| invalid_nxx | NXX starts with 0 or 1 (NANP-invalid) |
+| subscriber_all_same | Last 4 digits all same (9999) |
+| alternating_pattern | Even/odd positions uniform (5050505050) |
+| nxx_below_200 | Often unassigned ranges |
+| low_digit_entropy | Fewer than 4 distinct digits |
+| subscriber_sequential | Last 4 form ascending/descending run |
+
+Trained weekly from the CallShield database (50K positive + 50K negative samples). Threshold: 0.7 (conservative).
 
 ## Features
 
 ### Number Lookup
-- Instant spam check through all detection layers with animated spam score gauge (0-100)
+- Instant spam check through all 15 detection layers with animated score gauge (0-100)
 - Auto-paste from clipboard, area code lookup (330+ US/CA), haptic feedback
-- Multi-source reverse lookup: SkipCalls + PhoneBlock + WhoCalledMe queried in parallel
-- Per-source pass/fail indicators with report counts
+- Multi-source reverse lookup: SkipCalls + PhoneBlock + WhoCalledMe + OpenCNAM
 
 ### Recent Calls & Blocked Log
-- Recent calls pulled from phone's call log with contact names, risk indicator dots (green/yellow/red), call type icons
-- Blocked log with swipe-to-dismiss, log grouping, long-press copy, filter chips
-- **Expandable action buttons** on every entry: Search Google, Check Databases, Copy, Detail
+- Recent calls with contact names, risk indicators, call type icons
+- Blocked log with swipe-to-dismiss, grouping, filter chips, expandable action buttons
 - Staggered entrance animations
-
-### Scanners
-- Call log scanner + SMS inbox scanner — scan existing history for known spam
-- Results shown on dashboard with one-tap block buttons
 
 ### Rules Management (5 tabs)
 - Blocklist, Wildcards, Keywords, Whitelist, Database
-- Export/import blocklists as JSON, enable/disable toggles per rule
+- Export/import blocklists as JSON, per-rule enable/disable toggles
+- Regex validation before adding wildcard rules
 
 ### Statistics
-- Weekly bar chart, type breakdown, top offenders, area code heatmap, time-of-day heatmap
+- Weekly bar chart, detection method breakdown, top offenders, area code heatmap, hourly heatmap
 
 ### Smart Features
 - Smart suggestions — detects area code spam patterns, one-tap block entire area code
 - Blocking profiles: Work / Personal / Sleep / Maximum / Off
 - Callback detection + repeated urgent caller allow-through
-- FTC Do Not Call complaint filing (one-tap deep link)
+- FTC Do Not Call complaint filing
 
 ### Community
-- **One-tap anonymous contribution** — Report Spam or Not Spam buttons, powered by [Cloudflare Worker](https://callshield-reports.snafumatthew.workers.dev)
-- False positive reporting subtracts votes, numbers with 0 reports get removed
+- **One-tap anonymous contribution** via [Cloudflare Worker](https://callshield-reports.snafumatthew.workers.dev)
+- False positive reporting subtracts votes
 - Share spam warnings to any app
-- GitHub Issues for detailed reports
 
 ### Data & System
 - Full backup/restore, CSV log export, auto-cleanup (7/14/30/90 days)
-- Auto-sync every 6 hours, daily digest notification
+- Weekly full sync + 30-minute hot list refresh, daily digest notification
 - Quick Settings tile, app shortcuts, home screen widget
-- Notification grouping + rate limiting, deep link handling
 - Protection test validates all layers and permissions
-- Onboarding wizard, permission check banner, sync freshness indicator
+- Onboarding wizard with permission requests
 
 ## Data Sources
 
-### Database Seeding (32,933 numbers)
-| Source | Records | Method |
-|--------|---------|--------|
-| **FCC Consumer Complaints** | 1,753,601 processed → 32,933 with 3+ reports | Socrata API bulk download |
-| **FTC Do Not Call** | ~50/day | `api.ftc.gov` (DEMO_KEY) |
-| **Community Reports** | Growing | Anonymous via Cloudflare Worker |
+### Database (32,933 numbers, weekly CI)
+| Source | Method |
+|--------|--------|
+| **FCC Consumer Complaints** | Socrata API, 500K records, min 2 reports |
+| **FTC Do Not Call** | `api.ftc.gov` (DEMO_KEY) |
+| **ToastedSpam** | Community curated list |
+| **Community Reports** | Anonymous via Cloudflare Worker |
 
-### Real-Time Lookup (per call)
+### Hot List (30-minute refresh)
+| File | Contents |
+|------|----------|
+| `hot_numbers.json` | Top 500 trending numbers (last 24h) |
+| `hot_ranges.json` | NPA-NXX prefixes with 3+ active campaign numbers |
+| `spam_domains.json` | Phishing/spam domains from community SMS reports |
+
+### Real-Time Lookup (overlay only)
 | Source | What It Returns | Auth |
 |--------|----------------|------|
-| **SkipCalls** | `is_spam: true/false`, 1M+ numbers | None |
-| **PhoneBlock.net** | Votes, rating (A-E), blacklist status | None |
-| **WhoCalledMe** | Report count, community notes | None (scrape) |
+| **SkipCalls** | spam flag, 1M+ numbers | None |
+| **PhoneBlock.net** | Votes, rating, blacklist | None |
+| **WhoCalledMe** | Report count, notes | None |
+| **OpenCNAM** | Caller name (CNAM) | None (60/hr) |
+| **AbstractAPI** | Carrier, line type | Optional key |
+
+### URL Safety (post-decision)
+| Source | What It Checks |
+|--------|---------------|
+| **URLhaus** (abuse.ch) | Phishing/malware URLs in SMS/RCS bodies |
 
 ## Privacy
 
 All detection runs on-device. No personal data is collected. Network requests:
 - Syncing spam database from GitHub (public)
-- Real-time lookups against free public APIs (user's number is queried, not stored by CallShield)
-- Community reports sent to Cloudflare Worker (phone number only, no user identity)
+- Real-time lookups against free public APIs (number queried, not stored)
+- Community reports to Cloudflare Worker (phone number only, no identity)
+- URLhaus checks for SMS URL safety (URL only)
 
-No API keys. No accounts. No analytics. No ads.
+No API keys required. No accounts. No analytics. No ads.
 
 ## Requirements
 
 - Android 10+ (API 29)
 - STIR/SHAKEN requires Android 11+ (API 30)
 - Caller ID overlay requires "Display over other apps" permission
+- RCS filter requires Notification Access permission
 
 ## Building
 
@@ -165,12 +208,14 @@ Requires JDK 17+. Signed APK at `app/build/outputs/apk/release/app-release.apk`.
 | Database | Room (SQLite) — 6 entities |
 | Networking | OkHttp |
 | JSON | Moshi |
+| ML | Pure Kotlin logistic regression (15 features) |
 | Settings | DataStore Preferences |
 | Background | WorkManager |
 | Community API | Cloudflare Workers |
+| URL Safety | URLhaus (abuse.ch) |
 | Min SDK | 29 (Android 10) |
 | Target SDK | 35 |
-| Lines of Code | ~6,600 |
+| Files | 56 Kotlin + 5 Python scripts |
 
 ## License
 
