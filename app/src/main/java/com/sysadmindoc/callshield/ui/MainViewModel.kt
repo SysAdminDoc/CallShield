@@ -1,3 +1,4 @@
+@file:OptIn(kotlinx.coroutines.FlowPreview::class)
 package com.sysadmindoc.callshield.ui
 
 import android.app.Application
