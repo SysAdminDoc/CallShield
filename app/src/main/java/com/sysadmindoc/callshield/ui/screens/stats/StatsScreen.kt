@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.sysadmindoc.callshield.data.PhoneFormatter
 import com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup
 import com.sysadmindoc.callshield.data.model.BlockedCall
@@ -52,8 +53,8 @@ fun StatsScreen(viewModel: MainViewModel) {
     val maxWeekly = weeklyData.max().coerceAtLeast(1)
 
     Column(
-        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
         // Summary row
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -63,20 +64,28 @@ fun StatsScreen(viewModel: MainViewModel) {
         }
 
         // Weekly bar chart
-        Card(colors = CardDefaults.cardColors(containerColor = SurfaceVariant), shape = RoundedCornerShape(16.dp)) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text("Last 7 Days", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        PremiumCard {
+            Column(modifier = Modifier.padding(18.dp)) {
+                SectionHeader("Last 7 Days", CatBlue)
                 Spacer(Modifier.height(12.dp))
-                Row(modifier = Modifier.fillMaxWidth().height(100.dp), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.Bottom) {
-                    val days = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
-                    val todayIndex = java.util.Calendar.getInstance().get(java.util.Calendar.DAY_OF_WEEK)
+                // Compute day labels aligned to actual days
+                val cal = java.util.Calendar.getInstance()
+                val dayLabels = (6 downTo 0).map { daysAgo ->
+                    val c = java.util.Calendar.getInstance().apply { add(java.util.Calendar.DAY_OF_YEAR, -daysAgo) }
+                    listOf("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")[c.get(java.util.Calendar.DAY_OF_WEEK) - 1]
+                }
+                Row(modifier = Modifier.fillMaxWidth().height(110.dp), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.Bottom) {
                     weeklyData.forEachIndexed { i, count ->
+                        val isToday = i == 6
+                        val barColor = if (isToday) CatGreen else CatBlue
                         Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                            val height = (count.toFloat() / maxWeekly * 80).dp.coerceAtLeast(4.dp)
-                            val animatedHeight by animateDpAsState(targetValue = height, animationSpec = spring(dampingRatio = 0.6f), label = "bar")
-                            Text(count.toString(), style = MaterialTheme.typography.labelSmall, color = CatSubtext)
+                            Text(count.toString(), style = MaterialTheme.typography.labelSmall, color = if (isToday) CatGreen else CatSubtext)
                             Spacer(Modifier.height(4.dp))
-                            Box(modifier = Modifier.fillMaxWidth(0.6f).height(animatedHeight).clip(RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp)).background(CatBlue))
+                            val height = (count.toFloat() / maxWeekly * 70).dp.coerceAtLeast(4.dp)
+                            val animatedHeight by animateDpAsState(targetValue = height, animationSpec = spring(dampingRatio = 0.6f), label = "bar")
+                            Box(modifier = Modifier.fillMaxWidth(0.6f).height(animatedHeight).clip(RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp)).background(barColor))
+                            Spacer(Modifier.height(6.dp))
+                            Text(dayLabels[i], style = MaterialTheme.typography.labelSmall, color = if (isToday) CatGreen else CatOverlay)
                         }
                     }
                 }
@@ -85,9 +94,9 @@ fun StatsScreen(viewModel: MainViewModel) {
 
         // Type breakdown
         if (typeBreakdown.isNotEmpty()) {
-            Card(colors = CardDefaults.cardColors(containerColor = SurfaceVariant), shape = RoundedCornerShape(16.dp)) {
+            PremiumCard {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text("By Detection Method", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    SectionHeader("By Detection Method", CatGreen)
                     Spacer(Modifier.height(8.dp))
                     typeBreakdown.take(8).forEach { (type, count) ->
                         val fraction = count.toFloat() / totalBlocked.coerceAtLeast(1)
@@ -113,7 +122,7 @@ fun StatsScreen(viewModel: MainViewModel) {
                         LinearProgressIndicator(
                             progress = { fraction },
                             modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
-                            color = color, trackColor = CatOverlay.copy(alpha = 0.3f)
+                            color = color, trackColor = CatMuted.copy(alpha = 0.2f)
                         )
                         Spacer(Modifier.height(4.dp))
                     }
@@ -123,9 +132,9 @@ fun StatsScreen(viewModel: MainViewModel) {
 
         // Top offenders
         if (topOffenders.isNotEmpty()) {
-            Card(colors = CardDefaults.cardColors(containerColor = SurfaceVariant), shape = RoundedCornerShape(16.dp)) {
+            PremiumCard {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text("Top Offenders", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    SectionHeader("Top Offenders", CatRed)
                     Spacer(Modifier.height(8.dp))
                     topOffenders.forEachIndexed { i, (number, count) ->
                         Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -147,9 +156,9 @@ fun StatsScreen(viewModel: MainViewModel) {
                 .take(15)
         }
         if (areaCodeCounts.isNotEmpty()) {
-            Card(colors = CardDefaults.cardColors(containerColor = SurfaceVariant), shape = RoundedCornerShape(16.dp)) {
+            PremiumCard(accentColor = CatPeach) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text("Spam by Area Code", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    SectionHeader("Spam by Area Code", CatPeach)
                     Spacer(Modifier.height(8.dp))
                     val maxAc = areaCodeCounts.first().value.coerceAtLeast(1)
                     areaCodeCounts.forEach { (ac, count) ->
@@ -161,7 +170,7 @@ fun StatsScreen(viewModel: MainViewModel) {
                             LinearProgressIndicator(
                                 progress = { fraction },
                                 modifier = Modifier.weight(1f).height(8.dp).clip(RoundedCornerShape(4.dp)),
-                                color = CatPeach, trackColor = CatOverlay.copy(alpha = 0.2f)
+                                color = CatPeach, trackColor = CatMuted.copy(alpha = 0.2f)
                             )
                             Spacer(Modifier.width(8.dp))
                             Text("$count", style = MaterialTheme.typography.labelSmall, color = CatPeach, fontWeight = FontWeight.Bold)
@@ -171,7 +180,7 @@ fun StatsScreen(viewModel: MainViewModel) {
             }
         }
 
-        // Time-of-day heatmap (stolen from Nomorobo concept)
+        // Time-of-day heatmap
         if (blockedCalls.size >= 5) {
             val hourCounts = remember(blockedCalls) {
                 IntArray(24).also { hours ->
@@ -182,9 +191,9 @@ fun StatsScreen(viewModel: MainViewModel) {
                 }
             }
             val maxHour = hourCounts.max().coerceAtLeast(1)
-            Card(colors = CardDefaults.cardColors(containerColor = SurfaceVariant), shape = RoundedCornerShape(16.dp)) {
+            PremiumCard {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text("Spam by Hour", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    SectionHeader("Spam by Hour", CatMauve)
                     Text("When spam calls concentrate", style = MaterialTheme.typography.labelSmall, color = CatOverlay)
                     Spacer(Modifier.height(8.dp))
                     Row(modifier = Modifier.fillMaxWidth().height(60.dp), horizontalArrangement = Arrangement.spacedBy(1.dp), verticalAlignment = Alignment.Bottom) {
@@ -215,7 +224,7 @@ fun StatsScreen(viewModel: MainViewModel) {
         if (blockedCalls.isEmpty()) {
             Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(Icons.Default.BarChart, null, tint = CatOverlay, modifier = Modifier.size(64.dp))
+                    Icon(Icons.Default.BarChart, null, tint = CatOverlay, modifier = Modifier.size(64.dp).accentGlow(CatOverlay, 150f, 0.04f))
                     Spacer(Modifier.height(12.dp))
                     Text("No data yet", color = CatSubtext)
                     Text("Stats will appear after calls are blocked", color = CatOverlay, style = MaterialTheme.typography.bodySmall)
@@ -227,10 +236,14 @@ fun StatsScreen(viewModel: MainViewModel) {
 
 @Composable
 fun MiniStat(modifier: Modifier, label: String, value: String, color: androidx.compose.ui.graphics.Color) {
-    Card(modifier = modifier, colors = CardDefaults.cardColors(containerColor = SurfaceVariant), shape = RoundedCornerShape(12.dp)) {
+    PremiumCard(modifier = modifier, accentColor = color, cornerRadius = 14.dp) {
         Column(modifier = Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Text(value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = color)
-            Text(label, style = MaterialTheme.typography.labelSmall, color = CatSubtext)
+            Text(
+                label.uppercase(),
+                style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.2.sp),
+                color = CatSubtext
+            )
         }
     }
 }

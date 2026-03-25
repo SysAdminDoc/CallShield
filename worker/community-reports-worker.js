@@ -61,9 +61,20 @@ code{background:#252525;padding:2px 6px;border-radius:4px;font-size:12px;color:#
     }
 
     try {
+      // Reject oversized payloads (10KB limit)
+      const contentLength = parseInt(request.headers.get("content-length") || "0", 10);
+      if (contentLength > 10000) {
+        return new Response(JSON.stringify({ error: "Payload too large" }), {
+          status: 413, headers: { ...corsHeaders, "Content-Type": "application/json" }
+        });
+      }
+
       const body = await request.json();
       const number = body.number;
-      const type = body.type || "unknown";
+
+      // Validate type against allowed values
+      const VALID_TYPES = ["spam", "robocall", "scam", "telemarketer", "debt_collector", "sms_spam", "not_spam", "unknown"];
+      const type = VALID_TYPES.includes(body.type) ? body.type : "unknown";
 
       // Validate phone number (must be 7-15 digits, optionally with +)
       const digits = number?.replace(/\D/g, "") || "";
@@ -83,7 +94,8 @@ code{background:#252525;padding:2px 6px;border-radius:4px;font-size:12px;color:#
 
       // Create report file via GitHub API
       const timestamp = new Date().toISOString();
-      const filename = `${normalized.replace("+", "")}_${Date.now()}.json`;
+      const rand = crypto.randomUUID().substring(0, 8);
+      const filename = `${normalized.replace("+", "")}_${Date.now()}_${rand}.json`;
       const content = JSON.stringify({
         number: normalized,
         type: type,
@@ -111,6 +123,12 @@ code{background:#252525;padding:2px 6px;border-radius:4px;font-size:12px;color:#
       if (!githubResponse.ok) {
         const err = await githubResponse.text();
         console.error("GitHub API error:", err);
+        // Surface rate limiting to the client so it can back off
+        if (githubResponse.status === 403 || githubResponse.status === 429) {
+          return new Response(JSON.stringify({ error: "Rate limited, please retry later" }), {
+            status: 429, headers: { ...corsHeaders, "Content-Type": "application/json", "Retry-After": "60" }
+          });
+        }
         return new Response(JSON.stringify({ error: "Failed to submit report" }), {
           status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" }
         });

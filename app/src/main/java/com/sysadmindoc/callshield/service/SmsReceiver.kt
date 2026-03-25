@@ -62,10 +62,14 @@ class SmsReceiver : BroadcastReceiver() {
                 val body = capturedBody
                 val sender = capturedSender
                 CoroutineScope(Dispatchers.IO).launch {
-                    val maliciousUrls = UrlSafetyChecker.checkSmsBody(body)
-                    if (maliciousUrls.isNotEmpty()) {
-                        val threats = maliciousUrls.joinToString(", ") { it.threat.ifEmpty { "malware" } }
-                        NotificationHelper.notifyPhishingUrl(context, sender, threats)
+                    try {
+                        val maliciousUrls = UrlSafetyChecker.checkSmsBody(body)
+                        if (maliciousUrls.isNotEmpty()) {
+                            val threats = maliciousUrls.joinToString(", ") { it.threat.ifEmpty { "malware" } }
+                            NotificationHelper.notifyPhishingUrl(context, sender, threats)
+                        }
+                    } catch (_: Exception) {
+                        // URL check is best-effort — don't crash
                     }
                 }
             }

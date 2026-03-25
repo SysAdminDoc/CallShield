@@ -39,6 +39,11 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         System.currentTimeMillis() - 7 * 86_400_000
     ).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
+    val blockedLastWeek: StateFlow<Int> = repo.getBlockedCountBetween(
+        System.currentTimeMillis() - 14 * 86_400_000,
+        System.currentTimeMillis() - 7 * 86_400_000
+    ).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
     val allSpamNumbers: StateFlow<List<SpamNumber>> = repo.getAllSpamNumbers()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -113,6 +118,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val _restoreResult = MutableStateFlow<String?>(null)
     val restoreResult: StateFlow<String?> = _restoreResult
 
+    fun clearImportResult() { _importResult.value = null }
+    fun clearRestoreResult() { _restoreResult.value = null }
+    fun clearContributeResult() { _contributeResult.value = null }
+
     init {
         viewModelScope.launch {
             _spamCount.value = repo.getSpamCount()
@@ -132,7 +141,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun sync() {
         viewModelScope.launch {
             _syncState.value = SyncState.Syncing
-            val result = repo.syncFromGitHub()
+            val result = repo.syncFromGitHub(force = true)
             _syncState.value = if (result.success) {
                 _spamCount.value = repo.getSpamCount()
                 SyncState.Success(result.message)
@@ -140,13 +149,21 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun scanCallLog() { viewModelScope.launch { _scanResult.value = CallLogScanner.scan(getApplication()) } }
+    fun scanCallLog() {
+        viewModelScope.launch {
+            try {
+                _scanResult.value = CallLogScanner.scan(getApplication())
+            } catch (e: Exception) {
+                _scanResult.value = CallLogScanner.ScanResult(0, 0, emptyList(), error = "Scan failed: ${e.message}")
+            }
+        }
+    }
     fun scanSmsInbox() {
         viewModelScope.launch {
             try {
                 _smsScanResult.value = SmsInboxScanner.scan(getApplication())
-            } catch (_: Exception) {
-                _smsScanResult.value = SmsInboxScanner.ScanResult(0, 0, emptyList())
+            } catch (e: Exception) {
+                _smsScanResult.value = SmsInboxScanner.ScanResult(0, 0, emptyList(), error = "Scan failed: ${e.message}")
             }
         }
     }
@@ -164,6 +181,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
     fun unblockNumber(number: SpamNumber) { viewModelScope.launch { repo.unblockNumber(number) } }
     fun deleteLogEntry(call: BlockedCall) { viewModelScope.launch { repo.deleteBlockedCall(call) } }
+    fun restoreLogEntry(call: BlockedCall) { viewModelScope.launch { repo.insertBlockedCall(call) } }
     fun clearLog() { viewModelScope.launch { repo.clearCallLog() } }
 
     // Wildcards
@@ -230,8 +248,18 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun setAbstractApiKey(key: String) = viewModelScope.launch { repo.setAbstractApiKey(key) }
 
     // Profiles
+    private val _activeProfile = MutableStateFlow<BlockingProfiles.Profile?>(null)
+    val activeProfile: StateFlow<BlockingProfiles.Profile?> = _activeProfile
+
     fun applyProfile(profile: BlockingProfiles.Profile) {
-        viewModelScope.launch { BlockingProfiles.apply(getApplication(), profile) }
+        viewModelScope.launch {
+            try {
+                BlockingProfiles.apply(getApplication(), profile)
+                _activeProfile.value = profile
+            } catch (_: Exception) {
+                _activeProfile.value = null
+            }
+        }
     }
 
     // Anonymous community contribution

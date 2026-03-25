@@ -5,6 +5,7 @@ import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -57,6 +58,7 @@ fun LookupScreen() {
     }
     var result by remember { mutableStateOf<SpamCheckResult?>(null) }
     var checking by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
 
     Column(
@@ -75,37 +77,48 @@ fun LookupScreen() {
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone, imeAction = ImeAction.Search),
             keyboardActions = KeyboardActions(onSearch = {
                 if (numberInput.length >= 5) {
-                    checking = true
+                    checking = true; errorMessage = null
                     scope.launch {
-                        val repo = SpamRepository.getInstance(context)
-                        result = withContext(Dispatchers.IO) { repo.isSpam(numberInput) }
-                        checking = false
-                        // Haptic feedback
-                        haptic(context, result?.isSpam == true)
+                        try {
+                            val repo = SpamRepository.getInstance(context)
+                            result = withContext(Dispatchers.IO) { repo.isSpam(numberInput) }
+                            haptic(context, result?.isSpam == true)
+                        } catch (e: Exception) {
+                            errorMessage = "Lookup failed: ${e.message ?: "unknown error"}"
+                        } finally {
+                            checking = false
+                        }
                     }
                 }
             }),
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(14.dp),
             colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = CatGreen, cursorColor = CatGreen)
         )
 
         Button(
             onClick = {
                 if (numberInput.length >= 5) {
-                    checking = true
+                    checking = true; errorMessage = null
                     scope.launch {
-                        val repo = SpamRepository.getInstance(context)
-                        result = withContext(Dispatchers.IO) { repo.isSpam(numberInput) }
-                        checking = false
-                        haptic(context, result?.isSpam == true)
+                        try {
+                            val repo = SpamRepository.getInstance(context)
+                            result = withContext(Dispatchers.IO) { repo.isSpam(numberInput) }
+                            haptic(context, result?.isSpam == true)
+                        } catch (e: Exception) {
+                            errorMessage = "Lookup failed: ${e.message ?: "unknown error"}"
+                        } finally {
+                            checking = false
+                        }
                     }
                 }
             },
             enabled = numberInput.length >= 5 && !checking,
             colors = ButtonDefaults.buttonColors(containerColor = CatGreen),
-            shape = RoundedCornerShape(12.dp),
-            modifier = Modifier.fillMaxWidth()
+            shape = RoundedCornerShape(14.dp),
+            modifier = Modifier.fillMaxWidth().height(48.dp),
+            border = BorderStroke(1.dp, CatGreen.copy(alpha = 0.3f))
         ) {
             if (checking) {
                 CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp, color = Black)
@@ -116,6 +129,10 @@ fun LookupScreen() {
             Text("Check Number", color = Black, fontWeight = FontWeight.Bold)
         }
 
+        errorMessage?.let { err ->
+            Text(err, color = CatRed, style = MaterialTheme.typography.bodySmall)
+        }
+
         result?.let { r ->
             Spacer(Modifier.height(8.dp))
 
@@ -124,9 +141,8 @@ fun LookupScreen() {
             SpamScoreGauge(score = score, isSpam = r.isSpam)
 
             // Result card
-            Card(
-                colors = CardDefaults.cardColors(containerColor = if (r.isSpam) CatRed.copy(alpha = 0.1f) else CatGreen.copy(alpha = 0.1f)),
-                shape = RoundedCornerShape(16.dp),
+            PremiumCard(
+                accentColor = if (r.isSpam) CatRed else CatGreen,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -155,6 +171,59 @@ fun LookupScreen() {
                     }
                 }
             }
+
+            // Quick actions after result
+            Spacer(Modifier.height(8.dp))
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (r.isSpam) {
+                    Button(
+                        onClick = {
+                            val repo = SpamRepository.getInstance(context)
+                            scope.launch {
+                                try {
+                                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                                        repo.blockNumber(numberInput, r.type, r.matchSource)
+                                    }
+                                    hapticConfirm(context)
+                                    android.widget.Toast.makeText(context, "Number blocked", android.widget.Toast.LENGTH_SHORT).show()
+                                } catch (e: Exception) {
+                                    android.widget.Toast.makeText(context, "Block failed: ${e.message}", android.widget.Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        },
+                        modifier = Modifier.weight(1f).height(44.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = CatRed),
+                        shape = RoundedCornerShape(14.dp),
+                        border = BorderStroke(1.dp, CatRed.copy(alpha = 0.3f))
+                    ) {
+                        Icon(Icons.Default.Block, null, tint = Black, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("Block", color = Black, fontWeight = FontWeight.Bold)
+                    }
+                }
+                OutlinedButton(
+                    onClick = {
+                        scope.launch {
+                            try {
+                                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                                    com.sysadmindoc.callshield.data.CommunityContributor.contribute(numberInput, r.type.ifEmpty { "spam" })
+                                }
+                                hapticTick(context)
+                                android.widget.Toast.makeText(context, "Reported to community", android.widget.Toast.LENGTH_SHORT).show()
+                            } catch (e: Exception) {
+                                android.widget.Toast.makeText(context, "Report failed: ${e.message}", android.widget.Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    },
+                    modifier = Modifier.weight(1f).height(44.dp),
+                    shape = RoundedCornerShape(14.dp),
+                    border = BorderStroke(1.dp, CatGreen.copy(alpha = 0.3f))
+                ) {
+                    Icon(Icons.Default.Favorite, null, tint = CatGreen, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text(if (r.isSpam) "Report" else "Not Spam", color = CatGreen)
+                }
+            }
         }
     }
 }
@@ -172,7 +241,9 @@ fun SpamScoreGauge(score: Int, isSpam: Boolean) {
         else -> CatGreen
     }
 
-    Box(modifier = Modifier.size(120.dp), contentAlignment = Alignment.Center) {
+    val glowColor = if (isSpam) CatRed else CatGreen
+
+    Box(modifier = Modifier.size(120.dp).accentGlow(glowColor, 200f, 0.07f), contentAlignment = Alignment.Center) {
         // Arc background
         val bgColor = CatOverlay.copy(alpha = 0.2f)
         val arcColor = color
@@ -190,7 +261,7 @@ fun SpamScoreGauge(score: Int, isSpam: Boolean) {
 
 @Composable
 fun DetailRow(label: String, value: String, icon: androidx.compose.ui.graphics.vector.ImageVector? = null) {
-    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         if (icon != null) {
             Icon(icon, null, tint = CatSubtext, modifier = Modifier.size(16.dp))
             Spacer(Modifier.width(6.dp))

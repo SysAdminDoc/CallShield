@@ -5,9 +5,13 @@ import android.app.role.RoleManager
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
+import androidx.compose.animation.*
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -16,9 +20,11 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.ui.theme.*
@@ -37,12 +43,27 @@ fun ProtectionTestScreen() {
     val scope = rememberCoroutineScope()
 
     Column(
-        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Text("Protection Test", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = CatGreen)
-        Text("Validates all detection layers and permissions are working correctly.", style = MaterialTheme.typography.bodySmall, color = CatSubtext)
+        // Header
+        Column {
+            Text(
+                "Protection Test",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                color = CatGreen,
+                letterSpacing = (-0.3).sp
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                "Validates all detection layers and permissions are working correctly.",
+                style = MaterialTheme.typography.bodySmall,
+                color = CatSubtext
+            )
+        }
 
+        // Run button
         Button(
             onClick = {
                 testing = true
@@ -54,47 +75,119 @@ fun ProtectionTestScreen() {
             },
             enabled = !testing,
             colors = ButtonDefaults.buttonColors(containerColor = CatGreen),
-            shape = RoundedCornerShape(12.dp),
-            modifier = Modifier.fillMaxWidth()
+            shape = RoundedCornerShape(14.dp),
+            border = BorderStroke(1.dp, CatGreen.copy(alpha = 0.3f)),
+            modifier = Modifier.fillMaxWidth().height(48.dp)
         ) {
             if (testing) {
                 CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp, color = Black)
                 Spacer(Modifier.width(8.dp))
-                Text("Testing...", color = Black)
+                Text("Testing...", color = Black, fontWeight = FontWeight.SemiBold)
             } else {
                 Icon(Icons.Default.PlayArrow, null, tint = Black)
                 Spacer(Modifier.width(8.dp))
-                Text("Run Tests", color = Black, fontWeight = FontWeight.Bold)
+                Text("Run All Tests", color = Black, fontWeight = FontWeight.Bold)
             }
         }
 
+        // Summary card
         if (results.isNotEmpty()) {
             val passed = results.count { it.passed }
             val total = results.size
-            Card(colors = CardDefaults.cardColors(
-                containerColor = if (passed == total) CatGreen.copy(alpha = 0.1f) else CatYellow.copy(alpha = 0.1f)
-            ), shape = RoundedCornerShape(12.dp)) {
-                Row(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        if (passed == total) Icons.Default.CheckCircle else Icons.Default.Warning,
-                        null, tint = if (passed == total) CatGreen else CatYellow, modifier = Modifier.size(32.dp)
-                    )
-                    Spacer(Modifier.width(12.dp))
-                    Text("$passed / $total tests passed", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            val allPassed = passed == total
+            val summaryColor = if (allPassed) CatGreen else CatYellow
+
+            PremiumCard(accentColor = summaryColor) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .accentGlow(summaryColor, 300f, 0.06f)
+                        .padding(20.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(CircleShape)
+                            .background(summaryColor.copy(alpha = 0.1f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            if (allPassed) Icons.Default.CheckCircle else Icons.Default.Warning,
+                            null,
+                            tint = summaryColor,
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
+                    Spacer(Modifier.width(16.dp))
+                    Column {
+                        val scorePercent = (passed * 100) / total
+                        Text(
+                            "$passed / $total tests passed ($scorePercent%)",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            if (allPassed) "All systems operational" else "${total - passed} issue${if (total - passed > 1) "s" else ""} need${if (total - passed == 1) "s" else ""} attention",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (allPassed) CatGreen else CatYellow
+                        )
+                    }
                 }
             }
 
-            results.forEach { result ->
-                Card(colors = CardDefaults.cardColors(containerColor = SurfaceVariant), shape = RoundedCornerShape(10.dp)) {
-                    Row(modifier = Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            if (result.passed) Icons.Default.CheckCircle else Icons.Default.Cancel,
-                            null, tint = if (result.passed) CatGreen else CatRed, modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(Modifier.width(10.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(result.name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
-                            Text(result.detail, style = MaterialTheme.typography.bodySmall, color = CatSubtext)
+            // Test results
+            GradientDivider(color = summaryColor)
+
+            results.forEachIndexed { index, result ->
+                // Staggered entrance animation
+                var visible by remember { mutableStateOf(false) }
+                LaunchedEffect(Unit) {
+                    delay(index.toLong().coerceAtMost(12) * 50)
+                    visible = true
+                }
+                AnimatedVisibility(
+                    visible = visible,
+                    enter = slideInVertically { 30 } + fadeIn()
+                ) {
+                    PremiumCard(
+                        cornerRadius = 14.dp,
+                        accentColor = if (result.passed) CatGreen.copy(alpha = 0.5f) else CatRed.copy(alpha = 0.5f)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        if (result.passed) CatGreen.copy(alpha = 0.08f)
+                                        else CatRed.copy(alpha = 0.08f)
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    if (result.passed) Icons.Default.CheckCircle else Icons.Default.Cancel,
+                                    null,
+                                    tint = if (result.passed) CatGreen else CatRed,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                            Spacer(Modifier.width(12.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    result.name,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                Text(
+                                    result.detail,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = CatSubtext
+                                )
+                            }
                         }
                     }
                 }

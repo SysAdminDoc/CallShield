@@ -71,7 +71,7 @@ object SitTonePlayer {
 
     fun isPlaying(): Boolean = isPlaying
 
-    private fun playSequence(context: Context) {
+    private suspend fun playSequence(context: Context) {
         val am = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
 
         // Request audio focus on the voice call stream so it routes through earpiece
@@ -85,14 +85,14 @@ object SitTonePlayer {
         try {
             for ((freq, durationMs) in SIT_SEGMENTS) {
                 playTone(freq, durationMs)
-                Thread.sleep(SEGMENT_GAP_MS.toLong())
+                delay(SEGMENT_GAP_MS.toLong())
             }
             // Play the sequence twice for robustness against dialers that
             // sample the first 100ms and may miss the initial segment.
-            Thread.sleep(300L)
+            delay(300L)
             for ((freq, durationMs) in SIT_SEGMENTS) {
                 playTone(freq, durationMs)
-                Thread.sleep(SEGMENT_GAP_MS.toLong())
+                delay(SEGMENT_GAP_MS.toLong())
             }
         } finally {
             @Suppress("DEPRECATION")
@@ -100,7 +100,7 @@ object SitTonePlayer {
         }
     }
 
-    private fun playTone(frequencyHz: Double, durationMs: Int) {
+    private suspend fun playTone(frequencyHz: Double, durationMs: Int) {
         val numSamples = SAMPLE_RATE * durationMs / 1000
         val fadeSamples = SAMPLE_RATE * FADE_MS / 1000
         val buffer = ShortArray(numSamples)
@@ -142,7 +142,7 @@ object SitTonePlayer {
             track.write(buffer, 0, buffer.size)
             track.play()
             // Wait for playback to complete
-            Thread.sleep(durationMs.toLong() + 10)
+            delay(durationMs.toLong() + 10)
         } finally {
             track.stop()
             track.release()

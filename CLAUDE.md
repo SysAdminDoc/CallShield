@@ -3,7 +3,7 @@
 ## Overview
 Open-source Android spam call/text blocker. 56 Kotlin files, ~8,200 lines, 5 Python scripts. 32,933 spam numbers from FCC/FTC/community. 15-layer detection + ML scorer + RCS filter + 30-min hot list sync. Real-time multi-source caller ID overlay with SIT tone anti-autodialer. URLhaus phishing detection. Anonymous community contribution via Cloudflare Worker. No API keys required.
 
-**Released:** v1.2.5 (versionCode 8, backup format v2)
+**Released:** v1.2.6 (versionCode 9, backup format v2)
 
 ---
 
@@ -187,6 +187,7 @@ ANDROID_HOME="$HOME/AppData/Local/Android/Sdk"
 - **v1.2.3** — UX + performance: onboarding refresh, widget perf, RecentCalls batch queries, permission request
 - **v1.2.4** — README rewrite, protection test expansion (ML/RCS/hot list), theme colors, detection icons
 - **v1.2.5** — Backup keyword rules, proguard hardening (GitHubDataSource JSON models), final icon migration
+- **v1.2.6** — Premium UI overhaul (PremiumCard, accentGlow, GradientDivider, shimmer skeletons, haptic feedback), 12 bug fixes (race conditions, JSON injection, thread leaks, date grouping), undo on swipe-delete, confirmation dialogs, directional tab transitions, changelog timeline, widget protection status
 
 ---
 
@@ -221,4 +222,13 @@ ANDROID_HOME="$HOME/AppData/Local/Android/Sdk"
 - Proguard: `SpamDatabase`, `SpamNumberJson`, `SpamPrefixJson`, `HotNumber`, `BackupKeyword` all need keep rules (Moshi reflection)
 - `BlocklistScreen` wildcard dialog validates regex with try-catch before adding
 - `NumberDetailScreen` uses `rememberCoroutineScope` for web lookups (not `MainScope()` — was a coroutine leak)
-- `UrlSafetyChecker` and `CommunityContributor` escape quotes/backslashes in JSON string interpolation
+- `UrlSafetyChecker` and `CommunityContributor` escape quotes/backslashes/newlines/tabs in JSON string interpolation
+- `NotificationHelper.notifyBlocked()` uses `synchronized(lock)` for rate-limiting fields — do NOT revert to `@Volatile`
+- `CallerIdOverlayService.isOverlayActive` volatile flag guards all `handler.post` lambdas — must be set to false in `dismiss()` before `removeOverlay()`
+- `CallerIdOverlayService` overlay uses `GradientDrawable` with rounded bottom corners — don't replace with `setBackgroundColor`
+- `SitTonePlayer.playSequence()` and `playTone()` are `suspend` functions using `delay()` — do NOT revert to `Thread.sleep`
+- `SpamDao.insertBlockedCall` uses `OnConflictStrategy.REPLACE` for undo-on-delete support
+- Theme.kt: `PremiumCard`, `SectionHeader`, `GradientDivider`, `ShimmerBox`, `SkeletonListItem`, `accentGlow`, `hapticTick`, `hapticConfirm` are the premium design primitives — all screens use them via `import ui.theme.*`
+- `BlockedLogScreen` clear log requires confirmation dialog — do NOT call `clearLog()` without showing `showClearDialog`
+- `ChangelogScreen` uses a vertical timeline layout with `isLatest` and `isLast` flags — first entry must be `isLatest=true`, last must be `isLast=true`
+- `CallShieldWidget` reads protection status via `repo.blockCallsEnabled.first()` — needs the SpamRepository import

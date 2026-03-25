@@ -95,15 +95,14 @@ class GitHubDataSource {
             val body = response.body?.string()
                 ?: return@withContext Result.failure(Exception("Empty response"))
 
-            // Simple regex parse to avoid needing a new Moshi adapter for a small file
-            val numbersRegex = """"number"\s*:\s*"([^"]+)"""".toRegex()
+            // Parse each entry individually with targeted regex
+            val numberRegex = """"number"\s*:\s*"([^"]+)"""".toRegex()
             val typeRegex = """"type"\s*:\s*"([^"]+)"""".toRegex()
-            val descRegex = """"description"\s*:\s*"([^"]+)"""".toRegex()
+            val descRegex = """"description"\s*:\s*"([^"]*?)"""".toRegex()
 
-            // Split into number blocks and parse each
-            val blocks = body.split(""","number"""")
-            val hotNumbers = blocks.drop(1).mapNotNull { block ->
-                val number = numbersRegex.find(""""number$block""")?.groupValues?.get(1) ?: return@mapNotNull null
+            // Split by opening brace to get each object, then parse fields
+            val hotNumbers = body.split("""{""").drop(1).mapNotNull { block ->
+                val number = numberRegex.find(block)?.groupValues?.get(1) ?: return@mapNotNull null
                 val type = typeRegex.find(block)?.groupValues?.get(1) ?: "robocall"
                 val desc = descRegex.find(block)?.groupValues?.get(1) ?: "Trending community report"
                 HotNumber(number = number, type = type, description = desc)

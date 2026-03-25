@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="#FF0A0A0A"
-    android:padding="12dp"
+    android:background="#FF080808"
+    android:padding="16dp"
     android:gravity="center">
 
     <TextView
@@ -13,8 +14,20 @@
         android:layout_height="wrap_content"
         android:text="CallShield"
         android:textColor="#FFA6E3A1"
-        android:textSize="16sp"
-        android:textStyle="bold" />
+        android:textSize="14sp"
+        android:textStyle="bold"
+        android:letterSpacing="-0.02" />
+
+    <TextView
+        android:id="@+id/widget_status"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Protection active"
+        android:textColor="#FF585B70"
+        android:textSize="9sp"
+        android:letterSpacing="0.1"
+        android:textAllCaps="true"
+        android:layout_marginTop="2dp" />
 
     <TextView
         android:id="@+id/widget_blocked_today"
@@ -22,25 +35,28 @@
         android:layout_height="wrap_content"
         android:text="0"
         android:textColor="#FF89B4FA"
-        android:textSize="36sp"
+        android:textSize="40sp"
         android:textStyle="bold"
-        android:layout_marginTop="4dp" />
+        android:letterSpacing="-0.04"
+        android:layout_marginTop="2dp" />
 
     <TextView
         android:id="@+id/widget_label"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="blocked today"
-        android:textColor="#FFBAC2DE"
-        android:textSize="12sp" />
+        android:text="BLOCKED TODAY"
+        android:textColor="#FF9399B2"
+        android:textSize="10sp"
+        android:letterSpacing="0.08"
+        android:textAllCaps="true" />
 
     <TextView
         android:id="@+id/widget_total"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="0 total"
-        android:textColor="#FF6C7086"
+        android:textColor="#FF585B70"
         android:textSize="11sp"
-        android:layout_marginTop="4dp" />
+        android:layout_marginTop="6dp" />
 
 </LinearLayout>

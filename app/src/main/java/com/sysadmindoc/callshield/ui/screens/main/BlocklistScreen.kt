@@ -13,8 +13,10 @@ import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -24,10 +26,12 @@ import com.sysadmindoc.callshield.data.model.SpamNumber
 import com.sysadmindoc.callshield.data.model.WhitelistEntry
 import com.sysadmindoc.callshield.data.model.WildcardRule
 import com.sysadmindoc.callshield.ui.MainViewModel
+import kotlinx.coroutines.launch
 import com.sysadmindoc.callshield.ui.theme.*
 
 @Composable
 fun BlocklistScreen(viewModel: MainViewModel) {
+    val context = LocalContext.current
     val userBlocked by viewModel.userBlockedNumbers.collectAsState()
     val allSpam by viewModel.allSpamNumbers.collectAsState()
     val wildcardRules by viewModel.wildcardRules.collectAsState()
@@ -38,7 +42,9 @@ fun BlocklistScreen(viewModel: MainViewModel) {
     var showWildcardDialog by remember { mutableStateOf(false) }
     var showWhitelistDialog by remember { mutableStateOf(false) }
     var showKeywordDialog by remember { mutableStateOf(false) }
-    var tabIndex by remember { mutableIntStateOf(0) }
+    var tabIndex by rememberSaveable { mutableIntStateOf(0) }
+    val snackbarHost = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
 
     val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         uri?.let { viewModel.importBlocklist(it) }
@@ -47,7 +53,10 @@ fun BlocklistScreen(viewModel: MainViewModel) {
     Column(modifier = Modifier.fillMaxSize()) {
         ScrollableTabRow(
             selectedTabIndex = tabIndex, containerColor = Surface, contentColor = CatText,
-            edgePadding = 8.dp, indicator = { TabRowDefaults.SecondaryIndicator(color = CatGreen) }
+            edgePadding = 8.dp, divider = {},
+            indicator = {
+                TabRowDefaults.SecondaryIndicator(color = CatGreen)
+            }
         ) {
             Tab(selected = tabIndex == 0, onClick = { tabIndex = 0 }, text = { Text("Blocklist (${userBlocked.size})") })
             Tab(selected = tabIndex == 1, onClick = { tabIndex = 1 }, text = { Text("Wildcards (${wildcardRules.size})") })
@@ -58,6 +67,10 @@ fun BlocklistScreen(viewModel: MainViewModel) {
 
         importResult?.let {
             Text(it, color = CatGreen, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
+            LaunchedEffect(it) {
+                kotlinx.coroutines.delay(4000)
+                viewModel.clearImportResult()
+            }
         }
 
         Box(modifier = Modifier.weight(1f)) {
@@ -114,23 +127,44 @@ fun BlocklistScreen(viewModel: MainViewModel) {
                             3 -> showWhitelistDialog = true
                         }
                     },
-                    containerColor = CatGreen, contentColor = Black
+                    containerColor = CatGreen, contentColor = Black,
+                    shape = RoundedCornerShape(16.dp)
                 ) { Icon(Icons.Default.Add, "Add") }
             }
         }
     }
 
-    if (showAddDialog) AddNumberDialog({ showAddDialog = false }) { num, desc -> viewModel.blockNumber(num, description = desc); showAddDialog = false }
-    if (showWildcardDialog) AddWildcardDialog({ showWildcardDialog = false }) { p, r, d -> viewModel.addWildcardRule(p, r, d); showWildcardDialog = false }
-    if (showWhitelistDialog) AddWhitelistDialog({ showWhitelistDialog = false }) { num, desc -> viewModel.addToWhitelist(num, desc); showWhitelistDialog = false }
-    if (showKeywordDialog) AddKeywordDialog({ showKeywordDialog = false }) { kw, cs, d -> viewModel.addKeywordRule(kw, cs, d); showKeywordDialog = false }
+    // Snackbar host overlaid on the screen
+    Box(modifier = Modifier.fillMaxSize()) {
+        SnackbarHost(snackbarHost, modifier = Modifier.align(Alignment.BottomCenter))
+    }
+
+    if (showAddDialog) AddNumberDialog({ showAddDialog = false }) { num, desc ->
+        viewModel.blockNumber(num, description = desc); showAddDialog = false
+        hapticConfirm(context); scope.launch { snackbarHost.showSnackbar("Number blocked", duration = SnackbarDuration.Short) }
+    }
+    if (showWildcardDialog) AddWildcardDialog({ showWildcardDialog = false }) { p, r, d ->
+        viewModel.addWildcardRule(p, r, d); showWildcardDialog = false
+        hapticTick(context); scope.launch { snackbarHost.showSnackbar("Rule added", duration = SnackbarDuration.Short) }
+    }
+    if (showWhitelistDialog) AddWhitelistDialog({ showWhitelistDialog = false }) { num, desc ->
+        viewModel.addToWhitelist(num, desc); showWhitelistDialog = false
+        hapticTick(context); scope.launch { snackbarHost.showSnackbar("Number whitelisted", duration = SnackbarDuration.Short) }
+    }
+    if (showKeywordDialog) AddKeywordDialog({ showKeywordDialog = false }) { kw, cs, d ->
+        viewModel.addKeywordRule(kw, cs, d); showKeywordDialog = false
+        hapticTick(context); scope.launch { snackbarHost.showSnackbar("Keyword rule added", duration = SnackbarDuration.Short) }
+    }
 }
 
 @Composable
 fun EmptyState(title: String, subtitle: String) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(Icons.AutoMirrored.Filled.PlaylistAdd, null, tint = CatOverlay, modifier = Modifier.size(64.dp))
+            Icon(
+                Icons.AutoMirrored.Filled.PlaylistAdd, null, tint = CatOverlay,
+                modifier = Modifier.size(64.dp).accentGlow(CatOverlay, 150f, 0.04f)
+            )
             Spacer(Modifier.height(12.dp))
             Text(title, color = CatSubtext)
             Text(subtitle, color = CatOverlay, style = MaterialTheme.typography.bodySmall)
@@ -140,7 +174,7 @@ fun EmptyState(title: String, subtitle: String) {
 
 @Composable
 fun BlocklistItem(number: SpamNumber, onUnblock: () -> Unit) {
-    Card(colors = CardDefaults.cardColors(containerColor = SurfaceVariant), shape = RoundedCornerShape(12.dp)) {
+    PremiumCard(cornerRadius = 14.dp) {
         Row(modifier = Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Default.Block, null, tint = CatRed, modifier = Modifier.size(28.dp))
             Spacer(Modifier.width(12.dp))
@@ -155,7 +189,7 @@ fun BlocklistItem(number: SpamNumber, onUnblock: () -> Unit) {
 
 @Composable
 fun WildcardRuleItem(rule: WildcardRule, onToggle: (Boolean) -> Unit, onDelete: () -> Unit) {
-    Card(colors = CardDefaults.cardColors(containerColor = SurfaceVariant), shape = RoundedCornerShape(12.dp)) {
+    PremiumCard(cornerRadius = 14.dp) {
         Row(modifier = Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(if (rule.isRegex) Icons.Default.Code else Icons.Default.FilterAlt, null, tint = CatYellow, modifier = Modifier.size(28.dp))
             Spacer(Modifier.width(12.dp))
@@ -164,7 +198,7 @@ fun WildcardRuleItem(rule: WildcardRule, onToggle: (Boolean) -> Unit, onDelete: 
                 if (rule.description.isNotEmpty()) Text(rule.description, style = MaterialTheme.typography.bodySmall, color = CatSubtext)
                 Text(if (rule.isRegex) "Regex" else "Wildcard", style = MaterialTheme.typography.labelSmall, color = CatOverlay)
             }
-            Switch(checked = rule.enabled, onCheckedChange = onToggle, colors = SwitchDefaults.colors(checkedTrackColor = CatGreen))
+            Switch(checked = rule.enabled, onCheckedChange = onToggle, colors = SwitchDefaults.colors(checkedTrackColor = CatGreen, checkedThumbColor = Black))
             IconButton(onClick = onDelete) { Icon(Icons.Default.Close, "Delete", tint = CatOverlay) }
         }
     }
@@ -172,7 +206,7 @@ fun WildcardRuleItem(rule: WildcardRule, onToggle: (Boolean) -> Unit, onDelete: 
 
 @Composable
 fun KeywordRuleItem(rule: SmsKeywordRule, onToggle: (Boolean) -> Unit, onDelete: () -> Unit) {
-    Card(colors = CardDefaults.cardColors(containerColor = SurfaceVariant), shape = RoundedCornerShape(12.dp)) {
+    PremiumCard(cornerRadius = 14.dp) {
         Row(modifier = Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Default.TextFields, null, tint = CatMauve, modifier = Modifier.size(28.dp))
             Spacer(Modifier.width(12.dp))
@@ -181,7 +215,7 @@ fun KeywordRuleItem(rule: SmsKeywordRule, onToggle: (Boolean) -> Unit, onDelete:
                 if (rule.description.isNotEmpty()) Text(rule.description, style = MaterialTheme.typography.bodySmall, color = CatSubtext)
                 Text(if (rule.caseSensitive) "Case-sensitive" else "Case-insensitive", style = MaterialTheme.typography.labelSmall, color = CatOverlay)
             }
-            Switch(checked = rule.enabled, onCheckedChange = onToggle, colors = SwitchDefaults.colors(checkedTrackColor = CatGreen))
+            Switch(checked = rule.enabled, onCheckedChange = onToggle, colors = SwitchDefaults.colors(checkedTrackColor = CatGreen, checkedThumbColor = Black))
             IconButton(onClick = onDelete) { Icon(Icons.Default.Close, "Delete", tint = CatOverlay) }
         }
     }
@@ -189,7 +223,7 @@ fun KeywordRuleItem(rule: SmsKeywordRule, onToggle: (Boolean) -> Unit, onDelete:
 
 @Composable
 fun WhitelistItem(entry: WhitelistEntry, onRemove: () -> Unit) {
-    Card(colors = CardDefaults.cardColors(containerColor = SurfaceVariant), shape = RoundedCornerShape(12.dp)) {
+    PremiumCard(cornerRadius = 14.dp) {
         Row(modifier = Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Default.CheckCircle, null, tint = CatGreen, modifier = Modifier.size(28.dp))
             Spacer(Modifier.width(12.dp))
@@ -205,7 +239,7 @@ fun WhitelistItem(entry: WhitelistEntry, onRemove: () -> Unit) {
 @Composable
 fun DatabaseItem(number: SpamNumber) {
     val typeColor = when (number.type) { "robocall" -> CatRed; "scam" -> CatPeach; "telemarketer" -> CatYellow; else -> CatSubtext }
-    Card(colors = CardDefaults.cardColors(containerColor = SurfaceVariant), shape = RoundedCornerShape(12.dp)) {
+    PremiumCard(cornerRadius = 14.dp) {
         Row(modifier = Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Default.Warning, null, tint = typeColor, modifier = Modifier.size(28.dp))
             Spacer(Modifier.width(12.dp))
@@ -225,7 +259,7 @@ fun DatabaseItem(number: SpamNumber) {
 @Composable
 fun AddNumberDialog(onDismiss: () -> Unit, onAdd: (String, String) -> Unit) {
     var number by remember { mutableStateOf("") }; var desc by remember { mutableStateOf("") }
-    AlertDialog(onDismissRequest = onDismiss, containerColor = SurfaceVariant, title = { Text("Block Number") },
+    AlertDialog(onDismissRequest = onDismiss, containerColor = SurfaceBright, title = { Text("Block Number") },
         text = { Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             OutlinedTextField(value = number, onValueChange = { number = it }, label = { Text("Phone Number") }, placeholder = { Text("+1234567890") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone, imeAction = ImeAction.Next), singleLine = true,
@@ -243,22 +277,25 @@ fun AddNumberDialog(onDismiss: () -> Unit, onAdd: (String, String) -> Unit) {
 @Composable
 fun AddWildcardDialog(onDismiss: () -> Unit, onAdd: (String, Boolean, String) -> Unit) {
     var pattern by remember { mutableStateOf("") }; var desc by remember { mutableStateOf("") }; var isRegex by remember { mutableStateOf(false) }
-    AlertDialog(onDismissRequest = onDismiss, containerColor = SurfaceVariant, title = { Text("Add Wildcard Rule") },
+    var regexError by remember { mutableStateOf<String?>(null) }
+    AlertDialog(onDismissRequest = onDismiss, containerColor = SurfaceBright, title = { Text("Add Wildcard Rule") },
         text = { Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            OutlinedTextField(value = pattern, onValueChange = { pattern = it }, label = { Text(if (isRegex) "Regex" else "Pattern") },
+            OutlinedTextField(value = pattern, onValueChange = { pattern = it; regexError = null }, label = { Text(if (isRegex) "Regex" else "Pattern") },
                 placeholder = { Text(if (isRegex) "^\\+1832\\d{7}$" else "+1832555*") }, singleLine = true,
+                isError = regexError != null,
+                supportingText = regexError?.let { err -> { Text(err, color = CatRed) } },
                 colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = CatYellow, cursorColor = CatYellow))
             OutlinedTextField(value = desc, onValueChange = { desc = it }, label = { Text("Description") }, singleLine = true,
                 colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = CatYellow, cursorColor = CatYellow))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Checkbox(checked = isRegex, onCheckedChange = { isRegex = it }, colors = CheckboxDefaults.colors(checkedColor = CatYellow))
+                Checkbox(checked = isRegex, onCheckedChange = { isRegex = it; regexError = null }, colors = CheckboxDefaults.colors(checkedColor = CatYellow))
                 Text("Use regex", style = MaterialTheme.typography.bodySmall)
             }
         } },
         confirmButton = { Button(onClick = {
             if (pattern.isNotBlank()) {
                 if (isRegex) {
-                    try { Regex(pattern); onAdd(pattern, true, desc) } catch (_: Exception) { /* invalid regex — don't add */ }
+                    try { Regex(pattern); onAdd(pattern, true, desc) } catch (e: Exception) { regexError = "Invalid regex: ${e.message}" }
                 } else {
                     onAdd(pattern, false, desc)
                 }
@@ -271,7 +308,7 @@ fun AddWildcardDialog(onDismiss: () -> Unit, onAdd: (String, Boolean, String) ->
 @Composable
 fun AddWhitelistDialog(onDismiss: () -> Unit, onAdd: (String, String) -> Unit) {
     var number by remember { mutableStateOf("") }; var desc by remember { mutableStateOf("") }
-    AlertDialog(onDismissRequest = onDismiss, containerColor = SurfaceVariant, title = { Text("Add to Whitelist") },
+    AlertDialog(onDismissRequest = onDismiss, containerColor = SurfaceBright, title = { Text("Add to Whitelist") },
         text = { Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             OutlinedTextField(value = number, onValueChange = { number = it }, label = { Text("Phone Number") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone, imeAction = ImeAction.Next), singleLine = true,
@@ -290,7 +327,7 @@ fun AddWhitelistDialog(onDismiss: () -> Unit, onAdd: (String, String) -> Unit) {
 @Composable
 fun AddKeywordDialog(onDismiss: () -> Unit, onAdd: (String, Boolean, String) -> Unit) {
     var keyword by remember { mutableStateOf("") }; var desc by remember { mutableStateOf("") }; var caseSensitive by remember { mutableStateOf(false) }
-    AlertDialog(onDismissRequest = onDismiss, containerColor = SurfaceVariant, title = { Text("Block SMS Keyword") },
+    AlertDialog(onDismissRequest = onDismiss, containerColor = SurfaceBright, title = { Text("Block SMS Keyword") },
         text = { Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             OutlinedTextField(value = keyword, onValueChange = { keyword = it }, label = { Text("Keyword") },
                 placeholder = { Text("e.g., free gift card") }, singleLine = true,
