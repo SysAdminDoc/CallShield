@@ -1,5 +1,5 @@
 {
-  "generated": "2026-03-25T21:14:39.262895+00:00",
+  "generated": "2026-03-25T21:46:38.937473+00:00",
   "window_hours": 24,
   "count": 6,
   "numbers": [
@@ -47,8 +47,8 @@
       "number": "+02899985495",
       "type": "spam",
       "reports": 2,
-      "first_seen": "2026-03-25T16:38:06.763Z",
-      "last_seen": "2026-03-25T16:38:09.715Z",
+      "first_seen": "2026-03-25T16:38:09.715Z",
+      "last_seen": "2026-03-25T16:38:06.763Z",
       "description": "Trending community report"
     }
   ]
