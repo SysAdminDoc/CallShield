@@ -25,8 +25,9 @@ object NotificationHelper {
     private const val STATUS_ID = 2
     private const val RATE_LIMIT_MS = 5_000L // Min 5s between block notifications
 
-    @Volatile private var lastNotifTime = 0L
-    @Volatile private var blockedSinceLastNotif = 0
+    private var lastNotifTime = 0L
+    private var blockedSinceLastNotif = 0
+    private val lock = Any()
 
     private fun stableId(number: String, salt: Int = 0): Int {
         return (number.hashCode() xor (salt * 0x9E3779B9.toInt())) and 0x7FFFFFFF
@@ -59,14 +60,16 @@ object NotificationHelper {
     fun notifyBlocked(context: Context, number: String, reason: String, isCall: Boolean) {
         val now = System.currentTimeMillis()
 
-        // Rate limiting — batch rapid blocks into summary
-        if (now - lastNotifTime < RATE_LIMIT_MS) {
-            blockedSinceLastNotif++
-            updateSummary(context)
-            return
+        // Rate limiting — batch rapid blocks into summary (synchronized to avoid race)
+        synchronized(lock) {
+            if (now - lastNotifTime < RATE_LIMIT_MS) {
+                blockedSinceLastNotif++
+                updateSummary(context)
+                return
+            }
+            lastNotifTime = now
+            blockedSinceLastNotif = 0
         }
-        lastNotifTime = now
-        blockedSinceLastNotif = 0
 
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val nid = stableId(number, if (isCall) 1 else 2)
@@ -114,7 +117,8 @@ object NotificationHelper {
 
     private fun updateSummary(context: Context) {
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        val extra = if (blockedSinceLastNotif > 0) " (+$blockedSinceLastNotif more)" else ""
+        val count = synchronized(lock) { blockedSinceLastNotif }
+        val extra = if (count > 0) " (+$count more)" else ""
         val summary = NotificationCompat.Builder(context, CHANNEL_BLOCKED)
             .setSmallIcon(android.R.drawable.ic_menu_close_clear_cancel)
             .setContentTitle("CallShield")

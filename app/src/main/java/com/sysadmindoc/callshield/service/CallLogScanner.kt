@@ -14,7 +14,8 @@ object CallLogScanner {
     data class ScanResult(
         val totalScanned: Int,
         val spamFound: Int,
-        val spamNumbers: List<ScannedSpam>
+        val spamNumbers: List<ScannedSpam>,
+        val error: String? = null
     )
 
     data class ScannedSpam(
@@ -50,7 +51,7 @@ object CallLogScanner {
                 }
             }
         } catch (_: SecurityException) {
-            return ScanResult(0, 0, emptyList())
+            return ScanResult(0, 0, emptyList(), error = "Call log permission denied. Grant permission in Settings.")
         }
 
         val spamList = mutableListOf<ScannedSpam>()

@@ -112,9 +112,9 @@ Trained weekly from the CallShield database (50K positive + 50K negative samples
 - Multi-source reverse lookup: SkipCalls + PhoneBlock + WhoCalledMe + OpenCNAM
 
 ### Recent Calls & Blocked Log
-- Recent calls with contact names, risk indicators, call type icons
-- Blocked log with swipe-to-dismiss, grouping, filter chips, expandable action buttons
-- Staggered entrance animations
+- Recent calls with contact names, risk indicators, call type icons, filter chips (All/Missed/Spam)
+- Blocked log with swipe-to-dismiss + undo, grouping with severity-scaled accent bars, filter chips
+- Staggered entrance animations, shimmer loading skeletons
 
 ### Rules Management (5 tabs)
 - Blocklist, Wildcards, Keywords, Whitelist, Database
@@ -126,6 +126,8 @@ Trained weekly from the CallShield database (50K positive + 50K negative samples
 
 ### Smart Features
 - Smart suggestions — detects area code spam patterns, one-tap block entire area code
+- Weekly trend indicator — shows if spam is increasing or decreasing vs last week
+- Last blocked preview card on dashboard with tap-to-inspect
 - Blocking profiles: Work / Personal / Sleep / Maximum / Off
 - Callback detection + repeated urgent caller allow-through
 - FTC Do Not Call complaint filing
@@ -204,7 +206,7 @@ Requires JDK 17+. Signed APK at `app/build/outputs/apk/release/app-release.apk`.
 |-----------|-----------|
 | Language | Kotlin |
 | UI | Jetpack Compose + Material 3 |
-| Theme | AMOLED black + Catppuccin Mocha |
+| Theme | Premium AMOLED black + Catppuccin Mocha |
 | Database | Room (SQLite) — 6 entities |
 | Networking | OkHttp |
 | JSON | Moshi |
@@ -215,7 +217,7 @@ Requires JDK 17+. Signed APK at `app/build/outputs/apk/release/app-release.apk`.
 | URL Safety | URLhaus (abuse.ch) |
 | Min SDK | 29 (Android 10) |
 | Target SDK | 35 |
-| Files | 56 Kotlin + 5 Python scripts |
+| Files | 57 Kotlin + 5 Python scripts |
 
 ## License
 

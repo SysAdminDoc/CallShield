@@ -2,6 +2,7 @@ package com.sysadmindoc.callshield.service
 
 import android.app.NotificationManager
 import android.content.Context
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.work.*
 import com.sysadmindoc.callshield.data.local.AppDatabase
@@ -54,7 +55,8 @@ class DigestWorker(
 
         nm.notify(9999, notif)
         return Result.success()
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Log.e("DigestWorker", "Failed to send daily digest", e)
             return Result.success() // Don't retry digest on failure
         }
     }

@@ -6,6 +6,9 @@ import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -23,6 +26,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.sysadmindoc.callshield.ui.theme.*
 
 data class OnboardingPage(
@@ -63,11 +67,27 @@ fun OnboardingScreen(onComplete: () -> Unit) {
         }, label = "onboarding") { page ->
             val p = pages[page]
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Icon(p.icon, null, tint = p.color, modifier = Modifier.size(96.dp))
+                Icon(
+                    p.icon, null, tint = p.color,
+                    modifier = Modifier
+                        .size(96.dp)
+                        .accentGlow(p.color, 300f, 0.10f)
+                )
                 Spacer(Modifier.height(24.dp))
-                Text(p.title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = p.color, textAlign = TextAlign.Center)
+                Text(
+                    p.title,
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = p.color,
+                    textAlign = TextAlign.Center
+                )
                 Spacer(Modifier.height(12.dp))
-                Text(p.subtitle, style = MaterialTheme.typography.bodyLarge, color = CatSubtext, textAlign = TextAlign.Center)
+                Text(
+                    p.subtitle,
+                    style = MaterialTheme.typography.bodyLarge.copy(lineHeight = 26.sp),
+                    color = CatSubtext,
+                    textAlign = TextAlign.Center
+                )
 
                 // Permission request on page 2
                 if (page == 1) {
@@ -113,13 +133,20 @@ fun OnboardingScreen(onComplete: () -> Unit) {
         Spacer(Modifier.weight(1f))
 
         // Page indicators
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
             pages.forEachIndexed { i, p ->
+                val isSelected = i == currentPage
+                val indicatorWidth by animateDpAsState(
+                    targetValue = if (isSelected) 24.dp else 8.dp,
+                    animationSpec = spring(dampingRatio = 0.7f),
+                    label = "indicator"
+                )
                 Box(
                     modifier = Modifier
-                        .size(if (i == currentPage) 10.dp else 8.dp)
-                        .clip(CircleShape)
-                        .background(if (i == currentPage) p.color else CatOverlay)
+                        .width(indicatorWidth)
+                        .height(8.dp)
+                        .clip(if (isSelected) RoundedCornerShape(4.dp) else CircleShape)
+                        .background(if (isSelected) p.color else CatOverlay)
                 )
             }
         }
@@ -142,7 +169,9 @@ fun OnboardingScreen(onComplete: () -> Unit) {
                     else onComplete()
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = pages[currentPage].color),
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(14.dp),
+                border = BorderStroke(1.dp, pages[currentPage].color.copy(alpha = 0.3f)),
+                modifier = Modifier.height(48.dp)
             ) {
                 Text(
                     if (currentPage < pages.lastIndex) "Next" else "Get Started",

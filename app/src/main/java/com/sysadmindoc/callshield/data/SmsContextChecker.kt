@@ -71,7 +71,7 @@ object SmsContextChecker {
                     val address = cursor.getString(0) ?: continue
                     if (normalize(address) != normalized) continue
                     cal.timeInMillis = cursor.getLong(1)
-                    days.add("${cal.get(Calendar.YEAR)}-${cal.get(Calendar.MONTH)}-${cal.get(Calendar.DAY_OF_MONTH)}")
+                    days.add("${cal.get(Calendar.YEAR)}-${cal.get(Calendar.MONTH) + 1}-${cal.get(Calendar.DAY_OF_MONTH)}")
                     if (days.size >= 2) return true
                 }
                 false

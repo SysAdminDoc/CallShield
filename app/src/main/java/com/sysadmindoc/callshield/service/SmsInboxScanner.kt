@@ -14,7 +14,8 @@ object SmsInboxScanner {
     data class ScanResult(
         val totalScanned: Int,
         val spamFound: Int,
-        val spamMessages: List<ScannedSms>
+        val spamMessages: List<ScannedSms>,
+        val error: String? = null
     )
 
     data class ScannedSms(
@@ -67,7 +68,7 @@ object SmsInboxScanner {
                 }
             }
         } catch (_: SecurityException) {
-            return@withContext ScanResult(0, 0, emptyList())
+            return@withContext ScanResult(0, 0, emptyList(), error = "SMS permission denied. Grant permission in Settings.")
         } catch (_: Exception) {
             return@withContext ScanResult(scanned, spamList.size, spamList)
         }

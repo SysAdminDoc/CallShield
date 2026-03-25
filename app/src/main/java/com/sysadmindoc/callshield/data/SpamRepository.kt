@@ -263,10 +263,11 @@ class SpamRepository(private val context: Context) {
         if (start == end) return false // Same hour = disabled
         val now = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
 
+        // End hour is exclusive: "22 to 7" means block 22:00-6:59, allow at 7:00
         return if (start < end) {
-            now in start..end // e.g., 9-17 (inclusive)
+            now >= start && now < end
         } else {
-            now >= start || now <= end // e.g., 22-7 (overnight, inclusive)
+            now >= start || now < end // e.g., 22-7: block 22:00-6:59
         }
     }
 
@@ -295,15 +296,23 @@ class SpamRepository(private val context: Context) {
     }
 
     // ── Sync ───────────────────────────────────────────────────────────
-    suspend fun syncFromGitHub(): SyncResult = withContext(Dispatchers.IO) {
+    /**
+     * @param force When true, skips the SHA check and always downloads.
+     *              Used for manual sync to guarantee fresh data.
+     */
+    suspend fun syncFromGitHub(force: Boolean = false): SyncResult = withContext(Dispatchers.IO) {
         syncMutex.withLock {
         try {
-            val currentSha = dataStore.data.first()[KEY_LAST_SHA]
-            val remoteResult = remote.checkForUpdate()
-            val newSha = remoteResult.getOrNull()
+            if (!force) {
+                val currentSha = dataStore.data.first()[KEY_LAST_SHA]
+                val remoteResult = remote.checkForUpdate()
+                val newSha = remoteResult.getOrNull()
 
-            if (newSha != null && newSha == currentSha) {
-                return@withContext SyncResult(false, "Already up to date")
+                if (newSha != null && newSha == currentSha) {
+                    // Still update the sync timestamp so the UI shows freshness
+                    dataStore.edit { it[KEY_LAST_SYNC] = System.currentTimeMillis() }
+                    return@withContext SyncResult(true, "Database is up to date")
+                }
             }
 
             val result = remote.fetchSpamDatabase()
@@ -312,8 +321,6 @@ class SpamRepository(private val context: Context) {
             }
 
             val database = result.getOrThrow()
-            dao.deleteBySource("github")
-            dao.deleteAllPrefixes()
 
             val numbers = database.numbers.map { json ->
                 SpamNumber(
@@ -323,12 +330,16 @@ class SpamRepository(private val context: Context) {
                     description = json.description, source = "github"
                 )
             }
-            dao.insertNumbers(numbers)
-
             val prefixes = database.prefixes.map { json ->
                 SpamPrefix(prefix = json.prefix, type = json.type, description = json.description)
             }
-            dao.insertPrefixes(prefixes)
+
+            // Atomic replace — prevents detection gaps during sync
+            dao.replaceGithubData(numbers, prefixes)
+
+            // Get the current SHA for future comparison
+            val shaResult = remote.checkForUpdate()
+            val newSha = shaResult.getOrNull()
 
             dataStore.edit {
                 it[KEY_LAST_SYNC] = System.currentTimeMillis()
@@ -403,11 +414,13 @@ class SpamRepository(private val context: Context) {
     fun getBlockedSmsOnly(): Flow<List<BlockedCall>> = dao.getBlockedSmsOnly()
     fun getTotalBlockedCount(): Flow<Int> = dao.getTotalBlockedCount()
     fun getBlockedCountSince(since: Long): Flow<Int> = dao.getBlockedCountSince(since)
+    fun getBlockedCountBetween(start: Long, end: Long): Flow<Int> = dao.getBlockedCountBetween(start, end)
     fun getAllSpamNumbers(): Flow<List<SpamNumber>> = dao.getAllSpamNumbers()
     fun getUserBlockedNumbers(): Flow<List<SpamNumber>> = dao.getUserBlockedNumbers()
     suspend fun getSpamCount(): Int = dao.getSpamCount()
     suspend fun clearCallLog() = dao.clearCallLog()
     suspend fun deleteBlockedCall(call: BlockedCall) = dao.deleteBlockedCall(call)
+    suspend fun insertBlockedCall(call: BlockedCall) = dao.insertBlockedCall(call)
 
     // ── Search ─────────────────────────────────────────────────────────
     fun searchNumbers(query: String): Flow<List<SpamNumber>> = dao.searchNumbers(query)
@@ -423,8 +436,7 @@ class SpamRepository(private val context: Context) {
 
     // ── Hot list (30-minute trending sync) ────────────────────────────
     suspend fun replaceHotList(numbers: List<SpamNumber>) = withContext(Dispatchers.IO) {
-        dao.deleteBySource("hot_list")
-        if (numbers.isNotEmpty()) dao.insertNumbers(numbers)
+        dao.replaceBySource("hot_list", numbers)
     }
 
     // ── Auto-cleanup ──────────────────────────────────────────────────

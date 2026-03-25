@@ -45,7 +45,7 @@ object CommunityContributor {
     private suspend fun post(number: String, type: String): ContributeResult = withContext(Dispatchers.IO) {
         try {
             val normalized = normalizeForReport(number) ?: return@withContext ContributeResult(false, "Invalid number")
-            val escapedType = type.replace("\\", "\\\\").replace("\"", "\\\"")
+            val escapedType = escapeJson(type)
             val json = """{"number":"$normalized","type":"$escapedType"}"""
             val body = json.toRequestBody("application/json".toMediaType())
 
@@ -65,6 +65,10 @@ object CommunityContributor {
             ContributeResult(false, "Network error: ${e.message}")
         }
     }
+
+    private fun escapeJson(value: String): String =
+        value.replace("\\", "\\\\").replace("\"", "\\\"")
+            .replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
 
     private fun normalizeForReport(number: String): String? {
         val digits = number.filter { it.isDigit() }

@@ -37,6 +37,12 @@ interface SpamDao {
     @Query("DELETE FROM spam_numbers WHERE source = :source")
     suspend fun deleteBySource(source: String)
 
+    @Transaction
+    suspend fun replaceBySource(source: String, numbers: List<SpamNumber>) {
+        deleteBySource(source)
+        if (numbers.isNotEmpty()) insertNumbers(numbers)
+    }
+
     // Spam prefixes
     @Query("SELECT * FROM spam_prefixes")
     suspend fun getAllPrefixes(): List<SpamPrefix>
@@ -47,8 +53,16 @@ interface SpamDao {
     @Query("DELETE FROM spam_prefixes")
     suspend fun deleteAllPrefixes()
 
+    @Transaction
+    suspend fun replaceGithubData(numbers: List<SpamNumber>, prefixes: List<SpamPrefix>) {
+        deleteBySource("github")
+        deleteAllPrefixes()
+        if (numbers.isNotEmpty()) insertNumbers(numbers)
+        if (prefixes.isNotEmpty()) insertPrefixes(prefixes)
+    }
+
     // Call log
-    @Insert
+    @Insert(onConflict = androidx.room.OnConflictStrategy.REPLACE)
     suspend fun insertBlockedCall(call: BlockedCall)
 
     @Query("SELECT * FROM call_log ORDER BY timestamp DESC")
@@ -68,6 +82,9 @@ interface SpamDao {
 
     @Query("SELECT COUNT(*) FROM call_log WHERE wasBlocked = 1 AND timestamp > :since")
     suspend fun getBlockedCountSinceSync(since: Long): Int
+
+    @Query("SELECT COUNT(*) FROM call_log WHERE wasBlocked = 1 AND timestamp > :start AND timestamp <= :end")
+    fun getBlockedCountBetween(start: Long, end: Long): Flow<Int>
 
     @Query("DELETE FROM call_log")
     suspend fun clearCallLog()

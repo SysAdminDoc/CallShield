@@ -37,10 +37,11 @@ class CallShieldTileService : TileService() {
             val repo = SpamRepository.getInstance(applicationContext)
             val active = repo.blockCallsEnabled.first() || repo.blockSmsEnabled.first()
             withContext(Dispatchers.Main) {
-                tile.state = if (active) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
-                tile.label = "CallShield"
-                tile.subtitle = if (active) "Protection on" else "Protection off"
-                tile.updateTile()
+                val currentTile = qsTile ?: return@withContext
+                currentTile.state = if (active) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
+                currentTile.label = "CallShield"
+                currentTile.subtitle = if (active) "Protection on" else "Protection off"
+                currentTile.updateTile()
             }
         }
     }

@@ -8,6 +8,8 @@ import android.os.Build
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -54,13 +56,13 @@ fun SettingsScreen(viewModel: MainViewModel) {
     val screeningLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {}
 
     Column(
-        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
         // Call Screening Role
-        Card(colors = CardDefaults.cardColors(containerColor = SurfaceVariant), shape = RoundedCornerShape(16.dp)) {
+        PremiumCard {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text("Call Screening", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                SectionHeader("Call Screening", CatBlue)
                 Spacer(Modifier.height(4.dp))
                 Text("Set CallShield as your default call screening app.", style = MaterialTheme.typography.bodySmall, color = CatSubtext)
                 Spacer(Modifier.height(12.dp))
@@ -71,7 +73,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
                                 screeningLauncher.launch(roleManager.createRequestRoleIntent(RoleManager.ROLE_CALL_SCREENING))
                             }
                         },
-                        colors = ButtonDefaults.buttonColors(containerColor = CatBlue), shape = RoundedCornerShape(12.dp)
+                        colors = ButtonDefaults.buttonColors(containerColor = CatBlue), shape = RoundedCornerShape(14.dp)
                     ) {
                         Icon(Icons.AutoMirrored.Filled.PhoneCallback, null, tint = Black)
                         Spacer(Modifier.width(6.dp))
@@ -83,7 +85,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
                             val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${context.packageName}"))
                             context.startActivity(intent)
                         },
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(14.dp)
                     ) {
                         Icon(Icons.Default.Layers, null, tint = CatMauve)
                         Spacer(Modifier.width(6.dp))
@@ -96,9 +98,9 @@ fun SettingsScreen(viewModel: MainViewModel) {
         // Blocking
         SettingsCard("Blocking") {
             SettingsToggle("Block Spam Calls", "Reject calls from known spam numbers", Icons.Default.PhoneDisabled, blockCalls) { viewModel.setBlockCalls(it) }
-            HorizontalDivider(color = CatOverlay.copy(alpha = 0.2f))
+            GradientDivider()
             SettingsToggle("Block Spam SMS", "Filter texts from spam numbers and content", Icons.Default.SpeakerNotesOff, blockSms) { viewModel.setBlockSms(it) }
-            HorizontalDivider(color = CatOverlay.copy(alpha = 0.2f))
+            GradientDivider()
             SettingsToggle("Block Unknown Numbers", "Reject calls with hidden/no caller ID", Icons.Default.QuestionMark, blockUnknown) { viewModel.setBlockUnknown(it) }
         }
 
@@ -110,17 +112,17 @@ fun SettingsScreen(viewModel: MainViewModel) {
         // Detection engines
         SettingsCard("Detection Engines") {
             SettingsToggle("STIR/SHAKEN", "Block calls failing carrier caller ID auth (Android 11+)", Icons.Default.VerifiedUser, stirShaken) { viewModel.setStirShaken(it) }
-            HorizontalDivider(color = CatOverlay.copy(alpha = 0.2f))
+            GradientDivider()
             SettingsToggle("Neighbor Spoofing", "Flag calls matching your area code + exchange", Icons.Default.NearMe, neighborSpoof) { viewModel.setNeighborSpoof(it) }
-            HorizontalDivider(color = CatOverlay.copy(alpha = 0.2f))
+            GradientDivider()
             SettingsToggle("Heuristic Analysis", "VoIP ranges, premium rate, wangiri, rapid-fire", Icons.Default.Psychology, heuristics) { viewModel.setHeuristics(it) }
-            HorizontalDivider(color = CatOverlay.copy(alpha = 0.2f))
+            GradientDivider()
             SettingsToggle("SMS Content Analysis", "Spam keywords, phishing links, scam patterns", Icons.AutoMirrored.Filled.TextSnippet, smsContent) { viewModel.setSmsContent(it) }
-            HorizontalDivider(color = CatOverlay.copy(alpha = 0.2f))
+            GradientDivider()
             SettingsToggle("Repeat Caller Auto-Block", "Auto-block numbers that call 3+ times", Icons.Default.Repeat, freqEscalation) { viewModel.setFreqEscalation(it) }
-            HorizontalDivider(color = CatOverlay.copy(alpha = 0.2f))
+            GradientDivider()
             SettingsToggle("ML Spam Scorer", "On-device logistic regression model. No internet required.", Icons.Default.SmartToy, mlScorer) { viewModel.setMlScorer(it) }
-            HorizontalDivider(color = CatOverlay.copy(alpha = 0.2f))
+            GradientDivider()
             SettingsToggle("RCS Message Filter", "Block RCS spam via Notification Access. Covers Google/Samsung Messages.", Icons.Default.MarkChatRead, rcsFilter) { viewModel.setRcsFilter(it) }
             if (rcsFilter) {
                 Spacer(Modifier.height(4.dp))
@@ -170,6 +172,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
                         FilterChip(
                             selected = cleanupDays == days, onClick = { viewModel.setCleanupDays(days) },
                             label = { Text("${days}d") },
+                            border = BorderStroke(1.dp, if (cleanupDays == days) CatGreen.copy(alpha = 0.3f) else CatMuted.copy(alpha = 0.3f)),
                             colors = FilterChipDefaults.filterChipColors(selectedContainerColor = CatGreen.copy(alpha = 0.2f), selectedLabelColor = CatGreen)
                         )
                     }
@@ -180,9 +183,10 @@ fun SettingsScreen(viewModel: MainViewModel) {
         // Export log
         SettingsCard("Export") {
             Button(
-                onClick = { viewModel.exportLog() },
+                onClick = { hapticTick(context); viewModel.exportLog() },
                 colors = ButtonDefaults.buttonColors(containerColor = CatBlue),
-                shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()
+                border = BorderStroke(1.dp, CatBlue.copy(alpha = 0.3f)),
+                shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth().height(48.dp)
             ) {
                 Icon(Icons.Default.FileDownload, null, tint = Black)
                 Spacer(Modifier.width(6.dp))
@@ -200,19 +204,21 @@ fun SettingsScreen(viewModel: MainViewModel) {
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(
-                    onClick = { viewModel.backup() },
+                    onClick = { hapticTick(context); viewModel.backup() },
                     colors = ButtonDefaults.buttonColors(containerColor = CatGreen),
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.weight(1f)
+                    shape = RoundedCornerShape(14.dp),
+                    border = BorderStroke(1.dp, CatGreen.copy(alpha = 0.3f)),
+                    modifier = Modifier.weight(1f).height(48.dp)
                 ) {
                     Icon(Icons.Default.Backup, null, tint = Black)
                     Spacer(Modifier.width(6.dp))
                     Text("Backup", color = Black, fontWeight = FontWeight.Bold)
                 }
                 OutlinedButton(
-                    onClick = { restoreLauncher.launch("application/json") },
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.weight(1f)
+                    onClick = { hapticTick(context); restoreLauncher.launch("application/json") },
+                    shape = RoundedCornerShape(14.dp),
+                    border = BorderStroke(1.dp, CatBlue.copy(alpha = 0.3f)),
+                    modifier = Modifier.weight(1f).height(48.dp)
                 ) {
                     Icon(Icons.Default.Restore, null, tint = CatBlue)
                     Spacer(Modifier.width(6.dp))
@@ -222,6 +228,10 @@ fun SettingsScreen(viewModel: MainViewModel) {
             restoreResult?.let {
                 Spacer(Modifier.height(4.dp))
                 Text(it, style = MaterialTheme.typography.bodySmall, color = CatGreen)
+                LaunchedEffect(it) {
+                    kotlinx.coroutines.delay(4000)
+                    viewModel.clearRestoreResult()
+                }
             }
             Spacer(Modifier.height(4.dp))
             Text("Includes blocklist, whitelist, wildcard rules.", style = MaterialTheme.typography.labelSmall, color = CatOverlay)
@@ -240,7 +250,11 @@ fun SettingsScreen(viewModel: MainViewModel) {
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
                 trailingIcon = {
-                    TextButton(onClick = { viewModel.setAbstractApiKey(apiKeyInput.trim()) }) {
+                    TextButton(onClick = {
+                        viewModel.setAbstractApiKey(apiKeyInput.trim())
+                        hapticTick(context)
+                        android.widget.Toast.makeText(context, if (apiKeyInput.isBlank()) "API key cleared" else "API key saved", android.widget.Toast.LENGTH_SHORT).show()
+                    }) {
                         Text("Save", color = CatBlue)
                     }
                 }
@@ -248,9 +262,9 @@ fun SettingsScreen(viewModel: MainViewModel) {
         }
 
         // About
-        Card(colors = CardDefaults.cardColors(containerColor = SurfaceVariant), shape = RoundedCornerShape(16.dp)) {
+        PremiumCard {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text("CallShield v1.2.5", color = CatSubtext, style = MaterialTheme.typography.bodySmall)
+                Text("CallShield v1.2.7", color = CatSubtext, style = MaterialTheme.typography.bodySmall)
                 Text("Open-source spam blocker. No subscriptions, no tracking.", style = MaterialTheme.typography.labelSmall, color = CatOverlay)
             }
         }
@@ -263,7 +277,11 @@ fun HourPicker(selected: Int, onSelect: (Int) -> Unit) {
     val label = if (selected == 0) "12 AM" else if (selected < 12) "$selected AM" else if (selected == 12) "12 PM" else "${selected - 12} PM"
 
     Box {
-        OutlinedButton(onClick = { expanded = true }, shape = RoundedCornerShape(8.dp)) {
+        OutlinedButton(
+            onClick = { expanded = true },
+            shape = RoundedCornerShape(8.dp),
+            colors = ButtonDefaults.outlinedButtonColors(containerColor = SurfaceBright)
+        ) {
             Text(label, color = CatText)
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
@@ -277,10 +295,10 @@ fun HourPicker(selected: Int, onSelect: (Int) -> Unit) {
 
 @Composable
 fun SettingsCard(title: String, content: @Composable ColumnScope.() -> Unit) {
-    Card(colors = CardDefaults.cardColors(containerColor = SurfaceVariant), shape = RoundedCornerShape(16.dp)) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-            Spacer(Modifier.height(8.dp))
+    PremiumCard {
+        Column(modifier = Modifier.padding(18.dp)) {
+            SectionHeader(title)
+            Spacer(Modifier.height(12.dp))
             content()
         }
     }
@@ -291,14 +309,21 @@ fun SettingsToggle(
     title: String, subtitle: String, icon: androidx.compose.ui.graphics.vector.ImageVector,
     checked: Boolean, tintColor: androidx.compose.ui.graphics.Color = CatSubtext, onCheckedChange: (Boolean) -> Unit
 ) {
+    val context = LocalContext.current
     Row(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-        Icon(icon, null, tint = tintColor, modifier = Modifier.size(24.dp))
+        Box(
+            modifier = Modifier
+                .background(tintColor.copy(alpha = 0.08f), RoundedCornerShape(8.dp))
+                .padding(6.dp)
+        ) {
+            Icon(icon, null, tint = tintColor, modifier = Modifier.size(24.dp))
+        }
         Spacer(Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(title, style = MaterialTheme.typography.bodyLarge)
             Text(subtitle, style = MaterialTheme.typography.bodySmall, color = CatSubtext)
         }
         Spacer(Modifier.width(8.dp))
-        Switch(checked = checked, onCheckedChange = onCheckedChange, colors = SwitchDefaults.colors(checkedTrackColor = CatGreen))
+        Switch(checked = checked, onCheckedChange = { hapticTick(context); onCheckedChange(it) }, colors = SwitchDefaults.colors(checkedTrackColor = CatGreen, checkedThumbColor = Black))
     }
 }

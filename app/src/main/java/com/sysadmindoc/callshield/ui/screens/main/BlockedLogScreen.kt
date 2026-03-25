@@ -7,8 +7,10 @@ import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
 import androidx.compose.animation.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -16,12 +18,17 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ViewList
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -37,11 +44,13 @@ import java.util.*
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun BlockedLogScreen(viewModel: MainViewModel) {
+    val context = LocalContext.current
     val blockedCalls by viewModel.blockedCalls.collectAsState()
-    var filterMode by remember { mutableIntStateOf(0) }
-    var grouped by remember { mutableStateOf(false) }
+    var filterMode by rememberSaveable { mutableIntStateOf(0) }
+    var grouped by rememberSaveable { mutableStateOf(false) }
     val snackbarHost = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    var showClearDialog by remember { mutableStateOf(false) }
 
     val filtered = when (filterMode) {
         1 -> blockedCalls.filter { it.isCall }
@@ -67,25 +76,53 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                FilterChip(selected = filterMode == 0, onClick = { filterMode = 0 }, label = { Text("All (${blockedCalls.size})") },
-                    colors = FilterChipDefaults.filterChipColors(selectedContainerColor = CatGreen.copy(alpha = 0.2f), selectedLabelColor = CatGreen))
-                FilterChip(selected = filterMode == 1, onClick = { filterMode = 1 }, label = { Text("Calls") },
-                    colors = FilterChipDefaults.filterChipColors(selectedContainerColor = CatBlue.copy(alpha = 0.2f), selectedLabelColor = CatBlue))
-                FilterChip(selected = filterMode == 2, onClick = { filterMode = 2 }, label = { Text("SMS") },
-                    colors = FilterChipDefaults.filterChipColors(selectedContainerColor = CatMauve.copy(alpha = 0.2f), selectedLabelColor = CatMauve))
+                FilterChip(
+                    selected = filterMode == 0,
+                    onClick = { filterMode = 0 },
+                    label = { Text("All (${blockedCalls.size})") },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = CatGreen.copy(alpha = 0.2f),
+                        selectedLabelColor = CatGreen
+                    ),
+                    border = BorderStroke(1.dp, if (filterMode == 0) CatGreen.copy(alpha = 0.3f) else CatMuted.copy(alpha = 0.3f))
+                )
+                FilterChip(
+                    selected = filterMode == 1,
+                    onClick = { filterMode = 1 },
+                    label = { Text("Calls") },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = CatBlue.copy(alpha = 0.2f),
+                        selectedLabelColor = CatBlue
+                    ),
+                    border = BorderStroke(1.dp, if (filterMode == 1) CatBlue.copy(alpha = 0.3f) else CatMuted.copy(alpha = 0.3f))
+                )
+                FilterChip(
+                    selected = filterMode == 2,
+                    onClick = { filterMode = 2 },
+                    label = { Text("SMS") },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = CatMauve.copy(alpha = 0.2f),
+                        selectedLabelColor = CatMauve
+                    ),
+                    border = BorderStroke(1.dp, if (filterMode == 2) CatMauve.copy(alpha = 0.3f) else CatMuted.copy(alpha = 0.3f))
+                )
                 Spacer(Modifier.weight(1f))
                 IconButton(onClick = { grouped = !grouped }) {
-                    Icon(if (grouped) Icons.Default.ViewList else Icons.Default.GroupWork, "Group", tint = if (grouped) CatYellow else CatOverlay)
+                    Icon(if (grouped) Icons.AutoMirrored.Filled.ViewList else Icons.Default.GroupWork, "Group", tint = if (grouped) CatYellow else CatOverlay)
                 }
                 if (blockedCalls.isNotEmpty()) {
-                    IconButton(onClick = { viewModel.clearLog() }) { Icon(Icons.Default.DeleteSweep, "Clear", tint = CatRed) }
+                    IconButton(onClick = { showClearDialog = true }) { Icon(Icons.Default.DeleteSweep, "Clear log", tint = CatRed) }
                 }
             }
 
             if (filtered.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(Icons.Default.CheckCircle, null, tint = CatGreen.copy(alpha = 0.5f), modifier = Modifier.size(64.dp))
+                        Icon(
+                            Icons.Default.CheckCircle, null,
+                            tint = CatGreen.copy(alpha = 0.5f),
+                            modifier = Modifier.size(64.dp).accentGlow(CatGreen, 200f, 0.05f)
+                        )
                         Spacer(Modifier.height(12.dp))
                         Text("No blocked items yet", color = CatSubtext)
                     }
@@ -116,13 +153,22 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
                                     when (value) {
                                         SwipeToDismissBoxValue.EndToStart -> {
                                             viewModel.deleteLogEntry(call)
+                                            hapticTick(context)
                                             scope.launch {
-                                                snackbarHost.showSnackbar("Deleted", duration = SnackbarDuration.Short)
+                                                val result = snackbarHost.showSnackbar(
+                                                    "Deleted",
+                                                    actionLabel = "Undo",
+                                                    duration = SnackbarDuration.Short
+                                                )
+                                                if (result == SnackbarResult.ActionPerformed) {
+                                                    viewModel.restoreLogEntry(call)
+                                                }
                                             }
                                             true
                                         }
                                         SwipeToDismissBoxValue.StartToEnd -> {
                                             viewModel.blockNumber(call.number, "spam", "Blocked from log swipe")
+                                            hapticConfirm(context)
                                             scope.launch {
                                                 snackbarHost.showSnackbar("${PhoneFormatter.format(call.number)} blocked", duration = SnackbarDuration.Short)
                                             }
@@ -139,7 +185,7 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
                                     val color = when (direction) {
                                         SwipeToDismissBoxValue.StartToEnd -> CatYellow.copy(alpha = 0.3f)
                                         SwipeToDismissBoxValue.EndToStart -> CatRed.copy(alpha = 0.3f)
-                                        else -> Black
+                                        else -> SurfaceBright
                                     }
                                     val icon = when (direction) {
                                         SwipeToDismissBoxValue.StartToEnd -> Icons.Default.Block
@@ -151,7 +197,7 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
                                         else -> Alignment.CenterEnd
                                     }
                                     Box(
-                                        modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(12.dp)).background(color).padding(horizontal = 20.dp),
+                                        modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(14.dp)).background(color).padding(horizontal = 20.dp),
                                         contentAlignment = align
                                     ) {
                                         Icon(icon, null, tint = CatText)
@@ -166,6 +212,32 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
             }
         }
     }
+
+    // Clear log confirmation dialog
+    if (showClearDialog) {
+        AlertDialog(
+            onDismissRequest = { showClearDialog = false },
+            containerColor = SurfaceBright,
+            icon = { Icon(Icons.Default.DeleteSweep, null, tint = CatRed, modifier = Modifier.size(32.dp)) },
+            title = { Text("Clear Blocked Log?") },
+            text = { Text("This will permanently delete all ${blockedCalls.size} blocked call and SMS records. This cannot be undone.", color = CatSubtext) },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.clearLog()
+                        hapticConfirm(context)
+                        showClearDialog = false
+                        scope.launch { snackbarHost.showSnackbar("Log cleared", duration = SnackbarDuration.Short) }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = CatRed),
+                    shape = RoundedCornerShape(14.dp)
+                ) { Text("Clear All", color = Black, fontWeight = FontWeight.Bold) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showClearDialog = false }) { Text("Cancel", color = CatSubtext) }
+            }
+        )
+    }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -176,9 +248,8 @@ fun BlockedCallItem(call: BlockedCall, onTap: () -> Unit) {
     val location = remember(call.number) { AreaCodeLookup.lookup(call.number) }
     var expanded by remember { mutableStateOf(false) }
 
-    Card(
-        colors = CardDefaults.cardColors(containerColor = SurfaceVariant),
-        shape = RoundedCornerShape(12.dp),
+    PremiumCard(
+        cornerRadius = 14.dp,
         modifier = Modifier.combinedClickable(
             onClick = { expanded = !expanded },
             onLongClick = {
@@ -252,7 +323,8 @@ fun SmallActionButton(icon: androidx.compose.ui.graphics.vector.ImageVector, lab
         onClick = onClick,
         modifier = Modifier.height(32.dp),
         shape = RoundedCornerShape(8.dp),
-        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+        border = BorderStroke(1.dp, color.copy(alpha = 0.2f))
     ) {
         Icon(icon, label, tint = color, modifier = Modifier.size(14.dp))
         Spacer(Modifier.width(4.dp))
@@ -264,18 +336,36 @@ fun SmallActionButton(icon: androidx.compose.ui.graphics.vector.ImageVector, lab
 fun GroupedCallItem(call: BlockedCall, count: Int, onTap: () -> Unit, onBlock: () -> Unit) {
     val location = remember(call.number) { AreaCodeLookup.lookup(call.number) }
 
-    Card(
-        colors = CardDefaults.cardColors(containerColor = SurfaceVariant),
-        shape = RoundedCornerShape(12.dp),
+    val accentColor = if (count >= 5) CatRed else if (count >= 3) CatPeach else CatYellow
+
+    PremiumCard(
+        cornerRadius = 14.dp,
+        accentColor = if (count >= 5) CatRed.copy(alpha = 0.5f) else null,
         onClick = onTap
     ) {
-        Row(modifier = Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            // Count badge
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .drawBehind {
+                    drawRect(
+                        color = accentColor.copy(alpha = 0.5f),
+                        topLeft = Offset(0f, 0f),
+                        size = Size(3.dp.toPx(), size.height)
+                    )
+                }
+                .padding(start = 14.dp, end = 12.dp, top = 12.dp, bottom = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Count badge — color intensity scales with repeat count
             Box(
-                modifier = Modifier.size(40.dp).clip(CircleShape).background(CatRed.copy(alpha = 0.2f)),
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(accentColor.copy(alpha = 0.15f))
+                    .border(BorderStroke(1.dp, accentColor.copy(alpha = 0.3f)), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
-                Text("${count}x", color = CatRed, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
+                Text("${count}x", color = accentColor, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
             }
             Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {

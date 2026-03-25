@@ -8,6 +8,7 @@ import android.content.Intent
 import android.net.Uri
 import android.provider.ContactsContract
 import android.widget.Toast
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -22,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.sysadmindoc.callshield.data.PhoneFormatter
 import com.sysadmindoc.callshield.data.SpamCheckResult
 import com.sysadmindoc.callshield.data.SpamRepository
@@ -63,7 +65,11 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
     // Live spam check result
     var liveResult by remember { mutableStateOf<SpamCheckResult?>(null) }
     LaunchedEffect(number) {
-        liveResult = withContext(Dispatchers.IO) { SpamRepository.getInstance(context).isSpam(number) }
+        try {
+            liveResult = withContext(Dispatchers.IO) { SpamRepository.getInstance(context).isSpam(number) }
+        } catch (_: Exception) {
+            liveResult = null
+        }
     }
 
     // Multi-source lookup
@@ -73,7 +79,7 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
 
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
         // Header
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -97,9 +103,19 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
 
         // Spam score gauge (live check)
         liveResult?.let { r ->
-            Card(colors = CardDefaults.cardColors(containerColor = SurfaceVariant), shape = RoundedCornerShape(16.dp)) {
-                Column(modifier = Modifier.fillMaxWidth().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("Spam Score", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            PremiumCard(accentColor = if (r.isSpam) CatRed else CatGreen) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .accentGlow(
+                            color = if (r.isSpam) CatRed else CatGreen,
+                            radius = 300f,
+                            alpha = 0.06f
+                        )
+                        .padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    SectionHeader("Spam Score", color = if (r.isSpam) CatRed else CatGreen)
                     Spacer(Modifier.height(8.dp))
                     SpamScoreGauge(score = if (r.isSpam) r.confidence else 0, isSpam = r.isSpam)
                     if (r.isSpam) {
@@ -117,7 +133,8 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
         if (areaCode != null) {
             OutlinedButton(
                 onClick = { viewModel.addWildcardRule("+1$areaCode*", false, "Block area code $areaCode" + if (location != null) " ($location)" else "") },
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(14.dp),
+                border = BorderStroke(1.dp, CatYellow.copy(alpha = 0.3f))
             ) {
                 Icon(Icons.Default.FilterAlt, null, tint = CatYellow)
                 Spacer(Modifier.width(6.dp))
@@ -126,14 +143,18 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
         }
 
         // Stats
-        Card(colors = CardDefaults.cardColors(containerColor = SurfaceVariant), shape = RoundedCornerShape(16.dp)) {
+        PremiumCard {
             Column(modifier = Modifier.padding(16.dp)) {
+                SectionHeader("Statistics", color = CatBlue)
+                Spacer(Modifier.height(8.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     StatChip("Calls", callCount.toString(), CatRed)
                     StatChip("SMS", smsCount.toString(), CatMauve)
                     StatChip("Total", numberCalls.size.toString(), CatBlue)
                 }
                 if (dbEntry != null) {
+                    Spacer(Modifier.height(12.dp))
+                    GradientDivider()
                     Spacer(Modifier.height(12.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         AssistChip(onClick = {}, label = { Text(dbEntry.type.replaceFirstChar { it.uppercase() }) },
@@ -151,14 +172,16 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
 
         // Timeline
         if (firstSeen != null) {
-            Card(colors = CardDefaults.cardColors(containerColor = SurfaceVariant), shape = RoundedCornerShape(16.dp)) {
+            PremiumCard {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text("Timeline", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    SectionHeader("Timeline", color = CatLavender)
                     Spacer(Modifier.height(8.dp))
                     TimelineRow("First seen", dateFormat.format(Date(firstSeen)))
                     if (lastSeen != null && lastSeen != firstSeen) TimelineRow("Last seen", dateFormat.format(Date(lastSeen)))
                     val reasons = numberCalls.map { it.matchReason }.filter { it.isNotEmpty() }.distinct()
                     if (reasons.isNotEmpty()) {
+                        Spacer(Modifier.height(8.dp))
+                        GradientDivider()
                         Spacer(Modifier.height(8.dp))
                         Text("Match reasons:", style = MaterialTheme.typography.labelMedium, color = CatOverlay)
                         reasons.forEach { reason ->
@@ -175,9 +198,9 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
 
         // Recent activity
         if (numberCalls.isNotEmpty()) {
-            Card(colors = CardDefaults.cardColors(containerColor = SurfaceVariant), shape = RoundedCornerShape(16.dp)) {
+            PremiumCard {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text("Recent Activity", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    SectionHeader("Recent Activity", color = CatTeal)
                     Spacer(Modifier.height(8.dp))
                     numberCalls.take(10).forEach { call ->
                         Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -196,21 +219,31 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
         }
 
         // Multi-source online lookup
-        Card(colors = CardDefaults.cardColors(containerColor = SurfaceVariant), shape = RoundedCornerShape(16.dp)) {
+        PremiumCard {
             Column(modifier = Modifier.padding(16.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Online Lookup", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-                    if (webResult == null && !webLoading) {
-                        TextButton(onClick = {
-                            webLoading = true
-                            coroutineScope.launch {
-                                webResult = ExternalLookup.lookupAll(number)
-                                webLoading = false
-                            }
-                        }) { Text("Check 3 Sources", color = CatBlue) }
+                    SectionHeader("Online Lookup", color = CatBlue)
+                    Spacer(Modifier.weight(1f))
+                    if (webResult == null) {
+                        OutlinedButton(
+                            onClick = {
+                                webLoading = true
+                                coroutineScope.launch {
+                                    try {
+                                        webResult = ExternalLookup.lookupAll(number)
+                                    } catch (_: Exception) {}
+                                    webLoading = false
+                                }
+                            },
+                            enabled = !webLoading,
+                            shape = RoundedCornerShape(14.dp),
+                            border = BorderStroke(1.dp, if (webLoading) CatOverlay.copy(alpha = 0.3f) else CatBlue.copy(alpha = 0.3f)),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                        ) { Text("Check 3 Sources", color = if (webLoading) CatOverlay else CatBlue, style = MaterialTheme.typography.labelSmall) }
                     }
                 }
                 if (webLoading) {
+                    Spacer(Modifier.height(8.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp, color = CatBlue)
                         Spacer(Modifier.width(8.dp))
@@ -218,6 +251,7 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
                     }
                 }
                 webResult?.let { wr ->
+                    Spacer(Modifier.height(8.dp))
                     if (wr.totalReports > 0) {
                         Text("${wr.totalReports} reports across ${wr.sources.size} sources", color = CatRed, fontWeight = FontWeight.SemiBold)
                     } else {
@@ -251,20 +285,42 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
         // Actions
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             if (!isBlocked) {
-                Button(onClick = { viewModel.blockNumber(number, "spam", "Blocked from detail") }, modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.buttonColors(containerColor = CatRed), shape = RoundedCornerShape(12.dp)) {
+                Button(
+                    onClick = {
+                        viewModel.blockNumber(number, "spam", "Blocked from detail")
+                        hapticConfirm(context)
+                        Toast.makeText(context, "Number blocked", Toast.LENGTH_SHORT).show()
+                    },
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(containerColor = CatRed),
+                    shape = RoundedCornerShape(14.dp),
+                    border = BorderStroke(1.dp, CatRed.copy(alpha = 0.3f))
+                ) {
                     Icon(Icons.Default.Block, null, tint = Black); Spacer(Modifier.width(6.dp)); Text("Block", color = Black, fontWeight = FontWeight.Bold)
                 }
             } else {
-                Button(onClick = { userBlocked.find { it.number == number }?.let { viewModel.unblockNumber(it) } }, modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.buttonColors(containerColor = CatGreen), shape = RoundedCornerShape(12.dp)) {
+                Button(
+                    onClick = {
+                        userBlocked.find { it.number == number }?.let { viewModel.unblockNumber(it) }
+                        hapticTick(context)
+                        Toast.makeText(context, "Number unblocked", Toast.LENGTH_SHORT).show()
+                    },
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(containerColor = CatGreen),
+                    shape = RoundedCornerShape(14.dp)
+                ) {
                     Icon(Icons.Default.CheckCircle, null, tint = Black); Spacer(Modifier.width(6.dp)); Text("Unblock", color = Black, fontWeight = FontWeight.Bold)
                 }
             }
-            OutlinedButton(onClick = {
-                val title = Uri.encode("[SPAM] $number"); val body = Uri.encode("## Phone Number\n$number\n\n## Type\nReported from CallShield\n\n## Description\nSeen ${numberCalls.size} times")
-                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/SysAdminDoc/CallShield/issues/new?title=$title&body=$body&labels=spam-report")).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) })
-            }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp)) {
+            OutlinedButton(
+                onClick = {
+                    val title = Uri.encode("[SPAM] $number"); val body = Uri.encode("## Phone Number\n$number\n\n## Type\nReported from CallShield\n\n## Description\nSeen ${numberCalls.size} times")
+                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/SysAdminDoc/CallShield/issues/new?title=$title&body=$body&labels=spam-report")).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) })
+                },
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(14.dp),
+                border = BorderStroke(1.dp, CatPeach.copy(alpha = 0.3f))
+            ) {
                 Icon(Icons.Default.Flag, null, tint = CatPeach); Spacer(Modifier.width(6.dp)); Text("Report", color = CatPeach)
             }
         }
@@ -273,19 +329,21 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
         val contributeResult by viewModel.contributeResult.collectAsState()
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(
-                onClick = { viewModel.contributeToDatabase(number, dbEntry?.type ?: liveResult?.type ?: "spam") },
+                onClick = { hapticTick(context); viewModel.contributeToDatabase(number, dbEntry?.type ?: liveResult?.type ?: "spam") },
                 modifier = Modifier.weight(1f),
                 colors = ButtonDefaults.buttonColors(containerColor = CatGreen),
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(14.dp),
+                border = BorderStroke(1.dp, CatGreen.copy(alpha = 0.3f))
             ) {
                 Icon(Icons.Default.Favorite, null, tint = Black)
                 Spacer(Modifier.width(4.dp))
                 Text("Report Spam", color = Black, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelSmall)
             }
             OutlinedButton(
-                onClick = { viewModel.reportNotSpam(number) },
+                onClick = { hapticTick(context); viewModel.reportNotSpam(number) },
                 modifier = Modifier.weight(1f),
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(14.dp),
+                border = BorderStroke(1.dp, CatBlue.copy(alpha = 0.3f))
             ) {
                 Icon(Icons.Default.ThumbUp, null, tint = CatBlue)
                 Spacer(Modifier.width(4.dp))
@@ -294,6 +352,10 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
         }
         contributeResult?.let {
             Text(it, style = MaterialTheme.typography.bodySmall, color = if ("not spam" in it.lowercase() || "contributed" in it.lowercase()) CatGreen else CatRed)
+            LaunchedEffect(it) {
+                kotlinx.coroutines.delay(4000)
+                viewModel.clearContributeResult()
+            }
         }
 
         // FTC complaint
@@ -303,7 +365,8 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
                 context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(ftcUrl)).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) })
             },
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp)
+            shape = RoundedCornerShape(14.dp),
+            border = BorderStroke(1.dp, CardBorder)
         ) {
             Icon(Icons.Default.Gavel, null, tint = CatSubtext)
             Spacer(Modifier.width(6.dp))
@@ -312,17 +375,32 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
 
         // Whitelist / call / share actions
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(onClick = { viewModel.addToWhitelist(number, "Whitelisted from detail") }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp)) {
+            OutlinedButton(
+                onClick = { viewModel.addToWhitelist(number, "Whitelisted from detail") },
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(14.dp),
+                border = BorderStroke(1.dp, CatGreen.copy(alpha = 0.3f))
+            ) {
                 Icon(Icons.Default.CheckCircle, null, tint = CatGreen); Spacer(Modifier.width(4.dp)); Text("Whitelist", color = CatGreen, style = MaterialTheme.typography.labelSmall)
             }
-            OutlinedButton(onClick = {
-                context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:$number")).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) })
-            }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp)) {
+            OutlinedButton(
+                onClick = {
+                    context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:$number")).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) })
+                },
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(14.dp),
+                border = BorderStroke(1.dp, CatBlue.copy(alpha = 0.3f))
+            ) {
                 Icon(Icons.Default.Phone, null, tint = CatBlue); Spacer(Modifier.width(4.dp)); Text("Call", color = CatBlue, style = MaterialTheme.typography.labelSmall)
             }
-            OutlinedButton(onClick = {
-                viewModel.shareAsSpam(number, dbEntry?.type ?: liveResult?.type ?: "")
-            }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp)) {
+            OutlinedButton(
+                onClick = {
+                    viewModel.shareAsSpam(number, dbEntry?.type ?: liveResult?.type ?: "")
+                },
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(14.dp),
+                border = BorderStroke(1.dp, CatYellow.copy(alpha = 0.3f))
+            ) {
                 Icon(Icons.Default.Share, null, tint = CatYellow); Spacer(Modifier.width(4.dp)); Text("Share", color = CatYellow, style = MaterialTheme.typography.labelSmall)
             }
         }
@@ -332,7 +410,7 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
 @Composable
 fun StatChip(label: String, value: String, color: androidx.compose.ui.graphics.Color) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = color)
+        Text(value, style = MaterialTheme.typography.titleLarge.copy(letterSpacing = (-0.5).sp), fontWeight = FontWeight.Bold, color = color)
         Text(label, style = MaterialTheme.typography.labelSmall, color = CatSubtext)
     }
 }

@@ -6,6 +6,7 @@ import android.content.Intent
 import android.graphics.Color
 import android.graphics.PixelFormat
 import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Handler
 import android.os.IBinder
@@ -33,6 +34,8 @@ class CallerIdOverlayService : Service() {
     private var overlayView: LinearLayout? = null
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val handler = Handler(Looper.getMainLooper())
+
+    @Volatile private var isOverlayActive = false
 
     // UI elements we need to update
     private var headerText: TextView? = null
@@ -68,26 +71,40 @@ class CallerIdOverlayService : Service() {
 
         overlayView = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(Color.parseColor("#F0101010"))
-            setPadding(48, 36, 48, 24)
+            // Rounded bottom corners with premium surface
+            background = GradientDrawable().apply {
+                setColor(Color.parseColor("#F5080808"))
+                cornerRadii = floatArrayOf(0f, 0f, 0f, 0f, 48f, 48f, 48f, 48f) // bottom-left, bottom-right
+            }
+            setPadding(52, 40, 52, 32)
+
+            // Subtle accent line at top
+            addView(android.view.View(context).apply {
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, 2
+                ).apply { bottomMargin = 16 }
+                setBackgroundColor(Color.parseColor("#18A6E3A1"))
+            })
 
             // Header — updates based on lookup results
             headerText = TextView(context).apply {
                 text = if (confidence > 0) "POSSIBLE SPAM" else "INCOMING CALL"
                 setTextColor(if (confidence > 0) Color.parseColor("#FFF38BA8") else Color.parseColor("#FFA6E3A1"))
-                textSize = 14f; typeface = Typeface.DEFAULT_BOLD
+                textSize = 11f; typeface = Typeface.DEFAULT_BOLD
+                letterSpacing = 0.12f
             }
             addView(headerText)
 
             // Number + location
             addView(TextView(context).apply {
                 text = formatted
-                setTextColor(Color.WHITE); textSize = 22f; typeface = Typeface.DEFAULT_BOLD
-                setPadding(0, 6, 0, 2)
+                setTextColor(Color.parseColor("#FFCDD6F4")); textSize = 24f; typeface = Typeface.DEFAULT_BOLD
+                letterSpacing = -0.02f
+                setPadding(0, 8, 0, 2)
             })
             if (reason.isNotEmpty()) {
                 addView(TextView(context).apply {
-                    text = reason; setTextColor(Color.parseColor("#AAFFFFFF")); textSize = 12f
+                    text = reason; setTextColor(Color.parseColor("#FF9399B2")); textSize = 12f
                 })
             }
 
@@ -95,20 +112,20 @@ class CallerIdOverlayService : Service() {
             scoreText = TextView(context).apply {
                 text = if (confidence > 0) "Score: $confidence%" else "Checking databases..."
                 setTextColor(Color.parseColor("#FFFAB387")); textSize = 13f; typeface = Typeface.DEFAULT_BOLD
-                setPadding(0, 8, 0, 0)
+                setPadding(0, 10, 0, 0)
             }
             addView(scoreText)
 
             // Loading indicator
             progressBar = ProgressBar(context, null, android.R.attr.progressBarStyleSmall).apply {
-                setPadding(0, 8, 0, 0)
+                setPadding(0, 10, 0, 0)
             }
             addView(progressBar)
 
             // Sources container — results appear here as they come in
             sourcesContainer = LinearLayout(context).apply {
                 orientation = LinearLayout.VERTICAL
-                setPadding(0, 4, 0, 0)
+                setPadding(0, 6, 0, 0)
             }
             addView(sourcesContainer)
 
@@ -119,29 +136,30 @@ class CallerIdOverlayService : Service() {
                 textSize = 13f
                 typeface = Typeface.DEFAULT_BOLD
                 visibility = android.view.View.GONE
-                setPadding(0, 4, 0, 0)
+                setPadding(0, 6, 0, 0)
             }
             addView(callerNameText)
 
             // Status text
             statusText = TextView(context).apply {
                 text = "Querying SkipCalls, PhoneBlock, WhoCalledMe, OpenCNAM..."
-                setTextColor(Color.parseColor("#666666")); textSize = 10f
-                setPadding(0, 4, 0, 0)
+                setTextColor(Color.parseColor("#FF585B70")); textSize = 10f
+                letterSpacing = 0.02f
+                setPadding(0, 6, 0, 0)
             }
             addView(statusText)
 
             // Buttons — row 1
             addView(LinearLayout(context).apply {
                 orientation = LinearLayout.HORIZONTAL
-                setPadding(0, 12, 0, 0)
+                setPadding(0, 16, 0, 0)
 
                 // Google search
                 addView(Button(context).apply {
                     text = "Search"
                     setTextColor(Color.parseColor("#FF89B4FA"))
-                    setBackgroundColor(Color.parseColor("#20FFFFFF"))
-                    textSize = 11f; isAllCaps = false; setPadding(16, 6, 16, 6)
+                    setBackgroundColor(Color.parseColor("#14FFFFFF"))
+                    textSize = 11f; isAllCaps = false; setPadding(20, 8, 20, 8)
                     setOnClickListener {
                         try { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/search?q=${Uri.encode("$digits phone number spam")}")).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }) } catch (_: Exception) {}
                         dismiss()
@@ -154,8 +172,8 @@ class CallerIdOverlayService : Service() {
                 addView(Button(context).apply {
                     text = "Block"
                     setTextColor(Color.parseColor("#FFF38BA8"))
-                    setBackgroundColor(Color.parseColor("#20FFFFFF"))
-                    textSize = 11f; isAllCaps = false; setPadding(16, 6, 16, 6)
+                    setBackgroundColor(Color.parseColor("#14FFFFFF"))
+                    textSize = 11f; isAllCaps = false; setPadding(20, 8, 20, 8)
                     setOnClickListener {
                         CoroutineScope(Dispatchers.IO).launch {
                             com.sysadmindoc.callshield.data.SpamRepository.getInstance(context).blockNumber(number, "spam", "Blocked from overlay")
@@ -170,9 +188,9 @@ class CallerIdOverlayService : Service() {
                 // Dismiss
                 addView(Button(context).apply {
                     text = "Dismiss"
-                    setTextColor(Color.parseColor("#FF6C7086"))
+                    setTextColor(Color.parseColor("#FF585B70"))
                     setBackgroundColor(Color.TRANSPARENT)
-                    textSize = 11f; isAllCaps = false; setPadding(16, 6, 16, 6)
+                    textSize = 11f; isAllCaps = false; setPadding(20, 8, 20, 8)
                     setOnClickListener { dismiss() }
                 })
             })
@@ -180,13 +198,13 @@ class CallerIdOverlayService : Service() {
             // Buttons — row 2: SIT tone
             addView(Button(context).apply {
                 text = "\uD83D\uDD08 Play SIT Tone (anti-autodialer)"
-                setTextColor(Color.parseColor("#FFA6ADC8"))
-                setBackgroundColor(Color.parseColor("#15FFFFFF"))
-                textSize = 10f; isAllCaps = false; setPadding(16, 4, 16, 4)
+                setTextColor(Color.parseColor("#FF9399B2"))
+                setBackgroundColor(Color.parseColor("#0AFFFFFF"))
+                textSize = 10f; isAllCaps = false; setPadding(20, 6, 20, 6)
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
-                ).apply { topMargin = 4 }
+                ).apply { topMargin = 8 }
                 setOnClickListener {
                     if (!SitTonePlayer.isPlaying()) {
                         CoroutineScope(Dispatchers.IO).launch {
@@ -204,7 +222,10 @@ class CallerIdOverlayService : Service() {
             PixelFormat.TRANSLUCENT
         ).apply { gravity = Gravity.TOP }
 
-        try { windowManager?.addView(overlayView, params) } catch (_: Exception) {}
+        try {
+            windowManager?.addView(overlayView, params)
+            isOverlayActive = true
+        } catch (_: Exception) {}
 
         // Auto-dismiss after 20 seconds (longer now since we're showing lookup results)
         handler.postDelayed({ dismiss() }, 20000)
@@ -222,7 +243,7 @@ class CallerIdOverlayService : Service() {
 
         fun updateScore() {
             handler.post {
-                if (overlayView == null) return@post
+                if (!isOverlayActive || overlayView == null) return@post
                 val score = when {
                     totalReports >= 10 -> 95
                     totalReports >= 5 -> 80
@@ -256,13 +277,14 @@ class CallerIdOverlayService : Service() {
             totalReports += reports
             if (isSpam) anySpam = true
             handler.post {
+                if (!isOverlayActive) return@post
                 sourcesContainer?.addView(TextView(this).apply {
                     val icon = if (isSpam) "\u26A0" else "\u2713"
                     val info = if (reports > 0) "$reports reports" else if (isSpam) "Flagged" else "Clean"
                     text = "$icon $name: $info"
                     setTextColor(Color.parseColor(if (isSpam) "#FFF38BA8" else "#FFA6E3A1"))
                     textSize = 11f
-                    setPadding(0, 2, 0, 2)
+                    setPadding(0, 3, 0, 3)
                 })
             }
             updateScore()
@@ -302,6 +324,7 @@ class CallerIdOverlayService : Service() {
     }
 
     private fun dismiss() {
+        isOverlayActive = false
         handler.removeCallbacksAndMessages(null)
         removeOverlay()
         scope.cancel()
