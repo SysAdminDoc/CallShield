@@ -1,6 +1,6 @@
 {
-  "version": 11,
-  "updated": "2026-03-25",
+  "version": 12,
+  "updated": "2026-03-26",
   "description": "CallShield community spam number database",
   "sources": [
     "ftc_complaints",
@@ -263475,6 +263475,14 @@
     },
     {
       "number": "+19378307196",
+      "type": "spam",
+      "reports": 2,
+      "first_seen": "2026-03-25",
+      "last_seen": "2026-03-25",
+      "description": "Community reported"
+    },
+    {
+      "number": "+02899985495",
       "type": "spam",
       "reports": 2,
       "first_seen": "2026-03-25",
