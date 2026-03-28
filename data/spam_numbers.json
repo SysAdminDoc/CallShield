@@ -1,6 +1,6 @@
 {
-  "version": 13,
-  "updated": "2026-03-27",
+  "version": 14,
+  "updated": "2026-03-28",
   "description": "CallShield community spam number database",
   "sources": [
     "ftc_complaints",
@@ -263495,6 +263495,14 @@
       "reports": 1,
       "first_seen": "2026-03-26",
       "last_seen": "2026-03-26",
+      "description": "Community reported"
+    },
+    {
+      "number": "+34932954694",
+      "type": "unknown",
+      "reports": 1,
+      "first_seen": "2026-03-27",
+      "last_seen": "2026-03-27",
       "description": "Community reported"
     }
   ],
