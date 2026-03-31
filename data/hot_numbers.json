@@ -1,7 +1,7 @@
 {
-  "generated": "2026-03-31T03:09:11.422207+00:00",
+  "generated": "2026-03-31T04:22:47.601162+00:00",
   "window_hours": 24,
-  "count": 5,
+  "count": 6,
   "numbers": [
     {
       "number": "+13042635785",
@@ -42,6 +42,14 @@
       "first_seen": "2015-08-04",
       "last_seen": "2105-08-27",
       "description": "FCC: Robocalls"
+    },
+    {
+      "number": "+12029942853",
+      "type": "spam",
+      "reports": 3,
+      "first_seen": "2026-03-31T03:22:10.548Z",
+      "last_seen": "2026-03-31T03:22:32.815Z",
+      "description": "Trending community report"
     }
   ]
 }
