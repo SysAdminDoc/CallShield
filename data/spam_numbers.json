@@ -1,6 +1,6 @@
 {
-  "version": 18,
-  "updated": "2026-04-02",
+  "version": 19,
+  "updated": "2026-04-04",
   "description": "CallShield community spam number database",
   "sources": [
     "ftc_complaints",
@@ -263543,6 +263543,14 @@
       "reports": 1,
       "first_seen": "2026-04-01",
       "last_seen": "2026-04-01",
+      "description": "Community reported"
+    },
+    {
+      "number": "+02883841202",
+      "type": "spam",
+      "reports": 1,
+      "first_seen": "2026-04-04",
+      "last_seen": "2026-04-04",
       "description": "Community reported"
     }
   ],
