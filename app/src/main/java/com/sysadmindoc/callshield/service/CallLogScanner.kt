@@ -58,7 +58,10 @@ object CallLogScanner {
 
         val spamList = mutableListOf<ScannedSpam>()
         for ((number, callCount) in numbers) {
-            val result = repo.isSpam(number)
+            // realtimeCall = false so the historical scan doesn't feed
+            // CampaignDetector with old numbers or trigger caller-ID overlays
+            // for calls that already happened.
+            val result = repo.isSpam(number, realtimeCall = false)
             if (result.isSpam) {
                 spamList.add(ScannedSpam(number, callCount, result.matchSource, result.type))
             }

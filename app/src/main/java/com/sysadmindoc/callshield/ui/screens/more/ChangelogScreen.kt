@@ -24,7 +24,13 @@ fun ChangelogScreen() {
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(0.dp)
     ) {
-        VersionEntry("1.2.9", "Audit Round 3 — Correctness + Compose Hygiene", isLatest = true, changes = listOf(
+        VersionEntry("1.2.10", "Audit Round 4 — Time windows, screener lifetime, scanner isolation", isLatest = true, changes = listOf(
+            "Dashboard \"today / this week / last week\" counts now roll forward on a one-minute time anchor — windows no longer freeze at app start and drift as the process stays alive",
+            "After-call \"Was this spam?\" feedback notification now fires reliably — moved off the short-lived CallScreeningService handler onto a process-lifetime scope",
+            "Historical Call Log and SMS Inbox scans no longer poison the live campaign-burst detector or pop caller-ID overlays for calls that already happened",
+            "Contact whitelist lookup closes its cursor on exception paths (defensive correctness)",
+        ))
+        VersionEntry("1.2.9", "Audit Round 3 — Correctness + Compose Hygiene", changes = listOf(
             "Campaign burst detector no longer learns from contacts/dialed/repeat callers (false-positive fix)",
             "Backup restore closes the input stream properly (file descriptor leak fix)",
             "Notifications honor the API 33+ POST_NOTIFICATIONS runtime permission instead of throwing SecurityException",

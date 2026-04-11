@@ -20,14 +20,11 @@ object SpamHeuristics {
                 ContactsContract.PhoneLookup.CONTENT_FILTER_URI,
                 android.net.Uri.encode(normalized)
             )
-            val cursor = context.contentResolver.query(
+            context.contentResolver.query(
                 uri,
                 arrayOf(ContactsContract.PhoneLookup._ID),
                 null, null, null
-            )
-            val found = (cursor?.count ?: 0) > 0
-            cursor?.close()
-            found
+            )?.use { it.count > 0 } ?: false
         } catch (_: Exception) {
             false
         }

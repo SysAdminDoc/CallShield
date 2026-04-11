@@ -120,7 +120,20 @@ class SpamRepository(private val context: Context) {
     suspend fun setFreqEscalation(enabled: Boolean) = dataStore.edit { it[KEY_FREQ_ESCALATION] = enabled }
 
     // ── Primary spam check ─────────────────────────────────────────────
-    suspend fun isSpam(number: String, smsBody: String? = null): SpamCheckResult {
+    /**
+     * @param realtimeCall `true` for live incoming calls/SMS (the default) —
+     *   feeds `CampaignDetector` and may surface the suspicious-caller overlay.
+     *   Pass `false` from the historical call-log / SMS-inbox scanners so they
+     *   don't poison the in-memory campaign detector with old numbers (any 5+
+     *   historical unknowns sharing an NPA-NXX would otherwise flag that prefix
+     *   as an active campaign for the next hour) and don't pop overlays for
+     *   calls that already happened.
+     */
+    suspend fun isSpam(
+        number: String,
+        smsBody: String? = null,
+        realtimeCall: Boolean = true,
+    ): SpamCheckResult {
         val normalized = normalizeNumber(number)
 
         // Manual whitelist — always allow
@@ -146,8 +159,10 @@ class SpamRepository(private val context: Context) {
         // Record for campaign burst detection AFTER allow-through checks.
         // Otherwise, 5+ legitimate calls from family/coworkers in the same NPA-NXX
         // flag that prefix as an active campaign and block future unknown callers
-        // from that region as "campaign_burst".
-        CampaignDetector.recordCall(normalized)
+        // from that region as "campaign_burst". Historical scans skip this.
+        if (realtimeCall) {
+            CampaignDetector.recordCall(normalized)
+        }
 
         // User blocklist + database match (single query)
         val dbEntry = dao.findByNumber(normalized)
@@ -211,7 +226,8 @@ class SpamRepository(private val context: Context) {
             }
 
             // Feature 7: Caller ID overlay for suspicious but not blocked
-            if (hResult.score >= 30 && hResult.score < threshold) {
+            // (only for real-time calls — don't surface overlays from scans)
+            if (realtimeCall && hResult.score >= 30 && hResult.score < threshold) {
                 showCallerIdOverlay(normalized, hResult.score, hResult.reasons.firstOrNull() ?: "suspicious")
             }
         }
@@ -243,8 +259,13 @@ class SpamRepository(private val context: Context) {
     }
 
     // ── SMS-specific check ─────────────────────────────────────────────
-    suspend fun isSpamSms(number: String, body: String): SpamCheckResult {
-        val numberResult = isSpam(number, smsBody = body)
+    /** @param realtimeCall see [isSpam] — pass `false` from historical scanners. */
+    suspend fun isSpamSms(
+        number: String,
+        body: String,
+        realtimeCall: Boolean = true,
+    ): SpamCheckResult {
+        val numberResult = isSpam(number, smsBody = body, realtimeCall = realtimeCall)
         if (numberResult.isSpam) return numberResult
 
         // Prior conversation trust — if user has sent to or regularly received

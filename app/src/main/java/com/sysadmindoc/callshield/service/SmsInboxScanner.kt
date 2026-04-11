@@ -62,7 +62,10 @@ object SmsInboxScanner {
                     scanned++
 
                     try {
-                        val result = repo.isSpamSms(address, body)
+                        // realtimeCall = false so the historical scan doesn't
+                        // feed CampaignDetector with old senders or pop
+                        // caller-ID overlays for messages that already arrived.
+                        val result = repo.isSpamSms(address, body, realtimeCall = false)
                         if (result.isSpam) {
                             spamList.add(ScannedSms(
                                 number = address,

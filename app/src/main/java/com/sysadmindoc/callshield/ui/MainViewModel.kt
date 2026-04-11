@@ -19,6 +19,7 @@ import com.sysadmindoc.callshield.data.model.WildcardRule
 import com.sysadmindoc.callshield.service.CallLogScanner
 import com.sysadmindoc.callshield.service.SmsInboxScanner
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
@@ -32,18 +33,30 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     val totalBlocked: StateFlow<Int> = repo.getTotalBlockedCount()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
-    val blockedToday: StateFlow<Int> = repo.getBlockedCountSince(
-        System.currentTimeMillis() - 86_400_000
-    ).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+    // Rolling time anchor — re-emits the current wall-clock every minute so the
+    // "today / this week / last week" counts below stay accurate when the app is
+    // left open for long periods instead of baking a frozen timestamp into the
+    // Room query at VM construction time.
+    private val timeAnchor: Flow<Long> = flow {
+        while (true) {
+            emit(System.currentTimeMillis())
+            delay(60_000)
+        }
+    }
 
-    val blockedThisWeek: StateFlow<Int> = repo.getBlockedCountSince(
-        System.currentTimeMillis() - 7 * 86_400_000
-    ).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+    val blockedToday: StateFlow<Int> = timeAnchor
+        .flatMapLatest { now -> repo.getBlockedCountSince(now - 86_400_000L) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
-    val blockedLastWeek: StateFlow<Int> = repo.getBlockedCountBetween(
-        System.currentTimeMillis() - 14 * 86_400_000,
-        System.currentTimeMillis() - 7 * 86_400_000
-    ).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+    val blockedThisWeek: StateFlow<Int> = timeAnchor
+        .flatMapLatest { now -> repo.getBlockedCountSince(now - 7L * 86_400_000L) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
+    val blockedLastWeek: StateFlow<Int> = timeAnchor
+        .flatMapLatest { now ->
+            repo.getBlockedCountBetween(now - 14L * 86_400_000L, now - 7L * 86_400_000L)
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
     val allSpamNumbers: StateFlow<List<SpamNumber>> = repo.getAllSpamNumbers()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
