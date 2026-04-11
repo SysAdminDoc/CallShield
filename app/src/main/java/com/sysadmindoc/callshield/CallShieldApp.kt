@@ -15,20 +15,20 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
 class CallShieldApp : Application() {
-    private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun onCreate() {
         super.onCreate()
+        appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
         NotificationHelper.createChannels(this)
         SyncWorker.schedule(this)
         HotListSyncWorker.schedule(this)
         DigestWorker.schedule(this)
 
-        applicationScope.launch {
+        appScope.launch {
             SpamMLScorer.loadWeights(this@CallShieldApp)
         }
 
-        applicationScope.launch {
+        appScope.launch {
             try {
                 HotDataSync.primeBundled(this@CallShieldApp)
             } catch (e: Exception) {
@@ -36,12 +36,31 @@ class CallShieldApp : Application() {
             }
         }
 
-        applicationScope.launch {
+        appScope.launch {
             try {
                 SpamRepository.getInstance(this@CallShieldApp).cleanupOldLogs()
             } catch (e: Exception) {
                 Log.w("CallShieldApp", "Failed to clean up old logs", e)
             }
         }
+    }
+
+    companion object {
+        /**
+         * Process-lifetime coroutine scope for fire-and-forget work that MUST
+         * outlive the component that launched it — specifically the 10-second
+         * after-call feedback notification scheduled by
+         * CallShieldScreeningService, which is typically unbound by the system
+         * seconds after respondToCall() returns.
+         *
+         * Do NOT use this for work that should be cancelled when a UI surface
+         * goes away (use viewModelScope / rememberCoroutineScope for that).
+         * Do NOT add long-running loops here — the scope never cancels.
+         *
+         * Populated in onCreate(); reads before onCreate() will crash, which
+         * is intentional (they indicate an ordering bug).
+         */
+        lateinit var appScope: CoroutineScope
+            private set
     }
 }
