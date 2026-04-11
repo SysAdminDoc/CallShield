@@ -22,4 +22,15 @@
             android:targetPackage="com.sysadmindoc.callshield"
             android:targetClass="com.sysadmindoc.callshield.ui.MainActivity" />
     </shortcut>
+    <shortcut
+        android:shortcutId="scan_sms"
+        android:enabled="true"
+        android:shortcutShortLabel="@string/shortcut_scan_sms"
+        android:shortcutLongLabel="@string/shortcut_scan_sms_long"
+        android:icon="@drawable/ic_launcher_foreground">
+        <intent
+            android:action="com.sysadmindoc.callshield.SCAN_SMS"
+            android:targetPackage="com.sysadmindoc.callshield"
+            android:targetClass="com.sysadmindoc.callshield.ui.MainActivity" />
+    </shortcut>
 </shortcuts>

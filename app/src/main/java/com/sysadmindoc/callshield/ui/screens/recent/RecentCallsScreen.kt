@@ -26,6 +26,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
@@ -34,6 +35,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import android.net.Uri
 import android.provider.ContactsContract
 import com.sysadmindoc.callshield.data.PhoneFormatter
@@ -42,6 +46,7 @@ import com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup
 import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.theme.*
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.*
@@ -59,13 +64,48 @@ data class RecentCall(
 @Composable
 fun RecentCallsScreen(viewModel: MainViewModel) {
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val scope = rememberCoroutineScope()
     var calls by remember { mutableStateOf<List<RecentCall>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
+    var refreshing by remember { mutableStateOf(false) }
+    var initialLoadCompleted by remember { mutableStateOf(false) }
     var filterMode by rememberSaveable { mutableIntStateOf(0) } // 0=All, 1=Incoming, 2=Outgoing, 3=Missed, 4=Spam
 
-    LaunchedEffect(Unit) {
-        calls = loadRecentCalls(context)
-        loading = false
+    fun refreshRecentCalls(showSkeleton: Boolean) {
+        if (loading || refreshing) return
+
+        scope.launch {
+            if (showSkeleton) {
+                loading = true
+            } else {
+                refreshing = true
+            }
+
+            try {
+                calls = loadRecentCalls(context.applicationContext)
+                initialLoadCompleted = true
+            } finally {
+                loading = false
+                refreshing = false
+            }
+        }
+    }
+
+    val refreshRecentCallsState = rememberUpdatedState(::refreshRecentCalls)
+
+    LaunchedEffect(context.applicationContext) {
+        refreshRecentCallsState.value(true)
+    }
+
+    DisposableEffect(lifecycleOwner, context.applicationContext) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME && initialLoadCompleted) {
+                refreshRecentCallsState.value(false)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     val filtered = when (filterMode) {
@@ -95,6 +135,20 @@ fun RecentCallsScreen(viewModel: MainViewModel) {
                     FilterChip(selected = filterMode == 4, onClick = { filterMode = 4 }, label = { Text("Spam ($spamCount)") },
                         border = BorderStroke(1.dp, if (filterMode == 4) CatRed.copy(alpha = 0.3f) else CatMuted.copy(alpha = 0.3f)),
                         colors = FilterChipDefaults.filterChipColors(selectedContainerColor = CatRed.copy(alpha = 0.2f), selectedLabelColor = CatRed))
+                }
+                IconButton(
+                    onClick = { refreshRecentCalls(calls.isEmpty()) },
+                    enabled = !refreshing
+                ) {
+                    if (refreshing) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            strokeWidth = 2.dp,
+                            color = CatBlue
+                        )
+                    } else {
+                        Icon(Icons.Default.Refresh, "Refresh recent calls", tint = CatOverlay)
+                    }
                 }
             }
         }

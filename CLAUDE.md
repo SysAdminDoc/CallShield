@@ -1,14 +1,14 @@
 # CallShield — Project Notes
 
 ## Overview
-Open-source Android spam call/text blocker. 56 Kotlin files, ~8,200 lines, 5 Python scripts. 32,933 spam numbers from FCC/FTC/community. 15-layer detection + ML scorer + RCS filter + 30-min hot list sync. Real-time multi-source caller ID overlay with SIT tone anti-autodialer. URLhaus phishing detection. Anonymous community contribution via Cloudflare Worker. No API keys required.
+Open-source Android spam call/text blocker. 57 Kotlin files, ~9,200 lines, 5 Python scripts. 32,933 spam numbers from FCC/FTC/community. 15-layer detection + ML scorer + RCS filter + 30-min hot list sync. Real-time multi-source caller ID overlay with SIT tone anti-autodialer. URLhaus phishing detection. Anonymous community contribution via Cloudflare Worker. No API keys required.
 
-**Released:** v1.2.6 (versionCode 9, backup format v2)
+**Released:** v1.2.8 (versionCode 11, backup format v2)
 
 ---
 
 ## Tech Stack
-- Kotlin, Jetpack Compose, Material 3, AMOLED black + Catppuccin Mocha (+ CatTeal, CatLavender)
+- Kotlin 2.1, Jetpack Compose, Material 3, Premium AMOLED black + Catppuccin Mocha (+ CatTeal, CatLavender)
 - Room (SQLite v5) — 6 entities: spam_numbers, spam_prefixes, call_log, wildcard_rules, whitelist, sms_keyword_rules
 - OkHttp, Moshi, DataStore Preferences, WorkManager
 - Cloudflare Workers (community reports endpoint: `callshield-reports.snafumatthew.workers.dev`)
@@ -27,13 +27,14 @@ Open-source Android spam call/text blocker. 56 Kotlin files, ~8,200 lines, 5 Pyt
 6. Database match (GitHub-synced spam_numbers.json + hot_list entries)
 7. Prefix rules (wangiri/premium country codes)
 8. Wildcard/regex rules
-9. Quiet hours (time-based block)
+9. Quiet hours (time-based block, end hour is EXCLUSIVE — "22 to 7" blocks 22:00–6:59)
 10. Frequency auto-block (3+ calls from same number)
 11. Heuristic engine (`SpamHeuristics.analyze`) — VoIP NPA-NXX (~60 ranges), wangiri (~50), neighbor spoof, rapid-fire, **hot campaign range** (+35, "hot_campaign_range")
+11.5. Campaign burst detection (`CampaignDetector`) — in-memory NPA-NXX prefix tracking, 1-hour window, 5-call threshold (+75, "campaign_burst")
 12. Caller ID overlay (suspicious 30-59 -> `CallerIdOverlayService`, live lookup)
 13. *(SMS only)* Keyword rules
 14. *(SMS only)* SMS content analysis (`SmsContentAnalyzer`) — URL shorteners, suspicious TLDs, **spam domain blocklist** (+50, "spam_domain"), 30+ regex patterns
-15. On-device ML scorer (`SpamMLScorer`) — 15-feature logistic regression, threshold 0.7, gated by `mlScorerEnabled`
+15. On-device ML scorer (`SpamMLScorer`) — GBT v3 (20 features) with logistic regression v2 fallback (15 features), threshold 0.7, gated by `mlScorerEnabled`
 
 ### `SpamRepository.isSpamSms()` — additional SMS layers
 Calls `isSpam()` first, then:
@@ -83,7 +84,7 @@ Hot ranges and spam domains are in-memory (`@Volatile Set<String>`) — not pers
 ---
 
 ## ML Scorer (`SpamMLScorer`)
-Pure Kotlin logistic regression — no TFLite, no extra deps. Version 2 (15 features).
+Pure Kotlin ML scorer — no TFLite, no extra deps. Version 3: Gradient-Boosted Trees (50 trees, depth 4, 20 features, pure Kotlin inference). Version 2 fallback: Logistic regression (15 features).
 
 | # | Feature | Description |
 |---|---|---|
@@ -102,11 +103,16 @@ Pure Kotlin logistic regression — no TFLite, no extra deps. Version 2 (15 feat
 | 13 | nxx_below_200 | NXX integer < 200 (often unassigned) |
 | 14 | low_digit_entropy | Fewer than 4 distinct digits in full number |
 | 15 | subscriber_sequential | Last 4 form complete ascending/descending run (1234, 9876) |
+| 16 | time_of_day_sin | Sine encoding of call hour (captures cyclic time patterns) |
+| 17 | time_of_day_cos | Cosine encoding of call hour (captures cyclic time patterns) |
+| 18 | geographic_distance | Distance between caller NPA and callee NPA centroids |
+| 19 | short_number | Number has fewer than 10 digits (short codes, international) |
+| 20 | plus_one_prefix | Number starts with +1 (NANP prefix present) |
 
 - Threshold: **0.7** — must match in both `SpamMLScorer.kt` and `spam_model_weights.json`
-- Weights file: `data/spam_model_weights.json` (version 2), synced weekly via `SyncWorker`
+- Weights file: `data/spam_model_weights.json` (version 3), synced weekly via `SyncWorker`
 - Training: `scripts/train_spam_model.py` — 50K positives, 50K negatives, 300 epochs, L2=0.01
-- `parseAndApply()` size guard: `>= 15` — keep in sync with feature count
+- `parseAndApply()` size guard: `>= 15` for v2 compat, `>= 20` for v3 — keep in sync with feature count
 
 ---
 
@@ -120,7 +126,7 @@ Via `AudioTrack` on `USAGE_VOICE_COMMUNICATION` / `STREAM_VOICE_CALL`. User-init
 
 | Worker | Schedule | What it syncs |
 |---|---|---|
-| `SyncWorker` | Weekly (Monday 6am UTC) | Full spam DB + ML model weights |
+| `SyncWorker` | Every 6 hours | Full spam DB + ML model weights |
 | `HotListSyncWorker` | Every 30 min | hot_numbers.json + hot_ranges.json + spam_domains.json |
 | `DigestWorker` | Daily | Summary notification — total blocked with source breakdown |
 
@@ -137,10 +143,27 @@ Block Calls, Block SMS, Block Unknown, Contact Whitelist, STIR/SHAKEN, Neighbor 
 - 6 main tabs: Home, Recent, Log, Lookup, Blocklist, More
 - 5 blocklist sub-tabs: Blocklist, Wildcards, Keywords, Whitelist, Database
 - More hub: Statistics, Settings, Protection Test, What's New, Quick Links, About
-- Caller ID overlay: live multi-source lookup, real-time score, caller name (OpenCNAM), SIT tone button
+- Statistics: weekly bar chart (Canvas), source breakdown donut chart, monthly trend, hourly heatmap, area code breakdown
+- Caller ID overlay: live multi-source lookup, real-time score, caller name (OpenCNAM), SIT tone button, rounded bottom corners with accent line
+- After-call feedback notification with Block/Whitelist actions on allowed unknown calls
 - DigestWorker daily notification uses `BigTextStyle` with per-source breakdown
-- Onboarding: 4 pages with permission request + call screener role setup
-- Protection test: 11 checks (permissions, screener role, DB, prefix, wangiri, SMS, overlay, ML positive, ML false positive, hot list data, notification access)
+- Onboarding: 4 pages with permission request + call screener role setup, pill-shaped animated page indicators
+- Protection test: 11 checks with staggered entrance animations and protection score percentage
+- Dashboard: hero entrance animation, weekly trend indicator, last blocked preview, active profile indicator
+- Changelog: vertical timeline with connected rail and "LATEST" badge
+
+---
+
+## Premium Design System (`Theme.kt`)
+- `PremiumCard` — card with subtle 1dp border (accent-tinted or white@6%), used across all screens
+- `SectionHeader` — uppercase label with 3dp accent bar
+- `GradientDivider` — horizontal divider that fades in from transparent
+- `ShimmerBox` / `SkeletonListItem` — animated loading placeholders
+- `accentGlow` modifier — radial color glow behind elements
+- `hapticTick` / `hapticConfirm` — unified haptic feedback (15ms light / 40ms firm)
+- Surface hierarchy: Black(#000) → Surface(#080808) → SurfaceVariant(#111113) → SurfaceBright(#1A1A1E) → SurfaceElevated(#1E1E22)
+- Typography: negative letterSpacing on headlines, positive on labels
+- All screens import via `import ui.theme.*`
 
 ---
 
@@ -188,19 +211,21 @@ ANDROID_HOME="$HOME/AppData/Local/Android/Sdk"
 - **v1.2.4** — README rewrite, protection test expansion (ML/RCS/hot list), theme colors, detection icons
 - **v1.2.5** — Backup keyword rules, proguard hardening (GitHubDataSource JSON models), final icon migration
 - **v1.2.6** — Premium UI overhaul (PremiumCard, accentGlow, GradientDivider, shimmer skeletons, haptic feedback), 12 bug fixes (race conditions, JSON injection, thread leaks, date grouping), undo on swipe-delete, confirmation dialogs, directional tab transitions, changelog timeline, widget protection status
+- **v1.2.7** — Build fix, deprecated icon migration (AutoMirrored ViewList/TrendingUp/Down/Flat), zero compilation warnings, atomic database transactions, hot list parser fix, quiet hours end-time exclusive fix
+- **v1.2.8** — GBT ML model (v3, 20 features, pure Kotlin tree ensemble), campaign burst detection (NPA-NXX, 1hr/5-call), after-call feedback notifications, 378 strings extracted to strings.xml, 150 unit tests + CI pipeline (test.yml), full accessibility pass (100 content descriptions, semantic grouping, 48dp targets), weekly bar chart + source donut + monthly trend in Stats, signing credentials to local.properties, network_security_config.xml, restricted file_paths/backup_rules, proguard rules for GBT/Campaign, call log scanner Dispatchers.IO fix, sync freshness recompute, onboarding permission status + notification/overlay requests, ANSWER_PHONE_CALLS permission
 
 ---
 
 ## Gotchas
 - Must disable/re-enable branch protection to push (enforce_admins: true)
 - GitHubDataSource branch default is `"master"` not `"main"`
-- All Material icons must use `AutoMirrored.Filled.*` variants (ArrowBack, ArrowForward, PhoneCallback, TextSnippet, PlaylistAdd, OpenInNew, CallReceived, CallMade, PhoneMissed) — `Icons.Default.*` versions are deprecated
+- All Material icons must use `AutoMirrored.Filled.*` variants (ArrowBack, ArrowForward, PhoneCallback, TextSnippet, PlaylistAdd, OpenInNew, CallReceived, CallMade, PhoneMissed, ViewList, TrendingUp, TrendingDown, TrendingFlat) — `Icons.Default.*` versions are deprecated
 - STIR/SHAKEN: `Connection.VERIFICATION_STATUS_FAILED` (not `Call.Details`)
 - `settings.gradle.kts`: `dependencyResolutionManagement` (not `dependencyResolution`)
 - Room `NumberCount` data class needs explicit import in DAO
 - `SwipeToDismissBox` requires `@OptIn(ExperimentalMaterial3Api::class)`
 - SMS receiver uses `Thread+runBlocking` (not `CoroutineScope`) to prevent race with `pendingResult`
-- Notification IDs are stable hashes from phone number (no counter overflow)
+- Notification IDs are stable hashes from phone number (golden ratio hash, overflow is intentional)
 - Adaptive icon XML overrides PNG mipmaps on API 26+ — deleted so logo PNG is used
 - PullToRefresh API unstable in Material3 — removed
 - PhoneBlock bulk blocklist requires auth; per-number lookup does not
@@ -210,25 +235,42 @@ ANDROID_HOME="$HOME/AppData/Local/Android/Sdk"
 - `RcsNotificationListener.onDestroy()` uses `scope.coroutineContext[Job]?.cancel()` directly — do NOT add a private `CoroutineScope.cancel()` extension (shadows kotlinx stdlib, was removed)
 - `SpamMLScorer` parses weights JSON with regex (not Moshi) — do not add Moshi back to it. `bias` and `threshold` are `@Volatile`.
 - `SpamHeuristics.hotCampaignRanges` and `SmsContentAnalyzer.spamDomains` are `@Volatile` in-memory sets — they start empty on process start and are populated by the first `HotListSyncWorker` run
-- `SmsContextChecker` normalizes to last-10-digits before comparing against SMS content provider `address` column
+- `SmsContextChecker` normalizes to last-10-digits before comparing against SMS content provider `address` column. Calendar.MONTH is 0-indexed — must add +1 for date grouping.
 - `train_spam_model.py` outputs `"threshold": 0.7` — earlier version output `0.5`, which caused a mismatch (fixed)
-- `CallShieldTileService` uses coroutine-based async — do NOT use `runBlocking` (causes Quick Settings ANR)
-- `CallerIdOverlayService` calls `handler.removeCallbacksAndMessages(null)` in `dismiss()` and `onDestroy()` to prevent handler posts on dead views
-- `NotificationHelper.lastNotifTime` and `blockedSinceLastNotif` are `@Volatile` for thread-safe rate limiting
+- `CallShieldTileService` uses coroutine-based async — do NOT use `runBlocking` (causes Quick Settings ANR). Re-checks `qsTile` in Main context to avoid stale reference.
+- `CallerIdOverlayService.isOverlayActive` volatile flag guards all `handler.post` lambdas — must be set to false in `dismiss()` before `removeOverlay()`. Overlay uses `GradientDrawable` with rounded bottom corners + top accent line.
+- `NotificationHelper` uses `synchronized(lock)` for rate-limiting fields — both `notifyBlocked()` and `updateSummary()` access fields through the lock. Do NOT revert to `@Volatile`.
 - `LogExporter` uses RFC 4180 CSV escaping — quotes fields, escapes internal quotes, strips newlines
 - `merge_community_reports.py` deletes report files only AFTER DB is persisted (not before)
 - `HotListSyncWorker` uses `mapNotNull` with per-entry try-catch — one bad entry doesn't break the entire sync
-- `DigestWorker.doWork()` is wrapped in try-catch — DB errors don't crash the worker
+- `DigestWorker.doWork()` is wrapped in try-catch with `Log.e` — DB errors don't crash the worker
 - Proguard: `SpamDatabase`, `SpamNumberJson`, `SpamPrefixJson`, `HotNumber`, `BackupKeyword` all need keep rules (Moshi reflection)
-- `BlocklistScreen` wildcard dialog validates regex with try-catch before adding
-- `NumberDetailScreen` uses `rememberCoroutineScope` for web lookups (not `MainScope()` — was a coroutine leak)
+- `BlocklistScreen` wildcard dialog validates regex with try-catch and shows inline error message
+- `NumberDetailScreen` uses `rememberCoroutineScope` for web lookups (not `MainScope()` — was a coroutine leak). Web lookup button disabled during loading.
 - `UrlSafetyChecker` and `CommunityContributor` escape quotes/backslashes/newlines/tabs in JSON string interpolation
-- `NotificationHelper.notifyBlocked()` uses `synchronized(lock)` for rate-limiting fields — do NOT revert to `@Volatile`
-- `CallerIdOverlayService.isOverlayActive` volatile flag guards all `handler.post` lambdas — must be set to false in `dismiss()` before `removeOverlay()`
-- `CallerIdOverlayService` overlay uses `GradientDrawable` with rounded bottom corners — don't replace with `setBackgroundColor`
 - `SitTonePlayer.playSequence()` and `playTone()` are `suspend` functions using `delay()` — do NOT revert to `Thread.sleep`
 - `SpamDao.insertBlockedCall` uses `OnConflictStrategy.REPLACE` for undo-on-delete support
-- Theme.kt: `PremiumCard`, `SectionHeader`, `GradientDivider`, `ShimmerBox`, `SkeletonListItem`, `accentGlow`, `hapticTick`, `hapticConfirm` are the premium design primitives — all screens use them via `import ui.theme.*`
+- `SpamDao.replaceBySource()` and `replaceGithubData()` use `@Transaction` for atomic delete+insert — prevents detection gaps during sync
 - `BlockedLogScreen` clear log requires confirmation dialog — do NOT call `clearLog()` without showing `showClearDialog`
 - `ChangelogScreen` uses a vertical timeline layout with `isLatest` and `isLast` flags — first entry must be `isLatest=true`, last must be `isLast=true`
 - `CallShieldWidget` reads protection status via `repo.blockCallsEnabled.first()` — needs the SpamRepository import
+- `syncFromGitHub(force)` — manual sync uses `force=true` (always re-downloads), background SyncWorker uses `force=false` (SHA-checked). "Already up to date" does NOT update the sync timestamp (only actual data fetches do).
+- `CallShieldScreeningService.onScreenCall()` is wrapped in try-catch with guaranteed `respondAllow()` fallback — service must ALWAYS respond to avoid hanging calls
+- `CallLogScanner.ScanResult` and `SmsInboxScanner.ScanResult` have `error: String?` field — permission denials and exceptions surface to the UI instead of showing empty results
+- UI state that must survive rotation uses `rememberSaveable` (selectedTab, showSearch, filterMode, grouped, tabIndex, currentView)
+- `MainViewModel.activeProfile` tracks which blocking profile is active — resets to null on error or individual setting change
+- `GitHubDataSource.fetchHotList()` parses JSON by splitting on `{` and matching fields with regex — do NOT use the old `split(","number")` approach which drops the first entry
+- Quiet hours end time is EXCLUSIVE: "22 to 7" blocks 22:00–6:59, calls resume at 7:00. Uses `now < end` not `now <= end`.
+- `SmsReceiver` URL check coroutine has try-catch — prevents silent coroutine failure on URLhaus errors
+- `CallLogScanner.scan()` must use `withContext(Dispatchers.IO)` — cursor queries on Main thread cause ANR/silent failure. `SmsInboxScanner` already did this correctly.
+- Dashboard `isCallScreener` uses `DisposableEffect` lifecycle observer to re-check on resume — do NOT use plain `remember` (stale after granting role from system dialog)
+- Dashboard sync freshness text uses `remember(lastSync, syncState)` — adding `syncState` as key forces recomputation when sync completes
+- Onboarding permission launcher callback tracks grant status via `permsGranted` state — do NOT leave callback empty
+- Onboarding uses `.navigationBarsPadding()` for gesture nav compatibility — `enableEdgeToEdge()` draws behind nav bar
+- `ANSWER_PHONE_CALLS` permission required by some OEMs (Samsung, Xiaomi) for `CallScreeningService` to fully function
+- `MainViewModel.scanningCalls`/`scanningSms` prevent double-tap during scan — buttons show `CircularProgressIndicator` while active
+- `CampaignDetector` is in-memory only — data resets on process death. This is intentional (campaigns are short-lived).
+- `SpamMLScorer` v3 GBT parser uses `findMatchingBracket()` for nested JSON arrays — do NOT simplify to regex-only parsing
+- `extractFeatures()` returns 20 features in v3 (15 original + 5 behavioral). Size guard in `parseAndApply()` accepts >= 15 for backward compat.
+- After-call feedback notification fires 10 seconds after an allowed unknown call. Uses `SpamActionReceiver` with `FEEDBACK_SPAM`/`FEEDBACK_NOT_SPAM` actions.
+- `network_security_config.xml` disables cleartext traffic globally — do NOT add `cleartextTrafficPermitted="true"` for any domain

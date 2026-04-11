@@ -5,6 +5,7 @@ import android.content.Context
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.work.*
+import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.local.AppDatabase
 import java.util.concurrent.TimeUnit
 
@@ -46,10 +47,10 @@ class DigestWorker(
         val nm = applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val notif = NotificationCompat.Builder(applicationContext, NotificationHelper.CHANNEL_BLOCKED)
             .setSmallIcon(android.R.drawable.ic_menu_info_details)
-            .setContentTitle("CallShield Daily Summary")
-            .setContentText("Blocked $blocked spam today ($calls calls, $sms texts)")
+            .setContentTitle(applicationContext.getString(R.string.digest_title))
+            .setContentText(applicationContext.getString(R.string.digest_text, blocked, calls, sms))
             .setStyle(NotificationCompat.BigTextStyle()
-                .bigText("Blocked $blocked spam today — $calls calls, $sms texts\n$breakdown"))
+                .bigText(applicationContext.getString(R.string.digest_big_text, blocked, calls, sms, breakdown)))
             .setAutoCancel(true)
             .build()
 

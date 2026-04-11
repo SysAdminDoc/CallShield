@@ -8,8 +8,10 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -26,11 +28,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.sysadmindoc.callshield.R
+import com.sysadmindoc.callshield.data.CommunityContributor
 import com.sysadmindoc.callshield.data.PhoneFormatter
 import com.sysadmindoc.callshield.data.SpamCheckResult
 import com.sysadmindoc.callshield.data.SpamRepository
@@ -62,18 +67,21 @@ fun LookupScreen() {
     val scope = rememberCoroutineScope()
 
     Column(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Text("Number Lookup", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = CatGreen)
-        Text("Check any phone number against all 15 detection layers + ML", style = MaterialTheme.typography.bodySmall, color = CatSubtext)
+        Text(stringResource(R.string.lookup_title), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = CatGreen)
+        Text(stringResource(R.string.lookup_subtitle), style = MaterialTheme.typography.bodySmall, color = CatSubtext)
 
         OutlinedTextField(
             value = numberInput, onValueChange = { numberInput = it },
-            label = { Text("Phone Number") },
-            placeholder = { Text("+12125551234") },
-            leadingIcon = { Icon(Icons.Default.Phone, null, tint = CatSubtext) },
+            label = { Text(stringResource(R.string.lookup_phone_number)) },
+            placeholder = { Text(stringResource(R.string.lookup_phone_placeholder)) },
+            leadingIcon = { Icon(Icons.Default.Phone, contentDescription = stringResource(R.string.cd_phone_input), tint = CatSubtext) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone, imeAction = ImeAction.Search),
             keyboardActions = KeyboardActions(onSearch = {
                 if (numberInput.length >= 5) {
@@ -84,7 +92,7 @@ fun LookupScreen() {
                             result = withContext(Dispatchers.IO) { repo.isSpam(numberInput) }
                             haptic(context, result?.isSpam == true)
                         } catch (e: Exception) {
-                            errorMessage = "Lookup failed: ${e.message ?: "unknown error"}"
+                            errorMessage = context.getString(R.string.lookup_failed, e.message ?: context.getString(R.string.lookup_failed_unknown).substringAfter(": "))
                         } finally {
                             checking = false
                         }
@@ -107,7 +115,7 @@ fun LookupScreen() {
                             result = withContext(Dispatchers.IO) { repo.isSpam(numberInput) }
                             haptic(context, result?.isSpam == true)
                         } catch (e: Exception) {
-                            errorMessage = "Lookup failed: ${e.message ?: "unknown error"}"
+                            errorMessage = context.getString(R.string.lookup_failed, e.message ?: context.getString(R.string.lookup_failed_unknown).substringAfter(": "))
                         } finally {
                             checking = false
                         }
@@ -126,7 +134,7 @@ fun LookupScreen() {
                 Icon(Icons.Default.Search, null, tint = Black)
             }
             Spacer(Modifier.width(8.dp))
-            Text("Check Number", color = Black, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.lookup_check_number), color = Black, fontWeight = FontWeight.Bold)
         }
 
         errorMessage?.let { err ->
@@ -148,11 +156,11 @@ fun LookupScreen() {
                 Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     Icon(
                         if (r.isSpam) Icons.Default.Warning else Icons.Default.CheckCircle,
-                        null, tint = if (r.isSpam) CatRed else CatGreen, modifier = Modifier.size(48.dp)
+                        contentDescription = if (r.isSpam) stringResource(R.string.cd_spam_detected) else stringResource(R.string.cd_number_clean), tint = if (r.isSpam) CatRed else CatGreen, modifier = Modifier.size(48.dp)
                     )
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        if (r.isSpam) "SPAM DETECTED" else "CLEAN",
+                        if (r.isSpam) stringResource(R.string.lookup_spam_detected) else stringResource(R.string.lookup_clean),
                         style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold,
                         color = if (r.isSpam) CatRed else CatGreen
                     )
@@ -164,10 +172,10 @@ fun LookupScreen() {
 
                     if (r.isSpam) {
                         Spacer(Modifier.height(12.dp))
-                        DetailRow("Detection", r.matchSource.replace("_", " ").replaceFirstChar { it.uppercase() }, detectionIcon(r.matchSource))
-                        DetailRow("Type", r.type.replace("_", " ").replaceFirstChar { it.uppercase() })
-                        if (r.description.isNotEmpty()) DetailRow("Details", r.description)
-                        DetailRow("Confidence", "${r.confidence}%")
+                        DetailRow(stringResource(R.string.lookup_detection), r.matchSource.replace("_", " ").replaceFirstChar { it.uppercase() }, detectionIcon(r.matchSource))
+                        DetailRow(stringResource(R.string.lookup_type), r.type.replace("_", " ").replaceFirstChar { it.uppercase() })
+                        if (r.description.isNotEmpty()) DetailRow(stringResource(R.string.lookup_details), r.description)
+                        DetailRow(stringResource(R.string.lookup_confidence), stringResource(R.string.lookup_confidence_value, r.confidence))
                     }
                 }
             }
@@ -185,43 +193,60 @@ fun LookupScreen() {
                                         repo.blockNumber(numberInput, r.type, r.matchSource)
                                     }
                                     hapticConfirm(context)
-                                    android.widget.Toast.makeText(context, "Number blocked", android.widget.Toast.LENGTH_SHORT).show()
+                                    android.widget.Toast.makeText(context, context.getString(R.string.lookup_number_blocked), android.widget.Toast.LENGTH_SHORT).show()
                                 } catch (e: Exception) {
-                                    android.widget.Toast.makeText(context, "Block failed: ${e.message}", android.widget.Toast.LENGTH_SHORT).show()
+                                    android.widget.Toast.makeText(context, context.getString(R.string.lookup_block_failed, e.message ?: ""), android.widget.Toast.LENGTH_SHORT).show()
                                 }
                             }
                         },
-                        modifier = Modifier.weight(1f).height(44.dp),
+                        modifier = Modifier.weight(1f).height(48.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = CatRed),
                         shape = RoundedCornerShape(14.dp),
                         border = BorderStroke(1.dp, CatRed.copy(alpha = 0.3f))
                     ) {
                         Icon(Icons.Default.Block, null, tint = Black, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text("Block", color = Black, fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.lookup_block), color = Black, fontWeight = FontWeight.Bold)
                     }
                 }
                 OutlinedButton(
                     onClick = {
                         scope.launch {
                             try {
-                                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                                    com.sysadmindoc.callshield.data.CommunityContributor.contribute(numberInput, r.type.ifEmpty { "spam" })
+                                val repo = SpamRepository.getInstance(context)
+                                val successMessage = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                                    if (r.isSpam) {
+                                        CommunityContributor.contribute(numberInput, r.type.ifEmpty { "spam" })
+                                        context.getString(R.string.lookup_reported)
+                                    } else {
+                                        repo.addToWhitelist(numberInput, "Marked safe from lookup")
+                                        val reportResult = CommunityContributor.reportNotSpam(numberInput)
+                                        if (reportResult.success) {
+                                            context.getString(R.string.lookup_marked_safe_reported)
+                                        } else {
+                                            context.getString(R.string.lookup_marked_safe_local)
+                                        }
+                                    }
                                 }
                                 hapticTick(context)
-                                android.widget.Toast.makeText(context, "Reported to community", android.widget.Toast.LENGTH_SHORT).show()
+                                android.widget.Toast.makeText(context, successMessage, android.widget.Toast.LENGTH_SHORT).show()
                             } catch (e: Exception) {
-                                android.widget.Toast.makeText(context, "Report failed: ${e.message}", android.widget.Toast.LENGTH_SHORT).show()
+                                android.widget.Toast.makeText(context, context.getString(R.string.lookup_report_failed, e.message ?: ""), android.widget.Toast.LENGTH_SHORT).show()
                             }
                         }
                     },
-                    modifier = Modifier.weight(1f).height(44.dp),
+                    modifier = Modifier.weight(1f).height(48.dp),
                     shape = RoundedCornerShape(14.dp),
                     border = BorderStroke(1.dp, CatGreen.copy(alpha = 0.3f))
                 ) {
-                    Icon(Icons.Default.Favorite, null, tint = CatGreen, modifier = Modifier.size(18.dp))
+                    Icon(
+                        if (r.isSpam) Icons.Default.Favorite else Icons.Default.ThumbUp,
+                        null,
+                        tint = CatGreen,
+                        modifier = Modifier.size(18.dp)
+                    )
                     Spacer(Modifier.width(6.dp))
-                    Text(if (r.isSpam) "Report" else "Not Spam", color = CatGreen)
+                    Text(if (r.isSpam) stringResource(R.string.lookup_report) else stringResource(R.string.lookup_not_spam), color = CatGreen)
                 }
             }
         }
@@ -254,7 +279,7 @@ fun SpamScoreGauge(score: Int, isSpam: Boolean) {
         })
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text("$score", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = color)
-            Text(if (isSpam) "SPAM" else "SAFE", style = MaterialTheme.typography.labelSmall, color = color)
+            Text(if (isSpam) stringResource(R.string.lookup_spam) else stringResource(R.string.lookup_safe), style = MaterialTheme.typography.labelSmall, color = color)
         }
     }
 }
@@ -263,7 +288,7 @@ fun SpamScoreGauge(score: Int, isSpam: Boolean) {
 fun DetailRow(label: String, value: String, icon: androidx.compose.ui.graphics.vector.ImageVector? = null) {
     Row(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         if (icon != null) {
-            Icon(icon, null, tint = CatSubtext, modifier = Modifier.size(16.dp))
+            Icon(icon, contentDescription = label, tint = CatSubtext, modifier = Modifier.size(16.dp))
             Spacer(Modifier.width(6.dp))
         }
         Text(label, style = MaterialTheme.typography.bodySmall, color = CatOverlay, modifier = Modifier.width(90.dp))

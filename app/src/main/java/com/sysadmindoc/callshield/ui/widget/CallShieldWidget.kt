@@ -15,10 +15,14 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import java.text.NumberFormat
+import java.util.Calendar
+import java.util.concurrent.TimeUnit
 
 /**
  * Home screen widget.
- * Shows shield status, protection state, blocked count today, and total blocked.
+ * Shows shield status, protection state, blocked count with trend arrow,
+ * total blocked, and time since last blocked call.
  * Entire widget is clickable — opens the app.
  */
 class CallShieldWidget : AppWidgetProvider() {
@@ -48,25 +52,55 @@ class CallShieldWidget : AppWidgetProvider() {
             try {
                 val dao = AppDatabase.getInstance(context).spamDao()
                 val repo = SpamRepository.getInstance(context)
-                val todaySince = System.currentTimeMillis() - 86_400_000
-                val todayCount = dao.getBlockedCountSinceSync(todaySince)
+
+                // Calculate start-of-today and start-of-yesterday
+                val now = System.currentTimeMillis()
+                val todayStart = Calendar.getInstance().apply {
+                    set(Calendar.HOUR_OF_DAY, 0)
+                    set(Calendar.MINUTE, 0)
+                    set(Calendar.SECOND, 0)
+                    set(Calendar.MILLISECOND, 0)
+                }.timeInMillis
+                val yesterdayStart = todayStart - 86_400_000L
+
+                val todayCount = dao.getBlockedCountBetweenSync(todayStart, now)
+                val yesterdayCount = dao.getBlockedCountBetweenSync(yesterdayStart, todayStart)
                 val totalCount = dao.getBlockedCountSinceSync(0)
+                val numberFormatter = NumberFormat.getIntegerInstance()
+                val localizedTodayCount = numberFormatter.format(todayCount)
+                val localizedTotalCount = numberFormatter.format(totalCount)
+
+                // Trend arrow: compare today vs yesterday
+                val trendText = when {
+                    todayCount > yesterdayCount -> context.getString(R.string.widget_today_trend_up, localizedTodayCount)
+                    todayCount < yesterdayCount -> context.getString(R.string.widget_today_trend_down, localizedTodayCount)
+                    else -> context.getString(R.string.widget_today_trend_same, localizedTodayCount)
+                }
+
+                // Last blocked time
+                val lastTimestamp = dao.getLastBlockedTimestamp()
+                val lastBlockedText = formatLastBlocked(context, lastTimestamp, now)
 
                 // Protection status
                 val callsEnabled = repo.blockCallsEnabled.first()
                 val smsEnabled = repo.blockSmsEnabled.first()
                 val isActive = callsEnabled || smsEnabled
 
-                views.setTextViewText(R.id.widget_blocked_today, todayCount.toString())
-                views.setTextViewText(R.id.widget_total, "$totalCount total blocked")
+                views.setTextViewText(R.id.widget_blocked_today, localizedTodayCount)
+                views.setTextViewText(R.id.widget_trend, trendText)
+                views.setTextViewText(
+                    R.id.widget_total,
+                    context.getString(R.string.widget_total_blocked, localizedTotalCount)
+                )
+                views.setTextViewText(R.id.widget_last_blocked, lastBlockedText)
 
                 // Update status text and title color based on protection state
                 if (isActive) {
-                    views.setTextViewText(R.id.widget_status, "PROTECTION ACTIVE")
+                    views.setTextViewText(R.id.widget_status, context.getString(R.string.widget_protection_active))
                     views.setTextColor(R.id.widget_title, 0xFFA6E3A1.toInt()) // CatGreen
                     views.setTextColor(R.id.widget_status, 0xFFA6E3A1.toInt())
                 } else {
-                    views.setTextViewText(R.id.widget_status, "PROTECTION OFF")
+                    views.setTextViewText(R.id.widget_status, context.getString(R.string.widget_protection_off))
                     views.setTextColor(R.id.widget_title, 0xFFF38BA8.toInt()) // CatRed
                     views.setTextColor(R.id.widget_status, 0xFFF38BA8.toInt())
                 }
@@ -75,6 +109,26 @@ class CallShieldWidget : AppWidgetProvider() {
             } catch (_: Exception) {
                 // Widget will show stale data — acceptable
             }
+        }
+    }
+
+    /**
+     * Formats the last-blocked timestamp into a human-readable relative string.
+     */
+    private fun formatLastBlocked(context: Context, timestamp: Long?, now: Long): String {
+        if (timestamp == null || timestamp == 0L) {
+            return context.getString(R.string.widget_last_never)
+        }
+        val diffMs = now - timestamp
+        val minutes = TimeUnit.MILLISECONDS.toMinutes(diffMs)
+        val hours = TimeUnit.MILLISECONDS.toHours(diffMs)
+        val days = TimeUnit.MILLISECONDS.toDays(diffMs)
+
+        return when {
+            minutes < 1 -> context.getString(R.string.widget_last_just_now)
+            minutes < 60 -> context.getString(R.string.widget_last_minutes_ago, minutes.toInt())
+            hours < 24 -> context.getString(R.string.widget_last_hours_ago, hours.toInt())
+            else -> context.getString(R.string.widget_last_days_ago, days.toInt())
         }
     }
 

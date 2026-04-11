@@ -1,0 +1,8 @@
+# Signing config for release builds.
+# Copy this file to local.properties and fill in the values.
+# These can also be set as environment variables.
+
+RELEASE_STORE_FILE=../callshield-release.jks
+RELEASE_STORE_PASSWORD=
+RELEASE_KEY_ALIAS=callshield
+RELEASE_KEY_PASSWORD=

@@ -29,6 +29,12 @@
 -keep class com.sysadmindoc.callshield.data.model.SpamPrefixJson { *; }
 -keep class com.sysadmindoc.callshield.data.model.HotNumber { *; }
 
+# Campaign detection singleton
+-keep class com.sysadmindoc.callshield.data.CampaignDetector { *; }
+
+# GBT model tree data class (parsed dynamically)
+-keep class com.sysadmindoc.callshield.data.SpamMLScorer$GbtTree { *; }
+
 # Keep services and receivers registered in manifest
 -keep class com.sysadmindoc.callshield.service.** { *; }
 -keep class com.sysadmindoc.callshield.ui.widget.** { *; }

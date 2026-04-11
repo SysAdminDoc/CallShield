@@ -20,10 +20,13 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.PhoneFormatter
 import com.sysadmindoc.callshield.data.SpamCheckResult
 import com.sysadmindoc.callshield.data.SpamRepository
@@ -60,7 +63,12 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
     val areaCode = remember(number) { AreaCodeLookup.getAreaCode(number) }
 
     // Contact name resolution
-    val contactName = remember(number) { lookupContactName(context, number) }
+    var contactName by remember(number) { mutableStateOf<String?>(null) }
+    LaunchedEffect(context.applicationContext, number) {
+        contactName = withContext(Dispatchers.IO) {
+            lookupContactName(context.applicationContext, number)
+        }
+    }
 
     // Live spam check result
     var liveResult by remember { mutableStateOf<SpamCheckResult?>(null) }
@@ -86,8 +94,8 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
             IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = CatSubtext) }
             Spacer(Modifier.width(8.dp))
             Column(modifier = Modifier.weight(1f)) {
-                if (contactName != null) {
-                    Text(contactName, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = CatGreen)
+                contactName?.let { name ->
+                    Text(name, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = CatGreen)
                 }
                 Text(PhoneFormatter.format(number), style = if (contactName != null) MaterialTheme.typography.bodyLarge else MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
                 Text(PhoneFormatter.formatWithCountryCode(number), style = MaterialTheme.typography.bodySmall, color = CatSubtext)
@@ -239,7 +247,13 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
                             shape = RoundedCornerShape(14.dp),
                             border = BorderStroke(1.dp, if (webLoading) CatOverlay.copy(alpha = 0.3f) else CatBlue.copy(alpha = 0.3f)),
                             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
-                        ) { Text("Check 3 Sources", color = if (webLoading) CatOverlay else CatBlue, style = MaterialTheme.typography.labelSmall) }
+                        ) {
+                            Text(
+                                stringResource(R.string.detail_check_sources),
+                                color = if (webLoading) CatOverlay else CatBlue,
+                                style = MaterialTheme.typography.labelSmall
+                            )
+                        }
                     }
                 }
                 if (webLoading) {
@@ -247,15 +261,27 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp, color = CatBlue)
                         Spacer(Modifier.width(8.dp))
-                        Text("Checking SkipCalls, PhoneBlock, WhoCalledMe...", style = MaterialTheme.typography.bodySmall, color = CatSubtext)
+                        Text(
+                            stringResource(R.string.detail_checking_sources),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = CatSubtext
+                        )
                     }
                 }
                 webResult?.let { wr ->
                     Spacer(Modifier.height(8.dp))
                     if (wr.totalReports > 0) {
-                        Text("${wr.totalReports} reports across ${wr.sources.size} sources", color = CatRed, fontWeight = FontWeight.SemiBold)
+                        Text(
+                            stringResource(R.string.detail_reports_across_sources, wr.totalReports, wr.sources.size),
+                            color = CatRed,
+                            fontWeight = FontWeight.SemiBold
+                        )
                     } else {
-                        Text("Clean across all sources", color = CatGreen, style = MaterialTheme.typography.bodySmall)
+                        Text(
+                            stringResource(R.string.detail_clean_all_sources),
+                            color = CatGreen,
+                            style = MaterialTheme.typography.bodySmall
+                        )
                     }
                     Spacer(Modifier.height(4.dp))
                     wr.sources.forEach { src ->
@@ -267,7 +293,13 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
                             Spacer(Modifier.width(6.dp))
                             Text(src.source, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold, modifier = Modifier.width(90.dp))
                             Text(
-                                if (src.reports > 0) "${src.reports} reports" else if (src.isSpam) "Flagged" else "Clean",
+                                if (src.reports > 0) {
+                                    stringResource(R.string.detail_reports_count, src.reports)
+                                } else if (src.isSpam) {
+                                    stringResource(R.string.detail_flagged)
+                                } else {
+                                    stringResource(R.string.detail_clean)
+                                },
                                 style = MaterialTheme.typography.bodySmall, color = CatSubtext
                             )
                         }

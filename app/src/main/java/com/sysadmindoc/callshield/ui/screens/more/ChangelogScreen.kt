@@ -11,9 +11,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.ui.theme.*
 
 @Composable
@@ -22,7 +24,21 @@ fun ChangelogScreen() {
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(0.dp)
     ) {
-        VersionEntry("1.2.7", "Build Fix + Deprecation Cleanup", isLatest = true, changes = listOf(
+        VersionEntry("1.2.8", "ML Engine + Campaign Detection + Accessibility", isLatest = true, changes = listOf(
+            "Gradient-boosted tree ML model (20 features, pure Kotlin inference)",
+            "Campaign burst detection: auto-blocks NPA-NXX prefixes with 5+ calls in 1 hour",
+            "After-call feedback: \"Was this spam?\" notification with one-tap Block/Whitelist",
+            "378 strings extracted to strings.xml for localization support",
+            "150 unit tests + GitHub Actions CI pipeline",
+            "Full accessibility pass: 100 content descriptions, semantic grouping, 48dp touch targets",
+            "Weekly bar chart + source donut chart + monthly trend in Statistics",
+            "Signing credentials moved to local.properties (security hardening)",
+            "Call log scanner fixed (was blocking Main thread)",
+            "Sync freshness updates immediately after sync",
+            "Onboarding shows grant status, notification/overlay permissions",
+            "ANSWER_PHONE_CALLS permission for Samsung/Xiaomi compatibility",
+        ))
+        VersionEntry("1.2.7", "Build Fix + Deprecation Cleanup", changes = listOf(
             "Fixed BlocklistScreen tab indicator crash (removed deprecated tabIndicatorOffset API)",
             "Migrated remaining deprecated icons to AutoMirrored variants (ViewList, TrendingUp/Down/Flat)",
             "Zero compilation warnings",
@@ -205,7 +221,7 @@ fun VersionEntry(
                             shape = RoundedCornerShape(6.dp)
                         ) {
                             Text(
-                                "LATEST",
+                                stringResource(R.string.changelog_latest),
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
                                 style = MaterialTheme.typography.labelSmall.copy(
                                     letterSpacing = 1.sp,

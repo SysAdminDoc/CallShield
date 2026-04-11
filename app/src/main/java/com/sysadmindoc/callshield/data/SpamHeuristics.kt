@@ -1,5 +1,6 @@
 package com.sysadmindoc.callshield.data
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.provider.ContactsContract
 import android.telephony.TelephonyManager
@@ -316,8 +317,10 @@ object SpamHeuristics {
     }
 
     @Suppress("DEPRECATION")
+    @SuppressLint("HardwareIds")
     private fun getUserPhoneNumber(context: Context): String? {
         return try {
+            // Used only for local neighbor-spoof detection and never stored or transmitted.
             val tm = context.getSystemService(Context.TELEPHONY_SERVICE) as? TelephonyManager
             tm?.line1Number?.takeIf { it.isNotBlank() }
         } catch (_: SecurityException) {

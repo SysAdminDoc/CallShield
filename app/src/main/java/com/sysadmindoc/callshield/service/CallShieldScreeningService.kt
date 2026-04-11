@@ -1,6 +1,8 @@
 package com.sysadmindoc.callshield.service
 
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.telecom.Call
 import android.telecom.CallScreeningService
 import com.sysadmindoc.callshield.data.SpamHeuristics
@@ -10,6 +12,7 @@ import kotlinx.coroutines.flow.first
 
 class CallShieldScreeningService : CallScreeningService() {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private val handler = Handler(Looper.getMainLooper())
 
     override fun onScreenCall(callDetails: Call.Details) {
         scope.launch {
@@ -55,7 +58,8 @@ class CallShieldScreeningService : CallScreeningService() {
                 if (result.isSpam) {
                     respondBlock(callDetails, number, result.matchSource, result.confidence)
                 } else {
-                    if (!SpamHeuristics.isInContacts(applicationContext, number)) {
+                    val isInContacts = SpamHeuristics.isInContacts(applicationContext, number)
+                    if (!isInContacts) {
                         // Show caller ID info overlay for unknown numbers
                         val location = com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup.lookup(number)
                         if (location != null) {
@@ -69,6 +73,13 @@ class CallShieldScreeningService : CallScreeningService() {
                             } catch (_: Exception) {}
                         }
                         repo.promptSpamRating(number)
+                        // Show "Was this spam?" notification 10 seconds after call
+                        // Re-check contact status at execution time to avoid prompting for newly-added contacts
+                        handler.postDelayed({
+                            if (!SpamHeuristics.isInContacts(applicationContext, number)) {
+                                NotificationHelper.notifyAfterCall(applicationContext, number)
+                            }
+                        }, 10_000)
                     }
                     respondAllow(callDetails)
                 }
@@ -105,6 +116,7 @@ class CallShieldScreeningService : CallScreeningService() {
 
     override fun onDestroy() {
         super.onDestroy()
+        handler.removeCallbacksAndMessages(null)
         scope.cancel()
     }
 }

@@ -1,32 +1,126 @@
 package com.sysadmindoc.callshield.ui.screens.main
 
-import androidx.compose.animation.*
-import androidx.compose.animation.core.*
+import android.Manifest
+import android.app.role.RoleManager
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.os.Build
+import android.provider.Settings
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.animateIntAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.PhoneCallback
+import androidx.compose.material.icons.automirrored.filled.TextSnippet
 import androidx.compose.material.icons.automirrored.filled.TrendingDown
 import androidx.compose.material.icons.automirrored.filled.TrendingFlat
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Block
+import androidx.compose.material.icons.filled.Call
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.DownloadDone
+import androidx.compose.material.icons.filled.Layers
+import androidx.compose.material.icons.filled.Lightbulb
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.PhoneDisabled
+import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.ShieldMoon
+import androidx.compose.material.icons.filled.Sms
+import androidx.compose.material.icons.filled.SpeakerNotesOff
+import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material.icons.filled.Today
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.BlockingProfiles
-import com.sysadmindoc.callshield.service.CallLogScanner
+import com.sysadmindoc.callshield.data.PhoneFormatter
+import com.sysadmindoc.callshield.data.SpamRepository
+import com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup
+import com.sysadmindoc.callshield.permissions.CallShieldPermissions
 import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.SyncState
-import com.sysadmindoc.callshield.ui.theme.*
+import com.sysadmindoc.callshield.ui.theme.Black
+import com.sysadmindoc.callshield.ui.theme.CatBlue
+import com.sysadmindoc.callshield.ui.theme.CatGreen
+import com.sysadmindoc.callshield.ui.theme.CatMauve
+import com.sysadmindoc.callshield.ui.theme.CatMuted
+import com.sysadmindoc.callshield.ui.theme.CatOverlay
+import com.sysadmindoc.callshield.ui.theme.CatPeach
+import com.sysadmindoc.callshield.ui.theme.CatRed
+import com.sysadmindoc.callshield.ui.theme.CatSubtext
+import com.sysadmindoc.callshield.ui.theme.CatTeal
+import com.sysadmindoc.callshield.ui.theme.CatText
+import com.sysadmindoc.callshield.ui.theme.CatYellow
+import com.sysadmindoc.callshield.ui.theme.GradientDivider
+import com.sysadmindoc.callshield.ui.theme.PremiumCard
+import com.sysadmindoc.callshield.ui.theme.SectionHeader
+import com.sysadmindoc.callshield.ui.theme.accentGlow
+import com.sysadmindoc.callshield.ui.theme.hapticConfirm
+import com.sysadmindoc.callshield.ui.theme.hapticTick
 
 @Composable
 fun DashboardScreen(viewModel: MainViewModel) {
@@ -50,6 +144,150 @@ fun DashboardScreen(viewModel: MainViewModel) {
     val scanResult by viewModel.scanResult.collectAsState()
     val smsScanResult by viewModel.smsScanResult.collectAsState()
     val lastSync by viewModel.lastSyncTimestamp.collectAsState()
+    val lastSyncSource by viewModel.lastSyncSource.collectAsState()
+    val activeProfile by viewModel.activeProfile.collectAsState()
+    val scanningCalls by viewModel.scanningCalls.collectAsState()
+    val scanningSms by viewModel.scanningSms.collectAsState()
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val roleManager = remember(context) {
+        context.getSystemService(Context.ROLE_SERVICE) as? RoleManager
+    }
+    var permissionRefreshTick by remember { mutableIntStateOf(0) }
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                permissionRefreshTick++
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    val missingPerms = remember(
+        context,
+        permissionRefreshTick,
+        blockCallsEnabled,
+        blockSmsEnabled
+    ) {
+        CallShieldPermissions.missingEnabledProtectionPermissions(
+            context = context,
+            callsEnabled = blockCallsEnabled,
+            smsEnabled = blockSmsEnabled
+        )
+    }
+    val callPermissionsReady = remember(context, permissionRefreshTick) {
+        CallShieldPermissions.hasCallProtectionPermissions(context)
+    }
+    val smsPermissionsReady = remember(context, permissionRefreshTick) {
+        CallShieldPermissions.hasSmsProtectionPermissions(context)
+    }
+    val callLogReady = remember(context, permissionRefreshTick) {
+        CallShieldPermissions.isPermissionGranted(context, Manifest.permission.READ_CALL_LOG)
+    }
+    val smsInboxReady = remember(context, permissionRefreshTick) {
+        CallShieldPermissions.canReadSmsInbox(context)
+    }
+    val spamDatabaseReady = spamCount > 0
+    val callScreenerReady = remember(roleManager, permissionRefreshTick) {
+        CallShieldPermissions.hasCallScreeningRole(roleManager)
+    }
+    val overlayGranted = remember(context, permissionRefreshTick) {
+        CallShieldPermissions.canDrawOverlays(context)
+    }
+    val notificationsGranted = remember(context, permissionRefreshTick) {
+        CallShieldPermissions.hasNotificationPermission(context)
+    }
+    val corePermissionsReady = missingPerms.isEmpty()
+    val dashboardStatus = remember(
+        blockCallsEnabled,
+        blockSmsEnabled,
+        callPermissionsReady,
+        smsPermissionsReady,
+        corePermissionsReady,
+        spamDatabaseReady,
+        callScreenerReady,
+        overlayGranted,
+        notificationsGranted
+    ) {
+        buildDashboardStatusModel(
+            blockCallsEnabled = blockCallsEnabled,
+            blockSmsEnabled = blockSmsEnabled,
+            callPermissionsReady = callPermissionsReady,
+            smsPermissionsReady = smsPermissionsReady,
+            permissionsReady = corePermissionsReady,
+            spamDatabaseReady = spamDatabaseReady,
+            callScreenerReady = callScreenerReady,
+            overlayGranted = overlayGranted,
+            notificationsGranted = notificationsGranted
+        )
+    }
+    val protectionEnabled = dashboardStatus.protectionEnabled
+    val callProtectionReady = dashboardStatus.callProtectionReady
+    val smsProtectionReady = dashboardStatus.smsProtectionReady
+    val shieldActive = dashboardStatus.shieldActive
+    val requiredSetupComplete = dashboardStatus.requiredSetupComplete
+    val requiredSetupTotal = dashboardStatus.requiredSetupTotal
+    val optionalSetupComplete = dashboardStatus.optionalSetupComplete
+    val optionalSetupTotal = dashboardStatus.optionalSetupTotal
+    val setupSummary = when {
+        dashboardStatus.setupComplete && optionalSetupComplete == optionalSetupTotal ->
+            stringResource(R.string.dashboard_setup_complete)
+        dashboardStatus.setupComplete ->
+            stringResource(R.string.dashboard_setup_optional_summary)
+        else ->
+            stringResource(R.string.dashboard_setup_required_summary)
+    }
+    val heroAccent = when {
+        shieldActive -> CatGreen
+        protectionEnabled -> CatYellow
+        else -> CatBlue
+    }
+    val heroTitle = when (dashboardStatus.heroMode) {
+        DashboardHeroMode.Active -> stringResource(R.string.dashboard_protection_active)
+        DashboardHeroMode.SetupNeeded -> stringResource(R.string.dashboard_setup_needed)
+        DashboardHeroMode.Disabled -> stringResource(R.string.dashboard_protection_disabled)
+    }
+    val heroSubtitle = when {
+        shieldActive && blockCallsEnabled && blockSmsEnabled ->
+            stringResource(R.string.dashboard_calls_and_texts_protected)
+        shieldActive && blockCallsEnabled ->
+            stringResource(R.string.dashboard_calls_protected)
+        shieldActive && blockSmsEnabled ->
+            stringResource(R.string.dashboard_texts_protected)
+        !protectionEnabled ->
+            stringResource(R.string.dashboard_turn_on_protection_hint)
+        !corePermissionsReady ->
+            stringResource(R.string.dashboard_finish_permissions_hint)
+        !spamDatabaseReady ->
+            stringResource(R.string.dashboard_finish_setup_hint)
+        blockCallsEnabled && !callScreenerReady ->
+            stringResource(R.string.dashboard_call_screener_missing_hint)
+        else ->
+            stringResource(R.string.dashboard_finish_setup_hint)
+    }
+    val heroAction = when {
+        !corePermissionsReady -> HeroAction(
+            label = stringResource(R.string.dashboard_review_permissions),
+            icon = Icons.Default.Settings,
+            onClick = { openAppSettings(context) }
+        )
+        !spamDatabaseReady -> HeroAction(
+            label = stringResource(R.string.dashboard_sync_database),
+            icon = Icons.Default.Sync,
+            onClick = {
+                hapticTick(context)
+                viewModel.sync()
+            }
+        )
+        blockCallsEnabled && !callScreenerReady && roleManager != null -> HeroAction(
+            label = stringResource(R.string.dashboard_enable_call_screening),
+            icon = Icons.AutoMirrored.Filled.PhoneCallback,
+            onClick = { requestCallScreening(context, roleManager) }
+        )
+        else -> null
+    }
 
     Column(
         modifier = Modifier
@@ -58,125 +296,323 @@ fun DashboardScreen(viewModel: MainViewModel) {
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
-        // Permission check banner
-        val context = LocalContext.current
-        val missingPerms = remember {
-            listOf(
-                android.Manifest.permission.READ_CALL_LOG,
-                android.Manifest.permission.READ_CONTACTS,
-                android.Manifest.permission.RECEIVE_SMS
-            ).filter {
-                androidx.core.content.ContextCompat.checkSelfPermission(context, it) != android.content.pm.PackageManager.PERMISSION_GRANTED
-            }
-        }
-        if (missingPerms.isNotEmpty()) {
-            PremiumCard(
-                modifier = Modifier.fillMaxWidth(),
-                accentColor = CatRed
-            ) {
-                Row(modifier = Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Warning, null, tint = CatRed, modifier = Modifier.size(24.dp))
-                    Spacer(Modifier.width(10.dp))
-                    Text(
-                        "${missingPerms.size} permissions missing. Open Settings to grant.",
-                        color = CatRed,
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
-            }
-        }
-
-        // Shield status hero card — entrance animation
         var heroVisible by remember { mutableStateOf(false) }
         LaunchedEffect(Unit) { heroVisible = true }
         val heroAlpha by animateFloatAsState(
             targetValue = if (heroVisible) 1f else 0f,
-            animationSpec = tween(600, easing = FastOutSlowInEasing), label = "heroAlpha"
+            animationSpec = tween(600, easing = FastOutSlowInEasing),
+            label = "heroAlpha"
         )
         val heroScale by animateFloatAsState(
-            targetValue = if (heroVisible) 1f else 0.95f,
-            animationSpec = tween(600, easing = FastOutSlowInEasing), label = "heroScale"
+            targetValue = if (heroVisible) 1f else 0.96f,
+            animationSpec = tween(600, easing = FastOutSlowInEasing),
+            label = "heroScale"
         )
         PremiumCard(
-            modifier = Modifier.fillMaxWidth().graphicsLayer {
-                alpha = heroAlpha; scaleX = heroScale; scaleY = heroScale
-            },
-            accentColor = CatGreen
+            modifier = Modifier
+                .fillMaxWidth()
+                .graphicsLayer {
+                    alpha = heroAlpha
+                    scaleX = heroScale
+                    scaleY = heroScale
+                },
+            accentColor = heroAccent
         ) {
+            val pulseAnim = rememberInfiniteTransition(label = "shieldPulse")
+            val pulseScale by pulseAnim.animateFloat(
+                initialValue = 1f,
+                targetValue = if (shieldActive) 1.08f else 1f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(1600, easing = FastOutSlowInEasing),
+                    repeatMode = RepeatMode.Reverse
+                ),
+                label = "shieldScale"
+            )
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(28.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+                    .padding(24.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                val shieldActive = blockCallsEnabled || blockSmsEnabled
-                // Pulsing shield animation
-                val pulseAnim = rememberInfiniteTransition(label = "pulse")
-                val pulseScale by pulseAnim.animateFloat(
-                    initialValue = 1f, targetValue = 1.08f, label = "scale",
-                    animationSpec = infiniteRepeatable(tween(1500, easing = FastOutSlowInEasing), RepeatMode.Reverse)
-                )
-                Icon(
-                    imageVector = if (shieldActive) Icons.Default.Shield else Icons.Default.ShieldMoon,
-                    contentDescription = if (shieldActive) "Protection active" else "Protection disabled",
-                    tint = if (shieldActive) CatGreen else CatRed,
-                    modifier = Modifier
-                        .size(64.dp)
-                        .accentGlow(CatGreen, 400f, 0.06f)
-                        .graphicsLayer {
-                            if (shieldActive) {
-                                scaleX = pulseScale; scaleY = pulseScale
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.Top
+                ) {
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        SetupStateBadge(
+                            label = if (dashboardStatus.setupComplete) {
+                                stringResource(R.string.dashboard_setup_complete)
+                            } else {
+                                stringResource(R.string.dashboard_setup_needs_attention)
+                            },
+                            color = heroAccent
+                        )
+                        Text(
+                            text = heroTitle,
+                            style = MaterialTheme.typography.headlineMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = CatText
+                        )
+                        Text(
+                            text = heroSubtitle,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = CatSubtext
+                        )
+                    }
+                    Icon(
+                        imageVector = if (shieldActive) Icons.Default.Shield else Icons.Default.ShieldMoon,
+                        contentDescription = null,
+                        tint = heroAccent,
+                        modifier = Modifier
+                            .size(62.dp)
+                            .accentGlow(heroAccent, radius = 260f, alpha = 0.1f)
+                            .graphicsLayer {
+                                scaleX = pulseScale
+                                scaleY = pulseScale
                             }
-                        }
-                )
-                Spacer(Modifier.height(14.dp))
-                Text(
-                    text = if (shieldActive) "Protection Active" else "Protection Disabled",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = if (shieldActive) CatGreen else CatRed
-                )
-                Spacer(Modifier.height(6.dp))
-                if (spamCount == 0) {
-                    Text("No spam database loaded", style = MaterialTheme.typography.bodyMedium, color = CatYellow)
-                    Text("Tap Sync below to download", style = MaterialTheme.typography.labelSmall, color = CatOverlay)
-                } else {
-                    Text("$spamCount numbers in database", style = MaterialTheme.typography.bodyMedium, color = CatSubtext)
+                    )
                 }
-                Spacer(Modifier.height(4.dp))
-                val engineCount = listOf(true, stirShaken, heuristics, smsContent, neighborSpoof, mlScorer, rcsFilter, freqEscalation).count { it }
-                Text(
-                    text = "$engineCount detection engines active" + if (aggressiveMode) " | AGGRESSIVE" else "",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (aggressiveMode) CatRed else CatOverlay
+
+                LinearProgressIndicator(
+                    progress = { requiredSetupComplete / requiredSetupTotal.toFloat() },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(8.dp),
+                    color = heroAccent,
+                    trackColor = CatMuted.copy(alpha = 0.35f)
                 )
-                // Sync freshness
-                if (lastSync > 0) {
-                    Spacer(Modifier.height(6.dp))
-                    val ago = System.currentTimeMillis() - lastSync
-                    val freshText = when {
-                        ago < 3_600_000 -> "Synced just now"
-                        ago < 86_400_000 -> "Synced ${ago / 3_600_000}h ago"
-                        else -> "Synced ${ago / 86_400_000}d ago"
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = stringResource(
+                            R.string.dashboard_setup_progress_required,
+                            requiredSetupComplete,
+                            requiredSetupTotal
+                        ),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = CatSubtext
+                    )
+                    Text(
+                        text = setupSummary,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = heroAccent,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        val engineCount = activeEngineCount(
+                            stirShaken = stirShaken,
+                            heuristics = heuristics,
+                            smsContent = smsContent,
+                            neighborSpoof = neighborSpoof,
+                            mlScorer = mlScorer,
+                            rcsFilter = rcsFilter,
+                            freqEscalation = freqEscalation
+                        )
+                        Text(
+                            text = if (aggressiveMode) {
+                                stringResource(R.string.dashboard_engines_active_aggressive, engineCount)
+                            } else {
+                                stringResource(R.string.dashboard_engines_active, engineCount)
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = CatOverlay
+                        )
+                        Text(
+                            text = syncFreshnessText(lastSync, lastSyncSource),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = syncFreshnessColor(lastSync, lastSyncSource)
+                        )
                     }
-                    val freshColor = when {
-                        ago < 86_400_000 -> CatGreen
-                        ago < 172_800_000 -> CatYellow
-                        else -> CatRed
+                    heroAction?.let { action ->
+                        Button(
+                            onClick = action.onClick,
+                            enabled = syncState !is SyncState.Syncing || action.icon != Icons.Default.Sync,
+                            colors = ButtonDefaults.buttonColors(containerColor = heroAccent),
+                            shape = RoundedCornerShape(14.dp)
+                        ) {
+                            if (syncState is SyncState.Syncing && action.icon == Icons.Default.Sync) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(16.dp),
+                                    strokeWidth = 2.dp,
+                                    color = Black
+                                )
+                            } else {
+                                Icon(action.icon, null, tint = Black, modifier = Modifier.size(18.dp))
+                            }
+                            Spacer(Modifier.width(8.dp))
+                            Text(action.label, color = Black, fontWeight = FontWeight.Bold)
+                        }
                     }
-                    Text(freshText, style = MaterialTheme.typography.labelSmall, color = freshColor)
                 }
             }
         }
 
-        // Stats row
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            StatCard(Modifier.weight(1f), "Today", blockedToday.toString(), Icons.Default.Today, CatBlue)
-            StatCard(Modifier.weight(1f), "This Week", blockedThisWeek.toString(), Icons.Default.DateRange, CatMauve)
-            StatCard(Modifier.weight(1f), "Total", totalBlocked.toString(), Icons.Default.Block, CatPeach)
+        PremiumCard(modifier = Modifier.fillMaxWidth(), accentColor = CatYellow) {
+            Column(
+                modifier = Modifier.padding(18.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    SectionHeader(stringResource(R.string.dashboard_setup_checklist), CatYellow)
+                    SetupStateBadge(
+                        label = if (dashboardStatus.setupComplete) {
+                            stringResource(R.string.dashboard_setup_complete)
+                        } else {
+                            stringResource(R.string.dashboard_setup_needs_attention)
+                        },
+                        color = if (dashboardStatus.setupComplete) CatGreen else CatYellow
+                    )
+                }
+
+                Text(
+                    text = setupSummary,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = CatSubtext
+                )
+
+                SetupChecklistRow(
+                    icon = Icons.Default.Security,
+                    title = stringResource(R.string.dashboard_setup_permissions_title),
+                    detail = if (corePermissionsReady) {
+                        stringResource(R.string.dashboard_permissions_ready_detail)
+                    } else {
+                        stringResource(R.string.dashboard_permissions_needed_detail, missingPerms.size)
+                    },
+                    ready = corePermissionsReady,
+                    accentColor = CatBlue,
+                    actionLabel = if (corePermissionsReady) null else stringResource(R.string.dashboard_action_review),
+                    onAction = if (corePermissionsReady) null else { { openAppSettings(context) } }
+                )
+
+                GradientDivider()
+
+                SetupChecklistRow(
+                    icon = Icons.Default.DownloadDone,
+                    title = stringResource(R.string.dashboard_setup_database_title),
+                    detail = when {
+                        syncState is SyncState.Syncing -> stringResource(R.string.dashboard_database_syncing_detail)
+                        spamDatabaseReady -> stringResource(R.string.dashboard_database_ready_detail, spamCount)
+                        else -> stringResource(R.string.dashboard_database_needed_detail)
+                    },
+                    ready = spamDatabaseReady,
+                    accentColor = CatGreen,
+                    actionLabel = if (spamDatabaseReady) null else stringResource(R.string.dashboard_sync),
+                    onAction = if (spamDatabaseReady) null else {
+                        {
+                            hapticTick(context)
+                            viewModel.sync()
+                        }
+                    }
+                )
+
+                GradientDivider()
+
+                SetupChecklistRow(
+                    icon = Icons.AutoMirrored.Filled.PhoneCallback,
+                    title = stringResource(R.string.dashboard_setup_call_screener_title),
+                    detail = when {
+                        !blockCallsEnabled -> stringResource(R.string.dashboard_screener_optional_detail)
+                        callScreenerReady -> stringResource(R.string.dashboard_screener_ready_detail)
+                        else -> stringResource(R.string.dashboard_screener_needed_detail)
+                    },
+                    ready = !blockCallsEnabled || callScreenerReady,
+                    accentColor = CatMauve,
+                    actionLabel = if (!blockCallsEnabled || callScreenerReady || roleManager == null) null else stringResource(R.string.dashboard_enable_call_screening),
+                    onAction = if (!blockCallsEnabled || callScreenerReady || roleManager == null) null else {
+                        { requestCallScreening(context, roleManager) }
+                    }
+                )
+
+                GradientDivider(modifier = Modifier.padding(top = 2.dp))
+
+                Text(
+                    text = stringResource(R.string.dashboard_optional_extras),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = CatOverlay,
+                    fontWeight = FontWeight.SemiBold
+                )
+
+                SetupChecklistRow(
+                    icon = Icons.Default.Layers,
+                    title = stringResource(R.string.dashboard_setup_overlay_title),
+                    detail = if (overlayGranted) {
+                        stringResource(R.string.dashboard_overlay_ready_detail)
+                    } else {
+                        stringResource(R.string.dashboard_overlay_needed_detail)
+                    },
+                    ready = overlayGranted,
+                    accentColor = CatTeal,
+                    actionLabel = if (overlayGranted) null else stringResource(R.string.dashboard_enable_overlay),
+                    onAction = if (overlayGranted) null else { { openOverlaySettings(context) } }
+                )
+
+                GradientDivider()
+
+                SetupChecklistRow(
+                    icon = Icons.Default.Notifications,
+                    title = stringResource(R.string.dashboard_setup_notifications_title),
+                    detail = if (notificationsGranted) {
+                        stringResource(R.string.dashboard_notifications_ready_detail)
+                    } else {
+                        stringResource(R.string.dashboard_notifications_needed_detail)
+                    },
+                    ready = notificationsGranted,
+                    accentColor = CatBlue,
+                    actionLabel = if (notificationsGranted) null else stringResource(R.string.dashboard_enable_notifications),
+                    onAction = if (notificationsGranted) null else { { openNotificationSettings(context) } }
+                )
+            }
         }
 
-        // Weekly trend comparison
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            StatCard(
+                modifier = Modifier.weight(1f),
+                title = stringResource(R.string.dashboard_stat_today),
+                value = blockedToday.toString(),
+                icon = Icons.Default.Today,
+                color = CatBlue
+            )
+            StatCard(
+                modifier = Modifier.weight(1f),
+                title = stringResource(R.string.dashboard_stat_this_week),
+                value = blockedThisWeek.toString(),
+                icon = Icons.Default.DateRange,
+                color = CatMauve
+            )
+            StatCard(
+                modifier = Modifier.weight(1f),
+                title = stringResource(R.string.dashboard_stat_total),
+                value = totalBlocked.toString(),
+                icon = Icons.Default.Block,
+                color = CatPeach
+            )
+        }
+
         if (blockedThisWeek > 0 || blockedLastWeek > 0) {
             val diff = blockedThisWeek - blockedLastWeek
             val trendIcon = when {
@@ -190,12 +626,14 @@ fun DashboardScreen(viewModel: MainViewModel) {
                 else -> CatSubtext
             }
             val trendText = when {
-                diff > 0 -> "$diff more than last week"
-                diff < 0 -> "${-diff} fewer than last week"
-                else -> "Same as last week"
+                diff > 0 -> stringResource(R.string.dashboard_trend_more, diff)
+                diff < 0 -> stringResource(R.string.dashboard_trend_fewer, -diff)
+                else -> stringResource(R.string.dashboard_trend_same)
             }
             Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(trendIcon, null, tint = trendColor, modifier = Modifier.size(16.dp))
@@ -204,7 +642,6 @@ fun DashboardScreen(viewModel: MainViewModel) {
             }
         }
 
-        // Last blocked preview
         val lastBlocked = blockedCalls.firstOrNull { it.wasBlocked }
         if (lastBlocked != null) {
             PremiumCard(
@@ -213,7 +650,9 @@ fun DashboardScreen(viewModel: MainViewModel) {
                 onClick = { viewModel.openNumberDetail(lastBlocked.number) }
             ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(14.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(14.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
@@ -225,19 +664,15 @@ fun DashboardScreen(viewModel: MainViewModel) {
                     Spacer(Modifier.width(10.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            "Last blocked: ${com.sysadmindoc.callshield.data.PhoneFormatter.format(lastBlocked.number)}",
+                            stringResource(
+                                R.string.dashboard_last_blocked,
+                                PhoneFormatter.format(lastBlocked.number)
+                            ),
                             style = MaterialTheme.typography.bodySmall,
                             fontWeight = FontWeight.SemiBold
                         )
-                        val ago = System.currentTimeMillis() - lastBlocked.timestamp
-                        val agoText = when {
-                            ago < 60_000 -> "Just now"
-                            ago < 3_600_000 -> "${ago / 60_000}m ago"
-                            ago < 86_400_000 -> "${ago / 3_600_000}h ago"
-                            else -> "${ago / 86_400_000}d ago"
-                        }
                         Text(
-                            "$agoText · ${lastBlocked.matchReason.replace("_", " ")}",
+                            "${relativeTimeText(lastBlocked.timestamp)} · ${lastBlocked.matchReason.replace("_", " ")}",
                             style = MaterialTheme.typography.labelSmall,
                             color = CatOverlay
                         )
@@ -247,112 +682,189 @@ fun DashboardScreen(viewModel: MainViewModel) {
             }
         }
 
-        // Quick toggles
         PremiumCard(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(18.dp)) {
-                SectionHeader("Quick Controls", CatGreen)
+                SectionHeader(stringResource(R.string.dashboard_quick_controls), CatGreen)
                 Spacer(Modifier.height(12.dp))
-                QuickToggle(Icons.Default.Phone, "Block Calls", blockCallsEnabled) { viewModel.setBlockCalls(it) }
+                QuickToggle(
+                    icon = Icons.Default.Phone,
+                    label = stringResource(R.string.dashboard_block_calls),
+                    checked = blockCallsEnabled
+                ) { viewModel.setBlockCalls(it) }
                 GradientDivider(modifier = Modifier.padding(vertical = 4.dp))
-                QuickToggle(Icons.Default.Sms, "Block SMS", blockSmsEnabled) { viewModel.setBlockSms(it) }
+                QuickToggle(
+                    icon = Icons.Default.Sms,
+                    label = stringResource(R.string.dashboard_block_sms),
+                    checked = blockSmsEnabled
+                ) { viewModel.setBlockSms(it) }
             }
         }
 
-        // Blocking profiles
-        val activeProfile by viewModel.activeProfile.collectAsState()
         PremiumCard(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(18.dp)) {
-                SectionHeader("Quick Profiles", CatMauve)
+                SectionHeader(stringResource(R.string.dashboard_quick_profiles), CatMauve)
                 Spacer(Modifier.height(12.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    ProfileChip(Modifier.weight(1f), "Work", CatBlue, activeProfile == BlockingProfiles.Profile.WORK) { viewModel.applyProfile(BlockingProfiles.Profile.WORK) }
-                    ProfileChip(Modifier.weight(1f), "Personal", CatGreen, activeProfile == BlockingProfiles.Profile.PERSONAL) { viewModel.applyProfile(BlockingProfiles.Profile.PERSONAL) }
-                    ProfileChip(Modifier.weight(1f), "Sleep", CatMauve, activeProfile == BlockingProfiles.Profile.SLEEP) { viewModel.applyProfile(BlockingProfiles.Profile.SLEEP) }
+                    ProfileChip(
+                        Modifier.weight(1f),
+                        stringResource(R.string.dashboard_profile_work),
+                        CatBlue,
+                        activeProfile == BlockingProfiles.Profile.WORK
+                    ) { viewModel.applyProfile(BlockingProfiles.Profile.WORK) }
+                    ProfileChip(
+                        Modifier.weight(1f),
+                        stringResource(R.string.dashboard_profile_personal),
+                        CatGreen,
+                        activeProfile == BlockingProfiles.Profile.PERSONAL
+                    ) { viewModel.applyProfile(BlockingProfiles.Profile.PERSONAL) }
+                    ProfileChip(
+                        Modifier.weight(1f),
+                        stringResource(R.string.dashboard_profile_sleep),
+                        CatMauve,
+                        activeProfile == BlockingProfiles.Profile.SLEEP
+                    ) { viewModel.applyProfile(BlockingProfiles.Profile.SLEEP) }
                 }
                 Spacer(Modifier.height(6.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    ProfileChip(Modifier.weight(1f), "Maximum", CatRed, activeProfile == BlockingProfiles.Profile.MAX) { viewModel.applyProfile(BlockingProfiles.Profile.MAX) }
-                    ProfileChip(Modifier.weight(1f), "Off", CatOverlay, activeProfile == BlockingProfiles.Profile.OFF) { viewModel.applyProfile(BlockingProfiles.Profile.OFF) }
+                    ProfileChip(
+                        Modifier.weight(1f),
+                        stringResource(R.string.dashboard_profile_maximum),
+                        CatRed,
+                        activeProfile == BlockingProfiles.Profile.MAX
+                    ) { viewModel.applyProfile(BlockingProfiles.Profile.MAX) }
+                    ProfileChip(
+                        Modifier.weight(1f),
+                        stringResource(R.string.dashboard_profile_off),
+                        CatOverlay,
+                        activeProfile == BlockingProfiles.Profile.OFF
+                    ) { viewModel.applyProfile(BlockingProfiles.Profile.OFF) }
                     Spacer(Modifier.weight(1f))
                 }
             }
         }
 
-        // Action buttons
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(
-                onClick = { hapticTick(context); viewModel.sync() },
-                modifier = Modifier.weight(1f).height(48.dp),
-                enabled = syncState !is SyncState.Syncing,
-                colors = ButtonDefaults.buttonColors(containerColor = CatGreen),
-                shape = RoundedCornerShape(14.dp),
-                border = BorderStroke(1.dp, CatGreen.copy(alpha = 0.3f))
+        PremiumCard(modifier = Modifier.fillMaxWidth(), accentColor = CatGreen) {
+            Column(
+                modifier = Modifier.padding(18.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                if (syncState is SyncState.Syncing) {
-                    CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp, color = Black)
-                } else {
-                    Icon(Icons.Default.Sync, null, tint = Black)
+                SectionHeader(stringResource(R.string.dashboard_quick_actions), CatGreen)
+                DashboardActionRow(
+                    icon = Icons.Default.Sync,
+                    title = stringResource(R.string.dashboard_sync_database),
+                    subtitle = if (spamDatabaseReady) {
+                        stringResource(R.string.dashboard_action_sync_subtitle_ready, spamCount)
+                    } else {
+                        stringResource(R.string.dashboard_action_sync_subtitle)
+                    },
+                    accentColor = CatGreen,
+                    actionLabel = stringResource(R.string.dashboard_sync),
+                    loading = syncState is SyncState.Syncing,
+                    enabled = syncState !is SyncState.Syncing
+                ) {
+                    hapticTick(context)
+                    viewModel.sync()
                 }
-                Spacer(Modifier.width(6.dp))
-                Text("Sync", color = Black, fontWeight = FontWeight.Bold)
+                GradientDivider()
+                DashboardActionRow(
+                    icon = Icons.Default.Call,
+                    title = stringResource(R.string.dashboard_scan_calls),
+                    subtitle = if (callLogReady) {
+                        stringResource(R.string.dashboard_action_scan_calls_subtitle)
+                    } else {
+                        stringResource(R.string.dashboard_action_calls_permissions_subtitle)
+                    },
+                    accentColor = CatBlue,
+                    actionLabel = if (callLogReady) {
+                        stringResource(R.string.dashboard_action_run)
+                    } else {
+                        stringResource(R.string.dashboard_action_review)
+                    },
+                    loading = scanningCalls,
+                    enabled = !scanningCalls
+                ) {
+                    if (callLogReady) {
+                        hapticTick(context)
+                        viewModel.scanCallLog()
+                    } else {
+                        openAppSettings(context)
+                    }
+                }
+                GradientDivider()
+                DashboardActionRow(
+                    icon = Icons.AutoMirrored.Filled.TextSnippet,
+                    title = stringResource(R.string.dashboard_scan_sms_inbox),
+                    subtitle = if (smsInboxReady) {
+                        stringResource(R.string.dashboard_action_scan_sms_subtitle)
+                    } else {
+                        stringResource(R.string.dashboard_action_sms_permissions_subtitle)
+                    },
+                    accentColor = CatMauve,
+                    actionLabel = if (smsInboxReady) {
+                        stringResource(R.string.dashboard_action_run)
+                    } else {
+                        stringResource(R.string.dashboard_action_review)
+                    },
+                    loading = scanningSms,
+                    enabled = !scanningSms
+                ) {
+                    if (smsInboxReady) {
+                        hapticTick(context)
+                        viewModel.scanSmsInbox()
+                    } else {
+                        openAppSettings(context)
+                    }
+                }
             }
-            Button(
-                onClick = { hapticTick(context); viewModel.scanCallLog() },
-                modifier = Modifier.weight(1f).height(48.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = CatBlue),
-                shape = RoundedCornerShape(14.dp),
-                border = BorderStroke(1.dp, CatBlue.copy(alpha = 0.3f))
-            ) {
-                Icon(Icons.Default.Phone, null, tint = Black)
-                Spacer(Modifier.width(6.dp))
-                Text("Scan Calls", color = Black, fontWeight = FontWeight.Bold)
-            }
-        }
-        Button(
-            onClick = { hapticTick(context); viewModel.scanSmsInbox() },
-            modifier = Modifier.fillMaxWidth().height(48.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = CatMauve),
-            shape = RoundedCornerShape(14.dp),
-            border = BorderStroke(1.dp, CatMauve.copy(alpha = 0.3f))
-        ) {
-            Icon(Icons.Default.Sms, null, tint = Black)
-            Spacer(Modifier.width(6.dp))
-            Text("Scan SMS Inbox", color = Black, fontWeight = FontWeight.Bold)
         }
 
-        // Sync status
-        AnimatedVisibility(syncState is SyncState.Success || syncState is SyncState.Error) {
-            val isSuccess = syncState is SyncState.Success
+        AnimatedVisibility(
+            syncState is SyncState.Success ||
+                syncState is SyncState.Warning ||
+                syncState is SyncState.Error
+        ) {
+            val accentColor = when (syncState) {
+                is SyncState.Success -> CatGreen
+                is SyncState.Warning -> CatYellow
+                else -> CatRed
+            }
             val message = when (syncState) {
                 is SyncState.Success -> (syncState as SyncState.Success).message
+                is SyncState.Warning -> (syncState as SyncState.Warning).message
                 is SyncState.Error -> (syncState as SyncState.Error).message
                 else -> ""
             }
             PremiumCard(
                 modifier = Modifier.fillMaxWidth(),
-                accentColor = if (isSuccess) CatGreen else CatRed
+                accentColor = accentColor
             ) {
-                Row(modifier = Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    modifier = Modifier.padding(14.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Icon(
-                        if (isSuccess) Icons.Default.CheckCircle else Icons.Default.Error,
+                        if (syncState is SyncState.Success) Icons.Default.CheckCircle else Icons.Default.Warning,
                         null,
-                        tint = if (isSuccess) CatGreen else CatRed,
+                        tint = accentColor,
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(Modifier.width(10.dp))
-                    Text(message, color = if (isSuccess) CatGreen else CatRed, style = MaterialTheme.typography.bodySmall)
+                    Text(
+                        message,
+                        color = accentColor,
+                        style = MaterialTheme.typography.bodySmall
+                    )
                 }
             }
         }
 
-        // Call log scan results
         scanResult?.let { result ->
             PremiumCard(
                 modifier = Modifier.fillMaxWidth(),
                 accentColor = if (result.error != null) CatRed else if (result.spamFound > 0) CatRed else CatGreen
             ) {
                 Column(modifier = Modifier.padding(18.dp)) {
-                    SectionHeader("Call Log Scan", CatBlue)
+                    SectionHeader(stringResource(R.string.dashboard_call_log_scan), CatBlue)
                     Spacer(Modifier.height(10.dp))
                     if (result.error != null) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -361,8 +873,12 @@ fun DashboardScreen(viewModel: MainViewModel) {
                             Text(result.error, color = CatRed, style = MaterialTheme.typography.bodySmall)
                         }
                     } else {
-                    Text(
-                        "Scanned ${result.totalScanned} unique numbers, found ${result.spamFound} spam",
+                            Text(
+                        stringResource(
+                            R.string.dashboard_scan_result,
+                            result.totalScanned,
+                            result.spamFound
+                        ),
                         color = if (result.spamFound > 0) CatRed else CatGreen
                     )
                     for (spam in result.spamNumbers.take(5)) {
@@ -375,34 +891,41 @@ fun DashboardScreen(viewModel: MainViewModel) {
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
-                                Text(spam.number, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
                                 Text(
-                                    "${spam.callCount}x | ${spam.matchReason}",
+                                    PhoneFormatter.format(spam.number),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                Text(
+                                    "${spam.callCount}x | ${spam.matchReason.replace("_", " ")}",
                                     style = MaterialTheme.typography.bodySmall, color = CatSubtext
                                 )
                             }
                             TextButton(onClick = { viewModel.blockNumber(spam.number, spam.type) }) {
-                                Text("Block", color = CatRed)
+                                Text(stringResource(R.string.dashboard_block), color = CatRed)
                             }
                         }
                     }
                     if (result.spamNumbers.size > 5) {
                         Spacer(Modifier.height(4.dp))
-                        Text("+ ${result.spamNumbers.size - 5} more...", color = CatOverlay, style = MaterialTheme.typography.bodySmall)
+                        Text(
+                            stringResource(R.string.dashboard_scan_more, result.spamNumbers.size - 5),
+                            color = CatOverlay,
+                            style = MaterialTheme.typography.bodySmall
+                        )
                     }
                     } // else (no error)
                 }
             }
         }
 
-        // SMS scan results
         smsScanResult?.let { result ->
             PremiumCard(
                 modifier = Modifier.fillMaxWidth(),
                 accentColor = if (result.error != null) CatRed else if (result.spamFound > 0) CatRed else CatGreen
             ) {
                 Column(modifier = Modifier.padding(18.dp)) {
-                    SectionHeader("SMS Inbox Scan", CatMauve)
+                    SectionHeader(stringResource(R.string.dashboard_sms_inbox_scan), CatMauve)
                     Spacer(Modifier.height(10.dp))
                     if (result.error != null) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -411,8 +934,12 @@ fun DashboardScreen(viewModel: MainViewModel) {
                             Text(result.error, color = CatRed, style = MaterialTheme.typography.bodySmall)
                         }
                     } else {
-                    Text(
-                        "Scanned ${result.totalScanned} messages, found ${result.spamFound} spam",
+                            Text(
+                        stringResource(
+                            R.string.dashboard_sms_scan_result,
+                            result.totalScanned,
+                            result.spamFound
+                        ),
                         color = if (result.spamFound > 0) CatRed else CatGreen
                     )
                     for (sms in result.spamMessages.take(5)) {
@@ -421,27 +948,34 @@ fun DashboardScreen(viewModel: MainViewModel) {
                         Spacer(Modifier.height(6.dp))
                         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                             Column(modifier = Modifier.weight(1f)) {
-                                Text(com.sysadmindoc.callshield.data.PhoneFormatter.format(sms.number), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                                Text(
+                                    PhoneFormatter.format(sms.number),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.SemiBold
+                                )
                                 Text(sms.body, style = MaterialTheme.typography.bodySmall, color = CatSubtext, maxLines = 1)
                                 Text(sms.matchReason.replace("_", " "), style = MaterialTheme.typography.labelSmall, color = CatPeach)
                             }
                             TextButton(onClick = { viewModel.blockNumber(sms.number, sms.type) }) {
-                                Text("Block", color = CatRed)
+                                Text(stringResource(R.string.dashboard_block), color = CatRed)
                             }
                         }
                     }
                     if (result.spamMessages.size > 5) {
                         Spacer(Modifier.height(4.dp))
-                        Text("+ ${result.spamMessages.size - 5} more...", color = CatOverlay, style = MaterialTheme.typography.bodySmall)
+                        Text(
+                            stringResource(R.string.dashboard_scan_more, result.spamMessages.size - 5),
+                            color = CatOverlay,
+                            style = MaterialTheme.typography.bodySmall
+                        )
                     }
                     } // else (no error)
                 }
             }
         }
 
-        // Smart suggestions
         val topAreaCodes = remember(blockedCalls) {
-            blockedCalls.mapNotNull { com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup.getAreaCode(it.number) }
+            blockedCalls.mapNotNull { AreaCodeLookup.getAreaCode(it.number) }
                 .groupBy { it }.mapValues { it.value.size }
                 .filter { it.value >= 5 }
                 .entries.sortedByDescending { it.value }.take(3)
@@ -455,18 +989,30 @@ fun DashboardScreen(viewModel: MainViewModel) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.Lightbulb, null, tint = CatYellow, modifier = Modifier.size(20.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text("Smart Suggestions", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                        Text(
+                            stringResource(R.string.dashboard_smart_suggestions),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
                     }
                     Spacer(Modifier.height(10.dp))
                     topAreaCodes.forEachIndexed { index, (ac, count) ->
                         if (index > 0) {
                             GradientDivider(modifier = Modifier.padding(vertical = 2.dp))
                         }
-                        val loc = com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup.lookup("+1$ac") ?: ac
+                        val loc = AreaCodeLookup.lookup("+1$ac") ?: ac
                         Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Text("$count spam from $ac ($loc)", style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+                            Text(
+                                stringResource(R.string.dashboard_spam_from_area, count, ac, loc),
+                                style = MaterialTheme.typography.bodySmall,
+                                modifier = Modifier.weight(1f)
+                            )
                             TextButton(onClick = { viewModel.addWildcardRule("+1$ac*", false, "Block $ac ($loc)") }) {
-                                Text("Block $ac", color = CatYellow, style = MaterialTheme.typography.labelSmall)
+                                Text(
+                                    stringResource(R.string.dashboard_block_area, ac),
+                                    color = CatYellow,
+                                    style = MaterialTheme.typography.labelSmall
+                                )
                             }
                         }
                     }
@@ -474,15 +1020,226 @@ fun DashboardScreen(viewModel: MainViewModel) {
             }
         }
     }
-
 }
 
 @Composable
-fun QuickToggle(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, checked: Boolean, onChanged: (Boolean) -> Unit) {
+private fun SetupChecklistRow(
+    icon: ImageVector,
+    title: String,
+    detail: String,
+    ready: Boolean,
+    accentColor: Color,
+    actionLabel: String? = null,
+    onAction: (() -> Unit)? = null
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(42.dp)
+                .background(accentColor.copy(alpha = 0.12f), RoundedCornerShape(12.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(icon, null, tint = accentColor, modifier = Modifier.size(20.dp))
+        }
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            Text(title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+            Text(detail, style = MaterialTheme.typography.bodySmall, color = CatSubtext)
+        }
+        when {
+            ready -> SetupStateBadge(stringResource(R.string.dashboard_status_ready), CatGreen)
+            actionLabel != null && onAction != null -> {
+                OutlinedButton(
+                    onClick = onAction,
+                    shape = RoundedCornerShape(10.dp),
+                    border = BorderStroke(1.dp, accentColor.copy(alpha = 0.35f)),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
+                    modifier = Modifier.height(34.dp)
+                ) {
+                    Text(actionLabel, color = accentColor, style = MaterialTheme.typography.labelMedium)
+                }
+            }
+            else -> SetupStateBadge(stringResource(R.string.dashboard_status_needed), CatYellow)
+        }
+    }
+}
+
+@Composable
+private fun SetupStateBadge(label: String, color: Color) {
+    Surface(
+        shape = RoundedCornerShape(999.dp),
+        color = color.copy(alpha = 0.12f),
+        modifier = Modifier.wrapContentWidth()
+    ) {
+        Text(
+            label,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+            style = MaterialTheme.typography.labelMedium,
+            color = color,
+            fontWeight = FontWeight.SemiBold
+        )
+    }
+}
+
+@Composable
+private fun DashboardActionRow(
+    icon: ImageVector,
+    title: String,
+    subtitle: String,
+    accentColor: Color,
+    actionLabel: String,
+    loading: Boolean,
+    enabled: Boolean,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(42.dp)
+                .background(accentColor.copy(alpha = 0.12f), RoundedCornerShape(12.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(icon, null, tint = accentColor, modifier = Modifier.size(20.dp))
+        }
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            Text(title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = CatSubtext)
+        }
+        Button(
+            onClick = onClick,
+            enabled = enabled,
+            colors = ButtonDefaults.buttonColors(containerColor = accentColor),
+            shape = RoundedCornerShape(12.dp),
+            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
+            modifier = Modifier.height(36.dp)
+        ) {
+            if (loading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(15.dp),
+                    strokeWidth = 2.dp,
+                    color = Black
+                )
+            } else {
+                Text(actionLabel, color = Black, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium)
+            }
+        }
+    }
+}
+
+@Composable
+private fun relativeTimeText(timestamp: Long): String {
+    val ago = System.currentTimeMillis() - timestamp
+    return when {
+        ago < 60_000 -> stringResource(R.string.dashboard_time_just_now)
+        ago < 3_600_000 -> stringResource(R.string.dashboard_time_minutes_ago, (ago / 60_000).toInt())
+        ago < 86_400_000 -> stringResource(R.string.dashboard_time_hours_ago, (ago / 3_600_000).toInt())
+        else -> stringResource(R.string.dashboard_time_days_ago, (ago / 86_400_000).toInt())
+    }
+}
+
+@Composable
+private fun syncFreshnessText(lastSync: Long, lastSyncSource: String): String {
+    if (lastSyncSource == SpamRepository.SYNC_SOURCE_BUNDLED) {
+        return stringResource(R.string.dashboard_bundled_snapshot_ready)
+    }
+    if (lastSync <= 0L) {
+        return stringResource(R.string.dashboard_database_needed_detail)
+    }
+    val ago = System.currentTimeMillis() - lastSync
+    return when {
+        ago < 3_600_000 -> stringResource(R.string.dashboard_synced_just_now)
+        ago < 86_400_000 -> stringResource(R.string.dashboard_synced_hours_ago, (ago / 3_600_000).toInt())
+        else -> stringResource(R.string.dashboard_synced_days_ago, (ago / 86_400_000).toInt())
+    }
+}
+
+@Composable
+private fun syncFreshnessColor(lastSync: Long, lastSyncSource: String): Color {
+    if (lastSyncSource == SpamRepository.SYNC_SOURCE_BUNDLED) return CatBlue
+    if (lastSync <= 0L) return CatYellow
+    val ago = System.currentTimeMillis() - lastSync
+    return when {
+        ago < 86_400_000 -> CatGreen
+        ago < 172_800_000 -> CatYellow
+        else -> CatRed
+    }
+}
+
+private data class HeroAction(
+    val label: String,
+    val icon: ImageVector,
+    val onClick: () -> Unit
+)
+
+private fun activeEngineCount(
+    stirShaken: Boolean,
+    heuristics: Boolean,
+    smsContent: Boolean,
+    neighborSpoof: Boolean,
+    mlScorer: Boolean,
+    rcsFilter: Boolean,
+    freqEscalation: Boolean
+): Int = listOf(
+    true,
+    stirShaken,
+    heuristics,
+    smsContent,
+    neighborSpoof,
+    mlScorer,
+    rcsFilter,
+    freqEscalation
+).count { it }
+
+private fun openAppSettings(context: Context) {
+    context.startActivity(
+        Intent(
+            Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+            Uri.parse("package:${context.packageName}")
+        )
+    )
+}
+
+private fun openOverlaySettings(context: Context) {
+    context.startActivity(
+        Intent(
+            Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+            Uri.parse("package:${context.packageName}")
+        )
+    )
+}
+
+private fun openNotificationSettings(context: Context) {
+    val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+        putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+    }
+    context.startActivity(intent)
+}
+
+private fun requestCallScreening(context: Context, roleManager: RoleManager) {
+    context.startActivity(roleManager.createRequestRoleIntent(RoleManager.ROLE_CALL_SCREENING))
+}
+
+@Composable
+fun QuickToggle(icon: ImageVector, label: String, checked: Boolean, onChanged: (Boolean) -> Unit) {
     val context = LocalContext.current
     val tintColor = if (checked) CatGreen else CatSubtext
     Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -495,12 +1252,19 @@ fun QuickToggle(icon: androidx.compose.ui.graphics.vector.ImageVector, label: St
             Icon(icon, null, tint = tintColor, modifier = Modifier.size(20.dp))
         }
         Text(label, modifier = Modifier.weight(1f), fontWeight = FontWeight.Medium)
-        Switch(checked = checked, onCheckedChange = { hapticTick(context); onChanged(it) }, colors = SwitchDefaults.colors(checkedTrackColor = CatGreen, checkedThumbColor = Black))
+        Switch(
+            checked = checked,
+            onCheckedChange = {
+                hapticTick(context)
+                onChanged(it)
+            },
+            colors = SwitchDefaults.colors(checkedTrackColor = CatGreen, checkedThumbColor = Black)
+        )
     }
 }
 
 @Composable
-fun ProfileChip(modifier: Modifier, label: String, color: androidx.compose.ui.graphics.Color, isActive: Boolean = false, onClick: () -> Unit) {
+fun ProfileChip(modifier: Modifier, label: String, color: Color, isActive: Boolean = false, onClick: () -> Unit) {
     val context = LocalContext.current
     OutlinedButton(
         onClick = { hapticConfirm(context); onClick() },
@@ -510,7 +1274,7 @@ fun ProfileChip(modifier: Modifier, label: String, color: androidx.compose.ui.gr
         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
         colors = ButtonDefaults.outlinedButtonColors(
             contentColor = color,
-            containerColor = if (isActive) color.copy(alpha = 0.12f) else androidx.compose.ui.graphics.Color.Transparent
+            containerColor = if (isActive) color.copy(alpha = 0.12f) else Color.Transparent
         )
     ) {
         if (isActive) {
@@ -522,15 +1286,24 @@ fun ProfileChip(modifier: Modifier, label: String, color: androidx.compose.ui.gr
 }
 
 @Composable
-fun StatCard(modifier: Modifier, title: String, value: String, icon: androidx.compose.ui.graphics.vector.ImageVector, color: androidx.compose.ui.graphics.Color) {
+fun StatCard(modifier: Modifier, title: String, value: String, icon: ImageVector, color: Color) {
     val targetValue = value.toIntOrNull() ?: 0
-    val animatedValue by animateIntAsState(targetValue = targetValue, animationSpec = tween(800, easing = FastOutSlowInEasing), label = "counter")
+    val animatedValue by animateIntAsState(
+        targetValue = targetValue,
+        animationSpec = tween(800, easing = FastOutSlowInEasing),
+        label = "counter"
+    )
 
     PremiumCard(modifier = modifier, accentColor = color.copy(alpha = 0.5f)) {
         Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Icon(icon, null, tint = color, modifier = Modifier.size(28.dp))
             Spacer(Modifier.height(8.dp))
-            Text(animatedValue.toString(), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, color = color)
+            Text(
+                animatedValue.toString(),
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                color = color
+            )
             Text(title, style = MaterialTheme.typography.bodySmall.copy(letterSpacing = 1.sp), color = CatSubtext)
         }
     }

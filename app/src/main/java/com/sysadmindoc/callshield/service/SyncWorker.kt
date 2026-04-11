@@ -18,7 +18,11 @@ class SyncWorker(
         // Also sync the ML model weights file — lightweight, same GitHub repo
         SpamMLScorer.syncWeights(applicationContext)
 
-        return if (result.success) Result.success() else Result.retry()
+        return if (result.success || !result.shouldRetry) {
+            Result.success()
+        } else {
+            Result.retry()
+        }
     }
 
     companion object {
