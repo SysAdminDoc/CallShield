@@ -123,9 +123,6 @@ class SpamRepository(private val context: Context) {
     suspend fun isSpam(number: String, smsBody: String? = null): SpamCheckResult {
         val normalized = normalizeNumber(number)
 
-        // Record every incoming number for campaign burst detection
-        CampaignDetector.recordCall(normalized)
-
         // Manual whitelist — always allow
         if (dao.findWhitelistEntry(normalized) != null) {
             return SpamCheckResult(false, matchSource = "manual_whitelist")
@@ -145,6 +142,12 @@ class SpamRepository(private val context: Context) {
         if (CallbackDetector.isRepeatedUrgentCall(context, normalized)) {
             return SpamCheckResult(false, matchSource = "repeated_urgent")
         }
+
+        // Record for campaign burst detection AFTER allow-through checks.
+        // Otherwise, 5+ legitimate calls from family/coworkers in the same NPA-NXX
+        // flag that prefix as an active campaign and block future unknown callers
+        // from that region as "campaign_burst".
+        CampaignDetector.recordCall(normalized)
 
         // User blocklist + database match (single query)
         val dbEntry = dao.findByNumber(normalized)

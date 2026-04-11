@@ -91,8 +91,9 @@ object BackupRestore {
 
     suspend fun restoreFromUri(context: Context, uri: Uri): RestoreResult = withContext(Dispatchers.IO) {
         try {
-            val json = context.contentResolver.openInputStream(uri)?.bufferedReader()?.readText()
-                ?: return@withContext RestoreResult(false, "Could not read file")
+            val json = context.contentResolver.openInputStream(uri)?.use { stream ->
+                stream.bufferedReader().readText()
+            } ?: return@withContext RestoreResult(false, "Could not read file")
 
             val adapter = moshi.adapter(Backup::class.java)
             val backup = adapter.fromJson(json)
