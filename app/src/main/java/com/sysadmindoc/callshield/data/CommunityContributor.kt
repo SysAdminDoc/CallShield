@@ -54,12 +54,13 @@ object CommunityContributor {
                 .post(body)
                 .build()
 
-            val response = client.newCall(request).execute()
-            if (response.isSuccessful) {
-                val msg = if (type == "not_spam") "Reported as not spam" else "Contributed anonymously"
-                ContributeResult(true, msg)
-            } else {
-                ContributeResult(false, "Server error (${response.code})")
+            client.newCall(request).execute().use { response ->
+                if (response.isSuccessful) {
+                    val msg = if (type == "not_spam") "Reported as not spam" else "Contributed anonymously"
+                    ContributeResult(true, msg)
+                } else {
+                    ContributeResult(false, "Server error (${response.code})")
+                }
             }
         } catch (e: Exception) {
             ContributeResult(false, "Network error: ${e.message}")

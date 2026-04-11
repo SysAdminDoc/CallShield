@@ -76,32 +76,33 @@ object UrlSafetyChecker {
                 .header("User-Agent", "CallShield/1.0")
                 .build()
 
-            val response = client.newCall(request).execute()
-            if (!response.isSuccessful) return@withContext UrlCheckResult(url, false)
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) return@withContext UrlCheckResult(url, false)
 
-            val responseBody = response.body?.string() ?: return@withContext UrlCheckResult(url, false)
+                val responseBody = response.body?.string() ?: return@withContext UrlCheckResult(url, false)
 
-            // Parse response
-            // {"query_status":"is_phishing","url_status":"online","threat":"phishing",...}
-            // {"query_status":"no_results"} — clean or unknown
-            val status = Regex(""""query_status"\s*:\s*"([^"]+)"""").find(responseBody)
-                ?.groupValues?.get(1) ?: "no_results"
+                // Parse response
+                // {"query_status":"is_phishing","url_status":"online","threat":"phishing",...}
+                // {"query_status":"no_results"} — clean or unknown
+                val status = Regex(""""query_status"\s*:\s*"([^"]+)"""").find(responseBody)
+                    ?.groupValues?.get(1) ?: "no_results"
 
-            val isMalicious = status in listOf("is_malware", "is_phishing", "is_botnet_cc")
+                val isMalicious = status in listOf("is_malware", "is_phishing", "is_botnet_cc")
 
-            if (!isMalicious) return@withContext UrlCheckResult(url, false)
+                if (!isMalicious) return@withContext UrlCheckResult(url, false)
 
-            val threat = Regex(""""threat"\s*:\s*"([^"]+)"""").find(responseBody)
-                ?.groupValues?.get(1) ?: status
+                val threat = Regex(""""threat"\s*:\s*"([^"]+)"""").find(responseBody)
+                    ?.groupValues?.get(1) ?: status
 
-            val tagsMatch = Regex(""""tags"\s*:\s*\[([^\]]*)]""").find(responseBody)
-            val tags = tagsMatch?.groupValues?.get(1)
-                ?.split(",")
-                ?.map { it.trim().trim('"') }
-                ?.filter { it.isNotEmpty() }
-                ?: emptyList()
+                val tagsMatch = Regex(""""tags"\s*:\s*\[([^\]]*)]""").find(responseBody)
+                val tags = tagsMatch?.groupValues?.get(1)
+                    ?.split(",")
+                    ?.map { it.trim().trim('"') }
+                    ?.filter { it.isNotEmpty() }
+                    ?: emptyList()
 
-            UrlCheckResult(url = url, isMalicious = true, threat = threat, tags = tags)
+                UrlCheckResult(url = url, isMalicious = true, threat = threat, tags = tags)
+            }
         } catch (_: Exception) {
             UrlCheckResult(url, false) // Network error = don't flag
         }

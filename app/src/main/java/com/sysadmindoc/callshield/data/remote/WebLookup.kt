@@ -41,23 +41,25 @@ object WebLookup {
                 .url(url)
                 .header("User-Agent", "Mozilla/5.0")
                 .build()
-            val response = client.newCall(request).execute()
-            val body = response.body?.string() ?: return@withContext LookupResult()
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) return@withContext LookupResult()
+                val body = response.body?.string() ?: return@withContext LookupResult()
 
-            // Extract report count from page
-            val reportRegex = Regex("""(\d+)\s*(?:report|complaint|comment)""", RegexOption.IGNORE_CASE)
-            val reportMatch = reportRegex.find(body)
-            val reports = reportMatch?.groupValues?.get(1)?.toIntOrNull() ?: 0
+                // Extract report count from page
+                val reportRegex = Regex("""(\d+)\s*(?:report|complaint|comment)""", RegexOption.IGNORE_CASE)
+                val reportMatch = reportRegex.find(body)
+                val reports = reportMatch?.groupValues?.get(1)?.toIntOrNull() ?: 0
 
-            // Extract any community notes (simplified)
-            val noteRegex = Regex("""<div[^>]*class="[^"]*comment[^"]*"[^>]*>([^<]{10,200})</div>""", RegexOption.IGNORE_CASE)
-            val notes = noteRegex.findAll(body).map { it.groupValues[1].trim() }.take(3).toList()
+                // Extract any community notes (simplified)
+                val noteRegex = Regex("""<div[^>]*class="[^"]*comment[^"]*"[^>]*>([^<]{10,200})</div>""", RegexOption.IGNORE_CASE)
+                val notes = noteRegex.findAll(body).map { it.groupValues[1].trim() }.take(3).toList()
 
-            LookupResult(
-                spamReports = reports,
-                communityNotes = notes,
-                source = "whocalledme.com"
-            )
+                LookupResult(
+                    spamReports = reports,
+                    communityNotes = notes,
+                    source = "whocalledme.com"
+                )
+            }
         } catch (_: Exception) {
             LookupResult()
         }

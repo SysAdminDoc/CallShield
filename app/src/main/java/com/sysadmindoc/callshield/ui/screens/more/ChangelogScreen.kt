@@ -24,7 +24,11 @@ fun ChangelogScreen() {
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(0.dp)
     ) {
-        VersionEntry("1.2.10", "Audit Round 4 — Time windows, screener lifetime, scanner isolation", isLatest = true, changes = listOf(
+        VersionEntry("1.2.11", "Audit Round 5 — OkHttp response leaks + cache cleanup collision", isLatest = true, changes = listOf(
+            "All 5 remote lookup modules (ExternalLookup, UrlSafetyChecker, NumberTypeChecker, CommunityContributor, WebLookup) now wrap OkHttp execute() in .use { } — previously the Response was leaked on non-2xx paths",
+            "Log export cleanup now filters by filename prefix — no longer nukes in-flight blocklist exports that share the same cache directory",
+        ))
+        VersionEntry("1.2.10", "Audit Round 4 — Time windows, screener lifetime, scanner isolation", changes = listOf(
             "Dashboard \"today / this week / last week\" counts now roll forward on a one-minute time anchor — windows no longer freeze at app start and drift as the process stays alive",
             "After-call \"Was this spam?\" feedback notification now fires reliably — moved off the short-lived CallScreeningService handler onto a process-lifetime scope",
             "Historical Call Log and SMS Inbox scans no longer poison the live campaign-burst detector or pop caller-ID overlays for calls that already happened",
