@@ -37,6 +37,9 @@ interface SpamDao {
     @Query("DELETE FROM spam_numbers WHERE source = :source")
     suspend fun deleteBySource(source: String)
 
+    @Query("SELECT COUNT(*) FROM spam_numbers WHERE source = :source")
+    suspend fun getCountBySource(source: String): Int
+
     @Transaction
     suspend fun replaceBySource(source: String, numbers: List<SpamNumber>) {
         deleteBySource(source)
@@ -85,6 +88,12 @@ interface SpamDao {
 
     @Query("SELECT COUNT(*) FROM call_log WHERE wasBlocked = 1 AND timestamp > :start AND timestamp <= :end")
     fun getBlockedCountBetween(start: Long, end: Long): Flow<Int>
+
+    @Query("SELECT COUNT(*) FROM call_log WHERE wasBlocked = 1 AND timestamp > :start AND timestamp <= :end")
+    suspend fun getBlockedCountBetweenSync(start: Long, end: Long): Int
+
+    @Query("SELECT MAX(timestamp) FROM call_log WHERE wasBlocked = 1")
+    suspend fun getLastBlockedTimestamp(): Long?
 
     @Query("DELETE FROM call_log")
     suspend fun clearCallLog()

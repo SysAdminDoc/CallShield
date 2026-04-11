@@ -20,8 +20,9 @@ data class SmsKeywordRule(
     val enabled: Boolean = true
 ) {
     fun matches(text: String): Boolean {
-        if (!enabled) return false
-        return if (caseSensitive) text.contains(keyword)
-        else text.lowercase().contains(keyword.lowercase())
+        val normalizedKeyword = keyword.trim()
+        if (!enabled || normalizedKeyword.isBlank()) return false
+        return if (caseSensitive) text.contains(normalizedKeyword)
+        else text.lowercase().contains(normalizedKeyword.lowercase())
     }
 }

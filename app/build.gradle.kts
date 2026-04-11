@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -5,24 +7,41 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
+val localProperties = Properties().apply {
+    val localPropsFile = rootProject.file("local.properties")
+    if (localPropsFile.exists()) {
+        localPropsFile.inputStream().use { load(it) }
+    }
+}
+
+fun signingProp(key: String): String? =
+    localProperties.getProperty(key) ?: System.getenv(key)
+
 android {
     namespace = "com.sysadmindoc.callshield"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.sysadmindoc.callshield"
         minSdk = 29
-        targetSdk = 35
-        versionCode = 10
-        versionName = "1.2.7"
+        targetSdk = 36
+        versionCode = 11
+        versionName = "1.2.8"
     }
 
-    signingConfigs {
-        create("release") {
-            storeFile = file("../callshield-release.jks")
-            storePassword = "CallShield2026"
-            keyAlias = "callshield"
-            keyPassword = "CallShield2026"
+    val releaseStoreFile = signingProp("RELEASE_STORE_FILE")
+    val releaseStorePassword = signingProp("RELEASE_STORE_PASSWORD")
+    val releaseKeyAlias = signingProp("RELEASE_KEY_ALIAS")
+    val releaseKeyPassword = signingProp("RELEASE_KEY_PASSWORD")
+
+    if (listOf(releaseStoreFile, releaseStorePassword, releaseKeyAlias, releaseKeyPassword).all { it != null }) {
+        signingConfigs {
+            create("release") {
+                storeFile = file(releaseStoreFile!!)
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
         }
     }
 
@@ -30,7 +49,11 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
-            signingConfig = signingConfigs.getByName("release")
+            signingConfig = if (listOf(releaseStoreFile, releaseStorePassword, releaseKeyAlias, releaseKeyPassword).all { it != null }) {
+                signingConfigs.getByName("release")
+            } else {
+                null
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -49,6 +72,12 @@ android {
 
     buildFeatures {
         compose = true
+    }
+
+    sourceSets {
+        getByName("main") {
+            assets.srcDir("../data")
+        }
     }
 }
 
@@ -73,4 +102,5 @@ dependencies {
     implementation(libs.moshi)
     implementation(libs.moshi.kotlin)
     debugImplementation(libs.androidx.ui.tooling)
+    testImplementation(libs.junit4)
 }

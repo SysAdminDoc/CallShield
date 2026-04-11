@@ -17,6 +17,7 @@ import java.io.File
  * Full app backup/restore — settings, blocklist, whitelist, wildcard rules, call log.
  */
 object BackupRestore {
+    private const val MIN_IMPORTED_DIGITS = 5
 
     private val moshi = Moshi.Builder().addLast(KotlinJsonAdapterFactory()).build()
 
@@ -64,19 +65,28 @@ object BackupRestore {
 
     suspend fun shareBackup(context: Context) {
         val json = createBackup(context)
-        val file = File(context.cacheDir, "callshield_backup.json")
-        file.writeText(json)
+        val chooserIntent = withContext(Dispatchers.IO) {
+            val dir = File(context.cacheDir, "backups")
+            dir.mkdirs()
+            dir.listFiles()?.forEach { it.delete() }
+            val file = File(dir, "callshield_backup.json")
+            file.writeText(json)
 
-        val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
-        val intent = Intent(Intent.ACTION_SEND).apply {
-            type = "application/json"
-            putExtra(Intent.EXTRA_STREAM, uri)
-            putExtra(Intent.EXTRA_SUBJECT, "CallShield Backup")
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+            val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+            val intent = Intent(Intent.ACTION_SEND).apply {
+                type = "application/json"
+                putExtra(Intent.EXTRA_STREAM, uri)
+                putExtra(Intent.EXTRA_SUBJECT, "CallShield Backup")
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            Intent.createChooser(intent, "Save backup").apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
         }
-        context.startActivity(Intent.createChooser(intent, "Save backup").apply {
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        })
+
+        withContext(Dispatchers.Main) {
+            context.startActivity(chooserIntent)
+        }
     }
 
     suspend fun restoreFromUri(context: Context, uri: Uri): RestoreResult = withContext(Dispatchers.IO) {
@@ -87,32 +97,74 @@ object BackupRestore {
             val adapter = moshi.adapter(Backup::class.java)
             val backup = adapter.fromJson(json)
                 ?: return@withContext RestoreResult(false, "Invalid backup format")
+            if (backup.app != "CallShield") {
+                return@withContext RestoreResult(false, "This backup was not created by CallShield")
+            }
+            if (backup.version !in 1..2) {
+                return@withContext RestoreResult(false, "Unsupported backup version")
+            }
+            if (
+                backup.blockedNumbers.isEmpty() &&
+                backup.whitelistNumbers.isEmpty() &&
+                backup.wildcardRules.isEmpty() &&
+                backup.keywordRules.isEmpty()
+            ) {
+                return@withContext RestoreResult(false, "Backup file contains no restorable data")
+            }
 
             val repo = SpamRepository.getInstance(context)
             val dao = AppDatabase.getInstance(context).spamDao()
 
             var numbersRestored = 0
             for (n in backup.blockedNumbers) {
-                repo.blockNumber(n.number, n.type, n.description)
+                val normalizedNumber = normalizeImportedNumber(n.number) ?: continue
+                repo.blockNumber(
+                    normalizedNumber,
+                    n.type.trim().ifBlank { "unknown" },
+                    n.description.trim()
+                )
                 numbersRestored++
             }
 
             var whitelistRestored = 0
             for (w in backup.whitelistNumbers) {
-                repo.addToWhitelist(w.number, w.description)
+                val normalizedNumber = normalizeImportedNumber(w.number) ?: continue
+                repo.addToWhitelist(normalizedNumber, w.description.trim())
                 whitelistRestored++
             }
 
             var rulesRestored = 0
             for (r in backup.wildcardRules) {
-                dao.insertWildcardRule(WildcardRule(pattern = r.pattern, isRegex = r.isRegex, description = r.description, enabled = r.enabled))
+                val trimmedPattern = r.pattern.trim()
+                if (trimmedPattern.isBlank()) continue
+                dao.insertWildcardRule(
+                    WildcardRule(
+                        pattern = trimmedPattern,
+                        isRegex = r.isRegex,
+                        description = r.description.trim(),
+                        enabled = r.enabled
+                    )
+                )
                 rulesRestored++
             }
 
             var keywordsRestored = 0
             for (k in backup.keywordRules) {
-                dao.insertKeywordRule(SmsKeywordRule(keyword = k.keyword, caseSensitive = k.caseSensitive, description = k.description, enabled = k.enabled))
+                val trimmedKeyword = k.keyword.trim()
+                if (trimmedKeyword.isBlank()) continue
+                dao.insertKeywordRule(
+                    SmsKeywordRule(
+                        keyword = trimmedKeyword,
+                        caseSensitive = k.caseSensitive,
+                        description = k.description.trim(),
+                        enabled = k.enabled
+                    )
+                )
                 keywordsRestored++
+            }
+
+            if (numbersRestored + whitelistRestored + rulesRestored + keywordsRestored == 0) {
+                return@withContext RestoreResult(false, "Backup file contained no valid items")
             }
 
             RestoreResult(true, "Restored $numbersRestored numbers, $whitelistRestored whitelist, $rulesRestored wildcard rules, $keywordsRestored keyword rules")
@@ -122,4 +174,13 @@ object BackupRestore {
     }
 
     data class RestoreResult(val success: Boolean, val message: String)
+
+    private fun normalizeImportedNumber(rawNumber: String): String? {
+        val trimmed = rawNumber.trim()
+        val digits = trimmed.filter { it.isDigit() }
+        if (digits.length !in MIN_IMPORTED_DIGITS..15) {
+            return null
+        }
+        return if (trimmed.startsWith("+")) "+$digits" else digits
+    }
 }

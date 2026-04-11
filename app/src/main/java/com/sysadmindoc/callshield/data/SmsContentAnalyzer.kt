@@ -85,6 +85,8 @@ object SmsContentAnalyzer {
         spamDomains = domains.toHashSet()
     }
 
+    fun hasSpamDomains(): Boolean = spamDomains.isNotEmpty()
+
     /** Extract root domain from a URL string (strips scheme, www, path, port). */
     private fun extractDomain(url: String): String {
         val lower = url.lowercase()
@@ -147,7 +149,7 @@ object SmsContentAnalyzer {
         }
 
         // Contains phone number in body (callback scam)
-        if (PHONE_IN_BODY.containsMatchIn(body)) {
+        if (PHONE_IN_BODY.containsMatchIn(lower)) {
             score += 10
             reasons.add("callback_number")
         }

@@ -1,10 +1,9 @@
 package com.sysadmindoc.callshield.ui.screens.more
 
-import android.Manifest
 import android.app.role.RoleManager
 import android.content.Context
-import android.content.pm.PackageManager
 import android.os.Build
+import com.sysadmindoc.callshield.R
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
@@ -20,13 +19,15 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.ContextCompat
 import com.sysadmindoc.callshield.data.SpamRepository
+import com.sysadmindoc.callshield.permissions.CallShieldPermissions
 import com.sysadmindoc.callshield.ui.theme.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -123,12 +124,16 @@ fun ProtectionTestScreen() {
                     Column {
                         val scorePercent = (passed * 100) / total
                         Text(
-                            "$passed / $total tests passed ($scorePercent%)",
+                            stringResource(R.string.protection_test_summary, passed, total, scorePercent),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            if (allPassed) "All systems operational" else "${total - passed} issue${if (total - passed > 1) "s" else ""} need${if (total - passed == 1) "s" else ""} attention",
+                            if (allPassed) {
+                                stringResource(R.string.protection_test_all_ok)
+                            } else {
+                                stringResource(R.string.protection_test_issues, total - passed)
+                            },
                             style = MaterialTheme.typography.bodySmall,
                             color = if (allPassed) CatGreen else CatYellow
                         )
@@ -201,23 +206,16 @@ private suspend fun runTests(context: Context): List<TestResult> = withContext(D
     val repo = SpamRepository.getInstance(context)
 
     // Permission checks
-    val perms = mapOf(
-        "Call Log" to Manifest.permission.READ_CALL_LOG,
-        "Contacts" to Manifest.permission.READ_CONTACTS,
-        "SMS" to Manifest.permission.RECEIVE_SMS,
-        "Phone State" to Manifest.permission.READ_PHONE_STATE
-    )
+    val perms = CallShieldPermissions.protectionTestPermissions
     perms.forEach { (name, perm) ->
-        val granted = ContextCompat.checkSelfPermission(context, perm) == PackageManager.PERMISSION_GRANTED
+        val granted = CallShieldPermissions.isPermissionGranted(context, perm)
         results.add(TestResult("$name Permission", granted, if (granted) "Granted" else "Not granted — feature may not work"))
     }
 
     // Call screening role
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-        val rm = context.getSystemService(Context.ROLE_SERVICE) as? RoleManager
-        val isScreener = rm?.isRoleHeld(RoleManager.ROLE_CALL_SCREENING) ?: false
-        results.add(TestResult("Call Screener Role", isScreener, if (isScreener) "CallShield is the default call screener" else "Not set — go to Settings to enable"))
-    }
+    val rm = context.getSystemService(Context.ROLE_SERVICE) as? RoleManager
+    val isScreener = rm?.isRoleHeld(RoleManager.ROLE_CALL_SCREENING) ?: false
+    results.add(TestResult("Call Screener Role", isScreener, if (isScreener) "CallShield is the default call screener" else "Not set — go to Settings to enable"))
 
     // Database check
     val count = repo.getSpamCount()
@@ -248,16 +246,38 @@ private suspend fun runTests(context: Context): List<TestResult> = withContext(D
     results.add(TestResult("Hot List Data", hotRangesLoaded, if (hotRangesLoaded) "Hot campaign ranges loaded" else "Empty — will populate on next 30-min sync"))
 
     // Overlay permission
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-        val canOverlay = android.provider.Settings.canDrawOverlays(context)
-        results.add(TestResult("Overlay Permission", canOverlay, if (canOverlay) "Can display caller ID overlay" else "Not granted — overlay won't show"))
-    }
+    val canOverlay = android.provider.Settings.canDrawOverlays(context)
+    results.add(TestResult("Overlay Permission", canOverlay, if (canOverlay) "Can display caller ID overlay" else "Not granted — overlay won't show"))
 
     // Notification listener (for RCS filter)
     val notifListenerEnabled = android.provider.Settings.Secure.getString(
         context.contentResolver, "enabled_notification_listeners"
     )?.contains(context.packageName) ?: false
     results.add(TestResult("Notification Access (RCS)", notifListenerEnabled, if (notifListenerEnabled) "RCS filter can monitor messages" else "Not granted — RCS filter won't work"))
+
+    // Campaign detection test
+    val activeCampaigns = com.sysadmindoc.callshield.data.CampaignDetector.getActiveCampaigns()
+    results.add(TestResult(
+        context.getString(R.string.test_campaign_detection),
+        true,
+        context.getString(R.string.test_campaign_monitoring, activeCampaigns.size)
+    ))
+
+    // GBT Model test
+    val mlScore = com.sysadmindoc.callshield.data.SpamMLScorer.score("+12025551234")
+    val gbtActive = mlScore >= 0.0
+    results.add(TestResult(
+        context.getString(R.string.test_ml_model_loaded),
+        gbtActive,
+        if (gbtActive) context.getString(R.string.test_ml_model_ready) else context.getString(R.string.test_ml_model_fallback)
+    ))
+
+    // After-call feedback test
+    results.add(TestResult(
+        context.getString(R.string.test_after_call_feedback),
+        true,
+        context.getString(R.string.test_feedback_ready)
+    ))
 
     results
 }

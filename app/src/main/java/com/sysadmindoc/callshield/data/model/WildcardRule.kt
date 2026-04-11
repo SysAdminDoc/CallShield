@@ -20,15 +20,17 @@ data class WildcardRule(
     val enabled: Boolean = true
 ) {
     fun matches(number: String): Boolean {
+        val normalizedPattern = pattern.trim()
+        if (normalizedPattern.isBlank()) return false
         return if (isRegex) {
             try {
-                Regex(pattern).containsMatchIn(number)
+                Regex(normalizedPattern).containsMatchIn(number)
             } catch (_: Exception) {
                 false
             }
         } else {
             // Glob-style: * matches any digits
-            val regexPattern = pattern
+            val regexPattern = normalizedPattern
                 .replace("+", "\\+")
                 .replace("*", "\\d*")
                 .replace("?", "\\d")

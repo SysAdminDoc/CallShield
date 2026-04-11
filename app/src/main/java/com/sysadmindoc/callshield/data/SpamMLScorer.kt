@@ -1,20 +1,28 @@
 package com.sysadmindoc.callshield.data
 
 import android.content.Context
+import com.sysadmindoc.callshield.data.remote.GitHubDataSource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup
 import java.io.File
+import java.util.Calendar
 import java.util.concurrent.TimeUnit
+import kotlin.math.cos
 import kotlin.math.exp
+import kotlin.math.sin
 
 /**
- * Detection Layer 15 — On-Device Logistic Regression Spam Scorer
+ * Detection Layer 15 — On-Device ML Spam Scorer (v3: Gradient-Boosted Trees)
  *
- * Scores incoming numbers using a lightweight logistic regression model
- * trained weekly from the CallShield spam database. No TFLite or heavy
- * ML libraries needed — pure math on 15 features runs in microseconds.
+ * Scores incoming numbers using either:
+ *   - A gradient-boosted tree (GBT) ensemble (version 3 model), or
+ *   - A logistic regression fallback (version 2, or if GBT parsing fails)
+ *
+ * No TFLite or heavy ML libraries needed — pure Kotlin inference on 20 features
+ * runs in microseconds on any Android device.
  *
  * The model is stored in data/spam_model_weights.json on GitHub and
  * synced locally via SyncWorker. Falls back to the bundled initial
@@ -36,10 +44,17 @@ import kotlin.math.exp
  *  13. nxx_below_200          — NXX integer < 200 (often unassigned ranges)
  *  14. low_digit_entropy      — fewer than 4 distinct digits in full number
  *  15. subscriber_sequential  — last 4 form a complete ascending/descending run (1234, 9876)
+ *  16. time_of_day_sin        — sin(2π * hour/24) cyclical time encoding
+ *  17. time_of_day_cos        — cos(2π * hour/24) cyclical time encoding
+ *  18. geographic_distance    — caller's area code differs from user's by >200 numerically
+ *  19. short_number           — number has fewer than 7 digits (short codes)
+ *  20. plus_one_prefix        — number starts with +1 (US/Canada)
  *
  * Threshold: 0.7 (conservative — avoids false positives).
  */
 object SpamMLScorer {
+
+    private const val GBT_LEAF_NODE = -2
 
     private val TOLL_FREE_PREFIXES = setOf("800", "888", "877", "866", "855", "844", "833")
     private val HIGH_SPAM_NPAS = setOf(
@@ -58,12 +73,42 @@ object SpamMLScorer {
         "713291", "720420", "720660",
     )
 
+    // ── GBT model state ──────────────────────────────────────────────
+    @Volatile
+    private var useGbt: Boolean = false
+    @Volatile
+    private var gbtTrees: List<GbtTree>? = null
+    @Volatile
+    private var gbtLearningRate: Double = 0.1
+
+    // ── Logistic regression state (also used as fallback) ────────────
     @Volatile
     private var weights: DoubleArray? = null
     @Volatile
     private var bias: Double = -2.5
     @Volatile
     private var threshold: Double = 0.7  // Conservative threshold
+
+    init {
+        applyDefaultWeights()
+    }
+
+    /**
+     * A single decision tree in the GBT ensemble.
+     * Arrays follow scikit-learn's internal tree format:
+     *   - feature[i]: feature index to split on (-2 = leaf)
+     *   - threshold[i]: split threshold
+     *   - childrenLeft[i]: left child node index (-1 = no child)
+     *   - childrenRight[i]: right child node index (-1 = no child)
+     *   - value[i]: leaf value (only meaningful when feature[i] == -2)
+     */
+    private data class GbtTree(
+        val feature: IntArray,
+        val threshold: DoubleArray,
+        val childrenLeft: IntArray,
+        val childrenRight: IntArray,
+        val value: DoubleArray,
+    )
 
     /**
      * Load model weights from the locally-cached weights file.
@@ -73,7 +118,12 @@ object SpamMLScorer {
         try {
             val file = File(context.filesDir, "spam_model_weights.json")
             if (!file.exists()) {
-                applyDefaultWeights()
+                val bundled = GitHubDataSource.readBundledAsset(context, GitHubDataSource.BUNDLED_MODEL_WEIGHTS_ASSET)
+                if (bundled.isSuccess) {
+                    parseAndApply(bundled.getOrThrow())
+                } else {
+                    applyDefaultWeights()
+                }
                 return
             }
             val json = file.readText()
@@ -93,17 +143,39 @@ object SpamMLScorer {
                 .connectTimeout(15, TimeUnit.SECONDS)
                 .readTimeout(15, TimeUnit.SECONDS)
                 .build()
-            val url = "https://raw.githubusercontent.com/SysAdminDoc/CallShield/master/data/spam_model_weights.json"
-            val request = Request.Builder().url(url)
-                .header("Cache-Control", "no-store, max-age=0")
-                .build()
-            val response = client.newCall(request).execute()
-            if (!response.isSuccessful) return@withContext
+            val urls = listOf("main", "master").map { branch ->
+                GitHubDataSource.buildRawUrl(
+                    owner = GitHubDataSource.DEFAULT_REPO_OWNER,
+                    repo = GitHubDataSource.DEFAULT_REPO_NAME,
+                    branch = branch,
+                    path = GitHubDataSource.MODEL_WEIGHTS_PATH
+                )
+            }
 
-            val body = response.body?.string() ?: return@withContext
+            var body: String? = null
+            for (url in urls.distinct()) {
+                val request = Request.Builder()
+                    .url(url)
+                    .header("Cache-Control", "no-store, max-age=0")
+                    .header("User-Agent", "CallShield/1.0")
+                    .build()
+                client.newCall(request).execute().use { response ->
+                    if (response.isSuccessful) {
+                        body = response.body?.string()
+                    }
+                }
+                if (body != null) break
+            }
+
+            if (body == null) {
+                body = GitHubDataSource.readBundledAsset(context, GitHubDataSource.BUNDLED_MODEL_WEIGHTS_ASSET)
+                    .getOrNull()
+            }
+
+            val json = body ?: return@withContext
             val file = File(context.filesDir, "spam_model_weights.json")
-            file.writeText(body)
-            parseAndApply(body)
+            file.writeText(json)
+            parseAndApply(json)
         } catch (_: Exception) { }
     }
 
@@ -112,10 +184,23 @@ object SpamMLScorer {
      * Returns -1.0 if weights not loaded or number format invalid.
      */
     fun score(number: String): Double {
-        val w = weights ?: return -1.0
         val features = extractFeatures(number).takeIf { it.isNotEmpty() } ?: return -1.0
 
-        val z = w.zip(features.toTypedArray()).sumOf { (wi, xi) -> wi * xi } + bias
+        // Use GBT inference if available, otherwise logistic regression
+        if (useGbt) {
+            val trees = gbtTrees
+            if (trees != null && trees.isNotEmpty()) {
+                return scoreGbt(features, trees, gbtLearningRate)
+            }
+        }
+
+        // Logistic regression fallback
+        val w = weights ?: return -1.0
+        var z = bias
+        val limit = minOf(w.size, features.size)
+        for (i in 0 until limit) {
+            z += w[i] * features[i]
+        }
         return sigmoid(z)
     }
 
@@ -131,8 +216,50 @@ object SpamMLScorer {
     /** ML spam confidence as 0–100 integer for display. */
     fun confidence(number: String): Int = (score(number).coerceIn(0.0, 1.0) * 100).toInt()
 
+    /**
+     * GBT inference: traverse each tree, sum leaf values * learning_rate, apply sigmoid.
+     */
+    private fun scoreGbt(features: DoubleArray, trees: List<GbtTree>, learningRate: Double): Double {
+        var rawScore = 0.0
+        for (tree in trees) {
+            rawScore += evaluateTree(features, tree) * learningRate
+        }
+        return sigmoid(rawScore)
+    }
+
+    private fun evaluateTree(features: DoubleArray, tree: GbtTree): Double {
+        var node = 0
+        val visited = BooleanArray(tree.feature.size)
+
+        while (node in tree.feature.indices) {
+            if (visited[node]) return 0.0
+            visited[node] = true
+
+            val featureIdx = tree.feature[node]
+            if (featureIdx == GBT_LEAF_NODE) {
+                return tree.value.getOrElse(node) { 0.0 }
+            }
+            if (featureIdx !in features.indices) return 0.0
+
+            val nextNode = if (features[featureIdx] <= tree.threshold[node]) {
+                tree.childrenLeft[node]
+            } else {
+                tree.childrenRight[node]
+            }
+            if (nextNode !in tree.feature.indices) return 0.0
+            node = nextNode
+        }
+
+        return 0.0
+    }
+
     private fun extractFeatures(number: String): DoubleArray {
-        var digits = number.filter { it.isDigit() }
+        // Check raw number properties before normalizing to 10 digits
+        val rawDigits = number.filter { it.isDigit() }
+        val plusOnePrefix = if (number.trimStart().startsWith("+1")) 1.0 else 0.0
+        val shortNumber = if (rawDigits.length in 1..6) 1.0 else 0.0
+
+        var digits = rawDigits
         if (digits.length == 11 && digits.startsWith("1")) digits = digits.drop(1)
         if (digits.length != 10) return doubleArrayOf()
 
@@ -157,7 +284,7 @@ object SpamMLScorer {
         val is555     = if (nxx == "555") 1.0 else 0.0
         val last4Zero = if (sub == "0000") 1.0 else 0.0
 
-        // ── Features 9–15 (new) ──────────────────────────────────────
+        // ── Features 9–15 ───────────────────────────────────────────
         // NXX must start with 2–9 in NANP; 0 or 1 = spoofed/invalid
         val invalidNxx = if (nxx.firstOrNull().let { it == '0' || it == '1' }) 1.0 else 0.0
 
@@ -184,12 +311,32 @@ object SpamMLScorer {
         val subDesc = (0 until 3).count { sub[it + 1].digitToInt() == sub[it].digitToInt() - 1 }
         val subSeq  = if (subAsc == 3 || subDesc == 3) 1.0 else 0.0
 
+        // ── Features 16–20 (behavioral & temporal) ──────────────────
+        // Cyclical time-of-day encoding using current hour
+        val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
+        val timeAngle = 2.0 * Math.PI * hour / 24.0
+        val timeSin = sin(timeAngle)
+        val timeCos = cos(timeAngle)
+
+        // Geographic distance — caller's area code differs from a reference
+        // area code by >200 numerically and both are valid US area codes
+        val callerNpa = npa.toIntOrNull() ?: 0
+        val callerLocation = AreaCodeLookup.lookup(number)
+        val geoDist = if (callerLocation != null) {
+            // Use 312 (Chicago) as a central US reference area code
+            // This flags calls from geographically distant area codes
+            val refNpa = 312
+            if (kotlin.math.abs(callerNpa - refNpa) > 200) 1.0 else 0.0
+        } else 0.0
+
         return doubleArrayOf(
             tollFree, highSpamNpa, voipRange,
             repeatedRatio, seqAscRatio, allSame,
             is555, last4Zero,
             invalidNxx, subAllSame, alternating,
-            seqDescRatio, nxxBelow200, lowEntropy, subSeq
+            seqDescRatio, nxxBelow200, lowEntropy, subSeq,
+            // New behavioral & temporal features (16–20)
+            timeSin, timeCos, geoDist, shortNumber, plusOnePrefix
         )
     }
 
@@ -197,7 +344,7 @@ object SpamMLScorer {
         if (x >= 0) 1.0 / (1.0 + exp(-x)) else { val e = exp(x); e / (1.0 + e) }
 
     private fun applyDefaultWeights() {
-        // Initial heuristic priors for 15 features.
+        // Initial heuristic priors for 20 features.
         // Will be replaced by trained weights after first CI run.
         weights = doubleArrayOf(
             1.2,  // toll_free
@@ -215,32 +362,219 @@ object SpamMLScorer {
             1.0,  // nxx_below_200
             1.5,  // low_digit_entropy
             0.8,  // subscriber_sequential
+            0.3,  // time_of_day_sin
+            0.3,  // time_of_day_cos
+            0.6,  // geographic_distance
+            1.0,  // short_number
+            0.1,  // plus_one_prefix
         )
         bias = -2.5
         threshold = 0.7
+        useGbt = false
+        gbtTrees = null
     }
 
     private fun parseAndApply(json: String) {
         try {
-            // Simple regex parse to avoid additional Moshi adapter registration
-            val weightsMatch = Regex(""""weights"\s*:\s*\[([^\]]+)]""").find(json)
-            val biasMatch = Regex(""""bias"\s*:\s*([-\d.]+)""").find(json)
+            // Check version and model_type to decide GBT vs logistic regression
+            val versionMatch = Regex(""""version"\s*:\s*(\d+)""").find(json)
+            val modelTypeMatch = Regex(""""model_type"\s*:\s*"(\w+)"""").find(json)
             val thresholdMatch = Regex(""""threshold"\s*:\s*([\d.]+)""").find(json)
 
-            val parsedWeights = weightsMatch?.groupValues?.get(1)
-                ?.split(",")
-                ?.mapNotNull { it.trim().toDoubleOrNull() }
-                ?.toDoubleArray()
+            val version = versionMatch?.groupValues?.get(1)?.toIntOrNull() ?: 2
+            val modelType = modelTypeMatch?.groupValues?.get(1) ?: ""
 
-            if (parsedWeights != null && parsedWeights.size >= 15) {
-                weights = parsedWeights
-                bias = biasMatch?.groupValues?.get(1)?.toDoubleOrNull() ?: -2.5
-                threshold = thresholdMatch?.groupValues?.get(1)?.toDoubleOrNull() ?: 0.7
-            } else {
-                applyDefaultWeights()
+            threshold = thresholdMatch?.groupValues?.get(1)?.toDoubleOrNull() ?: 0.7
+
+            // Always try to load fallback LR weights (used by v2 or as fallback for v3)
+            loadFallbackWeights(json, version)
+
+            if (version >= 3 && modelType == "gbt") {
+                // Try to parse GBT trees
+                if (parseGbtTrees(json)) {
+                    val lrMatch = Regex(""""learning_rate"\s*:\s*([\d.]+)""").find(json)
+                    gbtLearningRate = lrMatch?.groupValues?.get(1)?.toDoubleOrNull() ?: 0.1
+                    useGbt = true
+                    return
+                }
             }
+
+            // Fall through to logistic regression (v2 or GBT parse failure)
+            useGbt = false
         } catch (_: Exception) {
             applyDefaultWeights()
         }
+    }
+
+    /**
+     * Load logistic regression weights from JSON.
+     * For v2: reads "weights" array and "bias".
+     * For v3: reads "fallback_weights" object and "fallback_bias".
+     */
+    private fun loadFallbackWeights(json: String, version: Int) {
+        if (version >= 3) {
+            // v3 stores LR weights as fallback_weights object: {"feature_name": weight, ...}
+            val fbWeightsMatch = Regex(""""fallback_weights"\s*:\s*\{([^}]+)\}""").find(json)
+            val fbBiasMatch = Regex(""""fallback_bias"\s*:\s*([-\d.eE]+)""").find(json)
+
+            if (fbWeightsMatch != null) {
+                // Parse key-value pairs from the object
+                val pairs = Regex(""""(\w+)"\s*:\s*([-\d.eE]+)""")
+                    .findAll(fbWeightsMatch.groupValues[1])
+                    .map { it.groupValues[1] to it.groupValues[2].toDouble() }
+                    .toMap()
+
+                // Build weights array in feature order
+                val featureNames = listOf(
+                    "toll_free", "high_spam_npa", "voip_range",
+                    "repeated_digits_ratio", "sequential_asc_ratio", "all_same_digit",
+                    "nxx_555", "last4_zero", "invalid_nxx", "subscriber_all_same",
+                    "alternating_pattern", "sequential_desc_ratio", "nxx_below_200",
+                    "low_digit_entropy", "subscriber_sequential",
+                    "time_of_day_sin", "time_of_day_cos", "geographic_distance",
+                    "short_number", "plus_one_prefix"
+                )
+                val parsedWeights = featureNames.map { pairs[it] ?: 0.0 }.toDoubleArray()
+
+                if (parsedWeights.size >= 15) {
+                    weights = parsedWeights
+                    bias = fbBiasMatch?.groupValues?.get(1)?.toDoubleOrNull() ?: -2.5
+                    return
+                }
+            }
+            // If fallback_weights parsing fails, try v2-style as last resort
+        }
+
+        // v2-style: "weights": [array] and "bias": value
+        val weightsMatch = Regex(""""weights"\s*:\s*\[([^\]]+)]""").find(json)
+        val biasMatch = Regex(""""bias"\s*:\s*([-\d.eE]+)""").find(json)
+
+        val parsedWeights = weightsMatch?.groupValues?.get(1)
+            ?.split(",")
+            ?.mapNotNull { it.trim().toDoubleOrNull() }
+            ?.toDoubleArray()
+
+        if (parsedWeights != null && (parsedWeights.size >= 15)) {
+            // Backward compat: pad old 15-weight models to 20 with zeros
+            weights = if (parsedWeights.size < 20) {
+                parsedWeights + DoubleArray(20 - parsedWeights.size)
+            } else {
+                parsedWeights
+            }
+            bias = biasMatch?.groupValues?.get(1)?.toDoubleOrNull() ?: -2.5
+        } else {
+            applyDefaultWeights()
+        }
+    }
+
+    /**
+     * Parse the "trees" array from the v3 JSON model.
+     * Each tree object has: feature, threshold, children_left, children_right, value
+     * (all integer/double arrays).
+     *
+     * Returns true if parsing succeeded and at least one tree was loaded.
+     */
+    private fun parseGbtTrees(json: String): Boolean {
+        try {
+            // Find the "trees" array — it contains objects with arrays inside
+            val treesStart = json.indexOf("\"trees\"")
+            if (treesStart == -1) return false
+
+            // Find the opening '[' of the trees array
+            val arrStart = json.indexOf('[', treesStart + 7)
+            if (arrStart == -1) return false
+
+            // Find matching closing ']' — need to handle nested brackets
+            val arrEnd = findMatchingBracket(json, arrStart, '[', ']')
+            if (arrEnd == -1) return false
+
+            val treesJson = json.substring(arrStart + 1, arrEnd)
+
+            // Split into individual tree objects by finding each { ... } block
+            val parsedTrees = mutableListOf<GbtTree>()
+            var pos = 0
+            while (pos < treesJson.length) {
+                val objStart = treesJson.indexOf('{', pos)
+                if (objStart == -1) break
+                val objEnd = findMatchingBracket(treesJson, objStart, '{', '}')
+                if (objEnd == -1) break
+
+                val treeObj = treesJson.substring(objStart, objEnd + 1)
+                val tree = parseOneTree(treeObj) ?: return false
+                parsedTrees.add(tree)
+                pos = objEnd + 1
+            }
+
+            if (parsedTrees.isEmpty()) return false
+            gbtTrees = parsedTrees
+            return true
+        } catch (_: Exception) {
+            return false
+        }
+    }
+
+    /**
+     * Parse a single tree object JSON string into a GbtTree.
+     */
+    private fun parseOneTree(treeJson: String): GbtTree? {
+        val feature = parseIntArray(treeJson, "feature") ?: return null
+        val thresh  = parseDoubleArray(treeJson, "threshold") ?: return null
+        val left    = parseIntArray(treeJson, "children_left") ?: return null
+        val right   = parseIntArray(treeJson, "children_right") ?: return null
+        val value   = parseDoubleArray(treeJson, "value") ?: return null
+
+        // All arrays must be the same length
+        if (feature.size != thresh.size || feature.size != left.size ||
+            feature.size != right.size || feature.size != value.size) return null
+
+        return GbtTree(feature, thresh, left, right, value)
+    }
+
+    /**
+     * Parse a named integer array from a JSON object string.
+     * E.g., "feature": [0, 2, -1, -1, 1, -1, -1]
+     */
+    private fun parseIntArray(json: String, name: String): IntArray? {
+        val pattern = Regex(""""$name"\s*:\s*\[([^\]]+)]""")
+        val match = pattern.find(json) ?: return null
+        return match.groupValues[1]
+            .split(",")
+            .mapNotNull { it.trim().toIntOrNull() }
+            .toIntArray()
+    }
+
+    /**
+     * Parse a named double array from a JSON object string.
+     * E.g., "threshold": [0.5, 0.5, 0, 0, 0.5, 0, 0]
+     */
+    private fun parseDoubleArray(json: String, name: String): DoubleArray? {
+        val pattern = Regex(""""$name"\s*:\s*\[([^\]]+)]""")
+        val match = pattern.find(json) ?: return null
+        return match.groupValues[1]
+            .split(",")
+            .mapNotNull { it.trim().toDoubleOrNull() }
+            .toDoubleArray()
+    }
+
+    /**
+     * Find the index of the matching closing bracket for an opening bracket at [startIdx].
+     */
+    private fun findMatchingBracket(s: String, startIdx: Int, open: Char, close: Char): Int {
+        var depth = 0
+        var inString = false
+        var escape = false
+        for (i in startIdx until s.length) {
+            val c = s[i]
+            if (escape) { escape = false; continue }
+            if (c == '\\') { escape = true; continue }
+            if (c == '"') { inString = !inString; continue }
+            if (inString) continue
+            if (c == open) depth++
+            else if (c == close) {
+                depth--
+                if (depth == 0) return i
+            }
+        }
+        return -1
     }
 }

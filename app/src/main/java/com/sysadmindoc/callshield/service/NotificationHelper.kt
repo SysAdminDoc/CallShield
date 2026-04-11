@@ -6,6 +6,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import androidx.core.app.NotificationCompat
+import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.PhoneFormatter
 import com.sysadmindoc.callshield.ui.MainActivity
 
@@ -36,29 +37,30 @@ object NotificationHelper {
     fun createChannels(context: Context) {
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         nm.createNotificationChannel(
-            NotificationChannel(CHANNEL_BLOCKED, "Blocked Calls & SMS", NotificationManager.IMPORTANCE_LOW).apply {
-                description = "Notifications when spam calls/texts are blocked"
+            NotificationChannel(CHANNEL_BLOCKED, context.getString(R.string.notif_channel_blocked), NotificationManager.IMPORTANCE_LOW).apply {
+                description = context.getString(R.string.notif_channel_blocked_desc)
             }
         )
         nm.createNotificationChannel(
-            NotificationChannel(CHANNEL_RATING, "Spam Rating", NotificationManager.IMPORTANCE_DEFAULT).apply {
-                description = "Rate calls as spam after they end"
+            NotificationChannel(CHANNEL_RATING, context.getString(R.string.notif_channel_rating), NotificationManager.IMPORTANCE_DEFAULT).apply {
+                description = context.getString(R.string.notif_channel_rating_desc)
             }
         )
         nm.createNotificationChannel(
-            NotificationChannel(CHANNEL_STATUS, "Protection Status", NotificationManager.IMPORTANCE_MIN).apply {
-                description = "Persistent protection status indicator"
+            NotificationChannel(CHANNEL_STATUS, context.getString(R.string.notif_channel_status), NotificationManager.IMPORTANCE_MIN).apply {
+                description = context.getString(R.string.notif_channel_status_desc)
             }
         )
         nm.createNotificationChannel(
-            NotificationChannel(CHANNEL_PHISHING, "Phishing URL Warning", NotificationManager.IMPORTANCE_HIGH).apply {
-                description = "Alert when a received SMS contains a known malicious URL"
+            NotificationChannel(CHANNEL_PHISHING, context.getString(R.string.notif_channel_phishing), NotificationManager.IMPORTANCE_HIGH).apply {
+                description = context.getString(R.string.notif_channel_phishing_desc)
             }
         )
     }
 
     fun notifyBlocked(context: Context, number: String, reason: String, isCall: Boolean) {
         val now = System.currentTimeMillis()
+        val nid = stableId(number, if (isCall) 1 else 2)
 
         // Rate limiting — batch rapid blocks into summary (synchronized to avoid race)
         synchronized(lock) {
@@ -68,12 +70,11 @@ object NotificationHelper {
                 return
             }
             lastNotifTime = now
-            blockedSinceLastNotif = 0
+            blockedSinceLastNotif = 1
         }
 
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        val nid = stableId(number, if (isCall) 1 else 2)
-        val typeText = if (isCall) "call" else "SMS"
+        val typeText = context.getString(if (isCall) R.string.notif_type_call else R.string.notif_type_sms)
 
         val openIntent = PendingIntent.getActivity(
             context, stableId(number, 40),
@@ -102,13 +103,13 @@ object NotificationHelper {
 
         val notif = NotificationCompat.Builder(context, CHANNEL_BLOCKED)
             .setSmallIcon(android.R.drawable.ic_menu_close_clear_cancel)
-            .setContentTitle("Blocked spam $typeText")
-            .setContentText("${PhoneFormatter.format(number)} ($reason)")
+            .setContentTitle(context.getString(R.string.notif_blocked_title, typeText))
+            .setContentText(context.getString(R.string.notif_blocked_text, PhoneFormatter.format(number), reason))
             .setContentIntent(openIntent)
             .setAutoCancel(true)
             .setGroup(GROUP_BLOCKED)
-            .addAction(android.R.drawable.ic_menu_close_clear_cancel, "Block forever", blockIntent)
-            .addAction(android.R.drawable.ic_menu_send, "Report", reportIntent)
+            .addAction(android.R.drawable.ic_menu_close_clear_cancel, context.getString(R.string.notif_action_block_forever), blockIntent)
+            .addAction(android.R.drawable.ic_menu_send, context.getString(R.string.notif_action_report), reportIntent)
             .build()
 
         nm.notify(nid, notif)
@@ -118,11 +119,15 @@ object NotificationHelper {
     private fun updateSummary(context: Context) {
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val count = synchronized(lock) { blockedSinceLastNotif }
-        val extra = if (count > 0) " (+$count more)" else ""
+        if (count <= 0) {
+            nm.cancel(SUMMARY_ID)
+            return
+        }
+        val summaryText = context.resources.getQuantityString(R.plurals.notif_summary_text_recent, count, count)
         val summary = NotificationCompat.Builder(context, CHANNEL_BLOCKED)
             .setSmallIcon(android.R.drawable.ic_menu_close_clear_cancel)
-            .setContentTitle("CallShield")
-            .setContentText("Blocking spam calls & texts$extra")
+            .setContentTitle(context.getString(R.string.app_name))
+            .setContentText(summaryText)
             .setGroup(GROUP_BLOCKED)
             .setGroupSummary(true)
             .setAutoCancel(true)
@@ -152,11 +157,11 @@ object NotificationHelper {
 
         val notif = NotificationCompat.Builder(context, CHANNEL_RATING)
             .setSmallIcon(android.R.drawable.ic_menu_help)
-            .setContentTitle("Was this call spam?")
+            .setContentTitle(context.getString(R.string.notif_rating_title))
             .setContentText(PhoneFormatter.format(number))
             .setAutoCancel(true)
-            .addAction(android.R.drawable.ic_menu_close_clear_cancel, "Spam - Block it", blockIntent)
-            .addAction(android.R.drawable.ic_menu_myplaces, "Safe", safeIntent)
+            .addAction(android.R.drawable.ic_menu_close_clear_cancel, context.getString(R.string.notif_action_spam_block), blockIntent)
+            .addAction(android.R.drawable.ic_menu_myplaces, context.getString(R.string.notif_action_safe), safeIntent)
             .build()
 
         nm.notify(nid, notif)
@@ -177,15 +182,49 @@ object NotificationHelper {
 
         val notif = NotificationCompat.Builder(context, CHANNEL_PHISHING)
             .setSmallIcon(android.R.drawable.ic_dialog_alert)
-            .setContentTitle("⚠ Phishing URL detected")
-            .setContentText("SMS from ${PhoneFormatter.format(sender)} contains a $threats link")
+            .setContentTitle(context.getString(R.string.notif_phishing_title))
+            .setContentText(context.getString(R.string.notif_phishing_text, PhoneFormatter.format(sender), threats))
             .setStyle(NotificationCompat.BigTextStyle()
-                .bigText("An SMS from ${PhoneFormatter.format(sender)} contains a URL flagged by URLhaus as $threats. Do not tap any links in this message."))
+                .bigText(context.getString(R.string.notif_phishing_big_text, PhoneFormatter.format(sender), threats)))
             .setContentIntent(openIntent)
             .setAutoCancel(true)
             .build()
 
         nm.notify(nid, notif)
+    }
+
+    fun notifyAfterCall(context: Context, number: String) {
+        // Don't show for very short numbers (short codes)
+        if (number.filter { it.isDigit() }.length < 7) return
+
+        val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+        // Create intents for "Spam" and "Not Spam" actions
+        val spamIntent = Intent(context, SpamActionReceiver::class.java).apply {
+            action = "com.sysadmindoc.callshield.FEEDBACK_SPAM"
+            putExtra("number", number)
+        }
+        val notSpamIntent = Intent(context, SpamActionReceiver::class.java).apply {
+            action = "com.sysadmindoc.callshield.FEEDBACK_NOT_SPAM"
+            putExtra("number", number)
+        }
+
+        val spamPending = PendingIntent.getBroadcast(context, number.hashCode(), spamIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        val notSpamPending = PendingIntent.getBroadcast(context, number.hashCode() + 1, notSpamIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+
+        val formatted = PhoneFormatter.format(number)
+
+        val notification = NotificationCompat.Builder(context, CHANNEL_RATING)
+            .setSmallIcon(android.R.drawable.ic_menu_call)
+            .setContentTitle(context.getString(R.string.feedback_title))
+            .setContentText(context.getString(R.string.feedback_text, formatted))
+            .addAction(0, context.getString(R.string.feedback_spam), spamPending)
+            .addAction(0, context.getString(R.string.feedback_not_spam), notSpamPending)
+            .setAutoCancel(true)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .build()
+
+        nm.notify(number.hashCode() + 10000, notification)
     }
 
     fun showPersistentStatus(context: Context, active: Boolean) {
@@ -199,8 +238,8 @@ object NotificationHelper {
         )
         val notif = NotificationCompat.Builder(context, CHANNEL_STATUS)
             .setSmallIcon(android.R.drawable.ic_menu_view)
-            .setContentTitle("CallShield active")
-            .setContentText("Protecting against spam calls & texts")
+            .setContentTitle(context.getString(R.string.notif_status_title))
+            .setContentText(context.getString(R.string.notif_status_text))
             .setContentIntent(openIntent)
             .setOngoing(true)
             .setSilent(true)

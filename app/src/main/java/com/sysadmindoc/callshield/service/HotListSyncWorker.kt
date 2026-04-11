@@ -2,11 +2,6 @@ package com.sysadmindoc.callshield.service
 
 import android.content.Context
 import androidx.work.*
-import com.sysadmindoc.callshield.data.SmsContentAnalyzer
-import com.sysadmindoc.callshield.data.SpamHeuristics
-import com.sysadmindoc.callshield.data.SpamRepository
-import com.sysadmindoc.callshield.data.model.SpamNumber
-import com.sysadmindoc.callshield.data.remote.GitHubDataSource
 import java.util.concurrent.TimeUnit
 
 /**
@@ -30,41 +25,12 @@ class HotListSyncWorker(
 
     override suspend fun doWork(): Result {
         return try {
-            val source = GitHubDataSource()
-            val repo   = SpamRepository.getInstance(applicationContext)
-
-            // ── 1. Hot numbers → Room database ───────────────────────
-            val hotResult = source.fetchHotList()
-            if (hotResult.isFailure) return Result.retry()
-
-            val hotNumbers = hotResult.getOrThrow()
-            if (hotNumbers.isNotEmpty()) {
-                repo.replaceHotList(hotNumbers.mapNotNull { hot ->
-                    try {
-                        SpamNumber(
-                            number      = repo.normalizeNumber(hot.number),
-                            type        = hot.type,
-                            reports     = 1,
-                            description = hot.description,
-                            source      = "hot_list"
-                        )
-                    } catch (_: Exception) { null }
-                })
+            val outcome = HotDataSync.refresh(applicationContext)
+            if (outcome.refreshedAnyFeed || outcome.hasAnyHotProtection) {
+                Result.success()
+            } else {
+                Result.retry()
             }
-
-            // ── 2. Hot ranges → SpamHeuristics in-memory ─────────────
-            val ranges = source.fetchHotRanges()
-            if (ranges.isNotEmpty()) {
-                SpamHeuristics.updateHotRanges(ranges)
-            }
-
-            // ── 3. Spam domains → SmsContentAnalyzer in-memory ───────
-            val domains = source.fetchSpamDomains()
-            if (domains.isNotEmpty()) {
-                SmsContentAnalyzer.updateSpamDomains(domains)
-            }
-
-            Result.success()
         } catch (_: Exception) {
             Result.retry()
         }

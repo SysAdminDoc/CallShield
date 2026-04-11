@@ -31,6 +31,7 @@ class SpamRepository(private val context: Context) {
 
     companion object {
         private val KEY_LAST_SYNC = longPreferencesKey("last_sync_timestamp")
+        private val KEY_LAST_SYNC_SOURCE = stringPreferencesKey("last_sync_source")
         private val KEY_LAST_SHA = stringPreferencesKey("last_data_sha")
         private val KEY_DB_VERSION = intPreferencesKey("db_version")
         private val KEY_BLOCK_CALLS = booleanPreferencesKey("block_calls_enabled")
@@ -55,6 +56,9 @@ class SpamRepository(private val context: Context) {
         private val KEY_ABSTRACT_API_KEY = stringPreferencesKey("abstract_api_key")
         private val KEY_ML_SCORER = booleanPreferencesKey("ml_scorer_enabled")
         private val KEY_RCS_FILTER = booleanPreferencesKey("rcs_filter_enabled")
+
+        const val SYNC_SOURCE_REMOTE = "remote"
+        const val SYNC_SOURCE_BUNDLED = "bundled"
 
         @Volatile
         private var INSTANCE: SpamRepository? = null
@@ -100,6 +104,7 @@ class SpamRepository(private val context: Context) {
 
     // Last sync timestamp for freshness indicator
     val lastSyncTimestamp: Flow<Long> = dataStore.data.map { it[KEY_LAST_SYNC] ?: 0L }
+    val lastSyncSource: Flow<String> = dataStore.data.map { it[KEY_LAST_SYNC_SOURCE] ?: "" }
     suspend fun setBlockCalls(enabled: Boolean) = dataStore.edit { it[KEY_BLOCK_CALLS] = enabled }
     suspend fun setBlockSms(enabled: Boolean) = dataStore.edit { it[KEY_BLOCK_SMS] = enabled }
     suspend fun setBlockUnknown(enabled: Boolean) = dataStore.edit { it[KEY_BLOCK_UNKNOWN] = enabled }
@@ -117,6 +122,9 @@ class SpamRepository(private val context: Context) {
     // ── Primary spam check ─────────────────────────────────────────────
     suspend fun isSpam(number: String, smsBody: String? = null): SpamCheckResult {
         val normalized = normalizeNumber(number)
+
+        // Record every incoming number for campaign burst detection
+        CampaignDetector.recordCall(normalized)
 
         // Manual whitelist — always allow
         if (dao.findWhitelistEntry(normalized) != null) {
@@ -203,6 +211,17 @@ class SpamRepository(private val context: Context) {
             if (hResult.score >= 30 && hResult.score < threshold) {
                 showCallerIdOverlay(normalized, hResult.score, hResult.reasons.firstOrNull() ?: "suspicious")
             }
+        }
+
+        // Layer 11.5: Campaign burst detection
+        if (CampaignDetector.isActiveCampaign(normalized)) {
+            return SpamCheckResult(
+                isSpam = true,
+                matchSource = "campaign_burst",
+                type = "robocall",
+                description = "Active spam campaign detected from this prefix",
+                confidence = 75
+            )
         }
 
         // Layer 15: On-device ML spam scorer
@@ -302,70 +321,155 @@ class SpamRepository(private val context: Context) {
      */
     suspend fun syncFromGitHub(force: Boolean = false): SyncResult = withContext(Dispatchers.IO) {
         syncMutex.withLock {
-        try {
-            if (!force) {
-                val currentSha = dataStore.data.first()[KEY_LAST_SHA]
-                val remoteResult = remote.checkForUpdate()
-                val newSha = remoteResult.getOrNull()
+            try {
+                val currentCount = dao.getSpamCount()
+                if (!force) {
+                    val currentSha = dataStore.data.first()[KEY_LAST_SHA]
+                    val remoteResult = remote.checkForUpdate()
+                    val newSha = remoteResult.getOrNull()
 
-                if (newSha != null && newSha == currentSha) {
-                    // Still update the sync timestamp so the UI shows freshness
-                    dataStore.edit { it[KEY_LAST_SYNC] = System.currentTimeMillis() }
-                    return@withContext SyncResult(true, "Database is up to date")
+                    if (newSha != null && newSha == currentSha) {
+                        return@withContext SyncResult(success = true, message = "Database is up to date")
+                    }
                 }
-            }
 
-            val result = remote.fetchSpamDatabase()
-            if (result.isFailure) {
-                return@withContext SyncResult(false, "Failed: ${result.exceptionOrNull()?.message}")
-            }
+                val result = remote.fetchSpamDatabase()
+                if (result.isSuccess) {
+                    val database = result.getOrThrow()
+                    val newSha = remote.checkForUpdate().getOrNull()
+                    val (numberCount, prefixCount) = persistSpamDatabase(
+                        database = database,
+                        sha = newSha,
+                        syncSource = SYNC_SOURCE_REMOTE
+                    )
+                    return@withContext SyncResult(
+                        success = true,
+                        message = "Synced $numberCount numbers, $prefixCount prefixes"
+                    )
+                }
 
-            val database = result.getOrThrow()
+                val remoteError = result.exceptionOrNull()?.message ?: "Unknown sync error"
+                if (currentCount > 0) {
+                    return@withContext SyncResult(
+                        success = true,
+                        message = "GitHub sync unavailable ($remoteError). Your existing spam database is still active.",
+                        warning = true
+                    )
+                }
 
-            val numbers = database.numbers.map { json ->
-                SpamNumber(
-                    number = normalizeNumber(json.number),
-                    type = json.type, reports = json.reports,
-                    firstSeen = json.firstSeen, lastSeen = json.lastSeen,
-                    description = json.description, source = "github"
+                val bundledDatabase = loadBundledSpamDatabase()
+                if (bundledDatabase.isSuccess) {
+                    val database = bundledDatabase.getOrThrow()
+                    val (numberCount, prefixCount) = persistSpamDatabase(
+                        database = database,
+                        sha = null,
+                        syncSource = SYNC_SOURCE_BUNDLED
+                    )
+                    return@withContext SyncResult(
+                        success = true,
+                        message = "Loaded bundled protection snapshot with $numberCount numbers and $prefixCount prefixes while GitHub was unavailable.",
+                        warning = true
+                    )
+                }
+
+                val bundledError = bundledDatabase.exceptionOrNull()?.message
+                val message = buildString {
+                    append("Sync unavailable (")
+                    append(remoteError)
+                    append(")")
+                    if (!bundledError.isNullOrBlank()) {
+                        append(". Bundled fallback failed: ")
+                        append(bundledError)
+                    }
+                }
+
+                SyncResult(
+                    success = false,
+                    message = message,
+                    shouldRetry = shouldRetrySync(remoteError)
+                )
+            } catch (e: Exception) {
+                SyncResult(
+                    success = false,
+                    message = "Error: ${e.message}",
+                    shouldRetry = true
                 )
             }
-            val prefixes = database.prefixes.map { json ->
-                SpamPrefix(prefix = json.prefix, type = json.type, description = json.description)
-            }
-
-            // Atomic replace — prevents detection gaps during sync
-            dao.replaceGithubData(numbers, prefixes)
-
-            // Get the current SHA for future comparison
-            val shaResult = remote.checkForUpdate()
-            val newSha = shaResult.getOrNull()
-
-            dataStore.edit {
-                it[KEY_LAST_SYNC] = System.currentTimeMillis()
-                it[KEY_DB_VERSION] = database.version
-                if (newSha != null) it[KEY_LAST_SHA] = newSha
-            }
-
-            // Refresh widget after sync
-            CallShieldWidget.refreshAll(context)
-
-            SyncResult(true, "Synced ${numbers.size} numbers, ${prefixes.size} prefixes")
-        } catch (e: Exception) {
-            SyncResult(false, "Error: ${e.message}")
-        }
         } // syncMutex
+    }
+
+    private suspend fun loadBundledSpamDatabase(): Result<SpamDatabase> {
+        val asset = GitHubDataSource.readBundledAsset(context, GitHubDataSource.BUNDLED_DATABASE_ASSET)
+        if (asset.isFailure) {
+            return Result.failure(asset.exceptionOrNull()!!)
+        }
+        return remote.parseSpamDatabaseJson(asset.getOrThrow())
+    }
+
+    private suspend fun persistSpamDatabase(
+        database: SpamDatabase,
+        sha: String?,
+        syncSource: String
+    ): Pair<Int, Int> {
+        val numbers = database.numbers.mapNotNull { json ->
+            val normalizedNumber = normalizeNumber(json.number)
+            if (normalizedNumber.isBlank()) {
+                null
+            } else {
+                SpamNumber(
+                    number = normalizedNumber,
+                    type = json.type.trim().ifBlank { "unknown" },
+                    reports = json.reports,
+                    firstSeen = json.firstSeen,
+                    lastSeen = json.lastSeen,
+                    description = json.description.trim(),
+                    source = "github"
+                )
+            }
+        }
+        val prefixes = database.prefixes.mapNotNull { json ->
+            val trimmedPrefix = json.prefix.trim()
+            if (trimmedPrefix.isBlank()) {
+                null
+            } else {
+                SpamPrefix(
+                    prefix = trimmedPrefix,
+                    type = json.type.trim().ifBlank { "unknown" },
+                    description = json.description.trim()
+                )
+            }
+        }
+
+        dao.replaceGithubData(numbers, prefixes)
+
+        dataStore.edit {
+            it[KEY_LAST_SYNC] = System.currentTimeMillis()
+            it[KEY_LAST_SYNC_SOURCE] = syncSource
+            it[KEY_DB_VERSION] = database.version
+            if (sha != null) it[KEY_LAST_SHA] = sha
+        }
+
+        CallShieldWidget.refreshAll(context)
+        return numbers.size to prefixes.size
+    }
+
+    private fun shouldRetrySync(message: String): Boolean {
+        val permanentFailureCodes = listOf("HTTP 400", "HTTP 401", "HTTP 403", "HTTP 404")
+        return permanentFailureCodes.none { code -> message.contains(code) }
     }
 
     // ── Blocklist management ───────────────────────────────────────────
     suspend fun blockNumber(number: String, type: String = "unknown", description: String = "") {
         val normalized = normalizeNumber(number)
+        if (normalized.isBlank()) return
         val existing = dao.findByNumber(normalized)
         if (existing != null) {
             dao.insertNumber(existing.copy(isUserBlocked = true))
         } else {
             dao.insertNumber(SpamNumber(
-                number = normalized, type = type, description = description,
+                number = normalized,
+                type = type.trim().ifBlank { "unknown" },
+                description = description.trim(),
                 source = "user", isUserBlocked = true
             ))
         }
@@ -380,7 +484,15 @@ class SpamRepository(private val context: Context) {
     fun getAllWildcardRules(): Flow<List<WildcardRule>> = dao.getAllWildcardRules()
 
     suspend fun addWildcardRule(pattern: String, isRegex: Boolean = false, description: String = "") {
-        dao.insertWildcardRule(WildcardRule(pattern = pattern, isRegex = isRegex, description = description))
+        val trimmedPattern = pattern.trim()
+        if (trimmedPattern.isBlank()) return
+        dao.insertWildcardRule(
+            WildcardRule(
+                pattern = trimmedPattern,
+                isRegex = isRegex,
+                description = description.trim()
+            )
+        )
     }
 
     suspend fun deleteWildcardRule(rule: WildcardRule) = dao.deleteWildcardRule(rule)
@@ -429,7 +541,9 @@ class SpamRepository(private val context: Context) {
     fun getAllWhitelist(): Flow<List<WhitelistEntry>> = dao.getAllWhitelist()
 
     suspend fun addToWhitelist(number: String, description: String = "") {
-        dao.insertWhitelistEntry(WhitelistEntry(number = normalizeNumber(number), description = description))
+        val normalized = normalizeNumber(number)
+        if (normalized.isBlank()) return
+        dao.insertWhitelistEntry(WhitelistEntry(number = normalized, description = description.trim()))
     }
 
     suspend fun removeFromWhitelist(entry: WhitelistEntry) = dao.deleteWhitelistEntry(entry)
@@ -452,7 +566,15 @@ class SpamRepository(private val context: Context) {
     fun getAllKeywordRules(): Flow<List<SmsKeywordRule>> = dao.getAllKeywordRules()
 
     suspend fun addKeywordRule(keyword: String, caseSensitive: Boolean = false, description: String = "") {
-        dao.insertKeywordRule(SmsKeywordRule(keyword = keyword, caseSensitive = caseSensitive, description = description))
+        val trimmedKeyword = keyword.trim()
+        if (trimmedKeyword.isBlank()) return
+        dao.insertKeywordRule(
+            SmsKeywordRule(
+                keyword = trimmedKeyword,
+                caseSensitive = caseSensitive,
+                description = description.trim()
+            )
+        )
     }
 
     suspend fun deleteKeywordRule(rule: SmsKeywordRule) = dao.deleteKeywordRule(rule)
@@ -462,9 +584,14 @@ class SpamRepository(private val context: Context) {
     fun searchLog(query: String): Flow<List<BlockedCall>> = dao.searchLog(query)
 
     fun normalizeNumber(number: String): String {
-        val hasPlus = number.startsWith("+")
-        val digits = number.filter { it.isDigit() }
-        return if (hasPlus) "+$digits" else digits
+        val trimmed = number.trim()
+        val hasPlus = trimmed.startsWith("+")
+        val digits = trimmed.filter { it.isDigit() }
+        return when {
+            digits.isEmpty() -> ""
+            hasPlus -> "+$digits"
+            else -> digits
+        }
     }
 }
 
@@ -476,4 +603,9 @@ data class SpamCheckResult(
     val confidence: Int = 100
 )
 
-data class SyncResult(val success: Boolean, val message: String)
+data class SyncResult(
+    val success: Boolean,
+    val message: String,
+    val warning: Boolean = false,
+    val shouldRetry: Boolean = false
+)

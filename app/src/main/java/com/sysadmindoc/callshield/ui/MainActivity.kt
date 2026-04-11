@@ -1,14 +1,10 @@
 package com.sysadmindoc.callshield.ui
 
-import android.Manifest
 import android.content.Intent
-import android.content.pm.PackageManager
-import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.*
@@ -24,11 +20,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.ui.screens.details.NumberDetailScreen
 import com.sysadmindoc.callshield.ui.screens.main.BlockedLogScreen
 import com.sysadmindoc.callshield.ui.screens.main.BlocklistScreen
@@ -39,57 +36,43 @@ import com.sysadmindoc.callshield.ui.screens.recent.RecentCallsScreen
 import com.sysadmindoc.callshield.ui.screens.more.MoreScreen
 import com.sysadmindoc.callshield.ui.theme.*
 
+data class LaunchRequest(
+    val id: Int,
+    val deepLinkNumber: String? = null,
+    val shortcutAction: String? = null
+)
+
 class MainActivity : ComponentActivity() {
-    private val permissionLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestMultiplePermissions()
-    ) { /* permissions handled */ }
+    private var launchRequest by mutableStateOf(LaunchRequest(id = 0))
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        requestPermissions()
+        launchRequest = intent.toLaunchRequest(nextId = 1)
 
-        // Deep link: tel: intent or notification tap opens number detail
-        val deepLinkNumber = intent?.getStringExtra("open_number")
-            ?: intent?.data?.schemeSpecificPart?.takeIf {
-                intent?.action == Intent.ACTION_VIEW && intent?.data?.scheme == "tel"
-            }
-        // App shortcuts
-        val shortcutAction = intent?.action
-
-        setContent { CallShieldTheme { CallShieldRoot(deepLinkNumber = deepLinkNumber, shortcutAction = shortcutAction) } }
+        setContent { CallShieldTheme { CallShieldRoot(launchRequest = launchRequest) } }
     }
 
-    private fun requestPermissions() {
-        val permissions = mutableListOf(
-            Manifest.permission.READ_PHONE_STATE,
-            Manifest.permission.READ_CALL_LOG,
-            Manifest.permission.READ_CONTACTS,
-            Manifest.permission.RECEIVE_SMS,
-            Manifest.permission.READ_SMS
-        )
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            permissions.add(Manifest.permission.POST_NOTIFICATIONS)
-        }
-        val needed = permissions.filter {
-            ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
-        }
-        if (needed.isNotEmpty()) permissionLauncher.launch(needed.toTypedArray())
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        launchRequest = intent.toLaunchRequest(nextId = launchRequest.id + 1)
     }
 }
 
 @Composable
-fun CallShieldRoot(viewModel: MainViewModel = viewModel(), deepLinkNumber: String? = null, shortcutAction: String? = null) {
+fun CallShieldRoot(viewModel: MainViewModel = viewModel(), launchRequest: LaunchRequest = LaunchRequest(id = 0)) {
     val onboardingDone by viewModel.onboardingDone.collectAsState()
     val selectedNumber by viewModel.selectedNumber.collectAsState()
 
     // Handle deep link and shortcuts
     var initialTab by remember { mutableIntStateOf(0) }
-    LaunchedEffect(deepLinkNumber, shortcutAction) {
-        if (deepLinkNumber != null) viewModel.openNumberDetail(deepLinkNumber)
-        when (shortcutAction) {
+    LaunchedEffect(launchRequest.id) {
+        launchRequest.deepLinkNumber?.let { viewModel.openNumberDetail(it) }
+        when (launchRequest.shortcutAction) {
             "com.sysadmindoc.callshield.LOOKUP" -> initialTab = 3
             "com.sysadmindoc.callshield.SCAN" -> { initialTab = 0; viewModel.scanCallLog() }
+            "com.sysadmindoc.callshield.SCAN_SMS" -> { initialTab = 0; viewModel.scanSmsInbox() }
         }
     }
 
@@ -112,6 +95,10 @@ fun CallShieldApp(viewModel: MainViewModel, startTab: Int = 0) {
     val searchQuery by viewModel.searchQuery.collectAsState()
     val searchResults by viewModel.searchResults.collectAsState()
 
+    LaunchedEffect(startTab) {
+        selectedTab = startTab
+    }
+
     // Close search when switching tabs
     LaunchedEffect(selectedTab) {
         if (showSearch) { showSearch = false; viewModel.setSearchQuery("") }
@@ -128,7 +115,7 @@ fun CallShieldApp(viewModel: MainViewModel, startTab: Int = 0) {
                         OutlinedTextField(
                             value = searchQuery,
                             onValueChange = { viewModel.setSearchQuery(it) },
-                            placeholder = { Text("Search numbers, reasons...", color = CatOverlay) },
+                            placeholder = { Text(stringResource(R.string.search_placeholder), color = CatOverlay) },
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth(),
                             colors = OutlinedTextFieldDefaults.colors(
@@ -142,7 +129,7 @@ fun CallShieldApp(viewModel: MainViewModel, startTab: Int = 0) {
                     },
                     navigationIcon = {
                         IconButton(onClick = { showSearch = false; viewModel.setSearchQuery("") }) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, "Close", tint = CatSubtext)
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_close_search), tint = CatSubtext)
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = Black)
@@ -151,14 +138,14 @@ fun CallShieldApp(viewModel: MainViewModel, startTab: Int = 0) {
                 TopAppBar(
                     title = {
                         Text(
-                            "CallShield",
+                            stringResource(R.string.app_name),
                             color = CatGreen,
                             letterSpacing = (-0.5).sp
                         )
                     },
                     actions = {
                         IconButton(onClick = { showSearch = true }) {
-                            Icon(Icons.Default.Search, "Search", tint = CatSubtext)
+                            Icon(Icons.Default.Search, contentDescription = stringResource(R.string.cd_search), tint = CatSubtext)
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = Black)
@@ -177,12 +164,12 @@ fun CallShieldApp(viewModel: MainViewModel, startTab: Int = 0) {
                     )
                 }
             ) {
-                NavItem(selectedTab == 0, { selectedTab = 0 }, Icons.Default.Shield, "Home", CatGreen)
-                NavItem(selectedTab == 1, { selectedTab = 1 }, Icons.Default.Phone, "Recent", CatBlue)
-                NavItem(selectedTab == 2, { selectedTab = 2 }, Icons.Default.History, "Log", CatPeach)
-                NavItem(selectedTab == 3, { selectedTab = 3 }, Icons.Default.Search, "Lookup", CatYellow)
-                NavItem(selectedTab == 4, { selectedTab = 4 }, Icons.Default.Block, "Blocklist", CatRed)
-                NavItem(selectedTab == 5, { selectedTab = 5 }, Icons.Default.Settings, "More", CatMauve)
+                NavItem(selectedTab == 0, { selectedTab = 0 }, Icons.Default.Shield, stringResource(R.string.nav_home), CatGreen)
+                NavItem(selectedTab == 1, { selectedTab = 1 }, Icons.Default.Phone, stringResource(R.string.nav_recent), CatBlue)
+                NavItem(selectedTab == 2, { selectedTab = 2 }, Icons.Default.History, stringResource(R.string.nav_log), CatPeach)
+                NavItem(selectedTab == 3, { selectedTab = 3 }, Icons.Default.Search, stringResource(R.string.nav_lookup), CatYellow)
+                NavItem(selectedTab == 4, { selectedTab = 4 }, Icons.Default.Block, stringResource(R.string.nav_blocklist), CatRed)
+                NavItem(selectedTab == 5, { selectedTab = 5 }, Icons.Default.Settings, stringResource(R.string.nav_more), CatMauve)
             }
         },
         containerColor = Black
@@ -216,10 +203,10 @@ fun SearchResultsView(results: List<com.sysadmindoc.callshield.data.model.SpamNu
     if (results.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.Center) {
             Column(horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
-                Icon(Icons.Default.SearchOff, null, tint = CatOverlay, modifier = Modifier.size(48.dp))
+                Icon(Icons.Default.SearchOff, contentDescription = stringResource(R.string.cd_search_no_results), tint = CatOverlay, modifier = Modifier.size(48.dp))
                 Spacer(Modifier.height(12.dp))
-                Text("No results found", color = CatSubtext, style = MaterialTheme.typography.bodyMedium)
-                Text("Try a different number or keyword", color = CatOverlay, style = MaterialTheme.typography.bodySmall)
+                Text(stringResource(R.string.search_no_results), color = CatSubtext, style = MaterialTheme.typography.bodyMedium)
+                Text(stringResource(R.string.search_try_different), color = CatOverlay, style = MaterialTheme.typography.bodySmall)
             }
         }
     } else {
@@ -229,7 +216,7 @@ fun SearchResultsView(results: List<com.sysadmindoc.callshield.data.model.SpamNu
         ) {
             item {
                 Text(
-                    "${results.size} result${if (results.size != 1) "s" else ""}",
+                    androidx.compose.ui.platform.LocalContext.current.resources.getQuantityString(R.plurals.search_results_count, results.size, results.size),
                     style = MaterialTheme.typography.labelMedium,
                     color = CatOverlay,
                     modifier = Modifier.padding(bottom = 4.dp)
@@ -243,7 +230,7 @@ fun SearchResultsView(results: List<com.sysadmindoc.callshield.data.model.SpamNu
                     modifier = Modifier.padding(vertical = 2.dp)
                 ) {
                     Row(modifier = Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                        Icon(Icons.Default.Warning, null, tint = CatRed, modifier = Modifier.size(24.dp))
+                        Icon(Icons.Default.Warning, contentDescription = stringResource(R.string.cd_search_result_spam), tint = CatRed, modifier = Modifier.size(24.dp))
                         Spacer(Modifier.width(12.dp))
                         Column {
                             Text(com.sysadmindoc.callshield.data.PhoneFormatter.format(number.number), fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
@@ -279,11 +266,28 @@ fun RowScope.NavItem(
 
     NavigationBarItem(
         selected = selected, onClick = onClick,
-        icon = { Icon(icon, null, tint = if (selected) iconTint else LocalContentColor.current) },
+        icon = { Icon(icon, contentDescription = label, tint = if (selected) iconTint else LocalContentColor.current) },
         label = { Text(label, style = MaterialTheme.typography.labelSmall) },
         colors = NavigationBarItemDefaults.colors(
             selectedIconColor = iconTint, selectedTextColor = color,
             indicatorColor = color.copy(alpha = 0.10f)
         )
+    )
+}
+
+private fun Intent?.toLaunchRequest(nextId: Int): LaunchRequest {
+    if (this == null) {
+        return LaunchRequest(id = nextId)
+    }
+
+    val deepLinkNumber = getStringExtra("open_number")
+        ?: data?.schemeSpecificPart?.takeIf {
+            action == Intent.ACTION_VIEW && data?.scheme == "tel"
+        }
+
+    return LaunchRequest(
+        id = nextId,
+        deepLinkNumber = deepLinkNumber,
+        shortcutAction = action
     )
 }

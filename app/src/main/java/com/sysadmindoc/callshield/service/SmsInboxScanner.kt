@@ -2,6 +2,7 @@ package com.sysadmindoc.callshield.service
 
 import android.content.Context
 import android.net.Uri
+import com.sysadmindoc.callshield.permissions.CallShieldPermissions
 import com.sysadmindoc.callshield.data.SpamRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -27,6 +28,15 @@ object SmsInboxScanner {
     )
 
     suspend fun scan(context: Context, limit: Int = 200): ScanResult = withContext(Dispatchers.IO) {
+        if (!CallShieldPermissions.canReadSmsInbox(context)) {
+            return@withContext ScanResult(
+                totalScanned = 0,
+                spamFound = 0,
+                spamMessages = emptyList(),
+                error = "SMS inbox permission denied. Grant SMS access in Settings."
+            )
+        }
+
         val repo = SpamRepository.getInstance(context)
         val spamList = mutableListOf<ScannedSms>()
         var scanned = 0
@@ -68,7 +78,7 @@ object SmsInboxScanner {
                 }
             }
         } catch (_: SecurityException) {
-            return@withContext ScanResult(0, 0, emptyList(), error = "SMS permission denied. Grant permission in Settings.")
+            return@withContext ScanResult(0, 0, emptyList(), error = "SMS inbox permission denied. Grant SMS access in Settings.")
         } catch (_: Exception) {
             return@withContext ScanResult(scanned, spamList.size, spamList)
         }

@@ -96,6 +96,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     val cleanupDays = repo.cleanupDays.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 30)
 
     val lastSyncTimestamp = repo.lastSyncTimestamp.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0L)
+    val lastSyncSource = repo.lastSyncSource.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
 
     val mlScorerEnabled = repo.mlScorerEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
     val rcsFilterEnabled = repo.rcsFilterEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
@@ -113,6 +114,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val _smsScanResult = MutableStateFlow<SmsInboxScanner.ScanResult?>(null)
     val smsScanResult: StateFlow<SmsInboxScanner.ScanResult?> = _smsScanResult
 
+    private val _scanningCalls = MutableStateFlow(false)
+    val scanningCalls: StateFlow<Boolean> = _scanningCalls
+
+    private val _scanningSms = MutableStateFlow(false)
+    val scanningSms: StateFlow<Boolean> = _scanningSms
+
     private val _importResult = MutableStateFlow<String?>(null)
     val importResult: StateFlow<String?> = _importResult
 
@@ -126,8 +133,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     init {
         viewModelScope.launch {
             _spamCount.value = repo.getSpamCount()
-            // Auto-sync on first launch
-            if (_spamCount.value == 0) sync()
+            val onboardingAlreadyDone = repo.onboardingDone.first()
+            if (_spamCount.value == 0 && onboardingAlreadyDone) sync()
         }
     }
 
@@ -145,26 +152,38 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             val result = repo.syncFromGitHub(force = true)
             _syncState.value = if (result.success) {
                 _spamCount.value = repo.getSpamCount()
-                SyncState.Success(result.message)
+                if (result.warning) {
+                    SyncState.Warning(result.message)
+                } else {
+                    SyncState.Success(result.message)
+                }
             } else SyncState.Error(result.message)
         }
     }
 
     fun scanCallLog() {
+        if (_scanningCalls.value) return
         viewModelScope.launch {
+            _scanningCalls.value = true
             try {
                 _scanResult.value = CallLogScanner.scan(getApplication())
             } catch (e: Exception) {
                 _scanResult.value = CallLogScanner.ScanResult(0, 0, emptyList(), error = "Scan failed: ${e.message}")
+            } finally {
+                _scanningCalls.value = false
             }
         }
     }
     fun scanSmsInbox() {
+        if (_scanningSms.value) return
         viewModelScope.launch {
+            _scanningSms.value = true
             try {
                 _smsScanResult.value = SmsInboxScanner.scan(getApplication())
             } catch (e: Exception) {
                 _smsScanResult.value = SmsInboxScanner.ScanResult(0, 0, emptyList(), error = "Scan failed: ${e.message}")
+            } finally {
+                _scanningSms.value = false
             }
         }
     }
@@ -210,12 +229,15 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     // Export/import
     fun exportBlocklist() {
         val numbers = userBlockedNumbers.value
-        if (numbers.isNotEmpty()) BlocklistExporter.exportAndShare(getApplication(), numbers)
+        if (numbers.isEmpty()) return
+        viewModelScope.launch {
+            BlocklistExporter.exportAndShare(getApplication(), numbers)
+        }
     }
     fun importBlocklist(uri: Uri) {
         viewModelScope.launch {
-            val count = BlocklistExporter.importFromUri(getApplication(), uri)
-            _importResult.value = "Imported $count numbers"
+            val result = BlocklistExporter.importFromUri(getApplication(), uri)
+            _importResult.value = result.message
         }
     }
 
@@ -291,7 +313,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     // Log export
     fun exportLog() {
         val calls = blockedCalls.value
-        if (calls.isNotEmpty()) LogExporter.exportAsCsv(getApplication(), calls)
+        if (calls.isEmpty()) return
+        viewModelScope.launch {
+            LogExporter.exportAsCsv(getApplication(), calls)
+        }
     }
 }
 
@@ -299,5 +324,6 @@ sealed class SyncState {
     data object Idle : SyncState()
     data object Syncing : SyncState()
     data class Success(val message: String) : SyncState()
+    data class Warning(val message: String) : SyncState()
     data class Error(val message: String) : SyncState()
 }

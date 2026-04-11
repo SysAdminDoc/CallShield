@@ -16,6 +16,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -46,7 +47,7 @@ fun BlocklistScreen(viewModel: MainViewModel) {
     val snackbarHost = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
-    val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+    val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         uri?.let { viewModel.importBlocklist(it) }
     }
 
@@ -66,7 +67,8 @@ fun BlocklistScreen(viewModel: MainViewModel) {
         }
 
         importResult?.let {
-            Text(it, color = CatGreen, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
+            val resultColor = if (it.startsWith("Imported ")) CatGreen else CatPeach
+            Text(it, color = resultColor, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
             LaunchedEffect(it) {
                 kotlinx.coroutines.delay(4000)
                 viewModel.clearImportResult()
@@ -116,7 +118,7 @@ fun BlocklistScreen(viewModel: MainViewModel) {
                     SmallFloatingActionButton(onClick = { viewModel.exportBlocklist() }, containerColor = CatBlue, contentColor = Black) { Icon(Icons.Default.Share, "Export") }
                 }
                 if (tabIndex == 0) {
-                    SmallFloatingActionButton(onClick = { importLauncher.launch("application/json") }, containerColor = CatMauve, contentColor = Black) { Icon(Icons.Default.FileOpen, "Import") }
+                    SmallFloatingActionButton(onClick = { importLauncher.launch(arrayOf("application/json", "text/plain")) }, containerColor = CatMauve, contentColor = Black) { Icon(Icons.Default.FileOpen, "Import") }
                 }
                 FloatingActionButton(
                     onClick = {

@@ -6,12 +6,13 @@
 
 <p align="center">
   <strong>Open-source spam call and text blocker for Android</strong><br>
-  15-layer detection + ML scorer | 32,933 spam numbers | Real-time caller ID | RCS filter | No API keys
+  15+ layer detection + Gradient-Boosted Tree ML | 32,933 spam numbers | Real-time caller ID | RCS filter | No API keys
 </p>
 
 <p align="center">
   <a href="https://github.com/SysAdminDoc/CallShield/releases/latest"><img src="https://img.shields.io/github/v/release/SysAdminDoc/CallShield?style=flat-square&color=a6e3a1" alt="Release"></a>
   <img src="https://img.shields.io/badge/Spam%20Numbers-32%2C933-f38ba8?style=flat-square" alt="32,933 Numbers">
+  <img src="https://img.shields.io/badge/Tests-210-94e2d5?style=flat-square" alt="210 Tests">
   <img src="https://img.shields.io/badge/Android-10%2B-89b4fa?style=flat-square" alt="Android 10+">
   <img src="https://img.shields.io/badge/License-MIT-cba6f7?style=flat-square" alt="MIT License">
   <img src="https://img.shields.io/badge/API%20Keys-None-fab387?style=flat-square" alt="No API Keys">
@@ -19,12 +20,23 @@
 
 ---
 
-CallShield blocks spam calls and texts using a **15-layer on-device detection engine** with an ML spam scorer, RCS notification filter, and real-time caller ID overlay. Powered by a 32,933-number database with 30-minute hot list updates. Community-maintained, no accounts, no tracking.
+CallShield blocks spam calls and texts using a **15+ layer on-device detection engine** with a gradient-boosted tree ML scorer, campaign burst detection, RCS notification filter, and real-time caller ID overlay. Powered by a 32,933-number database with 30-minute hot list updates. Community-maintained, no accounts, no tracking.
+
+## v1.2.8 Highlights
+
+- **Gradient-Boosted Tree ML model** — 20 features, pure Kotlin, no TFLite dependency
+- **Campaign burst detection** — NPA-NXX prefix clustering identifies coordinated spam waves
+- **After-call feedback** — "Was this spam?" notification for post-call community reporting
+- **544+ localized string resources** — fully externalized, ready for translation
+- **210 unit tests + GitHub Actions CI** — automated test pipeline on every push
+- **Full accessibility** — 100+ content descriptions, 48dp minimum touch targets
+- **Enhanced statistics** — weekly bar chart, source donut chart, monthly trend line
+- **Improved home screen widget** — today vs yesterday trend, last blocked time display
 
 ## How It Works
 
 1. **32,933 confirmed spam numbers** — sourced from 1.75M FCC consumer complaints (2+ reports each), FTC Do Not Call, ToastedSpam, and community reports
-2. **15-layer detection + ML** — database, heuristics, on-device logistic regression, SMS content analysis, RCS filter, STIR/SHAKEN, and more
+2. **15+ layer detection + ML** — database, heuristics, campaign burst detection, on-device gradient-boosted tree, SMS content analysis, RCS filter, STIR/SHAKEN, and more
 3. **Real-time caller ID overlay** — parallel lookups against SkipCalls, PhoneBlock, WhoCalledMe + OpenCNAM caller name, with SIT tone anti-autodialer
 4. **30-minute hot list** — trending spam numbers and campaign ranges refresh every 30 minutes via GitHub Actions
 5. **Callback-aware** — won't block callbacks from numbers you recently called, or urgent repeated callers
@@ -44,17 +56,19 @@ CallShield blocks spam calls and texts using a **15-layer on-device detection en
 | 8 | **Wildcard / Regex** | Custom pattern rules like `+1832555*` or full regex |
 | 9 | **Quiet Hours** | Block all non-contact calls during configurable hours |
 | 10 | **Frequency Auto-Block** | Numbers that call 3+ times get automatically blocked |
-| 11 | **Heuristic Engine** | VoIP ranges, neighbor spoofing, rapid-fire, hot campaign range detection |
+| 11 | **Heuristic Engine** | VoIP ranges, neighbor spoofing, rapid-fire detection |
+| 11.5 | **Campaign Burst Detection** | NPA-NXX prefix clustering detects coordinated spam waves |
 | 12 | **Caller ID Overlay** | Suspicious calls (score 30-59) get live multi-source lookup |
 | 13 | **SMS Keyword Rules** | Block texts containing specific words you define |
 | 14 | **SMS Content Analysis** | 30+ regex patterns, URL shorteners, suspicious TLDs, spam domain blocklist |
-| 15 | **ML Spam Scorer** | 15-feature on-device logistic regression model (weekly retrained) |
+| 15 | **ML Spam Scorer** | 20-feature on-device gradient-boosted tree model (weekly retrained) |
 
 ### Additional Layers
 - **SMS Context Trust** — messages from numbers you've texted or received from on 2+ days are allowed
 - **RCS Filter** — NotificationListenerService monitors Google/Samsung Messages for RCS spam
 - **URL Safety** — URLhaus (abuse.ch) checks for phishing/malware URLs in SMS/RCS (post-decision, notification only)
 - **STIR/SHAKEN** — blocks calls failing carrier caller ID verification (Android 11+)
+- **After-Call Feedback** — "Was this spam?" notification after suspicious calls for community reporting
 
 ## Live Caller ID Overlay
 
@@ -83,7 +97,7 @@ When a call comes in, CallShield shows a real-time overlay that queries **4 sour
 
 ## ML Spam Scorer
 
-On-device 15-feature logistic regression model — no TFLite, no heavy ML libraries. Pure math, runs in microseconds.
+On-device **20-feature gradient-boosted tree** model — pure Kotlin, no TFLite, no heavy ML libraries. Runs in microseconds.
 
 | Feature | Description |
 |---------|------------|
@@ -101,13 +115,14 @@ On-device 15-feature logistic regression model — no TFLite, no heavy ML librar
 | nxx_below_200 | Often unassigned ranges |
 | low_digit_entropy | Fewer than 4 distinct digits |
 | subscriber_sequential | Last 4 form ascending/descending run |
+| + 6 additional | Campaign proximity, time-of-day, call frequency, area code density, prefix heat, neighbor spoof score |
 
 Trained weekly from the CallShield database (50K positive + 50K negative samples). Threshold: 0.7 (conservative).
 
 ## Features
 
 ### Number Lookup
-- Instant spam check through all 15 detection layers with animated score gauge (0-100)
+- Instant spam check through all 15+ detection layers with animated score gauge (0-100)
 - Auto-paste from clipboard, area code lookup (330+ US/CA), haptic feedback
 - Multi-source reverse lookup: SkipCalls + PhoneBlock + WhoCalledMe + OpenCNAM
 
@@ -122,7 +137,10 @@ Trained weekly from the CallShield database (50K positive + 50K negative samples
 - Regex validation before adding wildcard rules
 
 ### Statistics
-- Weekly bar chart, detection method breakdown, top offenders, area code heatmap, hourly heatmap
+- Weekly bar chart with daily breakdown
+- Detection source donut chart
+- Monthly trend line
+- Top offenders, area code heatmap, hourly heatmap
 
 ### Smart Features
 - Smart suggestions — detects area code spam patterns, one-tap block entire area code
@@ -131,6 +149,12 @@ Trained weekly from the CallShield database (50K positive + 50K negative samples
 - Blocking profiles: Work / Personal / Sleep / Maximum / Off
 - Callback detection + repeated urgent caller allow-through
 - FTC Do Not Call complaint filing
+- After-call "Was this spam?" feedback notification
+
+### Home Screen Widget
+- Today vs yesterday blocked count with trend indicator
+- Last blocked number and time
+- Quick-access to lookup and protection status
 
 ### Community
 - **One-tap anonymous contribution** via [Cloudflare Worker](https://callshield-reports.snafumatthew.workers.dev)
@@ -175,6 +199,13 @@ Trained weekly from the CallShield database (50K positive + 50K negative samples
 |--------|---------------|
 | **URLhaus** (abuse.ch) | Phishing/malware URLs in SMS/RCS bodies |
 
+## Security
+
+- **Network security config** — cleartext traffic disabled in production
+- **Signing credentials** — stored in `local.properties`, not hardcoded in build files
+- **Restricted FileProvider paths** — scoped to export directory only
+- **Database-only backup** — `android:fullBackupContent` excludes preferences containing API keys
+
 ## Privacy
 
 All detection runs on-device. No personal data is collected. Network requests:
@@ -200,6 +231,22 @@ No API keys required. No accounts. No analytics. No ads.
 
 Requires JDK 17+. Signed APK at `app/build/outputs/apk/release/app-release.apk`.
 
+**Signing:** Create `local.properties` in the project root with your keystore credentials:
+```properties
+RELEASE_STORE_FILE=path/to/keystore.jks
+RELEASE_STORE_PASSWORD=...
+RELEASE_KEY_ALIAS=...
+RELEASE_KEY_PASSWORD=...
+```
+
+## Testing
+
+```bash
+./gradlew testDebugUnitTest   # 210 tests
+```
+
+CI runs automatically via GitHub Actions on every push and pull request.
+
 ## Tech Stack
 
 | Component | Technology |
@@ -210,14 +257,19 @@ Requires JDK 17+. Signed APK at `app/build/outputs/apk/release/app-release.apk`.
 | Database | Room (SQLite) — 6 entities |
 | Networking | OkHttp |
 | JSON | Moshi |
-| ML | Pure Kotlin logistic regression (15 features) |
+| ML | Pure Kotlin gradient-boosted tree (20 features) |
 | Settings | DataStore Preferences |
 | Background | WorkManager |
 | Community API | Cloudflare Workers |
 | URL Safety | URLhaus (abuse.ch) |
+| CI | GitHub Actions |
+| Tests | 210 unit tests (JUnit) |
+| Strings | 544+ resources (translation-ready) |
+| Accessibility | 100+ content descriptions, 48dp touch targets |
 | Min SDK | 29 (Android 10) |
 | Target SDK | 35 |
-| Files | 57 Kotlin + 5 Python scripts |
+
+For deep technical details, see [CLAUDE.md](CLAUDE.md).
 
 ## License
 

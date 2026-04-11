@@ -3,6 +3,8 @@ package com.sysadmindoc.callshield.service
 import android.content.Context
 import android.provider.CallLog
 import com.sysadmindoc.callshield.data.SpamRepository
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * Feature 3: Call log scanner.
@@ -25,7 +27,7 @@ object CallLogScanner {
         val type: String
     )
 
-    suspend fun scan(context: Context, limit: Int = 500): ScanResult {
+    suspend fun scan(context: Context, limit: Int = 500): ScanResult = withContext(Dispatchers.IO) {
         val repo = SpamRepository.getInstance(context)
         val numbers = mutableMapOf<String, Int>() // number -> call count
 
@@ -51,7 +53,7 @@ object CallLogScanner {
                 }
             }
         } catch (_: SecurityException) {
-            return ScanResult(0, 0, emptyList(), error = "Call log permission denied. Grant permission in Settings.")
+            return@withContext ScanResult(0, 0, emptyList(), error = "Call log permission denied. Grant permission in Settings.")
         }
 
         val spamList = mutableListOf<ScannedSpam>()
@@ -65,7 +67,7 @@ object CallLogScanner {
         // Sort by call count descending (most frequent spam callers first)
         spamList.sortByDescending { it.callCount }
 
-        return ScanResult(
+        ScanResult(
             totalScanned = numbers.size,
             spamFound = spamList.size,
             spamNumbers = spamList

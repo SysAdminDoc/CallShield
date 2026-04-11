@@ -1,5 +1,6 @@
 package com.sysadmindoc.callshield.data.remote
 
+import android.content.Context
 import com.sysadmindoc.callshield.data.model.HotNumber
 import com.sysadmindoc.callshield.data.model.SpamDatabase
 import com.squareup.moshi.Moshi
@@ -21,173 +22,206 @@ class GitHubDataSource {
         .build()
 
     companion object {
-        // Users fork the repo and update this URL, or use the default
         const val DEFAULT_REPO_OWNER = "SysAdminDoc"
         const val DEFAULT_REPO_NAME = "CallShield"
+
         const val DATA_PATH = "data/spam_numbers.json"
         const val HOT_LIST_PATH = "data/hot_numbers.json"
         const val HOT_RANGES_PATH = "data/hot_ranges.json"
         const val SPAM_DOMAINS_PATH = "data/spam_domains.json"
+        const val MODEL_WEIGHTS_PATH = "data/spam_model_weights.json"
 
-        fun buildRawUrl(owner: String, repo: String, branch: String = "master"): String =
-            "https://raw.githubusercontent.com/$owner/$repo/$branch/$DATA_PATH"
+        const val BUNDLED_DATABASE_ASSET = "spam_numbers.json"
+        const val BUNDLED_HOT_LIST_ASSET = "hot_numbers.json"
+        const val BUNDLED_HOT_RANGES_ASSET = "hot_ranges.json"
+        const val BUNDLED_SPAM_DOMAINS_ASSET = "spam_domains.json"
+        const val BUNDLED_MODEL_WEIGHTS_ASSET = "spam_model_weights.json"
 
-        fun buildHotListUrl(owner: String, repo: String, branch: String = "master"): String =
-            "https://raw.githubusercontent.com/$owner/$repo/$branch/$HOT_LIST_PATH"
+        private const val GITHUB_API_BASE = "https://api.github.com/repos"
+        private const val USER_AGENT = "CallShield/1.0"
+        private val FALLBACK_BRANCHES = listOf("main", "master")
 
-        fun buildHotRangesUrl(owner: String, repo: String, branch: String = "master"): String =
-            "https://raw.githubusercontent.com/$owner/$repo/$branch/$HOT_RANGES_PATH"
+        fun buildRawUrl(owner: String, repo: String, branch: String, path: String = DATA_PATH): String =
+            "https://raw.githubusercontent.com/$owner/$repo/$branch/$path"
 
-        fun buildSpamDomainsUrl(owner: String, repo: String, branch: String = "master"): String =
-            "https://raw.githubusercontent.com/$owner/$repo/$branch/$SPAM_DOMAINS_PATH"
+        fun readBundledAsset(context: Context, assetName: String): Result<String> = runCatching {
+            context.assets.open(assetName).bufferedReader().use { it.readText() }
+        }
     }
 
     suspend fun fetchSpamDatabase(
         owner: String = DEFAULT_REPO_OWNER,
         repo: String = DEFAULT_REPO_NAME
     ): Result<SpamDatabase> = withContext(Dispatchers.IO) {
-        try {
-            val url = buildRawUrl(owner, repo)
-            val request = Request.Builder()
-                .url(url)
-                .header("Cache-Control", "no-store, max-age=0")
-                .build()
-
-            val response = client.newCall(request).execute()
-            if (!response.isSuccessful) {
-                return@withContext Result.failure(Exception("HTTP ${response.code}: ${response.message}"))
-            }
-
-            val body = response.body?.string()
-                ?: return@withContext Result.failure(Exception("Empty response body"))
-
-            val adapter = moshi.adapter(SpamDatabase::class.java)
-            val database = adapter.fromJson(body)
-                ?: return@withContext Result.failure(Exception("Failed to parse spam database"))
-
-            Result.success(database)
-        } catch (e: Exception) {
-            Result.failure(e)
+        val result = fetchRawText(DATA_PATH, owner, repo)
+        if (result.isFailure) {
+            return@withContext Result.failure(result.exceptionOrNull()!!)
         }
+        parseSpamDatabaseJson(result.getOrThrow())
     }
 
-    /**
-     * Fetch hot_numbers.json — the list of numbers trending in the last 24h.
-     * Returns a list of number strings (E.164 format) to block immediately.
-     * Lightweight: typically <50KB vs the multi-MB main database.
-     */
     suspend fun fetchHotList(
         owner: String = DEFAULT_REPO_OWNER,
         repo: String = DEFAULT_REPO_NAME
     ): Result<List<HotNumber>> = withContext(Dispatchers.IO) {
-        try {
-            val url = buildHotListUrl(owner, repo)
-            val request = Request.Builder()
-                .url(url)
-                .header("Cache-Control", "no-store, max-age=0")
-                .build()
-
-            val response = client.newCall(request).execute()
-            if (!response.isSuccessful) {
-                return@withContext Result.failure(Exception("HTTP ${response.code}"))
-            }
-
-            val body = response.body?.string()
-                ?: return@withContext Result.failure(Exception("Empty response"))
-
-            // Parse each entry individually with targeted regex
-            val numberRegex = """"number"\s*:\s*"([^"]+)"""".toRegex()
-            val typeRegex = """"type"\s*:\s*"([^"]+)"""".toRegex()
-            val descRegex = """"description"\s*:\s*"([^"]*?)"""".toRegex()
-
-            // Split by opening brace to get each object, then parse fields
-            val hotNumbers = body.split("""{""").drop(1).mapNotNull { block ->
-                val number = numberRegex.find(block)?.groupValues?.get(1) ?: return@mapNotNull null
-                val type = typeRegex.find(block)?.groupValues?.get(1) ?: "robocall"
-                val desc = descRegex.find(block)?.groupValues?.get(1) ?: "Trending community report"
-                HotNumber(number = number, type = type, description = desc)
-            }
-
-            Result.success(hotNumbers)
-        } catch (e: Exception) {
-            Result.failure(e)
+        val result = fetchRawText(HOT_LIST_PATH, owner, repo)
+        if (result.isFailure) {
+            return@withContext Result.failure(result.exceptionOrNull()!!)
         }
+        Result.success(parseHotListJson(result.getOrThrow()))
     }
 
-    /**
-     * Fetch hot_ranges.json — NPA-NXX prefixes currently running active campaigns.
-     * Returns list of 6-digit NPA-NXX strings (e.g. "415523").
-     * Non-fatal: returns empty list on any failure so it never blocks a sync.
-     */
     suspend fun fetchHotRanges(
         owner: String = DEFAULT_REPO_OWNER,
         repo: String = DEFAULT_REPO_NAME
-    ): List<String> = withContext(Dispatchers.IO) {
-        try {
-            val request = Request.Builder()
-                .url(buildHotRangesUrl(owner, repo))
-                .header("Cache-Control", "no-store, max-age=0")
-                .build()
-            val body = client.newCall(request).execute().use { resp ->
-                if (!resp.isSuccessful) return@withContext emptyList()
-                resp.body?.string() ?: return@withContext emptyList()
-            }
-            Regex(""""npanxx"\s*:\s*"(\d{6})"""")
-                .findAll(body).map { it.groupValues[1] }.toList()
-        } catch (_: Exception) { emptyList() }
+    ): Result<List<String>> = withContext(Dispatchers.IO) {
+        val result = fetchRawText(HOT_RANGES_PATH, owner, repo)
+        if (result.isFailure) {
+            return@withContext Result.failure(result.exceptionOrNull()!!)
+        }
+        Result.success(parseHotRangesJson(result.getOrThrow()))
     }
 
-    /**
-     * Fetch spam_domains.json — community-reported phishing/spam domains.
-     * Returns list of root domain strings (e.g. "phish-site.xyz").
-     * Non-fatal: returns empty list on any failure.
-     */
     suspend fun fetchSpamDomains(
         owner: String = DEFAULT_REPO_OWNER,
         repo: String = DEFAULT_REPO_NAME
-    ): List<String> = withContext(Dispatchers.IO) {
-        try {
-            val request = Request.Builder()
-                .url(buildSpamDomainsUrl(owner, repo))
-                .header("Cache-Control", "no-store, max-age=0")
-                .build()
-            val body = client.newCall(request).execute().use { resp ->
-                if (!resp.isSuccessful) return@withContext emptyList()
-                resp.body?.string() ?: return@withContext emptyList()
-            }
-            // Parse the "domains": ["a","b",...] array
-            val arrayContent = Regex(""""domains"\s*:\s*\[([^\]]*)]""")
-                .find(body)?.groupValues?.get(1) ?: return@withContext emptyList()
-            Regex(""""([^"]+)"""").findAll(arrayContent)
-                .map { it.groupValues[1] }.filter { it.isNotBlank() }.toList()
-        } catch (_: Exception) { emptyList() }
+    ): Result<List<String>> = withContext(Dispatchers.IO) {
+        val result = fetchRawText(SPAM_DOMAINS_PATH, owner, repo)
+        if (result.isFailure) {
+            return@withContext Result.failure(result.exceptionOrNull()!!)
+        }
+        Result.success(parseSpamDomainsJson(result.getOrThrow()))
     }
 
     suspend fun checkForUpdate(
         owner: String = DEFAULT_REPO_OWNER,
         repo: String = DEFAULT_REPO_NAME
     ): Result<String> = withContext(Dispatchers.IO) {
+        var lastError: Exception? = null
+
+        for (branch in resolveCandidateBranches(owner, repo)) {
+            try {
+                val request = Request.Builder()
+                    .url("$GITHUB_API_BASE/$owner/$repo/commits?path=$DATA_PATH&sha=$branch&per_page=1")
+                    .header("Accept", "application/vnd.github.v3+json")
+                    .header("User-Agent", USER_AGENT)
+                    .build()
+
+                client.newCall(request).execute().use { response ->
+                    if (!response.isSuccessful) {
+                        lastError = Exception("HTTP ${response.code}: ${response.message}")
+                        return@use
+                    }
+
+                    val body = response.body?.string() ?: "[]"
+                    val shaRegex = """"sha"\s*:\s*"([a-f0-9]+)"""".toRegex()
+                    val sha = shaRegex.find(body)?.groupValues?.get(1)
+                    if (sha != null) {
+                        return@withContext Result.success(sha)
+                    }
+                    lastError = Exception("No commits found")
+                }
+            } catch (e: Exception) {
+                lastError = e
+            }
+        }
+
+        Result.failure(lastError ?: Exception("Unable to resolve repository update status"))
+    }
+
+    fun parseSpamDatabaseJson(body: String): Result<SpamDatabase> = runCatching {
+        val adapter = moshi.adapter(SpamDatabase::class.java)
+        adapter.fromJson(body) ?: throw IllegalStateException("Failed to parse spam database")
+    }
+
+    fun parseHotListJson(body: String): List<HotNumber> {
+        val numberRegex = """"number"\s*:\s*"([^"]+)"""".toRegex()
+        val typeRegex = """"type"\s*:\s*"([^"]+)"""".toRegex()
+        val descRegex = """"description"\s*:\s*"([^"]*?)"""".toRegex()
+
+        return body.split("{").drop(1).mapNotNull { block ->
+            val number = numberRegex.find(block)?.groupValues?.get(1) ?: return@mapNotNull null
+            val type = typeRegex.find(block)?.groupValues?.get(1) ?: "robocall"
+            val desc = descRegex.find(block)?.groupValues?.get(1) ?: "Trending community report"
+            HotNumber(number = number, type = type, description = desc)
+        }
+    }
+
+    fun parseHotRangesJson(body: String): List<String> =
+        Regex(""""npanxx"\s*:\s*"(\d{6})"""")
+            .findAll(body)
+            .map { it.groupValues[1] }
+            .toList()
+
+    fun parseSpamDomainsJson(body: String): List<String> {
+        val arrayContent = Regex(""""domains"\s*:\s*\[([^\]]*)]""")
+            .find(body)
+            ?.groupValues
+            ?.get(1)
+            ?: return emptyList()
+
+        return Regex(""""([^"]+)"""")
+            .findAll(arrayContent)
+            .map { it.groupValues[1] }
+            .filter { it.isNotBlank() }
+            .toList()
+    }
+
+    private suspend fun fetchRawText(path: String, owner: String, repo: String): Result<String> {
+        var lastError: Exception? = null
+
+        for (branch in resolveCandidateBranches(owner, repo)) {
+            try {
+                val request = Request.Builder()
+                    .url(buildRawUrl(owner, repo, branch, path))
+                    .header("Cache-Control", "no-store, max-age=0")
+                    .header("User-Agent", USER_AGENT)
+                    .build()
+
+                client.newCall(request).execute().use { response ->
+                    if (!response.isSuccessful) {
+                        lastError = Exception("HTTP ${response.code}: ${response.message}")
+                        return@use
+                    }
+
+                    val body = response.body?.string()
+                    if (body != null) {
+                        return Result.success(body)
+                    }
+                    lastError = Exception("Empty response body")
+                }
+            } catch (e: Exception) {
+                lastError = e
+            }
+        }
+
+        return Result.failure(lastError ?: Exception("Unable to fetch $path"))
+    }
+
+    private suspend fun resolveCandidateBranches(owner: String, repo: String): List<String> {
+        val defaultBranch = fetchDefaultBranch(owner, repo).getOrNull()
+        return listOfNotNull(defaultBranch).plus(FALLBACK_BRANCHES).distinct()
+    }
+
+    private suspend fun fetchDefaultBranch(owner: String, repo: String): Result<String> = withContext(Dispatchers.IO) {
         try {
-            // Use GitHub API (no auth needed for public repos, 60 req/hr)
-            val url = "https://api.github.com/repos/$owner/$repo/commits?path=$DATA_PATH&per_page=1"
             val request = Request.Builder()
-                .url(url)
+                .url("$GITHUB_API_BASE/$owner/$repo")
                 .header("Accept", "application/vnd.github.v3+json")
+                .header("User-Agent", USER_AGENT)
                 .build()
 
-            val response = client.newCall(request).execute()
-            if (!response.isSuccessful) {
-                return@withContext Result.failure(Exception("HTTP ${response.code}"))
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    return@withContext Result.failure(Exception("HTTP ${response.code}: ${response.message}"))
+                }
+
+                val body = response.body?.string() ?: "{}"
+                val match = """"default_branch"\s*:\s*"([^"]+)"""".toRegex().find(body)
+                val branch = match?.groupValues?.get(1)
+                    ?: return@withContext Result.failure(Exception("Missing default branch"))
+                Result.success(branch)
             }
-
-            val body = response.body?.string() ?: "[]"
-            // Extract SHA from first commit - simple string parse to avoid extra deps
-            val shaRegex = """"sha"\s*:\s*"([a-f0-9]+)"""".toRegex()
-            val match = shaRegex.find(body)
-            val sha = match?.groupValues?.get(1)
-                ?: return@withContext Result.failure(Exception("No commits found"))
-
-            Result.success(sha)
         } catch (e: Exception) {
             Result.failure(e)
         }

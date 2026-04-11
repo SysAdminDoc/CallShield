@@ -1,5 +1,6 @@
 package com.sysadmindoc.callshield.ui.screens.settings
 
+import android.Manifest
 import android.app.role.RoleManager
 import android.content.Context
 import android.content.Intent
@@ -22,15 +23,23 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.compose.ui.res.stringResource
+import com.sysadmindoc.callshield.permissions.CallShieldPermissions
+import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.theme.*
 
 @Composable
 fun SettingsScreen(viewModel: MainViewModel) {
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
     val blockCalls by viewModel.blockCallsEnabled.collectAsState()
     val blockSms by viewModel.blockSmsEnabled.collectAsState()
     val blockUnknown by viewModel.blockUnknownEnabled.collectAsState()
@@ -50,47 +59,208 @@ fun SettingsScreen(viewModel: MainViewModel) {
     val rcsFilter by viewModel.rcsFilterEnabled.collectAsState()
     val abstractApiKey by viewModel.abstractApiKey.collectAsState()
 
-    val roleManager = remember {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) context.getSystemService(Context.ROLE_SERVICE) as? RoleManager else null
+    val roleManager = remember(context) {
+        context.getSystemService(Context.ROLE_SERVICE) as? RoleManager
     }
-    val screeningLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {}
+    var missingCorePermissions by remember(context, blockCalls, blockSms) {
+        mutableStateOf(
+            CallShieldPermissions.missingEnabledProtectionPermissions(
+                context = context,
+                callsEnabled = blockCalls,
+                smsEnabled = blockSms
+            )
+        )
+    }
+    var notificationsGranted by remember(context) { mutableStateOf(CallShieldPermissions.hasNotificationPermission(context)) }
+    var overlayGranted by remember(context) { mutableStateOf(CallShieldPermissions.canDrawOverlays(context)) }
+    var screenerGranted by remember(roleManager) { mutableStateOf(CallShieldPermissions.hasCallScreeningRole(roleManager)) }
+    val corePermissionsGranted = missingCorePermissions.isEmpty()
+    val screenerReadyForCurrentMode = !blockCalls || screenerGranted
+    val setupReadyCount = listOf(corePermissionsGranted, screenerReadyForCurrentMode, overlayGranted, notificationsGranted).count { it }
+    val setupTotal = 4
+    val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
+        missingCorePermissions = CallShieldPermissions.missingEnabledProtectionPermissions(
+            context = context,
+            callsEnabled = blockCalls,
+            smsEnabled = blockSms
+        )
+    }
+    val notificationLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
+        notificationsGranted = CallShieldPermissions.hasNotificationPermission(context)
+    }
+    val screeningLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+        screenerGranted = CallShieldPermissions.hasCallScreeningRole(roleManager)
+    }
+
+    DisposableEffect(lifecycleOwner, context, roleManager, blockCalls, blockSms) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                missingCorePermissions = CallShieldPermissions.missingEnabledProtectionPermissions(
+                    context = context,
+                    callsEnabled = blockCalls,
+                    smsEnabled = blockSms
+                )
+                notificationsGranted = CallShieldPermissions.hasNotificationPermission(context)
+                overlayGranted = CallShieldPermissions.canDrawOverlays(context)
+                screenerGranted = CallShieldPermissions.hasCallScreeningRole(roleManager)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
-        // Call Screening Role
         PremiumCard {
             Column(modifier = Modifier.padding(16.dp)) {
-                SectionHeader("Call Screening", CatBlue)
+                SectionHeader(stringResource(R.string.settings_permissions_access), CatBlue)
                 Spacer(Modifier.height(4.dp))
-                Text("Set CallShield as your default call screening app.", style = MaterialTheme.typography.bodySmall, color = CatSubtext)
+                Text(stringResource(R.string.settings_permissions_access_desc), style = MaterialTheme.typography.bodySmall, color = CatSubtext)
                 Spacer(Modifier.height(12.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(
-                        onClick = {
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && roleManager != null) {
-                                screeningLauncher.launch(roleManager.createRequestRoleIntent(RoleManager.ROLE_CALL_SCREENING))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        stringResource(R.string.settings_setup_progress, setupReadyCount, setupTotal),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = CatSubtext
+                    )
+                    Text(
+                        if (setupReadyCount == setupTotal) {
+                            stringResource(R.string.settings_setup_ready_summary)
+                        } else {
+                            stringResource(R.string.settings_setup_attention_summary)
+                        },
+                        style = MaterialTheme.typography.labelMedium,
+                        color = if (setupReadyCount == setupTotal) CatGreen else CatBlue,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+                Spacer(Modifier.height(8.dp))
+                LinearProgressIndicator(
+                    progress = { setupReadyCount / setupTotal.toFloat() },
+                    modifier = Modifier.fillMaxWidth().height(8.dp),
+                    color = if (setupReadyCount == setupTotal) CatGreen else CatBlue,
+                    trackColor = CatMuted.copy(alpha = 0.25f)
+                )
+                Spacer(Modifier.height(12.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                    PermissionStatusChip(
+                        label = stringResource(if (corePermissionsGranted) R.string.settings_permissions_granted else R.string.settings_permissions_needed),
+                        color = if (corePermissionsGranted) CatGreen else CatPeach,
+                        modifier = Modifier.weight(1f)
+                    )
+                    PermissionStatusChip(
+                        label = stringResource(
+                            when {
+                                screenerGranted -> R.string.settings_call_screener_enabled
+                                blockCalls -> R.string.settings_call_screener_needed
+                                else -> R.string.settings_call_screener_optional
                             }
+                        ),
+                        color = when {
+                            screenerGranted -> CatGreen
+                            blockCalls -> CatMauve
+                            else -> CatOverlay
                         },
-                        colors = ButtonDefaults.buttonColors(containerColor = CatBlue), shape = RoundedCornerShape(14.dp)
-                    ) {
-                        Icon(Icons.AutoMirrored.Filled.PhoneCallback, null, tint = Black)
-                        Spacer(Modifier.width(6.dp))
-                        Text("Call Screener", color = Black, fontWeight = FontWeight.Bold)
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                Spacer(Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                    PermissionStatusChip(
+                        label = stringResource(if (overlayGranted) R.string.settings_overlay_enabled else R.string.settings_overlay_needed),
+                        color = if (overlayGranted) CatGreen else CatBlue,
+                        modifier = Modifier.weight(1f)
+                    )
+                    PermissionStatusChip(
+                        label = stringResource(
+                            if (notificationsGranted) R.string.settings_notifications_enabled
+                            else R.string.settings_notifications_optional
+                        ),
+                        color = if (notificationsGranted) CatGreen else CatOverlay,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                Spacer(Modifier.height(12.dp))
+                if (!corePermissionsGranted || !screenerReadyForCurrentMode || !overlayGranted || !notificationsGranted) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        if (!corePermissionsGranted) {
+                            Button(
+                                onClick = {
+                                    permissionLauncher.launch(CallShieldPermissions.corePermissions.toTypedArray())
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = CatBlue),
+                                shape = RoundedCornerShape(14.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Icon(Icons.Default.Security, null, tint = Black)
+                                Spacer(Modifier.width(6.dp))
+                                Text(stringResource(R.string.settings_grant_permissions), color = Black, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                        if (blockCalls && !screenerGranted && roleManager != null) {
+                            Button(
+                                onClick = {
+                                    screeningLauncher.launch(roleManager.createRequestRoleIntent(RoleManager.ROLE_CALL_SCREENING))
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = CatMauve),
+                                shape = RoundedCornerShape(14.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Icon(Icons.AutoMirrored.Filled.PhoneCallback, null, tint = Black)
+                                Spacer(Modifier.width(6.dp))
+                                Text(stringResource(R.string.settings_call_screener), color = Black, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                        if (!overlayGranted) {
+                            OutlinedButton(
+                                onClick = {
+                                    val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${context.packageName}"))
+                                    context.startActivity(intent)
+                                },
+                                shape = RoundedCornerShape(14.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Icon(Icons.Default.Layers, null, tint = CatBlue)
+                                Spacer(Modifier.width(6.dp))
+                                Text(stringResource(R.string.settings_overlay), color = CatBlue)
+                            }
+                        }
+                        if (!notificationsGranted) {
+                            OutlinedButton(
+                                onClick = {
+                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                        notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                    } else {
+                                        val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                                            putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                                        }
+                                        context.startActivity(intent)
+                                    }
+                                },
+                                shape = RoundedCornerShape(14.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Icon(Icons.Default.Notifications, null, tint = CatMauve)
+                                Spacer(Modifier.width(6.dp))
+                                Text(stringResource(R.string.settings_notifications), color = CatMauve)
+                            }
+                        }
                     }
-                    // Overlay permission button
-                    OutlinedButton(
-                        onClick = {
-                            val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${context.packageName}"))
-                            context.startActivity(intent)
-                        },
-                        shape = RoundedCornerShape(14.dp)
-                    ) {
-                        Icon(Icons.Default.Layers, null, tint = CatMauve)
-                        Spacer(Modifier.width(6.dp))
-                        Text("Overlay", color = CatMauve)
+                    Spacer(Modifier.height(8.dp))
+                }
+                TextButton(
+                    onClick = {
+                        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}"))
+                        context.startActivity(intent)
                     }
+                ) {
+                    Text(stringResource(R.string.settings_open_app_settings), color = CatSubtext)
                 }
             }
         }
@@ -197,7 +367,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
 
         // Backup/restore
         SettingsCard("Backup & Restore") {
-            val restoreLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+            val restoreLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
                 uri?.let { viewModel.restore(it) }
             }
             val restoreResult by viewModel.restoreResult.collectAsState()
@@ -215,7 +385,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
                     Text("Backup", color = Black, fontWeight = FontWeight.Bold)
                 }
                 OutlinedButton(
-                    onClick = { hapticTick(context); restoreLauncher.launch("application/json") },
+                    onClick = { hapticTick(context); restoreLauncher.launch(arrayOf("application/json", "text/plain")) },
                     shape = RoundedCornerShape(14.dp),
                     border = BorderStroke(1.dp, CatBlue.copy(alpha = 0.3f)),
                     modifier = Modifier.weight(1f).height(48.dp)
@@ -227,14 +397,18 @@ fun SettingsScreen(viewModel: MainViewModel) {
             }
             restoreResult?.let {
                 Spacer(Modifier.height(4.dp))
-                Text(it, style = MaterialTheme.typography.bodySmall, color = CatGreen)
+                Text(
+                    it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (it.startsWith("Restored ")) CatGreen else CatPeach
+                )
                 LaunchedEffect(it) {
                     kotlinx.coroutines.delay(4000)
                     viewModel.clearRestoreResult()
                 }
             }
             Spacer(Modifier.height(4.dp))
-            Text("Includes blocklist, whitelist, wildcard rules.", style = MaterialTheme.typography.labelSmall, color = CatOverlay)
+            Text("Includes blocklist, whitelist, wildcard rules, and keyword rules.", style = MaterialTheme.typography.labelSmall, color = CatOverlay)
         }
 
         // Advanced — optional API key for caller name lookup
@@ -264,8 +438,8 @@ fun SettingsScreen(viewModel: MainViewModel) {
         // About
         PremiumCard {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text("CallShield v1.2.7", color = CatSubtext, style = MaterialTheme.typography.bodySmall)
-                Text("Open-source spam blocker. No subscriptions, no tracking.", style = MaterialTheme.typography.labelSmall, color = CatOverlay)
+                Text(stringResource(R.string.settings_about_version), color = CatSubtext, style = MaterialTheme.typography.bodySmall)
+                Text(stringResource(R.string.settings_about_desc), style = MaterialTheme.typography.labelSmall, color = CatOverlay)
             }
         }
     }
@@ -325,5 +499,26 @@ fun SettingsToggle(
         }
         Spacer(Modifier.width(8.dp))
         Switch(checked = checked, onCheckedChange = { hapticTick(context); onCheckedChange(it) }, colors = SwitchDefaults.colors(checkedTrackColor = CatGreen, checkedThumbColor = Black))
+    }
+}
+
+@Composable
+private fun PermissionStatusChip(
+    label: String,
+    color: androidx.compose.ui.graphics.Color,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(10.dp),
+        color = color.copy(alpha = 0.12f)
+    ) {
+        Text(
+            label,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+            style = MaterialTheme.typography.labelMedium,
+            color = color,
+            fontWeight = FontWeight.SemiBold
+        )
     }
 }
