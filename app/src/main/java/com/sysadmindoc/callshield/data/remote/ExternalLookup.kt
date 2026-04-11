@@ -82,19 +82,19 @@ object ExternalLookup {
             val request = Request.Builder().url(url)
                 .header("User-Agent", "CallShield/1.0")
                 .build()
-            val response = client.newCall(request).execute()
-            if (!response.isSuccessful) return@withContext null
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) return@withContext null
+                val body = response.body?.string() ?: return@withContext null
 
-            val body = response.body?.string() ?: return@withContext null
+                // Parse JSON response
+                val isSpam = body.contains("\"spam\":true", ignoreCase = true) ||
+                             body.contains("\"isSpam\":true", ignoreCase = true) ||
+                             body.contains("\"status\":\"spam\"", ignoreCase = true)
+                val reportMatch = Regex(""""(?:reports?|count)":\s*(\d+)""").find(body)
+                val reports = reportMatch?.groupValues?.get(1)?.toIntOrNull() ?: if (isSpam) 1 else 0
 
-            // Parse JSON response
-            val isSpam = body.contains("\"spam\":true", ignoreCase = true) ||
-                         body.contains("\"isSpam\":true", ignoreCase = true) ||
-                         body.contains("\"status\":\"spam\"", ignoreCase = true)
-            val reportMatch = Regex(""""(?:reports?|count)":\s*(\d+)""").find(body)
-            val reports = reportMatch?.groupValues?.get(1)?.toIntOrNull() ?: if (isSpam) 1 else 0
-
-            SourceResult("SkipCalls", isSpam, reports, if (isSpam) "Flagged as spam" else "")
+                SourceResult("SkipCalls", isSpam, reports, if (isSpam) "Flagged as spam" else "")
+            }
         } catch (_: Exception) {
             null
         }
@@ -108,25 +108,25 @@ object ExternalLookup {
             val request = Request.Builder().url(url)
                 .header("Accept", "application/json")
                 .build()
-            val response = client.newCall(request).execute()
-            if (!response.isSuccessful) return@withContext null
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) return@withContext null
+                val body = response.body?.string() ?: return@withContext null
 
-            val body = response.body?.string() ?: return@withContext null
+                val votesMatch = Regex(""""votes":\s*(\d+)""").find(body)
+                val votes = votesMatch?.groupValues?.get(1)?.toIntOrNull() ?: 0
+                val blacklisted = body.contains("\"blackListed\":true")
+                val rating = Regex(""""rating":\s*"([^"]+)"""").find(body)?.groupValues?.get(1) ?: ""
+                val isSpam = blacklisted || votes >= 3 || rating.startsWith("D_") || rating.startsWith("E_")
 
-            val votesMatch = Regex(""""votes":\s*(\d+)""").find(body)
-            val votes = votesMatch?.groupValues?.get(1)?.toIntOrNull() ?: 0
-            val blacklisted = body.contains("\"blackListed\":true")
-            val rating = Regex(""""rating":\s*"([^"]+)"""").find(body)?.groupValues?.get(1) ?: ""
-            val isSpam = blacklisted || votes >= 3 || rating.startsWith("D_") || rating.startsWith("E_")
-
-            SourceResult(
-                "PhoneBlock", isSpam, votes,
-                when {
-                    blacklisted -> "Blacklisted ($votes votes)"
-                    votes > 0 -> "$votes community votes"
-                    else -> "Rating: $rating"
-                }
-            )
+                SourceResult(
+                    "PhoneBlock", isSpam, votes,
+                    when {
+                        blacklisted -> "Blacklisted ($votes votes)"
+                        votes > 0 -> "$votes community votes"
+                        else -> "Rating: $rating"
+                    }
+                )
+            }
         } catch (_: Exception) {
             null
         }
@@ -139,16 +139,16 @@ object ExternalLookup {
             val request = Request.Builder().url(url)
                 .header("User-Agent", "Mozilla/5.0")
                 .build()
-            val response = client.newCall(request).execute()
-            if (!response.isSuccessful) return@withContext null
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) return@withContext null
+                val body = response.body?.string() ?: return@withContext null
+                val reportMatch = Regex("""(\d+)\s*(?:report|complaint|comment)""", RegexOption.IGNORE_CASE).find(body)
+                val reports = reportMatch?.groupValues?.get(1)?.toIntOrNull() ?: 0
 
-            val body = response.body?.string() ?: return@withContext null
-            val reportMatch = Regex("""(\d+)\s*(?:report|complaint|comment)""", RegexOption.IGNORE_CASE).find(body)
-            val reports = reportMatch?.groupValues?.get(1)?.toIntOrNull() ?: 0
-
-            if (reports > 0) {
-                SourceResult("WhoCalledMe", reports >= 3, reports, "$reports reports")
-            } else null
+                if (reports > 0) {
+                    SourceResult("WhoCalledMe", reports >= 3, reports, "$reports reports")
+                } else null
+            }
         } catch (_: Exception) {
             null
         }
@@ -171,13 +171,13 @@ object ExternalLookup {
                 .header("User-Agent", "CallShield/1.0")
                 .header("Accept", "application/json")
                 .build()
-            val response = client.newCall(request).execute()
-            if (!response.isSuccessful) return@withContext ""
-
-            val body = response.body?.string() ?: return@withContext ""
-            // Response: {"number":"+15551234567","name":"JOHN DOE"}
-            val nameMatch = Regex(""""name"\s*:\s*"([^"]+)"""").find(body)
-            nameMatch?.groupValues?.get(1)?.trim() ?: ""
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) return@withContext ""
+                val body = response.body?.string() ?: return@withContext ""
+                // Response: {"number":"+15551234567","name":"JOHN DOE"}
+                val nameMatch = Regex(""""name"\s*:\s*"([^"]+)"""").find(body)
+                nameMatch?.groupValues?.get(1)?.trim() ?: ""
+            }
         } catch (_: Exception) {
             ""
         }

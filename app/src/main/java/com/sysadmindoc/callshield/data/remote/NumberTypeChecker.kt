@@ -60,31 +60,32 @@ object NumberTypeChecker {
                 .header("User-Agent", "CallShield/1.0")
                 .build()
 
-            val response = client.newCall(request).execute()
-            if (!response.isSuccessful) return@withContext NumberTypeResult(NumberLineType.UNKNOWN)
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) return@withContext NumberTypeResult(NumberLineType.UNKNOWN)
 
-            val body = response.body?.string() ?: return@withContext NumberTypeResult(NumberLineType.UNKNOWN)
+                val body = response.body?.string() ?: return@withContext NumberTypeResult(NumberLineType.UNKNOWN)
 
-            // Parse type field: {"type":{"type":"VoIP","is_prepaid":false,...},...}
-            val typeMatch = Regex(""""type"\s*:\s*"([^"]+)"""").find(body)
-            val rawType = typeMatch?.groupValues?.get(1)?.lowercase() ?: ""
+                // Parse type field: {"type":{"type":"VoIP","is_prepaid":false,...},...}
+                val typeMatch = Regex(""""type"\s*:\s*"([^"]+)"""").find(body)
+                val rawType = typeMatch?.groupValues?.get(1)?.lowercase() ?: ""
 
-            val isPrepaid = body.contains(""""is_prepaid":true""")
+                val isPrepaid = body.contains(""""is_prepaid":true""")
 
-            val lineType = when {
-                "voip" in rawType || "virtual" in rawType -> NumberLineType.VOIP
-                isPrepaid -> NumberLineType.PREPAID
-                "mobile" in rawType || "wireless" in rawType -> NumberLineType.MOBILE
-                "landline" in rawType || "fixed" in rawType -> NumberLineType.LANDLINE
-                else -> NumberLineType.UNKNOWN
+                val lineType = when {
+                    "voip" in rawType || "virtual" in rawType -> NumberLineType.VOIP
+                    isPrepaid -> NumberLineType.PREPAID
+                    "mobile" in rawType || "wireless" in rawType -> NumberLineType.MOBILE
+                    "landline" in rawType || "fixed" in rawType -> NumberLineType.LANDLINE
+                    else -> NumberLineType.UNKNOWN
+                }
+
+                val carrier = Regex(""""name"\s*:\s*"([^"]+)"""").find(body)
+                    ?.groupValues?.get(1) ?: ""
+                val country = Regex(""""country_code"\s*:\s*"([^"]+)"""").find(body)
+                    ?.groupValues?.get(1) ?: ""
+
+                NumberTypeResult(lineType = lineType, carrier = carrier, country = country)
             }
-
-            val carrier = Regex(""""name"\s*:\s*"([^"]+)"""").find(body)
-                ?.groupValues?.get(1) ?: ""
-            val country = Regex(""""country_code"\s*:\s*"([^"]+)"""").find(body)
-                ?.groupValues?.get(1) ?: ""
-
-            NumberTypeResult(lineType = lineType, carrier = carrier, country = country)
         } catch (_: Exception) {
             NumberTypeResult(NumberLineType.UNKNOWN)
         }

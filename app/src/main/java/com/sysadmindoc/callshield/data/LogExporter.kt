@@ -29,7 +29,11 @@ object LogExporter {
 
             val dir = File(context.cacheDir, "exports")
             dir.mkdirs()
-            dir.listFiles()?.forEach { it.delete() }
+            // Only prune our own prior log exports — `cacheDir/exports` is
+            // shared with BlocklistExporter, and deleting everything would
+            // nuke any in-flight blocklist file that's still being shared.
+            dir.listFiles { file -> file.name.startsWith("callshield_log_") }
+                ?.forEach { it.delete() }
             val file = File(dir, "callshield_log_${System.currentTimeMillis()}.csv")
             file.writeText(sb.toString())
 
