@@ -3,7 +3,7 @@
 ## Overview
 Open-source Android spam call/text blocker. 57 Kotlin files, ~9,200 lines, 5 Python scripts. 32,933 spam numbers from FCC/FTC/community. 15-layer detection + ML scorer + RCS filter + 30-min hot list sync. Real-time multi-source caller ID overlay with SIT tone anti-autodialer. URLhaus phishing detection. Anonymous community contribution via Cloudflare Worker. No API keys required.
 
-**Released:** v1.2.8 (versionCode 11, backup format v2)
+**Released:** v1.2.9 (versionCode 12, backup format v2)
 
 ---
 
@@ -213,6 +213,7 @@ ANDROID_HOME="$HOME/AppData/Local/Android/Sdk"
 - **v1.2.6** — Premium UI overhaul (PremiumCard, accentGlow, GradientDivider, shimmer skeletons, haptic feedback), 12 bug fixes (race conditions, JSON injection, thread leaks, date grouping), undo on swipe-delete, confirmation dialogs, directional tab transitions, changelog timeline, widget protection status
 - **v1.2.7** — Build fix, deprecated icon migration (AutoMirrored ViewList/TrendingUp/Down/Flat), zero compilation warnings, atomic database transactions, hot list parser fix, quiet hours end-time exclusive fix
 - **v1.2.8** — GBT ML model (v3, 20 features, pure Kotlin tree ensemble), campaign burst detection (NPA-NXX, 1hr/5-call), after-call feedback notifications, 378 strings extracted to strings.xml, 150 unit tests + CI pipeline (test.yml), full accessibility pass (100 content descriptions, semantic grouping, 48dp targets), weekly bar chart + source donut + monthly trend in Stats, signing credentials to local.properties, network_security_config.xml, restricted file_paths/backup_rules, proguard rules for GBT/Campaign, call log scanner Dispatchers.IO fix, sync freshness recompute, onboarding permission status + notification/overlay requests, ANSWER_PHONE_CALLS permission
+- **v1.2.9** — Audit round 3: CampaignDetector.recordCall moved AFTER whitelist/dialed/urgent short-circuits (contact false-positive fix), BackupRestore.restoreFromUri wrapped in .use (FD leak fix), NotificationHelper.safeNotify helper honoring POST_NOTIFICATIONS at runtime for all 5 notify sites + try/catch on revoke-race, DigestWorker permission guard, RecentCallsScreen stable itemsIndexed key + per-row state keyed by call identity, BlockedLogScreen grouped view stable key, SearchResultsView stable items key
 
 ---
 
@@ -274,3 +275,9 @@ ANDROID_HOME="$HOME/AppData/Local/Android/Sdk"
 - `extractFeatures()` returns 20 features in v3 (15 original + 5 behavioral). Size guard in `parseAndApply()` accepts >= 15 for backward compat.
 - After-call feedback notification fires 10 seconds after an allowed unknown call. Uses `SpamActionReceiver` with `FEEDBACK_SPAM`/`FEEDBACK_NOT_SPAM` actions.
 - `network_security_config.xml` disables cleartext traffic globally — do NOT add `cleartextTrafficPermitted="true"` for any domain
+- `CampaignDetector.recordCall(normalized)` MUST run AFTER the manual/contact whitelist, `CallbackDetector.wasRecentlyDialed`, and `CallbackDetector.isRepeatedUrgentCall` short-circuits — running before them makes legitimate contact/family calls feed the spam-campaign detector and causes false-positive `campaign_burst` blocks for unknown callers in the same NPA-NXX.
+- All `NotificationManager.notify(...)` posts must go through `NotificationHelper.safeNotify(...)` (or guard with `CallShieldPermissions.hasNotificationPermission(context)`) and be wrapped in `try/catch (SecurityException)` — API 33+ `POST_NOTIFICATIONS` can be revoked between check and post.
+- `BackupRestore.restoreFromUri` reads the backup via `openInputStream(uri)?.use { it.bufferedReader().readText() }` — Kotlin's `Reader.readText()` does NOT close its underlying stream, so the outer `.use { }` is load-bearing (FD leak fix).
+- `RecentCallsScreen` `itemsIndexed` uses `key = { _, call -> "${call.number}|${call.date}|${call.type}" }` and its per-row `visible` / `LaunchedEffect` are keyed by `(call.number, call.date)`. Do NOT revert to `remember { ... }` / `LaunchedEffect(Unit)` — filter-mode changes will scramble per-row animation state.
+- `BlockedLogScreen` has TWO branches — grouped view (`itemsIndexed(groupedList, key = { _, item -> item.first.number })`) and non-grouped swipe list (`itemsIndexed(filtered, key = { _, call -> call.id })`). Both must have keys; the grouped branch was previously unkeyed.
+- `MainActivity.SearchResultsView` uses `items(results, key = { it.number })` — needs `import androidx.compose.foundation.lazy.items`. Do NOT revert to `items(results.size)`.
