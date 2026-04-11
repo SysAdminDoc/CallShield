@@ -1,12 +1,13 @@
 package com.sysadmindoc.callshield.service
 
-import android.app.NotificationManager
 import android.content.Context
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 import androidx.work.*
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.local.AppDatabase
+import com.sysadmindoc.callshield.permissions.CallShieldPermissions
 import java.util.concurrent.TimeUnit
 
 /**
@@ -44,7 +45,10 @@ class DigestWorker(
             .sortedByDescending { it.value.size }
             .joinToString(" · ") { "${it.value.size} ${it.key}" }
 
-        val nm = applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        if (!CallShieldPermissions.hasNotificationPermission(applicationContext)) {
+            // User has not granted POST_NOTIFICATIONS on API 33+; skip quietly.
+            return Result.success()
+        }
         val notif = NotificationCompat.Builder(applicationContext, NotificationHelper.CHANNEL_BLOCKED)
             .setSmallIcon(android.R.drawable.ic_menu_info_details)
             .setContentTitle(applicationContext.getString(R.string.digest_title))
@@ -54,7 +58,11 @@ class DigestWorker(
             .setAutoCancel(true)
             .build()
 
-        nm.notify(9999, notif)
+        try {
+            NotificationManagerCompat.from(applicationContext).notify(9999, notif)
+        } catch (_: SecurityException) {
+            // Revoked between check and post — drop silently.
+        }
         return Result.success()
         } catch (e: Exception) {
             Log.e("DigestWorker", "Failed to send daily digest", e)

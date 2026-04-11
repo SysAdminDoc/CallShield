@@ -24,7 +24,16 @@ fun ChangelogScreen() {
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(0.dp)
     ) {
-        VersionEntry("1.2.8", "ML Engine + Campaign Detection + Accessibility", isLatest = true, changes = listOf(
+        VersionEntry("1.2.9", "Audit Round 3 — Correctness + Compose Hygiene", isLatest = true, changes = listOf(
+            "Campaign burst detector no longer learns from contacts/dialed/repeat callers (false-positive fix)",
+            "Backup restore closes the input stream properly (file descriptor leak fix)",
+            "Notifications honor the API 33+ POST_NOTIFICATIONS runtime permission instead of throwing SecurityException",
+            "Daily digest skips silently when notification permission is revoked",
+            "Recent Calls list now uses stable item keys — filter changes no longer scramble per-row animation state",
+            "Blocked Log grouped view now uses stable keys — no more scroll jumps or row-swap bugs",
+            "Global search results use stable keys — fixes reorder glitches when re-searching",
+        ))
+        VersionEntry("1.2.8", "ML Engine + Campaign Detection + Accessibility", changes = listOf(
             "Gradient-boosted tree ML model (20 features, pure Kotlin inference)",
             "Campaign burst detection: auto-blocks NPA-NXX prefixes with 5+ calls in 1 hour",
             "After-call feedback: \"Was this spam?\" notification with one-tap Block/Whitelist",

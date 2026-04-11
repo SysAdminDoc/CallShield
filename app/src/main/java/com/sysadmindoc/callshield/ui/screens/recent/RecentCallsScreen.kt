@@ -189,9 +189,12 @@ fun RecentCallsScreen(viewModel: MainViewModel) {
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                itemsIndexed(filtered) { index, call ->
-                    val visible = remember { mutableStateOf(false) }
-                    LaunchedEffect(Unit) {
+                itemsIndexed(
+                    items = filtered,
+                    key = { _, call -> "${call.number}|${call.date}|${call.type}" }
+                ) { index, call ->
+                    val visible = remember(call.number, call.date) { mutableStateOf(false) }
+                    LaunchedEffect(call.number, call.date) {
                         kotlinx.coroutines.delay(index.toLong().coerceAtMost(20) * 25)
                         visible.value = true
                     }

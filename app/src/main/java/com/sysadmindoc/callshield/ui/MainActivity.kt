@@ -8,6 +8,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -222,8 +223,10 @@ fun SearchResultsView(results: List<com.sysadmindoc.callshield.data.model.SpamNu
                     modifier = Modifier.padding(bottom = 4.dp)
                 )
             }
-            items(results.size) { i ->
-                val number = results[i]
+            items(
+                items = results,
+                key = { it.number }
+            ) { number ->
                 PremiumCard(
                     onClick = { onTap(number) },
                     cornerRadius = 14.dp,

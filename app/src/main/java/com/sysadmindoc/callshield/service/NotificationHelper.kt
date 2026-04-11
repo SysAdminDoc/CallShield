@@ -6,8 +6,10 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.PhoneFormatter
+import com.sysadmindoc.callshield.permissions.CallShieldPermissions
 import com.sysadmindoc.callshield.ui.MainActivity
 
 object NotificationHelper {
@@ -32,6 +34,22 @@ object NotificationHelper {
 
     private fun stableId(number: String, salt: Int = 0): Int {
         return (number.hashCode() xor (salt * 0x9E3779B9.toInt())) and 0x7FFFFFFF
+    }
+
+    /**
+     * Safely post a notification, honoring the API 33+ POST_NOTIFICATIONS runtime
+     * permission. If the permission is not granted we silently drop the notification
+     * instead of letting `nm.notify()` raise a SecurityException under StrictMode or
+     * crash on devices that enforce the permission strictly. Channel creation does
+     * not need a permission, only the actual post.
+     */
+    private fun safeNotify(context: Context, id: Int, builder: NotificationCompat.Builder) {
+        if (!CallShieldPermissions.hasNotificationPermission(context)) return
+        try {
+            NotificationManagerCompat.from(context).notify(id, builder.build())
+        } catch (_: SecurityException) {
+            // Revoked at runtime between the check and the post — drop silently.
+        }
     }
 
     fun createChannels(context: Context) {
@@ -73,7 +91,6 @@ object NotificationHelper {
             blockedSinceLastNotif = 1
         }
 
-        val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val typeText = context.getString(if (isCall) R.string.notif_type_call else R.string.notif_type_sms)
 
         val openIntent = PendingIntent.getActivity(
@@ -101,7 +118,7 @@ object NotificationHelper {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
-        val notif = NotificationCompat.Builder(context, CHANNEL_BLOCKED)
+        val builder = NotificationCompat.Builder(context, CHANNEL_BLOCKED)
             .setSmallIcon(android.R.drawable.ic_menu_close_clear_cancel)
             .setContentTitle(context.getString(R.string.notif_blocked_title, typeText))
             .setContentText(context.getString(R.string.notif_blocked_text, PhoneFormatter.format(number), reason))
@@ -110,16 +127,15 @@ object NotificationHelper {
             .setGroup(GROUP_BLOCKED)
             .addAction(android.R.drawable.ic_menu_close_clear_cancel, context.getString(R.string.notif_action_block_forever), blockIntent)
             .addAction(android.R.drawable.ic_menu_send, context.getString(R.string.notif_action_report), reportIntent)
-            .build()
 
-        nm.notify(nid, notif)
+        safeNotify(context, nid, builder)
         updateSummary(context)
     }
 
     private fun updateSummary(context: Context) {
-        val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val count = synchronized(lock) { blockedSinceLastNotif }
         if (count <= 0) {
+            val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             nm.cancel(SUMMARY_ID)
             return
         }
@@ -131,12 +147,10 @@ object NotificationHelper {
             .setGroup(GROUP_BLOCKED)
             .setGroupSummary(true)
             .setAutoCancel(true)
-            .build()
-        nm.notify(SUMMARY_ID, summary)
+        safeNotify(context, SUMMARY_ID, summary)
     }
 
     fun notifySpamRating(context: Context, number: String) {
-        val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val nid = stableId(number, 30)
 
         val blockIntent = PendingIntent.getBroadcast(
@@ -155,20 +169,18 @@ object NotificationHelper {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
-        val notif = NotificationCompat.Builder(context, CHANNEL_RATING)
+        val builder = NotificationCompat.Builder(context, CHANNEL_RATING)
             .setSmallIcon(android.R.drawable.ic_menu_help)
             .setContentTitle(context.getString(R.string.notif_rating_title))
             .setContentText(PhoneFormatter.format(number))
             .setAutoCancel(true)
             .addAction(android.R.drawable.ic_menu_close_clear_cancel, context.getString(R.string.notif_action_spam_block), blockIntent)
             .addAction(android.R.drawable.ic_menu_myplaces, context.getString(R.string.notif_action_safe), safeIntent)
-            .build()
 
-        nm.notify(nid, notif)
+        safeNotify(context, nid, builder)
     }
 
     fun notifyPhishingUrl(context: Context, sender: String, threats: String) {
-        val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val nid = stableId(sender, 50)
 
         val openIntent = PendingIntent.getActivity(
@@ -180,7 +192,7 @@ object NotificationHelper {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
-        val notif = NotificationCompat.Builder(context, CHANNEL_PHISHING)
+        val builder = NotificationCompat.Builder(context, CHANNEL_PHISHING)
             .setSmallIcon(android.R.drawable.ic_dialog_alert)
             .setContentTitle(context.getString(R.string.notif_phishing_title))
             .setContentText(context.getString(R.string.notif_phishing_text, PhoneFormatter.format(sender), threats))
@@ -188,16 +200,13 @@ object NotificationHelper {
                 .bigText(context.getString(R.string.notif_phishing_big_text, PhoneFormatter.format(sender), threats)))
             .setContentIntent(openIntent)
             .setAutoCancel(true)
-            .build()
 
-        nm.notify(nid, notif)
+        safeNotify(context, nid, builder)
     }
 
     fun notifyAfterCall(context: Context, number: String) {
         // Don't show for very short numbers (short codes)
         if (number.filter { it.isDigit() }.length < 7) return
-
-        val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
         // Create intents for "Spam" and "Not Spam" actions
         val spamIntent = Intent(context, SpamActionReceiver::class.java).apply {
@@ -214,7 +223,7 @@ object NotificationHelper {
 
         val formatted = PhoneFormatter.format(number)
 
-        val notification = NotificationCompat.Builder(context, CHANNEL_RATING)
+        val builder = NotificationCompat.Builder(context, CHANNEL_RATING)
             .setSmallIcon(android.R.drawable.ic_menu_call)
             .setContentTitle(context.getString(R.string.feedback_title))
             .setContentText(context.getString(R.string.feedback_text, formatted))
@@ -222,28 +231,26 @@ object NotificationHelper {
             .addAction(0, context.getString(R.string.feedback_not_spam), notSpamPending)
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)
-            .build()
 
-        nm.notify(number.hashCode() + 10000, notification)
+        safeNotify(context, number.hashCode() + 10000, builder)
     }
 
     fun showPersistentStatus(context: Context, active: Boolean) {
-        val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         if (!active) {
+            val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             nm.cancel(STATUS_ID)
             return
         }
         val openIntent = PendingIntent.getActivity(
             context, 0, Intent(context, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE
         )
-        val notif = NotificationCompat.Builder(context, CHANNEL_STATUS)
+        val builder = NotificationCompat.Builder(context, CHANNEL_STATUS)
             .setSmallIcon(android.R.drawable.ic_menu_view)
             .setContentTitle(context.getString(R.string.notif_status_title))
             .setContentText(context.getString(R.string.notif_status_text))
             .setContentIntent(openIntent)
             .setOngoing(true)
             .setSilent(true)
-            .build()
-        nm.notify(STATUS_ID, notif)
+        safeNotify(context, STATUS_ID, builder)
     }
 }

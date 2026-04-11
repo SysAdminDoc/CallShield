@@ -131,7 +131,10 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
             } else if (grouped && groupedList != null) {
                 // Grouped view
                 LazyColumn(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    itemsIndexed(groupedList) { _, (call, count) ->
+                    itemsIndexed(
+                        items = groupedList,
+                        key = { _, item -> item.first.number }
+                    ) { _, (call, count) ->
                         GroupedCallItem(
                             call = call, count = count,
                             onTap = { viewModel.openNumberDetail(call.number) },
