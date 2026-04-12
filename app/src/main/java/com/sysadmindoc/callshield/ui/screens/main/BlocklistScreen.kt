@@ -2,6 +2,7 @@ package com.sysadmindoc.callshield.ui.screens.main
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -16,12 +17,15 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.model.SmsKeywordRule
 import com.sysadmindoc.callshield.data.model.SpamNumber
 import com.sysadmindoc.callshield.data.model.WhitelistEntry
@@ -102,8 +106,14 @@ fun BlocklistScreen(viewModel: MainViewModel) {
                 3 -> {
                     if (whitelistEntries.isEmpty()) EmptyState("No whitelisted numbers", "Numbers here always pass through")
                     else LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        // Emergency-flagged entries render at the top with a
+                        // distinct badge (the DAO already sorts isEmergency DESC).
                         items(whitelistEntries, key = { it.id }) { e ->
-                            WhitelistItem(e) { viewModel.removeFromWhitelist(e) }
+                            WhitelistItem(
+                                entry = e,
+                                onRemove = { viewModel.removeFromWhitelist(e) },
+                                onToggleEmergency = { viewModel.toggleWhitelistEmergency(e.id, !e.isEmergency) },
+                            )
                         }
                     }
                 }
@@ -149,9 +159,11 @@ fun BlocklistScreen(viewModel: MainViewModel) {
         viewModel.addWildcardRule(p, r, d); showWildcardDialog = false
         hapticTick(context); scope.launch { snackbarHost.showSnackbar("Rule added", duration = SnackbarDuration.Short) }
     }
-    if (showWhitelistDialog) AddWhitelistDialog({ showWhitelistDialog = false }) { num, desc ->
-        viewModel.addToWhitelist(num, desc); showWhitelistDialog = false
-        hapticTick(context); scope.launch { snackbarHost.showSnackbar("Number whitelisted", duration = SnackbarDuration.Short) }
+    if (showWhitelistDialog) AddWhitelistDialog({ showWhitelistDialog = false }) { num, desc, emergency ->
+        viewModel.addToWhitelist(num, desc, isEmergency = emergency); showWhitelistDialog = false
+        hapticTick(context)
+        val msg = if (emergency) "Emergency contact added" else "Number whitelisted"
+        scope.launch { snackbarHost.showSnackbar(msg, duration = SnackbarDuration.Short) }
     }
     if (showKeywordDialog) AddKeywordDialog({ showKeywordDialog = false }) { kw, cs, d ->
         viewModel.addKeywordRule(kw, cs, d); showKeywordDialog = false
@@ -224,14 +236,53 @@ fun KeywordRuleItem(rule: SmsKeywordRule, onToggle: (Boolean) -> Unit, onDelete:
 }
 
 @Composable
-fun WhitelistItem(entry: WhitelistEntry, onRemove: () -> Unit) {
-    PremiumCard(cornerRadius = 14.dp) {
+fun WhitelistItem(
+    entry: WhitelistEntry,
+    onRemove: () -> Unit,
+    onToggleEmergency: () -> Unit,
+) {
+    // Emergency-flagged entries get a red accent + badge. The emergency
+    // toggle is a separate IconButton so users can un-emergency without
+    // deleting the whole entry.
+    val accent = if (entry.isEmergency) CatRed else CatGreen
+    PremiumCard(cornerRadius = 14.dp, accentColor = accent) {
         Row(modifier = Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Default.CheckCircle, null, tint = CatGreen, modifier = Modifier.size(28.dp))
+            Icon(
+                if (entry.isEmergency) Icons.Default.PriorityHigh else Icons.Default.CheckCircle,
+                null,
+                tint = accent,
+                modifier = Modifier.size(28.dp)
+            )
             Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(entry.number, fontWeight = FontWeight.SemiBold)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(entry.number, fontWeight = FontWeight.SemiBold)
+                    if (entry.isEmergency) {
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            stringResource(R.string.emergency_contacts_badge),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = CatRed,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier
+                                .background(CatRed.copy(alpha = 0.15f), RoundedCornerShape(4.dp))
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+                }
                 if (entry.description.isNotEmpty()) Text(entry.description, style = MaterialTheme.typography.bodySmall, color = CatSubtext)
+            }
+            IconButton(
+                onClick = onToggleEmergency,
+                modifier = Modifier.semantics {
+                    contentDescription = if (entry.isEmergency) "Remove emergency status" else "Mark as emergency"
+                },
+            ) {
+                Icon(
+                    if (entry.isEmergency) Icons.Default.Star else Icons.Default.StarBorder,
+                    null,
+                    tint = if (entry.isEmergency) CatRed else CatOverlay,
+                )
             }
             IconButton(onClick = onRemove) { Icon(Icons.Default.RemoveCircleOutline, "Remove", tint = CatOverlay) }
         }
@@ -308,8 +359,10 @@ fun AddWildcardDialog(onDismiss: () -> Unit, onAdd: (String, Boolean, String) ->
 }
 
 @Composable
-fun AddWhitelistDialog(onDismiss: () -> Unit, onAdd: (String, String) -> Unit) {
-    var number by remember { mutableStateOf("") }; var desc by remember { mutableStateOf("") }
+fun AddWhitelistDialog(onDismiss: () -> Unit, onAdd: (String, String, Boolean) -> Unit) {
+    var number by remember { mutableStateOf("") }
+    var desc by remember { mutableStateOf("") }
+    var emergency by remember { mutableStateOf(false) }
     AlertDialog(onDismissRequest = onDismiss, containerColor = SurfaceBright, title = { Text("Add to Whitelist") },
         text = { Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             OutlinedTextField(value = number, onValueChange = { number = it }, label = { Text("Phone Number") },
@@ -317,11 +370,35 @@ fun AddWhitelistDialog(onDismiss: () -> Unit, onAdd: (String, String) -> Unit) {
                 colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = CatGreen, cursorColor = CatGreen))
             OutlinedTextField(value = desc, onValueChange = { desc = it }, label = { Text("Description") }, singleLine = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                keyboardActions = KeyboardActions(onDone = { if (number.isNotBlank()) onAdd(number, desc) }),
+                keyboardActions = KeyboardActions(onDone = { if (number.isNotBlank()) onAdd(number, desc, emergency) }),
                 colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = CatGreen, cursorColor = CatGreen))
+            // Emergency toggle — same table row gets isEmergency=true, which
+            // makes the entry prominent in the list AND surfaces as
+            // emergency_contact matchSource in the block log if a call does
+            // come through.
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Checkbox(
+                    checked = emergency,
+                    onCheckedChange = { emergency = it },
+                    colors = CheckboxDefaults.colors(checkedColor = CatRed)
+                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(stringResource(R.string.emergency_contacts_mark_as), style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        stringResource(R.string.emergency_contacts_subtitle),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = CatOverlay,
+                    )
+                }
+            }
             Text("Whitelisted numbers will never be blocked, even if they match spam rules.", style = MaterialTheme.typography.labelSmall, color = CatOverlay)
         } },
-        confirmButton = { Button(onClick = { if (number.isNotBlank()) onAdd(number, desc) }, colors = ButtonDefaults.buttonColors(containerColor = CatGreen)) { Text("Whitelist", color = Black) } },
+        confirmButton = {
+            Button(
+                onClick = { if (number.isNotBlank()) onAdd(number, desc, emergency) },
+                colors = ButtonDefaults.buttonColors(containerColor = if (emergency) CatRed else CatGreen),
+            ) { Text(if (emergency) "Add Emergency Contact" else "Whitelist", color = Black) }
+        },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel", color = CatSubtext) } }
     )
 }

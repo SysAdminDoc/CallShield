@@ -31,6 +31,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.sysadmindoc.callshield.data.PhoneFormatter
@@ -281,7 +282,23 @@ fun BlockedCallItem(call: BlockedCall, onTap: () -> Unit) {
                     if (call.matchReason.isNotEmpty()) {
                         val reasonText = call.matchReason.replace("_", " ").replaceFirstChar { it.uppercase() }
                         val confidenceText = if (call.confidence < 100) " (${call.confidence}%)" else ""
-                        Text("$reasonText$confidenceText", style = MaterialTheme.typography.labelSmall, color = CatPeach)
+                        // Feature A: prepend the resolved CallCategory label.
+                        // Falls back silently to just the raw reason if the
+                        // resolver lands on Unknown — no noise, no mislabels.
+                        val category = remember(call.matchReason, call.type, call.confidence) {
+                            com.sysadmindoc.callshield.data.CallCategoryResolver.resolveFromLog(
+                                matchReason = call.matchReason,
+                                type = call.type,
+                                description = "",
+                                confidence = call.confidence,
+                            )
+                        }
+                        val label = if (category != com.sysadmindoc.callshield.data.CallCategory.Unknown) {
+                            "${category.emoji} ${stringResource(category.stringResId)} · $reasonText$confidenceText"
+                        } else {
+                            "$reasonText$confidenceText"
+                        }
+                        Text(label, style = MaterialTheme.typography.labelSmall, color = CatPeach)
                     }
                     if (call.smsBody != null) {
                         Text(call.smsBody, style = MaterialTheme.typography.bodySmall, color = CatSubtext, maxLines = 2)

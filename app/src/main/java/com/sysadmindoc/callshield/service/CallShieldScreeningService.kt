@@ -101,12 +101,26 @@ class CallShieldScreeningService : CallScreeningService() {
         val repo = SpamRepository.getInstance(applicationContext)
         repo.logBlockedCall(number = number, isCall = true, matchReason = reason, confidence = confidence)
 
-        val response = CallResponse.Builder()
-            .setDisallowCall(true)
-            .setRejectCall(true)
-            .setSkipCallLog(false)
-            .setSkipNotification(false)
-            .build()
+        // Silent voicemail mode: instead of hard-rejecting (caller hears
+        // busy tone + user sees missed-call entry), silence the ringer so
+        // the caller reaches voicemail normally and the user isn't
+        // interrupted. Default off — hard reject preserves the missed-call
+        // audit trail that some users rely on.
+        val silent = repo.silentVoicemailEnabled.first()
+        val response = if (silent) {
+            CallResponse.Builder()
+                .setSilenceCall(true)
+                .setSkipCallLog(false)
+                .setSkipNotification(false)
+                .build()
+        } else {
+            CallResponse.Builder()
+                .setDisallowCall(true)
+                .setRejectCall(true)
+                .setSkipCallLog(false)
+                .setSkipNotification(false)
+                .build()
+        }
         respondToCall(callDetails, response)
     }
 
