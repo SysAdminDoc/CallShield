@@ -349,7 +349,9 @@
     <string name="more_report_bug">Report a Bug</string>
     <string name="more_star_github">Star on GitHub</string>
     <string name="more_report_spam_number">Report Spam Number</string>
-    <string name="more_version">v1.2.8</string>
+    <string name="more_share_crash_log">Share Last Crash Log</string>
+    <string name="more_no_crash_logs">No crashes logged — CallShield hasn\'t recorded an uncaught exception.</string>
+    <string name="more_version">v1.3.0</string>
     <string name="more_about_description">Open-source spam call &amp; text blocker with 15-layer detection engine + ML scorer. No API keys, no accounts, no tracking. Everything runs on-device.</string>
     <string name="more_about_layers">15</string>
     <string name="more_about_layers_label">Layers</string>

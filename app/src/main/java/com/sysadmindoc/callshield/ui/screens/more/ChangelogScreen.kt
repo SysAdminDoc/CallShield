@@ -24,7 +24,14 @@ fun ChangelogScreen() {
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(0.dp)
     ) {
-        VersionEntry("1.2.15", "Audit Round 9 — Contact cache perf", isLatest = true, changes = listOf(
+        VersionEntry("1.3.0", "Crash reporter, instrumented tests, benchmark ceilings", isLatest = true, changes = listOf(
+            "Local crash reporter captures uncaught exceptions to filesDir/crashes/ — share the latest log via the new \"Share Last Crash Log\" Quick Link in More (no telemetry phoned home)",
+            "Instrumented test suite: Compose UI tests for PremiumCard/SectionHeader/accentGlow, end-to-end CrashReporter IO, and the DashboardStatusModel state machine",
+            "GitHub Actions emulator workflow runs connected tests on every PR + master push",
+            "Hot-path microbenchmarks as unit tests enforce regression ceilings on WildcardRule.matches, CampaignDetector record/check, SpamMLScorer.score, and SpamHeuristics pure checks",
+            "BuildConfig fields (VERSION_NAME, VERSION_CODE) re-enabled for the crash reporter header",
+        ))
+        VersionEntry("1.2.15", "Audit Round 9 — Contact cache perf", changes = listOf(
             "Contact whitelist lookups are now cached for 60 seconds — eliminates up to 4 redundant ContactsContract queries per incoming call on large contact lists (10–200 ms saved per call)",
         ))
         VersionEntry("1.2.14", "Audit Round 8 — Stats drift, wildcard SMS match, trusted-sender perf", changes = listOf(

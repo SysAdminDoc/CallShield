@@ -1,0 +1,103 @@
+name: Instrumented Tests
+
+on:
+  # Run against every PR + every push to master so regressions in
+  # Compose primitives, CrashReporter file IO, or DashboardStatusModel
+  # surface before they ship. The workflow is gated manually too so
+  # we can re-trigger without an empty commit.
+  push:
+    branches: [master]
+    paths:
+      - 'app/**'
+      - '.github/workflows/instrumented.yml'
+      - 'gradle/libs.versions.toml'
+  pull_request:
+    branches: [master]
+    paths:
+      - 'app/**'
+      - '.github/workflows/instrumented.yml'
+      - 'gradle/libs.versions.toml'
+  workflow_dispatch:
+
+# Emulator jobs are the expensive part of CI; cancel superseded runs so
+# a rapid commit stream doesn't pile up KVM VMs.
+concurrency:
+  group: instrumented-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  instrumented:
+    # `macos-latest` has hardware virtualization; ubuntu runners work
+    # but are 3-4x slower booting the emulator.
+    runs-on: macos-latest
+    timeout-minutes: 40
+
+    strategy:
+      fail-fast: false
+      matrix:
+        # Single API level for now — minSdk=29. Add 34 later for dual-target
+        # validation once we have headroom in CI credits.
+        api-level: [29]
+        target: [google_apis]
+        arch: [x86_64]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Enable KVM group permissions (Linux only, no-op on macOS)
+        if: runner.os == 'Linux'
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Cache AVD snapshot
+        uses: actions/cache@v4
+        id: avd-cache
+        with:
+          path: |
+            ~/.android/avd/*
+            ~/.android/adb*
+          key: avd-${{ matrix.api-level }}-${{ matrix.target }}-${{ matrix.arch }}
+
+      - name: Create AVD snapshot (cache miss only)
+        if: steps.avd-cache.outputs.cache-hit != 'true'
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ matrix.api-level }}
+          target: ${{ matrix.target }}
+          arch: ${{ matrix.arch }}
+          force-avd-creation: false
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: true
+          script: echo "AVD snapshot warmed"
+
+      - name: Run instrumented tests
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ matrix.api-level }}
+          target: ${{ matrix.target }}
+          arch: ${{ matrix.arch }}
+          force-avd-creation: false
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: true
+          script: ./gradlew connectedDebugAndroidTest --stacktrace
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: instrumented-test-results-api-${{ matrix.api-level }}
+          path: |
+            app/build/reports/androidTests/
+            app/build/outputs/androidTest-results/
