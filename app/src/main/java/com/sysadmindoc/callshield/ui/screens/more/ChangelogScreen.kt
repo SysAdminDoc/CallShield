@@ -24,7 +24,10 @@ fun ChangelogScreen() {
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(0.dp)
     ) {
-        VersionEntry("1.2.14", "Audit Round 8 — Stats drift, wildcard SMS match, trusted-sender perf", isLatest = true, changes = listOf(
+        VersionEntry("1.2.15", "Audit Round 9 — Contact cache perf", isLatest = true, changes = listOf(
+            "Contact whitelist lookups are now cached for 60 seconds — eliminates up to 4 redundant ContactsContract queries per incoming call on large contact lists (10–200 ms saved per call)",
+        ))
+        VersionEntry("1.2.14", "Audit Round 8 — Stats drift, wildcard SMS match, trusted-sender perf", changes = listOf(
             "Stats screen daily chart and monthly trend now recompute at midnight (was frozen until new blocks arrived)",
             "Wildcard area-code rules (e.g. +1212*) now match SMS senders without the +1 prefix via multi-normalization",
             "Trusted-sender SMS check uses SQL WHERE pre-filter — no longer scans the entire sent/inbox folder in memory",
