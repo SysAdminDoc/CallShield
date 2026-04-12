@@ -56,6 +56,12 @@ class SpamRepository(private val context: Context) {
         private val KEY_ABSTRACT_API_KEY = stringPreferencesKey("abstract_api_key")
         private val KEY_ML_SCORER = booleanPreferencesKey("ml_scorer_enabled")
         private val KEY_RCS_FILTER = booleanPreferencesKey("rcs_filter_enabled")
+        // Silent voicemail mode: when enabled, blocked calls are silenced (no
+        // ring) and routed to voicemail instead of hard-rejected. Less
+        // disruptive — phone stays quiet, caller hears normal rings and
+        // reaches voicemail, user can review later without the interruption
+        // or the missed-call entry from a rejection.
+        private val KEY_SILENT_VOICEMAIL = booleanPreferencesKey("silent_voicemail_mode")
 
         const val SYNC_SOURCE_REMOTE = "remote"
         const val SYNC_SOURCE_BUNDLED = "bundled"
@@ -95,8 +101,11 @@ class SpamRepository(private val context: Context) {
 
     val mlScorerEnabled: Flow<Boolean> = dataStore.data.map { it[KEY_ML_SCORER] ?: true }
     val rcsFilterEnabled: Flow<Boolean> = dataStore.data.map { it[KEY_RCS_FILTER] ?: true }
+    /** Off by default — some users want the missed-call log entry to confirm they were targeted. */
+    val silentVoicemailEnabled: Flow<Boolean> = dataStore.data.map { it[KEY_SILENT_VOICEMAIL] ?: false }
     suspend fun setMlScorer(enabled: Boolean) = dataStore.edit { it[KEY_ML_SCORER] = enabled }
     suspend fun setRcsFilter(enabled: Boolean) = dataStore.edit { it[KEY_RCS_FILTER] = enabled }
+    suspend fun setSilentVoicemail(enabled: Boolean) = dataStore.edit { it[KEY_SILENT_VOICEMAIL] = enabled }
 
     suspend fun setOnboardingDone() = dataStore.edit { it[KEY_ONBOARDING_DONE] = true }
     suspend fun setAutoCleanup(enabled: Boolean) = dataStore.edit { it[KEY_AUTO_CLEANUP] = enabled }
@@ -136,9 +145,12 @@ class SpamRepository(private val context: Context) {
     ): SpamCheckResult {
         val normalized = normalizeNumber(number)
 
-        // Manual whitelist — always allow
-        if (dao.findWhitelistEntry(normalized) != null) {
-            return SpamCheckResult(false, matchSource = "manual_whitelist")
+        // Manual whitelist — always allow. Emergency-flagged entries surface
+        // with `emergency_contact` matchSource so the block log + detail
+        // screen can show the distinct badge and narrative.
+        dao.findWhitelistEntry(normalized)?.let { entry ->
+            val source = if (entry.isEmergency) "emergency_contact" else "manual_whitelist"
+            return SpamCheckResult(false, matchSource = source)
         }
 
         // Contact whitelist
@@ -564,13 +576,26 @@ class SpamRepository(private val context: Context) {
     // ── Whitelist management ───────────────────────────────────────────
     fun getAllWhitelist(): Flow<List<WhitelistEntry>> = dao.getAllWhitelist()
 
-    suspend fun addToWhitelist(number: String, description: String = "") {
+    /** Emergency subset — used by the dedicated Emergency Contacts tab. */
+    fun getEmergencyContacts(): Flow<List<WhitelistEntry>> = dao.getEmergencyContacts()
+
+    suspend fun addToWhitelist(number: String, description: String = "", isEmergency: Boolean = false) {
         val normalized = normalizeNumber(number)
         if (normalized.isBlank()) return
-        dao.insertWhitelistEntry(WhitelistEntry(number = normalized, description = description.trim()))
+        dao.insertWhitelistEntry(
+            WhitelistEntry(
+                number = normalized,
+                description = description.trim(),
+                isEmergency = isEmergency,
+            )
+        )
     }
 
     suspend fun removeFromWhitelist(entry: WhitelistEntry) = dao.deleteWhitelistEntry(entry)
+
+    /** Toggle emergency flag on an existing whitelist entry without deleting it. */
+    suspend fun setWhitelistEmergency(id: Long, emergency: Boolean) =
+        dao.setWhitelistEmergency(id, emergency)
 
     // ── Hot list (30-minute trending sync) ────────────────────────────
     suspend fun replaceHotList(numbers: List<SpamNumber>) = withContext(Dispatchers.IO) {

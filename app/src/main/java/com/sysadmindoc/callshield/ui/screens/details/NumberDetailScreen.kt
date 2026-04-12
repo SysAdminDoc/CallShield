@@ -100,6 +100,30 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
                 Text(PhoneFormatter.format(number), style = if (contactName != null) MaterialTheme.typography.bodyLarge else MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
                 Text(PhoneFormatter.formatWithCountryCode(number), style = MaterialTheme.typography.bodySmall, color = CatSubtext)
                 if (location != null) Text(location, style = MaterialTheme.typography.bodySmall, color = CatOverlay)
+                // Feature A: smart call label chip under the header — shows
+                // the resolved category (Scam / Debt Collector / Phishing /
+                // etc.) once the live spam check completes. Only shown for
+                // spam matches; allow-through results don't need a label.
+                liveResult?.takeIf { it.isSpam }?.let { r ->
+                    val category = remember(r.matchSource, r.type, r.description, r.confidence) {
+                        com.sysadmindoc.callshield.data.CallCategoryResolver.resolve(r)
+                    }
+                    Spacer(Modifier.height(6.dp))
+                    AssistChip(
+                        onClick = {},
+                        label = {
+                            Text(
+                                "${category.emoji} ${stringResource(category.stringResId)}",
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Bold,
+                            )
+                        },
+                        colors = AssistChipDefaults.assistChipColors(
+                            containerColor = CatRed.copy(alpha = 0.18f),
+                            labelColor = CatRed,
+                        ),
+                    )
+                }
             }
             // Copy button
             IconButton(onClick = {
@@ -131,6 +155,37 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
                         Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
                             Icon(detectionIcon(r.matchSource), null, tint = CatPeach, modifier = Modifier.size(16.dp))
                             Text(r.matchSource.replace("_", " ").replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.bodySmall, color = CatPeach)
+                        }
+                    }
+                }
+            }
+        }
+
+        // Feature D: "Why was this blocked?" — narrative reconstruction from
+        // stored matchReason + description + confidence. Shows even for
+        // allow-through results so the user understands why *anything*
+        // happened (e.g. "This number is in your emergency contacts").
+        liveResult?.let { r ->
+            val reasoning = remember(r.matchSource, r.description, r.confidence) {
+                com.sysadmindoc.callshield.data.BlockReasoning.explain(
+                    matchReason = r.matchSource,
+                    description = r.description,
+                    confidence = r.confidence,
+                )
+            }
+            val accent = if (r.isSpam) CatPeach else CatGreen
+            PremiumCard(accentColor = accent) {
+                Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                    SectionHeader(stringResource(R.string.block_reasoning_title), color = accent)
+                    Spacer(Modifier.height(8.dp))
+                    Text(reasoning.headline, fontWeight = FontWeight.SemiBold, color = accent)
+                    if (reasoning.bullets.isNotEmpty()) {
+                        Spacer(Modifier.height(8.dp))
+                        reasoning.bullets.forEach { bullet ->
+                            Row(modifier = Modifier.padding(vertical = 2.dp)) {
+                                Text("•", color = CatSubtext, modifier = Modifier.width(16.dp))
+                                Text(bullet, style = MaterialTheme.typography.bodySmall, color = CatSubtext)
+                            }
                         }
                     }
                 }
@@ -390,19 +445,21 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
             }
         }
 
-        // FTC complaint
+        // FTC fraud report — copies the number + opens reportfraud.ftc.gov.
+        // The FTC form doesn't accept URL params, so we do the next-best
+        // thing: clipboard-seed the number and tell the user to paste.
         OutlinedButton(
             onClick = {
-                val ftcUrl = "https://www.donotcall.gov/report.html"
-                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(ftcUrl)).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) })
+                hapticTick(context)
+                com.sysadmindoc.callshield.data.ReportFraudHelper.report(context, number)
             },
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(14.dp),
-            border = BorderStroke(1.dp, CardBorder)
+            border = BorderStroke(1.dp, CatPeach.copy(alpha = 0.3f))
         ) {
-            Icon(Icons.Default.Gavel, null, tint = CatSubtext)
+            Icon(Icons.Default.Gavel, null, tint = CatPeach)
             Spacer(Modifier.width(6.dp))
-            Text("File FTC Do Not Call Complaint", color = CatSubtext, style = MaterialTheme.typography.labelSmall)
+            Text(stringResource(R.string.ftc_report_action), color = CatPeach, style = MaterialTheme.typography.labelSmall)
         }
 
         // Whitelist / call / share actions

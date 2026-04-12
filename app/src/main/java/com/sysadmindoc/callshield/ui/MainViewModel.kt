@@ -70,6 +70,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     val whitelistEntries: StateFlow<List<WhitelistEntry>> = repo.getAllWhitelist()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    val emergencyContacts: StateFlow<List<WhitelistEntry>> = repo.getEmergencyContacts()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     val keywordRules: StateFlow<List<SmsKeywordRule>> = repo.getAllKeywordRules()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -113,6 +116,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     val mlScorerEnabled = repo.mlScorerEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
     val rcsFilterEnabled = repo.rcsFilterEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+    val silentVoicemailEnabled = repo.silentVoicemailEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
     val abstractApiKey = repo.abstractApiKey.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
 
     private val _syncState = MutableStateFlow<SyncState>(SyncState.Idle)
@@ -232,11 +236,14 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun toggleWildcardRule(id: Long, enabled: Boolean) { viewModelScope.launch { repo.toggleWildcardRule(id, enabled) } }
 
     // Whitelist
-    fun addToWhitelist(number: String, description: String = "") {
-        viewModelScope.launch { repo.addToWhitelist(number, description) }
+    fun addToWhitelist(number: String, description: String = "", isEmergency: Boolean = false) {
+        viewModelScope.launch { repo.addToWhitelist(number, description, isEmergency) }
     }
     fun removeFromWhitelist(entry: WhitelistEntry) {
         viewModelScope.launch { repo.removeFromWhitelist(entry) }
+    }
+    fun toggleWhitelistEmergency(id: Long, emergency: Boolean) {
+        viewModelScope.launch { repo.setWhitelistEmergency(id, emergency) }
     }
 
     // Export/import
@@ -281,6 +288,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun setCleanupDays(d: Int) = viewModelScope.launch { repo.setCleanupDays(d) }
     fun setMlScorer(v: Boolean) = viewModelScope.launch { repo.setMlScorer(v) }
     fun setRcsFilter(v: Boolean) = viewModelScope.launch { repo.setRcsFilter(v) }
+    fun setSilentVoicemail(v: Boolean) = viewModelScope.launch { repo.setSilentVoicemail(v) }
     fun setAbstractApiKey(key: String) = viewModelScope.launch { repo.setAbstractApiKey(key) }
 
     // Profiles

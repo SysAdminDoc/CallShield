@@ -129,8 +129,11 @@ interface SpamDao {
     fun searchNumbers(query: String): Flow<List<SpamNumber>>
 
     // Whitelist
-    @Query("SELECT * FROM whitelist ORDER BY addedTimestamp DESC")
+    @Query("SELECT * FROM whitelist ORDER BY isEmergency DESC, addedTimestamp DESC")
     fun getAllWhitelist(): Flow<List<WhitelistEntry>>
+
+    @Query("SELECT * FROM whitelist WHERE isEmergency = 1 ORDER BY addedTimestamp DESC")
+    fun getEmergencyContacts(): Flow<List<WhitelistEntry>>
 
     @Query("SELECT * FROM whitelist WHERE number = :number LIMIT 1")
     suspend fun findWhitelistEntry(number: String): WhitelistEntry?
@@ -140,6 +143,9 @@ interface SpamDao {
 
     @Delete
     suspend fun deleteWhitelistEntry(entry: WhitelistEntry)
+
+    @Query("UPDATE whitelist SET isEmergency = :emergency WHERE id = :id")
+    suspend fun setWhitelistEmergency(id: Long, emergency: Boolean)
 
     // Auto-cleanup
     @Query("DELETE FROM call_log WHERE timestamp < :before")

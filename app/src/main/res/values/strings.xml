@@ -351,7 +351,36 @@
     <string name="more_report_spam_number">Report Spam Number</string>
     <string name="more_share_crash_log">Share Last Crash Log</string>
     <string name="more_no_crash_logs">No crashes logged — CallShield hasn\'t recorded an uncaught exception.</string>
-    <string name="more_version">v1.3.0</string>
+    <!-- FTC one-tap report (Feature C) -->
+    <string name="ftc_report_action">Report to FTC</string>
+    <string name="ftc_report_action_fcc">Report to FCC</string>
+    <string name="ftc_report_toast">%1$s copied. Paste it into the form\'s phone-number field.</string>
+    <string name="ftc_report_no_browser">No browser available to open the report form.</string>
+    <!-- Emergency contacts (Feature E) -->
+    <string name="emergency_contacts_title">Emergency Contacts</string>
+    <string name="emergency_contacts_subtitle">Always ring through — bypasses blocklist, quiet hours, and aggressive mode.</string>
+    <string name="emergency_contacts_empty_title">No emergency contacts yet</string>
+    <string name="emergency_contacts_empty_body">Add your kid\'s school, your doctor, a family emergency line — any number that must ring through even when CallShield would otherwise block it.</string>
+    <string name="emergency_contacts_add">Add Emergency Contact</string>
+    <string name="emergency_contacts_mark_as">Mark as Emergency</string>
+    <string name="emergency_contacts_unmark">Remove Emergency Status</string>
+    <string name="emergency_contacts_tab">Emergency</string>
+    <string name="emergency_contacts_badge">EMERGENCY</string>
+    <!-- Block reasoning (Feature D) -->
+    <string name="block_reasoning_title">Why was this blocked?</string>
+    <string name="block_reasoning_empty">This number was allowed through — no block reasoning to show.</string>
+    <!-- Smart call labels (Feature A) -->
+    <string name="call_category_debt_collector">Debt Collector</string>
+    <string name="call_category_political">Political</string>
+    <string name="call_category_robocall">Robocall</string>
+    <string name="call_category_scam">Scam</string>
+    <string name="call_category_phishing">Phishing</string>
+    <string name="call_category_telemarketer">Telemarketer</string>
+    <string name="call_category_business">Business</string>
+    <string name="call_category_unknown">Unknown</string>
+    <string name="call_category_wangiri">Wangiri Scam</string>
+    <string name="call_category_survey">Survey</string>
+    <string name="more_version">v1.4.0</string>
     <string name="more_about_description">Open-source spam call &amp; text blocker with 15-layer detection engine + ML scorer. No API keys, no accounts, no tracking. Everything runs on-device.</string>
     <string name="more_about_layers">15</string>
     <string name="more_about_layers_label">Layers</string>

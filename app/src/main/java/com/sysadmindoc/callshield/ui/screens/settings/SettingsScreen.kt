@@ -57,6 +57,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
     val freqEscalation by viewModel.freqEscalationEnabled.collectAsState()
     val mlScorer by viewModel.mlScorerEnabled.collectAsState()
     val rcsFilter by viewModel.rcsFilterEnabled.collectAsState()
+    val silentVoicemail by viewModel.silentVoicemailEnabled.collectAsState()
     val abstractApiKey by viewModel.abstractApiKey.collectAsState()
 
     val roleManager = remember(context) {
@@ -311,6 +312,16 @@ fun SettingsScreen(viewModel: MainViewModel) {
                     Text("Grant Notification Access", color = CatMauve)
                 }
             }
+            GradientDivider()
+            // Silent voicemail mode — send blocked calls to voicemail silently
+            // instead of hard-rejecting. Off by default; users who want the
+            // missed-call entry as an audit trail can keep hard reject.
+            SettingsToggle(
+                "Silent Voicemail Mode",
+                "Blocked calls reach voicemail silently — your phone doesn't ring and caller hears normal rings, not a busy tone.",
+                Icons.Default.Voicemail,
+                silentVoicemail
+            ) { viewModel.setSilentVoicemail(it) }
         }
 
         // Feature 9: Time-based blocking

@@ -24,7 +24,14 @@ fun ChangelogScreen() {
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(0.dp)
     ) {
-        VersionEntry("1.3.0", "Crash reporter, instrumented tests, benchmark ceilings", isLatest = true, changes = listOf(
+        VersionEntry("1.4.0", "Smart labels, silent voicemail, FTC report, emergency contacts, block reasoning", isLatest = true, changes = listOf(
+            "Smart call labels — Debt Collector / Political / Robocall / Scam / Phishing / Telemarketer / Wangiri / Survey / Business / Unknown, shown on the Number Detail hero and in the blocked log",
+            "Silent voicemail mode — blocked calls reach voicemail silently instead of hard-rejecting, so your phone doesn't ring. Off by default; opt-in from Settings → Detection",
+            "One-tap FTC fraud report — any Number Detail screen now has a \"Report to FTC\" button that copies the number and opens reportfraud.ftc.gov",
+            "Emergency contacts — whitelist entries can be flagged as emergency, bypassing blocklist, quiet hours, and aggressive mode with a distinct red badge in the Whitelist tab",
+            "\"Why was this blocked?\" — Number Detail now shows a plain-English narrative of which detection layer fired, what heuristic reasons contributed, and the model's confidence",
+        ))
+        VersionEntry("1.3.0", "Crash reporter, instrumented tests, benchmark ceilings", changes = listOf(
             "Local crash reporter captures uncaught exceptions to filesDir/crashes/ — share the latest log via the new \"Share Last Crash Log\" Quick Link in More (no telemetry phoned home)",
             "Instrumented test suite: Compose UI tests for PremiumCard/SectionHeader/accentGlow, end-to-end CrashReporter IO, and the DashboardStatusModel state machine",
             "GitHub Actions emulator workflow runs connected tests on every PR + master push",
