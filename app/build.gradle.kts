@@ -25,8 +25,8 @@ android {
         applicationId = "com.sysadmindoc.callshield"
         minSdk = 29
         targetSdk = 36
-        versionCode = 14
-        versionName = "1.2.11"
+        versionCode = 15
+        versionName = "1.2.12"
     }
 
     val releaseStoreFile = signingProp("RELEASE_STORE_FILE")

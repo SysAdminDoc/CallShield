@@ -206,7 +206,12 @@ fun SettingsScreen(viewModel: MainViewModel) {
                         if (blockCalls && !screenerGranted && roleManager != null) {
                             Button(
                                 onClick = {
-                                    screeningLauncher.launch(roleManager.createRequestRoleIntent(RoleManager.ROLE_CALL_SCREENING))
+                                    try {
+                                        screeningLauncher.launch(roleManager.createRequestRoleIntent(RoleManager.ROLE_CALL_SCREENING))
+                                    } catch (_: Exception) {
+                                        // Some OEM ROMs remove ROLE_CALL_SCREENING — open app settings instead
+                                        context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}")))
+                                    }
                                 },
                                 colors = ButtonDefaults.buttonColors(containerColor = CatMauve),
                                 shape = RoundedCornerShape(14.dp),

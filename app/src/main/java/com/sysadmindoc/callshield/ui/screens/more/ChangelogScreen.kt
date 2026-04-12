@@ -24,7 +24,11 @@ fun ChangelogScreen() {
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(0.dp)
     ) {
-        VersionEntry("1.2.11", "Audit Round 5 — OkHttp response leaks + cache cleanup collision", isLatest = true, changes = listOf(
+        VersionEntry("1.2.12", "Audit Round 6 — DB migration guard + call screener crash", isLatest = true, changes = listOf(
+            "Database destructive migration restricted to legacy versions 1-4 only — future schema upgrades that lack explicit migrations now crash during development instead of silently wiping user data in production",
+            "Call screener role request wrapped in try-catch on all 3 launch sites (Dashboard, Settings, Onboarding) — prevents crash on OEM ROMs that remove ROLE_CALL_SCREENING",
+        ))
+        VersionEntry("1.2.11", "Audit Round 5 — OkHttp response leaks + cache cleanup collision", changes = listOf(
             "All 5 remote lookup modules (ExternalLookup, UrlSafetyChecker, NumberTypeChecker, CommunityContributor, WebLookup) now wrap OkHttp execute() in .use { } — previously the Response was leaked on non-2xx paths",
             "Log export cleanup now filters by filename prefix — no longer nukes in-flight blocklist exports that share the same cache directory",
         ))

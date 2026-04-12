@@ -1229,7 +1229,13 @@ private fun openNotificationSettings(context: Context) {
 }
 
 private fun requestCallScreening(context: Context, roleManager: RoleManager) {
-    context.startActivity(roleManager.createRequestRoleIntent(RoleManager.ROLE_CALL_SCREENING))
+    try {
+        context.startActivity(roleManager.createRequestRoleIntent(RoleManager.ROLE_CALL_SCREENING))
+    } catch (_: Exception) {
+        // Some OEM ROMs remove ROLE_CALL_SCREENING entirely — fall back to app settings
+        // so the user can at least see what's available.
+        openAppSettings(context)
+    }
 }
 
 @Composable

@@ -218,7 +218,11 @@ fun OnboardingScreen(onComplete: () -> Unit) {
                         Button(
                             onClick = {
                                 if (roleManager != null) {
-                                    screeningLauncher.launch(roleManager.createRequestRoleIntent(RoleManager.ROLE_CALL_SCREENING))
+                                    try {
+                                        screeningLauncher.launch(roleManager.createRequestRoleIntent(RoleManager.ROLE_CALL_SCREENING))
+                                    } catch (_: Exception) {
+                                        // ROLE_CALL_SCREENING unavailable on this device — skip silently
+                                    }
                                 }
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = CatMauve),

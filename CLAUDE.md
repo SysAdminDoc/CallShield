@@ -3,7 +3,7 @@
 ## Overview
 Open-source Android spam call/text blocker. 57 Kotlin files, ~9,200 lines, 5 Python scripts. 32,933 spam numbers from FCC/FTC/community. 15-layer detection + ML scorer + RCS filter + 30-min hot list sync. Real-time multi-source caller ID overlay with SIT tone anti-autodialer. URLhaus phishing detection. Anonymous community contribution via Cloudflare Worker. No API keys required.
 
-**Released:** v1.2.11 (versionCode 14, backup format v2)
+**Released:** v1.2.12 (versionCode 15, backup format v2)
 
 ---
 
@@ -216,6 +216,7 @@ ANDROID_HOME="$HOME/AppData/Local/Android/Sdk"
 - **v1.2.9** — Audit round 3: CampaignDetector.recordCall moved AFTER whitelist/dialed/urgent short-circuits (contact false-positive fix), BackupRestore.restoreFromUri wrapped in .use (FD leak fix), NotificationHelper.safeNotify helper honoring POST_NOTIFICATIONS at runtime for all 5 notify sites + try/catch on revoke-race, DigestWorker permission guard, RecentCallsScreen stable itemsIndexed key + per-row state keyed by call identity, BlockedLogScreen grouped view stable key, SearchResultsView stable items key
 - **v1.2.10** — Audit round 4: MainViewModel blockedToday/blockedThisWeek/blockedLastWeek rebuilt off a 1-minute rolling timeAnchor flow (was frozen at VM construction), CallShieldApp.appScope companion object for process-lifetime fire-and-forget, CallShieldScreeningService after-call feedback moved off service handler onto appScope.launch{delay(10_000)} (was being killed by service unbind), SpamRepository.isSpam/isSpamSms gained realtimeCall parameter, CallLogScanner/SmsInboxScanner pass realtimeCall=false to avoid poisoning CampaignDetector with historical numbers and suppress scan-time caller-ID overlays, SpamHeuristics.isInContacts cursor leak fix via .use
 - **v1.2.11** — Audit round 5: OkHttp Response leak fix across all 5 remote lookup modules (ExternalLookup x4 sites, UrlSafetyChecker, NumberTypeChecker, CommunityContributor, WebLookup) — every client.newCall(request).execute() now wrapped in .use { response -> } so non-2xx responses release the underlying connection back to the pool. LogExporter cleanup now filters by filename prefix (was nuking in-flight BlocklistExporter files in the shared cacheDir/exports directory).
+- **v1.2.12** — Audit round 6: AppDatabase.fallbackToDestructiveMigration() replaced with fallbackToDestructiveMigrationFrom(1,2,3,4) so any future DB_VERSION bump without an explicit Migration crashes at dev time instead of silently wiping user data in production. RoleManager.createRequestRoleIntent(ROLE_CALL_SCREENING) wrapped in try-catch on all 3 launch sites (DashboardScreen, SettingsScreen, OnboardingScreen) — prevents crash on OEM ROMs that remove ROLE_CALL_SCREENING.
 
 ---
 

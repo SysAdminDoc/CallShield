@@ -30,13 +30,14 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "callshield.db"
                 )
-                    // TODO: Remove fallbackToDestructiveMigration() once proper Migration objects
-                    // are defined for all version transitions (1→2, 2→3, etc.). We keep it for now
-                    // because the app shipped without exportSchema=true, so historical schemas are
-                    // unavailable and retroactive migrations cannot be written. From DB_VERSION 5
-                    // onward, schemas are exported — write explicit addMigrations() for every
-                    // future version bump and then remove this fallback.
-                    .fallbackToDestructiveMigration()
+                    // Destructive migration is restricted to legacy schema versions (1–4)
+                    // whose schemas were never exported, so retroactive Migration objects
+                    // cannot be written. From DB_VERSION 5 (the current production version)
+                    // onward, an explicit addMigrations() entry is REQUIRED for every future
+                    // version bump. Without one Room will throw IllegalStateException at
+                    // startup instead of silently wiping the user's blocklist, whitelist,
+                    // wildcard rules, keyword rules, and blocked-call log.
+                    .fallbackToDestructiveMigrationFrom(1, 2, 3, 4)
                     .build().also { INSTANCE = it }
             }
         }
