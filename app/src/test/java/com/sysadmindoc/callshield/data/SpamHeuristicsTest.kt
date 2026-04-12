@@ -14,6 +14,15 @@ class SpamHeuristicsTest {
     fun tearDown() {
         // Reset hot campaign ranges after each test
         SpamHeuristics.updateHotRanges(emptyList())
+        // Reset the contacts LRU so cache-state doesn't leak between tests
+        SpamHeuristics.clearContactCache()
+    }
+
+    @Test
+    fun `clearContactCache does not throw when cache is empty`() {
+        // Smoke test — the cache starts empty and must tolerate a clear
+        SpamHeuristics.clearContactCache()
+        SpamHeuristics.clearContactCache()
     }
 
     // ── isTollFree ───────────────────────────────────────────────────────

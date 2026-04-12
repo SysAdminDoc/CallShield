@@ -13,9 +13,32 @@ object SpamHeuristics {
 
     // ── Contact Whitelist ──────────────────────────────────────────────
     // If the number is in the user's contacts, it's NEVER spam.
+    //
+    // A single incoming call triggers isInContacts() up to 4 times
+    // (SpamRepository, SpamHeuristics.analyze, CallShieldScreeningService
+    // pre-check, postDelayed after-call feedback). Each ContactsContract
+    // PhoneLookup takes ~10–50 ms on a device with large contact lists.
+    // A short-TTL cache keyed by normalized number eliminates the
+    // redundant queries while staying responsive to the user adding or
+    // removing a contact (TTL = 60 s).
+    private const val CONTACT_CACHE_TTL_MS = 60_000L
+    private const val CONTACT_CACHE_MAX = 128
+    private val contactCacheLock = Any()
+    private val contactCache = object : LinkedHashMap<String, Pair<Long, Boolean>>(16, 0.75f, true) {
+        override fun removeEldestEntry(eldest: Map.Entry<String, Pair<Long, Boolean>>?): Boolean =
+            size > CONTACT_CACHE_MAX
+    }
+
     fun isInContacts(context: Context, number: String): Boolean {
         val normalized = normalizeForLookup(number)
-        return try {
+        val now = System.currentTimeMillis()
+        synchronized(contactCacheLock) {
+            val cached = contactCache[normalized]
+            if (cached != null && now - cached.first < CONTACT_CACHE_TTL_MS) {
+                return cached.second
+            }
+        }
+        val found = try {
             val uri = android.net.Uri.withAppendedPath(
                 ContactsContract.PhoneLookup.CONTENT_FILTER_URI,
                 android.net.Uri.encode(normalized)
@@ -28,6 +51,17 @@ object SpamHeuristics {
         } catch (_: Exception) {
             false
         }
+        synchronized(contactCacheLock) {
+            contactCache[normalized] = now to found
+        }
+        return found
+    }
+
+    /** Invalidate the contacts cache — call after the user potentially
+     *  added or removed a contact (not strictly necessary since the TTL
+     *  is 60 s, but useful for tests and for immediate UI reactions). */
+    fun clearContactCache() {
+        synchronized(contactCacheLock) { contactCache.clear() }
     }
 
     // ── Neighbor Spoofing ──────────────────────────────────────────────

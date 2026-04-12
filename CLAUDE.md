@@ -3,7 +3,7 @@
 ## Overview
 Open-source Android spam call/text blocker. 57 Kotlin files, ~9,200 lines, 5 Python scripts. 32,933 spam numbers from FCC/FTC/community. 15-layer detection + ML scorer + RCS filter + 30-min hot list sync. Real-time multi-source caller ID overlay with SIT tone anti-autodialer. URLhaus phishing detection. Anonymous community contribution via Cloudflare Worker. No API keys required.
 
-**Released:** v1.2.14 (versionCode 17, backup format v2)
+**Released:** v1.2.15 (versionCode 18, backup format v2)
 
 ---
 
@@ -219,6 +219,7 @@ ANDROID_HOME="$HOME/AppData/Local/Android/Sdk"
 - **v1.2.12** — Audit round 6: AppDatabase.fallbackToDestructiveMigration() replaced with fallbackToDestructiveMigrationFrom(1,2,3,4) so any future DB_VERSION bump without an explicit Migration crashes at dev time instead of silently wiping user data in production. RoleManager.createRequestRoleIntent(ROLE_CALL_SCREENING) wrapped in try-catch on all 3 launch sites (DashboardScreen, SettingsScreen, OnboardingScreen) — prevents crash on OEM ROMs that remove ROLE_CALL_SCREENING.
 - **v1.2.13** — Audit round 7: All 7 remaining UI call sites for isSpam()/isSpamSms() (LookupScreen x2, NumberDetailScreen, ProtectionTestScreen x3, RecentCallsScreen) now pass realtimeCall=false — eliminates campaign detector pollution + overlay pop from manual lookups, test runs, and recent-calls loading. Manifest now references backup_rules.xml (fullBackupContent) and new data_extraction_rules.xml (dataExtractionRules for API 31+) — backup properly scoped to database + DataStore only, excluding caches and model weights.
 - **v1.2.14** — Audit round 8: StatsScreen dailyCounts/monthlyTrend remember blocks keyed on dayBucket (now / 86400000) so they recompute at midnight instead of staying frozen. WildcardRule.matches() tries multi-normalized variants of the input number (raw digits, +1-prefixed, 11-digit, 10-digit) so glob patterns like +1212* match SMS senders without the +1 prefix. SmsContextChecker.hasSentMessageTo/hasRecurringConversation use LIKE '%last7digits' SQL pre-filter to avoid loading the entire sent/inbox SMS folder. Unit tests for wildcard multi-normalization.
+- **v1.2.15** — Audit round 9: SpamHeuristics.isInContacts() now caches PhoneLookup results for 60 s in a size-bounded LinkedHashMap (LRU, max 128 entries) guarded by synchronized(lock). Eliminates the 4x-per-call ContactsContract query cost (SpamRepository + SpamHeuristics.analyze + CallShieldScreeningService pre-check + postDelayed feedback check). Public SpamHeuristics.clearContactCache() for tests and manual invalidation.
 
 ---
 
