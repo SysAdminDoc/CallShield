@@ -74,7 +74,7 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
     var liveResult by remember { mutableStateOf<SpamCheckResult?>(null) }
     LaunchedEffect(number) {
         try {
-            liveResult = withContext(Dispatchers.IO) { SpamRepository.getInstance(context).isSpam(number) }
+            liveResult = withContext(Dispatchers.IO) { SpamRepository.getInstance(context).isSpam(number, realtimeCall = false) }
         } catch (_: Exception) {
             liveResult = null
         }

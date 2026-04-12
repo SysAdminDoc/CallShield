@@ -24,7 +24,13 @@ fun ChangelogScreen() {
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(0.dp)
     ) {
-        VersionEntry("1.2.12", "Audit Round 6 — DB migration guard + call screener crash", isLatest = true, changes = listOf(
+        VersionEntry("1.2.13", "Audit Round 7 — UI campaign pollution + backup rules", isLatest = true, changes = listOf(
+            "All UI spam checks (Lookup, Number Detail, Protection Test, Recent Calls) now use realtimeCall=false — no longer poison the campaign burst detector or pop caller-ID overlays",
+            "Protection test no longer feeds synthetic test numbers into the campaign detector",
+            "Backup rules referenced in manifest and properly scoped — database + DataStore included, caches excluded",
+            "New data_extraction_rules.xml for API 31+ cloud backup and device transfer",
+        ))
+        VersionEntry("1.2.12", "Audit Round 6 — DB migration guard + call screener crash", changes = listOf(
             "Database destructive migration restricted to legacy versions 1-4 only — future schema upgrades that lack explicit migrations now crash during development instead of silently wiping user data in production",
             "Call screener role request wrapped in try-catch on all 3 launch sites (Dashboard, Settings, Onboarding) — prevents crash on OEM ROMs that remove ROLE_CALL_SCREENING",
         ))

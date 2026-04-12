@@ -89,7 +89,7 @@ fun LookupScreen() {
                     scope.launch {
                         try {
                             val repo = SpamRepository.getInstance(context)
-                            result = withContext(Dispatchers.IO) { repo.isSpam(numberInput) }
+                            result = withContext(Dispatchers.IO) { repo.isSpam(numberInput, realtimeCall = false) }
                             haptic(context, result?.isSpam == true)
                         } catch (e: Exception) {
                             errorMessage = context.getString(R.string.lookup_failed, e.message ?: context.getString(R.string.lookup_failed_unknown).substringAfter(": "))
@@ -112,7 +112,7 @@ fun LookupScreen() {
                     scope.launch {
                         try {
                             val repo = SpamRepository.getInstance(context)
-                            result = withContext(Dispatchers.IO) { repo.isSpam(numberInput) }
+                            result = withContext(Dispatchers.IO) { repo.isSpam(numberInput, realtimeCall = false) }
                             haptic(context, result?.isSpam == true)
                         } catch (e: Exception) {
                             errorMessage = context.getString(R.string.lookup_failed, e.message ?: context.getString(R.string.lookup_failed_unknown).substringAfter(": "))
