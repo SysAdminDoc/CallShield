@@ -65,8 +65,14 @@ fun StatsScreen(viewModel: MainViewModel) {
     }.reversed()
     val maxWeekly = weeklyData.max().coerceAtLeast(1)
 
+    // Day bucket — flips at midnight so daily/monthly remember blocks
+    // recompute their time windows even if blockedCalls hasn't changed.
+    // Without this, leaving the stats screen open across midnight shows
+    // stale day labels and month boundaries.
+    val dayBucket = now / dayMs
+
     // Weekly bar chart data with day labels
-    val dailyCounts = remember(blockedCalls) {
+    val dailyCounts = remember(blockedCalls, dayBucket) {
         (6 downTo 0).map { daysAgo ->
             val c = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, -daysAgo) }
             val dayStart = now - (daysAgo + 1) * dayMs
@@ -87,8 +93,7 @@ fun StatsScreen(viewModel: MainViewModel) {
     }
 
     // Monthly trend
-    val monthlyTrend = remember(blockedCalls) {
-        val cal = Calendar.getInstance()
+    val monthlyTrend = remember(blockedCalls, dayBucket) {
         val thisMonthStart = Calendar.getInstance().apply {
             set(Calendar.DAY_OF_MONTH, 1)
             set(Calendar.HOUR_OF_DAY, 0)
