@@ -4,6 +4,7 @@ import android.app.Application
 import android.util.Log
 import com.sysadmindoc.callshield.data.SpamMLScorer
 import com.sysadmindoc.callshield.data.SpamRepository
+import com.sysadmindoc.callshield.service.CrashReporter
 import com.sysadmindoc.callshield.service.DigestWorker
 import com.sysadmindoc.callshield.service.HotListSyncWorker
 import com.sysadmindoc.callshield.service.HotDataSync
@@ -18,6 +19,9 @@ class CallShieldApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        // Install the uncaught-exception handler BEFORE anything else so we
+        // capture crashes even during app-startup init.
+        CrashReporter.install(this)
         appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
         NotificationHelper.createChannels(this)
         SyncWorker.schedule(this)

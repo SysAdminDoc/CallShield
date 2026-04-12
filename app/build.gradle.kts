@@ -25,8 +25,9 @@ android {
         applicationId = "com.sysadmindoc.callshield"
         minSdk = 29
         targetSdk = 36
-        versionCode = 18
-        versionName = "1.2.15"
+        versionCode = 19
+        versionName = "1.3.0"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     val releaseStoreFile = signingProp("RELEASE_STORE_FILE")
@@ -72,6 +73,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     sourceSets {
@@ -103,4 +105,13 @@ dependencies {
     implementation(libs.moshi.kotlin)
     debugImplementation(libs.androidx.ui.tooling)
     testImplementation(libs.junit4)
+
+    // Instrumentation tests (emulator / device)
+    androidTestImplementation(platform(libs.androidx.compose.bom))
+    androidTestImplementation(libs.androidx.test.ext.junit)
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.test.core)
+    androidTestImplementation(libs.androidx.espresso.core)
+    androidTestImplementation(libs.androidx.compose.ui.test.junit4)
+    debugImplementation(libs.androidx.compose.ui.test.manifest)
 }

@@ -22,7 +22,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import android.widget.Toast
 import com.sysadmindoc.callshield.R
+import com.sysadmindoc.callshield.service.CrashReporter
 import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.screens.settings.SettingsScreen
 import com.sysadmindoc.callshield.ui.screens.stats.StatsScreen
@@ -118,6 +120,18 @@ fun MoreHub(onStats: () -> Unit, onSettings: () -> Unit, onChangelog: () -> Unit
                 GradientDivider()
                 QuickLink(Icons.Default.Flag, stringResource(R.string.more_report_spam_number), CatRed) {
                     context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/SysAdminDoc/CallShield/issues/new?template=spam_report.md")).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) })
+                }
+                GradientDivider()
+                // Crash log export. Local-only — we never auto-upload.
+                QuickLink(Icons.Default.Description, stringResource(R.string.more_share_crash_log), CatMauve) {
+                    val intent = CrashReporter.shareLatestCrashIntent(context)
+                    if (intent != null) {
+                        context.startActivity(Intent.createChooser(intent, null).apply {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        })
+                    } else {
+                        Toast.makeText(context, R.string.more_no_crash_logs, Toast.LENGTH_SHORT).show()
+                    }
                 }
             }
         }
