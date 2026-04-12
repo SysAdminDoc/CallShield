@@ -35,10 +35,34 @@ data class WildcardRule(
                 .replace("*", "\\d*")
                 .replace("?", "\\d")
             try {
-                Regex("^$regexPattern$").matches(number)
+                val regex = Regex("^$regexPattern$")
+                // Try the input as-is first, then normalized forms so that
+                // patterns like "+1212*" also match SMS senders that arrive
+                // without the +1 prefix (e.g. "2125551234").
+                numberVariants(number).any { regex.matches(it) }
             } catch (_: Exception) {
                 false
             }
+        }
+    }
+
+    companion object {
+        /** Generate common US number normalizations so wildcard globs match
+         *  regardless of whether the input has a +1 prefix or not. */
+        internal fun numberVariants(number: String): List<String> {
+            val digits = number.filter { it.isDigit() }
+            return buildList {
+                add(number)
+                if (digits != number) add(digits) // raw digits without punctuation
+                if (digits.length == 10) {
+                    add("+1$digits")
+                    add("1$digits")
+                }
+                if (digits.length == 11 && digits.startsWith("1")) {
+                    add("+$digits")
+                    add(digits.drop(1))
+                }
+            }.distinct()
         }
     }
 }

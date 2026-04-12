@@ -25,16 +25,24 @@ object SmsContextChecker {
     /**
      * Returns true if the user has ever sent an SMS to this number.
      * A sent message is strong evidence of a known, legitimate contact.
+     *
+     * Uses a LIKE pre-filter on the last 7 digits so the content provider
+     * only returns candidate rows instead of the entire sent folder.
+     * Normalizes in Kotlin afterward to handle +1 / leading-country-code
+     * variants that LIKE can't express.
      */
     fun hasSentMessageTo(context: Context, number: String): Boolean {
         val normalized = normalize(number)
         if (normalized.isEmpty()) return false
+        val likeSuffix = normalized.takeLast(7)
 
         return try {
             context.contentResolver.query(
                 Telephony.Sms.Sent.CONTENT_URI,
                 arrayOf(Telephony.Sms.Sent.ADDRESS),
-                null, null, null
+                "${Telephony.Sms.Sent.ADDRESS} LIKE ?",
+                arrayOf("%$likeSuffix"),
+                null
             )?.use { cursor ->
                 while (cursor.moveToNext()) {
                     val address = cursor.getString(0) ?: continue
@@ -53,16 +61,21 @@ object SmsContextChecker {
      *
      * Single-day multi-blast is a common spam pattern; genuine contacts
      * message across multiple days.
+     *
+     * Uses a LIKE pre-filter on the last 7 digits (same rationale as
+     * [hasSentMessageTo]) to avoid loading the entire inbox.
      */
     fun hasRecurringConversation(context: Context, number: String): Boolean {
         val normalized = normalize(number)
         if (normalized.isEmpty()) return false
+        val likeSuffix = normalized.takeLast(7)
 
         return try {
             context.contentResolver.query(
                 Telephony.Sms.Inbox.CONTENT_URI,
                 arrayOf(Telephony.Sms.Inbox.ADDRESS, Telephony.Sms.Inbox.DATE),
-                null, null,
+                "${Telephony.Sms.Inbox.ADDRESS} LIKE ?",
+                arrayOf("%$likeSuffix"),
                 "${Telephony.Sms.Inbox.DATE} ASC"
             )?.use { cursor ->
                 val days = mutableSetOf<String>()

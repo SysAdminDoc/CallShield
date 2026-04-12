@@ -24,7 +24,13 @@ fun ChangelogScreen() {
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(0.dp)
     ) {
-        VersionEntry("1.2.13", "Audit Round 7 — UI campaign pollution + backup rules", isLatest = true, changes = listOf(
+        VersionEntry("1.2.14", "Audit Round 8 — Stats drift, wildcard SMS match, trusted-sender perf", isLatest = true, changes = listOf(
+            "Stats screen daily chart and monthly trend now recompute at midnight (was frozen until new blocks arrived)",
+            "Wildcard area-code rules (e.g. +1212*) now match SMS senders without the +1 prefix via multi-normalization",
+            "Trusted-sender SMS check uses SQL WHERE pre-filter — no longer scans the entire sent/inbox folder in memory",
+            "New unit tests for wildcard multi-normalization (glob + E.164 + raw 10-digit + wrong-area-code rejection)",
+        ))
+        VersionEntry("1.2.13", "Audit Round 7 — UI campaign pollution + backup rules", changes = listOf(
             "All UI spam checks (Lookup, Number Detail, Protection Test, Recent Calls) now use realtimeCall=false — no longer poison the campaign burst detector or pop caller-ID overlays",
             "Protection test no longer feeds synthetic test numbers into the campaign detector",
             "Backup rules referenced in manifest and properly scoped — database + DataStore included, caches excluded",
