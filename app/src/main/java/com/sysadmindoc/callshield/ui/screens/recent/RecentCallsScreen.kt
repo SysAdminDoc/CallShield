@@ -366,7 +366,7 @@ private suspend fun loadRecentCalls(context: Context): List<RecentCall> = withCo
 
             // Batch spam check: only check unique numbers once
             val uniqueNumbers = rawCalls.map { it.number }.distinct()
-            val spamCache = uniqueNumbers.associateWith { repo.isSpam(it) }
+            val spamCache = uniqueNumbers.associateWith { repo.isSpam(it, realtimeCall = false) }
 
             // Batch contact lookup
             val contactCache = mutableMapOf<String, String?>()

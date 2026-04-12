@@ -222,15 +222,15 @@ private suspend fun runTests(context: Context): List<TestResult> = withContext(D
     results.add(TestResult("Spam Database", count > 0, "$count numbers loaded"))
 
     // Detection layer test — check a known spam number format
-    val testResult = repo.isSpam("+19005551234") // 900 prefix = premium rate
+    val testResult = repo.isSpam("+19005551234", realtimeCall = false) // 900 prefix = premium rate
     results.add(TestResult("Prefix Detection", testResult.isSpam, if (testResult.isSpam) "Correctly blocked +1900 prefix (${testResult.matchSource})" else "Failed to detect premium rate number"))
 
     // Heuristic test — check international premium
-    val wangiriResult = repo.isSpam("+2321234567") // Sierra Leone
+    val wangiriResult = repo.isSpam("+2321234567", realtimeCall = false) // Sierra Leone
     results.add(TestResult("Wangiri Detection", wangiriResult.isSpam, if (wangiriResult.isSpam) "Correctly flagged Sierra Leone number" else "Wangiri detection may be disabled"))
 
     // SMS content test
-    val smsResult = repo.isSpamSms("+15555555555", "You have WON a FREE gift card! Claim now at bit.ly/scam")
+    val smsResult = repo.isSpamSms("+15555555555", "You have WON a FREE gift card! Claim now at bit.ly/scam", realtimeCall = false)
     results.add(TestResult("SMS Content Analysis", smsResult.isSpam, if (smsResult.isSpam) "Correctly detected spam SMS (${smsResult.matchSource})" else "SMS analysis may be disabled"))
 
     // ML scorer test
