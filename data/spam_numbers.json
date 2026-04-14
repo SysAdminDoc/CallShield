@@ -1,6 +1,6 @@
 {
-  "version": 21,
-  "updated": "2026-04-09",
+  "version": 22,
+  "updated": "2026-04-14",
   "description": "CallShield community spam number database",
   "sources": [
     "ftc_complaints",
@@ -263479,6 +263479,14 @@
       "reports": 3,
       "first_seen": "2026-03-31",
       "last_seen": "2026-03-31",
+      "description": "Community reported"
+    },
+    {
+      "number": "+10342926519",
+      "type": "spam",
+      "reports": 3,
+      "first_seen": "2026-04-14",
+      "last_seen": "2026-04-14",
       "description": "Community reported"
     },
     {
