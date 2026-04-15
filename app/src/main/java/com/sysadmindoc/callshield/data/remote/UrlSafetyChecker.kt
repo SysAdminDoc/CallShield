@@ -47,10 +47,7 @@ object UrlSafetyChecker {
      * Safe to call from a background coroutine — never blocks the call/SMS decision.
      */
     suspend fun checkSmsBody(body: String): List<UrlCheckResult> {
-        val urls = URL_PATTERN.findAll(body)
-            .map { it.value }
-            .take(5) // Limit to 5 URLs per message to avoid hammering the API
-            .toList()
+        val urls = extractCandidateUrls(body)
 
         if (urls.isEmpty()) return emptyList()
 
@@ -64,8 +61,7 @@ object UrlSafetyChecker {
      */
     suspend fun checkUrl(url: String): UrlCheckResult = withContext(Dispatchers.IO) {
         try {
-            // Normalize — ensure it starts with http/https
-            val normalizedUrl = if (url.startsWith("www.")) "https://$url" else url
+            val normalizedUrl = normalizeCandidateUrl(url)
 
             val escapedUrl = normalizedUrl.replace("\\", "\\\\").replace("\"", "\\\"")
                 .replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
@@ -105,6 +101,24 @@ object UrlSafetyChecker {
             }
         } catch (_: Exception) {
             UrlCheckResult(url, false) // Network error = don't flag
+        }
+    }
+
+    internal fun extractCandidateUrls(body: String, limit: Int = 5): List<String> {
+        return URL_PATTERN.findAll(body)
+            .map { normalizeCandidateUrl(it.value) }
+            .filter { it.isNotBlank() }
+            .distinct()
+            .take(limit.coerceAtLeast(1))
+            .toList()
+    }
+
+    internal fun normalizeCandidateUrl(rawUrl: String): String {
+        val trimmed = rawUrl.trim().trimEnd('.', ',', '!', '?', ';', ':', ')', ']', '}')
+        return if (trimmed.startsWith("www.", ignoreCase = true)) {
+            "https://$trimmed"
+        } else {
+            trimmed
         }
     }
 }

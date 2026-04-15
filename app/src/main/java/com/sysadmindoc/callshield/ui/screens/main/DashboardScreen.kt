@@ -118,6 +118,7 @@ import com.sysadmindoc.callshield.ui.theme.CatYellow
 import com.sysadmindoc.callshield.ui.theme.GradientDivider
 import com.sysadmindoc.callshield.ui.theme.PremiumCard
 import com.sysadmindoc.callshield.ui.theme.SectionHeader
+import com.sysadmindoc.callshield.ui.theme.StatusPill
 import com.sysadmindoc.callshield.ui.theme.accentGlow
 import com.sysadmindoc.callshield.ui.theme.hapticConfirm
 import com.sysadmindoc.callshield.ui.theme.hapticTick
@@ -1072,19 +1073,13 @@ private fun SetupChecklistRow(
 
 @Composable
 private fun SetupStateBadge(label: String, color: Color) {
-    Surface(
-        shape = RoundedCornerShape(999.dp),
-        color = color.copy(alpha = 0.12f),
-        modifier = Modifier.wrapContentWidth()
-    ) {
-        Text(
-            label,
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-            style = MaterialTheme.typography.labelMedium,
-            color = color,
-            fontWeight = FontWeight.SemiBold
-        )
-    }
+    StatusPill(
+        text = label,
+        color = color,
+        modifier = Modifier.wrapContentWidth(),
+        horizontalPadding = 10.dp,
+        verticalPadding = 6.dp
+    )
 }
 
 @Composable

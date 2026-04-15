@@ -4,6 +4,7 @@ import android.content.Context
 import com.sysadmindoc.callshield.data.model.HotNumber
 import com.sysadmindoc.callshield.data.model.SpamDatabase
 import com.squareup.moshi.Moshi
+import com.squareup.moshi.Types
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -20,6 +21,18 @@ class GitHubDataSource {
     private val moshi = Moshi.Builder()
         .addLast(KotlinJsonAdapterFactory())
         .build()
+    private val hotListEnvelopeAdapter = moshi.adapter(HotListPayload::class.java)
+    private val hotListArrayAdapter = moshi.adapter<List<HotListEntry>>(
+        Types.newParameterizedType(List::class.java, HotListEntry::class.java)
+    )
+    private val hotRangesEnvelopeAdapter = moshi.adapter(HotRangesPayload::class.java)
+    private val hotRangesArrayAdapter = moshi.adapter<List<String>>(
+        Types.newParameterizedType(List::class.java, String::class.java)
+    )
+    private val spamDomainsEnvelopeAdapter = moshi.adapter(SpamDomainsPayload::class.java)
+    private val spamDomainsArrayAdapter = moshi.adapter<List<String>>(
+        Types.newParameterizedType(List::class.java, String::class.java)
+    )
 
     companion object {
         const val DEFAULT_REPO_OWNER = "SysAdminDoc"
@@ -135,36 +148,56 @@ class GitHubDataSource {
     }
 
     fun parseHotListJson(body: String): List<HotNumber> {
-        val numberRegex = """"number"\s*:\s*"([^"]+)"""".toRegex()
-        val typeRegex = """"type"\s*:\s*"([^"]+)"""".toRegex()
-        val descRegex = """"description"\s*:\s*"([^"]*?)"""".toRegex()
+        val trimmedBody = body.trimStart()
+        val entries = when {
+            trimmedBody.startsWith("{") -> {
+                hotListEnvelopeAdapter.fromJson(body)?.numbers
+                    ?: throw IllegalStateException("Failed to parse hot list payload")
+            }
+            trimmedBody.startsWith("[") -> {
+                hotListArrayAdapter.fromJson(body)
+                    ?: throw IllegalStateException("Failed to parse hot list array")
+            }
+            else -> throw IllegalStateException("Unsupported hot list JSON format")
+        }
 
-        return body.split("{").drop(1).mapNotNull { block ->
-            val number = numberRegex.find(block)?.groupValues?.get(1) ?: return@mapNotNull null
-            val type = typeRegex.find(block)?.groupValues?.get(1) ?: "robocall"
-            val desc = descRegex.find(block)?.groupValues?.get(1) ?: "Trending community report"
-            HotNumber(number = number, type = type, description = desc)
+        return entries.mapNotNull { entry ->
+            val number = entry.number.trim()
+            if (number.isBlank()) {
+                null
+            } else {
+                HotNumber(
+                    number = number,
+                    type = entry.type.trim().ifBlank { "robocall" },
+                    description = entry.description.trim().ifBlank { "Trending community report" }
+                )
+            }
         }
     }
 
-    fun parseHotRangesJson(body: String): List<String> =
-        Regex(""""npanxx"\s*:\s*"(\d{6})"""")
-            .findAll(body)
-            .map { it.groupValues[1] }
-            .toList()
+    fun parseHotRangesJson(body: String): List<String> {
+        val trimmedBody = body.trimStart()
+        return when {
+            trimmedBody.startsWith("{") -> {
+                hotRangesEnvelopeAdapter.fromJson(body)?.ranges.orEmpty().map { it.npanxx }
+            }
+            trimmedBody.startsWith("[") -> {
+                hotRangesArrayAdapter.fromJson(body)
+                    ?: throw IllegalStateException("Failed to parse hot ranges array")
+            }
+            else -> throw IllegalStateException("Unsupported hot ranges JSON format")
+        }
+    }
 
     fun parseSpamDomainsJson(body: String): List<String> {
-        val arrayContent = Regex(""""domains"\s*:\s*\[([^\]]*)]""")
-            .find(body)
-            ?.groupValues
-            ?.get(1)
-            ?: return emptyList()
-
-        return Regex(""""([^"]+)"""")
-            .findAll(arrayContent)
-            .map { it.groupValues[1] }
+        val trimmedBody = body.trimStart()
+        return when {
+            trimmedBody.startsWith("{") -> spamDomainsEnvelopeAdapter.fromJson(body)?.domains.orEmpty()
+            trimmedBody.startsWith("[") -> spamDomainsArrayAdapter.fromJson(body)
+                ?: throw IllegalStateException("Failed to parse spam domains array")
+            else -> throw IllegalStateException("Unsupported spam domains JSON format")
+        }.map { it.trim() }
             .filter { it.isNotBlank() }
-            .toList()
     }
 
     private suspend fun fetchRawText(path: String, owner: String, repo: String): Result<String> {
@@ -226,4 +259,26 @@ class GitHubDataSource {
             Result.failure(e)
         }
     }
+
+    private data class HotListPayload(
+        val numbers: List<HotListEntry> = emptyList(),
+    )
+
+    private data class HotListEntry(
+        val number: String = "",
+        val type: String = "robocall",
+        val description: String = "Trending community report",
+    )
+
+    private data class HotRangesPayload(
+        val ranges: List<HotRangeEntry> = emptyList(),
+    )
+
+    private data class HotRangeEntry(
+        val npanxx: String = "",
+    )
+
+    private data class SpamDomainsPayload(
+        val domains: List<String> = emptyList(),
+    )
 }

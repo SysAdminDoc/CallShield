@@ -272,6 +272,33 @@ fun SectionHeader(title: String, color: Color = CatOverlay) {
     }
 }
 
+@Composable
+fun StatusPill(
+    text: String,
+    color: Color,
+    modifier: Modifier = Modifier,
+    horizontalPadding: Dp = 12.dp,
+    verticalPadding: Dp = 8.dp,
+    containerAlpha: Float = 0.12f,
+    borderAlpha: Float = 0.18f,
+    textStyle: TextStyle = MaterialTheme.typography.labelMedium,
+) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(999.dp),
+        color = color.copy(alpha = containerAlpha),
+        border = BorderStroke(1.dp, color.copy(alpha = borderAlpha))
+    ) {
+        Text(
+            text = text,
+            modifier = Modifier.padding(horizontal = horizontalPadding, vertical = verticalPadding),
+            style = textStyle,
+            color = color,
+            fontWeight = FontWeight.SemiBold
+        )
+    }
+}
+
 // ─── Accent Glow Modifier ─────────────────────────────────────────
 // Draws a soft radial glow behind the element
 fun Modifier.accentGlow(color: Color, radius: Float = 500f, alpha: Float = 0.08f): Modifier =

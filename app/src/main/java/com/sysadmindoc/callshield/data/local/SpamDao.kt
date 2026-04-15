@@ -34,11 +34,20 @@ interface SpamDao {
     @Delete
     suspend fun deleteNumber(number: SpamNumber)
 
-    @Query("DELETE FROM spam_numbers WHERE source = :source")
+    // Preserve user-owned blocks even when the backing source refreshes.
+    // Example: a user-blocked number that also exists in the GitHub dataset
+    // must survive the next sync instead of disappearing.
+    @Query("DELETE FROM spam_numbers WHERE source = :source AND isUserBlocked = 0")
     suspend fun deleteBySource(source: String)
 
     @Query("SELECT COUNT(*) FROM spam_numbers WHERE source = :source")
     suspend fun getCountBySource(source: String): Int
+
+    @Query("SELECT * FROM spam_numbers WHERE isUserBlocked = 1")
+    suspend fun getUserBlockedNumbersSync(): List<SpamNumber>
+
+    @Query("SELECT * FROM spam_numbers WHERE number IN (:numbers)")
+    suspend fun getNumbersByNumbers(numbers: List<String>): List<SpamNumber>
 
     @Transaction
     suspend fun replaceBySource(source: String, numbers: List<SpamNumber>) {

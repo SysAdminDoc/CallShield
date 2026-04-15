@@ -70,8 +70,9 @@ class CallShieldScreeningService : CallScreeningService() {
                                 applicationContext.startService(intent)
                             } catch (_: Exception) {}
                         }
-                        repo.promptSpamRating(number)
-                        // Show "Was this spam?" notification 10 seconds after call.
+                        // Show a single "Was this spam?" notification after the
+                        // call settles. Posting immediately here as well created
+                        // two separate feedback notifications for the same call.
                         // Must run on the app-wide scope: CallScreeningService is
                         // typically unbound by the system shortly after
                         // respondToCall() returns, so the service's own scope /

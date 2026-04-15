@@ -32,7 +32,11 @@ object BackupRestore {
     )
 
     data class BackupNumber(val number: String, val type: String, val description: String, val source: String)
-    data class BackupWhitelist(val number: String, val description: String)
+    data class BackupWhitelist(
+        val number: String,
+        val description: String,
+        val isEmergency: Boolean = false,
+    )
     data class BackupWildcard(val pattern: String, val isRegex: Boolean, val description: String, val enabled: Boolean)
     data class BackupKeyword(val keyword: String, val caseSensitive: Boolean, val description: String, val enabled: Boolean)
 
@@ -43,7 +47,7 @@ object BackupRestore {
             BackupNumber(it.number, it.type, it.description, it.source)
         }
         val whitelist = dao.getAllWhitelist().first().map {
-            BackupWhitelist(it.number, it.description)
+            BackupWhitelist(it.number, it.description, it.isEmergency)
         }
         val wildcards = dao.getAllWildcardRules().first().map {
             BackupWildcard(it.pattern, it.isRegex, it.description, it.enabled)
@@ -130,7 +134,11 @@ object BackupRestore {
             var whitelistRestored = 0
             for (w in backup.whitelistNumbers) {
                 val normalizedNumber = normalizeImportedNumber(w.number) ?: continue
-                repo.addToWhitelist(normalizedNumber, w.description.trim())
+                repo.addToWhitelist(
+                    normalizedNumber,
+                    w.description.trim(),
+                    isEmergency = w.isEmergency
+                )
                 whitelistRestored++
             }
 
