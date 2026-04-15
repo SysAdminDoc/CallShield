@@ -23,6 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import android.widget.Toast
+import com.sysadmindoc.callshield.BuildConfig
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.service.CrashReporter
 import com.sysadmindoc.callshield.ui.MainViewModel
@@ -42,6 +43,7 @@ fun MoreScreen(viewModel: MainViewModel) {
         3 -> { Column(Modifier.fillMaxSize()) { MoreTopBar(stringResource(R.string.more_whats_new)) { currentView = 0 }; ChangelogScreen() } }
         4 -> { Column(Modifier.fillMaxSize()) { MoreTopBar(stringResource(R.string.more_protection_test)) { currentView = 0 }; ProtectionTestScreen() } }
         else -> MoreHub(
+            viewModel = viewModel,
             onStats = { currentView = 1 },
             onSettings = { currentView = 2 },
             onChangelog = { currentView = 3 },
@@ -70,13 +72,66 @@ fun MoreTopBar(title: String, onBack: () -> Unit) {
 }
 
 @Composable
-fun MoreHub(onStats: () -> Unit, onSettings: () -> Unit, onChangelog: () -> Unit, onTest: () -> Unit) {
+fun MoreHub(viewModel: MainViewModel, onStats: () -> Unit, onSettings: () -> Unit, onChangelog: () -> Unit, onTest: () -> Unit) {
     val context = LocalContext.current
+    val spamCount by viewModel.spamCount.collectAsState()
+    val blockedToday by viewModel.blockedToday.collectAsState()
+    val blockCallsEnabled by viewModel.blockCallsEnabled.collectAsState()
+    val blockSmsEnabled by viewModel.blockSmsEnabled.collectAsState()
+    val lastSync by viewModel.lastSyncTimestamp.collectAsState()
+    val protectionAccent = when {
+        blockCallsEnabled || blockSmsEnabled -> CatGreen
+        else -> CatPeach
+    }
+    val appVersion = "v${BuildConfig.VERSION_NAME}"
+    val protectionLabel = when {
+        blockCallsEnabled && blockSmsEnabled -> stringResource(R.string.more_snapshot_calls_texts)
+        blockCallsEnabled -> stringResource(R.string.more_snapshot_calls)
+        blockSmsEnabled -> stringResource(R.string.more_snapshot_texts)
+        else -> stringResource(R.string.more_snapshot_paused)
+    }
+    val syncLabel = when {
+        lastSync <= 0L -> stringResource(R.string.more_snapshot_never_synced)
+        else -> {
+            val ago = System.currentTimeMillis() - lastSync
+            when {
+                ago < 60_000 -> stringResource(R.string.dashboard_synced_just_now)
+                ago < 3_600_000 -> stringResource(R.string.dashboard_synced_minutes_ago, (ago / 60_000).toInt())
+                ago < 86_400_000 -> stringResource(R.string.dashboard_synced_hours_ago, (ago / 3_600_000).toInt())
+                else -> stringResource(R.string.dashboard_synced_days_ago, (ago / 86_400_000).toInt())
+            }
+        }
+    }
 
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        PremiumCard(accentColor = protectionAccent) {
+            Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                SectionHeader(stringResource(R.string.more_snapshot_title), protectionAccent)
+                Text(
+                    protectionLabel,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = protectionAccent
+                )
+                Text(
+                    syncLabel,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = CatSubtext
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    AboutStat(String.format("%,d", spamCount), stringResource(R.string.more_snapshot_database), CatGreen)
+                    AboutStat(blockedToday.toString(), stringResource(R.string.more_snapshot_today), CatPeach)
+                    AboutStat(appVersion, stringResource(R.string.more_snapshot_version), CatYellow)
+                }
+            }
+        }
+
         // Navigation cards
         MoreNavCard(
             icon = Icons.Default.BarChart, title = stringResource(R.string.more_statistics),
@@ -147,7 +202,7 @@ fun MoreHub(onStats: () -> Unit, onSettings: () -> Unit, onChangelog: () -> Unit
                     modifier = Modifier.accentGlow(CatGreen, 300f, 0.04f)
                 )
                 Spacer(Modifier.height(4.dp))
-                Text(stringResource(R.string.more_version), style = MaterialTheme.typography.bodyMedium, color = CatSubtext)
+                Text(appVersion, style = MaterialTheme.typography.bodyMedium, color = CatSubtext)
                 Spacer(Modifier.height(12.dp))
                 Text(
                     stringResource(R.string.more_about_description),
@@ -219,7 +274,7 @@ fun QuickLink(icon: androidx.compose.ui.graphics.vector.ImageVector, label: Stri
 }
 
 @Composable
-fun AboutStat(label: String, value: String, color: androidx.compose.ui.graphics.Color) {
+fun AboutStat(value: String, label: String, color: androidx.compose.ui.graphics.Color) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = color)
         Text(label, style = MaterialTheme.typography.labelSmall, color = CatSubtext)

@@ -23,7 +23,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -31,6 +30,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
+import com.sysadmindoc.callshield.BuildConfig
 import com.sysadmindoc.callshield.permissions.CallShieldPermissions
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.ui.MainViewModel
@@ -272,34 +272,34 @@ fun SettingsScreen(viewModel: MainViewModel) {
         }
 
         // Blocking
-        SettingsCard("Blocking") {
-            SettingsToggle("Block Spam Calls", "Reject calls from known spam numbers", Icons.Default.PhoneDisabled, blockCalls) { viewModel.setBlockCalls(it) }
+        SettingsCard(stringResource(R.string.settings_blocking)) {
+            SettingsToggle(stringResource(R.string.settings_block_spam_calls), stringResource(R.string.settings_block_spam_calls_desc), Icons.Default.PhoneDisabled, blockCalls) { viewModel.setBlockCalls(it) }
             GradientDivider()
-            SettingsToggle("Block Spam SMS", "Filter texts from spam numbers and content", Icons.Default.SpeakerNotesOff, blockSms) { viewModel.setBlockSms(it) }
+            SettingsToggle(stringResource(R.string.settings_block_spam_sms), stringResource(R.string.settings_block_spam_sms_desc), Icons.Default.SpeakerNotesOff, blockSms) { viewModel.setBlockSms(it) }
             GradientDivider()
-            SettingsToggle("Block Unknown Numbers", "Reject calls with hidden/no caller ID", Icons.Default.QuestionMark, blockUnknown) { viewModel.setBlockUnknown(it) }
+            SettingsToggle(stringResource(R.string.settings_block_unknown), stringResource(R.string.settings_block_unknown_desc), Icons.Default.QuestionMark, blockUnknown) { viewModel.setBlockUnknown(it) }
         }
 
         // Safety
-        SettingsCard("Safety") {
-            SettingsToggle("Contact Whitelist", "Never block numbers in your contacts", Icons.Default.Contacts, contactWhitelist) { viewModel.setContactWhitelist(it) }
+        SettingsCard(stringResource(R.string.settings_safety)) {
+            SettingsToggle(stringResource(R.string.settings_contact_whitelist), stringResource(R.string.settings_contact_whitelist_desc), Icons.Default.Contacts, contactWhitelist) { viewModel.setContactWhitelist(it) }
         }
 
         // Detection engines
-        SettingsCard("Detection Engines") {
-            SettingsToggle("STIR/SHAKEN", "Block calls failing carrier caller ID auth (Android 11+)", Icons.Default.VerifiedUser, stirShaken) { viewModel.setStirShaken(it) }
+        SettingsCard(stringResource(R.string.settings_detection_engines)) {
+            SettingsToggle(stringResource(R.string.settings_stir_shaken), stringResource(R.string.settings_stir_shaken_desc), Icons.Default.VerifiedUser, stirShaken) { viewModel.setStirShaken(it) }
             GradientDivider()
-            SettingsToggle("Neighbor Spoofing", "Flag calls matching your area code + exchange", Icons.Default.NearMe, neighborSpoof) { viewModel.setNeighborSpoof(it) }
+            SettingsToggle(stringResource(R.string.settings_neighbor_spoofing), stringResource(R.string.settings_neighbor_spoofing_desc), Icons.Default.NearMe, neighborSpoof) { viewModel.setNeighborSpoof(it) }
             GradientDivider()
-            SettingsToggle("Heuristic Analysis", "VoIP ranges, premium rate, wangiri, rapid-fire", Icons.Default.Psychology, heuristics) { viewModel.setHeuristics(it) }
+            SettingsToggle(stringResource(R.string.settings_heuristic_analysis), stringResource(R.string.settings_heuristic_analysis_desc), Icons.Default.Psychology, heuristics) { viewModel.setHeuristics(it) }
             GradientDivider()
-            SettingsToggle("SMS Content Analysis", "Spam keywords, phishing links, scam patterns", Icons.AutoMirrored.Filled.TextSnippet, smsContent) { viewModel.setSmsContent(it) }
+            SettingsToggle(stringResource(R.string.settings_sms_content), stringResource(R.string.settings_sms_content_desc), Icons.AutoMirrored.Filled.TextSnippet, smsContent) { viewModel.setSmsContent(it) }
             GradientDivider()
-            SettingsToggle("Repeat Caller Auto-Block", "Auto-block numbers that call 3+ times", Icons.Default.Repeat, freqEscalation) { viewModel.setFreqEscalation(it) }
+            SettingsToggle(stringResource(R.string.settings_repeat_caller), stringResource(R.string.settings_repeat_caller_desc), Icons.Default.Repeat, freqEscalation) { viewModel.setFreqEscalation(it) }
             GradientDivider()
-            SettingsToggle("ML Spam Scorer", "On-device logistic regression model. No internet required.", Icons.Default.SmartToy, mlScorer) { viewModel.setMlScorer(it) }
+            SettingsToggle(stringResource(R.string.settings_ml_scorer), stringResource(R.string.settings_ml_scorer_desc), Icons.Default.SmartToy, mlScorer) { viewModel.setMlScorer(it) }
             GradientDivider()
-            SettingsToggle("RCS Message Filter", "Block RCS spam via Notification Access. Covers Google/Samsung Messages.", Icons.Default.MarkChatRead, rcsFilter) { viewModel.setRcsFilter(it) }
+            SettingsToggle(stringResource(R.string.settings_rcs_filter), stringResource(R.string.settings_rcs_filter_desc), Icons.Default.MarkChatRead, rcsFilter) { viewModel.setRcsFilter(it) }
             if (rcsFilter) {
                 Spacer(Modifier.height(4.dp))
                 OutlinedButton(
@@ -309,7 +309,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
                 ) {
                     Icon(Icons.Default.NotificationsActive, null, tint = CatMauve)
                     Spacer(Modifier.width(6.dp))
-                    Text("Grant Notification Access", color = CatMauve)
+                    Text(stringResource(R.string.settings_grant_notification_access), color = CatMauve)
                 }
             }
             GradientDivider()
@@ -317,25 +317,25 @@ fun SettingsScreen(viewModel: MainViewModel) {
             // instead of hard-rejecting. Off by default; users who want the
             // missed-call entry as an audit trail can keep hard reject.
             SettingsToggle(
-                "Silent Voicemail Mode",
-                "Blocked calls reach voicemail silently — your phone doesn't ring and caller hears normal rings, not a busy tone.",
+                stringResource(R.string.settings_silent_voicemail),
+                stringResource(R.string.settings_silent_voicemail_desc),
                 Icons.Default.Voicemail,
                 silentVoicemail
             ) { viewModel.setSilentVoicemail(it) }
         }
 
         // Feature 9: Time-based blocking
-        SettingsCard("Quiet Hours") {
-            SettingsToggle("Block unknowns during quiet hours", "Block all non-contact calls during set hours", Icons.Default.Bedtime, timeBlock) { viewModel.setTimeBlock(it) }
+        SettingsCard(stringResource(R.string.settings_quiet_hours)) {
+            SettingsToggle(stringResource(R.string.settings_quiet_hours_toggle), stringResource(R.string.settings_quiet_hours_desc), Icons.Default.Bedtime, timeBlock) { viewModel.setTimeBlock(it) }
             if (timeBlock) {
                 Spacer(Modifier.height(8.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("Start", style = MaterialTheme.typography.labelMedium, color = CatSubtext)
+                        Text(stringResource(R.string.settings_time_start), style = MaterialTheme.typography.labelMedium, color = CatSubtext)
                         HourPicker(timeStart) { viewModel.setTimeBlockStart(it) }
                     }
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("End", style = MaterialTheme.typography.labelMedium, color = CatSubtext)
+                        Text(stringResource(R.string.settings_time_end), style = MaterialTheme.typography.labelMedium, color = CatSubtext)
                         HourPicker(timeEnd) { viewModel.setTimeBlockEnd(it) }
                     }
                 }
@@ -343,21 +343,21 @@ fun SettingsScreen(viewModel: MainViewModel) {
         }
 
         // Power mode
-        SettingsCard("Power Mode") {
-            SettingsToggle("Aggressive Blocking", "Lower thresholds. More spam blocked, possible false positives. Contacts always safe.", Icons.Default.Security, aggressiveMode, tintColor = CatRed) { viewModel.setAggressiveMode(it) }
+        SettingsCard(stringResource(R.string.settings_power_mode)) {
+            SettingsToggle(stringResource(R.string.settings_aggressive_blocking), stringResource(R.string.settings_aggressive_blocking_desc), Icons.Default.Security, aggressiveMode, tintColor = CatRed) { viewModel.setAggressiveMode(it) }
         }
 
         // Auto-cleanup
-        SettingsCard("Log Cleanup") {
-            SettingsToggle("Auto-cleanup old entries", "Remove blocked log entries older than retention period", Icons.Default.AutoDelete, autoCleanup) { viewModel.setAutoCleanup(it) }
+        SettingsCard(stringResource(R.string.settings_log_cleanup)) {
+            SettingsToggle(stringResource(R.string.settings_auto_cleanup), stringResource(R.string.settings_auto_cleanup_desc), Icons.Default.AutoDelete, autoCleanup) { viewModel.setAutoCleanup(it) }
             if (autoCleanup) {
                 Spacer(Modifier.height(8.dp))
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Keep for:", style = MaterialTheme.typography.bodySmall, color = CatSubtext)
+                    Text(stringResource(R.string.settings_keep_for), style = MaterialTheme.typography.bodySmall, color = CatSubtext)
                     listOf(7, 14, 30, 90).forEach { days ->
                         FilterChip(
                             selected = cleanupDays == days, onClick = { viewModel.setCleanupDays(days) },
-                            label = { Text("${days}d") },
+                            label = { Text(stringResource(R.string.settings_days, days)) },
                             border = BorderStroke(1.dp, if (cleanupDays == days) CatGreen.copy(alpha = 0.3f) else CatMuted.copy(alpha = 0.3f)),
                             colors = FilterChipDefaults.filterChipColors(selectedContainerColor = CatGreen.copy(alpha = 0.2f), selectedLabelColor = CatGreen)
                         )
@@ -367,7 +367,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
         }
 
         // Export log
-        SettingsCard("Export") {
+        SettingsCard(stringResource(R.string.settings_export)) {
             Button(
                 onClick = { hapticTick(context); viewModel.exportLog() },
                 colors = ButtonDefaults.buttonColors(containerColor = CatBlue),
@@ -376,13 +376,13 @@ fun SettingsScreen(viewModel: MainViewModel) {
             ) {
                 Icon(Icons.Default.FileDownload, null, tint = Black)
                 Spacer(Modifier.width(6.dp))
-                Text("Export Blocked Log as CSV", color = Black, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.settings_export_csv), color = Black, fontWeight = FontWeight.Bold)
             }
-            Text("Export all blocked calls/SMS as a CSV file for analysis.", style = MaterialTheme.typography.labelSmall, color = CatOverlay)
+            Text(stringResource(R.string.settings_export_csv_desc), style = MaterialTheme.typography.labelSmall, color = CatOverlay)
         }
 
         // Backup/restore
-        SettingsCard("Backup & Restore") {
+        SettingsCard(stringResource(R.string.settings_backup_restore)) {
             val restoreLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
                 uri?.let { viewModel.restore(it) }
             }
@@ -398,7 +398,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
                 ) {
                     Icon(Icons.Default.Backup, null, tint = Black)
                     Spacer(Modifier.width(6.dp))
-                    Text("Backup", color = Black, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.settings_backup), color = Black, fontWeight = FontWeight.Bold)
                 }
                 OutlinedButton(
                     onClick = { hapticTick(context); restoreLauncher.launch(arrayOf("application/json", "text/plain")) },
@@ -408,7 +408,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
                 ) {
                     Icon(Icons.Default.Restore, null, tint = CatBlue)
                     Spacer(Modifier.width(6.dp))
-                    Text("Restore", color = CatBlue)
+                    Text(stringResource(R.string.settings_restore), color = CatBlue)
                 }
             }
             restoreResult?.let {
@@ -424,28 +424,36 @@ fun SettingsScreen(viewModel: MainViewModel) {
                 }
             }
             Spacer(Modifier.height(4.dp))
-            Text("Includes blocklist, whitelist, wildcard rules, and keyword rules.", style = MaterialTheme.typography.labelSmall, color = CatOverlay)
+            Text(stringResource(R.string.settings_backup_includes), style = MaterialTheme.typography.labelSmall, color = CatOverlay)
         }
 
         // Advanced — optional API key for caller name lookup
-        SettingsCard("Advanced") {
+        SettingsCard(stringResource(R.string.settings_advanced)) {
             var apiKeyInput by remember { mutableStateOf(abstractApiKey) }
-            Text("AbstractAPI Key (optional)", style = MaterialTheme.typography.bodyMedium)
-            Text("Free 250 lookups/month for carrier & line-type enrichment in the caller ID overlay. Never used for blocking.", style = MaterialTheme.typography.bodySmall, color = CatSubtext)
+            Text(stringResource(R.string.settings_abstract_api_key), style = MaterialTheme.typography.bodyMedium)
+            Text(stringResource(R.string.settings_abstract_api_desc), style = MaterialTheme.typography.bodySmall, color = CatSubtext)
             Spacer(Modifier.height(8.dp))
             OutlinedTextField(
                 value = apiKeyInput,
                 onValueChange = { apiKeyInput = it },
-                label = { Text("API Key") },
+                label = { Text(stringResource(R.string.settings_api_key)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
                 trailingIcon = {
                     TextButton(onClick = {
                         viewModel.setAbstractApiKey(apiKeyInput.trim())
                         hapticTick(context)
-                        android.widget.Toast.makeText(context, if (apiKeyInput.isBlank()) "API key cleared" else "API key saved", android.widget.Toast.LENGTH_SHORT).show()
+                        android.widget.Toast.makeText(
+                            context,
+                            if (apiKeyInput.isBlank()) {
+                                context.getString(R.string.settings_api_key_cleared)
+                            } else {
+                                context.getString(R.string.settings_api_key_saved)
+                            },
+                            android.widget.Toast.LENGTH_SHORT
+                        ).show()
                     }) {
-                        Text("Save", color = CatBlue)
+                        Text(stringResource(R.string.settings_save), color = CatBlue)
                     }
                 }
             )
@@ -454,7 +462,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
         // About
         PremiumCard {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text(stringResource(R.string.settings_about_version), color = CatSubtext, style = MaterialTheme.typography.bodySmall)
+                Text("${stringResource(R.string.app_name)} v${BuildConfig.VERSION_NAME}", color = CatSubtext, style = MaterialTheme.typography.bodySmall)
                 Text(stringResource(R.string.settings_about_desc), style = MaterialTheme.typography.labelSmall, color = CatOverlay)
             }
         }

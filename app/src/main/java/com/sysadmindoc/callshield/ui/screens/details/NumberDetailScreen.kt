@@ -20,7 +20,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -91,7 +90,9 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
     ) {
         // Header
         Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = CatSubtext) }
+            IconButton(onClick = onBack) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.cd_back), tint = CatSubtext)
+            }
             Spacer(Modifier.width(8.dp))
             Column(modifier = Modifier.weight(1f)) {
                 contactName?.let { name ->
@@ -129,8 +130,8 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
             IconButton(onClick = {
                 (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager)
                     .setPrimaryClip(ClipData.newPlainText("Phone", number))
-                Toast.makeText(context, "Copied", Toast.LENGTH_SHORT).show()
-            }) { Icon(Icons.Default.ContentCopy, "Copy", tint = CatSubtext) }
+                Toast.makeText(context, context.getString(R.string.detail_copied), Toast.LENGTH_SHORT).show()
+            }) { Icon(Icons.Default.ContentCopy, stringResource(R.string.cd_copy), tint = CatSubtext) }
         }
 
         // Spam score gauge (live check)
@@ -147,7 +148,7 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
                         .padding(16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    SectionHeader("Spam Score", color = if (r.isSpam) CatRed else CatGreen)
+                    SectionHeader(stringResource(R.string.detail_spam_score), color = if (r.isSpam) CatRed else CatGreen)
                     Spacer(Modifier.height(8.dp))
                     SpamScoreGauge(score = if (r.isSpam) r.confidence else 0, isSpam = r.isSpam)
                     if (r.isSpam) {
@@ -201,19 +202,19 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
             ) {
                 Icon(Icons.Default.FilterAlt, null, tint = CatYellow)
                 Spacer(Modifier.width(6.dp))
-                Text("Block all $areaCode numbers", color = CatYellow)
+                Text(stringResource(R.string.detail_block_area_code, areaCode), color = CatYellow)
             }
         }
 
         // Stats
         PremiumCard {
             Column(modifier = Modifier.padding(16.dp)) {
-                SectionHeader("Statistics", color = CatBlue)
+                SectionHeader(stringResource(R.string.detail_statistics), color = CatBlue)
                 Spacer(Modifier.height(8.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    StatChip("Calls", callCount.toString(), CatRed)
-                    StatChip("SMS", smsCount.toString(), CatMauve)
-                    StatChip("Total", numberCalls.size.toString(), CatBlue)
+                    StatChip(stringResource(R.string.detail_calls), callCount.toString(), CatRed)
+                    StatChip(stringResource(R.string.detail_sms), smsCount.toString(), CatMauve)
+                    StatChip(stringResource(R.string.detail_total), numberCalls.size.toString(), CatBlue)
                 }
                 if (dbEntry != null) {
                     Spacer(Modifier.height(12.dp))
@@ -237,16 +238,18 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
         if (firstSeen != null) {
             PremiumCard {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    SectionHeader("Timeline", color = CatLavender)
+                    SectionHeader(stringResource(R.string.detail_timeline), color = CatLavender)
                     Spacer(Modifier.height(8.dp))
-                    TimelineRow("First seen", dateFormat.format(Date(firstSeen)))
-                    if (lastSeen != null && lastSeen != firstSeen) TimelineRow("Last seen", dateFormat.format(Date(lastSeen)))
+                    TimelineRow(stringResource(R.string.detail_first_seen), dateFormat.format(Date(firstSeen)))
+                    if (lastSeen != null && lastSeen != firstSeen) {
+                        TimelineRow(stringResource(R.string.detail_last_seen), dateFormat.format(Date(lastSeen)))
+                    }
                     val reasons = numberCalls.map { it.matchReason }.filter { it.isNotEmpty() }.distinct()
                     if (reasons.isNotEmpty()) {
                         Spacer(Modifier.height(8.dp))
                         GradientDivider()
                         Spacer(Modifier.height(8.dp))
-                        Text("Match reasons:", style = MaterialTheme.typography.labelMedium, color = CatOverlay)
+                        Text(stringResource(R.string.detail_match_reasons), style = MaterialTheme.typography.labelMedium, color = CatOverlay)
                         reasons.forEach { reason ->
                             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 1.dp)) {
                                 Icon(detectionIcon(reason), null, tint = CatPeach, modifier = Modifier.size(14.dp))
@@ -263,7 +266,7 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
         if (numberCalls.isNotEmpty()) {
             PremiumCard {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    SectionHeader("Recent Activity", color = CatTeal)
+                    SectionHeader(stringResource(R.string.detail_recent_activity), color = CatTeal)
                     Spacer(Modifier.height(8.dp))
                     numberCalls.take(10).forEach { call ->
                         Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -285,7 +288,7 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
         PremiumCard {
             Column(modifier = Modifier.padding(16.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    SectionHeader("Online Lookup", color = CatBlue)
+                    SectionHeader(stringResource(R.string.detail_online_lookup), color = CatBlue)
                     Spacer(Modifier.weight(1f))
                     if (webResult == null) {
                         OutlinedButton(
@@ -376,27 +379,31 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
                     onClick = {
                         viewModel.blockNumber(number, "spam", "Blocked from detail")
                         hapticConfirm(context)
-                        Toast.makeText(context, "Number blocked", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, context.getString(R.string.detail_number_blocked), Toast.LENGTH_SHORT).show()
                     },
                     modifier = Modifier.weight(1f),
                     colors = ButtonDefaults.buttonColors(containerColor = CatRed),
                     shape = RoundedCornerShape(14.dp),
                     border = BorderStroke(1.dp, CatRed.copy(alpha = 0.3f))
                 ) {
-                    Icon(Icons.Default.Block, null, tint = Black); Spacer(Modifier.width(6.dp)); Text("Block", color = Black, fontWeight = FontWeight.Bold)
+                    Icon(Icons.Default.Block, null, tint = Black)
+                    Spacer(Modifier.width(6.dp))
+                    Text(stringResource(R.string.detail_block), color = Black, fontWeight = FontWeight.Bold)
                 }
             } else {
                 Button(
                     onClick = {
                         userBlocked.find { it.number == number }?.let { viewModel.unblockNumber(it) }
                         hapticTick(context)
-                        Toast.makeText(context, "Number unblocked", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, context.getString(R.string.detail_number_unblocked), Toast.LENGTH_SHORT).show()
                     },
                     modifier = Modifier.weight(1f),
                     colors = ButtonDefaults.buttonColors(containerColor = CatGreen),
                     shape = RoundedCornerShape(14.dp)
                 ) {
-                    Icon(Icons.Default.CheckCircle, null, tint = Black); Spacer(Modifier.width(6.dp)); Text("Unblock", color = Black, fontWeight = FontWeight.Bold)
+                    Icon(Icons.Default.CheckCircle, null, tint = Black)
+                    Spacer(Modifier.width(6.dp))
+                    Text(stringResource(R.string.detail_unblock), color = Black, fontWeight = FontWeight.Bold)
                 }
             }
             OutlinedButton(
@@ -408,7 +415,9 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
                 shape = RoundedCornerShape(14.dp),
                 border = BorderStroke(1.dp, CatPeach.copy(alpha = 0.3f))
             ) {
-                Icon(Icons.Default.Flag, null, tint = CatPeach); Spacer(Modifier.width(6.dp)); Text("Report", color = CatPeach)
+                Icon(Icons.Default.Flag, null, tint = CatPeach)
+                Spacer(Modifier.width(6.dp))
+                Text(stringResource(R.string.detail_report), color = CatPeach)
             }
         }
 
@@ -424,7 +433,7 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
             ) {
                 Icon(Icons.Default.Favorite, null, tint = Black)
                 Spacer(Modifier.width(4.dp))
-                Text("Report Spam", color = Black, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelSmall)
+                Text(stringResource(R.string.detail_report_spam), color = Black, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelSmall)
             }
             OutlinedButton(
                 onClick = { hapticTick(context); viewModel.reportNotSpam(number) },
@@ -434,7 +443,7 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
             ) {
                 Icon(Icons.Default.ThumbUp, null, tint = CatBlue)
                 Spacer(Modifier.width(4.dp))
-                Text("Not Spam", color = CatBlue, style = MaterialTheme.typography.labelSmall)
+                Text(stringResource(R.string.detail_not_spam), color = CatBlue, style = MaterialTheme.typography.labelSmall)
             }
         }
         contributeResult?.let {
@@ -459,7 +468,7 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
         ) {
             Icon(Icons.Default.Gavel, null, tint = CatPeach)
             Spacer(Modifier.width(6.dp))
-            Text(stringResource(R.string.ftc_report_action), color = CatPeach, style = MaterialTheme.typography.labelSmall)
+            Text(stringResource(R.string.detail_ftc_complaint), color = CatPeach, style = MaterialTheme.typography.labelSmall)
         }
 
         // Whitelist / call / share actions
@@ -470,7 +479,9 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
                 shape = RoundedCornerShape(14.dp),
                 border = BorderStroke(1.dp, CatGreen.copy(alpha = 0.3f))
             ) {
-                Icon(Icons.Default.CheckCircle, null, tint = CatGreen); Spacer(Modifier.width(4.dp)); Text("Whitelist", color = CatGreen, style = MaterialTheme.typography.labelSmall)
+                Icon(Icons.Default.CheckCircle, null, tint = CatGreen)
+                Spacer(Modifier.width(4.dp))
+                Text(stringResource(R.string.detail_whitelist), color = CatGreen, style = MaterialTheme.typography.labelSmall)
             }
             OutlinedButton(
                 onClick = {
@@ -480,7 +491,9 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
                 shape = RoundedCornerShape(14.dp),
                 border = BorderStroke(1.dp, CatBlue.copy(alpha = 0.3f))
             ) {
-                Icon(Icons.Default.Phone, null, tint = CatBlue); Spacer(Modifier.width(4.dp)); Text("Call", color = CatBlue, style = MaterialTheme.typography.labelSmall)
+                Icon(Icons.Default.Phone, null, tint = CatBlue)
+                Spacer(Modifier.width(4.dp))
+                Text(stringResource(R.string.detail_call), color = CatBlue, style = MaterialTheme.typography.labelSmall)
             }
             OutlinedButton(
                 onClick = {
@@ -490,7 +503,9 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
                 shape = RoundedCornerShape(14.dp),
                 border = BorderStroke(1.dp, CatYellow.copy(alpha = 0.3f))
             ) {
-                Icon(Icons.Default.Share, null, tint = CatYellow); Spacer(Modifier.width(4.dp)); Text("Share", color = CatYellow, style = MaterialTheme.typography.labelSmall)
+                Icon(Icons.Default.Share, null, tint = CatYellow)
+                Spacer(Modifier.width(4.dp))
+                Text(stringResource(R.string.detail_share), color = CatYellow, style = MaterialTheme.typography.labelSmall)
             }
         }
     }
