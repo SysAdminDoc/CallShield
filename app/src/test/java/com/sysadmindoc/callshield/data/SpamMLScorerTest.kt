@@ -15,6 +15,7 @@ class SpamMLScorerTest {
     private lateinit var sigmoid: Method
     private lateinit var parseAndApply: Method
     private lateinit var applyDefaultWeights: Method
+    private lateinit var tryApplyModelJsonPreservingState: Method
 
     @Before
     fun setUp() {
@@ -29,6 +30,12 @@ class SpamMLScorerTest {
 
         applyDefaultWeights = SpamMLScorer::class.java.getDeclaredMethod("applyDefaultWeights")
         applyDefaultWeights.isAccessible = true
+
+        tryApplyModelJsonPreservingState = SpamMLScorer::class.java.getDeclaredMethod(
+            "tryApplyModelJsonPreservingState",
+            String::class.java
+        )
+        tryApplyModelJsonPreservingState.isAccessible = true
 
         // Ensure weights are loaded for score tests
         applyDefaultWeights.invoke(SpamMLScorer)
@@ -432,6 +439,39 @@ class SpamMLScorerTest {
         // Should use default bias -2.5 but custom weights
         val s = SpamMLScorer.score("2125551234")
         assertTrue(s in 0.0..1.0)
+    }
+
+    @Test
+    fun `tryApplyModelJsonPreservingState keeps prior model when json is invalid`() {
+        val validJson = """
+        {
+            "version": 2,
+            "weights": [0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4],
+            "bias": -1.2,
+            "threshold": 0.61
+        }
+        """.trimIndent()
+
+        parseAndApply.invoke(SpamMLScorer, validJson)
+
+        val weightsField = SpamMLScorer::class.java.getDeclaredField("weights").apply { isAccessible = true }
+        val biasField = SpamMLScorer::class.java.getDeclaredField("bias").apply { isAccessible = true }
+        val thresholdField = SpamMLScorer::class.java.getDeclaredField("threshold").apply { isAccessible = true }
+
+        val beforeWeights = (weightsField.get(SpamMLScorer) as DoubleArray).copyOf()
+        val beforeBias = biasField.getDouble(SpamMLScorer)
+        val beforeThreshold = thresholdField.getDouble(SpamMLScorer)
+
+        val result = tryApplyModelJsonPreservingState.invoke(SpamMLScorer, "not json at all {{{") as Boolean
+
+        val afterWeights = weightsField.get(SpamMLScorer) as DoubleArray
+        val afterBias = biasField.getDouble(SpamMLScorer)
+        val afterThreshold = thresholdField.getDouble(SpamMLScorer)
+
+        assertFalse(result)
+        assertArrayEquals(beforeWeights, afterWeights, 0.0)
+        assertEquals(beforeBias, afterBias, 0.0)
+        assertEquals(beforeThreshold, afterThreshold, 0.0)
     }
 
     // ── applyDefaultWeights ──────────────────────────────────────────────

@@ -73,6 +73,15 @@ object SpamMLScorer {
         "713291", "720420", "720660",
     )
 
+    private data class ModelState(
+        val useGbt: Boolean,
+        val gbtTrees: List<GbtTree>?,
+        val gbtLearningRate: Double,
+        val weights: DoubleArray?,
+        val bias: Double,
+        val threshold: Double,
+    )
+
     // ── GBT model state ──────────────────────────────────────────────
     @Volatile
     private var useGbt: Boolean = false
@@ -117,17 +126,16 @@ object SpamMLScorer {
     fun loadWeights(context: Context) {
         try {
             val file = File(context.filesDir, "spam_model_weights.json")
-            if (!file.exists()) {
-                val bundled = GitHubDataSource.readBundledAsset(context, GitHubDataSource.BUNDLED_MODEL_WEIGHTS_ASSET)
-                if (bundled.isSuccess) {
-                    parseAndApply(bundled.getOrThrow())
-                } else {
-                    applyDefaultWeights()
-                }
+            if (file.exists() && tryApplyModelJsonPreservingState(file.readText())) {
                 return
             }
-            val json = file.readText()
-            parseAndApply(json)
+
+            val bundled = GitHubDataSource.readBundledAsset(context, GitHubDataSource.BUNDLED_MODEL_WEIGHTS_ASSET)
+            if (bundled.isSuccess && tryApplyModelJsonPreservingState(bundled.getOrThrow())) {
+                return
+            }
+
+            applyDefaultWeights()
         } catch (_: Exception) {
             applyDefaultWeights()
         }
@@ -173,9 +181,11 @@ object SpamMLScorer {
             }
 
             val json = body ?: return@withContext
-            val file = File(context.filesDir, "spam_model_weights.json")
-            file.writeText(json)
-            parseAndApply(json)
+            if (!tryApplyModelJsonPreservingState(json)) {
+                return@withContext
+            }
+
+            persistModelJson(context, json)
         } catch (_: Exception) { }
     }
 
@@ -374,7 +384,7 @@ object SpamMLScorer {
         gbtTrees = null
     }
 
-    private fun parseAndApply(json: String) {
+    private fun parseAndApply(json: String): Boolean {
         try {
             // Check version and model_type to decide GBT vs logistic regression
             val versionMatch = Regex(""""version"\s*:\s*(\d+)""").find(json)
@@ -387,7 +397,7 @@ object SpamMLScorer {
             threshold = thresholdMatch?.groupValues?.get(1)?.toDoubleOrNull() ?: 0.7
 
             // Always try to load fallback LR weights (used by v2 or as fallback for v3)
-            loadFallbackWeights(json, version)
+            val fallbackLoaded = loadFallbackWeights(json, version)
 
             if (version >= 3 && modelType == "gbt") {
                 // Try to parse GBT trees
@@ -395,14 +405,22 @@ object SpamMLScorer {
                     val lrMatch = Regex(""""learning_rate"\s*:\s*([\d.]+)""").find(json)
                     gbtLearningRate = lrMatch?.groupValues?.get(1)?.toDoubleOrNull() ?: 0.1
                     useGbt = true
-                    return
+                    return true
                 }
             }
 
-            // Fall through to logistic regression (v2 or GBT parse failure)
-            useGbt = false
+            if (fallbackLoaded) {
+                // Fall through to logistic regression (v2 or GBT parse failure)
+                useGbt = false
+                gbtTrees = null
+                return true
+            }
+
+            applyDefaultWeights()
+            return false
         } catch (_: Exception) {
             applyDefaultWeights()
+            return false
         }
     }
 
@@ -411,7 +429,7 @@ object SpamMLScorer {
      * For v2: reads "weights" array and "bias".
      * For v3: reads "fallback_weights" object and "fallback_bias".
      */
-    private fun loadFallbackWeights(json: String, version: Int) {
+    private fun loadFallbackWeights(json: String, version: Int): Boolean {
         if (version >= 3) {
             // v3 stores LR weights as fallback_weights object: {"feature_name": weight, ...}
             val fbWeightsMatch = Regex(""""fallback_weights"\s*:\s*\{([^}]+)\}""").find(json)
@@ -439,7 +457,7 @@ object SpamMLScorer {
                 if (parsedWeights.size >= 15) {
                     weights = parsedWeights
                     bias = fbBiasMatch?.groupValues?.get(1)?.toDoubleOrNull() ?: -2.5
-                    return
+                    return true
                 }
             }
             // If fallback_weights parsing fails, try v2-style as last resort
@@ -462,8 +480,9 @@ object SpamMLScorer {
                 parsedWeights
             }
             bias = biasMatch?.groupValues?.get(1)?.toDoubleOrNull() ?: -2.5
+            return true
         } else {
-            applyDefaultWeights()
+            return false
         }
     }
 
@@ -576,5 +595,60 @@ object SpamMLScorer {
             }
         }
         return -1
+    }
+
+    private fun tryApplyModelJsonPreservingState(json: String): Boolean {
+        val snapshot = snapshotModelState()
+        return if (parseAndApply(json)) {
+            true
+        } else {
+            restoreModelState(snapshot)
+            false
+        }
+    }
+
+    private fun snapshotModelState(): ModelState {
+        return ModelState(
+            useGbt = useGbt,
+            gbtTrees = gbtTrees?.map { tree ->
+                tree.copy(
+                    feature = tree.feature.copyOf(),
+                    threshold = tree.threshold.copyOf(),
+                    childrenLeft = tree.childrenLeft.copyOf(),
+                    childrenRight = tree.childrenRight.copyOf(),
+                    value = tree.value.copyOf()
+                )
+            },
+            gbtLearningRate = gbtLearningRate,
+            weights = weights?.copyOf(),
+            bias = bias,
+            threshold = threshold
+        )
+    }
+
+    private fun restoreModelState(state: ModelState) {
+        useGbt = state.useGbt
+        gbtTrees = state.gbtTrees
+        gbtLearningRate = state.gbtLearningRate
+        weights = state.weights
+        bias = state.bias
+        threshold = state.threshold
+    }
+
+    private fun persistModelJson(context: Context, json: String) {
+        val file = File(context.filesDir, "spam_model_weights.json")
+        val tmpFile = File(context.filesDir, "spam_model_weights.json.tmp")
+        try {
+            tmpFile.writeText(json)
+            if (file.exists() && !file.delete()) {
+                file.writeText(json)
+            } else if (!tmpFile.renameTo(file)) {
+                file.writeText(json)
+            }
+        } finally {
+            if (tmpFile.exists()) {
+                tmpFile.delete()
+            }
+        }
     }
 }

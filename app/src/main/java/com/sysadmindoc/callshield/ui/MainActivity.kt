@@ -7,6 +7,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.items
@@ -23,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -138,6 +140,14 @@ fun CallShieldApp(viewModel: MainViewModel, startTab: Int = 0) {
         4 -> CatRed
         else -> CatMauve
     }
+    val currentModeLabel = when (selectedTab) {
+        0 -> stringResource(R.string.app_shell_mode_home)
+        1 -> stringResource(R.string.app_shell_mode_recent)
+        2 -> stringResource(R.string.app_shell_mode_log)
+        3 -> stringResource(R.string.app_shell_mode_lookup)
+        4 -> stringResource(R.string.app_shell_mode_blocklist)
+        else -> stringResource(R.string.app_shell_mode_more)
+    }
     val protectionStatusLabel = when {
         blockCallsEnabled && blockSmsEnabled -> stringResource(R.string.app_shell_status_calls_texts)
         blockCallsEnabled -> stringResource(R.string.app_shell_status_calls)
@@ -152,6 +162,7 @@ fun CallShieldApp(viewModel: MainViewModel, startTab: Int = 0) {
                 title = currentTitle,
                 subtitle = currentSubtitle,
                 accentColor = currentAccent,
+                modeLabel = currentModeLabel,
                 protectionStatusLabel = protectionStatusLabel,
                 spamCount = spamCount,
                 searchQuery = searchQuery,
@@ -222,12 +233,59 @@ fun CallShieldApp(viewModel: MainViewModel, startTab: Int = 0) {
 @Composable
 fun SearchResultsView(results: List<com.sysadmindoc.callshield.data.model.SpamNumber>, onTap: (com.sysadmindoc.callshield.data.model.SpamNumber) -> Unit) {
     if (results.isEmpty()) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.Center) {
-            Column(horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
-                Icon(Icons.Default.SearchOff, contentDescription = stringResource(R.string.cd_search_no_results), tint = CatOverlay, modifier = Modifier.size(48.dp))
-                Spacer(Modifier.height(12.dp))
-                Text(stringResource(R.string.search_no_results), color = CatSubtext, style = MaterialTheme.typography.bodyMedium)
-                Text(stringResource(R.string.search_try_different), color = CatOverlay, style = MaterialTheme.typography.bodySmall)
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            PremiumCard(accentColor = CatPeach, modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier.padding(18.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Surface(
+                            shape = RoundedCornerShape(14.dp),
+                            color = CatPeach.copy(alpha = 0.12f)
+                        ) {
+                            Icon(
+                                Icons.Default.SearchOff,
+                                contentDescription = stringResource(R.string.cd_search_no_results),
+                                tint = CatPeach,
+                                modifier = Modifier.padding(12.dp)
+                            )
+                        }
+                        Column {
+                            Text(
+                                stringResource(R.string.search_no_results),
+                                color = CatText,
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                            Text(
+                                stringResource(R.string.search_try_different),
+                                color = CatSubtext,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                    }
+                    GradientDivider(color = CatPeach)
+                    SearchHintRow(
+                        icon = Icons.Default.Phone,
+                        title = stringResource(R.string.search_idle_hint_exact_title),
+                        subtitle = stringResource(R.string.search_idle_hint_exact_body),
+                        accentColor = CatGreen
+                    )
+                    SearchHintRow(
+                        icon = Icons.Default.Description,
+                        title = stringResource(R.string.search_idle_hint_reason_title),
+                        subtitle = stringResource(R.string.search_idle_hint_reason_body),
+                        accentColor = CatPeach
+                    )
+                }
             }
         }
     } else {
@@ -236,10 +294,13 @@ fun SearchResultsView(results: List<com.sysadmindoc.callshield.data.model.SpamNu
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             item {
-                Text(
-                    androidx.compose.ui.platform.LocalContext.current.resources.getQuantityString(R.plurals.search_results_count, results.size, results.size),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = CatOverlay,
+                StatusPill(
+                    text = androidx.compose.ui.platform.LocalContext.current.resources.getQuantityString(
+                        R.plurals.search_results_count,
+                        results.size,
+                        results.size
+                    ),
+                    color = CatBlue,
                     modifier = Modifier.padding(bottom = 4.dp)
                 )
             }
@@ -273,6 +334,7 @@ private fun AppChrome(
     title: String,
     subtitle: String,
     accentColor: Color,
+    modeLabel: String,
     protectionStatusLabel: String,
     spamCount: Int,
     searchQuery: String,
@@ -284,94 +346,128 @@ private fun AppChrome(
     val keyboard = LocalSoftwareKeyboardController.current
 
     Surface(color = Black) {
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .statusBarsPadding()
-                .padding(horizontal = 20.dp, vertical = 12.dp)
-        ) {
-            if (showSearch) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    IconButton(onClick = {
-                        focusManager.clearFocus(force = true)
-                        keyboard?.hide()
-                        onCloseSearch()
-                    }) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.cd_close_search),
-                            tint = CatSubtext
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            accentColor.copy(alpha = 0.08f),
+                            Black,
+                            Black
                         )
-                    }
-                    Spacer(Modifier.width(8.dp))
-                    SearchField(
-                        query = searchQuery,
-                        accentColor = accentColor,
-                        onValueChange = onSearchQueryChange
                     )
-                }
-                Spacer(Modifier.height(10.dp))
-                Text(
-                    stringResource(R.string.search_hint_min_chars),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = CatOverlay
                 )
-            } else {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.Top
+                .padding(horizontal = 16.dp, vertical = 12.dp)
+        ) {
+            PremiumCard(
+                modifier = Modifier.fillMaxWidth(),
+                accentColor = accentColor,
+                cornerRadius = 24.dp
+            ) {
+                Column(
+                    modifier = Modifier.padding(horizontal = 18.dp, vertical = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Column(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
+                    if (showSearch) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Surface(
+                                shape = RoundedCornerShape(16.dp),
+                                color = accentColor.copy(alpha = 0.12f)
+                            ) {
+                                IconButton(onClick = {
+                                    focusManager.clearFocus(force = true)
+                                    keyboard?.hide()
+                                    onCloseSearch()
+                                }) {
+                                    Icon(
+                                        Icons.AutoMirrored.Filled.ArrowBack,
+                                        contentDescription = stringResource(R.string.cd_close_search),
+                                        tint = accentColor
+                                    )
+                                }
+                            }
+                            SearchField(
+                                query = searchQuery,
+                                accentColor = accentColor,
+                                onValueChange = onSearchQueryChange
+                            )
+                        }
                         Text(
-                            title,
-                            color = accentColor,
-                            style = MaterialTheme.typography.headlineSmall,
-                            letterSpacing = (-0.5).sp
+                            stringResource(R.string.search_hint_min_chars),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = CatOverlay
                         )
-                        Text(
-                            subtitle,
-                            color = CatSubtext,
-                            style = MaterialTheme.typography.bodySmall
-                        )
+                    } else {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.Top
+                        ) {
+                            Column(
+                                modifier = Modifier.weight(1f),
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                StatusPill(
+                                    text = protectionStatusLabel,
+                                    color = accentColor,
+                                    horizontalPadding = 10.dp,
+                                    verticalPadding = 6.dp,
+                                    textStyle = MaterialTheme.typography.labelSmall
+                                )
+                                Text(
+                                    title,
+                                    color = CatText,
+                                    style = MaterialTheme.typography.headlineSmall,
+                                    letterSpacing = (-0.5).sp
+                                )
+                                Text(
+                                    subtitle,
+                                    color = CatSubtext,
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                            Surface(
+                                shape = RoundedCornerShape(16.dp),
+                                color = accentColor.copy(alpha = 0.12f)
+                            ) {
+                                IconButton(onClick = onOpenSearch) {
+                                    Icon(
+                                        Icons.Default.Search,
+                                        contentDescription = stringResource(R.string.cd_search),
+                                        tint = accentColor
+                                    )
+                                }
+                            }
+                        }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            StatusPill(
+                                text = if (spamCount > 0) {
+                                    stringResource(R.string.app_shell_status_numbers, spamCount)
+                                } else {
+                                    stringResource(R.string.app_shell_status_setup_needed)
+                                },
+                                color = if (spamCount > 0) CatBlue else CatPeach,
+                                modifier = Modifier.weight(1f)
+                            )
+                            StatusPill(
+                                text = modeLabel,
+                                color = accentColor,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
                     }
-                    IconButton(onClick = onOpenSearch) {
-                        Icon(
-                            Icons.Default.Search,
-                            contentDescription = stringResource(R.string.cd_search),
-                            tint = CatSubtext
-                        )
-                    }
-                }
-                Spacer(Modifier.height(12.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    HeaderPill(
-                        text = protectionStatusLabel,
-                        accentColor = accentColor,
-                        modifier = Modifier.weight(1f)
-                    )
-                    HeaderPill(
-                        text = if (spamCount > 0) {
-                            stringResource(R.string.app_shell_status_numbers, spamCount)
-                        } else {
-                            stringResource(R.string.app_shell_status_setup_needed)
-                        },
-                        accentColor = if (spamCount > 0) CatBlue else CatPeach,
-                        modifier = Modifier.weight(1f)
-                    )
+                    GradientDivider(color = accentColor)
                 }
             }
-            Spacer(Modifier.height(12.dp))
-            GradientDivider(color = accentColor)
         }
     }
 }
@@ -418,7 +514,14 @@ private fun SearchField(
             }
         },
         modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
         colors = OutlinedTextFieldDefaults.colors(
+            focusedContainerColor = SurfaceElevated,
+            unfocusedContainerColor = SurfaceElevated,
+            focusedTextColor = CatText,
+            unfocusedTextColor = CatText,
+            unfocusedLeadingIconColor = CatOverlay,
+            unfocusedTrailingIconColor = CatOverlay,
             focusedBorderColor = accentColor.copy(alpha = 0.65f),
             unfocusedBorderColor = CatOverlay.copy(alpha = 0.3f),
             cursorColor = accentColor
@@ -426,27 +529,6 @@ private fun SearchField(
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
         keyboardActions = KeyboardActions(onSearch = { keyboard?.hide() })
     )
-}
-
-@Composable
-private fun HeaderPill(
-    text: String,
-    accentColor: Color,
-    modifier: Modifier = Modifier,
-) {
-    Surface(
-        modifier = modifier,
-        shape = RoundedCornerShape(999.dp),
-        color = accentColor.copy(alpha = 0.12f),
-        border = BorderStroke(1.dp, accentColor.copy(alpha = 0.18f))
-    ) {
-        Text(
-            text = text,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-            style = MaterialTheme.typography.labelMedium,
-            color = accentColor
-        )
-    }
 }
 
 @Composable

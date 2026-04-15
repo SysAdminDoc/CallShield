@@ -45,16 +45,23 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     val blockedToday: StateFlow<Int> = timeAnchor
-        .flatMapLatest { now -> repo.getBlockedCountSince(now - 86_400_000L) }
+        .flatMapLatest { now ->
+            val windows = buildDashboardTimeWindows(now)
+            repo.getBlockedCountSince(windows.todayStart)
+        }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
     val blockedThisWeek: StateFlow<Int> = timeAnchor
-        .flatMapLatest { now -> repo.getBlockedCountSince(now - 7L * 86_400_000L) }
+        .flatMapLatest { now ->
+            val windows = buildDashboardTimeWindows(now)
+            repo.getBlockedCountSince(windows.weekStart)
+        }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
     val blockedLastWeek: StateFlow<Int> = timeAnchor
         .flatMapLatest { now ->
-            repo.getBlockedCountBetween(now - 14L * 86_400_000L, now - 7L * 86_400_000L)
+            val windows = buildDashboardTimeWindows(now)
+            repo.getBlockedCountBetween(windows.lastWeekStart, windows.lastWeekEnd)
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 

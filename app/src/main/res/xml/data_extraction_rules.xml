@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- API 31+ backup/transfer rules (android:dataExtractionRules).
-     Mirrors backup_rules.xml for cloud backup. Device-to-device
-     transfer includes model weights too (regenerated on sync anyway). -->
+     Mirrors backup_rules.xml: preserve user data (database + DataStore)
+     without transferring operational files like crash logs or downloaded
+     model/feed artifacts, which are regenerated locally. -->
 <data-extraction-rules>
     <cloud-backup>
         <include domain="database" path="." />
@@ -9,6 +10,6 @@
     </cloud-backup>
     <device-transfer>
         <include domain="database" path="." />
-        <include domain="file" path="." />
+        <include domain="file" path="datastore/" />
     </device-transfer>
 </data-extraction-rules>

@@ -118,22 +118,25 @@ fun OnboardingScreen(onComplete: () -> Unit) {
         Spacer(Modifier.height(12.dp))
 
         PremiumCard(accentColor = pages[currentPage].color, modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    stringResource(R.string.onboarding_progress_title),
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    stringResource(R.string.onboarding_progress_core, requiredReady, 2),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = CatText
-                )
-                Text(
-                    stringResource(R.string.onboarding_progress_optional, optionalReady, 2),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = CatSubtext
-                )
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                SectionHeader(stringResource(R.string.onboarding_progress_title), pages[currentPage].color)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    StatusPill(
+                        text = stringResource(R.string.onboarding_progress_required_badge, requiredReady, 2),
+                        color = pages[currentPage].color,
+                        textStyle = MaterialTheme.typography.labelSmall,
+                        modifier = Modifier.weight(1f)
+                    )
+                    StatusPill(
+                        text = stringResource(R.string.onboarding_progress_optional_badge, optionalReady, 2),
+                        color = if (optionalReady > 0) CatGreen else CatOverlay,
+                        textStyle = MaterialTheme.typography.labelSmall,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
                 LinearProgressIndicator(
                     progress = { (requiredReady + optionalReady) / 4f },
                     modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(999.dp)),
@@ -195,6 +198,30 @@ fun OnboardingScreen(onComplete: () -> Unit) {
 
                     when (page) {
                         0 -> {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                StatusPill(
+                                    text = stringResource(R.string.onboarding_trust_no_account),
+                                    color = CatGreen,
+                                    textStyle = MaterialTheme.typography.labelSmall,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                StatusPill(
+                                    text = stringResource(R.string.onboarding_trust_on_device),
+                                    color = CatBlue,
+                                    textStyle = MaterialTheme.typography.labelSmall,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                StatusPill(
+                                    text = stringResource(R.string.onboarding_trust_open_source),
+                                    color = CatPeach,
+                                    textStyle = MaterialTheme.typography.labelSmall,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                            Spacer(Modifier.height(12.dp))
                             OnboardingFeatureCard(
                                 title = stringResource(R.string.onboarding_feature_private_title),
                                 body = stringResource(R.string.onboarding_feature_private_body),
@@ -462,37 +489,48 @@ fun OnboardingScreen(onComplete: () -> Unit) {
         SnackbarHost(hostState = snackbarHostState)
         Spacer(Modifier.height(16.dp))
 
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            if (currentPage > 0) {
-                TextButton(onClick = { currentPage-- }) {
-                    Text(stringResource(R.string.onboarding_back), color = CatSubtext)
-                }
-            } else {
-                Spacer(Modifier.width(1.dp))
-            }
-
-            Button(
-                onClick = {
-                    if (currentPage < pages.lastIndex) currentPage++
-                    else onComplete()
-                },
-                colors = ButtonDefaults.buttonColors(containerColor = pages[currentPage].color),
-                shape = RoundedCornerShape(14.dp),
-                border = BorderStroke(1.dp, pages[currentPage].color.copy(alpha = 0.3f)),
-                modifier = Modifier.height(48.dp)
+        PremiumCard(
+            accentColor = if (currentPage == pages.lastIndex && requiredReady == 2) CatGreen else pages[currentPage].color,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    when {
-                        currentPage < pages.lastIndex -> stringResource(R.string.onboarding_next)
-                        requiredReady == 2 -> stringResource(R.string.onboarding_finish_setup)
-                        else -> stringResource(R.string.onboarding_continue_anyway)
+                if (currentPage > 0) {
+                    TextButton(onClick = { currentPage-- }) {
+                        Text(stringResource(R.string.onboarding_back), color = CatSubtext)
+                    }
+                } else {
+                    Spacer(Modifier.width(1.dp))
+                }
+
+                Button(
+                    onClick = {
+                        if (currentPage < pages.lastIndex) currentPage++
+                        else onComplete()
                     },
-                    color = Black,
-                    fontWeight = FontWeight.Bold
-                )
-                if (currentPage < pages.lastIndex) {
-                    Spacer(Modifier.width(4.dp))
-                    Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = stringResource(R.string.cd_next_page), tint = Black, modifier = Modifier.size(18.dp))
+                    colors = ButtonDefaults.buttonColors(containerColor = pages[currentPage].color),
+                    shape = RoundedCornerShape(14.dp),
+                    border = BorderStroke(1.dp, pages[currentPage].color.copy(alpha = 0.3f)),
+                    modifier = Modifier.height(48.dp)
+                ) {
+                    Text(
+                        when {
+                            currentPage < pages.lastIndex -> stringResource(R.string.onboarding_next)
+                            requiredReady == 2 -> stringResource(R.string.onboarding_finish_setup)
+                            else -> stringResource(R.string.onboarding_continue_anyway)
+                        },
+                        color = Black,
+                        fontWeight = FontWeight.Bold
+                    )
+                    if (currentPage < pages.lastIndex) {
+                        Spacer(Modifier.width(4.dp))
+                        Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = stringResource(R.string.cd_next_page), tint = Black, modifier = Modifier.size(18.dp))
+                    }
                 }
             }
         }
@@ -539,10 +577,12 @@ private fun OnboardingChecklistItem(
             Spacer(Modifier.height(4.dp))
             Text(detail, style = MaterialTheme.typography.bodySmall, color = CatSubtext)
             Spacer(Modifier.height(6.dp))
-            Text(
-                badge,
-                style = MaterialTheme.typography.labelSmall,
-                color = accentColor
+            StatusPill(
+                text = badge,
+                color = accentColor,
+                horizontalPadding = 8.dp,
+                verticalPadding = 4.dp,
+                textStyle = MaterialTheme.typography.labelSmall
             )
         }
     }

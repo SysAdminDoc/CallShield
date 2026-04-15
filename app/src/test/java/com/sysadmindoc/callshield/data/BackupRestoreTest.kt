@@ -76,9 +76,16 @@ class BackupRestoreTest {
 
     @Test
     fun `BackupWhitelist stores fields`() {
-        val bw = BackupWhitelist("2125551234", "Doctor's office")
+        val bw = BackupWhitelist("2125551234", "Doctor's office", isEmergency = true)
         assertEquals("2125551234", bw.number)
         assertEquals("Doctor's office", bw.description)
+        assertTrue(bw.isEmergency)
+    }
+
+    @Test
+    fun `BackupWhitelist default emergency flag is false for older backups`() {
+        val bw = BackupWhitelist("2125551234", "Doctor's office")
+        assertFalse(bw.isEmergency)
     }
 
     // ── BackupWildcard data class ────────────────────────────────────────
@@ -148,7 +155,7 @@ class BackupRestoreTest {
                 BackupNumber("3105559876", "telemarketer", "Sales", "community")
             ),
             whitelistNumbers = listOf(
-                BackupWhitelist("5085551234", "Mom")
+                BackupWhitelist("5085551234", "Mom", isEmergency = true)
             ),
             wildcardRules = listOf(
                 BackupWildcard("800*", false, "Toll-free", true)
@@ -160,6 +167,7 @@ class BackupRestoreTest {
         assertEquals(2, backup.version)
         assertEquals(2, backup.blockedNumbers.size)
         assertEquals(1, backup.whitelistNumbers.size)
+        assertTrue(backup.whitelistNumbers.single().isEmergency)
         assertEquals(1, backup.wildcardRules.size)
         assertEquals(1, backup.keywordRules.size)
     }

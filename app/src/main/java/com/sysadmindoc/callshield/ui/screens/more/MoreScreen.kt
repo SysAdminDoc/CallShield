@@ -30,6 +30,7 @@ import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.screens.settings.SettingsScreen
 import com.sysadmindoc.callshield.ui.screens.stats.StatsScreen
 import com.sysadmindoc.callshield.ui.theme.*
+import java.text.NumberFormat
 
 @Composable
 fun MoreScreen(viewModel: MainViewModel) {
@@ -84,6 +85,8 @@ fun MoreHub(viewModel: MainViewModel, onStats: () -> Unit, onSettings: () -> Uni
         else -> CatPeach
     }
     val appVersion = "v${BuildConfig.VERSION_NAME}"
+    val localizedSpamCount = remember(spamCount) { NumberFormat.getIntegerInstance().format(spamCount) }
+    val localizedBlockedToday = remember(blockedToday) { NumberFormat.getIntegerInstance().format(blockedToday) }
     val protectionLabel = when {
         blockCallsEnabled && blockSmsEnabled -> stringResource(R.string.more_snapshot_calls_texts)
         blockCallsEnabled -> stringResource(R.string.more_snapshot_calls)
@@ -123,62 +126,81 @@ fun MoreHub(viewModel: MainViewModel, onStats: () -> Unit, onSettings: () -> Uni
                 )
                 Row(
                     modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    StatusPill(
+                        text = stringResource(R.string.more_trust_on_device),
+                        color = CatGreen
+                    )
+                    StatusPill(
+                        text = stringResource(R.string.more_trust_open_source),
+                        color = CatBlue
+                    )
+                    StatusPill(
+                        text = stringResource(R.string.more_trust_no_account),
+                        color = CatPeach
+                    )
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    AboutStat(String.format("%,d", spamCount), stringResource(R.string.more_snapshot_database), CatGreen)
-                    AboutStat(blockedToday.toString(), stringResource(R.string.more_snapshot_today), CatPeach)
+                    AboutStat(localizedSpamCount, stringResource(R.string.more_snapshot_database), CatGreen)
+                    AboutStat(localizedBlockedToday, stringResource(R.string.more_snapshot_today), CatPeach)
                     AboutStat(appVersion, stringResource(R.string.more_snapshot_version), CatYellow)
                 }
             }
         }
 
-        // Navigation cards
-        MoreNavCard(
-            icon = Icons.Default.BarChart, title = stringResource(R.string.more_statistics),
-            subtitle = stringResource(R.string.more_statistics_subtitle),
-            color = CatYellow, onClick = onStats
-        )
-        MoreNavCard(
-            icon = Icons.Default.Settings, title = stringResource(R.string.more_settings),
-            subtitle = stringResource(R.string.more_settings_subtitle),
-            color = CatMauve, onClick = onSettings
-        )
-        MoreNavCard(
-            icon = Icons.Default.Verified, title = stringResource(R.string.more_protection_test),
-            subtitle = stringResource(R.string.more_protection_test_subtitle),
-            color = CatGreen, onClick = onTest
-        )
-        MoreNavCard(
-            icon = Icons.Default.NewReleases, title = stringResource(R.string.more_whats_new),
-            subtitle = stringResource(R.string.more_whats_new_subtitle),
-            color = CatPeach, onClick = onChangelog
-        )
-
-        Spacer(Modifier.height(4.dp))
-
-        // Quick links
-        PremiumCard {
+        PremiumCard(accentColor = CatYellow) {
             Column(modifier = Modifier.padding(16.dp)) {
-                SectionHeader(stringResource(R.string.more_quick_links), CatBlue)
+                SectionHeader(stringResource(R.string.more_section_tools), CatYellow)
                 Spacer(Modifier.height(8.dp))
-                QuickLink(Icons.Default.Code, stringResource(R.string.more_github_repo), CatGreen) {
-                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/SysAdminDoc/CallShield")).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) })
-                }
+                MoreNavCard(
+                    icon = Icons.Default.BarChart,
+                    title = stringResource(R.string.more_statistics),
+                    subtitle = stringResource(R.string.more_statistics_subtitle),
+                    color = CatYellow,
+                    onClick = onStats
+                )
                 GradientDivider()
-                QuickLink(Icons.Default.BugReport, stringResource(R.string.more_report_bug), CatPeach) {
-                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/SysAdminDoc/CallShield/issues/new")).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) })
-                }
+                MoreNavCard(
+                    icon = Icons.Default.Verified,
+                    title = stringResource(R.string.more_protection_test),
+                    subtitle = stringResource(R.string.more_protection_test_subtitle),
+                    color = CatGreen,
+                    onClick = onTest
+                )
                 GradientDivider()
-                QuickLink(Icons.Default.Star, stringResource(R.string.more_star_github), CatYellow) {
-                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/SysAdminDoc/CallShield")).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) })
-                }
+                MoreNavCard(
+                    icon = Icons.Default.Settings,
+                    title = stringResource(R.string.more_settings),
+                    subtitle = stringResource(R.string.more_settings_subtitle),
+                    color = CatMauve,
+                    onClick = onSettings
+                )
+            }
+        }
+
+        PremiumCard(accentColor = CatPeach) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                SectionHeader(stringResource(R.string.more_section_release), CatPeach)
+                Spacer(Modifier.height(8.dp))
+                MoreNavCard(
+                    icon = Icons.Default.NewReleases,
+                    title = stringResource(R.string.more_whats_new),
+                    subtitle = stringResource(R.string.more_whats_new_subtitle),
+                    color = CatPeach,
+                    onClick = onChangelog
+                )
                 GradientDivider()
-                QuickLink(Icons.Default.Flag, stringResource(R.string.more_report_spam_number), CatRed) {
-                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/SysAdminDoc/CallShield/issues/new?template=spam_report.md")).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) })
-                }
-                GradientDivider()
-                // Crash log export. Local-only — we never auto-upload.
-                QuickLink(Icons.Default.Description, stringResource(R.string.more_share_crash_log), CatMauve) {
+                QuickLink(
+                    icon = Icons.Default.Description,
+                    label = stringResource(R.string.more_share_crash_log),
+                    subtitle = stringResource(R.string.more_share_crash_log_subtitle),
+                    color = CatMauve,
+                    external = false
+                ) {
                     val intent = CrashReporter.shareLatestCrashIntent(context)
                     if (intent != null) {
                         context.startActivity(Intent.createChooser(intent, null).apply {
@@ -187,6 +209,48 @@ fun MoreHub(viewModel: MainViewModel, onStats: () -> Unit, onSettings: () -> Uni
                     } else {
                         Toast.makeText(context, R.string.more_no_crash_logs, Toast.LENGTH_SHORT).show()
                     }
+                }
+            }
+        }
+
+        PremiumCard(accentColor = CatBlue) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                SectionHeader(stringResource(R.string.more_section_support), CatBlue)
+                Spacer(Modifier.height(8.dp))
+                QuickLink(
+                    icon = Icons.Default.Code,
+                    label = stringResource(R.string.more_github_repo),
+                    subtitle = stringResource(R.string.more_github_repo_subtitle),
+                    color = CatGreen
+                ) {
+                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/SysAdminDoc/CallShield")).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) })
+                }
+                GradientDivider()
+                QuickLink(
+                    icon = Icons.Default.BugReport,
+                    label = stringResource(R.string.more_report_bug),
+                    subtitle = stringResource(R.string.more_report_bug_subtitle),
+                    color = CatPeach
+                ) {
+                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/SysAdminDoc/CallShield/issues/new")).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) })
+                }
+                GradientDivider()
+                QuickLink(
+                    icon = Icons.Default.Star,
+                    label = stringResource(R.string.more_star_github),
+                    subtitle = stringResource(R.string.more_star_github_subtitle),
+                    color = CatYellow
+                ) {
+                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/SysAdminDoc/CallShield")).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) })
+                }
+                GradientDivider()
+                QuickLink(
+                    icon = Icons.Default.Flag,
+                    label = stringResource(R.string.more_report_spam_number),
+                    subtitle = stringResource(R.string.more_report_spam_number_subtitle),
+                    color = CatRed
+                ) {
+                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/SysAdminDoc/CallShield/issues/new?template=spam_report.md")).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) })
                 }
             }
         }
@@ -243,33 +307,53 @@ fun MoreNavCard(
     color: androidx.compose.ui.graphics.Color,
     onClick: () -> Unit
 ) {
-    PremiumCard(onClick = onClick, accentColor = color) {
-        Row(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                modifier = Modifier
-                    .size(44.dp)
-                    .background(color.copy(alpha = 0.08f), RoundedCornerShape(12.dp)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(icon, null, tint = color, modifier = Modifier.size(24.dp))
-            }
-            Spacer(Modifier.width(16.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                Text(subtitle, style = MaterialTheme.typography.bodySmall, color = CatSubtext)
-            }
-            Icon(Icons.Default.ChevronRight, contentDescription = stringResource(R.string.cd_chevron_right), tint = CatOverlay)
+    TextButton(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
+        Box(
+            modifier = Modifier
+                .size(42.dp)
+                .background(color.copy(alpha = 0.10f), RoundedCornerShape(12.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(icon, null, tint = color, modifier = Modifier.size(22.dp))
         }
+        Spacer(Modifier.width(14.dp))
+        Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.Start) {
+            Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, color = CatText)
+            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = CatSubtext)
+        }
+        Icon(Icons.Default.ChevronRight, contentDescription = stringResource(R.string.cd_chevron_right), tint = CatOverlay)
     }
 }
 
 @Composable
-fun QuickLink(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, color: androidx.compose.ui.graphics.Color, onClick: () -> Unit) {
-    TextButton(onClick = onClick, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-        Icon(icon, null, tint = color, modifier = Modifier.size(20.dp))
-        Spacer(Modifier.width(12.dp))
-        Text(label, color = CatText, modifier = Modifier.weight(1f))
-        Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = stringResource(R.string.cd_open_external), tint = CatOverlay, modifier = Modifier.size(16.dp))
+fun QuickLink(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    subtitle: String,
+    color: androidx.compose.ui.graphics.Color,
+    external: Boolean = true,
+    onClick: () -> Unit
+) {
+    TextButton(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
+        Box(
+            modifier = Modifier
+                .size(42.dp)
+                .background(color.copy(alpha = 0.10f), RoundedCornerShape(12.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(icon, null, tint = color, modifier = Modifier.size(20.dp))
+        }
+        Spacer(Modifier.width(14.dp))
+        Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.Start) {
+            Text(label, color = CatText, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+            Text(subtitle, color = CatSubtext, style = MaterialTheme.typography.bodySmall)
+        }
+        Icon(
+            if (external) Icons.AutoMirrored.Filled.OpenInNew else Icons.Default.ChevronRight,
+            contentDescription = if (external) stringResource(R.string.cd_open_external) else stringResource(R.string.cd_chevron_right),
+            tint = CatOverlay,
+            modifier = Modifier.size(16.dp)
+        )
     }
 }
 
@@ -278,12 +362,5 @@ fun AboutStat(value: String, label: String, color: androidx.compose.ui.graphics.
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = color)
         Text(label, style = MaterialTheme.typography.labelSmall, color = CatSubtext)
-        Spacer(Modifier.height(4.dp))
-        Box(
-            modifier = Modifier
-                .width(4.dp)
-                .height(4.dp)
-                .background(CatMuted.copy(alpha = 0.5f), RoundedCornerShape(2.dp))
-        )
     }
 }

@@ -11,12 +11,14 @@ import android.net.Uri
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
+import android.os.SystemClock
 import android.view.Gravity
 import android.view.WindowManager
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
+import com.sysadmindoc.callshield.CallShieldApp
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.PhoneFormatter
 import com.sysadmindoc.callshield.data.remote.ExternalLookup
@@ -32,12 +34,22 @@ import java.text.NumberFormat
  */
 class CallerIdOverlayService : Service() {
 
+    companion object {
+        // Sentinel for "no data" — used when we haven't collected a STIR/SHAKEN
+        // verdict yet (e.g. heuristic-triggered overlays on pre-Android-11 devices,
+        // or call-screening paths that don't expose verification status).
+        const val VERIFICATION_STATUS_UNKNOWN = -1
+    }
+
     private var windowManager: WindowManager? = null
     private var overlayView: LinearLayout? = null
-    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val handler = Handler(Looper.getMainLooper())
+    private var lookupJob: Job? = null
+    private var dismissRunnable: Runnable? = null
 
     @Volatile private var isOverlayActive = false
+    @Volatile private var activeSessionId = 0L
 
     // UI elements we need to update
     private var headerText: TextView? = null
@@ -53,22 +65,29 @@ class CallerIdOverlayService : Service() {
         val number = intent?.getStringExtra("number") ?: ""
         val confidence = intent?.getIntExtra("confidence", 0) ?: 0
         val reason = intent?.getStringExtra("reason") ?: ""
+        val verificationStatus = intent?.getIntExtra("verification_status", VERIFICATION_STATUS_UNKNOWN)
+            ?: VERIFICATION_STATUS_UNKNOWN
 
         if (number.isEmpty()) { stopSelf(); return START_NOT_STICKY }
 
-        showOverlay(number, confidence, reason)
+        val sessionId = showOverlay(number, confidence, reason, verificationStatus)
+            ?: return START_NOT_STICKY
         // Launch parallel lookups
-        runLiveLookups(number)
+        runLiveLookups(number, sessionId)
         return START_NOT_STICKY
     }
 
-    private fun showOverlay(number: String, confidence: Int, reason: String) {
-        if (!android.provider.Settings.canDrawOverlays(this)) { stopSelf(); return }
+    private fun showOverlay(number: String, confidence: Int, reason: String, verificationStatus: Int): Long? {
+        if (!android.provider.Settings.canDrawOverlays(this)) { stopSelf(); return null }
 
+        cancelLookup()
+        clearDismissCallback()
+        deactivateOverlaySession()
         removeOverlay()
         windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
         val formatted = PhoneFormatter.format(number)
         val digits = number.filter { it.isDigit() }
+        val sessionId = SystemClock.elapsedRealtimeNanos()
 
         overlayView = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -171,7 +190,7 @@ class CallerIdOverlayService : Service() {
                     textSize = 11f; isAllCaps = false; setPadding(20, 8, 20, 8)
                     setOnClickListener {
                         try { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/search?q=${Uri.encode("$digits phone number spam")}")).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }) } catch (_: Exception) {}
-                        dismiss()
+                        dismiss(sessionId)
                     }
                 })
 
@@ -184,11 +203,11 @@ class CallerIdOverlayService : Service() {
                     setBackgroundColor(Color.parseColor("#14FFFFFF"))
                     textSize = 11f; isAllCaps = false; setPadding(20, 8, 20, 8)
                     setOnClickListener {
-                        CoroutineScope(Dispatchers.IO).launch {
+                        CallShieldApp.appScope.launch {
                             com.sysadmindoc.callshield.data.SpamRepository.getInstance(context).blockNumber(number, "spam", "Blocked from overlay")
                             com.sysadmindoc.callshield.data.CommunityContributor.contribute(number, "spam")
                         }
-                        dismiss()
+                        dismiss(sessionId)
                     }
                 })
 
@@ -200,7 +219,7 @@ class CallerIdOverlayService : Service() {
                     setTextColor(Color.parseColor("#FF585B70"))
                     setBackgroundColor(Color.TRANSPARENT)
                     textSize = 11f; isAllCaps = false; setPadding(20, 8, 20, 8)
-                    setOnClickListener { dismiss() }
+                    setOnClickListener { dismiss(sessionId) }
                 })
             })
 
@@ -216,7 +235,7 @@ class CallerIdOverlayService : Service() {
                 ).apply { topMargin = 8 }
                 setOnClickListener {
                     if (!SitTonePlayer.isPlaying()) {
-                        CoroutineScope(Dispatchers.IO).launch {
+                        CallShieldApp.appScope.launch {
                             SitTonePlayer.play(context)
                         }
                     }
@@ -233,18 +252,26 @@ class CallerIdOverlayService : Service() {
 
         try {
             windowManager?.addView(overlayView, params)
+            activeSessionId = sessionId
             isOverlayActive = true
-        } catch (_: Exception) {}
+        } catch (_: Exception) {
+            deactivateOverlaySession()
+            removeOverlay()
+            stopSelf()
+            return null
+        }
 
         // Auto-dismiss after 20 seconds (longer now since we're showing lookup results)
-        handler.postDelayed({ dismiss() }, 20000)
+        dismissRunnable = Runnable { dismiss(sessionId) }
+        handler.postDelayed(dismissRunnable!!, 20_000)
+        return sessionId
     }
 
     /**
      * Query all sources in parallel and update the overlay as each responds.
      * Now includes OpenCNAM caller name lookup as a 4th source.
      */
-    private fun runLiveLookups(number: String) {
+    private fun runLiveLookups(number: String, sessionId: Long) {
         var completed = 0
         var totalReports = 0
         var anySpam = false
@@ -252,7 +279,7 @@ class CallerIdOverlayService : Service() {
 
         fun updateScore() {
             handler.post {
-                if (!isOverlayActive || overlayView == null) return@post
+                if (!isCurrentSession(sessionId)) return@post
                 val score = when {
                     totalReports >= 10 -> 95
                     totalReports >= 5 -> 80
@@ -294,7 +321,7 @@ class CallerIdOverlayService : Service() {
             totalReports += reports
             if (isSpam) anySpam = true
             handler.post {
-                if (!isOverlayActive) return@post
+                if (!isCurrentSession(sessionId)) return@post
                 sourcesContainer?.addView(TextView(this).apply {
                     val icon = if (isSpam) "\u26A0" else "\u2713"
                     val info = if (reports > 0) {
@@ -314,9 +341,10 @@ class CallerIdOverlayService : Service() {
         }
 
         // Fire all lookups in parallel
-        scope.launch {
+        lookupJob = serviceScope.launch {
             try {
                 val result = ExternalLookup.lookupAll(number)
+                if (!isCurrentSession(sessionId)) return@launch
                 for (src in result.sources) {
                     addSourceResult(src.source, src.isSpam, src.reports, src.detail)
                 }
@@ -324,6 +352,7 @@ class CallerIdOverlayService : Service() {
                 // Show caller name from OpenCNAM if available
                 if (result.callerName.isNotBlank()) {
                     handler.post {
+                        if (!isCurrentSession(sessionId)) return@post
                         callerNameText?.text = result.callerName
                         callerNameText?.visibility = android.view.View.VISIBLE
                     }
@@ -337,10 +366,17 @@ class CallerIdOverlayService : Service() {
                     completed++
                     updateScore()
                 }
+            } catch (_: CancellationException) {
+                // A newer overlay session replaced this one.
             } catch (_: Exception) {
                 handler.post {
+                    if (!isCurrentSession(sessionId)) return@post
                     statusText?.text = this@CallerIdOverlayService.getString(R.string.overlay_status_failed)
                     progressBar?.visibility = android.view.View.GONE
+                }
+            } finally {
+                if (activeSessionId == sessionId) {
+                    lookupJob = null
                 }
             }
         }
@@ -351,24 +387,50 @@ class CallerIdOverlayService : Service() {
         return resources.getQuantityString(R.plurals.overlay_reports_count, reports, localizedCount)
     }
 
-    private fun dismiss() {
-        isOverlayActive = false
+    private fun dismiss(expectedSessionId: Long? = null) {
+        if (expectedSessionId != null && activeSessionId != expectedSessionId) {
+            return
+        }
+        cancelLookup()
+        clearDismissCallback()
         handler.removeCallbacksAndMessages(null)
+        deactivateOverlaySession()
         removeOverlay()
-        scope.cancel()
         stopSelf()
+    }
+
+    private fun isCurrentSession(sessionId: Long): Boolean =
+        isOverlayActive && activeSessionId == sessionId && overlayView != null
+
+    private fun cancelLookup() {
+        lookupJob?.cancel()
+        lookupJob = null
+    }
+
+    private fun clearDismissCallback() {
+        dismissRunnable?.let(handler::removeCallbacks)
+        dismissRunnable = null
+    }
+
+    private fun deactivateOverlaySession() {
+        activeSessionId = 0L
+        isOverlayActive = false
     }
 
     private fun removeOverlay() {
         try { overlayView?.let { windowManager?.removeView(it) } } catch (_: Exception) {}
         overlayView = null; headerText = null; scoreText = null; statusText = null
         callerNameText = null; sourcesContainer = null; progressBar = null
+        windowManager = null
     }
 
     override fun onDestroy() {
+        cancelLookup()
+        clearDismissCallback()
+        deactivateOverlaySession()
         handler.removeCallbacksAndMessages(null)
         removeOverlay()
-        scope.cancel()
+        serviceScope.cancel()
         super.onDestroy()
     }
 }

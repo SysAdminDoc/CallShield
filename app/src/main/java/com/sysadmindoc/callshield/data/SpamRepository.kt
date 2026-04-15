@@ -158,24 +158,6 @@ class SpamRepository(private val context: Context) {
             return SpamCheckResult(false, matchSource = "contact_whitelist")
         }
 
-        // Dialed number recognition — don't block callbacks from numbers user recently called
-        if (CallbackDetector.wasRecentlyDialed(context, normalized)) {
-            return SpamCheckResult(false, matchSource = "recently_dialed")
-        }
-
-        // Repeated call allow-through — if same number calls 2x in 5 min, likely urgent
-        if (CallbackDetector.isRepeatedUrgentCall(context, normalized)) {
-            return SpamCheckResult(false, matchSource = "repeated_urgent")
-        }
-
-        // Record for campaign burst detection AFTER allow-through checks.
-        // Otherwise, 5+ legitimate calls from family/coworkers in the same NPA-NXX
-        // flag that prefix as an active campaign and block future unknown callers
-        // from that region as "campaign_burst". Historical scans skip this.
-        if (realtimeCall) {
-            CampaignDetector.recordCall(normalized)
-        }
-
         // User blocklist + database match (single query)
         val dbEntry = dao.findByNumber(normalized)
         if (dbEntry != null) {
@@ -199,6 +181,25 @@ class SpamRepository(private val context: Context) {
             if (rule.matches(normalized)) {
                 return SpamCheckResult(true, "wildcard", "blocked", rule.description)
             }
+        }
+
+        // Dialed / repeated-call allow-through reduces false positives for
+        // unknown numbers, but it must never override exact database hits or
+        // explicit wildcard rules the user set intentionally.
+        if (CallbackDetector.wasRecentlyDialed(context, normalized)) {
+            return SpamCheckResult(false, matchSource = "recently_dialed")
+        }
+
+        if (CallbackDetector.isRepeatedUrgentCall(context, normalized)) {
+            return SpamCheckResult(false, matchSource = "repeated_urgent")
+        }
+
+        // Record only after the trusted allow-through checks above. Otherwise,
+        // repeated callbacks from family, coworkers, or businesses the user
+        // just contacted can poison the in-memory campaign detector and make
+        // future unknown callers from that prefix look like an active campaign.
+        if (realtimeCall) {
+            CampaignDetector.recordCall(normalized)
         }
 
         // Feature 9: Time-based blocking (block all non-contact unknowns during sleep hours)
@@ -326,12 +327,18 @@ class SpamRepository(private val context: Context) {
         }
     }
 
-    private fun showCallerIdOverlay(number: String, confidence: Int, reason: String) {
+    private fun showCallerIdOverlay(
+        number: String,
+        confidence: Int,
+        reason: String,
+        verificationStatus: Int = CallerIdOverlayService.VERIFICATION_STATUS_UNKNOWN,
+    ) {
         try {
             val intent = Intent(context, CallerIdOverlayService::class.java).apply {
                 putExtra("number", number)
                 putExtra("confidence", confidence)
                 putExtra("reason", reason)
+                putExtra("verification_status", verificationStatus)
             }
             context.startService(intent)
         } catch (_: Exception) {}
@@ -447,22 +454,16 @@ class SpamRepository(private val context: Context) {
         sha: String?,
         syncSource: String
     ): Pair<Int, Int> {
-        val numbers = database.numbers.mapNotNull { json ->
-            val normalizedNumber = normalizeNumber(json.number)
-            if (normalizedNumber.isBlank()) {
-                null
-            } else {
-                SpamNumber(
-                    number = normalizedNumber,
-                    type = json.type.trim().ifBlank { "unknown" },
-                    reports = json.reports,
-                    firstSeen = json.firstSeen,
-                    lastSeen = json.lastSeen,
-                    description = json.description.trim(),
-                    source = "github"
-                )
-            }
-        }
+        val preservedUserBlocks = dao.getUserBlockedNumbersSync()
+            .asSequence()
+            .map { it.number }
+            .toSet()
+
+        val numbers = sanitizeDatabaseNumbers(
+            databaseNumbers = database.numbers,
+            normalizeNumber = ::normalizeNumber,
+            preservedUserBlockedNumbers = preservedUserBlocks
+        )
         val prefixes = database.prefixes.mapNotNull { json ->
             val trimmedPrefix = json.prefix.trim()
             if (trimmedPrefix.isBlank()) {
@@ -498,6 +499,7 @@ class SpamRepository(private val context: Context) {
     suspend fun blockNumber(number: String, type: String = "unknown", description: String = "") {
         val normalized = normalizeNumber(number)
         if (normalized.isBlank()) return
+        dao.findWhitelistEntry(normalized)?.let { dao.deleteWhitelistEntry(it) }
         val existing = dao.findByNumber(normalized)
         if (existing != null) {
             dao.insertNumber(existing.copy(isUserBlocked = true))
@@ -550,13 +552,6 @@ class SpamRepository(private val context: Context) {
         NotificationHelper.notifyBlocked(context, number, matchReason, isCall)
     }
 
-    // Feature 4: After-call spam rating for unblocked unknown numbers
-    fun promptSpamRating(number: String) {
-        if (number.isNotEmpty()) {
-            NotificationHelper.notifySpamRating(context, number)
-        }
-    }
-
     fun getBlockedCalls(): Flow<List<BlockedCall>> = dao.getBlockedCalls()
     fun getBlockedCallsOnly(): Flow<List<BlockedCall>> = dao.getBlockedCallsOnly()
     fun getBlockedSmsOnly(): Flow<List<BlockedCall>> = dao.getBlockedSmsOnly()
@@ -582,6 +577,11 @@ class SpamRepository(private val context: Context) {
     suspend fun addToWhitelist(number: String, description: String = "", isEmergency: Boolean = false) {
         val normalized = normalizeNumber(number)
         if (normalized.isBlank()) return
+        when (val resolution = resolveSpamNumberForWhitelist(dao.findByNumber(normalized))) {
+            SpamNumberWhitelistResolution.None -> Unit
+            is SpamNumberWhitelistResolution.Update -> dao.insertNumber(resolution.number)
+            is SpamNumberWhitelistResolution.Delete -> dao.deleteNumber(resolution.number)
+        }
         dao.insertWhitelistEntry(
             WhitelistEntry(
                 number = normalized,
@@ -599,7 +599,26 @@ class SpamRepository(private val context: Context) {
 
     // ── Hot list (30-minute trending sync) ────────────────────────────
     suspend fun replaceHotList(numbers: List<SpamNumber>) = withContext(Dispatchers.IO) {
-        dao.replaceBySource("hot_list", numbers)
+        val hotNumbers = numbers
+            .filter { it.number.isNotBlank() }
+            .distinctBy { it.number }
+
+        val existingByNumber = if (hotNumbers.isEmpty()) {
+            emptyMap()
+        } else {
+            dao.getNumbersByNumbers(hotNumbers.map { it.number })
+                .associateBy { it.number }
+        }
+
+        val mergedHotNumbers = mergeHotListNumbers(
+            hotNumbers = hotNumbers,
+            existingByNumber = existingByNumber
+        )
+
+        dao.deleteBySource("hot_list")
+        if (mergedHotNumbers.isNotEmpty()) {
+            dao.insertNumbers(mergedHotNumbers)
+        }
     }
 
     // ── Auto-cleanup ──────────────────────────────────────────────────
@@ -641,6 +660,72 @@ class SpamRepository(private val context: Context) {
             hasPlus -> "+$digits"
             else -> digits
         }
+    }
+}
+
+internal fun sanitizeDatabaseNumbers(
+    databaseNumbers: Collection<SpamNumberJson>,
+    normalizeNumber: (String) -> String,
+    preservedUserBlockedNumbers: Set<String>,
+): List<SpamNumber> {
+    return databaseNumbers.mapNotNull { json ->
+        val normalizedNumber = normalizeNumber(json.number)
+        if (normalizedNumber.isBlank()) {
+            null
+        } else {
+            SpamNumber(
+                number = normalizedNumber,
+                type = json.type.trim().ifBlank { "unknown" },
+                reports = json.reports.coerceAtLeast(1),
+                firstSeen = json.firstSeen,
+                lastSeen = json.lastSeen,
+                description = json.description.trim(),
+                source = "github",
+                isUserBlocked = normalizedNumber in preservedUserBlockedNumbers
+            )
+        }
+    }
+}
+
+internal fun mergeHotListNumbers(
+    hotNumbers: Collection<SpamNumber>,
+    existingByNumber: Map<String, SpamNumber>,
+): List<SpamNumber> {
+    return hotNumbers.mapNotNull { hotNumber ->
+        when (val existing = existingByNumber[hotNumber.number]) {
+            null -> hotNumber
+            else -> {
+                // Never let ephemeral hot-list data overwrite a stronger row from
+                // the main database. If we already know this number from GitHub or
+                // from a user-owned entry, keep that record and skip the hot insert.
+                if (existing.source != "hot_list") {
+                    null
+                } else {
+                    hotNumber.copy(
+                        id = existing.id,
+                        isUserBlocked = existing.isUserBlocked
+                    )
+                }
+            }
+        }
+    }
+}
+
+internal sealed interface SpamNumberWhitelistResolution {
+    data object None : SpamNumberWhitelistResolution
+    data class Update(val number: SpamNumber) : SpamNumberWhitelistResolution
+    data class Delete(val number: SpamNumber) : SpamNumberWhitelistResolution
+}
+
+internal fun resolveSpamNumberForWhitelist(existing: SpamNumber?): SpamNumberWhitelistResolution {
+    if (existing == null || !existing.isUserBlocked) {
+        return SpamNumberWhitelistResolution.None
+    }
+
+    return if (existing.source == "user") {
+        SpamNumberWhitelistResolution.Delete(existing)
+    } else {
+        SpamNumberWhitelistResolution.Update(existing.copy(isUserBlocked = false))
     }
 }
 

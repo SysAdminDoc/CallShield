@@ -14,6 +14,11 @@ import kotlinx.coroutines.withContext
  */
 object CallbackDetector {
 
+    internal data class CallLogQuery(
+        val selection: String,
+        val selectionArgs: Array<String>,
+    )
+
     /**
      * Check if the user has dialed this number recently (outgoing call).
      * If so, incoming calls from that number should be allowed through
@@ -24,12 +29,12 @@ object CallbackDetector {
         if (digits.length < 7) return@withContext false
 
         try {
-            val cutoff = (System.currentTimeMillis() - windowHours * 3600_000L).toString()
+            val query = buildRecentlyDialedQuery(System.currentTimeMillis(), windowHours)
             val cursor = context.contentResolver.query(
                 CallLog.Calls.CONTENT_URI,
                 arrayOf(CallLog.Calls.NUMBER),
-                "${CallLog.Calls.TYPE} = ? AND ${CallLog.Calls.DATE} > ?",
-                arrayOf(CallLog.Calls.OUTGOING_TYPE.toString(), cutoff),
+                query.selection,
+                query.selectionArgs,
                 "${CallLog.Calls.DATE} DESC"
             )
             cursor?.use { c ->
@@ -57,12 +62,12 @@ object CallbackDetector {
         if (digits.length < 7) return@withContext false
 
         try {
-            val cutoff = (System.currentTimeMillis() - windowMinutes * 60_000L).toString()
+            val query = buildRepeatedUrgentCallQuery(System.currentTimeMillis(), windowMinutes)
             val cursor = context.contentResolver.query(
                 CallLog.Calls.CONTENT_URI,
                 arrayOf(CallLog.Calls.NUMBER),
-                "${CallLog.Calls.DATE} > ?",
-                arrayOf(cutoff),
+                query.selection,
+                query.selectionArgs,
                 null
             )
             var count = 0
@@ -78,5 +83,36 @@ object CallbackDetector {
         } catch (_: SecurityException) {
             false
         }
+    }
+
+    internal fun buildRecentlyDialedQuery(
+        nowMillis: Long,
+        windowHours: Int,
+    ): CallLogQuery {
+        val safeWindowHours = windowHours.coerceAtLeast(1)
+        val cutoff = (nowMillis - safeWindowHours * 3_600_000L).toString()
+        return CallLogQuery(
+            selection = "${CallLog.Calls.TYPE} = ? AND ${CallLog.Calls.DATE} > ?",
+            selectionArgs = arrayOf(
+                CallLog.Calls.OUTGOING_TYPE.toString(),
+                cutoff
+            )
+        )
+    }
+
+    internal fun buildRepeatedUrgentCallQuery(
+        nowMillis: Long,
+        windowMinutes: Int,
+    ): CallLogQuery {
+        val safeWindowMinutes = windowMinutes.coerceAtLeast(1)
+        val cutoff = (nowMillis - safeWindowMinutes * 60_000L).toString()
+        return CallLogQuery(
+            selection = "${CallLog.Calls.TYPE} IN (?, ?) AND ${CallLog.Calls.DATE} > ?",
+            selectionArgs = arrayOf(
+                CallLog.Calls.INCOMING_TYPE.toString(),
+                CallLog.Calls.MISSED_TYPE.toString(),
+                cutoff
+            )
+        )
     }
 }

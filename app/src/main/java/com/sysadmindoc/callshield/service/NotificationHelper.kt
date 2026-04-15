@@ -150,36 +150,6 @@ object NotificationHelper {
         safeNotify(context, SUMMARY_ID, summary)
     }
 
-    fun notifySpamRating(context: Context, number: String) {
-        val nid = stableId(number, 30)
-
-        val blockIntent = PendingIntent.getBroadcast(
-            context, stableId(number, 31),
-            Intent(context, SpamActionReceiver::class.java).apply {
-                action = ACTION_BLOCK; putExtra(EXTRA_NUMBER, number); putExtra(EXTRA_NOTIF_ID, nid)
-            },
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
-        )
-
-        val safeIntent = PendingIntent.getBroadcast(
-            context, stableId(number, 32),
-            Intent(context, SpamActionReceiver::class.java).apply {
-                action = ACTION_SAFE; putExtra(EXTRA_NUMBER, number); putExtra(EXTRA_NOTIF_ID, nid)
-            },
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
-        )
-
-        val builder = NotificationCompat.Builder(context, CHANNEL_RATING)
-            .setSmallIcon(android.R.drawable.ic_menu_help)
-            .setContentTitle(context.getString(R.string.notif_rating_title))
-            .setContentText(PhoneFormatter.format(number))
-            .setAutoCancel(true)
-            .addAction(android.R.drawable.ic_menu_close_clear_cancel, context.getString(R.string.notif_action_spam_block), blockIntent)
-            .addAction(android.R.drawable.ic_menu_myplaces, context.getString(R.string.notif_action_safe), safeIntent)
-
-        safeNotify(context, nid, builder)
-    }
-
     fun notifyPhishingUrl(context: Context, sender: String, threats: String) {
         val nid = stableId(sender, 50)
 
