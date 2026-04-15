@@ -2,7 +2,6 @@ package com.sysadmindoc.callshield.data.remote
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.util.concurrent.TimeUnit
 
@@ -39,7 +38,7 @@ object NumberTypeChecker {
         val country: String = ""
     )
 
-    private val client = OkHttpClient.Builder()
+    private val client = HttpClient.shared.newBuilder()
         .connectTimeout(8, TimeUnit.SECONDS)
         .readTimeout(8, TimeUnit.SECONDS)
         .build()

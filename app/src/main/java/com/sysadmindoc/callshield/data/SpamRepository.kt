@@ -29,6 +29,33 @@ class SpamRepository(private val context: Context) {
     private val dataStore = context.dataStore
     private val syncMutex = Mutex()
 
+    // ── Hot-path caches ──────────────────────────────────────────────
+    // isSpam() is the critical real-time path (must complete within the
+    // CallScreeningService 5-second deadline). Loading all prefixes,
+    // wildcard rules, and keyword rules from Room on every call added
+    // unnecessary I/O latency. These caches are invalidated on writes.
+    @Volatile private var cachedPrefixes: List<SpamPrefix>? = null
+    @Volatile private var cachedWildcardRules: List<WildcardRule>? = null
+    @Volatile private var cachedKeywordRules: List<SmsKeywordRule>? = null
+
+    private suspend fun getPrefixes(): List<SpamPrefix> {
+        return cachedPrefixes ?: dao.getAllPrefixes().also { cachedPrefixes = it }
+    }
+    private suspend fun getActiveWildcards(): List<WildcardRule> {
+        return cachedWildcardRules ?: dao.getActiveWildcardRules().also { cachedWildcardRules = it }
+    }
+    private suspend fun getActiveKeywords(): List<SmsKeywordRule> {
+        return cachedKeywordRules ?: dao.getActiveKeywordRules().also { cachedKeywordRules = it }
+    }
+    private fun invalidatePrefixCache() { cachedPrefixes = null }
+    private fun invalidateWildcardCache() { cachedWildcardRules = null }
+    private fun invalidateKeywordCache() { cachedKeywordRules = null }
+    private fun invalidateAllCaches() {
+        cachedPrefixes = null
+        cachedWildcardRules = null
+        cachedKeywordRules = null
+    }
+
     companion object {
         private val KEY_LAST_SYNC = longPreferencesKey("last_sync_timestamp")
         private val KEY_LAST_SYNC_SOURCE = stringPreferencesKey("last_sync_source")
@@ -145,6 +172,12 @@ class SpamRepository(private val context: Context) {
     ): SpamCheckResult {
         val normalized = normalizeNumber(number)
 
+        // Read all preferences in one shot instead of 8+ separate
+        // Flow .first() calls. Each .first() spins up a collector —
+        // doing that 8× on the call-screening hot path wastes tens of
+        // milliseconds against the 5-second Android deadline.
+        val prefs = dataStore.data.first()
+
         // Manual whitelist — always allow. Emergency-flagged entries surface
         // with `emergency_contact` matchSource so the block log + detail
         // screen can show the distinct badge and narrative.
@@ -154,7 +187,7 @@ class SpamRepository(private val context: Context) {
         }
 
         // Contact whitelist
-        if (contactWhitelistEnabled.first() && SpamHeuristics.isInContacts(context, normalized)) {
+        if ((prefs[KEY_CONTACT_WHITELIST] ?: true) && SpamHeuristics.isInContacts(context, normalized)) {
             return SpamCheckResult(false, matchSource = "contact_whitelist")
         }
 
@@ -167,16 +200,16 @@ class SpamRepository(private val context: Context) {
             return SpamCheckResult(true, "database", dbEntry.type, dbEntry.description)
         }
 
-        // Prefix match
-        val prefixes = dao.getAllPrefixes()
+        // Prefix match (cached — invalidated on sync)
+        val prefixes = getPrefixes()
         for (prefix in prefixes) {
             if (normalized.startsWith(prefix.prefix)) {
                 return SpamCheckResult(true, "prefix", prefix.type, prefix.description)
             }
         }
 
-        // Feature 8: Wildcard/regex rules
-        val wildcards = dao.getActiveWildcardRules()
+        // Feature 8: Wildcard/regex rules (cached — invalidated on edit)
+        val wildcards = getActiveWildcards()
         for (rule in wildcards) {
             if (rule.matches(normalized)) {
                 return SpamCheckResult(true, "wildcard", "blocked", rule.description)
@@ -203,30 +236,33 @@ class SpamRepository(private val context: Context) {
         }
 
         // Feature 9: Time-based blocking (block all non-contact unknowns during sleep hours)
-        if (timeBlockEnabled.first() && isInBlockedTimeWindow()) {
+        if ((prefs[KEY_TIME_BLOCK] ?: false) && isInBlockedTimeWindow(prefs)) {
             return SpamCheckResult(true, "time_block", "unknown", "Blocked during quiet hours")
         }
 
-        // Feature 10: Frequency auto-escalation
-        if (freqEscalationEnabled.first()) {
-            val freq = dao.getNumberFrequency(normalized)
-            val threshold = freqThreshold.first().coerceAtLeast(2)
+        // Feature 10: Frequency auto-escalation (7-day window)
+        // Time-windowed to prevent legitimate callers (e.g. doctor's office)
+        // with 3+ calls spread over months from being auto-blocked.
+        if (prefs[KEY_FREQ_ESCALATION] ?: true) {
+            val freqWindowMs = 7 * 86_400_000L // 7 days
+            val freq = dao.getNumberFrequencySince(normalized, System.currentTimeMillis() - freqWindowMs)
+            val threshold = (prefs[KEY_FREQ_THRESHOLD] ?: 3).coerceAtLeast(2)
             if (freq >= threshold) {
-                return SpamCheckResult(true, "frequency", "repeat_caller", "Called $freq times - auto-blocked")
+                return SpamCheckResult(true, "frequency", "repeat_caller", "Called $freq times in 7 days - auto-blocked")
             }
         }
 
         // Heuristic engine
-        if (heuristicsEnabled.first()) {
+        if (prefs[KEY_HEURISTICS] ?: true) {
             val recentBlocked = dao.getRecentBlockedNumbers(System.currentTimeMillis() - 3600_000)
             val hResult = SpamHeuristics.analyze(
                 context = context,
                 number = normalized,
-                smsBody = if (smsContentEnabled.first()) smsBody else null,
+                smsBody = if (prefs[KEY_SMS_CONTENT] ?: true) smsBody else null,
                 recentBlockedNumbers = recentBlocked.map { it.number to it.timestamp }
             )
 
-            val threshold = if (aggressiveModeEnabled.first()) 30 else 60
+            val threshold = if (prefs[KEY_AGGRESSIVE_MODE] ?: false) 30 else 60
 
             if (hResult.score >= threshold) {
                 return SpamCheckResult(
@@ -257,7 +293,7 @@ class SpamRepository(private val context: Context) {
         }
 
         // Layer 15: On-device ML spam scorer
-        if (mlScorerEnabled.first() && SpamMLScorer.isSpam(normalized)) {
+        if ((prefs[KEY_ML_SCORER] ?: true) && SpamMLScorer.isSpam(normalized)) {
             val mlConf = SpamMLScorer.confidence(normalized)
             return SpamCheckResult(
                 isSpam = true,
@@ -288,17 +324,18 @@ class SpamRepository(private val context: Context) {
             return SpamCheckResult(false, matchSource = "sms_context")
         }
 
-        // Custom SMS keyword rules
-        val keywords = dao.getActiveKeywordRules()
+        // Custom SMS keyword rules (cached — invalidated on edit)
+        val keywords = getActiveKeywords()
         for (rule in keywords) {
             if (rule.matches(body)) {
                 return SpamCheckResult(true, "keyword", "sms_spam", "Keyword: ${rule.keyword}")
             }
         }
 
-        if (smsContentEnabled.first()) {
+        val smsPrefs = dataStore.data.first()
+        if (smsPrefs[KEY_SMS_CONTENT] ?: true) {
             val smsResult = SmsContentAnalyzer.analyze(body)
-            val threshold = if (aggressiveModeEnabled.first()) 25 else 50
+            val threshold = if (smsPrefs[KEY_AGGRESSIVE_MODE] ?: false) 25 else 50
             if (smsResult.score >= threshold) {
                 return SpamCheckResult(
                     isSpam = true,
@@ -313,9 +350,9 @@ class SpamRepository(private val context: Context) {
         return SpamCheckResult(false)
     }
 
-    private suspend fun isInBlockedTimeWindow(): Boolean {
-        val start = timeBlockStart.first().coerceIn(0, 23)
-        val end = timeBlockEnd.first().coerceIn(0, 23)
+    private fun isInBlockedTimeWindow(prefs: Preferences): Boolean {
+        val start = (prefs[KEY_TIME_BLOCK_START] ?: 22).coerceIn(0, 23)
+        val end = (prefs[KEY_TIME_BLOCK_END] ?: 7).coerceIn(0, 23)
         if (start == end) return false // Same hour = disabled
         val now = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
 
@@ -478,6 +515,7 @@ class SpamRepository(private val context: Context) {
         }
 
         dao.replaceGithubData(numbers, prefixes)
+        invalidateAllCaches()
 
         dataStore.edit {
             it[KEY_LAST_SYNC] = System.currentTimeMillis()
@@ -531,11 +569,18 @@ class SpamRepository(private val context: Context) {
                 description = description.trim()
             )
         )
+        invalidateWildcardCache()
     }
 
-    suspend fun deleteWildcardRule(rule: WildcardRule) = dao.deleteWildcardRule(rule)
+    suspend fun deleteWildcardRule(rule: WildcardRule) {
+        dao.deleteWildcardRule(rule)
+        invalidateWildcardCache()
+    }
 
-    suspend fun toggleWildcardRule(id: Long, enabled: Boolean) = dao.setWildcardRuleEnabled(id, enabled)
+    suspend fun toggleWildcardRule(id: Long, enabled: Boolean) {
+        dao.setWildcardRuleEnabled(id, enabled)
+        invalidateWildcardCache()
+    }
 
     // ── Call log ───────────────────────────────────────────────────────
     suspend fun logBlockedCall(
@@ -619,6 +664,9 @@ class SpamRepository(private val context: Context) {
         if (mergedHotNumbers.isNotEmpty()) {
             dao.insertNumbers(mergedHotNumbers)
         }
+        // Hot list numbers participate in the database-match layer of isSpam(),
+        // but prefixes and rules don't change here. No cache invalidation needed
+        // since hot list entries are looked up by exact number (dao.findByNumber).
     }
 
     // ── Auto-cleanup ──────────────────────────────────────────────────
@@ -643,10 +691,17 @@ class SpamRepository(private val context: Context) {
                 description = description.trim()
             )
         )
+        invalidateKeywordCache()
     }
 
-    suspend fun deleteKeywordRule(rule: SmsKeywordRule) = dao.deleteKeywordRule(rule)
-    suspend fun toggleKeywordRule(id: Long, enabled: Boolean) = dao.setKeywordRuleEnabled(id, enabled)
+    suspend fun deleteKeywordRule(rule: SmsKeywordRule) {
+        dao.deleteKeywordRule(rule)
+        invalidateKeywordCache()
+    }
+    suspend fun toggleKeywordRule(id: Long, enabled: Boolean) {
+        dao.setKeywordRuleEnabled(id, enabled)
+        invalidateKeywordCache()
+    }
 
     // ── Search log ───────────────────────────────────────────────────
     fun searchLog(query: String): Flow<List<BlockedCall>> = dao.searchLog(query)

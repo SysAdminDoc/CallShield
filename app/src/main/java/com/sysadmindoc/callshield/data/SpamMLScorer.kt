@@ -2,9 +2,9 @@ package com.sysadmindoc.callshield.data
 
 import android.content.Context
 import com.sysadmindoc.callshield.data.remote.GitHubDataSource
+import com.sysadmindoc.callshield.data.remote.HttpClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
 import okhttp3.Request
 import com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup
 import java.io.File
@@ -82,24 +82,15 @@ object SpamMLScorer {
         val threshold: Double,
     )
 
-    // ── GBT model state ──────────────────────────────────────────────
+    // ── Atomic model state ───────────────────────────────────────────
+    // All model parameters live in a single immutable ModelState object.
+    // Reads grab the reference once (guaranteed atomic for object refs on
+    // JVM), so score() never sees a half-updated model during syncWeights().
     @Volatile
-    private var useGbt: Boolean = false
-    @Volatile
-    private var gbtTrees: List<GbtTree>? = null
-    @Volatile
-    private var gbtLearningRate: Double = 0.1
-
-    // ── Logistic regression state (also used as fallback) ────────────
-    @Volatile
-    private var weights: DoubleArray? = null
-    @Volatile
-    private var bias: Double = -2.5
-    @Volatile
-    private var threshold: Double = 0.7  // Conservative threshold
+    private var state: ModelState = defaultModelState()
 
     init {
-        applyDefaultWeights()
+        // state is already initialized to defaults above
     }
 
     /**
@@ -147,7 +138,7 @@ object SpamMLScorer {
      */
     suspend fun syncWeights(context: Context) = withContext(Dispatchers.IO) {
         try {
-            val client = OkHttpClient.Builder()
+            val client = HttpClient.shared.newBuilder()
                 .connectTimeout(15, TimeUnit.SECONDS)
                 .readTimeout(15, TimeUnit.SECONDS)
                 .build()
@@ -192,21 +183,26 @@ object SpamMLScorer {
     /**
      * Score a number. Returns 0.0–1.0 probability of spam.
      * Returns -1.0 if weights not loaded or number format invalid.
+     *
+     * Thread-safe: reads [state] once (atomic ref read on JVM) so the
+     * entire scoring pass uses a consistent snapshot even if syncWeights()
+     * is swapping the model on another thread.
      */
     fun score(number: String): Double {
         val features = extractFeatures(number).takeIf { it.isNotEmpty() } ?: return -1.0
+        val snap = state // single atomic read
 
         // Use GBT inference if available, otherwise logistic regression
-        if (useGbt) {
-            val trees = gbtTrees
+        if (snap.useGbt) {
+            val trees = snap.gbtTrees
             if (trees != null && trees.isNotEmpty()) {
-                return scoreGbt(features, trees, gbtLearningRate)
+                return scoreGbt(features, trees, snap.gbtLearningRate)
             }
         }
 
         // Logistic regression fallback
-        val w = weights ?: return -1.0
-        var z = bias
+        val w = snap.weights ?: return -1.0
+        var z = snap.bias
         val limit = minOf(w.size, features.size)
         for (i in 0 until limit) {
             z += w[i] * features[i]
@@ -219,12 +215,29 @@ object SpamMLScorer {
      * Only returns true at a high-confidence threshold to minimize false positives.
      */
     fun isSpam(number: String): Boolean {
-        val s = score(number)
-        return s >= threshold
+        val snap = state // single atomic read for consistent threshold + score
+        val s = scoreWith(number, snap)
+        return s >= snap.threshold
     }
 
     /** ML spam confidence as 0–100 integer for display. */
     fun confidence(number: String): Int = (score(number).coerceIn(0.0, 1.0) * 100).toInt()
+
+    /** Score using a specific model snapshot (avoids double state read in isSpam). */
+    private fun scoreWith(number: String, snap: ModelState): Double {
+        val features = extractFeatures(number).takeIf { it.isNotEmpty() } ?: return -1.0
+        if (snap.useGbt) {
+            val trees = snap.gbtTrees
+            if (trees != null && trees.isNotEmpty()) {
+                return scoreGbt(features, trees, snap.gbtLearningRate)
+            }
+        }
+        val w = snap.weights ?: return -1.0
+        var z = snap.bias
+        val limit = minOf(w.size, features.size)
+        for (i in 0 until limit) { z += w[i] * features[i] }
+        return sigmoid(z)
+    }
 
     /**
      * GBT inference: traverse each tree, sum leaf values * learning_rate, apply sigmoid.
@@ -353,9 +366,10 @@ object SpamMLScorer {
     private fun sigmoid(x: Double): Double =
         if (x >= 0) 1.0 / (1.0 + exp(-x)) else { val e = exp(x); e / (1.0 + e) }
 
-    private fun applyDefaultWeights() {
-        // Initial heuristic priors for 20 features.
-        // Will be replaced by trained weights after first CI run.
+    private fun defaultModelState(): ModelState = ModelState(
+        useGbt = false,
+        gbtTrees = null,
+        gbtLearningRate = 0.1,
         weights = doubleArrayOf(
             1.2,  // toll_free
             0.8,  // high_spam_npa
@@ -377,11 +391,13 @@ object SpamMLScorer {
             0.6,  // geographic_distance
             1.0,  // short_number
             0.1,  // plus_one_prefix
-        )
-        bias = -2.5
-        threshold = 0.7
-        useGbt = false
-        gbtTrees = null
+        ),
+        bias = -2.5,
+        threshold = 0.7,
+    )
+
+    private fun applyDefaultWeights() {
+        state = defaultModelState()
     }
 
     private fun parseAndApply(json: String): Boolean {
@@ -393,26 +409,40 @@ object SpamMLScorer {
 
             val version = versionMatch?.groupValues?.get(1)?.toIntOrNull() ?: 2
             val modelType = modelTypeMatch?.groupValues?.get(1) ?: ""
-
-            threshold = thresholdMatch?.groupValues?.get(1)?.toDoubleOrNull() ?: 0.7
+            val parsedThreshold = thresholdMatch?.groupValues?.get(1)?.toDoubleOrNull() ?: 0.7
 
             // Always try to load fallback LR weights (used by v2 or as fallback for v3)
-            val fallbackLoaded = loadFallbackWeights(json, version)
+            val fallback = parseFallbackWeights(json, version)
 
             if (version >= 3 && modelType == "gbt") {
                 // Try to parse GBT trees
-                if (parseGbtTrees(json)) {
+                val trees = parseGbtTreesList(json)
+                if (trees != null) {
                     val lrMatch = Regex(""""learning_rate"\s*:\s*([\d.]+)""").find(json)
-                    gbtLearningRate = lrMatch?.groupValues?.get(1)?.toDoubleOrNull() ?: 0.1
-                    useGbt = true
+                    val lr = lrMatch?.groupValues?.get(1)?.toDoubleOrNull() ?: 0.1
+                    // Atomic swap — score() sees either the old model or the new one, never a mix
+                    state = ModelState(
+                        useGbt = true,
+                        gbtTrees = trees,
+                        gbtLearningRate = lr,
+                        weights = fallback?.first,
+                        bias = fallback?.second ?: -2.5,
+                        threshold = parsedThreshold,
+                    )
                     return true
                 }
             }
 
-            if (fallbackLoaded) {
-                // Fall through to logistic regression (v2 or GBT parse failure)
-                useGbt = false
-                gbtTrees = null
+            if (fallback != null) {
+                // Atomic swap to logistic regression (v2 or GBT parse failure)
+                state = ModelState(
+                    useGbt = false,
+                    gbtTrees = null,
+                    gbtLearningRate = 0.1,
+                    weights = fallback.first,
+                    bias = fallback.second,
+                    threshold = parsedThreshold,
+                )
                 return true
             }
 
@@ -425,11 +455,12 @@ object SpamMLScorer {
     }
 
     /**
-     * Load logistic regression weights from JSON.
+     * Parse logistic regression weights from JSON without mutating state.
+     * Returns (weights, bias) or null if parsing fails.
      * For v2: reads "weights" array and "bias".
      * For v3: reads "fallback_weights" object and "fallback_bias".
      */
-    private fun loadFallbackWeights(json: String, version: Int): Boolean {
+    private fun parseFallbackWeights(json: String, version: Int): Pair<DoubleArray, Double>? {
         if (version >= 3) {
             // v3 stores LR weights as fallback_weights object: {"feature_name": weight, ...}
             val fbWeightsMatch = Regex(""""fallback_weights"\s*:\s*\{([^}]+)\}""").find(json)
@@ -455,9 +486,8 @@ object SpamMLScorer {
                 val parsedWeights = featureNames.map { pairs[it] ?: 0.0 }.toDoubleArray()
 
                 if (parsedWeights.size >= 15) {
-                    weights = parsedWeights
-                    bias = fbBiasMatch?.groupValues?.get(1)?.toDoubleOrNull() ?: -2.5
-                    return true
+                    val bias = fbBiasMatch?.groupValues?.get(1)?.toDoubleOrNull() ?: -2.5
+                    return parsedWeights to bias
                 }
             }
             // If fallback_weights parsing fails, try v2-style as last resort
@@ -474,16 +504,15 @@ object SpamMLScorer {
 
         if (parsedWeights != null && (parsedWeights.size >= 15)) {
             // Backward compat: pad old 15-weight models to 20 with zeros
-            weights = if (parsedWeights.size < 20) {
+            val w = if (parsedWeights.size < 20) {
                 parsedWeights + DoubleArray(20 - parsedWeights.size)
             } else {
                 parsedWeights
             }
-            bias = biasMatch?.groupValues?.get(1)?.toDoubleOrNull() ?: -2.5
-            return true
-        } else {
-            return false
+            val bias = biasMatch?.groupValues?.get(1)?.toDoubleOrNull() ?: -2.5
+            return w to bias
         }
+        return null
     }
 
     /**
@@ -491,21 +520,21 @@ object SpamMLScorer {
      * Each tree object has: feature, threshold, children_left, children_right, value
      * (all integer/double arrays).
      *
-     * Returns true if parsing succeeded and at least one tree was loaded.
+     * Returns the parsed list, or null if parsing failed.
      */
-    private fun parseGbtTrees(json: String): Boolean {
+    private fun parseGbtTreesList(json: String): List<GbtTree>? {
         try {
             // Find the "trees" array — it contains objects with arrays inside
             val treesStart = json.indexOf("\"trees\"")
-            if (treesStart == -1) return false
+            if (treesStart == -1) return null
 
             // Find the opening '[' of the trees array
             val arrStart = json.indexOf('[', treesStart + 7)
-            if (arrStart == -1) return false
+            if (arrStart == -1) return null
 
             // Find matching closing ']' — need to handle nested brackets
             val arrEnd = findMatchingBracket(json, arrStart, '[', ']')
-            if (arrEnd == -1) return false
+            if (arrEnd == -1) return null
 
             val treesJson = json.substring(arrStart + 1, arrEnd)
 
@@ -519,16 +548,14 @@ object SpamMLScorer {
                 if (objEnd == -1) break
 
                 val treeObj = treesJson.substring(objStart, objEnd + 1)
-                val tree = parseOneTree(treeObj) ?: return false
+                val tree = parseOneTree(treeObj) ?: return null
                 parsedTrees.add(tree)
                 pos = objEnd + 1
             }
 
-            if (parsedTrees.isEmpty()) return false
-            gbtTrees = parsedTrees
-            return true
+            return parsedTrees.takeIf { it.isNotEmpty() }
         } catch (_: Exception) {
-            return false
+            return null
         }
     }
 
@@ -598,41 +625,17 @@ object SpamMLScorer {
     }
 
     private fun tryApplyModelJsonPreservingState(json: String): Boolean {
-        val snapshot = snapshotModelState()
+        // parseAndApply() now writes `state` atomically. If it fails, it calls
+        // applyDefaultWeights() which also writes atomically. Snapshot the
+        // current state so we can restore it on failure instead of falling
+        // back to defaults (which would regress a working model).
+        val snapshot = state
         return if (parseAndApply(json)) {
             true
         } else {
-            restoreModelState(snapshot)
+            state = snapshot
             false
         }
-    }
-
-    private fun snapshotModelState(): ModelState {
-        return ModelState(
-            useGbt = useGbt,
-            gbtTrees = gbtTrees?.map { tree ->
-                tree.copy(
-                    feature = tree.feature.copyOf(),
-                    threshold = tree.threshold.copyOf(),
-                    childrenLeft = tree.childrenLeft.copyOf(),
-                    childrenRight = tree.childrenRight.copyOf(),
-                    value = tree.value.copyOf()
-                )
-            },
-            gbtLearningRate = gbtLearningRate,
-            weights = weights?.copyOf(),
-            bias = bias,
-            threshold = threshold
-        )
-    }
-
-    private fun restoreModelState(state: ModelState) {
-        useGbt = state.useGbt
-        gbtTrees = state.gbtTrees
-        gbtLearningRate = state.gbtLearningRate
-        weights = state.weights
-        bias = state.bias
-        threshold = state.threshold
     }
 
     private fun persistModelJson(context: Context, json: String) {

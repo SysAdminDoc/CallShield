@@ -58,11 +58,14 @@ object CampaignDetector {
     private fun trimTrackedPrefixes() {
         if (recentPrefixes.size <= MAX_TRACKED_PREFIXES) return
 
-        val overflow = recentPrefixes.size - MAX_TRACKED_PREFIXES
-        recentPrefixes.entries
-            .sortedBy { (_, timestamps) -> timestamps.maxOrNull() ?: Long.MIN_VALUE }
-            .take(overflow)
-            .forEach { (prefix, _) -> recentPrefixes.remove(prefix) }
+        // Evict the stalest entries. Finding the min-max is O(n) per eviction,
+        // which beats sorting O(n log n) since overflow is typically small (1-2).
+        while (recentPrefixes.size > MAX_TRACKED_PREFIXES) {
+            val stalest = recentPrefixes.entries.minByOrNull { (_, timestamps) ->
+                timestamps.maxOrNull() ?: Long.MIN_VALUE
+            }?.key ?: break
+            recentPrefixes.remove(stalest)
+        }
     }
 
     private fun extractNpaNxx(number: String): String? {

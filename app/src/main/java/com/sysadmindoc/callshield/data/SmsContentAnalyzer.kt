@@ -72,8 +72,8 @@ object SmsContentAnalyzer {
     // Phone number in SMS body (common in callback scams)
     private val PHONE_IN_BODY = Regex("(?:call|dial|text|contact)\\s*(?:us\\s+(?:at|on))?\\s*\\+?\\d[\\d\\s\\-()]{7,}")
 
-    // URL pattern
-    private val URL_PATTERN = Regex("https?://[^\\s]+|www\\.[^\\s]+|[a-zA-Z0-9][a-zA-Z0-9-]*\\.[a-zA-Z]{2,}/[^\\s]*")
+    // URL pattern — length-capped to prevent ReDoS on pathological inputs
+    private val URL_PATTERN = Regex("https?://[^\\s]{1,2048}|www\\.[^\\s]{1,2048}|[a-zA-Z0-9][a-zA-Z0-9-]*\\.[a-zA-Z]{2,}/[^\\s]{0,2048}")
 
     // ── Spam Domain Blocklist ─────────────────────────────────────────
     // Community-reported phishing/spam domains. Loaded from GitHub's

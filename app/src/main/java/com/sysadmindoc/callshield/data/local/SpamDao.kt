@@ -113,9 +113,11 @@ interface SpamDao {
     @Query("SELECT * FROM call_log WHERE timestamp > :since ORDER BY timestamp DESC")
     suspend fun getRecentBlockedNumbers(since: Long): List<BlockedCall>
 
-    // Feature 10: Frequency tracking — count how many times a number appears in log
-    @Query("SELECT COUNT(*) FROM call_log WHERE number = :number")
-    suspend fun getNumberFrequency(number: String): Int
+    // Feature 10: Frequency tracking — count how many times a number appears in
+    // the log within a time window. Unbounded counts caused false positives for
+    // legitimate callers with 3+ calls spread over months.
+    @Query("SELECT COUNT(*) FROM call_log WHERE number = :number AND timestamp > :since")
+    suspend fun getNumberFrequencySince(number: String, since: Long): Int
 
     // Wildcard rules (Feature 8)
     @Query("SELECT * FROM wildcard_rules WHERE enabled = 1")
