@@ -7,8 +7,10 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -18,9 +20,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
@@ -95,6 +100,9 @@ fun CallShieldApp(viewModel: MainViewModel, startTab: Int = 0) {
     var showSearch by rememberSaveable { mutableStateOf(false) }
     val searchQuery by viewModel.searchQuery.collectAsState()
     val searchResults by viewModel.searchResults.collectAsState()
+    val spamCount by viewModel.spamCount.collectAsState()
+    val blockCallsEnabled by viewModel.blockCallsEnabled.collectAsState()
+    val blockSmsEnabled by viewModel.blockSmsEnabled.collectAsState()
 
     LaunchedEffect(startTab) {
         selectedTab = startTab
@@ -106,52 +114,54 @@ fun CallShieldApp(viewModel: MainViewModel, startTab: Int = 0) {
     }
 
     val navBarTopBorder = Color.White.copy(alpha = 0.04f)
+    val currentTitle = when (selectedTab) {
+        0 -> stringResource(R.string.nav_home)
+        1 -> stringResource(R.string.nav_recent)
+        2 -> stringResource(R.string.nav_log)
+        3 -> stringResource(R.string.nav_lookup)
+        4 -> stringResource(R.string.nav_blocklist)
+        else -> stringResource(R.string.nav_more)
+    }
+    val currentSubtitle = when (selectedTab) {
+        0 -> stringResource(R.string.app_shell_subtitle_home)
+        1 -> stringResource(R.string.app_shell_subtitle_recent)
+        2 -> stringResource(R.string.app_shell_subtitle_log)
+        3 -> stringResource(R.string.app_shell_subtitle_lookup)
+        4 -> stringResource(R.string.app_shell_subtitle_blocklist)
+        else -> stringResource(R.string.app_shell_subtitle_more)
+    }
+    val currentAccent = when (selectedTab) {
+        0 -> CatGreen
+        1 -> CatBlue
+        2 -> CatPeach
+        3 -> CatYellow
+        4 -> CatRed
+        else -> CatMauve
+    }
+    val protectionStatusLabel = when {
+        blockCallsEnabled && blockSmsEnabled -> stringResource(R.string.app_shell_status_calls_texts)
+        blockCallsEnabled -> stringResource(R.string.app_shell_status_calls)
+        blockSmsEnabled -> stringResource(R.string.app_shell_status_texts)
+        else -> stringResource(R.string.app_shell_status_paused)
+    }
 
     Scaffold(
         topBar = {
-            if (showSearch) {
-                // Global search bar
-                TopAppBar(
-                    title = {
-                        OutlinedTextField(
-                            value = searchQuery,
-                            onValueChange = { viewModel.setSearchQuery(it) },
-                            placeholder = { Text(stringResource(R.string.search_placeholder), color = CatOverlay) },
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = CatGreen.copy(alpha = 0.5f),
-                                cursorColor = CatGreen,
-                                unfocusedBorderColor = CatOverlay.copy(alpha = 0.3f)
-                            ),
-                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                            keyboardActions = KeyboardActions(onSearch = {})
-                        )
-                    },
-                    navigationIcon = {
-                        IconButton(onClick = { showSearch = false; viewModel.setSearchQuery("") }) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_close_search), tint = CatSubtext)
-                        }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Black)
-                )
-            } else {
-                TopAppBar(
-                    title = {
-                        Text(
-                            stringResource(R.string.app_name),
-                            color = CatGreen,
-                            letterSpacing = (-0.5).sp
-                        )
-                    },
-                    actions = {
-                        IconButton(onClick = { showSearch = true }) {
-                            Icon(Icons.Default.Search, contentDescription = stringResource(R.string.cd_search), tint = CatSubtext)
-                        }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Black)
-                )
-            }
+            AppChrome(
+                showSearch = showSearch,
+                title = currentTitle,
+                subtitle = currentSubtitle,
+                accentColor = currentAccent,
+                protectionStatusLabel = protectionStatusLabel,
+                spamCount = spamCount,
+                searchQuery = searchQuery,
+                onSearchQueryChange = viewModel::setSearchQuery,
+                onOpenSearch = { showSearch = true },
+                onCloseSearch = {
+                    showSearch = false
+                    viewModel.setSearchQuery("")
+                }
+            )
         },
         bottomBar = {
             NavigationBar(
@@ -176,9 +186,19 @@ fun CallShieldApp(viewModel: MainViewModel, startTab: Int = 0) {
         containerColor = Black
     ) { padding ->
         Box(modifier = Modifier.padding(padding)) {
-            if (showSearch && searchQuery.length >= 2) {
-                // Search results overlay
-                SearchResultsView(results = searchResults, onTap = { viewModel.openNumberDetail(it.number) })
+            if (showSearch) {
+                if (searchQuery.trim().length >= 2) {
+                    SearchResultsView(
+                        results = searchResults,
+                        onTap = {
+                            showSearch = false
+                            viewModel.setSearchQuery("")
+                            viewModel.openNumberDetail(it.number)
+                        }
+                    )
+                } else {
+                    SearchIdleView()
+                }
             } else {
                 AnimatedContent(targetState = selectedTab, transitionSpec = {
                     val direction = if (targetState > initialState) 1 else -1
@@ -189,7 +209,7 @@ fun CallShieldApp(viewModel: MainViewModel, startTab: Int = 0) {
                         0 -> DashboardScreen(viewModel)
                         1 -> RecentCallsScreen(viewModel)
                         2 -> BlockedLogScreen(viewModel)
-                        3 -> LookupScreen()
+                        3 -> LookupScreen(viewModel)
                         4 -> BlocklistScreen(viewModel)
                         5 -> MoreScreen(viewModel)
                     }
@@ -243,6 +263,285 @@ fun SearchResultsView(results: List<com.sysadmindoc.callshield.data.model.SpamNu
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun AppChrome(
+    showSearch: Boolean,
+    title: String,
+    subtitle: String,
+    accentColor: Color,
+    protectionStatusLabel: String,
+    spamCount: Int,
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit,
+    onOpenSearch: () -> Unit,
+    onCloseSearch: () -> Unit,
+) {
+    val focusManager = LocalFocusManager.current
+    val keyboard = LocalSoftwareKeyboardController.current
+
+    Surface(color = Black) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .statusBarsPadding()
+                .padding(horizontal = 20.dp, vertical = 12.dp)
+        ) {
+            if (showSearch) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = {
+                        focusManager.clearFocus(force = true)
+                        keyboard?.hide()
+                        onCloseSearch()
+                    }) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.cd_close_search),
+                            tint = CatSubtext
+                        )
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    SearchField(
+                        query = searchQuery,
+                        accentColor = accentColor,
+                        onValueChange = onSearchQueryChange
+                    )
+                }
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    stringResource(R.string.search_hint_min_chars),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = CatOverlay
+                )
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.Top
+                ) {
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(
+                            title,
+                            color = accentColor,
+                            style = MaterialTheme.typography.headlineSmall,
+                            letterSpacing = (-0.5).sp
+                        )
+                        Text(
+                            subtitle,
+                            color = CatSubtext,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                    IconButton(onClick = onOpenSearch) {
+                        Icon(
+                            Icons.Default.Search,
+                            contentDescription = stringResource(R.string.cd_search),
+                            tint = CatSubtext
+                        )
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    HeaderPill(
+                        text = protectionStatusLabel,
+                        accentColor = accentColor,
+                        modifier = Modifier.weight(1f)
+                    )
+                    HeaderPill(
+                        text = if (spamCount > 0) {
+                            stringResource(R.string.app_shell_status_numbers, spamCount)
+                        } else {
+                            stringResource(R.string.app_shell_status_setup_needed)
+                        },
+                        accentColor = if (spamCount > 0) CatBlue else CatPeach,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+            GradientDivider(color = accentColor)
+        }
+    }
+}
+
+@Composable
+private fun SearchField(
+    query: String,
+    accentColor: Color,
+    onValueChange: (String) -> Unit,
+) {
+    val keyboard = LocalSoftwareKeyboardController.current
+    val focusManager = LocalFocusManager.current
+
+    OutlinedTextField(
+        value = query,
+        onValueChange = onValueChange,
+        placeholder = {
+            Text(
+                stringResource(R.string.search_placeholder),
+                color = CatOverlay
+            )
+        },
+        singleLine = true,
+        leadingIcon = {
+            Icon(
+                Icons.Default.Search,
+                contentDescription = stringResource(R.string.cd_search),
+                tint = accentColor
+            )
+        },
+        trailingIcon = {
+            if (query.isNotBlank()) {
+                IconButton(onClick = {
+                    onValueChange("")
+                    focusManager.clearFocus(force = false)
+                    keyboard?.show()
+                }) {
+                    Icon(
+                        Icons.Default.Close,
+                        contentDescription = stringResource(R.string.cd_close),
+                        tint = CatOverlay
+                    )
+                }
+            }
+        },
+        modifier = Modifier.fillMaxWidth(),
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = accentColor.copy(alpha = 0.65f),
+            unfocusedBorderColor = CatOverlay.copy(alpha = 0.3f),
+            cursorColor = accentColor
+        ),
+        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+        keyboardActions = KeyboardActions(onSearch = { keyboard?.hide() })
+    )
+}
+
+@Composable
+private fun HeaderPill(
+    text: String,
+    accentColor: Color,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(999.dp),
+        color = accentColor.copy(alpha = 0.12f),
+        border = BorderStroke(1.dp, accentColor.copy(alpha = 0.18f))
+    ) {
+        Text(
+            text = text,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            style = MaterialTheme.typography.labelMedium,
+            color = accentColor
+        )
+    }
+}
+
+@Composable
+private fun SearchIdleView() {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        PremiumCard(accentColor = CatBlue, modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier.padding(18.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Search,
+                        contentDescription = null,
+                        tint = CatBlue,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Column {
+                        Text(
+                            stringResource(R.string.search_idle_title),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = CatText
+                        )
+                        Text(
+                            stringResource(R.string.search_idle_subtitle),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = CatSubtext
+                        )
+                    }
+                }
+                GradientDivider(color = CatBlue)
+                SearchHintRow(
+                    icon = Icons.Default.Phone,
+                    title = stringResource(R.string.search_idle_hint_exact_title),
+                    subtitle = stringResource(R.string.search_idle_hint_exact_body),
+                    accentColor = CatGreen
+                )
+                SearchHintRow(
+                    icon = Icons.Default.Description,
+                    title = stringResource(R.string.search_idle_hint_reason_title),
+                    subtitle = stringResource(R.string.search_idle_hint_reason_body),
+                    accentColor = CatPeach
+                )
+                SearchHintRow(
+                    icon = Icons.Default.AutoAwesome,
+                    title = stringResource(R.string.search_idle_hint_partial_title),
+                    subtitle = stringResource(R.string.search_idle_hint_partial_body),
+                    accentColor = CatMauve
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SearchHintRow(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    subtitle: String,
+    accentColor: Color,
+) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.Top
+    ) {
+        Surface(
+            shape = RoundedCornerShape(12.dp),
+            color = accentColor.copy(alpha = 0.12f)
+        ) {
+            Icon(
+                icon,
+                contentDescription = null,
+                tint = accentColor,
+                modifier = Modifier.padding(10.dp)
+            )
+        }
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(
+                title,
+                style = MaterialTheme.typography.titleSmall,
+                color = CatText
+            )
+            Text(
+                subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = CatSubtext
+            )
         }
     }
 }

@@ -1,19 +1,21 @@
 package com.sysadmindoc.callshield.ui.screens.recent
 
+import android.Manifest
 import android.content.Context
 import android.provider.CallLog
 import androidx.compose.animation.*
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Intent
+import android.provider.Settings
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -26,13 +28,13 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -40,9 +42,11 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import android.net.Uri
 import android.provider.ContactsContract
+import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.PhoneFormatter
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup
+import com.sysadmindoc.callshield.permissions.CallShieldPermissions
 import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.theme.*
 import kotlinx.coroutines.Dispatchers
@@ -67,13 +71,28 @@ fun RecentCallsScreen(viewModel: MainViewModel) {
     val lifecycleOwner = LocalLifecycleOwner.current
     val scope = rememberCoroutineScope()
     var calls by remember { mutableStateOf<List<RecentCall>>(emptyList()) }
-    var loading by remember { mutableStateOf(true) }
+    var loading by remember { mutableStateOf(false) }
     var refreshing by remember { mutableStateOf(false) }
     var initialLoadCompleted by remember { mutableStateOf(false) }
     var filterMode by rememberSaveable { mutableIntStateOf(0) } // 0=All, 1=Incoming, 2=Outgoing, 3=Missed, 4=Spam
+    var hasCallLogPermission by remember(context) {
+        mutableStateOf(
+            CallShieldPermissions.isPermissionGranted(
+                context,
+                Manifest.permission.READ_CALL_LOG
+            )
+        )
+    }
 
     fun refreshRecentCalls(showSkeleton: Boolean) {
         if (loading || refreshing) return
+        if (!hasCallLogPermission) {
+            calls = emptyList()
+            loading = false
+            refreshing = false
+            initialLoadCompleted = true
+            return
+        }
 
         scope.launch {
             if (showSkeleton) {
@@ -94,13 +113,26 @@ fun RecentCallsScreen(viewModel: MainViewModel) {
 
     val refreshRecentCallsState = rememberUpdatedState(::refreshRecentCalls)
 
-    LaunchedEffect(context.applicationContext) {
-        refreshRecentCallsState.value(true)
+    LaunchedEffect(context.applicationContext, hasCallLogPermission) {
+        if (hasCallLogPermission) {
+            refreshRecentCallsState.value(true)
+        } else {
+            calls = emptyList()
+            loading = false
+            refreshing = false
+            initialLoadCompleted = true
+        }
     }
 
     DisposableEffect(lifecycleOwner, context.applicationContext) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME && initialLoadCompleted) {
+            if (event == Lifecycle.Event.ON_RESUME) {
+                hasCallLogPermission = CallShieldPermissions.isPermissionGranted(
+                    context.applicationContext,
+                    Manifest.permission.READ_CALL_LOG
+                )
+            }
+            if (event == Lifecycle.Event.ON_RESUME && initialLoadCompleted && hasCallLogPermission) {
                 refreshRecentCallsState.value(false)
             }
         }
@@ -116,44 +148,92 @@ fun RecentCallsScreen(viewModel: MainViewModel) {
         else -> calls
     }
     val spamCount = calls.count { it.isSpam }
+    val missedCount = calls.count {
+        it.type == CallLog.Calls.MISSED_TYPE || it.type == CallLog.Calls.REJECTED_TYPE
+    }
+    val incomingCount = calls.count { it.type == CallLog.Calls.INCOMING_TYPE }
+    val outgoingCount = calls.count { it.type == CallLog.Calls.OUTGOING_TYPE }
+    val contactCount = calls.count { it.contactName != null }
+    val filterOptions = listOf(
+        RecentFilterOption(
+            mode = 0,
+            label = stringResource(R.string.recent_filter_all, calls.size),
+            color = CatGreen
+        ),
+        RecentFilterOption(
+            mode = 1,
+            label = stringResource(R.string.recent_filter_incoming, incomingCount),
+            color = CatBlue
+        ),
+        RecentFilterOption(
+            mode = 2,
+            label = stringResource(R.string.recent_filter_outgoing, outgoingCount),
+            color = CatTeal
+        ),
+        RecentFilterOption(
+            mode = 3,
+            label = stringResource(R.string.recent_filter_missed, missedCount),
+            color = CatPeach
+        ),
+        RecentFilterOption(
+            mode = 4,
+            label = stringResource(R.string.recent_filter_spam, spamCount),
+            color = CatRed
+        )
+    )
 
     Column(modifier = Modifier.fillMaxSize()) {
-        // Filter chips
-        if (!loading && calls.isNotEmpty()) {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                FilterChip(selected = filterMode == 0, onClick = { filterMode = 0 }, label = { Text("All (${calls.size})") },
-                    border = BorderStroke(1.dp, if (filterMode == 0) CatGreen.copy(alpha = 0.3f) else CatMuted.copy(alpha = 0.3f)),
-                    colors = FilterChipDefaults.filterChipColors(selectedContainerColor = CatGreen.copy(alpha = 0.2f), selectedLabelColor = CatGreen))
-                FilterChip(selected = filterMode == 3, onClick = { filterMode = 3 }, label = { Text("Missed") },
-                    border = BorderStroke(1.dp, if (filterMode == 3) CatPeach.copy(alpha = 0.3f) else CatMuted.copy(alpha = 0.3f)),
-                    colors = FilterChipDefaults.filterChipColors(selectedContainerColor = CatPeach.copy(alpha = 0.2f), selectedLabelColor = CatPeach))
-                if (spamCount > 0) {
-                    FilterChip(selected = filterMode == 4, onClick = { filterMode = 4 }, label = { Text("Spam ($spamCount)") },
-                        border = BorderStroke(1.dp, if (filterMode == 4) CatRed.copy(alpha = 0.3f) else CatMuted.copy(alpha = 0.3f)),
-                        colors = FilterChipDefaults.filterChipColors(selectedContainerColor = CatRed.copy(alpha = 0.2f), selectedLabelColor = CatRed))
-                }
-                IconButton(
-                    onClick = { refreshRecentCalls(calls.isEmpty()) },
-                    enabled = !refreshing
-                ) {
-                    if (refreshing) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(18.dp),
-                            strokeWidth = 2.dp,
-                            color = CatBlue
+        if (!hasCallLogPermission) {
+            RecentCallsPermissionState(
+                onOpenSettings = {
+                    context.startActivity(
+                        Intent(
+                            Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                            Uri.parse("package:${context.packageName}")
                         )
-                    } else {
-                        Icon(Icons.Default.Refresh, "Refresh recent calls", tint = CatOverlay)
+                    )
+                }
+            )
+        } else if (!loading) {
+            RecentCallsSummaryCard(
+                totalCount = calls.size,
+                spamCount = spamCount,
+                missedCount = missedCount,
+                contactCount = contactCount,
+                refreshing = refreshing,
+                onRefresh = { refreshRecentCalls(false) }
+            )
+            if (calls.isNotEmpty()) {
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(filterOptions.size) { index ->
+                        val option = filterOptions[index]
+                        FilterChip(
+                            selected = filterMode == option.mode,
+                            onClick = { filterMode = option.mode },
+                            label = { Text(option.label) },
+                            border = BorderStroke(
+                                1.dp,
+                                if (filterMode == option.mode) {
+                                    option.color.copy(alpha = 0.35f)
+                                } else {
+                                    CatMuted.copy(alpha = 0.3f)
+                                }
+                            ),
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = option.color.copy(alpha = 0.18f),
+                                selectedLabelColor = option.color
+                            )
+                        )
                     }
                 }
+                Spacer(Modifier.height(4.dp))
             }
         }
 
-        if (loading) {
+        if (hasCallLogPermission && loading) {
             // Premium shimmer skeleton while loading
             Column(
                 modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp),
@@ -161,12 +241,12 @@ fun RecentCallsScreen(viewModel: MainViewModel) {
             ) {
                 repeat(8) { SkeletonListItem(modifier = Modifier.fillMaxWidth()) }
             }
-        } else if (filtered.isEmpty()) {
+        } else if (hasCallLogPermission && filtered.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Icon(
                         Icons.AutoMirrored.Filled.PhoneMissed,
-                        null,
+                        contentDescription = stringResource(R.string.cd_no_recent_calls),
                         tint = CatOverlay,
                         modifier = Modifier
                             .size(64.dp)
@@ -174,17 +254,25 @@ fun RecentCallsScreen(viewModel: MainViewModel) {
                     )
                     Spacer(Modifier.height(16.dp))
                     Text(
-                        if (filterMode == 0) "No recent calls" else "No matching calls",
+                        if (filterMode == 0) {
+                            stringResource(R.string.recent_no_calls)
+                        } else {
+                            stringResource(R.string.recent_no_matching)
+                        },
                         color = CatSubtext, style = MaterialTheme.typography.titleMedium
                     )
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        if (filterMode == 0) "Call log is empty or permission denied" else "Try a different filter",
+                        if (filterMode == 0) {
+                            stringResource(R.string.recent_no_calls_desc)
+                        } else {
+                            stringResource(R.string.recent_no_matching_desc)
+                        },
                         color = CatOverlay, style = MaterialTheme.typography.bodySmall
                     )
                 }
             }
-        } else {
+        } else if (hasCallLogPermission) {
             LazyColumn(
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
@@ -199,7 +287,10 @@ fun RecentCallsScreen(viewModel: MainViewModel) {
                         visible.value = true
                     }
                     AnimatedVisibility(visible = visible.value, enter = slideInVertically { 30 } + fadeIn()) {
-                        RecentCallItem(call = call, onClick = { viewModel.openNumberDetail(call.number) })
+                        RecentCallItem(
+                            call = call,
+                            onOpenDetail = { viewModel.openNumberDetail(call.number) }
+                        )
                     }
                 }
             }
@@ -208,7 +299,7 @@ fun RecentCallsScreen(viewModel: MainViewModel) {
 }
 
 @Composable
-fun RecentCallItem(call: RecentCall, onClick: () -> Unit) {
+fun RecentCallItem(call: RecentCall, onOpenDetail: () -> Unit) {
     val dateFormat = remember { SimpleDateFormat("MMM d, h:mm a", Locale.getDefault()) }
     val location = remember(call.number) { AreaCodeLookup.lookup(call.number) }
 
@@ -241,9 +332,9 @@ fun RecentCallItem(call: RecentCall, onClick: () -> Unit) {
     var expanded by remember { mutableStateOf(false) }
 
     PremiumCard(
+        onClick = onOpenDetail,
         cornerRadius = 14.dp,
         accentColor = if (call.isSpam) CatRed else null,
-        modifier = Modifier.clickable { expanded = !expanded }
     ) {
         Column {
             Box {
@@ -287,9 +378,24 @@ fun RecentCallItem(call: RecentCall, onClick: () -> Unit) {
                             if (call.duration > 0) Text("${call.duration}s", style = MaterialTheme.typography.bodySmall, color = CatOverlay)
                         }
                         if (location != null) Text(location, style = MaterialTheme.typography.labelSmall, color = CatOverlay)
-                        if (call.isSpam) Text(call.spamReason.replace("_", " "), style = MaterialTheme.typography.labelSmall, color = CatRed)
+                        if (call.isSpam) {
+                            Text(
+                                call.spamReason.replace("_", " "),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = CatRed
+                            )
+                        }
                     }
-                    Icon(if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore, "Expand", tint = CatOverlay, modifier = Modifier.size(20.dp))
+                    IconButton(onClick = { expanded = !expanded }) {
+                        Icon(
+                            if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                            contentDescription = stringResource(
+                                if (expanded) R.string.cd_collapse else R.string.cd_expand
+                            ),
+                            tint = CatOverlay,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
                 }
             }
 
@@ -301,16 +407,42 @@ fun RecentCallItem(call: RecentCall, onClick: () -> Unit) {
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         val digits = call.number.filter { it.isDigit() }
-                        RecentActionButton(Icons.Default.Search, "Google", CatBlue) {
-                            context.startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://www.google.com/search?q=${android.net.Uri.encode("$digits phone number spam")}")).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) })
+                        RecentActionButton(
+                            icon = Icons.Default.Search,
+                            label = stringResource(R.string.recent_google),
+                            color = CatBlue
+                        ) {
+                            context.startActivity(
+                                Intent(
+                                    Intent.ACTION_VIEW,
+                                    android.net.Uri.parse(
+                                        "https://www.google.com/search?q=${
+                                            android.net.Uri.encode("$digits phone number spam")
+                                        }"
+                                    )
+                                ).apply {
+                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                }
+                            )
                         }
-                        RecentActionButton(Icons.Default.Storage, "Databases", CatGreen) { onClick() }
-                        RecentActionButton(Icons.Default.ContentCopy, "Copy", CatSubtext) {
+                        RecentActionButton(
+                            icon = Icons.Default.ContentCopy,
+                            label = stringResource(R.string.recent_copy),
+                            color = CatSubtext
+                        ) {
                             (context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as ClipboardManager)
                                 .setPrimaryClip(ClipData.newPlainText("Phone", call.number))
-                            Toast.makeText(context, "Copied", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(
+                                context,
+                                context.getString(R.string.recent_copied),
+                                Toast.LENGTH_SHORT
+                            ).show()
                         }
-                        RecentActionButton(Icons.Default.Info, "Detail", CatMauve) { onClick() }
+                        RecentActionButton(
+                            icon = Icons.Default.Info,
+                            label = stringResource(R.string.recent_detail),
+                            color = CatMauve
+                        ) { onOpenDetail() }
                     }
                 }
             }
@@ -395,4 +527,180 @@ private suspend fun loadRecentCalls(context: Context): List<RecentCall> = withCo
         }
     } catch (_: SecurityException) {}
     calls
+}
+
+private data class RecentFilterOption(
+    val mode: Int,
+    val label: String,
+    val color: Color,
+)
+
+@Composable
+private fun RecentCallsSummaryCard(
+    totalCount: Int,
+    spamCount: Int,
+    missedCount: Int,
+    contactCount: Int,
+    refreshing: Boolean,
+    onRefresh: () -> Unit,
+) {
+    PremiumCard(accentColor = CatBlue, modifier = Modifier
+        .fillMaxWidth()
+        .padding(horizontal = 16.dp, vertical = 12.dp)) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        stringResource(R.string.recent_summary_title),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = CatText
+                    )
+                    Text(
+                        stringResource(R.string.recent_summary_subtitle),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = CatSubtext
+                    )
+                }
+                IconButton(onClick = onRefresh, enabled = !refreshing) {
+                    if (refreshing) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            strokeWidth = 2.dp,
+                            color = CatBlue
+                        )
+                    } else {
+                        Icon(
+                            Icons.Default.Refresh,
+                            contentDescription = stringResource(R.string.cd_refresh_recent),
+                            tint = CatBlue
+                        )
+                    }
+                }
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                RecentSummaryPill(
+                    value = totalCount.toString(),
+                    label = stringResource(R.string.recent_summary_total),
+                    color = CatBlue,
+                    modifier = Modifier.weight(1f)
+                )
+                RecentSummaryPill(
+                    value = spamCount.toString(),
+                    label = stringResource(R.string.recent_summary_spam),
+                    color = CatRed,
+                    modifier = Modifier.weight(1f)
+                )
+                RecentSummaryPill(
+                    value = missedCount.toString(),
+                    label = stringResource(R.string.recent_summary_missed),
+                    color = CatPeach,
+                    modifier = Modifier.weight(1f)
+                )
+                RecentSummaryPill(
+                    value = contactCount.toString(),
+                    label = stringResource(R.string.recent_summary_known),
+                    color = CatGreen,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun RecentSummaryPill(
+    value: String,
+    label: String,
+    color: Color,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier,
+        color = color.copy(alpha = 0.12f),
+        shape = RoundedCornerShape(16.dp),
+        border = BorderStroke(1.dp, color.copy(alpha = 0.18f))
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            Text(
+                value,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = color
+            )
+            Text(
+                label,
+                style = MaterialTheme.typography.labelSmall,
+                color = CatSubtext
+            )
+        }
+    }
+}
+
+@Composable
+private fun RecentCallsPermissionState(
+    onOpenSettings: () -> Unit,
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        PremiumCard(accentColor = CatPeach, modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier.padding(20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Icon(
+                    Icons.Default.LockOpen,
+                    contentDescription = null,
+                    tint = CatPeach,
+                    modifier = Modifier
+                        .size(40.dp)
+                        .accentGlow(CatPeach, radius = 160f, alpha = 0.08f)
+                )
+                Text(
+                    stringResource(R.string.recent_permission_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = CatText
+                )
+                Text(
+                    stringResource(R.string.recent_permission_body),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = CatSubtext
+                )
+                Button(
+                    onClick = onOpenSettings,
+                    colors = ButtonDefaults.buttonColors(containerColor = CatPeach),
+                    shape = RoundedCornerShape(14.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Settings,
+                        contentDescription = null,
+                        tint = Black
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        stringResource(R.string.recent_permission_cta),
+                        color = Black,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
+    }
 }

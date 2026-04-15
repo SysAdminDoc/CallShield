@@ -33,13 +33,23 @@ import com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup
 import com.sysadmindoc.callshield.data.model.BlockedCall
 import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.theme.*
+import kotlinx.coroutines.delay
+import java.text.NumberFormat
 import java.util.Calendar
+
+private data class DailyStat(
+    val label: String,
+    val startMillis: Long,
+    val endMillis: Long,
+    val count: Int
+)
 
 @Composable
 fun StatsScreen(viewModel: MainViewModel) {
     val blockedCalls by viewModel.blockedCalls.collectAsState()
     val totalBlocked by viewModel.totalBlocked.collectAsState()
     val spamCount by viewModel.spamCount.collectAsState()
+    val numberFormatter = remember { NumberFormat.getIntegerInstance() }
 
     val callsOnly = blockedCalls.filter { it.isCall }
     val smsOnly = blockedCalls.filter { !it.isCall }
@@ -55,33 +65,21 @@ fun StatsScreen(viewModel: MainViewModel) {
         .entries.sortedByDescending { it.value }
         .take(10)
 
-    // Weekly trend (last 7 days)
-    val now = System.currentTimeMillis()
-    val dayMs = 86_400_000L
-    val weeklyData = (0..6).map { daysAgo ->
-        val dayStart = now - (daysAgo + 1) * dayMs
-        val dayEnd = now - daysAgo * dayMs
-        blockedCalls.count { it.timestamp in dayStart..dayEnd }
-    }.reversed()
-    val maxWeekly = weeklyData.max().coerceAtLeast(1)
+    val dayBucket = rememberDayBucket()
 
-    // Day bucket — flips at midnight so daily/monthly remember blocks
-    // recompute their time windows even if blockedCalls hasn't changed.
-    // Without this, leaving the stats screen open across midnight shows
-    // stale day labels and month boundaries.
-    val dayBucket = now / dayMs
-
-    // Weekly bar chart data with day labels
-    val dailyCounts = remember(blockedCalls, dayBucket) {
-        (6 downTo 0).map { daysAgo ->
-            val c = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, -daysAgo) }
-            val dayStart = now - (daysAgo + 1) * dayMs
-            val dayEnd = now - daysAgo * dayMs
-            val label = listOf("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")[c.get(Calendar.DAY_OF_WEEK) - 1]
-            val count = blockedCalls.count { it.timestamp in dayStart..dayEnd }
-            Pair(label, count)
-        }
+    // Weekly activity should align to true local calendar days rather than
+    // rolling 24-hour windows. This keeps charts stable across the day and
+    // fixes the "today" bucket after midnight.
+    val dailyStats = remember(blockedCalls, dayBucket) { buildRecentDailyStats(blockedCalls) }
+    val dailyCounts = remember(dailyStats) { dailyStats.map { it.label to it.count } }
+    val weeklyData = remember(dailyStats) { dailyStats.map { it.count } }
+    val maxWeekly = weeklyData.maxOrNull()?.coerceAtLeast(1) ?: 1
+    val weeklyTotal = remember(dailyStats) { dailyStats.sumOf { it.count } }
+    val previousWeekTotal = remember(blockedCalls, dailyStats) {
+        previousWeekCount(blockedCalls, dailyStats.firstOrNull()?.startMillis)
     }
+    val weeklyDelta = weeklyTotal - previousWeekTotal
+    val busiestDay = remember(dailyStats) { dailyStats.maxByOrNull { it.count } }
 
     // Source breakdown for donut chart
     val sourceBreakdown = remember(blockedCalls) {
@@ -119,11 +117,27 @@ fun StatsScreen(viewModel: MainViewModel) {
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
+        StatsOverviewCard(
+            weeklyTotal = weeklyTotal,
+            weeklyDelta = weeklyDelta,
+            topSource = typeBreakdown.firstOrNull()?.let { friendlyMatchReason(it.key) },
+            peakHour = blockedCalls.takeIf { it.isNotEmpty() }?.let {
+                val hourCounts = IntArray(24).also { hours ->
+                    blockedCalls.forEach { call ->
+                        val hour = Calendar.getInstance().apply { timeInMillis = call.timestamp }.get(Calendar.HOUR_OF_DAY)
+                        hours[hour]++
+                    }
+                }
+                val peakHourIndex = hourCounts.indices.maxByOrNull { index -> hourCounts[index] } ?: 0
+                if (hourCounts[peakHourIndex] > 0) formatHourRange(peakHourIndex) else null
+            }
+        )
+
         // Summary row
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            MiniStat(Modifier.weight(1f), stringResource(R.string.stats_calls), callsOnly.size.toString(), CatRed)
-            MiniStat(Modifier.weight(1f), stringResource(R.string.stats_sms), smsOnly.size.toString(), CatMauve)
-            MiniStat(Modifier.weight(1f), stringResource(R.string.stats_db_size), spamCount.toString(), CatGreen)
+            MiniStat(Modifier.weight(1f), stringResource(R.string.stats_calls), numberFormatter.format(callsOnly.size), CatRed)
+            MiniStat(Modifier.weight(1f), stringResource(R.string.stats_sms), numberFormatter.format(smsOnly.size), CatMauve)
+            MiniStat(Modifier.weight(1f), stringResource(R.string.stats_db_size), numberFormatter.format(spamCount), CatGreen)
         }
 
         // Weekly Activity bar chart (Canvas)
@@ -229,32 +243,47 @@ fun StatsScreen(viewModel: MainViewModel) {
             }
         }
 
-        // Original weekly bar chart (animated bars)
-        PremiumCard {
-            Column(modifier = Modifier.padding(18.dp)) {
-                SectionHeader(stringResource(R.string.stats_last_7_days), CatBlue)
-                Spacer(Modifier.height(12.dp))
-                // Compute day labels aligned to actual days
-                val cal = Calendar.getInstance()
-                val dayLabels = (6 downTo 0).map { daysAgo ->
-                    val c = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, -daysAgo) }
-                    listOf("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")[c.get(Calendar.DAY_OF_WEEK) - 1]
-                }
-                Row(modifier = Modifier.fillMaxWidth().height(110.dp), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.Bottom) {
-                    weeklyData.forEachIndexed { i, count ->
-                        val isToday = i == 6
-                        val barColor = if (isToday) CatGreen else CatBlue
-                        Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(count.toString(), style = MaterialTheme.typography.labelSmall, color = if (isToday) CatGreen else CatSubtext)
-                            Spacer(Modifier.height(4.dp))
-                            val height = (count.toFloat() / maxWeekly * 70).dp.coerceAtLeast(4.dp)
-                            val animatedHeight by animateDpAsState(targetValue = height, animationSpec = spring(dampingRatio = 0.6f), label = "bar")
-                            Box(modifier = Modifier.fillMaxWidth(0.6f).height(animatedHeight).clip(RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp)).background(barColor))
-                            Spacer(Modifier.height(6.dp))
-                            Text(dayLabels[i], style = MaterialTheme.typography.labelSmall, color = if (isToday) CatGreen else CatOverlay)
-                        }
+        PremiumCard(accentColor = CatBlue) {
+            Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                SectionHeader(stringResource(R.string.stats_weekly_highlights), CatBlue)
+
+                StatsInsightRow(
+                    title = stringResource(R.string.stats_highlight_weekly_change),
+                    value = when {
+                        weeklyDelta > 0 -> stringResource(R.string.stats_change_up, weeklyDelta)
+                        weeklyDelta < 0 -> stringResource(R.string.stats_change_down, -weeklyDelta)
+                        else -> stringResource(R.string.stats_change_same)
+                    },
+                    color = when {
+                        weeklyDelta > 0 -> CatRed
+                        weeklyDelta < 0 -> CatGreen
+                        else -> CatOverlay
                     }
-                }
+                )
+
+                StatsInsightRow(
+                    title = stringResource(R.string.stats_highlight_busiest_day),
+                    value = busiestDay?.takeIf { it.count > 0 }?.let {
+                        stringResource(R.string.stats_highlight_busiest_value, it.label, it.count)
+                    } ?: stringResource(R.string.stats_insight_waiting),
+                    color = CatBlue
+                )
+
+                val peakHourCount = blockedCalls.groupingBy {
+                    Calendar.getInstance().apply { timeInMillis = it.timestamp }.get(Calendar.HOUR_OF_DAY)
+                }.eachCount()
+                val peakHourEntry = peakHourCount.maxByOrNull { it.value }
+                StatsInsightRow(
+                    title = stringResource(R.string.stats_highlight_peak_window),
+                    value = peakHourEntry?.let {
+                        stringResource(
+                            R.string.stats_highlight_peak_value,
+                            formatHourRange(it.key),
+                            it.value
+                        )
+                    } ?: stringResource(R.string.stats_insight_waiting),
+                    color = CatMauve
+                )
             }
         }
 
@@ -282,8 +311,8 @@ fun StatsScreen(viewModel: MainViewModel) {
                             else -> CatSubtext
                         }
                         Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Text(type.replace("_", " ").replaceFirstChar { it.uppercase() }, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
-                            Text("$count", color = color, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall)
+                            Text(friendlyMatchReason(type), modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
+                            Text(numberFormatter.format(count), color = color, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall)
                         }
                         LinearProgressIndicator(
                             progress = { fraction },
@@ -303,10 +332,18 @@ fun StatsScreen(viewModel: MainViewModel) {
                     SectionHeader(stringResource(R.string.stats_top_offenders), CatRed)
                     Spacer(Modifier.height(8.dp))
                     topOffenders.forEachIndexed { i, (number, count) ->
+                        val displayNumber = number.takeIf { it.isNotBlank() }?.let(PhoneFormatter::format)
+                            ?: stringResource(R.string.stats_unknown_caller)
+                        val location = number.takeIf { it.isNotBlank() }?.let(AreaCodeLookup::lookup)
+                            ?: stringResource(R.string.stats_unknown_origin)
+
                         Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                             Text("${i + 1}.", color = CatOverlay, modifier = Modifier.width(24.dp), style = MaterialTheme.typography.bodySmall)
-                            Text(PhoneFormatter.format(number), modifier = Modifier.weight(1f), fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodyMedium)
-                            Text("${count}x", color = CatRed, fontWeight = FontWeight.Bold)
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(displayNumber, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodyMedium)
+                                Text(location, color = CatSubtext, style = MaterialTheme.typography.labelSmall)
+                            }
+                            Text(stringResource(R.string.stats_repeat_hits, count), color = CatRed, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -400,6 +437,229 @@ fun StatsScreen(viewModel: MainViewModel) {
     }
 }
 
+@Composable
+private fun StatsOverviewCard(
+    weeklyTotal: Int,
+    weeklyDelta: Int,
+    topSource: String?,
+    peakHour: String?
+) {
+    PremiumCard(accentColor = if (weeklyTotal > 0) CatGreen else CatOverlay) {
+        Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            SectionHeader(stringResource(R.string.stats_overview_title), CatGreen)
+            Text(
+                stringResource(R.string.stats_overview_subtitle),
+                style = MaterialTheme.typography.bodySmall,
+                color = CatSubtext
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                StatsInsightTile(
+                    modifier = Modifier.weight(1f),
+                    label = stringResource(R.string.stats_overview_week),
+                    value = weeklyTotal.toString(),
+                    color = CatBlue
+                )
+                StatsInsightTile(
+                    modifier = Modifier.weight(1f),
+                    label = stringResource(R.string.stats_overview_change),
+                    value = when {
+                        weeklyDelta > 0 -> stringResource(R.string.stats_change_up, weeklyDelta)
+                        weeklyDelta < 0 -> stringResource(R.string.stats_change_down, -weeklyDelta)
+                        else -> stringResource(R.string.stats_change_same)
+                    },
+                    color = when {
+                        weeklyDelta > 0 -> CatRed
+                        weeklyDelta < 0 -> CatGreen
+                        else -> CatOverlay
+                    }
+                )
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                StatsInsightTile(
+                    modifier = Modifier.weight(1f),
+                    label = stringResource(R.string.stats_overview_top_source),
+                    value = topSource ?: stringResource(R.string.stats_overview_no_source),
+                    color = CatGreen
+                )
+                StatsInsightTile(
+                    modifier = Modifier.weight(1f),
+                    label = stringResource(R.string.stats_overview_peak_hour),
+                    value = peakHour ?: stringResource(R.string.stats_overview_no_peak),
+                    color = CatMauve
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun StatsInsightTile(
+    modifier: Modifier,
+    label: String,
+    value: String,
+    color: Color
+) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(14.dp),
+        color = color.copy(alpha = 0.08f)
+    ) {
+        Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
+            Text(label, style = MaterialTheme.typography.labelSmall, color = CatSubtext)
+            Spacer(Modifier.height(4.dp))
+            Text(
+                value,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = color
+            )
+        }
+    }
+}
+
+@Composable
+private fun StatsInsightRow(
+    title: String,
+    value: String,
+    color: Color
+) {
+    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Box(
+            modifier = Modifier
+                .size(10.dp)
+                .clip(CircleShape)
+                .background(color)
+        )
+        Spacer(Modifier.width(10.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.labelMedium, color = CatSubtext)
+            Text(
+                value,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = CatText
+            )
+        }
+    }
+}
+
+@Composable
+private fun rememberDayBucket(): Int {
+    var dayBucket by remember { mutableIntStateOf(currentDayBucket()) }
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(millisUntilNextDay())
+            dayBucket = currentDayBucket()
+        }
+    }
+
+    return dayBucket
+}
+
+private fun currentDayBucket(): Int {
+    val calendar = Calendar.getInstance()
+    return calendar.get(Calendar.YEAR) * 1000 + calendar.get(Calendar.DAY_OF_YEAR)
+}
+
+private fun millisUntilNextDay(): Long {
+    val now = Calendar.getInstance()
+    val nextMidnight = Calendar.getInstance().apply {
+        timeInMillis = now.timeInMillis
+        add(Calendar.DAY_OF_YEAR, 1)
+        set(Calendar.HOUR_OF_DAY, 0)
+        set(Calendar.MINUTE, 0)
+        set(Calendar.SECOND, 0)
+        set(Calendar.MILLISECOND, 0)
+    }
+    return (nextMidnight.timeInMillis - now.timeInMillis).coerceAtLeast(60_000L)
+}
+
+private fun buildRecentDailyStats(blockedCalls: List<BlockedCall>): List<DailyStat> {
+    val todayStart = Calendar.getInstance().apply {
+        set(Calendar.HOUR_OF_DAY, 0)
+        set(Calendar.MINUTE, 0)
+        set(Calendar.SECOND, 0)
+        set(Calendar.MILLISECOND, 0)
+    }.timeInMillis
+
+    return (6 downTo 0).map { daysAgo ->
+        val dayStart = Calendar.getInstance().apply {
+            timeInMillis = todayStart
+            add(Calendar.DAY_OF_YEAR, -daysAgo)
+        }.timeInMillis
+        val dayEnd = Calendar.getInstance().apply {
+            timeInMillis = dayStart
+            add(Calendar.DAY_OF_YEAR, 1)
+        }.timeInMillis
+        val label = Calendar.getInstance().apply {
+            timeInMillis = dayStart
+        }.let { calendar ->
+            listOf("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")[calendar.get(Calendar.DAY_OF_WEEK) - 1]
+        }
+
+        DailyStat(
+            label = label,
+            startMillis = dayStart,
+            endMillis = dayEnd,
+            count = blockedCalls.count { it.timestamp in dayStart until dayEnd }
+        )
+    }
+}
+
+private fun previousWeekCount(blockedCalls: List<BlockedCall>, currentWeekStart: Long?): Int {
+    currentWeekStart ?: return 0
+
+    val previousWeekStart = Calendar.getInstance().apply {
+        timeInMillis = currentWeekStart
+        add(Calendar.DAY_OF_YEAR, -7)
+    }.timeInMillis
+
+    return blockedCalls.count { it.timestamp in previousWeekStart until currentWeekStart }
+}
+
+private fun friendlyMatchReason(reason: String): String = when {
+    reason.contains("database", ignoreCase = true) -> "Spam database"
+    reason.contains("hot_list", ignoreCase = true) -> "Hot-list range"
+    reason.contains("hot_campaign", ignoreCase = true) -> "Live campaign range"
+    reason.contains("heuristic", ignoreCase = true) -> "Heuristic analysis"
+    reason.contains("sms_content", ignoreCase = true) -> "SMS content"
+    reason.contains("spam_domain", ignoreCase = true) -> "Spam domain"
+    reason.contains("ml_scorer", ignoreCase = true) -> "ML scorer"
+    reason.contains("rcs_", ignoreCase = true) -> "RCS filter"
+    reason.contains("stir", ignoreCase = true) -> "STIR/SHAKEN"
+    reason.contains("prefix", ignoreCase = true) -> "Premium prefix"
+    reason.contains("wildcard", ignoreCase = true) -> "Wildcard rule"
+    reason.contains("keyword", ignoreCase = true) -> "Keyword rule"
+    reason.contains("frequency", ignoreCase = true) -> "Repeat caller rule"
+    reason.contains("time", ignoreCase = true) -> "Quiet hours"
+    reason.contains("user", ignoreCase = true) -> "Manual block"
+    reason.isBlank() || reason == "unknown" -> "Unknown"
+    else -> reason.replace("_", " ").replaceFirstChar { it.uppercase() }
+}
+
+private fun formatHourRange(hour: Int): String {
+    fun formatSingleHour(value: Int): String {
+        val normalized = value % 24
+        val suffix = if (normalized < 12) "AM" else "PM"
+        val displayHour = when (normalized % 12) {
+            0 -> 12
+            else -> normalized % 12
+        }
+        return "$displayHour $suffix"
+    }
+
+    return "${formatSingleHour(hour)}-${formatSingleHour(hour + 1)}"
+}
+
 // ─── Weekly Bar Chart (Canvas) ──────────────────────────────────────
 @Composable
 fun WeeklyBarChart(dailyCounts: List<Pair<String, Int>>, modifier: Modifier = Modifier) {
@@ -481,7 +741,6 @@ fun SourceLegend(sources: Map<String, Int>, modifier: Modifier = Modifier) {
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
         sources.entries.forEachIndexed { index, (source, count) ->
             val pct = (count * 100f / total).toInt()
-            val displayName = source.replace("_", " ").replaceFirstChar { it.uppercase() }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
                     modifier = Modifier
@@ -490,7 +749,7 @@ fun SourceLegend(sources: Map<String, Int>, modifier: Modifier = Modifier) {
                 )
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    displayName,
+                    friendlyMatchReason(source),
                     style = MaterialTheme.typography.labelSmall,
                     color = CatSubtext,
                     modifier = Modifier.weight(1f)

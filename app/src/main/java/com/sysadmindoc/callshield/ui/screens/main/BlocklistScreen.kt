@@ -63,11 +63,11 @@ fun BlocklistScreen(viewModel: MainViewModel) {
                 TabRowDefaults.SecondaryIndicator(color = CatGreen)
             }
         ) {
-            Tab(selected = tabIndex == 0, onClick = { tabIndex = 0 }, text = { Text("Blocklist (${userBlocked.size})") })
-            Tab(selected = tabIndex == 1, onClick = { tabIndex = 1 }, text = { Text("Wildcards (${wildcardRules.size})") })
-            Tab(selected = tabIndex == 2, onClick = { tabIndex = 2 }, text = { Text("Keywords (${keywordRules.size})") })
-            Tab(selected = tabIndex == 3, onClick = { tabIndex = 3 }, text = { Text("Whitelist (${whitelistEntries.size})") })
-            Tab(selected = tabIndex == 4, onClick = { tabIndex = 4 }, text = { Text("Database (${allSpam.size})") })
+            Tab(selected = tabIndex == 0, onClick = { tabIndex = 0 }, text = { Text(stringResource(R.string.blocklist_tab_blocklist, userBlocked.size)) })
+            Tab(selected = tabIndex == 1, onClick = { tabIndex = 1 }, text = { Text(stringResource(R.string.blocklist_tab_wildcards, wildcardRules.size)) })
+            Tab(selected = tabIndex == 2, onClick = { tabIndex = 2 }, text = { Text(stringResource(R.string.blocklist_tab_keywords, keywordRules.size)) })
+            Tab(selected = tabIndex == 3, onClick = { tabIndex = 3 }, text = { Text(stringResource(R.string.blocklist_tab_whitelist, whitelistEntries.size)) })
+            Tab(selected = tabIndex == 4, onClick = { tabIndex = 4 }, text = { Text(stringResource(R.string.blocklist_tab_database, allSpam.size)) })
         }
 
         importResult?.let {
@@ -82,13 +82,13 @@ fun BlocklistScreen(viewModel: MainViewModel) {
         Box(modifier = Modifier.weight(1f)) {
             when (tabIndex) {
                 0 -> {
-                    if (userBlocked.isEmpty()) EmptyState("No blocked numbers", "Tap + to add")
+                    if (userBlocked.isEmpty()) EmptyState(stringResource(R.string.blocklist_empty_blocked), stringResource(R.string.blocklist_empty_blocked_sub))
                     else LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         items(userBlocked, key = { it.id }) { n -> BlocklistItem(n) { viewModel.unblockNumber(n) } }
                     }
                 }
                 1 -> {
-                    if (wildcardRules.isEmpty()) EmptyState("No wildcard rules", "Tap + to add a pattern")
+                    if (wildcardRules.isEmpty()) EmptyState(stringResource(R.string.blocklist_empty_wildcards), stringResource(R.string.blocklist_empty_wildcards_sub))
                     else LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         items(wildcardRules, key = { it.id }) { r ->
                             WildcardRuleItem(r, { viewModel.toggleWildcardRule(r.id, it) }, { viewModel.deleteWildcardRule(r) })
@@ -96,7 +96,7 @@ fun BlocklistScreen(viewModel: MainViewModel) {
                     }
                 }
                 2 -> {
-                    if (keywordRules.isEmpty()) EmptyState("No keyword rules", "Block SMS containing specific words")
+                    if (keywordRules.isEmpty()) EmptyState(stringResource(R.string.blocklist_empty_keywords), stringResource(R.string.blocklist_empty_keywords_sub))
                     else LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         items(keywordRules, key = { it.id }) { r ->
                             KeywordRuleItem(r, { viewModel.toggleKeywordRule(r.id, it) }, { viewModel.deleteKeywordRule(r) })
@@ -104,7 +104,7 @@ fun BlocklistScreen(viewModel: MainViewModel) {
                     }
                 }
                 3 -> {
-                    if (whitelistEntries.isEmpty()) EmptyState("No whitelisted numbers", "Numbers here always pass through")
+                    if (whitelistEntries.isEmpty()) EmptyState(stringResource(R.string.blocklist_empty_whitelist), stringResource(R.string.blocklist_empty_whitelist_sub))
                     else LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         // Emergency-flagged entries render at the top with a
                         // distinct badge (the DAO already sorts isEmergency DESC).
@@ -125,10 +125,14 @@ fun BlocklistScreen(viewModel: MainViewModel) {
             // FABs
             Column(modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (tabIndex == 0 && userBlocked.isNotEmpty()) {
-                    SmallFloatingActionButton(onClick = { viewModel.exportBlocklist() }, containerColor = CatBlue, contentColor = Black) { Icon(Icons.Default.Share, "Export") }
+                    SmallFloatingActionButton(onClick = { viewModel.exportBlocklist() }, containerColor = CatBlue, contentColor = Black) {
+                        Icon(Icons.Default.Share, stringResource(R.string.cd_export))
+                    }
                 }
                 if (tabIndex == 0) {
-                    SmallFloatingActionButton(onClick = { importLauncher.launch(arrayOf("application/json", "text/plain")) }, containerColor = CatMauve, contentColor = Black) { Icon(Icons.Default.FileOpen, "Import") }
+                    SmallFloatingActionButton(onClick = { importLauncher.launch(arrayOf("application/json", "text/plain")) }, containerColor = CatMauve, contentColor = Black) {
+                        Icon(Icons.Default.FileOpen, stringResource(R.string.cd_import))
+                    }
                 }
                 FloatingActionButton(
                     onClick = {
@@ -141,7 +145,7 @@ fun BlocklistScreen(viewModel: MainViewModel) {
                     },
                     containerColor = CatGreen, contentColor = Black,
                     shape = RoundedCornerShape(16.dp)
-                ) { Icon(Icons.Default.Add, "Add") }
+                ) { Icon(Icons.Default.Add, stringResource(R.string.cd_add)) }
             }
         }
     }
@@ -153,21 +157,21 @@ fun BlocklistScreen(viewModel: MainViewModel) {
 
     if (showAddDialog) AddNumberDialog({ showAddDialog = false }) { num, desc ->
         viewModel.blockNumber(num, description = desc); showAddDialog = false
-        hapticConfirm(context); scope.launch { snackbarHost.showSnackbar("Number blocked", duration = SnackbarDuration.Short) }
+        hapticConfirm(context); scope.launch { snackbarHost.showSnackbar(context.getString(R.string.blocklist_number_blocked), duration = SnackbarDuration.Short) }
     }
     if (showWildcardDialog) AddWildcardDialog({ showWildcardDialog = false }) { p, r, d ->
         viewModel.addWildcardRule(p, r, d); showWildcardDialog = false
-        hapticTick(context); scope.launch { snackbarHost.showSnackbar("Rule added", duration = SnackbarDuration.Short) }
+        hapticTick(context); scope.launch { snackbarHost.showSnackbar(context.getString(R.string.blocklist_rule_added), duration = SnackbarDuration.Short) }
     }
     if (showWhitelistDialog) AddWhitelistDialog({ showWhitelistDialog = false }) { num, desc, emergency ->
         viewModel.addToWhitelist(num, desc, isEmergency = emergency); showWhitelistDialog = false
         hapticTick(context)
-        val msg = if (emergency) "Emergency contact added" else "Number whitelisted"
+        val msg = if (emergency) context.getString(R.string.emergency_contacts_added) else context.getString(R.string.blocklist_number_whitelisted)
         scope.launch { snackbarHost.showSnackbar(msg, duration = SnackbarDuration.Short) }
     }
     if (showKeywordDialog) AddKeywordDialog({ showKeywordDialog = false }) { kw, cs, d ->
         viewModel.addKeywordRule(kw, cs, d); showKeywordDialog = false
-        hapticTick(context); scope.launch { snackbarHost.showSnackbar("Keyword rule added", duration = SnackbarDuration.Short) }
+        hapticTick(context); scope.launch { snackbarHost.showSnackbar(context.getString(R.string.blocklist_keyword_rule_added), duration = SnackbarDuration.Short) }
     }
 }
 
@@ -176,7 +180,7 @@ fun EmptyState(title: String, subtitle: String) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Icon(
-                Icons.AutoMirrored.Filled.PlaylistAdd, null, tint = CatOverlay,
+                Icons.AutoMirrored.Filled.PlaylistAdd, stringResource(R.string.cd_empty_list), tint = CatOverlay,
                 modifier = Modifier.size(64.dp).accentGlow(CatOverlay, 150f, 0.04f)
             )
             Spacer(Modifier.height(12.dp))
@@ -196,7 +200,7 @@ fun BlocklistItem(number: SpamNumber, onUnblock: () -> Unit) {
                 Text(number.number, fontWeight = FontWeight.SemiBold)
                 if (number.description.isNotEmpty()) Text(number.description, style = MaterialTheme.typography.bodySmall, color = CatSubtext)
             }
-            IconButton(onClick = onUnblock) { Icon(Icons.Default.RemoveCircleOutline, "Unblock", tint = CatOverlay) }
+            IconButton(onClick = onUnblock) { Icon(Icons.Default.RemoveCircleOutline, stringResource(R.string.cd_unblock), tint = CatOverlay) }
         }
     }
 }
@@ -210,10 +214,14 @@ fun WildcardRuleItem(rule: WildcardRule, onToggle: (Boolean) -> Unit, onDelete: 
             Column(modifier = Modifier.weight(1f)) {
                 Text(rule.pattern, fontWeight = FontWeight.SemiBold)
                 if (rule.description.isNotEmpty()) Text(rule.description, style = MaterialTheme.typography.bodySmall, color = CatSubtext)
-                Text(if (rule.isRegex) "Regex" else "Wildcard", style = MaterialTheme.typography.labelSmall, color = CatOverlay)
+                Text(
+                    stringResource(if (rule.isRegex) R.string.blocklist_regex else R.string.blocklist_wildcard),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = CatOverlay
+                )
             }
             Switch(checked = rule.enabled, onCheckedChange = onToggle, colors = SwitchDefaults.colors(checkedTrackColor = CatGreen, checkedThumbColor = Black))
-            IconButton(onClick = onDelete) { Icon(Icons.Default.Close, "Delete", tint = CatOverlay) }
+            IconButton(onClick = onDelete) { Icon(Icons.Default.Close, stringResource(R.string.cd_delete_rule), tint = CatOverlay) }
         }
     }
 }
@@ -227,10 +235,14 @@ fun KeywordRuleItem(rule: SmsKeywordRule, onToggle: (Boolean) -> Unit, onDelete:
             Column(modifier = Modifier.weight(1f)) {
                 Text("\"${rule.keyword}\"", fontWeight = FontWeight.SemiBold)
                 if (rule.description.isNotEmpty()) Text(rule.description, style = MaterialTheme.typography.bodySmall, color = CatSubtext)
-                Text(if (rule.caseSensitive) "Case-sensitive" else "Case-insensitive", style = MaterialTheme.typography.labelSmall, color = CatOverlay)
+                Text(
+                    stringResource(if (rule.caseSensitive) R.string.blocklist_case_sensitive else R.string.blocklist_case_insensitive),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = CatOverlay
+                )
             }
             Switch(checked = rule.enabled, onCheckedChange = onToggle, colors = SwitchDefaults.colors(checkedTrackColor = CatGreen, checkedThumbColor = Black))
-            IconButton(onClick = onDelete) { Icon(Icons.Default.Close, "Delete", tint = CatOverlay) }
+            IconButton(onClick = onDelete) { Icon(Icons.Default.Close, stringResource(R.string.cd_delete_rule), tint = CatOverlay) }
         }
     }
 }
@@ -245,6 +257,11 @@ fun WhitelistItem(
     // toggle is a separate IconButton so users can un-emergency without
     // deleting the whole entry.
     val accent = if (entry.isEmergency) CatRed else CatGreen
+    val emergencyDescription = if (entry.isEmergency) {
+        stringResource(R.string.emergency_contacts_unmark)
+    } else {
+        stringResource(R.string.emergency_contacts_mark_as)
+    }
     PremiumCard(cornerRadius = 14.dp, accentColor = accent) {
         Row(modifier = Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(
@@ -275,7 +292,7 @@ fun WhitelistItem(
             IconButton(
                 onClick = onToggleEmergency,
                 modifier = Modifier.semantics {
-                    contentDescription = if (entry.isEmergency) "Remove emergency status" else "Mark as emergency"
+                    contentDescription = emergencyDescription
                 },
             ) {
                 Icon(
@@ -284,7 +301,7 @@ fun WhitelistItem(
                     tint = if (entry.isEmergency) CatRed else CatOverlay,
                 )
             }
-            IconButton(onClick = onRemove) { Icon(Icons.Default.RemoveCircleOutline, "Remove", tint = CatOverlay) }
+            IconButton(onClick = onRemove) { Icon(Icons.Default.RemoveCircleOutline, stringResource(R.string.cd_remove), tint = CatOverlay) }
         }
     }
 }
@@ -300,7 +317,7 @@ fun DatabaseItem(number: SpamNumber) {
                 Text(number.number, fontWeight = FontWeight.SemiBold)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(number.type.replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.labelSmall, color = typeColor)
-                    Text("${number.reports} reports", style = MaterialTheme.typography.labelSmall, color = CatOverlay)
+                    Text(stringResource(R.string.blocklist_reports, number.reports), style = MaterialTheme.typography.labelSmall, color = CatOverlay)
                 }
                 if (number.description.isNotEmpty()) Text(number.description, style = MaterialTheme.typography.bodySmall, color = CatSubtext)
             }
@@ -312,49 +329,50 @@ fun DatabaseItem(number: SpamNumber) {
 @Composable
 fun AddNumberDialog(onDismiss: () -> Unit, onAdd: (String, String) -> Unit) {
     var number by remember { mutableStateOf("") }; var desc by remember { mutableStateOf("") }
-    AlertDialog(onDismissRequest = onDismiss, containerColor = SurfaceBright, title = { Text("Block Number") },
+    AlertDialog(onDismissRequest = onDismiss, containerColor = SurfaceBright, title = { Text(stringResource(R.string.dialog_block_number)) },
         text = { Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            OutlinedTextField(value = number, onValueChange = { number = it }, label = { Text("Phone Number") }, placeholder = { Text("+1234567890") },
+            OutlinedTextField(value = number, onValueChange = { number = it }, label = { Text(stringResource(R.string.dialog_phone_number)) }, placeholder = { Text(stringResource(R.string.dialog_phone_placeholder)) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone, imeAction = ImeAction.Next), singleLine = true,
                 colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = CatGreen, cursorColor = CatGreen))
-            OutlinedTextField(value = desc, onValueChange = { desc = it }, label = { Text("Description (optional)") },
+            OutlinedTextField(value = desc, onValueChange = { desc = it }, label = { Text(stringResource(R.string.dialog_description_optional)) },
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(onDone = { if (number.isNotBlank()) onAdd(number, desc) }), singleLine = true,
                 colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = CatGreen, cursorColor = CatGreen))
         } },
-        confirmButton = { Button(onClick = { if (number.isNotBlank()) onAdd(number, desc) }, colors = ButtonDefaults.buttonColors(containerColor = CatGreen)) { Text("Block", color = Black) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel", color = CatSubtext) } }
+        confirmButton = { Button(onClick = { if (number.isNotBlank()) onAdd(number, desc) }, colors = ButtonDefaults.buttonColors(containerColor = CatGreen)) { Text(stringResource(R.string.dialog_block), color = Black) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.dialog_cancel), color = CatSubtext) } }
     )
 }
 
 @Composable
 fun AddWildcardDialog(onDismiss: () -> Unit, onAdd: (String, Boolean, String) -> Unit) {
+    val context = LocalContext.current
     var pattern by remember { mutableStateOf("") }; var desc by remember { mutableStateOf("") }; var isRegex by remember { mutableStateOf(false) }
     var regexError by remember { mutableStateOf<String?>(null) }
-    AlertDialog(onDismissRequest = onDismiss, containerColor = SurfaceBright, title = { Text("Add Wildcard Rule") },
+    AlertDialog(onDismissRequest = onDismiss, containerColor = SurfaceBright, title = { Text(stringResource(R.string.dialog_add_wildcard_rule)) },
         text = { Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            OutlinedTextField(value = pattern, onValueChange = { pattern = it; regexError = null }, label = { Text(if (isRegex) "Regex" else "Pattern") },
-                placeholder = { Text(if (isRegex) "^\\+1832\\d{7}$" else "+1832555*") }, singleLine = true,
+            OutlinedTextField(value = pattern, onValueChange = { pattern = it; regexError = null }, label = { Text(stringResource(if (isRegex) R.string.dialog_regex_label else R.string.dialog_pattern_label)) },
+                placeholder = { Text(stringResource(if (isRegex) R.string.dialog_regex_placeholder else R.string.dialog_wildcard_placeholder)) }, singleLine = true,
                 isError = regexError != null,
                 supportingText = regexError?.let { err -> { Text(err, color = CatRed) } },
                 colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = CatYellow, cursorColor = CatYellow))
-            OutlinedTextField(value = desc, onValueChange = { desc = it }, label = { Text("Description") }, singleLine = true,
+            OutlinedTextField(value = desc, onValueChange = { desc = it }, label = { Text(stringResource(R.string.dialog_description)) }, singleLine = true,
                 colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = CatYellow, cursorColor = CatYellow))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Checkbox(checked = isRegex, onCheckedChange = { isRegex = it; regexError = null }, colors = CheckboxDefaults.colors(checkedColor = CatYellow))
-                Text("Use regex", style = MaterialTheme.typography.bodySmall)
+                Text(stringResource(R.string.dialog_use_regex), style = MaterialTheme.typography.bodySmall)
             }
         } },
         confirmButton = { Button(onClick = {
             if (pattern.isNotBlank()) {
                 if (isRegex) {
-                    try { Regex(pattern); onAdd(pattern, true, desc) } catch (e: Exception) { regexError = "Invalid regex: ${e.message}" }
+                    try { Regex(pattern); onAdd(pattern, true, desc) } catch (e: Exception) { regexError = context.getString(R.string.dialog_invalid_regex, e.message ?: "") }
                 } else {
                     onAdd(pattern, false, desc)
                 }
             }
-        }, colors = ButtonDefaults.buttonColors(containerColor = CatYellow)) { Text("Add", color = Black) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel", color = CatSubtext) } }
+        }, colors = ButtonDefaults.buttonColors(containerColor = CatYellow)) { Text(stringResource(R.string.dialog_add), color = Black) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.dialog_cancel), color = CatSubtext) } }
     )
 }
 
@@ -363,12 +381,12 @@ fun AddWhitelistDialog(onDismiss: () -> Unit, onAdd: (String, String, Boolean) -
     var number by remember { mutableStateOf("") }
     var desc by remember { mutableStateOf("") }
     var emergency by remember { mutableStateOf(false) }
-    AlertDialog(onDismissRequest = onDismiss, containerColor = SurfaceBright, title = { Text("Add to Whitelist") },
+    AlertDialog(onDismissRequest = onDismiss, containerColor = SurfaceBright, title = { Text(stringResource(R.string.dialog_add_to_whitelist)) },
         text = { Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            OutlinedTextField(value = number, onValueChange = { number = it }, label = { Text("Phone Number") },
+            OutlinedTextField(value = number, onValueChange = { number = it }, label = { Text(stringResource(R.string.dialog_phone_number)) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone, imeAction = ImeAction.Next), singleLine = true,
                 colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = CatGreen, cursorColor = CatGreen))
-            OutlinedTextField(value = desc, onValueChange = { desc = it }, label = { Text("Description") }, singleLine = true,
+            OutlinedTextField(value = desc, onValueChange = { desc = it }, label = { Text(stringResource(R.string.dialog_description)) }, singleLine = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(onDone = { if (number.isNotBlank()) onAdd(number, desc, emergency) }),
                 colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = CatGreen, cursorColor = CatGreen))
@@ -391,35 +409,35 @@ fun AddWhitelistDialog(onDismiss: () -> Unit, onAdd: (String, String, Boolean) -
                     )
                 }
             }
-            Text("Whitelisted numbers will never be blocked, even if they match spam rules.", style = MaterialTheme.typography.labelSmall, color = CatOverlay)
+            Text(stringResource(R.string.dialog_whitelist_note), style = MaterialTheme.typography.labelSmall, color = CatOverlay)
         } },
         confirmButton = {
             Button(
                 onClick = { if (number.isNotBlank()) onAdd(number, desc, emergency) },
                 colors = ButtonDefaults.buttonColors(containerColor = if (emergency) CatRed else CatGreen),
-            ) { Text(if (emergency) "Add Emergency Contact" else "Whitelist", color = Black) }
+            ) { Text(if (emergency) stringResource(R.string.emergency_contacts_add) else stringResource(R.string.dialog_whitelist), color = Black) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel", color = CatSubtext) } }
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.dialog_cancel), color = CatSubtext) } }
     )
 }
 
 @Composable
 fun AddKeywordDialog(onDismiss: () -> Unit, onAdd: (String, Boolean, String) -> Unit) {
     var keyword by remember { mutableStateOf("") }; var desc by remember { mutableStateOf("") }; var caseSensitive by remember { mutableStateOf(false) }
-    AlertDialog(onDismissRequest = onDismiss, containerColor = SurfaceBright, title = { Text("Block SMS Keyword") },
+    AlertDialog(onDismissRequest = onDismiss, containerColor = SurfaceBright, title = { Text(stringResource(R.string.dialog_block_sms_keyword)) },
         text = { Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            OutlinedTextField(value = keyword, onValueChange = { keyword = it }, label = { Text("Keyword") },
-                placeholder = { Text("e.g., free gift card") }, singleLine = true,
+            OutlinedTextField(value = keyword, onValueChange = { keyword = it }, label = { Text(stringResource(R.string.dialog_keyword)) },
+                placeholder = { Text(stringResource(R.string.dialog_keyword_placeholder)) }, singleLine = true,
                 colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = CatMauve, cursorColor = CatMauve))
-            OutlinedTextField(value = desc, onValueChange = { desc = it }, label = { Text("Description") }, singleLine = true,
+            OutlinedTextField(value = desc, onValueChange = { desc = it }, label = { Text(stringResource(R.string.dialog_description)) }, singleLine = true,
                 colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = CatMauve, cursorColor = CatMauve))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Checkbox(checked = caseSensitive, onCheckedChange = { caseSensitive = it }, colors = CheckboxDefaults.colors(checkedColor = CatMauve))
-                Text("Case-sensitive", style = MaterialTheme.typography.bodySmall)
+                Text(stringResource(R.string.blocklist_case_sensitive), style = MaterialTheme.typography.bodySmall)
             }
-            Text("Any SMS containing this keyword will be blocked.", style = MaterialTheme.typography.labelSmall, color = CatOverlay)
+            Text(stringResource(R.string.dialog_keyword_note), style = MaterialTheme.typography.labelSmall, color = CatOverlay)
         } },
-        confirmButton = { Button(onClick = { if (keyword.isNotBlank()) onAdd(keyword, caseSensitive, desc) }, colors = ButtonDefaults.buttonColors(containerColor = CatMauve)) { Text("Add", color = Black) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel", color = CatSubtext) } }
+        confirmButton = { Button(onClick = { if (keyword.isNotBlank()) onAdd(keyword, caseSensitive, desc) }, colors = ButtonDefaults.buttonColors(containerColor = CatMauve)) { Text(stringResource(R.string.dialog_add), color = Black) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.dialog_cancel), color = CatSubtext) } }
     )
 }

@@ -15,6 +15,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -40,31 +41,53 @@ import com.sysadmindoc.callshield.data.PhoneFormatter
 import com.sysadmindoc.callshield.data.SpamCheckResult
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup
+import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.theme.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 @Composable
-fun LookupScreen() {
+fun LookupScreen(viewModel: MainViewModel) {
     val context = LocalContext.current
     var numberInput by remember { mutableStateOf("") }
-
-    // Auto-paste from clipboard if it contains a phone number
-    LaunchedEffect(Unit) {
-        try {
-            val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-            val clip = clipboard.primaryClip?.getItemAt(0)?.text?.toString() ?: ""
-            val digits = clip.filter { it.isDigit() }
-            if (digits.length in 7..15 && numberInput.isEmpty()) {
-                numberInput = clip.trim()
-            }
-        } catch (_: Exception) {}
-    }
+    val clipboardNumber = remember(context) { clipboardPhoneNumber(context) }
+    val normalizedNumber = remember(numberInput) { normalizeLookupNumber(numberInput) }
+    val previewLocation = remember(normalizedNumber) { AreaCodeLookup.lookup(normalizedNumber) }
     var result by remember { mutableStateOf<SpamCheckResult?>(null) }
     var checking by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
+
+    fun runLookup() {
+        if (normalizedNumber.length < 5 || checking) return
+
+        checking = true
+        errorMessage = null
+        scope.launch {
+            try {
+                val repo = SpamRepository.getInstance(context)
+                result = withContext(Dispatchers.IO) {
+                    repo.isSpam(normalizedNumber, realtimeCall = false)
+                }
+                haptic(context, result?.isSpam == true)
+            } catch (e: Exception) {
+                errorMessage = context.getString(
+                    R.string.lookup_failed,
+                    e.message ?: context.getString(R.string.lookup_failed_unknown)
+                        .substringAfter(": ")
+                )
+            } finally {
+                checking = false
+            }
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        if (!clipboardNumber.isNullOrBlank() && numberInput.isEmpty()) {
+            numberInput = clipboardNumber
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -74,55 +97,131 @@ fun LookupScreen() {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Text(stringResource(R.string.lookup_title), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = CatGreen)
-        Text(stringResource(R.string.lookup_subtitle), style = MaterialTheme.typography.bodySmall, color = CatSubtext)
-
-        OutlinedTextField(
-            value = numberInput, onValueChange = { numberInput = it },
-            label = { Text(stringResource(R.string.lookup_phone_number)) },
-            placeholder = { Text(stringResource(R.string.lookup_phone_placeholder)) },
-            leadingIcon = { Icon(Icons.Default.Phone, contentDescription = stringResource(R.string.cd_phone_input), tint = CatSubtext) },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone, imeAction = ImeAction.Search),
-            keyboardActions = KeyboardActions(onSearch = {
-                if (numberInput.length >= 5) {
-                    checking = true; errorMessage = null
-                    scope.launch {
-                        try {
-                            val repo = SpamRepository.getInstance(context)
-                            result = withContext(Dispatchers.IO) { repo.isSpam(numberInput, realtimeCall = false) }
-                            haptic(context, result?.isSpam == true)
-                        } catch (e: Exception) {
-                            errorMessage = context.getString(R.string.lookup_failed, e.message ?: context.getString(R.string.lookup_failed_unknown).substringAfter(": "))
-                        } finally {
-                            checking = false
+        PremiumCard(accentColor = CatGreen, modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier.padding(18.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    stringResource(R.string.lookup_title),
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = CatGreen
+                )
+                Text(
+                    stringResource(R.string.lookup_subtitle),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = CatSubtext
+                )
+                if (previewLocation != null || normalizedNumber.isNotBlank()) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        if (previewLocation != null) {
+                            AssistChip(
+                                onClick = {},
+                                label = { Text(previewLocation) },
+                                colors = AssistChipDefaults.assistChipColors(
+                                    containerColor = CatYellow.copy(alpha = 0.12f),
+                                    labelColor = CatYellow
+                                )
+                            )
+                        }
+                        if (normalizedNumber.isNotBlank()) {
+                            AssistChip(
+                                onClick = {},
+                                label = { Text(PhoneFormatter.format(normalizedNumber)) },
+                                colors = AssistChipDefaults.assistChipColors(
+                                    containerColor = CatGreen.copy(alpha = 0.12f),
+                                    labelColor = CatGreen
+                                )
+                            )
                         }
                     }
                 }
-            }),
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    if (!clipboardNumber.isNullOrBlank() && clipboardNumber != numberInput) {
+                        OutlinedButton(
+                            onClick = {
+                                numberInput = clipboardNumber
+                                errorMessage = null
+                            },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp),
+                            border = BorderStroke(1.dp, CatYellow.copy(alpha = 0.28f))
+                        ) {
+                            Icon(Icons.Default.ContentPaste, contentDescription = null, tint = CatYellow, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text(stringResource(R.string.lookup_paste_clipboard), color = CatYellow)
+                        }
+                    }
+                    if (numberInput.isNotBlank()) {
+                        OutlinedButton(
+                            onClick = {
+                                numberInput = ""
+                                result = null
+                                errorMessage = null
+                            },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp),
+                            border = BorderStroke(1.dp, CatOverlay.copy(alpha = 0.24f))
+                        ) {
+                            Icon(Icons.Default.Close, contentDescription = null, tint = CatSubtext, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text(stringResource(R.string.lookup_clear), color = CatSubtext)
+                        }
+                    }
+                }
+            }
+        }
+
+        OutlinedTextField(
+            value = numberInput,
+            onValueChange = {
+                numberInput = sanitizeLookupInput(it)
+                errorMessage = null
+            },
+            label = { Text(stringResource(R.string.lookup_phone_number)) },
+            placeholder = { Text(stringResource(R.string.lookup_phone_placeholder)) },
+            leadingIcon = { Icon(Icons.Default.Phone, contentDescription = stringResource(R.string.cd_phone_input), tint = CatSubtext) },
+            trailingIcon = {
+                if (numberInput.isNotBlank()) {
+                    IconButton(onClick = {
+                        numberInput = ""
+                        result = null
+                        errorMessage = null
+                    }) {
+                        Icon(Icons.Default.Close, contentDescription = stringResource(R.string.cd_close), tint = CatOverlay)
+                    }
+                }
+            },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone, imeAction = ImeAction.Search),
+            keyboardActions = KeyboardActions(onSearch = { runLookup() }),
             singleLine = true,
+            supportingText = {
+                if (normalizedNumber.isNotBlank()) {
+                    Text(
+                        if (previewLocation != null) {
+                            stringResource(R.string.lookup_supporting_location, PhoneFormatter.format(normalizedNumber), previewLocation)
+                        } else {
+                            stringResource(R.string.lookup_supporting_number, PhoneFormatter.format(normalizedNumber))
+                        },
+                        color = CatOverlay
+                    )
+                }
+            },
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(14.dp),
             colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = CatGreen, cursorColor = CatGreen)
         )
 
         Button(
-            onClick = {
-                if (numberInput.length >= 5) {
-                    checking = true; errorMessage = null
-                    scope.launch {
-                        try {
-                            val repo = SpamRepository.getInstance(context)
-                            result = withContext(Dispatchers.IO) { repo.isSpam(numberInput, realtimeCall = false) }
-                            haptic(context, result?.isSpam == true)
-                        } catch (e: Exception) {
-                            errorMessage = context.getString(R.string.lookup_failed, e.message ?: context.getString(R.string.lookup_failed_unknown).substringAfter(": "))
-                        } finally {
-                            checking = false
-                        }
-                    }
-                }
-            },
-            enabled = numberInput.length >= 5 && !checking,
+            onClick = { runLookup() },
+            enabled = normalizedNumber.length >= 5 && !checking,
             colors = ButtonDefaults.buttonColors(containerColor = CatGreen),
             shape = RoundedCornerShape(14.dp),
             modifier = Modifier.fillMaxWidth().height(48.dp),
@@ -144,11 +243,9 @@ fun LookupScreen() {
         result?.let { r ->
             Spacer(Modifier.height(8.dp))
 
-            // Spam score gauge
             val score = if (r.isSpam) r.confidence else 0
             SpamScoreGauge(score = score, isSpam = r.isSpam)
 
-            // Result card
             PremiumCard(
                 accentColor = if (r.isSpam) CatRed else CatGreen,
                 modifier = Modifier.fillMaxWidth()
@@ -156,19 +253,31 @@ fun LookupScreen() {
                 Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     Icon(
                         if (r.isSpam) Icons.Default.Warning else Icons.Default.CheckCircle,
-                        contentDescription = if (r.isSpam) stringResource(R.string.cd_spam_detected) else stringResource(R.string.cd_number_clean), tint = if (r.isSpam) CatRed else CatGreen, modifier = Modifier.size(48.dp)
+                        contentDescription = if (r.isSpam) stringResource(R.string.cd_spam_detected) else stringResource(R.string.cd_number_clean),
+                        tint = if (r.isSpam) CatRed else CatGreen,
+                        modifier = Modifier.size(48.dp)
                     )
                     Spacer(Modifier.height(8.dp))
                     Text(
                         if (r.isSpam) stringResource(R.string.lookup_spam_detected) else stringResource(R.string.lookup_clean),
-                        style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
                         color = if (r.isSpam) CatRed else CatGreen
                     )
-
-                    Text(PhoneFormatter.format(numberInput), style = MaterialTheme.typography.bodyLarge, color = CatText)
-                    AreaCodeLookup.lookup(numberInput)?.let {
+                    Text(PhoneFormatter.format(normalizedNumber), style = MaterialTheme.typography.bodyLarge, color = CatText)
+                    previewLocation?.let {
                         Text(it, style = MaterialTheme.typography.bodySmall, color = CatOverlay)
                     }
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        if (r.isSpam) {
+                            stringResource(R.string.lookup_result_spam_summary, r.confidence)
+                        } else {
+                            stringResource(R.string.lookup_result_safe_summary)
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (r.isSpam) CatSubtext else CatGreen
+                    )
 
                     if (r.isSpam) {
                         Spacer(Modifier.height(12.dp))
@@ -180,7 +289,6 @@ fun LookupScreen() {
                 }
             }
 
-            // Quick actions after result
             Spacer(Modifier.height(8.dp))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (r.isSpam) {
@@ -189,8 +297,8 @@ fun LookupScreen() {
                             val repo = SpamRepository.getInstance(context)
                             scope.launch {
                                 try {
-                                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                                        repo.blockNumber(numberInput, r.type, r.matchSource)
+                                    withContext(Dispatchers.IO) {
+                                        repo.blockNumber(normalizedNumber, r.type, r.matchSource)
                                     }
                                     hapticConfirm(context)
                                     android.widget.Toast.makeText(context, context.getString(R.string.lookup_number_blocked), android.widget.Toast.LENGTH_SHORT).show()
@@ -214,13 +322,13 @@ fun LookupScreen() {
                         scope.launch {
                             try {
                                 val repo = SpamRepository.getInstance(context)
-                                val successMessage = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                                val successMessage = withContext(Dispatchers.IO) {
                                     if (r.isSpam) {
-                                        CommunityContributor.contribute(numberInput, r.type.ifEmpty { "spam" })
+                                        CommunityContributor.contribute(normalizedNumber, r.type.ifEmpty { "spam" })
                                         context.getString(R.string.lookup_reported)
                                     } else {
-                                        repo.addToWhitelist(numberInput, "Marked safe from lookup")
-                                        val reportResult = CommunityContributor.reportNotSpam(numberInput)
+                                        repo.addToWhitelist(normalizedNumber, "Marked safe from lookup")
+                                        val reportResult = CommunityContributor.reportNotSpam(normalizedNumber)
                                         if (reportResult.success) {
                                             context.getString(R.string.lookup_marked_safe_reported)
                                         } else {
@@ -248,6 +356,16 @@ fun LookupScreen() {
                     Spacer(Modifier.width(6.dp))
                     Text(if (r.isSpam) stringResource(R.string.lookup_report) else stringResource(R.string.lookup_not_spam), color = CatGreen)
                 }
+            }
+            OutlinedButton(
+                onClick = { viewModel.openNumberDetail(normalizedNumber) },
+                modifier = Modifier.fillMaxWidth().height(48.dp),
+                shape = RoundedCornerShape(14.dp),
+                border = BorderStroke(1.dp, CatYellow.copy(alpha = 0.3f))
+            ) {
+                Icon(Icons.AutoMirrored.Filled.OpenInNew, null, tint = CatYellow, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(R.string.lookup_open_detail), color = CatYellow)
             }
         }
     }
@@ -326,4 +444,36 @@ private fun haptic(context: android.content.Context, isSpam: Boolean) {
             v?.vibrate(VibrationEffect.createOneShot(if (isSpam) 100 else 30, if (isSpam) 200 else 50))
         }
     } catch (_: Exception) {}
+}
+
+private fun sanitizeLookupInput(input: String): String {
+    val builder = StringBuilder()
+    input.forEach { char ->
+        when {
+            char.isDigit() -> builder.append(char)
+            char == '+' && builder.isEmpty() -> builder.append(char)
+            char == ' ' || char == '-' || char == '(' || char == ')' -> builder.append(char)
+        }
+    }
+    return builder.toString().take(24)
+}
+
+private fun normalizeLookupNumber(input: String): String {
+    val digitsOnly = input.filter { it.isDigit() }
+    return if (input.trim().startsWith("+")) {
+        "+$digitsOnly"
+    } else {
+        digitsOnly
+    }
+}
+
+private fun clipboardPhoneNumber(context: android.content.Context): String? {
+    return try {
+        val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+        val clip = clipboard.primaryClip?.getItemAt(0)?.text?.toString() ?: return null
+        val normalized = normalizeLookupNumber(clip)
+        normalized.takeIf { it.filter(Char::isDigit).length in 7..15 }
+    } catch (_: Exception) {
+        null
+    }
 }
