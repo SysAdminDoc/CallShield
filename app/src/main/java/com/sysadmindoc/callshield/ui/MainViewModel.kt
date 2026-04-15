@@ -187,8 +187,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun scanCallLog() {
         if (_scanningCalls.value) return
+        _scanningCalls.value = true
         viewModelScope.launch {
-            _scanningCalls.value = true
             try {
                 _scanResult.value = CallLogScanner.scan(getApplication())
             } catch (e: Exception) {
@@ -200,8 +200,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
     fun scanSmsInbox() {
         if (_scanningSms.value) return
+        _scanningSms.value = true
         viewModelScope.launch {
-            _scanningSms.value = true
             try {
                 _smsScanResult.value = SmsInboxScanner.scan(getApplication())
             } catch (e: Exception) {

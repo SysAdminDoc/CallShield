@@ -3,7 +3,6 @@ package com.sysadmindoc.callshield.data.remote
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.util.concurrent.TimeUnit
@@ -34,7 +33,7 @@ object UrlSafetyChecker {
         RegexOption.IGNORE_CASE
     )
 
-    private val client = OkHttpClient.Builder()
+    private val client = HttpClient.shared.newBuilder()
         .connectTimeout(10, TimeUnit.SECONDS)
         .readTimeout(10, TimeUnit.SECONDS)
         .build()

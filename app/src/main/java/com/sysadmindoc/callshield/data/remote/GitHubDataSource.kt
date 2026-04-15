@@ -8,12 +8,13 @@ import com.squareup.moshi.Types
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.util.concurrent.TimeUnit
 
 class GitHubDataSource {
-    private val client = OkHttpClient.Builder()
+    // Derived client with longer timeouts for large database downloads;
+    // shares the connection pool with other callers via HttpClient.shared.
+    private val client = HttpClient.shared.newBuilder()
         .connectTimeout(30, TimeUnit.SECONDS)
         .readTimeout(30, TimeUnit.SECONDS)
         .build()

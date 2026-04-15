@@ -162,8 +162,14 @@ object SpamHeuristics {
 
     fun isWangiriCountryCode(number: String): Boolean {
         val clean = number.removePrefix("+")
-        // Only flag international numbers (not starting with 1 for US/CA)
-        if (clean.startsWith("1") && clean.length == 11) return false
+        if (clean.startsWith("1") && clean.length == 11) {
+            // +1 number — check the NPA (area code) against Caribbean wangiri NPAs.
+            // The WANGIRI_COUNTRY_CODES set includes Caribbean NPAs like 876 (Jamaica),
+            // 284 (BVI), 649 (Turks & Caicos), etc. that share the +1 country code
+            // but are heavily abused for wangiri/premium-rate callback scams.
+            val npa = clean.substring(1, 4)
+            return npa in WANGIRI_COUNTRY_CODES
+        }
         return WANGIRI_COUNTRY_CODES.any { clean.startsWith(it) }
     }
 

@@ -24,18 +24,32 @@ data class WildcardRule(
         if (normalizedPattern.isBlank()) return false
         return if (isRegex) {
             try {
+                // Guard against ReDoS: reject overly complex patterns.
+                // Phone numbers are short (<20 chars) which limits exposure,
+                // but pathological patterns can still hang the call screening path.
+                if (normalizedPattern.length > 200) return false
                 Regex(normalizedPattern).containsMatchIn(number)
             } catch (_: Exception) {
                 false
             }
         } else {
-            // Glob-style: * matches any digits
-            val regexPattern = normalizedPattern
-                .replace("+", "\\+")
-                .replace("*", "\\d*")
-                .replace("?", "\\d")
+            // Glob-style: * matches any digits, ? matches one digit.
+            // Escape ALL regex metacharacters first, then convert our globs.
+            // Without this, a pattern like "212.555*" would treat '.' as
+            // regex any-char and match "2120555..." unexpectedly.
+            val escaped = buildString {
+                for (ch in normalizedPattern) {
+                    when (ch) {
+                        '*' -> append("\\d*")
+                        '?' -> append("\\d")
+                        '+', '.', '(', ')', '[', ']', '{', '}',
+                        '|', '^', '$', '\\' -> { append('\\'); append(ch) }
+                        else -> append(ch)
+                    }
+                }
+            }
             try {
-                val regex = Regex("^$regexPattern$")
+                val regex = Regex("^$escaped$")
                 // Try the input as-is first, then normalized forms so that
                 // patterns like "+1212*" also match SMS senders that arrive
                 // without the +1 prefix (e.g. "2125551234").

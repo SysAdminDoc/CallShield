@@ -2,8 +2,8 @@ package com.sysadmindoc.callshield.data
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import com.sysadmindoc.callshield.data.remote.HttpClient
 import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.util.concurrent.TimeUnit
@@ -20,7 +20,7 @@ object CommunityContributor {
 
     private const val WORKER_URL = "https://callshield-reports.snafumatthew.workers.dev"
 
-    private val client = OkHttpClient.Builder()
+    private val client = HttpClient.shared.newBuilder()
         .connectTimeout(10, TimeUnit.SECONDS)
         .readTimeout(10, TimeUnit.SECONDS)
         .build()
