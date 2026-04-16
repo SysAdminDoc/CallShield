@@ -265,7 +265,10 @@ fun RecentCallsScreen(viewModel: MainViewModel) {
             ) {
                 itemsIndexed(
                     items = filtered,
-                    key = { _, call -> "${call.number}|${call.date}|${call.type}" }
+                    // Include index — the (number,date,type) triple is not guaranteed
+                    // unique (dual-SIM duplicates, MMS group rows, sync re-inserts), and
+                    // collisions crash LazyColumn with "Key was already used".
+                    key = { index, call -> "${call.number}|${call.date}|${call.type}|$index" }
                 ) { index, call ->
                     val visible = remember(call.number, call.date) { mutableStateOf(false) }
                     LaunchedEffect(call.number, call.date) {
