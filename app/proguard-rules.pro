@@ -29,6 +29,21 @@
 -keep class com.sysadmindoc.callshield.data.model.SpamPrefixJson { *; }
 -keep class com.sysadmindoc.callshield.data.model.HotNumber { *; }
 
+# GitHubDataSource private payload inner data classes parsed by Moshi reflection.
+# Without these, R8 strips Kotlin metadata and Moshi's ClassJsonAdapter throws
+# "Cannot serialize abstract class" at GitHubDataSource.<init>, crashing MainViewModel
+# construction on app launch.
+-keep class com.sysadmindoc.callshield.data.remote.GitHubDataSource$HotListPayload { *; }
+-keep class com.sysadmindoc.callshield.data.remote.GitHubDataSource$HotListEntry { *; }
+-keep class com.sysadmindoc.callshield.data.remote.GitHubDataSource$HotRangesPayload { *; }
+-keep class com.sysadmindoc.callshield.data.remote.GitHubDataSource$HotRangeEntry { *; }
+-keep class com.sysadmindoc.callshield.data.remote.GitHubDataSource$SpamDomainsPayload { *; }
+
+# Preserve Kotlin metadata + generic signatures so KotlinJsonAdapterFactory can
+# introspect data classes after R8 optimization.
+-keepattributes RuntimeVisibleAnnotations,Signature,InnerClasses,EnclosingMethod
+-keep class kotlin.Metadata { *; }
+
 # Campaign detection singleton
 -keep class com.sysadmindoc.callshield.data.CampaignDetector { *; }
 
