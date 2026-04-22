@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.TextFields
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -84,6 +85,9 @@ import com.sysadmindoc.callshield.data.PhoneFormatter
 import com.sysadmindoc.callshield.data.model.SmsKeywordRule
 import com.sysadmindoc.callshield.data.model.SpamNumber
 import com.sysadmindoc.callshield.data.model.WhitelistEntry
+import com.sysadmindoc.callshield.data.HashWildcardMatcher
+import com.sysadmindoc.callshield.data.TimeSchedule
+import com.sysadmindoc.callshield.data.model.HashWildcardRule
 import com.sysadmindoc.callshield.data.model.WildcardRule
 import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.theme.Black
@@ -106,9 +110,10 @@ import kotlinx.coroutines.launch
 
 private const val BLOCKLIST_TAB_BLOCKED = 0
 private const val BLOCKLIST_TAB_WILDCARDS = 1
-private const val BLOCKLIST_TAB_KEYWORDS = 2
-private const val BLOCKLIST_TAB_WHITELIST = 3
-private const val BLOCKLIST_TAB_DATABASE = 4
+private const val BLOCKLIST_TAB_RANGES = 2        // A5: length-locked # patterns
+private const val BLOCKLIST_TAB_KEYWORDS = 3
+private const val BLOCKLIST_TAB_WHITELIST = 4
+private const val BLOCKLIST_TAB_DATABASE = 5
 
 private data class BlocklistWorkspaceModel(
     val title: String,
@@ -130,11 +135,13 @@ fun BlocklistScreen(viewModel: MainViewModel) {
     val userBlocked by viewModel.userBlockedNumbers.collectAsState()
     val allSpam by viewModel.allSpamNumbers.collectAsState()
     val wildcardRules by viewModel.wildcardRules.collectAsState()
+    val hashWildcardRules by viewModel.hashWildcardRules.collectAsState()
     val whitelistEntries by viewModel.whitelistEntries.collectAsState()
     val keywordRules by viewModel.keywordRules.collectAsState()
     val importResult by viewModel.importResult.collectAsState()
     var showAddDialog by remember { mutableStateOf(false) }
     var showWildcardDialog by remember { mutableStateOf(false) }
+    var showRangeDialog by remember { mutableStateOf(false) }
     var showWhitelistDialog by remember { mutableStateOf(false) }
     var showKeywordDialog by remember { mutableStateOf(false) }
     var tabIndex by rememberSaveable { mutableStateOf(BLOCKLIST_TAB_BLOCKED) }
@@ -176,6 +183,14 @@ fun BlocklistScreen(viewModel: MainViewModel) {
             accentColor = CatYellow,
             icon = Icons.Default.FilterAlt,
             addActionLabel = stringResource(R.string.blocklist_action_add_wildcard)
+        )
+        BLOCKLIST_TAB_RANGES -> BlocklistWorkspaceModel(
+            title = stringResource(R.string.blocklist_overview_ranges_title),
+            subtitle = stringResource(R.string.blocklist_overview_ranges_subtitle),
+            count = hashWildcardRules.size,
+            accentColor = CatPeach,
+            icon = Icons.Default.Tune,
+            addActionLabel = stringResource(R.string.blocklist_action_add_range)
         )
         BLOCKLIST_TAB_KEYWORDS -> BlocklistWorkspaceModel(
             title = stringResource(R.string.blocklist_overview_keywords_title),
@@ -234,6 +249,13 @@ fun BlocklistScreen(viewModel: MainViewModel) {
                     selectedContentColor = CatText,
                     unselectedContentColor = CatSubtext,
                     text = { Text(stringResource(R.string.blocklist_tab_wildcards_short)) }
+                )
+                Tab(
+                    selected = tabIndex == BLOCKLIST_TAB_RANGES,
+                    onClick = { tabIndex = BLOCKLIST_TAB_RANGES },
+                    selectedContentColor = CatText,
+                    unselectedContentColor = CatSubtext,
+                    text = { Text(stringResource(R.string.blocklist_tab_ranges_short)) }
                 )
                 Tab(
                     selected = tabIndex == BLOCKLIST_TAB_KEYWORDS,
@@ -297,6 +319,29 @@ fun BlocklistScreen(viewModel: MainViewModel) {
                                         rule = rule,
                                         onToggle = { viewModel.toggleWildcardRule(rule.id, it) },
                                         onDelete = { viewModel.deleteWildcardRule(rule) }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    BLOCKLIST_TAB_RANGES -> {
+                        if (hashWildcardRules.isEmpty()) {
+                            EmptyStateCard(
+                                title = stringResource(R.string.blocklist_empty_ranges),
+                                subtitle = stringResource(R.string.blocklist_empty_ranges_sub),
+                                icon = Icons.Default.Tune,
+                                accentColor = CatPeach
+                            )
+                        } else {
+                            LazyColumn(
+                                contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 104.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                items(hashWildcardRules, key = { it.id }) { rule ->
+                                    HashWildcardRuleItem(
+                                        rule = rule,
+                                        onToggle = { viewModel.toggleHashWildcardRule(rule.id, it) },
+                                        onDelete = { viewModel.deleteHashWildcardRule(rule) }
                                     )
                                 }
                             }
@@ -375,6 +420,7 @@ fun BlocklistScreen(viewModel: MainViewModel) {
                             when (tabIndex) {
                                 BLOCKLIST_TAB_BLOCKED -> showAddDialog = true
                                 BLOCKLIST_TAB_WILDCARDS -> showWildcardDialog = true
+                                BLOCKLIST_TAB_RANGES -> showRangeDialog = true
                                 BLOCKLIST_TAB_KEYWORDS -> showKeywordDialog = true
                                 BLOCKLIST_TAB_WHITELIST -> showWhitelistDialog = true
                             }
@@ -413,9 +459,25 @@ fun BlocklistScreen(viewModel: MainViewModel) {
         }
     }
     if (showWildcardDialog) {
-        AddWildcardDialog(onDismiss = { showWildcardDialog = false }) { pattern, isRegex, description ->
-            viewModel.addWildcardRule(pattern, isRegex, description)
+        AddWildcardDialog(onDismiss = { showWildcardDialog = false }) { pattern, isRegex, description, schedule ->
+            viewModel.addWildcardRule(pattern, isRegex, description, schedule)
             showWildcardDialog = false
+            hapticTick(context)
+            scope.launch {
+                snackbarHost.showSnackbar(
+                    context.getString(R.string.blocklist_rule_added),
+                    duration = SnackbarDuration.Short
+                )
+            }
+        }
+    }
+    if (showRangeDialog) {
+        AddHashWildcardDialog(
+            existing = hashWildcardRules,
+            onDismiss = { showRangeDialog = false },
+        ) { pattern, description, schedule ->
+            viewModel.addHashWildcardRule(pattern, description, schedule)
+            showRangeDialog = false
             hapticTick(context)
             scope.launch {
                 snackbarHost.showSnackbar(
@@ -439,8 +501,8 @@ fun BlocklistScreen(viewModel: MainViewModel) {
         }
     }
     if (showKeywordDialog) {
-        AddKeywordDialog(onDismiss = { showKeywordDialog = false }) { keyword, caseSensitive, description ->
-            viewModel.addKeywordRule(keyword, caseSensitive, description)
+        AddKeywordDialog(onDismiss = { showKeywordDialog = false }) { keyword, caseSensitive, description, schedule ->
+            viewModel.addKeywordRule(keyword, caseSensitive, description, schedule)
             showKeywordDialog = false
             hapticTick(context)
             scope.launch {
@@ -658,6 +720,7 @@ fun WildcardRuleItem(rule: WildcardRule, onToggle: (Boolean) -> Unit, onDelete: 
                     verticalPadding = 4.dp,
                     textStyle = MaterialTheme.typography.labelSmall
                 )
+                SchedulePill(rule.schedule)
             }
             androidx.compose.material3.Switch(
                 checked = rule.enabled,
@@ -700,6 +763,7 @@ fun KeywordRuleItem(rule: SmsKeywordRule, onToggle: (Boolean) -> Unit, onDelete:
                     verticalPadding = 4.dp,
                     textStyle = MaterialTheme.typography.labelSmall
                 )
+                SchedulePill(rule.schedule)
             }
             androidx.compose.material3.Switch(
                 checked = rule.enabled,
@@ -894,12 +958,16 @@ fun AddNumberDialog(onDismiss: () -> Unit, onAdd: (String, String) -> Unit) {
 }
 
 @Composable
-fun AddWildcardDialog(onDismiss: () -> Unit, onAdd: (String, Boolean, String) -> Unit) {
+fun AddWildcardDialog(
+    onDismiss: () -> Unit,
+    onAdd: (String, Boolean, String, TimeSchedule) -> Unit,
+) {
     val context = LocalContext.current
     var pattern by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
     var isRegex by remember { mutableStateOf(false) }
     var regexError by remember { mutableStateOf<String?>(null) }
+    var scheduleState by remember { mutableStateOf(ScheduleUiState()) }
     val trimmedPattern = pattern.trim()
 
     androidx.compose.material3.AlertDialog(
@@ -945,25 +1013,27 @@ fun AddWildcardDialog(onDismiss: () -> Unit, onAdd: (String, Boolean, String) ->
                     )
                     Text(stringResource(R.string.dialog_use_regex), style = MaterialTheme.typography.bodySmall)
                 }
+                GradientDivider(color = CatYellow)
+                ScheduleSection(scheduleState) { scheduleState = it }
             }
         },
         confirmButton = {
             androidx.compose.material3.Button(
                 onClick = {
-                    if (trimmedPattern.isNotBlank()) {
+                    if (trimmedPattern.isNotBlank() && !scheduleState.needsDaySelection) {
                         if (isRegex) {
                             try {
                                 Regex(trimmedPattern)
-                                onAdd(trimmedPattern, true, description.trim())
+                                onAdd(trimmedPattern, true, description.trim(), scheduleState.toSchedule())
                             } catch (e: Exception) {
                                 regexError = context.getString(R.string.dialog_invalid_regex, e.message ?: "")
                             }
                         } else {
-                            onAdd(trimmedPattern, false, description.trim())
+                            onAdd(trimmedPattern, false, description.trim(), scheduleState.toSchedule())
                         }
                     }
                 },
-                enabled = trimmedPattern.isNotBlank(),
+                enabled = trimmedPattern.isNotBlank() && !scheduleState.needsDaySelection,
                 colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = CatYellow)
             ) {
                 Text(stringResource(R.string.dialog_add), color = Black)
@@ -1067,10 +1137,14 @@ fun AddWhitelistDialog(onDismiss: () -> Unit, onAdd: (String, String, Boolean) -
 }
 
 @Composable
-fun AddKeywordDialog(onDismiss: () -> Unit, onAdd: (String, Boolean, String) -> Unit) {
+fun AddKeywordDialog(
+    onDismiss: () -> Unit,
+    onAdd: (String, Boolean, String, TimeSchedule) -> Unit,
+) {
     var keyword by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
     var caseSensitive by remember { mutableStateOf(false) }
+    var scheduleState by remember { mutableStateOf(ScheduleUiState()) }
     val trimmedKeyword = keyword.trim()
 
     androidx.compose.material3.AlertDialog(
@@ -1109,12 +1183,16 @@ fun AddKeywordDialog(onDismiss: () -> Unit, onAdd: (String, Boolean, String) -> 
                     Text(stringResource(R.string.blocklist_case_sensitive), style = MaterialTheme.typography.bodySmall)
                 }
                 Text(stringResource(R.string.dialog_keyword_note), style = MaterialTheme.typography.labelSmall, color = CatSubtext)
+                GradientDivider(color = CatMauve)
+                ScheduleSection(scheduleState) { scheduleState = it }
             }
         },
         confirmButton = {
             androidx.compose.material3.Button(
-                onClick = { onAdd(trimmedKeyword, caseSensitive, description.trim()) },
-                enabled = trimmedKeyword.isNotBlank(),
+                onClick = {
+                    onAdd(trimmedKeyword, caseSensitive, description.trim(), scheduleState.toSchedule())
+                },
+                enabled = trimmedKeyword.isNotBlank() && !scheduleState.needsDaySelection,
                 colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = CatMauve)
             ) {
                 Text(stringResource(R.string.dialog_add), color = Black)
@@ -1148,3 +1226,213 @@ private fun normalizePhoneInput(input: String): String {
         digitsOnly
     }
 }
+
+// ─────────────────────────────────────────────────────────────────────
+// A5 — Hash wildcard ("range") rules UI
+// ─────────────────────────────────────────────────────────────────────
+
+/** Format a coverage count with thousand-separators (e.g. 10_000 → "10,000"). */
+private fun formatCoverage(count: Long): String =
+    java.text.NumberFormat.getIntegerInstance().format(count)
+
+@Composable
+fun HashWildcardRuleItem(
+    rule: HashWildcardRule,
+    onToggle: (Boolean) -> Unit,
+    onDelete: () -> Unit,
+) {
+    val coverage = remember(rule.pattern) { HashWildcardMatcher.coveredNumberCount(rule.pattern) }
+    PremiumCard(cornerRadius = 16.dp, accentColor = CatPeach) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(Icons.Default.Tune, null, tint = CatPeach, modifier = Modifier.size(24.dp))
+            Spacer(Modifier.width(12.dp))
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Text(
+                    rule.pattern,
+                    fontWeight = FontWeight.SemiBold,
+                    color = CatText,
+                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+                )
+                if (rule.description.isNotEmpty()) {
+                    Text(
+                        rule.description,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = CatSubtext
+                    )
+                }
+                StatusPill(
+                    text = stringResource(R.string.hash_wildcard_item_covers, formatCoverage(coverage)),
+                    color = CatPeach,
+                    horizontalPadding = 8.dp,
+                    verticalPadding = 4.dp,
+                    textStyle = MaterialTheme.typography.labelSmall
+                )
+                SchedulePill(rule.schedule)
+            }
+            androidx.compose.material3.Switch(
+                checked = rule.enabled,
+                onCheckedChange = onToggle,
+                colors = androidx.compose.material3.SwitchDefaults.colors(
+                    checkedTrackColor = CatGreen,
+                    checkedThumbColor = Black
+                )
+            )
+            IconButton(onClick = onDelete) {
+                Icon(
+                    Icons.Default.Close,
+                    stringResource(R.string.cd_delete_rule),
+                    tint = CatRed.copy(alpha = 0.7f)
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Add-range dialog. Validates:
+ *   - Pattern contains at least one `#` (otherwise a simple user-blocklist
+ *     entry is a better fit and the UI nudges the user toward that tab).
+ *   - Coverage under 100,000,000 — beyond that the pattern is almost
+ *     certainly too broad, so we refuse the add as a safety rail.
+ *   - Overlap with any existing rule — shown as an inline warning
+ *     ("Already covered by +33#######" / "Duplicate of existing rule")
+ *     but only blocks saves on exact-duplicate (the narrower-covers-broader
+ *     case is a user choice, not an error).
+ */
+@Composable
+fun AddHashWildcardDialog(
+    existing: List<HashWildcardRule>,
+    onDismiss: () -> Unit,
+    onAdd: (String, String, TimeSchedule) -> Unit,
+) {
+    val context = LocalContext.current
+    var pattern by remember { mutableStateOf("") }
+    var description by remember { mutableStateOf("") }
+    // A7 schedule state — kept local to the dialog; committed to the rule
+    // only when the user presses "Add range". Default: disabled, so leaving
+    // the whole section untouched produces the pre-A7 behaviour.
+    var scheduleState by remember { mutableStateOf(ScheduleUiState()) }
+    val trimmed = pattern.trim()
+
+    val hashCount = remember(trimmed) { trimmed.count { it == '#' } }
+    val coverage = remember(trimmed) {
+        if (trimmed.isEmpty() || hashCount == 0) 0L
+        else HashWildcardMatcher.coveredNumberCount(trimmed)
+    }
+    val overlap = remember(trimmed, existing) {
+        if (trimmed.isEmpty()) null
+        else existing.asSequence()
+            .mapNotNull { rule ->
+                val kind = HashWildcardMatcher.coversOrCoveredBy(trimmed, rule.pattern)
+                if (kind == HashWildcardMatcher.Overlap.NONE) null else rule to kind
+            }
+            .firstOrNull()
+    }
+
+    val tooBroad = coverage > 100_000_000L
+    val isDuplicate = overlap?.second == HashWildcardMatcher.Overlap.EQUAL
+    val canConfirm = trimmed.isNotEmpty() && hashCount >= 1 && !tooBroad &&
+        !isDuplicate && !scheduleState.needsDaySelection
+
+    val overlapMessage: String? = overlap?.let { (rule, kind) ->
+        when (kind) {
+            HashWildcardMatcher.Overlap.EQUAL ->
+                context.getString(R.string.hash_wildcard_dialog_overlap_equal)
+            HashWildcardMatcher.Overlap.B_COVERS_A ->
+                context.getString(R.string.hash_wildcard_dialog_overlap_covered, rule.pattern)
+            HashWildcardMatcher.Overlap.A_COVERS_B ->
+                context.getString(R.string.hash_wildcard_dialog_overlap_covers, rule.pattern)
+            HashWildcardMatcher.Overlap.NONE -> null
+        }
+    }
+
+    val patternError: String? = when {
+        trimmed.isNotEmpty() && hashCount == 0 ->
+            context.getString(R.string.hash_wildcard_dialog_empty_error)
+        tooBroad -> context.getString(R.string.hash_wildcard_dialog_too_broad)
+        else -> null
+    }
+
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = com.sysadmindoc.callshield.ui.theme.SurfaceBright,
+        title = { Text(stringResource(R.string.hash_wildcard_dialog_title)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                androidx.compose.material3.OutlinedTextField(
+                    value = pattern,
+                    onValueChange = { pattern = it },
+                    label = { Text(stringResource(R.string.hash_wildcard_dialog_pattern_label)) },
+                    placeholder = { Text(stringResource(R.string.hash_wildcard_dialog_pattern_hint)) },
+                    singleLine = true,
+                    isError = patternError != null,
+                    supportingText = patternError?.let { msg -> { Text(msg, color = CatRed) } },
+                    colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = CatPeach,
+                        cursorColor = CatPeach
+                    )
+                )
+                androidx.compose.material3.OutlinedTextField(
+                    value = description,
+                    onValueChange = { description = it },
+                    label = { Text(stringResource(R.string.hash_wildcard_dialog_description_label)) },
+                    singleLine = true,
+                    colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = CatPeach,
+                        cursorColor = CatPeach
+                    )
+                )
+                Text(
+                    stringResource(R.string.hash_wildcard_dialog_help),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = CatSubtext
+                )
+                if (hashCount > 0 && !tooBroad) {
+                    StatusPill(
+                        text = stringResource(
+                            R.string.hash_wildcard_dialog_coverage_label,
+                            formatCoverage(coverage)
+                        ),
+                        color = CatPeach,
+                        horizontalPadding = 8.dp,
+                        verticalPadding = 4.dp,
+                        textStyle = MaterialTheme.typography.labelSmall
+                    )
+                }
+                overlapMessage?.let { msg ->
+                    Text(
+                        msg,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (isDuplicate) CatRed else CatPeach
+                    )
+                }
+
+                GradientDivider(color = CatPeach)
+                ScheduleSection(scheduleState) { scheduleState = it }
+            }
+        },
+        confirmButton = {
+            androidx.compose.material3.Button(
+                onClick = { onAdd(trimmed, description.trim(), scheduleState.toSchedule()) },
+                enabled = canConfirm,
+                colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = CatPeach)
+            ) {
+                Text(stringResource(R.string.hash_wildcard_dialog_add), color = Black)
+            }
+        },
+        dismissButton = {
+            androidx.compose.material3.TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.hash_wildcard_dialog_cancel), color = CatSubtext)
+            }
+        }
+    )
+}
+

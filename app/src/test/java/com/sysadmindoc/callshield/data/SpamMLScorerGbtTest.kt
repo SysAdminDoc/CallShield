@@ -353,16 +353,26 @@ class SpamMLScorerGbtTest {
 
     // ─── Backward compatibility: 15-feature weights padded to 20 ────
 
+    /** Read the live ModelState's `weights` array via reflection. */
+    private fun currentWeights(): DoubleArray? {
+        val stateField = SpamMLScorer::class.java.getDeclaredField("state").also { it.isAccessible = true }
+        val state = stateField.get(SpamMLScorer) ?: return null
+        val weightsField = state::class.java.getDeclaredField("weights").also { it.isAccessible = true }
+        return weightsField.get(state) as DoubleArray?
+    }
+
+    /** Parse JSON with parseModel and commit the resulting state. */
+    private fun parseAndCommit(json: String): Boolean {
+        val parseModel = SpamMLScorer::class.java.getDeclaredMethod("parseModel", String::class.java)
+            .also { it.isAccessible = true }
+        val parsed = parseModel.invoke(SpamMLScorer, json) ?: return false
+        val stateField = SpamMLScorer::class.java.getDeclaredField("state").also { it.isAccessible = true }
+        stateField.set(SpamMLScorer, parsed)
+        return true
+    }
+
     @Test
     fun backwardCompat_15featureWeights_paddedToTwenty() {
-        // Test the loadFallbackWeights parsing via parseAndApply.
-        // We use reflection to call parseAndApply with a v2 JSON containing 15 weights.
-        val parseAndApply = SpamMLScorer::class.java.getDeclaredMethod("parseAndApply", String::class.java)
-        parseAndApply.isAccessible = true
-
-        val weightsField = SpamMLScorer::class.java.getDeclaredField("weights")
-        weightsField.isAccessible = true
-
         val json = """
         {
             "version": 2,
@@ -371,10 +381,11 @@ class SpamMLScorerGbtTest {
         }
         """.trimIndent()
 
-        parseAndApply.invoke(SpamMLScorer, json)
+        assertTrue("parseModel should succeed for valid v2 JSON", parseAndCommit(json))
 
-        val weights = weightsField.get(SpamMLScorer) as DoubleArray
-        assertEquals(20, weights.size)
+        val weights = currentWeights()
+        assertNotNull(weights)
+        assertEquals(20, weights!!.size)
         // First 15 should be the original values
         assertEquals(1.0, weights[0], 0.0001)
         assertEquals(15.0, weights[14], 0.0001)
@@ -386,12 +397,6 @@ class SpamMLScorerGbtTest {
 
     @Test
     fun backwardCompat_20featureWeights_notPadded() {
-        val parseAndApply = SpamMLScorer::class.java.getDeclaredMethod("parseAndApply", String::class.java)
-        parseAndApply.isAccessible = true
-
-        val weightsField = SpamMLScorer::class.java.getDeclaredField("weights")
-        weightsField.isAccessible = true
-
         val weightsStr = (1..20).joinToString(", ") { "$it.0" }
         val json = """
         {
@@ -401,10 +406,11 @@ class SpamMLScorerGbtTest {
         }
         """.trimIndent()
 
-        parseAndApply.invoke(SpamMLScorer, json)
+        assertTrue("parseModel should succeed for valid v2 JSON", parseAndCommit(json))
 
-        val weights = weightsField.get(SpamMLScorer) as DoubleArray
-        assertEquals(20, weights.size)
+        val weights = currentWeights()
+        assertNotNull(weights)
+        assertEquals(20, weights!!.size)
         assertEquals(20.0, weights[19], 0.0001)
     }
 

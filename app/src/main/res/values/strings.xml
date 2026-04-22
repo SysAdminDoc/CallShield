@@ -162,6 +162,47 @@
     <string name="blocklist_empty_blocked_sub">Add a number or import an existing personal blocklist to start building your manual protections.</string>
     <string name="blocklist_empty_wildcards">No wildcard rules</string>
     <string name="blocklist_empty_wildcards_sub">Create a pattern rule when nuisance campaigns keep changing the last few digits.</string>
+    <!-- A5: Length-locked # wildcard patterns (Saracroche-style). -->
+    <string name="blocklist_tab_ranges_short">Ranges</string>
+    <string name="blocklist_overview_ranges_title">Length-locked ranges</string>
+    <string name="blocklist_overview_ranges_subtitle">Block an entire numbering range with a single pattern. Each # matches one digit; lengths must match exactly, so rules stay tight and predictable.</string>
+    <string name="blocklist_action_add_range">Add range</string>
+    <string name="blocklist_empty_ranges">No range rules</string>
+    <string name="blocklist_empty_ranges_sub">Paste a pattern like +33162###### to block an entire exchange in one rule.</string>
+    <string name="hash_wildcard_dialog_title">Add range pattern</string>
+    <string name="hash_wildcard_dialog_pattern_label">Pattern</string>
+    <string name="hash_wildcard_dialog_pattern_hint">+33162######</string>
+    <string name="hash_wildcard_dialog_description_label">Description (optional)</string>
+    <string name="hash_wildcard_dialog_help">Non-digit characters match themselves; # matches any single digit. The caller number must be exactly the same length as the pattern.</string>
+    <string name="hash_wildcard_dialog_empty_error">Enter a pattern containing at least one #.</string>
+    <string name="hash_wildcard_dialog_too_broad">Pattern would block more than 100,000,000 numbers. Narrow it down before saving.</string>
+    <string name="hash_wildcard_dialog_coverage_label">Covers %1$s numbers</string>
+    <string name="hash_wildcard_dialog_overlap_equal">Duplicate of an existing rule.</string>
+    <string name="hash_wildcard_dialog_overlap_covered">Already covered by existing rule %1$s.</string>
+    <string name="hash_wildcard_dialog_overlap_covers">This would also replace existing rule %1$s.</string>
+    <string name="hash_wildcard_dialog_add">Add range</string>
+    <string name="hash_wildcard_dialog_cancel">Cancel</string>
+    <string name="hash_wildcard_item_disabled">Disabled</string>
+    <string name="hash_wildcard_item_covers">Covers %1$s numbers</string>
+    <!-- A3: Push-alert bridge settings -->
+    <string name="settings_push_alert">Push-alert bridge</string>
+    <string name="settings_push_alert_desc">Let messaging, delivery, and rideshare notifications vouch for unknown callers. Requires notification access.</string>
+    <string name="settings_push_alert_sources">Configure trusted sources</string>
+    <string name="settings_push_alert_sources_count">%1$d of %2$d enabled</string>
+    <string name="push_alert_sources_title">Trusted notification sources</string>
+    <string name="push_alert_sources_body">Alerts from these apps can vouch for unknown callers within 30 minutes. Turn off any source you don\'t want to influence call screening.</string>
+    <string name="push_alert_sources_reset">Restore defaults</string>
+    <string name="push_alert_sources_not_installed">Not installed</string>
+    <string name="push_alert_sources_done">Done</string>
+    <!-- A7: Per-rule schedule gating -->
+    <string name="hash_wildcard_dialog_schedule_toggle">Only block during set hours</string>
+    <string name="hash_wildcard_dialog_schedule_days_label">Active days</string>
+    <string name="hash_wildcard_dialog_schedule_hours_label">Active hours</string>
+    <string name="hash_wildcard_dialog_schedule_all_day">All day</string>
+    <string name="hash_wildcard_dialog_schedule_needs_day">Select at least one day.</string>
+    <string name="hash_wildcard_dialog_schedule_start">Start</string>
+    <string name="hash_wildcard_dialog_schedule_end">End</string>
+    <string name="hash_wildcard_item_schedule">Active %1$s</string>
     <string name="blocklist_empty_keywords">No keyword rules</string>
     <string name="blocklist_empty_keywords_sub">Add phrases like bank alert or claim prize when spam texts reuse the same wording.</string>
     <string name="blocklist_empty_whitelist">No whitelisted numbers</string>

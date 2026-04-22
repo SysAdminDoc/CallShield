@@ -1,8 +1,11 @@
 package com.sysadmindoc.callshield.data.model
 
+import com.sysadmindoc.callshield.data.TimeSchedule
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.util.Calendar
+import java.util.GregorianCalendar
 
 class RuleValidationTest {
 
@@ -69,5 +72,47 @@ class RuleValidationTest {
         assertTrue("+12125551234" in variants)
         assertTrue("12125551234" in variants)
         assertTrue("2125551234" in variants)
+    }
+
+    // ── A7: schedule-aware match ──────────────────────────────────────
+
+    /** Wednesday 2026-04-22 12:00. */
+    private fun wednesdayNoon(): Calendar = GregorianCalendar(2026, Calendar.APRIL, 22, 12, 0)
+    /** Saturday 2026-04-18 12:00. */
+    private fun saturdayNoon(): Calendar = GregorianCalendar(2026, Calendar.APRIL, 18, 12, 0)
+
+    @Test
+    fun `WildcardRule without schedule is always active via matchesNow`() {
+        val rule = WildcardRule(pattern = "+1212*")
+        assertTrue(rule.matchesNow("2125551234", wednesdayNoon()))
+        assertTrue(rule.matchesNow("2125551234", saturdayNoon()))
+    }
+
+    @Test
+    fun `WildcardRule with weekday schedule skips weekend matches`() {
+        val sched = TimeSchedule.weekdaysAllDay()
+        val rule = WildcardRule(
+            pattern = "+1212*",
+            scheduleDays = sched.daysMask,
+            scheduleStartHour = sched.startHour,
+            scheduleEndHour = sched.endHour,
+        )
+        assertTrue(rule.matchesNow("2125551234", wednesdayNoon()))
+        assertFalse(rule.matchesNow("2125551234", saturdayNoon()))
+    }
+
+    @Test
+    fun `SmsKeywordRule respects schedule via matchesNow`() {
+        val rule = SmsKeywordRule(
+            keyword = "urgent",
+            scheduleDays = TimeSchedule.DAYS_WEEKDAYS,
+            scheduleStartHour = 9,
+            scheduleEndHour = 17,
+        )
+        // Inside window
+        assertTrue(rule.matchesNow("This is urgent", wednesdayNoon()))
+        // Same match, outside window
+        val wednesdayEvening = GregorianCalendar(2026, Calendar.APRIL, 22, 20, 0)
+        assertFalse(rule.matchesNow("This is urgent", wednesdayEvening))
     }
 }

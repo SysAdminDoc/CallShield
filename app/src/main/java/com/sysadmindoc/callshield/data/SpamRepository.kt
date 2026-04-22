@@ -1,15 +1,18 @@
 package com.sysadmindoc.callshield.data
 
 import android.content.Context
-import android.content.Intent
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
+import com.sysadmindoc.callshield.data.checker.BlockResult
+import com.sysadmindoc.callshield.data.checker.CheckContext
+import com.sysadmindoc.callshield.data.checker.CheckerPipeline
+import com.sysadmindoc.callshield.data.checker.IChecker
+import com.sysadmindoc.callshield.data.checker.SpamCheckers
 import com.sysadmindoc.callshield.data.local.AppDatabase
 import com.sysadmindoc.callshield.data.local.SpamDao
 import com.sysadmindoc.callshield.data.model.*
 import com.sysadmindoc.callshield.data.remote.GitHubDataSource
-import com.sysadmindoc.callshield.service.CallerIdOverlayService
 import com.sysadmindoc.callshield.service.NotificationHelper
 import com.sysadmindoc.callshield.ui.widget.CallShieldWidget
 import kotlinx.coroutines.Dispatchers
@@ -19,7 +22,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import java.util.Calendar
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "callshield_prefs")
 
@@ -37,6 +39,7 @@ class SpamRepository(private val context: Context) {
     @Volatile private var cachedPrefixes: List<SpamPrefix>? = null
     @Volatile private var cachedWildcardRules: List<WildcardRule>? = null
     @Volatile private var cachedKeywordRules: List<SmsKeywordRule>? = null
+    @Volatile private var cachedHashWildcardRules: List<HashWildcardRule>? = null
 
     private suspend fun getPrefixes(): List<SpamPrefix> {
         return cachedPrefixes ?: dao.getAllPrefixes().also { cachedPrefixes = it }
@@ -47,13 +50,18 @@ class SpamRepository(private val context: Context) {
     private suspend fun getActiveKeywords(): List<SmsKeywordRule> {
         return cachedKeywordRules ?: dao.getActiveKeywordRules().also { cachedKeywordRules = it }
     }
+    private suspend fun getActiveHashWildcards(): List<HashWildcardRule> {
+        return cachedHashWildcardRules ?: dao.getActiveHashWildcardRules().also { cachedHashWildcardRules = it }
+    }
     private fun invalidatePrefixCache() { cachedPrefixes = null }
     private fun invalidateWildcardCache() { cachedWildcardRules = null }
     private fun invalidateKeywordCache() { cachedKeywordRules = null }
+    private fun invalidateHashWildcardCache() { cachedHashWildcardRules = null }
     private fun invalidateAllCaches() {
         cachedPrefixes = null
         cachedWildcardRules = null
         cachedKeywordRules = null
+        cachedHashWildcardRules = null
     }
 
     companion object {
@@ -61,34 +69,47 @@ class SpamRepository(private val context: Context) {
         private val KEY_LAST_SYNC_SOURCE = stringPreferencesKey("last_sync_source")
         private val KEY_LAST_SHA = stringPreferencesKey("last_data_sha")
         private val KEY_DB_VERSION = intPreferencesKey("db_version")
-        private val KEY_BLOCK_CALLS = booleanPreferencesKey("block_calls_enabled")
-        private val KEY_BLOCK_SMS = booleanPreferencesKey("block_sms_enabled")
-        private val KEY_BLOCK_UNKNOWN = booleanPreferencesKey("block_unknown_enabled")
-        private val KEY_STIR_SHAKEN = booleanPreferencesKey("stir_shaken_enabled")
-        private val KEY_NEIGHBOR_SPOOF = booleanPreferencesKey("neighbor_spoof_enabled")
-        private val KEY_HEURISTICS = booleanPreferencesKey("heuristics_enabled")
-        private val KEY_SMS_CONTENT = booleanPreferencesKey("sms_content_analysis_enabled")
-        private val KEY_CONTACT_WHITELIST = booleanPreferencesKey("contact_whitelist_enabled")
-        private val KEY_AGGRESSIVE_MODE = booleanPreferencesKey("aggressive_mode_enabled")
+        val KEY_BLOCK_CALLS = booleanPreferencesKey("block_calls_enabled")
+        val KEY_BLOCK_SMS = booleanPreferencesKey("block_sms_enabled")
+        val KEY_BLOCK_UNKNOWN = booleanPreferencesKey("block_unknown_enabled")
+        val KEY_STIR_SHAKEN = booleanPreferencesKey("stir_shaken_enabled")
+        val KEY_NEIGHBOR_SPOOF = booleanPreferencesKey("neighbor_spoof_enabled")
+        val KEY_HEURISTICS = booleanPreferencesKey("heuristics_enabled")
+        val KEY_SMS_CONTENT = booleanPreferencesKey("sms_content_analysis_enabled")
+        val KEY_CONTACT_WHITELIST = booleanPreferencesKey("contact_whitelist_enabled")
+        val KEY_AGGRESSIVE_MODE = booleanPreferencesKey("aggressive_mode_enabled")
         // Feature 9: Time-based blocking
-        private val KEY_TIME_BLOCK = booleanPreferencesKey("time_block_enabled")
-        private val KEY_TIME_BLOCK_START = intPreferencesKey("time_block_start_hour") // 0-23
-        private val KEY_TIME_BLOCK_END = intPreferencesKey("time_block_end_hour")
+        val KEY_TIME_BLOCK = booleanPreferencesKey("time_block_enabled")
+        val KEY_TIME_BLOCK_START = intPreferencesKey("time_block_start_hour") // 0-23
+        val KEY_TIME_BLOCK_END = intPreferencesKey("time_block_end_hour")
         // Feature 10: Frequency auto-escalation
-        private val KEY_FREQ_ESCALATION = booleanPreferencesKey("freq_escalation_enabled")
-        private val KEY_FREQ_THRESHOLD = intPreferencesKey("freq_threshold")
+        val KEY_FREQ_ESCALATION = booleanPreferencesKey("freq_escalation_enabled")
+        val KEY_FREQ_THRESHOLD = intPreferencesKey("freq_threshold")
         private val KEY_ONBOARDING_DONE = booleanPreferencesKey("onboarding_done")
         private val KEY_AUTO_CLEANUP = booleanPreferencesKey("auto_cleanup_enabled")
         private val KEY_CLEANUP_DAYS = intPreferencesKey("cleanup_retention_days")
         private val KEY_ABSTRACT_API_KEY = stringPreferencesKey("abstract_api_key")
-        private val KEY_ML_SCORER = booleanPreferencesKey("ml_scorer_enabled")
-        private val KEY_RCS_FILTER = booleanPreferencesKey("rcs_filter_enabled")
+        val KEY_ML_SCORER = booleanPreferencesKey("ml_scorer_enabled")
+        val KEY_RCS_FILTER = booleanPreferencesKey("rcs_filter_enabled")
         // Silent voicemail mode: when enabled, blocked calls are silenced (no
         // ring) and routed to voicemail instead of hard-rejected. Less
         // disruptive — phone stays quiet, caller hears normal rings and
         // reaches voicemail, user can review later without the interruption
         // or the missed-call entry from a rejection.
-        private val KEY_SILENT_VOICEMAIL = booleanPreferencesKey("silent_voicemail_mode")
+        val KEY_SILENT_VOICEMAIL = booleanPreferencesKey("silent_voicemail_mode")
+        // A3 push-alert bridge — master toggle. When off, the registry is
+        // not fed by RcsNotificationListener and PushAlertChecker returns
+        // null unconditionally, so the pipeline behaves as if the feature
+        // didn't exist. Default on — the bridge is the single biggest
+        // false-positive fix and opt-in adoption would waste it.
+        val KEY_PUSH_ALERT = booleanPreferencesKey("push_alert_enabled")
+        // A3 source allowlist — opt-out semantics. The hardcoded default
+        // set lives in [PushAlertRegistry.ALERT_SOURCE_PACKAGES]; this
+        // StringSet records packages the user has turned OFF. An empty /
+        // missing preference means "use the full default set", so future
+        // additions to the default list propagate to existing users
+        // without them re-enabling anything.
+        val KEY_PUSH_ALERT_DISABLED = stringSetPreferencesKey("push_alert_disabled_packages")
 
         const val SYNC_SOURCE_REMOTE = "remote"
         const val SYNC_SOURCE_BUNDLED = "bundled"
@@ -130,9 +151,29 @@ class SpamRepository(private val context: Context) {
     val rcsFilterEnabled: Flow<Boolean> = dataStore.data.map { it[KEY_RCS_FILTER] ?: true }
     /** Off by default — some users want the missed-call log entry to confirm they were targeted. */
     val silentVoicemailEnabled: Flow<Boolean> = dataStore.data.map { it[KEY_SILENT_VOICEMAIL] ?: false }
+    val pushAlertEnabled: Flow<Boolean> = dataStore.data.map { it[KEY_PUSH_ALERT] ?: true }
+    /** Empty set is the default — means "no packages have been opted out". */
+    val pushAlertDisabledPackages: Flow<Set<String>> =
+        dataStore.data.map { it[KEY_PUSH_ALERT_DISABLED] ?: emptySet() }
     suspend fun setMlScorer(enabled: Boolean) = dataStore.edit { it[KEY_ML_SCORER] = enabled }
     suspend fun setRcsFilter(enabled: Boolean) = dataStore.edit { it[KEY_RCS_FILTER] = enabled }
     suspend fun setSilentVoicemail(enabled: Boolean) = dataStore.edit { it[KEY_SILENT_VOICEMAIL] = enabled }
+    suspend fun setPushAlert(enabled: Boolean) = dataStore.edit { it[KEY_PUSH_ALERT] = enabled }
+
+    /**
+     * Flip a single package between allowed and opted-out. Mutates the
+     * persisted [KEY_PUSH_ALERT_DISABLED] set — an empty result clears
+     * the key so the "use default" flow keeps working.
+     */
+    suspend fun togglePushAlertPackage(pkg: String, allowed: Boolean) = dataStore.edit { prefs ->
+        val current = prefs[KEY_PUSH_ALERT_DISABLED] ?: emptySet()
+        val next = if (allowed) current - pkg else current + pkg
+        if (next.isEmpty()) prefs.remove(KEY_PUSH_ALERT_DISABLED)
+        else prefs[KEY_PUSH_ALERT_DISABLED] = next
+    }
+
+    /** Restore the default allowlist by removing every opt-out. */
+    suspend fun resetPushAlertPackages() = dataStore.edit { it.remove(KEY_PUSH_ALERT_DISABLED) }
 
     suspend fun setOnboardingDone() = dataStore.edit { it[KEY_ONBOARDING_DONE] = true }
     suspend fun setAutoCleanup(enabled: Boolean) = dataStore.edit { it[KEY_AUTO_CLEANUP] = enabled }
@@ -155,6 +196,48 @@ class SpamRepository(private val context: Context) {
     suspend fun setTimeBlockEnd(hour: Int) = dataStore.edit { it[KEY_TIME_BLOCK_END] = hour }
     suspend fun setFreqEscalation(enabled: Boolean) = dataStore.edit { it[KEY_FREQ_ESCALATION] = enabled }
 
+    /**
+     * Read the full preferences snapshot once. Use this from hot paths
+     * (CallScreeningService, SmsReceiver) that need several settings at
+     * once — calling [Flow.first] per key regresses the 5-second deadline.
+     */
+    suspend fun readPrefsSnapshot(): Preferences = dataStore.data.first()
+
+    // ── Internal accessors for the checker pipeline ────────────────────
+    //
+    // Each checker lives in `data/checker` and needs narrow access to the
+    // DAO and the hot-path caches without exposing the full DAO surface
+    // to the rest of the app. These are `internal` (same Gradle module)
+    // and prefixed with `*Internal` to signal "not for general use".
+
+    internal suspend fun findWhitelistEntryInternal(normalized: String): WhitelistEntry? =
+        dao.findWhitelistEntry(normalized)
+
+    internal suspend fun findByNumberInternal(normalized: String): SpamNumber? =
+        dao.findByNumber(normalized)
+
+    internal suspend fun getPrefixesCachedInternal(): List<SpamPrefix> = getPrefixes()
+
+    internal suspend fun getActiveWildcardsCachedInternal(): List<WildcardRule> = getActiveWildcards()
+
+    internal suspend fun getActiveKeywordsCachedInternal(): List<SmsKeywordRule> = getActiveKeywords()
+
+    internal suspend fun getActiveHashWildcardsCachedInternal(): List<HashWildcardRule> = getActiveHashWildcards()
+
+    internal suspend fun getNumberFrequencySinceInternal(number: String, since: Long): Int =
+        dao.getNumberFrequencySince(number, since)
+
+    internal suspend fun getRecentBlockedNumbersInternal(since: Long): List<BlockedCall> =
+        dao.getRecentBlockedNumbers(since)
+
+    // ── Checker pipeline ───────────────────────────────────────────────
+    //
+    // Built lazily once per process (not per call) so the hot path doesn't
+    // pay the construction cost. Pre-sorted by priority descending.
+
+    private val callChain: List<IChecker> by lazy { SpamCheckers.buildCallChain(this, context) }
+    private val smsExtensions: List<IChecker> by lazy { SpamCheckers.buildSmsExtensions(this, context) }
+
     // ── Primary spam check ─────────────────────────────────────────────
     /**
      * @param realtimeCall `true` for live incoming calls/SMS (the default) —
@@ -164,147 +247,34 @@ class SpamRepository(private val context: Context) {
      *   historical unknowns sharing an NPA-NXX would otherwise flag that prefix
      *   as an active campaign for the next hour) and don't pop overlays for
      *   calls that already happened.
+     * @param prefsSnapshot caller-supplied prefs read. Pass a pre-loaded
+     *   snapshot to avoid repeating the DataStore read when the caller has
+     *   already taken one (e.g. CallShieldScreeningService).
      */
     suspend fun isSpam(
         number: String,
         smsBody: String? = null,
         realtimeCall: Boolean = true,
+        prefsSnapshot: Preferences? = null,
     ): SpamCheckResult {
         val normalized = normalizeNumber(number)
+        if (normalized.isBlank()) return SpamCheckResult(false)
 
-        // Read all preferences in one shot instead of 8+ separate
-        // Flow .first() calls. Each .first() spins up a collector —
-        // doing that 8× on the call-screening hot path wastes tens of
-        // milliseconds against the 5-second Android deadline.
-        val prefs = dataStore.data.first()
+        val prefs = prefsSnapshot ?: dataStore.data.first()
+        val ctx = CheckContext(
+            appContext = context,
+            number = normalized,
+            smsBody = smsBody,
+            realtimeCall = realtimeCall,
+            prefs = prefs,
+        )
 
-        // Manual whitelist — always allow. Emergency-flagged entries surface
-        // with `emergency_contact` matchSource so the block log + detail
-        // screen can show the distinct badge and narrative.
-        dao.findWhitelistEntry(normalized)?.let { entry ->
-            val source = if (entry.isEmergency) "emergency_contact" else "manual_whitelist"
-            return SpamCheckResult(false, matchSource = source)
-        }
+        // Priority-sorted pipeline — every detection layer is an IChecker.
+        // First non-null result wins. See data/checker/ for the 13 layers.
+        val verdict = CheckerPipeline.run(callChain, ctx)
+            ?: return SpamCheckResult(false)
 
-        // Contact whitelist
-        if ((prefs[KEY_CONTACT_WHITELIST] ?: true) && SpamHeuristics.isInContacts(context, normalized)) {
-            return SpamCheckResult(false, matchSource = "contact_whitelist")
-        }
-
-        // User blocklist + database match (single query)
-        val dbEntry = dao.findByNumber(normalized)
-        if (dbEntry != null) {
-            if (dbEntry.isUserBlocked) {
-                return SpamCheckResult(true, "user_blocklist", dbEntry.type, dbEntry.description)
-            }
-            return SpamCheckResult(true, "database", dbEntry.type, dbEntry.description)
-        }
-
-        // Prefix match (cached — invalidated on sync)
-        val prefixes = getPrefixes()
-        for (prefix in prefixes) {
-            if (normalized.startsWith(prefix.prefix)) {
-                return SpamCheckResult(true, "prefix", prefix.type, prefix.description)
-            }
-        }
-
-        // Feature 8: Wildcard/regex rules (cached — invalidated on edit)
-        val wildcards = getActiveWildcards()
-        for (rule in wildcards) {
-            if (rule.matches(normalized)) {
-                return SpamCheckResult(true, "wildcard", "blocked", rule.description)
-            }
-        }
-
-        // Dialed / repeated-call allow-through reduces false positives for
-        // unknown numbers, but it must never override exact database hits or
-        // explicit wildcard rules the user set intentionally.
-        if (CallbackDetector.wasRecentlyDialed(context, normalized)) {
-            return SpamCheckResult(false, matchSource = "recently_dialed")
-        }
-
-        if (CallbackDetector.isRepeatedUrgentCall(context, normalized)) {
-            return SpamCheckResult(false, matchSource = "repeated_urgent")
-        }
-
-        // Record only after the trusted allow-through checks above. Otherwise,
-        // repeated callbacks from family, coworkers, or businesses the user
-        // just contacted can poison the in-memory campaign detector and make
-        // future unknown callers from that prefix look like an active campaign.
-        if (realtimeCall) {
-            CampaignDetector.recordCall(normalized)
-        }
-
-        // Feature 9: Time-based blocking (block all non-contact unknowns during sleep hours)
-        if ((prefs[KEY_TIME_BLOCK] ?: false) && isInBlockedTimeWindow(prefs)) {
-            return SpamCheckResult(true, "time_block", "unknown", "Blocked during quiet hours")
-        }
-
-        // Feature 10: Frequency auto-escalation (7-day window)
-        // Time-windowed to prevent legitimate callers (e.g. doctor's office)
-        // with 3+ calls spread over months from being auto-blocked.
-        if (prefs[KEY_FREQ_ESCALATION] ?: true) {
-            val freqWindowMs = 7 * 86_400_000L // 7 days
-            val freq = dao.getNumberFrequencySince(normalized, System.currentTimeMillis() - freqWindowMs)
-            val threshold = (prefs[KEY_FREQ_THRESHOLD] ?: 3).coerceAtLeast(2)
-            if (freq >= threshold) {
-                return SpamCheckResult(true, "frequency", "repeat_caller", "Called $freq times in 7 days - auto-blocked")
-            }
-        }
-
-        // Heuristic engine
-        if (prefs[KEY_HEURISTICS] ?: true) {
-            val recentBlocked = dao.getRecentBlockedNumbers(System.currentTimeMillis() - 3600_000)
-            val hResult = SpamHeuristics.analyze(
-                context = context,
-                number = normalized,
-                smsBody = if (prefs[KEY_SMS_CONTENT] ?: true) smsBody else null,
-                recentBlockedNumbers = recentBlocked.map { it.number to it.timestamp }
-            )
-
-            val threshold = if (prefs[KEY_AGGRESSIVE_MODE] ?: false) 30 else 60
-
-            if (hResult.score >= threshold) {
-                return SpamCheckResult(
-                    isSpam = true,
-                    matchSource = "heuristic",
-                    type = classifyHeuristicReasons(hResult.reasons),
-                    description = hResult.reasons.joinToString(", ") { it.replace("_", " ") },
-                    confidence = hResult.score
-                )
-            }
-
-            // Feature 7: Caller ID overlay for suspicious but not blocked
-            // (only for real-time calls — don't surface overlays from scans)
-            if (realtimeCall && hResult.score >= 30 && hResult.score < threshold) {
-                showCallerIdOverlay(normalized, hResult.score, hResult.reasons.firstOrNull() ?: "suspicious")
-            }
-        }
-
-        // Layer 11.5: Campaign burst detection
-        if (CampaignDetector.isActiveCampaign(normalized)) {
-            return SpamCheckResult(
-                isSpam = true,
-                matchSource = "campaign_burst",
-                type = "robocall",
-                description = "Active spam campaign detected from this prefix",
-                confidence = 75
-            )
-        }
-
-        // Layer 15: On-device ML spam scorer
-        if ((prefs[KEY_ML_SCORER] ?: true) && SpamMLScorer.isSpam(normalized)) {
-            val mlConf = SpamMLScorer.confidence(normalized)
-            return SpamCheckResult(
-                isSpam = true,
-                matchSource = "ml_scorer",
-                type = "robocall",
-                description = "ML model: ${mlConf}% spam probability",
-                confidence = mlConf
-            )
-        }
-
-        return SpamCheckResult(false)
+        return verdict.toSpamCheckResult()
     }
 
     // ── SMS-specific check ─────────────────────────────────────────────
@@ -313,85 +283,30 @@ class SpamRepository(private val context: Context) {
         number: String,
         body: String,
         realtimeCall: Boolean = true,
+        prefsSnapshot: Preferences? = null,
     ): SpamCheckResult {
-        val numberResult = isSpam(number, smsBody = body, realtimeCall = realtimeCall)
+        // Shared number-based chain runs first. Only a positive spam
+        // verdict short-circuits — an allow-result (e.g. contact whitelist)
+        // lets SMS-specific layers still inspect the body, preserving the
+        // pre-refactor behavior where a contact's message could still be
+        // caught by keyword or content rules the user explicitly set.
+        val prefs = prefsSnapshot ?: dataStore.data.first()
+        val numberResult = isSpam(number, smsBody = body, realtimeCall = realtimeCall, prefsSnapshot = prefs)
         if (numberResult.isSpam) return numberResult
 
-        // Prior conversation trust — if user has sent to or regularly received
-        // from this number, bypass keyword/content analysis entirely.
-        // Checked after number-based blocking so a user-blocked number still blocks.
-        if (SmsContextChecker.isTrustedSender(context, number)) {
-            return SpamCheckResult(false, matchSource = "sms_context")
-        }
+        val normalized = normalizeNumber(number)
+        if (normalized.isBlank()) return SpamCheckResult(false)
+        val ctx = CheckContext(
+            appContext = context,
+            number = normalized,
+            smsBody = body,
+            realtimeCall = realtimeCall,
+            prefs = prefs,
+        )
+        val verdict = CheckerPipeline.run(smsExtensions, ctx)
+            ?: return SpamCheckResult(false)
 
-        // Custom SMS keyword rules (cached — invalidated on edit)
-        val keywords = getActiveKeywords()
-        for (rule in keywords) {
-            if (rule.matches(body)) {
-                return SpamCheckResult(true, "keyword", "sms_spam", "Keyword: ${rule.keyword}")
-            }
-        }
-
-        val smsPrefs = dataStore.data.first()
-        if (smsPrefs[KEY_SMS_CONTENT] ?: true) {
-            val smsResult = SmsContentAnalyzer.analyze(body)
-            val threshold = if (smsPrefs[KEY_AGGRESSIVE_MODE] ?: false) 25 else 50
-            if (smsResult.score >= threshold) {
-                return SpamCheckResult(
-                    isSpam = true,
-                    matchSource = "sms_content",
-                    type = "sms_spam",
-                    description = smsResult.reasons.joinToString(", ") { it.replace("_", " ") },
-                    confidence = smsResult.score
-                )
-            }
-        }
-
-        return SpamCheckResult(false)
-    }
-
-    private fun isInBlockedTimeWindow(prefs: Preferences): Boolean {
-        val start = (prefs[KEY_TIME_BLOCK_START] ?: 22).coerceIn(0, 23)
-        val end = (prefs[KEY_TIME_BLOCK_END] ?: 7).coerceIn(0, 23)
-        if (start == end) return false // Same hour = disabled
-        val now = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
-
-        // End hour is exclusive: "22 to 7" means block 22:00-6:59, allow at 7:00
-        return if (start < end) {
-            now >= start && now < end
-        } else {
-            now >= start || now < end // e.g., 22-7: block 22:00-6:59
-        }
-    }
-
-    private fun showCallerIdOverlay(
-        number: String,
-        confidence: Int,
-        reason: String,
-        verificationStatus: Int = CallerIdOverlayService.VERIFICATION_STATUS_UNKNOWN,
-    ) {
-        try {
-            val intent = Intent(context, CallerIdOverlayService::class.java).apply {
-                putExtra("number", number)
-                putExtra("confidence", confidence)
-                putExtra("reason", reason)
-                putExtra("verification_status", verificationStatus)
-            }
-            context.startService(intent)
-        } catch (_: Exception) {}
-    }
-
-    private fun classifyHeuristicReasons(reasons: List<String>): String {
-        return when {
-            "premium_rate" in reasons -> "premium_scam"
-            "wangiri_country" in reasons -> "wangiri_scam"
-            "neighbor_spoof" in reasons -> "spoofed"
-            "rapid_fire" in reasons -> "robocall"
-            "spam_keywords" in reasons -> "sms_spam"
-            "shortened_url" in reasons || "suspicious_tld" in reasons -> "phishing"
-            "voip_spam_range" in reasons -> "robocall"
-            else -> "suspicious"
-        }
+        return verdict.toSpamCheckResult()
     }
 
     // ── Sync ───────────────────────────────────────────────────────────
@@ -559,14 +474,22 @@ class SpamRepository(private val context: Context) {
     // ── Wildcard rules (Feature 8) ─────────────────────────────────────
     fun getAllWildcardRules(): Flow<List<WildcardRule>> = dao.getAllWildcardRules()
 
-    suspend fun addWildcardRule(pattern: String, isRegex: Boolean = false, description: String = "") {
+    suspend fun addWildcardRule(
+        pattern: String,
+        isRegex: Boolean = false,
+        description: String = "",
+        schedule: TimeSchedule = TimeSchedule(),
+    ) {
         val trimmedPattern = pattern.trim()
         if (trimmedPattern.isBlank()) return
         dao.insertWildcardRule(
             WildcardRule(
                 pattern = trimmedPattern,
                 isRegex = isRegex,
-                description = description.trim()
+                description = description.trim(),
+                scheduleDays = schedule.daysMask,
+                scheduleStartHour = schedule.startHour.coerceIn(0, 23),
+                scheduleEndHour = schedule.endHour.coerceIn(0, 23),
             )
         )
         invalidateWildcardCache()
@@ -580,6 +503,43 @@ class SpamRepository(private val context: Context) {
     suspend fun toggleWildcardRule(id: Long, enabled: Boolean) {
         dao.setWildcardRuleEnabled(id, enabled)
         invalidateWildcardCache()
+    }
+
+    // ── Hash wildcard rules (A5, length-locked `#` patterns) ───────────
+    fun getAllHashWildcardRules(): Flow<List<HashWildcardRule>> = dao.getAllHashWildcardRules()
+
+    suspend fun addHashWildcardRule(
+        pattern: String,
+        description: String = "",
+        schedule: TimeSchedule = TimeSchedule(),
+    ): Boolean {
+        val trimmed = pattern.trim()
+        // Minimal validation: at least one `#`, at most 30 chars, pattern is
+        // non-empty after trim. Broader validation (overlap, coverage size)
+        // is the UI's job — we don't want to reject arbitrary user patterns
+        // here unless they literally cannot match anything.
+        if (trimmed.isBlank() || trimmed.length > 30) return false
+        dao.insertHashWildcardRule(
+            HashWildcardRule(
+                pattern = trimmed,
+                description = description.trim(),
+                scheduleDays = schedule.daysMask,
+                scheduleStartHour = schedule.startHour.coerceIn(0, 23),
+                scheduleEndHour = schedule.endHour.coerceIn(0, 23),
+            )
+        )
+        invalidateHashWildcardCache()
+        return true
+    }
+
+    suspend fun deleteHashWildcardRule(rule: HashWildcardRule) {
+        dao.deleteHashWildcardRule(rule)
+        invalidateHashWildcardCache()
+    }
+
+    suspend fun toggleHashWildcardRule(id: Long, enabled: Boolean) {
+        dao.setHashWildcardRuleEnabled(id, enabled)
+        invalidateHashWildcardCache()
     }
 
     // ── Call log ───────────────────────────────────────────────────────
@@ -611,7 +571,7 @@ class SpamRepository(private val context: Context) {
     suspend fun insertBlockedCall(call: BlockedCall) = dao.insertBlockedCall(call)
 
     // ── Search ─────────────────────────────────────────────────────────
-    fun searchNumbers(query: String): Flow<List<SpamNumber>> = dao.searchNumbers(query)
+    fun searchNumbers(query: String): Flow<List<SpamNumber>> = dao.searchNumbers(escapeLikeQuery(query))
 
     // ── Whitelist management ───────────────────────────────────────────
     fun getAllWhitelist(): Flow<List<WhitelistEntry>> = dao.getAllWhitelist()
@@ -681,14 +641,22 @@ class SpamRepository(private val context: Context) {
     // ── SMS keyword rules ────────────────────────────────────────────
     fun getAllKeywordRules(): Flow<List<SmsKeywordRule>> = dao.getAllKeywordRules()
 
-    suspend fun addKeywordRule(keyword: String, caseSensitive: Boolean = false, description: String = "") {
+    suspend fun addKeywordRule(
+        keyword: String,
+        caseSensitive: Boolean = false,
+        description: String = "",
+        schedule: TimeSchedule = TimeSchedule(),
+    ) {
         val trimmedKeyword = keyword.trim()
         if (trimmedKeyword.isBlank()) return
         dao.insertKeywordRule(
             SmsKeywordRule(
                 keyword = trimmedKeyword,
                 caseSensitive = caseSensitive,
-                description = description.trim()
+                description = description.trim(),
+                scheduleDays = schedule.daysMask,
+                scheduleStartHour = schedule.startHour.coerceIn(0, 23),
+                scheduleEndHour = schedule.endHour.coerceIn(0, 23),
             )
         )
         invalidateKeywordCache()
@@ -704,7 +672,7 @@ class SpamRepository(private val context: Context) {
     }
 
     // ── Search log ───────────────────────────────────────────────────
-    fun searchLog(query: String): Flow<List<BlockedCall>> = dao.searchLog(query)
+    fun searchLog(query: String): Flow<List<BlockedCall>> = dao.searchLog(escapeLikeQuery(query))
 
     fun normalizeNumber(number: String): String {
         val trimmed = number.trim()
@@ -717,6 +685,28 @@ class SpamRepository(private val context: Context) {
         }
     }
 }
+
+/**
+ * Escape the SQL LIKE wildcard characters so user-typed `%` or `_` is
+ * treated literally (prevents a blank/"%" search from returning the
+ * whole table). Paired with an ESCAPE '\' clause on the Room queries.
+ */
+internal fun escapeLikeQuery(query: String): String =
+    query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
+/**
+ * Bridge between the new [BlockResult] type returned by the checker
+ * pipeline and the older [SpamCheckResult] shape consumed by the rest
+ * of the app (UI, service, notification code). Keeps the checker
+ * internals decoupled from legacy call sites.
+ */
+internal fun BlockResult.toSpamCheckResult(): SpamCheckResult = SpamCheckResult(
+    isSpam = shouldBlock,
+    matchSource = matchSource,
+    type = type,
+    description = description,
+    confidence = confidence,
+)
 
 internal fun sanitizeDatabaseNumbers(
     databaseNumbers: Collection<SpamNumberJson>,
