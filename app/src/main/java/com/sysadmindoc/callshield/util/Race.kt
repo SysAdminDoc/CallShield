@@ -61,24 +61,33 @@ suspend fun <C, T> race(
     val channel = Channel<T>(Channel.UNLIMITED)
     val remaining = AtomicInteger(competitors.size)
 
+    // Private sealed outcome — keeps failure distinct from "a real value
+    // the block happened to return". This prevents a thrown exception
+    // from synthesizing `onTimeout` and winning the race just because
+    // `decisive(onTimeout)` happens to be true for this caller.
     return coroutineScope {
         for (competitor in competitors) {
             launch {
-                val result = try {
-                    block(competitor)
+                val outcome: Outcome<T> = try {
+                    Outcome.Ok(block(competitor))
                 } catch (e: CancellationException) {
                     throw e
                 } catch (_: Throwable) {
-                    // Competitor failure — count toward the "remaining" tally
-                    // but don't propagate. Race continues with the survivors.
-                    onTimeout
+                    Outcome.Failed
                 }
-                if (decisive(result)) {
-                    channel.trySend(result)
-                } else if (remaining.decrementAndGet() == 0) {
-                    // Everyone finished non-decisively. Publish `onTimeout`
-                    // so the receiver wakes up instead of blocking forever.
-                    channel.trySend(onTimeout)
+                when (outcome) {
+                    is Outcome.Ok -> {
+                        if (decisive(outcome.value)) {
+                            channel.trySend(outcome.value)
+                        } else if (remaining.decrementAndGet() == 0) {
+                            channel.trySend(onTimeout)
+                        }
+                    }
+                    Outcome.Failed -> {
+                        if (remaining.decrementAndGet() == 0) {
+                            channel.trySend(onTimeout)
+                        }
+                    }
                 }
             }
         }
@@ -92,6 +101,15 @@ suspend fun <C, T> race(
         channel.close()
         winner
     }
+}
+
+/**
+ * Internal outcome wrapper used by [race] to keep "failure" distinct
+ * from "the block returned onTimeout." Callers never see this type.
+ */
+private sealed interface Outcome<out T> {
+    data class Ok<T>(val value: T) : Outcome<T>
+    data object Failed : Outcome<Nothing>
 }
 
 /**

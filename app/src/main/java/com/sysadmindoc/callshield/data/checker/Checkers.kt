@@ -51,6 +51,41 @@ internal class ContactWhitelistChecker(private val appContext: Context) : ICheck
     }
 }
 
+/**
+ * STIR/SHAKEN — carrier-signed attestation. On Android 11+ the telecom
+ * stack exposes [android.telecom.Call.Details.callerNumberVerificationStatus];
+ * `VERIFICATION_STATUS_FAILED` is a very strong spam signal (the carrier
+ * actively believes the calling number is spoofed).
+ *
+ * Sits BELOW the manual-whitelist + contact-whitelist tier so users who
+ * have explicitly trusted a number — emergency contacts on a legacy
+ * PBX, a relative on an old VoIP trunk that hasn't deployed STIR — can
+ * still ring through. Moved here from the screening service for exactly
+ * this reason after a v1.6.0 code review.
+ *
+ * Gated on both the user setting and the runtime ability to read a
+ * verification status (non-null); skipped for historical scans and SMS.
+ */
+internal class StirShakenChecker : IChecker {
+    override val priority = CheckerPriority.STIR_SHAKEN
+    override val name = "stir_shaken_failed"
+
+    override suspend fun isEnabled(ctx: CheckContext): Boolean =
+        (ctx.prefs[SpamRepository.KEY_STIR_SHAKEN] ?: true) && ctx.verificationStatus != null
+
+    override suspend fun check(ctx: CheckContext): BlockResult? {
+        @Suppress("DEPRECATION")
+        val failed = ctx.verificationStatus == android.telecom.Connection.VERIFICATION_STATUS_FAILED
+        return if (failed) {
+            BlockResult.block(
+                matchSource = "stir_shaken_failed",
+                type = "spoofed",
+                description = "Carrier could not verify caller identity"
+            )
+        } else null
+    }
+}
+
 // ─────────────────────────────────────────────────────────────────────
 // Block-side: explicit user / DB / rule matches
 // ─────────────────────────────────────────────────────────────────────

@@ -2,6 +2,30 @@
 
 All notable changes to CallShield will be documented in this file.
 
+## [v1.6.1] - 2026-04-22
+
+Post-release audit fixes. Every item came out of a v1.6.0 code review;
+no new features.
+
+### Fixed (critical)
+- **STIR/SHAKEN bypassed whitelist**: `CallShieldScreeningService` ran the STIR check inline *before* `isSpam()`, so a user's manual whitelist entry (emergency contact added via the app UI, not the device address book) was hard-rejected whenever the caller failed carrier verification. STIR is now a regular `IChecker` at priority 8,500 — below MANUAL_WHITELIST (10k) and CONTACT_WHITELIST (9k), above every block. Verification status threaded through `CheckContext.verificationStatus`.
+
+### Fixed (high)
+- **PushAlertChecker direct-number match anchoring**: a spam caller's last 7 digits appearing as a *substring* of any digit run in a recent notification (order ID, tracking number, dial-in PIN) used to return `allow("push_alert")`. Now anchored with `(?<!\d)…(?!\d)` boundaries so only standalone 7-digit runs qualify. TTL on both match paths unified to 10 minutes (was 30 min for number match).
+- **PushAlertChecker trust-phrase list tightened**: dropped the bare `calendar` regex (matched any notification mentioning "calendar"). Tightened `(is |has )?outside` to require a subject word ("is outside", "arriving outside", "I'm outside", "we're outside") so weather notifications no longer fire it.
+- **Verification/MFA phrases now package-gated**: "verify", "verification code", "OTP" etc. only fire for the four messaging-app packages that actually send SMS codes. Outlook MFA pushes no longer unblock unrelated callers. `appointment reminder` is gated to calendar apps.
+
+### Fixed (medium)
+- `util/Race.kt`: a competitor that threw was synthesizing `onTimeout` as its result and, for callers where `decisive(onTimeout) == true`, winning the race on the failure. Now failures are tracked as a separate state and only decrement the `remaining` tally.
+- `PushAlertRegistry` opt-out updates are now atomic via `applyOptOuts(Set)`: prune-before-publish eliminates the window where a concurrent screening verdict could read stale alerts from a just-disabled package. Defensive `HashSet(disabled)` copy on every write guards future callers.
+- `SystemBlockList.isBlocked`: a `SecurityException` (default-dialer role revoked mid-session) now clears the lookup cache in addition to marking availability off — prevents a stale `true` entry from the previous role session influencing subsequent checks.
+
+### Fixed (low)
+- `CheckerPipeline.run` now bails before each checker when `ctx.timeLeftMillis() <= 0` — cheap insurance in case a future checker blocks long enough to eat the 5-second deadline.
+
+### Added
+- `PushAlertCheckerTest` — 11 regression tests pinning the H1/H2/H3 fixes (anchored digit match, dropped bare phrases, package-gated MFA).
+
 ## [v1.6.0] - 2026-04-22
 
 Peer-inspired track — features ported from the strongest OSS Android call/SMS blockers

@@ -70,17 +70,13 @@ class RcsNotificationListener : NotificationListenerService() {
             }
         }
         // A3 allowlist editor: push the user's opt-outs into the registry
-        // so the hot-path filter is lock-free. When a package flips off,
-        // drop any of its cached alerts so the checker doesn't fire on
-        // stale content captured under the previous allowlist.
+        // so the hot-path filter is lock-free. Prune cached alerts for
+        // newly-disabled packages BEFORE publishing the new set — calling
+        // applyOptOuts ensures a concurrent screening verdict can't
+        // consume stale alerts from a just-disabled source.
         scope.launch {
             repo.pushAlertDisabledPackages.collectLatest { disabled ->
-                val previous = PushAlertRegistry.currentDisabledPackages()
-                PushAlertRegistry.setDisabledPackages(disabled)
-                val newlyDisabled = disabled - previous
-                if (newlyDisabled.isNotEmpty()) {
-                    PushAlertRegistry.pruneByPackages(newlyDisabled)
-                }
+                PushAlertRegistry.applyOptOuts(disabled)
             }
         }
     }

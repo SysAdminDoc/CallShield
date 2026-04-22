@@ -77,9 +77,31 @@ object PushAlertRegistry {
     @Volatile
     private var disabledPackages: Set<String> = emptySet()
 
-    /** Called from the listener's preference observer; lock-free on the hot path. */
+    /**
+     * Called from the listener's preference observer; lock-free on the hot
+     * path. Defensive `HashSet(...)` copy guards against future callers
+     * passing a mutable set — today's caller is a DataStore-backed
+     * immutable set so the copy is cheap insurance.
+     */
     fun setDisabledPackages(disabled: Set<String>) {
-        disabledPackages = disabled.toSet()
+        disabledPackages = HashSet(disabled)
+    }
+
+    /**
+     * Apply an opt-out update atomically: prune first (so already-cached
+     * alerts from newly-disabled packages can't slip into a concurrent
+     * screening verdict), then publish the new disabled set. Use this
+     * instead of calling [setDisabledPackages] + [pruneByPackages]
+     * separately — the two-step pattern had a visible race where stale
+     * alerts from newly-disabled packages were still reachable via
+     * [snapshot] between the writes.
+     */
+    fun applyOptOuts(disabled: Set<String>) {
+        val newlyDisabled = disabled - disabledPackages
+        if (newlyDisabled.isNotEmpty()) {
+            pruneByPackages(newlyDisabled)
+        }
+        disabledPackages = HashSet(disabled)
     }
 
     /** Snapshot of the active opt-out set — used by the listener to detect flips. */

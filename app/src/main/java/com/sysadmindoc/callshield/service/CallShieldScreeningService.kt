@@ -45,7 +45,10 @@ class CallShieldScreeningService : CallScreeningService() {
                     return@launch
                 }
 
-                // Contact whitelist — cached inside SpamHeuristics so this stays cheap
+                // Contact whitelist — cached inside SpamHeuristics so this stays cheap.
+                // Fast-path shortcut before we run the pipeline: a contact never
+                // needs any of the 13 downstream checks, and skipping them saves
+                // tens of milliseconds against the 5 s deadline.
                 if ((prefs[SpamRepository.KEY_CONTACT_WHITELIST] ?: true) &&
                     SpamHeuristics.isInContacts(appContext, number)
                 ) {
@@ -53,20 +56,20 @@ class CallShieldScreeningService : CallScreeningService() {
                     return@launch
                 }
 
-                // STIR/SHAKEN
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
-                    (prefs[SpamRepository.KEY_STIR_SHAKEN] ?: true)
-                ) {
-                    val verstat = callDetails.callerNumberVerificationStatus
-                    @Suppress("DEPRECATION")
-                    if (verstat == android.telecom.Connection.VERIFICATION_STATUS_FAILED) {
-                        respondBlock(callDetails, number, "stir_shaken_failed", prefs = prefs)
-                        return@launch
-                    }
-                }
+                // STIR/SHAKEN now lives in the pipeline as StirShakenChecker so a
+                // MANUAL_WHITELIST or CONTACT_WHITELIST entry can override it. We
+                // just forward the verification status through the pipeline.
+                val verificationStatus: Int? =
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                        callDetails.callerNumberVerificationStatus
+                    } else null
 
                 // Full spam check — reuses the snapshot so we don't re-read DataStore.
-                val result = repo.isSpam(number, prefsSnapshot = prefs)
+                val result = repo.isSpam(
+                    number = number,
+                    prefsSnapshot = prefs,
+                    verificationStatus = verificationStatus,
+                )
                 if (result.isSpam) {
                     respondBlock(
                         callDetails = callDetails,
