@@ -3,10 +3,15 @@ package com.sysadmindoc.callshield.data.model
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import com.sysadmindoc.callshield.data.TimeSchedule
+import java.util.Calendar
 
 /**
  * Feature 8: Wildcard/regex blocking rules.
- * Supports patterns like "832555*" or regex like "^\\+1832555\\d{4}$"
+ * Supports patterns like "832555*" or regex like "^\\+1832555\\d{4}$".
+ *
+ * A7 (v8→v9): carries an optional schedule. `scheduleDays == 0` means
+ * "always active". See [com.sysadmindoc.callshield.data.TimeSchedule].
  */
 @Entity(
     tableName = "wildcard_rules",
@@ -17,8 +22,23 @@ data class WildcardRule(
     val pattern: String,         // e.g., "+1832555*" or regex
     val isRegex: Boolean = false,
     val description: String = "",
-    val enabled: Boolean = true
+    val enabled: Boolean = true,
+    val scheduleDays: Int = 0,
+    val scheduleStartHour: Int = 0,
+    val scheduleEndHour: Int = 0,
 ) {
+    val schedule: TimeSchedule
+        get() = TimeSchedule(scheduleDays, scheduleStartHour, scheduleEndHour)
+
+    /**
+     * Schedule-aware match. Short-circuits on the schedule before running
+     * the (potentially expensive) regex compile + match.
+     */
+    fun matchesNow(number: String, calendar: Calendar = Calendar.getInstance()): Boolean {
+        if (!schedule.isActiveAt(calendar)) return false
+        return matches(number)
+    }
+
     fun matches(number: String): Boolean {
         val normalizedPattern = pattern.trim()
         if (normalizedPattern.isBlank()) return false

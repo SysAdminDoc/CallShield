@@ -70,7 +70,7 @@ object SmsContentAnalyzer {
     )
 
     // Phone number in SMS body (common in callback scams)
-    private val PHONE_IN_BODY = Regex("(?:call|dial|text|contact)\\s*(?:us\\s+(?:at|on))?\\s*\\+?\\d[\\d\\s\\-()]{7,}")
+    private val PHONE_IN_BODY = Regex("(?:call|dial|text|contact)\\s*(?:us\\s+(?:at|on))?\\s*\\+?\\d[\\d\\s\\-()]{7,}", RegexOption.IGNORE_CASE)
 
     // URL pattern — length-capped to prevent ReDoS on pathological inputs
     private val URL_PATTERN = Regex("https?://[^\\s]{1,2048}|www\\.[^\\s]{1,2048}|[a-zA-Z0-9][a-zA-Z0-9-]*\\.[a-zA-Z]{2,}/[^\\s]{0,2048}")
@@ -99,8 +99,6 @@ object SmsContentAnalyzer {
         val reasons = mutableListOf<String>()
 
         if (body.isBlank()) return SmsAnalysisResult(0, emptyList())
-
-        val lower = body.lowercase()
 
         // Check for URL shorteners (high spam signal)
         val urls = URL_PATTERN.findAll(body).map { it.value.lowercase() }.toList()
@@ -148,8 +146,9 @@ object SmsContentAnalyzer {
             reasons.add("excessive_caps")
         }
 
-        // Contains phone number in body (callback scam)
-        if (PHONE_IN_BODY.containsMatchIn(lower)) {
+        // Contains phone number in body (callback scam) — regex is
+        // case-insensitive so we match the original body instead of lowercasing.
+        if (PHONE_IN_BODY.containsMatchIn(body)) {
             score += 10
             reasons.add("callback_number")
         }

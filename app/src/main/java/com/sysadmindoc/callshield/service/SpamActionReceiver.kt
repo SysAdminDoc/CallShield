@@ -5,12 +5,10 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.widget.Toast
+import com.sysadmindoc.callshield.CallShieldApp
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.CommunityContributor
 import com.sysadmindoc.callshield.data.SpamRepository
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
 class SpamActionReceiver : BroadcastReceiver() {
@@ -78,8 +76,13 @@ class SpamActionReceiver : BroadcastReceiver() {
             else -> null
         } ?: return
 
+        // Previously this created a fresh CoroutineScope(SupervisorJob+IO) per
+        // broadcast, which was never cancelled and leaked a Job on every
+        // action. Reuse the process-wide appScope — the work must outlive
+        // onReceive anyway (goAsync covers the broadcast lifetime, not the
+        // suspend body).
         val pendingResult = goAsync()
-        CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
+        CallShieldApp.appScope.launch {
             try {
                 work.invoke()
             } finally {

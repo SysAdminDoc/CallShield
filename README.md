@@ -42,33 +42,40 @@ CallShield blocks spam calls and texts using a **15+ layer on-device detection e
 5. **Callback-aware** — won't block callbacks from numbers you recently called, or urgent repeated callers
 6. **Community-driven** — one-tap anonymous contribution via Cloudflare Worker, daily merge into database
 
-## Detection Layers
+## Detection Pipeline (v1.6.0)
 
-| # | Layer | How It Works |
-|---|-------|-------------|
-| 1 | **Manual Whitelist** | Numbers you've explicitly marked as always-allow |
-| 2 | **Contact Whitelist** | Numbers in your phone's contacts always pass through |
-| 3 | **Callback Detection** | Numbers you recently called (24h) are allowed — they're callbacks |
-| 4 | **Repeated Urgent Caller** | Same number calls 2x in 5 minutes → allowed through |
-| 5 | **User Blocklist** | Your personal block list with descriptions |
-| 6 | **Database Match** | 32,933 confirmed spam numbers + hot list (refreshed every 30 min) |
-| 7 | **Prefix Rules** | Wangiri country codes, US premium rate (+1900), international premium |
-| 8 | **Wildcard / Regex** | Custom pattern rules like `+1832555*` or full regex |
-| 9 | **Quiet Hours** | Block all non-contact calls during configurable hours |
-| 10 | **Frequency Auto-Block** | Numbers that call 3+ times get automatically blocked |
-| 11 | **Heuristic Engine** | VoIP ranges, neighbor spoofing, rapid-fire detection |
-| 11.5 | **Campaign Burst Detection** | NPA-NXX prefix clustering detects coordinated spam waves |
-| 12 | **Caller ID Overlay** | Suspicious calls (score 30-59) get live multi-source lookup |
-| 13 | **SMS Keyword Rules** | Block texts containing specific words you define |
-| 14 | **SMS Content Analysis** | 30+ regex patterns, URL shorteners, suspicious TLDs, spam domain blocklist |
-| 15 | **ML Spam Scorer** | 20-feature on-device gradient-boosted tree model (weekly retrained) |
+All detection layers implement a shared `IChecker` interface and run in priority order via `CheckerPipeline.run` — first non-null result wins, every layer is testable in isolation. Priorities are stable numbers; the ladder below is the live order.
+
+| Priority | Layer | Verdict | How It Works |
+|---------:|-------|---------|-------------|
+| 10000 | **Manual Whitelist** | Allow | Numbers you've explicitly marked as always-allow |
+|  9000 | **Contact Whitelist** | Allow | Numbers in your phone's contacts always pass through |
+|  7000 | **User Blocklist + Database** | Block | Personal blocklist + 32,933 confirmed spam numbers + hot list (refreshed every 30 min) |
+|  6900 | **System Block List** (A4) | Block | Read-only bridge to Android's `BlockedNumberContract` — respects stock Phone/Messages blocks |
+|  6000 | **Prefix Rules** | Block | Wangiri country codes, US premium rate (+1900), international premium |
+|  5500 | **Wildcard / Regex** | Block | Custom patterns like `+1832555*` or full regex, now with optional schedule |
+|  5400 | **Range Patterns** (A5) | Block | Length-locked `#` patterns like `+33162######`, with schedule + coverage safety rail |
+|  5000 | **Recently Dialed** | Allow | Numbers you called in the last 24h — they're probably calling back |
+|  4900 | **Repeated Urgent** | Allow | Same number calls 2x in 5 min → allowed through |
+|  4700 | **Push-Alert Bridge** (A3) | Allow | Uber/DoorDash/Amazon/Gmail notification about an arriving call? Let it through |
+|  4500 | *Campaign Recorder* | — | Side-effect only; feeds burst detection below |
+|  4000 | **Quiet Hours** | Block | Block all non-contact calls during configurable hours |
+|  3500 | **Frequency Auto-Block** | Block | Numbers that call 3+ times in 7 days get auto-blocked |
+|  3000 | **Heuristic Engine** | Block | VoIP ranges, neighbor spoofing, rapid-fire detection, 30+ rules |
+|  2500 | **Campaign Burst** | Block | NPA-NXX prefix clustering detects coordinated spam waves |
+|  2000 | **ML Spam Scorer** | Block | 20-feature on-device gradient-boosted tree model |
+
+SMS-specific layers (append after the shared chain): **SMS Context Trust** → **SMS Keyword Rules** (with schedule) → **SMS Content Analysis** (30+ regex patterns, URL shorteners, suspicious TLDs, spam domain blocklist).
 
 ### Additional Layers
-- **SMS Context Trust** — messages from numbers you've texted or received from on 2+ days are allowed
+- **Caller ID Overlay** — suspicious calls (heuristic score 30-59) trigger a live multi-source lookup overlay with SkipCalls, PhoneBlock, WhoCalledMe + OpenCNAM caller name
 - **RCS Filter** — NotificationListenerService monitors Google/Samsung Messages for RCS spam
 - **URL Safety** — URLhaus (abuse.ch) checks for phishing/malware URLs in SMS/RCS (post-decision, notification only)
 - **STIR/SHAKEN** — blocks calls failing carrier caller ID verification (Android 11+)
 - **After-Call Feedback** — "Was this spam?" notification after suspicious calls for community reporting
+
+### Per-Rule Schedules (A7)
+Any wildcard, range, or SMS keyword rule can be time-gated to specific days of the week and an hour window. The hour picker supports overnight wrap; `daysMask = 0` is the "no gating" sentinel so rules created before v1.6 behave identically.
 
 ## Live Caller ID Overlay
 

@@ -11,7 +11,9 @@ import com.sysadmindoc.callshield.data.BlocklistExporter
 import com.sysadmindoc.callshield.data.CommunityContributor
 import com.sysadmindoc.callshield.data.LogExporter
 import com.sysadmindoc.callshield.data.SpamRepository
+import com.sysadmindoc.callshield.data.TimeSchedule
 import com.sysadmindoc.callshield.data.model.BlockedCall
+import com.sysadmindoc.callshield.data.model.HashWildcardRule
 import com.sysadmindoc.callshield.data.model.SpamNumber
 import com.sysadmindoc.callshield.data.model.SmsKeywordRule
 import com.sysadmindoc.callshield.data.model.WhitelistEntry
@@ -74,6 +76,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     val wildcardRules: StateFlow<List<WildcardRule>> = repo.getAllWildcardRules()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    val hashWildcardRules: StateFlow<List<HashWildcardRule>> = repo.getAllHashWildcardRules()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     val whitelistEntries: StateFlow<List<WhitelistEntry>> = repo.getAllWhitelist()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -124,6 +129,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     val mlScorerEnabled = repo.mlScorerEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
     val rcsFilterEnabled = repo.rcsFilterEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
     val silentVoicemailEnabled = repo.silentVoicemailEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+    val pushAlertEnabled = repo.pushAlertEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+    val pushAlertDisabledPackages = repo.pushAlertDisabledPackages
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
     val abstractApiKey = repo.abstractApiKey.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
 
     private val _syncState = MutableStateFlow<SyncState>(SyncState.Idle)
@@ -229,14 +237,43 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun clearLog() { viewModelScope.launch { repo.clearCallLog() } }
 
     // Wildcards
-    fun addWildcardRule(pattern: String, isRegex: Boolean, description: String) {
-        viewModelScope.launch { repo.addWildcardRule(pattern, isRegex, description) }
+    fun addWildcardRule(
+        pattern: String,
+        isRegex: Boolean,
+        description: String,
+        schedule: TimeSchedule = TimeSchedule(),
+    ) {
+        viewModelScope.launch { repo.addWildcardRule(pattern, isRegex, description, schedule) }
     }
     fun deleteWildcardRule(rule: WildcardRule) { viewModelScope.launch { repo.deleteWildcardRule(rule) } }
 
+    // Hash wildcard rules (A5 — length-locked `#` patterns)
+    //
+    // addHashWildcardRule returns a Boolean via the repository but the
+    // ViewModel wrapper is fire-and-forget — the Compose layer validates
+    // patterns before calling this so any rejected write is already a bug.
+    fun addHashWildcardRule(
+        pattern: String,
+        description: String = "",
+        schedule: TimeSchedule = TimeSchedule(),
+    ) {
+        viewModelScope.launch { repo.addHashWildcardRule(pattern, description, schedule) }
+    }
+    fun deleteHashWildcardRule(rule: HashWildcardRule) {
+        viewModelScope.launch { repo.deleteHashWildcardRule(rule) }
+    }
+    fun toggleHashWildcardRule(id: Long, enabled: Boolean) {
+        viewModelScope.launch { repo.toggleHashWildcardRule(id, enabled) }
+    }
+
     // SMS keyword rules
-    fun addKeywordRule(keyword: String, caseSensitive: Boolean = false, description: String = "") {
-        viewModelScope.launch { repo.addKeywordRule(keyword, caseSensitive, description) }
+    fun addKeywordRule(
+        keyword: String,
+        caseSensitive: Boolean = false,
+        description: String = "",
+        schedule: TimeSchedule = TimeSchedule(),
+    ) {
+        viewModelScope.launch { repo.addKeywordRule(keyword, caseSensitive, description, schedule) }
     }
     fun deleteKeywordRule(rule: SmsKeywordRule) { viewModelScope.launch { repo.deleteKeywordRule(rule) } }
     fun toggleKeywordRule(id: Long, enabled: Boolean) { viewModelScope.launch { repo.toggleKeywordRule(id, enabled) } }
@@ -296,6 +333,15 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun setMlScorer(v: Boolean) = viewModelScope.launch { repo.setMlScorer(v) }
     fun setRcsFilter(v: Boolean) = viewModelScope.launch { repo.setRcsFilter(v) }
     fun setSilentVoicemail(v: Boolean) = viewModelScope.launch { repo.setSilentVoicemail(v) }
+    fun setPushAlert(v: Boolean) = viewModelScope.launch { repo.setPushAlert(v) }
+
+    /** Per-package opt-in/out for the A3 allowlist editor. */
+    fun setPushAlertPackageAllowed(pkg: String, allowed: Boolean) {
+        viewModelScope.launch { repo.togglePushAlertPackage(pkg, allowed) }
+    }
+    fun resetPushAlertPackages() {
+        viewModelScope.launch { repo.resetPushAlertPackages() }
+    }
     fun setAbstractApiKey(key: String) = viewModelScope.launch { repo.setAbstractApiKey(key) }
 
     // Profiles
