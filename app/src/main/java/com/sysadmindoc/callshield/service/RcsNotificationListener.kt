@@ -3,12 +3,14 @@ package com.sysadmindoc.callshield.service
 import android.app.Notification
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
+import com.sysadmindoc.callshield.data.PushAlertRegistry
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.remote.UrlSafetyChecker
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
@@ -48,15 +50,80 @@ class RcsNotificationListener : NotificationListenerService() {
         "com.microsoft.android.smsorganizer",
     )
 
+    // A3 toggle state, observed off the hot path so onNotificationPosted
+    // can read it without suspending. `true` until the DataStore observer
+    // first delivers — matches the feature's "on by default" contract and
+    // avoids a race where the first notification after boot arrives before
+    // the collector fires.
+    @Volatile private var pushAlertEnabled: Boolean = true
+
+    override fun onCreate() {
+        super.onCreate()
+        val repo = SpamRepository.getInstance(applicationContext)
+        // Also clear the registry when the feature is turned off so stale
+        // alerts captured under the previous setting don't inform the
+        // pipeline after a toggle flip.
+        scope.launch {
+            repo.pushAlertEnabled.collectLatest { enabled ->
+                pushAlertEnabled = enabled
+                if (!enabled) PushAlertRegistry.clear()
+            }
+        }
+        // A3 allowlist editor: push the user's opt-outs into the registry
+        // so the hot-path filter is lock-free. When a package flips off,
+        // drop any of its cached alerts so the checker doesn't fire on
+        // stale content captured under the previous allowlist.
+        scope.launch {
+            repo.pushAlertDisabledPackages.collectLatest { disabled ->
+                val previous = PushAlertRegistry.currentDisabledPackages()
+                PushAlertRegistry.setDisabledPackages(disabled)
+                val newlyDisabled = disabled - previous
+                if (newlyDisabled.isNotEmpty()) {
+                    PushAlertRegistry.pruneByPackages(newlyDisabled)
+                }
+            }
+        }
+    }
+
     override fun onNotificationPosted(sbn: StatusBarNotification) {
+        if (sbn.isOngoing) return  // skip ongoing (media controls, etc.)
+
+        // A3: Feed the push-alert registry for any allowlisted source app
+        // that the user hasn't opted out of. Master toggle and per-package
+        // opt-out are both checked here — if either is off, the
+        // notification content never enters the buffer.
+        if (pushAlertEnabled && PushAlertRegistry.isAllowedSource(sbn.packageName)) {
+            captureAlert(sbn)
+        }
+
         if (sbn.packageName !in MESSAGING_PACKAGES) return
-        if (sbn.isOngoing) return // Skip ongoing notifications (not messages)
 
         scope.launch {
             try {
                 processNotification(sbn)
             } catch (_: Exception) { }
         }
+    }
+
+    /**
+     * Extract title + body from a notification and push it into the
+     * in-memory registry. Runs synchronously — no coroutine — because
+     * [PushAlertRegistry.record] is trivial and we want the alert
+     * available before any subsequent call-screening coroutine runs.
+     */
+    private fun captureAlert(sbn: StatusBarNotification) {
+        val extras = sbn.notification?.extras ?: return
+        val title = extras.getCharSequence(Notification.EXTRA_TITLE)?.toString().orEmpty()
+        val body = extras.getCharSequence(Notification.EXTRA_TEXT)?.toString().orEmpty()
+        if (title.isBlank() && body.isBlank()) return
+        PushAlertRegistry.record(
+            PushAlertRegistry.Alert(
+                packageName = sbn.packageName,
+                title = title,
+                body = body,
+                timestamp = sbn.postTime.takeIf { it > 0 } ?: System.currentTimeMillis(),
+            )
+        )
     }
 
     private suspend fun processNotification(sbn: StatusBarNotification) {

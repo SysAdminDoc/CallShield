@@ -7,12 +7,11 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.widget.RemoteViews
+import com.sysadmindoc.callshield.CallShieldApp
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.local.AppDatabase
 import com.sysadmindoc.callshield.ui.MainActivity
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.text.NumberFormat
@@ -47,11 +46,15 @@ class CallShieldWidget : AppWidgetProvider() {
         // Set click listeners immediately, data updates async
         manager.updateAppWidget(widgetId, views)
 
-        // Fetch counts and protection status async
-        CoroutineScope(Dispatchers.IO).launch {
+        // Use the process-wide appScope instead of minting a fresh
+        // CoroutineScope per update — the previous pattern leaked a Job
+        // every time the widget refreshed. Capture a stable app-context
+        // reference so we don't hold onto the incoming broadcast context.
+        val appContext = context.applicationContext
+        CallShieldApp.appScope.launch {
             try {
-                val dao = AppDatabase.getInstance(context).spamDao()
-                val repo = SpamRepository.getInstance(context)
+                val dao = AppDatabase.getInstance(appContext).spamDao()
+                val repo = SpamRepository.getInstance(appContext)
 
                 // Calculate start-of-today and start-of-yesterday
                 val now = System.currentTimeMillis()
@@ -72,14 +75,14 @@ class CallShieldWidget : AppWidgetProvider() {
 
                 // Trend arrow: compare today vs yesterday
                 val trendText = when {
-                    todayCount > yesterdayCount -> context.getString(R.string.widget_today_trend_up, localizedTodayCount)
-                    todayCount < yesterdayCount -> context.getString(R.string.widget_today_trend_down, localizedTodayCount)
-                    else -> context.getString(R.string.widget_today_trend_same, localizedTodayCount)
+                    todayCount > yesterdayCount -> appContext.getString(R.string.widget_today_trend_up, localizedTodayCount)
+                    todayCount < yesterdayCount -> appContext.getString(R.string.widget_today_trend_down, localizedTodayCount)
+                    else -> appContext.getString(R.string.widget_today_trend_same, localizedTodayCount)
                 }
 
                 // Last blocked time
                 val lastTimestamp = dao.getLastBlockedTimestamp()
-                val lastBlockedText = formatLastBlocked(context, lastTimestamp, now)
+                val lastBlockedText = formatLastBlocked(appContext, lastTimestamp, now)
 
                 // Protection status
                 val callsEnabled = repo.blockCallsEnabled.first()
@@ -90,17 +93,17 @@ class CallShieldWidget : AppWidgetProvider() {
                 views.setTextViewText(R.id.widget_trend, trendText)
                 views.setTextViewText(
                     R.id.widget_total,
-                    context.getString(R.string.widget_total_blocked, localizedTotalCount)
+                    appContext.getString(R.string.widget_total_blocked, localizedTotalCount)
                 )
                 views.setTextViewText(R.id.widget_last_blocked, lastBlockedText)
 
                 // Update status text and title color based on protection state
                 if (isActive) {
-                    views.setTextViewText(R.id.widget_status, context.getString(R.string.widget_protection_active))
+                    views.setTextViewText(R.id.widget_status, appContext.getString(R.string.widget_protection_active))
                     views.setTextColor(R.id.widget_title, 0xFFA6E3A1.toInt()) // CatGreen
                     views.setTextColor(R.id.widget_status, 0xFFA6E3A1.toInt())
                 } else {
-                    views.setTextViewText(R.id.widget_status, context.getString(R.string.widget_protection_off))
+                    views.setTextViewText(R.id.widget_status, appContext.getString(R.string.widget_protection_off))
                     views.setTextColor(R.id.widget_title, 0xFFF38BA8.toInt()) // CatRed
                     views.setTextColor(R.id.widget_status, 0xFFF38BA8.toInt())
                 }

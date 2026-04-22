@@ -7,7 +7,6 @@ import android.provider.Telephony
 import com.sysadmindoc.callshield.CallShieldApp
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.remote.UrlSafetyChecker
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 class SmsReceiver : BroadcastReceiver() {
@@ -19,12 +18,15 @@ class SmsReceiver : BroadcastReceiver() {
         val pendingResult = goAsync()
 
         // Keep work off the main thread without spinning a raw thread per SMS.
-        // goAsync() keeps the broadcast alive until we finish the blocking decision.
+        // goAsync() keeps the broadcast alive until pendingResult.finish() is
+        // called. We use appScope rather than a short-lived one so the URLhaus
+        // phishing check can continue after we've finished with the broadcast.
         CallShieldApp.appScope.launch {
-            var capturedSender = ""
-            var capturedBody = ""
+            var sender = ""
+            var body = ""
             try {
-                if (!repo.blockSmsEnabled.first()) {
+                val prefs = repo.readPrefsSnapshot()
+                if (!(prefs[SpamRepository.KEY_BLOCK_SMS] ?: true)) {
                     return@launch
                 }
 
@@ -33,12 +35,10 @@ class SmsReceiver : BroadcastReceiver() {
                     return@launch
                 }
 
-                val sender = messages[0].originatingAddress ?: return@launch
-                val body = messages.joinToString("") { it.messageBody ?: "" }
-                capturedSender = sender
-                capturedBody = body
+                sender = messages[0].originatingAddress ?: return@launch
+                body = messages.joinToString("") { it.messageBody ?: "" }
 
-                val result = repo.isSpamSms(sender, body)
+                val result = repo.isSpamSms(sender, body, prefsSnapshot = prefs)
                 if (result.isSpam) {
                     repo.logBlockedCall(
                         number = sender,
@@ -47,6 +47,12 @@ class SmsReceiver : BroadcastReceiver() {
                         matchReason = result.matchSource,
                         confidence = result.confidence
                     )
+                    // NOTE: abortBroadcast() only suppresses delivery to lower-
+                    // priority receivers on ordered broadcasts. Since CallShield
+                    // is not the default SMS app, the message still lands in the
+                    // user's SMS inbox — this call just ensures we're first in
+                    // line when the broadcast is ordered (API-dependent) and
+                    // records the block in our own log.
                     abortBroadcast()
                 }
             } catch (_: Exception) {
@@ -55,22 +61,20 @@ class SmsReceiver : BroadcastReceiver() {
                 pendingResult.finish()
             }
 
-            // Background URLhaus phishing URL check — runs after broadcast decision
-            // so it never adds latency to SMS delivery. Fires a warning notification
-            // if the message contains a URL listed in the URLhaus malware/phishing DB.
-            if (capturedBody.isNotEmpty()) {
-                val body = capturedBody
-                val sender = capturedSender
-                CallShieldApp.appScope.launch {
-                    try {
-                        val maliciousUrls = UrlSafetyChecker.checkSmsBody(body)
-                        if (maliciousUrls.isNotEmpty()) {
-                            val threats = maliciousUrls.joinToString(", ") { it.threat.ifEmpty { "malware" } }
-                            NotificationHelper.notifyPhishingUrl(appContext, sender, threats)
-                        }
-                    } catch (_: Exception) {
-                        // URL check is best-effort — don't crash
+            // Background URLhaus phishing URL check — runs after the broadcast
+            // decision so it never adds latency to SMS delivery. Fires a
+            // warning notification if the message contains a URL listed in
+            // URLhaus. Wrapped in its own try/catch so a network hiccup can't
+            // propagate out of the receiver.
+            if (body.isNotEmpty()) {
+                try {
+                    val maliciousUrls = UrlSafetyChecker.checkSmsBody(body)
+                    if (maliciousUrls.isNotEmpty()) {
+                        val threats = maliciousUrls.joinToString(", ") { it.threat.ifEmpty { "malware" } }
+                        NotificationHelper.notifyPhishingUrl(appContext, sender, threats)
                     }
+                } catch (_: Exception) {
+                    // URL check is best-effort
                 }
             }
         }

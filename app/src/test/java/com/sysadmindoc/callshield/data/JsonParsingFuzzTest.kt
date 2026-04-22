@@ -4,30 +4,32 @@ import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
 import java.lang.reflect.InvocationTargetException
+import java.lang.reflect.Method
 
 /**
- * Fuzz tests for SpamMLScorer's JSON parsing — parseAndApply, parseGbtTrees,
- * and findMatchingBracket.
+ * Fuzz tests for SpamMLScorer's JSON parsing.
  *
- * Every test feeds adversarial JSON through the private parseAndApply method
- * via reflection and asserts that NO exception escapes — the code must fall
- * back to default weights gracefully.
+ * Every input is fed through the private parser and we assert that NO
+ * exception escapes — a corrupt weights file must never tear down the
+ * scoring pipeline. We invoke parseModel (pure parser) and then score()
+ * on the live instance to verify scoring still works after the hostile
+ * payload is offered to the scorer.
  */
 class JsonParsingFuzzTest {
 
-    private val parseAndApplyMethod by lazy {
-        SpamMLScorer::class.java.getDeclaredMethod("parseAndApply", String::class.java).also {
+    private val parseModel: Method by lazy {
+        SpamMLScorer::class.java.getDeclaredMethod("parseModel", String::class.java).also {
             it.isAccessible = true
         }
     }
 
-    private val parseGbtTreesMethod by lazy {
-        SpamMLScorer::class.java.getDeclaredMethod("parseGbtTrees", String::class.java).also {
+    private val parseGbtTreesList: Method by lazy {
+        SpamMLScorer::class.java.getDeclaredMethod("parseGbtTreesList", String::class.java).also {
             it.isAccessible = true
         }
     }
 
-    private val findMatchingBracketMethod by lazy {
+    private val findMatchingBracket: Method by lazy {
         SpamMLScorer::class.java.getDeclaredMethod(
             "findMatchingBracket", String::class.java,
             Int::class.java, Char::class.java, Char::class.java
@@ -36,29 +38,40 @@ class JsonParsingFuzzTest {
         }
     }
 
-    private val applyDefaultWeightsMethod by lazy {
-        SpamMLScorer::class.java.getDeclaredMethod("applyDefaultWeights").also {
+    private val defaultModelState: Method by lazy {
+        SpamMLScorer::class.java.getDeclaredMethod("defaultModelState").also {
             it.isAccessible = true
         }
     }
 
-    /** Reset scorer to known state before each test. */
+    private val stateField: java.lang.reflect.Field by lazy {
+        SpamMLScorer::class.java.getDeclaredField("state").also {
+            it.isAccessible = true
+        }
+    }
+
+    /** Reset scorer to known defaults before each test. */
     @Before
     fun resetScorer() {
-        applyDefaultWeightsMethod.invoke(SpamMLScorer)
+        stateField.set(SpamMLScorer, defaultModelState.invoke(SpamMLScorer))
     }
 
     /**
-     * Invoke parseAndApply and assert no exception escapes.
-     * After the call, verify score() still returns a sane value (not crashing).
+     * Feed the input to parseModel and assert nothing escapes. If the
+     * parser produces a state, commit it so score() exercises the freshly
+     * parsed path; otherwise confirm score() still works on the default
+     * model that the @Before step installed.
      */
-    private fun fuzzParseAndApply(json: String) {
-        try {
-            parseAndApplyMethod.invoke(SpamMLScorer, json)
+    private fun fuzzParse(json: String) {
+        val parsed = try {
+            parseModel.invoke(SpamMLScorer, json)
         } catch (e: InvocationTargetException) {
-            fail("parseAndApply threw ${e.targetException::class.simpleName} for input: ${json.take(120)}")
+            fail("parseModel threw ${e.targetException::class.simpleName} for input: ${json.take(120)}")
+            return
         }
-        // Verify scorer is still functional after parsing adversarial input
+        if (parsed != null) {
+            stateField.set(SpamMLScorer, parsed)
+        }
         val score = SpamMLScorer.score("2125551234")
         assertTrue(
             "Score should be valid after parsing adversarial JSON, got $score",
@@ -68,15 +81,15 @@ class JsonParsingFuzzTest {
 
     private fun fuzzParseGbtTrees(json: String) {
         try {
-            parseGbtTreesMethod.invoke(SpamMLScorer, json)
+            parseGbtTreesList.invoke(SpamMLScorer, json)
         } catch (e: InvocationTargetException) {
-            fail("parseGbtTrees threw ${e.targetException::class.simpleName} for input: ${json.take(120)}")
+            fail("parseGbtTreesList threw ${e.targetException::class.simpleName} for input: ${json.take(120)}")
         }
     }
 
     private fun fuzzFindMatchingBracket(s: String, startIdx: Int, open: Char, close: Char): Int {
         return try {
-            findMatchingBracketMethod.invoke(SpamMLScorer, s, startIdx, open, close) as Int
+            findMatchingBracket.invoke(SpamMLScorer, s, startIdx, open, close) as Int
         } catch (e: InvocationTargetException) {
             fail("findMatchingBracket threw ${e.targetException::class.simpleName} for input: ${s.take(80)}")
             -1
@@ -86,265 +99,265 @@ class JsonParsingFuzzTest {
     // ── Empty and null-like inputs ───────────────────────────────────
 
     @Test
-    fun `parseAndApply empty string`() = fuzzParseAndApply("")
+    fun `parse empty string`() = fuzzParse("")
 
     @Test
-    fun `parseAndApply whitespace only`() = fuzzParseAndApply("   \t\n  ")
+    fun `parse whitespace only`() = fuzzParse("   \t\n  ")
 
     @Test
-    fun `parseAndApply single character`() = fuzzParseAndApply("x")
+    fun `parse single character`() = fuzzParse("x")
 
     @Test
-    fun `parseAndApply null literal`() = fuzzParseAndApply("null")
+    fun `parse null literal`() = fuzzParse("null")
 
     @Test
-    fun `parseAndApply undefined literal`() = fuzzParseAndApply("undefined")
+    fun `parse undefined literal`() = fuzzParse("undefined")
 
     @Test
-    fun `parseAndApply boolean true`() = fuzzParseAndApply("true")
+    fun `parse boolean true`() = fuzzParse("true")
 
     @Test
-    fun `parseAndApply numeric literal`() = fuzzParseAndApply("42")
+    fun `parse numeric literal`() = fuzzParse("42")
 
     // ── Valid JSON but wrong structure ────────────────────────────────
 
     @Test
-    fun `parseAndApply empty object`() = fuzzParseAndApply("{}")
+    fun `parse empty object`() = fuzzParse("{}")
 
     @Test
-    fun `parseAndApply empty array`() = fuzzParseAndApply("[]")
+    fun `parse empty array`() = fuzzParse("[]")
 
     @Test
-    fun `parseAndApply version only`() = fuzzParseAndApply("""{"version": 3}""")
+    fun `parse version only`() = fuzzParse("""{"version": 3}""")
 
     @Test
-    fun `parseAndApply version with empty trees`() =
-        fuzzParseAndApply("""{"version": 3, "model_type": "gbt", "trees": []}""")
+    fun `parse version with empty trees`() =
+        fuzzParse("""{"version": 3, "model_type": "gbt", "trees": []}""")
 
     @Test
-    fun `parseAndApply version 2 with no weights`() =
-        fuzzParseAndApply("""{"version": 2}""")
+    fun `parse version 2 with no weights`() =
+        fuzzParse("""{"version": 2}""")
 
     @Test
-    fun `parseAndApply version 2 with empty weights array`() =
-        fuzzParseAndApply("""{"version": 2, "weights": [], "bias": 0.0}""")
+    fun `parse version 2 with empty weights array`() =
+        fuzzParse("""{"version": 2, "weights": [], "bias": 0.0}""")
 
     @Test
-    fun `parseAndApply version 2 with too few weights`() =
-        fuzzParseAndApply("""{"version": 2, "weights": [1.0, 2.0, 3.0], "bias": -1.0}""")
+    fun `parse version 2 with too few weights`() =
+        fuzzParse("""{"version": 2, "weights": [1.0, 2.0, 3.0], "bias": -1.0}""")
 
     @Test
-    fun `parseAndApply version 2 with exactly 15 weights`() =
-        fuzzParseAndApply(
+    fun `parse version 2 with exactly 15 weights`() =
+        fuzzParse(
             """{"version": 2, "weights": [1.0,0.8,1.8,1.5,0.6,2.1,1.4,0.9,2.0,1.2,1.8,0.5,1.0,1.5,0.8], "bias": -2.5}"""
         )
 
     @Test
-    fun `parseAndApply version 2 with exactly 20 weights`() =
-        fuzzParseAndApply(
+    fun `parse version 2 with exactly 20 weights`() =
+        fuzzParse(
             """{"version": 2, "weights": [1.0,0.8,1.8,1.5,0.6,2.1,1.4,0.9,2.0,1.2,1.8,0.5,1.0,1.5,0.8,0.3,0.3,0.6,1.0,0.1], "bias": -2.5}"""
         )
 
     // ── Version mismatches ───────────────────────────────────────────
 
     @Test
-    fun `parseAndApply version 1`() =
-        fuzzParseAndApply("""{"version": 1, "weights": [1.0], "bias": 0.0}""")
+    fun `parse version 1`() =
+        fuzzParse("""{"version": 1, "weights": [1.0], "bias": 0.0}""")
 
     @Test
-    fun `parseAndApply version 99`() =
-        fuzzParseAndApply("""{"version": 99, "model_type": "gbt", "trees": []}""")
+    fun `parse version 99`() =
+        fuzzParse("""{"version": 99, "model_type": "gbt", "trees": []}""")
 
     @Test
-    fun `parseAndApply negative version`() =
-        fuzzParseAndApply("""{"version": -1}""")
+    fun `parse negative version`() =
+        fuzzParse("""{"version": -1}""")
 
     @Test
-    fun `parseAndApply version 0`() =
-        fuzzParseAndApply("""{"version": 0}""")
+    fun `parse version 0`() =
+        fuzzParse("""{"version": 0}""")
 
     @Test
-    fun `parseAndApply version as string`() =
-        fuzzParseAndApply("""{"version": "three"}""")
+    fun `parse version as string`() =
+        fuzzParse("""{"version": "three"}""")
 
     @Test
-    fun `parseAndApply version very large`() =
-        fuzzParseAndApply("""{"version": 999999999}""")
+    fun `parse version very large`() =
+        fuzzParse("""{"version": 999999999}""")
 
     // ── Deeply nested brackets ───────────────────────────────────────
 
     @Test
-    fun `parseAndApply deeply nested open brackets`() =
-        fuzzParseAndApply("[".repeat(100))
+    fun `parse deeply nested open brackets`() =
+        fuzzParse("[".repeat(100))
 
     @Test
-    fun `parseAndApply deeply nested curly braces`() =
-        fuzzParseAndApply("{".repeat(100))
+    fun `parse deeply nested curly braces`() =
+        fuzzParse("{".repeat(100))
 
     @Test
-    fun `parseAndApply alternating brackets`() =
-        fuzzParseAndApply("[{[{[{[{[{" + "}]}]}]}]}]")
+    fun `parse alternating brackets`() =
+        fuzzParse("[{[{[{[{[{" + "}]}]}]}]}]")
 
     @Test
-    fun `parseAndApply mismatched brackets`() =
-        fuzzParseAndApply("""{"trees": [}]""")
+    fun `parse mismatched brackets`() =
+        fuzzParse("""{"trees": [}]""")
 
     @Test
-    fun `parseAndApply only closing brackets`() =
-        fuzzParseAndApply("]]]]]]]]")
+    fun `parse only closing brackets`() =
+        fuzzParse("]]]]]]]]")
 
     @Test
-    fun `parseAndApply 500 nested arrays`() =
-        fuzzParseAndApply("[".repeat(500) + "]".repeat(500))
+    fun `parse 500 nested arrays`() =
+        fuzzParse("[".repeat(500) + "]".repeat(500))
 
     // ── Malformed JSON ───────────────────────────────────────────────
 
     @Test
-    fun `parseAndApply truncated JSON`() =
-        fuzzParseAndApply("""{"version": 3, "model_type": "gbt", "trees": [{"fea""")
+    fun `parse truncated JSON`() =
+        fuzzParse("""{"version": 3, "model_type": "gbt", "trees": [{"fea""")
 
     @Test
-    fun `parseAndApply missing closing brace`() =
-        fuzzParseAndApply("""{"version": 3, "weights": [1.0, 2.0]""")
+    fun `parse missing closing brace`() =
+        fuzzParse("""{"version": 3, "weights": [1.0, 2.0]""")
 
     @Test
-    fun `parseAndApply missing closing bracket`() =
-        fuzzParseAndApply("""{"version": 2, "weights": [1.0, 2.0}""")
+    fun `parse missing closing bracket`() =
+        fuzzParse("""{"version": 2, "weights": [1.0, 2.0}""")
 
     @Test
-    fun `parseAndApply extra commas`() =
-        fuzzParseAndApply("""{"version": 2,,, "weights": [1.0,,2.0,,], "bias": -1.0,}""")
+    fun `parse extra commas`() =
+        fuzzParse("""{"version": 2,,, "weights": [1.0,,2.0,,], "bias": -1.0,}""")
 
     @Test
-    fun `parseAndApply trailing garbage`() =
-        fuzzParseAndApply("""{"version": 2, "weights": [1.0], "bias": 0.0} GARBAGE HERE""")
+    fun `parse trailing garbage`() =
+        fuzzParse("""{"version": 2, "weights": [1.0], "bias": 0.0} GARBAGE HERE""")
 
     @Test
-    fun `parseAndApply leading garbage`() =
-        fuzzParseAndApply("""GARBAGE {"version": 2}""")
+    fun `parse leading garbage`() =
+        fuzzParse("""GARBAGE {"version": 2}""")
 
     @Test
-    fun `parseAndApply double colons`() =
-        fuzzParseAndApply("""{"version":: 2}""")
+    fun `parse double colons`() =
+        fuzzParse("""{"version":: 2}""")
 
     @Test
-    fun `parseAndApply no quotes on keys`() =
-        fuzzParseAndApply("""{version: 2, weights: [1.0]}""")
+    fun `parse no quotes on keys`() =
+        fuzzParse("""{version: 2, weights: [1.0]}""")
 
     @Test
-    fun `parseAndApply single quotes`() =
-        fuzzParseAndApply("""{'version': 2, 'weights': [1.0]}""")
+    fun `parse single quotes`() =
+        fuzzParse("""{'version': 2, 'weights': [1.0]}""")
 
     // ── Huge arrays ──────────────────────────────────────────────────
 
     @Test
-    fun `parseAndApply huge weights array 1000 elements`() {
+    fun `parse huge weights array 1000 elements`() {
         val weights = (1..1000).joinToString(",") { "0.1" }
-        fuzzParseAndApply("""{"version": 2, "weights": [$weights], "bias": -2.5}""")
+        fuzzParse("""{"version": 2, "weights": [$weights], "bias": -2.5}""")
     }
 
     @Test
-    fun `parseAndApply huge trees array many empty objects`() {
+    fun `parse huge trees array many empty objects`() {
         val trees = (1..100).joinToString(",") { "{}" }
-        fuzzParseAndApply("""{"version": 3, "model_type": "gbt", "trees": [$trees]}""")
+        fuzzParse("""{"version": 3, "model_type": "gbt", "trees": [$trees]}""")
     }
 
     @Test
-    fun `parseAndApply very long string value`() {
+    fun `parse very long string value`() {
         val longStr = "a".repeat(10000)
-        fuzzParseAndApply("""{"version": 2, "weights": ["$longStr"]}""")
+        fuzzParse("""{"version": 2, "weights": ["$longStr"]}""")
     }
 
     // ── Special numeric values ───────────────────────────────────────
 
     @Test
-    fun `parseAndApply NaN in weights`() =
-        fuzzParseAndApply("""{"version": 2, "weights": [NaN, NaN, NaN], "bias": NaN}""")
+    fun `parse NaN in weights`() =
+        fuzzParse("""{"version": 2, "weights": [NaN, NaN, NaN], "bias": NaN}""")
 
     @Test
-    fun `parseAndApply Infinity in weights`() =
-        fuzzParseAndApply("""{"version": 2, "weights": [Infinity, -Infinity], "bias": Infinity}""")
+    fun `parse Infinity in weights`() =
+        fuzzParse("""{"version": 2, "weights": [Infinity, -Infinity], "bias": Infinity}""")
 
     @Test
-    fun `parseAndApply very large numbers`() =
-        fuzzParseAndApply("""{"version": 2, "weights": [1e308, -1e308, 1e-308], "bias": 1e999}""")
+    fun `parse very large numbers`() =
+        fuzzParse("""{"version": 2, "weights": [1e308, -1e308, 1e-308], "bias": 1e999}""")
 
     @Test
-    fun `parseAndApply negative zero`() =
-        fuzzParseAndApply("""{"version": 2, "weights": [-0.0, -0.0], "bias": -0.0}""")
+    fun `parse negative zero`() =
+        fuzzParse("""{"version": 2, "weights": [-0.0, -0.0], "bias": -0.0}""")
 
     @Test
-    fun `parseAndApply integer overflow in weights`() =
-        fuzzParseAndApply("""{"version": 2, "weights": [99999999999999999999999999999999], "bias": 0}""")
+    fun `parse integer overflow in weights`() =
+        fuzzParse("""{"version": 2, "weights": [99999999999999999999999999999999], "bias": 0}""")
 
     // ── Injection attempts in JSON values ────────────────────────────
 
     @Test
-    fun `parseAndApply SQL injection in string value`() =
-        fuzzParseAndApply("""{"version": 2, "model_type": "'; DROP TABLE models;--"}""")
+    fun `parse SQL injection in string value`() =
+        fuzzParse("""{"version": 2, "model_type": "'; DROP TABLE models;--"}""")
 
     @Test
-    fun `parseAndApply script injection in value`() =
-        fuzzParseAndApply("""{"version": 2, "model_type": "<script>alert(1)</script>"}""")
+    fun `parse script injection in value`() =
+        fuzzParse("""{"version": 2, "model_type": "<script>alert(1)</script>"}""")
 
     @Test
-    fun `parseAndApply null byte in JSON string`() =
-        fuzzParseAndApply("{\"version\": 2, \"model_type\": \"gbt\u0000evil\"}")
+    fun `parse null byte in JSON string`() =
+        fuzzParse("{\"version\": 2, \"model_type\": \"gbt\u0000evil\"}")
 
     @Test
-    fun `parseAndApply escape sequences in values`() =
-        fuzzParseAndApply("""{"version": 2, "model_type": "gbt\n\t\r\\\""}""")
+    fun `parse escape sequences in values`() =
+        fuzzParse("""{"version": 2, "model_type": "gbt\n\t\r\\\""}""")
 
     @Test
-    fun `parseAndApply unicode escapes in values`() =
-        fuzzParseAndApply("""{"version": 2, "model_type": "\u0067\u0062\u0074"}""")
+    fun `parse unicode escapes in values`() =
+        fuzzParse("""{"version": 2, "model_type": "\u0067\u0062\u0074"}""")
 
     // ── GBT tree specific malformed inputs ───────────────────────────
 
     @Test
-    fun `parseAndApply GBT with mismatched array lengths`() =
-        fuzzParseAndApply(
+    fun `parse GBT with mismatched array lengths`() =
+        fuzzParse(
             """{"version": 3, "model_type": "gbt", "learning_rate": 0.1, "trees": [{"feature": [0, -2], "threshold": [0.5], "children_left": [-1], "children_right": [-1], "value": [0.0]}]}"""
         )
 
     @Test
-    fun `parseAndApply GBT with empty arrays in tree`() =
-        fuzzParseAndApply(
+    fun `parse GBT with empty arrays in tree`() =
+        fuzzParse(
             """{"version": 3, "model_type": "gbt", "trees": [{"feature": [], "threshold": [], "children_left": [], "children_right": [], "value": []}]}"""
         )
 
     @Test
-    fun `parseAndApply GBT with missing tree fields`() =
-        fuzzParseAndApply(
+    fun `parse GBT with missing tree fields`() =
+        fuzzParse(
             """{"version": 3, "model_type": "gbt", "trees": [{"feature": [0]}]}"""
         )
 
     @Test
-    fun `parseAndApply GBT with negative feature indices`() =
-        fuzzParseAndApply(
+    fun `parse GBT with negative feature indices`() =
+        fuzzParse(
             """{"version": 3, "model_type": "gbt", "learning_rate": 0.1, "trees": [{"feature": [-99, -2, -2], "threshold": [0.5, 0.0, 0.0], "children_left": [1, -1, -1], "children_right": [2, -1, -1], "value": [0.0, 0.5, -0.3]}]}"""
         )
 
     @Test
-    fun `parseAndApply GBT with very large feature indices`() =
-        fuzzParseAndApply(
+    fun `parse GBT with very large feature indices`() =
+        fuzzParse(
             """{"version": 3, "model_type": "gbt", "learning_rate": 0.1, "trees": [{"feature": [9999, -2, -2], "threshold": [0.5, 0.0, 0.0], "children_left": [1, -1, -1], "children_right": [2, -1, -1], "value": [0.0, 0.5, -0.3]}]}"""
         )
 
     @Test
-    fun `parseAndApply GBT with circular children references`() =
-        fuzzParseAndApply(
+    fun `parse GBT with circular children references`() =
+        fuzzParse(
             """{"version": 3, "model_type": "gbt", "learning_rate": 0.1, "trees": [{"feature": [0, 0, 0], "threshold": [0.5, 0.5, 0.5], "children_left": [1, 2, 0], "children_right": [2, 0, 1], "value": [0.0, 0.5, -0.3]}]}"""
         )
 
     @Test
-    fun `parseAndApply GBT with string values in int array`() =
-        fuzzParseAndApply(
+    fun `parse GBT with string values in int array`() =
+        fuzzParse(
             """{"version": 3, "model_type": "gbt", "trees": [{"feature": ["a", "b"], "threshold": [0.5, 0.5], "children_left": [1, -1], "children_right": [2, -1], "value": [0.0, 0.5]}]}"""
         )
 
     @Test
-    fun `parseAndApply GBT valid single tree then scoring works`() {
+    fun `parse GBT valid single tree then scoring works`() {
         val json = """
         {
             "version": 3,
@@ -374,8 +387,7 @@ class JsonParsingFuzzTest {
             ]
         }
         """.trimIndent()
-        fuzzParseAndApply(json)
-        // After loading a valid GBT model, scoring should still work
+        fuzzParse(json)
         val score = SpamMLScorer.score("2125551234")
         assertTrue("Score should be in [0, 1], got $score", score in 0.0..1.0)
     }
@@ -453,34 +465,26 @@ class JsonParsingFuzzTest {
     // ── Batch adversarial JSON ───────────────────────────────────────
 
     @Test
-    fun `batch fuzz parseAndApply with varied adversarial inputs`() {
+    fun `batch fuzz parse with varied adversarial inputs`() {
         val inputs = listOf(
-            // Edge case JSON
             "{}{}",
             "[]{}\n[]",
-            """{"version":2,"version":3}""",   // duplicate keys
-            """{"weights":[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20],"bias":-2.5,"version":2}""", // reordered
+            """{"version":2,"version":3}""",
+            """{"weights":[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20],"bias":-2.5,"version":2}""",
             "{\"key\": \"value\u0000hidden\"}",
             """{"version": 2, "weights": [1.0e0, 2.0E1, .5, -.5, +1], "bias": -0}""",
-            // Binary-ish
             "\u0001\u0002\u0003\u0004\u0005",
-            // BOM
             "\uFEFF{\"version\": 2}",
-            // Comment-like
             """/* comment */ {"version": 2}""",
             """// line comment\n{"version": 2}""",
-            // JSONP-like
             """callback({"version": 2})""",
-            // Control characters
             "\u0000\u0001\u001F",
-            // Extremely long key
             """{"${"a".repeat(5000)}": 1}""",
-            // JSON with only whitespace between tokens
             "{ \t\n\r \"version\" \t\n\r : \t\n\r 2 \t\n\r }",
         )
         for (input in inputs) {
             try {
-                fuzzParseAndApply(input)
+                fuzzParse(input)
             } catch (e: Exception) {
                 fail("Exception for input '${input.take(60)}': ${e::class.simpleName}: ${e.message}")
             }
