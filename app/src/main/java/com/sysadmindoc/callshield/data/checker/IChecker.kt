@@ -84,6 +84,14 @@ data class CheckContext(
     val realtimeCall: Boolean,
     /** Pre-loaded DataStore snapshot — share across all checkers. */
     val prefs: Preferences,
+    /**
+     * STIR/SHAKEN carrier verification status when available
+     * ([android.telecom.Connection.VERIFICATION_STATUS_FAILED] etc).
+     * `null` when the caller can't supply one — historical scans, SMS, or
+     * pre-Android-11 devices. Consumed by [StirShakenChecker]; every other
+     * checker ignores this field.
+     */
+    val verificationStatus: Int? = null,
     /** Entry epoch for budget accounting. */
     val startTimeMillis: Long = System.currentTimeMillis(),
 ) {
@@ -141,6 +149,11 @@ object CheckerPriority {
     const val MANUAL_WHITELIST      = 10_000   // user-added entries; emergency contacts
     const val CONTACT_WHITELIST     =  9_000   // device contacts lookup
 
+    // ── Carrier-signed verdict — strong block but MUST sit under the
+    // explicit-allow tier above, otherwise a whitelisted emergency
+    // contact on a non-STIR carrier is hard-rejected (v1.6.0 bug).
+    const val STIR_SHAKEN           =  8_500
+
     // ── Explicit blocks — must NOT be overridden by recently-dialed ──
     // or push-alert. If the user intentionally blocked or wildcarded
     // this number, that intent is authoritative.
@@ -179,6 +192,13 @@ object CheckerPriority {
 object CheckerPipeline {
     suspend fun run(sortedCheckers: List<IChecker>, ctx: CheckContext): BlockResult? {
         for (checker in sortedCheckers) {
+            // Budget insurance: if a slow checker earlier in the chain
+            // chewed through the 4.5 s window, bail instead of racing past
+            // the 5 s Android deadline. Returning null maps to "not spam"
+            // in the caller — the safer default under time pressure is to
+            // allow the call rather than let Android auto-allow on timeout
+            // without our telemetry.
+            if (ctx.timeLeftMillis() <= 0L) return null
             if (!checker.isEnabled(ctx)) continue
             val result = try {
                 checker.check(ctx)
@@ -206,6 +226,7 @@ object SpamCheckers {
         buildList {
             add(WhitelistChecker(repo))
             add(ContactWhitelistChecker(appContext))
+            add(StirShakenChecker())
             add(DatabaseChecker(repo))
             add(SystemBlockListChecker(appContext))
             add(PrefixChecker(repo))

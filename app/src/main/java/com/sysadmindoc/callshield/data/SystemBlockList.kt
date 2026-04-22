@@ -83,9 +83,12 @@ object SystemBlockList {
             BlockedNumberContract.isBlocked(context, number)
         } catch (_: SecurityException) {
             // Role was revoked between availability check and this call —
-            // clear the availability so we don't keep retrying.
+            // clear the availability so we don't keep retrying, and wipe
+            // the lookup cache so stale `true` entries from the previous
+            // dialer-role session can't influence subsequent checks.
             available = false
             availableAt = System.currentTimeMillis()
+            synchronized(cacheLock) { cache.clear() }
             false
         } catch (_: Throwable) {
             false

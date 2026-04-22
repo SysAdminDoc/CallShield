@@ -256,6 +256,7 @@ class SpamRepository(private val context: Context) {
         smsBody: String? = null,
         realtimeCall: Boolean = true,
         prefsSnapshot: Preferences? = null,
+        verificationStatus: Int? = null,
     ): SpamCheckResult {
         val normalized = normalizeNumber(number)
         if (normalized.isBlank()) return SpamCheckResult(false)
@@ -267,6 +268,7 @@ class SpamRepository(private val context: Context) {
             smsBody = smsBody,
             realtimeCall = realtimeCall,
             prefs = prefs,
+            verificationStatus = verificationStatus,
         )
 
         // Priority-sorted pipeline — every detection layer is an IChecker.
