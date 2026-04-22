@@ -469,3 +469,105 @@ gantt
 | **Phase 5** | 11 tasks | 16-24 weeks | Carrier APIs, federated learning, premium tier |
 
 **Total: ~103 tasks, ~52-72 weeks end-to-end with parallelization**
+
+---
+
+## Addendum A — Peer-Inspired Track (April 2026)
+
+Derived from a deep read of SpamBlocker (aj3423), YetAnotherCallBlocker (xynngh), BlackList (kaliturin), Saracroche (cbouvat), spam-call-blocker-app (adamff-dev), and Fossify Phone. These are specific, concrete moves observed in shipping OSS peers, ranked by (user-impact × porting effort).
+
+This track runs **parallel** to the main roadmap — most items have no dependency on Phases 2-5 and land standalone.
+
+### A1. Priority-sorted `IChecker` pipeline — 1-2 days
+
+Replace the 140-line waterfall in [`SpamRepository.isSpam`](app/src/main/java/com/sysadmindoc/callshield/data/SpamRepository.kt) with an ordered `IChecker` list and `firstNotNullOf`. Every existing detection layer becomes a class implementing:
+
+```kotlin
+interface IChecker {
+    val priority: Int
+    suspend fun check(ctx: CheckContext): BlockResult?
+}
+```
+
+**Wins:** testable in isolation; explicit "why blocked" trail; clean extension point for every other item on this track.
+
+**Files:** new `data/checker/` package (IChecker, CheckContext, BlockResult, CheckerPipeline, 11 concrete checkers). [`SpamRepository.isSpam`](app/src/main/java/com/sysadmindoc/callshield/data/SpamRepository.kt) becomes a 10-line dispatcher.
+
+### A2. Budget-aware parallel race — 1 day
+
+Borrowed from [SpamBlocker](https://github.com/aj3423/SpamBlocker) (`Checker.InstantQuery`) and [adamff-dev](https://github.com/adamff-dev/spam-call-blocker-app) (`isSpamRace`).
+
+Track `startTimeMillis` in `CheckContext`; subtract elapsed from the 4500 ms effective screening budget (5 s OS kill minus 500 ms buffer); race reputation-API calls via `Channel<T>` + `select { onTimeout }`, cancel losers.
+
+**Wins:** hard guarantee against Android's 5-second kill; first-positive decision returns immediately.
+
+**Files:** new `util/Race.kt` + `ExternalLookupChecker` consumer.
+
+### A3. Push-Alert bridge — 3 days (single biggest UX win)
+
+Borrowed from [SpamBlocker](https://github.com/aj3423/SpamBlocker) `NotificationListenerService`. Temporarily allow-through an unknown caller when a messaging/delivery/rideshare app has recently posted a notification matching a user regex (e.g. `"Your driver|Your order|Delivery|Verification code"`).
+
+**Mechanics:**
+1. Extend `RcsNotificationListener` to record `(packageName, title, body, timestamp)` for whitelisted sources (Uber, DoorDash, Amazon, USPS, Gmail, etc.) in an in-memory ring buffer.
+2. Add `PushAlertChecker` (priority between whitelist and DB) that scans the ring buffer for regex matches within a TTL window.
+3. Gotcha: `onScreenCall` must yield (`CoroutineScope(IO).launch` + return) so Android flushes doze-queued notifications to the listener; the checker then `delay(500)` to drain.
+
+**Wins:** kills the #1 false-positive class (legit unknown callers from services the user actively uses).
+
+**Files:** `data/checker/PushAlertChecker.kt`, `data/PushAlertRegistry.kt`, `RcsNotificationListener.kt` (+alert capture), settings UI.
+
+### A4. BlockedNumberContract system-wide mirror — 2-3 days
+
+Borrowed from [Fossify Phone](https://github.com/FossifyOrg/Phone). Mirror the user-block list into Android's system-wide `BlockedNumberContract.BlockedNumbers` so blocks propagate to Google Phone/Messages, survive reinstalls, and unlock Google's "blocked" indicator.
+
+**Requirements:** user must be default dialer *or* default SMS role-holder, *or* we only read (not write) from the system list. Read-only integration is the easy win — add it as an additional `SystemBlockListChecker`.
+
+**Files:** `data/remote/SystemBlockList.kt`, `data/checker/SystemBlockListChecker.kt`.
+
+### A5. Length-locked `#` wildcard patterns — 1 day
+
+Borrowed from [Saracroche](https://codeberg.org/cbouvat/saracroche-android). Patterns like `+33162######` = "11 digits starting with `+33162`, rest anything". No regex JIT, no `LIKE`. Phone stored as `Long`, pattern as `String`, length must match exactly.
+
+Adds a pattern-overlap detector for the rule-add UI ("this pattern is already covered by `+33#######`"). Saracroche exposes "this pattern covers 1,000,000 numbers" — great trust signal.
+
+**Files:** new `data/model/HashWildcardRule.kt` + `data/checker/HashWildcardChecker.kt` + migration v6→v7.
+
+### A6. Bulk-insert batching + source tracking — half day
+
+Borrowed from [SpamBlocker](https://github.com/aj3423/SpamBlocker) `SpamTable`. Batched placeholder strings with `chunked(1000)` on Android 14+, `chunked(200)` below (SQLite 999-variable limit). Add `importSource: String` and `importReason: String` columns so auto-report can target the source that originally flagged the number.
+
+**Files:** `SpamDao` (batch insert method), `SpamNumber` (+2 columns), migration v7→v8.
+
+### A7. Per-rule schedule + SIM-slot gating — 2 days
+
+Borrowed from [SpamBlocker](https://github.com/aj3423/SpamBlocker) `RegexRuleChecker.isEnabled`. Each rule gets optional `TimeSchedule` (day-of-week + hour range) and `simSlot: Int?`. Checked in `IChecker.isEnabled(ctx)` before the regex/ML runs. Includes a brute-force 9-key SIM-slot extractor from SMS intents for vendor quirks.
+
+**Files:** `data/model/TimeSchedule.kt`, schema extension on `WildcardRule` + `SmsKeywordRule`, migration, UI additions on rule-edit screens.
+
+### A8. YACB trie+slice offline DB (deferred) — 5-7 days
+
+Borrowed from [YetAnotherCallBlocker](https://gitlab.com/xynngh/YetAnotherCallBlocker) `AbstractDatabase`. Fixed-width columnar format (~5 bytes per phone number), trie-indexed, daily delta updates via atomic `renameTo`. **Only worth building if we ship >100k bundled numbers** — Room handles <1M rows fine.
+
+Deferred until post-A1-A7; revisit if the bundled spam list crosses 50k entries.
+
+### Execution Order & Estimates
+
+| # | Item | Effort | Target | Blocks |
+|---|------|--------|--------|--------|
+| A1 | `IChecker` pipeline | 1-2d | v1.6.0 | — |
+| A2 | Budget-aware race | 1d | v1.6.0 | A1 |
+| A3 | Push-Alert bridge | 3d | v1.6.0 | A1 |
+| A5 | `#` wildcard patterns | 1d | v1.7.0 | A1 |
+| A4 | BlockedNumberContract | 2-3d | v1.7.0 | A1 |
+| A6 | Bulk-insert + source tracking | 0.5d | v1.7.0 | — |
+| A7 | Schedule + SIM gating | 2d | v1.8.0 | A1 |
+| A8 | YACB trie+slice DB | 5-7d | deferred | — |
+
+**Total through A7:** ~12-14 days of focused work, delivering two releases that hit the top false-positive pain points and set the architecture up for everything else.
+
+### Explicitly Skipped (from research)
+
+- BlackList's reflection-based `endCall` — pre-Android 10 only, irrelevant.
+- YACB's `PhoneStateListener` foreground-service fallback — Xiaomi OEM hack; `CallScreeningService` is cleaner.
+- TrueCaller API integration — ToS-hostile, not OSS-clean.
+- Tranquille — pure YACB fork, no new ideas.

@@ -58,7 +58,10 @@ fun SettingsScreen(viewModel: MainViewModel) {
     val mlScorer by viewModel.mlScorerEnabled.collectAsState()
     val rcsFilter by viewModel.rcsFilterEnabled.collectAsState()
     val silentVoicemail by viewModel.silentVoicemailEnabled.collectAsState()
+    val pushAlertEnabled by viewModel.pushAlertEnabled.collectAsState()
+    val pushAlertDisabledPackages by viewModel.pushAlertDisabledPackages.collectAsState()
     val abstractApiKey by viewModel.abstractApiKey.collectAsState()
+    var showPushAlertSources by remember { mutableStateOf(false) }
 
     val roleManager = remember(context) {
         context.getSystemService(Context.ROLE_SERVICE) as? RoleManager
@@ -313,6 +316,45 @@ fun SettingsScreen(viewModel: MainViewModel) {
                 }
             }
             GradientDivider()
+            // A3: Push-alert bridge — notification-backed allow-through for
+            // unknown callers. Shares the notification-listener grant with
+            // the RCS filter, so we show the same "Grant notification access"
+            // shortcut when this is on without the permission.
+            SettingsToggle(
+                stringResource(R.string.settings_push_alert),
+                stringResource(R.string.settings_push_alert_desc),
+                Icons.Default.NotificationsActive,
+                pushAlertEnabled
+            ) { viewModel.setPushAlert(it) }
+            if (pushAlertEnabled) {
+                val totalSources = com.sysadmindoc.callshield.data.PushAlertRegistry.ALERT_SOURCE_PACKAGES.size
+                val activeSources = totalSources - pushAlertDisabledPackages.size
+                Spacer(Modifier.height(4.dp))
+                OutlinedButton(
+                    onClick = { showPushAlertSources = true },
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Icon(Icons.Default.Tune, null, tint = CatMauve)
+                    Spacer(Modifier.width(6.dp))
+                    Column(horizontalAlignment = Alignment.Start) {
+                        Text(
+                            stringResource(R.string.settings_push_alert_sources),
+                            color = CatMauve,
+                        )
+                        Text(
+                            stringResource(
+                                R.string.settings_push_alert_sources_count,
+                                activeSources,
+                                totalSources,
+                            ),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = CatSubtext,
+                        )
+                    }
+                }
+            }
+            GradientDivider()
             // Silent voicemail mode — send blocked calls to voicemail silently
             // instead of hard-rejecting. Off by default; users who want the
             // missed-call entry as an audit trail can keep hard reject.
@@ -466,6 +508,17 @@ fun SettingsScreen(viewModel: MainViewModel) {
                 Text(stringResource(R.string.settings_about_desc), style = MaterialTheme.typography.labelSmall, color = CatOverlay)
             }
         }
+    }
+
+    // A3 allowlist editor — modal sheet only mounts when requested so
+    // the PackageManager lookup inside runs lazily.
+    if (showPushAlertSources) {
+        PushAlertSourcesSheet(
+            disabledPackages = pushAlertDisabledPackages,
+            onToggle = { pkg, allowed -> viewModel.setPushAlertPackageAllowed(pkg, allowed) },
+            onReset = { viewModel.resetPushAlertPackages() },
+            onDismiss = { showPushAlertSources = false },
+        )
     }
 }
 

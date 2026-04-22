@@ -2,6 +2,7 @@ package com.sysadmindoc.callshield.data.local
 
 import androidx.room.*
 import com.sysadmindoc.callshield.data.model.BlockedCall
+import com.sysadmindoc.callshield.data.model.HashWildcardRule
 import com.sysadmindoc.callshield.data.model.SpamNumber
 import com.sysadmindoc.callshield.data.model.SpamPrefix
 import com.sysadmindoc.callshield.data.model.NumberCount
@@ -135,8 +136,29 @@ interface SpamDao {
     @Query("UPDATE wildcard_rules SET enabled = :enabled WHERE id = :id")
     suspend fun setWildcardRuleEnabled(id: Long, enabled: Boolean)
 
-    // Search
-    @Query("SELECT * FROM spam_numbers WHERE number LIKE '%' || :query || '%' OR description LIKE '%' || :query || '%' ORDER BY reports DESC LIMIT 100")
+    // Hash wildcard rules (length-locked `#` patterns, DB v7+)
+    @Query("SELECT * FROM hash_wildcard_rules WHERE enabled = 1")
+    suspend fun getActiveHashWildcardRules(): List<HashWildcardRule>
+
+    @Query("SELECT * FROM hash_wildcard_rules ORDER BY addedTimestamp DESC")
+    fun getAllHashWildcardRules(): Flow<List<HashWildcardRule>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertHashWildcardRule(rule: HashWildcardRule)
+
+    @Delete
+    suspend fun deleteHashWildcardRule(rule: HashWildcardRule)
+
+    @Query("UPDATE hash_wildcard_rules SET enabled = :enabled WHERE id = :id")
+    suspend fun setHashWildcardRuleEnabled(id: Long, enabled: Boolean)
+
+    // Search — repository pre-escapes `%`, `_`, and `\` in the user query
+    // so typing a literal `%` doesn't silently become a wildcard and a
+    // blank search doesn't return the whole table.
+    @Query("""SELECT * FROM spam_numbers
+              WHERE number LIKE '%' || :query || '%' ESCAPE '\'
+                 OR description LIKE '%' || :query || '%' ESCAPE '\'
+              ORDER BY reports DESC LIMIT 100""")
     fun searchNumbers(query: String): Flow<List<SpamNumber>>
 
     // Whitelist
@@ -182,7 +204,10 @@ interface SpamDao {
     @Query("SELECT number, COUNT(*) as cnt FROM call_log WHERE wasBlocked = 1 GROUP BY number ORDER BY cnt DESC LIMIT :limit")
     suspend fun getGroupedBlockedNumbers(limit: Int = 50): List<NumberCount>
 
-    // Search across log
-    @Query("SELECT * FROM call_log WHERE number LIKE '%' || :query || '%' OR matchReason LIKE '%' || :query || '%' ORDER BY timestamp DESC LIMIT 100")
+    // Search across log — escaped like above
+    @Query("""SELECT * FROM call_log
+              WHERE number LIKE '%' || :query || '%' ESCAPE '\'
+                 OR matchReason LIKE '%' || :query || '%' ESCAPE '\'
+              ORDER BY timestamp DESC LIMIT 100""")
     fun searchLog(query: String): Flow<List<BlockedCall>>
 }
