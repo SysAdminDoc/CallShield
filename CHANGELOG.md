@@ -2,6 +2,80 @@
 
 All notable changes to CallShield will be documented in this file.
 
+## [v1.7.0] - 2026-04-24
+
+Round-2/3 borrow-and-harden pass. Competitor-OSS research
+(aj3423/SpamBlocker, adamff-dev/spam-call-blocker-app, rspamd patterns)
+distilled into two user-facing detection-pipeline improvements plus a
+behavior-preserving refactor of the block-response decision table.
+Fourteen new JVM unit tests cover the priority ladder and the
+silence-vs-reject branches.
+
+### Added
+
+- **STIR/SHAKEN Trusted-Caller Allow** — new detection layer that short-
+  circuits the weaker statistical blockers (heuristic, ML, campaign-burst,
+  frequency-escalation) when the carrier signs a `PASSED` attestation on
+  the calling number. Paired with the existing STIR_SHAKEN block slot
+  (which fires on `FAILED`) to form a clean decision table: PASSED → allow,
+  FAILED → block, NOT_VERIFIED / null → no opinion.
+  - New checker: `data/checker/Checkers.kt::StirShakenTrustChecker` at
+    priority slot `STIR_SHAKEN_TRUSTED = 5_300`. Sits **below** every
+    explicit user rule (manual whitelist, contact whitelist, user
+    blocklist, prefix, wildcard, hash-wildcard, system-block-list) so an
+    intentionally blocked number stays blocked even if the carrier
+    verifies it. Sits **above** heuristic / ML / campaign-burst /
+    frequency so it does what it's here to do.
+  - New setting: `KEY_STIR_TRUSTED_ALLOW`, **defaulted on**. Toggle
+    exposed in Settings → Detection Engines → "STIR Trusted-Caller Allow".
+  - Source: Round-2 OSS research — aj3423/SpamBlocker + adamff-dev
+    attestation-level filtering. We intentionally do NOT treat attestation
+    `C` (verified-fail) as a sole block signal because US wholesale
+    carriers routinely stamp C on legitimate traffic.
+- **Auto-Mute Low-Confidence Blocks** — new opt-in setting that silences
+  blocks with `confidence < 60` to voicemail instead of hard-rejecting
+  them. Users can then review uncertain calls after the fact without an
+  audible interruption. High-confidence hits (database match, user
+  blocklist, STIR FAILED, heuristic ≥ 60) are always hard-rejected even
+  with auto-mute on.
+  - New helper: `CallShieldScreeningService.shouldSilence(silentVoicemail,
+    autoMuteLowConf, confidence)` — pure decision function, testable
+    without a CallScreeningService / Android runtime.
+  - New constant: `AUTO_MUTE_CONFIDENCE_THRESHOLD = 60`.
+  - New setting: `KEY_AUTOMUTE_LOW_CONFIDENCE`, defaulted off. Toggle
+    exposed in Settings → Detection Engines → "Auto-Mute Low-Confidence
+    Blocks".
+  - `KEY_SILENT_VOICEMAIL` still wins when on — silence-every-block
+    beats silence-only-uncertain.
+- **14 new JVM unit tests** — `StirShakenTrustCheckerTest` (8 cases:
+  enablement gates, pure decision paths, full priority-ladder regression
+  sweep) and `CallShieldScreeningServiceAutoMuteTest` (6 cases: the three
+  decision table branches + confidence-threshold boundary).
+
+### Changed
+
+- `CallShieldScreeningService.respondBlock()` now delegates response-
+  shape decisions to a new private `buildBlockResponse(prefs, confidence)`
+  helper. All three response shapes (silent-voicemail / auto-mute /
+  hard-reject) share one reviewable decision table. Behavior-preserving
+  for v1.6.3 users — same `CallResponse.Builder()` flag sequence is still
+  emitted per branch.
+- `CheckerPriority` ladder extended with `STIR_SHAKEN_TRUSTED = 5_300`.
+  Existing slot numbers are unchanged.
+- ROADMAP `Current State` header rolled forward from v1.2.8 → v1.7.0 and
+  now documents the round-1 architecture refactor (IChecker pipeline,
+  Race.kt, PushAlertChecker) that shipped in the v1.6.x series.
+
+### Fixed
+
+- Internal audit caught during the v1.7.0 development cycle: the
+  first-cut priority slot for `STIR_SHAKEN_TRUSTED` was placed above
+  `USER_BLOCKLIST`, which would have let a carrier-signed PASSED call
+  override an intentional user block. Corrected to slot `5_300` before
+  ship; added a regression test suite in `StirShakenTrustCheckerTest`
+  that asserts the ladder invariant against every explicit user rule
+  so the bug cannot return silently.
+
 ## [v1.6.3] - 2026-04-24
 
 Hardening pass targeting defects the v1.6.1 audit missed. Nine
