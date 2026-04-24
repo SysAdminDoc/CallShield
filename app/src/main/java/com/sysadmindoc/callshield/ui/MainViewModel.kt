@@ -111,6 +111,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     val blockSmsEnabled = repo.blockSmsEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
     val blockUnknownEnabled = repo.blockUnknownEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
     val stirShakenEnabled = repo.stirShakenEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+    val stirTrustedAllowEnabled = repo.stirTrustedAllowEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+    val autoMuteLowConfidenceEnabled = repo.autoMuteLowConfidenceEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
     val neighborSpoofEnabled = repo.neighborSpoofEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
     val heuristicsEnabled = repo.heuristicsEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
     val smsContentEnabled = repo.smsContentEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
@@ -319,6 +321,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun setBlockSms(v: Boolean) = viewModelScope.launch { repo.setBlockSms(v) }
     fun setBlockUnknown(v: Boolean) = viewModelScope.launch { repo.setBlockUnknown(v) }
     fun setStirShaken(v: Boolean) = viewModelScope.launch { repo.setStirShaken(v) }
+    fun setStirTrustedAllow(v: Boolean) = viewModelScope.launch { repo.setStirTrustedAllow(v) }
+    fun setAutoMuteLowConfidence(v: Boolean) = viewModelScope.launch { repo.setAutoMuteLowConfidence(v) }
     fun setNeighborSpoof(v: Boolean) = viewModelScope.launch { repo.setNeighborSpoof(v) }
     fun setHeuristics(v: Boolean) = viewModelScope.launch { repo.setHeuristics(v) }
     fun setSmsContent(v: Boolean) = viewModelScope.launch { repo.setSmsContent(v) }
