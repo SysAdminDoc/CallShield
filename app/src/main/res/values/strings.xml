@@ -353,6 +353,10 @@
     <string name="settings_detection_engines">Detection Engines</string>
     <string name="settings_stir_shaken">STIR/SHAKEN</string>
     <string name="settings_stir_shaken_desc">Block calls failing carrier caller ID auth (Android 11+)</string>
+    <string name="settings_stir_trusted_allow">STIR Trusted-Caller Allow</string>
+    <string name="settings_stir_trusted_allow_desc">Short-circuit heuristic &amp; ML blocks when the carrier has verified the caller (attestation A/B). User-blocked numbers always win.</string>
+    <string name="settings_automute_low_confidence">Auto-Mute Low-Confidence Blocks</string>
+    <string name="settings_automute_low_confidence_desc">Silence low-confidence blocks to voicemail instead of rejecting them, so you can review uncertain calls after the fact.</string>
     <string name="settings_neighbor_spoofing">Neighbor Spoofing</string>
     <string name="settings_neighbor_spoofing_desc">Flag calls matching your area code + exchange</string>
     <string name="settings_heuristic_analysis">Heuristic Analysis</string>

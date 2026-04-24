@@ -44,6 +44,8 @@ fun SettingsScreen(viewModel: MainViewModel) {
     val blockSms by viewModel.blockSmsEnabled.collectAsState()
     val blockUnknown by viewModel.blockUnknownEnabled.collectAsState()
     val stirShaken by viewModel.stirShakenEnabled.collectAsState()
+    val stirTrustedAllow by viewModel.stirTrustedAllowEnabled.collectAsState()
+    val autoMuteLowConfidence by viewModel.autoMuteLowConfidenceEnabled.collectAsState()
     val neighborSpoof by viewModel.neighborSpoofEnabled.collectAsState()
     val heuristics by viewModel.heuristicsEnabled.collectAsState()
     val smsContent by viewModel.smsContentEnabled.collectAsState()
@@ -292,6 +294,13 @@ fun SettingsScreen(viewModel: MainViewModel) {
         SettingsCard(stringResource(R.string.settings_detection_engines)) {
             SettingsToggle(stringResource(R.string.settings_stir_shaken), stringResource(R.string.settings_stir_shaken_desc), Icons.Default.VerifiedUser, stirShaken) { viewModel.setStirShaken(it) }
             GradientDivider()
+            SettingsToggle(
+                stringResource(R.string.settings_stir_trusted_allow),
+                stringResource(R.string.settings_stir_trusted_allow_desc),
+                Icons.Default.VerifiedUser,
+                stirTrustedAllow,
+            ) { viewModel.setStirTrustedAllow(it) }
+            GradientDivider()
             SettingsToggle(stringResource(R.string.settings_neighbor_spoofing), stringResource(R.string.settings_neighbor_spoofing_desc), Icons.Default.NearMe, neighborSpoof) { viewModel.setNeighborSpoof(it) }
             GradientDivider()
             SettingsToggle(stringResource(R.string.settings_heuristic_analysis), stringResource(R.string.settings_heuristic_analysis_desc), Icons.Default.Psychology, heuristics) { viewModel.setHeuristics(it) }
@@ -364,6 +373,16 @@ fun SettingsScreen(viewModel: MainViewModel) {
                 Icons.Default.Voicemail,
                 silentVoicemail
             ) { viewModel.setSilentVoicemail(it) }
+            GradientDivider()
+            // v1.7.0: auto-mute low-confidence blocks. Independent from
+            // Silent Voicemail — Silent always silences; auto-mute only
+            // silences blocks scoring below the 60-confidence threshold.
+            SettingsToggle(
+                stringResource(R.string.settings_automute_low_confidence),
+                stringResource(R.string.settings_automute_low_confidence_desc),
+                Icons.Default.Voicemail,
+                autoMuteLowConfidence,
+            ) { viewModel.setAutoMuteLowConfidence(it) }
         }
 
         // Feature 9: Time-based blocking
