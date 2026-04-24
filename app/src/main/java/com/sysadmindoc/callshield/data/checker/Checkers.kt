@@ -52,6 +52,66 @@ internal class ContactWhitelistChecker(private val appContext: Context) : ICheck
 }
 
 /**
+ * STIR/SHAKEN attestation-level TRUST allow.
+ *
+ * Complementary to [StirShakenChecker] (which blocks on `VERIFICATION_STATUS_FAILED`).
+ * When the carrier actively signs for the calling number
+ * (`VERIFICATION_STATUS_PASSED`, attestation-level A or B in the SHAKEN
+ * framework), treat that as a trust signal strong enough to short-circuit
+ * the weaker downstream blockers — heuristic, ML, campaign-burst, frequency.
+ *
+ * Priority slot: [CheckerPriority.STIR_SHAKEN_TRUSTED] = 5_300. This sits
+ * BELOW every explicit user rule (manual whitelist, contact whitelist,
+ * user blocklist, prefix, wildcard, hash-wildcard, system-block-list) and
+ * BELOW the STIR_SHAKEN block — a user who explicitly blocked a number
+ * keeps that intent even if the carrier verifies it, and a carrier that
+ * says "this specific call is spoofed" beats a generic "we trust this
+ * caller's line identity." The allow still lands ABOVE heuristic / ML /
+ * campaign-burst / frequency so it does what it's here to do.
+ *
+ * Rationale (from Round-2 research, aj3423/SpamBlocker + adamff-dev): US
+ * wholesale carriers frequently attest "C" on legitimate traffic, so we
+ * do NOT treat C as a sole block signal. We only fire the allow on a
+ * positive PASSED signal, never on the absence of one.
+ *
+ * Gated on the user setting and the runtime ability to read a
+ * verification status (non-null); skipped for historical scans and SMS.
+ */
+internal class StirShakenTrustChecker : IChecker {
+    override val priority = CheckerPriority.STIR_SHAKEN_TRUSTED
+    override val name = "stir_shaken_trusted"
+
+    override suspend fun isEnabled(ctx: CheckContext): Boolean =
+        isEnabledPure(
+            settingEnabled = ctx.prefs[SpamRepository.KEY_STIR_TRUSTED_ALLOW] ?: true,
+            verificationStatus = ctx.verificationStatus,
+        )
+
+    override suspend fun check(ctx: CheckContext): BlockResult? =
+        decidePure(ctx.verificationStatus)
+
+    companion object {
+        // android.telecom.Connection.VERIFICATION_STATUS_PASSED == 1 (AOSP).
+        // Reproduced here as a plain Int so JVM unit tests can feed the
+        // pure helpers without pulling in the android.telecom stub, which
+        // throws `RuntimeException("Stub!")` for field reads on unit-test
+        // classpath unless testOptions.unitTests.returnDefaultValues = true
+        // (which we intentionally don't set — it masks real bugs).
+        internal const val VERIFICATION_STATUS_PASSED = 1
+
+        /** Pure-logic helper — testable without a CheckContext or Android. */
+        internal fun isEnabledPure(settingEnabled: Boolean, verificationStatus: Int?): Boolean =
+            settingEnabled && verificationStatus != null
+
+        /** Pure-logic helper — returns the allow result iff the carrier signed PASSED. */
+        internal fun decidePure(verificationStatus: Int?): BlockResult? =
+            if (verificationStatus == VERIFICATION_STATUS_PASSED) {
+                BlockResult.allow("stir_shaken_trusted")
+            } else null
+    }
+}
+
+/**
  * STIR/SHAKEN — carrier-signed attestation. On Android 11+ the telecom
  * stack exposes [android.telecom.Call.Details.callerNumberVerificationStatus];
  * `VERIFICATION_STATUS_FAILED` is a very strong spam signal (the carrier
@@ -62,6 +122,8 @@ internal class ContactWhitelistChecker(private val appContext: Context) : ICheck
  * PBX, a relative on an old VoIP trunk that hasn't deployed STIR — can
  * still ring through. Moved here from the screening service for exactly
  * this reason after a v1.6.0 code review.
+ *
+ * Paired with [StirShakenTrustChecker] which handles the PASSED case.
  *
  * Gated on both the user setting and the runtime ability to read a
  * verification status (non-null); skipped for historical scans and SMS.

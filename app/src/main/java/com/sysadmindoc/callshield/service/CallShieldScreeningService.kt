@@ -122,8 +122,44 @@ class CallShieldScreeningService : CallScreeningService() {
         // deadline, regardless of whether the Room insert is quick or slow.
         // The log/notification run async on appScope — losing them is better
         // than losing the block decision itself.
-        val silent = prefs[SpamRepository.KEY_SILENT_VOICEMAIL] ?: false
-        val response = if (silent) {
+        val response = buildBlockResponse(prefs, confidence)
+        respondToCall(callDetails, response)
+
+        CallShieldApp.appScope.launch {
+            try {
+                SpamRepository.getInstance(applicationContext)
+                    .logBlockedCall(number = number, isCall = true, matchReason = reason, confidence = confidence)
+            } catch (_: Exception) { }
+        }
+    }
+
+    /**
+     * Decision table for how a block is delivered to the telecom stack.
+     *
+     * Three shapes, priority descending:
+     *   1. `KEY_SILENT_VOICEMAIL` on → user asked for every block to be
+     *      silenced (no ring, lands in voicemail). Wins outright — the
+     *      user preference is unambiguous.
+     *   2. `KEY_AUTOMUTE_LOW_CONFIDENCE` on AND confidence < 60 → the
+     *      detection layer isn't fully certain (heuristic at the
+     *      threshold, ML below 60%, campaign-burst hit), so silence
+     *      instead of hard-reject. Lets the user inspect the log entry
+     *      later without the interruption. Numbers v1.7.0-onward lifted
+     *      from adamff-dev/spam-call-blocker-app's "auto-mute" mode.
+     *   3. Default → hard reject with setDisallowCall + setRejectCall.
+     *      Both flags set for maximum compatibility across OEMs — some
+     *      carriers ignore one but not the other.
+     *
+     * All three paths keep setSkipCallLog=false + setSkipNotification=false
+     * so the block is still visible to the user.
+     */
+    private fun buildBlockResponse(
+        prefs: androidx.datastore.preferences.core.Preferences,
+        confidence: Int,
+    ): CallResponse {
+        val silentVoicemail = prefs[SpamRepository.KEY_SILENT_VOICEMAIL] ?: false
+        val autoMuteLowConf = prefs[SpamRepository.KEY_AUTOMUTE_LOW_CONFIDENCE] ?: false
+        return if (shouldSilence(silentVoicemail, autoMuteLowConf, confidence)) {
             CallResponse.Builder()
                 .setSilenceCall(true)
                 .setSkipCallLog(false)
@@ -137,14 +173,35 @@ class CallShieldScreeningService : CallScreeningService() {
                 .setSkipNotification(false)
                 .build()
         }
-        respondToCall(callDetails, response)
+    }
 
-        CallShieldApp.appScope.launch {
-            try {
-                SpamRepository.getInstance(applicationContext)
-                    .logBlockedCall(number = number, isCall = true, matchReason = reason, confidence = confidence)
-            } catch (_: Exception) { }
-        }
+    companion object {
+        // Blocks at or above this confidence are always hard-rejected even
+        // with auto-mute on — a database hit, user blocklist, STIR fail, or
+        // high-scoring heuristic is certain enough that the user shouldn't
+        // have to fish it out of voicemail.
+        internal const val AUTO_MUTE_CONFIDENCE_THRESHOLD = 60
+
+        /**
+         * Pure decision: should a block arrive as a silent voicemail
+         * drop (true) or as a hard reject (false)?
+         *
+         * - `silentVoicemailEnabled` wins unconditionally when on.
+         * - Otherwise, `autoMuteLowConfidenceEnabled` silences only blocks
+         *   with `confidence < AUTO_MUTE_CONFIDENCE_THRESHOLD`.
+         * - Default is hard reject.
+         *
+         * Kept as a companion function so unit tests can cover every
+         * combination without standing up a CallScreeningService (which
+         * requires a bound telecom context and an Android runtime).
+         */
+        internal fun shouldSilence(
+            silentVoicemailEnabled: Boolean,
+            autoMuteLowConfidenceEnabled: Boolean,
+            confidence: Int,
+        ): Boolean =
+            silentVoicemailEnabled ||
+                (autoMuteLowConfidenceEnabled && confidence < AUTO_MUTE_CONFIDENCE_THRESHOLD)
     }
 
     private fun respondAllow(callDetails: Call.Details) {
