@@ -55,6 +55,41 @@ class PushAlertCheckerTest {
         )
     }
 
+    // ── v1.6.3: scope digit match to the body, not title+body ────────
+
+    @Test fun `body-only scoping ignores standalone digit run in title`() {
+        // Pre-v1.6.3 the match ran against `title + "\n" + body`. Since `\n`
+        // is a non-digit boundary, a standalone 7-digit run appearing in the
+        // title (order ID, tracking number, delivery PIN) would allow an
+        // unrelated caller whose last-7 matched. We now scope the digit
+        // match to the body only; phrase matches still see the full text.
+        val title = "Order #5551234 delivered"
+        val body = "Package arrived at your doorstep"
+        val searchText = "$title\n$body"
+        // The raw anchored regex still matches the title-embedded run —
+        // this is intentional for phrase matches.
+        assertTrue(
+            "anchored regex ignores `\\n` as a non-digit boundary, so a title-embedded 7-digit run still satisfies the pattern",
+            anchoredDigitRegex("5551234").containsMatchIn(searchText)
+        )
+        // But the v1.6.3 fix in PushAlertChecker.check() runs the digit
+        // regex against `alert.body` only — so the body-scoped invocation
+        // must NOT match.
+        assertFalse(
+            "body-scoped digit match must ignore the title",
+            anchoredDigitRegex("5551234").containsMatchIn(body)
+        )
+    }
+
+    @Test fun `body match still fires when body contains the run`() {
+        // Positive case: the body itself carries the standalone 7-digit run
+        // (e.g. a courier note with a callback number), so we still allow.
+        val body = "Call 5551234 if no one is home"
+        assertTrue(
+            anchoredDigitRegex("5551234").containsMatchIn(body)
+        )
+    }
+
     // ── H2: tightened trust-phrase list ───────────────────────────────
 
     @Test fun `bare calendar word no longer qualifies`() {

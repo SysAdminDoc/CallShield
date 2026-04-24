@@ -15,14 +15,31 @@ import java.io.File
 
 /**
  * Full app backup/restore — settings, blocklist, whitelist, wildcard rules, call log.
+ *
+ * ## Versioning
+ *
+ * - **v1**: initial schema (numbers, whitelist).
+ * - **v2**: added wildcard rules and keyword rules. Whitelist gained
+ *   `isEmergency`.
+ * - **v3** (v1.6.3): wildcard and keyword rules now carry their
+ *   schedule columns (`scheduleDays`, `scheduleStartHour`,
+ *   `scheduleEndHour`). Prior backups silently dropped the schedule,
+ *   so a time-gated rule round-tripped through a v2 backup would fire
+ *   24/7 after restore. The reader accepts v1–v3; the writer emits v3.
+ *   Older backups that don't carry schedule fields are restored with
+ *   all-zeros — the Kotlin defaults on [WildcardRule] and
+ *   [SmsKeywordRule] treat that as "always active", preserving
+ *   pre-v3 behavior.
  */
 object BackupRestore {
     private const val MIN_IMPORTED_DIGITS = 5
+    private const val CURRENT_BACKUP_VERSION = 3
+    private const val OLDEST_SUPPORTED_VERSION = 1
 
     private val moshi = Moshi.Builder().addLast(KotlinJsonAdapterFactory()).build()
 
     data class Backup(
-        val version: Int = 2,
+        val version: Int = CURRENT_BACKUP_VERSION,
         val app: String = "CallShield",
         val timestamp: Long = System.currentTimeMillis(),
         val blockedNumbers: List<BackupNumber> = emptyList(),
@@ -37,8 +54,29 @@ object BackupRestore {
         val description: String,
         val isEmergency: Boolean = false,
     )
-    data class BackupWildcard(val pattern: String, val isRegex: Boolean, val description: String, val enabled: Boolean)
-    data class BackupKeyword(val keyword: String, val caseSensitive: Boolean, val description: String, val enabled: Boolean)
+    data class BackupWildcard(
+        val pattern: String,
+        val isRegex: Boolean,
+        val description: String,
+        val enabled: Boolean,
+        /**
+         * Bitmask of active weekdays; see [TimeSchedule]. Defaults to
+         * `0` for backward compatibility with pre-v3 backups, which is
+         * interpreted as "always active".
+         */
+        val scheduleDays: Int = 0,
+        val scheduleStartHour: Int = 0,
+        val scheduleEndHour: Int = 0,
+    )
+    data class BackupKeyword(
+        val keyword: String,
+        val caseSensitive: Boolean,
+        val description: String,
+        val enabled: Boolean,
+        val scheduleDays: Int = 0,
+        val scheduleStartHour: Int = 0,
+        val scheduleEndHour: Int = 0,
+    )
 
     suspend fun createBackup(context: Context): String = withContext(Dispatchers.IO) {
         val dao = AppDatabase.getInstance(context).spamDao()
@@ -50,10 +88,26 @@ object BackupRestore {
             BackupWhitelist(it.number, it.description, it.isEmergency)
         }
         val wildcards = dao.getAllWildcardRules().first().map {
-            BackupWildcard(it.pattern, it.isRegex, it.description, it.enabled)
+            BackupWildcard(
+                pattern = it.pattern,
+                isRegex = it.isRegex,
+                description = it.description,
+                enabled = it.enabled,
+                scheduleDays = it.scheduleDays,
+                scheduleStartHour = it.scheduleStartHour,
+                scheduleEndHour = it.scheduleEndHour,
+            )
         }
         val keywords = dao.getAllKeywordRules().first().map {
-            BackupKeyword(it.keyword, it.caseSensitive, it.description, it.enabled)
+            BackupKeyword(
+                keyword = it.keyword,
+                caseSensitive = it.caseSensitive,
+                description = it.description,
+                enabled = it.enabled,
+                scheduleDays = it.scheduleDays,
+                scheduleStartHour = it.scheduleStartHour,
+                scheduleEndHour = it.scheduleEndHour,
+            )
         }
 
         val backup = Backup(
@@ -105,8 +159,8 @@ object BackupRestore {
             if (backup.app != "CallShield") {
                 return@withContext RestoreResult(false, "This backup was not created by CallShield")
             }
-            if (backup.version !in 1..2) {
-                return@withContext RestoreResult(false, "Unsupported backup version")
+            if (backup.version !in OLDEST_SUPPORTED_VERSION..CURRENT_BACKUP_VERSION) {
+                return@withContext RestoreResult(false, "Unsupported backup version ${backup.version}")
             }
             if (
                 backup.blockedNumbers.isEmpty() &&
@@ -151,7 +205,10 @@ object BackupRestore {
                         pattern = trimmedPattern,
                         isRegex = r.isRegex,
                         description = r.description.trim(),
-                        enabled = r.enabled
+                        enabled = r.enabled,
+                        scheduleDays = sanitizeScheduleDays(r.scheduleDays),
+                        scheduleStartHour = sanitizeScheduleHour(r.scheduleStartHour),
+                        scheduleEndHour = sanitizeScheduleHour(r.scheduleEndHour),
                     )
                 )
                 rulesRestored++
@@ -166,7 +223,10 @@ object BackupRestore {
                         keyword = trimmedKeyword,
                         caseSensitive = k.caseSensitive,
                         description = k.description.trim(),
-                        enabled = k.enabled
+                        enabled = k.enabled,
+                        scheduleDays = sanitizeScheduleDays(k.scheduleDays),
+                        scheduleStartHour = sanitizeScheduleHour(k.scheduleStartHour),
+                        scheduleEndHour = sanitizeScheduleHour(k.scheduleEndHour),
                     )
                 )
                 keywordsRestored++
@@ -192,4 +252,14 @@ object BackupRestore {
         }
         return if (trimmed.startsWith("+")) "+$digits" else digits
     }
+
+    /**
+     * Reject corrupt schedule values from a hostile or malformed backup.
+     * Only the low 7 bits are meaningful (one per weekday); anything else
+     * is silently zeroed so the restored rule falls back to "always active"
+     * rather than getting a surprising gated schedule.
+     */
+    private fun sanitizeScheduleDays(raw: Int): Int = raw and 0b1111111
+
+    private fun sanitizeScheduleHour(raw: Int): Int = raw.coerceIn(0, 23)
 }

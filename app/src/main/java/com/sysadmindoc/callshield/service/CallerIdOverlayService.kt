@@ -250,9 +250,13 @@ class CallerIdOverlayService : Service() {
             PixelFormat.TRANSLUCENT
         ).apply { gravity = Gravity.TOP }
 
+        // Publish the session id BEFORE addView so any asynchronous work
+        // triggered during view construction (lookup jobs posting back via
+        // the handler) can correctly compare against activeSessionId. If
+        // addView fails, we roll the session id back in the catch block.
+        activeSessionId = sessionId
         try {
             windowManager?.addView(overlayView, params)
-            activeSessionId = sessionId
             isOverlayActive = true
         } catch (_: Exception) {
             deactivateOverlaySession()

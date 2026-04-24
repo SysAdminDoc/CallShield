@@ -48,7 +48,13 @@ data class WildcardRule(
                 // Phone numbers are short (<20 chars) which limits exposure,
                 // but pathological patterns can still hang the call screening path.
                 if (normalizedPattern.length > 200) return false
-                Regex(normalizedPattern).containsMatchIn(number)
+                val regex = Regex(normalizedPattern)
+                // Try the input as-is first, then normalized forms so that
+                // patterns like `^\+1832555\d{4}$` also match SMS senders that
+                // arrive without the `+1` prefix. This matches the glob path
+                // below; prior to v1.6.3 the two paths diverged silently —
+                // users hit "why does my glob match but my regex doesn't?"
+                numberVariants(number).any { regex.containsMatchIn(it) }
             } catch (_: Exception) {
                 false
             }

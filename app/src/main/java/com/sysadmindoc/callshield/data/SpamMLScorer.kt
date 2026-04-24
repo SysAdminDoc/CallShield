@@ -119,6 +119,15 @@ object SpamMLScorer {
      */
     fun loadWeights(context: Context) {
         try {
+            // Best-effort sweep of an orphan .tmp file from a prior
+            // persistModelJson() that was killed between writeText and
+            // renameTo. Ignored if persistModelJson is mid-flight: it
+            // will re-create the file on its next write.
+            runCatching {
+                val stale = File(context.filesDir, "spam_model_weights.json.tmp")
+                if (stale.exists()) stale.delete()
+            }
+
             val file = File(context.filesDir, "spam_model_weights.json")
             if (file.exists()) {
                 val parsed = parseModel(file.readText())

@@ -15,22 +15,32 @@ import com.sysadmindoc.callshield.data.SpamRepository
  *
  * Inspired by SpamBlocker's `NotificationListenerService` push-alert bridge.
  *
- * ## Match rules (tightened after v1.6.0 review)
+ * ## Match rules (tightened after v1.6.0 review, body-scoped in v1.6.3)
  *
  * All alert lookups use [TRUST_WINDOW_MS] (10 min) — a longer window on
  * direct-number matches was found to be too permissive. Each alert in
  * the window gets two chances to allow:
  *
- *   1. **Anchored digit match**: the last 7 digits of the caller appear in
- *      the alert body AS A WHOLE DIGIT RUN. The anchor prevents a 7-digit
- *      order ID / tracking number / PIN inside a longer digit sequence
- *      from accidentally unblocking a completely unrelated caller.
+ *   1. **Anchored digit match against the body**: the last 7 digits of
+ *      the caller appear in the alert *body* AS A WHOLE DIGIT RUN. The
+ *      anchor prevents a 7-digit order ID / tracking number / PIN
+ *      inside a longer digit sequence from accidentally unblocking a
+ *      completely unrelated caller.
  *
- *   2. **Package-gated phrase match**: the alert body contains a trust
- *      phrase (`your driver`, `out for delivery`, …) AND the phrase is
- *      allowed to fire for the alert's package. Verification/MFA
- *      phrases only match for messaging apps that actually send SMS
- *      codes — an Outlook MFA push no longer unblocks random callers.
+ *      v1.6.3: restricted to the body only. Previously the match ran
+ *      against `title + "\n" + body`, and since `\n` counts as a
+ *      non-digit boundary, a standalone 7-digit run in a notification
+ *      title (order ID "Order #5551234", delivery PIN, tracking
+ *      number) could allow an unrelated caller whose last-7 happened
+ *      to match. Trust phrases are still evaluated against the full
+ *      searchText — a phrase like "Your driver" in the title is a
+ *      legitimate signal.
+ *
+ *   2. **Package-gated phrase match**: the alert title or body contains
+ *      a trust phrase (`your driver`, `out for delivery`, …) AND the
+ *      phrase is allowed to fire for the alert's package. Verification
+ *      /MFA phrases only match for messaging apps that actually send
+ *      SMS codes — an Outlook MFA push no longer unblocks random callers.
  */
 internal class PushAlertChecker : IChecker {
     override val priority = CheckerPriority.PUSH_ALERT_BRIDGE
@@ -124,11 +134,15 @@ internal class PushAlertChecker : IChecker {
         val digitMatcher = if (last7.length == 7) anchoredDigitRegex(last7) else null
 
         for (alert in alerts) {
-            // Anchored direct-number match
-            if (digitMatcher != null && digitMatcher.containsMatchIn(alert.searchText)) {
+            // Anchored direct-number match — body only (see class docs).
+            // Titles often carry short standalone digit runs (order IDs,
+            // tracking numbers, delivery PINs) that would otherwise allow
+            // an unrelated caller whose last-7 happened to match.
+            if (digitMatcher != null && digitMatcher.containsMatchIn(alert.body)) {
                 return BlockResult.allow("push_alert")
             }
-            // Package-gated phrase match
+            // Package-gated phrase match — full searchText (title+body).
+            // Phrases like "Your driver" legitimately appear in titles.
             val matched = TRUST_PHRASES.any { phrase ->
                 phrase.appliesTo(alert.packageName) && phrase.regex.containsMatchIn(alert.searchText)
             }

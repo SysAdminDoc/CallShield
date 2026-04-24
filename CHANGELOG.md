@@ -2,6 +2,109 @@
 
 All notable changes to CallShield will be documented in this file.
 
+## [v1.6.3] - 2026-04-24
+
+Hardening pass targeting defects the v1.6.1 audit missed. Nine
+surgical correctness fixes across the screening pipeline, backup
+system, SMS receiver, and several services.
+
+### Fixed (high)
+
+- **PushAlertChecker — title/body scope for anchored digit match**
+  (`data/checker/PushAlertChecker.kt`). The v1.6.1 fix added a
+  lookbehind/lookahead to the 7-digit match so "5551234" wouldn't
+  match as a substring of a longer digit run, but the regex still
+  ran against `title + "\n" + body`. Since `\n` counts as a
+  non-digit boundary, a standalone 7-digit run in the **title**
+  (order ID "Order #5551234", delivery PIN, tracking number) could
+  allow an unrelated caller whose last-7 happened to match. The
+  digit match is now scoped to `alert.body` only. Phrase matches
+  (`your driver`, `out for delivery`, …) still run against the full
+  title+body because phrases legitimately appear in titles.
+- **BackupRestore — schedule fields now round-trip** (`data/BackupRestore.kt`).
+  `BackupWildcard`/`BackupKeyword` dropped `scheduleDays`/`scheduleStartHour`/
+  `scheduleEndHour` on export. A time-gated rule restored from a v2
+  backup silently lost its schedule and fired 24/7. Backup version
+  bumped to 3; readers still accept v1–v3.
+- **SmsReceiver — removed misleading `abortBroadcast()`** (`service/SmsReceiver.kt`).
+  CallShield isn't the default SMS app, so `abortBroadcast()` on
+  `SMS_RECEIVED_ACTION` is either unordered or a no-op depending on
+  OEM/API level — the message still landed in the inbox. The call
+  (with its apologetic comment) suggested CallShield blocked SMS
+  delivery when it only logs the block. Comment rewritten to be
+  explicit: we log, we do not suppress.
+- **CallerIdOverlayService — publish session id before `addView`**
+  (`service/CallerIdOverlayService.kt`). Lookup jobs scheduled
+  during view construction could compare against an older
+  `activeSessionId` and mis-attribute results to the prior session.
+  Belt-and-braces: set the id first, unwind on addView failure.
+
+### Fixed (medium)
+
+- **CallbackDetector — `NUMBER LIKE ?` SQL prefilter** (`data/CallbackDetector.kt`).
+  The outgoing-24h and incoming-5min queries previously scanned the
+  full CallLog window and post-filtered in Kotlin. On heavy users
+  that's hundreds of rows decoded per screening call. SQLite now
+  narrows on the trailing 7 digits before handing the cursor back;
+  Kotlin still does an exact 10-digit match because CallLog formats
+  vary (parentheses, dashes, country-code presence).
+- **CallShieldTileService — Mutex-serialized toggles** (`service/CallShieldTileService.kt`).
+  Two rapid QS-tile taps could both read the current state, both
+  compute the opposite, and both write — leaving the toggle
+  apparently stuck. A single `Mutex` now serializes the
+  read-modify-write on each tap.
+- **SpamMLScorer — sweep stale `.tmp` on `loadWeights`** (`data/SpamMLScorer.kt`).
+  A process kill between `writeText` and `renameTo` left an orphan
+  `spam_model_weights.json.tmp` that accumulated forever because
+  `loadWeights` only reads the final file. Startup now deletes any
+  stale tmp before reading.
+- **WildcardRule — regex path uses `numberVariants`** (`data/model/WildcardRule.kt`).
+  The glob path matched an input across its `+1`, bare-digit, and
+  `1`-prefixed forms; the regex path only matched the raw input.
+  A user-written regex anchored to E.164 (`^\+1832555\d{4}$`)
+  silently missed SMS senders arriving without the `+1`. Regex now
+  tries every variant for parity.
+
+### Fixed (low)
+
+- **SitTonePlayer — AtomicBoolean CAS for single-flight** (`service/SitTonePlayer.kt`).
+  The `@Volatile var isPlaying` check-then-set wasn't atomic; two
+  coroutines entering `play()` concurrently could both see `false`
+  and both proceed. Replaced with `AtomicBoolean.compareAndSet`.
+
+### Tests
+
+- `CallbackDetectorTest` updated for the new query builder signature
+  and the `NUMBER LIKE '%<last7>'` prefilter.
+- `PushAlertCheckerTest` gains two regression cases covering the
+  body-only digit scoping.
+- `WildcardRuleTest` (new) covers the glob+regex parity and the
+  ReDoS guard.
+- `BackupRestoreTest` updated for v3 schema, including schedule-field
+  round-trip cases.
+- **577 unit tests pass.**
+
+### Known follow-ups (not fixed this pass)
+
+Real findings from the audit that deserve their own session:
+
+- Contact cache has no `ContactsContract` observer — a contact added
+  via the OS remains "unknown" for up to 60s. Needs lifecycle wiring
+  and should land alongside a sibling observer for
+  `BlockedNumberContract`.
+- `MainActivity` uses `collectAsState` (not `collectAsStateWithLifecycle`)
+  so the dashboard minute-ticker keeps running in background. Touches
+  many screens; do in one sweep.
+- Backup restore is additive; picking the wrong file mixes two users'
+  state. Needs a product decision on Replace-vs-Merge prompt.
+- Screening-service block logging is fire-and-forget on `appScope`;
+  under memory pressure Android can reclaim the process before the
+  Room insert runs. Needs `goAsync`-equivalent keep-alive.
+- `MainViewModel` is 400+ lines with 28 StateFlows; wants to split
+  into domain-specific ViewModels.
+- Phone-number normalization duplicated across 13+ screens — wants
+  a `PhoneUtils` extraction.
+
 ## [v1.6.2] - 2026-04-24
 
 Maintenance release. No app-code changes since v1.6.1 — bundles the

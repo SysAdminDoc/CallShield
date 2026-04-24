@@ -8,6 +8,7 @@ import android.media.AudioTrack
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.PI
 import kotlin.math.sin
 
@@ -51,8 +52,12 @@ object SitTonePlayer {
     private const val SEGMENT_GAP_MS = 80   // Silence between tones
     private const val FADE_MS = 15          // Fade in/out to avoid clicks
 
-    @Volatile
-    private var isPlaying = false
+    // AtomicBoolean rather than @Volatile + guarded write: two coroutines
+    // entering play() concurrently would both see `false` on a plain
+    // @Volatile and both advance to the `isPlaying = true` line before
+    // either rejected the other. compareAndSet(false, true) is the single
+    // atomic step that admits exactly one winner.
+    private val playing = AtomicBoolean(false)
 
     /**
      * Play the full SIT tone sequence.
@@ -60,16 +65,15 @@ object SitTonePlayer {
      * Safe to call multiple times — concurrent plays are rejected.
      */
     suspend fun play(context: Context) = withContext(Dispatchers.IO) {
-        if (isPlaying) return@withContext
-        isPlaying = true
+        if (!playing.compareAndSet(false, true)) return@withContext
         try {
             playSequence(context)
         } finally {
-            isPlaying = false
+            playing.set(false)
         }
     }
 
-    fun isPlaying(): Boolean = isPlaying
+    fun isPlaying(): Boolean = playing.get()
 
     private suspend fun playSequence(context: Context) {
         val am = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager

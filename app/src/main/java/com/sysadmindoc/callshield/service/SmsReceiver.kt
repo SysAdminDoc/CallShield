@@ -47,13 +47,20 @@ class SmsReceiver : BroadcastReceiver() {
                         matchReason = result.matchSource,
                         confidence = result.confidence
                     )
-                    // NOTE: abortBroadcast() only suppresses delivery to lower-
-                    // priority receivers on ordered broadcasts. Since CallShield
-                    // is not the default SMS app, the message still lands in the
-                    // user's SMS inbox — this call just ensures we're first in
-                    // line when the broadcast is ordered (API-dependent) and
-                    // records the block in our own log.
-                    abortBroadcast()
+                    // NOTE: we deliberately do NOT call abortBroadcast() here.
+                    //
+                    // abortBroadcast() is only meaningful on ordered broadcasts
+                    // delivered to the default SMS app (SMS_DELIVER_ACTION).
+                    // CallShield listens on SMS_RECEIVED_ACTION, which on
+                    // modern Android (API 26+) is either unordered or the
+                    // abort is a no-op for non-default SMS apps depending on
+                    // the OEM. The message will still land in the user's SMS
+                    // inbox — the only way to actually suppress delivery is
+                    // for CallShield to become the default SMS app, which
+                    // would require reimplementing the entire messaging
+                    // surface. We log the block so the user can see it in
+                    // the CallShield log + notification, and we leave the
+                    // inbox alone.
                 }
             } catch (_: Exception) {
                 // Don't crash the receiver — allow SMS through on error
