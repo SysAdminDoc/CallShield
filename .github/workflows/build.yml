@@ -33,17 +33,15 @@ jobs:
       - name: Build Release APK
         run: ./gradlew assembleRelease
 
-      - name: Upload APK
+      - name: Upload APK (workflow artifact)
         uses: actions/upload-artifact@v4
         with:
           name: CallShield-release
           path: app/build/outputs/apk/release/*.apk
 
-      - name: Upload to Release
-        if: startsWith(github.ref, 'refs/tags/')
-        run: gh release upload ${{ github.ref_name }} app/build/outputs/apk/release/*.apk --clobber
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # Signed release APKs are built and attached locally; CI does not
+      # have the keystore secrets, so the runner produces an unsigned APK
+      # that must not clobber the signed one on the GitHub Release.
 
   update-database:
     runs-on: ubuntu-latest
