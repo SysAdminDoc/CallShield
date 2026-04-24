@@ -2,6 +2,18 @@
 
 All notable changes to CallShield will be documented in this file.
 
+## [v1.6.2] - 2026-04-24
+
+Maintenance release. No app-code changes since v1.6.1 — bundles the
+refreshed spam database and a CI cadence fix.
+
+### Changed
+- **CI**: `merge-reports.yml` now runs weekly (Mon 08:00 UTC) instead of
+  every 30 minutes. The hot-list refresh cadence was generating ~48
+  commits/day to master; the weekly build workflow already covers the
+  same ground. No effect on shipped app behavior.
+- **Data**: refreshed community hot list and campaign-range aggregates.
+
 ## [v1.6.1] - 2026-04-22
 
 Post-release audit fixes. Every item came out of a v1.6.0 code review;
