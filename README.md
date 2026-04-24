@@ -12,7 +12,7 @@
 <p align="center">
   <a href="https://github.com/SysAdminDoc/CallShield/releases/latest"><img src="https://img.shields.io/github/v/release/SysAdminDoc/CallShield?style=flat-square&color=a6e3a1" alt="Release"></a>
   <img src="https://img.shields.io/badge/Spam%20Numbers-32%2C933-f38ba8?style=flat-square" alt="32,933 Numbers">
-  <img src="https://img.shields.io/badge/Tests-210-94e2d5?style=flat-square" alt="210 Tests">
+  <img src="https://img.shields.io/badge/Tests-591-94e2d5?style=flat-square" alt="591 Tests">
   <img src="https://img.shields.io/badge/Android-10%2B-89b4fa?style=flat-square" alt="Android 10+">
   <img src="https://img.shields.io/badge/License-MIT-cba6f7?style=flat-square" alt="MIT License">
   <img src="https://img.shields.io/badge/API%20Keys-None-fab387?style=flat-square" alt="No API Keys">
@@ -22,16 +22,16 @@
 
 CallShield blocks spam calls and texts using a **15+ layer on-device detection engine** with a gradient-boosted tree ML scorer, campaign burst detection, RCS notification filter, and real-time caller ID overlay. Powered by a 32,933-number database with 30-minute hot list updates. Community-maintained, no accounts, no tracking.
 
-## v1.2.8 Highlights
+## v1.7.0 Highlights
 
-- **Gradient-Boosted Tree ML model** — 20 features, pure Kotlin, no TFLite dependency
-- **Campaign burst detection** — NPA-NXX prefix clustering identifies coordinated spam waves
-- **After-call feedback** — "Was this spam?" notification for post-call community reporting
-- **544+ localized string resources** — fully externalized, ready for translation
-- **210 unit tests + GitHub Actions CI** — automated test pipeline on every push
-- **Full accessibility** — 100+ content descriptions, 48dp minimum touch targets
-- **Enhanced statistics** — weekly bar chart, source donut chart, monthly trend line
-- **Improved home screen widget** — today vs yesterday trend, last blocked time display
+- **STIR/SHAKEN Trusted-Caller Allow** — new detection layer that short-circuits heuristic / ML / campaign-burst when the carrier signs a `PASSED` attestation. Paired with the existing `FAILED`-blocks layer for a clean PASSED / FAILED / NOT_VERIFIED decision table. Priority slot sits below every explicit user rule — your blocklist always wins over the carrier.
+- **Auto-Mute Low-Confidence Blocks** — opt-in setting that silences blocks scoring below 60% confidence to voicemail instead of hard-rejecting them, so you can review uncertain calls after the fact. High-confidence hits (database, blocklist, STIR fail, heuristic ≥ 60) still hard-reject even with auto-mute on.
+- **Centralized block-response decision table** — `buildBlockResponse()` helper in `CallShieldScreeningService` with a pure `shouldSilence()` companion. Three silence/reject branches (silent-voicemail / auto-mute / hard-reject) now share one reviewable code path. Behavior-preserving refactor — existing response shapes emit identical `CallResponse.Builder()` calls.
+- **14 new JVM unit tests** — full priority-ladder regression sweep in `StirShakenTrustCheckerTest` and every branch of the silence/reject table in `CallShieldScreeningServiceAutoMuteTest`.
+- **591 total unit tests + GitHub Actions CI** — automated test pipeline on every push.
+- **Gradient-Boosted Tree ML model** — 20 features, pure Kotlin, no TFLite dependency.
+- **Campaign burst detection** — NPA-NXX prefix clustering identifies coordinated spam waves.
+- **Full accessibility** — content descriptions across Compose UI, 48dp minimum touch targets.
 
 ## How It Works
 

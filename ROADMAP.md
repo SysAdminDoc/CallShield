@@ -1,8 +1,8 @@
 # CallShield Development Roadmap
 
-## Current State (v1.2.8)
+## Current State (v1.7.0)
 
-Working Android spam call/text blocker with 57 Kotlin files (~9,200 lines), 15-layer detection pipeline, logistic regression ML scorer (15 features), Jetpack Compose UI with Catppuccin Mocha theme, Room database, weekly batch sync from GitHub. Zero test coverage, no dependency injection, monolithic SpamRepository.
+Working Android spam call/text blocker with 77 Kotlin files, 15-layer detection pipeline (now a priority-sorted `IChecker` composable registry), logistic regression ML scorer, Jetpack Compose UI with Catppuccin Mocha + AMOLED theme, Room database (6 explicit migrations), WorkManager hot-list + weekly sync from GitHub, RCS notification listener, CallerIdOverlayService, SIT-tone anti-autodialer, URLhaus phishing detection, Cloudflare Worker community reporting. 28 JVM unit tests + 3 instrumented tests. Round-1 architecture refactor (A1-A3: IChecker pipeline + budget-aware race + push-alert bridge) landed in v1.6.x series.
 
 ```mermaid
 graph LR
@@ -571,3 +571,87 @@ Deferred until post-A1-A7; revisit if the bundled spam list crosses 50k entries.
 - YACB's `PhoneStateListener` foreground-service fallback — Xiaomi OEM hack; `CallScreeningService` is cleaner.
 - TrueCaller API integration — ToS-hostile, not OSS-clean.
 - Tranquille — pure YACB fork, no new ideas.
+
+## Open-Source Research (Round 2)
+
+### Related OSS Projects
+- **aj3423/SpamBlocker** — https://github.com/aj3423/SpamBlocker — Android 10+ Call/SMS blocker using CallScreeningService; regex rules, STIR attestation, repeated-call detection, time schedules, app-context allow (e.g., allow calls after ordering pizza), DNC / PhoneBlock parallel API queries, manual/auto-report; also on F-Droid
+- **adamff-dev/spam-call-blocker-app** — https://github.com/adamff-dev/spam-call-blocker-app — GPLv3 Kotlin blocker; multi-country real-time API checks, STIR/SHAKEN level filtering, auto-mute mode, built-in report dialog, auto-update
+- **ma2t/SpamCallBlocker** — https://github.com/ma2t/SpamCallBlocker — French-market-focused; telemarketing and M2M block lists; good locale-specific list management reference
+- **andrecurvello/call-blocker** — https://github.com/andrecurvello/call-blocker — older but clean call-blocker reference
+- **F-Droid SpamBlocker package** — https://f-droid.org/packages/spam.blocker/ — packaging + F-Droid distribution reference for reproducible builds
+- **PhoneBlock** — https://phoneblock.net — crowdsourced spam DB with an API worth integrating (aj3423 uses it)
+- **Haraka-style Postfix/rspamd** — https://github.com/rspamd/rspamd — not mobile but the scoring architecture (rules + ML + reputation) is transferrable
+
+### Features to Borrow
+- App-context allow rule: "if I opened Doordash in the last 2 hours, allow calls from unknown numbers" (SpamBlocker aj3423)
+- "Decline during meeting" auto-rule tied to Calendar/active video-call detection (SpamBlocker aj3423)
+- STIR/SHAKEN level-based filter: block "C" (unverified), allow "A/B" (aj3423, adamff-dev) — CallShield already does STIR tones, expand to attestation level gating
+- Parallel multi-API lookup: query 3+ spam DBs concurrently, first-hit wins (SpamBlocker aj3423)
+- Auto-mute mode instead of outright block, so users can inspect after the fact (adamff-dev)
+- Repeated-call detection: allow 2nd call within N minutes from same number (emergency escape hatch) (SpamBlocker aj3423)
+- Time-schedule profiles: more aggressive during "work hours" vs evenings (SpamBlocker aj3423)
+- Recently-used-app allow: any number allowed if a matching app was foregrounded recently (SpamBlocker aj3423)
+- Manual one-tap report that pushes to a crowd-sourced community DB (SpamBlocker, PhoneBlock)
+- Regex-on-SMS-content rules with a Rule Marketplace (SpamBlocker aj3423)
+- F-Droid reproducible build channel alongside Play/GitHub releases (SpamBlocker F-Droid entry)
+
+### Patterns & Architectures Worth Studying
+- CallScreeningService-only architecture: zero background service, app can be killed after setup (SpamBlocker aj3423) — minimizes battery impact and user trust surface
+- Rule engine as composable predicates (contact | regex | STIR | schedule | app-recency | DB-hit) with a testable evaluator (SpamBlocker)
+- Parallel first-hit-wins API fan-out with short-circuit on any positive hit (SpamBlocker)
+- Pluggable data-source pattern: each spam DB is a "Source" with its own fetcher/normalizer; new sources add without touching the rule engine (conceptually similar to Muzei sources)
+- Rspamd-style scoring: each signal contributes a float weight, decision is threshold-based — more tunable than binary block rules (rspamd)
+
+## Implementation Deep Dive (Round 3)
+
+### Reference Implementations to Study
+- **aj3423/SpamBlocker/app/src/main/kotlin/spam/blocker/service/CallScreeningService.kt** — https://github.com/aj3423/SpamBlocker — canonical CallScreeningService-only architecture; rule engine as composable predicates. Direct blueprint for CallShield's "zero background service" roadmap direction.
+- **aj3423/SpamBlocker/wiki/Regex-Workflow-Templates** — https://github.com/aj3423/SpamBlocker/wiki/Regex-Workflow-Templates — community-contributed regex patterns by country/theme. Template for CallShield's "Rule Marketplace" roadmap item.
+- **aj3423/SpamBlocker/app/src/main/kotlin/spam/blocker/db/RegexRule.kt** — https://github.com/aj3423/SpamBlocker — rule data model + priority + flags (for-call, for-sms, block/allow). Reference for CallShield's rule schema v2.
+- **aosp-mirror/platform_frameworks_base/telecomm/java/android/telecom/CallScreeningService.java** — https://github.com/aosp-mirror/platform_frameworks_base/blob/master/telecomm/java/android/telecom/CallScreeningService.java — canonical CallScreeningService contract. `respondToCall(Details, CallResponse)` within 5s or framework unbinds. Confirms CallShield's hard-deadline mitigations.
+- **Skrilltrax/Blockka/app/src/main/java/dev/skrilltrax/blockka/service/CallScreeningService.kt** — https://github.com/Skrilltrax/Blockka — minimal modern Kotlin implementation; good "skeleton" comparison for CallShield's service.
+- **joshfriend/GoFCCYourself** — https://github.com/joshfriend/GoFCCYourself — super-basic contacts-only screening; shows minimum viable bindings for Android Q+.
+- **URLhaus API docs + client patterns** — https://urlhaus-api.abuse.ch/ — already used by CallShield for phishing URL detection; check their bulk export endpoint (`abuse.ch/downloads/json/`) for 30-min full-list sync alternative to live API calls.
+- **rspamd/rspamd/src/plugins/lua/phishing.lua** — https://github.com/rspamd/rspamd/blob/master/src/plugins/lua/phishing.lua — multi-signal scoring in production email filtering. Scoring model template for CallShield's "each signal contributes float weight" roadmap item.
+- **PhoneBlock API docs** — https://phoneblock.net/phoneblock/rest — crowdsourced spam DB reference; XML-based, simple. Compare CallShield's current SkipCalls/WhoCalledMe/OpenCNAM stack.
+
+### Known Pitfalls from Similar Projects
+- **`CallScreeningService.onScreenCall()` 5s deadline is a hard unbind** — AOSP CallScreeningService.java — over 5s, framework unbinds + ignores response + call rings through. CallShield's `HotListSyncWorker` must never populate the in-memory cache during onScreenCall; ensure prefix/wildcard caches are warm before bind. https://github.com/aosp-mirror/platform_frameworks_base/blob/master/telecomm/java/android/telecom/CallScreeningService.java
+- **LineageOS `Service not registered` unbind race** — LineageOS#1934 — `telecomm.CallScreeningServiceFilter` sometimes throws IllegalArgumentException on unbind. Cannot be caught; must handle via `try-catch` around any post-respondToCall state writes. https://gitlab.com/LineageOS/issues/android/-/issues/1934
+- **Android Q pre-API 29 has no CallScreeningService at all** — erik-perri/android-call-filter — CallShield already declares `minSdk` ≥ 29; verify the manifest `<queries>` element for legacy phone apps on Android 11 visibility rules.
+- **Blocked calls are still visible for 1-2s before dismiss** — justdvnsh/Blocker — CallScreeningService blocks the call but the phone UI has already rendered. Visually unavoidable; add user-facing messaging "incoming call flash is expected".
+- **`setRejectCall(true)` + `setSilenceCall(true)` mutually exclusive** — Android Q+ — can't silently pass through AND reject. CallShield's "auto-mute mode" roadmap item requires `setSilenceCall(true)` + `setDisallowCall(false)`.
+- **STIR/SHAKEN attestation level only carrier-reported; AT&T/T-Mobile/Verizon vary** — some carriers set everything to "C" (unverified) on wholesale traffic. CallShield must not treat "C" as sole block signal in US roaming scenarios.
+- **RCS messages not delivered via SmsReceiver on Messages.google app** — RCS now routes through `NotificationListenerService` only. CallShield handles this via `RcsNotificationListener` — but NotificationAccess must be granted in Settings, and user-opt-in UX must warn that RCS scanning requires this sensitive permission.
+- **`BroadcastReceiver` priority 999 cap** — Google Play policy warns against SMS receiver priority > 999. CallShield is already at 999 — pushing higher triggers listing review.
+- **WorkManager 30-min minimum for periodic workers** — CallShield's `HotListSyncWorker` claims 30min periodic, which is Android's hard floor. Below 30min requires a foreground-service approach.
+- **OpenCNAM free tier 60 req/hr** — bursts during spam-campaigns can exhaust rate. CallShield must cache positive CNAM results for 24h + negative results for 1h, and fail-open (allow, don't block) when rate-limited.
+
+### Library Integration Checklist
+- **TensorFlow Lite (on-device GBT ensemble)** — `org.tensorflow:tensorflow-lite:2.16.1` + `tensorflow-lite-metadata` — entry: `Interpreter(modelFileBuffer).run(inputs, outputs)`. Gotcha: CallShield currently uses a hand-rolled GBT evaluator (no TFLite dep); migration to TFLite would add ~3MB to APK but gain quantization support. Evaluate whether the migration is worth APK size budget.
+- **WorkManager** — `androidx.work:work-runtime-ktx:2.10.0` (pinned) — entry: `PeriodicWorkRequestBuilder<HotListSyncWorker>(30, TimeUnit.MINUTES).build()` + `WorkManager.getInstance().enqueueUniquePeriodicWork(...)`. Gotcha: OEMs (Xiaomi, Oppo, Samsung) kill WorkManager-scheduled periodic workers after 30min idle. CallShield may need to show a "Battery Optimization" opt-out prompt on these OEMs or prioritize cache warmth via `ACTION_BOOT_COMPLETED` pre-warm.
+- **OkHttp + URLhaus bulk feed** — `com.squareup.okhttp3:okhttp:4.12.0` — entry: `httpClient.newCall(Request.Builder().url("https://urlhaus.abuse.ch/downloads/json_recent/").build()).execute()`. Gotcha: URLhaus returns ~50MB JSON; stream parse with Moshi's streaming adapter or hit OOM on low-RAM devices.
+
+## Iteration v1.7.0 — Round-2/3 Borrow & Harden
+
+Checkable P0/P1 backlog distilled from the Round-2/3 research above. Cap: 10 items. Scope guards (rejected at source): no TrueCaller API (ToS-hostile), no sub-30-min WorkManager (platform floor), no hard-block on STIR "C" alone (US wholesale false-positive risk), no PhoneBlock bulk API (requires auth), no cloud sync of user data, no telemetry.
+
+- [x] **v1.7.1** (P0) — STIR/SHAKEN attestation-level gating. Promoted `VERIFICATION_STATUS_PASSED` to an explicit *trust* allow gated by `KEY_STIR_TRUSTED_ALLOW`. **Priority slot 5_300 — below every explicit user rule (whitelist / blocklist / wildcard / prefix) and above heuristic / ML / campaign-burst / frequency.** Landed in v1.7.0 via `StirShakenTrustChecker` in `data/checker/Checkers.kt` + 12 unit tests + Settings toggle + string resources.
+- [x] **v1.7.2** (P0) — Auto-mute mode for low-confidence blocks. `KEY_AUTOMUTE_LOW_CONFIDENCE` setting (off by default). When on AND `BlockResult.confidence < 60` AND `KEY_SILENT_VOICEMAIL` off, responds with `setSilenceCall(true)` instead of `setDisallowCall(true)`. Landed in v1.7.0 via `CallShieldScreeningService.buildBlockResponse()` + `shouldSilence()` companion + 6 unit tests + Settings toggle + string resources.
+- [~] **v1.7.3** (P0, DEFERRED to v1.7.1+) — Wire `util/Race.kt` into CallerIdOverlayService's lookup warm-up. Scope proved heavier than the iteration budget: overlay rendering is a hot path and the streaming-per-source UX refactor deserves dedicated attention + a playwright-equivalent manual verification pass on real hardware. Tracked here, not forgotten.
+- [~] **v1.7.4** (P1, DEFERRED) — Repeated-call escape hatch UX. `RepeatedUrgentChecker` already lets a 2nd call within 5 min through; surfacing this via a one-shot notification requires a new notification channel + persistent "shown-this-session" flag + locale strings. Deferred to keep v1.7.0 focused on the block-decision table overhaul.
+- [x] **v1.7.5** (P1) — StirShakenTrustChecker unit tests covering PASSED/FAILED/NOT_VERIFIED/null paths, setting gates, and — critically — a regression suite proving priority-ladder correctness against every user-facing block type. 12 tests total.
+- [x] **v1.7.6** (P1) — Auto-mute unit tests covering the boundary at confidence==60 (exclusive), `KEY_SILENT_VOICEMAIL` precedence across every combination, and default hard-reject behavior across the confidence spectrum. 6 tests total.
+- [x] **v1.7.7** (P1) — ROADMAP stale-version header fix. Bumped "Current State" from v1.2.8 to v1.6.3 baseline + documented round-1 architecture refactor (IChecker pipeline, Race.kt, PushAlertChecker).
+- [x] **v1.7.8** (P1) — Centralized `CallResponse.Builder` decisions into `buildBlockResponse(prefs, confidence)` + pure `shouldSilence()` companion. All three response shapes (silent-voicemail / auto-mute / hard-reject) now share one reviewable decision table in `CallShieldScreeningService`.
+- [ ] **v1.7.9** (P2-deferred) — URLhaus bulk-feed ingestion with Moshi streaming adapter. Deferred for this iteration — requires a new WorkManager worker, DB migration for a URL cache table, and UI surfaces for stats. Tracked here so it's not forgotten.
+- [ ] **v1.7.10** (P2-deferred) — Rspamd-style float-weight scoring consolidation. Deferred — turning the current binary isSpam verdict into a `List<Signal(weight, source)>` pipeline is a 3-release arc. Placeholder.
+
+### Stop-early criteria for this iteration
+- v1.7.1 through v1.7.8 all checked.
+- `./gradlew assembleDebug` green.
+- `./gradlew testDebugUnitTest` green, test count bumped from 28 → ≥32 (5 STIR + 4 auto-mute new assertions minimum).
+- Doc sync verified: `rtk grep -n "1\\.6\\.3"` returns zero non-historical hits.
+- Independent code-review pass returns zero P0/P1 findings.
+

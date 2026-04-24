@@ -18,3 +18,4 @@ CallShield-*.apk
 .wrangler/
 .kotlin/
 CLAUDE.md
+.claude/
