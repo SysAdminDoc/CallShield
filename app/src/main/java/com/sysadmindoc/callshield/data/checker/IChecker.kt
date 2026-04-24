@@ -149,9 +149,10 @@ object CheckerPriority {
     const val MANUAL_WHITELIST      = 10_000   // user-added entries; emergency contacts
     const val CONTACT_WHITELIST     =  9_000   // device contacts lookup
 
-    // ── Carrier-signed verdict — strong block but MUST sit under the
-    // explicit-allow tier above, otherwise a whitelisted emergency
-    // contact on a non-STIR carrier is hard-rejected (v1.6.0 bug).
+    // ── Carrier-signed block verdict — attestation C verified-fail.
+    // MUST sit under the explicit-allow tier above (CONTACT_WHITELIST,
+    // MANUAL_WHITELIST), otherwise a whitelisted emergency contact on a
+    // non-STIR carrier is hard-rejected (v1.6.0 bug).
     const val STIR_SHAKEN           =  8_500
 
     // ── Explicit blocks — must NOT be overridden by recently-dialed ──
@@ -165,6 +166,14 @@ object CheckerPriority {
 
     // ── Conditional allows — trust signals that sit UNDER explicit
     // user blocks but ABOVE weaker detection layers.
+    //
+    // STIR_SHAKEN_TRUSTED belongs in this tier: a carrier-signed PASSED
+    // attestation is a strong trust signal, but the user's explicit
+    // blocklist / wildcard / prefix rules are authoritative and MUST win
+    // against it. Placed at the top of the conditional-allow block so it
+    // still beats statistical heuristics / ML / campaign-burst below.
+    // Paired with STIR_SHAKEN (block side) above.
+    const val STIR_SHAKEN_TRUSTED   =  5_300
     const val RECENTLY_DIALED       =  5_000   // user just called this number
     const val REPEATED_URGENT       =  4_900   // same number called 2+ times in 5 min
     const val PUSH_ALERT_BRIDGE     =  4_700   // reserved for A3 — notification-bridged allow
@@ -226,6 +235,7 @@ object SpamCheckers {
         buildList {
             add(WhitelistChecker(repo))
             add(ContactWhitelistChecker(appContext))
+            add(StirShakenTrustChecker())
             add(StirShakenChecker())
             add(DatabaseChecker(repo))
             add(SystemBlockListChecker(appContext))

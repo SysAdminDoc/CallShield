@@ -73,6 +73,23 @@ class SpamRepository(private val context: Context) {
         val KEY_BLOCK_SMS = booleanPreferencesKey("block_sms_enabled")
         val KEY_BLOCK_UNKNOWN = booleanPreferencesKey("block_unknown_enabled")
         val KEY_STIR_SHAKEN = booleanPreferencesKey("stir_shaken_enabled")
+        // STIR/SHAKEN attestation-level TRUST allow. When enabled, a
+        // carrier-verified PASS (attestation A/B equivalent) short-circuits
+        // the weaker downstream blockers (heuristic, ML, campaign-burst,
+        // frequency) — the carrier explicitly signed for this caller's
+        // number so we trust it above statistical signals, but NOT above
+        // explicit user blocklist entries (those still sit higher in
+        // priority order). Defaulted on: the FP-fighting value is large
+        // and the data is carrier-signed, not self-asserted.
+        val KEY_STIR_TRUSTED_ALLOW = booleanPreferencesKey("stir_trusted_allow_enabled")
+        // Auto-mute mode. When enabled, blocks with confidence < 60 (weaker
+        // heuristic/ML hits) are silenced via setSilenceCall() instead of
+        // hard-rejected — the call reaches voicemail with no ring, and the
+        // user can inspect the entry later. Off by default because the
+        // current hard-reject matches most users' expectations. When
+        // KEY_SILENT_VOICEMAIL is already on, that user preference wins
+        // (silence-everything beats silence-only-uncertain).
+        val KEY_AUTOMUTE_LOW_CONFIDENCE = booleanPreferencesKey("automute_low_confidence_enabled")
         val KEY_NEIGHBOR_SPOOF = booleanPreferencesKey("neighbor_spoof_enabled")
         val KEY_HEURISTICS = booleanPreferencesKey("heuristics_enabled")
         val KEY_SMS_CONTENT = booleanPreferencesKey("sms_content_analysis_enabled")
@@ -129,6 +146,8 @@ class SpamRepository(private val context: Context) {
     val blockSmsEnabled: Flow<Boolean> = dataStore.data.map { it[KEY_BLOCK_SMS] ?: true }
     val blockUnknownEnabled: Flow<Boolean> = dataStore.data.map { it[KEY_BLOCK_UNKNOWN] ?: false }
     val stirShakenEnabled: Flow<Boolean> = dataStore.data.map { it[KEY_STIR_SHAKEN] ?: true }
+    val stirTrustedAllowEnabled: Flow<Boolean> = dataStore.data.map { it[KEY_STIR_TRUSTED_ALLOW] ?: true }
+    val autoMuteLowConfidenceEnabled: Flow<Boolean> = dataStore.data.map { it[KEY_AUTOMUTE_LOW_CONFIDENCE] ?: false }
     val neighborSpoofEnabled: Flow<Boolean> = dataStore.data.map { it[KEY_NEIGHBOR_SPOOF] ?: true }
     val heuristicsEnabled: Flow<Boolean> = dataStore.data.map { it[KEY_HEURISTICS] ?: true }
     val smsContentEnabled: Flow<Boolean> = dataStore.data.map { it[KEY_SMS_CONTENT] ?: true }
@@ -186,6 +205,8 @@ class SpamRepository(private val context: Context) {
     suspend fun setBlockSms(enabled: Boolean) = dataStore.edit { it[KEY_BLOCK_SMS] = enabled }
     suspend fun setBlockUnknown(enabled: Boolean) = dataStore.edit { it[KEY_BLOCK_UNKNOWN] = enabled }
     suspend fun setStirShaken(enabled: Boolean) = dataStore.edit { it[KEY_STIR_SHAKEN] = enabled }
+    suspend fun setStirTrustedAllow(enabled: Boolean) = dataStore.edit { it[KEY_STIR_TRUSTED_ALLOW] = enabled }
+    suspend fun setAutoMuteLowConfidence(enabled: Boolean) = dataStore.edit { it[KEY_AUTOMUTE_LOW_CONFIDENCE] = enabled }
     suspend fun setNeighborSpoof(enabled: Boolean) = dataStore.edit { it[KEY_NEIGHBOR_SPOOF] = enabled }
     suspend fun setHeuristics(enabled: Boolean) = dataStore.edit { it[KEY_HEURISTICS] = enabled }
     suspend fun setSmsContent(enabled: Boolean) = dataStore.edit { it[KEY_SMS_CONTENT] = enabled }
