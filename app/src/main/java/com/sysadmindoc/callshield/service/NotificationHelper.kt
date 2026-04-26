@@ -17,6 +17,7 @@ object NotificationHelper {
     const val CHANNEL_RATING = "spam_rating"
     const val CHANNEL_STATUS = "protection_status"
     const val CHANNEL_PHISHING = "phishing_warning"
+    const val CHANNEL_ALLOWED = "allowed_call_decisions"
     const val ACTION_BLOCK = "com.sysadmindoc.callshield.ACTION_BLOCK"
     const val ACTION_REPORT = "com.sysadmindoc.callshield.ACTION_REPORT"
     const val ACTION_SAFE = "com.sysadmindoc.callshield.ACTION_SAFE"
@@ -31,6 +32,7 @@ object NotificationHelper {
     private var lastNotifTime = 0L
     private var blockedSinceLastNotif = 0
     private val lock = Any()
+    private val repeatedUrgentNoticeGate = OneShotNoticeGate()
 
     private fun stableId(number: String, salt: Int = 0): Int {
         return (number.hashCode() xor (salt * 0x9E3779B9.toInt())) and 0x7FFFFFFF
@@ -72,6 +74,11 @@ object NotificationHelper {
         nm.createNotificationChannel(
             NotificationChannel(CHANNEL_PHISHING, context.getString(R.string.notif_channel_phishing), NotificationManager.IMPORTANCE_HIGH).apply {
                 description = context.getString(R.string.notif_channel_phishing_desc)
+            }
+        )
+        nm.createNotificationChannel(
+            NotificationChannel(CHANNEL_ALLOWED, context.getString(R.string.notif_channel_allowed), NotificationManager.IMPORTANCE_DEFAULT).apply {
+                description = context.getString(R.string.notif_channel_allowed_desc)
             }
         )
     }
@@ -203,6 +210,58 @@ object NotificationHelper {
             .setPriority(NotificationCompat.PRIORITY_LOW)
 
         safeNotify(context, number.hashCode() + 10000, builder)
+    }
+
+    fun notifyRepeatedUrgentAllowed(context: Context, number: String) {
+        val digits = number.filter { it.isDigit() }.takeLast(10)
+        if (digits.length < 7) return
+        if (!repeatedUrgentNoticeGate.shouldShow("repeated_urgent:$digits")) return
+
+        val nid = stableId(number, 70)
+        val formatted = PhoneFormatter.format(number)
+        val openIntent = PendingIntent.getActivity(
+            context, stableId(number, 71),
+            Intent(context, MainActivity::class.java).apply {
+                putExtra("open_number", number)
+                flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
+            },
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+        val blockIntent = PendingIntent.getBroadcast(
+            context, stableId(number, 72),
+            Intent(context, SpamActionReceiver::class.java).apply {
+                action = ACTION_BLOCK
+                putExtra(EXTRA_NUMBER, number)
+                putExtra(EXTRA_NOTIF_ID, nid)
+            },
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+        val safeIntent = PendingIntent.getBroadcast(
+            context, stableId(number, 73),
+            Intent(context, SpamActionReceiver::class.java).apply {
+                action = ACTION_SAFE
+                putExtra(EXTRA_NUMBER, number)
+                putExtra(EXTRA_NOTIF_ID, nid)
+            },
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+
+        val builder = NotificationCompat.Builder(context, CHANNEL_ALLOWED)
+            .setSmallIcon(android.R.drawable.ic_menu_call)
+            .setContentTitle(context.getString(R.string.notif_repeated_urgent_title))
+            .setContentText(context.getString(R.string.notif_repeated_urgent_text, formatted))
+            .setStyle(
+                NotificationCompat.BigTextStyle().bigText(
+                    context.getString(R.string.notif_repeated_urgent_big_text, formatted)
+                )
+            )
+            .setContentIntent(openIntent)
+            .setAutoCancel(true)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .addAction(android.R.drawable.ic_menu_close_clear_cancel, context.getString(R.string.notif_action_block_forever), blockIntent)
+            .addAction(android.R.drawable.ic_menu_save, context.getString(R.string.notif_repeated_urgent_action_safe), safeIntent)
+
+        safeNotify(context, nid, builder)
     }
 
     fun showPersistentStatus(context: Context, active: Boolean) {

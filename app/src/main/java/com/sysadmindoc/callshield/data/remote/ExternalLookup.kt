@@ -20,6 +20,12 @@ import java.util.concurrent.TimeUnit
  */
 object ExternalLookup {
 
+    enum class SpamLookupSource {
+        SKIP_CALLS,
+        PHONE_BLOCK,
+        WHO_CALLED_ME
+    }
+
     data class MultiLookupResult(
         val isSpam: Boolean = false,
         val totalReports: Int = 0,
@@ -40,6 +46,12 @@ object ExternalLookup {
         .readTimeout(8, TimeUnit.SECONDS)
         .build()
 
+    fun spamLookupSources(): List<SpamLookupSource> = listOf(
+        SpamLookupSource.SKIP_CALLS,
+        SpamLookupSource.PHONE_BLOCK,
+        SpamLookupSource.WHO_CALLED_ME
+    )
+
     /**
      * Query all sources in parallel and merge results.
      */
@@ -47,17 +59,11 @@ object ExternalLookup {
         val digits = number.filter { it.isDigit() }
         if (digits.length < 7) return@coroutineScope MultiLookupResult()
 
-        val skipCallsDeferred  = async { checkSkipCalls(digits) }
-        val phoneBlockDeferred = async { checkPhoneBlock(digits) }
-        val whoCalledDeferred  = async { checkWhoCalledMe(digits) }
-        val cnamDeferred       = async { fetchCallerName(digits) }
-
-        val spamResults = listOf(
-            skipCallsDeferred.await(),
-            phoneBlockDeferred.await(),
-            whoCalledDeferred.await()
-        ).filterNotNull()
-
+        val spamDeferred = spamLookupSources().map { source ->
+            async { lookupSpamSource(digits, source) }
+        }
+        val cnamDeferred = async { fetchCallerName(digits) }
+        val spamResults = spamDeferred.awaitAll().filterNotNull()
         val callerName = cnamDeferred.await()
         val totalReports = spamResults.sumOf { it.reports }
         val isSpam = spamResults.any { it.isSpam } || totalReports >= 3
@@ -71,6 +77,22 @@ object ExternalLookup {
                 if (it.detail.isNotEmpty()) listOf("${it.source}: ${it.detail}") else emptyList()
             }
         )
+    }
+
+    suspend fun lookupSpamSource(numberOrDigits: String, source: SpamLookupSource): SourceResult? {
+        val digits = numberOrDigits.filter { it.isDigit() }
+        if (digits.length < 7) return null
+        return when (source) {
+            SpamLookupSource.SKIP_CALLS -> checkSkipCalls(digits)
+            SpamLookupSource.PHONE_BLOCK -> checkPhoneBlock(digits)
+            SpamLookupSource.WHO_CALLED_ME -> checkWhoCalledMe(digits)
+        }
+    }
+
+    suspend fun lookupCallerName(numberOrDigits: String): String {
+        val digits = numberOrDigits.filter { it.isDigit() }
+        if (digits.length < 7) return ""
+        return fetchCallerName(digits)
     }
 
     // ── SkipCalls (free, no key, 1M+ numbers) ─────────────────────────

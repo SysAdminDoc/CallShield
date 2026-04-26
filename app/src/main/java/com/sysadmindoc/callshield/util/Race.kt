@@ -2,8 +2,8 @@ package com.sysadmindoc.callshield.util
 
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.atomic.AtomicInteger
@@ -66,7 +66,7 @@ suspend fun <C, T> race(
     // from synthesizing `onTimeout` and winning the race just because
     // `decisive(onTimeout)` happens to be true for this caller.
     return coroutineScope {
-        for (competitor in competitors) {
+        val jobs = competitors.map { competitor ->
             launch {
                 val outcome: Outcome<T> = try {
                     Outcome.Ok(block(competitor))
@@ -92,14 +92,16 @@ suspend fun <C, T> race(
             }
         }
 
-        val winner = withTimeoutOrNull(timeoutMillis) {
-            select<T> { channel.onReceive { it } }
-        } ?: onTimeout
-
-        // Cancel any survivors — structured concurrency via coroutineScope
-        // means returning from the scope cancels children automatically.
-        channel.close()
-        winner
+        try {
+            withTimeoutOrNull(timeoutMillis) { channel.receive() } ?: onTimeout
+        } finally {
+            // coroutineScope waits for children on normal return; cancel the
+            // loser jobs explicitly so a fast decisive result is not delayed
+            // by slow competitors.
+            jobs.forEach { it.cancel() }
+            jobs.joinAll()
+            channel.close()
+        }
     }
 }
 

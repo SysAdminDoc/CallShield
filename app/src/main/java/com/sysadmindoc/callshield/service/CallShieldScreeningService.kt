@@ -79,6 +79,7 @@ class CallShieldScreeningService : CallScreeningService() {
                         prefs = prefs
                     )
                 } else {
+                    val repeatedUrgentAllow = result.matchSource == "repeated_urgent"
                     // Unknown non-contact caller — area-code-only caller ID overlay
                     val location = AreaCodeLookup.lookup(number)
                     if (location != null) {
@@ -93,14 +94,18 @@ class CallShieldScreeningService : CallScreeningService() {
                     }
                     respondAllow(callDetails)
 
-                    // After-call feedback notification, deferred. Must run on
-                    // appScope since the service is typically unbound by the
-                    // time 10 s has passed. Contact status is re-checked at
-                    // post-time in case the user just added the caller.
-                    CallShieldApp.appScope.launch {
-                        delay(10_000L)
-                        if (!SpamHeuristics.isInContacts(appContext, number)) {
-                            NotificationHelper.notifyAfterCall(appContext, number)
+                    if (repeatedUrgentAllow) {
+                        NotificationHelper.notifyRepeatedUrgentAllowed(appContext, number)
+                    } else {
+                        // After-call feedback notification, deferred. Must run on
+                        // appScope since the service is typically unbound by the
+                        // time 10 s has passed. Contact status is re-checked at
+                        // post-time in case the user just added the caller.
+                        CallShieldApp.appScope.launch {
+                            delay(10_000L)
+                            if (!SpamHeuristics.isInContacts(appContext, number)) {
+                                NotificationHelper.notifyAfterCall(appContext, number)
+                            }
                         }
                     }
                 }
