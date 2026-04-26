@@ -308,6 +308,7 @@
     <string name="overlay_score_loading">Checking databases…</string>
     <string name="overlay_spam_score">Spam score: %1$d%% (%2$s)</string>
     <string name="overlay_status_querying">Querying SkipCalls, PhoneBlock, WhoCalledMe, OpenCNAM…</string>
+    <string name="overlay_status_fast_hit">Fast hit from %1$s; checking remaining sources…</string>
     <string name="overlay_status_complete">All sources checked</string>
     <string name="overlay_status_failed">Lookup failed</string>
     <string name="overlay_action_search">Search</string>
@@ -765,6 +766,8 @@
     <string name="notif_channel_status_desc">Persistent protection status indicator</string>
     <string name="notif_channel_phishing">Phishing URL Warning</string>
     <string name="notif_channel_phishing_desc">Alert when a received SMS contains a known malicious URL</string>
+    <string name="notif_channel_allowed">Allowed Call Decisions</string>
+    <string name="notif_channel_allowed_desc">Explains calls CallShield allowed because of safety rules</string>
     <string name="notif_blocked_title">Blocked spam %s</string>
     <string name="notif_blocked_text">%1$s (%2$s)</string>
     <string name="notif_type_call">call</string>
@@ -781,6 +784,10 @@
     <string name="notif_phishing_big_text">An SMS from %1$s contains a URL flagged by URLhaus as %2$s. Do not tap any links in this message.</string>
     <string name="notif_status_title">CallShield active</string>
     <string name="notif_status_text">Protecting against spam calls &amp; texts</string>
+    <string name="notif_repeated_urgent_title">Repeated caller allowed</string>
+    <string name="notif_repeated_urgent_text">%s rang through after repeated calls</string>
+    <string name="notif_repeated_urgent_big_text">CallShield allowed %s because the same number called repeatedly within a few minutes. Block it if this was unwanted, or mark it safe to trust future calls.</string>
+    <string name="notif_repeated_urgent_action_safe">Mark safe</string>
 
     <!-- DigestWorker -->
     <string name="digest_title">CallShield Daily Summary</string>

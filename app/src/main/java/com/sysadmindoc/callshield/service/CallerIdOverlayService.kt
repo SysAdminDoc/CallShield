@@ -22,6 +22,7 @@ import com.sysadmindoc.callshield.CallShieldApp
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.PhoneFormatter
 import com.sysadmindoc.callshield.data.remote.ExternalLookup
+import com.sysadmindoc.callshield.util.race
 import kotlinx.coroutines.*
 import java.text.NumberFormat
 
@@ -39,6 +40,7 @@ class CallerIdOverlayService : Service() {
         // verdict yet (e.g. heuristic-triggered overlays on pre-Android-11 devices,
         // or call-screening paths that don't expose verification status).
         const val VERIFICATION_STATUS_UNKNOWN = -1
+        private const val FAST_SPAM_HIT_TIMEOUT_MS = 1_500L
     }
 
     private var windowManager: WindowManager? = null
@@ -276,99 +278,182 @@ class CallerIdOverlayService : Service() {
      * Now includes OpenCNAM caller name lookup as a 4th source.
      */
     private fun runLiveLookups(number: String, sessionId: Long) {
+        data class LookupSnapshot(
+            val completed: Int,
+            val totalReports: Int,
+            val anySpam: Boolean,
+        )
+
+        val spamSources = ExternalLookup.spamLookupSources()
+        val totalSources = spamSources.size + 1  // spam sources + OpenCNAM
+        val stateLock = Any()
         var completed = 0
         var totalReports = 0
         var anySpam = false
-        val totalSources = 4  // SkipCalls + PhoneBlock + WhoCalledMe + OpenCNAM
+        var warmHitShown = false
 
-        fun updateScore() {
-            handler.post {
-                if (!isCurrentSession(sessionId)) return@post
-                val score = when {
-                    totalReports >= 10 -> 95
-                    totalReports >= 5 -> 80
-                    totalReports >= 3 -> 60
-                    anySpam -> 50
-                    totalReports > 0 -> 30
-                    completed >= totalSources -> 0
-                    else -> -1 // still loading
+        fun scoreFor(snapshot: LookupSnapshot): Int = when {
+            snapshot.totalReports >= 10 -> 95
+            snapshot.totalReports >= 5 -> 80
+            snapshot.totalReports >= 3 -> 60
+            snapshot.anySpam -> 50
+            snapshot.totalReports > 0 -> 30
+            snapshot.completed >= totalSources -> 0
+            else -> -1 // still loading
+        }
+
+        fun colorFor(score: Int): String = when {
+            score >= 70 -> "#FFF38BA8" // Red
+            score >= 40 -> "#FFFAB387" // Orange
+            score > 0 -> "#FFF9E2AF"   // Yellow
+            else -> "#FFA6E3A1"         // Green
+        }
+
+        fun renderScore(snapshot: LookupSnapshot) {
+            val score = scoreFor(snapshot)
+            if (score >= 0) {
+                val color = colorFor(score)
+                scoreText?.text = this@CallerIdOverlayService.getString(
+                    R.string.overlay_spam_score,
+                    score,
+                    formatReports(snapshot.totalReports)
+                )
+                scoreText?.setTextColor(Color.parseColor(color))
+                headerText?.text = when {
+                    score >= 50 -> this@CallerIdOverlayService.getString(R.string.overlay_header_likely_spam)
+                    score > 0 -> this@CallerIdOverlayService.getString(R.string.overlay_header_suspicious)
+                    else -> this@CallerIdOverlayService.getString(R.string.overlay_header_safe)
                 }
-                if (score >= 0) {
-                    val color = when {
-                        score >= 70 -> "#FFF38BA8" // Red
-                        score >= 40 -> "#FFFAB387" // Orange
-                        score > 0 -> "#FFF9E2AF"   // Yellow
-                        else -> "#FFA6E3A1"         // Green
-                    }
-                    scoreText?.text = this@CallerIdOverlayService.getString(
-                        R.string.overlay_spam_score,
-                        score,
-                        formatReports(totalReports)
-                    )
-                    scoreText?.setTextColor(Color.parseColor(color))
-                    headerText?.text = when {
-                        score >= 50 -> this@CallerIdOverlayService.getString(R.string.overlay_header_likely_spam)
-                        score > 0 -> this@CallerIdOverlayService.getString(R.string.overlay_header_suspicious)
-                        else -> this@CallerIdOverlayService.getString(R.string.overlay_header_safe)
-                    }
-                    headerText?.setTextColor(Color.parseColor(if (score >= 50) "#FFF38BA8" else if (score > 0) "#FFF9E2AF" else "#FFA6E3A1"))
-                }
-                if (completed >= totalSources) {
-                    progressBar?.visibility = android.view.View.GONE
-                    statusText?.text = this@CallerIdOverlayService.getString(R.string.overlay_status_complete)
-                }
+                headerText?.setTextColor(Color.parseColor(color))
+            }
+            if (snapshot.completed >= totalSources) {
+                progressBar?.visibility = android.view.View.GONE
+                statusText?.text = this@CallerIdOverlayService.getString(R.string.overlay_status_complete)
             }
         }
 
-        fun addSourceResult(name: String, isSpam: Boolean, reports: Int, detail: String) {
-            completed++
-            totalReports += reports
-            if (isSpam) anySpam = true
+        fun recordCompletion(result: ExternalLookup.SourceResult?): LookupSnapshot =
+            synchronized(stateLock) {
+                completed++
+                if (result != null) {
+                    totalReports += result.reports
+                    if (result.isSpam) anySpam = true
+                }
+                LookupSnapshot(completed, totalReports, anySpam)
+            }
+
+        fun addSourceResult(result: ExternalLookup.SourceResult) {
+            val snapshot = recordCompletion(result)
             handler.post {
                 if (!isCurrentSession(sessionId)) return@post
                 sourcesContainer?.addView(TextView(this).apply {
-                    val icon = if (isSpam) "\u26A0" else "\u2713"
-                    val info = if (reports > 0) {
-                        formatReports(reports)
-                    } else if (isSpam) {
+                    val icon = if (result.isSpam) "\u26A0" else "\u2713"
+                    val info = if (result.reports > 0) {
+                        formatReports(result.reports)
+                    } else if (result.isSpam) {
                         this@CallerIdOverlayService.getString(R.string.overlay_source_flagged)
                     } else {
                         this@CallerIdOverlayService.getString(R.string.overlay_source_clean)
                     }
-                    text = this@CallerIdOverlayService.getString(R.string.overlay_source_result, icon, name, info)
-                    setTextColor(Color.parseColor(if (isSpam) "#FFF38BA8" else "#FFA6E3A1"))
+                    text = this@CallerIdOverlayService.getString(R.string.overlay_source_result, icon, result.source, info)
+                    setTextColor(Color.parseColor(if (result.isSpam) "#FFF38BA8" else "#FFA6E3A1"))
                     textSize = 11f
                     setPadding(0, 3, 0, 3)
                 })
+                renderScore(snapshot)
             }
-            updateScore()
         }
 
-        // Fire all lookups in parallel
+        fun markSourceFinished() {
+            val snapshot = recordCompletion(null)
+            handler.post {
+                if (!isCurrentSession(sessionId)) return@post
+                renderScore(snapshot)
+            }
+        }
+
+        fun publishWarmHit(result: ExternalLookup.SourceResult) {
+            val shouldPublish = synchronized(stateLock) {
+                if (warmHitShown || anySpam) {
+                    false
+                } else {
+                    warmHitShown = true
+                    true
+                }
+            }
+            if (!shouldPublish) return
+
+            val score = scoreFor(
+                LookupSnapshot(
+                    completed = totalSources,
+                    totalReports = result.reports,
+                    anySpam = result.isSpam || result.reports >= 3,
+                )
+            ).coerceAtLeast(50)
+            handler.post {
+                if (!isCurrentSession(sessionId)) return@post
+                val color = colorFor(score)
+                val reportText = if (result.reports > 0) {
+                    formatReports(result.reports)
+                } else {
+                    this@CallerIdOverlayService.getString(R.string.overlay_source_flagged)
+                }
+                headerText?.text = this@CallerIdOverlayService.getString(R.string.overlay_header_likely_spam)
+                headerText?.setTextColor(Color.parseColor(color))
+                scoreText?.text = this@CallerIdOverlayService.getString(R.string.overlay_spam_score, score, reportText)
+                scoreText?.setTextColor(Color.parseColor(color))
+                statusText?.text = this@CallerIdOverlayService.getString(
+                    R.string.overlay_status_fast_hit,
+                    result.source
+                )
+            }
+        }
+
         lookupJob = serviceScope.launch {
             try {
-                val result = ExternalLookup.lookupAll(number)
-                if (!isCurrentSession(sessionId)) return@launch
-                for (src in result.sources) {
-                    addSourceResult(src.source, src.isSpam, src.reports, src.detail)
-                }
-
-                // Show caller name from OpenCNAM if available
-                if (result.callerName.isNotBlank()) {
-                    handler.post {
-                        if (!isCurrentSession(sessionId)) return@post
-                        callerNameText?.text = result.callerName
-                        callerNameText?.visibility = android.view.View.VISIBLE
+                coroutineScope {
+                    val spamJobs = spamSources.map { source ->
+                        async { ExternalLookup.lookupSpamSource(number, source) }
                     }
-                }
-                // Count OpenCNAM as completed (it's bundled in lookupAll)
-                completed++
-                updateScore()
 
-                // Fill remaining if some spam sources returned null
-                while (completed < totalSources) {
-                    completed++
-                    updateScore()
+                    launch {
+                        val firstHit: ExternalLookup.SourceResult? = race(
+                            competitors = spamJobs,
+                            timeoutMillis = FAST_SPAM_HIT_TIMEOUT_MS,
+                            decisive = { result ->
+                                result != null && (result.isSpam || result.reports >= 3)
+                            },
+                            onTimeout = null,
+                        ) { job ->
+                            job.await()
+                        }
+                        if (firstHit != null) {
+                            publishWarmHit(firstHit)
+                        }
+                    }
+
+                    spamJobs.forEach { job ->
+                        launch {
+                            val result = job.await()
+                            if (result != null) {
+                                addSourceResult(result)
+                            } else {
+                                markSourceFinished()
+                            }
+                        }
+                    }
+
+                    launch {
+                        val callerName = ExternalLookup.lookupCallerName(number)
+                        if (callerName.isNotBlank()) {
+                            handler.post {
+                                if (!isCurrentSession(sessionId)) return@post
+                                callerNameText?.text = callerName
+                                callerNameText?.visibility = android.view.View.VISIBLE
+                            }
+                        }
+                        markSourceFinished()
+                    }
                 }
             } catch (_: CancellationException) {
                 // A newer overlay session replaced this one.

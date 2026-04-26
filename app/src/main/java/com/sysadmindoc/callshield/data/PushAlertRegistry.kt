@@ -174,10 +174,10 @@ object PushAlertRegistry {
     fun snapshot(nowMillis: Long = System.currentTimeMillis(), ttlMs: Long = DEFAULT_TTL_MS): List<Alert> {
         val cutoff = nowMillis - ttlMs
         // Iterate newest-first so the checker sees the most recent match
-        // quickly. `reversed()` on ArrayDeque copies — fine, the buffer is
-        // bounded to MAX_ENTRIES so this is trivial even under lock.
+        // quickly. Copy to a Kotlin List before reversing; java.util.Deque
+        // reversed() is API 35, while CallShield supports API 29+.
         return synchronized(lock) {
-            buffer.reversed().filter { it.timestamp >= cutoff }
+            buffer.toList().asReversed().filter { it.timestamp >= cutoff }
         }
     }
 
