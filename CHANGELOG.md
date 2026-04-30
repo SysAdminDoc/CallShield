@@ -2,6 +2,14 @@
 
 All notable changes to CallShield will be documented in this file.
 
+## [v1.7.1] - 2026-04-29
+
+### Improved
+
+- **Caller-ID overlay race & feedback** — `CallerIdOverlayService` no longer blocks on all three external lookups; first spam-hit-wins via the `Race.kt` helper, so user-visible callerID appears sooner.
+- **External lookup robustness** — tightened `ExternalLookup.kt` against transient races and stale results when one provider returns much later than the others.
+- **Push-alert allow feedback** — `PushAlertRegistry` + `OneShotNoticeGate` now surface "Allowed by you" notices the next time a previously-allowed number rings, so the user can revoke without digging into logs.
+
 ## [v1.7.0] - 2026-04-24
 
 Round-2/3 borrow-and-harden pass. Competitor-OSS research
