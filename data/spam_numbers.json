@@ -1,6 +1,6 @@
 {
-  "version": 22,
-  "updated": "2026-04-14",
+  "version": 23,
+  "updated": "2026-05-04",
   "description": "CallShield community spam number database",
   "sources": [
     "ftc_complaints",
@@ -263575,6 +263575,14 @@
       "reports": 1,
       "first_seen": "2026-04-08",
       "last_seen": "2026-04-08",
+      "description": "Community reported"
+    },
+    {
+      "number": "+34602529006",
+      "type": "spam",
+      "reports": 1,
+      "first_seen": "2026-05-02",
+      "last_seen": "2026-05-02",
       "description": "Community reported"
     }
   ],
