@@ -2,6 +2,7 @@ package com.sysadmindoc.callshield.service
 
 import android.content.Context
 import android.net.Uri
+import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.permissions.CallShieldPermissions
 import com.sysadmindoc.callshield.data.SpamRepository
 import kotlinx.coroutines.Dispatchers
@@ -33,7 +34,7 @@ object SmsInboxScanner {
                 totalScanned = 0,
                 spamFound = 0,
                 spamMessages = emptyList(),
-                error = "SMS inbox permission denied. Grant SMS access in Settings."
+                error = context.getString(R.string.dashboard_sms_inbox_permission_denied)
             )
         }
 
@@ -81,7 +82,12 @@ object SmsInboxScanner {
                 }
             }
         } catch (_: SecurityException) {
-            return@withContext ScanResult(0, 0, emptyList(), error = "SMS inbox permission denied. Grant SMS access in Settings.")
+            return@withContext ScanResult(
+                0,
+                0,
+                emptyList(),
+                error = context.getString(R.string.dashboard_sms_inbox_permission_denied)
+            )
         } catch (_: Exception) {
             return@withContext ScanResult(scanned, spamList.size, spamList)
         }

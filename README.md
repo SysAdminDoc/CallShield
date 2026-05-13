@@ -22,8 +22,9 @@
 
 CallShield blocks spam calls and texts using a **15+ layer on-device detection engine** with a gradient-boosted tree ML scorer, campaign burst detection, RCS notification filter, and real-time caller ID overlay. Powered by a 32,933-number database with scheduled hot-list updates. Community-maintained, no accounts, no tracking.
 
-## v1.7.4 Highlights
+## v1.7.5 Highlights
 
+- **Stats and scan feedback polish** — weekly activity labels now respect locale weekday names, Statistics detection-source labels are resource-backed, and scan permission/failure copy is consistent across call-log and SMS flows.
 - **Settings credential polish** — the optional AbstractAPI key is masked by default, has explicit show/hide control, and now reports "Not configured", "Saved locally", and "Unsaved changes" states before saving.
 - **Premium-polish UX pass** — tighter app chrome, restrained 12dp surface radius, zero negative type tracking, and selected navigation without pill-shaped backdrops.
 - **Clearer recovery states** — Blocked Log empty and filtered states now explain what happened and provide a direct "Show all activity" recovery action when filters hide records.
@@ -44,7 +45,7 @@ CallShield blocks spam calls and texts using a **15+ layer on-device detection e
 5. **Callback-aware** — won't block callbacks from numbers you recently called, or urgent repeated callers
 6. **Community-driven** — one-tap anonymous contribution via Cloudflare Worker, daily merge into database
 
-## Detection Pipeline (v1.7.4)
+## Detection Pipeline (v1.7.5)
 
 All detection layers implement a shared `IChecker` interface and run in priority order via `CheckerPipeline.run` — first non-null result wins, every layer is testable in isolation. Priorities are stable numbers; the ladder below is the live order.
 

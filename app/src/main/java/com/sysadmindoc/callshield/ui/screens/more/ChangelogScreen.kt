@@ -24,7 +24,13 @@ fun ChangelogScreen() {
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(0.dp)
     ) {
-        VersionEntry("1.7.4", "Settings trust polish: safer optional API-key handling", isLatest = true, changes = listOf(
+        VersionEntry("1.7.5", "Stats and scan feedback polish: localized labels and calmer errors", isLatest = true, changes = listOf(
+            "Statistics now uses localized weekday labels for the weekly activity chart",
+            "Detection-source labels in Statistics are routed through string resources instead of hardcoded English",
+            "Call-log and SMS scan permission failures now use consistent resource-backed recovery copy",
+            "Source legend counts now use a formatted string resource for cleaner localization",
+        ))
+        VersionEntry("1.7.4", "Settings trust polish: safer optional API-key handling", changes = listOf(
             "Optional AbstractAPI key entry is now masked by default, with explicit show/hide control",
             "Settings now show clear saved, unsaved, and not-configured states before changes are committed",
             "The save action is disabled until the local value changes, reducing accidental credential churn",

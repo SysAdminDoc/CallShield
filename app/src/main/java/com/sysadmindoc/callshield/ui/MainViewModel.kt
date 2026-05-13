@@ -5,6 +5,7 @@ import android.app.Application
 import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.BackupRestore
 import com.sysadmindoc.callshield.data.BlockingProfiles
 import com.sysadmindoc.callshield.data.BlocklistExporter
@@ -202,7 +203,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             try {
                 _scanResult.value = CallLogScanner.scan(getApplication())
             } catch (e: Exception) {
-                _scanResult.value = CallLogScanner.ScanResult(0, 0, emptyList(), error = "Scan failed: ${e.message}")
+                _scanResult.value = CallLogScanner.ScanResult(
+                    0,
+                    0,
+                    emptyList(),
+                    error = scanFailedMessage(e)
+                )
             } finally {
                 _scanningCalls.value = false
             }
@@ -215,7 +221,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             try {
                 _smsScanResult.value = SmsInboxScanner.scan(getApplication())
             } catch (e: Exception) {
-                _smsScanResult.value = SmsInboxScanner.ScanResult(0, 0, emptyList(), error = "Scan failed: ${e.message}")
+                _smsScanResult.value = SmsInboxScanner.ScanResult(
+                    0,
+                    0,
+                    emptyList(),
+                    error = scanFailedMessage(e)
+                )
             } finally {
                 _scanningSms.value = false
             }
@@ -395,6 +406,14 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             LogExporter.exportAsCsv(getApplication(), calls)
         }
+    }
+
+    private fun scanFailedMessage(error: Throwable): String {
+        val app = getApplication<Application>()
+        return app.getString(
+            R.string.dashboard_scan_failed,
+            error.message ?: app.getString(R.string.dashboard_scan_unknown_error)
+        )
     }
 }
 
