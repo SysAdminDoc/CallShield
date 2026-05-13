@@ -697,15 +697,50 @@ class SpamRepository(private val context: Context) {
     // ── Search log ───────────────────────────────────────────────────
     fun searchLog(query: String): Flow<List<BlockedCall>> = dao.searchLog(escapeLikeQuery(query))
 
-    fun normalizeNumber(number: String): String {
-        val trimmed = number.trim()
-        val hasPlus = trimmed.startsWith("+")
-        val digits = trimmed.filter { it.isDigit() }
-        return when {
-            digits.isEmpty() -> ""
-            hasPlus -> "+$digits"
-            else -> digits
+    fun normalizeNumber(number: String): String = normalizePhoneNumber(number)
+}
+
+/**
+ * Normalize a raw phone string into the canonical form used everywhere
+ * downstream. Strips whitespace, parentheses, punctuation, then keeps
+ * **only ASCII '0'..'9'** digits — explicitly NOT `Char.isDigit()` which
+ * accepts Arabic-Indic (٠-٩), fullwidth (０-９), and other Unicode digit
+ * classes. Allowing those would let a crafted caller-ID bypass exact
+ * blocklist matches and prefix rules by sending the same number in a
+ * visually-identical but byte-different form. Carrier dialers strip
+ * non-ASCII digits before placing a call, so this is the right contract.
+ *
+ * A leading `+` is preserved; everything else (including embedded `+`,
+ * shortcode markers, USSD `#`/`*`) is dropped. Empty result means the
+ * caller had no usable digits.
+ *
+ * Lives as a top-level internal function so JVM unit tests can exercise
+ * the canonicalisation without standing up a SpamRepository (and the
+ * Context it requires).
+ */
+internal fun normalizePhoneNumber(number: String): String {
+    // Pre-strip Unicode formatting control marks (ZWSP, ZWJ, ZWNJ, LRM,
+    // RLM, BOM). These can be injected into spoofed caller-ID strings
+    // and bypass naive `trim()` (which only sees ASCII whitespace).
+    // Doing this first means the `startsWith("+")` check below sees the
+    // real leading character.
+    val cleaned = buildString(number.length) {
+        for (ch in number) {
+            when (ch.code) {
+                0x200B, 0x200C, 0x200D, 0x200E, 0x200F, 0xFEFF -> Unit
+                else -> append(ch)
+            }
         }
+    }
+    val trimmed = cleaned.trim()
+    val hasPlus = trimmed.startsWith("+")
+    val digits = buildString(trimmed.length) {
+        for (ch in trimmed) if (ch in '0'..'9') append(ch)
+    }
+    return when {
+        digits.isEmpty() -> ""
+        hasPlus -> "+$digits"
+        else -> digits
     }
 }
 

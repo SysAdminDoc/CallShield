@@ -2,6 +2,68 @@
 
 All notable changes to CallShield will be documented in this file.
 
+## [v1.7.2] - 2026-05-13
+
+Extreme hardening pass. Eight surgical fixes across UI design rules,
+phone-number spoofing defence, regex-DoS guards, unbounded in-memory
+maps, and crash-log durability. 28 new JVM unit tests; full suite at 613
+passing.
+
+### Security & correctness
+
+- **ASCII-only phone-number normalization** — `normalizePhoneNumber()`
+  now drops Arabic-Indic (٠-٩), fullwidth (０-９), and other non-ASCII
+  digits that `Char.isDigit()` previously accepted. Visually-identical
+  homoglyph caller IDs no longer bypass exact blocklist matches. Also
+  strips zero-width / RTL marks (ZWSP, LRM, RLM, BOM) injected into
+  spoofed numbers before the `+` check.
+- **SMS body DoS guard (`SmsContentAnalyzer.MAX_ANALYSIS_LENGTH = 16 KB`)**
+  — caps the input fed into the regex sweep. Multi-MB SMS bodies on the
+  inbox-scan path can no longer pin the 5 s screening deadline.
+- **Multipart SMS reassembly cap (`SmsReceiver.MAX_REASSEMBLED_BODY = 16 KB`)**
+  — a malformed delivery claiming hundreds of segments can no longer
+  drive `joinToString` into unbounded memory.
+- **WildcardRule ReDoS hardening** — rejects catastrophic-backtracking
+  shapes (`(a+)+`, `(a*)+`, `(a|aa)+`) at validation time, before the
+  regex even compiles. Phone-shaped patterns (`^\+?1?\d{10}$`, area-code
+  alternations) still pass.
+- **CrashReporter atomic write** — crash logs now write to `*.txt.tmp`
+  and atomically rename. Power loss or a second crash mid-write can no
+  longer leave a half-written report that looks legitimate.
+
+### Reliability
+
+- **OneShotNoticeGate bounded map** — added a 1 024-entry LRU cap on
+  top of the existing 6 h TTL prune. Long-lived processes that see many
+  unique callers can no longer grow the notice-gate map without bound.
+- **NotificationHelper PendingIntent ID separation** — `notifyAfterCall`
+  now derives its request codes from `stableId(number, salt)` with
+  distinct salts per intent rather than `number.hashCode()` and
+  `hashCode() + 1`, removing collisions with block-notification intents
+  for adjacent hashes.
+- **`updateSummary` cancel guarded against SecurityException** — the
+  no-blocks-yet `NotificationManager.cancel(SUMMARY_ID)` path now
+  swallows the API 33+ revoke-between-check race the same way
+  `safeNotify()` does.
+
+### Design system
+
+- **No pill / oval backdrops** — removed every `RoundedCornerShape(999.dp)`
+  in the app:
+  - `StatusPill` (Theme.kt) now uses 6 dp corner radius and differentiates
+    by colour/border/font-weight, not shape.
+  - Onboarding and Protection-Test progress bars switched from
+    `RoundedCornerShape(999.dp)` to 4 dp.
+  - Blocked-log count badge switched from `CircleShape` to
+    `RoundedCornerShape(10.dp)` (text-bearing badge, no longer fully
+    rounded).
+
+### Tests
+
+- 28 new JVM unit tests across `NormalizePhoneNumberTest`,
+  `SmsContentAnalyzerTest`, `OneShotNoticeGateTest`, `WildcardRuleTest`.
+- Full suite: 613 tests passing in ~10 s.
+
 ## [v1.7.1] - 2026-04-29
 
 ### Improved

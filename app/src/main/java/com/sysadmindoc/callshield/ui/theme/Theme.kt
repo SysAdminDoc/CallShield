@@ -272,6 +272,14 @@ fun SectionHeader(title: String, color: Color = CatOverlay) {
     }
 }
 
+/**
+ * Status badge. Despite the legacy name, this MUST NOT render with a pill /
+ * oval / fully-rounded backdrop — that visual reads as amateur and is banned
+ * by the project's design rules. Differentiation is via colour, border, and
+ * font weight, not shape. Corner radius is a subtle 6.dp so the element
+ * still feels distinct from a flat rectangle without crossing into pill
+ * territory.
+ */
 @Composable
 fun StatusPill(
     text: String,
@@ -285,7 +293,7 @@ fun StatusPill(
 ) {
     Surface(
         modifier = modifier,
-        shape = RoundedCornerShape(999.dp),
+        shape = RoundedCornerShape(6.dp),
         color = color.copy(alpha = containerAlpha),
         border = BorderStroke(1.dp, color.copy(alpha = borderAlpha))
     ) {

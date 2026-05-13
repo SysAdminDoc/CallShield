@@ -179,7 +179,7 @@ fun ProtectionTestScreen() {
 
                     LinearProgressIndicator(
                         progress = { passed / total.toFloat() },
-                        modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(999.dp)),
+                        modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(4.dp)),
                         color = summaryColor,
                         trackColor = CatMuted.copy(alpha = 0.2f)
                     )

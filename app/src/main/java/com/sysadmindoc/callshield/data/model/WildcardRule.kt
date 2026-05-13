@@ -44,10 +44,7 @@ data class WildcardRule(
         if (normalizedPattern.isBlank()) return false
         return if (isRegex) {
             try {
-                // Guard against ReDoS: reject overly complex patterns.
-                // Phone numbers are short (<20 chars) which limits exposure,
-                // but pathological patterns can still hang the call screening path.
-                if (normalizedPattern.length > 200) return false
+                if (!isSafeRegexPattern(normalizedPattern)) return false
                 val regex = Regex(normalizedPattern)
                 // Try the input as-is first, then normalized forms so that
                 // patterns like `^\+1832555\d{4}$` also match SMS senders that
@@ -87,6 +84,39 @@ data class WildcardRule(
     }
 
     companion object {
+        /** Hard limit on regex pattern length. Phone numbers are short; any
+         *  pattern longer than this is almost certainly a copy-paste mistake
+         *  or a deliberate ReDoS attempt. */
+        internal const val MAX_REGEX_LENGTH = 200
+
+        /**
+         * Reject regex patterns that are known catastrophic-backtracking
+         * shapes. This is a coarse-grained heuristic — not a full ReDoS
+         * analyzer — but it catches the common offenders we don't want
+         * running on the call-screening hot path.
+         *
+         * Rejected:
+         *  - patterns longer than [MAX_REGEX_LENGTH]
+         *  - nested quantifiers like `(a+)+`, `(a*)+`, `(a+)*` — the classic
+         *    catastrophic-backtracking trigger
+         *  - alternation inside a repeated group like `(a|aa)+` — same family
+         *
+         * Phone-number regex doesn't need any of these to be expressive
+         * (`^\+?1?\d{10}$`-style patterns pass through fine).
+         */
+        internal fun isSafeRegexPattern(pattern: String): Boolean {
+            if (pattern.length > MAX_REGEX_LENGTH) return false
+            // Catastrophic nested quantifiers: a group whose body ends in
+            // `+` / `*` / `}` (counted) followed immediately by another
+            // outer quantifier.
+            val nestedQuantifier = Regex("""\([^)]*[+*}]\s*\)\s*[+*?{]""")
+            if (nestedQuantifier.containsMatchIn(pattern)) return false
+            // Alternation inside a repeated group: `(...|...)+`
+            val ambiguousAlternation = Regex("""\([^()]*\|[^()]*\)\s*[+*]""")
+            if (ambiguousAlternation.containsMatchIn(pattern)) return false
+            return true
+        }
+
         /** Generate common US number normalizations so wildcard globs match
          *  regardless of whether the input has a +1 prefix or not. */
         internal fun numberVariants(number: String): List<String> {

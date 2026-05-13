@@ -1,8 +1,20 @@
 # CallShield Development Roadmap
 
-## Current State (v1.7.0)
+**Roadmap revision:** 2026-05-13 · **Anchored to:** v1.7.2 (versionCode 30)
 
-Working Android spam call/text blocker with 77 Kotlin files, 15-layer detection pipeline (now a priority-sorted `IChecker` composable registry), logistic regression ML scorer, Jetpack Compose UI with Catppuccin Mocha + AMOLED theme, Room database (6 explicit migrations), WorkManager hot-list + weekly sync from GitHub, RCS notification listener, CallerIdOverlayService, SIT-tone anti-autodialer, URLhaus phishing detection, Cloudflare Worker community reporting. 28 JVM unit tests + 3 instrumented tests. Round-1 architecture refactor (A1-A3: IChecker pipeline + budget-aware race + push-alert bridge) landed in v1.6.x series.
+This roadmap merges the original Phase 1–5 plan, the Addendum A "peer-inspired track" (round-1/2/3 borrows from SpamBlocker, YACB, BlackList, Saracroche, adamff-dev, Fossify), and a fresh Addendum B harvested from a 30-source research sweep across OSS competitors, commercial competitors, FCC/IETF/ATIS standards, Android 15/16 platform changes, dependency changelogs, and adjacent-domain OSS (NetGuard, Pi-hole, rspamd patterns).
+
+Source-cited. Every Addendum-B item maps to an entry in **Appendix — Source Index**. Anything that contradicts CallShield's stated philosophy (on-device, no accounts, no API keys, no cloud audio, FOSS) is either rejected or flagged.
+
+---
+
+## Current State (v1.7.2)
+
+Working Android spam call/text blocker. **78 main + 33 test Kotlin files.** v1.7.2 added an extreme hardening pass: ASCII-only number normalization (anti-spoof), SmsContentAnalyzer/SmsReceiver 16 KB caps, WildcardRule ReDoS guard, OneShotNoticeGate LRU cap, NotificationHelper PendingIntent ID separation, CrashReporter atomic writes, removal of every pill/oval backdrop in the UI (StatusPill 999 → 6 dp; Onboarding/Protection-Test progress; blocked-log count badge). 28 new JVM unit tests; **613 tests total**.
+
+15-layer detection pipeline (priority-sorted `IChecker` registry), GBT v3 ML scorer (20 features, atomic ModelState, pure-Kotlin inference) with logistic-regression v2 fallback, Jetpack Compose UI on Catppuccin Mocha + AMOLED, Room 2.6.1 with explicit migrations v5+, WorkManager hot-list (30 min) + weekly sync from GitHub, RCS NotificationListener, CallerIdOverlayService with first-hit-wins lookup race, SIT-tone anti-autodialer, URLhaus phishing detection, Cloudflare Worker community reporting, GitHub Actions CI on every push.
+
+**Stack fingerprint:** AGP 8.7.3 · Kotlin 2.1.0 · Compose BOM 2024.12.01 · Room 2.6.1 · WorkManager 2.10.0 · OkHttp 4.12.0 · Moshi 1.15.1 · DataStore 1.1.1 · minSdk 29 · targetSdk 36 · KSP for Room codegen. **No Hilt, no KMP, no Glance, no SQLCipher.**
 
 ```mermaid
 graph LR
@@ -11,647 +23,510 @@ graph LR
     P2 --> P4[Phase 4: Platform & UX]
     P3 --> P4
     P4 --> P5[Phase 5: Scale & Partnerships]
+    P1 -.-> AB[Addendum B: Research Track]
+    P2 -.-> AB
 
     style P1 fill:#a6e3a1,color:#000
     style P2 fill:#89b4fa,color:#000
     style P3 fill:#fab387,color:#000
     style P4 fill:#cba6f7,color:#000
     style P5 fill:#f38ba8,color:#000
+    style AB fill:#f9e2af,color:#000
 ```
 
 ---
 
-## Phase 1: Foundation (Testing, Architecture, Security)
+## Status Legend
 
-**Goal:** Engineering discipline, testability, security hardening. Every subsequent phase depends on this.
+`[DONE]` shipped in a tagged release · `[WIP]` partially landed · `[NOW]` next 1–2 releases · `[NEXT]` 3–6 releases out · `[LATER]` long-horizon · `[?]` under consideration · `[X]` rejected (with reasoning).
 
-**Estimated Duration:** 6-8 weeks
+---
 
-### 1.1 Unit Tests for Detection Engines
+## Locked Design Philosophy (do not contradict without flagging)
 
-| Task | Size | Depends On | Files |
-|------|------|-----------|-------|
-| 1.1.1 `SpamMLScorer` tests — extractFeatures(), score() boundary at 0.7, parseAndApply() with valid/invalid JSON, sigmoid() edges | M | — | `test/.../SpamMLScorerTest.kt` |
-| 1.1.2 `SpamHeuristics` tests — isNeighborSpoof(), isTollFree(), analyze() scoring, hot campaign range matching | L | — | `test/.../SpamHeuristicsTest.kt` |
-| 1.1.3 `SmsContentAnalyzer` tests — each of 30+ regex patterns, URL shortener detection, spam domain blocklist, scoring thresholds | L | — | `test/.../SmsContentAnalyzerTest.kt` |
-| 1.1.4 `PhoneFormatter` tests — US 10/11-digit, short codes, international, empty/non-digit edge cases | S | — | `test/.../PhoneFormatterTest.kt` |
-| 1.1.5 `CallbackDetector` tests — wasRecentlyDialed() window, isRepeatedUrgentCall() threshold counting (mock ContentResolver) | M | 1.6 | `test/.../CallbackDetectorTest.kt` |
-| 1.1.6 `SmsContextChecker` tests — normalization to last-10-digits, trust threshold (2+ distinct days), month 0-indexing | M | 1.6 | `test/.../SmsContextCheckerTest.kt` |
-| 1.1.7 `LogExporter` tests — RFC 4180 CSV escaping: quotes, embedded quotes, newline stripping | S | — | `test/.../LogExporterTest.kt` |
-| 1.1.8 `BackupRestore` tests — v2 serialization/deserialization, v1 backward compat, per-item error tolerance | M | — | `test/.../BackupRestoreTest.kt` |
-| 1.1.9 `WildcardRule.matches()` tests — regex validation, crash prevention | S | — | `test/.../WildcardRuleTest.kt` |
-| 1.1.10 `BlockingProfiles` tests — profile application verification | S | — | `test/.../BlockingProfilesTest.kt` |
+1. **On-device first.** Every detection layer must work offline. Network calls are enrichments, never gating.
+2. **No accounts, no sign-in, no telemetry.** Anonymous community reporting via Cloudflare Worker is the maximum ceiling.
+3. **No required API keys.** Any third-party API must have a free, no-auth tier or be optional.
+4. **No cloud audio.** Voice frames never leave the device. Deepfake / fingerprint detection runs locally or not at all.
+5. **FOSS distribution.** Every release must be reproducible-buildable for F-Droid; no GMS-only code paths.
+6. **5-second screening deadline.** `CallShieldScreeningService` must respond <5 s. All hot-path code is budget-aware.
+7. **Backward compat for hot-list URLs.** GitHub-raw endpoints remain serve-and-respond for v1.2.x clients indefinitely.
 
-**Architecture note:** `SpamHeuristics`, `SmsContentAnalyzer`, `SpamMLScorer`, `CallbackDetector`, `SmsContextChecker` are `object` singletons with Context dependencies. For testability, make `analyze()` and `isSpam()` accept data as parameters rather than fetching internally. Preserves singleton pattern while making pure logic testable.
+Any roadmap item that contradicts these is flagged inline with **⚠ philosophy conflict** and given an explicit case.
 
-### 1.2 Integration Tests
+---
 
-| Task | Size | Depends On | Files |
-|------|------|-----------|-------|
-| 1.2.1 Full `isSpam()` pipeline with in-memory Room DB — exercise all 15 layers, verify priority ordering (whitelist > blocklist > heuristics) | XL | 1.1, 1.6 | `androidTest/.../SpamPipelineIntegrationTest.kt` |
-| 1.2.2 `isSpamSms()` pipeline — SMS context trust bypass, keyword rules, content analysis order | L | 1.2.1 | `androidTest/.../SmsPipelineIntegrationTest.kt` |
-| 1.2.3 `syncFromGitHub()` — mock HTTP responses, verify Room populated atomically via @Transaction | M | 1.6 | `androidTest/.../SyncIntegrationTest.kt` |
+## Phase 1 — Foundation (Testing, Architecture, Security)
+
+**Goal:** engineering discipline, testability, security hardening. Every later phase depends on this.
+
+### 1.1 Unit Tests for Detection Engines `[DONE]`
+
+Shipped: 30 test files now exist under `app/src/test/`, covering `SpamMLScorer` (logistic + GBT), `SpamHeuristics`, `SmsContentAnalyzer`, `PhoneFormatter`, `CallbackDetector`, `BackupRestore`, `WildcardRule`, `HashWildcardMatcher`, `LogExporter`, `BlockingProfiles`, `BlockReasoning`, `CampaignDetector`, `TimeSchedule`, `PhoneNumberFuzzTest`, `JsonParsingFuzzTest`, `HotPathBenchmarkTest`, `OneShotNoticeGate`, `CrashReporter`, `DashboardStatusModel`, `Race`, plus `CallShieldScreeningServiceAutoMuteTest` and `StirShakenTrustCheckerTest` from v1.7.0.
+
+### 1.2 Integration Tests `[NOW]`
+
+| Task | Size | Depends | Files |
+|------|------|---------|-------|
+| 1.2.1 Full `isSpam()` pipeline test with in-memory Room — exercise all 15+ layers, verify priority ordering | XL | 1.6 | `androidTest/.../SpamPipelineIntegrationTest.kt` |
+| 1.2.2 Full `isSpamSms()` pipeline test — context trust bypass, keyword rules, content-analysis order | L | 1.2.1 | `androidTest/.../SmsPipelineIntegrationTest.kt` |
+| 1.2.3 `syncFromGitHub()` mocked — verify atomic Room population via `@Transaction` | M | 1.6 | `androidTest/.../SyncIntegrationTest.kt` |
 | 1.2.4 `HotListSyncWorker` — hot_numbers, hot_ranges, spam_domains parsed and stored, per-entry error tolerance | M | 1.6 | `androidTest/.../HotListSyncTest.kt` |
 
-Use `Room.inMemoryDatabaseBuilder()` for speed and isolation. Requires refactoring `AppDatabase.getInstance()` to accept pre-built instance (via Hilt).
+Use `Room.inMemoryDatabaseBuilder()`. Requires refactoring `AppDatabase.getInstance()` to accept a pre-built instance (post-Hilt).
 
-### 1.3 Compose UI Tests
+### 1.3 Compose UI Tests `[WIP]`
 
-| Task | Size | Depends On | Files |
-|------|------|-----------|-------|
-| 1.3.1 Onboarding flow — 4 pages, permission requests, call screener setup | M | 1.6 | `androidTest/.../ui/OnboardingTest.kt` |
-| 1.3.2 Dashboard — hero stats, sync freshness, call screener banner | M | 1.6 | `androidTest/.../ui/DashboardTest.kt` |
-| 1.3.3 Blocklist management — add/delete, wildcard validation, swipe-to-delete+undo, dialogs | L | 1.6 | `androidTest/.../ui/BlocklistTest.kt` |
-| 1.3.4 Settings — toggle persistence, quiet hours validation | M | 1.6 | `androidTest/.../ui/SettingsTest.kt` |
+Three instrumented tests already exist (`CrashReporterInstrumentedTest`, `DashboardStatusBadgeTest`, `ThemePrimitivesTest`). Remaining:
 
-### 1.4 CI Pipeline
+| Task | Size | Files |
+|------|------|-------|
+| 1.3.1 Onboarding flow — 4 pages, permission requests, call-screener setup | M | `androidTest/.../ui/OnboardingTest.kt` |
+| 1.3.2 Dashboard — hero stats, sync freshness, screener banner | M | `androidTest/.../ui/DashboardTest.kt` |
+| 1.3.3 Blocklist — add/delete, wildcard validation, swipe-to-delete + undo | L | `androidTest/.../ui/BlocklistTest.kt` |
+| 1.3.4 Settings — toggle persistence, quiet-hours validation, schedule picker | M | `androidTest/.../ui/SettingsTest.kt` |
 
-| Task | Size | Depends On | Files |
-|------|------|-----------|-------|
-| 1.4.1 `test.yml` workflow — compile app, run unit tests on every PR/push | M | — | `.github/workflows/test.yml` |
-| 1.4.2 Instrumented test job with Android emulator (API 29) | L | 1.4.1 | `.github/workflows/test.yml` |
-| 1.4.3 Lint + ktlint checks | S | 1.4.1 | `.github/workflows/test.yml`, `.editorconfig` |
-| 1.4.4 Code coverage (Kover) with ratcheting threshold (start 30%) | M | 1.4.1, 1.1 | `app/build.gradle.kts` |
+### 1.4 CI Pipeline `[DONE]` / `[NOW]` for coverage gate
 
-**Trade-off:** Emulator tests are slow/flaky. Run instrumented tests only on master merges, not every PR.
+`build.yml`, `instrumented.yml`, `merge-reports.yml`, `test.yml` exist. Outstanding:
 
-### 1.5 Clean Architecture Refactor
+| Task | Size | Files |
+|------|------|-------|
+| 1.4.4 Code-coverage gate via Kover, ratcheting threshold (start 35%, +5% per release) | M | `app/build.gradle.kts`, `.github/workflows/test.yml` |
+| 1.4.5 Lint + ktlint + detekt as required PR checks | S | `.editorconfig`, `.github/workflows/test.yml` |
 
-| Task | Size | Depends On | Files |
-|------|------|-----------|-------|
-| 1.5.1 Domain use cases: `CheckSpamUseCase`, `CheckSpamSmsUseCase`, `SyncDatabaseUseCase`, `ManageBlocklistUseCase`, `ExportLogsUseCase` | L | — | `domain/usecase/*.kt` |
-| 1.5.2 Extract `SpamCheckResult` and settings models to domain layer | S | 1.5.1 | `domain/model/*.kt` |
-| 1.5.3 Define repository interfaces in domain layer | M | 1.5.1 | `domain/repository/*.kt` |
-| 1.5.4 Split `SpamRepository` (~320 lines) into: `SpamRepositoryImpl`, `SettingsRepository`, `SyncRepository`, `BlocklistRepository` | XL | 1.5.3 | `data/repository/*.kt` |
+### 1.5 Clean Architecture Refactor `[WIP]`
 
-**Critical:** Write integration tests for the full pipeline BEFORE splitting SpamRepository. Run them after each split step to verify detection ordering is preserved.
+`SpamRepository` is still ~320 lines and orchestrates everything. The `IChecker` registry (Addendum A1) split detection logic out cleanly; remaining work is splitting **non-detection** concerns.
 
-```mermaid
-graph TD
-    subgraph Presentation
-        VM[MainViewModel]
-        Screens[Compose Screens]
-    end
-    subgraph Domain
-        UC_Spam[CheckSpamUseCase]
-        UC_Sync[SyncDatabaseUseCase]
-        UC_Block[ManageBlocklistUseCase]
-        IRepo[ISpamRepository]
-        ISettings[ISettingsRepository]
-    end
-    subgraph Data
-        RepoImpl[SpamRepositoryImpl]
-        SettingsRepo[SettingsRepository]
-        SyncRepo[SyncRepository]
-        DAO[SpamDao / Room]
-        DS[DataStore]
-        GH[GitHubDataSource]
-    end
+| Task | Size | Files |
+|------|------|-------|
+| 1.5.1 Domain use cases: `CheckSpamUseCase`, `CheckSpamSmsUseCase`, `SyncDatabaseUseCase`, `ManageBlocklistUseCase`, `ExportLogsUseCase` | L | `domain/usecase/*.kt` |
+| 1.5.2 Extract `SpamCheckResult` and settings models to domain layer | S | `domain/model/*.kt` |
+| 1.5.3 Define repository interfaces in domain | M | `domain/repository/*.kt` |
+| 1.5.4 Split `SpamRepository` into `SpamRepositoryImpl`, `SettingsRepository`, `SyncRepository`, `BlocklistRepository` | XL | `data/repository/*.kt` |
 
-    VM --> UC_Spam
-    VM --> UC_Sync
-    VM --> UC_Block
-    UC_Spam --> IRepo
-    UC_Spam --> ISettings
-    IRepo -.-> RepoImpl
-    ISettings -.-> SettingsRepo
-    RepoImpl --> DAO
-    SettingsRepo --> DS
-    SyncRepo --> GH
-    SyncRepo --> DAO
-```
+**Critical:** integration tests in 1.2 must exist before splitting `SpamRepository`. Run after each split to verify priority ordering.
 
-### 1.6 Dependency Injection (Hilt)
+### 1.6 Dependency Injection (Hilt) `[NOW]`
 
-| Task | Size | Depends On | Files |
-|------|------|-----------|-------|
-| 1.6.1 Add Hilt dependencies | S | — | `build.gradle.kts`, `libs.versions.toml` |
-| 1.6.2 `@HiltAndroidApp` on `CallShieldApp` | S | 1.6.1 | `CallShieldApp.kt` |
-| 1.6.3 `DatabaseModule` — provide `AppDatabase` + `SpamDao` singletons | M | 1.6.1 | `di/DatabaseModule.kt` |
-| 1.6.4 `RepositoryModule` — bind interfaces to implementations | M | 1.5.4, 1.6.1 | `di/RepositoryModule.kt` |
-| 1.6.5 `NetworkModule` — shared `OkHttpClient` with cert pinning | M | 1.6.1, 1.7.2 | `di/NetworkModule.kt` |
-| 1.6.6 `MainViewModel` → `@HiltViewModel` with injected use cases | M | 1.6.4 | `MainViewModel.kt` |
-| 1.6.7 `CallShieldScreeningService` → `@AndroidEntryPoint` | M | 1.6.4 | `CallShieldScreeningService.kt` |
-| 1.6.8 Workers → `@HiltWorker` | M | 1.6.4 | `SyncWorker.kt`, `HotListSyncWorker.kt`, `DigestWorker.kt` |
-| 1.6.9 Convert `object` singletons to injectable classes | L | 1.6.1 | Multiple data files |
+| Task | Size | Files |
+|------|------|-------|
+| 1.6.1 Add Hilt 2.52 (full K2 support per release notes [src 7]) | S | `libs.versions.toml`, `build.gradle.kts` |
+| 1.6.2 `@HiltAndroidApp` on `CallShieldApp` | S | `CallShieldApp.kt` |
+| 1.6.3 `DatabaseModule` providing `AppDatabase` + `SpamDao` singletons | M | `di/DatabaseModule.kt` |
+| 1.6.4 `RepositoryModule` binding interfaces to impls | M | `di/RepositoryModule.kt` |
+| 1.6.5 `NetworkModule` providing the shared `OkHttpClient` (with cert pinning, see 1.7.2) | M | `di/NetworkModule.kt` |
+| 1.6.6 `MainViewModel` → `@HiltViewModel` with injected use cases | M | `MainViewModel.kt` |
+| 1.6.7 `CallShieldScreeningService` → `@AndroidEntryPoint` | M | `CallShieldScreeningService.kt` |
+| 1.6.8 Workers → `@HiltWorker` | M | `SyncWorker.kt`, `HotListSyncWorker.kt`, `DigestWorker.kt` |
+| 1.6.9 Convert `object` singletons (`SpamHeuristics`, `SmsContentAnalyzer`, `SpamMLScorer`, `CallbackDetector`, `SmsContextChecker`, `CampaignDetector`, `HashWildcardMatcher`) to injectable classes | L | data layer |
 
-**Risk:** Migrate services one at a time; keep `getInstance()` fallback until all consumers migrated.
+**Risk:** migrate one consumer at a time; keep `getInstance()` fallback until all consumers migrated.
 
-### 1.7 Security Hardening
+**Alternate (worth a spike):** Kotlin 2.2 `context(...)` parameters [src 20] could replace some `@Inject` for pure-logic boundaries. Don't do it as the primary DI strategy — Hilt's lifecycle binding is still needed for ViewModel/Worker scoping.
 
-| Task | Size | Depends On | Files |
-|------|------|-----------|-------|
-| 1.7.1 Move signing credentials to `local.properties` / env vars | S | — | `build.gradle.kts`, `.gitignore` |
-| 1.7.2 Certificate pinning for GitHub CDN + Cloudflare Worker | M | 1.6.5 | `di/NetworkModule.kt` |
-| 1.7.3 Encrypt backups with AndroidX Security `EncryptedFile` | M | — | `BackupRestore.kt` |
-| 1.7.4 `android:allowBackup="false"` or restrictive backup rules | S | — | `AndroidManifest.xml` |
+### 1.7 Security Hardening `[WIP]`
 
-**Priority:** 1.7.1 is the highest-priority security fix. Hardcoded `CallShield2026` password in `build.gradle.kts` is visible to anyone with repo access.
+| Task | Size | Status | Files |
+|------|------|--------|-------|
+| 1.7.1 Move signing credentials to `local.properties` / env vars | S | `[DONE]` (`build.gradle.kts:33-47`) | — |
+| 1.7.2 Certificate pinning — GitHub raw, Cloudflare Worker, all enrichment APIs. Use OkHttp 5 `CertificatePinner` (post-1.7.5 upgrade). | M | `[NOW]` | `di/NetworkModule.kt` |
+| 1.7.3 Replace any `EncryptedSharedPreferences` with **Tink `AeadSerializer` + DataStore 1.2** [src 21]. AndroidX Security `EncryptedSharedPreferences` is on the deprecated path. | M | `[NOW]` | `BackupRestore.kt`, settings layer |
+| 1.7.4 Consider `android:allowBackup="false"` or restrict via existing `backup_rules.xml` (currently `allowBackup="true"`) | S | `[?]` | `AndroidManifest.xml` |
+| 1.7.5 OkHttp 4.12 → **OkHttp 5.x** [src 18]. Adds Happy Eyeballs (RFC 8305), ZSTD compression module, JPMS, separate Android artifact, eliminates 4.x cookie-jar SSRF. | M | `[NOW]` | `data/remote/HttpClient.kt`, version catalog |
+| 1.7.6 Glance dependency audit — **CVE-2024-7254 protobuf buffer overflow** [src 22, NVD]. CallShield doesn't use Glance yet, but 4.8.3 home widget is plain RemoteViews; if migrated to Glance, must pin 1.1.1+. Track for the widget-modernization story. | S | `[?]` | n/a |
+| 1.7.7 Reproducible-build verification — match SpamBlocker's F-Droid story. Eliminate build-timestamp embedding, enable Gradle `dependencyLocking`, document hash-comparison procedure. [src 1, src 24] | M | `[NOW]` | `build.gradle.kts`, CI |
+| 1.7.8 Play Integrity API integration (Standard request, low-latency) for community-report submission only — gates the Cloudflare Worker against poisoning by overlay/screen-capture malware (`appAccessRiskVerdict`) [src 13]. **Keep optional**; client must function without Play Services. ⚠ partial conflict with FOSS philosophy: feature-flag it so non-GMS builds skip integrity gating but still submit reports. | L | `[NEXT]` | `data/CommunityContributor.kt`, server |
 
-### 1.8 String Extraction
+### 1.8 String Extraction `[WIP]`
 
-| Task | Size | Depends On | Files |
-|------|------|-----------|-------|
-| 1.8.1 Audit all 57 Kotlin files for hardcoded user-facing strings (~200-300 strings) | S | — | Audit doc |
-| 1.8.2 Extract UI strings from Compose screens | XL | 1.8.1 | `res/values/strings.xml`, all screens |
-| 1.8.3 Extract notification strings | M | 1.8.1 | `NotificationHelper.kt`, `DigestWorker.kt` |
-| 1.8.4 Extract detection reason strings | M | 1.8.1 | Data layer files |
+`544+ string resources` are already extracted (per README), but a fresh audit will surface stragglers. Continue.
+
+| Task | Size | Files |
+|------|------|-------|
+| 1.8.1 Audit all 78 main Kotlin files for hardcoded user-facing strings | S | audit doc |
+| 1.8.2 Plurals + parameterized strings for counts ("1 call blocked" / "%d calls blocked") | M | `res/values/strings.xml` |
+| 1.8.3 Number-formatting localization — display E.164 numbers in local format ((212) 555-0100 in en-US, +33 1 23 45 67 89 in fr-FR) using `libphonenumber` or `PhoneNumberUtils.formatNumber()` [Addendum B item B.27] | M | `data/PhoneFormatter.kt` |
 
 ---
 
-## Phase 2: Detection Quality
+## Phase 2 — Detection Quality
 
-**Goal:** Better ML model, behavioral features, STIR/SHAKEN parsing, feedback loops.
+**Goal:** behavioral features, STIR/SHAKEN parsing depth, feedback loops, fuzz/perf gates.
 
-**Estimated Duration:** 8-10 weeks
-**Prerequisites:** Phase 1 (testing, DI) substantially complete.
+### 2.1 ML Model Upgrade `[DONE]`
 
-### 2.1 ML Model Upgrade
+GBT v3 (20 features, pure Kotlin inference, ~50 KB model, sigmoid output, atomic ModelState) shipped in v1.6.0. Logistic v2 fallback retained. JSON v3 schema with backward compat to v2. Threshold 0.7.
 
-| Task | Size | Depends On | Files |
-|------|------|-----------|-------|
-| 2.1.1 Upgrade training to gradient-boosted trees (XGBoost/LightGBM), keep logistic regression as fallback | L | — | `scripts/train_spam_model.py` |
-| 2.1.2 On-device GBT inference in pure Kotlin — 50-100 trees, max depth 4, no TFLite needed | L | 2.1.1 | `SpamMLScorer.kt` (rewrite) |
-| 2.1.3 Update `spam_model_weights.json` format (version 3) with backward compat to v2 logistic regression | M | 2.1.1, 2.1.2 | Weight JSON schema, `parseAndApply()` |
-| 2.1.4 A/B comparison framework — log both old/new model scores for 2 weeks before switching | M | 2.1.2 | `SpamMLScorer.kt`, `SpamDao.kt` |
+### 2.2 Behavioral / Temporal Features `[NEXT]`
 
-**Why GBT over neural network:** (a) trivial pure-Kotlin inference, (b) better with binary indicator features, (c) small model (~50KB), (d) no ML library dependency.
+| Task | Size | Depends | Files |
+|------|------|---------|-------|
+| 2.2.1 Time-of-day feature — sin/cos cyclical encoding | M | — | `SpamMLScorer.extractFeatures()` |
+| 2.2.2 Call frequency feature — calls from this number in 7/30-day windows | M | — | `SpamMLScorer.extractFeatures()`, `SpamDao` |
+| 2.2.3 Ring duration feature — short rings correlate with autodialers | M | — | `CallShieldScreeningService` |
+| 2.2.4 Geographic distance feature — area-code distance from user's home area code | M | — | `SpamMLScorer.extractFeatures()` |
+| 2.2.5 Retrain with expanded features (20 → 24-26) and ship a v4 weights JSON; keep v3 backward compat | M | 2.2.1-4 | `scripts/train_spam_model.py`, weights schema |
 
-### 2.2 Behavioral/Temporal Features
+### 2.3 STIR/SHAKEN Enhancement `[WIP]`
 
-| Task | Size | Depends On | Files |
-|------|------|-----------|-------|
-| 2.2.1 Time-of-day feature — sin/cos encoding for cyclical continuity | M | 2.1.2 | `SpamMLScorer.extractFeatures()` |
-| 2.2.2 Call frequency feature — calls from this number in last 7/30 days | M | 2.1.2 | `SpamMLScorer.extractFeatures()`, `SpamDao.kt` |
-| 2.2.3 Ring duration feature — short rings correlate with robocalls | M | 2.1.2 | `CallShieldScreeningService.kt` |
-| 2.2.4 Geographic distance feature — area code distance from user | M | 2.1.2 | `SpamMLScorer.extractFeatures()` |
-| 2.2.5 Retrain with expanded features (15 original + 4-6 new) | M | 2.2.1-4 | `train_spam_model.py` |
+v1.7.0 shipped the binary trusted-allow / FAIL-block layer. Remaining: **PASSporT JWT depth.**
 
-### 2.3 STIR/SHAKEN Enhancement
+| Task | Size | Depends | Files |
+|------|------|---------|-------|
+| 2.3.1 Parse full PASSporT token per **RFC 8225** (header `typ=passport, alg=ES256, x5u=…`; payload `iat`, `orig`, `dest`, optional `mky`) [src 14]. Android exposes the SIP `Identity` header on API 30+ via `Connection.getExtras()`. | L | — | New `data/StirShakenParser.kt` |
+| 2.3.2 Per **RFC 8588 SHAKEN profile**: extract `attest` (A/B/C) and `origid` (UUID) claims. Display attestation badge in caller-ID overlay (green=A full, yellow=B partial, gray=C gateway/no opinion). [src 14] | M | 2.3.1 | overlay UI, `BlockedCall` model |
+| 2.3.3 `iat` replay-attack guard — reject tokens with `iat` more than 60 s old/skewed [src 14] | S | 2.3.1 | parser |
+| 2.3.4 Persist `origid` UUID in BlockedCall for **RFC 9027 traceback** participation. Future-proofs FCC traceback consortium reporting. [src research, RFC 9027] | S | 2.3.1 | `SpamDao`, `BlockedCall` |
+| 2.3.5 Attestation level as ML feature (A reduces score, C raises) | M | 2.3.1, 2.2.5 | `SpamMLScorer.extractFeatures()` |
 
-| Task | Size | Depends On | Files |
-|------|------|-----------|-------|
-| 2.3.1 Parse full PASSporT token (Android 11+) — attestation level A/B/C, originating carrier | L | — | New `data/StirShakenParser.kt` |
-| 2.3.2 Attestation level as ML feature — A reduces score, C increases | M | 2.3.1, 2.1.2 | `SpamMLScorer.extractFeatures()` |
-| 2.3.3 Log attestation in call log for statistics | S | 2.3.1 | `SpamDao.kt`, `BlockedCall` model |
+### 2.4 Graph-Based Campaign Detection `[NEXT]`
 
-### 2.4 Graph-Based Campaign Detection
+In-memory `CampaignDetector` exists. Persist to Room and broaden window:
 
-| Task | Size | Depends On | Files |
-|------|------|-----------|-------|
-| 2.4.1 Local call graph in Room — track NPA-NXX prefix clusters over time | L | — | New `data/local/CallGraphDao.kt` |
-| 2.4.2 Campaign burst detection — 5+ numbers from same NPA-NXX in 1 hour = active campaign | M | 2.4.1 | New `data/CampaignDetector.kt` |
-| 2.4.3 Integrate as detection layer 11.5 (between heuristics and overlay) | M | 2.4.2 | `SpamRepositoryImpl.isSpam()` |
+| Task | Size | Files |
+|------|------|-------|
+| 2.4.1 Persistent call-graph table — track NPA-NXX prefix clusters over 7-day window | L | new `data/local/CallGraphDao.kt` |
+| 2.4.2 Burst rule — 5+ distinct numbers from same NPA-NXX in 1 h = active campaign | M | `data/CampaignDetector.kt` |
+| 2.4.3 Geographic clustering across users (post-Phase 3 server) | L | server |
 
-### 2.5 After-Call Feedback
+### 2.5 After-Call Feedback `[WIP]`
 
-| Task | Size | Depends On | Files |
-|------|------|-----------|-------|
-| 2.5.1 "Was this spam?" notification after allowed unknown calls | M | P1.6 | `NotificationHelper.kt`, `SpamActionReceiver.kt` |
-| 2.5.2 Store feedback in Room with positive/negative labels | S | 2.5.1 | `SpamDao.kt`, new `FeedbackEntry` model |
-| 2.5.3 Export feedback for training pipeline | M | 2.5.2 | `train_spam_model.py` |
-| 2.5.4 Auto-submit to community reports (opt-in) | M | 2.5.2 | `CommunityContributor.kt` |
+Skeleton ("Was this spam?" notification) shipped in v1.4.x. Remaining:
 
-### 2.6 Quality Assurance
+| Task | Size | Files |
+|------|------|-------|
+| 2.5.1 Bottom-sheet variant for in-app review (richer options: spam type, severity) | M | new UI, `CallShieldScreeningService` |
+| 2.5.2 Persist feedback as labeled rows in Room | S | `SpamDao`, new `FeedbackEntry` |
+| 2.5.3 Export feedback to training pipeline (opt-in) | M | `train_spam_model.py` |
+| 2.5.4 On-device Bayesian classifier learning from local feedback (per-user) [Addendum B item B.13] | L | new `data/BayesianFeedbackModel.kt` |
 
-| Task | Size | Depends On | Files |
-|------|------|-----------|-------|
-| 2.6.1 Fuzz testing on phone number parsing | M | P1.1 | `test/.../PhoneNumberFuzzTest.kt` |
-| 2.6.2 Performance benchmark — `isSpam()` must be <50ms | M | P1.4 | `androidTest/.../SpamCheckBenchmark.kt` |
-| 2.6.3 ML accuracy metrics (precision/recall/F1) in CI | M | 2.1.1 | `scripts/evaluate_model.py` |
+### 2.6 Quality Gates `[WIP]`
 
----
-
-## Phase 3: Real-Time Data Pipeline
-
-**Goal:** Replace batch sync with real-time streaming, proper backend, honeypot network.
-
-**Estimated Duration:** 10-14 weeks
-**Prerequisites:** Phase 1 complete. Phase 2 at least partially complete.
-
-### 3.1 API Server
-
-| Task | Size | Depends On | Files |
-|------|------|-----------|-------|
-| 3.1.1 OpenAPI 3.0 spec — `POST /reports`, `GET /reputation/{number}`, `GET /blocklist/delta`, `POST /feedback` | M | — | `server/openapi.yaml` |
-| 3.1.2 Ktor server implementation | XL | 3.1.1 | `server/` directory |
-| 3.1.3 Migrate Cloudflare Worker to thin proxy for backward compat | L | 3.1.2 | `worker/`, server |
-| 3.1.4 Authentication — API keys (anonymous but rate-limited), JWT for admin | L | 3.1.2 | `server/auth/` |
-| 3.1.5 Rate limiting via Redis or in-memory token bucket | M | 3.1.2 | `server/middleware/` |
-| 3.1.6 Abuse detection — coordinated false reports, report flooding | L | 3.1.5 | `server/abuse/` |
-
-**Why Ktor:** Same Kotlin ecosystem, shares data models with Android, coroutines-native.
-
-### 3.2 Real-Time Streaming
-
-| Task | Size | Depends On | Files |
-|------|------|-----------|-------|
-| 3.2.1 Delta API — client sends `last_sync_timestamp`, gets only new/changed numbers | L | 3.1.2 | `data/remote/ApiDataSource.kt`, server |
-| 3.2.2 SSE push — new hot numbers pushed within 30 seconds of ingestion | XL | 3.1.2 | Server, new `service/RealtimeSyncService.kt` |
-| 3.2.3 Fallback polling — keep `HotListSyncWorker` when SSE drops | M | 3.2.2 | `HotListSyncWorker.kt` |
-
-### 3.3 Two-Tier Database
-
-| Task | Size | Depends On | Files |
-|------|------|-----------|-------|
-| 3.3.1 Bloom filter for 100K+ numbers (FPR <0.1%) + exact-match Room table | L | — | New `data/local/BloomFilter.kt` |
-| 3.3.2 Cloud reputation API for numbers not in local filter | M | 3.1.2 | New `data/remote/ReputationApi.kt` |
-| 3.3.3 Two-tier lookup in pipeline — local first (μs), cloud fallback | M | 3.3.1, 3.3.2 | `SpamRepositoryImpl.isSpam()` |
-| 3.3.4 Offline mode — fully functional with local-only, cloud is enhancement | M | 3.3.3 | Detection pipeline |
-
-### 3.4 Honeypot Network
-
-| Task | Size | Depends On | Files |
-|------|------|-----------|-------|
-| 3.4.1 Deploy 10 Twilio honeypot numbers across area codes — log all callers | XL | 3.1.2 | `server/honeypot/` |
-| 3.4.2 Ground-truth labeling — all honeypot calls are definitively spam → training pipeline | L | 3.4.1 | `train_spam_model.py` |
-| 3.4.3 Geographic campaign clustering from honeypot + community data | L | 3.4.1 | `server/analytics/` |
-
-### 3.5 Geographic Clustering
-
-| Task | Size | Depends On | Files |
-|------|------|-----------|-------|
-| 3.5.1 NPA-NXX geographic mapping from NANPA public data | M | — | `server/data/nanpa_mapping.json` |
-| 3.5.2 Spam campaign hot zone identification | L | 3.5.1, 3.1.2 | `server/analytics/` |
-| 3.5.3 API endpoint for client-side visualization | M | 3.5.2 | Server |
+| Task | Size | Status | Files |
+|------|------|--------|-------|
+| 2.6.1 Phone-number fuzz tests | `[DONE]` | `PhoneNumberFuzzTest.kt` exists | — |
+| 2.6.2 `isSpam()` perf benchmark, hard ceiling 50 ms p99 | `[WIP]` | `HotPathBenchmarkTest.kt` exists; needs CI gate | `androidTest/.../SpamCheckBenchmark.kt` |
+| 2.6.3 ML accuracy metrics (precision/recall/F1) in CI | `[NOW]` | — | `scripts/evaluate_model.py` |
+| 2.6.4 **Baseline Profile** for screener cold-start [Addendum B item B.30] — first-call latency drops measurably; CallScreeningService has 5 s deadline | M | `[NEXT]` | `app/baselineprofile/` |
 
 ---
 
-## Phase 4: Platform & UX
+## Phase 3 — Real-Time Data Pipeline
 
-**Goal:** iOS via KMP, InCallService, accessibility, localization, spam trends dashboard.
+**Goal:** delta sync, two-tier DB, optional honeypot. **Caveat:** the existing GitHub-raw + 30 min hot-list pipeline already meets the realistic target. A full backend is justified only if community-report volume outgrows GitHub Pages economics.
 
-**Estimated Duration:** 12-16 weeks
-**Prerequisites:** Phase 1 complete. Phase 2 substantially complete. Phase 3 API server minimum.
+### 3.1 API Server `[LATER]`
 
-### 4.1 Kotlin Multiplatform (iOS)
+| Task | Size | Files |
+|------|------|-------|
+| 3.1.1 OpenAPI 3.0 spec — `POST /reports`, `GET /reputation/{number}`, `GET /blocklist/delta`, `POST /feedback` | M | `server/openapi.yaml` |
+| 3.1.2 Ktor server impl (Kotlin shared models with Android) | XL | `server/` |
+| 3.1.3 Migrate Cloudflare Worker to thin proxy for backward compat | L | `worker/`, server |
+| 3.1.4 API-key gate (anonymous, rotating, rate-limited) + JWT for admin | L | `server/auth/` |
+| 3.1.5 Token-bucket rate limiting | M | `server/middleware/` |
+| 3.1.6 Abuse detection — coordinated false reports, report flooding | L | `server/abuse/` |
 
-| Task | Size | Depends On | Files |
-|------|------|-----------|-------|
-| 4.1.1 Extract shared detection engine to KMP module — `SpamMLScorer`, `SpamHeuristics` (non-Android), `PhoneFormatter`, regex patterns | XL | P1.5, P1.6 | New `shared/` KMP module |
-| 4.1.2 `expect`/`actual` for platform APIs — contacts, call log, DataStore/UserDefaults | XL | 4.1.1 | `shared/src/{commonMain,androidMain,iosMain}/` |
-| 4.1.3 iOS SwiftUI shell — settings, blocklist, detection toggle | XL | 4.1.2 | `iosApp/` |
-| 4.1.4 CallKit integration — `CXCallDirectoryProvider` for blocking, `CXCallDirectoryManager` for reload | XL | 4.1.3 | `iosApp/CallShieldExtension/` |
+### 3.2 Real-Time Streaming `[LATER]`
 
-**Critical iOS constraint:** CallKit requires preloading a block list into an extension — no real-time evaluation. Strategy: sync blocked numbers to CallKit extension periodically.
+| Task | Size | Files |
+|------|------|-------|
+| 3.2.1 Delta API — `last_sync_timestamp` → only-deltas response | L | `data/remote/ApiDataSource.kt`, server |
+| 3.2.2 SSE push for new hot numbers within 30 s of ingestion | XL | server, new `service/RealtimeSyncService.kt` |
+| 3.2.3 Polling fallback when SSE drops | M | `HotListSyncWorker.kt` |
 
-### 4.2 Adaptive Layouts
+### 3.3 Two-Tier Database `[NEXT]`
 
-| Task | Size | Depends On | Files |
-|------|------|-----------|-------|
-| 4.2.1 Window size class detection (`calculateWindowSizeClass()`) | S | — | `MainActivity.kt` |
-| 4.2.2 Tablet list-detail pane for blocklist/log screens | L | 4.2.1 | Screen files |
-| 4.2.3 Foldable support (`FoldingFeature`) | M | 4.2.1 | `MainActivity.kt` |
-| 4.2.4 Landscape layout — horizontal stats, wider dialogs | M | 4.2.1 | Various screens |
+This one is worth doing **without** a backend. The bloom filter alone gives O(μs) negative checks for the 32K → 100K+ growth path.
 
-### 4.3 InCallService Integration
+| Task | Size | Files |
+|------|------|-------|
+| 3.3.1 Bloom filter for the full DB (FPR < 0.1%) loaded at startup | L | new `data/local/BloomFilter.kt` |
+| 3.3.2 Optional cloud-reputation API for filter-positive lookups | M | new `data/remote/ReputationApi.kt` |
+| 3.3.3 Two-tier lookup: bloom (μs) → exact Room (ms) → optional cloud (10–100 ms) | M | `SpamRepositoryImpl.isSpam()` |
+| 3.3.4 Strict offline mode toggle — disable all network calls including enrichment [Addendum B item B.21] | M | settings |
 
-| Task | Size | Depends On | Files |
-|------|------|-----------|-------|
-| 4.3.1 Custom call screen (Android 12+) — spam score, caller name, location on incoming call UI | XL | P1.6 | New `service/CallShieldInCallService.kt` |
-| 4.3.2 Replace overlay with InCallService when available — overlay fallback for Android 10-11 | M | 4.3.1 | `CallerIdOverlayService.kt` |
+### 3.4 Honeypot Network `[?]`
 
-### 4.4 After-Call Bottom Sheet
+⚠ Operational and privacy cost. Justified only at much higher scale. Defer behind Phase 5.
 
-| Task | Size | Depends On | Files |
-|------|------|-----------|-------|
-| 4.4.1 "Was this spam?" bottom sheet after unknown calls — thumbs up/down + type selector | M | P2.5 | New UI, `CallShieldScreeningService.kt` |
-| 4.4.2 Skip for contacts/whitelisted numbers | S | 4.4.1 | Service logic |
-
-### 4.5 Contact Enrichment
-
-| Task | Size | Depends On | Files |
-|------|------|-----------|-------|
-| 4.5.1 Business name lookup (OpenCNAM + Google Places) | M | P3.1 | `data/remote/BusinessLookup.kt` |
-| 4.5.2 Business logo (Clearbit/Google Favicon) | M | 4.5.1 | Caller ID UI |
-| 4.5.3 Cache enrichment results in Room | M | 4.5.1 | New `data/local/ContactEnrichmentDao.kt` |
-
-### 4.6 Accessibility
-
-| Task | Size | Depends On | Files |
-|------|------|-----------|-------|
-| 4.6.1 Full TalkBack audit — contentDescription on all elements | L | — | All screens |
-| 4.6.2 Dynamic type support — test at 200% font scale | M | — | `Theme.kt`, all screens |
-| 4.6.3 WCAG AA color contrast audit against Catppuccin Mocha | M | — | `Theme.kt` |
-| 4.6.4 Touch targets ≥ 48dp × 48dp | M | — | All screens |
-
-### 4.7 Localization
-
-| Task | Size | Depends On | Files |
-|------|------|-----------|-------|
-| 4.7.1 Complete string extraction (Phase 1.8) | XL | P1.8 | `res/values/strings.xml` |
-| 4.7.2 Translate to 6 languages: ES, FR, DE, PT, JA, KO | L each | 4.7.1 | `res/values-{lang}/strings.xml` |
-| 4.7.3 RTL layout support (Arabic, Hebrew) | M | 4.7.1 | Layout adjustments |
-| 4.7.4 Plurals and formatted strings | M | 4.7.1 | `strings.xml` |
-
-### 4.8 Spam Trends Dashboard
-
-| Task | Size | Depends On | Files |
-|------|------|-----------|-------|
-| 4.8.1 Time-series chart — blocked calls per day/week/month (Vico or custom Canvas) | L | — | `StatsScreen.kt` rewrite |
-| 4.8.2 Source breakdown pie/donut chart | M | 4.8.1 | `StatsScreen.kt` |
-| 4.8.3 Geographic spam heat map using Phase 3.5 data | XL | P3.5.3 | New `SpamMapScreen.kt` |
-| 4.8.4 Trend indicators with historical comparison | M | 4.8.1 | `StatsScreen.kt` |
+### 3.5 Geographic Clustering `[LATER]` (depends on 3.1)
 
 ---
 
-## Phase 5: Scale & Partnerships
+## Phase 4 — Platform & UX
 
-**Goal:** Carrier APIs, federated learning, monetization, security audit.
+### 4.1 Kotlin Multiplatform → iOS `[LATER]`
 
-**Estimated Duration:** 16-24 weeks (ongoing)
-**Prerequisites:** Phases 1-3 complete. Phase 4 substantially complete.
+| Task | Size | Files |
+|------|------|-------|
+| 4.1.1 Extract pure-logic into KMP module — `SpamMLScorer`, `SpamHeuristics` core, `PhoneFormatter`, `HashWildcardMatcher`, regex packs | XL | new `shared/` |
+| 4.1.2 `expect`/`actual` for contacts, call log, DataStore/UserDefaults | XL | `shared/src/{commonMain,androidMain,iosMain}/` |
+| 4.1.3 iOS shell — SwiftUI, settings, blocklist, detection toggle | XL | `iosApp/` |
+| 4.1.4 **CallKit `CXCallDirectoryProvider`** + `CXCallDirectoryManager` reload | XL | `iosApp/CallShieldExtension/` |
+| 4.1.5 **Saracroche-style 4-target architecture** [src 7]: Main App + Call Directory Extension + Unwanted Communication Reporting + Message Filter Extension | XL | iOS app |
 
-### 5.1 Carrier Integration
+**Constraint:** CallKit is preload-only; no real-time evaluation. Strategy: periodic CallKit reload from local DB; community reports via the shared backend if Phase 3 lands first.
 
-| Task | Size | Depends On | Files |
-|------|------|-----------|-------|
-| 5.1.1 T-Mobile STIR/SHAKEN Verified Calls API | XL | Partnership | `data/remote/CarrierApi.kt` |
-| 5.1.2 AT&T ActiveArmor API | XL | Partnership | `data/remote/CarrierApi.kt` |
-| 5.1.3 Abstract carrier differences behind common interface | L | 5.1.1, 5.1.2 | `domain/repository/CarrierRepository.kt` |
+### 4.2 Adaptive Layouts `[NEXT]`
 
-### 5.2 Federated Learning
+| Task | Size | Files |
+|------|------|-------|
+| 4.2.1 `calculateWindowSizeClass()` + `androidx.window 1.3+` [src research] | S | `MainActivity.kt` |
+| 4.2.2 Tablet list-detail pane for blocklist / log | L | screen files |
+| 4.2.3 Foldable `FoldingFeature` support | M | `MainActivity.kt` |
+| 4.2.4 Landscape — horizontal stats, wider dialogs | M | screens |
 
-| Task | Size | Depends On | Files |
-|------|------|-----------|-------|
-| 5.2.1 On-device training — compute gradient updates locally from feedback, no raw data sent | XL | P2.1, P2.5 | New `data/ml/FederatedTrainer.kt` |
-| 5.2.2 Secure aggregation server — multi-party computation for gradient aggregation | XL | 5.2.1 | `server/federated/` |
-| 5.2.3 Differential privacy — calibrated noise on gradient updates | L | 5.2.2 | `server/federated/privacy.kt` |
+### 4.3 InCallService Integration `[LATER]`
 
-### 5.3 gRPC API
+| Task | Size | Files |
+|------|------|-------|
+| 4.3.1 Custom call screen (Android 12+) — spam score, caller name, location, attestation badge on incoming UI | XL | new `service/CallShieldInCallService.kt` |
+| 4.3.2 Replace overlay with InCallService when available; overlay fallback for older devices | M | `CallerIdOverlayService.kt` |
 
-| Task | Size | Depends On | Files |
-|------|------|-----------|-------|
-| 5.3.1 Protobuf contracts for all endpoints | L | P3.1 | `proto/*.proto` |
-| 5.3.2 Generate Kotlin/Swift clients | M | 5.3.1 | Generated code |
-| 5.3.3 gRPC server alongside REST | L | 5.3.1 | `server/grpc/` |
+### 4.4 After-Call Bottom Sheet `[NEXT]`
 
-### 5.4 Monetization & Audit
+| Task | Size | Files |
+|------|------|-------|
+| 4.4.1 "Was this spam?" bottom sheet (replaces notification chip for unknown allowed calls) — thumbs up/down + type selector | M | new UI |
+| 4.4.2 Skip for contacts and whitelisted numbers | S | service |
 
-| Task | Size | Depends On | Files |
-|------|------|-----------|-------|
-| 5.4.1 Premium tier — Google Play Billing, feature gating | L | — | `data/billing/BillingManager.kt`, `PremiumScreen.kt` |
-| 5.4.2 Feature flags for premium features | M | 5.4.1 | `domain/FeatureFlags.kt` |
-| 5.4.3 Third-party security audit | XL | P1-P4 | External engagement |
-| 5.4.4 White-label SDK for carrier integration | XL | P4.1 | New `sdk/` module |
+### 4.5 Contact Enrichment `[LATER]`
+
+| Task | Size | Files |
+|------|------|-------|
+| 4.5.1 Business-name lookup (OpenCNAM existing + Google Places optional) | M | `data/remote/BusinessLookup.kt` |
+| 4.5.2 Business logo (Clearbit / Google Favicon) — cache aggressively | M | overlay UI |
+| 4.5.3 Cache enrichment in Room with TTL | M | new `data/local/ContactEnrichmentDao.kt` |
+
+### 4.6 Accessibility `[NEXT]`
+
+| Task | Size | Files |
+|------|------|-------|
+| 4.6.1 Full TalkBack audit — `contentDescription` on all interactive elements (claimed 100+, audit to confirm) | L | all screens |
+| 4.6.2 Dynamic-type at 200% font scale | M | `Theme.kt`, screens |
+| 4.6.3 WCAG AA color-contrast audit on Catppuccin Mocha tokens | M | `Theme.kt` |
+| 4.6.4 48 dp × 48 dp touch-target audit (claimed; verify) | M | screens |
+| 4.6.5 Predictive-back full preview (Android 14+, polished in 16) [src 28] | M | `MainActivity.kt`, screens |
+
+### 4.7 Localization `[LATER]`
+
+| Task | Size | Files |
+|------|------|-------|
+| 4.7.1 Plurals + format strings (P1.8.2) | XL | `strings.xml` |
+| 4.7.2 Translate to ES, FR, DE, PT, JA, KO. Plus **TR, ES-MX, IT, NL, PL, RU** based on top OSS-app reach. Each L. | many | `res/values-{lang}/strings.xml` |
+| 4.7.3 RTL layout (Arabic, Hebrew) | M | layouts |
+
+### 4.8 Spam Trends Dashboard `[NEXT]`
+
+| Task | Size | Files |
+|------|------|-------|
+| 4.8.1 Time-series chart — daily/weekly/monthly (Vico or custom Canvas) | L | `StatsScreen.kt` rewrite |
+| 4.8.2 Source-breakdown pie | M | `StatsScreen.kt` |
+| 4.8.3 Geographic heat map (depends on 3.5.3) | XL | new `SpamMapScreen.kt` |
+| 4.8.4 Trend indicators with historical comparison | M | `StatsScreen.kt` |
+
+---
+
+## Phase 5 — Scale & Partnerships
+
+### 5.1 Carrier Integration `[LATER]`
+
+T-Mobile Scam Shield, AT&T ActiveArmor, Verizon Call Filter — all require business-development engagement [src 30]. Track but do not staff.
+
+### 5.2 Federated Learning `[?]`
+
+Roadmap retains as long-horizon. **Differential-privacy noise injection** is a hard requirement; small per-user spam-call counts (~20/month [src research]) make naive FL leak. Likely won't ship before 2027.
+
+### 5.3 gRPC API `[LATER]` — depends on 3.1
+
+### 5.4 Monetization & Audit `[?]`
+
+| Task | Size | Files |
+|------|------|-------|
+| 5.4.1 Premium tier — Google Play Billing, feature gating ⚠ partial conflict with FOSS philosophy: F-Droid build must remain feature-complete; premium = Play-only convenience features (cloud sync, multi-device, priority support) | L | `data/billing/BillingManager.kt` |
+| 5.4.2 Feature flags for premium | M | `domain/FeatureFlags.kt` |
+| 5.4.3 Third-party security audit | XL | external |
+| 5.4.4 White-label SDK for carrier integration | XL | new `sdk/` module |
 
 ---
 
 ## Cross-Cutting Concerns
 
 ### Database Migrations
-Current Room DB uses `fallbackToDestructiveMigration()`. Acceptable for spam numbers (re-syncs) but NOT after adding feedback (2.5), call graphs (2.4), and enrichment caches (4.5). **Phase 1 must switch to proper `Migration` objects before Phase 2.**
+v5+ are explicit; v1–4 use `fallbackToDestructiveMigration()`. **Acceptable for spam-numbers (re-syncable) but unacceptable** after FeedbackEntry (2.5.2), CallGraph (2.4.1), ContactEnrichment (4.5.3). Add `Migration` objects in lockstep with each new entity.
 
 ### Backward Compatibility
-Hot list sync and community reports use hardcoded GitHub URLs on `master` branch. Phase 3 API migration must maintain these endpoints for v1.2.x. Staged rollout: new API for new versions, GitHub raw for legacy.
+Hot-list sync and community reports use hardcoded GitHub-raw URLs on `master`. Phase 3 must keep these endpoints serving for v1.2.x clients indefinitely — that's the legacy contract.
 
 ### Privacy Architecture
-Phases 2.5 (feedback), 3.4 (honeypot), 5.2 (federated learning) introduce data collection. Each requires: explicit opt-in, clear privacy policy, data retention limits.
+Phases 2.5 (feedback), 3.4 (honeypot), 5.2 (federated) introduce data collection. Each requires explicit opt-in toggle, plain-language privacy disclosure, and a retention cap. No exceptions.
+
+### Dependency Refresh Cadence
+Quarterly dependency audit. The current stack (Kotlin 2.1, Compose BOM 2024.12, Room 2.6, OkHttp 4.12, WorkManager 2.10) is approaching ~6 month staleness on the major libs. Addendum B.U batches the upgrades.
 
 ---
 
-## Timeline
+## Addendum A — Peer-Inspired Track (preserved)
 
-```mermaid
-gantt
-    title CallShield Roadmap
-    dateFormat  YYYY-MM-DD
-    axisFormat  %b %Y
+Round-1/2/3 borrows from SpamBlocker (aj3423), YetAnotherCallBlocker (xynngh), BlackList (kaliturin), Saracroche (cbouvat), spam-call-blocker-app (adamff-dev), Fossify Phone.
 
-    section Phase 1
-    Unit Tests           :p1a, 2026-04-01, 3w
-    Integration Tests    :p1b, after p1a, 2w
-    CI Pipeline          :p1c, 2026-04-01, 2w
-    Clean Architecture   :p1d, after p1a, 3w
-    Hilt DI              :p1e, after p1d, 2w
-    Security             :p1f, 2026-04-01, 1w
-    String Extraction    :p1g, after p1e, 2w
-
-    section Phase 2
-    ML Model Upgrade     :p2a, after p1e, 4w
-    Behavioral Features  :p2b, after p2a, 2w
-    STIR/SHAKEN          :p2c, after p1e, 2w
-    Campaign Detection   :p2d, after p2b, 3w
-    After-Call Feedback  :p2e, after p1e, 2w
-    Fuzz/Benchmarks      :p2f, after p2b, 2w
-
-    section Phase 3
-    API Server           :p3a, after p2a, 5w
-    Real-Time Streaming  :p3b, after p3a, 4w
-    Two-Tier Database    :p3c, after p3a, 3w
-    Honeypot Network     :p3d, after p3a, 4w
-
-    section Phase 4
-    KMP iOS              :p4a, after p3a, 8w
-    Adaptive Layouts     :p4b, after p1g, 3w
-    InCallService        :p4c, after p1e, 4w
-    Accessibility        :p4d, after p1g, 2w
-    Localization         :p4e, after p1g, 3w
-    Spam Dashboard       :p4f, after p3c, 3w
-
-    section Phase 5
-    Carrier APIs         :p5a, after p4a, 8w
-    Federated Learning   :p5b, after p3d, 6w
-    gRPC                 :p5c, after p3a, 3w
-    Premium Tier         :p5d, after p4a, 3w
-```
+| ID | Item | Status |
+|----|------|--------|
+| A1 | Priority-sorted `IChecker` pipeline | `[DONE]` v1.6.0 |
+| A2 | Budget-aware lookup race (`Race.kt`) | `[DONE]` v1.6.0/1.7.1 |
+| A3 | Push-alert / notification-context bridge (`PushAlertChecker`, `PushAlertRegistry`) + allowlist editor + revoke-on-next-ring feedback | `[DONE]` v1.6.0/1.7.1 |
+| A4 | System block-list bridge (`BlockedNumberContract` read-only) | `[DONE]` v1.6.0 |
+| A5 | Hash-wildcard / range patterns (`#` length-locked) | `[DONE]` v1.6.0 |
+| A6 | Schedule-aware rules (days mask + hour window with overnight wrap) | `[DONE]` v1.6.0 |
+| A7 | STIR trusted-caller allow + auto-mute low-confidence | `[DONE]` v1.7.0 |
 
 ---
 
-## Total Estimated Effort
+## Addendum B — Round-3 Research Track (new, 2026-05-06)
 
-| Phase | Tasks | Duration | Key Deliverable |
-|-------|-------|----------|-----------------|
-| **Phase 1** | 35 tasks | 6-8 weeks | Testable, secure, properly-architected codebase |
-| **Phase 2** | 20 tasks | 8-10 weeks | GBT model, behavioral features, feedback loops |
-| **Phase 3** | 15 tasks | 10-14 weeks | Real-time API, two-tier DB, honeypot network |
-| **Phase 4** | 22 tasks | 12-16 weeks | iOS app, InCallService, accessibility, i18n |
-| **Phase 5** | 11 tasks | 16-24 weeks | Carrier APIs, federated learning, premium tier |
+Harvested from a 30-source sweep (see Appendix). Scoped to NEW signal not already covered above. Each item carries impact (1–5), effort (1–5), source ref.
 
-**Total: ~103 tasks, ~52-72 weeks end-to-end with parallelization**
+### B.NOW — Now (1–2 releases)
+
+| ID | Item | Impact | Effort | Source | Notes |
+|----|------|-------:|-------:|--------|-------|
+| B.U.1 | OkHttp 4.12 → **5.x** | 4 | 2 | [18] | Happy Eyeballs, ZSTD module, JPMS, separate Android artifact, no 4.x cookie SSRF surface. Mostly drop-in; `MockWebServer` moves to `mockwebserver3` coords |
+| B.U.2 | Room 2.6 → **2.8.4** | 3 | 2 | [research] | minSdk API 23 (we're 29), `room-sqlite-wrapper` for SQLiteDriver migration path, `generateKotlin=true` becomes default |
+| B.U.3 | Kotlin 2.1 → **2.2.0** | 3 | 2 | [20] | Stable guard conditions in `when`, non-local break/continue, multi-dollar interpolation, stable `Base64` + `HexFormat` (drop any custom impls) |
+| B.U.4 | DataStore 1.1 → **1.2.1** + Tink `AeadSerializer` | 4 | 3 | [21] | Replaces `EncryptedSharedPreferences` (deprecated path); enables Direct-Boot prefs for cold-call-at-boot screening |
+| B.U.5 | WorkManager 2.10 → **2.11.2** | 2 | 1 | [16] | Android 15 network-constraint regression fixes |
+| B.U.6 | Compose BOM 2024.12 → latest stable (Compose Foundation 1.11+) | 3 | 2 | [17] | LazyColumn grid track sizing, FlexBox |
+| B.D.1 | **F-Droid submission** — `fastlane/metadata/android/en-US/`, GitLab MR to `fdroiddata`, reproducible-build verification | 5 | 3 | [24] | High-value distribution; matches SpamBlocker, Fossify, YACB |
+| B.D.2 | **IzzyOnDroid** publication (faster cycle than F-Droid; binary-accepted) | 4 | 1 | [research] | Just publish + notify |
+| B.D.3 | **Accrescent** submission (GrapheneOS-friendly, key pinning, signed metadata, Android 12+) | 3 | 2 | [23] | Privacy-niche audience but high alignment |
+| B.D.4 | **Obtainium** spec — already supported via GitHub Releases; document the workflow + add SHA256 sidecar files to release artifacts | 2 | 1 | [research] | Trivial polish |
+| B.S.1 | Reproducible APK build (Gradle `dependencyLocking`, deterministic timestamps, no embedded build metadata) | 4 | 3 | [1, 24] | Required for F-Droid path; competitive parity with SpamBlocker |
+| B.F.1 | **Per-SIM filtering rules** (dual-SIM aware) | 4 | 3 | [SpamBlocker #59] | Top community ask; enables work/personal SIM split |
+| B.F.2 | **Rule replay / debug mode** — re-run any logged call/SMS through the current ruleset | 4 | 2 | [SpamBlocker #386] | Power-user feature; cheap to add via `IChecker` registry already present |
+| B.F.3 | **Strict (AND) vs Relaxed (OR) rule mode** | 3 | 2 | [SpamBlocker #377] | Replaces Inclusive/Exclusive terminology; clearer semantics |
+| B.F.4 | **Auto-add regex-blocked numbers to local DB** for review | 3 | 1 | [SpamBlocker #355] | One-line change in pipeline |
+| B.F.5 | **App-foreground context rule** — allow calls when banking / delivery app is active | 4 | 3 | [SpamBlocker #218] | UsageStatsManager + (existing) PushAlertChecker pattern |
+| B.F.6 | **System-notification context rule** (delivery notification present → allow) | 3 | 2 | [SpamBlocker #350] | Already partially via PushAlertChecker; broaden source taxonomy |
+| B.F.7 | **External blocklist URL subscription** (Pi-hole "gravity" model) — CSV/TXT/JSON URLs, scheduled refresh, merged into local DB with attribution | 5 | 3 | [26] | Architecturally aligns with our hot-list pattern |
+| B.F.8 | **Spam-SMS auto-forward to 7726 (SPAM)** — opt-in carrier reporting | 3 | 1 | [15] | Pure UX win; FCC-recommended |
+| B.U.7 | **Number formatting localization** via `PhoneNumberUtils.formatNumber()` or `libphonenumber` | 3 | 2 | [research] | Belongs in P1.8.3 |
+| B.O.1 | **"Explain this decision" drawer** — tap any log entry to see rules triggered, in priority order, with confidence | 4 | 2 | [research] | Cheap with existing `IChecker` returning `BlockResult` reasons |
+| B.U.8 | Predictive back full preview (where missing) | 2 | 2 | [28] | Polish for Android 14+ |
+| B.S.2 | Certificate pinning for **all** API endpoints (existing `network_security_config.xml` covers cleartext only) | 4 | 2 | [research] | Pair with B.U.1 OkHttp 5 upgrade |
+| B.U.9 | `androidx.glance` widget rewrite (current widget is `RemoteViews`); pin Glance ≥ 1.1.1 against **CVE-2024-7254** | 3 | 3 | [22] | Widget preview API + adaptive sizing |
+
+### B.NEXT — Next (3–6 releases)
+
+| ID | Item | Impact | Effort | Source | Notes |
+|----|------|-------:|-------:|--------|-------|
+| B.F.9 | **ICS / iCal calendar-based scheduling** — parse iCal subscription URL into dynamic allow windows (shift workers, on-call) | 3 | 4 | [SpamBlocker #359] | Builds on existing per-rule schedule (A6) |
+| B.F.10 | **DID range fuzzy matching** — allow numbers within ±N of a saved contact's number | 2 | 2 | [SpamBlocker #554] | Covers contacts whose business rotates last digits |
+| B.F.11 | **Family DB sharing** — opt-in mesh-share local user blocklist with N trusted devices via QR-paired keys | 4 | 4 | [SpamBlocker #549] | ⚠ Privacy: end-to-end encrypted; no server involvement |
+| B.F.12 | **Wi-Fi SSID / geofence rule profiles** — corporate SSID = work rules, home SSID = relaxed | 3 | 3 | [research, NetGuard pattern] | Builds on existing BlockingProfiles |
+| B.F.13 | **Bidirectional blocklist subscription** — publish your local list as a stable URL others can subscribe to (Pi-hole / OPML model) | 3 | 4 | [26] | Pairs with B.F.7 |
+| B.F.14 | **Local REST API on loopback** for Tasker / Macrodroid / automation: `GET /api/stats/summary`, `POST /api/report`, `GET /api/log` | 3 | 3 | [26] | Pi-hole pattern; keep auth-by-shared-secret |
+| B.O.2 | **Rule-coverage analytics** — % of incoming calls handled by each rule; identify dead rules | 3 | 2 | [research] | Reuses BlockReasoning |
+| B.O.3 | **Advanced call-log filter** — by rule, number pattern, type, date range, confidence, source | 3 | 3 | [research] | Compose pre-existing log refactor |
+| B.O.4 | **Diagnostic-report export** — one-tap CSV/JSON of log + rules + model version + device info for bug reports | 3 | 2 | [NetGuard PRO] | Ships with redaction option |
+| B.D.5 | **Wear OS / Galaxy Watch tile** — last blocked call + one-tap temporary allow | 3 | 4 | [research] | Reuse Glance widget |
+| B.M.1 | **TinyML audio fingerprint** — perceptual hash of first ~2 s of call audio (post-answer if user answers; opt-in only); compare to local hash set of known robocall recordings | 4 | 4 | [research, robocall fingerprinting lit] | ⚠ Audio capture must be opt-in, on-device only, and easy to disable. Aligns with the no-cloud-audio philosophy as long as features stay local |
+| B.M.2 | **On-device Bayesian feedback model** — per-user weights learned from "Was this spam?" responses, blends into existing GBT score | 4 | 3 | [research] | Continuous personalization without leaking data |
+| B.M.3 | **Campaign-detection alerts** — proactive notification when new burst is detected on user's number range | 3 | 2 | [research, FCC traceback] | Reuses existing CampaignDetector |
+| B.S.3 | **Play Integrity Standard request** for community-report submission (`appAccessRiskVerdict` to detect overlay/screen-cap during submit) | 3 | 3 | [13] | ⚠ GMS-only; feature-flag for non-Play builds. Don't gate detection — only contribution |
+| B.U.10 | Migrate to **Room SQLiteDriver** path (`room-sqlite-wrapper` from 2.7+) — sets up future KMP support | 3 | 4 | [research] | Lays groundwork for P4.1 |
+
+### B.LATER — Later
+
+| ID | Item | Impact | Effort | Source | Notes |
+|----|------|-------:|-------:|--------|-------|
+| B.E.1 | **Enterprise / MDM edition** — managed config, zero-touch enrollment, fleet allow/block list, audit-log export | 3 | 5 | [7] | Saracroche's differentiator; valuable revenue path under 5.4 monetization |
+| B.E.2 | Android Work Profile awareness — separate rule sets per profile | 2 | 3 | [research] | Pairs with B.E.1 |
+| B.S.4 | **Oblivious HTTP (OHTTP) relay** for enrichment lookups — server never sees user IP | 4 | 4 | [research] | Cloudflare/Fastly run public relays. Privacy maxima |
+| B.M.4 | **Voice deepfake / synthetic-voice detection** (post-answer, on-device) | 4 | 5 | [Hiya 2025, FCC AI ban] | ⚠ Compute-heavy; only if a usable open model lands. Must run on-device. Otherwise reject |
+| B.M.5 | Voice-print similarity scoring across rotating numbers | 3 | 5 | [research] | ⚠ Privacy: voice-print derivation only on opt-in opted calls; never persist raw audio |
+| B.M.6 | **Automated call summarization & transcription** for screened calls | 3 | 5 | [Hiya AI Phone] | Only viable on-device with a small Whisper-class model; gate to higher-end devices |
+
+### B.UNDER — Under Consideration (decide before staffing)
+
+| ID | Item | Source | Decision Needed |
+|----|------|--------|-----------------|
+| B.?.1 | **AI Answer Bot** that engages spam callers to waste their time | [9 RoboKiller] | Legal/ethical: TCPA + state recording-consent laws; harassment exposure. Lean reject for now |
+| B.?.2 | **Audio CAPTCHA screening** ("press 1 to connect") | [10 YouMail] | UX cost vs spam-reduction; pilot opt-in for unknown callers |
+| B.?.3 | **Visual voicemail with spam-priority sorting** | [10 YouMail] | Scope creep — replaces dialer/voicemail. Keep in mind for a separate sister app |
+| B.?.4 | **Auto-attendant / IVR for first-time callers** | [10 YouMail] | Same scope concern as B.?.3 |
+| B.?.5 | **Truecaller-style B2B verified-caller display** | [29 Truecaller] | Requires partnerships; conflicts with on-device-first |
 
 ---
 
-## Addendum A — Peer-Inspired Track (April 2026)
+## Rejected (with reasoning)
 
-Derived from a deep read of SpamBlocker (aj3423), YetAnotherCallBlocker (xynngh), BlackList (kaliturin), Saracroche (cbouvat), spam-call-blocker-app (adamff-dev), and Fossify Phone. These are specific, concrete moves observed in shipping OSS peers, ranked by (user-impact × porting effort).
+| Item | Why rejected |
+|------|--------------|
+| Cloud upload of address book / contacts (Truecaller core) | Breaks **on-device-first** and **no-accounts** philosophy. |
+| Cloud audio analysis for deepfake / transcription | Breaks **no-cloud-audio** philosophy. On-device variants of B.M.4–6 only. |
+| Required sign-in / per-user cloud profile | Breaks **no-accounts** philosophy. |
+| Always-on cloud reputation gating | Breaks **on-device-first** — every layer must work offline. |
+| Hosts-file-style monetary blocklist (paid feeds) | Breaks **FOSS** philosophy. Free user-supplied URLs only (B.F.7 / B.F.13). |
+| Built-in ads, ad-supported tier | Hard no — incompatible with sysadmin-grade tool positioning. |
+| `fullBackupContent="true"` exposing API keys | Already mitigated via existing `backup_rules.xml`; consider tightening to `allowBackup=false` (1.7.4). |
 
-This track runs **parallel** to the main roadmap — most items have no dependency on Phases 2-5 and land standalone.
+---
 
-### A1. Priority-sorted `IChecker` pipeline — 1-2 days
+## Effort Summary
 
-Replace the 140-line waterfall in [`SpamRepository.isSpam`](app/src/main/java/com/sysadmindoc/callshield/data/SpamRepository.kt) with an ordered `IChecker` list and `firstNotNullOf`. Every existing detection layer becomes a class implementing:
+| Phase / Track | Tasks | Status |
+|---|---|---|
+| Phase 1 — Foundation | 35 | ~50% done (1.1, 1.4, 1.7.1 shipped; 1.2, 1.6, 1.7.2-7 open) |
+| Phase 2 — Detection Quality | 22 | 2.1, 2.6.1 shipped; 2.3 partial; rest open |
+| Phase 3 — Realtime Pipeline | 15 | open; 3.3 (bloom filter) is the next high-value tranche |
+| Phase 4 — Platform & UX | 24 | open; 4.2 + 4.6 are the next high-value tranches |
+| Phase 5 — Scale & Partnerships | 11 | open; treat as long-horizon |
+| Addendum A — Peer track | 7 | shipped |
+| **Addendum B — Research track** | **45** | **new — see B.NOW for the next-release shortlist** |
 
-```kotlin
-interface IChecker {
-    val priority: Int
-    suspend fun check(ctx: CheckContext): BlockResult?
-}
-```
+**Total: ~155 tracked items.** Phase ordering is a guideline; B.NOW items can land in parallel with Phase 1 tasks because most are isolated upgrades or self-contained features.
 
-**Wins:** testable in isolation; explicit "why blocked" trail; clean extension point for every other item on this track.
+---
 
-**Files:** new `data/checker/` package (IChecker, CheckContext, BlockResult, CheckerPipeline, 11 concrete checkers). [`SpamRepository.isSpam`](app/src/main/java/com/sysadmindoc/callshield/data/SpamRepository.kt) becomes a 10-line dispatcher.
+## Appendix — Source Index
 
-### A2. Budget-aware parallel race — 1 day
+| # | Source | Type |
+|---|--------|------|
+| 1 | https://github.com/aj3423/SpamBlocker | OSS competitor (1,489★, MIT, Kotlin) |
+| 2 | https://github.com/aj3423/SpamBlocker/issues?q=sort:comments-desc | Community feature requests |
+| 3 | https://gitlab.com/xynngh/YetAnotherCallBlocker | OSS competitor (GPLv3, Java) |
+| 4 | https://github.com/adamff-dev/spam-call-blocker-app | OSS competitor (185★, GPLv3, Kotlin) |
+| 5 | https://github.com/kaliturin/BlackList | OSS competitor (Apache, unmaintained ~2020) |
+| 6 | https://github.com/FossifyOrg/Phone | OSS adjacent (privacy-first dialer, no internet) |
+| 7 | https://codeberg.org/cbouvat/saracroche-ios | OSS competitor (4-target, Enterprise/MDM) |
+| 8 | https://hiya.com/ | Commercial — Branded Call, AI Phone (deepfake detect, transcription) |
+| 9 | https://robokiller.com/ | Commercial — Answer Bot, 1.5 B-number DB |
+| 10 | https://youmail.com/ | Commercial — visual voicemail, audio CAPTCHA, auto-attendant |
+| 11 | https://nomorobo.com/ | Commercial — 350 K honeypot sensors |
+| 12 | https://developer.android.com/reference/android/telecom/CallScreeningService.CallResponse.Builder | Android API surface |
+| 13 | https://developer.android.com/google/play/integrity/overview | Play Integrity verdicts (`appAccessRiskVerdict` etc.) |
+| 14 | https://www.rfc-editor.org/rfc/rfc8225 | IETF — PASSporT JWT |
+| 15 | https://www.fcc.gov/consumers/guides/stop-unwanted-robocalls-and-texts | FCC — STIR/SHAKEN, AI-voice ban, 7726 SPAM |
+| 16 | https://developer.android.com/jetpack/androidx/releases/work | WorkManager 2.11.2 changelog |
+| 17 | https://developer.android.com/jetpack/androidx/releases/compose-foundation | Compose Foundation 1.11.0 |
+| 18 | https://square.github.io/okhttp/changelogs/changelog/ | OkHttp 5.x changelog |
+| 19 | https://kotlinlang.org/docs/whatsnew21.html | Kotlin 2.1.0 release |
+| 20 | https://kotlinlang.org/docs/whatsnew22.html | Kotlin 2.2.0 release (context parameters, stable Base64) |
+| 21 | https://developer.android.com/jetpack/androidx/releases/datastore | DataStore 1.2.1 + Tink `AeadSerializer` |
+| 22 | https://developer.android.com/jetpack/androidx/releases/glance | Glance 1.1.1 (CVE-2024-7254) + 1.2 widget preview |
+| 23 | https://accrescent.app/ | Distribution channel — key pinning, signed metadata |
+| 24 | https://f-droid.org/en/docs/Inclusion_Policy/ | F-Droid inclusion (fastlane, reproducible) |
+| 25 | https://github.com/M66B/NetGuard | OSS adjacent — per-app firewall patterns |
+| 26 | https://github.com/pi-hole/pi-hole | OSS adjacent — Gravity blocklist subscription, REST API |
+| 27 | https://developer.android.com/about/versions/15/features | Android 15 — `FLAG_STOPPED`, Private Space, 16 KB pages |
+| 28 | https://developer.android.com/about/versions/16 | Android 16 — `Notification.ProgressStyle`, `SDK_INT_FULL` |
+| 29 | https://truecaller.com/ | Commercial — B2B verified-caller, OTP-less verification SDK |
+| 30 | https://www.t-mobile.com/scam-shield · https://www.att.com/security/active-armor/ · https://www.verizon.com/solutions-and-services/call-filter/ | Carrier — STIR/SHAKEN integration, paid add-ons |
 
-Borrowed from [SpamBlocker](https://github.com/aj3423/SpamBlocker) (`Checker.InstantQuery`) and [adamff-dev](https://github.com/adamff-dev/spam-call-blocker-app) (`isSpamRace`).
+Plus RFC 8588 (SHAKEN profile), RFC 9027 (Traceback), Apache SpamAssassin / rspamd (architectural pattern), CVE-2024-7254 (NVD), academic robocall-fingerprinting literature (Georgia Tech / Stony Brook 2019–2022) cited inline in research notes.
 
-Track `startTimeMillis` in `CheckContext`; subtract elapsed from the 4500 ms effective screening budget (5 s OS kill minus 500 ms buffer); race reputation-API calls via `Channel<T>` + `select { onTimeout }`, cancel losers.
+---
 
-**Wins:** hard guarantee against Android's 5-second kill; first-positive decision returns immediately.
-
-**Files:** new `util/Race.kt` + `ExternalLookupChecker` consumer.
-
-### A3. Push-Alert bridge — 3 days (single biggest UX win)
-
-Borrowed from [SpamBlocker](https://github.com/aj3423/SpamBlocker) `NotificationListenerService`. Temporarily allow-through an unknown caller when a messaging/delivery/rideshare app has recently posted a notification matching a user regex (e.g. `"Your driver|Your order|Delivery|Verification code"`).
-
-**Mechanics:**
-1. Extend `RcsNotificationListener` to record `(packageName, title, body, timestamp)` for whitelisted sources (Uber, DoorDash, Amazon, USPS, Gmail, etc.) in an in-memory ring buffer.
-2. Add `PushAlertChecker` (priority between whitelist and DB) that scans the ring buffer for regex matches within a TTL window.
-3. Gotcha: `onScreenCall` must yield (`CoroutineScope(IO).launch` + return) so Android flushes doze-queued notifications to the listener; the checker then `delay(500)` to drain.
-
-**Wins:** kills the #1 false-positive class (legit unknown callers from services the user actively uses).
-
-**Files:** `data/checker/PushAlertChecker.kt`, `data/PushAlertRegistry.kt`, `RcsNotificationListener.kt` (+alert capture), settings UI.
-
-### A4. BlockedNumberContract system-wide mirror — 2-3 days
-
-Borrowed from [Fossify Phone](https://github.com/FossifyOrg/Phone). Mirror the user-block list into Android's system-wide `BlockedNumberContract.BlockedNumbers` so blocks propagate to Google Phone/Messages, survive reinstalls, and unlock Google's "blocked" indicator.
-
-**Requirements:** user must be default dialer *or* default SMS role-holder, *or* we only read (not write) from the system list. Read-only integration is the easy win — add it as an additional `SystemBlockListChecker`.
-
-**Files:** `data/remote/SystemBlockList.kt`, `data/checker/SystemBlockListChecker.kt`.
-
-### A5. Length-locked `#` wildcard patterns — 1 day
-
-Borrowed from [Saracroche](https://codeberg.org/cbouvat/saracroche-android). Patterns like `+33162######` = "11 digits starting with `+33162`, rest anything". No regex JIT, no `LIKE`. Phone stored as `Long`, pattern as `String`, length must match exactly.
-
-Adds a pattern-overlap detector for the rule-add UI ("this pattern is already covered by `+33#######`"). Saracroche exposes "this pattern covers 1,000,000 numbers" — great trust signal.
-
-**Files:** new `data/model/HashWildcardRule.kt` + `data/checker/HashWildcardChecker.kt` + migration v6→v7.
-
-### A6. Bulk-insert batching + source tracking — half day
-
-Borrowed from [SpamBlocker](https://github.com/aj3423/SpamBlocker) `SpamTable`. Batched placeholder strings with `chunked(1000)` on Android 14+, `chunked(200)` below (SQLite 999-variable limit). Add `importSource: String` and `importReason: String` columns so auto-report can target the source that originally flagged the number.
-
-**Files:** `SpamDao` (batch insert method), `SpamNumber` (+2 columns), migration v7→v8.
-
-### A7. Per-rule schedule + SIM-slot gating — 2 days
-
-Borrowed from [SpamBlocker](https://github.com/aj3423/SpamBlocker) `RegexRuleChecker.isEnabled`. Each rule gets optional `TimeSchedule` (day-of-week + hour range) and `simSlot: Int?`. Checked in `IChecker.isEnabled(ctx)` before the regex/ML runs. Includes a brute-force 9-key SIM-slot extractor from SMS intents for vendor quirks.
-
-**Files:** `data/model/TimeSchedule.kt`, schema extension on `WildcardRule` + `SmsKeywordRule`, migration, UI additions on rule-edit screens.
-
-### A8. YACB trie+slice offline DB (deferred) — 5-7 days
-
-Borrowed from [YetAnotherCallBlocker](https://gitlab.com/xynngh/YetAnotherCallBlocker) `AbstractDatabase`. Fixed-width columnar format (~5 bytes per phone number), trie-indexed, daily delta updates via atomic `renameTo`. **Only worth building if we ship >100k bundled numbers** — Room handles <1M rows fine.
-
-Deferred until post-A1-A7; revisit if the bundled spam list crosses 50k entries.
-
-### Execution Order & Estimates
-
-| # | Item | Effort | Target | Blocks |
-|---|------|--------|--------|--------|
-| A1 | `IChecker` pipeline | 1-2d | v1.6.0 | — |
-| A2 | Budget-aware race | 1d | v1.6.0 | A1 |
-| A3 | Push-Alert bridge | 3d | v1.6.0 | A1 |
-| A5 | `#` wildcard patterns | 1d | v1.7.0 | A1 |
-| A4 | BlockedNumberContract | 2-3d | v1.7.0 | A1 |
-| A6 | Bulk-insert + source tracking | 0.5d | v1.7.0 | — |
-| A7 | Schedule + SIM gating | 2d | v1.8.0 | A1 |
-| A8 | YACB trie+slice DB | 5-7d | deferred | — |
-
-**Total through A7:** ~12-14 days of focused work, delivering two releases that hit the top false-positive pain points and set the architecture up for everything else.
-
-### Explicitly Skipped (from research)
-
-- BlackList's reflection-based `endCall` — pre-Android 10 only, irrelevant.
-- YACB's `PhoneStateListener` foreground-service fallback — Xiaomi OEM hack; `CallScreeningService` is cleaner.
-- TrueCaller API integration — ToS-hostile, not OSS-clean.
-- Tranquille — pure YACB fork, no new ideas.
-
-## Open-Source Research (Round 2)
-
-### Related OSS Projects
-- **aj3423/SpamBlocker** — https://github.com/aj3423/SpamBlocker — Android 10+ Call/SMS blocker using CallScreeningService; regex rules, STIR attestation, repeated-call detection, time schedules, app-context allow (e.g., allow calls after ordering pizza), DNC / PhoneBlock parallel API queries, manual/auto-report; also on F-Droid
-- **adamff-dev/spam-call-blocker-app** — https://github.com/adamff-dev/spam-call-blocker-app — GPLv3 Kotlin blocker; multi-country real-time API checks, STIR/SHAKEN level filtering, auto-mute mode, built-in report dialog, auto-update
-- **ma2t/SpamCallBlocker** — https://github.com/ma2t/SpamCallBlocker — French-market-focused; telemarketing and M2M block lists; good locale-specific list management reference
-- **andrecurvello/call-blocker** — https://github.com/andrecurvello/call-blocker — older but clean call-blocker reference
-- **F-Droid SpamBlocker package** — https://f-droid.org/packages/spam.blocker/ — packaging + F-Droid distribution reference for reproducible builds
-- **PhoneBlock** — https://phoneblock.net — crowdsourced spam DB with an API worth integrating (aj3423 uses it)
-- **Haraka-style Postfix/rspamd** — https://github.com/rspamd/rspamd — not mobile but the scoring architecture (rules + ML + reputation) is transferrable
-
-### Features to Borrow
-- App-context allow rule: "if I opened Doordash in the last 2 hours, allow calls from unknown numbers" (SpamBlocker aj3423)
-- "Decline during meeting" auto-rule tied to Calendar/active video-call detection (SpamBlocker aj3423)
-- STIR/SHAKEN level-based filter: block "C" (unverified), allow "A/B" (aj3423, adamff-dev) — CallShield already does STIR tones, expand to attestation level gating
-- Parallel multi-API lookup: query 3+ spam DBs concurrently, first-hit wins (SpamBlocker aj3423)
-- Auto-mute mode instead of outright block, so users can inspect after the fact (adamff-dev)
-- Repeated-call detection: allow 2nd call within N minutes from same number (emergency escape hatch) (SpamBlocker aj3423)
-- Time-schedule profiles: more aggressive during "work hours" vs evenings (SpamBlocker aj3423)
-- Recently-used-app allow: any number allowed if a matching app was foregrounded recently (SpamBlocker aj3423)
-- Manual one-tap report that pushes to a crowd-sourced community DB (SpamBlocker, PhoneBlock)
-- Regex-on-SMS-content rules with a Rule Marketplace (SpamBlocker aj3423)
-- F-Droid reproducible build channel alongside Play/GitHub releases (SpamBlocker F-Droid entry)
-
-### Patterns & Architectures Worth Studying
-- CallScreeningService-only architecture: zero background service, app can be killed after setup (SpamBlocker aj3423) — minimizes battery impact and user trust surface
-- Rule engine as composable predicates (contact | regex | STIR | schedule | app-recency | DB-hit) with a testable evaluator (SpamBlocker)
-- Parallel first-hit-wins API fan-out with short-circuit on any positive hit (SpamBlocker)
-- Pluggable data-source pattern: each spam DB is a "Source" with its own fetcher/normalizer; new sources add without touching the rule engine (conceptually similar to Muzei sources)
-- Rspamd-style scoring: each signal contributes a float weight, decision is threshold-based — more tunable than binary block rules (rspamd)
-
-## Implementation Deep Dive (Round 3)
-
-### Reference Implementations to Study
-- **aj3423/SpamBlocker/app/src/main/kotlin/spam/blocker/service/CallScreeningService.kt** — https://github.com/aj3423/SpamBlocker — canonical CallScreeningService-only architecture; rule engine as composable predicates. Direct blueprint for CallShield's "zero background service" roadmap direction.
-- **aj3423/SpamBlocker/wiki/Regex-Workflow-Templates** — https://github.com/aj3423/SpamBlocker/wiki/Regex-Workflow-Templates — community-contributed regex patterns by country/theme. Template for CallShield's "Rule Marketplace" roadmap item.
-- **aj3423/SpamBlocker/app/src/main/kotlin/spam/blocker/db/RegexRule.kt** — https://github.com/aj3423/SpamBlocker — rule data model + priority + flags (for-call, for-sms, block/allow). Reference for CallShield's rule schema v2.
-- **aosp-mirror/platform_frameworks_base/telecomm/java/android/telecom/CallScreeningService.java** — https://github.com/aosp-mirror/platform_frameworks_base/blob/master/telecomm/java/android/telecom/CallScreeningService.java — canonical CallScreeningService contract. `respondToCall(Details, CallResponse)` within 5s or framework unbinds. Confirms CallShield's hard-deadline mitigations.
-- **Skrilltrax/Blockka/app/src/main/java/dev/skrilltrax/blockka/service/CallScreeningService.kt** — https://github.com/Skrilltrax/Blockka — minimal modern Kotlin implementation; good "skeleton" comparison for CallShield's service.
-- **joshfriend/GoFCCYourself** — https://github.com/joshfriend/GoFCCYourself — super-basic contacts-only screening; shows minimum viable bindings for Android Q+.
-- **URLhaus API docs + client patterns** — https://urlhaus-api.abuse.ch/ — already used by CallShield for phishing URL detection; check their bulk export endpoint (`abuse.ch/downloads/json/`) for 30-min full-list sync alternative to live API calls.
-- **rspamd/rspamd/src/plugins/lua/phishing.lua** — https://github.com/rspamd/rspamd/blob/master/src/plugins/lua/phishing.lua — multi-signal scoring in production email filtering. Scoring model template for CallShield's "each signal contributes float weight" roadmap item.
-- **PhoneBlock API docs** — https://phoneblock.net/phoneblock/rest — crowdsourced spam DB reference; XML-based, simple. Compare CallShield's current SkipCalls/WhoCalledMe/OpenCNAM stack.
-
-### Known Pitfalls from Similar Projects
-- **`CallScreeningService.onScreenCall()` 5s deadline is a hard unbind** — AOSP CallScreeningService.java — over 5s, framework unbinds + ignores response + call rings through. CallShield's `HotListSyncWorker` must never populate the in-memory cache during onScreenCall; ensure prefix/wildcard caches are warm before bind. https://github.com/aosp-mirror/platform_frameworks_base/blob/master/telecomm/java/android/telecom/CallScreeningService.java
-- **LineageOS `Service not registered` unbind race** — LineageOS#1934 — `telecomm.CallScreeningServiceFilter` sometimes throws IllegalArgumentException on unbind. Cannot be caught; must handle via `try-catch` around any post-respondToCall state writes. https://gitlab.com/LineageOS/issues/android/-/issues/1934
-- **Android Q pre-API 29 has no CallScreeningService at all** — erik-perri/android-call-filter — CallShield already declares `minSdk` ≥ 29; verify the manifest `<queries>` element for legacy phone apps on Android 11 visibility rules.
-- **Blocked calls are still visible for 1-2s before dismiss** — justdvnsh/Blocker — CallScreeningService blocks the call but the phone UI has already rendered. Visually unavoidable; add user-facing messaging "incoming call flash is expected".
-- **`setRejectCall(true)` + `setSilenceCall(true)` mutually exclusive** — Android Q+ — can't silently pass through AND reject. CallShield's "auto-mute mode" roadmap item requires `setSilenceCall(true)` + `setDisallowCall(false)`.
-- **STIR/SHAKEN attestation level only carrier-reported; AT&T/T-Mobile/Verizon vary** — some carriers set everything to "C" (unverified) on wholesale traffic. CallShield must not treat "C" as sole block signal in US roaming scenarios.
-- **RCS messages not delivered via SmsReceiver on Messages.google app** — RCS now routes through `NotificationListenerService` only. CallShield handles this via `RcsNotificationListener` — but NotificationAccess must be granted in Settings, and user-opt-in UX must warn that RCS scanning requires this sensitive permission.
-- **`BroadcastReceiver` priority 999 cap** — Google Play policy warns against SMS receiver priority > 999. CallShield is already at 999 — pushing higher triggers listing review.
-- **WorkManager 30-min minimum for periodic workers** — CallShield's `HotListSyncWorker` claims 30min periodic, which is Android's hard floor. Below 30min requires a foreground-service approach.
-- **OpenCNAM free tier 60 req/hr** — bursts during spam-campaigns can exhaust rate. CallShield must cache positive CNAM results for 24h + negative results for 1h, and fail-open (allow, don't block) when rate-limited.
-
-### Library Integration Checklist
-- **TensorFlow Lite (on-device GBT ensemble)** — `org.tensorflow:tensorflow-lite:2.16.1` + `tensorflow-lite-metadata` — entry: `Interpreter(modelFileBuffer).run(inputs, outputs)`. Gotcha: CallShield currently uses a hand-rolled GBT evaluator (no TFLite dep); migration to TFLite would add ~3MB to APK but gain quantization support. Evaluate whether the migration is worth APK size budget.
-- **WorkManager** — `androidx.work:work-runtime-ktx:2.10.0` (pinned) — entry: `PeriodicWorkRequestBuilder<HotListSyncWorker>(30, TimeUnit.MINUTES).build()` + `WorkManager.getInstance().enqueueUniquePeriodicWork(...)`. Gotcha: OEMs (Xiaomi, Oppo, Samsung) kill WorkManager-scheduled periodic workers after 30min idle. CallShield may need to show a "Battery Optimization" opt-out prompt on these OEMs or prioritize cache warmth via `ACTION_BOOT_COMPLETED` pre-warm.
-- **OkHttp + URLhaus bulk feed** — `com.squareup.okhttp3:okhttp:4.12.0` — entry: `httpClient.newCall(Request.Builder().url("https://urlhaus.abuse.ch/downloads/json_recent/").build()).execute()`. Gotcha: URLhaus returns ~50MB JSON; stream parse with Moshi's streaming adapter or hit OOM on low-RAM devices.
-
-## Iteration v1.7.0 — Round-2/3 Borrow & Harden
-
-Checkable P0/P1 backlog distilled from the Round-2/3 research above. Cap: 10 items. Scope guards (rejected at source): no TrueCaller API (ToS-hostile), no sub-30-min WorkManager (platform floor), no hard-block on STIR "C" alone (US wholesale false-positive risk), no PhoneBlock bulk API (requires auth), no cloud sync of user data, no telemetry.
-
-- [x] **v1.7.1** (P0) — STIR/SHAKEN attestation-level gating. Promoted `VERIFICATION_STATUS_PASSED` to an explicit *trust* allow gated by `KEY_STIR_TRUSTED_ALLOW`. **Priority slot 5_300 — below every explicit user rule (whitelist / blocklist / wildcard / prefix) and above heuristic / ML / campaign-burst / frequency.** Landed in v1.7.0 via `StirShakenTrustChecker` in `data/checker/Checkers.kt` + 12 unit tests + Settings toggle + string resources.
-- [x] **v1.7.2** (P0) — Auto-mute mode for low-confidence blocks. `KEY_AUTOMUTE_LOW_CONFIDENCE` setting (off by default). When on AND `BlockResult.confidence < 60` AND `KEY_SILENT_VOICEMAIL` off, responds with `setSilenceCall(true)` instead of `setDisallowCall(true)`. Landed in v1.7.0 via `CallShieldScreeningService.buildBlockResponse()` + `shouldSilence()` companion + 6 unit tests + Settings toggle + string resources.
-- [x] **v1.7.3** (P0) — `util/Race.kt` wired into `CallerIdOverlayService` lookup warm-up. The race helper now cancels loser jobs instead of waiting for slow competitors, and the overlay launches SkipCalls / PhoneBlock / WhoCalledMe / OpenCNAM independently so a fast spam hit can update the header/status within a 1.5 s warm-up window while the remaining source rows continue streaming in. Added `RaceTest` coverage for fast winner, timeout, and non-decisive paths.
-- [x] **v1.7.4** (P1) — Repeated-call escape-hatch UX. `RepeatedUrgentChecker` allow-throughs now surface a one-shot explanatory notification on a dedicated "Allowed Call Decisions" channel with recovery actions to block forever or mark safe. The generic after-call spam prompt is suppressed for this allow reason to avoid duplicate prompts. Added `OneShotNoticeGate` + unit coverage for duplicate suppression and retention expiry.
-- [x] **v1.7.5** (P1) — StirShakenTrustChecker unit tests covering PASSED/FAILED/NOT_VERIFIED/null paths, setting gates, and — critically — a regression suite proving priority-ladder correctness against every user-facing block type. 12 tests total.
-- [x] **v1.7.6** (P1) — Auto-mute unit tests covering the boundary at confidence==60 (exclusive), `KEY_SILENT_VOICEMAIL` precedence across every combination, and default hard-reject behavior across the confidence spectrum. 6 tests total.
-- [x] **v1.7.7** (P1) — ROADMAP stale-version header fix. Bumped "Current State" from v1.2.8 to v1.6.3 baseline + documented round-1 architecture refactor (IChecker pipeline, Race.kt, PushAlertChecker).
-- [x] **v1.7.8** (P1) — Centralized `CallResponse.Builder` decisions into `buildBlockResponse(prefs, confidence)` + pure `shouldSilence()` companion. All three response shapes (silent-voicemail / auto-mute / hard-reject) now share one reviewable decision table in `CallShieldScreeningService`.
-- [ ] **v1.7.9** (P2-deferred) — URLhaus bulk-feed ingestion with Moshi streaming adapter. Deferred for this iteration — requires a new WorkManager worker, DB migration for a URL cache table, and UI surfaces for stats. Tracked here so it's not forgotten.
-- [ ] **v1.7.10** (P2-deferred) — Rspamd-style float-weight scoring consolidation. Deferred — turning the current binary isSpam verdict into a `List<Signal(weight, source)>` pipeline is a 3-release arc. Placeholder.
-
-### Stop-early criteria for this iteration
-- v1.7.1 through v1.7.8 all checked.
-- `./gradlew assembleDebug` green.
-- `./gradlew testDebugUnitTest` green, test count bumped from 28 → ≥32 (5 STIR + 4 auto-mute new assertions minimum).
-- Doc sync verified: `rtk grep -n "1\\.6\\.3"` returns zero non-historical hits.
-- Independent code-review pass returns zero P0/P1 findings.
-
+*Roadmap maintained alongside `CHANGELOG.md` and `CLAUDE.md`. Update on every minor release; full re-research pass per major.*

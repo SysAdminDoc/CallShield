@@ -35,6 +35,34 @@ class SmsContentAnalyzerTest {
         assertEquals(0, result.score)
     }
 
+    // ── DoS guard: oversized bodies are truncated before regex sweep ────
+
+    @Test
+    fun `analyze does not hang on pathologically large body`() {
+        // 1 MB body — without the length guard the regex sweep could pin
+        // the 5-second screening deadline. With the guard, analysis is
+        // bounded; the call must return well under that. Generous JVM
+        // warm-up budget here so the test isn't flaky on a cold CI runner.
+        val giant = "X".repeat(1_000_000)
+        val start = System.nanoTime()
+        val result = SmsContentAnalyzer.analyze(giant)
+        val elapsedMs = (System.nanoTime() - start) / 1_000_000
+        assertTrue(
+            "analysis took too long: ${elapsedMs}ms — regex DoS guard regressed",
+            elapsedMs < 3_000
+        )
+        assertTrue("oversized_body reason should be reported", "oversized_body" in result.reasons)
+    }
+
+    @Test
+    fun `analyze keeps detecting spam inside the truncation window`() {
+        // Spam keyword appears in the first KB; even with a giant tail,
+        // the analyser must still flag it.
+        val malicious = "Your package is delayed. Verify your account: " + "X".repeat(50_000)
+        val result = SmsContentAnalyzer.analyze(malicious)
+        assertTrue(result.score > 0)
+    }
+
     // ── URL detection ────────────────────────────────────────────────────
 
     @Test

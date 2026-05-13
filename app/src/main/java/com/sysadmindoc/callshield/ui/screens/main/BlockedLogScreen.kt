@@ -414,13 +414,16 @@ fun GroupedCallItem(call: BlockedCall, count: Int, onTap: () -> Unit, onBlock: (
                 .padding(start = 14.dp, end = 12.dp, top = 12.dp, bottom = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Count badge — color intensity scales with repeat count
+            // Count badge — color intensity scales with repeat count. Square-ish
+            // rounded backdrop (10.dp) deliberately avoids a pill/full-circle
+            // shape for text-bearing badges.
+            val badgeShape = RoundedCornerShape(10.dp)
             Box(
                 modifier = Modifier
                     .size(40.dp)
-                    .clip(CircleShape)
+                    .clip(badgeShape)
                     .background(accentColor.copy(alpha = 0.15f))
-                    .border(BorderStroke(1.dp, accentColor.copy(alpha = 0.3f)), CircleShape),
+                    .border(BorderStroke(1.dp, accentColor.copy(alpha = 0.3f)), badgeShape),
                 contentAlignment = Alignment.Center
             ) {
                 Text("${count}x", color = accentColor, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)

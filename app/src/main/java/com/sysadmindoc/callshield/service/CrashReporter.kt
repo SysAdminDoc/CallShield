@@ -136,7 +136,32 @@ object CrashReporter {
                 depth++
             }
         }
-        file.writeText(stackWriter.toString())
+        // Atomic write: serialize to a .tmp sibling first, then rename. If
+        // the process is killed mid-write (power loss, OOM kill, ART
+        // crashing on a second uncaught throwable) the user is never left
+        // with a half-written `crash_*.txt` that looks legitimate but
+        // truncates in the middle of a stack trace. The rename is atomic
+        // on every Android filesystem we ship to (ext4, f2fs, EROFS).
+        val tmp = File(dir, "$fileName.tmp")
+        try {
+            tmp.writeText(stackWriter.toString())
+            if (!tmp.renameTo(file)) {
+                // Renaming can fail if `file` already exists on some FS
+                // semantics; remove the destination and retry once.
+                runCatching { file.delete() }
+                if (!tmp.renameTo(file)) {
+                    // Last resort: fall through to non-atomic write so we
+                    // at least preserve the crash data.
+                    file.writeText(stackWriter.toString())
+                    runCatching { tmp.delete() }
+                }
+            }
+        } catch (t: Throwable) {
+            // Never let our handler mask the original crash. Best-effort
+            // cleanup of any partial file.
+            runCatching { tmp.delete() }
+            throw t
+        }
         rotate(dir)
     }
 
