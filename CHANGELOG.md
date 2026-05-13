@@ -2,6 +2,35 @@
 
 All notable changes to CallShield will be documented in this file.
 
+## [v1.7.3] - 2026-05-13
+
+Premium-polish pass focused on trust, visual discipline, state recovery,
+and user-facing release clarity.
+
+### UX and visual polish
+
+- **Shared shape and typography rhythm** — standardized premium surfaces to
+  modest rectangular 12 dp corners, removed negative/expanded letter tracking,
+  and kept status backdrops within the existing no-pill design rule.
+- **App chrome refinement** — tightened the top shell spacing, reduced header
+  card weight, and removed the selected bottom-navigation pill indicator. The
+  active tab is now communicated through icon/text color and weight.
+- **State treatment consistency** — aligned buttons, filter chips, dialogs,
+  progress bars, tabs, cards, and icon backdrops around the same restrained
+  radius system.
+
+### Trust and feedback
+
+- **Blocked Log recovery states** — empty and filtered log states now explain
+  what is happening, use a proper premium state card, and provide a "Show all
+  activity" recovery action when filters hide existing records.
+- **Trusted-source sheet feedback** — the push-alert source picker now shows
+  installed-source coverage, total supported-source coverage, and skeleton
+  loading while app labels resolve.
+- **Lookup/report semantics** — spam report actions now use a flag icon rather
+  than a favorite icon, and Number Detail database/risk labels use the shared
+  rectangular status treatment instead of default Material chip backdrops.
+
 ## [v1.7.2] - 2026-05-13
 
 Extreme hardening pass. Eight surgical fixes across UI design rules,

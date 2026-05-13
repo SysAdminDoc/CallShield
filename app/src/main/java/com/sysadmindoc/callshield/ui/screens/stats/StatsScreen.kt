@@ -372,7 +372,7 @@ fun StatsScreen(viewModel: MainViewModel) {
                             Text(loc, style = MaterialTheme.typography.labelSmall, color = CatSubtext, modifier = Modifier.width(120.dp))
                             LinearProgressIndicator(
                                 progress = { fraction },
-                                modifier = Modifier.weight(1f).height(8.dp).clip(RoundedCornerShape(4.dp)),
+                                modifier = Modifier.weight(1f).height(8.dp).clip(RoundedCornerShape(3.dp)),
                                 color = CatPeach, trackColor = CatMuted.copy(alpha = 0.2f)
                             )
                             Spacer(Modifier.width(8.dp))
@@ -509,7 +509,7 @@ private fun StatsInsightTile(
 ) {
     Surface(
         modifier = modifier,
-        shape = RoundedCornerShape(14.dp),
+        shape = RoundedCornerShape(12.dp),
         color = color.copy(alpha = 0.08f)
     ) {
         Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
@@ -767,12 +767,12 @@ fun SourceLegend(sources: Map<String, Int>, modifier: Modifier = Modifier) {
 
 @Composable
 fun MiniStat(modifier: Modifier, label: String, value: String, color: Color) {
-    PremiumCard(modifier = modifier, accentColor = color, cornerRadius = 14.dp) {
+    PremiumCard(modifier = modifier, accentColor = color, cornerRadius = 12.dp) {
         Column(modifier = Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Text(value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = color)
             Text(
                 label.uppercase(),
-                style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.2.sp),
+                style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 0.sp),
                 color = CatSubtext
             )
         }

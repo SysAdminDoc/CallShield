@@ -64,7 +64,7 @@ fun MoreTopBar(title: String, onBack: () -> Unit) {
             Spacer(Modifier.width(4.dp))
             Text(
                 title,
-                style = MaterialTheme.typography.titleLarge.copy(letterSpacing = (-0.3).sp),
+                style = MaterialTheme.typography.titleLarge.copy(letterSpacing = 0.sp),
                 fontWeight = FontWeight.Bold
             )
         }

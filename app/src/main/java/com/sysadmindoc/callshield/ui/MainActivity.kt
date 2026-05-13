@@ -29,6 +29,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -249,7 +250,7 @@ fun SearchResultsView(results: List<com.sysadmindoc.callshield.data.model.SpamNu
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         Surface(
-                            shape = RoundedCornerShape(14.dp),
+                            shape = RoundedCornerShape(ShapeXl),
                             color = CatPeach.copy(alpha = 0.12f)
                         ) {
                             Icon(
@@ -310,7 +311,7 @@ fun SearchResultsView(results: List<com.sysadmindoc.callshield.data.model.SpamNu
             ) { number ->
                 PremiumCard(
                     onClick = { onTap(number) },
-                    cornerRadius = 14.dp,
+                    cornerRadius = 12.dp,
                     modifier = Modifier.padding(vertical = 2.dp)
                 ) {
                     Row(modifier = Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
@@ -359,16 +360,16 @@ private fun AppChrome(
                         )
                     )
                 )
-                .padding(horizontal = 16.dp, vertical = 12.dp)
+                .padding(horizontal = 16.dp, vertical = 10.dp)
         ) {
             PremiumCard(
                 modifier = Modifier.fillMaxWidth(),
                 accentColor = accentColor,
-                cornerRadius = 24.dp
+                cornerRadius = ShapeXl
             ) {
                 Column(
-                    modifier = Modifier.padding(horizontal = 18.dp, vertical = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     if (showSearch) {
                         Row(
@@ -377,7 +378,7 @@ private fun AppChrome(
                             horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
                             Surface(
-                                shape = RoundedCornerShape(16.dp),
+                                shape = RoundedCornerShape(ShapeXl),
                                 color = accentColor.copy(alpha = 0.12f)
                             ) {
                                 IconButton(onClick = {
@@ -424,7 +425,7 @@ private fun AppChrome(
                                     title,
                                     color = CatText,
                                     style = MaterialTheme.typography.headlineSmall,
-                                    letterSpacing = (-0.5).sp
+                                    letterSpacing = 0.sp
                                 )
                                 Text(
                                     subtitle,
@@ -433,7 +434,7 @@ private fun AppChrome(
                                 )
                             }
                             Surface(
-                                shape = RoundedCornerShape(16.dp),
+                                shape = RoundedCornerShape(ShapeXl),
                                 color = accentColor.copy(alpha = 0.12f)
                             ) {
                                 IconButton(onClick = onOpenSearch) {
@@ -514,7 +515,7 @@ private fun SearchField(
             }
         },
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(ShapeXl),
         colors = OutlinedTextFieldDefaults.colors(
             focusedContainerColor = SurfaceElevated,
             unfocusedContainerColor = SurfaceElevated,
@@ -651,10 +652,16 @@ fun RowScope.NavItem(
     NavigationBarItem(
         selected = selected, onClick = onClick,
         icon = { Icon(icon, contentDescription = label, tint = if (selected) iconTint else LocalContentColor.current) },
-        label = { Text(label, style = MaterialTheme.typography.labelSmall) },
+        label = {
+            Text(
+                label,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium
+            )
+        },
         colors = NavigationBarItemDefaults.colors(
             selectedIconColor = iconTint, selectedTextColor = color,
-            indicatorColor = color.copy(alpha = 0.10f)
+            indicatorColor = Color.Transparent
         )
     )
 }

@@ -430,6 +430,7 @@ fun BlocklistScreen(viewModel: MainViewModel) {
                             .padding(16.dp),
                         containerColor = workspace.accentColor,
                         contentColor = Black,
+                        shape = RoundedCornerShape(12.dp),
                         icon = { Icon(Icons.Default.Add, stringResource(R.string.cd_add)) },
                         text = { Text(addLabel, fontWeight = FontWeight.Bold) }
                     )
@@ -523,7 +524,7 @@ private fun BlocklistOverviewCard(
     PremiumCard(
         modifier = modifier,
         accentColor = workspace.accentColor,
-        cornerRadius = 22.dp
+        cornerRadius = 12.dp
     ) {
         Column(
             modifier = Modifier.padding(18.dp),
@@ -535,7 +536,7 @@ private fun BlocklistOverviewCard(
                 verticalAlignment = Alignment.Top
             ) {
                 Surface(
-                    shape = RoundedCornerShape(16.dp),
+                    shape = RoundedCornerShape(12.dp),
                     color = workspace.accentColor.copy(alpha = 0.12f)
                 ) {
                     Icon(
@@ -578,7 +579,7 @@ private fun BlocklistOverviewCard(
                         OutlinedButton(
                             onClick = { workspace.onPrimaryUtility?.invoke() },
                             modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(14.dp)
+                            shape = RoundedCornerShape(12.dp)
                         ) {
                             Icon(Icons.Default.FileOpen, null, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(8.dp))
@@ -589,7 +590,7 @@ private fun BlocklistOverviewCard(
                         OutlinedButton(
                             onClick = { workspace.onSecondaryUtility?.invoke() },
                             modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(14.dp)
+                            shape = RoundedCornerShape(12.dp)
                         ) {
                             Icon(Icons.Default.Share, null, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(8.dp))
@@ -618,7 +619,7 @@ private fun EmptyStateCard(
         PremiumCard(
             modifier = Modifier.fillMaxWidth(),
             accentColor = accentColor,
-            cornerRadius = 22.dp
+            cornerRadius = 12.dp
         ) {
             Column(
                 modifier = Modifier
@@ -628,7 +629,7 @@ private fun EmptyStateCard(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Surface(
-                    shape = RoundedCornerShape(18.dp),
+                    shape = RoundedCornerShape(12.dp),
                     color = accentColor.copy(alpha = 0.12f)
                 ) {
                     Icon(
@@ -657,7 +658,7 @@ private fun EmptyStateCard(
 
 @Composable
 fun BlocklistItem(number: SpamNumber, onUnblock: () -> Unit) {
-    PremiumCard(cornerRadius = 16.dp, accentColor = CatRed) {
+    PremiumCard(cornerRadius = 12.dp, accentColor = CatRed) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -691,7 +692,7 @@ fun BlocklistItem(number: SpamNumber, onUnblock: () -> Unit) {
 
 @Composable
 fun WildcardRuleItem(rule: WildcardRule, onToggle: (Boolean) -> Unit, onDelete: () -> Unit) {
-    PremiumCard(cornerRadius = 16.dp, accentColor = CatYellow) {
+    PremiumCard(cornerRadius = 12.dp, accentColor = CatYellow) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -739,7 +740,7 @@ fun WildcardRuleItem(rule: WildcardRule, onToggle: (Boolean) -> Unit, onDelete: 
 
 @Composable
 fun KeywordRuleItem(rule: SmsKeywordRule, onToggle: (Boolean) -> Unit, onDelete: () -> Unit) {
-    PremiumCard(cornerRadius = 16.dp, accentColor = CatMauve) {
+    PremiumCard(cornerRadius = 12.dp, accentColor = CatMauve) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -792,7 +793,7 @@ fun WhitelistItem(
     } else {
         stringResource(R.string.emergency_contacts_mark_as)
     }
-    PremiumCard(cornerRadius = 16.dp, accentColor = accent) {
+    PremiumCard(cornerRadius = 12.dp, accentColor = accent) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -849,7 +850,7 @@ fun DatabaseItem(number: SpamNumber) {
         "telemarketer" -> CatYellow
         else -> CatBlue
     }
-    PremiumCard(cornerRadius = 16.dp, accentColor = typeColor) {
+    PremiumCard(cornerRadius = 12.dp, accentColor = typeColor) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -1242,7 +1243,7 @@ fun HashWildcardRuleItem(
     onDelete: () -> Unit,
 ) {
     val coverage = remember(rule.pattern) { HashWildcardMatcher.coveredNumberCount(rule.pattern) }
-    PremiumCard(cornerRadius = 16.dp, accentColor = CatPeach) {
+    PremiumCard(cornerRadius = 12.dp, accentColor = CatPeach) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()

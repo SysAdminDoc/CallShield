@@ -20,15 +20,16 @@
 
 ---
 
-CallShield blocks spam calls and texts using a **15+ layer on-device detection engine** with a gradient-boosted tree ML scorer, campaign burst detection, RCS notification filter, and real-time caller ID overlay. Powered by a 32,933-number database with 30-minute hot list updates. Community-maintained, no accounts, no tracking.
+CallShield blocks spam calls and texts using a **15+ layer on-device detection engine** with a gradient-boosted tree ML scorer, campaign burst detection, RCS notification filter, and real-time caller ID overlay. Powered by a 32,933-number database with scheduled hot-list updates. Community-maintained, no accounts, no tracking.
 
-## v1.7.0 Highlights
+## v1.7.3 Highlights
 
-- **STIR/SHAKEN Trusted-Caller Allow** — new detection layer that short-circuits heuristic / ML / campaign-burst when the carrier signs a `PASSED` attestation. Paired with the existing `FAILED`-blocks layer for a clean PASSED / FAILED / NOT_VERIFIED decision table. Priority slot sits below every explicit user rule — your blocklist always wins over the carrier.
-- **Auto-Mute Low-Confidence Blocks** — opt-in setting that silences blocks scoring below 60% confidence to voicemail instead of hard-rejecting them, so you can review uncertain calls after the fact. High-confidence hits (database, blocklist, STIR fail, heuristic ≥ 60) still hard-reject even with auto-mute on.
-- **Centralized block-response decision table** — `buildBlockResponse()` helper in `CallShieldScreeningService` with a pure `shouldSilence()` companion. Three silence/reject branches (silent-voicemail / auto-mute / hard-reject) now share one reviewable code path. Behavior-preserving refactor — existing response shapes emit identical `CallResponse.Builder()` calls.
-- **14 new JVM unit tests** — full priority-ladder regression sweep in `StirShakenTrustCheckerTest` and every branch of the silence/reject table in `CallShieldScreeningServiceAutoMuteTest`.
-- **597 total unit tests + GitHub Actions CI** — automated test pipeline on every push.
+- **Premium-polish UX pass** — tighter app chrome, restrained 12dp surface radius, zero negative type tracking, and selected navigation without pill-shaped backdrops.
+- **Clearer recovery states** — Blocked Log empty and filtered states now explain what happened and provide a direct "Show all activity" recovery action when filters hide records.
+- **Trust-focused settings feedback** — the trusted push-alert source picker now shows installed-source coverage and skeleton loading while package labels resolve.
+- **Hardening foundation from v1.7.2** — spoof-proof ASCII phone normalization, SMS size caps, regex ReDoS validation, LRU notice gates, separated PendingIntent IDs, and atomic crash-log writes.
+- **STIR/SHAKEN Trusted-Caller Allow** — carrier `PASSED` attestations can short-circuit heuristic / ML blocks while still yielding to every explicit user rule.
+- **613 total JVM unit tests + GitHub Actions CI** — automated test pipeline on every push.
 - **Gradient-Boosted Tree ML model** — 20 features, pure Kotlin, no TFLite dependency.
 - **Campaign burst detection** — NPA-NXX prefix clustering identifies coordinated spam waves.
 - **Full accessibility** — content descriptions across Compose UI, 48dp minimum touch targets.
@@ -38,11 +39,11 @@ CallShield blocks spam calls and texts using a **15+ layer on-device detection e
 1. **32,933 confirmed spam numbers** — sourced from 1.75M FCC consumer complaints (2+ reports each), FTC Do Not Call, ToastedSpam, and community reports
 2. **15+ layer detection + ML** — database, heuristics, campaign burst detection, on-device gradient-boosted tree, SMS content analysis, RCS filter, STIR/SHAKEN, and more
 3. **Real-time caller ID overlay** — parallel lookups against SkipCalls, PhoneBlock, WhoCalledMe + OpenCNAM caller name, with SIT tone anti-autodialer
-4. **30-minute hot list** — trending spam numbers and campaign ranges refresh every 30 minutes via GitHub Actions
+4. **Scheduled hot list** — trending spam numbers and campaign ranges refresh through the repository data pipeline
 5. **Callback-aware** — won't block callbacks from numbers you recently called, or urgent repeated callers
 6. **Community-driven** — one-tap anonymous contribution via Cloudflare Worker, daily merge into database
 
-## Detection Pipeline (v1.6.0)
+## Detection Pipeline (v1.7.3)
 
 All detection layers implement a shared `IChecker` interface and run in priority order via `CheckerPipeline.run` — first non-null result wins, every layer is testable in isolation. Priorities are stable numbers; the ladder below is the live order.
 
@@ -50,11 +51,13 @@ All detection layers implement a shared `IChecker` interface and run in priority
 |---------:|-------|---------|-------------|
 | 10000 | **Manual Whitelist** | Allow | Numbers you've explicitly marked as always-allow |
 |  9000 | **Contact Whitelist** | Allow | Numbers in your phone's contacts always pass through |
-|  7000 | **User Blocklist + Database** | Block | Personal blocklist + 32,933 confirmed spam numbers + hot list (refreshed every 30 min) |
+|  8500 | **STIR/SHAKEN Failed** | Block | Carrier-authenticated caller ID failure gets blocked before heuristic layers |
+|  7000 | **User Blocklist + Database** | Block | Personal blocklist + 32,933 confirmed spam numbers + scheduled hot-list data |
 |  6900 | **System Block List** (A4) | Block | Read-only bridge to Android's `BlockedNumberContract` — respects stock Phone/Messages blocks |
 |  6000 | **Prefix Rules** | Block | Wangiri country codes, US premium rate (+1900), international premium |
 |  5500 | **Wildcard / Regex** | Block | Custom patterns like `+1832555*` or full regex, now with optional schedule |
 |  5400 | **Range Patterns** (A5) | Block | Length-locked `#` patterns like `+33162######`, with schedule + coverage safety rail |
+|  5300 | **STIR/SHAKEN Trusted** | Allow | Carrier `PASSED` attestations can allow through lower-confidence heuristic/ML suspicion |
 |  5000 | **Recently Dialed** | Allow | Numbers you called in the last 24h — they're probably calling back |
 |  4900 | **Repeated Urgent** | Allow | Same number calls 2x in 5 min → allowed through |
 |  4700 | **Push-Alert Bridge** (A3) | Allow | Uber/DoorDash/Amazon/Gmail notification about an arriving call? Let it through |
@@ -170,7 +173,7 @@ Trained weekly from the CallShield database (50K positive + 50K negative samples
 
 ### Data & System
 - Full backup/restore, CSV log export, auto-cleanup (7/14/30/90 days)
-- Weekly full sync + 30-minute hot list refresh, daily digest notification
+- Weekly full sync + scheduled hot list refresh, daily digest notification
 - Quick Settings tile, app shortcuts, home screen widget
 - Protection test validates all layers and permissions
 - Onboarding wizard with permission requests
@@ -185,7 +188,7 @@ Trained weekly from the CallShield database (50K positive + 50K negative samples
 | **ToastedSpam** | Community curated list |
 | **Community Reports** | Anonymous via Cloudflare Worker |
 
-### Hot List (30-minute refresh)
+### Hot List (scheduled refresh)
 | File | Contents |
 |------|----------|
 | `hot_numbers.json` | Top 500 trending numbers (last 24h) |

@@ -201,7 +201,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
                                     permissionLauncher.launch(CallShieldPermissions.corePermissions.toTypedArray())
                                 },
                                 colors = ButtonDefaults.buttonColors(containerColor = CatBlue),
-                                shape = RoundedCornerShape(14.dp),
+                                shape = RoundedCornerShape(12.dp),
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Icon(Icons.Default.Security, null, tint = Black)
@@ -220,7 +220,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
                                     }
                                 },
                                 colors = ButtonDefaults.buttonColors(containerColor = CatMauve),
-                                shape = RoundedCornerShape(14.dp),
+                                shape = RoundedCornerShape(12.dp),
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Icon(Icons.AutoMirrored.Filled.PhoneCallback, null, tint = Black)
@@ -234,7 +234,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
                                     val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${context.packageName}"))
                                     context.startActivity(intent)
                                 },
-                                shape = RoundedCornerShape(14.dp),
+                                shape = RoundedCornerShape(12.dp),
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Icon(Icons.Default.Layers, null, tint = CatBlue)
@@ -254,7 +254,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
                                         context.startActivity(intent)
                                     }
                                 },
-                                shape = RoundedCornerShape(14.dp),
+                                shape = RoundedCornerShape(12.dp),
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Icon(Icons.Default.Notifications, null, tint = CatMauve)
@@ -419,6 +419,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
                         FilterChip(
                             selected = cleanupDays == days, onClick = { viewModel.setCleanupDays(days) },
                             label = { Text(stringResource(R.string.settings_days, days)) },
+                            shape = RoundedCornerShape(8.dp),
                             border = BorderStroke(1.dp, if (cleanupDays == days) CatGreen.copy(alpha = 0.3f) else CatMuted.copy(alpha = 0.3f)),
                             colors = FilterChipDefaults.filterChipColors(selectedContainerColor = CatGreen.copy(alpha = 0.2f), selectedLabelColor = CatGreen)
                         )
@@ -433,7 +434,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
                 onClick = { hapticTick(context); viewModel.exportLog() },
                 colors = ButtonDefaults.buttonColors(containerColor = CatBlue),
                 border = BorderStroke(1.dp, CatBlue.copy(alpha = 0.3f)),
-                shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth().height(48.dp)
+                shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth().height(48.dp)
             ) {
                 Icon(Icons.Default.FileDownload, null, tint = Black)
                 Spacer(Modifier.width(6.dp))
@@ -453,7 +454,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
                 Button(
                     onClick = { hapticTick(context); viewModel.backup() },
                     colors = ButtonDefaults.buttonColors(containerColor = CatGreen),
-                    shape = RoundedCornerShape(14.dp),
+                    shape = RoundedCornerShape(12.dp),
                     border = BorderStroke(1.dp, CatGreen.copy(alpha = 0.3f)),
                     modifier = Modifier.weight(1f).height(48.dp)
                 ) {
@@ -463,7 +464,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
                 }
                 OutlinedButton(
                     onClick = { hapticTick(context); restoreLauncher.launch(arrayOf("application/json", "text/plain")) },
-                    shape = RoundedCornerShape(14.dp),
+                    shape = RoundedCornerShape(12.dp),
                     border = BorderStroke(1.dp, CatBlue.copy(alpha = 0.3f)),
                     modifier = Modifier.weight(1f).height(48.dp)
                 ) {

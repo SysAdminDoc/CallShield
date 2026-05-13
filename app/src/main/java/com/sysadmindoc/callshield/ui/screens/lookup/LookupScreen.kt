@@ -32,7 +32,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.ErrorOutline
-import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.FilterAlt
 import androidx.compose.material.icons.filled.Handshake
 import androidx.compose.material.icons.filled.MarkChatRead
@@ -268,7 +268,7 @@ fun LookupScreen(viewModel: MainViewModel) {
                             }
                         },
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
+                        shape = RoundedCornerShape(12.dp),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedContainerColor = SurfaceElevated,
                             unfocusedContainerColor = SurfaceElevated,
@@ -316,7 +316,7 @@ fun LookupScreen(viewModel: MainViewModel) {
                         onClick = { runLookup() },
                         enabled = canLookup && !checking,
                         colors = ButtonDefaults.buttonColors(containerColor = CatGreen),
-                        shape = RoundedCornerShape(14.dp),
+                        shape = RoundedCornerShape(12.dp),
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(48.dp),
@@ -457,7 +457,7 @@ fun LookupScreen(viewModel: MainViewModel) {
                                     .weight(1f)
                                     .height(48.dp),
                                 colors = ButtonDefaults.buttonColors(containerColor = CatRed),
-                                shape = RoundedCornerShape(14.dp),
+                                shape = RoundedCornerShape(12.dp),
                                 border = BorderStroke(1.dp, CatRed.copy(alpha = 0.3f))
                             ) {
                                 Icon(Icons.Default.Block, null, tint = Black, modifier = Modifier.size(18.dp))
@@ -494,11 +494,11 @@ fun LookupScreen(viewModel: MainViewModel) {
                             modifier = Modifier
                                 .weight(1f)
                                 .height(48.dp),
-                            shape = RoundedCornerShape(14.dp),
+                            shape = RoundedCornerShape(12.dp),
                             border = BorderStroke(1.dp, CatGreen.copy(alpha = 0.3f))
                         ) {
                             Icon(
-                                if (lookupResult.isSpam) Icons.Default.Favorite else Icons.Default.VerifiedUser,
+                                if (lookupResult.isSpam) Icons.Default.Flag else Icons.Default.VerifiedUser,
                                 null,
                                 tint = CatGreen,
                                 modifier = Modifier.size(18.dp)
@@ -520,7 +520,7 @@ fun LookupScreen(viewModel: MainViewModel) {
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(48.dp),
-                        shape = RoundedCornerShape(14.dp),
+                        shape = RoundedCornerShape(12.dp),
                         border = BorderStroke(1.dp, CatYellow.copy(alpha = 0.3f))
                     ) {
                         Icon(Icons.AutoMirrored.Filled.OpenInNew, null, tint = CatYellow, modifier = Modifier.size(18.dp))

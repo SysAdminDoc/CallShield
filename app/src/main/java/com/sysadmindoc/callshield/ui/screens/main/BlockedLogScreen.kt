@@ -15,7 +15,6 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ViewList
@@ -29,6 +28,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -82,6 +82,7 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
                     selected = filterMode == 0,
                     onClick = { filterMode = 0 },
                     label = { Text(stringResource(R.string.blocked_log_filter_all, blockedCalls.size)) },
+                    shape = RoundedCornerShape(8.dp),
                     colors = FilterChipDefaults.filterChipColors(
                         selectedContainerColor = CatGreen.copy(alpha = 0.2f),
                         selectedLabelColor = CatGreen
@@ -92,6 +93,7 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
                     selected = filterMode == 1,
                     onClick = { filterMode = 1 },
                     label = { Text(stringResource(R.string.blocked_log_filter_calls)) },
+                    shape = RoundedCornerShape(8.dp),
                     colors = FilterChipDefaults.filterChipColors(
                         selectedContainerColor = CatBlue.copy(alpha = 0.2f),
                         selectedLabelColor = CatBlue
@@ -102,6 +104,7 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
                     selected = filterMode == 2,
                     onClick = { filterMode = 2 },
                     label = { Text(stringResource(R.string.blocked_log_filter_sms)) },
+                    shape = RoundedCornerShape(8.dp),
                     colors = FilterChipDefaults.filterChipColors(
                         selectedContainerColor = CatMauve.copy(alpha = 0.2f),
                         selectedLabelColor = CatMauve
@@ -124,18 +127,21 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
             }
 
             if (filtered.isEmpty()) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(
-                            Icons.Default.CheckCircle,
-                            contentDescription = stringResource(R.string.cd_no_items),
-                            tint = CatGreen.copy(alpha = 0.5f),
-                            modifier = Modifier.size(64.dp).accentGlow(CatGreen, 200f, 0.05f)
-                        )
-                        Spacer(Modifier.height(12.dp))
-                        Text(stringResource(R.string.blocked_log_no_items), color = CatSubtext)
-                    }
-                }
+                BlockedLogEmptyState(
+                    title = if (blockedCalls.isEmpty()) {
+                        stringResource(R.string.blocked_log_empty_all_title)
+                    } else {
+                        stringResource(R.string.blocked_log_empty_filter_title)
+                    },
+                    subtitle = if (blockedCalls.isEmpty()) {
+                        stringResource(R.string.blocked_log_empty_all_body)
+                    } else {
+                        stringResource(R.string.blocked_log_empty_filter_body)
+                    },
+                    accentColor = if (blockedCalls.isEmpty()) CatGreen else CatPeach,
+                    actionLabel = if (blockedCalls.isEmpty()) null else stringResource(R.string.blocked_log_show_all),
+                    onAction = if (blockedCalls.isEmpty()) null else { { filterMode = 0 } }
+                )
             } else if (grouped && groupedList != null) {
                 // Grouped view
                 LazyColumn(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -215,7 +221,7 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
                                         else -> Alignment.CenterEnd
                                     }
                                     Box(
-                                        modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(14.dp)).background(color).padding(horizontal = 20.dp),
+                                        modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(12.dp)).background(color).padding(horizontal = 20.dp),
                                         contentAlignment = align
                                     ) {
                                         Icon(icon, null, tint = CatText)
@@ -258,7 +264,7 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
                         }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = CatRed),
-                    shape = RoundedCornerShape(14.dp)
+                    shape = RoundedCornerShape(12.dp)
                 ) { Text(stringResource(R.string.blocked_log_clear_all), color = Black, fontWeight = FontWeight.Bold) }
             },
             dismissButton = {
@@ -267,6 +273,59 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
                 }
             }
         )
+    }
+}
+
+@Composable
+private fun BlockedLogEmptyState(
+    title: String,
+    subtitle: String,
+    accentColor: Color,
+    actionLabel: String? = null,
+    onAction: (() -> Unit)? = null
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        PremiumCard(accentColor = accentColor, modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier.padding(20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = accentColor.copy(alpha = 0.12f),
+                    border = BorderStroke(1.dp, accentColor.copy(alpha = 0.18f))
+                ) {
+                    Icon(
+                        Icons.Default.CheckCircle,
+                        contentDescription = stringResource(R.string.cd_no_items),
+                        tint = accentColor,
+                        modifier = Modifier.padding(14.dp).size(34.dp)
+                    )
+                }
+                Text(title, color = CatText, style = MaterialTheme.typography.titleMedium)
+                Text(
+                    subtitle,
+                    color = CatSubtext,
+                    style = MaterialTheme.typography.bodySmall,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
+                if (actionLabel != null && onAction != null) {
+                    OutlinedButton(
+                        onClick = onAction,
+                        shape = RoundedCornerShape(12.dp),
+                        border = BorderStroke(1.dp, accentColor.copy(alpha = 0.28f))
+                    ) {
+                        Text(actionLabel, color = accentColor, fontWeight = FontWeight.SemiBold)
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -279,7 +338,7 @@ fun BlockedCallItem(call: BlockedCall, onTap: () -> Unit) {
     var expanded by remember { mutableStateOf(false) }
 
     PremiumCard(
-        cornerRadius = 14.dp,
+        cornerRadius = 12.dp,
         modifier = Modifier.combinedClickable(
             onClick = onTap,
             onLongClick = {
@@ -397,7 +456,7 @@ fun GroupedCallItem(call: BlockedCall, count: Int, onTap: () -> Unit, onBlock: (
     val accentColor = if (count >= 5) CatRed else if (count >= 3) CatPeach else CatYellow
 
     PremiumCard(
-        cornerRadius = 14.dp,
+        cornerRadius = 12.dp,
         accentColor = if (count >= 5) CatRed.copy(alpha = 0.5f) else null,
         onClick = onTap
     ) {

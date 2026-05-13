@@ -139,7 +139,7 @@ fun OnboardingScreen(onComplete: () -> Unit) {
                 }
                 LinearProgressIndicator(
                     progress = { (requiredReady + optionalReady) / 4f },
-                    modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(4.dp)),
+                    modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
                     color = pages[currentPage].color,
                     trackColor = CatMuted.copy(alpha = 0.2f)
                 )
@@ -276,7 +276,7 @@ fun OnboardingScreen(onComplete: () -> Unit) {
                                         permLauncher.launch(CallShieldPermissions.corePermissions.toTypedArray())
                                     },
                                     colors = ButtonDefaults.buttonColors(containerColor = CatBlue),
-                                    shape = RoundedCornerShape(14.dp),
+                                    shape = RoundedCornerShape(12.dp),
                                     modifier = Modifier.fillMaxWidth().height(48.dp)
                                 ) {
                                     Icon(Icons.Default.Security, null, tint = Black)
@@ -291,7 +291,7 @@ fun OnboardingScreen(onComplete: () -> Unit) {
                                     onClick = {
                                         notifPermLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                                     },
-                                    shape = RoundedCornerShape(14.dp),
+                                    shape = RoundedCornerShape(12.dp),
                                     border = BorderStroke(1.dp, CatBlue.copy(alpha = 0.3f)),
                                     modifier = Modifier.fillMaxWidth().height(48.dp)
                                 ) {
@@ -311,7 +311,7 @@ fun OnboardingScreen(onComplete: () -> Unit) {
                                         )
                                         context.startActivity(intent)
                                     },
-                                    shape = RoundedCornerShape(14.dp),
+                                    shape = RoundedCornerShape(12.dp),
                                     border = BorderStroke(1.dp, CatBlue.copy(alpha = 0.3f)),
                                     modifier = Modifier.fillMaxWidth().height(48.dp)
                                 ) {
@@ -363,7 +363,7 @@ fun OnboardingScreen(onComplete: () -> Unit) {
                                         }
                                     },
                                     colors = ButtonDefaults.buttonColors(containerColor = CatMauve),
-                                    shape = RoundedCornerShape(14.dp),
+                                    shape = RoundedCornerShape(12.dp),
                                     modifier = Modifier.fillMaxWidth().height(48.dp)
                                 ) {
                                     Icon(Icons.AutoMirrored.Filled.PhoneCallback, null, tint = Black)
@@ -479,7 +479,7 @@ fun OnboardingScreen(onComplete: () -> Unit) {
                     modifier = Modifier
                         .width(indicatorWidth)
                         .height(8.dp)
-                        .clip(if (isSelected) RoundedCornerShape(4.dp) else CircleShape)
+                        .clip(RoundedCornerShape(3.dp))
                         .background(if (isSelected) p.color else CatOverlay)
                 )
             }
@@ -514,7 +514,7 @@ fun OnboardingScreen(onComplete: () -> Unit) {
                         else onComplete()
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = pages[currentPage].color),
-                    shape = RoundedCornerShape(14.dp),
+                    shape = RoundedCornerShape(12.dp),
                     border = BorderStroke(1.dp, pages[currentPage].color.copy(alpha = 0.3f)),
                     modifier = Modifier.height(48.dp)
                 ) {
