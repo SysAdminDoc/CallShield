@@ -2,6 +2,21 @@
 
 All notable changes to CallShield will be documented in this file.
 
+## [v1.7.5] - 2026-05-13
+
+Continuation polish pass focused on Statistics localization and scan feedback.
+
+### Stats and scan feedback polish
+
+- **Localized chart labels** — the weekly Statistics chart now uses locale
+  weekday abbreviations instead of hardcoded English day names.
+- **Resource-backed detection labels** — Statistics detection-source names are
+  now string resources, including the corrected "Prefix match" label.
+- **Consistent scan errors** — call-log and SMS inbox scan permission/failure
+  messages now use the same resource-backed copy system as the rest of the UI.
+- **Cleaner legend formatting** — source legend count/percentage labels now
+  use a formatted string resource for localization-ready output.
+
 ## [v1.7.4] - 2026-05-13
 
 Continuation polish pass focused on the advanced settings credential flow.

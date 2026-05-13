@@ -98,6 +98,10 @@
     <string name="dashboard_scan_sms_inbox">Scan SMS Inbox</string>
     <string name="dashboard_call_log_scan">Call Log Scan</string>
     <string name="dashboard_scan_result">Unique numbers scanned: %1$d | Spam found: %2$d</string>
+    <string name="dashboard_scan_failed">Scan failed: %s</string>
+    <string name="dashboard_scan_unknown_error">unknown error</string>
+    <string name="dashboard_call_log_permission_denied">Call log permission denied. Grant call log access in Settings.</string>
+    <string name="dashboard_sms_inbox_permission_denied">SMS inbox permission denied. Grant SMS access in Settings.</string>
     <string name="dashboard_block">Block</string>
     <string name="dashboard_scan_more">More matches: +%d</string>
     <string name="dashboard_sms_inbox_scan">SMS Inbox Scan</string>
@@ -462,6 +466,23 @@
     <string name="stats_unknown_caller">Unknown caller</string>
     <string name="stats_unknown_origin">Origin unavailable</string>
     <string name="stats_repeat_hits">%dx</string>
+    <string name="stats_source_count_percent">%1$d (%2$d%%)</string>
+    <string name="stats_reason_spam_database">Spam database</string>
+    <string name="stats_reason_hot_list">Hot-list range</string>
+    <string name="stats_reason_live_campaign">Live campaign range</string>
+    <string name="stats_reason_heuristic">Heuristic analysis</string>
+    <string name="stats_reason_sms_content">SMS content</string>
+    <string name="stats_reason_spam_domain">Spam domain</string>
+    <string name="stats_reason_ml_scorer">ML scorer</string>
+    <string name="stats_reason_rcs_filter">RCS filter</string>
+    <string name="stats_reason_stir_shaken">STIR/SHAKEN</string>
+    <string name="stats_reason_prefix_match">Prefix match</string>
+    <string name="stats_reason_wildcard_rule">Wildcard rule</string>
+    <string name="stats_reason_keyword_rule">Keyword rule</string>
+    <string name="stats_reason_repeat_caller">Repeat caller rule</string>
+    <string name="stats_reason_quiet_hours">Quiet hours</string>
+    <string name="stats_reason_manual_block">Manual block</string>
+    <string name="stats_reason_unknown">Unknown</string>
     <string name="stats_no_data">No data yet</string>
     <string name="stats_no_data_desc">Stats will appear after CallShield blocks its first calls or texts.</string>
 

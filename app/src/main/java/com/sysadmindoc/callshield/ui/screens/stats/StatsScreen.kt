@@ -34,6 +34,7 @@ import com.sysadmindoc.callshield.data.model.BlockedCall
 import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.theme.*
 import kotlinx.coroutines.delay
+import java.text.DateFormatSymbols
 import java.text.NumberFormat
 import java.util.Calendar
 
@@ -120,7 +121,7 @@ fun StatsScreen(viewModel: MainViewModel) {
         StatsOverviewCard(
             weeklyTotal = weeklyTotal,
             weeklyDelta = weeklyDelta,
-            topSource = typeBreakdown.firstOrNull()?.let { friendlyMatchReason(it.key) },
+            topSource = typeBreakdown.firstOrNull()?.key,
             peakHour = blockedCalls.takeIf { it.isNotEmpty() }?.let {
                 val hourCounts = IntArray(24).also { hours ->
                     blockedCalls.forEach { call ->
@@ -311,7 +312,7 @@ fun StatsScreen(viewModel: MainViewModel) {
                             else -> CatSubtext
                         }
                         Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Text(friendlyMatchReason(type), modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
+                            Text(friendlyMatchReasonLabel(type), modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
                             Text(numberFormatter.format(count), color = color, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall)
                         }
                         LinearProgressIndicator(
@@ -486,7 +487,8 @@ private fun StatsOverviewCard(
                 StatsInsightTile(
                     modifier = Modifier.weight(1f),
                     label = stringResource(R.string.stats_overview_top_source),
-                    value = topSource ?: stringResource(R.string.stats_overview_no_source),
+                    value = topSource?.let { friendlyMatchReasonLabel(it) }
+                        ?: stringResource(R.string.stats_overview_no_source),
                     color = CatGreen
                 )
                 StatsInsightTile(
@@ -603,7 +605,9 @@ private fun buildRecentDailyStats(blockedCalls: List<BlockedCall>): List<DailySt
         val label = Calendar.getInstance().apply {
             timeInMillis = dayStart
         }.let { calendar ->
-            listOf("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")[calendar.get(Calendar.DAY_OF_WEEK) - 1]
+            DateFormatSymbols.getInstance()
+                .shortWeekdays[calendar.get(Calendar.DAY_OF_WEEK)]
+                .ifBlank { calendar.get(Calendar.DAY_OF_WEEK).toString() }
         }
 
         DailyStat(
@@ -626,23 +630,24 @@ private fun previousWeekCount(blockedCalls: List<BlockedCall>, currentWeekStart:
     return blockedCalls.count { it.timestamp in previousWeekStart until currentWeekStart }
 }
 
-private fun friendlyMatchReason(reason: String): String = when {
-    reason.contains("database", ignoreCase = true) -> "Spam database"
-    reason.contains("hot_list", ignoreCase = true) -> "Hot-list range"
-    reason.contains("hot_campaign", ignoreCase = true) -> "Live campaign range"
-    reason.contains("heuristic", ignoreCase = true) -> "Heuristic analysis"
-    reason.contains("sms_content", ignoreCase = true) -> "SMS content"
-    reason.contains("spam_domain", ignoreCase = true) -> "Spam domain"
-    reason.contains("ml_scorer", ignoreCase = true) -> "ML scorer"
-    reason.contains("rcs_", ignoreCase = true) -> "RCS filter"
-    reason.contains("stir", ignoreCase = true) -> "STIR/SHAKEN"
-    reason.contains("prefix", ignoreCase = true) -> "Premium prefix"
-    reason.contains("wildcard", ignoreCase = true) -> "Wildcard rule"
-    reason.contains("keyword", ignoreCase = true) -> "Keyword rule"
-    reason.contains("frequency", ignoreCase = true) -> "Repeat caller rule"
-    reason.contains("time", ignoreCase = true) -> "Quiet hours"
-    reason.contains("user", ignoreCase = true) -> "Manual block"
-    reason.isBlank() || reason == "unknown" -> "Unknown"
+@Composable
+private fun friendlyMatchReasonLabel(reason: String): String = when {
+    reason.contains("database", ignoreCase = true) -> stringResource(R.string.stats_reason_spam_database)
+    reason.contains("hot_list", ignoreCase = true) -> stringResource(R.string.stats_reason_hot_list)
+    reason.contains("hot_campaign", ignoreCase = true) -> stringResource(R.string.stats_reason_live_campaign)
+    reason.contains("heuristic", ignoreCase = true) -> stringResource(R.string.stats_reason_heuristic)
+    reason.contains("sms_content", ignoreCase = true) -> stringResource(R.string.stats_reason_sms_content)
+    reason.contains("spam_domain", ignoreCase = true) -> stringResource(R.string.stats_reason_spam_domain)
+    reason.contains("ml_scorer", ignoreCase = true) -> stringResource(R.string.stats_reason_ml_scorer)
+    reason.contains("rcs_", ignoreCase = true) -> stringResource(R.string.stats_reason_rcs_filter)
+    reason.contains("stir", ignoreCase = true) -> stringResource(R.string.stats_reason_stir_shaken)
+    reason.contains("prefix", ignoreCase = true) -> stringResource(R.string.stats_reason_prefix_match)
+    reason.contains("wildcard", ignoreCase = true) -> stringResource(R.string.stats_reason_wildcard_rule)
+    reason.contains("keyword", ignoreCase = true) -> stringResource(R.string.stats_reason_keyword_rule)
+    reason.contains("frequency", ignoreCase = true) -> stringResource(R.string.stats_reason_repeat_caller)
+    reason.contains("time", ignoreCase = true) -> stringResource(R.string.stats_reason_quiet_hours)
+    reason.contains("user", ignoreCase = true) -> stringResource(R.string.stats_reason_manual_block)
+    reason.isBlank() || reason == "unknown" -> stringResource(R.string.stats_reason_unknown)
     else -> reason.replace("_", " ").replaceFirstChar { it.uppercase() }
 }
 
@@ -749,13 +754,13 @@ fun SourceLegend(sources: Map<String, Int>, modifier: Modifier = Modifier) {
                 )
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    friendlyMatchReason(source),
+                    friendlyMatchReasonLabel(source),
                     style = MaterialTheme.typography.labelSmall,
                     color = CatSubtext,
                     modifier = Modifier.weight(1f)
                 )
                 Text(
-                    "$count ($pct%)",
+                    stringResource(R.string.stats_source_count_percent, count, pct),
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Bold,
                     color = colors[index % colors.size]

@@ -2,6 +2,7 @@ package com.sysadmindoc.callshield.service
 
 import android.content.Context
 import android.provider.CallLog
+import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.SpamRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -53,7 +54,12 @@ object CallLogScanner {
                 }
             }
         } catch (_: SecurityException) {
-            return@withContext ScanResult(0, 0, emptyList(), error = "Call log permission denied. Grant permission in Settings.")
+            return@withContext ScanResult(
+                0,
+                0,
+                emptyList(),
+                error = context.getString(R.string.dashboard_call_log_permission_denied)
+            )
         }
 
         val spamList = mutableListOf<ScannedSpam>()
