@@ -110,19 +110,12 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
                         com.sysadmindoc.callshield.data.CallCategoryResolver.resolve(r)
                     }
                     Spacer(Modifier.height(6.dp))
-                    AssistChip(
-                        onClick = {},
-                        label = {
-                            Text(
-                                "${category.emoji} ${stringResource(category.stringResId)}",
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = FontWeight.Bold,
-                            )
-                        },
-                        colors = AssistChipDefaults.assistChipColors(
-                            containerColor = CatRed.copy(alpha = 0.18f),
-                            labelColor = CatRed,
-                        ),
+                    StatusPill(
+                        text = "${category.emoji} ${stringResource(category.stringResId)}",
+                        color = CatRed,
+                        horizontalPadding = 10.dp,
+                        verticalPadding = 6.dp,
+                        textStyle = MaterialTheme.typography.labelMedium,
                     )
                 }
             }
@@ -197,7 +190,7 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
         if (areaCode != null) {
             OutlinedButton(
                 onClick = { viewModel.addWildcardRule("+1$areaCode*", false, "Block area code $areaCode" + if (location != null) " ($location)" else "") },
-                shape = RoundedCornerShape(14.dp),
+                shape = RoundedCornerShape(12.dp),
                 border = BorderStroke(1.dp, CatYellow.copy(alpha = 0.3f))
             ) {
                 Icon(Icons.Default.FilterAlt, null, tint = CatYellow)
@@ -221,10 +214,20 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
                     GradientDivider()
                     Spacer(Modifier.height(12.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        AssistChip(onClick = {}, label = { Text(dbEntry.type.replaceFirstChar { it.uppercase() }) },
-                            colors = AssistChipDefaults.assistChipColors(containerColor = CatRed.copy(alpha = 0.2f), labelColor = CatRed))
-                        AssistChip(onClick = {}, label = { Text("${dbEntry.reports} reports") },
-                            colors = AssistChipDefaults.assistChipColors(containerColor = CatPeach.copy(alpha = 0.2f), labelColor = CatPeach))
+                        StatusPill(
+                            text = dbEntry.type.replaceFirstChar { it.uppercase() },
+                            color = CatRed,
+                            horizontalPadding = 10.dp,
+                            verticalPadding = 6.dp,
+                            textStyle = MaterialTheme.typography.labelSmall
+                        )
+                        StatusPill(
+                            text = "${dbEntry.reports} reports",
+                            color = CatPeach,
+                            horizontalPadding = 10.dp,
+                            verticalPadding = 6.dp,
+                            textStyle = MaterialTheme.typography.labelSmall
+                        )
                     }
                     if (dbEntry.description.isNotEmpty()) {
                         Spacer(Modifier.height(8.dp))
@@ -302,7 +305,7 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
                                 }
                             },
                             enabled = !webLoading,
-                            shape = RoundedCornerShape(14.dp),
+                            shape = RoundedCornerShape(12.dp),
                             border = BorderStroke(1.dp, if (webLoading) CatOverlay.copy(alpha = 0.3f) else CatBlue.copy(alpha = 0.3f)),
                             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
                         ) {
@@ -383,7 +386,7 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
                     },
                     modifier = Modifier.weight(1f),
                     colors = ButtonDefaults.buttonColors(containerColor = CatRed),
-                    shape = RoundedCornerShape(14.dp),
+                    shape = RoundedCornerShape(12.dp),
                     border = BorderStroke(1.dp, CatRed.copy(alpha = 0.3f))
                 ) {
                     Icon(Icons.Default.Block, null, tint = Black)
@@ -399,7 +402,7 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
                     },
                     modifier = Modifier.weight(1f),
                     colors = ButtonDefaults.buttonColors(containerColor = CatGreen),
-                    shape = RoundedCornerShape(14.dp)
+                    shape = RoundedCornerShape(12.dp)
                 ) {
                     Icon(Icons.Default.CheckCircle, null, tint = Black)
                     Spacer(Modifier.width(6.dp))
@@ -412,7 +415,7 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
                     context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/SysAdminDoc/CallShield/issues/new?title=$title&body=$body&labels=spam-report")).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) })
                 },
                 modifier = Modifier.weight(1f),
-                shape = RoundedCornerShape(14.dp),
+                shape = RoundedCornerShape(12.dp),
                 border = BorderStroke(1.dp, CatPeach.copy(alpha = 0.3f))
             ) {
                 Icon(Icons.Default.Flag, null, tint = CatPeach)
@@ -428,7 +431,7 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
                 onClick = { hapticTick(context); viewModel.contributeToDatabase(number, dbEntry?.type ?: liveResult?.type ?: "spam") },
                 modifier = Modifier.weight(1f),
                 colors = ButtonDefaults.buttonColors(containerColor = CatGreen),
-                shape = RoundedCornerShape(14.dp),
+                shape = RoundedCornerShape(12.dp),
                 border = BorderStroke(1.dp, CatGreen.copy(alpha = 0.3f))
             ) {
                 Icon(Icons.Default.Favorite, null, tint = Black)
@@ -438,7 +441,7 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
             OutlinedButton(
                 onClick = { hapticTick(context); viewModel.reportNotSpam(number) },
                 modifier = Modifier.weight(1f),
-                shape = RoundedCornerShape(14.dp),
+                shape = RoundedCornerShape(12.dp),
                 border = BorderStroke(1.dp, CatBlue.copy(alpha = 0.3f))
             ) {
                 Icon(Icons.Default.ThumbUp, null, tint = CatBlue)
@@ -463,7 +466,7 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
                 com.sysadmindoc.callshield.data.ReportFraudHelper.report(context, number)
             },
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(14.dp),
+            shape = RoundedCornerShape(12.dp),
             border = BorderStroke(1.dp, CatPeach.copy(alpha = 0.3f))
         ) {
             Icon(Icons.Default.Gavel, null, tint = CatPeach)
@@ -476,7 +479,7 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
             OutlinedButton(
                 onClick = { viewModel.addToWhitelist(number, "Whitelisted from detail") },
                 modifier = Modifier.weight(1f),
-                shape = RoundedCornerShape(14.dp),
+                shape = RoundedCornerShape(12.dp),
                 border = BorderStroke(1.dp, CatGreen.copy(alpha = 0.3f))
             ) {
                 Icon(Icons.Default.CheckCircle, null, tint = CatGreen)
@@ -488,7 +491,7 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
                     context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:$number")).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) })
                 },
                 modifier = Modifier.weight(1f),
-                shape = RoundedCornerShape(14.dp),
+                shape = RoundedCornerShape(12.dp),
                 border = BorderStroke(1.dp, CatBlue.copy(alpha = 0.3f))
             ) {
                 Icon(Icons.Default.Phone, null, tint = CatBlue)
@@ -500,7 +503,7 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
                     viewModel.shareAsSpam(number, dbEntry?.type ?: liveResult?.type ?: "")
                 },
                 modifier = Modifier.weight(1f),
-                shape = RoundedCornerShape(14.dp),
+                shape = RoundedCornerShape(12.dp),
                 border = BorderStroke(1.dp, CatYellow.copy(alpha = 0.3f))
             ) {
                 Icon(Icons.Default.Share, null, tint = CatYellow)
@@ -514,7 +517,7 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
 @Composable
 fun StatChip(label: String, value: String, color: androidx.compose.ui.graphics.Color) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(value, style = MaterialTheme.typography.titleLarge.copy(letterSpacing = (-0.5).sp), fontWeight = FontWeight.Bold, color = color)
+        Text(value, style = MaterialTheme.typography.titleLarge.copy(letterSpacing = 0.sp), fontWeight = FontWeight.Bold, color = color)
         Text(label, style = MaterialTheme.typography.labelSmall, color = CatSubtext)
     }
 }

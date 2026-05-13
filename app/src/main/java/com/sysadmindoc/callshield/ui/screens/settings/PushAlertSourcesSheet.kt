@@ -36,8 +36,12 @@ import androidx.compose.ui.unit.dp
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.PushAlertRegistry
 import com.sysadmindoc.callshield.ui.theme.CatBlue
+import com.sysadmindoc.callshield.ui.theme.CatGreen
+import com.sysadmindoc.callshield.ui.theme.CatOverlay
 import com.sysadmindoc.callshield.ui.theme.CatSubtext
 import com.sysadmindoc.callshield.ui.theme.CatText
+import com.sysadmindoc.callshield.ui.theme.SkeletonListItem
+import com.sysadmindoc.callshield.ui.theme.StatusPill
 import com.sysadmindoc.callshield.ui.theme.SurfaceBright
 
 /**
@@ -101,6 +105,8 @@ fun PushAlertSourcesSheet(
                 .padding(horizontal = 20.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
+            val installedCount = sources.count { it.installed }
+            val activeInstalledCount = sources.count { it.installed && it.packageName !in disabledPackages }
             Text(
                 stringResource(R.string.push_alert_sources_title),
                 style = MaterialTheme.typography.titleMedium,
@@ -112,6 +118,39 @@ fun PushAlertSourcesSheet(
                 style = MaterialTheme.typography.bodySmall,
                 color = CatSubtext,
             )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                StatusPill(
+                    text = if (sources.isEmpty()) {
+                        stringResource(R.string.push_alert_sources_loading)
+                    } else {
+                        stringResource(
+                            R.string.push_alert_sources_installed_count,
+                            activeInstalledCount,
+                            installedCount,
+                        )
+                    },
+                    color = if (sources.isEmpty()) CatOverlay else CatGreen,
+                    modifier = Modifier.weight(1f),
+                    horizontalPadding = 10.dp,
+                    verticalPadding = 6.dp,
+                    textStyle = MaterialTheme.typography.labelSmall,
+                )
+                StatusPill(
+                    text = stringResource(
+                        R.string.push_alert_sources_catalog_count,
+                        PushAlertRegistry.ALERT_SOURCE_PACKAGES.size,
+                    ),
+                    color = CatBlue,
+                    modifier = Modifier.weight(1f),
+                    horizontalPadding = 10.dp,
+                    verticalPadding = 6.dp,
+                    textStyle = MaterialTheme.typography.labelSmall,
+                )
+            }
             Spacer(Modifier.height(4.dp))
             HorizontalDivider()
         }
@@ -124,12 +163,18 @@ fun PushAlertSourcesSheet(
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
-            items(sources, key = { it.packageName }) { source ->
-                SourceRow(
-                    source = source,
-                    allowed = source.packageName !in disabledPackages,
-                    onToggle = { allowed -> onToggle(source.packageName, allowed) },
-                )
+            if (sources.isEmpty()) {
+                items(4) {
+                    SkeletonListItem(modifier = Modifier.fillMaxWidth())
+                }
+            } else {
+                items(sources, key = { it.packageName }) { source ->
+                    SourceRow(
+                        source = source,
+                        allowed = source.packageName !in disabledPackages,
+                        onToggle = { allowed -> onToggle(source.packageName, allowed) },
+                    )
+                }
             }
         }
 

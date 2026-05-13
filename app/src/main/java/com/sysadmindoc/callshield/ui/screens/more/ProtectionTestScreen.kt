@@ -74,7 +74,7 @@ fun ProtectionTestScreen() {
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 color = CatGreen,
-                letterSpacing = (-0.3).sp
+                letterSpacing = 0.sp
             )
             Spacer(Modifier.height(4.dp))
             Text(
@@ -95,7 +95,7 @@ fun ProtectionTestScreen() {
             },
             enabled = !testing,
             colors = ButtonDefaults.buttonColors(containerColor = CatGreen),
-            shape = RoundedCornerShape(14.dp),
+            shape = RoundedCornerShape(12.dp),
             border = BorderStroke(1.dp, CatGreen.copy(alpha = 0.3f)),
             modifier = Modifier.fillMaxWidth().height(48.dp)
         ) {
@@ -179,7 +179,7 @@ fun ProtectionTestScreen() {
 
                     LinearProgressIndicator(
                         progress = { passed / total.toFloat() },
-                        modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(4.dp)),
+                        modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
                         color = summaryColor,
                         trackColor = CatMuted.copy(alpha = 0.2f)
                     )
@@ -220,7 +220,7 @@ fun ProtectionTestScreen() {
                                     )
                                 )
                             },
-                            shape = RoundedCornerShape(14.dp),
+                            shape = RoundedCornerShape(12.dp),
                             border = BorderStroke(1.dp, CatBlue.copy(alpha = 0.3f))
                         ) {
                             Text(
@@ -317,7 +317,7 @@ private fun TestResultCard(result: TestResult) {
         else -> CatYellow
     }
 
-    PremiumCard(cornerRadius = 14.dp, accentColor = accentColor) {
+    PremiumCard(cornerRadius = 12.dp, accentColor = accentColor) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(14.dp),
             verticalAlignment = Alignment.CenterVertically

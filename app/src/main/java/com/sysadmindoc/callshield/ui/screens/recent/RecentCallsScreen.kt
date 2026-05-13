@@ -215,6 +215,7 @@ fun RecentCallsScreen(viewModel: MainViewModel) {
                             selected = filterMode == option.mode,
                             onClick = { filterMode = option.mode },
                             label = { Text(option.label) },
+                            shape = RoundedCornerShape(8.dp),
                             border = BorderStroke(
                                 1.dp,
                                 if (filterMode == option.mode) {
@@ -322,7 +323,7 @@ fun RecentCallItem(call: RecentCall, onOpenDetail: () -> Unit) {
 
     PremiumCard(
         onClick = onOpenDetail,
-        cornerRadius = 14.dp,
+        cornerRadius = 12.dp,
         accentColor = if (call.isSpam) CatRed else null,
     ) {
         Column {
@@ -624,7 +625,7 @@ private fun RecentSummaryPill(
     Surface(
         modifier = modifier,
         color = color.copy(alpha = 0.12f),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(12.dp),
         border = BorderStroke(1.dp, color.copy(alpha = 0.18f))
     ) {
         Column(
@@ -697,7 +698,7 @@ private fun RecentCallsPermissionState(
                 Button(
                     onClick = onOpenSettings,
                     colors = ButtonDefaults.buttonColors(containerColor = CatPeach),
-                    shape = RoundedCornerShape(14.dp)
+                    shape = RoundedCornerShape(12.dp)
                 ) {
                     Icon(
                         Icons.Default.Settings,
@@ -753,7 +754,7 @@ private fun RecentEmptyStateCard(
                 if (actionLabel != null && onAction != null) {
                     OutlinedButton(
                         onClick = onAction,
-                        shape = RoundedCornerShape(14.dp),
+                        shape = RoundedCornerShape(12.dp),
                         border = BorderStroke(1.dp, accentColor.copy(alpha = 0.28f))
                     ) {
                         Text(actionLabel, color = accentColor, fontWeight = FontWeight.SemiBold)

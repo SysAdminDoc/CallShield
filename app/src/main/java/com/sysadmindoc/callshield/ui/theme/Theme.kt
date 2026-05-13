@@ -25,6 +25,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -57,6 +58,14 @@ val CatMuted = Color(0xFF45475A)
 val CardBorder = Color.White.copy(alpha = 0.06f)
 val CardBorderAccent = Color.White.copy(alpha = 0.09f)
 val DividerColor = Color.White.copy(alpha = 0.04f)
+
+// Shared shape rhythm. Text-bearing backdrops intentionally stay rectangular
+// with modest corners; full-pill shapes are banned by the product rules.
+val ShapeXs = 4.dp
+val ShapeSm = 6.dp
+val ShapeMd = 8.dp
+val ShapeLg = 10.dp
+val ShapeXl = 12.dp
 
 // ─── Gradient presets ──────────────────────────────────────────────
 val SurfaceGradient = Brush.verticalGradient(
@@ -101,28 +110,28 @@ private val PremiumTypography = Typography(
     headlineLarge = TextStyle(
         fontWeight = FontWeight.Bold,
         fontSize = 28.sp,
-        letterSpacing = (-0.8).sp,
+        letterSpacing = 0.sp,
         lineHeight = 34.sp,
         color = CatText
     ),
     headlineMedium = TextStyle(
         fontWeight = FontWeight.Bold,
         fontSize = 24.sp,
-        letterSpacing = (-0.5).sp,
+        letterSpacing = 0.sp,
         lineHeight = 30.sp,
         color = CatText
     ),
     headlineSmall = TextStyle(
         fontWeight = FontWeight.Bold,
         fontSize = 20.sp,
-        letterSpacing = (-0.3).sp,
+        letterSpacing = 0.sp,
         lineHeight = 26.sp,
         color = CatText
     ),
     titleLarge = TextStyle(
         fontWeight = FontWeight.SemiBold,
         fontSize = 18.sp,
-        letterSpacing = (-0.2).sp,
+        letterSpacing = 0.sp,
         lineHeight = 24.sp,
         color = CatText
     ),
@@ -136,7 +145,7 @@ private val PremiumTypography = Typography(
     titleSmall = TextStyle(
         fontWeight = FontWeight.SemiBold,
         fontSize = 13.sp,
-        letterSpacing = 0.1.sp,
+        letterSpacing = 0.sp,
         lineHeight = 18.sp,
         color = CatText
     ),
@@ -150,35 +159,35 @@ private val PremiumTypography = Typography(
     bodyMedium = TextStyle(
         fontWeight = FontWeight.Normal,
         fontSize = 13.sp,
-        letterSpacing = 0.1.sp,
+        letterSpacing = 0.sp,
         lineHeight = 19.sp,
         color = CatText
     ),
     bodySmall = TextStyle(
         fontWeight = FontWeight.Normal,
         fontSize = 12.sp,
-        letterSpacing = 0.1.sp,
+        letterSpacing = 0.sp,
         lineHeight = 17.sp,
         color = CatSubtext
     ),
     labelLarge = TextStyle(
         fontWeight = FontWeight.SemiBold,
         fontSize = 13.sp,
-        letterSpacing = 0.4.sp,
+        letterSpacing = 0.sp,
         lineHeight = 18.sp,
         color = CatSubtext
     ),
     labelMedium = TextStyle(
         fontWeight = FontWeight.Medium,
         fontSize = 11.sp,
-        letterSpacing = 0.6.sp,
+        letterSpacing = 0.sp,
         lineHeight = 15.sp,
         color = CatSubtext
     ),
     labelSmall = TextStyle(
         fontWeight = FontWeight.Medium,
         fontSize = 10.sp,
-        letterSpacing = 0.8.sp,
+        letterSpacing = 0.sp,
         lineHeight = 14.sp,
         color = CatOverlay
     )
@@ -215,7 +224,7 @@ fun PremiumCard(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
     accentColor: Color? = null,
-    cornerRadius: Dp = 20.dp,
+    cornerRadius: Dp = ShapeXl,
     content: @Composable ColumnScope.() -> Unit
 ) {
     val border = if (accentColor != null) {
@@ -258,13 +267,13 @@ fun SectionHeader(title: String, color: Color = CatOverlay) {
             modifier = Modifier
                 .width(3.dp)
                 .height(16.dp)
-                .background(color, RoundedCornerShape(2.dp))
+                .background(color, RoundedCornerShape(ShapeXs))
         )
         Spacer(Modifier.width(10.dp))
         Text(
             title.uppercase(),
             style = MaterialTheme.typography.labelMedium.copy(
-                letterSpacing = 1.2.sp,
+                letterSpacing = 0.sp,
                 fontWeight = FontWeight.Bold,
                 color = color
             )
@@ -293,7 +302,7 @@ fun StatusPill(
 ) {
     Surface(
         modifier = modifier,
-        shape = RoundedCornerShape(6.dp),
+        shape = RoundedCornerShape(ShapeSm),
         color = color.copy(alpha = containerAlpha),
         border = BorderStroke(1.dp, color.copy(alpha = borderAlpha))
     ) {
@@ -302,7 +311,9 @@ fun StatusPill(
             modifier = Modifier.padding(horizontal = horizontalPadding, vertical = verticalPadding),
             style = textStyle,
             color = color,
-            fontWeight = FontWeight.SemiBold
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis
         )
     }
 }
@@ -371,12 +382,12 @@ fun ShimmerBox(
 // Skeleton card that mimics a list item while loading
 @Composable
 fun SkeletonListItem(modifier: Modifier = Modifier) {
-    PremiumCard(modifier = modifier, cornerRadius = 14.dp) {
+    PremiumCard(modifier = modifier, cornerRadius = ShapeXl) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(14.dp),
             verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
         ) {
-            ShimmerBox(modifier = Modifier.size(36.dp), cornerRadius = 10.dp)
+            ShimmerBox(modifier = Modifier.size(36.dp), cornerRadius = ShapeLg)
             Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 ShimmerBox(modifier = Modifier.fillMaxWidth(0.6f).height(14.dp))

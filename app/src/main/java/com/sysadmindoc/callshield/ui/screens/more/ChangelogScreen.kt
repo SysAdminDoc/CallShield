@@ -24,7 +24,21 @@ fun ChangelogScreen() {
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(0.dp)
     ) {
-        VersionEntry("1.4.0", "Smart labels, silent voicemail, FTC report, emergency contacts, block reasoning", isLatest = true, changes = listOf(
+        VersionEntry("1.7.3", "Premium polish pass: calmer chrome, tighter states, clearer trust feedback", isLatest = true, changes = listOf(
+            "Shared visual system tightened: modest 12dp surface radius, zero negative type tracking, and no selected navigation pill backdrop",
+            "Blocked Log empty and filtered states now explain what happened and offer a one-tap recovery path back to all activity",
+            "Trusted notification source picker now shows installed-source coverage and skeleton loading while app labels resolve",
+            "Lookup and Number Detail use rectangular status treatments for risk/type labels instead of default Material chip backdrops",
+            "Report actions now use clearer flag semantics, with filter chips and action buttons brought into the same shape rhythm",
+        ))
+        VersionEntry("1.7.2", "Hardening: spoof-proof normalization, DoS guards, atomic crash logs", changes = listOf(
+            "ASCII-only phone-number normalization blocks homoglyph caller-ID bypasses",
+            "SMS analysis and multipart reassembly are capped at 16 KB to protect hot paths",
+            "Wildcard regex validation rejects catastrophic backtracking patterns before compile",
+            "Notice gates are LRU bounded, PendingIntent request codes are separated, and crash logs write atomically",
+            "Text-bearing pill and oval backdrops were removed from status, progress, and count treatments",
+        ))
+        VersionEntry("1.4.0", "Smart labels, silent voicemail, FTC report, emergency contacts, block reasoning", changes = listOf(
             "Smart call labels — Debt Collector / Political / Robocall / Scam / Phishing / Telemarketer / Wangiri / Survey / Business / Unknown, shown on the Number Detail hero and in the blocked log",
             "Silent voicemail mode — blocked calls reach voicemail silently instead of hard-rejecting, so your phone doesn't ring. Off by default; opt-in from Settings → Detection",
             "One-tap FTC fraud report — any Number Detail screen now has a \"Report to FTC\" button that copies the number and opens reportfraud.ftc.gov",
@@ -254,14 +268,14 @@ fun VersionEntry(
         PremiumCard(
             modifier = Modifier.weight(1f).padding(bottom = 16.dp),
             accentColor = if (isLatest) CatGreen else null,
-            cornerRadius = 16.dp
+            cornerRadius = 12.dp
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         "v$version",
                         style = MaterialTheme.typography.titleMedium.copy(
-                            letterSpacing = (-0.2).sp
+                            letterSpacing = 0.sp
                         ),
                         fontWeight = FontWeight.Bold,
                         color = accentColor
@@ -276,7 +290,7 @@ fun VersionEntry(
                                 stringResource(R.string.changelog_latest),
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
                                 style = MaterialTheme.typography.labelSmall.copy(
-                                    letterSpacing = 1.sp,
+                                    letterSpacing = 0.sp,
                                     fontWeight = FontWeight.Bold
                                 ),
                                 color = CatGreen

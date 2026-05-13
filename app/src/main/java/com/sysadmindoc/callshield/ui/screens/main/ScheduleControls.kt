@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.MaterialTheme
@@ -161,6 +162,7 @@ private fun DayOfWeekChips(daysMask: Int, onChange: (Int) -> Unit) {
                 selected = selected,
                 onClick = { onChange(daysMask xor (1 shl dayBit)) },
                 label = { Text(TimeSchedule.DAY_LABELS[dayBit]) },
+                shape = RoundedCornerShape(8.dp),
                 colors = FilterChipDefaults.filterChipColors(
                     selectedContainerColor = CatBlue.copy(alpha = 0.25f),
                     selectedLabelColor = CatText,

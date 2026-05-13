@@ -387,10 +387,9 @@ fun DashboardScreen(viewModel: MainViewModel) {
                     trackColor = CatMuted.copy(alpha = 0.35f)
                 )
 
-                Row(
+                Column(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     Text(
                         text = stringResource(
@@ -409,13 +408,12 @@ fun DashboardScreen(viewModel: MainViewModel) {
                     )
                 }
 
-                Row(
+                Column(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Column(
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.fillMaxWidth(),
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         val engineCount = activeEngineCount(
@@ -447,7 +445,11 @@ fun DashboardScreen(viewModel: MainViewModel) {
                             onClick = action.onClick,
                             enabled = syncState !is SyncState.Syncing || action.icon != Icons.Default.Sync,
                             colors = ButtonDefaults.buttonColors(containerColor = heroAccent),
-                            shape = RoundedCornerShape(14.dp)
+                            shape = RoundedCornerShape(8.dp),
+                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(52.dp)
                         ) {
                             if (syncState is SyncState.Syncing && action.icon == Icons.Default.Sync) {
                                 CircularProgressIndicator(
@@ -459,7 +461,12 @@ fun DashboardScreen(viewModel: MainViewModel) {
                                 Icon(action.icon, null, tint = Black, modifier = Modifier.size(18.dp))
                             }
                             Spacer(Modifier.width(8.dp))
-                            Text(action.label, color = Black, fontWeight = FontWeight.Bold)
+                            Text(
+                                action.label,
+                                color = Black,
+                                fontWeight = FontWeight.Bold,
+                                style = MaterialTheme.typography.labelLarge
+                            )
                         }
                     }
                 }
@@ -647,7 +654,7 @@ fun DashboardScreen(viewModel: MainViewModel) {
         if (lastBlocked != null) {
             PremiumCard(
                 modifier = Modifier.fillMaxWidth(),
-                cornerRadius = 14.dp,
+                cornerRadius = 12.dp,
                 onClick = { viewModel.openNumberDetail(lastBlocked.number) }
             ) {
                 Row(
@@ -1305,7 +1312,7 @@ fun StatCard(modifier: Modifier, title: String, value: String, icon: ImageVector
                 fontWeight = FontWeight.Bold,
                 color = color
             )
-            Text(title, style = MaterialTheme.typography.bodySmall.copy(letterSpacing = 1.sp), color = CatSubtext)
+            Text(title, style = MaterialTheme.typography.bodySmall.copy(letterSpacing = 0.sp), color = CatSubtext)
         }
     }
 }
