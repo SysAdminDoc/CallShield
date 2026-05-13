@@ -94,14 +94,35 @@ object SmsContentAnalyzer {
         return lower.split("/")[0].split("?")[0].split("#")[0].split(":")[0]
     }
 
+    /**
+     * Hard cap on the body length we attempt to deep-analyze. A real SMS is
+     * capped by the GSM/UCS-2 segment limit (~6 400 chars at 40 segments),
+     * but RCS, MMS attachments, and inbox-scan paths can hand us much
+     * larger blobs. Running 25+ regexes plus [URL_PATTERN.findAll] over a
+     * multi-MB string is a real ReDoS risk on the 5-second screening
+     * deadline — at this length the message is almost certainly spam
+     * anyway, so we sample the first 16 KB and stop.
+     */
+    internal const val MAX_ANALYSIS_LENGTH = 16_384
+
     fun analyze(body: String): SmsAnalysisResult {
         var score = 0
         val reasons = mutableListOf<String>()
 
         if (body.isBlank()) return SmsAnalysisResult(0, emptyList())
 
+        // Length guard: cap the input we feed into the regex engine so a
+        // hostile / malformed body can't pin the screening thread.
+        val analysisBody = if (body.length > MAX_ANALYSIS_LENGTH) {
+            score += 10
+            reasons.add("oversized_body")
+            body.substring(0, MAX_ANALYSIS_LENGTH)
+        } else {
+            body
+        }
+
         // Check for URL shorteners (high spam signal)
-        val urls = URL_PATTERN.findAll(body).map { it.value.lowercase() }.toList()
+        val urls = URL_PATTERN.findAll(analysisBody).map { it.value.lowercase() }.toList()
         for (url in urls) {
             // Community-reported spam domain — highest confidence
             if (spamDomains.isNotEmpty()) {
@@ -127,7 +148,7 @@ object SmsContentAnalyzer {
         // Check spam keyword patterns
         var patternHits = 0
         for (pattern in SPAM_PATTERNS) {
-            if (pattern.containsMatchIn(body)) {
+            if (pattern.containsMatchIn(analysisBody)) {
                 patternHits++
                 if (patternHits == 1) {
                     score += 25
@@ -140,7 +161,7 @@ object SmsContentAnalyzer {
         }
 
         // All caps text (>50% of message) — shouting is a spam signal
-        val alphaChars = body.filter { it.isLetter() }
+        val alphaChars = analysisBody.filter { it.isLetter() }
         if (alphaChars.length > 10 && alphaChars.count { it.isUpperCase() }.toFloat() / alphaChars.length > 0.5f) {
             score += 15
             reasons.add("excessive_caps")
@@ -148,19 +169,21 @@ object SmsContentAnalyzer {
 
         // Contains phone number in body (callback scam) — regex is
         // case-insensitive so we match the original body instead of lowercasing.
-        if (PHONE_IN_BODY.containsMatchIn(body)) {
+        if (PHONE_IN_BODY.containsMatchIn(analysisBody)) {
             score += 10
             reasons.add("callback_number")
         }
 
         // Excessive special characters / emoji (common in spam)
-        val specialRatio = body.count { !it.isLetterOrDigit() && !it.isWhitespace() }.toFloat() / body.length.coerceAtLeast(1)
-        if (specialRatio > 0.15f && body.length > 20) {
+        val specialRatio = analysisBody.count { !it.isLetterOrDigit() && !it.isWhitespace() }.toFloat() / analysisBody.length.coerceAtLeast(1)
+        if (specialRatio > 0.15f && analysisBody.length > 20) {
             score += 10
             reasons.add("special_chars")
         }
 
-        // Very short message with URL (likely phishing)
+        // Very short message with URL (likely phishing).
+        // Uses original body length so a 20-char SMS still triggers when
+        // [analysisBody] hasn't been truncated.
         if (body.length < 50 && urls.isNotEmpty()) {
             score += 20
             reasons.add("short_msg_with_url")

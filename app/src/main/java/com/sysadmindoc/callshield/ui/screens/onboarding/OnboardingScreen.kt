@@ -139,7 +139,7 @@ fun OnboardingScreen(onComplete: () -> Unit) {
                 }
                 LinearProgressIndicator(
                     progress = { (requiredReady + optionalReady) / 4f },
-                    modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(999.dp)),
+                    modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(4.dp)),
                     color = pages[currentPage].color,
                     trackColor = CatMuted.copy(alpha = 0.2f)
                 )

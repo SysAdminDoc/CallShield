@@ -139,11 +139,23 @@ object NotificationHelper {
         updateSummary(context)
     }
 
+    /**
+     * Build and post (or cancel) the group-summary notification. The count
+     * read and the eventual `notify()` are NOT serialized — `safeNotify`
+     * itself talks to the system service and we don't want to hold the
+     * `lock` across a binder call. Worst case: two concurrent callers post
+     * a summary with off-by-one counts; both target the same notification
+     * ID so the latest one wins. We avoided the previous race where a
+     * stale `count` from `synchronized(lock) { blockedSinceLastNotif }`
+     * could be used to post a summary AFTER another thread had reset the
+     * counter — by snapshotting the count and short-circuiting on zero
+     * inside the same call.
+     */
     private fun updateSummary(context: Context) {
         val count = synchronized(lock) { blockedSinceLastNotif }
         if (count <= 0) {
             val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            nm.cancel(SUMMARY_ID)
+            try { nm.cancel(SUMMARY_ID) } catch (_: SecurityException) {}
             return
         }
         val summaryText = context.resources.getQuantityString(R.plurals.notif_summary_text_recent, count, count)
@@ -185,7 +197,12 @@ object NotificationHelper {
         // Don't show for very short numbers (short codes)
         if (number.filter { it.isDigit() }.length < 7) return
 
-        // Create intents for "Spam" and "Not Spam" actions
+        // Create intents for "Spam" and "Not Spam" actions. Use distinct
+        // [stableId] salts (instead of `number.hashCode()` / `+ 1`) so the
+        // pending-intent request codes can't collide with the IDs the
+        // block notification uses for its own intents — `hashCode()` and
+        // `hashCode() + 1` previously had a real chance of clashing with
+        // the block path's `stableId(number, 10/20/40)` outputs.
         val spamIntent = Intent(context, SpamActionReceiver::class.java).apply {
             action = "com.sysadmindoc.callshield.FEEDBACK_SPAM"
             putExtra("number", number)
@@ -195,8 +212,14 @@ object NotificationHelper {
             putExtra("number", number)
         }
 
-        val spamPending = PendingIntent.getBroadcast(context, number.hashCode(), spamIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-        val notSpamPending = PendingIntent.getBroadcast(context, number.hashCode() + 1, notSpamIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        val spamPending = PendingIntent.getBroadcast(
+            context, stableId(number, 60), spamIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        val notSpamPending = PendingIntent.getBroadcast(
+            context, stableId(number, 61), notSpamIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
 
         val formatted = PhoneFormatter.format(number)
 
@@ -209,7 +232,11 @@ object NotificationHelper {
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)
 
-        safeNotify(context, number.hashCode() + 10000, builder)
+        // Distinct notification ID via [stableId] with salt 62 — avoids the
+        // previous `number.hashCode() + 10_000` scheme, which produced IDs
+        // that could collide with blocked-notification IDs from a different
+        // number whose `hashCode()` differed by ~10 000.
+        safeNotify(context, stableId(number, 62), builder)
     }
 
     fun notifyRepeatedUrgentAllowed(context: Context, number: String) {

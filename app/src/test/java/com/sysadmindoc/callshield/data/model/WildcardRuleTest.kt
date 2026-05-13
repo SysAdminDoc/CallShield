@@ -75,6 +75,38 @@ class WildcardRuleTest {
         assertFalse(rule.matches("anything"))
     }
 
+    // ── ReDoS guard: catastrophic-backtracking shapes are rejected ─────
+
+    @Test fun `nested quantifier pattern is rejected before compile`() {
+        // Classic ReDoS shape — without the guard, evaluation on a
+        // mismatching input can take exponential time. isSafeRegexPattern
+        // rejects it outright so the hot path never even compiles.
+        assertFalse(WildcardRule.isSafeRegexPattern("(a+)+"))
+        assertFalse(WildcardRule.isSafeRegexPattern("(a*)+"))
+        assertFalse(WildcardRule.isSafeRegexPattern("(a+)*"))
+        assertFalse(WildcardRule.isSafeRegexPattern("(\\d{1,3})+"))
+    }
+
+    @Test fun `ambiguous alternation in repeated group is rejected`() {
+        assertFalse(WildcardRule.isSafeRegexPattern("(a|aa)+"))
+        assertFalse(WildcardRule.isSafeRegexPattern("(foo|foob)*"))
+    }
+
+    @Test fun `legitimate phone-shaped regex still passes the guard`() {
+        // The patterns users actually write must continue to work.
+        assertTrue(WildcardRule.isSafeRegexPattern("^\\+?1?\\d{10}$"))
+        assertTrue(WildcardRule.isSafeRegexPattern("^\\+1832555\\d{4}$"))
+        assertTrue(WildcardRule.isSafeRegexPattern("832555"))
+        assertTrue(WildcardRule.isSafeRegexPattern("^(212|310|415)\\d{7}$"))
+    }
+
+    @Test fun `nested-quantifier rule rejected end to end`() {
+        // End-to-end: a hostile rule cannot even reach the regex engine,
+        // regardless of the input.
+        val hostile = wildcard(pattern = "(a+)+", isRegex = true)
+        assertFalse(hostile.matches("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab"))
+    }
+
     // ── Empty/blank handling ────────────────────────────────────────
 
     @Test fun `blank pattern matches nothing`() {
