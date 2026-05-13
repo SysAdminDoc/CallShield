@@ -25,6 +25,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -492,6 +496,25 @@ fun SettingsScreen(viewModel: MainViewModel) {
         // Advanced — optional API key for caller name lookup
         SettingsCard(stringResource(R.string.settings_advanced)) {
             var apiKeyInput by remember { mutableStateOf(abstractApiKey) }
+            var showApiKey by remember { mutableStateOf(false) }
+            LaunchedEffect(abstractApiKey) {
+                apiKeyInput = abstractApiKey
+            }
+            val trimmedApiKey = apiKeyInput.trim()
+            val hasStoredApiKey = abstractApiKey.isNotBlank()
+            val hasApiKeyChanges = trimmedApiKey != abstractApiKey
+            val apiStatusText = stringResource(
+                when {
+                    hasApiKeyChanges -> R.string.settings_api_key_unsaved
+                    hasStoredApiKey -> R.string.settings_api_key_saved_locally
+                    else -> R.string.settings_api_key_not_configured
+                }
+            )
+            val apiStatusColor = when {
+                hasApiKeyChanges -> CatYellow
+                hasStoredApiKey -> CatGreen
+                else -> CatOverlay
+            }
             Text(stringResource(R.string.settings_abstract_api_key), style = MaterialTheme.typography.bodyMedium)
             Text(stringResource(R.string.settings_abstract_api_desc), style = MaterialTheme.typography.bodySmall, color = CatSubtext)
             Spacer(Modifier.height(8.dp))
@@ -501,23 +524,87 @@ fun SettingsScreen(viewModel: MainViewModel) {
                 label = { Text(stringResource(R.string.settings_api_key)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
+                leadingIcon = {
+                    Icon(Icons.Default.Key, contentDescription = null, tint = CatBlue)
+                },
+                visualTransformation = if (showApiKey) {
+                    VisualTransformation.None
+                } else {
+                    PasswordVisualTransformation()
+                },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                 trailingIcon = {
-                    TextButton(onClick = {
-                        viewModel.setAbstractApiKey(apiKeyInput.trim())
+                    IconButton(onClick = { showApiKey = !showApiKey }) {
+                        Icon(
+                            imageVector = if (showApiKey) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                            contentDescription = stringResource(
+                                if (showApiKey) R.string.settings_api_key_hide else R.string.settings_api_key_show
+                            ),
+                            tint = CatSubtext
+                        )
+                    }
+                },
+                shape = RoundedCornerShape(8.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = CatBlue,
+                    unfocusedBorderColor = CardBorderAccent,
+                    focusedLabelColor = CatBlue,
+                    cursorColor = CatBlue
+                )
+            )
+            Spacer(Modifier.height(10.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                StatusPill(
+                    text = apiStatusText,
+                    color = apiStatusColor,
+                    modifier = Modifier.weight(1f),
+                    horizontalPadding = 10.dp,
+                    verticalPadding = 6.dp
+                )
+                Button(
+                    onClick = {
+                        viewModel.setAbstractApiKey(trimmedApiKey)
                         hapticTick(context)
                         android.widget.Toast.makeText(
                             context,
-                            if (apiKeyInput.isBlank()) {
+                            if (trimmedApiKey.isBlank()) {
                                 context.getString(R.string.settings_api_key_cleared)
                             } else {
                                 context.getString(R.string.settings_api_key_saved)
                             },
                             android.widget.Toast.LENGTH_SHORT
                         ).show()
-                    }) {
-                        Text(stringResource(R.string.settings_save), color = CatBlue)
-                    }
+                    },
+                    enabled = hasApiKeyChanges,
+                    colors = ButtonDefaults.buttonColors(containerColor = CatBlue),
+                    shape = RoundedCornerShape(8.dp),
+                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 0.dp),
+                    modifier = Modifier.height(42.dp)
+                ) {
+                    Icon(Icons.Default.Save, contentDescription = null, tint = Black, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        stringResource(
+                            if (trimmedApiKey.isBlank() && hasStoredApiKey) {
+                                R.string.settings_api_key_clear
+                            } else {
+                                R.string.settings_api_key_save
+                            }
+                        ),
+                        color = Black,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
+            }
+            Spacer(Modifier.height(8.dp))
+            Text(
+                stringResource(R.string.settings_api_key_local_only),
+                style = MaterialTheme.typography.labelSmall,
+                color = CatOverlay
             )
         }
 

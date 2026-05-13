@@ -1,6 +1,6 @@
 # CallShield Development Roadmap
 
-**Roadmap revision:** 2026-05-13 · **Anchored to:** v1.7.3 (versionCode 31)
+**Roadmap revision:** 2026-05-13 · **Anchored to:** v1.7.4 (versionCode 32)
 
 This roadmap merges the original Phase 1–5 plan, the Addendum A "peer-inspired track" (round-1/2/3 borrows from SpamBlocker, YACB, BlackList, Saracroche, adamff-dev, Fossify), and a fresh Addendum B harvested from a 30-source research sweep across OSS competitors, commercial competitors, FCC/IETF/ATIS standards, Android 15/16 platform changes, dependency changelogs, and adjacent-domain OSS (NetGuard, Pi-hole, rspamd patterns).
 
@@ -8,9 +8,9 @@ Source-cited. Every Addendum-B item maps to an entry in **Appendix — Source In
 
 ---
 
-## Current State (v1.7.3)
+## Current State (v1.7.4)
 
-Working Android spam call/text blocker. **78 main + 33 test Kotlin files.** v1.7.3 added a premium-polish pass across Compose chrome, shared shape/typography rhythm, blocked-log recovery states, trusted-source sheet feedback, lookup/report semantics, and in-app release notes. v1.7.2 added the latest hardening layer: ASCII-only number normalization (anti-spoof), SmsContentAnalyzer/SmsReceiver 16 KB caps, WildcardRule ReDoS guard, OneShotNoticeGate LRU cap, NotificationHelper PendingIntent ID separation, CrashReporter atomic writes, and removal of text-bearing pill/oval backdrops. **613 tests total**.
+Working Android spam call/text blocker. **78 main + 33 test Kotlin files.** v1.7.4 refined the advanced settings credential flow with masked optional API-key entry, explicit show/hide control, saved/unsaved/not-configured feedback, and clearer local-only trust copy. v1.7.3 added a premium-polish pass across Compose chrome, shared shape/typography rhythm, blocked-log recovery states, trusted-source sheet feedback, lookup/report semantics, and in-app release notes. v1.7.2 added the latest hardening layer: ASCII-only number normalization (anti-spoof), SmsContentAnalyzer/SmsReceiver 16 KB caps, WildcardRule ReDoS guard, OneShotNoticeGate LRU cap, NotificationHelper PendingIntent ID separation, CrashReporter atomic writes, and removal of text-bearing pill/oval backdrops. **613 tests total**.
 
 15-layer detection pipeline (priority-sorted `IChecker` registry), GBT v3 ML scorer (20 features, atomic ModelState, pure-Kotlin inference) with logistic-regression v2 fallback, Jetpack Compose UI on Catppuccin Mocha + AMOLED, Room 2.6.1 with explicit migrations v5+, scheduled WorkManager hot-list + weekly sync from GitHub, RCS NotificationListener, CallerIdOverlayService with first-hit-wins lookup race, SIT-tone anti-autodialer, URLhaus phishing detection, Cloudflare Worker community reporting, GitHub Actions CI on every push.
 
