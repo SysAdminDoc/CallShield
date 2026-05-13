@@ -2,6 +2,24 @@
 
 All notable changes to CallShield will be documented in this file.
 
+## [v1.7.4] - 2026-05-13
+
+Continuation polish pass focused on the advanced settings credential flow.
+
+### Settings trust polish
+
+- **Safer optional API-key control** — the AbstractAPI key field is now masked
+  by default, with explicit show/hide control rather than a permanently visible
+  credential field.
+- **Clear saved-state feedback** — the control now distinguishes "Not
+  configured", "Saved locally", and "Unsaved changes" so users can tell whether
+  a key is active or pending.
+- **Lower-friction saving** — the save action is disabled until the local value
+  changes, and switches to a clear-key action when a stored key is being
+  removed.
+- **Trust copy** — advanced settings now state that the optional key is stored
+  only on the device and can be left blank to disable carrier enrichment.
+
 ## [v1.7.3] - 2026-05-13
 
 Premium-polish pass focused on trust, visual discipline, state recovery,

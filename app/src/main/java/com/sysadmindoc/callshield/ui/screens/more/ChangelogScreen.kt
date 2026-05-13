@@ -24,7 +24,13 @@ fun ChangelogScreen() {
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(0.dp)
     ) {
-        VersionEntry("1.7.3", "Premium polish pass: calmer chrome, tighter states, clearer trust feedback", isLatest = true, changes = listOf(
+        VersionEntry("1.7.4", "Settings trust polish: safer optional API-key handling", isLatest = true, changes = listOf(
+            "Optional AbstractAPI key entry is now masked by default, with explicit show/hide control",
+            "Settings now show clear saved, unsaved, and not-configured states before changes are committed",
+            "The save action is disabled until the local value changes, reducing accidental credential churn",
+            "Advanced settings copy now reinforces that the key stays on-device and only powers optional carrier enrichment",
+        ))
+        VersionEntry("1.7.3", "Premium polish pass: calmer chrome, tighter states, clearer trust feedback", changes = listOf(
             "Shared visual system tightened: modest 12dp surface radius, zero negative type tracking, and no selected navigation pill backdrop",
             "Blocked Log empty and filtered states now explain what happened and offer a one-tap recovery path back to all activity",
             "Trusted notification source picker now shows installed-source coverage and skeleton loading while app labels resolve",

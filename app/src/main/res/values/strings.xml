@@ -408,6 +408,14 @@
     <string name="settings_save">Save</string>
     <string name="settings_api_key_cleared">API key cleared</string>
     <string name="settings_api_key_saved">API key saved</string>
+    <string name="settings_api_key_save">Save key</string>
+    <string name="settings_api_key_clear">Clear key</string>
+    <string name="settings_api_key_show">Show API key</string>
+    <string name="settings_api_key_hide">Hide API key</string>
+    <string name="settings_api_key_not_configured">Not configured</string>
+    <string name="settings_api_key_saved_locally">Saved locally</string>
+    <string name="settings_api_key_unsaved">Unsaved changes</string>
+    <string name="settings_api_key_local_only">Stored only on this device. Leave blank to disable optional carrier enrichment.</string>
     <string name="settings_about_desc">Open-source spam blocker. No subscriptions, no tracking.</string>
 
     <!-- Stats Screen -->
