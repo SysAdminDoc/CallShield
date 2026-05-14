@@ -12,7 +12,7 @@
 <p align="center">
   <a href="https://github.com/SysAdminDoc/CallShield/releases/latest"><img src="https://img.shields.io/github/v/release/SysAdminDoc/CallShield?style=flat-square&color=a6e3a1" alt="Release"></a>
   <img src="https://img.shields.io/badge/Spam%20Numbers-32%2C933-f38ba8?style=flat-square" alt="32,933 Numbers">
-  <img src="https://img.shields.io/badge/Tests-613-94e2d5?style=flat-square" alt="613 Tests">
+  <img src="https://img.shields.io/badge/Tests-614-94e2d5?style=flat-square" alt="614 Tests">
   <img src="https://img.shields.io/badge/Android-10%2B-89b4fa?style=flat-square" alt="Android 10+">
   <img src="https://img.shields.io/badge/License-MIT-cba6f7?style=flat-square" alt="MIT License">
   <img src="https://img.shields.io/badge/API%20Keys-None-fab387?style=flat-square" alt="No API Keys">
@@ -22,8 +22,14 @@
 
 CallShield blocks spam calls and texts using a **15+ layer on-device detection engine** with a gradient-boosted tree ML scorer, campaign burst detection, RCS notification filter, and real-time caller ID overlay. Powered by a 32,933-number database with scheduled hot-list updates. Community-maintained, no accounts, no tracking.
 
-## v1.7.5 Highlights
+## v1.7.6 Highlights
 
+- **Network hardening** — OkHttp is upgraded to 5.3.2 and all direct data,
+  community-report, URL-safety, and caller-ID enrichment hosts are protected by
+  centralized certificate pinning.
+- **Modern Android build stack** — AGP is upgraded to 8.10.1, Kotlin/KSP are
+  aligned on 2.2.21, and Room is upgraded to 2.8.4, keeping codegen and R8
+  compatible with the current Kotlin metadata used by the networking stack.
 - **Stats and scan feedback polish** — weekly activity labels now respect locale weekday names, Statistics detection-source labels are resource-backed, and scan permission/failure copy is consistent across call-log and SMS flows.
 - **Settings credential polish** — the optional AbstractAPI key is masked by default, has explicit show/hide control, and now reports "Not configured", "Saved locally", and "Unsaved changes" states before saving.
 - **Premium-polish UX pass** — tighter app chrome, restrained 12dp surface radius, zero negative type tracking, and selected navigation without pill-shaped backdrops.
@@ -31,7 +37,7 @@ CallShield blocks spam calls and texts using a **15+ layer on-device detection e
 - **Trust-focused settings feedback** — the trusted push-alert source picker now shows installed-source coverage and skeleton loading while package labels resolve.
 - **Hardening foundation from v1.7.2** — spoof-proof ASCII phone normalization, SMS size caps, regex ReDoS validation, LRU notice gates, separated PendingIntent IDs, and atomic crash-log writes.
 - **STIR/SHAKEN Trusted-Caller Allow** — carrier `PASSED` attestations can short-circuit heuristic / ML blocks while still yielding to every explicit user rule.
-- **613 total JVM unit tests + GitHub Actions CI** — automated test pipeline on every push.
+- **614 total JVM unit tests + GitHub Actions CI** — automated test pipeline on every push.
 - **Gradient-Boosted Tree ML model** — 20 features, pure Kotlin, no TFLite dependency.
 - **Campaign burst detection** — NPA-NXX prefix clustering identifies coordinated spam waves.
 - **Full accessibility** — content descriptions across Compose UI, 48dp minimum touch targets.
@@ -45,7 +51,7 @@ CallShield blocks spam calls and texts using a **15+ layer on-device detection e
 5. **Callback-aware** — won't block callbacks from numbers you recently called, or urgent repeated callers
 6. **Community-driven** — one-tap anonymous contribution via Cloudflare Worker, daily merge into database
 
-## Detection Pipeline (v1.7.5)
+## Detection Pipeline (v1.7.6)
 
 All detection layers implement a shared `IChecker` interface and run in priority order via `CheckerPipeline.run` — first non-null result wins, every layer is testable in isolation. Priorities are stable numbers; the ladder below is the live order.
 
@@ -263,11 +269,11 @@ CI runs automatically via GitHub Actions on every push and pull request.
 
 | Component | Technology |
 |-----------|-----------|
-| Language | Kotlin |
+| Language | Kotlin 2.2.21 |
 | UI | Jetpack Compose + Material 3 |
 | Theme | Premium AMOLED black + Catppuccin Mocha |
-| Database | Room (SQLite) — 6 entities |
-| Networking | OkHttp |
+| Database | Room 2.8.4 (SQLite) — 6 entities |
+| Networking | OkHttp 5.3.2 + certificate pinning |
 | JSON | Moshi |
 | ML | Pure Kotlin gradient-boosted tree (20 features) |
 | Settings | DataStore Preferences |

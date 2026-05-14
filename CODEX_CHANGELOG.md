@@ -1,6 +1,6 @@
 # Codex Change Log
 
-Last updated: 2026-04-15
+Last updated: 2026-05-14
 
 This is an internal handoff note for follow-on agents. It is not the user-facing product changelog.
 
@@ -13,6 +13,24 @@ This is an internal handoff note for follow-on agents. It is not the user-facing
 This repository already had a broad UX/premium-polish pass in progress across the main Android surfaces. This session continued with a deeper hardening/audit pass focused on correctness, lifecycle safety, sync reliability, parser robustness, and regression coverage.
 
 ## Major Work Completed
+
+### 0. v1.7.6 roadmap continuation — network dependency hardening
+
+Files:
+
+- `gradle/libs.versions.toml`
+- `app/build.gradle.kts`
+- `app/src/main/java/com/sysadmindoc/callshield/data/remote/HttpClient.kt`
+- `app/src/main/java/com/sysadmindoc/callshield/data/local/AppDatabase.kt`
+- `app/src/main/java/com/sysadmindoc/callshield/data/model/SpamNumber.kt`
+- `app/src/test/java/com/sysadmindoc/callshield/data/remote/HttpClientTest.kt`
+
+Work completed:
+
+- upgraded AGP to 8.10.1, Kotlin/KSP to 2.2.21, Room to 2.8.4, and OkHttp to 5.3.2
+- added central OkHttp `CertificatePinner` coverage for GitHub, Cloudflare Worker, URLhaus, AbstractAPI, and caller-ID enrichment endpoints
+- added a focused unit test for pinned-host inventory, pin format, and enforcement behavior
+- bumped app metadata to v1.7.6 / versionCode 34 and synchronized README, CHANGELOG, CLAUDE, and ROADMAP
 
 ### 1. Main UX / premium-polish pass already present in the tree
 

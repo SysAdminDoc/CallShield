@@ -131,7 +131,7 @@ abstract class AppDatabase : RoomDatabase() {
                     // REQUIRES an explicit Migration — Room will throw
                     // IllegalStateException at startup if one is missing instead of
                     // silently wiping user data.
-                    .fallbackToDestructiveMigrationFrom(1, 2, 3, 4)
+                    .fallbackToDestructiveMigrationFrom(true, 1, 2, 3, 4)
                     .addMigrations(MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9)
                     .build().also { INSTANCE = it }
             }
