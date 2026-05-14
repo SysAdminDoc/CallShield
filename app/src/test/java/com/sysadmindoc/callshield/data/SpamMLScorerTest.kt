@@ -63,7 +63,8 @@ class SpamMLScorerTest {
         stateField.set(SpamMLScorer, defaultMethod.invoke(SpamMLScorer))
     }
 
-    private fun snapshotState(): Any = stateField.get(SpamMLScorer)
+    private fun snapshotState(): Any =
+        stateField.get(SpamMLScorer) ?: error("SpamMLScorer state should always be initialized")
 
     // Feature indices
     private val TOLL_FREE = 0

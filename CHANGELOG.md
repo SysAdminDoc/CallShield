@@ -2,6 +2,23 @@
 
 All notable changes to CallShield will be documented in this file.
 
+## [v1.7.6] - 2026-05-14
+
+Continuation roadmap pass focused on network dependency hardening.
+
+### Network and dependency hardening
+
+- **OkHttp 5 upgrade** — upgraded OkHttp from 4.12.0 to 5.3.2 and kept
+  callers on the shared `HttpClient` derived-client pattern.
+- **Central certificate pinning** — added SPKI pins for GitHub raw/API,
+  Cloudflare community reports, URLhaus, AbstractAPI, and the free caller-ID
+  enrichment hosts.
+- **Kotlin, AGP, and Room alignment** — upgraded AGP to 8.10.1, Kotlin/KSP to
+  2.2.21, and Room to 2.8.4 so the OkHttp 5 dependency stack builds cleanly
+  with current metadata.
+- **Pinning regression coverage** — added `HttpClientTest` to lock the pinned
+  host inventory and pin-format requirements.
+
 ## [v1.7.5] - 2026-05-13
 
 Continuation polish pass focused on Statistics localization and scan feedback.

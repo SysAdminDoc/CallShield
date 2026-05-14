@@ -15,8 +15,8 @@ data class SpamNumber(
     val number: String,
     val type: String,
     val reports: Int = 1,
-    @Json(name = "first_seen") val firstSeen: String = "",
-    @Json(name = "last_seen") val lastSeen: String = "",
+    @param:Json(name = "first_seen") val firstSeen: String = "",
+    @param:Json(name = "last_seen") val lastSeen: String = "",
     val description: String = "",
     val source: String = "community",
     val isUserBlocked: Boolean = false
@@ -62,8 +62,8 @@ data class SpamNumberJson(
     val number: String,
     val type: String,
     val reports: Int = 1,
-    @Json(name = "first_seen") val firstSeen: String = "",
-    @Json(name = "last_seen") val lastSeen: String = "",
+    @param:Json(name = "first_seen") val firstSeen: String = "",
+    @param:Json(name = "last_seen") val lastSeen: String = "",
     val description: String = ""
 )
 

@@ -1,4 +1,5 @@
 import java.util.Properties
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     alias(libs.plugins.android.application)
@@ -25,8 +26,8 @@ android {
         applicationId = "com.sysadmindoc.callshield"
         minSdk = 29
         targetSdk = 36
-        versionCode = 33
-        versionName = "1.7.5"
+        versionCode = 34
+        versionName = "1.7.6"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -67,10 +68,6 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    kotlinOptions {
-        jvmTarget = "17"
-    }
-
     buildFeatures {
         compose = true
         buildConfig = true
@@ -80,6 +77,12 @@ android {
         getByName("main") {
             assets.srcDir("../data")
         }
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(JvmTarget.JVM_17)
     }
 }
 
