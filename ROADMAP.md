@@ -1,6 +1,6 @@
 # CallShield Development Roadmap
 
-**Roadmap revision:** 2026-05-14 · **Anchored to:** v1.7.6 (versionCode 34)
+**Roadmap revision:** 2026-05-14 · **Anchored to:** v1.7.7 (versionCode 35)
 
 This roadmap merges the original Phase 1–5 plan, the Addendum A "peer-inspired track" (round-1/2/3 borrows from SpamBlocker, YACB, BlackList, Saracroche, adamff-dev, Fossify), and a fresh Addendum B harvested from a 30-source research sweep across OSS competitors, commercial competitors, FCC/IETF/ATIS standards, Android 15/16 platform changes, dependency changelogs, and adjacent-domain OSS (NetGuard, Pi-hole, rspamd patterns).
 
@@ -8,9 +8,9 @@ Source-cited. Every Addendum-B item maps to an entry in **Appendix — Source In
 
 ---
 
-## Current State (v1.7.6)
+## Current State (v1.7.7)
 
-Working Android spam call/text blocker. **78 main + 34 test Kotlin files.** v1.7.6 hardens the network stack: AGP 8.10.1, OkHttp 5.3.2, Kotlin/KSP 2.2.21, Room 2.8.4, centralized SPKI certificate pinning for GitHub API/raw data, Cloudflare community reports, URLhaus, AbstractAPI, and caller-ID enrichment hosts, plus regression coverage for pinned-host inventory and pin format. v1.7.5 polished Statistics localization and scan feedback: localized weekday chart labels, resource-backed detection-source labels, corrected "Prefix match" copy, and consistent resource-backed call-log/SMS scan errors. v1.7.4 refined the advanced settings credential flow with masked optional API-key entry, explicit show/hide control, saved/unsaved/not-configured feedback, and clearer local-only trust copy. v1.7.3 added a premium-polish pass across Compose chrome, shared shape/typography rhythm, blocked-log recovery states, trusted-source sheet feedback, lookup/report semantics, and in-app release notes. v1.7.2 added the latest hardening layer: ASCII-only number normalization (anti-spoof), SmsContentAnalyzer/SmsReceiver 16 KB caps, WildcardRule ReDoS guard, OneShotNoticeGate LRU cap, NotificationHelper PendingIntent ID separation, CrashReporter atomic writes, and removal of text-bearing pill/oval backdrops. **614 tests total**.
+Working Android spam call/text blocker. **78 main + 34 test Kotlin files.** v1.7.7 adds reproducible-build groundwork: Gradle dependency locking, checked-in lockfiles, a `verifyReproducibleBuildInputs` guard against wall-clock build metadata, disabled AGP VCS metadata in release APKs, APK-level metadata verification, release APK SHA256 sidecars for artifact integrity, a ZIP-entry content comparator, and a hash-comparison runbook for signed local releases versus unsigned CI artifacts. v1.7.6 hardens the network stack: AGP 8.10.1, OkHttp 5.3.2, Kotlin/KSP 2.2.21, Room 2.8.4, centralized SPKI certificate pinning for GitHub API/raw data, Cloudflare community reports, URLhaus, AbstractAPI, and caller-ID enrichment hosts, plus regression coverage for pinned-host inventory and pin format. v1.7.5 polished Statistics localization and scan feedback: localized weekday chart labels, resource-backed detection-source labels, corrected "Prefix match" copy, and consistent resource-backed call-log/SMS scan errors. v1.7.4 refined the advanced settings credential flow with masked optional API-key entry, explicit show/hide control, saved/unsaved/not-configured feedback, and clearer local-only trust copy. v1.7.3 added a premium-polish pass across Compose chrome, shared shape/typography rhythm, blocked-log recovery states, trusted-source sheet feedback, lookup/report semantics, and in-app release notes. v1.7.2 added the latest hardening layer: ASCII-only number normalization (anti-spoof), SmsContentAnalyzer/SmsReceiver 16 KB caps, WildcardRule ReDoS guard, OneShotNoticeGate LRU cap, NotificationHelper PendingIntent ID separation, CrashReporter atomic writes, and removal of text-bearing pill/oval backdrops. **614 tests total**.
 
 15-layer detection pipeline (priority-sorted `IChecker` registry), GBT v3 ML scorer (20 features, atomic ModelState, pure-Kotlin inference) with logistic-regression v2 fallback, Jetpack Compose UI on Catppuccin Mocha + AMOLED, Room 2.8.4 with explicit migrations v5+, scheduled WorkManager hot-list + weekly sync from GitHub, RCS NotificationListener, CallerIdOverlayService with first-hit-wins lookup race, SIT-tone anti-autodialer, URLhaus phishing detection, Cloudflare Worker community reporting, GitHub Actions CI on every push.
 
@@ -136,7 +136,7 @@ Three instrumented tests already exist (`CrashReporterInstrumentedTest`, `Dashbo
 | 1.7.4 Consider `android:allowBackup="false"` or restrict via existing `backup_rules.xml` (currently `allowBackup="true"`) | S | `[?]` | `AndroidManifest.xml` |
 | 1.7.5 OkHttp 4.12 → **OkHttp 5.x** [src 18]. Adds Happy Eyeballs (RFC 8305), ZSTD compression module, JPMS, separate Android artifact, eliminates 4.x cookie-jar SSRF. | M | `[DONE]` v1.7.6 (`OkHttp 5.3.2`) | `data/remote/HttpClient.kt`, version catalog |
 | 1.7.6 Glance dependency audit — **CVE-2024-7254 protobuf buffer overflow** [src 22, NVD]. CallShield doesn't use Glance yet, but 4.8.3 home widget is plain RemoteViews; if migrated to Glance, must pin 1.1.1+. Track for the widget-modernization story. | S | `[?]` | n/a |
-| 1.7.7 Reproducible-build verification — match SpamBlocker's F-Droid story. Eliminate build-timestamp embedding, enable Gradle `dependencyLocking`, document hash-comparison procedure. [src 1, src 24] | M | `[NOW]` | `build.gradle.kts`, CI |
+| 1.7.7 Reproducible-build verification — match SpamBlocker's F-Droid story. Eliminate build-timestamp embedding, enable Gradle `dependencyLocking`, document hash-comparison procedure. [src 1, src 24] | M | `[DONE]` v1.7.7 for source-content groundwork; signed byte-for-byte validation remains a F-Droid signature-copy follow-up | `build.gradle.kts`, CI, `docs/reproducible-builds.md`, `scripts/compare-apk-contents.ps1` |
 | 1.7.8 Play Integrity API integration (Standard request, low-latency) for community-report submission only — gates the Cloudflare Worker against poisoning by overlay/screen-capture malware (`appAccessRiskVerdict`) [src 13]. **Keep optional**; client must function without Play Services. ⚠ partial conflict with FOSS philosophy: feature-flag it so non-GMS builds skip integrity gating but still submit reports. | L | `[NEXT]` | `data/CommunityContributor.kt`, server |
 
 ### 1.8 String Extraction `[WIP]`
@@ -364,7 +364,7 @@ Hot-list sync and community reports use hardcoded GitHub-raw URLs on `master`. P
 Phases 2.5 (feedback), 3.4 (honeypot), 5.2 (federated) introduce data collection. Each requires explicit opt-in toggle, plain-language privacy disclosure, and a retention cap. No exceptions.
 
 ### Dependency Refresh Cadence
-Quarterly dependency audit. v1.7.6 cleared the Kotlin/KSP, AGP, Room, and OkHttp tranche; remaining stale pieces include Compose BOM 2024.12, WorkManager 2.10, and DataStore 1.1. Addendum B.U batches the remaining upgrades.
+Quarterly dependency audit. v1.7.6 cleared the Kotlin/KSP, AGP, Room, and OkHttp tranche; v1.7.7 locked the resolved dependency graph and added the reproducible-build runbook. Remaining stale pieces include Compose BOM 2024.12, WorkManager 2.10, and DataStore 1.1. Addendum B.U batches the remaining upgrades.
 
 ---
 
@@ -401,8 +401,8 @@ Harvested from a 30-source sweep (see Appendix). Scoped to NEW signal not alread
 | B.D.1 | **F-Droid submission** — `fastlane/metadata/android/en-US/`, GitLab MR to `fdroiddata`, reproducible-build verification | 5 | 3 | [24] | High-value distribution; matches SpamBlocker, Fossify, YACB |
 | B.D.2 | **IzzyOnDroid** publication (faster cycle than F-Droid; binary-accepted) | 4 | 1 | [research] | Just publish + notify |
 | B.D.3 | **Accrescent** submission (GrapheneOS-friendly, key pinning, signed metadata, Android 12+) | 3 | 2 | [23] | Privacy-niche audience but high alignment |
-| B.D.4 | **Obtainium** spec — already supported via GitHub Releases; document the workflow + add SHA256 sidecar files to release artifacts | 2 | 1 | [research] | Trivial polish |
-| B.S.1 | Reproducible APK build (Gradle `dependencyLocking`, deterministic timestamps, no embedded build metadata) | 4 | 3 | [1, 24] | Required for F-Droid path; competitive parity with SpamBlocker |
+| B.D.4 | **Obtainium** spec — already supported via GitHub Releases; document the workflow + add SHA256 sidecar files to release artifacts | 2 | 1 | [research] | `[DONE]` v1.7.7: CI emits APK `.sha256` sidecars, local signed releases use `scripts/write-release-sha256.ps1`, and the hash workflow is documented. |
+| B.S.1 | Reproducible APK build (Gradle `dependencyLocking`, deterministic timestamps, no embedded build metadata) | 4 | 3 | [1, 24] | `[WIP]` v1.7.7: dependency locks, build-metadata guard, AGP VCS metadata exclusion, APK metadata verification, ZIP-entry comparator, and runbook landed. Remaining: F-Droid/apksigcopier validation for full signed-release reproducibility. |
 | B.F.1 | **Per-SIM filtering rules** (dual-SIM aware) | 4 | 3 | [SpamBlocker #59] | Top community ask; enables work/personal SIM split |
 | B.F.2 | **Rule replay / debug mode** — re-run any logged call/SMS through the current ruleset | 4 | 2 | [SpamBlocker #386] | Power-user feature; cheap to add via `IChecker` registry already present |
 | B.F.3 | **Strict (AND) vs Relaxed (OR) rule mode** | 3 | 2 | [SpamBlocker #377] | Replaces Inclusive/Exclusive terminology; clearer semantics |

@@ -2,6 +2,30 @@
 
 All notable changes to CallShield will be documented in this file.
 
+## [v1.7.7] - 2026-05-14
+
+Continuation roadmap pass focused on reproducible-build groundwork.
+
+### Build integrity
+
+- **Gradle dependency locking** — enabled repository-wide dependency locking
+  and checked in the generated lockfiles for release/debug/test resolution.
+- **Build metadata guard** — added `verifyReproducibleBuildInputs` to fail if
+  Gradle build scripts start embedding wall-clock build metadata into APK
+  inputs.
+- **AGP VCS metadata disabled** — release APKs no longer include
+  `META-INF/version-control-info.textproto`, and
+  `verifyReleaseApkReproducibleMetadata` fails if it returns.
+- **Release hash sidecars** — CI release artifacts now include `.sha256`
+  sidecars for artifact integrity, and local signed releases can generate the same sidecar via
+  `scripts/write-release-sha256.ps1`.
+- **APK content comparator** — added `scripts/compare-apk-contents.ps1` for
+  rebuild checks that compare ZIP entries while making APK Signing Block
+  differences explicit.
+- **Verification runbook** — documented the fixed inputs, signed-vs-unsigned
+  artifact distinction, offline rebuild command, and hash comparison workflow
+  in `docs/reproducible-builds.md`.
+
 ## [v1.7.6] - 2026-05-14
 
 Continuation roadmap pass focused on network dependency hardening.

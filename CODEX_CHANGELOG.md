@@ -14,7 +14,30 @@ This repository already had a broad UX/premium-polish pass in progress across th
 
 ## Major Work Completed
 
-### 0. v1.7.6 roadmap continuation — network dependency hardening
+### 0. v1.7.7 roadmap continuation — reproducible-build groundwork
+
+Files:
+
+- `build.gradle.kts`
+- `.github/workflows/build.yml`
+- `.github/workflows/test.yml`
+- `app/build.gradle.kts`
+- `app/gradle.lockfile`
+- `settings-gradle.lockfile`
+- `docs/reproducible-builds.md`
+- `scripts/write-release-sha256.ps1`
+
+Work completed:
+
+- enabled Gradle dependency locking across the repo and checked in generated lockfiles
+- added `verifyReproducibleBuildInputs` to fail build-script wall-clock metadata embedding
+- disabled AGP VCS metadata in release APKs and added `verifyReleaseApkReproducibleMetadata`
+- added CI and local SHA256 sidecar generation for APK release artifacts
+- added `scripts/compare-apk-contents.ps1` after clean rebuilds showed identical ZIP entries but different APK Signing Block bytes
+- documented the signed local release versus unsigned CI artifact hash-comparison workflow without claiming raw signed SHA256 reproducibility
+- bumped app metadata to v1.7.7 / versionCode 35 and synchronized README, CHANGELOG, CLAUDE, and ROADMAP
+
+### 1. v1.7.6 roadmap continuation — network dependency hardening
 
 Files:
 
@@ -32,7 +55,7 @@ Work completed:
 - added a focused unit test for pinned-host inventory, pin format, and enforcement behavior
 - bumped app metadata to v1.7.6 / versionCode 34 and synchronized README, CHANGELOG, CLAUDE, and ROADMAP
 
-### 1. Main UX / premium-polish pass already present in the tree
+### 2. Main UX / premium-polish pass already present in the tree
 
 These areas were already improved earlier in the thread and remain part of the current worktree:
 
@@ -57,7 +80,7 @@ That work included:
 - stronger copy/resource consistency
 - a more polished More hub and supporting navigation
 
-### 2. Data sync integrity hardening
+### 3. Data sync integrity hardening
 
 Files:
 
@@ -79,7 +102,7 @@ Fixes made:
 - replaced naive hot-list replacement with merge-aware logic that preserves stronger existing rows and existing user-block state
 - added focused regression tests for the sync merge/sanitization helpers
 
-### 3. Callback allow-through hardening
+### 4. Callback allow-through hardening
 
 Files:
 
@@ -100,7 +123,7 @@ Fixes made:
 - moved campaign-detector recording to happen after trusted callback allow-through checks
 - added focused tests for the call-log query builders so the filtering logic stays stable
 
-### 4. Blocklist/whitelist reconciliation hardening
+### 5. Blocklist/whitelist reconciliation hardening
 
 Files:
 

@@ -33,11 +33,24 @@ jobs:
       - name: Build Release APK
         run: ./gradlew assembleRelease
 
+      - name: Verify reproducible build inputs
+        run: ./gradlew verifyReproducibleBuildInputs verifyReleaseApkReproducibleMetadata
+
+      - name: Write APK SHA256 sidecars
+        shell: bash
+        run: |
+          set -euo pipefail
+          for apk in app/build/outputs/apk/release/*.apk; do
+            sha256sum "$apk" > "$apk.sha256"
+          done
+
       - name: Upload APK (workflow artifact)
         uses: actions/upload-artifact@v4
         with:
           name: CallShield-release
-          path: app/build/outputs/apk/release/*.apk
+          path: |
+            app/build/outputs/apk/release/*.apk
+            app/build/outputs/apk/release/*.apk.sha256
 
       # Signed release APKs are built and attached locally; CI does not
       # have the keystore secrets, so the runner produces an unsigned APK

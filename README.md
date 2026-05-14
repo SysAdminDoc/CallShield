@@ -22,8 +22,15 @@
 
 CallShield blocks spam calls and texts using a **15+ layer on-device detection engine** with a gradient-boosted tree ML scorer, campaign burst detection, RCS notification filter, and real-time caller ID overlay. Powered by a 32,933-number database with scheduled hot-list updates. Community-maintained, no accounts, no tracking.
 
-## v1.7.6 Highlights
+## v1.7.7 Highlights
 
+- **Reproducible-build groundwork** — Gradle dependency locking is enabled,
+  the resolved dependency graph is checked in, AGP VCS metadata is disabled for
+  release APKs, and CI runs guards that block wall-clock build metadata from
+  being embedded into APK inputs.
+- **Release hash sidecars** — release builds now produce SHA256 sidecars for
+  APK artifact integrity, with Windows helpers for signed local releases and
+  content-level APK rebuild comparisons.
 - **Network hardening** — OkHttp is upgraded to 5.3.2 and all direct data,
   community-report, URL-safety, and caller-ID enrichment hosts are protected by
   centralized certificate pinning.
@@ -51,7 +58,7 @@ CallShield blocks spam calls and texts using a **15+ layer on-device detection e
 5. **Callback-aware** — won't block callbacks from numbers you recently called, or urgent repeated callers
 6. **Community-driven** — one-tap anonymous contribution via Cloudflare Worker, daily merge into database
 
-## Detection Pipeline (v1.7.6)
+## Detection Pipeline (v1.7.7)
 
 All detection layers implement a shared `IChecker` interface and run in priority order via `CheckerPipeline.run` — first non-null result wins, every layer is testable in isolation. Priorities are stable numbers; the ladder below is the live order.
 
@@ -244,10 +251,18 @@ No API keys required. No accounts. No analytics. No ads.
 ## Building
 
 ```bash
-./gradlew assembleRelease
+./gradlew verifyReproducibleBuildInputs verifyReleaseApkReproducibleMetadata
 ```
 
 Requires JDK 17+. Signed APK at `app/build/outputs/apk/release/app-release.apk`.
+Generate the release hash sidecar with:
+
+```powershell
+.\scripts\write-release-sha256.ps1
+```
+
+See `docs/reproducible-builds.md` for the dependency-lock and hash-comparison
+runbook.
 
 **Signing:** Create `local.properties` in the project root with your keystore credentials:
 ```properties
@@ -260,7 +275,7 @@ RELEASE_KEY_PASSWORD=...
 ## Testing
 
 ```bash
-./gradlew testDebugUnitTest   # 210 tests
+./gradlew testDebugUnitTest   # 614 tests
 ```
 
 CI runs automatically via GitHub Actions on every push and pull request.
