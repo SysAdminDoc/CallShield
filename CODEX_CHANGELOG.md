@@ -14,7 +14,27 @@ This repository already had a broad UX/premium-polish pass in progress across th
 
 ## Major Work Completed
 
-### 0. v1.7.7 roadmap continuation — reproducible-build groundwork
+### 0. v1.7.8 roadmap continuation — DataStore privacy hardening
+
+Files:
+
+- `gradle/libs.versions.toml`
+- `app/build.gradle.kts`
+- `app/gradle.lockfile`
+- `app/src/main/java/com/sysadmindoc/callshield/data/SpamRepository.kt`
+- `app/src/main/res/xml/backup_rules.xml`
+- `app/src/main/res/xml/data_extraction_rules.xml`
+
+Work completed:
+
+- upgraded DataStore Preferences to 1.2.1 and refreshed dependency locks
+- audited the settings/backup layer and confirmed there is no current `EncryptedSharedPreferences`, `androidx.security`, or Tink preference path to migrate
+- moved the optional AbstractAPI enrichment key to a private DataStore created under `noBackupFilesDir`
+- added first-read/save migration that copies any legacy public key into no-backup storage and then removes the public value
+- corrected backup-rule comments and user-facing README security copy to distinguish public settings restore from private credential storage
+- bumped app metadata to v1.7.8 / versionCode 36 and synchronized README, CHANGELOG, CODEX_CHANGELOG, and ROADMAP
+
+### 1. v1.7.7 roadmap continuation — reproducible-build groundwork
 
 Files:
 
@@ -37,7 +57,7 @@ Work completed:
 - documented the signed local release versus unsigned CI artifact hash-comparison workflow without claiming raw signed SHA256 reproducibility
 - bumped app metadata to v1.7.7 / versionCode 35 and synchronized README, CHANGELOG, CLAUDE, and ROADMAP
 
-### 1. v1.7.6 roadmap continuation — network dependency hardening
+### 2. v1.7.6 roadmap continuation — network dependency hardening
 
 Files:
 
@@ -55,7 +75,7 @@ Work completed:
 - added a focused unit test for pinned-host inventory, pin format, and enforcement behavior
 - bumped app metadata to v1.7.6 / versionCode 34 and synchronized README, CHANGELOG, CLAUDE, and ROADMAP
 
-### 2. Main UX / premium-polish pass already present in the tree
+### 3. Main UX / premium-polish pass already present in the tree
 
 These areas were already improved earlier in the thread and remain part of the current worktree:
 

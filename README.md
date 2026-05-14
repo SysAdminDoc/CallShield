@@ -6,7 +6,7 @@
 
 <p align="center">
   <strong>Open-source spam call and text blocker for Android</strong><br>
-  15+ layer detection + Gradient-Boosted Tree ML | 32,933 spam numbers | Real-time caller ID | RCS filter | No API keys
+  15+ layer detection + Gradient-Boosted Tree ML | 32,933 spam numbers | Real-time caller ID | RCS filter | No required API keys
 </p>
 
 <p align="center">
@@ -15,15 +15,21 @@
   <img src="https://img.shields.io/badge/Tests-614-94e2d5?style=flat-square" alt="614 Tests">
   <img src="https://img.shields.io/badge/Android-10%2B-89b4fa?style=flat-square" alt="Android 10+">
   <img src="https://img.shields.io/badge/License-MIT-cba6f7?style=flat-square" alt="MIT License">
-  <img src="https://img.shields.io/badge/API%20Keys-None-fab387?style=flat-square" alt="No API Keys">
+  <img src="https://img.shields.io/badge/API%20Keys-None-fab387?style=flat-square" alt="No required API keys">
 </p>
 
 ---
 
 CallShield blocks spam calls and texts using a **15+ layer on-device detection engine** with a gradient-boosted tree ML scorer, campaign burst detection, RCS notification filter, and real-time caller ID overlay. Powered by a 32,933-number database with scheduled hot-list updates. Community-maintained, no accounts, no tracking.
 
-## v1.7.7 Highlights
+## v1.7.8 Highlights
 
+- **DataStore privacy hardening** — settings now run on DataStore 1.2.1, and
+  the optional AbstractAPI enrichment key is stored in a private no-backup
+  DataStore instead of the backed-up public settings file.
+- **Safer backup boundary** — database and public preferences remain
+  restorable for device transfers, while optional local credentials migrate out
+  of Android Auto Backup scope on first read or save.
 - **Reproducible-build groundwork** — Gradle dependency locking is enabled,
   the resolved dependency graph is checked in, AGP VCS metadata is disabled for
   release APKs, and CI runs guards that block wall-clock build metadata from
@@ -38,7 +44,7 @@ CallShield blocks spam calls and texts using a **15+ layer on-device detection e
   aligned on 2.2.21, and Room is upgraded to 2.8.4, keeping codegen and R8
   compatible with the current Kotlin metadata used by the networking stack.
 - **Stats and scan feedback polish** — weekly activity labels now respect locale weekday names, Statistics detection-source labels are resource-backed, and scan permission/failure copy is consistent across call-log and SMS flows.
-- **Settings credential polish** — the optional AbstractAPI key is masked by default, has explicit show/hide control, and now reports "Not configured", "Saved locally", and "Unsaved changes" states before saving.
+- **Settings credential polish** — the optional AbstractAPI key is masked by default, has explicit show/hide control, reports "Not configured", "Saved locally", and "Unsaved changes" states before saving, and is now kept out of backed-up public preferences.
 - **Premium-polish UX pass** — tighter app chrome, restrained 12dp surface radius, zero negative type tracking, and selected navigation without pill-shaped backdrops.
 - **Clearer recovery states** — Blocked Log empty and filtered states now explain what happened and provide a direct "Show all activity" recovery action when filters hide records.
 - **Trust-focused settings feedback** — the trusted push-alert source picker now shows installed-source coverage and skeleton loading while package labels resolve.
@@ -58,7 +64,7 @@ CallShield blocks spam calls and texts using a **15+ layer on-device detection e
 5. **Callback-aware** — won't block callbacks from numbers you recently called, or urgent repeated callers
 6. **Community-driven** — one-tap anonymous contribution via Cloudflare Worker, daily merge into database
 
-## Detection Pipeline (v1.7.7)
+## Detection Pipeline (v1.7.8)
 
 All detection layers implement a shared `IChecker` interface and run in priority order via `CheckerPipeline.run` — first non-null result wins, every layer is testable in isolation. Priorities are stable numbers; the ladder below is the live order.
 
@@ -229,7 +235,7 @@ Trained weekly from the CallShield database (50K positive + 50K negative samples
 - **Network security config** — cleartext traffic disabled in production
 - **Signing credentials** — stored in `local.properties`, not hardcoded in build files
 - **Restricted FileProvider paths** — scoped to export directory only
-- **Database-only backup** — `android:fullBackupContent` excludes preferences containing API keys
+- **Scoped backup** — database and public settings are backed up for transfer/restore, while the optional AbstractAPI key is migrated to a private no-backup DataStore
 
 ## Privacy
 
@@ -239,7 +245,7 @@ All detection runs on-device. No personal data is collected. Network requests:
 - Community reports to Cloudflare Worker (phone number only, no identity)
 - URLhaus checks for SMS URL safety (URL only)
 
-No API keys required. No accounts. No analytics. No ads.
+No required API keys. The optional AbstractAPI key stays on-device in no-backup storage. No accounts. No analytics. No ads.
 
 ## Requirements
 
@@ -291,16 +297,16 @@ CI runs automatically via GitHub Actions on every push and pull request.
 | Networking | OkHttp 5.3.2 + certificate pinning |
 | JSON | Moshi |
 | ML | Pure Kotlin gradient-boosted tree (20 features) |
-| Settings | DataStore Preferences |
+| Settings | DataStore Preferences 1.2.1 |
 | Background | WorkManager |
 | Community API | Cloudflare Workers |
 | URL Safety | URLhaus (abuse.ch) |
 | CI | GitHub Actions |
-| Tests | 210 unit tests (JUnit) |
+| Tests | 614 JVM unit tests (JUnit) |
 | Strings | 544+ resources (translation-ready) |
 | Accessibility | 100+ content descriptions, 48dp touch targets |
 | Min SDK | 29 (Android 10) |
-| Target SDK | 35 |
+| Target SDK | 36 |
 
 For deep technical details, see [CLAUDE.md](CLAUDE.md).
 

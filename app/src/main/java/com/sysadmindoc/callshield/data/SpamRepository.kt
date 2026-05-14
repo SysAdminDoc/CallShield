@@ -15,21 +15,51 @@ import com.sysadmindoc.callshield.data.model.*
 import com.sysadmindoc.callshield.data.remote.GitHubDataSource
 import com.sysadmindoc.callshield.service.NotificationHelper
 import com.sysadmindoc.callshield.ui.widget.CallShieldWidget
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import java.io.File
+import java.util.concurrent.ConcurrentHashMap
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "callshield_prefs")
+
+private object NoBackupPreferenceStores {
+    private val stores = ConcurrentHashMap<String, DataStore<Preferences>>()
+
+    fun get(context: Context, name: String): DataStore<Preferences> {
+        val appContext = context.applicationContext
+        val key = "${appContext.noBackupFilesDir.absolutePath}/$name"
+        return stores.computeIfAbsent(key) {
+            PreferenceDataStoreFactory.create(
+                scope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
+                produceFile = {
+                    File(appContext.noBackupFilesDir, "datastore").apply { mkdirs() }
+                    File(File(appContext.noBackupFilesDir, "datastore"), "$name.preferences_pb")
+                }
+            )
+        }
+    }
+}
+
+private fun Context.noBackupDataStore(name: String): DataStore<Preferences> =
+    NoBackupPreferenceStores.get(this, name)
 
 class SpamRepository(private val context: Context) {
     private val dao: SpamDao = AppDatabase.getInstance(context).spamDao()
     private val remote = GitHubDataSource()
     private val dataStore = context.dataStore
+    private val privateDataStore = context.noBackupDataStore("callshield_private_prefs")
     private val syncMutex = Mutex()
+    private val abstractApiKeyMigrationMutex = Mutex()
+    @Volatile private var abstractApiKeyMigrationComplete = false
 
     // ── Hot-path caches ──────────────────────────────────────────────
     // isSpam() is the critical real-time path (must complete within the
@@ -163,8 +193,22 @@ class SpamRepository(private val context: Context) {
     val cleanupDays: Flow<Int> = dataStore.data.map { it[KEY_CLEANUP_DAYS] ?: 30 }
     // Optional AbstractAPI key for carrier/number-type enrichment in the Caller ID overlay.
     // Never used in the blocking pipeline — blocking stays 100% local/offline.
-    val abstractApiKey: Flow<String> = dataStore.data.map { it[KEY_ABSTRACT_API_KEY] ?: "" }
-    suspend fun setAbstractApiKey(key: String) = dataStore.edit { it[KEY_ABSTRACT_API_KEY] = key }
+    val abstractApiKey: Flow<String> = flow {
+        migrateAbstractApiKeyIfNeeded()
+        emitAll(privateDataStore.data.map { it[KEY_ABSTRACT_API_KEY] ?: "" })
+    }
+    suspend fun setAbstractApiKey(key: String) {
+        migrateAbstractApiKeyIfNeeded()
+        val sanitizedKey = key.trim()
+        privateDataStore.edit { prefs ->
+            if (sanitizedKey.isBlank()) {
+                prefs.remove(KEY_ABSTRACT_API_KEY)
+            } else {
+                prefs[KEY_ABSTRACT_API_KEY] = sanitizedKey
+            }
+        }
+        dataStore.edit { it.remove(KEY_ABSTRACT_API_KEY) }
+    }
 
     val mlScorerEnabled: Flow<Boolean> = dataStore.data.map { it[KEY_ML_SCORER] ?: true }
     val rcsFilterEnabled: Flow<Boolean> = dataStore.data.map { it[KEY_RCS_FILTER] ?: true }
@@ -197,6 +241,24 @@ class SpamRepository(private val context: Context) {
     suspend fun setOnboardingDone() = dataStore.edit { it[KEY_ONBOARDING_DONE] = true }
     suspend fun setAutoCleanup(enabled: Boolean) = dataStore.edit { it[KEY_AUTO_CLEANUP] = enabled }
     suspend fun setCleanupDays(days: Int) = dataStore.edit { it[KEY_CLEANUP_DAYS] = days }
+
+    private suspend fun migrateAbstractApiKeyIfNeeded() {
+        if (abstractApiKeyMigrationComplete) return
+
+        abstractApiKeyMigrationMutex.withLock {
+            if (abstractApiKeyMigrationComplete) return@withLock
+
+            val privateKey = privateDataStore.data.first()[KEY_ABSTRACT_API_KEY]
+            val legacyKey = dataStore.data.first()[KEY_ABSTRACT_API_KEY]
+            if (privateKey.isNullOrBlank() && !legacyKey.isNullOrBlank()) {
+                privateDataStore.edit { it[KEY_ABSTRACT_API_KEY] = legacyKey.trim() }
+            }
+            if (legacyKey != null) {
+                dataStore.edit { it.remove(KEY_ABSTRACT_API_KEY) }
+            }
+            abstractApiKeyMigrationComplete = true
+        }
+    }
 
     // Last sync timestamp for freshness indicator
     val lastSyncTimestamp: Flow<Long> = dataStore.data.map { it[KEY_LAST_SYNC] ?: 0L }

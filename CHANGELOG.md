@@ -2,6 +2,27 @@
 
 All notable changes to CallShield will be documented in this file.
 
+## [v1.7.8] - 2026-05-14
+
+Continuation roadmap pass focused on DataStore and backup privacy hardening.
+
+### Settings and backup privacy
+
+- **DataStore 1.2.1 upgrade** — upgraded the settings dependency and refreshed
+  the locked dependency graph.
+- **No deprecated encrypted-preferences path** — audited the settings and
+  backup layer; CallShield does not use `EncryptedSharedPreferences`,
+  `androidx.security`, or Tink-backed preferences today, so no encrypted
+  preference migration target exists.
+- **No-backup credential storage** — moved the optional AbstractAPI enrichment
+  key into a private DataStore under `noBackupFilesDir`, with one-time
+  migration from the legacy public settings key.
+- **Scoped restore boundary** — public DataStore settings and the Room
+  database remain restorable, while optional local credentials are kept out of
+  Android Auto Backup scope.
+- **Backup-rule documentation** — corrected backup rule comments and README
+  copy so they no longer imply that every preference is excluded.
+
 ## [v1.7.7] - 2026-05-14
 
 Continuation roadmap pass focused on reproducible-build groundwork.

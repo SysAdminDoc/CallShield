@@ -1,6 +1,6 @@
 # CallShield Development Roadmap
 
-**Roadmap revision:** 2026-05-14 · **Anchored to:** v1.7.7 (versionCode 35)
+**Roadmap revision:** 2026-05-14 · **Anchored to:** v1.7.8 (versionCode 36)
 
 This roadmap merges the original Phase 1–5 plan, the Addendum A "peer-inspired track" (round-1/2/3 borrows from SpamBlocker, YACB, BlackList, Saracroche, adamff-dev, Fossify), and a fresh Addendum B harvested from a 30-source research sweep across OSS competitors, commercial competitors, FCC/IETF/ATIS standards, Android 15/16 platform changes, dependency changelogs, and adjacent-domain OSS (NetGuard, Pi-hole, rspamd patterns).
 
@@ -8,13 +8,13 @@ Source-cited. Every Addendum-B item maps to an entry in **Appendix — Source In
 
 ---
 
-## Current State (v1.7.7)
+## Current State (v1.7.8)
 
-Working Android spam call/text blocker. **78 main + 34 test Kotlin files.** v1.7.7 adds reproducible-build groundwork: Gradle dependency locking, checked-in lockfiles, a `verifyReproducibleBuildInputs` guard against wall-clock build metadata, disabled AGP VCS metadata in release APKs, APK-level metadata verification, release APK SHA256 sidecars for artifact integrity, a ZIP-entry content comparator, and a hash-comparison runbook for signed local releases versus unsigned CI artifacts. v1.7.6 hardens the network stack: AGP 8.10.1, OkHttp 5.3.2, Kotlin/KSP 2.2.21, Room 2.8.4, centralized SPKI certificate pinning for GitHub API/raw data, Cloudflare community reports, URLhaus, AbstractAPI, and caller-ID enrichment hosts, plus regression coverage for pinned-host inventory and pin format. v1.7.5 polished Statistics localization and scan feedback: localized weekday chart labels, resource-backed detection-source labels, corrected "Prefix match" copy, and consistent resource-backed call-log/SMS scan errors. v1.7.4 refined the advanced settings credential flow with masked optional API-key entry, explicit show/hide control, saved/unsaved/not-configured feedback, and clearer local-only trust copy. v1.7.3 added a premium-polish pass across Compose chrome, shared shape/typography rhythm, blocked-log recovery states, trusted-source sheet feedback, lookup/report semantics, and in-app release notes. v1.7.2 added the latest hardening layer: ASCII-only number normalization (anti-spoof), SmsContentAnalyzer/SmsReceiver 16 KB caps, WildcardRule ReDoS guard, OneShotNoticeGate LRU cap, NotificationHelper PendingIntent ID separation, CrashReporter atomic writes, and removal of text-bearing pill/oval backdrops. **614 tests total**.
+Working Android spam call/text blocker. **78 main + 34 test Kotlin files.** v1.7.8 upgrades settings to DataStore 1.2.1, confirms there is no deprecated `EncryptedSharedPreferences`/`androidx.security` path to migrate, and moves the optional AbstractAPI enrichment key into a private no-backup DataStore with legacy public-key cleanup. v1.7.7 adds reproducible-build groundwork: Gradle dependency locking, checked-in lockfiles, a `verifyReproducibleBuildInputs` guard against wall-clock build metadata, disabled AGP VCS metadata in release APKs, APK-level metadata verification, release APK SHA256 sidecars for artifact integrity, a ZIP-entry content comparator, and a hash-comparison runbook for signed local releases versus unsigned CI artifacts. v1.7.6 hardens the network stack: AGP 8.10.1, OkHttp 5.3.2, Kotlin/KSP 2.2.21, Room 2.8.4, centralized SPKI certificate pinning for GitHub API/raw data, Cloudflare community reports, URLhaus, AbstractAPI, and caller-ID enrichment hosts, plus regression coverage for pinned-host inventory and pin format. v1.7.5 polished Statistics localization and scan feedback: localized weekday chart labels, resource-backed detection-source labels, corrected "Prefix match" copy, and consistent resource-backed call-log/SMS scan errors. v1.7.4 refined the advanced settings credential flow with masked optional API-key entry, explicit show/hide control, saved/unsaved/not-configured feedback, and clearer local-only trust copy. v1.7.3 added a premium-polish pass across Compose chrome, shared shape/typography rhythm, blocked-log recovery states, trusted-source sheet feedback, lookup/report semantics, and in-app release notes. v1.7.2 added the latest hardening layer: ASCII-only number normalization (anti-spoof), SmsContentAnalyzer/SmsReceiver 16 KB caps, WildcardRule ReDoS guard, OneShotNoticeGate LRU cap, NotificationHelper PendingIntent ID separation, CrashReporter atomic writes, and removal of text-bearing pill/oval backdrops. **614 tests total**.
 
 15-layer detection pipeline (priority-sorted `IChecker` registry), GBT v3 ML scorer (20 features, atomic ModelState, pure-Kotlin inference) with logistic-regression v2 fallback, Jetpack Compose UI on Catppuccin Mocha + AMOLED, Room 2.8.4 with explicit migrations v5+, scheduled WorkManager hot-list + weekly sync from GitHub, RCS NotificationListener, CallerIdOverlayService with first-hit-wins lookup race, SIT-tone anti-autodialer, URLhaus phishing detection, Cloudflare Worker community reporting, GitHub Actions CI on every push.
 
-**Stack fingerprint:** AGP 8.10.1 · Kotlin 2.2.21 · Compose BOM 2024.12.01 · Room 2.8.4 · WorkManager 2.10.0 · OkHttp 5.3.2 · Moshi 1.15.1 · DataStore 1.1.1 · minSdk 29 · targetSdk 36 · KSP for Room codegen. **No Hilt, no KMP, no Glance, no SQLCipher.**
+**Stack fingerprint:** AGP 8.10.1 · Kotlin 2.2.21 · Compose BOM 2024.12.01 · Room 2.8.4 · WorkManager 2.10.0 · OkHttp 5.3.2 · Moshi 1.15.1 · DataStore 1.2.1 · minSdk 29 · targetSdk 36 · KSP for Room codegen. **No Hilt, no KMP, no Glance, no SQLCipher.**
 
 ```mermaid
 graph LR
@@ -132,8 +132,8 @@ Three instrumented tests already exist (`CrashReporterInstrumentedTest`, `Dashbo
 |------|------|--------|-------|
 | 1.7.1 Move signing credentials to `local.properties` / env vars | S | `[DONE]` (`build.gradle.kts:33-47`) | — |
 | 1.7.2 Certificate pinning — GitHub raw, Cloudflare Worker, all enrichment APIs. Use OkHttp 5 `CertificatePinner` (post-1.7.5 upgrade). | M | `[DONE]` v1.7.6 | `data/remote/HttpClient.kt`, `HttpClientTest.kt` |
-| 1.7.3 Replace any `EncryptedSharedPreferences` with **Tink `AeadSerializer` + DataStore 1.2** [src 21]. AndroidX Security `EncryptedSharedPreferences` is on the deprecated path. | M | `[NOW]` | `BackupRestore.kt`, settings layer |
-| 1.7.4 Consider `android:allowBackup="false"` or restrict via existing `backup_rules.xml` (currently `allowBackup="true"`) | S | `[?]` | `AndroidManifest.xml` |
+| 1.7.3 Replace any `EncryptedSharedPreferences` with **Tink `AeadSerializer` + DataStore 1.2** [src 21]. AndroidX Security `EncryptedSharedPreferences` is on the deprecated path. | M | `[DONE]` v1.7.8: no `EncryptedSharedPreferences`/`androidx.security` path exists; DataStore upgraded to 1.2.1 and optional key moved to no-backup DataStore instead of adding an unused Tink path | `SpamRepository.kt`, settings layer |
+| 1.7.4 Consider `android:allowBackup="false"` or restrict via existing `backup_rules.xml` (currently `allowBackup="true"`) | S | `[DONE]` v1.7.8: backups remain enabled for Room + public settings, while optional credentials now live under `noBackupFilesDir` and migrate out of backed-up DataStore | `backup_rules.xml`, `data_extraction_rules.xml`, `SpamRepository.kt` |
 | 1.7.5 OkHttp 4.12 → **OkHttp 5.x** [src 18]. Adds Happy Eyeballs (RFC 8305), ZSTD compression module, JPMS, separate Android artifact, eliminates 4.x cookie-jar SSRF. | M | `[DONE]` v1.7.6 (`OkHttp 5.3.2`) | `data/remote/HttpClient.kt`, version catalog |
 | 1.7.6 Glance dependency audit — **CVE-2024-7254 protobuf buffer overflow** [src 22, NVD]. CallShield doesn't use Glance yet, but 4.8.3 home widget is plain RemoteViews; if migrated to Glance, must pin 1.1.1+. Track for the widget-modernization story. | S | `[?]` | n/a |
 | 1.7.7 Reproducible-build verification — match SpamBlocker's F-Droid story. Eliminate build-timestamp embedding, enable Gradle `dependencyLocking`, document hash-comparison procedure. [src 1, src 24] | M | `[DONE]` v1.7.7 for source-content groundwork; signed byte-for-byte validation remains a F-Droid signature-copy follow-up | `build.gradle.kts`, CI, `docs/reproducible-builds.md`, `scripts/compare-apk-contents.ps1` |
@@ -364,7 +364,7 @@ Hot-list sync and community reports use hardcoded GitHub-raw URLs on `master`. P
 Phases 2.5 (feedback), 3.4 (honeypot), 5.2 (federated) introduce data collection. Each requires explicit opt-in toggle, plain-language privacy disclosure, and a retention cap. No exceptions.
 
 ### Dependency Refresh Cadence
-Quarterly dependency audit. v1.7.6 cleared the Kotlin/KSP, AGP, Room, and OkHttp tranche; v1.7.7 locked the resolved dependency graph and added the reproducible-build runbook. Remaining stale pieces include Compose BOM 2024.12, WorkManager 2.10, and DataStore 1.1. Addendum B.U batches the remaining upgrades.
+Quarterly dependency audit. v1.7.6 cleared the Kotlin/KSP, AGP, Room, and OkHttp tranche; v1.7.7 locked the resolved dependency graph and added the reproducible-build runbook; v1.7.8 cleared the DataStore 1.2.1 upgrade and optional-key backup boundary. Remaining stale pieces include Compose BOM 2024.12 and WorkManager 2.10. Addendum B.U batches the remaining upgrades.
 
 ---
 
@@ -395,7 +395,7 @@ Harvested from a 30-source sweep (see Appendix). Scoped to NEW signal not alread
 | B.U.1 | OkHttp 4.12 → **5.x** | 4 | 2 | [18] | `[DONE]` v1.7.6: upgraded to OkHttp 5.3.2 and kept the shared-client/derived-client contract. |
 | B.U.2 | Room 2.6 → **2.8.4** | 3 | 2 | [research] | `[DONE]` v1.7.6: upgraded Room to 2.8.4 and updated the legacy destructive-migration overload. |
 | B.U.3 | Kotlin 2.1 → **2.2.21** | 3 | 2 | [20] | `[DONE]` v1.7.6: upgraded AGP to 8.10.1 for Kotlin 2.2 R8 compatibility, aligned Kotlin/KSP to 2.2.21, and moved JVM target configuration to the compilerOptions DSL. |
-| B.U.4 | DataStore 1.1 → **1.2.1** + Tink `AeadSerializer` | 4 | 3 | [21] | Replaces `EncryptedSharedPreferences` (deprecated path); enables Direct-Boot prefs for cold-call-at-boot screening |
+| B.U.4 | DataStore 1.1 → **1.2.1** + Tink `AeadSerializer` | 4 | 3 | [21] | `[DONE]` v1.7.8: upgraded DataStore to 1.2.1; no deprecated encrypted-preferences path exists, so no unused Tink serializer was introduced; optional AbstractAPI key now migrates into private no-backup DataStore |
 | B.U.5 | WorkManager 2.10 → **2.11.2** | 2 | 1 | [16] | Android 15 network-constraint regression fixes |
 | B.U.6 | Compose BOM 2024.12 → latest stable (Compose Foundation 1.11+) | 3 | 2 | [17] | LazyColumn grid track sizing, FlexBox |
 | B.D.1 | **F-Droid submission** — `fastlane/metadata/android/en-US/`, GitLab MR to `fdroiddata`, reproducible-build verification | 5 | 3 | [24] | High-value distribution; matches SpamBlocker, Fossify, YACB |
@@ -470,7 +470,7 @@ Harvested from a 30-source sweep (see Appendix). Scoped to NEW signal not alread
 | Always-on cloud reputation gating | Breaks **on-device-first** — every layer must work offline. |
 | Hosts-file-style monetary blocklist (paid feeds) | Breaks **FOSS** philosophy. Free user-supplied URLs only (B.F.7 / B.F.13). |
 | Built-in ads, ad-supported tier | Hard no — incompatible with sysadmin-grade tool positioning. |
-| `fullBackupContent="true"` exposing API keys | Already mitigated via existing `backup_rules.xml`; consider tightening to `allowBackup=false` (1.7.4). |
+| `fullBackupContent="true"` exposing API keys | Mitigated in v1.7.8 by moving the optional AbstractAPI key out of backed-up public DataStore and into a private DataStore under `noBackupFilesDir`; backups remain enabled for Room data and public settings. |
 
 ---
 

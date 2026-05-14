@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- API 23–30 backup rules (android:fullBackupContent).
-     Include database (blocklist, whitelist, rules, log) and DataStore
-     preferences (user settings). Everything else (cached exports, synced
-     model weights, OkHttp cache) is automatically excluded because only
+<!-- API 23-30 backup rules (android:fullBackupContent).
+     Include database (blocklist, whitelist, rules, log) and the public
+     DataStore preferences (user settings). Private no-backup DataStore files
+     such as the optional AbstractAPI key are stored under noBackupFilesDir and
+     are intentionally not included here. Everything else (cached exports,
+     synced model weights, OkHttp cache) is automatically excluded because only
      explicitly included paths are backed up. -->
 <full-backup-content>
     <include domain="database" path="." />

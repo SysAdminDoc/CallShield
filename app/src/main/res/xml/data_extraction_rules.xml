@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- API 31+ backup/transfer rules (android:dataExtractionRules).
-     Mirrors backup_rules.xml: preserve user data (database + DataStore)
-     without transferring operational files like crash logs or downloaded
-     model/feed artifacts, which are regenerated locally. -->
+     Mirrors backup_rules.xml: preserve user data (database + public
+     DataStore) without transferring operational files, downloaded model/feed
+     artifacts, or no-backup private DataStore secrets. -->
 <data-extraction-rules>
     <cloud-backup>
         <include domain="database" path="." />
