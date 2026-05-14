@@ -14,7 +14,30 @@ This repository already had a broad UX/premium-polish pass in progress across th
 
 ## Major Work Completed
 
-### 0. v1.7.10 roadmap continuation — Compose BOM refresh
+### 0. F-Droid submission prep
+
+Files:
+
+- `.gitignore`
+- `fastlane/metadata/android/en-US/title.txt`
+- `fastlane/metadata/android/en-US/short_description.txt`
+- `fastlane/metadata/android/en-US/full_description.txt`
+- `fastlane/metadata/android/en-US/changelogs/38.txt`
+- `docs/fdroid/com.sysadmindoc.callshield.yml`
+- `docs/fdroid-submission.md`
+- `docs/reproducible-builds.md`
+- `CHANGELOG.md`
+- `ROADMAP.md`
+
+Work completed:
+
+- added Fastlane listing metadata for F-Droid-compatible localized store copy
+- drafted the `fdroiddata` YAML for `com.sysadmindoc.callshield`, including the v1.7.10 commit hash, upstream release APK URL, and expected release signer SHA256
+- documented the remaining fdroidserver/GitLab MR flow and signature-copy verification inputs
+- ignored generated APK/AAB hash sidecars so release artifacts stay attached to GitHub Releases instead of entering source control
+- marked B.D.1 as WIP because the actual F-Droid merge request and apksigcopier validation require an fdroiddata/GitLab environment
+
+### 1. v1.7.10 roadmap continuation — Compose BOM refresh
 
 Files:
 
@@ -37,7 +60,7 @@ Work completed:
 - fixed newly enforced Compose lint by replacing `LocalContext.getString` and `LocalContext.current.resources` reads in composables with `stringResource`, `pluralStringResource`, and `LocalResources`
 - bumped app metadata to v1.7.10 / versionCode 38 and synchronized README, CHANGELOG, CODEX_CHANGELOG, and ROADMAP
 
-### 1. v1.7.9 roadmap continuation — WorkManager refresh
+### 2. v1.7.9 roadmap continuation — WorkManager refresh
 
 Files:
 
@@ -59,7 +82,7 @@ Work completed:
 - stabilized the SMS large-body DoS guard timing test by warming the analyzer outside the measured path
 - bumped app metadata to v1.7.9 / versionCode 37 and synchronized README, CHANGELOG, CODEX_CHANGELOG, and ROADMAP
 
-### 2. v1.7.8 roadmap continuation — DataStore privacy hardening
+### 3. v1.7.8 roadmap continuation — DataStore privacy hardening
 
 Files:
 

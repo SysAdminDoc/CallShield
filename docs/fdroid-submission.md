@@ -1,0 +1,53 @@
+# F-Droid Submission Prep
+
+This repo now carries the upstream metadata needed before opening an F-Droid
+`fdroiddata` merge request.
+
+## Upstream Metadata
+
+- App ID: `com.sysadmindoc.callshield`
+- License: MIT
+- Source: `https://github.com/SysAdminDoc/CallShield`
+- Latest release prepared for verification: `v1.7.10`
+- Version code: `38`
+- Release APK: `https://github.com/SysAdminDoc/CallShield/releases/download/v1.7.10/CallShield-v1.7.10.apk`
+- APK SHA256: `c44a30dbf4dfaaa175c95f20be548b01d3ecc4e4c45bcf22beccc80a02e1c894`
+- Signer SHA256: `d179d0daa9eac6b52fc19d3a7126fd6ccb911923a43a3cf0bef9f74b12234ad2`
+
+## Files To Copy Into fdroiddata
+
+- Draft app metadata: `docs/fdroid/com.sysadmindoc.callshield.yml`
+- Localized Fastlane listing: `fastlane/metadata/android/en-US/`
+
+The draft uses F-Droid's reproducible-build `Binaries` flow so F-Droid can
+verify its rebuild against the upstream signed APK before publishing the
+developer-signed binary.
+
+## Local Preflight
+
+```powershell
+.\gradlew.bat --no-daemon verifyReproducibleBuildInputs verifyReleaseApkReproducibleMetadata :app:testDebugUnitTest :app:lintDebug
+.\scripts\write-release-sha256.ps1 -ApkPath .\CallShield-v1.7.10.apk
+& "$env:LOCALAPPDATA\Android\Sdk\build-tools\36.1.0\apksigner.bat" verify --verbose --print-certs .\CallShield-v1.7.10.apk
+```
+
+Expected signer:
+
+```text
+d179d0daa9eac6b52fc19d3a7126fd6ccb911923a43a3cf0bef9f74b12234ad2
+```
+
+## Remaining External Steps
+
+1. Fork `https://gitlab.com/fdroid/fdroiddata`.
+2. Add `metadata/com.sysadmindoc.callshield.yml` from the draft in this repo.
+3. Copy the Fastlane listing if reviewers request upstream localized metadata.
+4. Run `fdroid rewritemeta com.sysadmindoc.callshield`.
+5. Run `fdroid lint com.sysadmindoc.callshield`.
+6. Run an fdroidserver build for version code 38.
+7. Run F-Droid signature-copy verification against the upstream APK.
+8. Open the GitLab merge request and include the release URL, signer SHA256,
+   APK SHA256, and the local verification command output.
+
+The actual merge request and final apksigcopier/fdroidserver result must happen
+in a local fdroiddata checkout or GitLab CI environment.

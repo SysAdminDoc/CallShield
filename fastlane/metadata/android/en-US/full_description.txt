@@ -1,0 +1,26 @@
+CallShield blocks spam calls and text messages with layered on-device
+detection, scheduled public spam-data updates, and a privacy-first Android
+experience.
+
+Core protection runs locally on your phone. CallShield combines personal
+allow/block rules, contacts, public spam databases, prefix and wildcard rules,
+quiet hours, callback detection, STIR/SHAKEN signals, heuristics, campaign
+burst detection, SMS keyword analysis, and a pure Kotlin machine-learning
+scorer.
+
+Highlights:
+
+* 15+ detection layers for calls, SMS, and RCS notification spam
+* On-device spam scoring with no required account, ads, analytics, or tracking
+* Public spam database and hot-list sync from the open source repository
+* Real-time caller ID overlay for suspicious calls
+* User-controlled blocklist, whitelist, wildcard, range, and keyword rules
+* Backup/restore and CSV export for local data portability
+* Optional community spam reports through the project's Cloudflare Worker
+* Optional caller enrichment key stored only on-device outside backup scope
+* Android 10+ support with Material 3 and accessibility-focused touch targets
+
+Network access is limited to public spam-data sync, optional caller lookup,
+optional URL safety checks, and optional anonymous community reports. No Google
+Play Services, Firebase, Crashlytics, advertising SDK, or analytics SDK is
+required.

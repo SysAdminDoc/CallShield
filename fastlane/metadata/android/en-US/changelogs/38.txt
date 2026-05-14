@@ -1,0 +1,6 @@
+Compose BOM refresh to 2026.05.00 with Compose UI/Foundation/Runtime 1.11.1
+and Material 3 1.4.0.
+
+Dependency locks are refreshed across debug, release, and unit-test
+configurations. Compose resource-read lint is fixed with configuration-aware
+string and plural resources.

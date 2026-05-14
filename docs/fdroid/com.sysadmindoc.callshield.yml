@@ -1,0 +1,44 @@
+Categories:
+  - "Phone & SMS"
+License: MIT
+AuthorName: SysAdminDoc
+WebSite: https://github.com/SysAdminDoc/CallShield
+SourceCode: https://github.com/SysAdminDoc/CallShield
+IssueTracker: https://github.com/SysAdminDoc/CallShield/issues
+Changelog: https://github.com/SysAdminDoc/CallShield/releases
+
+AutoName: CallShield
+Summary: Spam call and text blocker with on-device detection
+Description: |-
+  CallShield blocks spam calls and text messages with layered on-device
+  detection, scheduled public spam-data updates, and a privacy-first Android
+  experience.
+
+  Core protection runs locally on your phone. CallShield combines personal
+  allow/block rules, contacts, public spam databases, prefix and wildcard
+  rules, quiet hours, callback detection, STIR/SHAKEN signals, heuristics,
+  campaign burst detection, SMS keyword analysis, and a pure Kotlin
+  machine-learning scorer.
+
+  Network access is limited to public spam-data sync, optional caller lookup,
+  optional URL safety checks, and optional anonymous community reports. No
+  Google Play Services, Firebase, Crashlytics, advertising SDK, or analytics
+  SDK is required.
+
+RepoType: git
+Repo: https://github.com/SysAdminDoc/CallShield.git
+Binaries: https://github.com/SysAdminDoc/CallShield/releases/download/v%v/CallShield-v%v.apk
+
+Builds:
+  - versionName: 1.7.10
+    versionCode: 38
+    commit: fe97701291fef879c0790b4bb5e183cde5bf8e2e
+    gradle:
+      - yes
+
+AllowedAPKSigningKeys: d179d0daa9eac6b52fc19d3a7126fd6ccb911923a43a3cf0bef9f74b12234ad2
+
+AutoUpdateMode: Version
+UpdateCheckMode: Tags ^v[0-9]+\.[0-9]+\.[0-9]+$
+CurrentVersion: 1.7.10
+CurrentVersionCode: 38
