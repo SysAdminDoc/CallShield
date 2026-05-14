@@ -28,6 +28,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -296,7 +297,7 @@ fun SearchResultsView(results: List<com.sysadmindoc.callshield.data.model.SpamNu
         ) {
             item {
                 StatusPill(
-                    text = androidx.compose.ui.platform.LocalContext.current.resources.getQuantityString(
+                    text = pluralStringResource(
                         R.plurals.search_results_count,
                         results.size,
                         results.size

@@ -14,7 +14,30 @@ This repository already had a broad UX/premium-polish pass in progress across th
 
 ## Major Work Completed
 
-### 0. v1.7.9 roadmap continuation — WorkManager refresh
+### 0. v1.7.10 roadmap continuation — Compose BOM refresh
+
+Files:
+
+- `gradle/libs.versions.toml`
+- `app/build.gradle.kts`
+- `app/gradle.lockfile`
+- `app/src/main/java/com/sysadmindoc/callshield/ui/MainActivity.kt`
+- `app/src/main/java/com/sysadmindoc/callshield/ui/screens/details/NumberDetailScreen.kt`
+- `app/src/main/java/com/sysadmindoc/callshield/ui/screens/lookup/LookupScreen.kt`
+- `app/src/main/java/com/sysadmindoc/callshield/ui/screens/main/BlockedLogScreen.kt`
+- `app/src/main/java/com/sysadmindoc/callshield/ui/screens/main/BlocklistScreen.kt`
+- `app/src/main/java/com/sysadmindoc/callshield/ui/screens/onboarding/OnboardingScreen.kt`
+- `app/src/main/java/com/sysadmindoc/callshield/ui/screens/recent/RecentCallsScreen.kt`
+- `app/src/main/java/com/sysadmindoc/callshield/ui/screens/settings/SettingsScreen.kt`
+
+Work completed:
+
+- upgraded Compose BOM to 2026.05.00, resolving core Compose artifacts to 1.11.1 and Material 3 to 1.4.0
+- regenerated app dependency locks across debug, release, and unit-test classpaths so the Compose/lifecycle/core/savedstate graph is coherent
+- fixed newly enforced Compose lint by replacing `LocalContext.getString` and `LocalContext.current.resources` reads in composables with `stringResource`, `pluralStringResource`, and `LocalResources`
+- bumped app metadata to v1.7.10 / versionCode 38 and synchronized README, CHANGELOG, CODEX_CHANGELOG, and ROADMAP
+
+### 1. v1.7.9 roadmap continuation — WorkManager refresh
 
 Files:
 
@@ -36,7 +59,7 @@ Work completed:
 - stabilized the SMS large-body DoS guard timing test by warming the analyzer outside the measured path
 - bumped app metadata to v1.7.9 / versionCode 37 and synchronized README, CHANGELOG, CODEX_CHANGELOG, and ROADMAP
 
-### 1. v1.7.8 roadmap continuation — DataStore privacy hardening
+### 2. v1.7.8 roadmap continuation — DataStore privacy hardening
 
 Files:
 
@@ -56,7 +79,7 @@ Work completed:
 - corrected backup-rule comments and user-facing README security copy to distinguish public settings restore from private credential storage
 - bumped app metadata to v1.7.8 / versionCode 36 and synchronized README, CHANGELOG, CODEX_CHANGELOG, and ROADMAP
 
-### 2. v1.7.7 roadmap continuation — reproducible-build groundwork
+### 3. v1.7.7 roadmap continuation — reproducible-build groundwork
 
 Files:
 
@@ -79,7 +102,7 @@ Work completed:
 - documented the signed local release versus unsigned CI artifact hash-comparison workflow without claiming raw signed SHA256 reproducibility
 - bumped app metadata to v1.7.7 / versionCode 35 and synchronized README, CHANGELOG, CLAUDE, and ROADMAP
 
-### 3. v1.7.6 roadmap continuation — network dependency hardening
+### 4. v1.7.6 roadmap continuation — network dependency hardening
 
 Files:
 
@@ -97,7 +120,7 @@ Work completed:
 - added a focused unit test for pinned-host inventory, pin format, and enforcement behavior
 - bumped app metadata to v1.7.6 / versionCode 34 and synchronized README, CHANGELOG, CLAUDE, and ROADMAP
 
-### 4. Main UX / premium-polish pass already present in the tree
+### 5. Main UX / premium-polish pass already present in the tree
 
 These areas were already improved earlier in the thread and remain part of the current worktree:
 

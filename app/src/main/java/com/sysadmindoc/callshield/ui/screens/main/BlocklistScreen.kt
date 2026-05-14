@@ -446,6 +446,12 @@ fun BlocklistScreen(viewModel: MainViewModel) {
         )
     }
 
+    val numberBlockedMessage = stringResource(R.string.blocklist_number_blocked)
+    val ruleAddedMessage = stringResource(R.string.blocklist_rule_added)
+    val emergencyContactsAddedMessage = stringResource(R.string.emergency_contacts_added)
+    val numberWhitelistedMessage = stringResource(R.string.blocklist_number_whitelisted)
+    val keywordRuleAddedMessage = stringResource(R.string.blocklist_keyword_rule_added)
+
     if (showAddDialog) {
         AddNumberDialog(onDismiss = { showAddDialog = false }) { number, description ->
             viewModel.blockNumber(number, description = description)
@@ -453,7 +459,7 @@ fun BlocklistScreen(viewModel: MainViewModel) {
             hapticConfirm(context)
             scope.launch {
                 snackbarHost.showSnackbar(
-                    context.getString(R.string.blocklist_number_blocked),
+                    numberBlockedMessage,
                     duration = SnackbarDuration.Short
                 )
             }
@@ -466,7 +472,7 @@ fun BlocklistScreen(viewModel: MainViewModel) {
             hapticTick(context)
             scope.launch {
                 snackbarHost.showSnackbar(
-                    context.getString(R.string.blocklist_rule_added),
+                    ruleAddedMessage,
                     duration = SnackbarDuration.Short
                 )
             }
@@ -482,7 +488,7 @@ fun BlocklistScreen(viewModel: MainViewModel) {
             hapticTick(context)
             scope.launch {
                 snackbarHost.showSnackbar(
-                    context.getString(R.string.blocklist_rule_added),
+                    ruleAddedMessage,
                     duration = SnackbarDuration.Short
                 )
             }
@@ -494,9 +500,9 @@ fun BlocklistScreen(viewModel: MainViewModel) {
             showWhitelistDialog = false
             hapticTick(context)
             val message = if (emergency) {
-                context.getString(R.string.emergency_contacts_added)
+                emergencyContactsAddedMessage
             } else {
-                context.getString(R.string.blocklist_number_whitelisted)
+                numberWhitelistedMessage
             }
             scope.launch { snackbarHost.showSnackbar(message, duration = SnackbarDuration.Short) }
         }
@@ -508,7 +514,7 @@ fun BlocklistScreen(viewModel: MainViewModel) {
             hapticTick(context)
             scope.launch {
                 snackbarHost.showSnackbar(
-                    context.getString(R.string.blocklist_keyword_rule_added),
+                    keywordRuleAddedMessage,
                     duration = SnackbarDuration.Short
                 )
             }
@@ -963,11 +969,10 @@ fun AddWildcardDialog(
     onDismiss: () -> Unit,
     onAdd: (String, Boolean, String, TimeSchedule) -> Unit,
 ) {
-    val context = LocalContext.current
     var pattern by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
     var isRegex by remember { mutableStateOf(false) }
-    var regexError by remember { mutableStateOf<String?>(null) }
+    var regexErrorDetail by remember { mutableStateOf<String?>(null) }
     var scheduleState by remember { mutableStateOf(ScheduleUiState()) }
     val trimmedPattern = pattern.trim()
 
@@ -981,13 +986,15 @@ fun AddWildcardDialog(
                     value = pattern,
                     onValueChange = {
                         pattern = it
-                        regexError = null
+                        regexErrorDetail = null
                     },
                     label = { Text(stringResource(if (isRegex) R.string.dialog_regex_label else R.string.dialog_pattern_label)) },
                     placeholder = { Text(stringResource(if (isRegex) R.string.dialog_regex_placeholder else R.string.dialog_wildcard_placeholder)) },
                     singleLine = true,
-                    isError = regexError != null,
-                    supportingText = regexError?.let { message -> { Text(message, color = CatRed) } },
+                    isError = regexErrorDetail != null,
+                    supportingText = regexErrorDetail?.let { detail ->
+                        { Text(stringResource(R.string.dialog_invalid_regex, detail), color = CatRed) }
+                    },
                     colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = CatYellow,
                         cursorColor = CatYellow
@@ -1008,7 +1015,7 @@ fun AddWildcardDialog(
                         checked = isRegex,
                         onCheckedChange = {
                             isRegex = it
-                            regexError = null
+                            regexErrorDetail = null
                         },
                         colors = androidx.compose.material3.CheckboxDefaults.colors(checkedColor = CatYellow)
                     )
@@ -1027,7 +1034,7 @@ fun AddWildcardDialog(
                                 Regex(trimmedPattern)
                                 onAdd(trimmedPattern, true, description.trim(), scheduleState.toSchedule())
                             } catch (e: Exception) {
-                                regexError = context.getString(R.string.dialog_invalid_regex, e.message ?: "")
+                                regexErrorDetail = e.message ?: ""
                             }
                         } else {
                             onAdd(trimmedPattern, false, description.trim(), scheduleState.toSchedule())
@@ -1314,7 +1321,6 @@ fun AddHashWildcardDialog(
     onDismiss: () -> Unit,
     onAdd: (String, String, TimeSchedule) -> Unit,
 ) {
-    val context = LocalContext.current
     var pattern by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
     // A7 schedule state — kept local to the dialog; committed to the rule
@@ -1346,19 +1352,19 @@ fun AddHashWildcardDialog(
     val overlapMessage: String? = overlap?.let { (rule, kind) ->
         when (kind) {
             HashWildcardMatcher.Overlap.EQUAL ->
-                context.getString(R.string.hash_wildcard_dialog_overlap_equal)
+                stringResource(R.string.hash_wildcard_dialog_overlap_equal)
             HashWildcardMatcher.Overlap.B_COVERS_A ->
-                context.getString(R.string.hash_wildcard_dialog_overlap_covered, rule.pattern)
+                stringResource(R.string.hash_wildcard_dialog_overlap_covered, rule.pattern)
             HashWildcardMatcher.Overlap.A_COVERS_B ->
-                context.getString(R.string.hash_wildcard_dialog_overlap_covers, rule.pattern)
+                stringResource(R.string.hash_wildcard_dialog_overlap_covers, rule.pattern)
             HashWildcardMatcher.Overlap.NONE -> null
         }
     }
 
     val patternError: String? = when {
         trimmed.isNotEmpty() && hashCount == 0 ->
-            context.getString(R.string.hash_wildcard_dialog_empty_error)
-        tooBroad -> context.getString(R.string.hash_wildcard_dialog_too_broad)
+            stringResource(R.string.hash_wildcard_dialog_empty_error)
+        tooBroad -> stringResource(R.string.hash_wildcard_dialog_too_broad)
         else -> null
     }
 

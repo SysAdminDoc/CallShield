@@ -320,6 +320,7 @@ fun RecentCallItem(call: RecentCall, onOpenDetail: () -> Unit) {
 
     val context = LocalContext.current
     var expanded by remember { mutableStateOf(false) }
+    val copiedMessage = stringResource(R.string.recent_copied)
 
     PremiumCard(
         onClick = onOpenDetail,
@@ -424,7 +425,7 @@ fun RecentCallItem(call: RecentCall, onOpenDetail: () -> Unit) {
                                 .setPrimaryClip(ClipData.newPlainText("Phone", call.number))
                             Toast.makeText(
                                 context,
-                                context.getString(R.string.recent_copied),
+                                copiedMessage,
                                 Toast.LENGTH_SHORT
                             ).show()
                         }

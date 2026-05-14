@@ -83,6 +83,12 @@ fun OnboardingScreen(onComplete: () -> Unit) {
         OnboardingPage(Icons.AutoMirrored.Filled.PhoneCallback, stringResource(R.string.onboarding_screener_title), stringResource(R.string.onboarding_screener_subtitle), CatMauve),
         OnboardingPage(Icons.Default.Sync, stringResource(R.string.onboarding_sync_title), stringResource(R.string.onboarding_sync_subtitle), CatPeach),
     )
+    val pageContentDescription = stringResource(
+        R.string.cd_onboarding_page,
+        currentPage + 1,
+        pages.size
+    )
+    val screenerErrorMessage = stringResource(R.string.onboarding_screener_error)
 
     val screeningLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
         screenerGranted = CallShieldPermissions.hasCallScreeningRole(roleManager)
@@ -153,11 +159,7 @@ fun OnboardingScreen(onComplete: () -> Unit) {
                 .weight(1f)
                 .fillMaxWidth()
                 .semantics {
-                    contentDescription = context.getString(
-                        R.string.cd_onboarding_page,
-                        currentPage + 1,
-                        pages.size
-                    )
+                    contentDescription = pageContentDescription
                 },
             contentAlignment = Alignment.Center
         ) {
@@ -357,7 +359,7 @@ fun OnboardingScreen(onComplete: () -> Unit) {
                                                 screeningLauncher.launch(roleManager.createRequestRoleIntent(RoleManager.ROLE_CALL_SCREENING))
                                             } catch (_: Exception) {
                                                 scope.launch {
-                                                    snackbarHostState.showSnackbar(context.getString(R.string.onboarding_screener_error))
+                                                    snackbarHostState.showSnackbar(screenerErrorMessage)
                                                 }
                                             }
                                         }
