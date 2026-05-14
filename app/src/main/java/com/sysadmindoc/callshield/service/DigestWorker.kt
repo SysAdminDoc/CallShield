@@ -74,15 +74,16 @@ class DigestWorker(
         private const val WORK_NAME = "callshield_digest"
 
         fun schedule(context: Context) {
-            val request = PeriodicWorkRequestBuilder<DigestWorker>(24, TimeUnit.HOURS)
-                .setInitialDelay(1, TimeUnit.HOURS)
-                .build()
-
             WorkManager.getInstance(context).enqueueUniquePeriodicWork(
                 WORK_NAME,
                 ExistingPeriodicWorkPolicy.KEEP,
-                request
+                periodicRequest()
             )
         }
+
+        internal fun periodicRequest(): PeriodicWorkRequest =
+            PeriodicWorkRequestBuilder<DigestWorker>(24, TimeUnit.HOURS)
+                .setInitialDelay(1, TimeUnit.HOURS)
+                .build()
     }
 }

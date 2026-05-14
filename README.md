@@ -12,7 +12,7 @@
 <p align="center">
   <a href="https://github.com/SysAdminDoc/CallShield/releases/latest"><img src="https://img.shields.io/github/v/release/SysAdminDoc/CallShield?style=flat-square&color=a6e3a1" alt="Release"></a>
   <img src="https://img.shields.io/badge/Spam%20Numbers-32%2C933-f38ba8?style=flat-square" alt="32,933 Numbers">
-  <img src="https://img.shields.io/badge/Tests-614-94e2d5?style=flat-square" alt="614 Tests">
+  <img src="https://img.shields.io/badge/Tests-620-94e2d5?style=flat-square" alt="620 Tests">
   <img src="https://img.shields.io/badge/Android-10%2B-89b4fa?style=flat-square" alt="Android 10+">
   <img src="https://img.shields.io/badge/License-MIT-cba6f7?style=flat-square" alt="MIT License">
   <img src="https://img.shields.io/badge/API%20Keys-None-fab387?style=flat-square" alt="No required API keys">
@@ -22,8 +22,14 @@
 
 CallShield blocks spam calls and texts using a **15+ layer on-device detection engine** with a gradient-boosted tree ML scorer, campaign burst detection, RCS notification filter, and real-time caller ID overlay. Powered by a 32,933-number database with scheduled hot-list updates. Community-maintained, no accounts, no tracking.
 
-## v1.7.8 Highlights
+## v1.7.9 Highlights
 
+- **WorkManager 2.11.2 refresh** — background sync, hot-list refresh, and
+  daily digest jobs now run on the current WorkManager line with Android 15+
+  network-constraint fixes.
+- **Worker schedule contract tests** — sync, manual refresh, hot-list, and
+  digest WorkRequests now have JVM coverage for repeat intervals, network
+  constraints, initial delay, and retry backoff.
 - **DataStore privacy hardening** — settings now run on DataStore 1.2.1, and
   the optional AbstractAPI enrichment key is stored in a private no-backup
   DataStore instead of the backed-up public settings file.
@@ -50,7 +56,7 @@ CallShield blocks spam calls and texts using a **15+ layer on-device detection e
 - **Trust-focused settings feedback** — the trusted push-alert source picker now shows installed-source coverage and skeleton loading while package labels resolve.
 - **Hardening foundation from v1.7.2** — spoof-proof ASCII phone normalization, SMS size caps, regex ReDoS validation, LRU notice gates, separated PendingIntent IDs, and atomic crash-log writes.
 - **STIR/SHAKEN Trusted-Caller Allow** — carrier `PASSED` attestations can short-circuit heuristic / ML blocks while still yielding to every explicit user rule.
-- **614 total JVM unit tests + GitHub Actions CI** — automated test pipeline on every push.
+- **620 total JVM unit tests + GitHub Actions CI** — automated test pipeline on every push.
 - **Gradient-Boosted Tree ML model** — 20 features, pure Kotlin, no TFLite dependency.
 - **Campaign burst detection** — NPA-NXX prefix clustering identifies coordinated spam waves.
 - **Full accessibility** — content descriptions across Compose UI, 48dp minimum touch targets.
@@ -64,7 +70,7 @@ CallShield blocks spam calls and texts using a **15+ layer on-device detection e
 5. **Callback-aware** — won't block callbacks from numbers you recently called, or urgent repeated callers
 6. **Community-driven** — one-tap anonymous contribution via Cloudflare Worker, daily merge into database
 
-## Detection Pipeline (v1.7.8)
+## Detection Pipeline (v1.7.9)
 
 All detection layers implement a shared `IChecker` interface and run in priority order via `CheckerPipeline.run` — first non-null result wins, every layer is testable in isolation. Priorities are stable numbers; the ladder below is the live order.
 
@@ -281,7 +287,7 @@ RELEASE_KEY_PASSWORD=...
 ## Testing
 
 ```bash
-./gradlew testDebugUnitTest   # 614 tests
+./gradlew testDebugUnitTest   # 620 tests
 ```
 
 CI runs automatically via GitHub Actions on every push and pull request.
@@ -298,11 +304,11 @@ CI runs automatically via GitHub Actions on every push and pull request.
 | JSON | Moshi |
 | ML | Pure Kotlin gradient-boosted tree (20 features) |
 | Settings | DataStore Preferences 1.2.1 |
-| Background | WorkManager |
+| Background | WorkManager 2.11.2 |
 | Community API | Cloudflare Workers |
 | URL Safety | URLhaus (abuse.ch) |
 | CI | GitHub Actions |
-| Tests | 614 JVM unit tests (JUnit) |
+| Tests | 620 JVM unit tests (JUnit) |
 | Strings | 544+ resources (translation-ready) |
 | Accessibility | 100+ content descriptions, 48dp touch targets |
 | Min SDK | 29 (Android 10) |
