@@ -2,6 +2,26 @@
 
 All notable changes to CallShield will be documented in this file.
 
+## [v1.7.10] - 2026-05-14
+
+Continuation roadmap pass focused on the Compose dependency refresh.
+
+### Compose stack
+
+- **Compose BOM 2026.05.00 upgrade** — moved the UI stack from the 2024.12
+  BOM to the 2026.05 release train, resolving Compose UI/Foundation/Runtime to
+  1.11.1 and Material 3 to 1.4.0.
+- **Locked graph refresh** — regenerated dependency locks across debug,
+  release, and unit-test classpaths so every app configuration resolves the
+  same Compose, lifecycle, core, savedstate, and profileinstaller graph.
+- **Compose resource lint cleanup** — replaced stale `LocalContext.getString`
+  and `LocalContext.resources` reads in composables with `stringResource`,
+  `pluralStringResource`, or `LocalResources`, keeping snackbar, toast,
+  semantic, and validation copy configuration-aware.
+- **Verification** — `lintDebug` is green on the refreshed Compose train; the
+  full reproducible-build, unit-test, and lint pipeline was rerun after the
+  migration.
+
 ## [v1.7.9] - 2026-05-14
 
 Continuation roadmap pass focused on WorkManager dependency and scheduling

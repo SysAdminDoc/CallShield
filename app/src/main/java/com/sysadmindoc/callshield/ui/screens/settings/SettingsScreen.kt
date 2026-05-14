@@ -68,6 +68,8 @@ fun SettingsScreen(viewModel: MainViewModel) {
     val pushAlertDisabledPackages by viewModel.pushAlertDisabledPackages.collectAsState()
     val abstractApiKey by viewModel.abstractApiKey.collectAsState()
     var showPushAlertSources by remember { mutableStateOf(false) }
+    val apiKeyClearedMessage = stringResource(R.string.settings_api_key_cleared)
+    val apiKeySavedMessage = stringResource(R.string.settings_api_key_saved)
 
     val roleManager = remember(context) {
         context.getSystemService(Context.ROLE_SERVICE) as? RoleManager
@@ -572,9 +574,9 @@ fun SettingsScreen(viewModel: MainViewModel) {
                         android.widget.Toast.makeText(
                             context,
                             if (trimmedApiKey.isBlank()) {
-                                context.getString(R.string.settings_api_key_cleared)
+                                apiKeyClearedMessage
                             } else {
-                                context.getString(R.string.settings_api_key_saved)
+                                apiKeySavedMessage
                             },
                             android.widget.Toast.LENGTH_SHORT
                         ).show()

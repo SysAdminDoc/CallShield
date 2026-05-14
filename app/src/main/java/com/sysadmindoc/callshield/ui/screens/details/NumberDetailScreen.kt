@@ -60,6 +60,9 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
     val dateFormat = remember { SimpleDateFormat("MMM d, yyyy h:mm a", Locale.getDefault()) }
     val location = remember(number) { AreaCodeLookup.lookup(number) }
     val areaCode = remember(number) { AreaCodeLookup.getAreaCode(number) }
+    val copiedMessage = stringResource(R.string.detail_copied)
+    val numberBlockedMessage = stringResource(R.string.detail_number_blocked)
+    val numberUnblockedMessage = stringResource(R.string.detail_number_unblocked)
 
     // Contact name resolution
     var contactName by remember(number) { mutableStateOf<String?>(null) }
@@ -123,7 +126,7 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
             IconButton(onClick = {
                 (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager)
                     .setPrimaryClip(ClipData.newPlainText("Phone", number))
-                Toast.makeText(context, context.getString(R.string.detail_copied), Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, copiedMessage, Toast.LENGTH_SHORT).show()
             }) { Icon(Icons.Default.ContentCopy, stringResource(R.string.cd_copy), tint = CatSubtext) }
         }
 
@@ -382,7 +385,7 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
                     onClick = {
                         viewModel.blockNumber(number, "spam", "Blocked from detail")
                         hapticConfirm(context)
-                        Toast.makeText(context, context.getString(R.string.detail_number_blocked), Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, numberBlockedMessage, Toast.LENGTH_SHORT).show()
                     },
                     modifier = Modifier.weight(1f),
                     colors = ButtonDefaults.buttonColors(containerColor = CatRed),
@@ -398,7 +401,7 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
                     onClick = {
                         userBlocked.find { it.number == number }?.let { viewModel.unblockNumber(it) }
                         hapticTick(context)
-                        Toast.makeText(context, context.getString(R.string.detail_number_unblocked), Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, numberUnblockedMessage, Toast.LENGTH_SHORT).show()
                     },
                     modifier = Modifier.weight(1f),
                     colors = ButtonDefaults.buttonColors(containerColor = CatGreen),

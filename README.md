@@ -22,8 +22,15 @@
 
 CallShield blocks spam calls and texts using a **15+ layer on-device detection engine** with a gradient-boosted tree ML scorer, campaign burst detection, RCS notification filter, and real-time caller ID overlay. Powered by a 32,933-number database with scheduled hot-list updates. Community-maintained, no accounts, no tracking.
 
-## v1.7.9 Highlights
+## v1.7.10 Highlights
 
+- **Compose BOM 2026.05.00 refresh** — UI dependencies now resolve on the
+  current Compose 1.11.1 release train, with Material 3 1.4.0 and refreshed
+  lifecycle/core/savedstate transitive locks across debug, release, and unit
+  test configurations.
+- **Configuration-aware Compose copy** — snackbar, toast, semantic, validation,
+  and search-result count text now use Compose resource APIs instead of stale
+  `LocalContext.getString` / `resources` reads inside composables.
 - **WorkManager 2.11.2 refresh** — background sync, hot-list refresh, and
   daily digest jobs now run on the current WorkManager line with Android 15+
   network-constraint fixes.
@@ -70,7 +77,7 @@ CallShield blocks spam calls and texts using a **15+ layer on-device detection e
 5. **Callback-aware** — won't block callbacks from numbers you recently called, or urgent repeated callers
 6. **Community-driven** — one-tap anonymous contribution via Cloudflare Worker, daily merge into database
 
-## Detection Pipeline (v1.7.9)
+## Detection Pipeline (v1.7.10)
 
 All detection layers implement a shared `IChecker` interface and run in priority order via `CheckerPipeline.run` — first non-null result wins, every layer is testable in isolation. Priorities are stable numbers; the ladder below is the live order.
 
@@ -297,7 +304,7 @@ CI runs automatically via GitHub Actions on every push and pull request.
 | Component | Technology |
 |-----------|-----------|
 | Language | Kotlin 2.2.21 |
-| UI | Jetpack Compose + Material 3 |
+| UI | Jetpack Compose BOM 2026.05.00 + Material 3 |
 | Theme | Premium AMOLED black + Catppuccin Mocha |
 | Database | Room 2.8.4 (SQLite) — 6 entities |
 | Networking | OkHttp 5.3.2 + certificate pinning |

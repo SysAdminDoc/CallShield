@@ -161,6 +161,12 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
                 LazyColumn(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     itemsIndexed(filtered, key = { _, call -> call.id }) { index, call ->
                         val visible = remember { mutableStateOf(false) }
+                        val deletedMessage = stringResource(R.string.blocked_log_deleted)
+                        val undoLabel = stringResource(R.string.blocked_log_undo)
+                        val blockedMessage = stringResource(
+                            R.string.blocked_log_number_blocked,
+                            PhoneFormatter.format(call.number)
+                        )
                         LaunchedEffect(Unit) {
                             kotlinx.coroutines.delay(index.toLong().coerceAtMost(15) * 30)
                             visible.value = true
@@ -174,8 +180,8 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
                                             hapticTick(context)
                                             scope.launch {
                                                 val result = snackbarHost.showSnackbar(
-                                                    message = context.getString(R.string.blocked_log_deleted),
-                                                    actionLabel = context.getString(R.string.blocked_log_undo),
+                                                    message = deletedMessage,
+                                                    actionLabel = undoLabel,
                                                     duration = SnackbarDuration.Short
                                                 )
                                                 if (result == SnackbarResult.ActionPerformed) {
@@ -189,10 +195,7 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
                                             hapticConfirm(context)
                                             scope.launch {
                                                 snackbarHost.showSnackbar(
-                                                    context.getString(
-                                                        R.string.blocked_log_number_blocked,
-                                                        PhoneFormatter.format(call.number)
-                                                    ),
+                                                    blockedMessage,
                                                     duration = SnackbarDuration.Short
                                                 )
                                             }
@@ -239,6 +242,7 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
 
     // Clear log confirmation dialog
     if (showClearDialog) {
+        val logClearedMessage = stringResource(R.string.blocked_log_log_cleared)
         AlertDialog(
             onDismissRequest = { showClearDialog = false },
             containerColor = SurfaceBright,
@@ -258,7 +262,7 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
                         showClearDialog = false
                         scope.launch {
                             snackbarHost.showSnackbar(
-                                context.getString(R.string.blocked_log_log_cleared),
+                                logClearedMessage,
                                 duration = SnackbarDuration.Short
                             )
                         }
@@ -336,6 +340,8 @@ fun BlockedCallItem(call: BlockedCall, onTap: () -> Unit) {
     val dateFormat = remember { SimpleDateFormat("MMM d, h:mm a", Locale.getDefault()) }
     val location = remember(call.number) { AreaCodeLookup.lookup(call.number) }
     var expanded by remember { mutableStateOf(false) }
+    val copiedMessage = stringResource(R.string.blocked_log_copied, PhoneFormatter.format(call.number))
+    val copiedShortMessage = stringResource(R.string.blocked_log_copied_short)
 
     PremiumCard(
         cornerRadius = 12.dp,
@@ -346,7 +352,7 @@ fun BlockedCallItem(call: BlockedCall, onTap: () -> Unit) {
                 (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(clip)
                 Toast.makeText(
                     context,
-                    context.getString(R.string.blocked_log_copied, PhoneFormatter.format(call.number)),
+                    copiedMessage,
                     Toast.LENGTH_SHORT
                 ).show()
             }
@@ -424,7 +430,7 @@ fun BlockedCallItem(call: BlockedCall, onTap: () -> Unit) {
                     SmallActionButton(Icons.Default.ContentCopy, stringResource(R.string.blocked_log_copy), CatSubtext) {
                         (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager)
                             .setPrimaryClip(ClipData.newPlainText("Phone", call.number))
-                        Toast.makeText(context, context.getString(R.string.blocked_log_copied_short), Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, copiedShortMessage, Toast.LENGTH_SHORT).show()
                     }
                     // Detail
                     SmallActionButton(Icons.Default.Info, stringResource(R.string.blocked_log_detail), CatMauve) { onTap() }

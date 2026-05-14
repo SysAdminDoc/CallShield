@@ -77,6 +77,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -114,6 +115,7 @@ import kotlinx.coroutines.withContext
 @Composable
 fun LookupScreen(viewModel: MainViewModel) {
     val context = LocalContext.current
+    val resources = LocalResources.current
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     var numberInput by remember { mutableStateOf("") }
@@ -124,6 +126,11 @@ fun LookupScreen(viewModel: MainViewModel) {
     var checking by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     val canLookup = normalizedNumber.length >= 5
+    val lookupFailedUnknown = stringResource(R.string.lookup_failed_unknown).substringAfter(": ")
+    val numberBlockedMessage = stringResource(R.string.lookup_number_blocked)
+    val reportedMessage = stringResource(R.string.lookup_reported)
+    val markedSafeReportedMessage = stringResource(R.string.lookup_marked_safe_reported)
+    val markedSafeLocalMessage = stringResource(R.string.lookup_marked_safe_local)
 
     fun clearLookup() {
         numberInput = ""
@@ -146,9 +153,9 @@ fun LookupScreen(viewModel: MainViewModel) {
                 result = lookupResult
                 haptic(context, lookupResult.isSpam)
             } catch (e: Exception) {
-                errorMessage = context.getString(
+                errorMessage = resources.getString(
                     R.string.lookup_failed,
-                    e.message ?: context.getString(R.string.lookup_failed_unknown).substringAfter(": ")
+                    e.message ?: lookupFailedUnknown
                 )
             } finally {
                 checking = false
@@ -446,9 +453,9 @@ fun LookupScreen(viewModel: MainViewModel) {
                                                 repo.blockNumber(normalizedNumber, lookupResult.type, lookupResult.matchSource)
                                             }
                                             hapticConfirm(context)
-                                            context.getString(R.string.lookup_number_blocked)
+                                            numberBlockedMessage
                                         } catch (e: Exception) {
-                                            context.getString(R.string.lookup_block_failed, e.message ?: "")
+                                            resources.getString(R.string.lookup_block_failed, e.message ?: "")
                                         }
                                         snackbarHostState.showSnackbar(message)
                                     }
@@ -473,19 +480,19 @@ fun LookupScreen(viewModel: MainViewModel) {
                                         withContext(Dispatchers.IO) {
                                             if (lookupResult.isSpam) {
                                                 CommunityContributor.contribute(normalizedNumber, lookupResult.type.ifEmpty { "spam" })
-                                                context.getString(R.string.lookup_reported)
+                                                reportedMessage
                                             } else {
                                                 repo.addToWhitelist(normalizedNumber, "Marked safe from lookup")
                                                 val reportResult = CommunityContributor.reportNotSpam(normalizedNumber)
                                                 if (reportResult.success) {
-                                                    context.getString(R.string.lookup_marked_safe_reported)
+                                                    markedSafeReportedMessage
                                                 } else {
-                                                    context.getString(R.string.lookup_marked_safe_local)
+                                                    markedSafeLocalMessage
                                                 }
                                             }
                                         }
                                     } catch (e: Exception) {
-                                        context.getString(R.string.lookup_report_failed, e.message ?: "")
+                                        resources.getString(R.string.lookup_report_failed, e.message ?: "")
                                     }
                                     hapticTick(context)
                                     snackbarHostState.showSnackbar(message)
