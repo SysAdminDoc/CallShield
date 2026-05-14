@@ -2,6 +2,26 @@
 
 All notable changes to CallShield will be documented in this file.
 
+## [v1.7.9] - 2026-05-14
+
+Continuation roadmap pass focused on WorkManager dependency and scheduling
+hardening.
+
+### Background work
+
+- **WorkManager 2.11.2 upgrade** — upgraded the background-work stack and
+  refreshed dependency locks across debug, release, and unit-test classpaths.
+- **Schedule contract coverage** — added JVM tests for `SyncWorker`,
+  `HotListSyncWorker`, and `DigestWorker` WorkRequest construction, covering
+  repeat intervals, connected-network constraints, initial delay, and backoff
+  policy.
+- **Schedule construction seam** — centralized each worker's WorkRequest
+  creation behind testable companion helpers while preserving the existing
+  unique periodic work names and `KEEP` enqueue policy.
+- **Stable DoS-guard verification** — warmed the SMS analyzer before timing
+  the large-body guard so the test measures analyzer behavior rather than JVM
+  regex initialization.
+
 ## [v1.7.8] - 2026-05-14
 
 Continuation roadmap pass focused on DataStore and backup privacy hardening.

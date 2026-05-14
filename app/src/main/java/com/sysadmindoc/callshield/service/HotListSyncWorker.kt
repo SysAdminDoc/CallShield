@@ -40,20 +40,22 @@ class HotListSyncWorker(
         private const val WORK_NAME = "callshield_hot_list_sync"
 
         fun schedule(context: Context) {
-            val constraints = Constraints.Builder()
-                .setRequiredNetworkType(NetworkType.CONNECTED)
-                .build()
-
-            val request = PeriodicWorkRequestBuilder<HotListSyncWorker>(30, TimeUnit.MINUTES)
-                .setConstraints(constraints)
-                .setBackoffCriteria(BackoffPolicy.LINEAR, 5, TimeUnit.MINUTES)
-                .build()
-
             WorkManager.getInstance(context).enqueueUniquePeriodicWork(
                 WORK_NAME,
                 ExistingPeriodicWorkPolicy.KEEP,
-                request
+                periodicRequest()
             )
         }
+
+        internal fun periodicRequest(): PeriodicWorkRequest =
+            PeriodicWorkRequestBuilder<HotListSyncWorker>(30, TimeUnit.MINUTES)
+                .setConstraints(networkConstraints())
+                .setBackoffCriteria(BackoffPolicy.LINEAR, 5, TimeUnit.MINUTES)
+                .build()
+
+        private fun networkConstraints(): Constraints =
+            Constraints.Builder()
+                .setRequiredNetworkType(NetworkType.CONNECTED)
+                .build()
     }
 }

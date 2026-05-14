@@ -44,6 +44,7 @@ class SmsContentAnalyzerTest {
         // bounded; the call must return well under that. Generous JVM
         // warm-up budget here so the test isn't flaky on a cold CI runner.
         val giant = "X".repeat(1_000_000)
+        SmsContentAnalyzer.analyze("warmup")
         val start = System.nanoTime()
         val result = SmsContentAnalyzer.analyze(giant)
         val elapsedMs = (System.nanoTime() - start) / 1_000_000
