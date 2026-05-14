@@ -2,6 +2,18 @@
 
 All notable changes to CallShield will be documented in this file.
 
+## [Unreleased]
+
+Distribution prep after the v1.7.10 release.
+
+### F-Droid
+
+- Added Fastlane listing metadata under `fastlane/metadata/android/en-US/`.
+- Added a draft `fdroiddata` metadata file with the v1.7.10 build, upstream
+  binary URL, expected signer fingerprint, and tag/update settings.
+- Added an F-Droid submission runbook with the remaining GitLab MR,
+  fdroidserver lint/build, and signature-copy verification steps.
+
 ## [v1.7.10] - 2026-05-14
 
 Continuation roadmap pass focused on the Compose dependency refresh.

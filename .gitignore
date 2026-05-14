@@ -11,7 +11,9 @@ local.properties
 /app/build
 /app/release
 *.apk
+*.apk.sha256
 *.aab
+*.aab.sha256
 *.jks
 *.keystore
 CallShield-*.apk

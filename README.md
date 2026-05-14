@@ -283,6 +283,11 @@ Generate the release hash sidecar with:
 See `docs/reproducible-builds.md` for the dependency-lock and hash-comparison
 runbook.
 
+F-Droid submission prep lives in `fastlane/metadata/android/en-US/`,
+`docs/fdroid/com.sysadmindoc.callshield.yml`, and
+`docs/fdroid-submission.md`. The actual F-Droid merge request and signature-copy
+verification still require an fdroiddata/GitLab environment.
+
 **Signing:** Create `local.properties` in the project root with your keystore credentials:
 ```properties
 RELEASE_STORE_FILE=path/to/keystore.jks

@@ -88,6 +88,9 @@ differ in bytes outside ZIP entries when the APK Signature Scheme v2 signing
 block changes; F-Droid-style reproducible verification handles this with
 signature copying before comparing the resulting APK.
 
+For the current F-Droid submission draft, release signer fingerprint, and
+fdroidserver handoff steps, see `docs/fdroid-submission.md`.
+
 ## Updating Locks
 
 When dependency versions change intentionally:
