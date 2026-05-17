@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.core.content.FileProvider
+import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.model.SpamNumber
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.Types
@@ -60,10 +61,10 @@ object BlocklistExporter {
             val shareIntent = Intent(Intent.ACTION_SEND).apply {
                 type = "application/json"
                 putExtra(Intent.EXTRA_STREAM, uri)
-                putExtra(Intent.EXTRA_SUBJECT, "CallShield Blocklist")
+                putExtra(Intent.EXTRA_SUBJECT, context.getString(R.string.blocklist_export_subject))
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
             }
-            Intent.createChooser(shareIntent, "Share blocklist").apply {
+            Intent.createChooser(shareIntent, context.getString(R.string.blocklist_export_chooser_title)).apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
         }
@@ -97,7 +98,7 @@ object BlocklistExporter {
         if (numbers.isEmpty()) {
             return ImportResult(
                 importedCount = 0,
-                message = "No valid numbers found in import file",
+                message = context.getString(R.string.blocklist_import_no_valid_numbers),
                 success = false
             )
         }
@@ -109,7 +110,7 @@ object BlocklistExporter {
         }
         return ImportResult(
             importedCount = count,
-            message = if (count == 1) "Imported 1 number" else "Imported $count numbers",
+            message = context.resources.getQuantityString(R.plurals.blocklist_imported_numbers, count, count),
             success = true
         )
     }
@@ -119,13 +120,13 @@ object BlocklistExporter {
             val json = context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
                 ?: return@withContext ImportResult(
                     importedCount = 0,
-                    message = "Couldn't open the selected file",
+                    message = context.getString(R.string.blocklist_import_could_not_open),
                     success = false
                 )
             if (json.isBlank()) {
                 return@withContext ImportResult(
                     importedCount = 0,
-                    message = "Selected file was empty",
+                    message = context.getString(R.string.blocklist_import_empty),
                     success = false
                 )
             }
@@ -133,13 +134,16 @@ object BlocklistExporter {
         } catch (_: SecurityException) {
             ImportResult(
                 importedCount = 0,
-                message = "Couldn't access the selected file",
+                message = context.getString(R.string.blocklist_import_could_not_access),
                 success = false
             )
         } catch (e: Exception) {
             ImportResult(
                 importedCount = 0,
-                message = "Import failed: ${e.message ?: "Couldn't read the selected file"}",
+                message = context.getString(
+                    R.string.blocklist_import_failed,
+                    e.message ?: context.getString(R.string.blocklist_import_fallback_read_error)
+                ),
                 success = false
             )
         }

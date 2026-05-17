@@ -87,6 +87,14 @@ Distribution prep after the v1.7.10 release.
   all-day warning when start and end match, and covered the toggle callback,
   validation message, and hour picker in Compose tests.
 
+### Localization
+
+- Audited all 100 tracked main Kotlin files for hardcoded user-facing strings
+  and recorded the findings in `docs/hardcoded-string-audit.md`.
+- Moved clear backup/restore, blocklist import/export, CSV export, spam share,
+  sync result, Quick Settings tile, clipboard, search-result, recent-duration,
+  and number-detail stragglers into `strings.xml` resources and plurals.
+
 ### F-Droid
 
 - Added Fastlane listing metadata under `fastlane/metadata/android/en-US/`.

@@ -1,6 +1,7 @@
 package com.sysadmindoc.callshield.data.repository
 
 import android.content.Context
+import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.local.SpamDao
 import com.sysadmindoc.callshield.data.mergeHotListNumbers
@@ -43,7 +44,10 @@ class SyncRepository(
                     val newSha = remoteResult.getOrNull()
 
                     if (newSha != null && newSha == currentSha) {
-                        return@withContext SyncResult(success = true, message = "Database is up to date")
+                        return@withContext SyncResult(
+                            success = true,
+                            message = context.getString(R.string.sync_database_up_to_date)
+                        )
                     }
                 }
 
@@ -58,16 +62,15 @@ class SyncRepository(
                     )
                     return@withContext SyncResult(
                         success = true,
-                        message = "Synced $numberCount numbers, $prefixCount prefixes",
+                        message = context.getString(R.string.sync_success_counts, numberCount, prefixCount),
                     )
                 }
 
-                val remoteError = result.exceptionOrNull()?.message ?: "Unknown sync error"
+                val remoteError = result.exceptionOrNull()?.message ?: context.getString(R.string.sync_unknown_error)
                 if (currentCount > 0) {
                     return@withContext SyncResult(
                         success = true,
-                        message = "GitHub sync unavailable ($remoteError). " +
-                            "Your existing spam database is still active.",
+                        message = context.getString(R.string.sync_remote_unavailable_existing, remoteError),
                         warning = true,
                     )
                 }
@@ -82,20 +85,20 @@ class SyncRepository(
                     )
                     return@withContext SyncResult(
                         success = true,
-                        message = "Loaded bundled protection snapshot with $numberCount numbers and " +
-                            "$prefixCount prefixes while GitHub was unavailable.",
+                        message = context.getString(
+                            R.string.sync_bundled_snapshot_loaded,
+                            numberCount,
+                            prefixCount
+                        ),
                         warning = true,
                     )
                 }
 
                 val bundledError = bundledDatabase.exceptionOrNull()?.message
                 val message = buildString {
-                    append("Sync unavailable (")
-                    append(remoteError)
-                    append(")")
+                    append(context.getString(R.string.sync_unavailable_prefix, remoteError))
                     if (!bundledError.isNullOrBlank()) {
-                        append(". Bundled fallback failed: ")
-                        append(bundledError)
+                        append(context.getString(R.string.sync_bundled_fallback_failed, bundledError))
                     }
                 }
 
@@ -107,7 +110,7 @@ class SyncRepository(
             } catch (e: Exception) {
                 SyncResult(
                     success = false,
-                    message = "Error: ${e.message}",
+                    message = context.getString(R.string.sync_error, e.message ?: ""),
                     shouldRetry = true,
                 )
             }

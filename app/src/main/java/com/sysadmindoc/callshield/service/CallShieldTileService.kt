@@ -2,6 +2,7 @@ package com.sysadmindoc.callshield.service
 
 import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
+import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.SpamRepository
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.first
@@ -52,8 +53,10 @@ class CallShieldTileService : TileService() {
             withContext(Dispatchers.Main) {
                 val currentTile = qsTile ?: return@withContext
                 currentTile.state = if (active) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
-                currentTile.label = "CallShield"
-                currentTile.subtitle = if (active) "Protection on" else "Protection off"
+                currentTile.label = getString(R.string.app_name)
+                currentTile.subtitle = getString(
+                    if (active) R.string.tile_protection_on else R.string.tile_protection_off
+                )
                 currentTile.updateTile()
             }
         }

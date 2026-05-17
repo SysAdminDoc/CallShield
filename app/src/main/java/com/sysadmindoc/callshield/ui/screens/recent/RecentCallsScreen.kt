@@ -321,6 +321,7 @@ fun RecentCallItem(call: RecentCall, onOpenDetail: () -> Unit) {
     val context = LocalContext.current
     var expanded by remember { mutableStateOf(false) }
     val copiedMessage = stringResource(R.string.recent_copied)
+    val clipLabelPhone = stringResource(R.string.clip_label_phone)
 
     PremiumCard(
         onClick = onOpenDetail,
@@ -366,7 +367,13 @@ fun RecentCallItem(call: RecentCall, onOpenDetail: () -> Unit) {
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text(dateFormat.format(Date(call.date)), style = MaterialTheme.typography.bodySmall, color = CatSubtext)
-                            if (call.duration > 0) Text("${call.duration}s", style = MaterialTheme.typography.bodySmall, color = CatOverlay)
+                            if (call.duration > 0) {
+                                Text(
+                                    stringResource(R.string.recent_duration, call.duration),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = CatOverlay
+                                )
+                            }
                         }
                         if (location != null) Text(location, style = MaterialTheme.typography.labelSmall, color = CatOverlay)
                         if (call.isSpam) {
@@ -422,7 +429,7 @@ fun RecentCallItem(call: RecentCall, onOpenDetail: () -> Unit) {
                             color = CatSubtext
                         ) {
                             (context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as ClipboardManager)
-                                .setPrimaryClip(ClipData.newPlainText("Phone", call.number))
+                                .setPrimaryClip(ClipData.newPlainText(clipLabelPhone, call.number))
                             Toast.makeText(
                                 context,
                                 copiedMessage,

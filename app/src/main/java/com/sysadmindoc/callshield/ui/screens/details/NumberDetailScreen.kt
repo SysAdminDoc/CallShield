@@ -21,6 +21,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -63,6 +64,18 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
     val copiedMessage = stringResource(R.string.detail_copied)
     val numberBlockedMessage = stringResource(R.string.detail_number_blocked)
     val numberUnblockedMessage = stringResource(R.string.detail_number_unblocked)
+    val clipLabelPhone = stringResource(R.string.clip_label_phone)
+    val blockedFromDetail = stringResource(R.string.detail_blocked_from_detail)
+    val whitelistedFromDetail = stringResource(R.string.detail_whitelisted_from_detail)
+    val blockAreaCodeDescription = areaCode?.let { code ->
+        if (location != null) {
+            stringResource(R.string.detail_block_area_code_description_location, code, location)
+        } else {
+            stringResource(R.string.detail_block_area_code_description, code)
+        }
+    }
+    val reportIssueTitle = stringResource(R.string.detail_report_issue_title, number)
+    val reportIssueBody = stringResource(R.string.detail_report_issue_body, number, numberCalls.size)
 
     // Contact name resolution
     var contactName by remember(number) { mutableStateOf<String?>(null) }
@@ -125,7 +138,7 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
             // Copy button
             IconButton(onClick = {
                 (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager)
-                    .setPrimaryClip(ClipData.newPlainText("Phone", number))
+                    .setPrimaryClip(ClipData.newPlainText(clipLabelPhone, number))
                 Toast.makeText(context, copiedMessage, Toast.LENGTH_SHORT).show()
             }) { Icon(Icons.Default.ContentCopy, stringResource(R.string.cd_copy), tint = CatSubtext) }
         }
@@ -192,7 +205,7 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
         // Block area code
         if (areaCode != null) {
             OutlinedButton(
-                onClick = { viewModel.addWildcardRule("+1$areaCode*", false, "Block area code $areaCode" + if (location != null) " ($location)" else "") },
+                onClick = { viewModel.addWildcardRule("+1$areaCode*", false, blockAreaCodeDescription.orEmpty()) },
                 shape = RoundedCornerShape(12.dp),
                 border = BorderStroke(1.dp, CatYellow.copy(alpha = 0.3f))
             ) {
@@ -225,7 +238,11 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
                             textStyle = MaterialTheme.typography.labelSmall
                         )
                         StatusPill(
-                            text = "${dbEntry.reports} reports",
+                            text = pluralStringResource(
+                                R.plurals.detail_reports_count_plural,
+                                dbEntry.reports,
+                                dbEntry.reports
+                            ),
                             color = CatPeach,
                             horizontalPadding = 10.dp,
                             verticalPadding = 6.dp,
@@ -383,7 +400,7 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
             if (!isBlocked) {
                 Button(
                     onClick = {
-                        viewModel.blockNumber(number, "spam", "Blocked from detail")
+                        viewModel.blockNumber(number, "spam", blockedFromDetail)
                         hapticConfirm(context)
                         Toast.makeText(context, numberBlockedMessage, Toast.LENGTH_SHORT).show()
                     },
@@ -414,7 +431,8 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
             }
             OutlinedButton(
                 onClick = {
-                    val title = Uri.encode("[SPAM] $number"); val body = Uri.encode("## Phone Number\n$number\n\n## Type\nReported from CallShield\n\n## Description\nSeen ${numberCalls.size} times")
+                    val title = Uri.encode(reportIssueTitle)
+                    val body = Uri.encode(reportIssueBody)
                     context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/SysAdminDoc/CallShield/issues/new?title=$title&body=$body&labels=spam-report")).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) })
                 },
                 modifier = Modifier.weight(1f),
@@ -480,7 +498,7 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
         // Whitelist / call / share actions
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedButton(
-                onClick = { viewModel.addToWhitelist(number, "Whitelisted from detail") },
+                onClick = { viewModel.addToWhitelist(number, whitelistedFromDetail) },
                 modifier = Modifier.weight(1f),
                 shape = RoundedCornerShape(12.dp),
                 border = BorderStroke(1.dp, CatGreen.copy(alpha = 0.3f))

@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.core.content.FileProvider
+import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.local.AppDatabase
 import com.sysadmindoc.callshield.data.model.*
 import com.squareup.moshi.Moshi
@@ -134,10 +135,10 @@ object BackupRestore {
             val intent = Intent(Intent.ACTION_SEND).apply {
                 type = "application/json"
                 putExtra(Intent.EXTRA_STREAM, uri)
-                putExtra(Intent.EXTRA_SUBJECT, "CallShield Backup")
+                putExtra(Intent.EXTRA_SUBJECT, context.getString(R.string.backup_subject))
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
             }
-            Intent.createChooser(intent, "Save backup").apply {
+            Intent.createChooser(intent, context.getString(R.string.backup_chooser_title)).apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
         }
@@ -151,16 +152,19 @@ object BackupRestore {
         try {
             val json = context.contentResolver.openInputStream(uri)?.use { stream ->
                 stream.bufferedReader().readText()
-            } ?: return@withContext RestoreResult(false, "Could not read file")
+            } ?: return@withContext RestoreResult(false, context.getString(R.string.backup_restore_could_not_read))
 
             val adapter = moshi.adapter(Backup::class.java)
             val backup = adapter.fromJson(json)
-                ?: return@withContext RestoreResult(false, "Invalid backup format")
+                ?: return@withContext RestoreResult(false, context.getString(R.string.backup_restore_invalid_format))
             if (backup.app != "CallShield") {
-                return@withContext RestoreResult(false, "This backup was not created by CallShield")
+                return@withContext RestoreResult(false, context.getString(R.string.backup_restore_wrong_app))
             }
             if (backup.version !in OLDEST_SUPPORTED_VERSION..CURRENT_BACKUP_VERSION) {
-                return@withContext RestoreResult(false, "Unsupported backup version ${backup.version}")
+                return@withContext RestoreResult(
+                    false,
+                    context.getString(R.string.backup_restore_unsupported_version, backup.version)
+                )
             }
             if (
                 backup.blockedNumbers.isEmpty() &&
@@ -168,7 +172,7 @@ object BackupRestore {
                 backup.wildcardRules.isEmpty() &&
                 backup.keywordRules.isEmpty()
             ) {
-                return@withContext RestoreResult(false, "Backup file contains no restorable data")
+                return@withContext RestoreResult(false, context.getString(R.string.backup_restore_no_data))
             }
 
             val repo = SpamRepository.getInstance(context)
@@ -233,12 +237,21 @@ object BackupRestore {
             }
 
             if (numbersRestored + whitelistRestored + rulesRestored + keywordsRestored == 0) {
-                return@withContext RestoreResult(false, "Backup file contained no valid items")
+                return@withContext RestoreResult(false, context.getString(R.string.backup_restore_no_valid_items))
             }
 
-            RestoreResult(true, "Restored $numbersRestored numbers, $whitelistRestored whitelist, $rulesRestored wildcard rules, $keywordsRestored keyword rules")
+            RestoreResult(
+                true,
+                context.getString(
+                    R.string.backup_restore_success,
+                    numbersRestored,
+                    whitelistRestored,
+                    rulesRestored,
+                    keywordsRestored
+                )
+            )
         } catch (e: Exception) {
-            RestoreResult(false, "Error: ${e.message}")
+            RestoreResult(false, context.getString(R.string.backup_restore_error, e.message ?: ""))
         }
     }
 

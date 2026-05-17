@@ -8,7 +8,7 @@ Last verified: 2026-05-17
 - Latest observed commit before this pass: `c20f01a chore: prep fdroid submission`.
 - Current release: v1.7.10, `versionCode` 38.
 - Stack: Kotlin Android, Jetpack Compose BOM 2026.05.00, AGP 8.10.1, Kotlin/KSP 2.2.21, Room 2.8.4, WorkManager 2.11.2, OkHttp 5.3.2, DataStore 1.2.1, Hilt 2.58, AndroidX Hilt Work 1.3.0.
-- Source shape after this pass: 98 main Kotlin files, 35 JVM test files, 11 instrumented test files.
+- Source shape after this pass: 100 main Kotlin files, 35 JVM test files, 11 instrumented test files.
 - CI now runs Kover 0.9.8 for the debug JVM unit-test report. The coverage gate is scoped to `data.*` and `util.*`, excludes `data.local.*`, and currently passes at 41.06% line coverage against a 35% floor.
 - CI now also has a `static-analysis` job running ktlint 1.8.0 and detekt 1.23.8. Existing debt is captured in `app/config/ktlint/baseline.xml` and `app/detekt-baseline.xml`.
 - Shared project memory still lags around v1.7.2; treat live repo docs, Gradle files, and git history as authoritative.
@@ -34,7 +34,7 @@ Last verified: 2026-05-17
 
 ## Current Roadmap Position
 
-- Completed in this pass: roadmap 1.2.1, 1.2.2, 1.2.3, 1.2.4, 1.3.1, 1.3.2, 1.3.3, 1.3.4, 1.4.4, 1.4.5, 1.5.1, 1.5.2, 1.5.3, 1.5.4, and 1.6.1 through 1.6.9.
+- Completed in this pass: roadmap 1.2.1, 1.2.2, 1.2.3, 1.2.4, 1.3.1, 1.3.2, 1.3.3, 1.3.4, 1.4.4, 1.4.5, 1.5.1, 1.5.2, 1.5.3, 1.5.4, 1.6.1 through 1.6.9, and 1.8.1.
 - Hilt 2.52 is stale for this repo's Kotlin/KSP line; it failed KSP processing. Hilt 2.59.2 is also not usable on AGP 8.10.1 because the Hilt Gradle plugin now requires AGP 9. Hilt 2.58 is the current AGP-8-compatible choice verified in this checkout.
 - `SpamRepository(context, database, remote)` now supports injected `AppDatabase` and `SpamDataSource` dependencies, enabling in-memory Room integration tests without committing to the larger Hilt/DI refactor.
 - `HotDataSync.refresh(context, source, repo, dao)` now supports an injected `HotFeedDataSource`, enabling hot-feed integration tests without live GitHub requests.
@@ -49,9 +49,10 @@ Last verified: 2026-05-17
   - `SettingsTest`: deterministic Compose coverage for quiet-hours toggle callback, same-hour validation warning, hour picker selection, and hour-label formatting.
 - Manual blocklist rows now support swipe-left removal with snackbar undo, matching the blocked-log recovery pattern.
 - Quiet-hours settings now show an explicit all-day warning when start and end match.
+- `docs/hardcoded-string-audit.md` records the 100-file string audit, clear user-facing stragglers moved into resources, and remaining intentional/deferred literal buckets: static changelog entries, decision-reason templates, community-contribution result codes, internal protocol tokens, and time/number formatting helpers.
 
 ## Next Practical Task
 
-Roadmap 1.8.1 is the next local code-quality task: audit the main Kotlin source set for hardcoded user-facing strings and move clear stragglers into resources without destabilizing Compose UI tests.
+Roadmap 1.8.2 is the next local code-quality task: continue plural and parameterized-string cleanup for remaining count/status formatting, using `docs/hardcoded-string-audit.md` as the inventory boundary.
 
 Distribution hardening remains a parallel external track: B.D.1/B.S.1 still need fdroiddata MR and apksigcopier/signature-copy validation in an F-Droid-capable environment.

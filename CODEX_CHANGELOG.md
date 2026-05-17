@@ -71,7 +71,17 @@ Files:
 - `app/src/main/java/com/sysadmindoc/callshield/ui/screens/main/DashboardScreen.kt`
 - `app/src/main/java/com/sysadmindoc/callshield/ui/screens/main/BlocklistScreen.kt`
 - `app/src/main/java/com/sysadmindoc/callshield/ui/screens/settings/SettingsScreen.kt`
+- `app/src/main/java/com/sysadmindoc/callshield/data/BackupRestore.kt`
+- `app/src/main/java/com/sysadmindoc/callshield/data/BlocklistExporter.kt`
+- `app/src/main/java/com/sysadmindoc/callshield/data/LogExporter.kt`
+- `app/src/main/java/com/sysadmindoc/callshield/data/SpamSharer.kt`
+- `app/src/main/java/com/sysadmindoc/callshield/data/repository/SyncRepository.kt`
+- `app/src/main/java/com/sysadmindoc/callshield/service/CallShieldTileService.kt`
+- `app/src/main/java/com/sysadmindoc/callshield/ui/screens/details/NumberDetailScreen.kt`
+- `app/src/main/java/com/sysadmindoc/callshield/ui/screens/main/BlockedLogScreen.kt`
+- `app/src/main/java/com/sysadmindoc/callshield/ui/screens/recent/RecentCallsScreen.kt`
 - `app/src/main/res/values/strings.xml`
+- `docs/hardcoded-string-audit.md`
 - `app/src/androidTest/java/com/sysadmindoc/callshield/data/SpamPipelineIntegrationTest.kt`
 - `app/src/androidTest/java/com/sysadmindoc/callshield/data/SmsPipelineIntegrationTest.kt`
 - `app/src/androidTest/java/com/sysadmindoc/callshield/data/SyncIntegrationTest.kt`
@@ -126,8 +136,10 @@ Work completed:
 - provided `GitHubDataSource` as the shared Hilt `SpamDataSource` and `HotFeedDataSource` binding for injected feed refresh paths
 - added `DetectionModule` and `CheckerDependencies`, then routed the live checker chain, screening-service contact shortcut, app-startup model/hot-data priming, and sync/hot-list workers through injected detection helper dependencies while preserving existing object facades
 - converted `SpamHeuristics`, `SmsContentAnalyzer`, `SpamMLScorer`, `CallbackDetector`, `SmsContextChecker`, `CampaignDetector`, and `HashWildcardMatcher` from Kotlin `object` declarations into constructor-injectable classes with shared companion facades for existing static call sites
+- audited all 100 tracked main Kotlin files for hardcoded user-facing strings and saved the inventory in `docs/hardcoded-string-audit.md`
+- moved clear backup/restore, blocklist import/export, CSV export, spam-share, sync-result, Quick Settings tile, clipboard, search-result, recent-duration, and number-detail stragglers into `strings.xml` resources and plurals
 - regenerated the ktlint baseline after modifying previously-baselined files so the new gate reflects the current debt set
-- marked roadmap items 1.2.1 through 1.2.4, 1.3.1 through 1.3.4, 1.4.4, 1.4.5, 1.5.1 through 1.5.4, and 1.6.1 through 1.6.9 done
+- marked roadmap items 1.2.1 through 1.2.4, 1.3.1 through 1.3.4, 1.4.4, 1.4.5, 1.5.1 through 1.5.4, 1.6.1 through 1.6.9, and 1.8.1 done
 - verified `:app:compileDebugAndroidTestKotlin`, `testDebugUnitTest`, `:app:lintDebug`, `:app:ktlintCheck`, `:app:detekt`, and the Kover debug coverage gate
 
 ### 0. F-Droid submission prep

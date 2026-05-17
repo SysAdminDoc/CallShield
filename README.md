@@ -321,7 +321,7 @@ CI runs automatically via GitHub Actions on every push and pull request.
 | URL Safety | URLhaus (abuse.ch) |
 | CI | GitHub Actions |
 | Tests | 620 JVM unit tests (JUnit) |
-| Strings | 544+ resources (translation-ready) |
+| Strings | 955+ resources and 6 plural groups (translation-ready) |
 | Accessibility | 100+ content descriptions, 48dp touch targets |
 | Min SDK | 29 (Android 10) |
 | Target SDK | 36 |

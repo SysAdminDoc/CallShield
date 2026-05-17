@@ -65,6 +65,6 @@ object ReportFraudHelper {
 
     private fun copyToClipboard(context: Context, number: String) {
         val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager ?: return
-        cm.setPrimaryClip(ClipData.newPlainText("CallShield spam number", number))
+        cm.setPrimaryClip(ClipData.newPlainText(context.getString(R.string.clip_label_spam_number), number))
     }
 }

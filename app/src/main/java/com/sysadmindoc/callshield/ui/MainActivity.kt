@@ -322,7 +322,16 @@ fun SearchResultsView(results: List<com.sysadmindoc.callshield.data.model.SpamNu
                         Spacer(Modifier.width(12.dp))
                         Column {
                             Text(com.sysadmindoc.callshield.data.PhoneFormatter.format(number.number), fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
-                            Text("${number.type} - ${number.reports} reports", style = MaterialTheme.typography.bodySmall, color = CatSubtext)
+                            Text(
+                                pluralStringResource(
+                                    R.plurals.search_result_type_reports,
+                                    number.reports,
+                                    number.type,
+                                    number.reports
+                                ),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = CatSubtext
+                            )
                             if (number.description.isNotEmpty()) Text(number.description, style = MaterialTheme.typography.labelSmall, color = CatOverlay, maxLines = 1)
                         }
                     }
