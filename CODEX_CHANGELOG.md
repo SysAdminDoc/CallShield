@@ -24,11 +24,13 @@ Files:
 - `app/src/main/java/com/sysadmindoc/callshield/data/remote/GitHubDataSource.kt`
 - `app/src/main/java/com/sysadmindoc/callshield/service/HotDataSync.kt`
 - `app/src/main/java/com/sysadmindoc/callshield/ui/screens/onboarding/OnboardingScreen.kt`
+- `app/src/main/java/com/sysadmindoc/callshield/ui/screens/main/DashboardScreen.kt`
 - `app/src/androidTest/java/com/sysadmindoc/callshield/data/SpamPipelineIntegrationTest.kt`
 - `app/src/androidTest/java/com/sysadmindoc/callshield/data/SmsPipelineIntegrationTest.kt`
 - `app/src/androidTest/java/com/sysadmindoc/callshield/data/SyncIntegrationTest.kt`
 - `app/src/androidTest/java/com/sysadmindoc/callshield/service/HotListSyncIntegrationTest.kt`
 - `app/src/androidTest/java/com/sysadmindoc/callshield/ui/screens/onboarding/OnboardingTest.kt`
+- `app/src/androidTest/java/com/sysadmindoc/callshield/ui/screens/main/DashboardTest.kt`
 - `ROADMAP.md`
 - `CHANGELOG.md`
 - `CLAUDE.md`
@@ -44,7 +46,9 @@ Work completed:
 - added a narrow `HotFeedDataSource` seam and in-memory Room integration coverage for hot numbers, hot ranges, spam domains, duplicate/invalid feed entries, and preservation of stronger existing database rows
 - split onboarding's real Android launchers from deterministic screen content and added stable tags for request actions
 - added Compose UI tests for the onboarding four-page walkthrough, permission affordances, call-screener setup action, and unsupported-screener fallback
-- marked roadmap items 1.2.1 through 1.2.4 and 1.3.1 done
+- extracted dashboard hero, setup checklist, and stats-row composables that production uses directly
+- added Compose UI tests for dashboard hero copy, setup progress, sync freshness, blocked-count stats, and the call-screener setup action
+- marked roadmap items 1.2.1 through 1.2.4, 1.3.1, and 1.3.2 done
 - verified `:app:compileDebugAndroidTestKotlin` and `testDebugUnitTest`
 
 ### 0. F-Droid submission prep
