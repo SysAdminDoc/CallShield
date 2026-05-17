@@ -35,6 +35,9 @@ jobs:
       - name: Run unit tests
         run: ./gradlew testDebugUnitTest
 
+      - name: Verify debug unit-test coverage
+        run: ./gradlew :app:koverVerifyDebug :app:koverXmlReportDebug
+
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4

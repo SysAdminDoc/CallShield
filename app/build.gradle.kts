@@ -6,6 +6,7 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
+    alias(libs.plugins.kover)
 }
 
 val localProperties = Properties().apply {
@@ -86,6 +87,29 @@ android {
 kotlin {
     compilerOptions {
         jvmTarget.set(JvmTarget.JVM_17)
+    }
+}
+
+kover {
+    reports {
+        variant("debug") {
+            filters {
+                includes {
+                    classes(
+                        "com.sysadmindoc.callshield.data.*",
+                        "com.sysadmindoc.callshield.util.*"
+                    )
+                }
+                excludes {
+                    classes("com.sysadmindoc.callshield.data.local.*")
+                }
+            }
+            verify {
+                rule("debug line coverage") {
+                    minBound(35)
+                }
+            }
+        }
     }
 }
 
