@@ -8,7 +8,7 @@ Last verified: 2026-05-17
 - Latest observed commit before this pass: `c20f01a chore: prep fdroid submission`.
 - Current release: v1.7.10, `versionCode` 38.
 - Stack: Kotlin Android, Jetpack Compose BOM 2026.05.00, AGP 8.10.1, Kotlin/KSP 2.2.21, Room 2.8.4, WorkManager 2.11.2, OkHttp 5.3.2, DataStore 1.2.1.
-- Source shape after this pass: 79 main Kotlin files, 35 JVM test files, 6 instrumented test files.
+- Source shape after this pass: 80 main Kotlin files, 35 JVM test files, 7 instrumented test files.
 - Shared project memory still lags around v1.7.2; treat live repo docs, Gradle files, and git history as authoritative.
 
 ## Architecture Notes
@@ -21,15 +21,17 @@ Last verified: 2026-05-17
 
 ## Current Roadmap Position
 
-- Completed in this pass: roadmap 1.2.1, 1.2.2, and 1.2.3.
+- Completed in this pass: roadmap 1.2.1, 1.2.2, 1.2.3, and 1.2.4.
 - `SpamRepository(context, database, remote)` now supports injected `AppDatabase` and `SpamDataSource` dependencies, enabling in-memory Room integration tests without committing to the larger Hilt/DI refactor.
+- `HotDataSync.refresh(context, source, repo, dao)` now supports an injected `HotFeedDataSource`, enabling hot-feed integration tests without live GitHub requests.
 - Added instrumented tests:
   - `SpamPipelineIntegrationTest`: manual whitelist, STIR/SHAKEN failed/trusted ordering, user blocklist, prefix, wildcard, hash wildcard, and frequency tiers.
   - `SmsPipelineIntegrationTest`: whitelisted-sender inspection, keyword-before-content ordering, and SMS content-analysis block behavior.
   - `SyncIntegrationTest`: mocked remote database sync, Room population, and user-block preservation during remote refresh.
+  - `HotListSyncIntegrationTest`: mocked hot-feed refresh for hot number insertion, duplicate/invalid-entry tolerance, hot-range refresh, spam-domain refresh, and stronger existing-row preservation.
 
 ## Next Practical Task
 
-Roadmap 1.2.4 is next: `HotListSyncWorker` / `HotDataSync` integration coverage for hot numbers, hot ranges, spam domains, and per-entry tolerance.
+Roadmap 1.3.1 is next: Compose onboarding flow coverage for the four-page flow, permission request affordances, and call-screener setup state.
 
-Keep the seam narrow: introduce a mockable hot-feed source boundary around `fetchHotList`, `fetchHotRanges`, and `fetchSpamDomains`, then write the in-memory Room test before any repository split.
+Prefer a focused UI test seam or screen-level Compose test before starting the larger repository/Hilt split.

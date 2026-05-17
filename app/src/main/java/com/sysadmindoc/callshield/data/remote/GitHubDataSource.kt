@@ -11,7 +11,7 @@ import kotlinx.coroutines.withContext
 import okhttp3.Request
 import java.util.concurrent.TimeUnit
 
-class GitHubDataSource : SpamDataSource {
+class GitHubDataSource : SpamDataSource, HotFeedDataSource {
     // Derived client with longer timeouts for large database downloads;
     // shares the connection pool with other callers via HttpClient.shared.
     private val client = HttpClient.shared.newBuilder()
@@ -74,9 +74,9 @@ class GitHubDataSource : SpamDataSource {
         parseSpamDatabaseJson(result.getOrThrow())
     }
 
-    suspend fun fetchHotList(
-        owner: String = DEFAULT_REPO_OWNER,
-        repo: String = DEFAULT_REPO_NAME
+    override suspend fun fetchHotList(
+        owner: String,
+        repo: String
     ): Result<List<HotNumber>> = withContext(Dispatchers.IO) {
         val result = fetchRawText(HOT_LIST_PATH, owner, repo)
         if (result.isFailure) {
@@ -85,9 +85,9 @@ class GitHubDataSource : SpamDataSource {
         Result.success(parseHotListJson(result.getOrThrow()))
     }
 
-    suspend fun fetchHotRanges(
-        owner: String = DEFAULT_REPO_OWNER,
-        repo: String = DEFAULT_REPO_NAME
+    override suspend fun fetchHotRanges(
+        owner: String,
+        repo: String
     ): Result<List<String>> = withContext(Dispatchers.IO) {
         val result = fetchRawText(HOT_RANGES_PATH, owner, repo)
         if (result.isFailure) {
@@ -96,9 +96,9 @@ class GitHubDataSource : SpamDataSource {
         Result.success(parseHotRangesJson(result.getOrThrow()))
     }
 
-    suspend fun fetchSpamDomains(
-        owner: String = DEFAULT_REPO_OWNER,
-        repo: String = DEFAULT_REPO_NAME
+    override suspend fun fetchSpamDomains(
+        owner: String,
+        repo: String
     ): Result<List<String>> = withContext(Dispatchers.IO) {
         val result = fetchRawText(SPAM_DOMAINS_PATH, owner, repo)
         if (result.isFailure) {
@@ -148,7 +148,7 @@ class GitHubDataSource : SpamDataSource {
         adapter.fromJson(body) ?: throw IllegalStateException("Failed to parse spam database")
     }
 
-    fun parseHotListJson(body: String): List<HotNumber> {
+    override fun parseHotListJson(body: String): List<HotNumber> {
         val trimmedBody = body.trimStart()
         val entries = when {
             trimmedBody.startsWith("{") -> {
@@ -176,7 +176,7 @@ class GitHubDataSource : SpamDataSource {
         }
     }
 
-    fun parseHotRangesJson(body: String): List<String> {
+    override fun parseHotRangesJson(body: String): List<String> {
         val trimmedBody = body.trimStart()
         return when {
             trimmedBody.startsWith("{") -> {
@@ -190,7 +190,7 @@ class GitHubDataSource : SpamDataSource {
         }
     }
 
-    fun parseSpamDomainsJson(body: String): List<String> {
+    override fun parseSpamDomainsJson(body: String): List<String> {
         val trimmedBody = body.trimStart()
         return when {
             trimmedBody.startsWith("{") -> spamDomainsEnvelopeAdapter.fromJson(body)?.domains.orEmpty()
