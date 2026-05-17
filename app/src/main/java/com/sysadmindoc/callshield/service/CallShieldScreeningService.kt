@@ -7,6 +7,7 @@ import com.sysadmindoc.callshield.CallShieldApp
 import com.sysadmindoc.callshield.data.SpamHeuristics
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup
+import com.sysadmindoc.callshield.domain.usecase.CheckSpamUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -24,6 +25,7 @@ class CallShieldScreeningService : CallScreeningService() {
             val appContext = applicationContext
             try {
                 val repo = SpamRepository.getInstance(appContext)
+                val checkSpam = CheckSpamUseCase(repo)
                 // One snapshot of all prefs — the 5-second deadline is tight
                 // and individual Flow.first() calls each spin up a collector.
                 val prefs = repo.readPrefsSnapshot()
@@ -65,7 +67,7 @@ class CallShieldScreeningService : CallScreeningService() {
                     } else null
 
                 // Full spam check — reuses the snapshot so we don't re-read DataStore.
-                val result = repo.isSpam(
+                val result = checkSpam(
                     number = number,
                     prefsSnapshot = prefs,
                     verificationStatus = verificationStatus,

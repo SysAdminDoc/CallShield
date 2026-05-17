@@ -10,7 +10,6 @@ import com.sysadmindoc.callshield.data.BackupRestore
 import com.sysadmindoc.callshield.data.BlockingProfiles
 import com.sysadmindoc.callshield.data.BlocklistExporter
 import com.sysadmindoc.callshield.data.CommunityContributor
-import com.sysadmindoc.callshield.data.LogExporter
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.TimeSchedule
 import com.sysadmindoc.callshield.data.model.BlockedCall
@@ -19,6 +18,9 @@ import com.sysadmindoc.callshield.data.model.SpamNumber
 import com.sysadmindoc.callshield.data.model.SmsKeywordRule
 import com.sysadmindoc.callshield.data.model.WhitelistEntry
 import com.sysadmindoc.callshield.data.model.WildcardRule
+import com.sysadmindoc.callshield.domain.usecase.ExportLogsUseCase
+import com.sysadmindoc.callshield.domain.usecase.ManageBlocklistUseCase
+import com.sysadmindoc.callshield.domain.usecase.SyncDatabaseUseCase
 import com.sysadmindoc.callshield.service.CallLogScanner
 import com.sysadmindoc.callshield.service.SmsInboxScanner
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -29,6 +31,9 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalCoroutinesApi::class)
 class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val repo = SpamRepository.getInstance(app)
+    private val syncDatabase = SyncDatabaseUseCase(repo)
+    private val manageBlocklist = ManageBlocklistUseCase(repo)
+    private val exportLogs = ExportLogsUseCase(app)
 
     val blockedCalls: StateFlow<List<BlockedCall>> = repo.getBlockedCalls()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -184,7 +189,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun sync() {
         viewModelScope.launch {
             _syncState.value = SyncState.Syncing
-            val result = repo.syncFromGitHub(force = true)
+            val result = syncDatabase(force = true)
             _syncState.value = if (result.success) {
                 _spamCount.value = repo.getSpamCount()
                 if (result.warning) {
@@ -242,9 +247,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     // Blocklist
     fun blockNumber(number: String, type: String = "unknown", description: String = "") {
-        viewModelScope.launch { repo.blockNumber(number, type, description) }
+        viewModelScope.launch { manageBlocklist.blockNumber(number, type, description) }
     }
-    fun unblockNumber(number: SpamNumber) { viewModelScope.launch { repo.unblockNumber(number) } }
+    fun unblockNumber(number: SpamNumber) { viewModelScope.launch { manageBlocklist.unblockNumber(number) } }
     fun deleteLogEntry(call: BlockedCall) { viewModelScope.launch { repo.deleteBlockedCall(call) } }
     fun restoreLogEntry(call: BlockedCall) { viewModelScope.launch { repo.insertBlockedCall(call) } }
     fun clearLog() { viewModelScope.launch { repo.clearCallLog() } }
@@ -256,9 +261,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         description: String,
         schedule: TimeSchedule = TimeSchedule(),
     ) {
-        viewModelScope.launch { repo.addWildcardRule(pattern, isRegex, description, schedule) }
+        viewModelScope.launch { manageBlocklist.addWildcardRule(pattern, isRegex, description, schedule) }
     }
-    fun deleteWildcardRule(rule: WildcardRule) { viewModelScope.launch { repo.deleteWildcardRule(rule) } }
+    fun deleteWildcardRule(rule: WildcardRule) { viewModelScope.launch { manageBlocklist.deleteWildcardRule(rule) } }
 
     // Hash wildcard rules (A5 — length-locked `#` patterns)
     //
@@ -270,13 +275,13 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         description: String = "",
         schedule: TimeSchedule = TimeSchedule(),
     ) {
-        viewModelScope.launch { repo.addHashWildcardRule(pattern, description, schedule) }
+        viewModelScope.launch { manageBlocklist.addHashWildcardRule(pattern, description, schedule) }
     }
     fun deleteHashWildcardRule(rule: HashWildcardRule) {
-        viewModelScope.launch { repo.deleteHashWildcardRule(rule) }
+        viewModelScope.launch { manageBlocklist.deleteHashWildcardRule(rule) }
     }
     fun toggleHashWildcardRule(id: Long, enabled: Boolean) {
-        viewModelScope.launch { repo.toggleHashWildcardRule(id, enabled) }
+        viewModelScope.launch { manageBlocklist.toggleHashWildcardRule(id, enabled) }
     }
 
     // SMS keyword rules
@@ -286,21 +291,25 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         description: String = "",
         schedule: TimeSchedule = TimeSchedule(),
     ) {
-        viewModelScope.launch { repo.addKeywordRule(keyword, caseSensitive, description, schedule) }
+        viewModelScope.launch { manageBlocklist.addKeywordRule(keyword, caseSensitive, description, schedule) }
     }
-    fun deleteKeywordRule(rule: SmsKeywordRule) { viewModelScope.launch { repo.deleteKeywordRule(rule) } }
-    fun toggleKeywordRule(id: Long, enabled: Boolean) { viewModelScope.launch { repo.toggleKeywordRule(id, enabled) } }
-    fun toggleWildcardRule(id: Long, enabled: Boolean) { viewModelScope.launch { repo.toggleWildcardRule(id, enabled) } }
+    fun deleteKeywordRule(rule: SmsKeywordRule) { viewModelScope.launch { manageBlocklist.deleteKeywordRule(rule) } }
+    fun toggleKeywordRule(id: Long, enabled: Boolean) {
+        viewModelScope.launch { manageBlocklist.toggleKeywordRule(id, enabled) }
+    }
+    fun toggleWildcardRule(id: Long, enabled: Boolean) {
+        viewModelScope.launch { manageBlocklist.toggleWildcardRule(id, enabled) }
+    }
 
     // Whitelist
     fun addToWhitelist(number: String, description: String = "", isEmergency: Boolean = false) {
-        viewModelScope.launch { repo.addToWhitelist(number, description, isEmergency) }
+        viewModelScope.launch { manageBlocklist.addToWhitelist(number, description, isEmergency) }
     }
     fun removeFromWhitelist(entry: WhitelistEntry) {
-        viewModelScope.launch { repo.removeFromWhitelist(entry) }
+        viewModelScope.launch { manageBlocklist.removeFromWhitelist(entry) }
     }
     fun toggleWhitelistEmergency(id: Long, emergency: Boolean) {
-        viewModelScope.launch { repo.setWhitelistEmergency(id, emergency) }
+        viewModelScope.launch { manageBlocklist.setWhitelistEmergency(id, emergency) }
     }
 
     // Export/import
@@ -308,7 +317,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         val numbers = userBlockedNumbers.value
         if (numbers.isEmpty()) return
         viewModelScope.launch {
-            BlocklistExporter.exportAndShare(getApplication(), numbers)
+            exportLogs.exportBlocklist(numbers)
         }
     }
     fun importBlocklist(uri: Uri) {
@@ -388,7 +397,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun reportNotSpam(number: String) {
         viewModelScope.launch {
             // Whitelist locally AND report as false positive to community
-            repo.addToWhitelist(number, "Reported as not spam")
+            manageBlocklist.addToWhitelist(number, "Reported as not spam")
             val result = CommunityContributor.reportNotSpam(number)
             _contributeResult.value = result.message
         }
@@ -404,7 +413,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         val calls = blockedCalls.value
         if (calls.isEmpty()) return
         viewModelScope.launch {
-            LogExporter.exportAsCsv(getApplication(), calls)
+            exportLogs.exportBlockedLog(calls)
         }
     }
 
