@@ -16,6 +16,9 @@ Distribution prep after the v1.7.10 release.
   hash-wildcard, and frequency escalation priority tiers.
 - Added instrumented SMS-pipeline coverage for whitelisted-sender inspection,
   keyword-before-content ordering, and generic SMS content-analysis blocking.
+- Added a `SpamDataSource` seam and mocked in-memory Room sync integration
+  tests for `syncFromGitHub()`, including remote snapshot population and
+  preservation of user-block flags during remote refresh.
 
 ### F-Droid
 

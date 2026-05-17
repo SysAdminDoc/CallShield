@@ -13,6 +13,7 @@ import com.sysadmindoc.callshield.data.local.AppDatabase
 import com.sysadmindoc.callshield.data.local.SpamDao
 import com.sysadmindoc.callshield.data.model.*
 import com.sysadmindoc.callshield.data.remote.GitHubDataSource
+import com.sysadmindoc.callshield.data.remote.SpamDataSource
 import com.sysadmindoc.callshield.service.NotificationHelper
 import com.sysadmindoc.callshield.ui.widget.CallShieldWidget
 import kotlinx.coroutines.CoroutineScope
@@ -55,7 +56,7 @@ private fun Context.noBackupDataStore(name: String): DataStore<Preferences> =
 class SpamRepository(
     private val context: Context,
     database: AppDatabase = AppDatabase.getInstance(context),
-    private val remote: GitHubDataSource = GitHubDataSource(),
+    private val remote: SpamDataSource = GitHubDataSource(),
 ) {
     private val dao: SpamDao = database.spamDao()
     private val dataStore = context.dataStore
