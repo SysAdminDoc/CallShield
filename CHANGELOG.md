@@ -8,6 +8,9 @@ Distribution prep after the v1.7.10 release.
 
 ### Testing
 
+- Added Kover 0.9.8 to the locked Gradle graph and wired CI to run
+  `:app:koverVerifyDebug` plus `:app:koverXmlReportDebug`, gating the
+  JVM-tested data/util core at a 35% minimum line-coverage threshold.
 - Added an `AppDatabase` constructor seam to `SpamRepository` so Android
   integration tests can run the repository against an in-memory Room database
   without starting the larger DI refactor.
