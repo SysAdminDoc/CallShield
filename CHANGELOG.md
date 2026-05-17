@@ -23,6 +23,9 @@ Distribution prep after the v1.7.10 release.
   in-memory Room coverage for hot number insertion, stronger existing-row
   preservation, hot-range refresh, spam-domain refresh, and invalid-entry
   tolerance.
+- Added deterministic onboarding Compose UI coverage for the four-page setup
+  walkthrough, permission request affordances, call-screener setup action, and
+  unsupported-screener fallback state.
 
 ### F-Droid
 

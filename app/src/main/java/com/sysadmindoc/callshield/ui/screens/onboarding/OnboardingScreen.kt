@@ -28,6 +28,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -50,10 +51,14 @@ data class OnboardingPage(
     val color: androidx.compose.ui.graphics.Color
 )
 
+internal const val ONBOARDING_CORE_PERMISSIONS_BUTTON_TAG = "onboarding_core_permissions_button"
+internal const val ONBOARDING_NOTIFICATIONS_BUTTON_TAG = "onboarding_notifications_button"
+internal const val ONBOARDING_OVERLAY_BUTTON_TAG = "onboarding_overlay_button"
+internal const val ONBOARDING_SCREENER_BUTTON_TAG = "onboarding_screener_button"
+
 @Composable
 fun OnboardingScreen(onComplete: () -> Unit) {
     val context = LocalContext.current
-    var currentPage by remember { mutableIntStateOf(0) }
     val roleManager = remember {
         context.getSystemService(Context.ROLE_SERVICE) as? RoleManager
     }
@@ -65,8 +70,6 @@ fun OnboardingScreen(onComplete: () -> Unit) {
     val lifecycleOwner = LocalLifecycleOwner.current
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
-    val requiredReady = listOf(permsGranted, screenerGranted).count { it }
-    val optionalReady = listOf(notificationsGranted, overlayGranted).count { it }
 
     val permLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
         permsGranted = CallShieldPermissions.hasCorePermissions(context)
@@ -77,17 +80,6 @@ fun OnboardingScreen(onComplete: () -> Unit) {
         notificationsGranted = CallShieldPermissions.hasNotificationPermission(context)
     }
 
-    val pages = listOf(
-        OnboardingPage(Icons.Default.Shield, stringResource(R.string.onboarding_welcome_title), stringResource(R.string.onboarding_welcome_subtitle), CatGreen),
-        OnboardingPage(Icons.Default.Security, stringResource(R.string.onboarding_permissions_title), stringResource(R.string.onboarding_permissions_subtitle), CatBlue),
-        OnboardingPage(Icons.AutoMirrored.Filled.PhoneCallback, stringResource(R.string.onboarding_screener_title), stringResource(R.string.onboarding_screener_subtitle), CatMauve),
-        OnboardingPage(Icons.Default.Sync, stringResource(R.string.onboarding_sync_title), stringResource(R.string.onboarding_sync_subtitle), CatPeach),
-    )
-    val pageContentDescription = stringResource(
-        R.string.cd_onboarding_page,
-        currentPage + 1,
-        pages.size
-    )
     val screenerErrorMessage = stringResource(R.string.onboarding_screener_error)
 
     val screeningLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
@@ -106,6 +98,70 @@ fun OnboardingScreen(onComplete: () -> Unit) {
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
+
+    OnboardingScreenContent(
+        permsGranted = permsGranted,
+        notificationsGranted = notificationsGranted,
+        overlayGranted = overlayGranted,
+        screenerGranted = screenerGranted,
+        screenerSupported = screenerSupported,
+        snackbarHostState = snackbarHostState,
+        onRequestCorePermissions = {
+            permLauncher.launch(CallShieldPermissions.corePermissions.toTypedArray())
+        },
+        onRequestNotifications = {
+            notifPermLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        },
+        onRequestOverlay = {
+            val intent = android.content.Intent(
+                Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                Uri.parse("package:${context.packageName}")
+            )
+            context.startActivity(intent)
+        },
+        onRequestScreener = {
+            if (roleManager != null) {
+                try {
+                    screeningLauncher.launch(roleManager.createRequestRoleIntent(RoleManager.ROLE_CALL_SCREENING))
+                } catch (_: Exception) {
+                    scope.launch {
+                        snackbarHostState.showSnackbar(screenerErrorMessage)
+                    }
+                }
+            }
+        },
+        onComplete = onComplete,
+    )
+}
+
+@Composable
+internal fun OnboardingScreenContent(
+    permsGranted: Boolean,
+    notificationsGranted: Boolean,
+    overlayGranted: Boolean,
+    screenerGranted: Boolean,
+    screenerSupported: Boolean,
+    onRequestCorePermissions: () -> Unit,
+    onRequestNotifications: () -> Unit,
+    onRequestOverlay: () -> Unit,
+    onRequestScreener: () -> Unit,
+    onComplete: () -> Unit,
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
+) {
+    var currentPage by remember { mutableIntStateOf(0) }
+    val requiredReady = listOf(permsGranted, screenerGranted).count { it }
+    val optionalReady = listOf(notificationsGranted, overlayGranted).count { it }
+    val pages = listOf(
+        OnboardingPage(Icons.Default.Shield, stringResource(R.string.onboarding_welcome_title), stringResource(R.string.onboarding_welcome_subtitle), CatGreen),
+        OnboardingPage(Icons.Default.Security, stringResource(R.string.onboarding_permissions_title), stringResource(R.string.onboarding_permissions_subtitle), CatBlue),
+        OnboardingPage(Icons.AutoMirrored.Filled.PhoneCallback, stringResource(R.string.onboarding_screener_title), stringResource(R.string.onboarding_screener_subtitle), CatMauve),
+        OnboardingPage(Icons.Default.Sync, stringResource(R.string.onboarding_sync_title), stringResource(R.string.onboarding_sync_subtitle), CatPeach),
+    )
+    val pageContentDescription = stringResource(
+        R.string.cd_onboarding_page,
+        currentPage + 1,
+        pages.size
+    )
 
     Column(
         modifier = Modifier
@@ -275,11 +331,14 @@ fun OnboardingScreen(onComplete: () -> Unit) {
                             if (!permsGranted) {
                                 Button(
                                     onClick = {
-                                        permLauncher.launch(CallShieldPermissions.corePermissions.toTypedArray())
+                                        onRequestCorePermissions()
                                     },
                                     colors = ButtonDefaults.buttonColors(containerColor = CatBlue),
                                     shape = RoundedCornerShape(12.dp),
-                                    modifier = Modifier.fillMaxWidth().height(48.dp)
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(48.dp)
+                                        .testTag(ONBOARDING_CORE_PERMISSIONS_BUTTON_TAG)
                                 ) {
                                     Icon(Icons.Default.Security, null, tint = Black)
                                     Spacer(Modifier.width(8.dp))
@@ -291,11 +350,14 @@ fun OnboardingScreen(onComplete: () -> Unit) {
                                 Spacer(Modifier.height(10.dp))
                                 OutlinedButton(
                                     onClick = {
-                                        notifPermLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                        onRequestNotifications()
                                     },
                                     shape = RoundedCornerShape(12.dp),
                                     border = BorderStroke(1.dp, CatBlue.copy(alpha = 0.3f)),
-                                    modifier = Modifier.fillMaxWidth().height(48.dp)
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(48.dp)
+                                        .testTag(ONBOARDING_NOTIFICATIONS_BUTTON_TAG)
                                 ) {
                                     Icon(Icons.Default.Notifications, null, tint = CatBlue, modifier = Modifier.size(18.dp))
                                     Spacer(Modifier.width(8.dp))
@@ -307,15 +369,14 @@ fun OnboardingScreen(onComplete: () -> Unit) {
                                 Spacer(Modifier.height(10.dp))
                                 OutlinedButton(
                                     onClick = {
-                                        val intent = android.content.Intent(
-                                            Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                                            Uri.parse("package:${context.packageName}")
-                                        )
-                                        context.startActivity(intent)
+                                        onRequestOverlay()
                                     },
                                     shape = RoundedCornerShape(12.dp),
                                     border = BorderStroke(1.dp, CatBlue.copy(alpha = 0.3f)),
-                                    modifier = Modifier.fillMaxWidth().height(48.dp)
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(48.dp)
+                                        .testTag(ONBOARDING_OVERLAY_BUTTON_TAG)
                                 ) {
                                     Icon(Icons.Default.Layers, null, tint = CatBlue, modifier = Modifier.size(18.dp))
                                     Spacer(Modifier.width(8.dp))
@@ -354,19 +415,14 @@ fun OnboardingScreen(onComplete: () -> Unit) {
                             if (screenerSupported && !screenerGranted) {
                                 Button(
                                     onClick = {
-                                        if (roleManager != null) {
-                                            try {
-                                                screeningLauncher.launch(roleManager.createRequestRoleIntent(RoleManager.ROLE_CALL_SCREENING))
-                                            } catch (_: Exception) {
-                                                scope.launch {
-                                                    snackbarHostState.showSnackbar(screenerErrorMessage)
-                                                }
-                                            }
-                                        }
+                                        onRequestScreener()
                                     },
                                     colors = ButtonDefaults.buttonColors(containerColor = CatMauve),
                                     shape = RoundedCornerShape(12.dp),
-                                    modifier = Modifier.fillMaxWidth().height(48.dp)
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(48.dp)
+                                        .testTag(ONBOARDING_SCREENER_BUTTON_TAG)
                                 ) {
                                     Icon(Icons.AutoMirrored.Filled.PhoneCallback, null, tint = Black)
                                     Spacer(Modifier.width(8.dp))

@@ -23,10 +23,12 @@ Files:
 - `app/src/main/java/com/sysadmindoc/callshield/data/remote/HotFeedDataSource.kt`
 - `app/src/main/java/com/sysadmindoc/callshield/data/remote/GitHubDataSource.kt`
 - `app/src/main/java/com/sysadmindoc/callshield/service/HotDataSync.kt`
+- `app/src/main/java/com/sysadmindoc/callshield/ui/screens/onboarding/OnboardingScreen.kt`
 - `app/src/androidTest/java/com/sysadmindoc/callshield/data/SpamPipelineIntegrationTest.kt`
 - `app/src/androidTest/java/com/sysadmindoc/callshield/data/SmsPipelineIntegrationTest.kt`
 - `app/src/androidTest/java/com/sysadmindoc/callshield/data/SyncIntegrationTest.kt`
 - `app/src/androidTest/java/com/sysadmindoc/callshield/service/HotListSyncIntegrationTest.kt`
+- `app/src/androidTest/java/com/sysadmindoc/callshield/ui/screens/onboarding/OnboardingTest.kt`
 - `ROADMAP.md`
 - `CHANGELOG.md`
 - `CLAUDE.md`
@@ -40,7 +42,9 @@ Work completed:
 - added in-memory Room instrumented tests for SMS keyword/content ordering and whitelisted-sender inspection
 - added mocked in-memory Room sync integration tests for remote snapshot population and user-block preservation
 - added a narrow `HotFeedDataSource` seam and in-memory Room integration coverage for hot numbers, hot ranges, spam domains, duplicate/invalid feed entries, and preservation of stronger existing database rows
-- marked roadmap items 1.2.1 through 1.2.4 done
+- split onboarding's real Android launchers from deterministic screen content and added stable tags for request actions
+- added Compose UI tests for the onboarding four-page walkthrough, permission affordances, call-screener setup action, and unsupported-screener fallback
+- marked roadmap items 1.2.1 through 1.2.4 and 1.3.1 done
 - verified `:app:compileDebugAndroidTestKotlin` and `testDebugUnitTest`
 
 ### 0. F-Droid submission prep
