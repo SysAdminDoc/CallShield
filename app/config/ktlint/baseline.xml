@@ -154,7 +154,7 @@
     </file>
     <file name="src/main/java/com/sysadmindoc/callshield/CallShieldApp.kt">
         <error line="3" column="1" source="standard:import-ordering" />
-        <error line="21" column="1" source="standard:no-empty-first-line-in-class-body" />
+        <error line="31" column="33" source="standard:chain-method-continuation" />
     </file>
     <file name="src/main/java/com/sysadmindoc/callshield/data/BackupRestore.kt">
         <error line="3" column="1" source="standard:import-ordering" />
@@ -2175,59 +2175,58 @@
         <error line="173" column="14" source="standard:chain-method-continuation" />
     </file>
     <file name="src/main/java/com/sysadmindoc/callshield/service/DigestWorker.kt">
-        <error line="7" column="1" source="standard:no-wildcard-imports" />
-        <error line="18" column="29" source="standard:trailing-comma-on-declaration-site" />
-        <error line="20" column="1" source="standard:no-empty-first-line-in-class-body" />
-        <error line="23" column="1" source="standard:indent" />
-        <error line="24" column="1" source="standard:indent" />
-        <error line="25" column="1" source="standard:indent" />
-        <error line="26" column="1" source="standard:indent" />
-        <error line="28" column="1" source="standard:indent" />
-        <error line="30" column="1" source="standard:indent" />
-        <error line="31" column="1" source="standard:indent" />
+        <error line="25" column="19" source="standard:annotation" />
+        <error line="25" column="35" source="standard:annotation" />
+        <error line="30" column="1" source="standard:no-empty-first-line-in-class-body" />
         <error line="33" column="1" source="standard:indent" />
         <error line="34" column="1" source="standard:indent" />
-        <error line="34" column="24" source="standard:multiline-expression-wrapping" />
         <error line="35" column="1" source="standard:indent" />
-        <error line="36" column="1" source="standard:indent" />
         <error line="37" column="1" source="standard:indent" />
-        <error line="38" column="1" source="standard:indent" />
         <error line="39" column="1" source="standard:indent" />
         <error line="40" column="1" source="standard:indent" />
-        <error line="41" column="1" source="standard:indent" />
         <error line="42" column="1" source="standard:indent" />
         <error line="43" column="1" source="standard:indent" />
+        <error line="43" column="24" source="standard:multiline-expression-wrapping" />
         <error line="44" column="1" source="standard:indent" />
-        <error line="44" column="25" source="standard:multiline-expression-wrapping" />
         <error line="45" column="1" source="standard:indent" />
         <error line="46" column="1" source="standard:indent" />
+        <error line="47" column="1" source="standard:indent" />
         <error line="48" column="1" source="standard:indent" />
         <error line="49" column="1" source="standard:indent" />
         <error line="50" column="1" source="standard:indent" />
         <error line="51" column="1" source="standard:indent" />
         <error line="52" column="1" source="standard:indent" />
-        <error line="52" column="21" source="standard:multiline-expression-wrapping" />
-        <error line="52" column="39" source="standard:chain-method-continuation" />
         <error line="53" column="1" source="standard:indent" />
+        <error line="53" column="25" source="standard:multiline-expression-wrapping" />
         <error line="54" column="1" source="standard:indent" />
         <error line="55" column="1" source="standard:indent" />
-        <error line="56" column="1" source="standard:indent" />
-        <error line="56" column="23" source="standard:multiline-expression-wrapping" />
-        <error line="56" column="23" source="standard:wrapping" />
-        <error line="56" column="23" source="standard:argument-list-wrapping" />
-        <error line="56" column="41" source="standard:chain-method-continuation" />
         <error line="57" column="1" source="standard:indent" />
-        <error line="57" column="112" source="standard:wrapping" />
-        <error line="57" column="113" source="standard:argument-list-wrapping" />
         <error line="58" column="1" source="standard:indent" />
         <error line="59" column="1" source="standard:indent" />
+        <error line="60" column="1" source="standard:indent" />
         <error line="61" column="1" source="standard:indent" />
+        <error line="61" column="21" source="standard:multiline-expression-wrapping" />
+        <error line="61" column="39" source="standard:chain-method-continuation" />
         <error line="62" column="1" source="standard:indent" />
         <error line="63" column="1" source="standard:indent" />
         <error line="64" column="1" source="standard:indent" />
         <error line="65" column="1" source="standard:indent" />
+        <error line="65" column="23" source="standard:multiline-expression-wrapping" />
+        <error line="65" column="23" source="standard:wrapping" />
+        <error line="65" column="23" source="standard:argument-list-wrapping" />
+        <error line="65" column="41" source="standard:chain-method-continuation" />
         <error line="66" column="1" source="standard:indent" />
-        <error line="80" column="34" source="standard:trailing-comma-on-call-site" />
+        <error line="66" column="112" source="standard:wrapping" />
+        <error line="66" column="113" source="standard:argument-list-wrapping" />
+        <error line="67" column="1" source="standard:indent" />
+        <error line="68" column="1" source="standard:indent" />
+        <error line="70" column="1" source="standard:indent" />
+        <error line="71" column="1" source="standard:indent" />
+        <error line="72" column="1" source="standard:indent" />
+        <error line="73" column="1" source="standard:indent" />
+        <error line="74" column="1" source="standard:indent" />
+        <error line="75" column="1" source="standard:indent" />
+        <error line="89" column="34" source="standard:trailing-comma-on-call-site" />
     </file>
     <file name="src/main/java/com/sysadmindoc/callshield/service/HotDataSync.kt">
         <error line="28" column="50" source="standard:multiline-expression-wrapping" />
@@ -2267,12 +2266,13 @@
         <error line="181" column="13" source="standard:chain-method-continuation" />
     </file>
     <file name="src/main/java/com/sysadmindoc/callshield/service/HotListSyncWorker.kt">
-        <error line="4" column="1" source="standard:no-wildcard-imports" />
-        <error line="23" column="29" source="standard:trailing-comma-on-declaration-site" />
-        <error line="25" column="1" source="standard:no-empty-first-line-in-class-body" />
-        <error line="26" column="43" source="standard:function-expression-body" />
-        <error line="46" column="34" source="standard:trailing-comma-on-call-site" />
-        <error line="57" column="24" source="standard:chain-method-continuation" />
+        <error line="36" column="24" source="standard:annotation" />
+        <error line="36" column="40" source="standard:annotation" />
+        <error line="43" column="1" source="standard:no-empty-first-line-in-class-body" />
+        <error line="44" column="43" source="standard:function-expression-body" />
+        <error line="46" column="27" source="standard:multiline-expression-wrapping" />
+        <error line="69" column="34" source="standard:trailing-comma-on-call-site" />
+        <error line="80" column="24" source="standard:chain-method-continuation" />
     </file>
     <file name="src/main/java/com/sysadmindoc/callshield/service/NotificationHelper.kt">
         <error line="37" column="26" source="standard:function-signature" />
@@ -2461,11 +2461,11 @@
         <error line="76" column="21" source="standard:when-entry-bracing" />
     </file>
     <file name="src/main/java/com/sysadmindoc/callshield/service/SyncWorker.kt">
-        <error line="4" column="1" source="standard:no-wildcard-imports" />
-        <error line="13" column="29" source="standard:trailing-comma-on-declaration-site" />
-        <error line="15" column="1" source="standard:no-empty-first-line-in-class-body" />
-        <error line="37" column="34" source="standard:trailing-comma-on-call-site" />
-        <error line="57" column="24" source="standard:chain-method-continuation" />
+        <error line="23" column="17" source="standard:annotation" />
+        <error line="23" column="33" source="standard:annotation" />
+        <error line="28" column="1" source="standard:no-empty-first-line-in-class-body" />
+        <error line="49" column="34" source="standard:trailing-comma-on-call-site" />
+        <error line="69" column="24" source="standard:chain-method-continuation" />
     </file>
     <file name="src/main/java/com/sysadmindoc/callshield/ui/DashboardTimeWindows.kt">
         <error line="16" column="22" source="standard:multiline-expression-wrapping" />

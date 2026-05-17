@@ -4,23 +4,32 @@ import android.content.Context
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
-import androidx.work.*
+import androidx.hilt.work.HiltWorker
+import androidx.work.CoroutineWorker
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.PeriodicWorkRequest
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
+import androidx.work.WorkerParameters
 import com.sysadmindoc.callshield.R
-import com.sysadmindoc.callshield.data.local.AppDatabase
+import com.sysadmindoc.callshield.data.local.SpamDao
 import com.sysadmindoc.callshield.permissions.CallShieldPermissions
+import dagger.assisted.Assisted
+import dagger.assisted.AssistedInject
 import java.util.concurrent.TimeUnit
 
 /**
  * Sends a daily digest notification summarizing blocked calls/SMS.
  */
-class DigestWorker(
-    context: Context,
-    params: WorkerParameters
+@HiltWorker
+class DigestWorker @AssistedInject constructor(
+    @Assisted context: Context,
+    @Assisted params: WorkerParameters,
+    private val dao: SpamDao,
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
         try {
-        val dao = AppDatabase.getInstance(applicationContext).spamDao()
         val since = System.currentTimeMillis() - 86_400_000 // Last 24h
         val recent = dao.getRecentBlockedNumbers(since)
         val blocked = recent.count { it.wasBlocked }

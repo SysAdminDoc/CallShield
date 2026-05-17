@@ -7,7 +7,7 @@ Last verified: 2026-05-17
 - Branch: `master`, tracking `origin/master`.
 - Latest observed commit before this pass: `c20f01a chore: prep fdroid submission`.
 - Current release: v1.7.10, `versionCode` 38.
-- Stack: Kotlin Android, Jetpack Compose BOM 2026.05.00, AGP 8.10.1, Kotlin/KSP 2.2.21, Room 2.8.4, WorkManager 2.11.2, OkHttp 5.3.2, DataStore 1.2.1, Hilt 2.58.
+- Stack: Kotlin Android, Jetpack Compose BOM 2026.05.00, AGP 8.10.1, Kotlin/KSP 2.2.21, Room 2.8.4, WorkManager 2.11.2, OkHttp 5.3.2, DataStore 1.2.1, Hilt 2.58, AndroidX Hilt Work 1.3.0.
 - Source shape after this pass: 98 main Kotlin files, 35 JVM test files, 11 instrumented test files.
 - CI now runs Kover 0.9.8 for the debug JVM unit-test report. The coverage gate is scoped to `data.*` and `util.*`, excludes `data.local.*`, and currently passes at 41.06% line coverage against a 35% floor.
 - CI now also has a `static-analysis` job running ktlint 1.8.0 and detekt 1.23.8. Existing debt is captured in `app/config/ktlint/baseline.xml` and `app/detekt-baseline.xml`.
@@ -23,15 +23,17 @@ Last verified: 2026-05-17
 - `di/DatabaseModule` now provides `AppDatabase` and `SpamDao` through Hilt while production callers still use existing singleton/facade paths.
 - `di/RepositoryModule` now provides the existing `SpamRepository` facade and binds `SpamCheckRepository`, `SyncRepository`, and `BlocklistRepository` to `SpamRepositoryAdapter`.
 - `di/NetworkModule` now provides the existing pinned `HttpClient.shared` as the Hilt `OkHttpClient` singleton.
+- `NetworkModule` also provides `GitHubDataSource` as the shared `SpamDataSource`/`HotFeedDataSource` binding.
 - `MainActivity` is now a Hilt entry point and `MainViewModel` is an `@HiltViewModel` with injected `SpamRepository`, `SyncDatabaseUseCase`, `ManageBlocklistUseCase`, and `ExportLogsUseCase`.
 - `CallShieldScreeningService` is now a Hilt entry point with injected `SpamRepository` and `CheckSpamUseCase`; it still has a hard 5-second Android deadline and must keep using one DataStore snapshot per call.
+- `CallShieldApp` now installs `HiltWorkerFactory`, and `SyncWorker`, `HotListSyncWorker`, and `DigestWorker` are `@HiltWorker` assisted-injected workers while preserving their existing WorkRequest schedule contracts.
 - Room migrations are explicit from DB v5 onward; v1-v4 remain destructive legacy fallbacks because schemas were not exported.
 - `HttpClient.shared` owns the pinned OkHttp client. New HTTPS endpoints need SPKI pins and `HttpClientTest` coverage.
 - Optional AbstractAPI credentials live in a private no-backup DataStore and are not part of the blocking path.
 
 ## Current Roadmap Position
 
-- Completed in this pass: roadmap 1.2.1, 1.2.2, 1.2.3, 1.2.4, 1.3.1, 1.3.2, 1.3.3, 1.3.4, 1.4.4, 1.4.5, 1.5.1, 1.5.2, 1.5.3, 1.5.4, and 1.6.1 through 1.6.7.
+- Completed in this pass: roadmap 1.2.1, 1.2.2, 1.2.3, 1.2.4, 1.3.1, 1.3.2, 1.3.3, 1.3.4, 1.4.4, 1.4.5, 1.5.1, 1.5.2, 1.5.3, 1.5.4, and 1.6.1 through 1.6.8.
 - Hilt 2.52 is stale for this repo's Kotlin/KSP line; it failed KSP processing. Hilt 2.59.2 is also not usable on AGP 8.10.1 because the Hilt Gradle plugin now requires AGP 9. Hilt 2.58 is the current AGP-8-compatible choice verified in this checkout.
 - `SpamRepository(context, database, remote)` now supports injected `AppDatabase` and `SpamDataSource` dependencies, enabling in-memory Room integration tests without committing to the larger Hilt/DI refactor.
 - `HotDataSync.refresh(context, source, repo, dao)` now supports an injected `HotFeedDataSource`, enabling hot-feed integration tests without live GitHub requests.
@@ -49,6 +51,6 @@ Last verified: 2026-05-17
 
 ## Next Practical Task
 
-Roadmap 1.6.8 is next: migrate `SyncWorker`, `HotListSyncWorker`, and `DigestWorker` to Hilt worker injection without changing WorkManager scheduling contracts.
+Roadmap 1.6.9 is next: convert the remaining pure/object detection helpers (`SpamHeuristics`, `SmsContentAnalyzer`, `SpamMLScorer`, `CallbackDetector`, `SmsContextChecker`, `CampaignDetector`, `HashWildcardMatcher`) to injectable classes carefully, without changing hot-path behavior.
 
 Keep `SpamRepository.getInstance()` as the fallback until app, ViewModel, service, and worker consumers are migrated one at a time.
