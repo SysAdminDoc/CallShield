@@ -31,6 +31,8 @@ Distribution prep after the v1.7.10 release.
 - Added a Hilt `RepositoryModule` that provides the existing
   `SpamRepository` facade and binds the spam-check, sync, and blocklist domain
   repository interfaces to `SpamRepositoryAdapter`.
+- Added a Hilt `NetworkModule` that provides the existing pinned
+  `HttpClient.shared` as the singleton `OkHttpClient`.
 
 ### Testing
 
