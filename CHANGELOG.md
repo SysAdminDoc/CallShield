@@ -26,6 +26,8 @@ Distribution prep after the v1.7.10 release.
 - Added the Hilt 2.58 Gradle plugin/runtime/compiler on the KSP path and
   annotated `CallShieldApp` with `@HiltAndroidApp`, establishing the DI
   migration baseline while staying compatible with AGP 8.10.1.
+- Added a Hilt `DatabaseModule` that provides `AppDatabase` and `SpamDao`
+  singletons for the upcoming repository and consumer injection steps.
 
 ### Testing
 
