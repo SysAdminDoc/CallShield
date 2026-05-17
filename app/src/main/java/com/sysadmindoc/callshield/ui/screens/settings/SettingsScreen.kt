@@ -24,6 +24,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -39,6 +40,8 @@ import com.sysadmindoc.callshield.permissions.CallShieldPermissions
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.theme.*
+
+internal const val SETTINGS_QUIET_HOURS_TOGGLE_TAG = "settings_quiet_hours_toggle"
 
 @Composable
 fun SettingsScreen(viewModel: MainViewModel) {
@@ -392,22 +395,14 @@ fun SettingsScreen(viewModel: MainViewModel) {
         }
 
         // Feature 9: Time-based blocking
-        SettingsCard(stringResource(R.string.settings_quiet_hours)) {
-            SettingsToggle(stringResource(R.string.settings_quiet_hours_toggle), stringResource(R.string.settings_quiet_hours_desc), Icons.Default.Bedtime, timeBlock) { viewModel.setTimeBlock(it) }
-            if (timeBlock) {
-                Spacer(Modifier.height(8.dp))
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(stringResource(R.string.settings_time_start), style = MaterialTheme.typography.labelMedium, color = CatSubtext)
-                        HourPicker(timeStart) { viewModel.setTimeBlockStart(it) }
-                    }
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(stringResource(R.string.settings_time_end), style = MaterialTheme.typography.labelMedium, color = CatSubtext)
-                        HourPicker(timeEnd) { viewModel.setTimeBlockEnd(it) }
-                    }
-                }
-            }
-        }
+        QuietHoursSettings(
+            enabled = timeBlock,
+            startHour = timeStart,
+            endHour = timeEnd,
+            onEnabledChange = { viewModel.setTimeBlock(it) },
+            onStartChange = { viewModel.setTimeBlockStart(it) },
+            onEndChange = { viewModel.setTimeBlockEnd(it) },
+        )
 
         // Power mode
         SettingsCard(stringResource(R.string.settings_power_mode)) {
@@ -632,9 +627,51 @@ fun SettingsScreen(viewModel: MainViewModel) {
 }
 
 @Composable
+internal fun QuietHoursSettings(
+    enabled: Boolean,
+    startHour: Int,
+    endHour: Int,
+    onEnabledChange: (Boolean) -> Unit,
+    onStartChange: (Int) -> Unit,
+    onEndChange: (Int) -> Unit,
+) {
+    SettingsCard(stringResource(R.string.settings_quiet_hours)) {
+        SettingsToggle(
+            stringResource(R.string.settings_quiet_hours_toggle),
+            stringResource(R.string.settings_quiet_hours_desc),
+            Icons.Default.Bedtime,
+            enabled,
+            toggleTag = SETTINGS_QUIET_HOURS_TOGGLE_TAG,
+            onCheckedChange = onEnabledChange
+        )
+        if (enabled) {
+            Spacer(Modifier.height(8.dp))
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(stringResource(R.string.settings_time_start), style = MaterialTheme.typography.labelMedium, color = CatSubtext)
+                    HourPicker(startHour, onSelect = onStartChange)
+                }
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(stringResource(R.string.settings_time_end), style = MaterialTheme.typography.labelMedium, color = CatSubtext)
+                    HourPicker(endHour, onSelect = onEndChange)
+                }
+            }
+            if (startHour == endHour) {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    stringResource(R.string.settings_quiet_hours_all_day_warning),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = CatYellow
+                )
+            }
+        }
+    }
+}
+
+@Composable
 fun HourPicker(selected: Int, onSelect: (Int) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
-    val label = if (selected == 0) "12 AM" else if (selected < 12) "$selected AM" else if (selected == 12) "12 PM" else "${selected - 12} PM"
+    val label = formatHourLabel(selected)
 
     Box {
         OutlinedButton(
@@ -646,11 +683,18 @@ fun HourPicker(selected: Int, onSelect: (Int) -> Unit) {
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             for (h in 0..23) {
-                val l = if (h == 0) "12 AM" else if (h < 12) "$h AM" else if (h == 12) "12 PM" else "${h - 12} PM"
+                val l = formatHourLabel(h)
                 DropdownMenuItem(text = { Text(l) }, onClick = { onSelect(h); expanded = false })
             }
         }
     }
+}
+
+internal fun formatHourLabel(hour: Int): String = when {
+    hour == 0 -> "12 AM"
+    hour < 12 -> "$hour AM"
+    hour == 12 -> "12 PM"
+    else -> "${hour - 12} PM"
 }
 
 @Composable
@@ -667,7 +711,10 @@ fun SettingsCard(title: String, content: @Composable ColumnScope.() -> Unit) {
 @Composable
 fun SettingsToggle(
     title: String, subtitle: String, icon: androidx.compose.ui.graphics.vector.ImageVector,
-    checked: Boolean, tintColor: androidx.compose.ui.graphics.Color = CatSubtext, onCheckedChange: (Boolean) -> Unit
+    checked: Boolean,
+    tintColor: androidx.compose.ui.graphics.Color = CatSubtext,
+    toggleTag: String? = null,
+    onCheckedChange: (Boolean) -> Unit
 ) {
     val context = LocalContext.current
     Row(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -684,7 +731,12 @@ fun SettingsToggle(
             Text(subtitle, style = MaterialTheme.typography.bodySmall, color = CatSubtext)
         }
         Spacer(Modifier.width(8.dp))
-        Switch(checked = checked, onCheckedChange = { hapticTick(context); onCheckedChange(it) }, colors = SwitchDefaults.colors(checkedTrackColor = CatGreen, checkedThumbColor = Black))
+        Switch(
+            checked = checked,
+            onCheckedChange = { hapticTick(context); onCheckedChange(it) },
+            modifier = if (toggleTag != null) Modifier.testTag(toggleTag) else Modifier,
+            colors = SwitchDefaults.colors(checkedTrackColor = CatGreen, checkedThumbColor = Black)
+        )
     }
 }
 

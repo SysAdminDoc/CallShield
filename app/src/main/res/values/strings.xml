@@ -392,6 +392,7 @@
     <string name="settings_quiet_hours_desc">Block all non-contact calls during set hours</string>
     <string name="settings_time_start">Start</string>
     <string name="settings_time_end">End</string>
+    <string name="settings_quiet_hours_all_day_warning">Start and end match, so quiet-hours blocking runs all day.</string>
     <string name="settings_power_mode">Power Mode</string>
     <string name="settings_aggressive_blocking">Aggressive Blocking</string>
     <string name="settings_aggressive_blocking_desc">Lower thresholds. More spam blocked, possible false positives. Contacts always safe.</string>

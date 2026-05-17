@@ -32,6 +32,9 @@ Distribution prep after the v1.7.10 release.
 - Added blocklist swipe-left removal with snackbar undo for manual block
   entries, plus Compose coverage for manual add normalization, regex validation,
   delete action, and swipe removal.
+- Extracted quiet-hours settings into a deterministic composable, added an
+  all-day warning when start and end match, and covered the toggle callback,
+  validation message, and hour picker in Compose tests.
 
 ### F-Droid
 
