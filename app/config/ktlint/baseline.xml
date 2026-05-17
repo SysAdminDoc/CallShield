@@ -2000,29 +2000,26 @@
         <error line="85" column="35" source="standard:trailing-comma-on-call-site" />
     </file>
     <file name="src/main/java/com/sysadmindoc/callshield/service/CallShieldScreeningService.kt">
-        <error line="17" column="1" source="standard:no-empty-first-line-in-class-body" />
-        <error line="68" column="23" source="standard:if-else-wrapping" />
-        <error line="68" column="28" source="standard:if-else-bracing" />
-        <error line="68" column="28" source="standard:if-else-wrapping" />
-        <error line="68" column="28" source="standard:multiline-if-else" />
-        <error line="71" column="30" source="standard:multiline-expression-wrapping" />
-        <error line="82" column="38" source="standard:trailing-comma-on-call-site" />
-        <error line="90" column="42" source="standard:multiline-expression-wrapping" />
-        <error line="96" column="49" source="standard:try-catch-finally-spacing" />
-        <error line="96" column="49" source="standard:try-catch-finally-spacing" />
-        <error line="117" column="22" source="standard:try-catch-finally-spacing" />
-        <error line="117" column="23" source="standard:statement-wrapping" />
-        <error line="117" column="49" source="standard:statement-wrapping" />
-        <error line="117" column="49" source="standard:try-catch-finally-spacing" />
-        <error line="117" column="73" source="standard:try-catch-finally-spacing" />
-        <error line="117" column="73" source="standard:try-catch-finally-spacing" />
-        <error line="138" column="31" source="standard:chain-method-continuation" />
-        <error line="140" column="37" source="standard:try-catch-finally-spacing" />
-        <error line="140" column="38" source="standard:try-catch-finally-spacing" />
-        <error line="171" column="25" source="standard:chain-method-continuation" />
+        <error line="74" column="23" source="standard:if-else-wrapping" />
+        <error line="74" column="28" source="standard:if-else-bracing" />
+        <error line="74" column="28" source="standard:if-else-wrapping" />
+        <error line="74" column="28" source="standard:multiline-if-else" />
+        <error line="77" column="30" source="standard:multiline-expression-wrapping" />
+        <error line="96" column="42" source="standard:multiline-expression-wrapping" />
+        <error line="102" column="49" source="standard:try-catch-finally-spacing" />
+        <error line="102" column="49" source="standard:try-catch-finally-spacing" />
+        <error line="123" column="22" source="standard:try-catch-finally-spacing" />
+        <error line="123" column="23" source="standard:statement-wrapping" />
+        <error line="123" column="49" source="standard:statement-wrapping" />
+        <error line="123" column="49" source="standard:try-catch-finally-spacing" />
+        <error line="123" column="73" source="standard:try-catch-finally-spacing" />
+        <error line="123" column="73" source="standard:try-catch-finally-spacing" />
+        <error line="146" column="37" source="standard:try-catch-finally-spacing" />
+        <error line="146" column="38" source="standard:try-catch-finally-spacing" />
         <error line="177" column="25" source="standard:chain-method-continuation" />
-        <error line="216" column="24" source="standard:multiline-expression-wrapping" />
-        <error line="216" column="36" source="standard:chain-method-continuation" />
+        <error line="183" column="25" source="standard:chain-method-continuation" />
+        <error line="222" column="24" source="standard:multiline-expression-wrapping" />
+        <error line="222" column="36" source="standard:chain-method-continuation" />
     </file>
     <file name="src/main/java/com/sysadmindoc/callshield/service/CallShieldTileService.kt">
         <error line="6" column="1" source="standard:no-wildcard-imports" />

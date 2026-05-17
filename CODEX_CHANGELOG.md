@@ -115,8 +115,9 @@ Work completed:
 - added `RepositoryModule` with Hilt bindings from domain repository interfaces to `SpamRepositoryAdapter`, with the existing `SpamRepository` facade provided from `getInstance()`
 - added `NetworkModule` with a Hilt provider for the existing pinned `HttpClient.shared` `OkHttpClient`
 - annotated `MainActivity` as a Hilt entry point and migrated `MainViewModel` to `@HiltViewModel` with injected `SpamRepository`, `SyncDatabaseUseCase`, `ManageBlocklistUseCase`, and `ExportLogsUseCase`
+- added a Hilt provider for `CheckSpamUseCase` and migrated `CallShieldScreeningService` to `@AndroidEntryPoint` field injection while keeping the one-snapshot 5-second decision path and fail-open behavior
 - regenerated the ktlint baseline after modifying previously-baselined files so the new gate reflects the current debt set
-- marked roadmap items 1.2.1 through 1.2.4, 1.3.1 through 1.3.4, 1.4.4, 1.4.5, 1.5.1 through 1.5.4, and 1.6.1 through 1.6.6 done
+- marked roadmap items 1.2.1 through 1.2.4, 1.3.1 through 1.3.4, 1.4.4, 1.4.5, 1.5.1 through 1.5.4, and 1.6.1 through 1.6.7 done
 - verified `:app:compileDebugAndroidTestKotlin`, `testDebugUnitTest`, `:app:lintDebug`, `:app:ktlintCheck`, `:app:detekt`, and the Kover debug coverage gate
 
 ### 0. F-Droid submission prep
