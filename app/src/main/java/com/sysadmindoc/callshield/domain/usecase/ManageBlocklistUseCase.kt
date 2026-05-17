@@ -1,16 +1,16 @@
 package com.sysadmindoc.callshield.domain.usecase
 
-import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.TimeSchedule
 import com.sysadmindoc.callshield.data.model.HashWildcardRule
 import com.sysadmindoc.callshield.data.model.SmsKeywordRule
 import com.sysadmindoc.callshield.data.model.SpamNumber
 import com.sysadmindoc.callshield.data.model.WhitelistEntry
 import com.sysadmindoc.callshield.data.model.WildcardRule
+import com.sysadmindoc.callshield.domain.repository.BlocklistRepository
 
 @Suppress("TooManyFunctions")
 class ManageBlocklistUseCase(
-    private val repository: SpamRepository,
+    private val repository: BlocklistRepository,
 ) {
     suspend fun blockNumber(
         number: String,

@@ -5,6 +5,7 @@ import android.net.Uri
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.permissions.CallShieldPermissions
 import com.sysadmindoc.callshield.data.SpamRepository
+import com.sysadmindoc.callshield.data.repository.SpamRepositoryAdapter
 import com.sysadmindoc.callshield.domain.usecase.CheckSpamSmsUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -40,7 +41,7 @@ object SmsInboxScanner {
         }
 
         val repo = SpamRepository.getInstance(context)
-        val checkSpamSms = CheckSpamSmsUseCase(repo)
+        val checkSpamSms = CheckSpamSmsUseCase(SpamRepositoryAdapter(repo))
         val spamList = mutableListOf<ScannedSms>()
         var scanned = 0
 

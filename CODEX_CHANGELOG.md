@@ -37,6 +37,10 @@ Files:
 - `app/src/main/java/com/sysadmindoc/callshield/domain/usecase/ExportLogsUseCase.kt`
 - `app/src/main/java/com/sysadmindoc/callshield/domain/model/SpamCheckResult.kt`
 - `app/src/main/java/com/sysadmindoc/callshield/domain/model/SyncResult.kt`
+- `app/src/main/java/com/sysadmindoc/callshield/domain/repository/SpamCheckRepository.kt`
+- `app/src/main/java/com/sysadmindoc/callshield/domain/repository/SyncRepository.kt`
+- `app/src/main/java/com/sysadmindoc/callshield/domain/repository/BlocklistRepository.kt`
+- `app/src/main/java/com/sysadmindoc/callshield/data/repository/SpamRepositoryAdapter.kt`
 - `app/src/main/java/com/sysadmindoc/callshield/data/CallCategory.kt`
 - `app/src/main/java/com/sysadmindoc/callshield/service/CallLogScanner.kt`
 - `app/src/main/java/com/sysadmindoc/callshield/service/CallShieldScreeningService.kt`
@@ -89,8 +93,11 @@ Work completed:
 - routed the live call-screening service, SMS receiver, RCS listener, historical call/SMS scanners, sync worker, and `MainViewModel` blocklist/export operations through those wrappers while preserving `SpamRepository` as the implementation
 - moved `SpamCheckResult` and `SyncResult` from the bottom of `SpamRepository.kt` into `domain/model`
 - updated call category resolution, lookup/detail UI, use cases, and tests to import the domain result models
+- added domain repository contracts for spam checks, database sync, and blocklist management
+- added `SpamRepositoryAdapter` to bridge those contracts to the current monolithic repository without changing repository defaults or beginning the larger split
+- updated use cases to depend on domain repository interfaces instead of concrete `SpamRepository`
 - regenerated the ktlint baseline after modifying previously-baselined files so the new gate reflects the current debt set
-- marked roadmap items 1.2.1 through 1.2.4, 1.3.1 through 1.3.4, 1.4.4, 1.4.5, 1.5.1, and 1.5.2 done
+- marked roadmap items 1.2.1 through 1.2.4, 1.3.1 through 1.3.4, 1.4.4, 1.4.5, 1.5.1, 1.5.2, and 1.5.3 done
 - verified `:app:compileDebugAndroidTestKotlin`, `testDebugUnitTest`, `:app:lintDebug`, `:app:ktlintCheck`, `:app:detekt`, and the Kover debug coverage gate
 
 ### 0. F-Droid submission prep

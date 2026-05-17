@@ -6,6 +6,7 @@ import android.content.Intent
 import android.provider.Telephony
 import com.sysadmindoc.callshield.CallShieldApp
 import com.sysadmindoc.callshield.data.SpamRepository
+import com.sysadmindoc.callshield.data.repository.SpamRepositoryAdapter
 import com.sysadmindoc.callshield.data.remote.UrlSafetyChecker
 import com.sysadmindoc.callshield.domain.usecase.CheckSpamSmsUseCase
 import kotlinx.coroutines.launch
@@ -22,7 +23,7 @@ class SmsReceiver : BroadcastReceiver() {
 
         val appContext = context.applicationContext
         val repo = SpamRepository.getInstance(appContext)
-        val checkSpamSms = CheckSpamSmsUseCase(repo)
+        val checkSpamSms = CheckSpamSmsUseCase(SpamRepositoryAdapter(repo))
         val pendingResult = goAsync()
 
         // Keep work off the main thread without spinning a raw thread per SMS.
