@@ -6,6 +6,17 @@ All notable changes to CallShield will be documented in this file.
 
 Distribution prep after the v1.7.10 release.
 
+### Testing
+
+- Added an `AppDatabase` constructor seam to `SpamRepository` so Android
+  integration tests can run the repository against an in-memory Room database
+  without starting the larger DI refactor.
+- Added instrumented call-pipeline integration coverage for manual whitelist,
+  STIR/SHAKEN failed/trusted ordering, user blocklist, prefix, wildcard,
+  hash-wildcard, and frequency escalation priority tiers.
+- Added instrumented SMS-pipeline coverage for whitelisted-sender inspection,
+  keyword-before-content ordering, and generic SMS content-analysis blocking.
+
 ### F-Droid
 
 - Added Fastlane listing metadata under `fastlane/metadata/android/en-US/`.
