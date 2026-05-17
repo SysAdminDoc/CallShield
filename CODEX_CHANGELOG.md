@@ -35,6 +35,9 @@ Files:
 - `app/src/main/java/com/sysadmindoc/callshield/domain/usecase/SyncDatabaseUseCase.kt`
 - `app/src/main/java/com/sysadmindoc/callshield/domain/usecase/ManageBlocklistUseCase.kt`
 - `app/src/main/java/com/sysadmindoc/callshield/domain/usecase/ExportLogsUseCase.kt`
+- `app/src/main/java/com/sysadmindoc/callshield/domain/model/SpamCheckResult.kt`
+- `app/src/main/java/com/sysadmindoc/callshield/domain/model/SyncResult.kt`
+- `app/src/main/java/com/sysadmindoc/callshield/data/CallCategory.kt`
 - `app/src/main/java/com/sysadmindoc/callshield/service/CallLogScanner.kt`
 - `app/src/main/java/com/sysadmindoc/callshield/service/CallShieldScreeningService.kt`
 - `app/src/main/java/com/sysadmindoc/callshield/service/RcsNotificationListener.kt`
@@ -84,8 +87,10 @@ Work completed:
 - added a CI `static-analysis` job that runs `:app:ktlintCheck` and `:app:detekt` and uploads both report directories
 - added domain use-case wrappers for call/SMS checks, sync, blocklist management, and exports
 - routed the live call-screening service, SMS receiver, RCS listener, historical call/SMS scanners, sync worker, and `MainViewModel` blocklist/export operations through those wrappers while preserving `SpamRepository` as the implementation
+- moved `SpamCheckResult` and `SyncResult` from the bottom of `SpamRepository.kt` into `domain/model`
+- updated call category resolution, lookup/detail UI, use cases, and tests to import the domain result models
 - regenerated the ktlint baseline after modifying previously-baselined files so the new gate reflects the current debt set
-- marked roadmap items 1.2.1 through 1.2.4, 1.3.1 through 1.3.4, 1.4.4, 1.4.5, and 1.5.1 done
+- marked roadmap items 1.2.1 through 1.2.4, 1.3.1 through 1.3.4, 1.4.4, 1.4.5, 1.5.1, and 1.5.2 done
 - verified `:app:compileDebugAndroidTestKotlin`, `testDebugUnitTest`, `:app:lintDebug`, `:app:ktlintCheck`, `:app:detekt`, and the Kover debug coverage gate
 
 ### 0. F-Droid submission prep

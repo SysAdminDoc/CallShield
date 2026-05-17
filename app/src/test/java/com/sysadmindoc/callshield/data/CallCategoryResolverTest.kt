@@ -1,5 +1,6 @@
 package com.sysadmindoc.callshield.data
 
+import com.sysadmindoc.callshield.domain.model.SpamCheckResult
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
