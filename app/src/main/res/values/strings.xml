@@ -222,6 +222,8 @@
     <string name="blocklist_empty_database">No spam database loaded</string>
     <string name="blocklist_empty_database_sub">Run a sync from Home to download the current spam feed before reviewing local database entries here.</string>
     <string name="blocklist_number_blocked">Number blocked</string>
+    <string name="blocklist_number_removed">Removed from blocklist</string>
+    <string name="blocklist_undo">Undo</string>
     <string name="blocklist_rule_added">Rule added</string>
     <string name="blocklist_number_whitelisted">Number whitelisted</string>
     <string name="blocklist_keyword_rule_added">Keyword rule added</string>

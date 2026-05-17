@@ -2,6 +2,7 @@ package com.sysadmindoc.callshield.ui.screens.main
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,6 +25,7 @@ import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Code
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.FileOpen
 import androidx.compose.material.icons.filled.FilterAlt
 import androidx.compose.material.icons.filled.PriorityHigh
@@ -51,13 +53,17 @@ import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRowDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -69,9 +75,11 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -114,6 +122,8 @@ private const val BLOCKLIST_TAB_RANGES = 2        // A5: length-locked # pattern
 private const val BLOCKLIST_TAB_KEYWORDS = 3
 private const val BLOCKLIST_TAB_WHITELIST = 4
 private const val BLOCKLIST_TAB_DATABASE = 5
+internal const val BLOCKLIST_SWIPE_ITEM_TAG = "blocklist_swipe_item"
+internal const val BLOCKLIST_REGEX_CHECKBOX_TAG = "blocklist_regex_checkbox"
 
 private data class BlocklistWorkspaceModel(
     val title: String,
@@ -157,6 +167,28 @@ fun BlocklistScreen(viewModel: MainViewModel) {
         snackbarHost.currentSnackbarData?.dismiss()
         snackbarHost.showSnackbar(message, duration = SnackbarDuration.Short)
         viewModel.clearImportResult()
+    }
+
+    val numberRemovedMessage = stringResource(R.string.blocklist_number_removed)
+    val undoLabel = stringResource(R.string.blocklist_undo)
+    fun removeBlockedNumberWithUndo(number: SpamNumber) {
+        viewModel.unblockNumber(number)
+        hapticTick(context)
+        scope.launch {
+            snackbarHost.currentSnackbarData?.dismiss()
+            val result = snackbarHost.showSnackbar(
+                message = numberRemovedMessage,
+                actionLabel = undoLabel,
+                duration = SnackbarDuration.Short
+            )
+            if (result == SnackbarResult.ActionPerformed) {
+                viewModel.blockNumber(
+                    number = number.number,
+                    type = number.type,
+                    description = number.description
+                )
+            }
+        }
     }
 
     val workspace = when (tabIndex) {
@@ -296,7 +328,10 @@ fun BlocklistScreen(viewModel: MainViewModel) {
                                 verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 items(userBlocked, key = { it.id }) { number ->
-                                    BlocklistItem(number) { viewModel.unblockNumber(number) }
+                                    SwipeToRemoveBlocklistItem(
+                                        number = number,
+                                        onRemove = { removeBlockedNumberWithUndo(number) },
+                                    )
                                 }
                             }
                         }
@@ -662,6 +697,43 @@ private fun EmptyStateCard(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun SwipeToRemoveBlocklistItem(
+    number: SpamNumber,
+    onRemove: () -> Unit,
+) {
+    val dismissState = rememberSwipeToDismissBoxState(
+        confirmValueChange = { value ->
+            if (value == SwipeToDismissBoxValue.EndToStart) {
+                onRemove()
+                true
+            } else {
+                false
+            }
+        }
+    )
+    SwipeToDismissBox(
+        state = dismissState,
+        modifier = Modifier.testTag(BLOCKLIST_SWIPE_ITEM_TAG),
+        backgroundContent = {
+            val active = dismissState.dismissDirection == SwipeToDismissBoxValue.EndToStart
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(if (active) CatRed.copy(alpha = 0.28f) else SurfaceBright)
+                    .padding(horizontal = 20.dp),
+                contentAlignment = Alignment.CenterEnd
+            ) {
+                Icon(Icons.Default.Delete, null, tint = CatText)
+            }
+        }
+    ) {
+        BlocklistItem(number, onUnblock = onRemove)
+    }
+}
+
 @Composable
 fun BlocklistItem(number: SpamNumber, onUnblock: () -> Unit) {
     PremiumCard(cornerRadius = 12.dp, accentColor = CatRed) {
@@ -1011,14 +1083,15 @@ fun AddWildcardDialog(
                     )
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    androidx.compose.material3.Checkbox(
-                        checked = isRegex,
-                        onCheckedChange = {
-                            isRegex = it
-                            regexErrorDetail = null
-                        },
-                        colors = androidx.compose.material3.CheckboxDefaults.colors(checkedColor = CatYellow)
-                    )
+                androidx.compose.material3.Checkbox(
+                    checked = isRegex,
+                    onCheckedChange = {
+                        isRegex = it
+                        regexErrorDetail = null
+                    },
+                    modifier = Modifier.testTag(BLOCKLIST_REGEX_CHECKBOX_TAG),
+                    colors = androidx.compose.material3.CheckboxDefaults.colors(checkedColor = CatYellow)
+                )
                     Text(stringResource(R.string.dialog_use_regex), style = MaterialTheme.typography.bodySmall)
                 }
                 GradientDivider(color = CatYellow)
