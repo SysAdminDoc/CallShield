@@ -28,6 +28,9 @@ Distribution prep after the v1.7.10 release.
   migration baseline while staying compatible with AGP 8.10.1.
 - Added a Hilt `DatabaseModule` that provides `AppDatabase` and `SpamDao`
   singletons for the upcoming repository and consumer injection steps.
+- Added a Hilt `RepositoryModule` that provides the existing
+  `SpamRepository` facade and binds the spam-check, sync, and blocklist domain
+  repository interfaces to `SpamRepositoryAdapter`.
 
 ### Testing
 
