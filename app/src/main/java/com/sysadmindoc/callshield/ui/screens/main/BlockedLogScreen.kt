@@ -342,13 +342,15 @@ fun BlockedCallItem(call: BlockedCall, onTap: () -> Unit) {
     var expanded by remember { mutableStateOf(false) }
     val copiedMessage = stringResource(R.string.blocked_log_copied, PhoneFormatter.format(call.number))
     val copiedShortMessage = stringResource(R.string.blocked_log_copied_short)
+    val clipLabelPhone = stringResource(R.string.clip_label_phone)
+    val clipLabelPhoneNumber = stringResource(R.string.clip_label_phone_number)
 
     PremiumCard(
         cornerRadius = 12.dp,
         modifier = Modifier.combinedClickable(
             onClick = onTap,
             onLongClick = {
-                val clip = ClipData.newPlainText("Phone Number", call.number)
+                val clip = ClipData.newPlainText(clipLabelPhoneNumber, call.number)
                 (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(clip)
                 Toast.makeText(
                     context,
@@ -377,7 +379,11 @@ fun BlockedCallItem(call: BlockedCall, onTap: () -> Unit) {
                     }
                     if (call.matchReason.isNotEmpty()) {
                         val reasonText = call.matchReason.replace("_", " ").replaceFirstChar { it.uppercase() }
-                        val confidenceText = if (call.confidence < 100) " (${call.confidence}%)" else ""
+                        val confidenceText = if (call.confidence < 100) {
+                            stringResource(R.string.confidence_suffix, call.confidence)
+                        } else {
+                            ""
+                        }
                         // Feature A: prepend the resolved CallCategory label.
                         // Falls back silently to just the raw reason if the
                         // resolver lands on Unknown — no noise, no mislabels.
@@ -429,7 +435,7 @@ fun BlockedCallItem(call: BlockedCall, onTap: () -> Unit) {
                     // Copy
                     SmallActionButton(Icons.Default.ContentCopy, stringResource(R.string.blocked_log_copy), CatSubtext) {
                         (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager)
-                            .setPrimaryClip(ClipData.newPlainText("Phone", call.number))
+                            .setPrimaryClip(ClipData.newPlainText(clipLabelPhone, call.number))
                         Toast.makeText(context, copiedShortMessage, Toast.LENGTH_SHORT).show()
                     }
                     // Detail

@@ -233,6 +233,18 @@
     <string name="blocklist_case_insensitive">Case-insensitive</string>
     <string name="blocklist_reports">Reports: %d</string>
     <string name="blocklist_manual_badge">Manual block</string>
+    <string name="blocklist_export_subject">CallShield Blocklist</string>
+    <string name="blocklist_export_chooser_title">Share blocklist</string>
+    <string name="blocklist_import_no_valid_numbers">No valid numbers found in import file</string>
+    <string name="blocklist_import_could_not_open">Couldn\'t open the selected file</string>
+    <string name="blocklist_import_empty">Selected file was empty</string>
+    <string name="blocklist_import_could_not_access">Couldn\'t access the selected file</string>
+    <string name="blocklist_import_failed">Import failed: %s</string>
+    <string name="blocklist_import_fallback_read_error">Couldn\'t read the selected file</string>
+    <plurals name="blocklist_imported_numbers">
+        <item quantity="one">Imported %d number</item>
+        <item quantity="other">Imported %d numbers</item>
+    </plurals>
 
     <!-- Add Number Dialog -->
     <string name="dialog_block_number">Block Number</string>
@@ -754,6 +766,17 @@
     <string name="detail_whitelist">Whitelist</string>
     <string name="detail_call">Call</string>
     <string name="detail_share">Share</string>
+    <string name="detail_block_area_code_description">Block area code %s</string>
+    <string name="detail_block_area_code_description_location">Block area code %1$s (%2$s)</string>
+    <string name="detail_blocked_from_detail">Blocked from detail</string>
+    <string name="detail_whitelisted_from_detail">Whitelisted from detail</string>
+    <string name="detail_report_issue_title">[SPAM] %s</string>
+    <string name="detail_report_issue_body">## Phone Number\n%1$s\n\n## Type\nReported from CallShield\n\n## Description\nSeen %2$d times</string>
+    <string name="confidence_suffix"> (%d%%)</string>
+    <plurals name="detail_reports_count_plural">
+        <item quantity="one">%d report</item>
+        <item quantity="other">%d reports</item>
+    </plurals>
 
     <!-- MainActivity / Navigation -->
     <string name="nav_home">Home</string>
@@ -796,6 +819,42 @@
         <item quantity="one">%d result</item>
         <item quantity="other">%d results</item>
     </plurals>
+    <plurals name="search_result_type_reports">
+        <item quantity="one">%1$s - %2$d report</item>
+        <item quantity="other">%1$s - %2$d reports</item>
+    </plurals>
+
+    <!-- Sync results -->
+    <string name="sync_database_up_to_date">Database is up to date</string>
+    <string name="sync_success_counts">Synced %1$d numbers, %2$d prefixes</string>
+    <string name="sync_unknown_error">Unknown sync error</string>
+    <string name="sync_remote_unavailable_existing">GitHub sync unavailable (%s). Your existing spam database is still active.</string>
+    <string name="sync_bundled_snapshot_loaded">Loaded bundled protection snapshot with %1$d numbers and %2$d prefixes while GitHub was unavailable.</string>
+    <string name="sync_unavailable_prefix">Sync unavailable (%s)</string>
+    <string name="sync_bundled_fallback_failed">. Bundled fallback failed: %s</string>
+    <string name="sync_error">Error: %s</string>
+
+    <!-- Backup, restore, and clipboard labels -->
+    <string name="backup_subject">CallShield Backup</string>
+    <string name="backup_chooser_title">Save backup</string>
+    <string name="backup_restore_could_not_read">Could not read file</string>
+    <string name="backup_restore_invalid_format">Invalid backup format</string>
+    <string name="backup_restore_wrong_app">This backup was not created by CallShield</string>
+    <string name="backup_restore_unsupported_version">Unsupported backup version %d</string>
+    <string name="backup_restore_no_data">Backup file contains no restorable data</string>
+    <string name="backup_restore_no_valid_items">Backup file contained no valid items</string>
+    <string name="backup_restore_success">Restored %1$d numbers, %2$d whitelist entries, %3$d wildcard rules, %4$d keyword rules</string>
+    <string name="backup_restore_error">Error: %s</string>
+    <string name="clip_label_phone">Phone</string>
+    <string name="clip_label_phone_number">Phone Number</string>
+    <string name="clip_label_spam_number">CallShield spam number</string>
+    <string name="log_export_subject">CallShield Blocked Log</string>
+    <string name="log_export_chooser_title">Export log</string>
+    <string name="share_spam_warning_text">Spam alert: %1$s%2$s is a known spam number.%3$s Blocked by CallShield.</string>
+    <string name="share_spam_warning_location"> (%s)</string>
+    <string name="share_spam_warning_type"> Type: %s.</string>
+    <string name="share_spam_warning_subject">Spam Number Warning: %s</string>
+    <string name="share_spam_warning_chooser_title">Share spam warning</string>
 
     <!-- NotificationHelper -->
     <string name="notif_channel_blocked">Blocked Calls &amp; SMS</string>
@@ -969,6 +1028,8 @@
     <string name="widget_last_hours_ago">Last: %dh ago</string>
     <string name="widget_last_days_ago">Last: %dd ago</string>
     <string name="widget_last_never">Last: never</string>
+    <string name="tile_protection_on">Protection on</string>
+    <string name="tile_protection_off">Protection off</string>
 
     <plurals name="overlay_reports_count">
         <item quantity="one">%1$s report</item>
