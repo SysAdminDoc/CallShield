@@ -1,5 +1,7 @@
 import java.util.Properties
+import io.gitlab.arturbosch.detekt.Detekt
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jlleitschuh.gradle.ktlint.reporter.ReporterType
 
 plugins {
     alias(libs.plugins.android.application)
@@ -7,6 +9,8 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
     alias(libs.plugins.kover)
+    alias(libs.plugins.ktlint)
+    alias(libs.plugins.detekt)
 }
 
 val localProperties = Properties().apply {
@@ -110,6 +114,41 @@ kover {
                 }
             }
         }
+    }
+}
+
+ktlint {
+    version.set(libs.versions.ktlintCli.get())
+    android.set(true)
+    outputToConsole.set(true)
+    ignoreFailures.set(false)
+    reporters {
+        reporter(ReporterType.PLAIN)
+        reporter(ReporterType.CHECKSTYLE)
+    }
+}
+
+detekt {
+    toolVersion = libs.versions.detekt.get()
+    buildUponDefaultConfig = true
+    parallel = true
+    ignoreFailures = false
+    source.setFrom(
+        "src/main/java",
+        "src/test/java",
+        "src/androidTest/java"
+    )
+    baseline = file("detekt-baseline.xml")
+    basePath = rootDir.absolutePath
+}
+
+tasks.withType<Detekt>().configureEach {
+    jvmTarget = "17"
+    reports {
+        html.required.set(true)
+        xml.required.set(true)
+        sarif.required.set(true)
+        md.required.set(false)
     }
 }
 

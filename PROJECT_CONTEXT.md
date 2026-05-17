@@ -10,6 +10,7 @@ Last verified: 2026-05-17
 - Stack: Kotlin Android, Jetpack Compose BOM 2026.05.00, AGP 8.10.1, Kotlin/KSP 2.2.21, Room 2.8.4, WorkManager 2.11.2, OkHttp 5.3.2, DataStore 1.2.1.
 - Source shape after this pass: 80 main Kotlin files, 35 JVM test files, 11 instrumented test files.
 - CI now runs Kover 0.9.8 for the debug JVM unit-test report. The coverage gate is scoped to `data.*` and `util.*`, excludes `data.local.*`, and currently passes at 41.06% line coverage against a 35% floor.
+- CI now also has a `static-analysis` job running ktlint 1.8.0 and detekt 1.23.8. Existing debt is captured in `app/config/ktlint/baseline.xml` and `app/detekt-baseline.xml`.
 - Shared project memory still lags around v1.7.2; treat live repo docs, Gradle files, and git history as authoritative.
 
 ## Architecture Notes
@@ -22,7 +23,7 @@ Last verified: 2026-05-17
 
 ## Current Roadmap Position
 
-- Completed in this pass: roadmap 1.2.1, 1.2.2, 1.2.3, 1.2.4, 1.3.1, 1.3.2, 1.3.3, 1.3.4, and 1.4.4.
+- Completed in this pass: roadmap 1.2.1, 1.2.2, 1.2.3, 1.2.4, 1.3.1, 1.3.2, 1.3.3, 1.3.4, 1.4.4, and 1.4.5.
 - `SpamRepository(context, database, remote)` now supports injected `AppDatabase` and `SpamDataSource` dependencies, enabling in-memory Room integration tests without committing to the larger Hilt/DI refactor.
 - `HotDataSync.refresh(context, source, repo, dao)` now supports an injected `HotFeedDataSource`, enabling hot-feed integration tests without live GitHub requests.
 - Added instrumented tests:
@@ -39,6 +40,6 @@ Last verified: 2026-05-17
 
 ## Next Practical Task
 
-Roadmap 1.4.5 is next: add lint, ktlint, and detekt as required PR checks.
+Roadmap 1.5.1 is next: introduce domain use-case wrappers for the main repository workflows.
 
-Verify the existing Android lint job, Kotlin style, and dependency-locking behavior before adding static-analysis plugins. Keep the first pass non-invasive: enforce formatting and static analysis without starting broad code-style rewrites unless the tools surface real blockers.
+Keep this as an incremental architecture step: add use cases without splitting `SpamRepository` yet, preserve the constructor seams from 1.2, and rerun the unit tests plus Android-test compilation after any dependency direction changes.

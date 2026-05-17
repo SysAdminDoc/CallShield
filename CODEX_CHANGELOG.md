@@ -19,10 +19,13 @@ This repository already had a broad UX/premium-polish pass in progress across th
 Files:
 
 - `.github/workflows/test.yml`
+- `.editorconfig`
 - `build.gradle.kts`
 - `gradle/libs.versions.toml`
 - `app/build.gradle.kts`
 - `app/gradle.lockfile`
+- `app/config/ktlint/baseline.xml`
+- `app/detekt-baseline.xml`
 - `app/src/main/java/com/sysadmindoc/callshield/data/SpamRepository.kt`
 - `app/src/main/java/com/sysadmindoc/callshield/data/remote/SpamDataSource.kt`
 - `app/src/main/java/com/sysadmindoc/callshield/data/remote/HotFeedDataSource.kt`
@@ -64,8 +67,11 @@ Work completed:
 - added Kover 0.9.8 through the version catalog, refreshed the locked Gradle graph, and applied the plugin to the app module
 - configured `:app:koverVerifyDebug` with a 35% minimum line threshold over the JVM-tested data/util core, excluding `data.local` because Room is covered by instrumented tests and Kover does not collect device-test coverage
 - added CI execution for `:app:koverVerifyDebug` and `:app:koverXmlReportDebug`
-- marked roadmap items 1.2.1 through 1.2.4, 1.3.1 through 1.3.4, and 1.4.4 done
-- verified `:app:compileDebugAndroidTestKotlin`, `testDebugUnitTest`, and the Kover debug coverage gate
+- added ktlint-gradle 14.2.0, ktlint CLI 1.8.0, detekt 1.23.8, and a repo `.editorconfig`
+- generated ktlint and detekt baselines so the new static-analysis job gates regressions without forcing a broad reformat/refactor
+- added a CI `static-analysis` job that runs `:app:ktlintCheck` and `:app:detekt` and uploads both report directories
+- marked roadmap items 1.2.1 through 1.2.4, 1.3.1 through 1.3.4, 1.4.4, and 1.4.5 done
+- verified `:app:compileDebugAndroidTestKotlin`, `testDebugUnitTest`, `:app:lintDebug`, `:app:ktlintCheck`, `:app:detekt`, and the Kover debug coverage gate
 
 ### 0. F-Droid submission prep
 
