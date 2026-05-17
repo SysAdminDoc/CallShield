@@ -10,6 +10,7 @@ import com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup
 import java.io.File
 import java.util.Calendar
 import java.util.concurrent.TimeUnit
+import javax.inject.Inject
 import kotlin.math.cos
 import kotlin.math.exp
 import kotlin.math.sin
@@ -52,18 +53,16 @@ import kotlin.math.sin
  *
  * Threshold: 0.7 (conservative — avoids false positives).
  */
-object SpamMLScorer {
+class SpamMLScorer @Inject constructor() {
 
-    private const val GBT_LEAF_NODE = -2
-
-    private val TOLL_FREE_PREFIXES = setOf("800", "888", "877", "866", "855", "844", "833")
-    private val HIGH_SPAM_NPAS = setOf(
+    private val tollFreePrefixes = setOf("800", "888", "877", "866", "855", "844", "833")
+    private val highSpamNpas = setOf(
         "800", "888", "877", "866", "855", "844", "833",
         "202", "213", "310", "323", "347", "404", "415",
         "512", "617", "646", "702", "713", "718", "786",
         "813", "832", "917", "929",
     )
-    private val HIGH_SPAM_VOIP_NPANXX = setOf(
+    private val highSpamVoipNpanxx = setOf(
         "202555", "213226", "213555", "310555", "310400",
         "323555", "347555", "404555", "404430", "415555",
         "503555", "512555", "617555", "646555", "702555",
@@ -311,9 +310,9 @@ object SpamMLScorer {
         val nxxInt = nxx.toIntOrNull() ?: 0
 
         // ── Features 1–8 (original) ──────────────────────────────────
-        val tollFree     = if (npa in TOLL_FREE_PREFIXES) 1.0 else 0.0
-        val highSpamNpa  = if (npa in HIGH_SPAM_NPAS) 1.0 else 0.0
-        val voipRange    = if (npanxx in HIGH_SPAM_VOIP_NPANXX) 1.0 else 0.0
+        val tollFree     = if (npa in tollFreePrefixes) 1.0 else 0.0
+        val highSpamNpa  = if (npa in highSpamNpas) 1.0 else 0.0
+        val voipRange    = if (npanxx in highSpamVoipNpanxx) 1.0 else 0.0
 
         val digitCounts  = digits.groupingBy { it }.eachCount()
         val repeatedRatio = (digitCounts.values.maxOrNull() ?: 1) / 10.0
@@ -649,5 +648,31 @@ object SpamMLScorer {
                 tmpFile.delete()
             }
         }
+    }
+
+    companion object {
+        val shared: SpamMLScorer = SpamMLScorer()
+
+        private const val GBT_LEAF_NODE = -2
+
+        fun loadWeights(context: Context) {
+            shared.loadWeights(context)
+        }
+
+        suspend fun syncWeights(context: Context) {
+            shared.syncWeights(context)
+        }
+
+        fun score(number: String): Double =
+            shared.score(number)
+
+        fun isSpam(number: String): Boolean =
+            shared.isSpam(number)
+
+        fun confidence(number: String): Int =
+            shared.confidence(number)
+
+        fun verdict(number: String): Verdict =
+            shared.verdict(number)
     }
 }

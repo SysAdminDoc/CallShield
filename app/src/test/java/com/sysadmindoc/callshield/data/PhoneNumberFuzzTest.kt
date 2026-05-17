@@ -27,7 +27,7 @@ class PhoneNumberFuzzTest {
         try {
             val method = SpamMLScorer::class.java.getDeclaredMethod("extractFeatures", String::class.java)
             method.isAccessible = true
-            method.invoke(SpamMLScorer, input)
+            method.invoke(SpamMLScorer.shared, input)
         } catch (e: java.lang.reflect.InvocationTargetException) {
             fail("extractFeatures threw ${e.targetException::class.simpleName} for input: ${input.take(80)}")
         }
@@ -50,7 +50,7 @@ class PhoneNumberFuzzTest {
         try {
             val method = CampaignDetector::class.java.getDeclaredMethod("extractNpaNxx", String::class.java)
             method.isAccessible = true
-            method.invoke(CampaignDetector, input)
+            method.invoke(CampaignDetector.shared, input)
         } catch (e: java.lang.reflect.InvocationTargetException) {
             fail("extractNpaNxx threw ${e.targetException::class.simpleName} for input: ${input.take(80)}")
         }
@@ -332,7 +332,7 @@ class PhoneNumberFuzzTest {
     fun `extractFeatures returns empty for non-10-digit input`() {
         val method = SpamMLScorer::class.java.getDeclaredMethod("extractFeatures", String::class.java)
         method.isAccessible = true
-        val result = method.invoke(SpamMLScorer, "123") as DoubleArray
+        val result = method.invoke(SpamMLScorer.shared, "123") as DoubleArray
         assertEquals("Should return empty array for short input", 0, result.size)
     }
 
@@ -340,7 +340,7 @@ class PhoneNumberFuzzTest {
     fun `extractFeatures returns 20 features for valid number`() {
         val method = SpamMLScorer::class.java.getDeclaredMethod("extractFeatures", String::class.java)
         method.isAccessible = true
-        val result = method.invoke(SpamMLScorer, "2125551234") as DoubleArray
+        val result = method.invoke(SpamMLScorer.shared, "2125551234") as DoubleArray
         assertEquals("Should return 20 features", 20, result.size)
     }
 
@@ -348,7 +348,7 @@ class PhoneNumberFuzzTest {
     fun `extractNpaNxx returns null for short number`() {
         val method = CampaignDetector::class.java.getDeclaredMethod("extractNpaNxx", String::class.java)
         method.isAccessible = true
-        val result = method.invoke(CampaignDetector, "12345")
+        val result = method.invoke(CampaignDetector.shared, "12345")
         assertNull(result)
     }
 
@@ -356,7 +356,7 @@ class PhoneNumberFuzzTest {
     fun `extractNpaNxx returns 6-char string for valid number`() {
         val method = CampaignDetector::class.java.getDeclaredMethod("extractNpaNxx", String::class.java)
         method.isAccessible = true
-        val result = method.invoke(CampaignDetector, "2125551234") as String
+        val result = method.invoke(CampaignDetector.shared, "2125551234") as String
         assertEquals(6, result.length)
         assertEquals("212555", result)
     }

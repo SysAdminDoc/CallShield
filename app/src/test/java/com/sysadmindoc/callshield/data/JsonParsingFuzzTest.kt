@@ -53,7 +53,7 @@ class JsonParsingFuzzTest {
     /** Reset scorer to known defaults before each test. */
     @Before
     fun resetScorer() {
-        stateField.set(SpamMLScorer, defaultModelState.invoke(SpamMLScorer))
+        stateField.set(SpamMLScorer.shared, defaultModelState.invoke(SpamMLScorer.shared))
     }
 
     /**
@@ -64,13 +64,13 @@ class JsonParsingFuzzTest {
      */
     private fun fuzzParse(json: String) {
         val parsed = try {
-            parseModel.invoke(SpamMLScorer, json)
+            parseModel.invoke(SpamMLScorer.shared, json)
         } catch (e: InvocationTargetException) {
             fail("parseModel threw ${e.targetException::class.simpleName} for input: ${json.take(120)}")
             return
         }
         if (parsed != null) {
-            stateField.set(SpamMLScorer, parsed)
+            stateField.set(SpamMLScorer.shared, parsed)
         }
         val score = SpamMLScorer.score("2125551234")
         assertTrue(
@@ -81,7 +81,7 @@ class JsonParsingFuzzTest {
 
     private fun fuzzParseGbtTrees(json: String) {
         try {
-            parseGbtTreesList.invoke(SpamMLScorer, json)
+            parseGbtTreesList.invoke(SpamMLScorer.shared, json)
         } catch (e: InvocationTargetException) {
             fail("parseGbtTreesList threw ${e.targetException::class.simpleName} for input: ${json.take(120)}")
         }
@@ -89,7 +89,7 @@ class JsonParsingFuzzTest {
 
     private fun fuzzFindMatchingBracket(s: String, startIdx: Int, open: Char, close: Char): Int {
         return try {
-            findMatchingBracket.invoke(SpamMLScorer, s, startIdx, open, close) as Int
+            findMatchingBracket.invoke(SpamMLScorer.shared, s, startIdx, open, close) as Int
         } catch (e: InvocationTargetException) {
             fail("findMatchingBracket threw ${e.targetException::class.simpleName} for input: ${s.take(80)}")
             -1

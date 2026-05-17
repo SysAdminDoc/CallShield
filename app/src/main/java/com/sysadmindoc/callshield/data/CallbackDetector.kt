@@ -4,6 +4,7 @@ import android.content.Context
 import android.provider.CallLog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import javax.inject.Inject
 
 /**
  * Callback detection — stolen from SpamBlocker.
@@ -22,7 +23,7 @@ import kotlinx.coroutines.withContext
  * CallLog stores raw as-dialed formats (parentheses, spaces) that our
  * digit-suffix match tolerates.
  */
-object CallbackDetector {
+class CallbackDetector @Inject constructor() {
 
     internal data class CallLogQuery(
         val selection: String,
@@ -133,5 +134,38 @@ object CallbackDetector {
                 "%$last7Digits"
             )
         )
+    }
+
+    companion object {
+        val shared: CallbackDetector = CallbackDetector()
+
+        suspend fun wasRecentlyDialed(
+            context: Context,
+            number: String,
+            windowHours: Int = 24,
+        ): Boolean =
+            shared.wasRecentlyDialed(context, number, windowHours)
+
+        suspend fun isRepeatedUrgentCall(
+            context: Context,
+            number: String,
+            windowMinutes: Int = 5,
+            threshold: Int = 2,
+        ): Boolean =
+            shared.isRepeatedUrgentCall(context, number, windowMinutes, threshold)
+
+        internal fun buildRecentlyDialedQuery(
+            nowMillis: Long,
+            windowHours: Int,
+            last7Digits: String,
+        ): CallLogQuery =
+            shared.buildRecentlyDialedQuery(nowMillis, windowHours, last7Digits)
+
+        internal fun buildRepeatedUrgentCallQuery(
+            nowMillis: Long,
+            windowMinutes: Int,
+            last7Digits: String,
+        ): CallLogQuery =
+            shared.buildRepeatedUrgentCallQuery(nowMillis, windowMinutes, last7Digits)
     }
 }

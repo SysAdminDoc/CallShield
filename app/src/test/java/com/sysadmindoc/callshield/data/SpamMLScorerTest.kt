@@ -42,29 +42,29 @@ class SpamMLScorerTest {
     // ── Helpers ──────────────────────────────────────────────────────────
 
     private fun features(number: String): DoubleArray =
-        extractFeatures.invoke(SpamMLScorer, number) as DoubleArray
+        extractFeatures.invoke(SpamMLScorer.shared, number) as DoubleArray
 
     private fun sig(x: Double): Double =
-        sigmoid.invoke(SpamMLScorer, x) as Double
+        sigmoid.invoke(SpamMLScorer.shared, x) as Double
 
     /** Invoke the pure parser; returns null when the payload is un-parseable. */
-    private fun parseOrNull(json: String): Any? = parseModel.invoke(SpamMLScorer, json)
+    private fun parseOrNull(json: String): Any? = parseModel.invoke(SpamMLScorer.shared, json)
 
     /** Commit a parsed ModelState (or reset to defaults when null). */
     private fun applyParsed(json: String): Boolean {
         val parsed = parseOrNull(json) ?: return false
-        stateField.set(SpamMLScorer, parsed)
+        stateField.set(SpamMLScorer.shared, parsed)
         return true
     }
 
     private fun resetToDefaults() {
         val defaultMethod = SpamMLScorer::class.java.getDeclaredMethod("defaultModelState")
         defaultMethod.isAccessible = true
-        stateField.set(SpamMLScorer, defaultMethod.invoke(SpamMLScorer))
+        stateField.set(SpamMLScorer.shared, defaultMethod.invoke(SpamMLScorer.shared))
     }
 
     private fun snapshotState(): Any =
-        stateField.get(SpamMLScorer) ?: error("SpamMLScorer state should always be initialized")
+        stateField.get(SpamMLScorer.shared) ?: error("SpamMLScorer state should always be initialized")
 
     // Feature indices
     private val TOLL_FREE = 0

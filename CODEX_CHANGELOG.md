@@ -125,8 +125,9 @@ Work completed:
 - added AndroidX Hilt Work 1.3.0, installed `HiltWorkerFactory` through `CallShieldApp`, removed WorkManager's default initializer, and migrated `SyncWorker`, `HotListSyncWorker`, and `DigestWorker` to `@HiltWorker` assisted injection
 - provided `GitHubDataSource` as the shared Hilt `SpamDataSource` and `HotFeedDataSource` binding for injected feed refresh paths
 - added `DetectionModule` and `CheckerDependencies`, then routed the live checker chain, screening-service contact shortcut, app-startup model/hot-data priming, and sync/hot-list workers through injected detection helper dependencies while preserving existing object facades
+- converted `SpamHeuristics`, `SmsContentAnalyzer`, `SpamMLScorer`, `CallbackDetector`, `SmsContextChecker`, `CampaignDetector`, and `HashWildcardMatcher` from Kotlin `object` declarations into constructor-injectable classes with shared companion facades for existing static call sites
 - regenerated the ktlint baseline after modifying previously-baselined files so the new gate reflects the current debt set
-- marked roadmap items 1.2.1 through 1.2.4, 1.3.1 through 1.3.4, 1.4.4, 1.4.5, 1.5.1 through 1.5.4, and 1.6.1 through 1.6.8 done; marked 1.6.9 WIP for the helper-injection seam
+- marked roadmap items 1.2.1 through 1.2.4, 1.3.1 through 1.3.4, 1.4.4, 1.4.5, 1.5.1 through 1.5.4, and 1.6.1 through 1.6.9 done
 - verified `:app:compileDebugAndroidTestKotlin`, `testDebugUnitTest`, `:app:lintDebug`, `:app:ktlintCheck`, `:app:detekt`, and the Kover debug coverage gate
 
 ### 0. F-Droid submission prep

@@ -132,7 +132,7 @@ class HotPathBenchmarkTest {
     private fun clearCampaignDetectorState() {
         val field = CampaignDetector::class.java.getDeclaredField("recentPrefixes").apply { isAccessible = true }
         @Suppress("UNCHECKED_CAST")
-        val map = field.get(CampaignDetector) as MutableMap<String, MutableList<Long>>
+        val map = field.get(CampaignDetector.shared) as MutableMap<String, MutableList<Long>>
         map.clear()
     }
 }

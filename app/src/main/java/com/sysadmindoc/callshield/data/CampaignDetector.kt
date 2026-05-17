@@ -1,5 +1,7 @@
 package com.sysadmindoc.callshield.data
 
+import javax.inject.Inject
+
 /**
  * Graph-based campaign detection via NPA-NXX prefix clustering.
  *
@@ -9,12 +11,9 @@ package com.sysadmindoc.callshield.data
  *
  * Thread-safe: all access is synchronized.
  */
-object CampaignDetector {
+class CampaignDetector @Inject constructor() {
     private val lock = Any()
     private val recentPrefixes = mutableMapOf<String, MutableList<Long>>()
-    private const val WINDOW_MS = 3_600_000L // 1 hour window
-    private const val BURST_THRESHOLD = 5    // 5+ calls from same prefix = campaign
-    private const val MAX_TRACKED_PREFIXES = 1000
 
     fun recordCall(number: String) {
         val prefix = extractNpaNxx(number) ?: return
@@ -76,5 +75,23 @@ object CampaignDetector {
             else -> return null
         }
         return normalized.substring(0, 6) // NPA-NXX
+    }
+
+    companion object {
+        val shared: CampaignDetector = CampaignDetector()
+
+        private const val WINDOW_MS = 3_600_000L // 1 hour window
+        private const val BURST_THRESHOLD = 5    // 5+ calls from same prefix = campaign
+        private const val MAX_TRACKED_PREFIXES = 1000
+
+        fun recordCall(number: String) {
+            shared.recordCall(number)
+        }
+
+        fun isActiveCampaign(number: String): Boolean =
+            shared.isActiveCampaign(number)
+
+        fun getActiveCampaigns(): List<Pair<String, Int>> =
+            shared.getActiveCampaigns()
     }
 }

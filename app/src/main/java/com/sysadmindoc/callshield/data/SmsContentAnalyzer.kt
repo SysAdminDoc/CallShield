@@ -1,10 +1,12 @@
 package com.sysadmindoc.callshield.data
 
+import javax.inject.Inject
+
 /**
  * Analyzes SMS message body content for spam indicators.
  * Pure regex/keyword-based — runs entirely on-device.
  */
-object SmsContentAnalyzer {
+class SmsContentAnalyzer @Inject constructor() {
 
     data class SmsAnalysisResult(
         val score: Int,
@@ -12,14 +14,14 @@ object SmsContentAnalyzer {
     )
 
     // URL shorteners frequently used in SMS spam
-    private val SHORTENER_DOMAINS = setOf(
+    private val shortenerDomains = setOf(
         "bit.ly", "tinyurl.com", "t.co", "goo.gl", "ow.ly", "is.gd",
         "buff.ly", "rebrand.ly", "cutt.ly", "shorturl.at", "rb.gy",
         "t.ly", "v.gd", "tiny.cc", "qr.ae", "bl.ink", "lnk.to"
     )
 
     // Suspicious TLDs commonly used in phishing
-    private val SUSPICIOUS_TLDS = setOf(
+    private val suspiciousTlds = setOf(
         ".xyz", ".top", ".club", ".work", ".buzz", ".icu", ".cam",
         ".life", ".click", ".link", ".info", ".loan", ".win", ".bid",
         ".stream", ".racing", ".download", ".gq", ".ml", ".tk", ".cf",
@@ -27,7 +29,7 @@ object SmsContentAnalyzer {
     )
 
     // Spam keyword patterns (case-insensitive)
-    private val SPAM_PATTERNS = listOf(
+    private val spamPatterns = listOf(
         // Financial scams
         Regex("(?i)(you('ve| have)? (won|been selected|been chosen))"),
         Regex("(?i)(claim (your|the) (prize|reward|gift|money))"),
@@ -70,10 +72,10 @@ object SmsContentAnalyzer {
     )
 
     // Phone number in SMS body (common in callback scams)
-    private val PHONE_IN_BODY = Regex("(?:call|dial|text|contact)\\s*(?:us\\s+(?:at|on))?\\s*\\+?\\d[\\d\\s\\-()]{7,}", RegexOption.IGNORE_CASE)
+    private val phoneInBody = Regex("(?:call|dial|text|contact)\\s*(?:us\\s+(?:at|on))?\\s*\\+?\\d[\\d\\s\\-()]{7,}", RegexOption.IGNORE_CASE)
 
     // URL pattern — length-capped to prevent ReDoS on pathological inputs
-    private val URL_PATTERN = Regex("https?://[^\\s]{1,2048}|www\\.[^\\s]{1,2048}|[a-zA-Z0-9][a-zA-Z0-9-]*\\.[a-zA-Z]{2,}/[^\\s]{0,2048}")
+    private val urlPattern = Regex("https?://[^\\s]{1,2048}|www\\.[^\\s]{1,2048}|[a-zA-Z0-9][a-zA-Z0-9-]*\\.[a-zA-Z]{2,}/[^\\s]{0,2048}")
 
     // ── Spam Domain Blocklist ─────────────────────────────────────────
     // Community-reported phishing/spam domains. Loaded from GitHub's
@@ -98,13 +100,11 @@ object SmsContentAnalyzer {
      * Hard cap on the body length we attempt to deep-analyze. A real SMS is
      * capped by the GSM/UCS-2 segment limit (~6 400 chars at 40 segments),
      * but RCS, MMS attachments, and inbox-scan paths can hand us much
-     * larger blobs. Running 25+ regexes plus [URL_PATTERN.findAll] over a
+     * larger blobs. Running 25+ regexes plus [urlPattern.findAll] over a
      * multi-MB string is a real ReDoS risk on the 5-second screening
      * deadline — at this length the message is almost certainly spam
      * anyway, so we sample the first 16 KB and stop.
      */
-    internal const val MAX_ANALYSIS_LENGTH = 16_384
-
     fun analyze(body: String): SmsAnalysisResult {
         var score = 0
         val reasons = mutableListOf<String>()
@@ -122,7 +122,7 @@ object SmsContentAnalyzer {
         }
 
         // Check for URL shorteners (high spam signal)
-        val urls = URL_PATTERN.findAll(analysisBody).map { it.value.lowercase() }.toList()
+        val urls = urlPattern.findAll(analysisBody).map { it.value.lowercase() }.toList()
         for (url in urls) {
             // Community-reported spam domain — highest confidence
             if (spamDomains.isNotEmpty()) {
@@ -133,12 +133,12 @@ object SmsContentAnalyzer {
                     continue
                 }
             }
-            if (SHORTENER_DOMAINS.any { url.contains(it) }) {
+            if (shortenerDomains.any { url.contains(it) }) {
                 score += 35
                 reasons.add("shortened_url")
                 continue
             }
-            if (SUSPICIOUS_TLDS.any { url.endsWith(it) || url.contains("$it/") }) {
+            if (suspiciousTlds.any { url.endsWith(it) || url.contains("$it/") }) {
                 score += 30
                 reasons.add("suspicious_tld")
                 continue
@@ -147,7 +147,7 @@ object SmsContentAnalyzer {
 
         // Check spam keyword patterns
         var patternHits = 0
-        for (pattern in SPAM_PATTERNS) {
+        for (pattern in spamPatterns) {
             if (pattern.containsMatchIn(analysisBody)) {
                 patternHits++
                 if (patternHits == 1) {
@@ -169,7 +169,7 @@ object SmsContentAnalyzer {
 
         // Contains phone number in body (callback scam) — regex is
         // case-insensitive so we match the original body instead of lowercasing.
-        if (PHONE_IN_BODY.containsMatchIn(analysisBody)) {
+        if (phoneInBody.containsMatchIn(analysisBody)) {
             score += 10
             reasons.add("callback_number")
         }
@@ -190,5 +190,21 @@ object SmsContentAnalyzer {
         }
 
         return SmsAnalysisResult(score.coerceAtMost(100), reasons)
+    }
+
+    companion object {
+        val shared: SmsContentAnalyzer = SmsContentAnalyzer()
+
+        internal const val MAX_ANALYSIS_LENGTH = 16_384
+
+        fun updateSpamDomains(domains: Collection<String>) {
+            shared.updateSpamDomains(domains)
+        }
+
+        fun hasSpamDomains(): Boolean =
+            shared.hasSpamDomains()
+
+        fun analyze(body: String): SmsAnalysisResult =
+            shared.analyze(body)
     }
 }
