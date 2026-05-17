@@ -26,6 +26,7 @@ Files:
 - `app/gradle.lockfile`
 - `app/config/ktlint/baseline.xml`
 - `app/detekt-baseline.xml`
+- `app/src/main/java/com/sysadmindoc/callshield/CallShieldApp.kt`
 - `app/src/main/java/com/sysadmindoc/callshield/data/SpamRepository.kt`
 - `app/src/main/java/com/sysadmindoc/callshield/data/remote/SpamDataSource.kt`
 - `app/src/main/java/com/sysadmindoc/callshield/data/remote/HotFeedDataSource.kt`
@@ -104,8 +105,10 @@ Work completed:
 - updated use cases to depend on domain repository interfaces instead of concrete `SpamRepository`
 - split `SpamRepository` into a compatibility facade backed by `SpamRepositoryImpl`, `SettingsRepository`, `SyncRepository`, and `BlocklistRepository`
 - moved the checker registry to build against `SpamRepositoryImpl`, keeping the 5-second screening path and one-snapshot settings contract intact
+- added Hilt 2.58 to the Gradle plugin/runtime/compiler graph, applied the app plugin, enabled the aggregating task, and annotated `CallShieldApp` with `@HiltAndroidApp`
+- rejected stale Hilt 2.52 after KSP processing failed and rejected Hilt 2.59.2 because its Gradle plugin requires AGP 9; 2.58 compiles on the current AGP 8.10.1 stack
 - regenerated the ktlint baseline after modifying previously-baselined files so the new gate reflects the current debt set
-- marked roadmap items 1.2.1 through 1.2.4, 1.3.1 through 1.3.4, 1.4.4, 1.4.5, and 1.5.1 through 1.5.4 done
+- marked roadmap items 1.2.1 through 1.2.4, 1.3.1 through 1.3.4, 1.4.4, 1.4.5, 1.5.1 through 1.5.4, 1.6.1, and 1.6.2 done
 - verified `:app:compileDebugAndroidTestKotlin`, `testDebugUnitTest`, `:app:lintDebug`, `:app:ktlintCheck`, `:app:detekt`, and the Kover debug coverage gate
 
 ### 0. F-Droid submission prep

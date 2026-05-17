@@ -14,7 +14,7 @@ Working Android spam call/text blocker. **95 main Kotlin files, 35 JVM test file
 
 15-layer detection pipeline (priority-sorted `IChecker` registry), GBT v3 ML scorer (20 features, atomic ModelState, pure-Kotlin inference) with logistic-regression v2 fallback, Jetpack Compose UI on Catppuccin Mocha + AMOLED, Room 2.8.4 with explicit migrations v5+, scheduled WorkManager hot-list + weekly sync from GitHub, RCS NotificationListener, CallerIdOverlayService with first-hit-wins lookup race, SIT-tone anti-autodialer, URLhaus phishing detection, Cloudflare Worker community reporting, GitHub Actions CI on every push.
 
-**Stack fingerprint:** AGP 8.10.1 · Kotlin 2.2.21 · Compose BOM 2026.05.00 · Room 2.8.4 · WorkManager 2.11.2 · OkHttp 5.3.2 · Moshi 1.15.1 · DataStore 1.2.1 · Kover 0.9.8 · ktlint 1.8.0 · detekt 1.23.8 · minSdk 29 · targetSdk 36 · KSP for Room codegen. **No Hilt, no KMP, no Glance, no SQLCipher.**
+**Stack fingerprint:** AGP 8.10.1 · Kotlin 2.2.21 · Compose BOM 2026.05.00 · Room 2.8.4 · WorkManager 2.11.2 · OkHttp 5.3.2 · Moshi 1.15.1 · DataStore 1.2.1 · Kover 0.9.8 · ktlint 1.8.0 · detekt 1.23.8 · Hilt 2.58 · minSdk 29 · targetSdk 36 · KSP for Room/Hilt codegen. **No KMP, no Glance, no SQLCipher.**
 
 ```mermaid
 graph LR
@@ -112,17 +112,19 @@ Eleven instrumented test files now exist (`CrashReporterInstrumentedTest`, `Dash
 
 ### 1.6 Dependency Injection (Hilt) `[NOW]`
 
-| Task | Size | Files |
-|------|------|-------|
-| 1.6.1 Add Hilt 2.52 (full K2 support per release notes [src 7]) | S | `libs.versions.toml`, `build.gradle.kts` |
-| 1.6.2 `@HiltAndroidApp` on `CallShieldApp` | S | `CallShieldApp.kt` |
-| 1.6.3 `DatabaseModule` providing `AppDatabase` + `SpamDao` singletons | M | `di/DatabaseModule.kt` |
-| 1.6.4 `RepositoryModule` binding interfaces to impls | M | `di/RepositoryModule.kt` |
-| 1.6.5 `NetworkModule` providing the shared `OkHttpClient` (with cert pinning, see 1.7.2) | M | `di/NetworkModule.kt` |
-| 1.6.6 `MainViewModel` → `@HiltViewModel` with injected use cases | M | `MainViewModel.kt` |
-| 1.6.7 `CallShieldScreeningService` → `@AndroidEntryPoint` | M | `CallShieldScreeningService.kt` |
-| 1.6.8 Workers → `@HiltWorker` | M | `SyncWorker.kt`, `HotListSyncWorker.kt`, `DigestWorker.kt` |
-| 1.6.9 Convert `object` singletons (`SpamHeuristics`, `SmsContentAnalyzer`, `SpamMLScorer`, `CallbackDetector`, `SmsContextChecker`, `CampaignDetector`, `HashWildcardMatcher`) to injectable classes | L | data layer |
+Hilt is pinned to 2.58 for the current AGP 8.10.1 stack: 2.59+ requires AGP 9, while 2.58 explicitly held AGP 9 support back [src 31]. The app uses KSP for the Hilt compiler following the official Gradle setup [src 32].
+
+| Task | Size | Status | Files |
+|------|------|--------|-------|
+| 1.6.1 Add Hilt 2.58 (AGP 8-compatible current line [src 31]) | S | `[DONE]` | `libs.versions.toml`, `build.gradle.kts` |
+| 1.6.2 `@HiltAndroidApp` on `CallShieldApp` | S | `[DONE]` | `CallShieldApp.kt` |
+| 1.6.3 `DatabaseModule` providing `AppDatabase` + `SpamDao` singletons | M | `[NOW]` | `di/DatabaseModule.kt` |
+| 1.6.4 `RepositoryModule` binding interfaces to impls | M | `[TODO]` | `di/RepositoryModule.kt` |
+| 1.6.5 `NetworkModule` providing the shared `OkHttpClient` (with cert pinning, see 1.7.2) | M | `[TODO]` | `di/NetworkModule.kt` |
+| 1.6.6 `MainViewModel` → `@HiltViewModel` with injected use cases | M | `[TODO]` | `MainViewModel.kt` |
+| 1.6.7 `CallShieldScreeningService` → `@AndroidEntryPoint` | M | `[TODO]` | `CallShieldScreeningService.kt` |
+| 1.6.8 Workers → `@HiltWorker` | M | `[TODO]` | `SyncWorker.kt`, `HotListSyncWorker.kt`, `DigestWorker.kt` |
+| 1.6.9 Convert `object` singletons (`SpamHeuristics`, `SmsContentAnalyzer`, `SpamMLScorer`, `CallbackDetector`, `SmsContextChecker`, `CampaignDetector`, `HashWildcardMatcher`) to injectable classes | L | `[TODO]` | data layer |
 
 **Risk:** migrate one consumer at a time; keep `getInstance()` fallback until all consumers migrated.
 
@@ -526,6 +528,8 @@ Harvested from a 30-source sweep (see Appendix). Scoped to NEW signal not alread
 | 28 | https://developer.android.com/about/versions/16 | Android 16 — `Notification.ProgressStyle`, `SDK_INT_FULL` |
 | 29 | https://truecaller.com/ | Commercial — B2B verified-caller, OTP-less verification SDK |
 | 30 | https://www.t-mobile.com/scam-shield · https://www.att.com/security/active-armor/ · https://www.verizon.com/solutions-and-services/call-filter/ | Carrier — STIR/SHAKEN integration, paid add-ons |
+| 31 | https://github.com/google/dagger/releases/tag/dagger-2.58 · https://github.com/google/dagger/releases/tag/dagger-2.59 | Dagger/Hilt — 2.58 held back AGP 9 support; 2.59 requires AGP 9 for the Hilt Gradle plugin |
+| 32 | https://dagger.dev/hilt/gradle-setup | Hilt Gradle/KSP setup |
 
 Plus RFC 8588 (SHAKEN profile), RFC 9027 (Traceback), Apache SpamAssassin / rspamd (architectural pattern), CVE-2024-7254 (NVD), academic robocall-fingerprinting literature (Georgia Tech / Stony Brook 2019–2022) cited inline in research notes.
 

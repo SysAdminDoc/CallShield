@@ -7,7 +7,7 @@ Last verified: 2026-05-17
 - Branch: `master`, tracking `origin/master`.
 - Latest observed commit before this pass: `c20f01a chore: prep fdroid submission`.
 - Current release: v1.7.10, `versionCode` 38.
-- Stack: Kotlin Android, Jetpack Compose BOM 2026.05.00, AGP 8.10.1, Kotlin/KSP 2.2.21, Room 2.8.4, WorkManager 2.11.2, OkHttp 5.3.2, DataStore 1.2.1.
+- Stack: Kotlin Android, Jetpack Compose BOM 2026.05.00, AGP 8.10.1, Kotlin/KSP 2.2.21, Room 2.8.4, WorkManager 2.11.2, OkHttp 5.3.2, DataStore 1.2.1, Hilt 2.58.
 - Source shape after this pass: 95 main Kotlin files, 35 JVM test files, 11 instrumented test files.
 - CI now runs Kover 0.9.8 for the debug JVM unit-test report. The coverage gate is scoped to `data.*` and `util.*`, excludes `data.local.*`, and currently passes at 41.06% line coverage against a 35% floor.
 - CI now also has a `static-analysis` job running ktlint 1.8.0 and detekt 1.23.8. Existing debt is captured in `app/config/ktlint/baseline.xml` and `app/detekt-baseline.xml`.
@@ -27,7 +27,8 @@ Last verified: 2026-05-17
 
 ## Current Roadmap Position
 
-- Completed in this pass: roadmap 1.2.1, 1.2.2, 1.2.3, 1.2.4, 1.3.1, 1.3.2, 1.3.3, 1.3.4, 1.4.4, 1.4.5, 1.5.1, 1.5.2, 1.5.3, and 1.5.4.
+- Completed in this pass: roadmap 1.2.1, 1.2.2, 1.2.3, 1.2.4, 1.3.1, 1.3.2, 1.3.3, 1.3.4, 1.4.4, 1.4.5, 1.5.1, 1.5.2, 1.5.3, 1.5.4, 1.6.1, and 1.6.2.
+- Hilt 2.52 is stale for this repo's Kotlin/KSP line; it failed KSP processing. Hilt 2.59.2 is also not usable on AGP 8.10.1 because the Hilt Gradle plugin now requires AGP 9. Hilt 2.58 is the current AGP-8-compatible choice verified in this checkout.
 - `SpamRepository(context, database, remote)` now supports injected `AppDatabase` and `SpamDataSource` dependencies, enabling in-memory Room integration tests without committing to the larger Hilt/DI refactor.
 - `HotDataSync.refresh(context, source, repo, dao)` now supports an injected `HotFeedDataSource`, enabling hot-feed integration tests without live GitHub requests.
 - Added instrumented tests:
@@ -44,6 +45,6 @@ Last verified: 2026-05-17
 
 ## Next Practical Task
 
-Roadmap 1.6.1 is next: add Hilt 2.52 to the locked Gradle graph.
+Roadmap 1.6.3 is next: add a `DatabaseModule` that provides `AppDatabase` and `SpamDao` singletons.
 
-This starts the DI migration. Keep `SpamRepository.getInstance()` as the fallback until app, ViewModel, service, and worker consumers are migrated one at a time.
+Keep `SpamRepository.getInstance()` as the fallback until app, ViewModel, service, and worker consumers are migrated one at a time.

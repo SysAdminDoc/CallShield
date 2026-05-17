@@ -11,6 +11,7 @@ plugins {
     alias(libs.plugins.kover)
     alias(libs.plugins.ktlint)
     alias(libs.plugins.detekt)
+    alias(libs.plugins.hilt)
 }
 
 val localProperties = Properties().apply {
@@ -94,6 +95,10 @@ kotlin {
     }
 }
 
+hilt {
+    enableAggregatingTask = true
+}
+
 kover {
     reports {
         variant("debug") {
@@ -169,6 +174,8 @@ dependencies {
     ksp(libs.androidx.room.compiler)
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.work.runtime.ktx)
+    implementation(libs.hilt.android)
+    ksp(libs.hilt.compiler)
     implementation(libs.okhttp)
     implementation(libs.moshi)
     implementation(libs.moshi.kotlin)

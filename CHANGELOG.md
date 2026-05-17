@@ -23,6 +23,9 @@ Distribution prep after the v1.7.10 release.
   `BlocklistRepository`, preserving existing singleton callers while moving
   detection, settings, sync, and blocklist/log concerns behind data-layer
   collaborators.
+- Added the Hilt 2.58 Gradle plugin/runtime/compiler on the KSP path and
+  annotated `CallShieldApp` with `@HiltAndroidApp`, establishing the DI
+  migration baseline while staying compatible with AGP 8.10.1.
 
 ### Testing
 
