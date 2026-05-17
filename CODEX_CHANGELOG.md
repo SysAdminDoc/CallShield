@@ -19,8 +19,11 @@ This repository already had a broad UX/premium-polish pass in progress across th
 Files:
 
 - `app/src/main/java/com/sysadmindoc/callshield/data/SpamRepository.kt`
+- `app/src/main/java/com/sysadmindoc/callshield/data/remote/SpamDataSource.kt`
+- `app/src/main/java/com/sysadmindoc/callshield/data/remote/GitHubDataSource.kt`
 - `app/src/androidTest/java/com/sysadmindoc/callshield/data/SpamPipelineIntegrationTest.kt`
 - `app/src/androidTest/java/com/sysadmindoc/callshield/data/SmsPipelineIntegrationTest.kt`
+- `app/src/androidTest/java/com/sysadmindoc/callshield/data/SyncIntegrationTest.kt`
 - `ROADMAP.md`
 - `CHANGELOG.md`
 - `CLAUDE.md`
@@ -29,9 +32,11 @@ Files:
 Work completed:
 
 - added a constructor-provided `AppDatabase` seam to `SpamRepository` while preserving the production singleton path
+- added a narrow `SpamDataSource` seam so `syncFromGitHub()` can be tested without live GitHub requests
 - added in-memory Room instrumented tests for the call checker pipeline priority tiers
 - added in-memory Room instrumented tests for SMS keyword/content ordering and whitelisted-sender inspection
-- marked roadmap items 1.2.1 and 1.2.2 done, leaving sync/hot-list integration tests open behind a source seam
+- added mocked in-memory Room sync integration tests for remote snapshot population and user-block preservation
+- marked roadmap items 1.2.1, 1.2.2, and 1.2.3 done, leaving hot-list integration tests open behind a source seam
 - verified `:app:compileDebugAndroidTestKotlin` and `testDebugUnitTest`
 
 ### 0. F-Droid submission prep

@@ -11,7 +11,7 @@ import kotlinx.coroutines.withContext
 import okhttp3.Request
 import java.util.concurrent.TimeUnit
 
-class GitHubDataSource {
+class GitHubDataSource : SpamDataSource {
     // Derived client with longer timeouts for large database downloads;
     // shares the connection pool with other callers via HttpClient.shared.
     private val client = HttpClient.shared.newBuilder()
@@ -63,9 +63,9 @@ class GitHubDataSource {
         }
     }
 
-    suspend fun fetchSpamDatabase(
-        owner: String = DEFAULT_REPO_OWNER,
-        repo: String = DEFAULT_REPO_NAME
+    override suspend fun fetchSpamDatabase(
+        owner: String,
+        repo: String
     ): Result<SpamDatabase> = withContext(Dispatchers.IO) {
         val result = fetchRawText(DATA_PATH, owner, repo)
         if (result.isFailure) {
@@ -107,9 +107,9 @@ class GitHubDataSource {
         Result.success(parseSpamDomainsJson(result.getOrThrow()))
     }
 
-    suspend fun checkForUpdate(
-        owner: String = DEFAULT_REPO_OWNER,
-        repo: String = DEFAULT_REPO_NAME
+    override suspend fun checkForUpdate(
+        owner: String,
+        repo: String
     ): Result<String> = withContext(Dispatchers.IO) {
         var lastError: Exception? = null
 
@@ -143,7 +143,7 @@ class GitHubDataSource {
         Result.failure(lastError ?: Exception("Unable to resolve repository update status"))
     }
 
-    fun parseSpamDatabaseJson(body: String): Result<SpamDatabase> = runCatching {
+    override fun parseSpamDatabaseJson(body: String): Result<SpamDatabase> = runCatching {
         val adapter = moshi.adapter(SpamDatabase::class.java)
         adapter.fromJson(body) ?: throw IllegalStateException("Failed to parse spam database")
     }
