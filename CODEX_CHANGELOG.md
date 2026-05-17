@@ -26,6 +26,7 @@ Files:
 - `app/src/main/java/com/sysadmindoc/callshield/ui/screens/onboarding/OnboardingScreen.kt`
 - `app/src/main/java/com/sysadmindoc/callshield/ui/screens/main/DashboardScreen.kt`
 - `app/src/main/java/com/sysadmindoc/callshield/ui/screens/main/BlocklistScreen.kt`
+- `app/src/main/java/com/sysadmindoc/callshield/ui/screens/settings/SettingsScreen.kt`
 - `app/src/main/res/values/strings.xml`
 - `app/src/androidTest/java/com/sysadmindoc/callshield/data/SpamPipelineIntegrationTest.kt`
 - `app/src/androidTest/java/com/sysadmindoc/callshield/data/SmsPipelineIntegrationTest.kt`
@@ -34,6 +35,7 @@ Files:
 - `app/src/androidTest/java/com/sysadmindoc/callshield/ui/screens/onboarding/OnboardingTest.kt`
 - `app/src/androidTest/java/com/sysadmindoc/callshield/ui/screens/main/DashboardTest.kt`
 - `app/src/androidTest/java/com/sysadmindoc/callshield/ui/screens/main/BlocklistTest.kt`
+- `app/src/androidTest/java/com/sysadmindoc/callshield/ui/screens/settings/SettingsTest.kt`
 - `ROADMAP.md`
 - `CHANGELOG.md`
 - `CLAUDE.md`
@@ -53,7 +55,8 @@ Work completed:
 - added Compose UI tests for dashboard hero copy, setup progress, sync freshness, blocked-count stats, and the call-screener setup action
 - added swipe-left removal with snackbar undo for manual blocklist rows
 - added Compose UI tests for blocklist add normalization, wildcard regex validation, delete action, and swipe removal
-- marked roadmap items 1.2.1 through 1.2.4 and 1.3.1 through 1.3.3 done
+- extracted quiet-hours settings into a production-used composable, added an all-day validation warning, and added Compose tests for toggle callbacks plus hour picker selection
+- marked roadmap items 1.2.1 through 1.2.4 and 1.3.1 through 1.3.4 done
 - verified `:app:compileDebugAndroidTestKotlin` and `testDebugUnitTest`
 
 ### 0. F-Droid submission prep
