@@ -1,0 +1,998 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>ClassNaming:Checkers.kt$SmsContextChecker_Checker : IChecker</ID>
+    <ID>ComplexCondition:BackupRestore.kt$BackupRestore$backup.blockedNumbers.isEmpty() &amp;&amp; backup.whitelistNumbers.isEmpty() &amp;&amp; backup.wildcardRules.isEmpty() &amp;&amp; backup.keywordRules.isEmpty()</ID>
+    <ID>ComplexCondition:PushAlertRegistry.kt$PushAlertRegistry$recent != null &amp;&amp; recent.packageName == alert.packageName &amp;&amp; recent.title == alert.title &amp;&amp; recent.body == alert.body &amp;&amp; alert.timestamp - recent.timestamp &lt; 5_000</ID>
+    <ID>ComplexCondition:SettingsScreen.kt$!corePermissionsGranted || !screenerReadyForCurrentMode || !overlayGranted || !notificationsGranted</ID>
+    <ID>ComplexCondition:SpamMLScorer.kt$SpamMLScorer$feature.size != thresh.size || feature.size != left.size || feature.size != right.size || feature.size != value.size</ID>
+    <ID>CyclomaticComplexMethod:BackupRestore.kt$BackupRestore$suspend fun restoreFromUri(context: Context, uri: Uri): RestoreResult</ID>
+    <ID>CyclomaticComplexMethod:BlockReasoning.kt$BlockReasoning$fun explain(matchReason: String, description: String, confidence: Int): Reasoning</ID>
+    <ID>CyclomaticComplexMethod:BlockedLogScreen.kt$@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class) @Composable fun BlockedLogScreen(viewModel: MainViewModel)</ID>
+    <ID>CyclomaticComplexMethod:BlocklistScreen.kt$@Composable fun AddHashWildcardDialog( existing: List&lt;HashWildcardRule&gt;, onDismiss: () -&gt; Unit, onAdd: (String, String, TimeSchedule) -&gt; Unit, )</ID>
+    <ID>CyclomaticComplexMethod:BlocklistScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun BlocklistScreen(viewModel: MainViewModel)</ID>
+    <ID>CyclomaticComplexMethod:CallCategory.kt$CallCategoryResolver$fun resolve(result: SpamCheckResult): CallCategory</ID>
+    <ID>CyclomaticComplexMethod:CallShieldScreeningService.kt$CallShieldScreeningService$override fun onScreenCall(callDetails: Call.Details)</ID>
+    <ID>CyclomaticComplexMethod:CallerIdOverlayService.kt$CallerIdOverlayService$private fun runLiveLookups(number: String, sessionId: Long)</ID>
+    <ID>CyclomaticComplexMethod:CallerIdOverlayService.kt$CallerIdOverlayService$private fun showOverlay(number: String, confidence: Int, reason: String, verificationStatus: Int): Long?</ID>
+    <ID>CyclomaticComplexMethod:DashboardScreen.kt$@Composable fun DashboardScreen(viewModel: MainViewModel)</ID>
+    <ID>CyclomaticComplexMethod:DashboardScreen.kt$@Composable internal fun DashboardSetupChecklistCard( dashboardStatus: DashboardStatusModel, setupSummary: String, corePermissionsReady: Boolean, missingPermissionCount: Int, syncState: SyncState, spamDatabaseReady: Boolean, spamCount: Int, blockCallsEnabled: Boolean, callScreenerReady: Boolean, overlayGranted: Boolean, notificationsGranted: Boolean, onReviewPermissions: () -&gt; Unit, onSyncDatabase: () -&gt; Unit, onEnableCallScreener: (() -&gt; Unit)?, onEnableOverlay: () -&gt; Unit, onEnableNotifications: () -&gt; Unit, )</ID>
+    <ID>CyclomaticComplexMethod:DigestWorker.kt$DigestWorker$override suspend fun doWork(): Result</ID>
+    <ID>CyclomaticComplexMethod:HashWildcardMatcher.kt$HashWildcardMatcher$fun coversOrCoveredBy(a: String, b: String): Overlap</ID>
+    <ID>CyclomaticComplexMethod:LookupScreen.kt$@Composable fun LookupScreen(viewModel: MainViewModel)</ID>
+    <ID>CyclomaticComplexMethod:LookupScreen.kt$fun detectionIcon(source: String): ImageVector</ID>
+    <ID>CyclomaticComplexMethod:MainActivity.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun CallShieldApp(viewModel: MainViewModel, startTab: Int = 0)</ID>
+    <ID>CyclomaticComplexMethod:MoreScreen.kt$@Composable fun MoreHub(viewModel: MainViewModel, onStats: () -&gt; Unit, onSettings: () -&gt; Unit, onChangelog: () -&gt; Unit, onTest: () -&gt; Unit)</ID>
+    <ID>CyclomaticComplexMethod:NumberDetailScreen.kt$@Composable fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -&gt; Unit)</ID>
+    <ID>CyclomaticComplexMethod:NumberTypeChecker.kt$NumberTypeChecker$suspend fun check(number: String, apiKey: String): NumberTypeResult</ID>
+    <ID>CyclomaticComplexMethod:OnboardingScreen.kt$@Composable internal fun OnboardingScreenContent( permsGranted: Boolean, notificationsGranted: Boolean, overlayGranted: Boolean, screenerGranted: Boolean, screenerSupported: Boolean, onRequestCorePermissions: () -&gt; Unit, onRequestNotifications: () -&gt; Unit, onRequestOverlay: () -&gt; Unit, onRequestScreener: () -&gt; Unit, onComplete: () -&gt; Unit, snackbarHostState: SnackbarHostState = remember { SnackbarHostState() }, )</ID>
+    <ID>CyclomaticComplexMethod:ProtectionTestScreen.kt$private suspend fun runTests(context: Context): List&lt;TestResult&gt;</ID>
+    <ID>CyclomaticComplexMethod:RecentCallsScreen.kt$@Composable fun RecentCallItem(call: RecentCall, onOpenDetail: () -&gt; Unit)</ID>
+    <ID>CyclomaticComplexMethod:RecentCallsScreen.kt$@Composable fun RecentCallsScreen(viewModel: MainViewModel)</ID>
+    <ID>CyclomaticComplexMethod:RecentCallsScreen.kt$private suspend fun loadRecentCalls(context: Context): List&lt;RecentCall&gt;</ID>
+    <ID>CyclomaticComplexMethod:SettingsScreen.kt$@Composable fun SettingsScreen(viewModel: MainViewModel)</ID>
+    <ID>CyclomaticComplexMethod:SmsContentAnalyzer.kt$SmsContentAnalyzer$fun analyze(body: String): SmsAnalysisResult</ID>
+    <ID>CyclomaticComplexMethod:SmsInboxScanner.kt$SmsInboxScanner$suspend fun scan(context: Context, limit: Int = 200): ScanResult</ID>
+    <ID>CyclomaticComplexMethod:SmsReceiver.kt$SmsReceiver$override fun onReceive(context: Context, intent: Intent)</ID>
+    <ID>CyclomaticComplexMethod:SpamActionReceiver.kt$SpamActionReceiver$override fun onReceive(context: Context, intent: Intent)</ID>
+    <ID>CyclomaticComplexMethod:SpamMLScorer.kt$SpamMLScorer$private fun extractFeatures(number: String): DoubleArray</ID>
+    <ID>CyclomaticComplexMethod:StatsScreen.kt$@Composable fun StatsScreen(viewModel: MainViewModel)</ID>
+    <ID>CyclomaticComplexMethod:StatsScreen.kt$@Composable private fun friendlyMatchReasonLabel(reason: String): String</ID>
+    <ID>FunctionNaming:BlockedLogScreen.kt$@Composable fun GroupedCallItem(call: BlockedCall, count: Int, onTap: () -&gt; Unit, onBlock: () -&gt; Unit)</ID>
+    <ID>FunctionNaming:BlockedLogScreen.kt$@Composable fun SmallActionButton(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, color: androidx.compose.ui.graphics.Color, onClick: () -&gt; Unit)</ID>
+    <ID>FunctionNaming:BlockedLogScreen.kt$@Composable private fun BlockedLogEmptyState( title: String, subtitle: String, accentColor: Color, actionLabel: String? = null, onAction: (() -&gt; Unit)? = null )</ID>
+    <ID>FunctionNaming:BlockedLogScreen.kt$@OptIn(ExperimentalFoundationApi::class) @Composable fun BlockedCallItem(call: BlockedCall, onTap: () -&gt; Unit)</ID>
+    <ID>FunctionNaming:BlockedLogScreen.kt$@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class) @Composable fun BlockedLogScreen(viewModel: MainViewModel)</ID>
+    <ID>FunctionNaming:BlocklistScreen.kt$@Composable fun AddHashWildcardDialog( existing: List&lt;HashWildcardRule&gt;, onDismiss: () -&gt; Unit, onAdd: (String, String, TimeSchedule) -&gt; Unit, )</ID>
+    <ID>FunctionNaming:BlocklistScreen.kt$@Composable fun AddKeywordDialog( onDismiss: () -&gt; Unit, onAdd: (String, Boolean, String, TimeSchedule) -&gt; Unit, )</ID>
+    <ID>FunctionNaming:BlocklistScreen.kt$@Composable fun AddNumberDialog(onDismiss: () -&gt; Unit, onAdd: (String, String) -&gt; Unit)</ID>
+    <ID>FunctionNaming:BlocklistScreen.kt$@Composable fun AddWhitelistDialog(onDismiss: () -&gt; Unit, onAdd: (String, String, Boolean) -&gt; Unit)</ID>
+    <ID>FunctionNaming:BlocklistScreen.kt$@Composable fun AddWildcardDialog( onDismiss: () -&gt; Unit, onAdd: (String, Boolean, String, TimeSchedule) -&gt; Unit, )</ID>
+    <ID>FunctionNaming:BlocklistScreen.kt$@Composable fun BlocklistItem(number: SpamNumber, onUnblock: () -&gt; Unit)</ID>
+    <ID>FunctionNaming:BlocklistScreen.kt$@Composable fun DatabaseItem(number: SpamNumber)</ID>
+    <ID>FunctionNaming:BlocklistScreen.kt$@Composable fun HashWildcardRuleItem( rule: HashWildcardRule, onToggle: (Boolean) -&gt; Unit, onDelete: () -&gt; Unit, )</ID>
+    <ID>FunctionNaming:BlocklistScreen.kt$@Composable fun KeywordRuleItem(rule: SmsKeywordRule, onToggle: (Boolean) -&gt; Unit, onDelete: () -&gt; Unit)</ID>
+    <ID>FunctionNaming:BlocklistScreen.kt$@Composable fun WhitelistItem( entry: WhitelistEntry, onRemove: () -&gt; Unit, onToggleEmergency: () -&gt; Unit, )</ID>
+    <ID>FunctionNaming:BlocklistScreen.kt$@Composable fun WildcardRuleItem(rule: WildcardRule, onToggle: (Boolean) -&gt; Unit, onDelete: () -&gt; Unit)</ID>
+    <ID>FunctionNaming:BlocklistScreen.kt$@Composable private fun BlocklistOverviewCard( workspace: BlocklistWorkspaceModel, modifier: Modifier = Modifier, )</ID>
+    <ID>FunctionNaming:BlocklistScreen.kt$@Composable private fun EmptyStateCard( title: String, subtitle: String, icon: ImageVector, accentColor: Color, )</ID>
+    <ID>FunctionNaming:BlocklistScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun BlocklistScreen(viewModel: MainViewModel)</ID>
+    <ID>FunctionNaming:BlocklistScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable internal fun SwipeToRemoveBlocklistItem( number: SpamNumber, onRemove: () -&gt; Unit, )</ID>
+    <ID>FunctionNaming:ChangelogScreen.kt$@Composable fun ChangelogScreen()</ID>
+    <ID>FunctionNaming:ChangelogScreen.kt$@Composable fun VersionEntry( version: String, title: String = "", isLatest: Boolean = false, isLast: Boolean = false, changes: List&lt;String&gt; )</ID>
+    <ID>FunctionNaming:DashboardScreen.kt$@Composable fun DashboardScreen(viewModel: MainViewModel)</ID>
+    <ID>FunctionNaming:DashboardScreen.kt$@Composable fun ProfileChip(modifier: Modifier, label: String, color: Color, isActive: Boolean = false, onClick: () -&gt; Unit)</ID>
+    <ID>FunctionNaming:DashboardScreen.kt$@Composable fun QuickToggle(icon: ImageVector, label: String, checked: Boolean, onChanged: (Boolean) -&gt; Unit)</ID>
+    <ID>FunctionNaming:DashboardScreen.kt$@Composable fun StatCard(modifier: Modifier, title: String, value: String, icon: ImageVector, color: Color)</ID>
+    <ID>FunctionNaming:DashboardScreen.kt$@Composable internal fun DashboardHeroCard( modifier: Modifier = Modifier, dashboardStatus: DashboardStatusModel, shieldActive: Boolean, heroTitle: String, heroSubtitle: String, heroAccent: Color, requiredSetupComplete: Int, requiredSetupTotal: Int, setupSummary: String, engineCount: Int, aggressiveMode: Boolean, lastSync: Long, lastSyncSource: String, syncState: SyncState, heroAction: HeroAction?, )</ID>
+    <ID>FunctionNaming:DashboardScreen.kt$@Composable internal fun DashboardSetupChecklistCard( dashboardStatus: DashboardStatusModel, setupSummary: String, corePermissionsReady: Boolean, missingPermissionCount: Int, syncState: SyncState, spamDatabaseReady: Boolean, spamCount: Int, blockCallsEnabled: Boolean, callScreenerReady: Boolean, overlayGranted: Boolean, notificationsGranted: Boolean, onReviewPermissions: () -&gt; Unit, onSyncDatabase: () -&gt; Unit, onEnableCallScreener: (() -&gt; Unit)?, onEnableOverlay: () -&gt; Unit, onEnableNotifications: () -&gt; Unit, )</ID>
+    <ID>FunctionNaming:DashboardScreen.kt$@Composable internal fun DashboardStatsRow( totalBlocked: Int, blockedToday: Int, blockedThisWeek: Int, )</ID>
+    <ID>FunctionNaming:DashboardScreen.kt$@Composable private fun DashboardActionRow( icon: ImageVector, title: String, subtitle: String, accentColor: Color, actionLabel: String, loading: Boolean, enabled: Boolean, onClick: () -&gt; Unit )</ID>
+    <ID>FunctionNaming:DashboardScreen.kt$@Composable private fun SetupChecklistRow( icon: ImageVector, title: String, detail: String, ready: Boolean, accentColor: Color, actionLabel: String? = null, onAction: (() -&gt; Unit)? = null )</ID>
+    <ID>FunctionNaming:DashboardScreen.kt$@Composable private fun SetupStateBadge(label: String, color: Color)</ID>
+    <ID>FunctionNaming:LookupScreen.kt$@Composable fun DetailRow(label: String, value: String, icon: ImageVector? = null)</ID>
+    <ID>FunctionNaming:LookupScreen.kt$@Composable fun LookupScreen(viewModel: MainViewModel)</ID>
+    <ID>FunctionNaming:LookupScreen.kt$@Composable fun SpamScoreGauge(score: Int, isSpam: Boolean)</ID>
+    <ID>FunctionNaming:LookupScreen.kt$@Composable private fun LookupHintRow( icon: ImageVector, title: String, subtitle: String, accentColor: Color, )</ID>
+    <ID>FunctionNaming:LookupScreen.kt$@Composable private fun LookupIdleCard()</ID>
+    <ID>FunctionNaming:LookupScreen.kt$@Composable private fun LookupMessageCard( title: String, body: String, accentColor: Color, icon: ImageVector, )</ID>
+    <ID>FunctionNaming:LookupScreen.kt$@Composable private fun LookupProgressCard(number: String, location: String?)</ID>
+    <ID>FunctionNaming:MainActivity.kt$@Composable fun CallShieldRoot(viewModel: MainViewModel = viewModel(), launchRequest: LaunchRequest = LaunchRequest(id = 0))</ID>
+    <ID>FunctionNaming:MainActivity.kt$@Composable fun RowScope.NavItem( selected: Boolean, onClick: () -&gt; Unit, icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, color: androidx.compose.ui.graphics.Color )</ID>
+    <ID>FunctionNaming:MainActivity.kt$@Composable fun SearchResultsView(results: List&lt;com.sysadmindoc.callshield.data.model.SpamNumber&gt;, onTap: (com.sysadmindoc.callshield.data.model.SpamNumber) -&gt; Unit)</ID>
+    <ID>FunctionNaming:MainActivity.kt$@Composable private fun AppChrome( showSearch: Boolean, title: String, subtitle: String, accentColor: Color, modeLabel: String, protectionStatusLabel: String, spamCount: Int, searchQuery: String, onSearchQueryChange: (String) -&gt; Unit, onOpenSearch: () -&gt; Unit, onCloseSearch: () -&gt; Unit, )</ID>
+    <ID>FunctionNaming:MainActivity.kt$@Composable private fun SearchField( query: String, accentColor: Color, onValueChange: (String) -&gt; Unit, )</ID>
+    <ID>FunctionNaming:MainActivity.kt$@Composable private fun SearchHintRow( icon: androidx.compose.ui.graphics.vector.ImageVector, title: String, subtitle: String, accentColor: Color, )</ID>
+    <ID>FunctionNaming:MainActivity.kt$@Composable private fun SearchIdleView()</ID>
+    <ID>FunctionNaming:MainActivity.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun CallShieldApp(viewModel: MainViewModel, startTab: Int = 0)</ID>
+    <ID>FunctionNaming:MoreScreen.kt$@Composable fun AboutStat(value: String, label: String, color: androidx.compose.ui.graphics.Color)</ID>
+    <ID>FunctionNaming:MoreScreen.kt$@Composable fun MoreHub(viewModel: MainViewModel, onStats: () -&gt; Unit, onSettings: () -&gt; Unit, onChangelog: () -&gt; Unit, onTest: () -&gt; Unit)</ID>
+    <ID>FunctionNaming:MoreScreen.kt$@Composable fun MoreNavCard( icon: androidx.compose.ui.graphics.vector.ImageVector, title: String, subtitle: String, color: androidx.compose.ui.graphics.Color, onClick: () -&gt; Unit )</ID>
+    <ID>FunctionNaming:MoreScreen.kt$@Composable fun MoreScreen(viewModel: MainViewModel)</ID>
+    <ID>FunctionNaming:MoreScreen.kt$@Composable fun MoreTopBar(title: String, onBack: () -&gt; Unit)</ID>
+    <ID>FunctionNaming:MoreScreen.kt$@Composable fun QuickLink( icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, subtitle: String, color: androidx.compose.ui.graphics.Color, external: Boolean = true, onClick: () -&gt; Unit )</ID>
+    <ID>FunctionNaming:NumberDetailScreen.kt$@Composable fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -&gt; Unit)</ID>
+    <ID>FunctionNaming:NumberDetailScreen.kt$@Composable fun StatChip(label: String, value: String, color: androidx.compose.ui.graphics.Color)</ID>
+    <ID>FunctionNaming:NumberDetailScreen.kt$@Composable fun TimelineRow(label: String, value: String)</ID>
+    <ID>FunctionNaming:OnboardingScreen.kt$@Composable fun OnboardingScreen(onComplete: () -&gt; Unit)</ID>
+    <ID>FunctionNaming:OnboardingScreen.kt$@Composable internal fun OnboardingScreenContent( permsGranted: Boolean, notificationsGranted: Boolean, overlayGranted: Boolean, screenerGranted: Boolean, screenerSupported: Boolean, onRequestCorePermissions: () -&gt; Unit, onRequestNotifications: () -&gt; Unit, onRequestOverlay: () -&gt; Unit, onRequestScreener: () -&gt; Unit, onComplete: () -&gt; Unit, snackbarHostState: SnackbarHostState = remember { SnackbarHostState() }, )</ID>
+    <ID>FunctionNaming:OnboardingScreen.kt$@Composable private fun OnboardingBulletPoint(text: String, color: androidx.compose.ui.graphics.Color)</ID>
+    <ID>FunctionNaming:OnboardingScreen.kt$@Composable private fun OnboardingChecklistItem( title: String, detail: String, granted: Boolean, accentColor: androidx.compose.ui.graphics.Color, badge: String )</ID>
+    <ID>FunctionNaming:OnboardingScreen.kt$@Composable private fun OnboardingFeatureCard(title: String, body: String, accentColor: androidx.compose.ui.graphics.Color)</ID>
+    <ID>FunctionNaming:OnboardingScreen.kt$@Composable private fun OnboardingStatusRow(label: String, granted: Boolean, color: androidx.compose.ui.graphics.Color)</ID>
+    <ID>FunctionNaming:ProtectionTestScreen.kt$@Composable fun ProtectionTestScreen()</ID>
+    <ID>FunctionNaming:ProtectionTestScreen.kt$@Composable private fun ProtectionIntroRow(text: String)</ID>
+    <ID>FunctionNaming:ProtectionTestScreen.kt$@Composable private fun TestResultCard(result: TestResult)</ID>
+    <ID>FunctionNaming:PushAlertSourcesSheet.kt$@Composable private fun SourceRow( source: PushAlertSource, allowed: Boolean, onToggle: (Boolean) -&gt; Unit, )</ID>
+    <ID>FunctionNaming:PushAlertSourcesSheet.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun PushAlertSourcesSheet( disabledPackages: Set&lt;String&gt;, onToggle: (pkg: String, allowed: Boolean) -&gt; Unit, onReset: () -&gt; Unit, onDismiss: () -&gt; Unit, )</ID>
+    <ID>FunctionNaming:RecentCallsScreen.kt$@Composable fun RecentActionButton(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, color: androidx.compose.ui.graphics.Color, onClick: () -&gt; Unit)</ID>
+    <ID>FunctionNaming:RecentCallsScreen.kt$@Composable fun RecentCallItem(call: RecentCall, onOpenDetail: () -&gt; Unit)</ID>
+    <ID>FunctionNaming:RecentCallsScreen.kt$@Composable fun RecentCallsScreen(viewModel: MainViewModel)</ID>
+    <ID>FunctionNaming:RecentCallsScreen.kt$@Composable private fun RecentCallsPermissionState( onOpenSettings: () -&gt; Unit, )</ID>
+    <ID>FunctionNaming:RecentCallsScreen.kt$@Composable private fun RecentCallsSummaryCard( totalCount: Int, spamCount: Int, missedCount: Int, contactCount: Int, refreshing: Boolean, onRefresh: () -&gt; Unit, )</ID>
+    <ID>FunctionNaming:RecentCallsScreen.kt$@Composable private fun RecentEmptyStateCard( title: String, subtitle: String, accentColor: Color, actionLabel: String? = null, onAction: (() -&gt; Unit)? = null, )</ID>
+    <ID>FunctionNaming:RecentCallsScreen.kt$@Composable private fun RecentGuidanceRow( icon: androidx.compose.ui.graphics.vector.ImageVector, title: String, subtitle: String, accentColor: Color, )</ID>
+    <ID>FunctionNaming:RecentCallsScreen.kt$@Composable private fun RecentSummaryPill( value: String, label: String, color: Color, modifier: Modifier = Modifier, )</ID>
+    <ID>FunctionNaming:ScheduleControls.kt$@Composable fun SchedulePill(schedule: TimeSchedule)</ID>
+    <ID>FunctionNaming:ScheduleControls.kt$@Composable fun ScheduleSection( state: ScheduleUiState, onChange: (ScheduleUiState) -&gt; Unit, )</ID>
+    <ID>FunctionNaming:ScheduleControls.kt$@Composable private fun DayOfWeekChips(daysMask: Int, onChange: (Int) -&gt; Unit)</ID>
+    <ID>FunctionNaming:SettingsScreen.kt$@Composable fun HourPicker(selected: Int, onSelect: (Int) -&gt; Unit)</ID>
+    <ID>FunctionNaming:SettingsScreen.kt$@Composable fun SettingsCard(title: String, content: @Composable ColumnScope.() -&gt; Unit)</ID>
+    <ID>FunctionNaming:SettingsScreen.kt$@Composable fun SettingsScreen(viewModel: MainViewModel)</ID>
+    <ID>FunctionNaming:SettingsScreen.kt$@Composable fun SettingsToggle( title: String, subtitle: String, icon: androidx.compose.ui.graphics.vector.ImageVector, checked: Boolean, tintColor: androidx.compose.ui.graphics.Color = CatSubtext, toggleTag: String? = null, onCheckedChange: (Boolean) -&gt; Unit )</ID>
+    <ID>FunctionNaming:SettingsScreen.kt$@Composable internal fun QuietHoursSettings( enabled: Boolean, startHour: Int, endHour: Int, onEnabledChange: (Boolean) -&gt; Unit, onStartChange: (Int) -&gt; Unit, onEndChange: (Int) -&gt; Unit, )</ID>
+    <ID>FunctionNaming:SettingsScreen.kt$@Composable private fun PermissionStatusChip( label: String, color: androidx.compose.ui.graphics.Color, modifier: Modifier = Modifier )</ID>
+    <ID>FunctionNaming:StatsScreen.kt$@Composable fun MiniStat(modifier: Modifier, label: String, value: String, color: Color)</ID>
+    <ID>FunctionNaming:StatsScreen.kt$@Composable fun SourceDonutChart(sources: Map&lt;String, Int&gt;, modifier: Modifier = Modifier)</ID>
+    <ID>FunctionNaming:StatsScreen.kt$@Composable fun SourceLegend(sources: Map&lt;String, Int&gt;, modifier: Modifier = Modifier)</ID>
+    <ID>FunctionNaming:StatsScreen.kt$@Composable fun StatsScreen(viewModel: MainViewModel)</ID>
+    <ID>FunctionNaming:StatsScreen.kt$@Composable fun WeeklyBarChart(dailyCounts: List&lt;Pair&lt;String, Int&gt;&gt;, modifier: Modifier = Modifier)</ID>
+    <ID>FunctionNaming:StatsScreen.kt$@Composable private fun StatsInsightRow( title: String, value: String, color: Color )</ID>
+    <ID>FunctionNaming:StatsScreen.kt$@Composable private fun StatsInsightTile( modifier: Modifier, label: String, value: String, color: Color )</ID>
+    <ID>FunctionNaming:StatsScreen.kt$@Composable private fun StatsOverviewCard( weeklyTotal: Int, weeklyDelta: Int, topSource: String?, peakHour: String? )</ID>
+    <ID>FunctionNaming:Theme.kt$@Composable fun CallShieldTheme(content: @Composable () -&gt; Unit)</ID>
+    <ID>FunctionNaming:Theme.kt$@Composable fun GradientDivider(modifier: Modifier = Modifier, color: Color = CatOverlay)</ID>
+    <ID>FunctionNaming:Theme.kt$@Composable fun PremiumCard( modifier: Modifier = Modifier, onClick: (() -&gt; Unit)? = null, accentColor: Color? = null, cornerRadius: Dp = ShapeXl, content: @Composable ColumnScope.() -&gt; Unit )</ID>
+    <ID>FunctionNaming:Theme.kt$@Composable fun SectionHeader(title: String, color: Color = CatOverlay)</ID>
+    <ID>FunctionNaming:Theme.kt$@Composable fun ShimmerBox( modifier: Modifier = Modifier, cornerRadius: Dp = 8.dp )</ID>
+    <ID>FunctionNaming:Theme.kt$@Composable fun SkeletonListItem(modifier: Modifier = Modifier)</ID>
+    <ID>FunctionNaming:Theme.kt$@Composable fun StatusPill( text: String, color: Color, modifier: Modifier = Modifier, horizontalPadding: Dp = 12.dp, verticalPadding: Dp = 8.dp, containerAlpha: Float = 0.12f, borderAlpha: Float = 0.18f, textStyle: TextStyle = MaterialTheme.typography.labelMedium, )</ID>
+    <ID>LongMethod:BackupRestore.kt$BackupRestore$suspend fun restoreFromUri(context: Context, uri: Uri): RestoreResult</ID>
+    <ID>LongMethod:BlockReasoning.kt$BlockReasoning$fun explain(matchReason: String, description: String, confidence: Int): Reasoning</ID>
+    <ID>LongMethod:BlockedLogScreen.kt$@OptIn(ExperimentalFoundationApi::class) @Composable fun BlockedCallItem(call: BlockedCall, onTap: () -&gt; Unit)</ID>
+    <ID>LongMethod:BlockedLogScreen.kt$@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class) @Composable fun BlockedLogScreen(viewModel: MainViewModel)</ID>
+    <ID>LongMethod:BlocklistScreen.kt$@Composable fun AddHashWildcardDialog( existing: List&lt;HashWildcardRule&gt;, onDismiss: () -&gt; Unit, onAdd: (String, String, TimeSchedule) -&gt; Unit, )</ID>
+    <ID>LongMethod:BlocklistScreen.kt$@Composable fun AddKeywordDialog( onDismiss: () -&gt; Unit, onAdd: (String, Boolean, String, TimeSchedule) -&gt; Unit, )</ID>
+    <ID>LongMethod:BlocklistScreen.kt$@Composable fun AddNumberDialog(onDismiss: () -&gt; Unit, onAdd: (String, String) -&gt; Unit)</ID>
+    <ID>LongMethod:BlocklistScreen.kt$@Composable fun AddWhitelistDialog(onDismiss: () -&gt; Unit, onAdd: (String, String, Boolean) -&gt; Unit)</ID>
+    <ID>LongMethod:BlocklistScreen.kt$@Composable fun AddWildcardDialog( onDismiss: () -&gt; Unit, onAdd: (String, Boolean, String, TimeSchedule) -&gt; Unit, )</ID>
+    <ID>LongMethod:BlocklistScreen.kt$@Composable private fun BlocklistOverviewCard( workspace: BlocklistWorkspaceModel, modifier: Modifier = Modifier, )</ID>
+    <ID>LongMethod:BlocklistScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun BlocklistScreen(viewModel: MainViewModel)</ID>
+    <ID>LongMethod:CallShieldScreeningService.kt$CallShieldScreeningService$override fun onScreenCall(callDetails: Call.Details)</ID>
+    <ID>LongMethod:CallerIdOverlayService.kt$CallerIdOverlayService$private fun runLiveLookups(number: String, sessionId: Long)</ID>
+    <ID>LongMethod:CallerIdOverlayService.kt$CallerIdOverlayService$private fun showOverlay(number: String, confidence: Int, reason: String, verificationStatus: Int): Long?</ID>
+    <ID>LongMethod:ChangelogScreen.kt$@Composable fun ChangelogScreen()</ID>
+    <ID>LongMethod:ChangelogScreen.kt$@Composable fun VersionEntry( version: String, title: String = "", isLatest: Boolean = false, isLast: Boolean = false, changes: List&lt;String&gt; )</ID>
+    <ID>LongMethod:DashboardScreen.kt$@Composable fun DashboardScreen(viewModel: MainViewModel)</ID>
+    <ID>LongMethod:DashboardScreen.kt$@Composable internal fun DashboardHeroCard( modifier: Modifier = Modifier, dashboardStatus: DashboardStatusModel, shieldActive: Boolean, heroTitle: String, heroSubtitle: String, heroAccent: Color, requiredSetupComplete: Int, requiredSetupTotal: Int, setupSummary: String, engineCount: Int, aggressiveMode: Boolean, lastSync: Long, lastSyncSource: String, syncState: SyncState, heroAction: HeroAction?, )</ID>
+    <ID>LongMethod:DashboardScreen.kt$@Composable internal fun DashboardSetupChecklistCard( dashboardStatus: DashboardStatusModel, setupSummary: String, corePermissionsReady: Boolean, missingPermissionCount: Int, syncState: SyncState, spamDatabaseReady: Boolean, spamCount: Int, blockCallsEnabled: Boolean, callScreenerReady: Boolean, overlayGranted: Boolean, notificationsGranted: Boolean, onReviewPermissions: () -&gt; Unit, onSyncDatabase: () -&gt; Unit, onEnableCallScreener: (() -&gt; Unit)?, onEnableOverlay: () -&gt; Unit, onEnableNotifications: () -&gt; Unit, )</ID>
+    <ID>LongMethod:LookupScreen.kt$@Composable fun LookupScreen(viewModel: MainViewModel)</ID>
+    <ID>LongMethod:MainActivity.kt$@Composable fun SearchResultsView(results: List&lt;com.sysadmindoc.callshield.data.model.SpamNumber&gt;, onTap: (com.sysadmindoc.callshield.data.model.SpamNumber) -&gt; Unit)</ID>
+    <ID>LongMethod:MainActivity.kt$@Composable private fun AppChrome( showSearch: Boolean, title: String, subtitle: String, accentColor: Color, modeLabel: String, protectionStatusLabel: String, spamCount: Int, searchQuery: String, onSearchQueryChange: (String) -&gt; Unit, onOpenSearch: () -&gt; Unit, onCloseSearch: () -&gt; Unit, )</ID>
+    <ID>LongMethod:MainActivity.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun CallShieldApp(viewModel: MainViewModel, startTab: Int = 0)</ID>
+    <ID>LongMethod:MoreScreen.kt$@Composable fun MoreHub(viewModel: MainViewModel, onStats: () -&gt; Unit, onSettings: () -&gt; Unit, onChangelog: () -&gt; Unit, onTest: () -&gt; Unit)</ID>
+    <ID>LongMethod:NumberDetailScreen.kt$@Composable fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -&gt; Unit)</ID>
+    <ID>LongMethod:OnboardingScreen.kt$@Composable fun OnboardingScreen(onComplete: () -&gt; Unit)</ID>
+    <ID>LongMethod:OnboardingScreen.kt$@Composable internal fun OnboardingScreenContent( permsGranted: Boolean, notificationsGranted: Boolean, overlayGranted: Boolean, screenerGranted: Boolean, screenerSupported: Boolean, onRequestCorePermissions: () -&gt; Unit, onRequestNotifications: () -&gt; Unit, onRequestOverlay: () -&gt; Unit, onRequestScreener: () -&gt; Unit, onComplete: () -&gt; Unit, snackbarHostState: SnackbarHostState = remember { SnackbarHostState() }, )</ID>
+    <ID>LongMethod:ProtectionTestScreen.kt$@Composable fun ProtectionTestScreen()</ID>
+    <ID>LongMethod:ProtectionTestScreen.kt$private suspend fun runTests(context: Context): List&lt;TestResult&gt;</ID>
+    <ID>LongMethod:PushAlertSourcesSheet.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun PushAlertSourcesSheet( disabledPackages: Set&lt;String&gt;, onToggle: (pkg: String, allowed: Boolean) -&gt; Unit, onReset: () -&gt; Unit, onDismiss: () -&gt; Unit, )</ID>
+    <ID>LongMethod:RecentCallsScreen.kt$@Composable fun RecentCallItem(call: RecentCall, onOpenDetail: () -&gt; Unit)</ID>
+    <ID>LongMethod:RecentCallsScreen.kt$@Composable fun RecentCallsScreen(viewModel: MainViewModel)</ID>
+    <ID>LongMethod:RecentCallsScreen.kt$@Composable private fun RecentCallsPermissionState( onOpenSettings: () -&gt; Unit, )</ID>
+    <ID>LongMethod:RecentCallsScreen.kt$@Composable private fun RecentCallsSummaryCard( totalCount: Int, spamCount: Int, missedCount: Int, contactCount: Int, refreshing: Boolean, onRefresh: () -&gt; Unit, )</ID>
+    <ID>LongMethod:ScheduleControls.kt$@Composable fun ScheduleSection( state: ScheduleUiState, onChange: (ScheduleUiState) -&gt; Unit, )</ID>
+    <ID>LongMethod:SettingsScreen.kt$@Composable fun SettingsScreen(viewModel: MainViewModel)</ID>
+    <ID>LongMethod:SmsContentAnalyzer.kt$SmsContentAnalyzer$fun analyze(body: String): SmsAnalysisResult</ID>
+    <ID>LongMethod:SpamActionReceiver.kt$SpamActionReceiver$override fun onReceive(context: Context, intent: Intent)</ID>
+    <ID>LongMethod:SpamRepository.kt$SpamRepository$suspend fun syncFromGitHub(force: Boolean = false): SyncResult</ID>
+    <ID>LongMethod:StatsScreen.kt$@Composable fun StatsScreen(viewModel: MainViewModel)</ID>
+    <ID>LongParameterList:DashboardScreen.kt$( dashboardStatus: DashboardStatusModel, setupSummary: String, corePermissionsReady: Boolean, missingPermissionCount: Int, syncState: SyncState, spamDatabaseReady: Boolean, spamCount: Int, blockCallsEnabled: Boolean, callScreenerReady: Boolean, overlayGranted: Boolean, notificationsGranted: Boolean, onReviewPermissions: () -&gt; Unit, onSyncDatabase: () -&gt; Unit, onEnableCallScreener: (() -&gt; Unit)?, onEnableOverlay: () -&gt; Unit, onEnableNotifications: () -&gt; Unit, )</ID>
+    <ID>LongParameterList:DashboardScreen.kt$( icon: ImageVector, title: String, detail: String, ready: Boolean, accentColor: Color, actionLabel: String? = null, onAction: (() -&gt; Unit)? = null )</ID>
+    <ID>LongParameterList:DashboardScreen.kt$( icon: ImageVector, title: String, subtitle: String, accentColor: Color, actionLabel: String, loading: Boolean, enabled: Boolean, onClick: () -&gt; Unit )</ID>
+    <ID>LongParameterList:DashboardScreen.kt$( modifier: Modifier = Modifier, dashboardStatus: DashboardStatusModel, shieldActive: Boolean, heroTitle: String, heroSubtitle: String, heroAccent: Color, requiredSetupComplete: Int, requiredSetupTotal: Int, setupSummary: String, engineCount: Int, aggressiveMode: Boolean, lastSync: Long, lastSyncSource: String, syncState: SyncState, heroAction: HeroAction?, )</ID>
+    <ID>LongParameterList:DashboardScreen.kt$( stirShaken: Boolean, heuristics: Boolean, smsContent: Boolean, neighborSpoof: Boolean, mlScorer: Boolean, rcsFilter: Boolean, freqEscalation: Boolean )</ID>
+    <ID>LongParameterList:DashboardStatusModel.kt$( blockCallsEnabled: Boolean, blockSmsEnabled: Boolean, callPermissionsReady: Boolean, smsPermissionsReady: Boolean, permissionsReady: Boolean, spamDatabaseReady: Boolean, callScreenerReady: Boolean, overlayGranted: Boolean, notificationsGranted: Boolean, )</ID>
+    <ID>LongParameterList:MainActivity.kt$( showSearch: Boolean, title: String, subtitle: String, accentColor: Color, modeLabel: String, protectionStatusLabel: String, spamCount: Int, searchQuery: String, onSearchQueryChange: (String) -&gt; Unit, onOpenSearch: () -&gt; Unit, onCloseSearch: () -&gt; Unit, )</ID>
+    <ID>LongParameterList:MoreScreen.kt$( icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, subtitle: String, color: androidx.compose.ui.graphics.Color, external: Boolean = true, onClick: () -&gt; Unit )</ID>
+    <ID>LongParameterList:OnboardingScreen.kt$( permsGranted: Boolean, notificationsGranted: Boolean, overlayGranted: Boolean, screenerGranted: Boolean, screenerSupported: Boolean, onRequestCorePermissions: () -&gt; Unit, onRequestNotifications: () -&gt; Unit, onRequestOverlay: () -&gt; Unit, onRequestScreener: () -&gt; Unit, onComplete: () -&gt; Unit, snackbarHostState: SnackbarHostState = remember { SnackbarHostState() }, )</ID>
+    <ID>LongParameterList:OnboardingTest.kt$OnboardingTest$( permsGranted: Boolean, notificationsGranted: Boolean, overlayGranted: Boolean, screenerGranted: Boolean, screenerSupported: Boolean = true, onRequestCorePermissions: () -&gt; Unit = {}, onRequestNotifications: () -&gt; Unit = {}, onRequestOverlay: () -&gt; Unit = {}, onRequestScreener: () -&gt; Unit = {}, onComplete: () -&gt; Unit = {}, )</ID>
+    <ID>LongParameterList:RecentCallsScreen.kt$( totalCount: Int, spamCount: Int, missedCount: Int, contactCount: Int, refreshing: Boolean, onRefresh: () -&gt; Unit, )</ID>
+    <ID>LongParameterList:SettingsScreen.kt$( enabled: Boolean, startHour: Int, endHour: Int, onEnabledChange: (Boolean) -&gt; Unit, onStartChange: (Int) -&gt; Unit, onEndChange: (Int) -&gt; Unit, )</ID>
+    <ID>LongParameterList:SettingsScreen.kt$( title: String, subtitle: String, icon: androidx.compose.ui.graphics.vector.ImageVector, checked: Boolean, tintColor: androidx.compose.ui.graphics.Color = CatSubtext, toggleTag: String? = null, onCheckedChange: (Boolean) -&gt; Unit )</ID>
+    <ID>LongParameterList:Theme.kt$( text: String, color: Color, modifier: Modifier = Modifier, horizontalPadding: Dp = 12.dp, verticalPadding: Dp = 8.dp, containerAlpha: Float = 0.12f, borderAlpha: Float = 0.18f, textStyle: TextStyle = MaterialTheme.typography.labelMedium, )</ID>
+    <ID>LoopWithTooManyJumpStatements:RecentCallsScreen.kt$while</ID>
+    <ID>LoopWithTooManyJumpStatements:SmsContentAnalyzer.kt$SmsContentAnalyzer$for</ID>
+    <ID>LoopWithTooManyJumpStatements:SmsContextChecker.kt$SmsContextChecker$while</ID>
+    <ID>LoopWithTooManyJumpStatements:SmsReceiver.kt$SmsReceiver$for</ID>
+    <ID>LoopWithTooManyJumpStatements:SpamMLScorer.kt$SpamMLScorer$for</ID>
+    <ID>LoopWithTooManyJumpStatements:SpamMLScorer.kt$SpamMLScorer$while</ID>
+    <ID>MagicNumber:AppDatabase.kt$&lt;no name provided&gt;$5</ID>
+    <ID>MagicNumber:AppDatabase.kt$&lt;no name provided&gt;$6</ID>
+    <ID>MagicNumber:AppDatabase.kt$&lt;no name provided&gt;$7</ID>
+    <ID>MagicNumber:AppDatabase.kt$&lt;no name provided&gt;$8</ID>
+    <ID>MagicNumber:AppDatabase.kt$&lt;no name provided&gt;$9</ID>
+    <ID>MagicNumber:AppDatabase.kt$AppDatabase.Companion$3</ID>
+    <ID>MagicNumber:AppDatabase.kt$AppDatabase.Companion$4</ID>
+    <ID>MagicNumber:AreaCodeLookup.kt$AreaCodeLookup$10</ID>
+    <ID>MagicNumber:AreaCodeLookup.kt$AreaCodeLookup$11</ID>
+    <ID>MagicNumber:AreaCodeLookup.kt$AreaCodeLookup$3</ID>
+    <ID>MagicNumber:AreaCodeLookup.kt$AreaCodeLookup$4</ID>
+    <ID>MagicNumber:BackupRestore.kt$BackupRestore$0b1111111</ID>
+    <ID>MagicNumber:BackupRestore.kt$BackupRestore$15</ID>
+    <ID>MagicNumber:BackupRestore.kt$BackupRestore$23</ID>
+    <ID>MagicNumber:BlockReasoning.kt$BlockReasoning$99</ID>
+    <ID>MagicNumber:BlockedLogScreen.kt$100</ID>
+    <ID>MagicNumber:BlockedLogScreen.kt$15</ID>
+    <ID>MagicNumber:BlockedLogScreen.kt$3</ID>
+    <ID>MagicNumber:BlockedLogScreen.kt$30</ID>
+    <ID>MagicNumber:BlockedLogScreen.kt$40</ID>
+    <ID>MagicNumber:BlockedLogScreen.kt$5</ID>
+    <ID>MagicNumber:BlocklistExporter.kt$BlocklistExporter$15</ID>
+    <ID>MagicNumber:BlocklistScreen.kt$100_000_000L</ID>
+    <ID>MagicNumber:BlocklistScreen.kt$24</ID>
+    <ID>MagicNumber:BlocklistScreen.kt$5</ID>
+    <ID>MagicNumber:CallCategory.kt$CallCategoryResolver$80</ID>
+    <ID>MagicNumber:CallLogScanner.kt$CallLogScanner$7</ID>
+    <ID>MagicNumber:CallShieldScreeningService.kt$CallShieldScreeningService$10_000L</ID>
+    <ID>MagicNumber:CallShieldWidget.kt$CallShieldWidget$24</ID>
+    <ID>MagicNumber:CallShieldWidget.kt$CallShieldWidget$60</ID>
+    <ID>MagicNumber:CallShieldWidget.kt$CallShieldWidget$86_400_000L</ID>
+    <ID>MagicNumber:CallbackDetector.kt$CallbackDetector$10</ID>
+    <ID>MagicNumber:CallbackDetector.kt$CallbackDetector$3_600_000L</ID>
+    <ID>MagicNumber:CallbackDetector.kt$CallbackDetector$60_000L</ID>
+    <ID>MagicNumber:CallbackDetector.kt$CallbackDetector$7</ID>
+    <ID>MagicNumber:CallerIdOverlayService.kt$CallerIdOverlayService$0.02f</ID>
+    <ID>MagicNumber:CallerIdOverlayService.kt$CallerIdOverlayService$0.12f</ID>
+    <ID>MagicNumber:CallerIdOverlayService.kt$CallerIdOverlayService$10</ID>
+    <ID>MagicNumber:CallerIdOverlayService.kt$CallerIdOverlayService$10f</ID>
+    <ID>MagicNumber:CallerIdOverlayService.kt$CallerIdOverlayService$11f</ID>
+    <ID>MagicNumber:CallerIdOverlayService.kt$CallerIdOverlayService$12f</ID>
+    <ID>MagicNumber:CallerIdOverlayService.kt$CallerIdOverlayService$13f</ID>
+    <ID>MagicNumber:CallerIdOverlayService.kt$CallerIdOverlayService$16</ID>
+    <ID>MagicNumber:CallerIdOverlayService.kt$CallerIdOverlayService$20</ID>
+    <ID>MagicNumber:CallerIdOverlayService.kt$CallerIdOverlayService$20_000</ID>
+    <ID>MagicNumber:CallerIdOverlayService.kt$CallerIdOverlayService$24f</ID>
+    <ID>MagicNumber:CallerIdOverlayService.kt$CallerIdOverlayService$3</ID>
+    <ID>MagicNumber:CallerIdOverlayService.kt$CallerIdOverlayService$30</ID>
+    <ID>MagicNumber:CallerIdOverlayService.kt$CallerIdOverlayService$32</ID>
+    <ID>MagicNumber:CallerIdOverlayService.kt$CallerIdOverlayService$40</ID>
+    <ID>MagicNumber:CallerIdOverlayService.kt$CallerIdOverlayService$48f</ID>
+    <ID>MagicNumber:CallerIdOverlayService.kt$CallerIdOverlayService$5</ID>
+    <ID>MagicNumber:CallerIdOverlayService.kt$CallerIdOverlayService$50</ID>
+    <ID>MagicNumber:CallerIdOverlayService.kt$CallerIdOverlayService$52</ID>
+    <ID>MagicNumber:CallerIdOverlayService.kt$CallerIdOverlayService$6</ID>
+    <ID>MagicNumber:CallerIdOverlayService.kt$CallerIdOverlayService$60</ID>
+    <ID>MagicNumber:CallerIdOverlayService.kt$CallerIdOverlayService$70</ID>
+    <ID>MagicNumber:CallerIdOverlayService.kt$CallerIdOverlayService$8</ID>
+    <ID>MagicNumber:CallerIdOverlayService.kt$CallerIdOverlayService$80</ID>
+    <ID>MagicNumber:CallerIdOverlayService.kt$CallerIdOverlayService$95</ID>
+    <ID>MagicNumber:CampaignDetector.kt$CampaignDetector$10</ID>
+    <ID>MagicNumber:CampaignDetector.kt$CampaignDetector$11</ID>
+    <ID>MagicNumber:CampaignDetector.kt$CampaignDetector$6</ID>
+    <ID>MagicNumber:Checkers.kt$FrequencyEscalationChecker$3</ID>
+    <ID>MagicNumber:Checkers.kt$FrequencyEscalationChecker$7</ID>
+    <ID>MagicNumber:Checkers.kt$FrequencyEscalationChecker$86_400_000L</ID>
+    <ID>MagicNumber:Checkers.kt$HeuristicChecker$30</ID>
+    <ID>MagicNumber:Checkers.kt$HeuristicChecker$3_600_000L</ID>
+    <ID>MagicNumber:Checkers.kt$HeuristicChecker$60</ID>
+    <ID>MagicNumber:Checkers.kt$SmsContentChecker$100</ID>
+    <ID>MagicNumber:Checkers.kt$SmsContentChecker$25</ID>
+    <ID>MagicNumber:Checkers.kt$SmsContentChecker$50</ID>
+    <ID>MagicNumber:Checkers.kt$SmsKeywordChecker$100</ID>
+    <ID>MagicNumber:Checkers.kt$TimeBlockChecker$22</ID>
+    <ID>MagicNumber:Checkers.kt$TimeBlockChecker$23</ID>
+    <ID>MagicNumber:Checkers.kt$TimeBlockChecker$7</ID>
+    <ID>MagicNumber:CommunityContributor.kt$CommunityContributor$10</ID>
+    <ID>MagicNumber:CommunityContributor.kt$CommunityContributor$11</ID>
+    <ID>MagicNumber:CommunityContributor.kt$CommunityContributor$15</ID>
+    <ID>MagicNumber:CommunityContributor.kt$CommunityContributor$7</ID>
+    <ID>MagicNumber:DashboardScreen.kt$1600</ID>
+    <ID>MagicNumber:DashboardScreen.kt$172_800_000</ID>
+    <ID>MagicNumber:DashboardScreen.kt$3</ID>
+    <ID>MagicNumber:DashboardScreen.kt$3_600_000</ID>
+    <ID>MagicNumber:DashboardScreen.kt$5</ID>
+    <ID>MagicNumber:DashboardScreen.kt$600</ID>
+    <ID>MagicNumber:DashboardScreen.kt$60_000</ID>
+    <ID>MagicNumber:DashboardScreen.kt$800</ID>
+    <ID>MagicNumber:DashboardScreen.kt$86_400_000</ID>
+    <ID>MagicNumber:DashboardStatusModel.kt$3</ID>
+    <ID>MagicNumber:DashboardTimeWindows.kt$7</ID>
+    <ID>MagicNumber:DigestWorker.kt$DigestWorker$86_400_000</ID>
+    <ID>MagicNumber:DigestWorker.kt$DigestWorker$9999</ID>
+    <ID>MagicNumber:DigestWorker.kt$DigestWorker.Companion$24</ID>
+    <ID>MagicNumber:ExternalLookup.kt$ExternalLookup$10</ID>
+    <ID>MagicNumber:ExternalLookup.kt$ExternalLookup$11</ID>
+    <ID>MagicNumber:ExternalLookup.kt$ExternalLookup$3</ID>
+    <ID>MagicNumber:ExternalLookup.kt$ExternalLookup$7</ID>
+    <ID>MagicNumber:ExternalLookup.kt$ExternalLookup$8</ID>
+    <ID>MagicNumber:GitHubDataSource.kt$GitHubDataSource$30</ID>
+    <ID>MagicNumber:HashWildcardMatcher.kt$HashWildcardMatcher$10</ID>
+    <ID>MagicNumber:HashWildcardMatcher.kt$HashWildcardMatcher$10L</ID>
+    <ID>MagicNumber:HashWildcardMatcher.kt$HashWildcardMatcher$11</ID>
+    <ID>MagicNumber:HashWildcardMatcher.kt$HashWildcardMatcher$19</ID>
+    <ID>MagicNumber:HotDataSync.kt$HotDataSync$11</ID>
+    <ID>MagicNumber:HotDataSync.kt$HotDataSync$6</ID>
+    <ID>MagicNumber:HotListSyncWorker.kt$HotListSyncWorker.Companion$30</ID>
+    <ID>MagicNumber:HotListSyncWorker.kt$HotListSyncWorker.Companion$5</ID>
+    <ID>MagicNumber:HttpClient.kt$HttpClient$15</ID>
+    <ID>MagicNumber:LookupScreen.kt$0.07f</ID>
+    <ID>MagicNumber:LookupScreen.kt$100</ID>
+    <ID>MagicNumber:LookupScreen.kt$1000</ID>
+    <ID>MagicNumber:LookupScreen.kt$15</ID>
+    <ID>MagicNumber:LookupScreen.kt$200</ID>
+    <ID>MagicNumber:LookupScreen.kt$200f</ID>
+    <ID>MagicNumber:LookupScreen.kt$24</ID>
+    <ID>MagicNumber:LookupScreen.kt$30</ID>
+    <ID>MagicNumber:LookupScreen.kt$40</ID>
+    <ID>MagicNumber:LookupScreen.kt$5</ID>
+    <ID>MagicNumber:LookupScreen.kt$50</ID>
+    <ID>MagicNumber:LookupScreen.kt$7</ID>
+    <ID>MagicNumber:LookupScreen.kt$70</ID>
+    <ID>MagicNumber:MainActivity.kt$150</ID>
+    <ID>MagicNumber:MainActivity.kt$200</ID>
+    <ID>MagicNumber:MainActivity.kt$3</ID>
+    <ID>MagicNumber:MainActivity.kt$4</ID>
+    <ID>MagicNumber:MainActivity.kt$5</ID>
+    <ID>MagicNumber:MainActivity.kt$6</ID>
+    <ID>MagicNumber:MainViewModel.kt$MainViewModel$22</ID>
+    <ID>MagicNumber:MainViewModel.kt$MainViewModel$30</ID>
+    <ID>MagicNumber:MainViewModel.kt$MainViewModel$300</ID>
+    <ID>MagicNumber:MainViewModel.kt$MainViewModel$5000</ID>
+    <ID>MagicNumber:MainViewModel.kt$MainViewModel$60_000</ID>
+    <ID>MagicNumber:MainViewModel.kt$MainViewModel$7</ID>
+    <ID>MagicNumber:MoreScreen.kt$0.04f</ID>
+    <ID>MagicNumber:MoreScreen.kt$3</ID>
+    <ID>MagicNumber:MoreScreen.kt$300f</ID>
+    <ID>MagicNumber:MoreScreen.kt$3_600_000</ID>
+    <ID>MagicNumber:MoreScreen.kt$4</ID>
+    <ID>MagicNumber:MoreScreen.kt$60_000</ID>
+    <ID>MagicNumber:MoreScreen.kt$86_400_000</ID>
+    <ID>MagicNumber:NotificationHelper.kt$NotificationHelper$0x7FFFFFFF</ID>
+    <ID>MagicNumber:NotificationHelper.kt$NotificationHelper$10</ID>
+    <ID>MagicNumber:NotificationHelper.kt$NotificationHelper$20</ID>
+    <ID>MagicNumber:NotificationHelper.kt$NotificationHelper$40</ID>
+    <ID>MagicNumber:NotificationHelper.kt$NotificationHelper$50</ID>
+    <ID>MagicNumber:NotificationHelper.kt$NotificationHelper$51</ID>
+    <ID>MagicNumber:NotificationHelper.kt$NotificationHelper$60</ID>
+    <ID>MagicNumber:NotificationHelper.kt$NotificationHelper$61</ID>
+    <ID>MagicNumber:NotificationHelper.kt$NotificationHelper$62</ID>
+    <ID>MagicNumber:NotificationHelper.kt$NotificationHelper$7</ID>
+    <ID>MagicNumber:NotificationHelper.kt$NotificationHelper$70</ID>
+    <ID>MagicNumber:NotificationHelper.kt$NotificationHelper$71</ID>
+    <ID>MagicNumber:NotificationHelper.kt$NotificationHelper$72</ID>
+    <ID>MagicNumber:NotificationHelper.kt$NotificationHelper$73</ID>
+    <ID>MagicNumber:NumberDetailScreen.kt$10</ID>
+    <ID>MagicNumber:NumberDetailScreen.kt$100</ID>
+    <ID>MagicNumber:NumberDetailScreen.kt$3</ID>
+    <ID>MagicNumber:NumberDetailScreen.kt$4000</ID>
+    <ID>MagicNumber:NumberTypeChecker.kt$NumberTypeChecker$10</ID>
+    <ID>MagicNumber:NumberTypeChecker.kt$NumberTypeChecker$11</ID>
+    <ID>MagicNumber:NumberTypeChecker.kt$NumberTypeChecker$15</ID>
+    <ID>MagicNumber:NumberTypeChecker.kt$NumberTypeChecker$20</ID>
+    <ID>MagicNumber:NumberTypeChecker.kt$NumberTypeChecker$30</ID>
+    <ID>MagicNumber:NumberTypeChecker.kt$NumberTypeChecker$5</ID>
+    <ID>MagicNumber:NumberTypeChecker.kt$NumberTypeChecker$7</ID>
+    <ID>MagicNumber:NumberTypeChecker.kt$NumberTypeChecker$8</ID>
+    <ID>MagicNumber:OnboardingScreen.kt$0.10f</ID>
+    <ID>MagicNumber:OnboardingScreen.kt$300f</ID>
+    <ID>MagicNumber:OneShotNoticeGate.kt$OneShotNoticeGate$1_000L</ID>
+    <ID>MagicNumber:OneShotNoticeGate.kt$OneShotNoticeGate$6</ID>
+    <ID>MagicNumber:OneShotNoticeGate.kt$OneShotNoticeGate$60</ID>
+    <ID>MagicNumber:PhoneFormatter.kt$PhoneFormatter$10</ID>
+    <ID>MagicNumber:PhoneFormatter.kt$PhoneFormatter$11</ID>
+    <ID>MagicNumber:PhoneFormatter.kt$PhoneFormatter$3</ID>
+    <ID>MagicNumber:PhoneFormatter.kt$PhoneFormatter$5</ID>
+    <ID>MagicNumber:PhoneFormatter.kt$PhoneFormatter$6</ID>
+    <ID>MagicNumber:ProtectionTestScreen.kt$0.06f</ID>
+    <ID>MagicNumber:ProtectionTestScreen.kt$100</ID>
+    <ID>MagicNumber:ProtectionTestScreen.kt$12</ID>
+    <ID>MagicNumber:ProtectionTestScreen.kt$20</ID>
+    <ID>MagicNumber:ProtectionTestScreen.kt$3</ID>
+    <ID>MagicNumber:ProtectionTestScreen.kt$30</ID>
+    <ID>MagicNumber:ProtectionTestScreen.kt$300f</ID>
+    <ID>MagicNumber:ProtectionTestScreen.kt$40</ID>
+    <ID>MagicNumber:ProtectionTestScreen.kt$50</ID>
+    <ID>MagicNumber:PushAlertChecker.kt$PushAlertChecker$7</ID>
+    <ID>MagicNumber:PushAlertRegistry.kt$PushAlertRegistry$5_000</ID>
+    <ID>MagicNumber:PushAlertSourcesSheet.kt$4</ID>
+    <ID>MagicNumber:RcsNotificationListener.kt$RcsNotificationListener$7</ID>
+    <ID>MagicNumber:RecentCallsScreen.kt$100</ID>
+    <ID>MagicNumber:RecentCallsScreen.kt$20</ID>
+    <ID>MagicNumber:RecentCallsScreen.kt$25</ID>
+    <ID>MagicNumber:RecentCallsScreen.kt$3</ID>
+    <ID>MagicNumber:RecentCallsScreen.kt$30</ID>
+    <ID>MagicNumber:RecentCallsScreen.kt$4</ID>
+    <ID>MagicNumber:RecentCallsScreen.kt$5</ID>
+    <ID>MagicNumber:RecentCallsScreen.kt$8</ID>
+    <ID>MagicNumber:ScheduleControls.kt$6</ID>
+    <ID>MagicNumber:SettingsScreen.kt$12</ID>
+    <ID>MagicNumber:SettingsScreen.kt$14</ID>
+    <ID>MagicNumber:SettingsScreen.kt$23</ID>
+    <ID>MagicNumber:SettingsScreen.kt$30</ID>
+    <ID>MagicNumber:SettingsScreen.kt$4</ID>
+    <ID>MagicNumber:SettingsScreen.kt$4000</ID>
+    <ID>MagicNumber:SettingsScreen.kt$7</ID>
+    <ID>MagicNumber:SettingsScreen.kt$90</ID>
+    <ID>MagicNumber:SitTonePlayer.kt$SitTonePlayer$0.9</ID>
+    <ID>MagicNumber:SitTonePlayer.kt$SitTonePlayer$10</ID>
+    <ID>MagicNumber:SitTonePlayer.kt$SitTonePlayer$1000</ID>
+    <ID>MagicNumber:SitTonePlayer.kt$SitTonePlayer$1428.5</ID>
+    <ID>MagicNumber:SitTonePlayer.kt$SitTonePlayer$1776.7</ID>
+    <ID>MagicNumber:SitTonePlayer.kt$SitTonePlayer$300L</ID>
+    <ID>MagicNumber:SitTonePlayer.kt$SitTonePlayer$380</ID>
+    <ID>MagicNumber:SitTonePlayer.kt$SitTonePlayer$985.2</ID>
+    <ID>MagicNumber:SmsContentAnalyzer.kt$SmsContentAnalyzer$0.15f</ID>
+    <ID>MagicNumber:SmsContentAnalyzer.kt$SmsContentAnalyzer$0.5f</ID>
+    <ID>MagicNumber:SmsContentAnalyzer.kt$SmsContentAnalyzer$10</ID>
+    <ID>MagicNumber:SmsContentAnalyzer.kt$SmsContentAnalyzer$100</ID>
+    <ID>MagicNumber:SmsContentAnalyzer.kt$SmsContentAnalyzer$15</ID>
+    <ID>MagicNumber:SmsContentAnalyzer.kt$SmsContentAnalyzer$20</ID>
+    <ID>MagicNumber:SmsContentAnalyzer.kt$SmsContentAnalyzer$25</ID>
+    <ID>MagicNumber:SmsContentAnalyzer.kt$SmsContentAnalyzer$3</ID>
+    <ID>MagicNumber:SmsContentAnalyzer.kt$SmsContentAnalyzer$30</ID>
+    <ID>MagicNumber:SmsContentAnalyzer.kt$SmsContentAnalyzer$35</ID>
+    <ID>MagicNumber:SmsContentAnalyzer.kt$SmsContentAnalyzer$50</ID>
+    <ID>MagicNumber:SmsContextChecker.kt$SmsContextChecker$10</ID>
+    <ID>MagicNumber:SmsContextChecker.kt$SmsContextChecker$11</ID>
+    <ID>MagicNumber:SmsContextChecker.kt$SmsContextChecker$7</ID>
+    <ID>MagicNumber:SmsInboxScanner.kt$SmsInboxScanner$100</ID>
+    <ID>MagicNumber:SpamActionReceiver.kt$SpamActionReceiver$10000</ID>
+    <ID>MagicNumber:SpamHeuristics.kt$SpamHeuristics$10</ID>
+    <ID>MagicNumber:SpamHeuristics.kt$SpamHeuristics$100</ID>
+    <ID>MagicNumber:SpamHeuristics.kt$SpamHeuristics$11</ID>
+    <ID>MagicNumber:SpamHeuristics.kt$SpamHeuristics$3</ID>
+    <ID>MagicNumber:SpamHeuristics.kt$SpamHeuristics$30</ID>
+    <ID>MagicNumber:SpamHeuristics.kt$SpamHeuristics$35</ID>
+    <ID>MagicNumber:SpamHeuristics.kt$SpamHeuristics$4</ID>
+    <ID>MagicNumber:SpamHeuristics.kt$SpamHeuristics$40</ID>
+    <ID>MagicNumber:SpamHeuristics.kt$SpamHeuristics$50</ID>
+    <ID>MagicNumber:SpamHeuristics.kt$SpamHeuristics$6</ID>
+    <ID>MagicNumber:SpamHeuristics.kt$SpamHeuristics$7</ID>
+    <ID>MagicNumber:SpamHeuristics.kt$SpamHeuristics$80</ID>
+    <ID>MagicNumber:SpamHeuristics.kt$SpamHeuristics$9</ID>
+    <ID>MagicNumber:SpamHeuristics.kt$SpamHeuristics$90</ID>
+    <ID>MagicNumber:SpamHeuristics.kt$SpamHeuristics.&lt;no name provided&gt;$0.75f</ID>
+    <ID>MagicNumber:SpamHeuristics.kt$SpamHeuristics.&lt;no name provided&gt;$16</ID>
+    <ID>MagicNumber:SpamHeuristics.kt$SpamHeuristics.HeuristicResult$60</ID>
+    <ID>MagicNumber:SpamMLScorer.kt$SpamMLScorer$0.1</ID>
+    <ID>MagicNumber:SpamMLScorer.kt$SpamMLScorer$0.3</ID>
+    <ID>MagicNumber:SpamMLScorer.kt$SpamMLScorer$0.5</ID>
+    <ID>MagicNumber:SpamMLScorer.kt$SpamMLScorer$0.6</ID>
+    <ID>MagicNumber:SpamMLScorer.kt$SpamMLScorer$0.7</ID>
+    <ID>MagicNumber:SpamMLScorer.kt$SpamMLScorer$0.8</ID>
+    <ID>MagicNumber:SpamMLScorer.kt$SpamMLScorer$0.9</ID>
+    <ID>MagicNumber:SpamMLScorer.kt$SpamMLScorer$1.2</ID>
+    <ID>MagicNumber:SpamMLScorer.kt$SpamMLScorer$1.4</ID>
+    <ID>MagicNumber:SpamMLScorer.kt$SpamMLScorer$1.5</ID>
+    <ID>MagicNumber:SpamMLScorer.kt$SpamMLScorer$1.8</ID>
+    <ID>MagicNumber:SpamMLScorer.kt$SpamMLScorer$10</ID>
+    <ID>MagicNumber:SpamMLScorer.kt$SpamMLScorer$10.0</ID>
+    <ID>MagicNumber:SpamMLScorer.kt$SpamMLScorer$11</ID>
+    <ID>MagicNumber:SpamMLScorer.kt$SpamMLScorer$15</ID>
+    <ID>MagicNumber:SpamMLScorer.kt$SpamMLScorer$2.1</ID>
+    <ID>MagicNumber:SpamMLScorer.kt$SpamMLScorer$2.5</ID>
+    <ID>MagicNumber:SpamMLScorer.kt$SpamMLScorer$20</ID>
+    <ID>MagicNumber:SpamMLScorer.kt$SpamMLScorer$200</ID>
+    <ID>MagicNumber:SpamMLScorer.kt$SpamMLScorer$24.0</ID>
+    <ID>MagicNumber:SpamMLScorer.kt$SpamMLScorer$3</ID>
+    <ID>MagicNumber:SpamMLScorer.kt$SpamMLScorer$312</ID>
+    <ID>MagicNumber:SpamMLScorer.kt$SpamMLScorer$4</ID>
+    <ID>MagicNumber:SpamMLScorer.kt$SpamMLScorer$6</ID>
+    <ID>MagicNumber:SpamMLScorer.kt$SpamMLScorer$7</ID>
+    <ID>MagicNumber:SpamMLScorer.kt$SpamMLScorer$9</ID>
+    <ID>MagicNumber:SpamMLScorer.kt$SpamMLScorer$9.0</ID>
+    <ID>MagicNumber:SpamRepository.kt$0x200B</ID>
+    <ID>MagicNumber:SpamRepository.kt$0x200C</ID>
+    <ID>MagicNumber:SpamRepository.kt$0x200D</ID>
+    <ID>MagicNumber:SpamRepository.kt$0x200E</ID>
+    <ID>MagicNumber:SpamRepository.kt$0x200F</ID>
+    <ID>MagicNumber:SpamRepository.kt$0xFEFF</ID>
+    <ID>MagicNumber:SpamRepository.kt$SpamRepository$22</ID>
+    <ID>MagicNumber:SpamRepository.kt$SpamRepository$23</ID>
+    <ID>MagicNumber:SpamRepository.kt$SpamRepository$3</ID>
+    <ID>MagicNumber:SpamRepository.kt$SpamRepository$30</ID>
+    <ID>MagicNumber:SpamRepository.kt$SpamRepository$7</ID>
+    <ID>MagicNumber:SpamRepository.kt$SpamRepository$86_400_000L</ID>
+    <ID>MagicNumber:StatsScreen.kt$0.02f</ID>
+    <ID>MagicNumber:StatsScreen.kt$0.04f</ID>
+    <ID>MagicNumber:StatsScreen.kt$0.4f</ID>
+    <ID>MagicNumber:StatsScreen.kt$0.7f</ID>
+    <ID>MagicNumber:StatsScreen.kt$10</ID>
+    <ID>MagicNumber:StatsScreen.kt$1000</ID>
+    <ID>MagicNumber:StatsScreen.kt$100f</ID>
+    <ID>MagicNumber:StatsScreen.kt$12</ID>
+    <ID>MagicNumber:StatsScreen.kt$15</ID>
+    <ID>MagicNumber:StatsScreen.kt$150f</ID>
+    <ID>MagicNumber:StatsScreen.kt$24</ID>
+    <ID>MagicNumber:StatsScreen.kt$360f</ID>
+    <ID>MagicNumber:StatsScreen.kt$5</ID>
+    <ID>MagicNumber:StatsScreen.kt$6</ID>
+    <ID>MagicNumber:StatsScreen.kt$60_000L</ID>
+    <ID>MagicNumber:StatsScreen.kt$7</ID>
+    <ID>MagicNumber:StatsScreen.kt$8</ID>
+    <ID>MagicNumber:StatsScreen.kt$90f</ID>
+    <ID>MagicNumber:SyncWorker.kt$SyncWorker.Companion$30</ID>
+    <ID>MagicNumber:SyncWorker.kt$SyncWorker.Companion$6</ID>
+    <ID>MagicNumber:SystemBlockList.kt$SystemBlockList.&lt;no name provided&gt;$0.75f</ID>
+    <ID>MagicNumber:SystemBlockList.kt$SystemBlockList.&lt;no name provided&gt;$16</ID>
+    <ID>MagicNumber:Theme.kt$0.4f</ID>
+    <ID>MagicNumber:Theme.kt$0.6f</ID>
+    <ID>MagicNumber:Theme.kt$0xFF000000</ID>
+    <ID>MagicNumber:Theme.kt$0xFF080808</ID>
+    <ID>MagicNumber:Theme.kt$0xFF0A0A0C</ID>
+    <ID>MagicNumber:Theme.kt$0xFF0D0D10</ID>
+    <ID>MagicNumber:Theme.kt$0xFF0F0F12</ID>
+    <ID>MagicNumber:Theme.kt$0xFF111113</ID>
+    <ID>MagicNumber:Theme.kt$0xFF141C2A</ID>
+    <ID>MagicNumber:Theme.kt$0xFF162016</ID>
+    <ID>MagicNumber:Theme.kt$0xFF1A1A1E</ID>
+    <ID>MagicNumber:Theme.kt$0xFF1E1E22</ID>
+    <ID>MagicNumber:Theme.kt$0xFF45475A</ID>
+    <ID>MagicNumber:Theme.kt$0xFF585B70</ID>
+    <ID>MagicNumber:Theme.kt$0xFF89B4FA</ID>
+    <ID>MagicNumber:Theme.kt$0xFF9399B2</ID>
+    <ID>MagicNumber:Theme.kt$0xFF94E2D5</ID>
+    <ID>MagicNumber:Theme.kt$0xFFA6E3A1</ID>
+    <ID>MagicNumber:Theme.kt$0xFFB4BEFE</ID>
+    <ID>MagicNumber:Theme.kt$0xFFCBA6F7</ID>
+    <ID>MagicNumber:Theme.kt$0xFFCDD6F4</ID>
+    <ID>MagicNumber:Theme.kt$0xFFF38BA8</ID>
+    <ID>MagicNumber:Theme.kt$0xFFF9E2AF</ID>
+    <ID>MagicNumber:Theme.kt$0xFFFAB387</ID>
+    <ID>MagicNumber:Theme.kt$1200</ID>
+    <ID>MagicNumber:Theme.kt$15</ID>
+    <ID>MagicNumber:Theme.kt$150</ID>
+    <ID>MagicNumber:Theme.kt$300f</ID>
+    <ID>MagicNumber:Theme.kt$40</ID>
+    <ID>MagicNumber:Theme.kt$80</ID>
+    <ID>MagicNumber:TimeSchedule.kt$TimeSchedule$23</ID>
+    <ID>MagicNumber:TimeSchedule.kt$TimeSchedule$3</ID>
+    <ID>MagicNumber:TimeSchedule.kt$TimeSchedule$4</ID>
+    <ID>MagicNumber:TimeSchedule.kt$TimeSchedule$5</ID>
+    <ID>MagicNumber:TimeSchedule.kt$TimeSchedule$6</ID>
+    <ID>MagicNumber:TimeSchedule.kt$TimeSchedule$7</ID>
+    <ID>MagicNumber:UrlSafetyChecker.kt$UrlSafetyChecker$10</ID>
+    <ID>MagicNumber:WebLookup.kt$WebLookup$10</ID>
+    <ID>MagicNumber:WebLookup.kt$WebLookup$3</ID>
+    <ID>MagicNumber:WildcardRule.kt$WildcardRule.Companion$10</ID>
+    <ID>MagicNumber:WildcardRule.kt$WildcardRule.Companion$11</ID>
+    <ID>MatchingDeclarationName:OnboardingScreen.kt$OnboardingPage</ID>
+    <ID>MatchingDeclarationName:PushAlertSourcesSheet.kt$PushAlertSource</ID>
+    <ID>MatchingDeclarationName:RecentCallsScreen.kt$RecentCall</ID>
+    <ID>MatchingDeclarationName:ScheduleControls.kt$ScheduleUiState</ID>
+    <ID>MaxLineLength:BackupRestore.kt$BackupRestore$RestoreResult(true, "Restored $numbersRestored numbers, $whitelistRestored whitelist, $rulesRestored wildcard rules, $keywordsRestored keyword rules")</ID>
+    <ID>MaxLineLength:BlockReasoning.kt$BlockReasoning$bullets += "Matched SMS context trust — you've sent a message to this number, or received from it on 2+ distinct days."</ID>
+    <ID>MaxLineLength:BlockReasoning.kt$BlockReasoning$bullets += "Matched layer 3 (callback detection) — any number you've dialed in the last 24h rings through even if it's in a spam database."</ID>
+    <ID>MaxLineLength:BlockedLogScreen.kt$LazyColumn</ID>
+    <ID>MaxLineLength:BlockedLogScreen.kt$SmallActionButton</ID>
+    <ID>MaxLineLength:BlockedLogScreen.kt$SmallActionButton(Icons.Default.Info, stringResource(R.string.blocked_log_detail), CatMauve) { onTap() }</ID>
+    <ID>MaxLineLength:BlockedLogScreen.kt$SmallActionButton(Icons.Default.Storage, stringResource(R.string.blocked_log_databases), CatGreen) { onTap() }</ID>
+    <ID>MaxLineLength:BlockedLogScreen.kt$Text("${count}x", color = accentColor, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)</ID>
+    <ID>MaxLineLength:BlockedLogScreen.kt$Text(PhoneFormatter.format(call.number), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)</ID>
+    <ID>MaxLineLength:BlockedLogScreen.kt$Text(call.matchReason.replace("_", " ").replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.labelSmall, color = CatPeach)</ID>
+    <ID>MaxLineLength:BlockedLogScreen.kt$Text(dateFormat.format(Date(call.timestamp)), style = MaterialTheme.typography.bodySmall, color = CatSubtext)</ID>
+    <ID>MaxLineLength:BlockedLogScreen.kt$border = BorderStroke(1.dp, if (filterMode == 0) CatGreen.copy(alpha = 0.3f) else CatMuted.copy(alpha = 0.3f))</ID>
+    <ID>MaxLineLength:BlockedLogScreen.kt$border = BorderStroke(1.dp, if (filterMode == 1) CatBlue.copy(alpha = 0.3f) else CatMuted.copy(alpha = 0.3f))</ID>
+    <ID>MaxLineLength:BlockedLogScreen.kt$border = BorderStroke(1.dp, if (filterMode == 2) CatMauve.copy(alpha = 0.3f) else CatMuted.copy(alpha = 0.3f))</ID>
+    <ID>MaxLineLength:BlockedLogScreen.kt$context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) })</ID>
+    <ID>MaxLineLength:BlockedLogScreen.kt$fun</ID>
+    <ID>MaxLineLength:BlockedLogScreen.kt$if (location != null) Text(location, style = MaterialTheme.typography.labelSmall, color = CatOverlay)</ID>
+    <ID>MaxLineLength:BlockedLogScreen.kt$modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(12.dp)).background(color).padding(horizontal = 20.dp)</ID>
+    <ID>MaxLineLength:BlocklistScreen.kt$Text(stringResource(R.string.dialog_keyword_note), style = MaterialTheme.typography.labelSmall, color = CatSubtext)</ID>
+    <ID>MaxLineLength:BlocklistScreen.kt$Text(stringResource(R.string.dialog_whitelist_note), style = MaterialTheme.typography.labelSmall, color = CatSubtext)</ID>
+    <ID>MaxLineLength:BlocklistScreen.kt$Text(stringResource(R.string.emergency_contacts_mark_as), style = MaterialTheme.typography.bodyMedium)</ID>
+    <ID>MaxLineLength:BlocklistScreen.kt$colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = if (emergency) CatRed else CatGreen)</ID>
+    <ID>MaxLineLength:BlocklistScreen.kt$contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 104.dp)</ID>
+    <ID>MaxLineLength:BlocklistScreen.kt$if (emergency) stringResource(R.string.emergency_contacts_add) else stringResource(R.string.dialog_whitelist)</ID>
+    <ID>MaxLineLength:BlocklistScreen.kt$label = { Text(stringResource(if (isRegex) R.string.dialog_regex_label else R.string.dialog_pattern_label)) }</ID>
+    <ID>MaxLineLength:BlocklistScreen.kt$onToggleEmergency = { viewModel.toggleWhitelistEmergency(entry.id, !entry.isEmergency) }</ID>
+    <ID>MaxLineLength:BlocklistScreen.kt$placeholder = { Text(stringResource(if (isRegex) R.string.dialog_regex_placeholder else R.string.dialog_wildcard_placeholder)) }</ID>
+    <ID>MaxLineLength:BlocklistScreen.kt$text = stringResource(if (rule.caseSensitive) R.string.blocklist_case_sensitive else R.string.blocklist_case_insensitive)</ID>
+    <ID>MaxLineLength:CallShieldWidget.kt$CallShieldWidget$todayCount &lt; yesterdayCount -&gt; appContext.getString(R.string.widget_today_trend_down, localizedTodayCount)</ID>
+    <ID>MaxLineLength:CallShieldWidget.kt$CallShieldWidget$todayCount &gt; yesterdayCount -&gt; appContext.getString(R.string.widget_today_trend_up, localizedTodayCount)</ID>
+    <ID>MaxLineLength:CallbackDetector.kt$CallbackDetector$selection = "${CallLog.Calls.TYPE} IN (?, ?) AND ${CallLog.Calls.DATE} &gt; ? AND ${CallLog.Calls.NUMBER} LIKE ?"</ID>
+    <ID>MaxLineLength:CallbackDetector.kt$CallbackDetector$suspend</ID>
+    <ID>MaxLineLength:CallerIdOverlayService.kt$CallerIdOverlayService$WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN</ID>
+    <ID>MaxLineLength:CallerIdOverlayService.kt$CallerIdOverlayService$com.sysadmindoc.callshield.data.SpamRepository.getInstance(context).blockNumber(number, "spam", "Blocked from overlay")</ID>
+    <ID>MaxLineLength:CallerIdOverlayService.kt$CallerIdOverlayService$text = this@CallerIdOverlayService.getString(R.string.overlay_source_result, icon, result.source, info)</ID>
+    <ID>MaxLineLength:CallerIdOverlayService.kt$CallerIdOverlayService$try { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/search?q=${Uri.encode("$digits phone number spam")}")).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }) } catch (_: Exception) {}</ID>
+    <ID>MaxLineLength:ChangelogScreen.kt$"Advanced settings copy now reinforces that the key stays on-device and only powers optional carrier enrichment"</ID>
+    <ID>MaxLineLength:ChangelogScreen.kt$"After-call \"Was this spam?\" feedback notification now fires reliably — moved off the short-lived CallScreeningService handler onto a process-lifetime scope"</ID>
+    <ID>MaxLineLength:ChangelogScreen.kt$"All 5 remote lookup modules (ExternalLookup, UrlSafetyChecker, NumberTypeChecker, CommunityContributor, WebLookup) now wrap OkHttp execute() in .use { } — previously the Response was leaked on non-2xx paths"</ID>
+    <ID>MaxLineLength:ChangelogScreen.kt$"All UI spam checks (Lookup, Number Detail, Protection Test, Recent Calls) now use realtimeCall=false — no longer poison the campaign burst detector or pop caller-ID overlays"</ID>
+    <ID>MaxLineLength:ChangelogScreen.kt$"Blocked Log empty and filtered states now explain what happened and offer a one-tap recovery path back to all activity"</ID>
+    <ID>MaxLineLength:ChangelogScreen.kt$"Call screener role request wrapped in try-catch on all 3 launch sites (Dashboard, Settings, Onboarding) — prevents crash on OEM ROMs that remove ROLE_CALL_SCREENING"</ID>
+    <ID>MaxLineLength:ChangelogScreen.kt$"Contact whitelist lookups are now cached for 60 seconds — eliminates up to 4 redundant ContactsContract queries per incoming call on large contact lists (10–200 ms saved per call)"</ID>
+    <ID>MaxLineLength:ChangelogScreen.kt$"Dashboard \"today / this week / last week\" counts now roll forward on a one-minute time anchor — windows no longer freeze at app start and drift as the process stays alive"</ID>
+    <ID>MaxLineLength:ChangelogScreen.kt$"Database destructive migration restricted to legacy versions 1-4 only — future schema upgrades that lack explicit migrations now crash during development instead of silently wiping user data in production"</ID>
+    <ID>MaxLineLength:ChangelogScreen.kt$"Emergency contacts — whitelist entries can be flagged as emergency, bypassing blocklist, quiet hours, and aggressive mode with a distinct red badge in the Whitelist tab"</ID>
+    <ID>MaxLineLength:ChangelogScreen.kt$"Historical Call Log and SMS Inbox scans no longer poison the live campaign-burst detector or pop caller-ID overlays for calls that already happened"</ID>
+    <ID>MaxLineLength:ChangelogScreen.kt$"Hot-path microbenchmarks as unit tests enforce regression ceilings on WildcardRule.matches, CampaignDetector record/check, SpamMLScorer.score, and SpamHeuristics pure checks"</ID>
+    <ID>MaxLineLength:ChangelogScreen.kt$"Instrumented test suite: Compose UI tests for PremiumCard/SectionHeader/accentGlow, end-to-end CrashReporter IO, and the DashboardStatusModel state machine"</ID>
+    <ID>MaxLineLength:ChangelogScreen.kt$"Local crash reporter captures uncaught exceptions to filesDir/crashes/ — share the latest log via the new \"Share Last Crash Log\" Quick Link in More (no telemetry phoned home)"</ID>
+    <ID>MaxLineLength:ChangelogScreen.kt$"Log export cleanup now filters by filename prefix — no longer nukes in-flight blocklist exports that share the same cache directory"</ID>
+    <ID>MaxLineLength:ChangelogScreen.kt$"Lookup and Number Detail use rectangular status treatments for risk/type labels instead of default Material chip backdrops"</ID>
+    <ID>MaxLineLength:ChangelogScreen.kt$"Notifications honor the API 33+ POST_NOTIFICATIONS runtime permission instead of throwing SecurityException"</ID>
+    <ID>MaxLineLength:ChangelogScreen.kt$"One-tap FTC fraud report — any Number Detail screen now has a \"Report to FTC\" button that copies the number and opens reportfraud.ftc.gov"</ID>
+    <ID>MaxLineLength:ChangelogScreen.kt$"Report actions now use clearer flag semantics, with filter chips and action buttons brought into the same shape rhythm"</ID>
+    <ID>MaxLineLength:ChangelogScreen.kt$"Shared visual system tightened: modest 12dp surface radius, zero negative type tracking, and no selected navigation pill backdrop"</ID>
+    <ID>MaxLineLength:ChangelogScreen.kt$"Silent voicemail mode — blocked calls reach voicemail silently instead of hard-rejecting, so your phone doesn't ring. Off by default; opt-in from Settings → Detection"</ID>
+    <ID>MaxLineLength:ChangelogScreen.kt$"Smart call labels — Debt Collector / Political / Robocall / Scam / Phishing / Telemarketer / Wangiri / Survey / Business / Unknown, shown on the Number Detail hero and in the blocked log"</ID>
+    <ID>MaxLineLength:ChangelogScreen.kt$"Stats screen daily chart and monthly trend now recompute at midnight (was frozen until new blocks arrived)"</ID>
+    <ID>MaxLineLength:ChangelogScreen.kt$"Trusted notification source picker now shows installed-source coverage and skeleton loading while app labels resolve"</ID>
+    <ID>MaxLineLength:ChangelogScreen.kt$"Trusted-sender SMS check uses SQL WHERE pre-filter — no longer scans the entire sent/inbox folder in memory"</ID>
+    <ID>MaxLineLength:ChangelogScreen.kt$"Wildcard area-code rules (e.g. +1212*) now match SMS senders without the +1 prefix via multi-normalization"</ID>
+    <ID>MaxLineLength:ChangelogScreen.kt$"\"Why was this blocked?\" — Number Detail now shows a plain-English narrative of which detection layer fired, what heuristic reasons contributed, and the model's confidence"</ID>
+    <ID>MaxLineLength:ChangelogScreen.kt$VersionEntry</ID>
+    <ID>MaxLineLength:CrashReporterInstrumentedTest.kt$CrashReporterInstrumentedTest$.</ID>
+    <ID>MaxLineLength:DashboardScreen.kt$Row</ID>
+    <ID>MaxLineLength:DashboardScreen.kt$Text(actionLabel, color = Black, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium)</ID>
+    <ID>MaxLineLength:DashboardScreen.kt$Text(label, style = MaterialTheme.typography.labelMedium, fontWeight = if (isActive) FontWeight.Bold else FontWeight.SemiBold, maxLines = 1)</ID>
+    <ID>MaxLineLength:DashboardScreen.kt$Text(sms.body, style = MaterialTheme.typography.bodySmall, color = CatSubtext, maxLines = 1)</ID>
+    <ID>MaxLineLength:DashboardScreen.kt$Text(sms.matchReason.replace("_", " "), style = MaterialTheme.typography.labelSmall, color = CatPeach)</ID>
+    <ID>MaxLineLength:DashboardScreen.kt$actionLabel = if (notificationsGranted) null else stringResource(R.string.dashboard_enable_notifications)</ID>
+    <ID>MaxLineLength:DashboardTest.kt$DashboardTest$composeRule.onNodeWithText("Set CallShield as the default call screener for live call blocking.").assertIsDisplayed()</ID>
+    <ID>MaxLineLength:DigestWorker.kt$DigestWorker$call.matchReason.startsWith("database") || call.matchReason.startsWith("user_blocklist") || call.matchReason.startsWith("hot_list") -&gt; "database"</ID>
+    <ID>MaxLineLength:JsonParsingFuzzTest.kt$JsonParsingFuzzTest$"""{"version": 2, "weights": [1.0,0.8,1.8,1.5,0.6,2.1,1.4,0.9,2.0,1.2,1.8,0.5,1.0,1.5,0.8,0.3,0.3,0.6,1.0,0.1], "bias": -2.5}"""</ID>
+    <ID>MaxLineLength:JsonParsingFuzzTest.kt$JsonParsingFuzzTest$"""{"version": 3, "model_type": "gbt", "learning_rate": 0.1, "trees": [{"feature": [-99, -2, -2], "threshold": [0.5, 0.0, 0.0], "children_left": [1, -1, -1], "children_right": [2, -1, -1], "value": [0.0, 0.5, -0.3]}]}"""</ID>
+    <ID>MaxLineLength:JsonParsingFuzzTest.kt$JsonParsingFuzzTest$"""{"version": 3, "model_type": "gbt", "learning_rate": 0.1, "trees": [{"feature": [0, -2], "threshold": [0.5], "children_left": [-1], "children_right": [-1], "value": [0.0]}]}"""</ID>
+    <ID>MaxLineLength:JsonParsingFuzzTest.kt$JsonParsingFuzzTest$"""{"version": 3, "model_type": "gbt", "learning_rate": 0.1, "trees": [{"feature": [0, 0, 0], "threshold": [0.5, 0.5, 0.5], "children_left": [1, 2, 0], "children_right": [2, 0, 1], "value": [0.0, 0.5, -0.3]}]}"""</ID>
+    <ID>MaxLineLength:JsonParsingFuzzTest.kt$JsonParsingFuzzTest$"""{"version": 3, "model_type": "gbt", "learning_rate": 0.1, "trees": [{"feature": [9999, -2, -2], "threshold": [0.5, 0.0, 0.0], "children_left": [1, -1, -1], "children_right": [2, -1, -1], "value": [0.0, 0.5, -0.3]}]}"""</ID>
+    <ID>MaxLineLength:JsonParsingFuzzTest.kt$JsonParsingFuzzTest$"""{"version": 3, "model_type": "gbt", "trees": [{"feature": ["a", "b"], "threshold": [0.5, 0.5], "children_left": [1, -1], "children_right": [2, -1], "value": [0.0, 0.5]}]}"""</ID>
+    <ID>MaxLineLength:JsonParsingFuzzTest.kt$JsonParsingFuzzTest$"""{"version": 3, "model_type": "gbt", "trees": [{"feature": [], "threshold": [], "children_left": [], "children_right": [], "value": []}]}"""</ID>
+    <ID>MaxLineLength:LogExporter.kt$LogExporter$sb.appendLine("${csvEscape(call.number)},${csvEscape(date)},${csvEscape(call.type)},${call.isCall},${csvEscape(call.matchReason)},${call.confidence},$body")</ID>
+    <ID>MaxLineLength:LookupScreen.kt$CommunityContributor.contribute(normalizedNumber, lookupResult.type.ifEmpty { "spam" })</ID>
+    <ID>MaxLineLength:LookupScreen.kt$Icon(Icons.AutoMirrored.Filled.OpenInNew, null, tint = CatYellow, modifier = Modifier.size(18.dp))</ID>
+    <ID>MaxLineLength:LookupScreen.kt$Icon(Icons.Default.Close, contentDescription = null, tint = CatSubtext, modifier = Modifier.size(16.dp))</ID>
+    <ID>MaxLineLength:LookupScreen.kt$Icon(Icons.Default.ContentPaste, contentDescription = null, tint = CatYellow, modifier = Modifier.size(16.dp))</ID>
+    <ID>MaxLineLength:LookupScreen.kt$if (lookupResult.isSpam) stringResource(R.string.lookup_spam_detected) else stringResource(R.string.lookup_clean)</ID>
+    <ID>MaxLineLength:LookupScreen.kt$repo.blockNumber(normalizedNumber, lookupResult.type, lookupResult.matchSource)</ID>
+    <ID>MaxLineLength:LookupScreen.kt$val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager</ID>
+    <ID>MaxLineLength:LookupScreen.kt$value = lookupResult.matchSource.replace("_", " ").replaceFirstChar { it.uppercase() }</ID>
+    <ID>MaxLineLength:MainActivity.kt$Icon(Icons.Default.Warning, contentDescription = stringResource(R.string.cd_search_result_spam), tint = CatRed, modifier = Modifier.size(24.dp))</ID>
+    <ID>MaxLineLength:MainActivity.kt$NavItem(selectedTab == 0, { selectedTab = 0 }, Icons.Default.Shield, stringResource(R.string.nav_home), CatGreen)</ID>
+    <ID>MaxLineLength:MainActivity.kt$NavItem(selectedTab == 1, { selectedTab = 1 }, Icons.Default.Phone, stringResource(R.string.nav_recent), CatBlue)</ID>
+    <ID>MaxLineLength:MainActivity.kt$NavItem(selectedTab == 2, { selectedTab = 2 }, Icons.Default.History, stringResource(R.string.nav_log), CatPeach)</ID>
+    <ID>MaxLineLength:MainActivity.kt$NavItem(selectedTab == 3, { selectedTab = 3 }, Icons.Default.Search, stringResource(R.string.nav_lookup), CatYellow)</ID>
+    <ID>MaxLineLength:MainActivity.kt$NavItem(selectedTab == 4, { selectedTab = 4 }, Icons.Default.Block, stringResource(R.string.nav_blocklist), CatRed)</ID>
+    <ID>MaxLineLength:MainActivity.kt$NavItem(selectedTab == 5, { selectedTab = 5 }, Icons.Default.Settings, stringResource(R.string.nav_more), CatMauve)</ID>
+    <ID>MaxLineLength:MainActivity.kt$Row</ID>
+    <ID>MaxLineLength:MainActivity.kt$Text("${number.type} - ${number.reports} reports", style = MaterialTheme.typography.bodySmall, color = CatSubtext)</ID>
+    <ID>MaxLineLength:MainActivity.kt$Text(com.sysadmindoc.callshield.data.PhoneFormatter.format(number.number), fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)</ID>
+    <ID>MaxLineLength:MainActivity.kt$fun</ID>
+    <ID>MaxLineLength:MainActivity.kt$if (number.description.isNotEmpty()) Text(number.description, style = MaterialTheme.typography.labelSmall, color = CatOverlay, maxLines = 1)</ID>
+    <ID>MaxLineLength:MainViewModel.kt$MainViewModel$fun toggleWildcardRule(id: Long, enabled: Boolean)</ID>
+    <ID>MaxLineLength:MainViewModel.kt$MainViewModel$val aggressiveModeEnabled = repo.aggressiveModeEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)</ID>
+    <ID>MaxLineLength:MainViewModel.kt$MainViewModel$val autoCleanupEnabled = repo.autoCleanupEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)</ID>
+    <ID>MaxLineLength:MainViewModel.kt$MainViewModel$val autoMuteLowConfidenceEnabled = repo.autoMuteLowConfidenceEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)</ID>
+    <ID>MaxLineLength:MainViewModel.kt$MainViewModel$val blockUnknownEnabled = repo.blockUnknownEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)</ID>
+    <ID>MaxLineLength:MainViewModel.kt$MainViewModel$val contactWhitelistEnabled = repo.contactWhitelistEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)</ID>
+    <ID>MaxLineLength:MainViewModel.kt$MainViewModel$val freqEscalationEnabled = repo.freqEscalationEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)</ID>
+    <ID>MaxLineLength:MainViewModel.kt$MainViewModel$val neighborSpoofEnabled = repo.neighborSpoofEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)</ID>
+    <ID>MaxLineLength:MainViewModel.kt$MainViewModel$val silentVoicemailEnabled = repo.silentVoicemailEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)</ID>
+    <ID>MaxLineLength:MainViewModel.kt$MainViewModel$val stirTrustedAllowEnabled = repo.stirTrustedAllowEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)</ID>
+    <ID>MaxLineLength:MoreScreen.kt$1 -&gt; { Column(Modifier.fillMaxSize()) { MoreTopBar(stringResource(R.string.more_statistics)) { currentView = 0 }; StatsScreen(viewModel) } }</ID>
+    <ID>MaxLineLength:MoreScreen.kt$2 -&gt; { Column(Modifier.fillMaxSize()) { MoreTopBar(stringResource(R.string.more_settings)) { currentView = 0 }; SettingsScreen(viewModel) } }</ID>
+    <ID>MaxLineLength:MoreScreen.kt$3 -&gt; { Column(Modifier.fillMaxSize()) { MoreTopBar(stringResource(R.string.more_whats_new)) { currentView = 0 }; ChangelogScreen() } }</ID>
+    <ID>MaxLineLength:MoreScreen.kt$4 -&gt; { Column(Modifier.fillMaxSize()) { MoreTopBar(stringResource(R.string.more_protection_test)) { currentView = 0 }; ProtectionTestScreen() } }</ID>
+    <ID>MaxLineLength:MoreScreen.kt$AboutStat(stringResource(R.string.more_about_layers), stringResource(R.string.more_about_layers_label), CatGreen)</ID>
+    <ID>MaxLineLength:MoreScreen.kt$AboutStat(stringResource(R.string.more_about_lines), stringResource(R.string.more_about_lines_label), CatPeach)</ID>
+    <ID>MaxLineLength:MoreScreen.kt$AboutStat(stringResource(R.string.more_about_releases), stringResource(R.string.more_about_releases_label), CatYellow)</ID>
+    <ID>MaxLineLength:MoreScreen.kt$Icon(Icons.Default.ChevronRight, contentDescription = stringResource(R.string.cd_chevron_right), tint = CatOverlay)</ID>
+    <ID>MaxLineLength:MoreScreen.kt$Icon(Icons.Default.Lock, contentDescription = stringResource(R.string.cd_privacy), tint = CatGreen, modifier = Modifier.size(14.dp))</ID>
+    <ID>MaxLineLength:MoreScreen.kt$IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back), tint = CatSubtext) }</ID>
+    <ID>MaxLineLength:MoreScreen.kt$Text(stringResource(R.string.more_license), style = MaterialTheme.typography.labelSmall, color = CatOverlay)</ID>
+    <ID>MaxLineLength:MoreScreen.kt$Text(stringResource(R.string.more_made_by), style = MaterialTheme.typography.labelSmall, color = CatSubtext)</ID>
+    <ID>MaxLineLength:MoreScreen.kt$Text(stringResource(R.string.more_privacy_note), style = MaterialTheme.typography.labelSmall, color = CatOverlay)</ID>
+    <ID>MaxLineLength:MoreScreen.kt$contentDescription = if (external) stringResource(R.string.cd_open_external) else stringResource(R.string.cd_chevron_right)</ID>
+    <ID>MaxLineLength:MoreScreen.kt$context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/SysAdminDoc/CallShield")).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) })</ID>
+    <ID>MaxLineLength:MoreScreen.kt$context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/SysAdminDoc/CallShield/issues/new")).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) })</ID>
+    <ID>MaxLineLength:MoreScreen.kt$context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/SysAdminDoc/CallShield/issues/new?template=spam_report.md")).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) })</ID>
+    <ID>MaxLineLength:MoreScreen.kt$fun</ID>
+    <ID>MaxLineLength:NotificationHelper.kt$NotificationHelper$.</ID>
+    <ID>MaxLineLength:NotificationHelper.kt$NotificationHelper$NotificationChannel(CHANNEL_ALLOWED, context.getString(R.string.notif_channel_allowed), NotificationManager.IMPORTANCE_DEFAULT)</ID>
+    <ID>MaxLineLength:NotificationHelper.kt$NotificationHelper$NotificationChannel(CHANNEL_BLOCKED, context.getString(R.string.notif_channel_blocked), NotificationManager.IMPORTANCE_LOW)</ID>
+    <ID>MaxLineLength:NotificationHelper.kt$NotificationHelper$NotificationChannel(CHANNEL_PHISHING, context.getString(R.string.notif_channel_phishing), NotificationManager.IMPORTANCE_HIGH)</ID>
+    <ID>MaxLineLength:NotificationHelper.kt$NotificationHelper$NotificationChannel(CHANNEL_RATING, context.getString(R.string.notif_channel_rating), NotificationManager.IMPORTANCE_DEFAULT)</ID>
+    <ID>MaxLineLength:NotificationHelper.kt$NotificationHelper$NotificationChannel(CHANNEL_STATUS, context.getString(R.string.notif_channel_status), NotificationManager.IMPORTANCE_MIN)</ID>
+    <ID>MaxLineLength:NumberDetailScreen.kt$Row</ID>
+    <ID>MaxLineLength:NumberDetailScreen.kt$SectionHeader(stringResource(R.string.detail_spam_score), color = if (r.isSpam) CatRed else CatGreen)</ID>
+    <ID>MaxLineLength:NumberDetailScreen.kt$Text(PhoneFormatter.format(number), style = if (contactName != null) MaterialTheme.typography.bodyLarge else MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)</ID>
+    <ID>MaxLineLength:NumberDetailScreen.kt$Text(PhoneFormatter.formatWithCountryCode(number), style = MaterialTheme.typography.bodySmall, color = CatSubtext)</ID>
+    <ID>MaxLineLength:NumberDetailScreen.kt$Text(call.smsBody, style = MaterialTheme.typography.bodySmall, color = CatSubtext.copy(alpha = 0.7f), maxLines = 2, modifier = Modifier.padding(start = 24.dp))</ID>
+    <ID>MaxLineLength:NumberDetailScreen.kt$Text(dateFormat.format(Date(call.timestamp)), style = MaterialTheme.typography.bodySmall, color = CatSubtext, modifier = Modifier.weight(1f))</ID>
+    <ID>MaxLineLength:NumberDetailScreen.kt$Text(it, style = MaterialTheme.typography.bodySmall, color = if ("not spam" in it.lowercase() || "contributed" in it.lowercase()) CatGreen else CatRed)</ID>
+    <ID>MaxLineLength:NumberDetailScreen.kt$Text(name, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = CatGreen)</ID>
+    <ID>MaxLineLength:NumberDetailScreen.kt$Text(r.matchSource.replace("_", " ").replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.bodySmall, color = CatPeach)</ID>
+    <ID>MaxLineLength:NumberDetailScreen.kt$Text(reason.replace("_", " "), style = MaterialTheme.typography.bodySmall, color = CatPeach)</ID>
+    <ID>MaxLineLength:NumberDetailScreen.kt$Text(src.source, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold, modifier = Modifier.width(90.dp))</ID>
+    <ID>MaxLineLength:NumberDetailScreen.kt$Text(stringResource(R.string.detail_ftc_complaint), color = CatPeach, style = MaterialTheme.typography.labelSmall)</ID>
+    <ID>MaxLineLength:NumberDetailScreen.kt$Text(stringResource(R.string.detail_match_reasons), style = MaterialTheme.typography.labelMedium, color = CatOverlay)</ID>
+    <ID>MaxLineLength:NumberDetailScreen.kt$Text(stringResource(R.string.detail_not_spam), color = CatBlue, style = MaterialTheme.typography.labelSmall)</ID>
+    <ID>MaxLineLength:NumberDetailScreen.kt$Text(stringResource(R.string.detail_report_spam), color = Black, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelSmall)</ID>
+    <ID>MaxLineLength:NumberDetailScreen.kt$Text(stringResource(R.string.detail_share), color = CatYellow, style = MaterialTheme.typography.labelSmall)</ID>
+    <ID>MaxLineLength:NumberDetailScreen.kt$Text(stringResource(R.string.detail_whitelist), color = CatGreen, style = MaterialTheme.typography.labelSmall)</ID>
+    <ID>MaxLineLength:NumberDetailScreen.kt$Text(value, style = MaterialTheme.typography.titleLarge.copy(letterSpacing = 0.sp), fontWeight = FontWeight.Bold, color = color)</ID>
+    <ID>MaxLineLength:NumberDetailScreen.kt$border = BorderStroke(1.dp, if (webLoading) CatOverlay.copy(alpha = 0.3f) else CatBlue.copy(alpha = 0.3f))</ID>
+    <ID>MaxLineLength:NumberDetailScreen.kt$context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:$number")).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) })</ID>
+    <ID>MaxLineLength:NumberDetailScreen.kt$context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/SysAdminDoc/CallShield/issues/new?title=$title&amp;body=$body&amp;labels=spam-report")).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) })</ID>
+    <ID>MaxLineLength:NumberDetailScreen.kt$if (call.confidence &lt; 100) Text("${call.confidence}%", style = MaterialTheme.typography.labelSmall, color = CatOverlay)</ID>
+    <ID>MaxLineLength:NumberDetailScreen.kt$liveResult = withContext(Dispatchers.IO) { SpamRepository.getInstance(context).isSpam(number, realtimeCall = false) }</ID>
+    <ID>MaxLineLength:NumberDetailScreen.kt$onClick = { hapticTick(context); viewModel.contributeToDatabase(number, dbEntry?.type ?: liveResult?.type ?: "spam") }</ID>
+    <ID>MaxLineLength:NumberDetailScreen.kt$onClick = { viewModel.addWildcardRule("+1$areaCode*", false, "Block area code $areaCode" + if (location != null) " ($location)" else "") }</ID>
+    <ID>MaxLineLength:NumberDetailScreen.kt$val cursor = context.contentResolver.query(uri, arrayOf(ContactsContract.PhoneLookup.DISPLAY_NAME), null, null, null)</ID>
+    <ID>MaxLineLength:NumberDetailScreen.kt$val title = Uri.encode("[SPAM] $number")</ID>
+    <ID>MaxLineLength:OnboardingScreen.kt$Column</ID>
+    <ID>MaxLineLength:OnboardingScreen.kt$Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = stringResource(R.string.cd_next_page), tint = Black, modifier = Modifier.size(18.dp))</ID>
+    <ID>MaxLineLength:OnboardingScreen.kt$Icon(Icons.Default.Notifications, null, tint = CatBlue, modifier = Modifier.size(18.dp))</ID>
+    <ID>MaxLineLength:OnboardingScreen.kt$OnboardingPage(Icons.AutoMirrored.Filled.PhoneCallback, stringResource(R.string.onboarding_screener_title), stringResource(R.string.onboarding_screener_subtitle), CatMauve)</ID>
+    <ID>MaxLineLength:OnboardingScreen.kt$OnboardingPage(Icons.Default.Security, stringResource(R.string.onboarding_permissions_title), stringResource(R.string.onboarding_permissions_subtitle), CatBlue)</ID>
+    <ID>MaxLineLength:OnboardingScreen.kt$OnboardingPage(Icons.Default.Shield, stringResource(R.string.onboarding_welcome_title), stringResource(R.string.onboarding_welcome_subtitle), CatGreen)</ID>
+    <ID>MaxLineLength:OnboardingScreen.kt$OnboardingPage(Icons.Default.Sync, stringResource(R.string.onboarding_sync_title), stringResource(R.string.onboarding_sync_subtitle), CatPeach)</ID>
+    <ID>MaxLineLength:OnboardingScreen.kt$Text(stringResource(R.string.onboarding_enable_notifications), color = CatBlue, fontWeight = FontWeight.SemiBold)</ID>
+    <ID>MaxLineLength:OnboardingScreen.kt$Text(stringResource(R.string.onboarding_enable_overlay), color = CatBlue, fontWeight = FontWeight.SemiBold)</ID>
+    <ID>MaxLineLength:OnboardingScreen.kt$Text(stringResource(R.string.onboarding_grant_permissions), color = Black, fontWeight = FontWeight.Bold)</ID>
+    <ID>MaxLineLength:OnboardingScreen.kt$Text(stringResource(R.string.onboarding_set_screener), color = Black, fontWeight = FontWeight.Bold)</ID>
+    <ID>MaxLineLength:OnboardingScreen.kt$accentColor = if (currentPage == pages.lastIndex &amp;&amp; requiredReady == 2) CatGreen else pages[currentPage].color</ID>
+    <ID>MaxLineLength:OnboardingScreen.kt$val screenerSupported = remember(roleManager) { roleManager?.isRoleAvailable(RoleManager.ROLE_CALL_SCREENING) == true }</ID>
+    <ID>MaxLineLength:OnboardingScreen.kt$var notificationsGranted by remember(context) { mutableStateOf(CallShieldPermissions.hasNotificationPermission(context)) }</ID>
+    <ID>MaxLineLength:OnboardingScreen.kt$var screenerGranted by remember(roleManager) { mutableStateOf(CallShieldPermissions.hasCallScreeningRole(roleManager)) }</ID>
+    <ID>MaxLineLength:ProtectionTestScreen.kt$recoveryHint = if (notifListenerEnabled) null else context.getString(R.string.protection_test_fix_notifications)</ID>
+    <ID>MaxLineLength:ProtectionTestScreen.kt$val smsResult = repo.isSpamSms("+15555555555", "You have WON a FREE gift card! Claim now at bit.ly/scam", realtimeCall = false)</ID>
+    <ID>MaxLineLength:PushAlertCheckerTest.kt$PushAlertCheckerTest$"anchored regex ignores `\\n` as a non-digit boundary, so a title-embedded 7-digit run still satisfies the pattern"</ID>
+    <ID>MaxLineLength:RecentCallsScreen.kt$Text(PhoneFormatter.format(call.number), fontWeight = if (call.contactName == null) FontWeight.SemiBold else FontWeight.Normal, style = if (call.contactName == null) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.bodySmall)</ID>
+    <ID>MaxLineLength:RecentCallsScreen.kt$Text(call.contactName, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium, color = CatGreen)</ID>
+    <ID>MaxLineLength:RecentCallsScreen.kt$Text(dateFormat.format(Date(call.date)), style = MaterialTheme.typography.bodySmall, color = CatSubtext)</ID>
+    <ID>MaxLineLength:RecentCallsScreen.kt$fun</ID>
+    <ID>MaxLineLength:RecentCallsScreen.kt$if (call.duration &gt; 0) Text("${call.duration}s", style = MaterialTheme.typography.bodySmall, color = CatOverlay)</ID>
+    <ID>MaxLineLength:RecentCallsScreen.kt$if (location != null) Text(location, style = MaterialTheme.typography.labelSmall, color = CatOverlay)</ID>
+    <ID>MaxLineLength:RecentCallsScreen.kt$modifier = Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 10.dp)</ID>
+    <ID>MaxLineLength:RecentCallsScreen.kt$val cc = context.contentResolver.query(uri, arrayOf(ContactsContract.PhoneLookup.DISPLAY_NAME), null, null, null)</ID>
+    <ID>MaxLineLength:SettingsScreen.kt$Row</ID>
+    <ID>MaxLineLength:SettingsScreen.kt$SettingsToggle(stringResource(R.string.settings_aggressive_blocking), stringResource(R.string.settings_aggressive_blocking_desc), Icons.Default.Security, aggressiveMode, tintColor = CatRed) { viewModel.setAggressiveMode(it) }</ID>
+    <ID>MaxLineLength:SettingsScreen.kt$SettingsToggle(stringResource(R.string.settings_auto_cleanup), stringResource(R.string.settings_auto_cleanup_desc), Icons.Default.AutoDelete, autoCleanup) { viewModel.setAutoCleanup(it) }</ID>
+    <ID>MaxLineLength:SettingsScreen.kt$SettingsToggle(stringResource(R.string.settings_block_spam_calls), stringResource(R.string.settings_block_spam_calls_desc), Icons.Default.PhoneDisabled, blockCalls) { viewModel.setBlockCalls(it) }</ID>
+    <ID>MaxLineLength:SettingsScreen.kt$SettingsToggle(stringResource(R.string.settings_block_spam_sms), stringResource(R.string.settings_block_spam_sms_desc), Icons.Default.SpeakerNotesOff, blockSms) { viewModel.setBlockSms(it) }</ID>
+    <ID>MaxLineLength:SettingsScreen.kt$SettingsToggle(stringResource(R.string.settings_block_unknown), stringResource(R.string.settings_block_unknown_desc), Icons.Default.QuestionMark, blockUnknown) { viewModel.setBlockUnknown(it) }</ID>
+    <ID>MaxLineLength:SettingsScreen.kt$SettingsToggle(stringResource(R.string.settings_contact_whitelist), stringResource(R.string.settings_contact_whitelist_desc), Icons.Default.Contacts, contactWhitelist) { viewModel.setContactWhitelist(it) }</ID>
+    <ID>MaxLineLength:SettingsScreen.kt$SettingsToggle(stringResource(R.string.settings_heuristic_analysis), stringResource(R.string.settings_heuristic_analysis_desc), Icons.Default.Psychology, heuristics) { viewModel.setHeuristics(it) }</ID>
+    <ID>MaxLineLength:SettingsScreen.kt$SettingsToggle(stringResource(R.string.settings_ml_scorer), stringResource(R.string.settings_ml_scorer_desc), Icons.Default.SmartToy, mlScorer) { viewModel.setMlScorer(it) }</ID>
+    <ID>MaxLineLength:SettingsScreen.kt$SettingsToggle(stringResource(R.string.settings_neighbor_spoofing), stringResource(R.string.settings_neighbor_spoofing_desc), Icons.Default.NearMe, neighborSpoof) { viewModel.setNeighborSpoof(it) }</ID>
+    <ID>MaxLineLength:SettingsScreen.kt$SettingsToggle(stringResource(R.string.settings_rcs_filter), stringResource(R.string.settings_rcs_filter_desc), Icons.Default.MarkChatRead, rcsFilter) { viewModel.setRcsFilter(it) }</ID>
+    <ID>MaxLineLength:SettingsScreen.kt$SettingsToggle(stringResource(R.string.settings_repeat_caller), stringResource(R.string.settings_repeat_caller_desc), Icons.Default.Repeat, freqEscalation) { viewModel.setFreqEscalation(it) }</ID>
+    <ID>MaxLineLength:SettingsScreen.kt$SettingsToggle(stringResource(R.string.settings_sms_content), stringResource(R.string.settings_sms_content_desc), Icons.AutoMirrored.Filled.TextSnippet, smsContent) { viewModel.setSmsContent(it) }</ID>
+    <ID>MaxLineLength:SettingsScreen.kt$SettingsToggle(stringResource(R.string.settings_stir_shaken), stringResource(R.string.settings_stir_shaken_desc), Icons.Default.VerifiedUser, stirShaken) { viewModel.setStirShaken(it) }</ID>
+    <ID>MaxLineLength:SettingsScreen.kt$Text("${stringResource(R.string.app_name)} v${BuildConfig.VERSION_NAME}", color = CatSubtext, style = MaterialTheme.typography.bodySmall)</ID>
+    <ID>MaxLineLength:SettingsScreen.kt$Text(stringResource(R.string.settings_about_desc), style = MaterialTheme.typography.labelSmall, color = CatOverlay)</ID>
+    <ID>MaxLineLength:SettingsScreen.kt$Text(stringResource(R.string.settings_abstract_api_desc), style = MaterialTheme.typography.bodySmall, color = CatSubtext)</ID>
+    <ID>MaxLineLength:SettingsScreen.kt$Text(stringResource(R.string.settings_backup_includes), style = MaterialTheme.typography.labelSmall, color = CatOverlay)</ID>
+    <ID>MaxLineLength:SettingsScreen.kt$Text(stringResource(R.string.settings_call_screener), color = Black, fontWeight = FontWeight.Bold)</ID>
+    <ID>MaxLineLength:SettingsScreen.kt$Text(stringResource(R.string.settings_export_csv_desc), style = MaterialTheme.typography.labelSmall, color = CatOverlay)</ID>
+    <ID>MaxLineLength:SettingsScreen.kt$Text(stringResource(R.string.settings_grant_permissions), color = Black, fontWeight = FontWeight.Bold)</ID>
+    <ID>MaxLineLength:SettingsScreen.kt$Text(stringResource(R.string.settings_keep_for), style = MaterialTheme.typography.bodySmall, color = CatSubtext)</ID>
+    <ID>MaxLineLength:SettingsScreen.kt$Text(stringResource(R.string.settings_permissions_access_desc), style = MaterialTheme.typography.bodySmall, color = CatSubtext)</ID>
+    <ID>MaxLineLength:SettingsScreen.kt$Text(stringResource(R.string.settings_time_end), style = MaterialTheme.typography.labelMedium, color = CatSubtext)</ID>
+    <ID>MaxLineLength:SettingsScreen.kt$Text(stringResource(R.string.settings_time_start), style = MaterialTheme.typography.labelMedium, color = CatSubtext)</ID>
+    <ID>MaxLineLength:SettingsScreen.kt$border = BorderStroke(1.dp, if (cleanupDays == days) CatGreen.copy(alpha = 0.3f) else CatMuted.copy(alpha = 0.3f))</ID>
+    <ID>MaxLineLength:SettingsScreen.kt$colors = FilterChipDefaults.filterChipColors(selectedContainerColor = CatGreen.copy(alpha = 0.2f), selectedLabelColor = CatGreen)</ID>
+    <ID>MaxLineLength:SettingsScreen.kt$context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}")))</ID>
+    <ID>MaxLineLength:SettingsScreen.kt$if</ID>
+    <ID>MaxLineLength:SettingsScreen.kt$label = stringResource(if (corePermissionsGranted) R.string.settings_permissions_granted else R.string.settings_permissions_needed)</ID>
+    <ID>MaxLineLength:SettingsScreen.kt$label = stringResource(if (overlayGranted) R.string.settings_overlay_enabled else R.string.settings_overlay_needed)</ID>
+    <ID>MaxLineLength:SettingsScreen.kt$onClick = { hapticTick(context); restoreLauncher.launch(arrayOf("application/json", "text/plain")) }</ID>
+    <ID>MaxLineLength:SettingsScreen.kt$screeningLauncher.launch(roleManager.createRequestRoleIntent(RoleManager.ROLE_CALL_SCREENING))</ID>
+    <ID>MaxLineLength:SettingsScreen.kt$val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}"))</ID>
+    <ID>MaxLineLength:SettingsScreen.kt$val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${context.packageName}"))</ID>
+    <ID>MaxLineLength:SettingsScreen.kt$val setupReadyCount = listOf(corePermissionsGranted, screenerReadyForCurrentMode, overlayGranted, notificationsGranted).count { it }</ID>
+    <ID>MaxLineLength:SettingsScreen.kt$var notificationsGranted by remember(context) { mutableStateOf(CallShieldPermissions.hasNotificationPermission(context)) }</ID>
+    <ID>MaxLineLength:SettingsScreen.kt$var screenerGranted by remember(roleManager) { mutableStateOf(CallShieldPermissions.hasCallScreeningRole(roleManager)) }</ID>
+    <ID>MaxLineLength:SmsContentAnalyzer.kt$SmsContentAnalyzer$Regex("(?i)(amazon|apple|google|microsoft|paypal|netflix|fedex|ups|usps).{0,30}(verify|confirm|update|suspend|locked|expire)")</ID>
+    <ID>MaxLineLength:SmsContentAnalyzer.kt$SmsContentAnalyzer$private</ID>
+    <ID>MaxLineLength:SmsContentAnalyzer.kt$SmsContentAnalyzer$val specialRatio = analysisBody.count { !it.isLetterOrDigit() &amp;&amp; !it.isWhitespace() }.toFloat() / analysisBody.length.coerceAtLeast(1)</ID>
+    <ID>MaxLineLength:SmsContentAnalyzerTest.kt$SmsContentAnalyzerTest$val r1 = SmsContentAnalyzer.analyze("Visit https://first.com/x for more info and details about the product and services")</ID>
+    <ID>MaxLineLength:SmsContentAnalyzerTest.kt$SmsContentAnalyzerTest$val r2 = SmsContentAnalyzer.analyze("Visit https://second.com/x for more info and details about the product and services")</ID>
+    <ID>MaxLineLength:SmsContentAnalyzerTest.kt$SmsContentAnalyzerTest$val result = SmsContentAnalyzer.analyze("Act now! Limited time offer expires today. Don't miss out on this deal!")</ID>
+    <ID>MaxLineLength:SmsContentAnalyzerTest.kt$SmsContentAnalyzerTest$val result = SmsContentAnalyzer.analyze("FINAL NOTICE: Your payment is overdue. Contact us immediately to avoid collection.")</ID>
+    <ID>MaxLineLength:SmsContentAnalyzerTest.kt$SmsContentAnalyzerTest$val result = SmsContentAnalyzer.analyze("Visit https://evil-spam.com/offer for more details and information about the product")</ID>
+    <ID>MaxLineLength:SmsContentAnalyzerTest.kt$SmsContentAnalyzerTest$val result = SmsContentAnalyzer.analyze("Visit https://google.com for info about our upcoming meeting and schedule details")</ID>
+    <ID>MaxLineLength:SmsContentAnalyzerTest.kt$SmsContentAnalyzerTest$val result = SmsContentAnalyzer.analyze("Visit https://legitimate-business.com/page for more info and details about the product")</ID>
+    <ID>MaxLineLength:SmsContentAnalyzerTest.kt$SmsContentAnalyzerTest$val result = SmsContentAnalyzer.analyze("You have a package waiting. Call us at +1-800-555-1234 to schedule delivery.")</ID>
+    <ID>MaxLineLength:SmsContentAnalyzerTest.kt$SmsContentAnalyzerTest$val result = SmsContentAnalyzer.analyze("Your account suspended. Verify your identity immediately to restore access.")</ID>
+    <ID>MaxLineLength:SmsContextChecker.kt$SmsContextChecker$days.add("${cal.get(Calendar.YEAR)}-${cal.get(Calendar.MONTH) + 1}-${cal.get(Calendar.DAY_OF_MONTH)}")</ID>
+    <ID>MaxLineLength:SpamActionReceiver.kt$SpamActionReceiver$Toast.makeText(appContext, appContext.getString(R.string.feedback_whitelisted), Toast.LENGTH_SHORT).show()</ID>
+    <ID>MaxLineLength:SpamDao.kt$SpamDao$@Query("SELECT number, COUNT(*) as cnt FROM call_log WHERE wasBlocked = 1 GROUP BY number ORDER BY cnt DESC LIMIT :limit")</ID>
+    <ID>MaxLineLength:SpamHeuristics.kt$SpamHeuristics$fun</ID>
+    <ID>MaxLineLength:SpamRepository.kt$SpamRepository$message = "GitHub sync unavailable ($remoteError). Your existing spam database is still active."</ID>
+    <ID>MaxLineLength:SpamRepository.kt$SpamRepository$message = "Loaded bundled protection snapshot with $numberCount numbers and $prefixCount prefixes while GitHub was unavailable."</ID>
+    <ID>MaxLineLength:SpamRepository.kt$SpamRepository$suspend fun setAutoMuteLowConfidence(enabled: Boolean)</ID>
+    <ID>MaxLineLength:StatsScreen.kt$Icon(Icons.Default.BarChart, contentDescription = stringResource(R.string.cd_bar_chart), tint = CatOverlay, modifier = Modifier.size(64.dp).accentGlow(CatOverlay, 150f, 0.04f))</ID>
+    <ID>MaxLineLength:StatsScreen.kt$MiniStat(Modifier.weight(1f), stringResource(R.string.stats_calls), numberFormatter.format(callsOnly.size), CatRed)</ID>
+    <ID>MaxLineLength:StatsScreen.kt$MiniStat(Modifier.weight(1f), stringResource(R.string.stats_db_size), numberFormatter.format(spamCount), CatGreen)</ID>
+    <ID>MaxLineLength:StatsScreen.kt$MiniStat(Modifier.weight(1f), stringResource(R.string.stats_sms), numberFormatter.format(smsOnly.size), CatMauve)</ID>
+    <ID>MaxLineLength:StatsScreen.kt$Row</ID>
+    <ID>MaxLineLength:StatsScreen.kt$Text("$count", style = MaterialTheme.typography.labelSmall, color = CatPeach, fontWeight = FontWeight.Bold)</ID>
+    <ID>MaxLineLength:StatsScreen.kt$Text("${i + 1}.", color = CatOverlay, modifier = Modifier.width(24.dp), style = MaterialTheme.typography.bodySmall)</ID>
+    <ID>MaxLineLength:StatsScreen.kt$Text(ac, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall, modifier = Modifier.width(36.dp), color = CatPeach)</ID>
+    <ID>MaxLineLength:StatsScreen.kt$Text(displayNumber, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodyMedium)</ID>
+    <ID>MaxLineLength:StatsScreen.kt$Text(friendlyMatchReasonLabel(type), modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)</ID>
+    <ID>MaxLineLength:StatsScreen.kt$Text(loc, style = MaterialTheme.typography.labelSmall, color = CatSubtext, modifier = Modifier.width(120.dp))</ID>
+    <ID>MaxLineLength:StatsScreen.kt$Text(numberFormatter.format(count), color = color, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall)</ID>
+    <ID>MaxLineLength:StatsScreen.kt$Text(stringResource(R.string.stats_no_data_desc), color = CatOverlay, style = MaterialTheme.typography.bodySmall)</ID>
+    <ID>MaxLineLength:StatsScreen.kt$Text(stringResource(R.string.stats_repeat_hits, count), color = CatRed, fontWeight = FontWeight.Bold)</ID>
+    <ID>MaxLineLength:StatsScreen.kt$Text(stringResource(R.string.stats_spam_concentrate), style = MaterialTheme.typography.labelSmall, color = CatOverlay)</ID>
+    <ID>MaxLineLength:StatsScreen.kt$Text(stringResource(R.string.stats_time_12a), style = MaterialTheme.typography.labelSmall, color = CatOverlay)</ID>
+    <ID>MaxLineLength:StatsScreen.kt$Text(stringResource(R.string.stats_time_12p), style = MaterialTheme.typography.labelSmall, color = CatOverlay)</ID>
+    <ID>MaxLineLength:StatsScreen.kt$Text(stringResource(R.string.stats_time_6a), style = MaterialTheme.typography.labelSmall, color = CatOverlay)</ID>
+    <ID>MaxLineLength:StatsScreen.kt$Text(stringResource(R.string.stats_time_6p), style = MaterialTheme.typography.labelSmall, color = CatOverlay)</ID>
+    <ID>MaxLineLength:StatsScreen.kt$modifier = Modifier.weight(1f).fillMaxHeight(fraction.coerceAtLeast(0.02f)).clip(RoundedCornerShape(topStart = 2.dp, topEnd = 2.dp)).background(barColor)</ID>
+    <ID>MaxLineLength:StatsScreen.kt$val hour = Calendar.getInstance().apply { timeInMillis = call.timestamp }.get(Calendar.HOUR_OF_DAY)</ID>
+    <ID>MaxLineLength:WebLookup.kt$WebLookup$val noteRegex = Regex("""&lt;div[^&gt;]*class="[^"]*comment[^"]*"[^&gt;]*&gt;([^&lt;]{10,200})&lt;/div&gt;""", RegexOption.IGNORE_CASE)</ID>
+    <ID>NestedBlockDepth:GitHubDataSource.kt$GitHubDataSource$private suspend fun fetchRawText(path: String, owner: String, repo: String): Result&lt;String&gt;</ID>
+    <ID>NestedBlockDepth:SmsContextChecker.kt$SmsContextChecker$fun hasRecurringConversation(context: Context, number: String): Boolean</ID>
+    <ID>NestedBlockDepth:SmsContextChecker.kt$SmsContextChecker$fun hasSentMessageTo(context: Context, number: String): Boolean</ID>
+    <ID>ReturnCount:CallCategory.kt$CallCategoryResolver$fun resolve(result: SpamCheckResult): CallCategory</ID>
+    <ID>ReturnCount:CallerIdOverlayService.kt$CallerIdOverlayService$override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int</ID>
+    <ID>ReturnCount:CallerIdOverlayService.kt$CallerIdOverlayService$private fun showOverlay(number: String, confidence: Int, reason: String, verificationStatus: Int): Long?</ID>
+    <ID>ReturnCount:CampaignDetector.kt$CampaignDetector$fun isActiveCampaign(number: String): Boolean</ID>
+    <ID>ReturnCount:Checkers.kt$HashWildcardChecker$override suspend fun check(ctx: CheckContext): BlockResult?</ID>
+    <ID>ReturnCount:Checkers.kt$SmsKeywordChecker$override suspend fun check(ctx: CheckContext): BlockResult?</ID>
+    <ID>ReturnCount:Checkers.kt$WildcardChecker$override suspend fun check(ctx: CheckContext): BlockResult?</ID>
+    <ID>ReturnCount:DashboardScreen.kt$@Composable private fun syncFreshnessColor(lastSync: Long, lastSyncSource: String): Color</ID>
+    <ID>ReturnCount:DashboardScreen.kt$@Composable private fun syncFreshnessText(lastSync: Long, lastSyncSource: String): String</ID>
+    <ID>ReturnCount:DigestWorker.kt$DigestWorker$override suspend fun doWork(): Result</ID>
+    <ID>ReturnCount:HashWildcardMatcher.kt$HashWildcardMatcher$fun coveredNumberCount(pattern: String): Long</ID>
+    <ID>ReturnCount:HashWildcardMatcher.kt$HashWildcardMatcher$fun coversOrCoveredBy(a: String, b: String): Overlap</ID>
+    <ID>ReturnCount:HashWildcardMatcher.kt$HashWildcardMatcher$fun matches(pattern: String, number: String): Boolean</ID>
+    <ID>ReturnCount:IChecker.kt$CheckerPipeline$suspend fun run(sortedCheckers: List&lt;IChecker&gt;, ctx: CheckContext): BlockResult?</ID>
+    <ID>ReturnCount:PhoneFormatter.kt$PhoneFormatter$fun format(number: String): String</ID>
+    <ID>ReturnCount:PushAlertChecker.kt$PushAlertChecker$override suspend fun check(ctx: CheckContext): BlockResult?</ID>
+    <ID>ReturnCount:RcsNotificationListener.kt$RcsNotificationListener$private suspend fun processNotification(sbn: StatusBarNotification)</ID>
+    <ID>ReturnCount:SmsContextChecker.kt$SmsContextChecker$fun hasRecurringConversation(context: Context, number: String): Boolean</ID>
+    <ID>ReturnCount:SmsContextChecker.kt$SmsContextChecker$fun hasSentMessageTo(context: Context, number: String): Boolean</ID>
+    <ID>ReturnCount:SpamActionReceiver.kt$SpamActionReceiver$override fun onReceive(context: Context, intent: Intent)</ID>
+    <ID>ReturnCount:SpamHeuristics.kt$SpamHeuristics$fun isHotCampaignRange(number: String): Boolean</ID>
+    <ID>ReturnCount:SpamHeuristics.kt$SpamHeuristics$fun isNeighborSpoof(context: Context, incomingNumber: String): Boolean</ID>
+    <ID>ReturnCount:SpamMLScorer.kt$SpamMLScorer$private fun evaluateTree(features: DoubleArray, tree: GbtTree): Double</ID>
+    <ID>ReturnCount:SpamMLScorer.kt$SpamMLScorer$private fun parseFallbackWeights(json: String, version: Int): Pair&lt;DoubleArray, Double&gt;?</ID>
+    <ID>ReturnCount:SpamMLScorer.kt$SpamMLScorer$private fun parseGbtTreesList(json: String): List&lt;GbtTree&gt;?</ID>
+    <ID>ReturnCount:SpamMLScorer.kt$SpamMLScorer$private fun parseModel(json: String): ModelState?</ID>
+    <ID>ReturnCount:SpamMLScorer.kt$SpamMLScorer$private fun parseOneTree(treeJson: String): GbtTree?</ID>
+    <ID>ReturnCount:SpamMLScorer.kt$SpamMLScorer$private fun scoreWith(number: String, snap: ModelState): Double</ID>
+    <ID>ReturnCount:SpamRepository.kt$SpamRepository$suspend fun isSpam( number: String, smsBody: String? = null, realtimeCall: Boolean = true, prefsSnapshot: Preferences? = null, verificationStatus: Int? = null, ): SpamCheckResult</ID>
+    <ID>ReturnCount:SpamRepository.kt$SpamRepository$suspend fun isSpamSms( number: String, body: String, realtimeCall: Boolean = true, prefsSnapshot: Preferences? = null, ): SpamCheckResult</ID>
+    <ID>ReturnCount:SystemBlockList.kt$SystemBlockList$fun isBlocked(context: Context, number: String): Boolean</ID>
+    <ID>ReturnCount:TimeSchedule.kt$TimeSchedule$fun isActiveAt(calendar: Calendar): Boolean</ID>
+    <ID>ReturnCount:WildcardRule.kt$WildcardRule$fun matches(number: String): Boolean</ID>
+    <ID>ReturnCount:WildcardRule.kt$WildcardRule.Companion$internal fun isSafeRegexPattern(pattern: String): Boolean</ID>
+    <ID>SpreadOperator:HttpClient.kt$HttpClient$(host, *pins.toTypedArray())</ID>
+    <ID>SwallowedException:IChecker.kt$CheckerPipeline$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:BackupRestore.kt$BackupRestore$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:BlocklistExporter.kt$BlocklistExporter$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:BlocklistScreen.kt$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:CallShieldApp.kt$CallShieldApp$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:CommunityContributor.kt$CommunityContributor$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:CrashReporter.kt$CrashReporter$t: Throwable</ID>
+    <ID>TooGenericExceptionCaught:DigestWorker.kt$DigestWorker$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:GitHubDataSource.kt$GitHubDataSource$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:IChecker.kt$CheckerPipeline$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:LookupScreen.kt$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:MainViewModel.kt$MainViewModel$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:SpamRepository.kt$SpamRepository$e: Exception</ID>
+    <ID>TooManyFunctions:BlocklistExporter.kt$BlocklistExporter</ID>
+    <ID>TooManyFunctions:BlocklistScreen.kt$com.sysadmindoc.callshield.ui.screens.main.BlocklistScreen.kt</ID>
+    <ID>TooManyFunctions:CallShieldPermissions.kt$CallShieldPermissions</ID>
+    <ID>TooManyFunctions:CallerIdOverlayService.kt$CallerIdOverlayService : Service</ID>
+    <ID>TooManyFunctions:DashboardScreen.kt$com.sysadmindoc.callshield.ui.screens.main.DashboardScreen.kt</ID>
+    <ID>TooManyFunctions:GitHubDataSource.kt$GitHubDataSource : SpamDataSourceHotFeedDataSource</ID>
+    <ID>TooManyFunctions:HotDataSync.kt$HotDataSync</ID>
+    <ID>TooManyFunctions:LookupScreen.kt$com.sysadmindoc.callshield.ui.screens.lookup.LookupScreen.kt</ID>
+    <ID>TooManyFunctions:MainViewModel.kt$MainViewModel : AndroidViewModel</ID>
+    <ID>TooManyFunctions:SpamDao.kt$SpamDao</ID>
+    <ID>TooManyFunctions:SpamHeuristics.kt$SpamHeuristics</ID>
+    <ID>TooManyFunctions:SpamMLScorer.kt$SpamMLScorer</ID>
+    <ID>TooManyFunctions:SpamRepository.kt$SpamRepository</ID>
+    <ID>TooManyFunctions:StatsScreen.kt$com.sysadmindoc.callshield.ui.screens.stats.StatsScreen.kt</ID>
+    <ID>UnusedParameter:CallerIdOverlayService.kt$CallerIdOverlayService$verificationStatus: Int</ID>
+    <ID>UnusedPrivateMember:SpamRepository.kt$SpamRepository$private fun invalidatePrefixCache()</ID>
+    <ID>UnusedPrivateProperty:CallShieldTileService.kt$CallShieldTileService$val tile = qsTile ?: return</ID>
+    <ID>UnusedPrivateProperty:SpamMLScorerTest.kt$SpamMLScorerTest$private val HIGH_SPAM_NPA = 1</ID>
+    <ID>UnusedPrivateProperty:StatsScreen.kt$val maxWeekly = weeklyData.maxOrNull()?.coerceAtLeast(1) ?: 1</ID>
+    <ID>UseCheckOrError:GitHubDataSource.kt$GitHubDataSource$throw IllegalStateException("Failed to parse hot list array")</ID>
+    <ID>UseCheckOrError:GitHubDataSource.kt$GitHubDataSource$throw IllegalStateException("Failed to parse hot list payload")</ID>
+    <ID>UseCheckOrError:GitHubDataSource.kt$GitHubDataSource$throw IllegalStateException("Failed to parse hot ranges array")</ID>
+    <ID>UseCheckOrError:GitHubDataSource.kt$GitHubDataSource$throw IllegalStateException("Failed to parse spam database")</ID>
+    <ID>UseCheckOrError:GitHubDataSource.kt$GitHubDataSource$throw IllegalStateException("Failed to parse spam domains array")</ID>
+    <ID>UseCheckOrError:GitHubDataSource.kt$GitHubDataSource$throw IllegalStateException("Unsupported hot list JSON format")</ID>
+    <ID>UseCheckOrError:GitHubDataSource.kt$GitHubDataSource$throw IllegalStateException("Unsupported hot ranges JSON format")</ID>
+    <ID>UseCheckOrError:GitHubDataSource.kt$GitHubDataSource$throw IllegalStateException("Unsupported spam domains JSON format")</ID>
+    <ID>VariableNaming:RcsNotificationListener.kt$RcsNotificationListener$// Package names of RCS/SMS messaging apps to monitor private val MESSAGING_PACKAGES = setOf( "com.google.android.apps.messaging", "com.samsung.android.messaging", "com.android.mms", "com.microsoft.android.smsorganizer", )</ID>
+    <ID>VariableNaming:SpamMLScorerTest.kt$SpamMLScorerTest$// Feature indices private val TOLL_FREE = 0</ID>
+    <ID>VariableNaming:SpamMLScorerTest.kt$SpamMLScorerTest$private val ALL_SAME = 5</ID>
+    <ID>VariableNaming:SpamMLScorerTest.kt$SpamMLScorerTest$private val ALTERNATING = 10</ID>
+    <ID>VariableNaming:SpamMLScorerTest.kt$SpamMLScorerTest$private val HIGH_SPAM_NPA = 1</ID>
+    <ID>VariableNaming:SpamMLScorerTest.kt$SpamMLScorerTest$private val INVALID_NXX = 8</ID>
+    <ID>VariableNaming:SpamMLScorerTest.kt$SpamMLScorerTest$private val LAST4_ZERO = 7</ID>
+    <ID>VariableNaming:SpamMLScorerTest.kt$SpamMLScorerTest$private val LOW_ENTROPY = 13</ID>
+    <ID>VariableNaming:SpamMLScorerTest.kt$SpamMLScorerTest$private val NXX_555 = 6</ID>
+    <ID>VariableNaming:SpamMLScorerTest.kt$SpamMLScorerTest$private val NXX_BELOW_200 = 12</ID>
+    <ID>VariableNaming:SpamMLScorerTest.kt$SpamMLScorerTest$private val REPEATED_RATIO = 3</ID>
+    <ID>VariableNaming:SpamMLScorerTest.kt$SpamMLScorerTest$private val SEQ_ASC_RATIO = 4</ID>
+    <ID>VariableNaming:SpamMLScorerTest.kt$SpamMLScorerTest$private val SEQ_DESC_RATIO = 11</ID>
+    <ID>VariableNaming:SpamMLScorerTest.kt$SpamMLScorerTest$private val SUB_ALL_SAME = 9</ID>
+    <ID>VariableNaming:SpamMLScorerTest.kt$SpamMLScorerTest$private val SUB_SEQUENTIAL = 14</ID>
+    <ID>VariableNaming:SpamMLScorerTest.kt$SpamMLScorerTest$private val VOIP_RANGE = 2</ID>
+    <ID>WildcardImport:AppDatabase.kt$import com.sysadmindoc.callshield.data.model.*</ID>
+    <ID>WildcardImport:BackupRestore.kt$import com.sysadmindoc.callshield.data.model.*</ID>
+    <ID>WildcardImport:BackupRestoreTest.kt$import org.junit.Assert.*</ID>
+    <ID>WildcardImport:BlockedLogScreen.kt$import androidx.compose.animation.*</ID>
+    <ID>WildcardImport:BlockedLogScreen.kt$import androidx.compose.foundation.layout.*</ID>
+    <ID>WildcardImport:BlockedLogScreen.kt$import androidx.compose.material.icons.filled.*</ID>
+    <ID>WildcardImport:BlockedLogScreen.kt$import androidx.compose.material3.*</ID>
+    <ID>WildcardImport:BlockedLogScreen.kt$import androidx.compose.runtime.*</ID>
+    <ID>WildcardImport:BlockedLogScreen.kt$import com.sysadmindoc.callshield.ui.theme.*</ID>
+    <ID>WildcardImport:BlockingProfilesTest.kt$import org.junit.Assert.*</ID>
+    <ID>WildcardImport:CallShieldTileService.kt$import kotlinx.coroutines.*</ID>
+    <ID>WildcardImport:CallerIdOverlayService.kt$import kotlinx.coroutines.*</ID>
+    <ID>WildcardImport:CampaignDetectorTest.kt$import org.junit.Assert.*</ID>
+    <ID>WildcardImport:ChangelogScreen.kt$import androidx.compose.foundation.layout.*</ID>
+    <ID>WildcardImport:ChangelogScreen.kt$import androidx.compose.material3.*</ID>
+    <ID>WildcardImport:ChangelogScreen.kt$import androidx.compose.runtime.*</ID>
+    <ID>WildcardImport:ChangelogScreen.kt$import com.sysadmindoc.callshield.ui.theme.*</ID>
+    <ID>WildcardImport:DigestWorker.kt$import androidx.work.*</ID>
+    <ID>WildcardImport:HotListSyncWorker.kt$import androidx.work.*</ID>
+    <ID>WildcardImport:JsonParsingFuzzTest.kt$import org.junit.Assert.*</ID>
+    <ID>WildcardImport:LogExporterTest.kt$import org.junit.Assert.*</ID>
+    <ID>WildcardImport:MainActivity.kt$import androidx.compose.animation.*</ID>
+    <ID>WildcardImport:MainActivity.kt$import androidx.compose.foundation.layout.*</ID>
+    <ID>WildcardImport:MainActivity.kt$import androidx.compose.material.icons.filled.*</ID>
+    <ID>WildcardImport:MainActivity.kt$import androidx.compose.material3.*</ID>
+    <ID>WildcardImport:MainActivity.kt$import androidx.compose.runtime.*</ID>
+    <ID>WildcardImport:MainActivity.kt$import com.sysadmindoc.callshield.ui.theme.*</ID>
+    <ID>WildcardImport:MainViewModel.kt$import kotlinx.coroutines.flow.*</ID>
+    <ID>WildcardImport:MoreScreen.kt$import androidx.compose.foundation.layout.*</ID>
+    <ID>WildcardImport:MoreScreen.kt$import androidx.compose.material.icons.filled.*</ID>
+    <ID>WildcardImport:MoreScreen.kt$import androidx.compose.material3.*</ID>
+    <ID>WildcardImport:MoreScreen.kt$import androidx.compose.runtime.*</ID>
+    <ID>WildcardImport:MoreScreen.kt$import com.sysadmindoc.callshield.ui.theme.*</ID>
+    <ID>WildcardImport:NumberDetailScreen.kt$import androidx.compose.foundation.layout.*</ID>
+    <ID>WildcardImport:NumberDetailScreen.kt$import androidx.compose.material.icons.filled.*</ID>
+    <ID>WildcardImport:NumberDetailScreen.kt$import androidx.compose.material3.*</ID>
+    <ID>WildcardImport:NumberDetailScreen.kt$import androidx.compose.runtime.*</ID>
+    <ID>WildcardImport:NumberDetailScreen.kt$import com.sysadmindoc.callshield.ui.theme.*</ID>
+    <ID>WildcardImport:OnboardingScreen.kt$import androidx.compose.animation.*</ID>
+    <ID>WildcardImport:OnboardingScreen.kt$import androidx.compose.foundation.layout.*</ID>
+    <ID>WildcardImport:OnboardingScreen.kt$import androidx.compose.material.icons.filled.*</ID>
+    <ID>WildcardImport:OnboardingScreen.kt$import androidx.compose.material3.*</ID>
+    <ID>WildcardImport:OnboardingScreen.kt$import androidx.compose.runtime.*</ID>
+    <ID>WildcardImport:OnboardingScreen.kt$import com.sysadmindoc.callshield.ui.theme.*</ID>
+    <ID>WildcardImport:PhoneFormatterTest.kt$import org.junit.Assert.*</ID>
+    <ID>WildcardImport:PhoneNumberFuzzTest.kt$import org.junit.Assert.*</ID>
+    <ID>WildcardImport:ProtectionTestScreen.kt$import androidx.compose.animation.*</ID>
+    <ID>WildcardImport:ProtectionTestScreen.kt$import androidx.compose.animation.core.*</ID>
+    <ID>WildcardImport:ProtectionTestScreen.kt$import androidx.compose.foundation.layout.*</ID>
+    <ID>WildcardImport:ProtectionTestScreen.kt$import androidx.compose.material.icons.filled.*</ID>
+    <ID>WildcardImport:ProtectionTestScreen.kt$import androidx.compose.material3.*</ID>
+    <ID>WildcardImport:ProtectionTestScreen.kt$import androidx.compose.runtime.*</ID>
+    <ID>WildcardImport:ProtectionTestScreen.kt$import com.sysadmindoc.callshield.ui.theme.*</ID>
+    <ID>WildcardImport:RecentCallsScreen.kt$import androidx.compose.animation.*</ID>
+    <ID>WildcardImport:RecentCallsScreen.kt$import androidx.compose.foundation.layout.*</ID>
+    <ID>WildcardImport:RecentCallsScreen.kt$import androidx.compose.material.icons.filled.*</ID>
+    <ID>WildcardImport:RecentCallsScreen.kt$import androidx.compose.material3.*</ID>
+    <ID>WildcardImport:RecentCallsScreen.kt$import androidx.compose.runtime.*</ID>
+    <ID>WildcardImport:RecentCallsScreen.kt$import com.sysadmindoc.callshield.ui.theme.*</ID>
+    <ID>WildcardImport:SettingsScreen.kt$import androidx.compose.foundation.layout.*</ID>
+    <ID>WildcardImport:SettingsScreen.kt$import androidx.compose.material.icons.filled.*</ID>
+    <ID>WildcardImport:SettingsScreen.kt$import androidx.compose.material3.*</ID>
+    <ID>WildcardImport:SettingsScreen.kt$import androidx.compose.runtime.*</ID>
+    <ID>WildcardImport:SettingsScreen.kt$import com.sysadmindoc.callshield.ui.theme.*</ID>
+    <ID>WildcardImport:SmsContentAnalyzerTest.kt$import org.junit.Assert.*</ID>
+    <ID>WildcardImport:SpamDao.kt$import androidx.room.*</ID>
+    <ID>WildcardImport:SpamHeuristicsTest.kt$import org.junit.Assert.*</ID>
+    <ID>WildcardImport:SpamMLScorerGbtTest.kt$import org.junit.Assert.*</ID>
+    <ID>WildcardImport:SpamMLScorerTest.kt$import org.junit.Assert.*</ID>
+    <ID>WildcardImport:SpamRepository.kt$import androidx.datastore.preferences.core.*</ID>
+    <ID>WildcardImport:SpamRepository.kt$import com.sysadmindoc.callshield.data.model.*</ID>
+    <ID>WildcardImport:StatsScreen.kt$import androidx.compose.animation.core.*</ID>
+    <ID>WildcardImport:StatsScreen.kt$import androidx.compose.foundation.layout.*</ID>
+    <ID>WildcardImport:StatsScreen.kt$import androidx.compose.material.icons.filled.*</ID>
+    <ID>WildcardImport:StatsScreen.kt$import androidx.compose.material3.*</ID>
+    <ID>WildcardImport:StatsScreen.kt$import androidx.compose.runtime.*</ID>
+    <ID>WildcardImport:StatsScreen.kt$import com.sysadmindoc.callshield.ui.theme.*</ID>
+    <ID>WildcardImport:SyncWorker.kt$import androidx.work.*</ID>
+    <ID>WildcardImport:Theme.kt$import androidx.compose.animation.core.*</ID>
+    <ID>WildcardImport:Theme.kt$import androidx.compose.foundation.layout.*</ID>
+    <ID>WildcardImport:Theme.kt$import androidx.compose.material3.*</ID>
+  </CurrentIssues>
+</SmellBaseline>

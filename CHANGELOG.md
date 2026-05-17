@@ -11,6 +11,9 @@ Distribution prep after the v1.7.10 release.
 - Added Kover 0.9.8 to the locked Gradle graph and wired CI to run
   `:app:koverVerifyDebug` plus `:app:koverXmlReportDebug`, gating the
   JVM-tested data/util core at a 35% minimum line-coverage threshold.
+- Added ktlint 1.8.0 and detekt 1.23.8 as locked Gradle checks, with
+  baselines for existing style/complexity debt and a CI `static-analysis` job
+  that fails on new ktlint or detekt findings.
 - Added an `AppDatabase` constructor seam to `SpamRepository` so Android
   integration tests can run the repository against an in-memory Room database
   without starting the larger DI refactor.
