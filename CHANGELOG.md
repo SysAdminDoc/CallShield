@@ -19,6 +19,10 @@ Distribution prep after the v1.7.10 release.
 - Added a `SpamDataSource` seam and mocked in-memory Room sync integration
   tests for `syncFromGitHub()`, including remote snapshot population and
   preservation of user-block flags during remote refresh.
+- Added a `HotFeedDataSource` seam for hot-list feeds and instrumented
+  in-memory Room coverage for hot number insertion, stronger existing-row
+  preservation, hot-range refresh, spam-domain refresh, and invalid-entry
+  tolerance.
 
 ### F-Droid
 

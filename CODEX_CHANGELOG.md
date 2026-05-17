@@ -1,6 +1,6 @@
 # Codex Change Log
 
-Last updated: 2026-05-14
+Last updated: 2026-05-17
 
 This is an internal handoff note for follow-on agents. It is not the user-facing product changelog.
 
@@ -20,10 +20,13 @@ Files:
 
 - `app/src/main/java/com/sysadmindoc/callshield/data/SpamRepository.kt`
 - `app/src/main/java/com/sysadmindoc/callshield/data/remote/SpamDataSource.kt`
+- `app/src/main/java/com/sysadmindoc/callshield/data/remote/HotFeedDataSource.kt`
 - `app/src/main/java/com/sysadmindoc/callshield/data/remote/GitHubDataSource.kt`
+- `app/src/main/java/com/sysadmindoc/callshield/service/HotDataSync.kt`
 - `app/src/androidTest/java/com/sysadmindoc/callshield/data/SpamPipelineIntegrationTest.kt`
 - `app/src/androidTest/java/com/sysadmindoc/callshield/data/SmsPipelineIntegrationTest.kt`
 - `app/src/androidTest/java/com/sysadmindoc/callshield/data/SyncIntegrationTest.kt`
+- `app/src/androidTest/java/com/sysadmindoc/callshield/service/HotListSyncIntegrationTest.kt`
 - `ROADMAP.md`
 - `CHANGELOG.md`
 - `CLAUDE.md`
@@ -36,7 +39,8 @@ Work completed:
 - added in-memory Room instrumented tests for the call checker pipeline priority tiers
 - added in-memory Room instrumented tests for SMS keyword/content ordering and whitelisted-sender inspection
 - added mocked in-memory Room sync integration tests for remote snapshot population and user-block preservation
-- marked roadmap items 1.2.1, 1.2.2, and 1.2.3 done, leaving hot-list integration tests open behind a source seam
+- added a narrow `HotFeedDataSource` seam and in-memory Room integration coverage for hot numbers, hot ranges, spam domains, duplicate/invalid feed entries, and preservation of stronger existing database rows
+- marked roadmap items 1.2.1 through 1.2.4 done
 - verified `:app:compileDebugAndroidTestKotlin` and `testDebugUnitTest`
 
 ### 0. F-Droid submission prep
