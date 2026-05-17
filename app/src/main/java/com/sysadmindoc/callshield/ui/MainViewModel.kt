@@ -1,9 +1,9 @@
 @file:OptIn(kotlinx.coroutines.FlowPreview::class)
 package com.sysadmindoc.callshield.ui
 
-import android.app.Application
+import android.content.Context
 import android.net.Uri
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.BackupRestore
@@ -18,24 +18,31 @@ import com.sysadmindoc.callshield.data.model.SpamNumber
 import com.sysadmindoc.callshield.data.model.SmsKeywordRule
 import com.sysadmindoc.callshield.data.model.WhitelistEntry
 import com.sysadmindoc.callshield.data.model.WildcardRule
-import com.sysadmindoc.callshield.data.repository.SpamRepositoryAdapter
 import com.sysadmindoc.callshield.domain.usecase.ExportLogsUseCase
 import com.sysadmindoc.callshield.domain.usecase.ManageBlocklistUseCase
 import com.sysadmindoc.callshield.domain.usecase.SyncDatabaseUseCase
 import com.sysadmindoc.callshield.service.CallLogScanner
 import com.sysadmindoc.callshield.service.SmsInboxScanner
+import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class MainViewModel(app: Application) : AndroidViewModel(app) {
-    private val repo = SpamRepository.getInstance(app)
-    private val repoAdapter = SpamRepositoryAdapter(repo)
-    private val syncDatabase = SyncDatabaseUseCase(repoAdapter)
-    private val manageBlocklist = ManageBlocklistUseCase(repoAdapter)
-    private val exportLogs = ExportLogsUseCase(app)
+@Suppress("TooManyFunctions")
+@HiltViewModel
+class MainViewModel
+    @Inject
+    constructor(
+        @param:ApplicationContext private val appContext: Context,
+        private val repo: SpamRepository,
+        private val syncDatabase: SyncDatabaseUseCase,
+        private val manageBlocklist: ManageBlocklistUseCase,
+        private val exportLogs: ExportLogsUseCase,
+    ) : ViewModel() {
 
     val blockedCalls: StateFlow<List<BlockedCall>> = repo.getBlockedCalls()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -208,7 +215,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         _scanningCalls.value = true
         viewModelScope.launch {
             try {
-                _scanResult.value = CallLogScanner.scan(getApplication())
+                _scanResult.value = CallLogScanner.scan(appContext)
             } catch (e: Exception) {
                 _scanResult.value = CallLogScanner.ScanResult(
                     0,
@@ -226,7 +233,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         _scanningSms.value = true
         viewModelScope.launch {
             try {
-                _smsScanResult.value = SmsInboxScanner.scan(getApplication())
+                _smsScanResult.value = SmsInboxScanner.scan(appContext)
             } catch (e: Exception) {
                 _smsScanResult.value = SmsInboxScanner.ScanResult(
                     0,
@@ -324,16 +331,16 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
     fun importBlocklist(uri: Uri) {
         viewModelScope.launch {
-            val result = BlocklistExporter.importFromUri(getApplication(), uri)
+            val result = BlocklistExporter.importFromUri(appContext, uri)
             _importResult.value = result.message
         }
     }
 
     // Backup/restore
-    fun backup() { viewModelScope.launch { BackupRestore.shareBackup(getApplication()) } }
+    fun backup() { viewModelScope.launch { BackupRestore.shareBackup(appContext) } }
     fun restore(uri: Uri) {
         viewModelScope.launch {
-            val result = BackupRestore.restoreFromUri(getApplication(), uri)
+            val result = BackupRestore.restoreFromUri(appContext, uri)
             _restoreResult.value = result.message
         }
     }
@@ -377,7 +384,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun applyProfile(profile: BlockingProfiles.Profile) {
         viewModelScope.launch {
             try {
-                BlockingProfiles.apply(getApplication(), profile)
+                BlockingProfiles.apply(appContext, profile)
                 _activeProfile.value = profile
             } catch (_: Exception) {
                 _activeProfile.value = null
@@ -407,7 +414,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     // Share spam warning
     fun shareAsSpam(number: String, reason: String = "") {
-        com.sysadmindoc.callshield.data.SpamSharer.share(getApplication(), number, reason)
+        com.sysadmindoc.callshield.data.SpamSharer.share(appContext, number, reason)
     }
 
     // Log export
@@ -420,10 +427,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private fun scanFailedMessage(error: Throwable): String {
-        val app = getApplication<Application>()
-        return app.getString(
+        return appContext.getString(
             R.string.dashboard_scan_failed,
-            error.message ?: app.getString(R.string.dashboard_scan_unknown_error)
+            error.message ?: appContext.getString(R.string.dashboard_scan_unknown_error)
         )
     }
 }

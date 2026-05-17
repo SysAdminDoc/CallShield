@@ -7,11 +7,14 @@ import com.sysadmindoc.callshield.data.model.SpamNumber
 import com.sysadmindoc.callshield.data.model.WhitelistEntry
 import com.sysadmindoc.callshield.data.model.WildcardRule
 import com.sysadmindoc.callshield.domain.repository.BlocklistRepository
+import javax.inject.Inject
 
 @Suppress("TooManyFunctions")
-class ManageBlocklistUseCase(
-    private val repository: BlocklistRepository,
-) {
+class ManageBlocklistUseCase
+    @Inject
+    constructor(
+        private val repository: BlocklistRepository,
+    ) {
     suspend fun blockNumber(
         number: String,
         type: String = "unknown",

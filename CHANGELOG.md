@@ -33,6 +33,9 @@ Distribution prep after the v1.7.10 release.
   repository interfaces to `SpamRepositoryAdapter`.
 - Added a Hilt `NetworkModule` that provides the existing pinned
   `HttpClient.shared` as the singleton `OkHttpClient`.
+- Migrated `MainActivity` and `MainViewModel` onto Hilt, with
+  `MainViewModel` now receiving the existing `SpamRepository` facade plus
+  sync, blocklist, and export use cases through constructor injection.
 
 ### Testing
 
