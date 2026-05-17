@@ -36,6 +36,9 @@ Distribution prep after the v1.7.10 release.
 - Migrated `MainActivity` and `MainViewModel` onto Hilt, with
   `MainViewModel` now receiving the existing `SpamRepository` facade plus
   sync, blocklist, and export use cases through constructor injection.
+- Migrated `CallShieldScreeningService` onto Hilt field injection for the
+  `SpamRepository` facade and call-spam use case while preserving the existing
+  one-snapshot, fail-open 5-second screening flow.
 
 ### Testing
 

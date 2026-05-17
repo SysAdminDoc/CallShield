@@ -4,6 +4,7 @@ import android.content.Context
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.repository.SpamRepositoryAdapter
 import com.sysadmindoc.callshield.domain.repository.SpamCheckRepository
+import com.sysadmindoc.callshield.domain.usecase.CheckSpamUseCase
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -41,5 +42,10 @@ abstract class RepositoryModule {
         fun provideSpamRepositoryAdapter(
             repository: SpamRepository,
         ): SpamRepositoryAdapter = SpamRepositoryAdapter(repository)
+
+        @Provides
+        fun provideCheckSpamUseCase(
+            repository: SpamCheckRepository,
+        ): CheckSpamUseCase = CheckSpamUseCase(repository)
     }
 }

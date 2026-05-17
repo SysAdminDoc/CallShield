@@ -7,13 +7,20 @@ import com.sysadmindoc.callshield.CallShieldApp
 import com.sysadmindoc.callshield.data.SpamHeuristics
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup
-import com.sysadmindoc.callshield.data.repository.SpamRepositoryAdapter
 import com.sysadmindoc.callshield.domain.usecase.CheckSpamUseCase
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
+@AndroidEntryPoint
 class CallShieldScreeningService : CallScreeningService() {
+    @Inject
+    lateinit var repo: SpamRepository
+
+    @Inject
+    lateinit var checkSpam: CheckSpamUseCase
 
     override fun onScreenCall(callDetails: Call.Details) {
         // Run on the process-wide appScope instead of a service-scoped one.
@@ -24,12 +31,11 @@ class CallShieldScreeningService : CallScreeningService() {
         // subsequent logging/notification always run to completion.
         CallShieldApp.appScope.launch(Dispatchers.IO) {
             val appContext = applicationContext
+            val repository = repo
             try {
-                val repo = SpamRepository.getInstance(appContext)
-                val checkSpam = CheckSpamUseCase(SpamRepositoryAdapter(repo))
                 // One snapshot of all prefs — the 5-second deadline is tight
                 // and individual Flow.first() calls each spin up a collector.
-                val prefs = repo.readPrefsSnapshot()
+                val prefs = repository.readPrefsSnapshot()
 
                 if (!(prefs[SpamRepository.KEY_BLOCK_CALLS] ?: true)) {
                     respondAllow(callDetails)
@@ -79,7 +85,7 @@ class CallShieldScreeningService : CallScreeningService() {
                         number = number,
                         reason = result.matchSource,
                         confidence = result.confidence,
-                        prefs = prefs
+                        prefs = prefs,
                     )
                 } else {
                     val repeatedUrgentAllow = result.matchSource == "repeated_urgent"
@@ -133,10 +139,10 @@ class CallShieldScreeningService : CallScreeningService() {
         val response = buildBlockResponse(prefs, confidence)
         respondToCall(callDetails, response)
 
+        val repository = repo
         CallShieldApp.appScope.launch {
             try {
-                SpamRepository.getInstance(applicationContext)
-                    .logBlockedCall(number = number, isCall = true, matchReason = reason, confidence = confidence)
+                repository.logBlockedCall(number = number, isCall = true, matchReason = reason, confidence = confidence)
             } catch (_: Exception) { }
         }
     }
