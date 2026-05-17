@@ -8,7 +8,7 @@ Last verified: 2026-05-17
 - Latest observed commit before this pass: `c20f01a chore: prep fdroid submission`.
 - Current release: v1.7.10, `versionCode` 38.
 - Stack: Kotlin Android, Jetpack Compose BOM 2026.05.00, AGP 8.10.1, Kotlin/KSP 2.2.21, Room 2.8.4, WorkManager 2.11.2, OkHttp 5.3.2, DataStore 1.2.1.
-- Source shape after this pass: 80 main Kotlin files, 35 JVM test files, 8 instrumented test files.
+- Source shape after this pass: 80 main Kotlin files, 35 JVM test files, 9 instrumented test files.
 - Shared project memory still lags around v1.7.2; treat live repo docs, Gradle files, and git history as authoritative.
 
 ## Architecture Notes
@@ -21,7 +21,7 @@ Last verified: 2026-05-17
 
 ## Current Roadmap Position
 
-- Completed in this pass: roadmap 1.2.1, 1.2.2, 1.2.3, 1.2.4, and 1.3.1.
+- Completed in this pass: roadmap 1.2.1, 1.2.2, 1.2.3, 1.2.4, 1.3.1, and 1.3.2.
 - `SpamRepository(context, database, remote)` now supports injected `AppDatabase` and `SpamDataSource` dependencies, enabling in-memory Room integration tests without committing to the larger Hilt/DI refactor.
 - `HotDataSync.refresh(context, source, repo, dao)` now supports an injected `HotFeedDataSource`, enabling hot-feed integration tests without live GitHub requests.
 - Added instrumented tests:
@@ -30,9 +30,10 @@ Last verified: 2026-05-17
   - `SyncIntegrationTest`: mocked remote database sync, Room population, and user-block preservation during remote refresh.
   - `HotListSyncIntegrationTest`: mocked hot-feed refresh for hot number insertion, duplicate/invalid-entry tolerance, hot-range refresh, spam-domain refresh, and stronger existing-row preservation.
   - `OnboardingTest`: deterministic Compose coverage for the four-page walkthrough, permission affordances, call-screener setup action, and unavailable-screener fallback.
+  - `DashboardTest`: deterministic Compose coverage for dashboard hero copy, setup progress, sync freshness, blocked-count stats, and call-screener setup action.
 
 ## Next Practical Task
 
-Roadmap 1.3.2 is next: dashboard Compose UI coverage for hero stats, sync freshness, and screener/setup banners.
+Roadmap 1.3.3 is next: blocklist Compose UI coverage for add/delete, wildcard validation, and swipe-to-delete undo.
 
-Prefer a focused screen-level seam for dashboard status rendering before starting the larger repository/Hilt split.
+Prefer a focused blocklist content seam or smaller extracted composables before starting the larger repository/Hilt split.

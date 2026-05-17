@@ -26,6 +26,9 @@ Distribution prep after the v1.7.10 release.
 - Added deterministic onboarding Compose UI coverage for the four-page setup
   walkthrough, permission request affordances, call-screener setup action, and
   unsupported-screener fallback state.
+- Extracted dashboard hero, setup checklist, and stats-row composables for
+  deterministic Compose coverage of protection hero copy, sync freshness,
+  blocked-count stats, and the call-screener setup action.
 
 ### F-Droid
 
