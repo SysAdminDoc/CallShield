@@ -14,7 +14,7 @@ This repository already had a broad UX/premium-polish pass in progress across th
 
 ## Major Work Completed
 
-### Current session: integration-test foundation and CI coverage gate
+### Current session: integration-test foundation, CI gates, and use-case wrappers
 
 Files:
 
@@ -30,8 +30,20 @@ Files:
 - `app/src/main/java/com/sysadmindoc/callshield/data/remote/SpamDataSource.kt`
 - `app/src/main/java/com/sysadmindoc/callshield/data/remote/HotFeedDataSource.kt`
 - `app/src/main/java/com/sysadmindoc/callshield/data/remote/GitHubDataSource.kt`
+- `app/src/main/java/com/sysadmindoc/callshield/domain/usecase/CheckSpamUseCase.kt`
+- `app/src/main/java/com/sysadmindoc/callshield/domain/usecase/CheckSpamSmsUseCase.kt`
+- `app/src/main/java/com/sysadmindoc/callshield/domain/usecase/SyncDatabaseUseCase.kt`
+- `app/src/main/java/com/sysadmindoc/callshield/domain/usecase/ManageBlocklistUseCase.kt`
+- `app/src/main/java/com/sysadmindoc/callshield/domain/usecase/ExportLogsUseCase.kt`
+- `app/src/main/java/com/sysadmindoc/callshield/service/CallLogScanner.kt`
+- `app/src/main/java/com/sysadmindoc/callshield/service/CallShieldScreeningService.kt`
+- `app/src/main/java/com/sysadmindoc/callshield/service/RcsNotificationListener.kt`
+- `app/src/main/java/com/sysadmindoc/callshield/service/SmsInboxScanner.kt`
+- `app/src/main/java/com/sysadmindoc/callshield/service/SmsReceiver.kt`
+- `app/src/main/java/com/sysadmindoc/callshield/service/SyncWorker.kt`
 - `app/src/main/java/com/sysadmindoc/callshield/service/HotDataSync.kt`
 - `app/src/main/java/com/sysadmindoc/callshield/ui/screens/onboarding/OnboardingScreen.kt`
+- `app/src/main/java/com/sysadmindoc/callshield/ui/MainViewModel.kt`
 - `app/src/main/java/com/sysadmindoc/callshield/ui/screens/main/DashboardScreen.kt`
 - `app/src/main/java/com/sysadmindoc/callshield/ui/screens/main/BlocklistScreen.kt`
 - `app/src/main/java/com/sysadmindoc/callshield/ui/screens/settings/SettingsScreen.kt`
@@ -70,7 +82,10 @@ Work completed:
 - added ktlint-gradle 14.2.0, ktlint CLI 1.8.0, detekt 1.23.8, and a repo `.editorconfig`
 - generated ktlint and detekt baselines so the new static-analysis job gates regressions without forcing a broad reformat/refactor
 - added a CI `static-analysis` job that runs `:app:ktlintCheck` and `:app:detekt` and uploads both report directories
-- marked roadmap items 1.2.1 through 1.2.4, 1.3.1 through 1.3.4, 1.4.4, and 1.4.5 done
+- added domain use-case wrappers for call/SMS checks, sync, blocklist management, and exports
+- routed the live call-screening service, SMS receiver, RCS listener, historical call/SMS scanners, sync worker, and `MainViewModel` blocklist/export operations through those wrappers while preserving `SpamRepository` as the implementation
+- regenerated the ktlint baseline after modifying previously-baselined files so the new gate reflects the current debt set
+- marked roadmap items 1.2.1 through 1.2.4, 1.3.1 through 1.3.4, 1.4.4, 1.4.5, and 1.5.1 done
 - verified `:app:compileDebugAndroidTestKotlin`, `testDebugUnitTest`, `:app:lintDebug`, `:app:ktlintCheck`, `:app:detekt`, and the Kover debug coverage gate
 
 ### 0. F-Droid submission prep

@@ -5,6 +5,7 @@ import android.net.Uri
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.permissions.CallShieldPermissions
 import com.sysadmindoc.callshield.data.SpamRepository
+import com.sysadmindoc.callshield.domain.usecase.CheckSpamSmsUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -39,6 +40,7 @@ object SmsInboxScanner {
         }
 
         val repo = SpamRepository.getInstance(context)
+        val checkSpamSms = CheckSpamSmsUseCase(repo)
         val spamList = mutableListOf<ScannedSms>()
         var scanned = 0
 
@@ -66,7 +68,7 @@ object SmsInboxScanner {
                         // realtimeCall = false so the historical scan doesn't
                         // feed CampaignDetector with old senders or pop
                         // caller-ID overlays for messages that already arrived.
-                        val result = repo.isSpamSms(address, body, realtimeCall = false)
+                        val result = checkSpamSms(address, body, realtimeCall = false)
                         if (result.isSpam) {
                             spamList.add(ScannedSms(
                                 number = address,

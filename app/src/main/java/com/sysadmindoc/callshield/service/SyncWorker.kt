@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.work.*
 import com.sysadmindoc.callshield.data.SpamMLScorer
 import com.sysadmindoc.callshield.data.SpamRepository
+import com.sysadmindoc.callshield.domain.usecase.SyncDatabaseUseCase
 import java.util.concurrent.TimeUnit
 
 class SyncWorker(
@@ -13,7 +14,7 @@ class SyncWorker(
 
     override suspend fun doWork(): Result {
         val repo = SpamRepository.getInstance(applicationContext)
-        val result = repo.syncFromGitHub()
+        val result = SyncDatabaseUseCase(repo)()
 
         // Also sync the ML model weights file — lightweight, same GitHub repo
         SpamMLScorer.syncWeights(applicationContext)

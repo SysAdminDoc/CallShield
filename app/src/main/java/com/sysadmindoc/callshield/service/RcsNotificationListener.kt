@@ -6,6 +6,7 @@ import android.service.notification.StatusBarNotification
 import com.sysadmindoc.callshield.data.PushAlertRegistry
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.remote.UrlSafetyChecker
+import com.sysadmindoc.callshield.domain.usecase.CheckSpamSmsUseCase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -124,6 +125,7 @@ class RcsNotificationListener : NotificationListenerService() {
 
     private suspend fun processNotification(sbn: StatusBarNotification) {
         val repo = SpamRepository.getInstance(applicationContext)
+        val checkSpamSms = CheckSpamSmsUseCase(repo)
 
         // Respect the "Block SMS" and "RCS Filter" toggles
         if (!repo.blockSmsEnabled.first()) return
@@ -155,7 +157,7 @@ class RcsNotificationListener : NotificationListenerService() {
             return
         }
 
-        val result = repo.isSpamSms(senderDigits, body)
+        val result = checkSpamSms(senderDigits, body)
 
         if (result.isSpam) {
             // Cancel the notification — user won't see it ring/vibrate

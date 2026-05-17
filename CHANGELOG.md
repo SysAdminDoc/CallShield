@@ -6,6 +6,13 @@ All notable changes to CallShield will be documented in this file.
 
 Distribution prep after the v1.7.10 release.
 
+### Architecture
+
+- Added production-used domain use-case wrappers for call spam checks, SMS spam
+  checks, database sync, blocklist management, and log/blocklist export, then
+  routed the live screening/scanner/sync/ViewModel entrypoints through them
+  while preserving `SpamRepository` as the backing implementation.
+
 ### Testing
 
 - Added Kover 0.9.8 to the locked Gradle graph and wired CI to run
