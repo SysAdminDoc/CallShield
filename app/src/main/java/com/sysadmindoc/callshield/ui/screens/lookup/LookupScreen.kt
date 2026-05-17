@@ -87,9 +87,9 @@ import androidx.compose.ui.unit.sp
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.CommunityContributor
 import com.sysadmindoc.callshield.data.PhoneFormatter
-import com.sysadmindoc.callshield.data.SpamCheckResult
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup
+import com.sysadmindoc.callshield.domain.model.SpamCheckResult
 import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.theme.Black
 import com.sysadmindoc.callshield.ui.theme.CatBlue

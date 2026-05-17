@@ -1,7 +1,7 @@
 package com.sysadmindoc.callshield.domain.usecase
 
 import com.sysadmindoc.callshield.data.SpamRepository
-import com.sysadmindoc.callshield.data.SyncResult
+import com.sysadmindoc.callshield.domain.model.SyncResult
 
 class SyncDatabaseUseCase(
     private val repository: SpamRepository,

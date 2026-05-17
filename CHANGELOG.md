@@ -12,6 +12,9 @@ Distribution prep after the v1.7.10 release.
   checks, database sync, blocklist management, and log/blocklist export, then
   routed the live screening/scanner/sync/ViewModel entrypoints through them
   while preserving `SpamRepository` as the backing implementation.
+- Moved `SpamCheckResult` and `SyncResult` into `domain/model` so use cases,
+  UI, services, and tests now consume the same domain result types instead of
+  repository-local data classes.
 
 ### Testing
 

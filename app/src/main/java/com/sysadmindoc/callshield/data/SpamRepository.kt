@@ -14,6 +14,8 @@ import com.sysadmindoc.callshield.data.local.SpamDao
 import com.sysadmindoc.callshield.data.model.*
 import com.sysadmindoc.callshield.data.remote.GitHubDataSource
 import com.sysadmindoc.callshield.data.remote.SpamDataSource
+import com.sysadmindoc.callshield.domain.model.SpamCheckResult
+import com.sysadmindoc.callshield.domain.model.SyncResult
 import com.sysadmindoc.callshield.service.NotificationHelper
 import com.sysadmindoc.callshield.ui.widget.CallShieldWidget
 import kotlinx.coroutines.CoroutineScope
@@ -897,18 +899,3 @@ internal fun resolveSpamNumberForWhitelist(existing: SpamNumber?): SpamNumberWhi
         SpamNumberWhitelistResolution.Update(existing.copy(isUserBlocked = false))
     }
 }
-
-data class SpamCheckResult(
-    val isSpam: Boolean,
-    val matchSource: String = "",
-    val type: String = "",
-    val description: String = "",
-    val confidence: Int = 100
-)
-
-data class SyncResult(
-    val success: Boolean,
-    val message: String,
-    val warning: Boolean = false,
-    val shouldRetry: Boolean = false
-)

@@ -1,5 +1,7 @@
 package com.sysadmindoc.callshield.data
 
+import com.sysadmindoc.callshield.domain.model.SpamCheckResult
+
 /**
  * A human-friendly label for why a call was blocked or flagged.
  *
