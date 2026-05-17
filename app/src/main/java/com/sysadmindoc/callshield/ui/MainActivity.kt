@@ -45,6 +45,7 @@ import com.sysadmindoc.callshield.ui.screens.lookup.LookupScreen
 import com.sysadmindoc.callshield.ui.screens.recent.RecentCallsScreen
 import com.sysadmindoc.callshield.ui.screens.more.MoreScreen
 import com.sysadmindoc.callshield.ui.theme.*
+import dagger.hilt.android.AndroidEntryPoint
 
 data class LaunchRequest(
     val id: Int,
@@ -52,6 +53,7 @@ data class LaunchRequest(
     val shortcutAction: String? = null
 )
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     private var launchRequest by mutableStateOf(LaunchRequest(id = 0))
 
