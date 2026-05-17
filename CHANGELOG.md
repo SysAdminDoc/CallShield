@@ -46,6 +46,10 @@ Distribution prep after the v1.7.10 release.
   checker pipeline, screening service, app-startup hot-data/model priming, and
   sync workers consume detection helpers through an injectable seam while the
   remaining object-to-class conversion continues.
+- Converted the remaining detection helper singletons into
+  constructor-injectable classes backed by shared compatibility facades, keeping
+  existing UI/test utility call sites source-compatible while Hilt consumers
+  receive injectable instances.
 
 ### Testing
 

@@ -35,7 +35,7 @@ class CampaignDetectorTest {
 
     @Suppress("UNCHECKED_CAST")
     private fun clearState() {
-        val map = recentPrefixesField.get(CampaignDetector) as MutableMap<*, *>
+        val map = recentPrefixesField.get(CampaignDetector.shared) as MutableMap<*, *>
         map.clear()
     }
 
@@ -125,7 +125,7 @@ class CampaignDetectorTest {
         repeat(10) { i ->
             CampaignDetector.recordCall("212555${1000 + i}")
         }
-        val map = recentPrefixesField.get(CampaignDetector) as Map<String, List<Long>>
+        val map = recentPrefixesField.get(CampaignDetector.shared) as Map<String, List<Long>>
         val timestamps = map["212555"]
         assertNotNull(timestamps)
         // All 10 calls are recent, so all should be present
@@ -135,7 +135,7 @@ class CampaignDetectorTest {
     @Test
     @Suppress("UNCHECKED_CAST")
     fun recordCall_prunesExpiredPrefixesAcrossMap() {
-        val map = recentPrefixesField.get(CampaignDetector) as MutableMap<String, MutableList<Long>>
+        val map = recentPrefixesField.get(CampaignDetector.shared) as MutableMap<String, MutableList<Long>>
         val staleTimestamp = System.currentTimeMillis() - 4_000_000L
 
         map["111111"] = mutableListOf(staleTimestamp)
@@ -253,6 +253,6 @@ class CampaignDetectorTest {
     // ─── Helper ──────────────────────────────────────────────────────
 
     private fun callExtract(number: String): String? {
-        return extractNpaNxx.invoke(CampaignDetector, number) as String?
+        return extractNpaNxx.invoke(CampaignDetector.shared, number) as String?
     }
 }

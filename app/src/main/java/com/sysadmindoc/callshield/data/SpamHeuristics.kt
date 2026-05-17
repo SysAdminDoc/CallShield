@@ -4,12 +4,13 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.provider.ContactsContract
 import android.telephony.TelephonyManager
+import javax.inject.Inject
 
 /**
  * On-device heuristic spam detection engine.
  * No network calls, no API keys — pure local analysis.
  */
-object SpamHeuristics {
+class SpamHeuristics @Inject constructor() {
 
     // ── Contact Whitelist ──────────────────────────────────────────────
     // If the number is in the user's contacts, it's NEVER spam.
@@ -21,8 +22,6 @@ object SpamHeuristics {
     // A short-TTL cache keyed by normalized number eliminates the
     // redundant queries while staying responsive to the user adding or
     // removing a contact (TTL = 60 s).
-    private const val CONTACT_CACHE_TTL_MS = 60_000L
-    private const val CONTACT_CACHE_MAX = 128
     private val contactCacheLock = Any()
     private val contactCache = object : LinkedHashMap<String, Pair<Long, Boolean>>(16, 0.75f, true) {
         override fun removeEldestEntry(eldest: Map.Entry<String, Pair<Long, Boolean>>?): Boolean =
@@ -80,17 +79,17 @@ object SpamHeuristics {
 
     // ── Toll-Free Spam Scoring ─────────────────────────────────────────
     // Toll-free numbers are heavily abused by robocallers
-    private val TOLL_FREE_PREFIXES = setOf("800", "888", "877", "866", "855", "844", "833")
+    private val tollFreePrefixes = setOf("800", "888", "877", "866", "855", "844", "833")
 
     fun isTollFree(number: String): Boolean {
         val digits = number.filter { it.isDigit() }.takeLast(10)
         if (digits.length < 10) return false
-        return digits.substring(0, 3) in TOLL_FREE_PREFIXES
+        return digits.substring(0, 3) in tollFreePrefixes
     }
 
     // ── International Premium Rate ─────────────────────────────────────
     // These are almost always scam/wangiri callback numbers
-    private val PREMIUM_COUNTRY_CODES = setOf(
+    private val premiumCountryCodes = setOf(
         "900",   // US premium
         "976",   // US premium legacy
         "1900",  // US premium with country code
@@ -98,7 +97,7 @@ object SpamHeuristics {
 
     // Known international wangiri/premium rate country codes
     // These originate one-ring scam calls (wangiri) to bait callbacks to premium numbers.
-    private val WANGIRI_COUNTRY_CODES = setOf(
+    private val wangiriCountryCodes = setOf(
         // Africa (high wangiri origination)
         "232",  // Sierra Leone
         "252",  // Somalia
@@ -157,20 +156,20 @@ object SpamHeuristics {
 
     fun isInternationalPremium(number: String): Boolean {
         val clean = number.removePrefix("+")
-        return PREMIUM_COUNTRY_CODES.any { clean.startsWith(it) }
+        return premiumCountryCodes.any { clean.startsWith(it) }
     }
 
     fun isWangiriCountryCode(number: String): Boolean {
         val clean = number.removePrefix("+")
         if (clean.startsWith("1") && clean.length == 11) {
             // +1 number — check the NPA (area code) against Caribbean wangiri NPAs.
-            // The WANGIRI_COUNTRY_CODES set includes Caribbean NPAs like 876 (Jamaica),
+            // The wangiriCountryCodes set includes Caribbean NPAs like 876 (Jamaica),
             // 284 (BVI), 649 (Turks & Caicos), etc. that share the +1 country code
             // but are heavily abused for wangiri/premium-rate callback scams.
             val npa = clean.substring(1, 4)
-            return npa in WANGIRI_COUNTRY_CODES
+            return npa in wangiriCountryCodes
         }
-        return WANGIRI_COUNTRY_CODES.any { clean.startsWith(it) }
+        return wangiriCountryCodes.any { clean.startsWith(it) }
     }
 
     // ── VoIP Range Detection ───────────────────────────────────────────
@@ -179,7 +178,7 @@ object SpamHeuristics {
     // Sources: FCC enforcement actions, carrier abuse reports, FTC complaints.
     // NOTE: only include ranges with confirmed high spam rates — many VoIP
     // numbers are legitimate businesses. "toll_free" check covers 8XX separately.
-    private val HIGH_SPAM_VOIP_NPANXX = setOf(
+    private val highSpamVoipNpanxx = setOf(
         // ── Bandwidth.com reseller ranges ────────────────────────────
         // Heavily abused by robocall operations for neighbor-spoofing campaigns
         "202555", "213226", "213555", "310555", "310400",
@@ -218,7 +217,7 @@ object SpamHeuristics {
     fun isHighSpamVoipRange(number: String): Boolean {
         val digits = number.filter { it.isDigit() }.takeLast(10)
         if (digits.length < 10) return false
-        return digits.substring(0, 6) in HIGH_SPAM_VOIP_NPANXX
+        return digits.substring(0, 6) in highSpamVoipNpanxx
     }
 
     // ── Hot Campaign Range Detection ──────────────────────────────────
@@ -363,5 +362,64 @@ object SpamHeuristics {
         } catch (_: SecurityException) {
             null
         }
+    }
+
+    @Suppress("TooManyFunctions")
+    companion object {
+        val shared: SpamHeuristics = SpamHeuristics()
+
+        private const val CONTACT_CACHE_TTL_MS = 60_000L
+        private const val CONTACT_CACHE_MAX = 128
+
+        fun isInContacts(context: Context, number: String): Boolean =
+            shared.isInContacts(context, number)
+
+        fun clearContactCache() {
+            shared.clearContactCache()
+        }
+
+        fun isNeighborSpoof(context: Context, incomingNumber: String): Boolean =
+            shared.isNeighborSpoof(context, incomingNumber)
+
+        fun isTollFree(number: String): Boolean =
+            shared.isTollFree(number)
+
+        fun isInternationalPremium(number: String): Boolean =
+            shared.isInternationalPremium(number)
+
+        fun isWangiriCountryCode(number: String): Boolean =
+            shared.isWangiriCountryCode(number)
+
+        fun isHighSpamVoipRange(number: String): Boolean =
+            shared.isHighSpamVoipRange(number)
+
+        fun updateHotRanges(ranges: Collection<String>) {
+            shared.updateHotRanges(ranges)
+        }
+
+        fun hasHotRanges(): Boolean =
+            shared.hasHotRanges()
+
+        fun isHotCampaignRange(number: String): Boolean =
+            shared.isHotCampaignRange(number)
+
+        fun isInvalidFormat(number: String): Boolean =
+            shared.isInvalidFormat(number)
+
+        fun isRapidFire(
+            recentNumbers: List<Pair<String, Long>>,
+            number: String,
+            windowMs: Long = 3600_000,
+            threshold: Int = 3,
+        ): Boolean =
+            shared.isRapidFire(recentNumbers, number, windowMs, threshold)
+
+        fun analyze(
+            context: Context,
+            number: String,
+            smsBody: String? = null,
+            recentBlockedNumbers: List<Pair<String, Long>> = emptyList(),
+        ): HeuristicResult =
+            shared.analyze(context, number, smsBody, recentBlockedNumbers)
     }
 }

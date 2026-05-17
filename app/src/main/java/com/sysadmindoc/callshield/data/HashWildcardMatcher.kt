@@ -1,5 +1,7 @@
 package com.sysadmindoc.callshield.data
 
+import javax.inject.Inject
+
 /**
  * Length-locked `#` wildcard matcher for phone numbers.
  *
@@ -31,7 +33,7 @@ package com.sysadmindoc.callshield.data
  * [coversOrCoveredBy] detects rule overlap — when the user is about to
  * add a pattern that's already covered by (or covers) an existing rule.
  */
-object HashWildcardMatcher {
+class HashWildcardMatcher @Inject constructor() {
 
     /**
      * `true` iff [pattern] matches [number] exactly.
@@ -87,29 +89,6 @@ object HashWildcardMatcher {
      * Common North American / European prefixes. Callers can override with
      * a narrower list when they know the device's locale.
      */
-    val DEFAULT_COUNTRY_PREFIXES: List<String> = listOf(
-        "+1",   // NANP (US, Canada)
-        "+33",  // France
-        "+44",  // UK
-        "+49",  // Germany
-        "+34",  // Spain
-        "+39",  // Italy
-        "+31",  // Netherlands
-        "+32",  // Belgium
-        "+41",  // Switzerland
-        "+43",  // Austria
-        "+46",  // Sweden
-        "+47",  // Norway
-        "+45",  // Denmark
-        "+358", // Finland
-        "+351", // Portugal
-        "+353", // Ireland
-        "+52",  // Mexico
-        "+55",  // Brazil
-        "+61",  // Australia
-        "+64",  // NZ
-    )
-
     /**
      * Generate plausible normalization variants for [number].
      *
@@ -216,4 +195,57 @@ object HashWildcardMatcher {
     }
 
     enum class Overlap { NONE, EQUAL, A_COVERS_B, B_COVERS_A }
+
+    companion object {
+        val shared: HashWildcardMatcher = HashWildcardMatcher()
+
+        /**
+         * Common North American / European prefixes. Callers can override with
+         * a narrower list when they know the device's locale.
+         */
+        val DEFAULT_COUNTRY_PREFIXES: List<String> = listOf(
+            "+1",   // NANP (US, Canada)
+            "+33",  // France
+            "+44",  // UK
+            "+49",  // Germany
+            "+34",  // Spain
+            "+39",  // Italy
+            "+31",  // Netherlands
+            "+32",  // Belgium
+            "+41",  // Switzerland
+            "+43",  // Austria
+            "+46",  // Sweden
+            "+47",  // Norway
+            "+45",  // Denmark
+            "+358", // Finland
+            "+351", // Portugal
+            "+353", // Ireland
+            "+52",  // Mexico
+            "+55",  // Brazil
+            "+61",  // Australia
+            "+64",  // NZ
+        )
+
+        fun matches(pattern: String, number: String): Boolean =
+            shared.matches(pattern, number)
+
+        fun matchesWithVariants(
+            pattern: String,
+            number: String,
+            countryPrefixes: List<String> = DEFAULT_COUNTRY_PREFIXES,
+        ): Boolean =
+            shared.matchesWithVariants(pattern, number, countryPrefixes)
+
+        internal fun numberVariants(
+            number: String,
+            countryPrefixes: List<String>,
+        ): List<String> =
+            shared.numberVariants(number, countryPrefixes)
+
+        fun coveredNumberCount(pattern: String): Long =
+            shared.coveredNumberCount(pattern)
+
+        fun coversOrCoveredBy(a: String, b: String): Overlap =
+            shared.coversOrCoveredBy(a, b)
+    }
 }

@@ -61,7 +61,7 @@ data class HashWildcardRule(
     fun matchesNow(
         number: String,
         calendar: Calendar = Calendar.getInstance(),
-        matcher: HashWildcardMatcher = HashWildcardMatcher,
+        matcher: HashWildcardMatcher = HashWildcardMatcher.shared,
     ): Boolean {
         if (!schedule.isActiveAt(calendar)) return false
         return matches(number, matcher)
@@ -75,7 +75,7 @@ data class HashWildcardRule(
      */
     fun matches(
         number: String,
-        matcher: HashWildcardMatcher = HashWildcardMatcher,
+        matcher: HashWildcardMatcher = HashWildcardMatcher.shared,
     ): Boolean =
         matcher.matchesWithVariants(pattern, number)
 }

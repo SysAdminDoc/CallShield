@@ -9,11 +9,11 @@ import com.sysadmindoc.callshield.data.SpamHeuristics
 import com.sysadmindoc.callshield.data.SpamMLScorer
 
 data class CheckerDependencies(
-    val spamHeuristics: SpamHeuristics = SpamHeuristics,
-    val smsContentAnalyzer: SmsContentAnalyzer = SmsContentAnalyzer,
-    val spamMLScorer: SpamMLScorer = SpamMLScorer,
-    val callbackDetector: CallbackDetector = CallbackDetector,
-    val smsContextChecker: SmsContextChecker = SmsContextChecker,
-    val campaignDetector: CampaignDetector = CampaignDetector,
-    val hashWildcardMatcher: HashWildcardMatcher = HashWildcardMatcher,
+    val spamHeuristics: SpamHeuristics = SpamHeuristics.shared,
+    val smsContentAnalyzer: SmsContentAnalyzer = SmsContentAnalyzer.shared,
+    val spamMLScorer: SpamMLScorer = SpamMLScorer.shared,
+    val callbackDetector: CallbackDetector = CallbackDetector.shared,
+    val smsContextChecker: SmsContextChecker = SmsContextChecker.shared,
+    val campaignDetector: CampaignDetector = CampaignDetector.shared,
+    val hashWildcardMatcher: HashWildcardMatcher = HashWildcardMatcher.shared,
 )

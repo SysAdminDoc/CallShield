@@ -3,6 +3,7 @@ package com.sysadmindoc.callshield.data
 import android.content.Context
 import android.provider.Telephony
 import java.util.Calendar
+import javax.inject.Inject
 
 /**
  * SMS Conversation Context Checker
@@ -20,7 +21,7 @@ import java.util.Calendar
  * Requires READ_SMS permission (already declared in AndroidManifest).
  * All queries are local — no network access.
  */
-object SmsContextChecker {
+class SmsContextChecker @Inject constructor() {
 
     /**
      * Returns true if the user has ever sent an SMS to this number.
@@ -109,5 +110,18 @@ object SmsContextChecker {
             digits.length >= 10 -> digits.takeLast(10)
             else -> digits
         }
+    }
+
+    companion object {
+        val shared: SmsContextChecker = SmsContextChecker()
+
+        fun hasSentMessageTo(context: Context, number: String): Boolean =
+            shared.hasSentMessageTo(context, number)
+
+        fun hasRecurringConversation(context: Context, number: String): Boolean =
+            shared.hasRecurringConversation(context, number)
+
+        fun isTrustedSender(context: Context, number: String): Boolean =
+            shared.isTrustedSender(context, number)
     }
 }

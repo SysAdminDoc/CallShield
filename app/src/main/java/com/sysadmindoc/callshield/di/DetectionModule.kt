@@ -19,31 +19,31 @@ import javax.inject.Singleton
 object DetectionModule {
     @Provides
     @Singleton
-    fun provideSpamHeuristics(): SpamHeuristics = SpamHeuristics
+    fun provideSpamHeuristics(): SpamHeuristics = SpamHeuristics.shared
 
     @Provides
     @Singleton
-    fun provideSmsContentAnalyzer(): SmsContentAnalyzer = SmsContentAnalyzer
+    fun provideSmsContentAnalyzer(): SmsContentAnalyzer = SmsContentAnalyzer.shared
 
     @Provides
     @Singleton
-    fun provideSpamMLScorer(): SpamMLScorer = SpamMLScorer
+    fun provideSpamMLScorer(): SpamMLScorer = SpamMLScorer.shared
 
     @Provides
     @Singleton
-    fun provideCallbackDetector(): CallbackDetector = CallbackDetector
+    fun provideCallbackDetector(): CallbackDetector = CallbackDetector.shared
 
     @Provides
     @Singleton
-    fun provideSmsContextChecker(): SmsContextChecker = SmsContextChecker
+    fun provideSmsContextChecker(): SmsContextChecker = SmsContextChecker.shared
 
     @Provides
     @Singleton
-    fun provideCampaignDetector(): CampaignDetector = CampaignDetector
+    fun provideCampaignDetector(): CampaignDetector = CampaignDetector.shared
 
     @Provides
     @Singleton
-    fun provideHashWildcardMatcher(): HashWildcardMatcher = HashWildcardMatcher
+    fun provideHashWildcardMatcher(): HashWildcardMatcher = HashWildcardMatcher.shared
 
     @Provides
     @Singleton

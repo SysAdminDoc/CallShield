@@ -66,15 +66,15 @@ class SpamMLScorerGbtTest {
     }
 
     private fun callScoreGbt(features: DoubleArray, trees: List<Any>, learningRate: Double): Double {
-        return scoreGbtMethod.invoke(SpamMLScorer, features, trees, learningRate) as Double
+        return scoreGbtMethod.invoke(SpamMLScorer.shared, features, trees, learningRate) as Double
     }
 
     private fun callExtractFeatures(number: String): DoubleArray {
-        return extractFeaturesMethod.invoke(SpamMLScorer, number) as DoubleArray
+        return extractFeaturesMethod.invoke(SpamMLScorer.shared, number) as DoubleArray
     }
 
     private fun sigmoid(x: Double): Double {
-        return sigmoidMethod.invoke(SpamMLScorer, x) as Double
+        return sigmoidMethod.invoke(SpamMLScorer.shared, x) as Double
     }
 
     // ─── GbtTree data class construction ─────────────────────────────
@@ -356,7 +356,7 @@ class SpamMLScorerGbtTest {
     /** Read the live ModelState's `weights` array via reflection. */
     private fun currentWeights(): DoubleArray? {
         val stateField = SpamMLScorer::class.java.getDeclaredField("state").also { it.isAccessible = true }
-        val state = stateField.get(SpamMLScorer) ?: return null
+        val state = stateField.get(SpamMLScorer.shared) ?: return null
         val weightsField = state::class.java.getDeclaredField("weights").also { it.isAccessible = true }
         return weightsField.get(state) as DoubleArray?
     }
@@ -365,9 +365,9 @@ class SpamMLScorerGbtTest {
     private fun parseAndCommit(json: String): Boolean {
         val parseModel = SpamMLScorer::class.java.getDeclaredMethod("parseModel", String::class.java)
             .also { it.isAccessible = true }
-        val parsed = parseModel.invoke(SpamMLScorer, json) ?: return false
+        val parsed = parseModel.invoke(SpamMLScorer.shared, json) ?: return false
         val stateField = SpamMLScorer::class.java.getDeclaredField("state").also { it.isAccessible = true }
-        stateField.set(SpamMLScorer, parsed)
+        stateField.set(SpamMLScorer.shared, parsed)
         return true
     }
 
