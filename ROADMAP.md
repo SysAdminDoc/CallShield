@@ -10,7 +10,7 @@ Source-cited. Every Addendum-B item maps to an entry in **Appendix — Source In
 
 ## Current State (v1.7.10)
 
-Working Android spam call/text blocker. **78 main + 35 test Kotlin files.** v1.7.10 upgrades the Compose stack to BOM 2026.05.00, resolves Compose UI/Foundation/Runtime to 1.11.1 and Material 3 to 1.4.0, refreshes locked UI classpaths across debug/release/unit-test configurations, and fixes newly enforced Compose resource-read lint by moving UI copy to `stringResource`, `pluralStringResource`, and `LocalResources`. v1.7.9 upgrades WorkManager to 2.11.2, refreshes locked background-work classpaths, and adds JVM schedule-contract coverage for sync, manual refresh, hot-list, and digest WorkRequests. v1.7.8 upgrades settings to DataStore 1.2.1, confirms there is no deprecated `EncryptedSharedPreferences`/`androidx.security` path to migrate, and moves the optional AbstractAPI enrichment key into a private no-backup DataStore with legacy public-key cleanup. v1.7.7 adds reproducible-build groundwork: Gradle dependency locking, checked-in lockfiles, a `verifyReproducibleBuildInputs` guard against wall-clock build metadata, disabled AGP VCS metadata in release APKs, APK-level metadata verification, release APK SHA256 sidecars for artifact integrity, a ZIP-entry content comparator, and a hash-comparison runbook for signed local releases versus unsigned CI artifacts. v1.7.6 hardens the network stack: AGP 8.10.1, OkHttp 5.3.2, Kotlin/KSP 2.2.21, Room 2.8.4, centralized SPKI certificate pinning for GitHub API/raw data, Cloudflare community reports, URLhaus, AbstractAPI, and caller-ID enrichment hosts, plus regression coverage for pinned-host inventory and pin format. v1.7.5 polished Statistics localization and scan feedback: localized weekday chart labels, resource-backed detection-source labels, corrected "Prefix match" copy, and consistent resource-backed call-log/SMS scan errors. v1.7.4 refined the advanced settings credential flow with masked optional API-key entry, explicit show/hide control, saved/unsaved/not-configured feedback, and clearer local-only trust copy. v1.7.3 added a premium-polish pass across Compose chrome, shared shape/typography rhythm, blocked-log recovery states, trusted-source sheet feedback, lookup/report semantics, and in-app release notes. v1.7.2 added the latest hardening layer: ASCII-only number normalization (anti-spoof), SmsContentAnalyzer/SmsReceiver 16 KB caps, WildcardRule ReDoS guard, OneShotNoticeGate LRU cap, NotificationHelper PendingIntent ID separation, CrashReporter atomic writes, and removal of text-bearing pill/oval backdrops. **620 tests total**.
+Working Android spam call/text blocker. **78 main Kotlin files, 35 JVM test files, and 5 instrumented test files.** Post-v1.7.10 work added an `AppDatabase` constructor seam to `SpamRepository` plus in-memory Room integration tests for the call and SMS checker pipelines. v1.7.10 upgrades the Compose stack to BOM 2026.05.00, resolves Compose UI/Foundation/Runtime to 1.11.1 and Material 3 to 1.4.0, refreshes locked UI classpaths across debug/release/unit-test configurations, and fixes newly enforced Compose resource-read lint by moving UI copy to `stringResource`, `pluralStringResource`, and `LocalResources`. v1.7.9 upgrades WorkManager to 2.11.2, refreshes locked background-work classpaths, and adds JVM schedule-contract coverage for sync, manual refresh, hot-list, and digest WorkRequests. v1.7.8 upgrades settings to DataStore 1.2.1, confirms there is no deprecated `EncryptedSharedPreferences`/`androidx.security` path to migrate, and moves the optional AbstractAPI enrichment key into a private no-backup DataStore with legacy public-key cleanup. v1.7.7 adds reproducible-build groundwork: Gradle dependency locking, checked-in lockfiles, a `verifyReproducibleBuildInputs` guard against wall-clock build metadata, disabled AGP VCS metadata in release APKs, APK-level metadata verification, release APK SHA256 sidecars for artifact integrity, a ZIP-entry content comparator, and a hash-comparison runbook for signed local releases versus unsigned CI artifacts. v1.7.6 hardens the network stack: AGP 8.10.1, OkHttp 5.3.2, Kotlin/KSP 2.2.21, Room 2.8.4, centralized SPKI certificate pinning for GitHub API/raw data, Cloudflare community reports, URLhaus, AbstractAPI, and caller-ID enrichment hosts, plus regression coverage for pinned-host inventory and pin format. v1.7.5 polished Statistics localization and scan feedback: localized weekday chart labels, resource-backed detection-source labels, corrected "Prefix match" copy, and consistent resource-backed call-log/SMS scan errors. v1.7.4 refined the advanced settings credential flow with masked optional API-key entry, explicit show/hide control, saved/unsaved/not-configured feedback, and clearer local-only trust copy. v1.7.3 added a premium-polish pass across Compose chrome, shared shape/typography rhythm, blocked-log recovery states, trusted-source sheet feedback, lookup/report semantics, and in-app release notes. v1.7.2 added the latest hardening layer: ASCII-only number normalization (anti-spoof), SmsContentAnalyzer/SmsReceiver 16 KB caps, WildcardRule ReDoS guard, OneShotNoticeGate LRU cap, NotificationHelper PendingIntent ID separation, CrashReporter atomic writes, and removal of text-bearing pill/oval backdrops. **620 JVM tests plus instrumented integration/UI/runtime coverage**.
 
 15-layer detection pipeline (priority-sorted `IChecker` registry), GBT v3 ML scorer (20 features, atomic ModelState, pure-Kotlin inference) with logistic-regression v2 fallback, Jetpack Compose UI on Catppuccin Mocha + AMOLED, Room 2.8.4 with explicit migrations v5+, scheduled WorkManager hot-list + weekly sync from GitHub, RCS NotificationListener, CallerIdOverlayService with first-hit-wins lookup race, SIT-tone anti-autodialer, URLhaus phishing detection, Cloudflare Worker community reporting, GitHub Actions CI on every push.
 
@@ -64,20 +64,20 @@ Any roadmap item that contradicts these is flagged inline with **⚠ philosophy 
 
 Shipped: 30 test files now exist under `app/src/test/`, covering `SpamMLScorer` (logistic + GBT), `SpamHeuristics`, `SmsContentAnalyzer`, `PhoneFormatter`, `CallbackDetector`, `BackupRestore`, `WildcardRule`, `HashWildcardMatcher`, `LogExporter`, `BlockingProfiles`, `BlockReasoning`, `CampaignDetector`, `TimeSchedule`, `PhoneNumberFuzzTest`, `JsonParsingFuzzTest`, `HotPathBenchmarkTest`, `OneShotNoticeGate`, `CrashReporter`, `DashboardStatusModel`, `Race`, plus `CallShieldScreeningServiceAutoMuteTest` and `StirShakenTrustCheckerTest` from v1.7.0.
 
-### 1.2 Integration Tests `[NOW]`
+### 1.2 Integration Tests `[WIP]`
 
 | Task | Size | Depends | Files |
 |------|------|---------|-------|
-| 1.2.1 Full `isSpam()` pipeline test with in-memory Room — exercise all 15+ layers, verify priority ordering | XL | 1.6 | `androidTest/.../SpamPipelineIntegrationTest.kt` |
-| 1.2.2 Full `isSpamSms()` pipeline test — context trust bypass, keyword rules, content-analysis order | L | 1.2.1 | `androidTest/.../SmsPipelineIntegrationTest.kt` |
-| 1.2.3 `syncFromGitHub()` mocked — verify atomic Room population via `@Transaction` | M | 1.6 | `androidTest/.../SyncIntegrationTest.kt` |
-| 1.2.4 `HotListSyncWorker` — hot_numbers, hot_ranges, spam_domains parsed and stored, per-entry error tolerance | M | 1.6 | `androidTest/.../HotListSyncTest.kt` |
+| 1.2.1 Full `isSpam()` pipeline test with in-memory Room — exercise core priority tiers and verify priority ordering | XL | `[DONE]` | `androidTest/.../data/SpamPipelineIntegrationTest.kt` |
+| 1.2.2 Full `isSpamSms()` pipeline test — context trust bypass, keyword rules, content-analysis order | L | `[DONE]` | `androidTest/.../data/SmsPipelineIntegrationTest.kt` |
+| 1.2.3 `syncFromGitHub()` mocked — verify atomic Room population via `@Transaction` | M | remote-source seam | `androidTest/.../SyncIntegrationTest.kt` |
+| 1.2.4 `HotListSyncWorker` — hot_numbers, hot_ranges, spam_domains parsed and stored, per-entry error tolerance | M | worker/source seam | `androidTest/.../HotListSyncTest.kt` |
 
-Use `Room.inMemoryDatabaseBuilder()`. Requires refactoring `AppDatabase.getInstance()` to accept a pre-built instance (post-Hilt).
+`SpamRepository` now accepts a constructor-provided `AppDatabase`, so Android integration tests can use `Room.inMemoryDatabaseBuilder()` without starting the Hilt refactor. Remaining sync tests need a mockable GitHub/hot-feed data-source seam before they can be deterministic.
 
 ### 1.3 Compose UI Tests `[WIP]`
 
-Three instrumented tests already exist (`CrashReporterInstrumentedTest`, `DashboardStatusBadgeTest`, `ThemePrimitivesTest`). Remaining:
+Five instrumented test files now exist (`CrashReporterInstrumentedTest`, `DashboardStatusBadgeTest`, `ThemePrimitivesTest`, `SpamPipelineIntegrationTest`, `SmsPipelineIntegrationTest`). Remaining:
 
 | Task | Size | Files |
 |------|------|-------|
@@ -106,7 +106,7 @@ Three instrumented tests already exist (`CrashReporterInstrumentedTest`, `Dashbo
 | 1.5.3 Define repository interfaces in domain | M | `domain/repository/*.kt` |
 | 1.5.4 Split `SpamRepository` into `SpamRepositoryImpl`, `SettingsRepository`, `SyncRepository`, `BlocklistRepository` | XL | `data/repository/*.kt` |
 
-**Critical:** integration tests in 1.2 must exist before splitting `SpamRepository`. Run after each split to verify priority ordering.
+**Critical:** the call/SMS pipeline integration tests in 1.2.1/1.2.2 now exist; add the sync/hot-list integration tests before splitting repository sync responsibilities. Run the full integration set after each split to verify priority ordering and data-refresh behavior.
 
 ### 1.6 Dependency Injection (Hilt) `[NOW]`
 
@@ -478,7 +478,7 @@ Harvested from a 30-source sweep (see Appendix). Scoped to NEW signal not alread
 
 | Phase / Track | Tasks | Status |
 |---|---|---|
-| Phase 1 — Foundation | 35 | ~50% done (1.1, 1.4, 1.7.1 shipped; 1.2, 1.6, 1.7.2-7 open) |
+| Phase 1 — Foundation | 35 | ~55% done (1.1, 1.2.1, 1.2.2, 1.4, 1.7.1 shipped; 1.2.3/1.2.4, 1.6, 1.7.2-7 open) |
 | Phase 2 — Detection Quality | 22 | 2.1, 2.6.1 shipped; 2.3 partial; rest open |
 | Phase 3 — Realtime Pipeline | 15 | open; 3.3 (bloom filter) is the next high-value tranche |
 | Phase 4 — Platform & UX | 24 | open; 4.2 + 4.6 are the next high-value tranches |

@@ -52,9 +52,12 @@ private object NoBackupPreferenceStores {
 private fun Context.noBackupDataStore(name: String): DataStore<Preferences> =
     NoBackupPreferenceStores.get(this, name)
 
-class SpamRepository(private val context: Context) {
-    private val dao: SpamDao = AppDatabase.getInstance(context).spamDao()
-    private val remote = GitHubDataSource()
+class SpamRepository(
+    private val context: Context,
+    database: AppDatabase = AppDatabase.getInstance(context),
+    private val remote: GitHubDataSource = GitHubDataSource(),
+) {
+    private val dao: SpamDao = database.spamDao()
     private val dataStore = context.dataStore
     private val privateDataStore = context.noBackupDataStore("callshield_private_prefs")
     private val syncMutex = Mutex()
