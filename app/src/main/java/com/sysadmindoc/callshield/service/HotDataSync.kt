@@ -1,10 +1,10 @@
 package com.sysadmindoc.callshield.service
 
 import android.content.Context
-import com.sysadmindoc.callshield.data.SmsContentAnalyzer
-import com.sysadmindoc.callshield.data.SpamHeuristics
 import com.sysadmindoc.callshield.data.SpamRepository
+import com.sysadmindoc.callshield.data.checker.CheckerDependencies
 import com.sysadmindoc.callshield.data.local.AppDatabase
+import com.sysadmindoc.callshield.data.local.SpamDao
 import com.sysadmindoc.callshield.data.model.HotNumber
 import com.sysadmindoc.callshield.data.model.SpamNumber
 import com.sysadmindoc.callshield.data.remote.GitHubDataSource
@@ -25,20 +25,23 @@ internal object HotDataSync {
         val resolved: Boolean,
     )
 
-    suspend fun primeBundled(context: Context) = withContext(Dispatchers.IO) {
+    suspend fun primeBundled(
+        context: Context,
+        source: HotFeedDataSource = GitHubDataSource(),
+        repo: SpamRepository = SpamRepository.getInstance(context.applicationContext),
+        dao: SpamDao = AppDatabase.getInstance(context.applicationContext).spamDao(),
+        dependencies: CheckerDependencies = CheckerDependencies(),
+    ) = withContext(Dispatchers.IO) {
         val appContext = context.applicationContext
-        val source = GitHubDataSource()
-        val repo = SpamRepository.getInstance(appContext)
-        val dao = AppDatabase.getInstance(appContext).spamDao()
 
         val bundledRanges = loadBundledHotRanges(appContext, source)
         if (bundledRanges.resolved) {
-            SpamHeuristics.updateHotRanges(sanitizeHotRanges(bundledRanges.data))
+            dependencies.spamHeuristics.updateHotRanges(sanitizeHotRanges(bundledRanges.data))
         }
 
         val bundledDomains = loadBundledSpamDomains(appContext, source)
         if (bundledDomains.resolved) {
-            SmsContentAnalyzer.updateSpamDomains(sanitizeSpamDomains(bundledDomains.data))
+            dependencies.smsContentAnalyzer.updateSpamDomains(sanitizeSpamDomains(bundledDomains.data))
         }
 
         if (dao.getCountBySource(HOT_LIST_SOURCE) == 0) {
@@ -49,13 +52,17 @@ internal object HotDataSync {
         }
     }
 
-    suspend fun refresh(context: Context): RefreshOutcome {
+    suspend fun refresh(
+        context: Context,
+        dependencies: CheckerDependencies = CheckerDependencies(),
+    ): RefreshOutcome {
         val appContext = context.applicationContext
         return refresh(
             context = appContext,
             source = GitHubDataSource(),
             repo = SpamRepository.getInstance(appContext),
             dao = AppDatabase.getInstance(appContext).spamDao(),
+            dependencies = dependencies,
         )
     }
 
@@ -63,7 +70,8 @@ internal object HotDataSync {
         context: Context,
         source: HotFeedDataSource,
         repo: SpamRepository,
-        dao: com.sysadmindoc.callshield.data.local.SpamDao,
+        dao: SpamDao,
+        dependencies: CheckerDependencies = CheckerDependencies(),
     ): RefreshOutcome = withContext(Dispatchers.IO) {
         val appContext = context.applicationContext
 
@@ -74,19 +82,19 @@ internal object HotDataSync {
 
         val hotRanges = loadHotRanges(appContext, source)
         if (hotRanges.resolved) {
-            SpamHeuristics.updateHotRanges(sanitizeHotRanges(hotRanges.data))
+            dependencies.spamHeuristics.updateHotRanges(sanitizeHotRanges(hotRanges.data))
         }
 
         val spamDomains = loadSpamDomains(appContext, source)
         if (spamDomains.resolved) {
-            SmsContentAnalyzer.updateSpamDomains(sanitizeSpamDomains(spamDomains.data))
+            dependencies.smsContentAnalyzer.updateSpamDomains(sanitizeSpamDomains(spamDomains.data))
         }
 
         RefreshOutcome(
             refreshedAnyFeed = hotList.resolved || hotRanges.resolved || spamDomains.resolved,
             hasAnyHotProtection = dao.getCountBySource(HOT_LIST_SOURCE) > 0 ||
-                SpamHeuristics.hasHotRanges() ||
-                SmsContentAnalyzer.hasSpamDomains()
+                dependencies.spamHeuristics.hasHotRanges() ||
+                dependencies.smsContentAnalyzer.hasSpamDomains()
         )
     }
 

@@ -154,7 +154,7 @@
     </file>
     <file name="src/main/java/com/sysadmindoc/callshield/CallShieldApp.kt">
         <error line="3" column="1" source="standard:import-ordering" />
-        <error line="31" column="33" source="standard:chain-method-continuation" />
+        <error line="34" column="33" source="standard:chain-method-continuation" />
     </file>
     <file name="src/main/java/com/sysadmindoc/callshield/data/BackupRestore.kt">
         <error line="3" column="1" source="standard:import-ordering" />
@@ -840,109 +840,109 @@
     </file>
     <file name="src/main/java/com/sysadmindoc/callshield/data/SpamRepository.kt">
         <error line="5" column="1" source="standard:no-wildcard-imports" />
-        <error line="10" column="1" source="standard:no-wildcard-imports" />
-        <error line="31" column="13" source="standard:function-signature" />
-        <error line="31" column="31" source="standard:function-signature" />
-        <error line="31" column="43" source="standard:function-signature" />
-        <error line="40" column="18" source="standard:trailing-comma-on-call-site" />
-        <error line="46" column="78" source="standard:function-signature" />
-        <error line="57" column="38" source="standard:multiline-expression-wrapping" />
-        <error line="61" column="38" source="standard:multiline-expression-wrapping" />
-        <error line="66" column="34" source="standard:multiline-expression-wrapping" />
-        <error line="74" column="39" source="standard:multiline-expression-wrapping" />
-        <error line="93" column="9" source="standard:spacing-between-declarations-with-comments" />
-        <error line="102" column="9" source="standard:spacing-between-declarations-with-comments" />
-        <error line="115" column="9" source="standard:spacing-between-declarations-with-comments" />
-        <error line="119" column="9" source="standard:spacing-between-declarations-with-comments" />
-        <error line="128" column="9" source="standard:spacing-between-declarations-with-comments" />
-        <error line="134" column="9" source="standard:spacing-between-declarations-with-comments" />
-        <error line="140" column="9" source="standard:spacing-between-declarations-with-comments" />
-        <error line="152" column="21" source="standard:property-naming" />
-        <error line="154" column="59" source="standard:function-expression-body" />
-        <error line="191" column="5" source="standard:blank-line-before-declaration" />
-        <error line="192" column="5" source="standard:blank-line-before-declaration" />
-        <error line="193" column="5" source="standard:blank-line-before-declaration" />
-        <error line="194" column="5" source="standard:blank-line-before-declaration" />
-        <error line="195" column="5" source="standard:blank-line-before-declaration" />
-        <error line="195" column="40" source="standard:function-signature" />
-        <error line="195" column="53" source="standard:function-signature" />
-        <error line="195" column="69" source="standard:function-signature" />
-        <error line="195" column="72" source="standard:function-signature" />
-        <error line="197" column="5" source="standard:blank-line-before-declaration" />
-        <error line="198" column="5" source="standard:blank-line-before-declaration" />
-        <error line="199" column="5" source="standard:blank-line-before-declaration" />
-        <error line="200" column="5" source="standard:blank-line-before-declaration" />
-        <error line="201" column="5" source="standard:blank-line-before-declaration" />
-        <error line="202" column="5" source="standard:blank-line-before-declaration" />
-        <error line="203" column="5" source="standard:blank-line-before-declaration" />
+        <error line="11" column="1" source="standard:no-wildcard-imports" />
+        <error line="32" column="13" source="standard:function-signature" />
+        <error line="32" column="31" source="standard:function-signature" />
+        <error line="32" column="43" source="standard:function-signature" />
+        <error line="41" column="18" source="standard:trailing-comma-on-call-site" />
+        <error line="47" column="78" source="standard:function-signature" />
+        <error line="59" column="38" source="standard:multiline-expression-wrapping" />
+        <error line="63" column="38" source="standard:multiline-expression-wrapping" />
+        <error line="69" column="34" source="standard:multiline-expression-wrapping" />
+        <error line="77" column="39" source="standard:multiline-expression-wrapping" />
+        <error line="96" column="9" source="standard:spacing-between-declarations-with-comments" />
+        <error line="105" column="9" source="standard:spacing-between-declarations-with-comments" />
+        <error line="118" column="9" source="standard:spacing-between-declarations-with-comments" />
+        <error line="122" column="9" source="standard:spacing-between-declarations-with-comments" />
+        <error line="131" column="9" source="standard:spacing-between-declarations-with-comments" />
+        <error line="137" column="9" source="standard:spacing-between-declarations-with-comments" />
+        <error line="143" column="9" source="standard:spacing-between-declarations-with-comments" />
+        <error line="155" column="21" source="standard:property-naming" />
+        <error line="162" column="27" source="standard:function-expression-body" />
         <error line="204" column="5" source="standard:blank-line-before-declaration" />
         <error line="205" column="5" source="standard:blank-line-before-declaration" />
         <error line="206" column="5" source="standard:blank-line-before-declaration" />
         <error line="207" column="5" source="standard:blank-line-before-declaration" />
         <error line="208" column="5" source="standard:blank-line-before-declaration" />
-        <error line="209" column="5" source="standard:blank-line-before-declaration" />
+        <error line="208" column="40" source="standard:function-signature" />
+        <error line="208" column="53" source="standard:function-signature" />
+        <error line="208" column="69" source="standard:function-signature" />
+        <error line="208" column="72" source="standard:function-signature" />
         <error line="210" column="5" source="standard:blank-line-before-declaration" />
         <error line="211" column="5" source="standard:blank-line-before-declaration" />
         <error line="212" column="5" source="standard:blank-line-before-declaration" />
         <error line="213" column="5" source="standard:blank-line-before-declaration" />
         <error line="214" column="5" source="standard:blank-line-before-declaration" />
         <error line="215" column="5" source="standard:blank-line-before-declaration" />
+        <error line="216" column="5" source="standard:blank-line-before-declaration" />
+        <error line="217" column="5" source="standard:blank-line-before-declaration" />
+        <error line="218" column="5" source="standard:blank-line-before-declaration" />
+        <error line="219" column="5" source="standard:blank-line-before-declaration" />
+        <error line="220" column="5" source="standard:blank-line-before-declaration" />
+        <error line="221" column="5" source="standard:blank-line-before-declaration" />
+        <error line="222" column="5" source="standard:blank-line-before-declaration" />
+        <error line="223" column="5" source="standard:blank-line-before-declaration" />
+        <error line="224" column="5" source="standard:blank-line-before-declaration" />
         <error line="225" column="5" source="standard:blank-line-before-declaration" />
-        <error line="225" column="5" source="standard:no-consecutive-comments" />
-        <error line="225" column="5" source="standard:spacing-between-declarations-with-comments" />
-        <error line="253" column="5" source="standard:blank-line-before-declaration" />
-        <error line="253" column="5" source="standard:no-consecutive-comments" />
-        <error line="253" column="5" source="standard:spacing-between-declarations-with-comments" />
-        <error line="268" column="5" source="standard:blank-line-before-declaration" />
-        <error line="268" column="5" source="standard:no-consecutive-comments" />
-        <error line="268" column="5" source="standard:spacing-between-declarations-with-comments" />
-        <error line="295" column="36" source="standard:function-signature" />
-        <error line="295" column="46" source="standard:function-signature" />
-        <error line="295" column="62" source="standard:function-signature" />
-        <error line="308" column="40" source="standard:function-signature" />
-        <error line="308" column="50" source="standard:function-signature" />
-        <error line="308" column="66" source="standard:function-signature" />
-        <error line="308" column="69" source="standard:function-signature" />
-        <error line="321" column="5" source="standard:blank-line-before-declaration" />
-        <error line="322" column="5" source="standard:blank-line-before-declaration" />
-        <error line="323" column="5" source="standard:blank-line-before-declaration" />
-        <error line="324" column="5" source="standard:blank-line-before-declaration" />
-        <error line="325" column="5" source="standard:blank-line-before-declaration" />
-        <error line="325" column="32" source="standard:function-signature" />
-        <error line="325" column="45" source="standard:function-signature" />
-        <error line="325" column="54" source="standard:function-signature" />
-        <error line="325" column="68" source="standard:function-signature" />
-        <error line="327" column="5" source="standard:blank-line-before-declaration" />
-        <error line="328" column="5" source="standard:blank-line-before-declaration" />
-        <error line="329" column="5" source="standard:blank-line-before-declaration" />
-        <error line="330" column="5" source="standard:blank-line-before-declaration" />
-        <error line="331" column="5" source="standard:blank-line-before-declaration" />
-        <error line="332" column="5" source="standard:blank-line-before-declaration" />
-        <error line="352" column="39" source="standard:function-signature" />
-        <error line="352" column="49" source="standard:function-signature" />
-        <error line="352" column="67" source="standard:function-signature" />
-        <error line="352" column="70" source="standard:function-signature" />
-        <error line="372" column="5" source="standard:blank-line-before-declaration" />
-        <error line="372" column="35" source="standard:function-signature" />
-        <error line="372" column="45" source="standard:function-signature" />
-        <error line="372" column="61" source="standard:function-signature" />
-        <error line="404" column="19" source="standard:multiline-expression-wrapping" />
-        <error line="414" column="18" source="standard:multiline-expression-wrapping" />
-        <error line="429" column="54" source="standard:function-signature" />
-        <error line="438" column="65" source="standard:multiline-expression-wrapping" />
-        <error line="438" column="65" source="standard:function-signature" />
-        <error line="450" column="21" source="standard:function-expression-body" />
-        <error line="464" column="80" source="standard:trailing-comma-on-call-site" />
-        <error line="473" column="21" source="standard:function-expression-body" />
-        <error line="476" column="21" source="standard:when-entry-bracing" />
-        <error line="477" column="1" source="standard:blank-line-between-when-conditions" />
-        <error line="486" column="63" source="standard:trailing-comma-on-call-site" />
-        <error line="496" column="5" source="standard:blank-line-before-declaration" />
-        <error line="496" column="23" source="standard:class-signature" />
-        <error line="496" column="45" source="standard:class-signature" />
-        <error line="497" column="5" source="standard:blank-line-before-declaration" />
-        <error line="497" column="23" source="standard:class-signature" />
-        <error line="497" column="45" source="standard:class-signature" />
+        <error line="226" column="5" source="standard:blank-line-before-declaration" />
+        <error line="227" column="5" source="standard:blank-line-before-declaration" />
+        <error line="228" column="5" source="standard:blank-line-before-declaration" />
+        <error line="238" column="5" source="standard:blank-line-before-declaration" />
+        <error line="238" column="5" source="standard:no-consecutive-comments" />
+        <error line="238" column="5" source="standard:spacing-between-declarations-with-comments" />
+        <error line="266" column="5" source="standard:blank-line-before-declaration" />
+        <error line="266" column="5" source="standard:no-consecutive-comments" />
+        <error line="266" column="5" source="standard:spacing-between-declarations-with-comments" />
+        <error line="281" column="5" source="standard:blank-line-before-declaration" />
+        <error line="281" column="5" source="standard:no-consecutive-comments" />
+        <error line="281" column="5" source="standard:spacing-between-declarations-with-comments" />
+        <error line="308" column="36" source="standard:function-signature" />
+        <error line="308" column="46" source="standard:function-signature" />
+        <error line="308" column="62" source="standard:function-signature" />
+        <error line="321" column="40" source="standard:function-signature" />
+        <error line="321" column="50" source="standard:function-signature" />
+        <error line="321" column="66" source="standard:function-signature" />
+        <error line="321" column="69" source="standard:function-signature" />
+        <error line="334" column="5" source="standard:blank-line-before-declaration" />
+        <error line="335" column="5" source="standard:blank-line-before-declaration" />
+        <error line="336" column="5" source="standard:blank-line-before-declaration" />
+        <error line="337" column="5" source="standard:blank-line-before-declaration" />
+        <error line="338" column="5" source="standard:blank-line-before-declaration" />
+        <error line="338" column="32" source="standard:function-signature" />
+        <error line="338" column="45" source="standard:function-signature" />
+        <error line="338" column="54" source="standard:function-signature" />
+        <error line="338" column="68" source="standard:function-signature" />
+        <error line="340" column="5" source="standard:blank-line-before-declaration" />
+        <error line="341" column="5" source="standard:blank-line-before-declaration" />
+        <error line="342" column="5" source="standard:blank-line-before-declaration" />
+        <error line="343" column="5" source="standard:blank-line-before-declaration" />
+        <error line="344" column="5" source="standard:blank-line-before-declaration" />
+        <error line="345" column="5" source="standard:blank-line-before-declaration" />
+        <error line="365" column="39" source="standard:function-signature" />
+        <error line="365" column="49" source="standard:function-signature" />
+        <error line="365" column="67" source="standard:function-signature" />
+        <error line="365" column="70" source="standard:function-signature" />
+        <error line="385" column="5" source="standard:blank-line-before-declaration" />
+        <error line="385" column="35" source="standard:function-signature" />
+        <error line="385" column="45" source="standard:function-signature" />
+        <error line="385" column="61" source="standard:function-signature" />
+        <error line="417" column="19" source="standard:multiline-expression-wrapping" />
+        <error line="427" column="18" source="standard:multiline-expression-wrapping" />
+        <error line="442" column="54" source="standard:function-signature" />
+        <error line="451" column="65" source="standard:multiline-expression-wrapping" />
+        <error line="451" column="65" source="standard:function-signature" />
+        <error line="463" column="21" source="standard:function-expression-body" />
+        <error line="477" column="80" source="standard:trailing-comma-on-call-site" />
+        <error line="486" column="21" source="standard:function-expression-body" />
+        <error line="489" column="21" source="standard:when-entry-bracing" />
+        <error line="490" column="1" source="standard:blank-line-between-when-conditions" />
+        <error line="499" column="63" source="standard:trailing-comma-on-call-site" />
+        <error line="509" column="5" source="standard:blank-line-before-declaration" />
+        <error line="509" column="23" source="standard:class-signature" />
+        <error line="509" column="45" source="standard:class-signature" />
+        <error line="510" column="5" source="standard:blank-line-before-declaration" />
+        <error line="510" column="23" source="standard:class-signature" />
+        <error line="510" column="45" source="standard:class-signature" />
     </file>
     <file name="src/main/java/com/sysadmindoc/callshield/data/SpamSharer.kt">
         <error line="10" column="1" source="standard:no-empty-first-line-in-class-body" />
@@ -1232,130 +1232,120 @@
         <error line="152" column="69" source="standard:argument-list-wrapping" />
     </file>
     <file name="src/main/java/com/sysadmindoc/callshield/data/checker/Checkers.kt">
-        <error line="26" column="33" source="standard:class-signature" />
-        <error line="26" column="69" source="standard:class-signature" />
-        <error line="41" column="40" source="standard:class-signature" />
-        <error line="41" column="71" source="standard:class-signature" />
-        <error line="45" column="65" source="standard:function-signature" />
-        <error line="48" column="65" source="standard:function-expression-body" />
-        <error line="51" column="11" source="standard:if-else-wrapping" />
-        <error line="51" column="16" source="standard:if-else-bracing" />
-        <error line="51" column="16" source="standard:if-else-wrapping" />
-        <error line="51" column="16" source="standard:multiline-if-else" />
-        <error line="91" column="66" source="standard:function-signature" />
-        <error line="104" column="36" source="standard:function-signature" />
-        <error line="104" column="61" source="standard:function-signature" />
-        <error line="104" column="85" source="standard:function-signature" />
-        <error line="104" column="97" source="standard:function-signature" />
-        <error line="111" column="15" source="standard:if-else-wrapping" />
-        <error line="111" column="20" source="standard:if-else-bracing" />
-        <error line="111" column="20" source="standard:if-else-wrapping" />
-        <error line="111" column="20" source="standard:multiline-if-else" />
-        <error line="136" column="65" source="standard:function-signature" />
-        <error line="146" column="73" source="standard:trailing-comma-on-call-site" />
-        <error line="148" column="11" source="standard:if-else-wrapping" />
-        <error line="148" column="16" source="standard:if-else-bracing" />
-        <error line="148" column="16" source="standard:if-else-wrapping" />
-        <error line="148" column="16" source="standard:multiline-if-else" />
-        <error line="162" column="39" source="standard:class-signature" />
-        <error line="162" column="70" source="standard:class-signature" />
-        <error line="166" column="65" source="standard:function-expression-body" />
-        <error line="171" column="62" source="standard:trailing-comma-on-call-site" />
-        <error line="173" column="11" source="standard:if-else-wrapping" />
-        <error line="173" column="16" source="standard:if-else-bracing" />
-        <error line="173" column="16" source="standard:if-else-wrapping" />
-        <error line="173" column="16" source="standard:multiline-if-else" />
-        <error line="181" column="32" source="standard:class-signature" />
-        <error line="181" column="68" source="standard:class-signature" />
-        <error line="196" column="30" source="standard:class-signature" />
-        <error line="196" column="66" source="standard:class-signature" />
-        <error line="215" column="32" source="standard:class-signature" />
-        <error line="215" column="68" source="standard:class-signature" />
-        <error line="241" column="36" source="standard:class-signature" />
-        <error line="241" column="72" source="standard:class-signature" />
-        <error line="264" column="38" source="standard:class-signature" />
-        <error line="264" column="69" source="standard:class-signature" />
-        <error line="268" column="65" source="standard:function-expression-body" />
-        <error line="271" column="11" source="standard:if-else-wrapping" />
-        <error line="271" column="16" source="standard:if-else-bracing" />
-        <error line="271" column="16" source="standard:if-else-wrapping" />
-        <error line="271" column="16" source="standard:multiline-if-else" />
-        <error line="275" column="38" source="standard:class-signature" />
-        <error line="275" column="69" source="standard:class-signature" />
-        <error line="279" column="65" source="standard:function-expression-body" />
-        <error line="282" column="11" source="standard:if-else-wrapping" />
-        <error line="282" column="16" source="standard:if-else-bracing" />
-        <error line="282" column="16" source="standard:if-else-wrapping" />
-        <error line="282" column="16" source="standard:multiline-if-else" />
-        <error line="303" column="21" source="standard:no-multi-spaces" />
-        <error line="315" column="65" source="standard:function-signature" />
-        <error line="321" column="39" source="standard:no-multi-spaces" />
-        <error line="324" column="24" source="standard:multiline-expression-wrapping" />
-        <error line="324" column="41" source="standard:if-else-wrapping" />
-        <error line="324" column="41" source="standard:multiline-if-else" />
-        <error line="325" column="1" source="standard:indent" />
-        <error line="325" column="29" source="standard:if-else-wrapping" />
-        <error line="325" column="29" source="standard:multiline-if-else" />
-        <error line="325" column="55" source="standard:no-multi-spaces" />
-        <error line="329" column="11" source="standard:if-else-wrapping" />
-        <error line="329" column="16" source="standard:if-else-bracing" />
-        <error line="329" column="16" source="standard:if-else-wrapping" />
-        <error line="329" column="16" source="standard:multiline-if-else" />
-        <error line="333" column="43" source="standard:class-signature" />
-        <error line="333" column="79" source="standard:class-signature" />
-        <error line="337" column="65" source="standard:function-signature" />
-        <error line="341" column="40" source="standard:no-multi-spaces" />
-        <error line="346" column="11" source="standard:if-else-wrapping" />
-        <error line="346" column="16" source="standard:if-else-bracing" />
-        <error line="346" column="16" source="standard:if-else-wrapping" />
-        <error line="346" column="16" source="standard:multiline-if-else" />
-        <error line="357" column="65" source="standard:function-signature" />
-        <error line="364" column="23" source="standard:multiline-expression-wrapping" />
-        <error line="368" column="83" source="standard:trailing-comma-on-call-site" />
-        <error line="379" column="43" source="standard:trailing-comma-on-call-site" />
-        <error line="386" column="29" source="standard:argument-list-wrapping" />
-        <error line="386" column="41" source="standard:argument-list-wrapping" />
-        <error line="387" column="62" source="standard:trailing-comma-on-call-site" />
-        <error line="393" column="75" source="standard:multiline-expression-wrapping" />
-        <error line="393" column="75" source="standard:function-signature" />
-        <error line="404" column="37" source="standard:function-signature" />
-        <error line="404" column="51" source="standard:function-signature" />
-        <error line="404" column="67" source="standard:function-signature" />
-        <error line="404" column="84" source="standard:function-signature" />
-        <error line="404" column="98" source="standard:function-signature" />
-        <error line="406" column="26" source="standard:multiline-expression-wrapping" />
-        <error line="412" column="71" source="standard:trailing-comma-on-call-site" />
-        <error line="416" column="33" source="standard:try-catch-finally-spacing" />
-        <error line="416" column="63" source="standard:try-catch-finally-spacing" />
-        <error line="424" column="65" source="standard:function-expression-body" />
-        <error line="430" column="32" source="standard:trailing-comma-on-call-site" />
-        <error line="432" column="11" source="standard:if-else-wrapping" />
-        <error line="432" column="16" source="standard:if-else-bracing" />
-        <error line="432" column="16" source="standard:if-else-wrapping" />
-        <error line="432" column="16" source="standard:multiline-if-else" />
-        <error line="440" column="65" source="standard:function-signature" />
-        <error line="450" column="48" source="standard:trailing-comma-on-call-site" />
-        <error line="452" column="11" source="standard:if-else-wrapping" />
-        <error line="452" column="16" source="standard:if-else-bracing" />
-        <error line="452" column="16" source="standard:if-else-wrapping" />
-        <error line="452" column="16" source="standard:multiline-if-else" />
-        <error line="464" column="16" source="standard:class-naming" />
-        <error line="464" column="42" source="standard:class-signature" />
-        <error line="464" column="73" source="standard:class-signature" />
-        <error line="465" column="63" source="standard:no-multi-spaces" />
-        <error line="468" column="65" source="standard:function-expression-body" />
-        <error line="471" column="11" source="standard:if-else-wrapping" />
-        <error line="471" column="16" source="standard:if-else-bracing" />
-        <error line="471" column="16" source="standard:if-else-wrapping" />
-        <error line="471" column="16" source="standard:multiline-if-else" />
-        <error line="475" column="34" source="standard:class-signature" />
-        <error line="475" column="70" source="standard:class-signature" />
-        <error line="497" column="65" source="standard:function-signature" />
-        <error line="510" column="42" source="standard:trailing-comma-on-call-site" />
-        <error line="512" column="11" source="standard:if-else-wrapping" />
-        <error line="512" column="16" source="standard:if-else-bracing" />
-        <error line="512" column="16" source="standard:if-else-wrapping" />
-        <error line="512" column="16" source="standard:multiline-if-else" />
+        <error line="27" column="33" source="standard:class-signature" />
+        <error line="27" column="69" source="standard:class-signature" />
+        <error line="49" column="65" source="standard:function-signature" />
+        <error line="52" column="65" source="standard:function-expression-body" />
+        <error line="55" column="11" source="standard:if-else-wrapping" />
+        <error line="55" column="16" source="standard:if-else-bracing" />
+        <error line="55" column="16" source="standard:if-else-wrapping" />
+        <error line="55" column="16" source="standard:multiline-if-else" />
+        <error line="95" column="66" source="standard:function-signature" />
+        <error line="108" column="36" source="standard:function-signature" />
+        <error line="108" column="61" source="standard:function-signature" />
+        <error line="108" column="85" source="standard:function-signature" />
+        <error line="108" column="97" source="standard:function-signature" />
+        <error line="115" column="15" source="standard:if-else-wrapping" />
+        <error line="115" column="20" source="standard:if-else-bracing" />
+        <error line="115" column="20" source="standard:if-else-wrapping" />
+        <error line="115" column="20" source="standard:multiline-if-else" />
+        <error line="140" column="65" source="standard:function-signature" />
+        <error line="150" column="73" source="standard:trailing-comma-on-call-site" />
+        <error line="152" column="11" source="standard:if-else-wrapping" />
+        <error line="152" column="16" source="standard:if-else-bracing" />
+        <error line="152" column="16" source="standard:if-else-wrapping" />
+        <error line="152" column="16" source="standard:multiline-if-else" />
+        <error line="166" column="39" source="standard:class-signature" />
+        <error line="166" column="70" source="standard:class-signature" />
+        <error line="170" column="65" source="standard:function-expression-body" />
+        <error line="175" column="62" source="standard:trailing-comma-on-call-site" />
+        <error line="177" column="11" source="standard:if-else-wrapping" />
+        <error line="177" column="16" source="standard:if-else-bracing" />
+        <error line="177" column="16" source="standard:if-else-wrapping" />
+        <error line="177" column="16" source="standard:multiline-if-else" />
+        <error line="185" column="32" source="standard:class-signature" />
+        <error line="185" column="68" source="standard:class-signature" />
+        <error line="200" column="30" source="standard:class-signature" />
+        <error line="200" column="66" source="standard:class-signature" />
+        <error line="219" column="32" source="standard:class-signature" />
+        <error line="219" column="68" source="standard:class-signature" />
+        <error line="278" column="65" source="standard:function-expression-body" />
+        <error line="281" column="11" source="standard:if-else-wrapping" />
+        <error line="281" column="16" source="standard:if-else-bracing" />
+        <error line="281" column="16" source="standard:if-else-wrapping" />
+        <error line="281" column="16" source="standard:multiline-if-else" />
+        <error line="292" column="65" source="standard:function-expression-body" />
+        <error line="295" column="11" source="standard:if-else-wrapping" />
+        <error line="295" column="16" source="standard:if-else-bracing" />
+        <error line="295" column="16" source="standard:if-else-wrapping" />
+        <error line="295" column="16" source="standard:multiline-if-else" />
+        <error line="318" column="21" source="standard:no-multi-spaces" />
+        <error line="330" column="65" source="standard:function-signature" />
+        <error line="336" column="39" source="standard:no-multi-spaces" />
+        <error line="339" column="24" source="standard:multiline-expression-wrapping" />
+        <error line="339" column="41" source="standard:if-else-wrapping" />
+        <error line="339" column="41" source="standard:multiline-if-else" />
+        <error line="340" column="1" source="standard:indent" />
+        <error line="340" column="29" source="standard:if-else-wrapping" />
+        <error line="340" column="29" source="standard:multiline-if-else" />
+        <error line="340" column="55" source="standard:no-multi-spaces" />
+        <error line="344" column="11" source="standard:if-else-wrapping" />
+        <error line="344" column="16" source="standard:if-else-bracing" />
+        <error line="344" column="16" source="standard:if-else-wrapping" />
+        <error line="344" column="16" source="standard:multiline-if-else" />
+        <error line="348" column="43" source="standard:class-signature" />
+        <error line="348" column="79" source="standard:class-signature" />
+        <error line="352" column="65" source="standard:function-signature" />
+        <error line="356" column="40" source="standard:no-multi-spaces" />
+        <error line="361" column="11" source="standard:if-else-wrapping" />
+        <error line="361" column="16" source="standard:if-else-bracing" />
+        <error line="361" column="16" source="standard:if-else-wrapping" />
+        <error line="361" column="16" source="standard:multiline-if-else" />
+        <error line="373" column="65" source="standard:function-signature" />
+        <error line="380" column="23" source="standard:multiline-expression-wrapping" />
+        <error line="384" column="83" source="standard:trailing-comma-on-call-site" />
+        <error line="395" column="43" source="standard:trailing-comma-on-call-site" />
+        <error line="402" column="29" source="standard:argument-list-wrapping" />
+        <error line="402" column="41" source="standard:argument-list-wrapping" />
+        <error line="403" column="62" source="standard:trailing-comma-on-call-site" />
+        <error line="409" column="75" source="standard:multiline-expression-wrapping" />
+        <error line="409" column="75" source="standard:function-signature" />
+        <error line="420" column="37" source="standard:function-signature" />
+        <error line="420" column="51" source="standard:function-signature" />
+        <error line="420" column="67" source="standard:function-signature" />
+        <error line="420" column="84" source="standard:function-signature" />
+        <error line="420" column="98" source="standard:function-signature" />
+        <error line="422" column="26" source="standard:multiline-expression-wrapping" />
+        <error line="428" column="71" source="standard:trailing-comma-on-call-site" />
+        <error line="432" column="33" source="standard:try-catch-finally-spacing" />
+        <error line="432" column="63" source="standard:try-catch-finally-spacing" />
+        <error line="442" column="65" source="standard:function-expression-body" />
+        <error line="448" column="32" source="standard:trailing-comma-on-call-site" />
+        <error line="450" column="11" source="standard:if-else-wrapping" />
+        <error line="450" column="16" source="standard:if-else-bracing" />
+        <error line="450" column="16" source="standard:if-else-wrapping" />
+        <error line="450" column="16" source="standard:multiline-if-else" />
+        <error line="460" column="65" source="standard:function-signature" />
+        <error line="470" column="48" source="standard:trailing-comma-on-call-site" />
+        <error line="472" column="11" source="standard:if-else-wrapping" />
+        <error line="472" column="16" source="standard:if-else-bracing" />
+        <error line="472" column="16" source="standard:if-else-wrapping" />
+        <error line="472" column="16" source="standard:multiline-if-else" />
+        <error line="484" column="16" source="standard:class-naming" />
+        <error line="488" column="63" source="standard:no-multi-spaces" />
+        <error line="491" column="65" source="standard:function-expression-body" />
+        <error line="494" column="11" source="standard:if-else-wrapping" />
+        <error line="494" column="16" source="standard:if-else-bracing" />
+        <error line="494" column="16" source="standard:if-else-wrapping" />
+        <error line="494" column="16" source="standard:multiline-if-else" />
+        <error line="498" column="34" source="standard:class-signature" />
+        <error line="498" column="70" source="standard:class-signature" />
+        <error line="522" column="65" source="standard:function-signature" />
+        <error line="535" column="42" source="standard:trailing-comma-on-call-site" />
+        <error line="537" column="11" source="standard:if-else-wrapping" />
+        <error line="537" column="16" source="standard:if-else-bracing" />
+        <error line="537" column="16" source="standard:if-else-wrapping" />
+        <error line="537" column="16" source="standard:multiline-if-else" />
     </file>
     <file name="src/main/java/com/sysadmindoc/callshield/data/checker/IChecker.kt">
         <error line="132" column="19" source="standard:function-signature" />
@@ -1415,14 +1405,6 @@
         <error line="203" column="53" source="standard:function-signature" />
         <error line="203" column="70" source="standard:function-signature" />
         <error line="213" column="26" source="standard:multiline-expression-wrapping" />
-        <error line="235" column="24" source="standard:function-signature" />
-        <error line="235" column="50" source="standard:function-signature" />
-        <error line="235" column="69" source="standard:function-signature" />
-        <error line="248" column="37" source="standard:no-multi-spaces" />
-        <error line="249" column="44" source="standard:no-multi-spaces" />
-        <error line="258" column="28" source="standard:function-signature" />
-        <error line="258" column="54" source="standard:function-signature" />
-        <error line="258" column="73" source="standard:function-signature" />
     </file>
     <file name="src/main/java/com/sysadmindoc/callshield/data/checker/PushAlertChecker.kt">
         <error line="49" column="65" source="standard:function-signature" />
@@ -1487,10 +1469,7 @@
     <file name="src/main/java/com/sysadmindoc/callshield/data/model/HashWildcardRule.kt">
         <error line="41" column="5" source="standard:no-consecutive-comments" />
         <error line="50" column="17" source="standard:multiline-expression-wrapping" />
-        <error line="61" column="20" source="standard:function-signature" />
-        <error line="61" column="36" source="standard:function-signature" />
-        <error line="61" column="79" source="standard:function-signature" />
-        <error line="72" column="43" source="standard:function-signature" />
+        <error line="79" column="17" source="standard:function-signature" />
     </file>
     <file name="src/main/java/com/sysadmindoc/callshield/data/model/SmsKeywordRule.kt">
         <error line="18" column="58" source="standard:trailing-comma-on-call-site" />
@@ -1857,24 +1836,24 @@
         <error line="134" column="54" source="standard:function-signature" />
     </file>
     <file name="src/main/java/com/sysadmindoc/callshield/data/repository/SpamRepositoryImpl.kt">
-        <error line="31" column="1" source="standard:spacing-between-declarations-with-annotations" />
-        <error line="32" column="1" source="standard:spacing-between-declarations-with-annotations" />
         <error line="33" column="1" source="standard:spacing-between-declarations-with-annotations" />
-        <error line="58" column="91" source="standard:function-signature" />
-        <error line="61" column="81" source="standard:function-signature" />
-        <error line="64" column="73" source="standard:function-signature" />
-        <error line="67" column="82" source="standard:function-signature" />
-        <error line="70" column="83" source="standard:function-signature" />
-        <error line="73" column="90" source="standard:function-signature" />
-        <error line="76" column="58" source="standard:function-signature" />
-        <error line="76" column="74" source="standard:function-signature" />
-        <error line="76" column="85" source="standard:function-signature" />
-        <error line="76" column="93" source="standard:function-signature" />
-        <error line="79" column="91" source="standard:function-signature" />
-        <error line="96" column="19" source="standard:multiline-expression-wrapping" />
-        <error line="105" column="23" source="standard:multiline-expression-wrapping" />
-        <error line="123" column="19" source="standard:multiline-expression-wrapping" />
-        <error line="130" column="23" source="standard:multiline-expression-wrapping" />
+        <error line="34" column="1" source="standard:spacing-between-declarations-with-annotations" />
+        <error line="35" column="1" source="standard:spacing-between-declarations-with-annotations" />
+        <error line="60" column="91" source="standard:function-signature" />
+        <error line="63" column="81" source="standard:function-signature" />
+        <error line="66" column="73" source="standard:function-signature" />
+        <error line="69" column="82" source="standard:function-signature" />
+        <error line="72" column="83" source="standard:function-signature" />
+        <error line="75" column="90" source="standard:function-signature" />
+        <error line="78" column="58" source="standard:function-signature" />
+        <error line="78" column="74" source="standard:function-signature" />
+        <error line="78" column="85" source="standard:function-signature" />
+        <error line="78" column="93" source="standard:function-signature" />
+        <error line="81" column="91" source="standard:function-signature" />
+        <error line="102" column="19" source="standard:multiline-expression-wrapping" />
+        <error line="111" column="23" source="standard:multiline-expression-wrapping" />
+        <error line="129" column="19" source="standard:multiline-expression-wrapping" />
+        <error line="136" column="23" source="standard:multiline-expression-wrapping" />
     </file>
     <file name="src/main/java/com/sysadmindoc/callshield/data/repository/SyncRepository.kt">
         <error line="36" column="70" source="standard:multiline-expression-wrapping" />
@@ -2000,26 +1979,26 @@
         <error line="85" column="35" source="standard:trailing-comma-on-call-site" />
     </file>
     <file name="src/main/java/com/sysadmindoc/callshield/service/CallShieldScreeningService.kt">
-        <error line="74" column="23" source="standard:if-else-wrapping" />
-        <error line="74" column="28" source="standard:if-else-bracing" />
-        <error line="74" column="28" source="standard:if-else-wrapping" />
-        <error line="74" column="28" source="standard:multiline-if-else" />
-        <error line="77" column="30" source="standard:multiline-expression-wrapping" />
-        <error line="96" column="42" source="standard:multiline-expression-wrapping" />
-        <error line="102" column="49" source="standard:try-catch-finally-spacing" />
-        <error line="102" column="49" source="standard:try-catch-finally-spacing" />
-        <error line="123" column="22" source="standard:try-catch-finally-spacing" />
-        <error line="123" column="23" source="standard:statement-wrapping" />
-        <error line="123" column="49" source="standard:statement-wrapping" />
-        <error line="123" column="49" source="standard:try-catch-finally-spacing" />
-        <error line="123" column="73" source="standard:try-catch-finally-spacing" />
-        <error line="123" column="73" source="standard:try-catch-finally-spacing" />
-        <error line="146" column="37" source="standard:try-catch-finally-spacing" />
-        <error line="146" column="38" source="standard:try-catch-finally-spacing" />
-        <error line="177" column="25" source="standard:chain-method-continuation" />
-        <error line="183" column="25" source="standard:chain-method-continuation" />
-        <error line="222" column="24" source="standard:multiline-expression-wrapping" />
-        <error line="222" column="36" source="standard:chain-method-continuation" />
+        <error line="77" column="23" source="standard:if-else-wrapping" />
+        <error line="77" column="28" source="standard:if-else-bracing" />
+        <error line="77" column="28" source="standard:if-else-wrapping" />
+        <error line="77" column="28" source="standard:multiline-if-else" />
+        <error line="80" column="30" source="standard:multiline-expression-wrapping" />
+        <error line="99" column="42" source="standard:multiline-expression-wrapping" />
+        <error line="105" column="49" source="standard:try-catch-finally-spacing" />
+        <error line="105" column="49" source="standard:try-catch-finally-spacing" />
+        <error line="126" column="22" source="standard:try-catch-finally-spacing" />
+        <error line="126" column="23" source="standard:statement-wrapping" />
+        <error line="126" column="49" source="standard:statement-wrapping" />
+        <error line="126" column="49" source="standard:try-catch-finally-spacing" />
+        <error line="126" column="73" source="standard:try-catch-finally-spacing" />
+        <error line="126" column="73" source="standard:try-catch-finally-spacing" />
+        <error line="149" column="37" source="standard:try-catch-finally-spacing" />
+        <error line="149" column="38" source="standard:try-catch-finally-spacing" />
+        <error line="180" column="25" source="standard:chain-method-continuation" />
+        <error line="186" column="25" source="standard:chain-method-continuation" />
+        <error line="225" column="24" source="standard:multiline-expression-wrapping" />
+        <error line="225" column="36" source="standard:chain-method-continuation" />
     </file>
     <file name="src/main/java/com/sysadmindoc/callshield/service/CallShieldTileService.kt">
         <error line="6" column="1" source="standard:no-wildcard-imports" />
@@ -2229,50 +2208,48 @@
         <error line="89" column="34" source="standard:trailing-comma-on-call-site" />
     </file>
     <file name="src/main/java/com/sysadmindoc/callshield/service/HotDataSync.kt">
-        <error line="28" column="50" source="standard:multiline-expression-wrapping" />
-        <error line="28" column="50" source="standard:function-signature" />
-        <error line="67" column="25" source="standard:multiline-expression-wrapping" />
-        <error line="67" column="25" source="standard:function-signature" />
-        <error line="87" column="35" source="standard:multiline-expression-wrapping" />
-        <error line="89" column="52" source="standard:trailing-comma-on-call-site" />
-        <error line="93" column="37" source="standard:function-signature" />
-        <error line="93" column="55" source="standard:function-signature" />
-        <error line="93" column="80" source="standard:function-signature" />
-        <error line="101" column="39" source="standard:function-signature" />
-        <error line="101" column="57" source="standard:function-signature" />
-        <error line="101" column="82" source="standard:function-signature" />
-        <error line="109" column="41" source="standard:function-signature" />
-        <error line="109" column="59" source="standard:function-signature" />
-        <error line="109" column="84" source="standard:function-signature" />
-        <error line="117" column="36" source="standard:function-signature" />
-        <error line="117" column="54" source="standard:function-signature" />
-        <error line="117" column="79" source="standard:function-signature" />
-        <error line="118" column="23" source="standard:multiline-expression-wrapping" />
-        <error line="118" column="39" source="standard:chain-method-continuation" />
-        <error line="123" column="38" source="standard:function-signature" />
-        <error line="123" column="56" source="standard:function-signature" />
-        <error line="123" column="81" source="standard:function-signature" />
-        <error line="124" column="23" source="standard:multiline-expression-wrapping" />
-        <error line="124" column="39" source="standard:chain-method-continuation" />
-        <error line="129" column="40" source="standard:function-signature" />
-        <error line="129" column="58" source="standard:function-signature" />
-        <error line="129" column="83" source="standard:function-signature" />
-        <error line="130" column="23" source="standard:multiline-expression-wrapping" />
-        <error line="130" column="39" source="standard:chain-method-continuation" />
-        <error line="152" column="45" source="standard:trailing-comma-on-call-site" />
-        <error line="158" column="78" source="standard:function-expression-body" />
-        <error line="167" column="81" source="standard:function-expression-body" />
-        <error line="171" column="23" source="standard:chain-method-continuation" />
-        <error line="181" column="13" source="standard:chain-method-continuation" />
+        <error line="75" column="25" source="standard:multiline-expression-wrapping" />
+        <error line="75" column="25" source="standard:function-signature" />
+        <error line="95" column="35" source="standard:multiline-expression-wrapping" />
+        <error line="97" column="65" source="standard:trailing-comma-on-call-site" />
+        <error line="101" column="37" source="standard:function-signature" />
+        <error line="101" column="55" source="standard:function-signature" />
+        <error line="101" column="80" source="standard:function-signature" />
+        <error line="109" column="39" source="standard:function-signature" />
+        <error line="109" column="57" source="standard:function-signature" />
+        <error line="109" column="82" source="standard:function-signature" />
+        <error line="117" column="41" source="standard:function-signature" />
+        <error line="117" column="59" source="standard:function-signature" />
+        <error line="117" column="84" source="standard:function-signature" />
+        <error line="125" column="36" source="standard:function-signature" />
+        <error line="125" column="54" source="standard:function-signature" />
+        <error line="125" column="79" source="standard:function-signature" />
+        <error line="126" column="23" source="standard:multiline-expression-wrapping" />
+        <error line="126" column="39" source="standard:chain-method-continuation" />
+        <error line="131" column="38" source="standard:function-signature" />
+        <error line="131" column="56" source="standard:function-signature" />
+        <error line="131" column="81" source="standard:function-signature" />
+        <error line="132" column="23" source="standard:multiline-expression-wrapping" />
+        <error line="132" column="39" source="standard:chain-method-continuation" />
+        <error line="137" column="40" source="standard:function-signature" />
+        <error line="137" column="58" source="standard:function-signature" />
+        <error line="137" column="83" source="standard:function-signature" />
+        <error line="138" column="23" source="standard:multiline-expression-wrapping" />
+        <error line="138" column="39" source="standard:chain-method-continuation" />
+        <error line="160" column="45" source="standard:trailing-comma-on-call-site" />
+        <error line="166" column="78" source="standard:function-expression-body" />
+        <error line="175" column="81" source="standard:function-expression-body" />
+        <error line="179" column="23" source="standard:chain-method-continuation" />
+        <error line="189" column="13" source="standard:chain-method-continuation" />
     </file>
     <file name="src/main/java/com/sysadmindoc/callshield/service/HotListSyncWorker.kt">
-        <error line="36" column="24" source="standard:annotation" />
-        <error line="36" column="40" source="standard:annotation" />
-        <error line="43" column="1" source="standard:no-empty-first-line-in-class-body" />
-        <error line="44" column="43" source="standard:function-expression-body" />
-        <error line="46" column="27" source="standard:multiline-expression-wrapping" />
-        <error line="69" column="34" source="standard:trailing-comma-on-call-site" />
-        <error line="80" column="24" source="standard:chain-method-continuation" />
+        <error line="37" column="24" source="standard:annotation" />
+        <error line="37" column="40" source="standard:annotation" />
+        <error line="45" column="1" source="standard:no-empty-first-line-in-class-body" />
+        <error line="46" column="43" source="standard:function-expression-body" />
+        <error line="48" column="27" source="standard:multiline-expression-wrapping" />
+        <error line="72" column="34" source="standard:trailing-comma-on-call-site" />
+        <error line="83" column="24" source="standard:chain-method-continuation" />
     </file>
     <file name="src/main/java/com/sysadmindoc/callshield/service/NotificationHelper.kt">
         <error line="37" column="26" source="standard:function-signature" />
@@ -2463,9 +2440,9 @@
     <file name="src/main/java/com/sysadmindoc/callshield/service/SyncWorker.kt">
         <error line="23" column="17" source="standard:annotation" />
         <error line="23" column="33" source="standard:annotation" />
-        <error line="28" column="1" source="standard:no-empty-first-line-in-class-body" />
-        <error line="49" column="34" source="standard:trailing-comma-on-call-site" />
-        <error line="69" column="24" source="standard:chain-method-continuation" />
+        <error line="29" column="1" source="standard:no-empty-first-line-in-class-body" />
+        <error line="50" column="34" source="standard:trailing-comma-on-call-site" />
+        <error line="70" column="24" source="standard:chain-method-continuation" />
     </file>
     <file name="src/main/java/com/sysadmindoc/callshield/ui/DashboardTimeWindows.kt">
         <error line="16" column="22" source="standard:multiline-expression-wrapping" />

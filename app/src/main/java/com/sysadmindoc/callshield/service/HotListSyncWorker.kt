@@ -12,6 +12,7 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.sysadmindoc.callshield.data.SpamRepository
+import com.sysadmindoc.callshield.data.checker.CheckerDependencies
 import com.sysadmindoc.callshield.data.local.SpamDao
 import com.sysadmindoc.callshield.data.remote.HotFeedDataSource
 import dagger.assisted.Assisted
@@ -39,6 +40,7 @@ class HotListSyncWorker @AssistedInject constructor(
     private val repo: SpamRepository,
     private val dao: SpamDao,
     private val hotFeedDataSource: HotFeedDataSource,
+    private val checkerDependencies: CheckerDependencies,
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
@@ -48,6 +50,7 @@ class HotListSyncWorker @AssistedInject constructor(
                 source = hotFeedDataSource,
                 repo = repo,
                 dao = dao,
+                dependencies = checkerDependencies,
             )
             if (outcome.refreshedAnyFeed || outcome.hasAnyHotProtection) {
                 Result.success()

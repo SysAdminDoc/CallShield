@@ -2,6 +2,9 @@ package com.sysadmindoc.callshield.di
 
 import android.content.Context
 import com.sysadmindoc.callshield.data.SpamRepository
+import com.sysadmindoc.callshield.data.checker.CheckerDependencies
+import com.sysadmindoc.callshield.data.local.AppDatabase
+import com.sysadmindoc.callshield.data.remote.SpamDataSource
 import com.sysadmindoc.callshield.data.repository.SpamRepositoryAdapter
 import com.sysadmindoc.callshield.domain.repository.SpamCheckRepository
 import com.sysadmindoc.callshield.domain.usecase.CheckSpamUseCase
@@ -35,7 +38,16 @@ abstract class RepositoryModule {
         @Singleton
         fun provideSpamRepository(
             @ApplicationContext context: Context,
-        ): SpamRepository = SpamRepository.getInstance(context)
+            database: AppDatabase,
+            remote: SpamDataSource,
+            checkerDependencies: CheckerDependencies,
+        ): SpamRepository =
+            SpamRepository.getInstance(
+                context = context,
+                database = database,
+                remote = remote,
+                checkerDependencies = checkerDependencies,
+            )
 
         @Provides
         @Singleton

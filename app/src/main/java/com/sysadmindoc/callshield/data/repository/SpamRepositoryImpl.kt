@@ -3,6 +3,7 @@ package com.sysadmindoc.callshield.data.repository
 import android.content.Context
 import androidx.datastore.preferences.core.Preferences
 import com.sysadmindoc.callshield.data.checker.CheckContext
+import com.sysadmindoc.callshield.data.checker.CheckerDependencies
 import com.sysadmindoc.callshield.data.checker.CheckerPipeline
 import com.sysadmindoc.callshield.data.checker.IChecker
 import com.sysadmindoc.callshield.data.checker.SpamCheckers
@@ -23,6 +24,7 @@ class SpamRepositoryImpl(
     private val context: Context,
     private val dao: SpamDao,
     private val settingsRepository: SettingsRepository,
+    private val checkerDependencies: CheckerDependencies = CheckerDependencies(),
 ) {
     // isSpam() is the critical real-time path. Loading all prefixes,
     // wildcard rules, and keyword rules from Room on every call adds
@@ -79,8 +81,12 @@ class SpamRepositoryImpl(
     internal suspend fun getRecentBlockedNumbersInternal(since: Long): List<BlockedCall> =
         dao.getRecentBlockedNumbers(since)
 
-    private val callChain: List<IChecker> by lazy { SpamCheckers.buildCallChain(this, context) }
-    private val smsExtensions: List<IChecker> by lazy { SpamCheckers.buildSmsExtensions(this, context) }
+    private val callChain: List<IChecker> by lazy {
+        SpamCheckers.buildCallChain(this, context, checkerDependencies)
+    }
+    private val smsExtensions: List<IChecker> by lazy {
+        SpamCheckers.buildSmsExtensions(this, context, checkerDependencies)
+    }
 
     suspend fun isSpam(
         number: String,
