@@ -39,6 +39,9 @@ Distribution prep after the v1.7.10 release.
 - Migrated `CallShieldScreeningService` onto Hilt field injection for the
   `SpamRepository` facade and call-spam use case while preserving the existing
   one-snapshot, fail-open 5-second screening flow.
+- Added AndroidX Hilt Work 1.3.0, installed `HiltWorkerFactory`, removed the
+  default WorkManager initializer, and migrated sync, hot-list, and digest
+  workers to `@HiltWorker` assisted injection without changing schedules.
 
 ### Testing
 

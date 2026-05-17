@@ -24,6 +24,7 @@ Files:
 - `gradle/libs.versions.toml`
 - `app/build.gradle.kts`
 - `app/gradle.lockfile`
+- `app/src/main/AndroidManifest.xml`
 - `app/config/ktlint/baseline.xml`
 - `app/detekt-baseline.xml`
 - `app/src/main/java/com/sysadmindoc/callshield/CallShieldApp.kt`
@@ -58,6 +59,8 @@ Files:
 - `app/src/main/java/com/sysadmindoc/callshield/service/SmsInboxScanner.kt`
 - `app/src/main/java/com/sysadmindoc/callshield/service/SmsReceiver.kt`
 - `app/src/main/java/com/sysadmindoc/callshield/service/SyncWorker.kt`
+- `app/src/main/java/com/sysadmindoc/callshield/service/HotListSyncWorker.kt`
+- `app/src/main/java/com/sysadmindoc/callshield/service/DigestWorker.kt`
 - `app/src/main/java/com/sysadmindoc/callshield/service/HotDataSync.kt`
 - `app/src/main/java/com/sysadmindoc/callshield/ui/screens/onboarding/OnboardingScreen.kt`
 - `app/src/main/java/com/sysadmindoc/callshield/ui/MainActivity.kt`
@@ -116,8 +119,10 @@ Work completed:
 - added `NetworkModule` with a Hilt provider for the existing pinned `HttpClient.shared` `OkHttpClient`
 - annotated `MainActivity` as a Hilt entry point and migrated `MainViewModel` to `@HiltViewModel` with injected `SpamRepository`, `SyncDatabaseUseCase`, `ManageBlocklistUseCase`, and `ExportLogsUseCase`
 - added a Hilt provider for `CheckSpamUseCase` and migrated `CallShieldScreeningService` to `@AndroidEntryPoint` field injection while keeping the one-snapshot 5-second decision path and fail-open behavior
+- added AndroidX Hilt Work 1.3.0, installed `HiltWorkerFactory` through `CallShieldApp`, removed WorkManager's default initializer, and migrated `SyncWorker`, `HotListSyncWorker`, and `DigestWorker` to `@HiltWorker` assisted injection
+- provided `GitHubDataSource` as the shared Hilt `SpamDataSource` and `HotFeedDataSource` binding for injected feed refresh paths
 - regenerated the ktlint baseline after modifying previously-baselined files so the new gate reflects the current debt set
-- marked roadmap items 1.2.1 through 1.2.4, 1.3.1 through 1.3.4, 1.4.4, 1.4.5, 1.5.1 through 1.5.4, and 1.6.1 through 1.6.7 done
+- marked roadmap items 1.2.1 through 1.2.4, 1.3.1 through 1.3.4, 1.4.4, 1.4.5, 1.5.1 through 1.5.4, and 1.6.1 through 1.6.8 done
 - verified `:app:compileDebugAndroidTestKotlin`, `testDebugUnitTest`, `:app:lintDebug`, `:app:ktlintCheck`, `:app:detekt`, and the Kover debug coverage gate
 
 ### 0. F-Droid submission prep
