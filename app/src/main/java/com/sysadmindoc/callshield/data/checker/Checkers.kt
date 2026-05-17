@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import com.sysadmindoc.callshield.data.CallbackDetector
 import com.sysadmindoc.callshield.data.CampaignDetector
+import com.sysadmindoc.callshield.data.HashWildcardMatcher
 import com.sysadmindoc.callshield.data.SmsContentAnalyzer
 import com.sysadmindoc.callshield.data.SmsContextChecker
 import com.sysadmindoc.callshield.data.SpamHeuristics
@@ -38,7 +39,10 @@ internal class WhitelistChecker(private val repo: SpamRepositoryImpl) : IChecker
  * never spam. Gated by the `contact_whitelist_enabled` setting because
  * some users sync thousands of contacts they don't actively trust.
  */
-internal class ContactWhitelistChecker(private val appContext: Context) : IChecker {
+internal class ContactWhitelistChecker(
+    private val appContext: Context,
+    private val spamHeuristics: SpamHeuristics,
+) : IChecker {
     override val priority = CheckerPriority.CONTACT_WHITELIST
     override val name = "contact_whitelist"
 
@@ -46,7 +50,7 @@ internal class ContactWhitelistChecker(private val appContext: Context) : ICheck
         ctx.prefs[SpamRepository.KEY_CONTACT_WHITELIST] ?: true
 
     override suspend fun check(ctx: CheckContext): BlockResult? {
-        return if (SpamHeuristics.isInContacts(appContext, ctx.number)) {
+        return if (spamHeuristics.isInContacts(appContext, ctx.number)) {
             BlockResult.allow("contact_whitelist")
         } else null
     }
@@ -238,7 +242,10 @@ internal class WildcardChecker(private val repo: SpamRepositoryImpl) : IChecker 
  * one [java.util.Calendar] for the whole check so all rules share the
  * same "now" — relevant when a call arrives right at a schedule boundary.
  */
-internal class HashWildcardChecker(private val repo: SpamRepositoryImpl) : IChecker {
+internal class HashWildcardChecker(
+    private val repo: SpamRepositoryImpl,
+    private val hashWildcardMatcher: HashWildcardMatcher,
+) : IChecker {
     override val priority = CheckerPriority.HASH_WILDCARD_RULE
     override val name = "hash_wildcard"
 
@@ -247,7 +254,7 @@ internal class HashWildcardChecker(private val repo: SpamRepositoryImpl) : IChec
         if (rules.isEmpty()) return null
         val now = java.util.Calendar.getInstance()
         for (rule in rules) {
-            if (rule.matchesNow(ctx.number, now)) {
+            if (rule.matchesNow(ctx.number, now, hashWildcardMatcher)) {
                 val detail = rule.description.ifBlank { rule.pattern }
                 return BlockResult.block("hash_wildcard", "blocked", detail)
             }
@@ -261,23 +268,29 @@ internal class HashWildcardChecker(private val repo: SpamRepositoryImpl) : IChec
 // intentional user rules are not overridden by "we called them recently".
 // ─────────────────────────────────────────────────────────────────────
 
-internal class RecentlyDialedChecker(private val appContext: Context) : IChecker {
+internal class RecentlyDialedChecker(
+    private val appContext: Context,
+    private val callbackDetector: CallbackDetector,
+) : IChecker {
     override val priority = CheckerPriority.RECENTLY_DIALED
     override val name = "recently_dialed"
 
     override suspend fun check(ctx: CheckContext): BlockResult? {
-        return if (CallbackDetector.wasRecentlyDialed(appContext, ctx.number)) {
+        return if (callbackDetector.wasRecentlyDialed(appContext, ctx.number)) {
             BlockResult.allow("recently_dialed")
         } else null
     }
 }
 
-internal class RepeatedUrgentChecker(private val appContext: Context) : IChecker {
+internal class RepeatedUrgentChecker(
+    private val appContext: Context,
+    private val callbackDetector: CallbackDetector,
+) : IChecker {
     override val priority = CheckerPriority.REPEATED_URGENT
     override val name = "repeated_urgent"
 
     override suspend fun check(ctx: CheckContext): BlockResult? {
-        return if (CallbackDetector.isRepeatedUrgentCall(appContext, ctx.number)) {
+        return if (callbackDetector.isRepeatedUrgentCall(appContext, ctx.number)) {
             BlockResult.allow("repeated_urgent")
         } else null
     }
@@ -292,13 +305,15 @@ internal class RepeatedUrgentChecker(private val appContext: Context) : IChecker
  * Non-realtime invocations (historical scans) skip the record to avoid
  * flagging old prefixes as active campaigns.
  */
-internal class CampaignRecorderChecker : IChecker {
+internal class CampaignRecorderChecker(
+    private val campaignDetector: CampaignDetector,
+) : IChecker {
     override val priority = CheckerPriority.CAMPAIGN_RECORDER
     override val name = "campaign_recorder"
 
     override suspend fun check(ctx: CheckContext): BlockResult? {
         if (ctx.realtimeCall) {
-            CampaignDetector.recordCall(ctx.number)
+            campaignDetector.recordCall(ctx.number)
         }
         return null  // never blocks
     }
@@ -350,6 +365,7 @@ internal class FrequencyEscalationChecker(private val repo: SpamRepositoryImpl) 
 internal class HeuristicChecker(
     private val repo: SpamRepositoryImpl,
     private val appContext: Context,
+    private val spamHeuristics: SpamHeuristics,
 ) : IChecker {
     override val priority = CheckerPriority.HEURISTIC
     override val name = "heuristic"
@@ -361,7 +377,7 @@ internal class HeuristicChecker(
         val recentBlocked = repo.getRecentBlockedNumbersInternal(System.currentTimeMillis() - 3_600_000L)
         val sms = if (ctx.prefs[SpamRepository.KEY_SMS_CONTENT] ?: true) ctx.smsBody else null
 
-        val hResult = SpamHeuristics.analyze(
+        val hResult = spamHeuristics.analyze(
             context = appContext,
             number = ctx.number,
             smsBody = sms,
@@ -417,12 +433,14 @@ internal class HeuristicChecker(
     }
 }
 
-internal class CampaignBurstChecker : IChecker {
+internal class CampaignBurstChecker(
+    private val campaignDetector: CampaignDetector,
+) : IChecker {
     override val priority = CheckerPriority.CAMPAIGN_BURST
     override val name = "campaign_burst"
 
     override suspend fun check(ctx: CheckContext): BlockResult? {
-        return if (CampaignDetector.isActiveCampaign(ctx.number)) {
+        return if (campaignDetector.isActiveCampaign(ctx.number)) {
             BlockResult.block(
                 matchSource = "campaign_burst",
                 type = "robocall",
@@ -433,7 +451,9 @@ internal class CampaignBurstChecker : IChecker {
     }
 }
 
-internal class MlScorerChecker : IChecker {
+internal class MlScorerChecker(
+    private val spamMLScorer: SpamMLScorer,
+) : IChecker {
     override val priority = CheckerPriority.ML_SCORER
     override val name = "ml_scorer"
 
@@ -441,7 +461,7 @@ internal class MlScorerChecker : IChecker {
         ctx.prefs[SpamRepository.KEY_ML_SCORER] ?: true
 
     override suspend fun check(ctx: CheckContext): BlockResult? {
-        val verdict = SpamMLScorer.verdict(ctx.number)
+        val verdict = spamMLScorer.verdict(ctx.number)
         return if (verdict.isSpam) {
             BlockResult.block(
                 matchSource = "ml_scorer",
@@ -461,12 +481,15 @@ internal class MlScorerChecker : IChecker {
  * Named with a trailing `_Checker` to avoid colliding with the top-level
  * `SmsContextChecker` object.
  */
-internal class SmsContextChecker_Checker(private val appContext: Context) : IChecker {
+internal class SmsContextChecker_Checker(
+    private val appContext: Context,
+    private val smsContextChecker: SmsContextChecker,
+) : IChecker {
     override val priority = CheckerPriority.PUSH_ALERT_BRIDGE  // sits at trust tier
     override val name = "sms_context"
 
     override suspend fun check(ctx: CheckContext): BlockResult? {
-        return if (SmsContextChecker.isTrustedSender(appContext, ctx.number)) {
+        return if (smsContextChecker.isTrustedSender(appContext, ctx.number)) {
             BlockResult.allow("sms_context")
         } else null
     }
@@ -490,7 +513,9 @@ internal class SmsKeywordChecker(private val repo: SpamRepositoryImpl) : IChecke
     }
 }
 
-internal class SmsContentChecker : IChecker {
+internal class SmsContentChecker(
+    private val smsContentAnalyzer: SmsContentAnalyzer,
+) : IChecker {
     override val priority = CheckerPriority.ML_SCORER - 100
     override val name = "sms_content"
 
@@ -499,7 +524,7 @@ internal class SmsContentChecker : IChecker {
 
     override suspend fun check(ctx: CheckContext): BlockResult? {
         val body = ctx.smsBody ?: return null
-        val result = SmsContentAnalyzer.analyze(body)
+        val result = smsContentAnalyzer.analyze(body)
         val aggressive = ctx.prefs[SpamRepository.KEY_AGGRESSIVE_MODE] ?: false
         val threshold = if (aggressive) 25 else 50
         return if (result.score >= threshold) {

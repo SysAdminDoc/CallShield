@@ -42,6 +42,10 @@ Distribution prep after the v1.7.10 release.
 - Added AndroidX Hilt Work 1.3.0, installed `HiltWorkerFactory`, removed the
   default WorkManager initializer, and migrated sync, hot-list, and digest
   workers to `@HiltWorker` assisted injection without changing schedules.
+- Added a Hilt `DetectionModule` plus `CheckerDependencies` so the live
+  checker pipeline, screening service, app-startup hot-data/model priming, and
+  sync workers consume detection helpers through an injectable seam while the
+  remaining object-to-class conversion continues.
 
 ### Testing
 

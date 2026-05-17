@@ -58,9 +58,13 @@ data class HashWildcardRule(
      * the schedule (if any) is active at [calendar]. Checkers on the hot
      * path should prefer this over calling [matches] + [schedule] separately.
      */
-    fun matchesNow(number: String, calendar: Calendar = Calendar.getInstance()): Boolean {
+    fun matchesNow(
+        number: String,
+        calendar: Calendar = Calendar.getInstance(),
+        matcher: HashWildcardMatcher = HashWildcardMatcher,
+    ): Boolean {
         if (!schedule.isActiveAt(calendar)) return false
-        return matches(number)
+        return matches(number, matcher)
     }
 
     /**
@@ -69,6 +73,9 @@ data class HashWildcardRule(
      * format `0612345678`. Does NOT consult the schedule — use [matchesNow]
      * on the decision path.
      */
-    fun matches(number: String): Boolean =
-        HashWildcardMatcher.matchesWithVariants(pattern, number)
+    fun matches(
+        number: String,
+        matcher: HashWildcardMatcher = HashWildcardMatcher,
+    ): Boolean =
+        matcher.matchesWithVariants(pattern, number)
 }

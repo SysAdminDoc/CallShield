@@ -24,13 +24,14 @@ class SyncWorker @AssistedInject constructor(
     @Assisted context: Context,
     @Assisted params: WorkerParameters,
     private val syncDatabase: SyncDatabaseUseCase,
+    private val spamMLScorer: SpamMLScorer,
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
         val result = syncDatabase()
 
         // Also sync the ML model weights file — lightweight, same GitHub repo
-        SpamMLScorer.syncWeights(applicationContext)
+        spamMLScorer.syncWeights(applicationContext)
 
         return when {
             result.success -> Result.success()

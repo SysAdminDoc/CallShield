@@ -4,8 +4,8 @@ import android.app.Application
 import android.util.Log
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
-import com.sysadmindoc.callshield.data.SpamMLScorer
 import com.sysadmindoc.callshield.data.SpamRepository
+import com.sysadmindoc.callshield.data.checker.CheckerDependencies
 import com.sysadmindoc.callshield.service.CrashReporter
 import com.sysadmindoc.callshield.service.DigestWorker
 import com.sysadmindoc.callshield.service.HotListSyncWorker
@@ -26,6 +26,9 @@ class CallShieldApp :
     @Inject
     lateinit var workerFactory: HiltWorkerFactory
 
+    @Inject
+    lateinit var checkerDependencies: CheckerDependencies
+
     override val workManagerConfiguration: Configuration
         get() {
             return Configuration.Builder()
@@ -45,12 +48,15 @@ class CallShieldApp :
         DigestWorker.schedule(this)
 
         appScope.launch {
-            SpamMLScorer.loadWeights(this@CallShieldApp)
+            checkerDependencies.spamMLScorer.loadWeights(this@CallShieldApp)
         }
 
         appScope.launch {
             try {
-                HotDataSync.primeBundled(this@CallShieldApp)
+                HotDataSync.primeBundled(
+                    context = this@CallShieldApp,
+                    dependencies = checkerDependencies,
+                )
             } catch (e: Exception) {
                 Log.w("CallShieldApp", "Failed to prime bundled hot data", e)
             }

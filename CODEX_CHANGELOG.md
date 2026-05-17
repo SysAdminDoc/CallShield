@@ -31,7 +31,9 @@ Files:
 - `app/src/main/java/com/sysadmindoc/callshield/di/DatabaseModule.kt`
 - `app/src/main/java/com/sysadmindoc/callshield/di/RepositoryModule.kt`
 - `app/src/main/java/com/sysadmindoc/callshield/di/NetworkModule.kt`
+- `app/src/main/java/com/sysadmindoc/callshield/di/DetectionModule.kt`
 - `app/src/main/java/com/sysadmindoc/callshield/data/SpamRepository.kt`
+- `app/src/main/java/com/sysadmindoc/callshield/data/checker/CheckerDependencies.kt`
 - `app/src/main/java/com/sysadmindoc/callshield/data/remote/SpamDataSource.kt`
 - `app/src/main/java/com/sysadmindoc/callshield/data/remote/HotFeedDataSource.kt`
 - `app/src/main/java/com/sysadmindoc/callshield/data/remote/GitHubDataSource.kt`
@@ -52,6 +54,7 @@ Files:
 - `app/src/main/java/com/sysadmindoc/callshield/data/repository/BlocklistRepository.kt`
 - `app/src/main/java/com/sysadmindoc/callshield/data/checker/Checkers.kt`
 - `app/src/main/java/com/sysadmindoc/callshield/data/checker/IChecker.kt`
+- `app/src/main/java/com/sysadmindoc/callshield/data/model/HashWildcardRule.kt`
 - `app/src/main/java/com/sysadmindoc/callshield/data/CallCategory.kt`
 - `app/src/main/java/com/sysadmindoc/callshield/service/CallLogScanner.kt`
 - `app/src/main/java/com/sysadmindoc/callshield/service/CallShieldScreeningService.kt`
@@ -121,8 +124,9 @@ Work completed:
 - added a Hilt provider for `CheckSpamUseCase` and migrated `CallShieldScreeningService` to `@AndroidEntryPoint` field injection while keeping the one-snapshot 5-second decision path and fail-open behavior
 - added AndroidX Hilt Work 1.3.0, installed `HiltWorkerFactory` through `CallShieldApp`, removed WorkManager's default initializer, and migrated `SyncWorker`, `HotListSyncWorker`, and `DigestWorker` to `@HiltWorker` assisted injection
 - provided `GitHubDataSource` as the shared Hilt `SpamDataSource` and `HotFeedDataSource` binding for injected feed refresh paths
+- added `DetectionModule` and `CheckerDependencies`, then routed the live checker chain, screening-service contact shortcut, app-startup model/hot-data priming, and sync/hot-list workers through injected detection helper dependencies while preserving existing object facades
 - regenerated the ktlint baseline after modifying previously-baselined files so the new gate reflects the current debt set
-- marked roadmap items 1.2.1 through 1.2.4, 1.3.1 through 1.3.4, 1.4.4, 1.4.5, 1.5.1 through 1.5.4, and 1.6.1 through 1.6.8 done
+- marked roadmap items 1.2.1 through 1.2.4, 1.3.1 through 1.3.4, 1.4.4, 1.4.5, 1.5.1 through 1.5.4, and 1.6.1 through 1.6.8 done; marked 1.6.9 WIP for the helper-injection seam
 - verified `:app:compileDebugAndroidTestKotlin`, `testDebugUnitTest`, `:app:lintDebug`, `:app:ktlintCheck`, `:app:detekt`, and the Kover debug coverage gate
 
 ### 0. F-Droid submission prep

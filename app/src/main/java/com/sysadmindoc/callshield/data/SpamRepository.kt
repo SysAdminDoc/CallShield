@@ -5,6 +5,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
 import com.sysadmindoc.callshield.data.checker.BlockResult
+import com.sysadmindoc.callshield.data.checker.CheckerDependencies
 import com.sysadmindoc.callshield.data.local.AppDatabase
 import com.sysadmindoc.callshield.data.local.SpamDao
 import com.sysadmindoc.callshield.data.model.*
@@ -51,6 +52,7 @@ class SpamRepository(
     context: Context,
     database: AppDatabase = AppDatabase.getInstance(context),
     remote: SpamDataSource = GitHubDataSource(),
+    checkerDependencies: CheckerDependencies = CheckerDependencies(),
 ) {
     private val appContext: Context = context.applicationContext
     private val dao: SpamDao = database.spamDao()
@@ -62,6 +64,7 @@ class SpamRepository(
         context = appContext,
         dao = dao,
         settingsRepository = settingsRepository,
+        checkerDependencies = checkerDependencies,
     )
     private val syncRepository = SyncRepository(
         context = appContext,
@@ -151,9 +154,19 @@ class SpamRepository(
         @Volatile
         private var INSTANCE: SpamRepository? = null
 
-        fun getInstance(context: Context): SpamRepository {
+        fun getInstance(
+            context: Context,
+            database: AppDatabase = AppDatabase.getInstance(context),
+            remote: SpamDataSource = GitHubDataSource(),
+            checkerDependencies: CheckerDependencies = CheckerDependencies(),
+        ): SpamRepository {
             return INSTANCE ?: synchronized(this) {
-                INSTANCE ?: SpamRepository(context.applicationContext).also { INSTANCE = it }
+                INSTANCE ?: SpamRepository(
+                    context = context.applicationContext,
+                    database = database,
+                    remote = remote,
+                    checkerDependencies = checkerDependencies,
+                ).also { INSTANCE = it }
             }
         }
     }

@@ -232,33 +232,41 @@ object CheckerPipeline {
  */
 object SpamCheckers {
     /** Call + SMS shared detection chain. */
-    fun buildCallChain(repo: SpamRepositoryImpl, appContext: Context): List<IChecker> =
+    fun buildCallChain(
+        repo: SpamRepositoryImpl,
+        appContext: Context,
+        dependencies: CheckerDependencies = CheckerDependencies(),
+    ): List<IChecker> =
         buildList {
             add(WhitelistChecker(repo))
-            add(ContactWhitelistChecker(appContext))
+            add(ContactWhitelistChecker(appContext, dependencies.spamHeuristics))
             add(StirShakenTrustChecker())
             add(StirShakenChecker())
             add(DatabaseChecker(repo))
             add(SystemBlockListChecker(appContext))
             add(PrefixChecker(repo))
             add(WildcardChecker(repo))
-            add(HashWildcardChecker(repo))
-            add(RecentlyDialedChecker(appContext))
-            add(RepeatedUrgentChecker(appContext))
-            add(PushAlertChecker())                // notification-bridged allow
-            add(CampaignRecorderChecker())         // not a blocker — records for campaign detection
+            add(HashWildcardChecker(repo, dependencies.hashWildcardMatcher))
+            add(RecentlyDialedChecker(appContext, dependencies.callbackDetector))
+            add(RepeatedUrgentChecker(appContext, dependencies.callbackDetector))
+            add(PushAlertChecker())
+            add(CampaignRecorderChecker(dependencies.campaignDetector))
             add(TimeBlockChecker())
             add(FrequencyEscalationChecker(repo))
-            add(HeuristicChecker(repo, appContext))
-            add(CampaignBurstChecker())
-            add(MlScorerChecker())
+            add(HeuristicChecker(repo, appContext, dependencies.spamHeuristics))
+            add(CampaignBurstChecker(dependencies.campaignDetector))
+            add(MlScorerChecker(dependencies.spamMLScorer))
         }.sortedByDescending { it.priority }
 
     /** SMS-specific extensions appended after the shared chain returns null. */
-    fun buildSmsExtensions(repo: SpamRepositoryImpl, appContext: Context): List<IChecker> =
+    fun buildSmsExtensions(
+        repo: SpamRepositoryImpl,
+        appContext: Context,
+        dependencies: CheckerDependencies = CheckerDependencies(),
+    ): List<IChecker> =
         buildList {
-            add(SmsContextChecker_Checker(appContext))
+            add(SmsContextChecker_Checker(appContext, dependencies.smsContextChecker))
             add(SmsKeywordChecker(repo))
-            add(SmsContentChecker())
+            add(SmsContentChecker(dependencies.smsContentAnalyzer))
         }.sortedByDescending { it.priority }
 }

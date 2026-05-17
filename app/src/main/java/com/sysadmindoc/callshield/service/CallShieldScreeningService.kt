@@ -22,6 +22,9 @@ class CallShieldScreeningService : CallScreeningService() {
     @Inject
     lateinit var checkSpam: CheckSpamUseCase
 
+    @Inject
+    lateinit var spamHeuristics: SpamHeuristics
+
     override fun onScreenCall(callDetails: Call.Details) {
         // Run on the process-wide appScope instead of a service-scoped one.
         // CallScreeningService is frequently unbound moments after we reply,
@@ -59,7 +62,7 @@ class CallShieldScreeningService : CallScreeningService() {
                 // needs any of the 13 downstream checks, and skipping them saves
                 // tens of milliseconds against the 5 s deadline.
                 if ((prefs[SpamRepository.KEY_CONTACT_WHITELIST] ?: true) &&
-                    SpamHeuristics.isInContacts(appContext, number)
+                    spamHeuristics.isInContacts(appContext, number)
                 ) {
                     respondAllow(callDetails)
                     return@launch
@@ -112,7 +115,7 @@ class CallShieldScreeningService : CallScreeningService() {
                         // post-time in case the user just added the caller.
                         CallShieldApp.appScope.launch {
                             delay(10_000L)
-                            if (!SpamHeuristics.isInContacts(appContext, number)) {
+                            if (!spamHeuristics.isInContacts(appContext, number)) {
                                 NotificationHelper.notifyAfterCall(appContext, number)
                             }
                         }
