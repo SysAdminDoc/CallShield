@@ -29,6 +29,9 @@ Distribution prep after the v1.7.10 release.
 - Extracted dashboard hero, setup checklist, and stats-row composables for
   deterministic Compose coverage of protection hero copy, sync freshness,
   blocked-count stats, and the call-screener setup action.
+- Added blocklist swipe-left removal with snackbar undo for manual block
+  entries, plus Compose coverage for manual add normalization, regex validation,
+  delete action, and swipe removal.
 
 ### F-Droid
 
