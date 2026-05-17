@@ -3,6 +3,7 @@ package com.sysadmindoc.callshield.data.checker
 import android.content.Context
 import androidx.datastore.preferences.core.Preferences
 import com.sysadmindoc.callshield.data.SpamRepository
+import com.sysadmindoc.callshield.data.repository.SpamRepositoryImpl
 
 /**
  * Priority-sorted detection pipeline.
@@ -226,12 +227,12 @@ object CheckerPipeline {
 /**
  * Factory for the canonical checker set plus SMS-only extensions.
  *
- * Held as a lazy-initialized list on [SpamRepository] so we build the
+ * Held as a lazy-initialized list on [SpamRepositoryImpl] so we build the
  * pipeline once per process, not per call.
  */
 object SpamCheckers {
-    /** Call + SMS shared detection chain. Call this from [SpamRepository.init]. */
-    fun buildCallChain(repo: SpamRepository, appContext: Context): List<IChecker> =
+    /** Call + SMS shared detection chain. */
+    fun buildCallChain(repo: SpamRepositoryImpl, appContext: Context): List<IChecker> =
         buildList {
             add(WhitelistChecker(repo))
             add(ContactWhitelistChecker(appContext))
@@ -254,7 +255,7 @@ object SpamCheckers {
         }.sortedByDescending { it.priority }
 
     /** SMS-specific extensions appended after the shared chain returns null. */
-    fun buildSmsExtensions(repo: SpamRepository, appContext: Context): List<IChecker> =
+    fun buildSmsExtensions(repo: SpamRepositoryImpl, appContext: Context): List<IChecker> =
         buildList {
             add(SmsContextChecker_Checker(appContext))
             add(SmsKeywordChecker(repo))

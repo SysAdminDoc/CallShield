@@ -18,6 +18,11 @@ Distribution prep after the v1.7.10 release.
 - Added domain repository contracts for spam checks, database sync, and
   blocklist management, then routed the use cases through a
   `SpamRepositoryAdapter` bridge ahead of the larger repository split.
+- Split `SpamRepository` into a compatibility facade over
+  `SpamRepositoryImpl`, `SettingsRepository`, `SyncRepository`, and
+  `BlocklistRepository`, preserving existing singleton callers while moving
+  detection, settings, sync, and blocklist/log concerns behind data-layer
+  collaborators.
 
 ### Testing
 

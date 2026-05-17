@@ -10,6 +10,7 @@ import com.sysadmindoc.callshield.data.SpamHeuristics
 import com.sysadmindoc.callshield.data.SpamMLScorer
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.SystemBlockList
+import com.sysadmindoc.callshield.data.repository.SpamRepositoryImpl
 import com.sysadmindoc.callshield.service.CallerIdOverlayService
 import java.util.Calendar
 
@@ -22,7 +23,7 @@ import java.util.Calendar
  * entries surface with `emergency_contact` matchSource so the block log
  * and detail screen can distinguish them.
  */
-internal class WhitelistChecker(private val repo: SpamRepository) : IChecker {
+internal class WhitelistChecker(private val repo: SpamRepositoryImpl) : IChecker {
     override val priority = CheckerPriority.MANUAL_WHITELIST
     override val name = "manual_whitelist"
 
@@ -177,7 +178,7 @@ internal class SystemBlockListChecker(private val appContext: Context) : IChecke
  * Combined user-blocklist + GitHub database lookup — both live in the
  * same `spam_numbers` table. A single Room query handles both.
  */
-internal class DatabaseChecker(private val repo: SpamRepository) : IChecker {
+internal class DatabaseChecker(private val repo: SpamRepositoryImpl) : IChecker {
     override val priority = CheckerPriority.USER_BLOCKLIST
     override val name = "database"
 
@@ -190,9 +191,9 @@ internal class DatabaseChecker(private val repo: SpamRepository) : IChecker {
 
 /**
  * NPA-NXX (or arbitrary digit-prefix) matcher. Prefixes are loaded once
- * and cached in [SpamRepository]; cache invalidation happens on sync.
+ * and cached in [SpamRepositoryImpl]; cache invalidation happens on sync.
  */
-internal class PrefixChecker(private val repo: SpamRepository) : IChecker {
+internal class PrefixChecker(private val repo: SpamRepositoryImpl) : IChecker {
     override val priority = CheckerPriority.PREFIX_MATCH
     override val name = "prefix"
 
@@ -211,7 +212,7 @@ internal class PrefixChecker(private val repo: SpamRepository) : IChecker {
  * A7 schedule gating: rules may carry a day/hour window that skips the
  * (potentially expensive) regex match when inactive.
  */
-internal class WildcardChecker(private val repo: SpamRepository) : IChecker {
+internal class WildcardChecker(private val repo: SpamRepositoryImpl) : IChecker {
     override val priority = CheckerPriority.WILDCARD_RULE
     override val name = "wildcard"
 
@@ -237,7 +238,7 @@ internal class WildcardChecker(private val repo: SpamRepository) : IChecker {
  * one [java.util.Calendar] for the whole check so all rules share the
  * same "now" — relevant when a call arrives right at a schedule boundary.
  */
-internal class HashWildcardChecker(private val repo: SpamRepository) : IChecker {
+internal class HashWildcardChecker(private val repo: SpamRepositoryImpl) : IChecker {
     override val priority = CheckerPriority.HASH_WILDCARD_RULE
     override val name = "hash_wildcard"
 
@@ -329,7 +330,7 @@ internal class TimeBlockChecker : IChecker {
     }
 }
 
-internal class FrequencyEscalationChecker(private val repo: SpamRepository) : IChecker {
+internal class FrequencyEscalationChecker(private val repo: SpamRepositoryImpl) : IChecker {
     override val priority = CheckerPriority.FREQUENCY_ESCALATION
     override val name = "frequency"
 
@@ -347,7 +348,7 @@ internal class FrequencyEscalationChecker(private val repo: SpamRepository) : IC
 }
 
 internal class HeuristicChecker(
-    private val repo: SpamRepository,
+    private val repo: SpamRepositoryImpl,
     private val appContext: Context,
 ) : IChecker {
     override val priority = CheckerPriority.HEURISTIC
@@ -471,7 +472,7 @@ internal class SmsContextChecker_Checker(private val appContext: Context) : IChe
     }
 }
 
-internal class SmsKeywordChecker(private val repo: SpamRepository) : IChecker {
+internal class SmsKeywordChecker(private val repo: SpamRepositoryImpl) : IChecker {
     override val priority = CheckerPriority.WILDCARD_RULE - 100
     override val name = "keyword"
 

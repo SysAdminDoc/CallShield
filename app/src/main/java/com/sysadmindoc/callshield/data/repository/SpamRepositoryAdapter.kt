@@ -10,16 +10,16 @@ import com.sysadmindoc.callshield.data.model.WhitelistEntry
 import com.sysadmindoc.callshield.data.model.WildcardRule
 import com.sysadmindoc.callshield.domain.model.SpamCheckResult
 import com.sysadmindoc.callshield.domain.model.SyncResult
-import com.sysadmindoc.callshield.domain.repository.BlocklistRepository
 import com.sysadmindoc.callshield.domain.repository.SpamCheckRepository
-import com.sysadmindoc.callshield.domain.repository.SyncRepository
+import com.sysadmindoc.callshield.domain.repository.BlocklistRepository as DomainBlocklistRepository
+import com.sysadmindoc.callshield.domain.repository.SyncRepository as DomainSyncRepository
 
 @Suppress("TooManyFunctions")
 class SpamRepositoryAdapter(
     private val repository: SpamRepository,
 ) : SpamCheckRepository,
-    SyncRepository,
-    BlocklistRepository {
+    DomainSyncRepository,
+    DomainBlocklistRepository {
     override suspend fun checkSpam(
         number: String,
         smsBody: String?,

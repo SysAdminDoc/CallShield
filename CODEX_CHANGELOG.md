@@ -41,6 +41,12 @@ Files:
 - `app/src/main/java/com/sysadmindoc/callshield/domain/repository/SyncRepository.kt`
 - `app/src/main/java/com/sysadmindoc/callshield/domain/repository/BlocklistRepository.kt`
 - `app/src/main/java/com/sysadmindoc/callshield/data/repository/SpamRepositoryAdapter.kt`
+- `app/src/main/java/com/sysadmindoc/callshield/data/repository/SpamRepositoryImpl.kt`
+- `app/src/main/java/com/sysadmindoc/callshield/data/repository/SettingsRepository.kt`
+- `app/src/main/java/com/sysadmindoc/callshield/data/repository/SyncRepository.kt`
+- `app/src/main/java/com/sysadmindoc/callshield/data/repository/BlocklistRepository.kt`
+- `app/src/main/java/com/sysadmindoc/callshield/data/checker/Checkers.kt`
+- `app/src/main/java/com/sysadmindoc/callshield/data/checker/IChecker.kt`
 - `app/src/main/java/com/sysadmindoc/callshield/data/CallCategory.kt`
 - `app/src/main/java/com/sysadmindoc/callshield/service/CallLogScanner.kt`
 - `app/src/main/java/com/sysadmindoc/callshield/service/CallShieldScreeningService.kt`
@@ -94,10 +100,12 @@ Work completed:
 - moved `SpamCheckResult` and `SyncResult` from the bottom of `SpamRepository.kt` into `domain/model`
 - updated call category resolution, lookup/detail UI, use cases, and tests to import the domain result models
 - added domain repository contracts for spam checks, database sync, and blocklist management
-- added `SpamRepositoryAdapter` to bridge those contracts to the current monolithic repository without changing repository defaults or beginning the larger split
+- added `SpamRepositoryAdapter` to bridge those contracts to the `SpamRepository` facade without changing repository defaults
 - updated use cases to depend on domain repository interfaces instead of concrete `SpamRepository`
+- split `SpamRepository` into a compatibility facade backed by `SpamRepositoryImpl`, `SettingsRepository`, `SyncRepository`, and `BlocklistRepository`
+- moved the checker registry to build against `SpamRepositoryImpl`, keeping the 5-second screening path and one-snapshot settings contract intact
 - regenerated the ktlint baseline after modifying previously-baselined files so the new gate reflects the current debt set
-- marked roadmap items 1.2.1 through 1.2.4, 1.3.1 through 1.3.4, 1.4.4, 1.4.5, 1.5.1, 1.5.2, and 1.5.3 done
+- marked roadmap items 1.2.1 through 1.2.4, 1.3.1 through 1.3.4, 1.4.4, 1.4.5, and 1.5.1 through 1.5.4 done
 - verified `:app:compileDebugAndroidTestKotlin`, `testDebugUnitTest`, `:app:lintDebug`, `:app:ktlintCheck`, `:app:detekt`, and the Kover debug coverage gate
 
 ### 0. F-Droid submission prep
