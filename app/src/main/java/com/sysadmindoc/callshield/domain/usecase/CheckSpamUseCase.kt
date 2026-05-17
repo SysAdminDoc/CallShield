@@ -1,11 +1,11 @@
 package com.sysadmindoc.callshield.domain.usecase
 
 import androidx.datastore.preferences.core.Preferences
-import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.domain.model.SpamCheckResult
+import com.sysadmindoc.callshield.domain.repository.SpamCheckRepository
 
 class CheckSpamUseCase(
-    private val repository: SpamRepository,
+    private val repository: SpamCheckRepository,
 ) {
     suspend operator fun invoke(
         number: String,
@@ -14,7 +14,7 @@ class CheckSpamUseCase(
         prefsSnapshot: Preferences? = null,
         verificationStatus: Int? = null,
     ): SpamCheckResult =
-        repository.isSpam(
+        repository.checkSpam(
             number = number,
             smsBody = smsBody,
             realtimeCall = realtimeCall,

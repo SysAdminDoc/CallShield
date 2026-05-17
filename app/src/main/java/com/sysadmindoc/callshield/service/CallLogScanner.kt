@@ -4,6 +4,7 @@ import android.content.Context
 import android.provider.CallLog
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.SpamRepository
+import com.sysadmindoc.callshield.data.repository.SpamRepositoryAdapter
 import com.sysadmindoc.callshield.domain.usecase.CheckSpamUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -31,7 +32,7 @@ object CallLogScanner {
 
     suspend fun scan(context: Context, limit: Int = 500): ScanResult = withContext(Dispatchers.IO) {
         val repo = SpamRepository.getInstance(context)
-        val checkSpam = CheckSpamUseCase(repo)
+        val checkSpam = CheckSpamUseCase(SpamRepositoryAdapter(repo))
         val numbers = mutableMapOf<String, Int>() // number -> call count
 
         try {

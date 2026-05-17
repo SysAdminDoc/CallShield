@@ -15,6 +15,9 @@ Distribution prep after the v1.7.10 release.
 - Moved `SpamCheckResult` and `SyncResult` into `domain/model` so use cases,
   UI, services, and tests now consume the same domain result types instead of
   repository-local data classes.
+- Added domain repository contracts for spam checks, database sync, and
+  blocklist management, then routed the use cases through a
+  `SpamRepositoryAdapter` bridge ahead of the larger repository split.
 
 ### Testing
 

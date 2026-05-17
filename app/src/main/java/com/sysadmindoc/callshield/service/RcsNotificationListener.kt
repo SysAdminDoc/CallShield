@@ -5,6 +5,7 @@ import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import com.sysadmindoc.callshield.data.PushAlertRegistry
 import com.sysadmindoc.callshield.data.SpamRepository
+import com.sysadmindoc.callshield.data.repository.SpamRepositoryAdapter
 import com.sysadmindoc.callshield.data.remote.UrlSafetyChecker
 import com.sysadmindoc.callshield.domain.usecase.CheckSpamSmsUseCase
 import kotlinx.coroutines.CoroutineScope
@@ -125,7 +126,7 @@ class RcsNotificationListener : NotificationListenerService() {
 
     private suspend fun processNotification(sbn: StatusBarNotification) {
         val repo = SpamRepository.getInstance(applicationContext)
-        val checkSpamSms = CheckSpamSmsUseCase(repo)
+        val checkSpamSms = CheckSpamSmsUseCase(SpamRepositoryAdapter(repo))
 
         // Respect the "Block SMS" and "RCS Filter" toggles
         if (!repo.blockSmsEnabled.first()) return

@@ -18,6 +18,7 @@ import com.sysadmindoc.callshield.data.model.SpamNumber
 import com.sysadmindoc.callshield.data.model.SmsKeywordRule
 import com.sysadmindoc.callshield.data.model.WhitelistEntry
 import com.sysadmindoc.callshield.data.model.WildcardRule
+import com.sysadmindoc.callshield.data.repository.SpamRepositoryAdapter
 import com.sysadmindoc.callshield.domain.usecase.ExportLogsUseCase
 import com.sysadmindoc.callshield.domain.usecase.ManageBlocklistUseCase
 import com.sysadmindoc.callshield.domain.usecase.SyncDatabaseUseCase
@@ -31,8 +32,9 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalCoroutinesApi::class)
 class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val repo = SpamRepository.getInstance(app)
-    private val syncDatabase = SyncDatabaseUseCase(repo)
-    private val manageBlocklist = ManageBlocklistUseCase(repo)
+    private val repoAdapter = SpamRepositoryAdapter(repo)
+    private val syncDatabase = SyncDatabaseUseCase(repoAdapter)
+    private val manageBlocklist = ManageBlocklistUseCase(repoAdapter)
     private val exportLogs = ExportLogsUseCase(app)
 
     val blockedCalls: StateFlow<List<BlockedCall>> = repo.getBlockedCalls()
