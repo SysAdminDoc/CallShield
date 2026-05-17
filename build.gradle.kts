@@ -8,6 +8,7 @@ plugins {
     alias(libs.plugins.kover) apply false
     alias(libs.plugins.ktlint) apply false
     alias(libs.plugins.detekt) apply false
+    alias(libs.plugins.hilt) apply false
 }
 
 allprojects {
