@@ -1,6 +1,6 @@
 {
-  "version": 24,
-  "updated": "2026-05-11",
+  "version": 25,
+  "updated": "2026-05-18",
   "description": "CallShield community spam number database",
   "sources": [
     "ftc_complaints",
@@ -263663,6 +263663,78 @@
       "reports": 1,
       "first_seen": "2026-05-09",
       "last_seen": "2026-05-09",
+      "description": "Community reported"
+    },
+    {
+      "number": "+13143357588",
+      "type": "spam",
+      "reports": 1,
+      "first_seen": "2026-05-15",
+      "last_seen": "2026-05-15",
+      "description": "Community reported"
+    },
+    {
+      "number": "+16369333683",
+      "type": "spam",
+      "reports": 1,
+      "first_seen": "2026-05-13",
+      "last_seen": "2026-05-13",
+      "description": "Community reported"
+    },
+    {
+      "number": "+12402049089",
+      "type": "unknown",
+      "reports": 1,
+      "first_seen": "2026-05-12",
+      "last_seen": "2026-05-12",
+      "description": "Community reported"
+    },
+    {
+      "number": "+15162696956",
+      "type": "unknown",
+      "reports": 1,
+      "first_seen": "2026-05-16",
+      "last_seen": "2026-05-16",
+      "description": "Community reported"
+    },
+    {
+      "number": "+15737386167",
+      "type": "spam",
+      "reports": 1,
+      "first_seen": "2026-05-15",
+      "last_seen": "2026-05-15",
+      "description": "Community reported"
+    },
+    {
+      "number": "+14433389975",
+      "type": "spam",
+      "reports": 1,
+      "first_seen": "2026-05-12",
+      "last_seen": "2026-05-12",
+      "description": "Community reported"
+    },
+    {
+      "number": "+17273711699",
+      "type": "unknown",
+      "reports": 1,
+      "first_seen": "2026-05-12",
+      "last_seen": "2026-05-12",
+      "description": "Community reported"
+    },
+    {
+      "number": "+12395248093",
+      "type": "spam",
+      "reports": 1,
+      "first_seen": "2026-05-15",
+      "last_seen": "2026-05-15",
+      "description": "Community reported"
+    },
+    {
+      "number": "+79092231669",
+      "type": "spam",
+      "reports": 1,
+      "first_seen": "2026-05-13",
+      "last_seen": "2026-05-13",
       "description": "Community reported"
     }
   ],
