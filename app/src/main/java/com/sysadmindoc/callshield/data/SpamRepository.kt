@@ -147,6 +147,11 @@ class SpamRepository(
         // additions to the default list propagate to existing users
         // without them re-enabling anything.
         val KEY_PUSH_ALERT_DISABLED = stringSetPreferencesKey("push_alert_disabled_packages")
+        // Last-applied blocking profile name (BlockingProfiles.Profile.name). Persisted so the
+        // Dashboard chip-row reflects the user's choice across process death / config change.
+        // Without this key, _activeProfile defaulted back to null on every VM init, so the
+        // Maximum profile (and every other profile) would visually "reset" — issue #2.
+        val KEY_ACTIVE_PROFILE = stringPreferencesKey("active_profile_name")
 
         const val SYNC_SOURCE_REMOTE = "remote"
         const val SYNC_SOURCE_BUNDLED = "bundled"
@@ -199,7 +204,9 @@ class SpamRepository(
     val pushAlertDisabledPackages: Flow<Set<String>> = settingsRepository.pushAlertDisabledPackages
     val lastSyncTimestamp: Flow<Long> = settingsRepository.lastSyncTimestamp
     val lastSyncSource: Flow<String> = settingsRepository.lastSyncSource
+    val activeProfileName: Flow<String?> = settingsRepository.activeProfileName
 
+    suspend fun setActiveProfileName(name: String?) = settingsRepository.setActiveProfileName(name)
     suspend fun setAbstractApiKey(key: String) = settingsRepository.setAbstractApiKey(key)
     suspend fun setMlScorer(enabled: Boolean) = settingsRepository.setMlScorer(enabled)
     suspend fun setRcsFilter(enabled: Boolean) = settingsRepository.setRcsFilter(enabled)

@@ -378,16 +378,20 @@ class MainViewModel
     fun setAbstractApiKey(key: String) = viewModelScope.launch { repo.setAbstractApiKey(key) }
 
     // Profiles
-    private val _activeProfile = MutableStateFlow<BlockingProfiles.Profile?>(null)
-    val activeProfile: StateFlow<BlockingProfiles.Profile?> = _activeProfile
+    // Persisted in DataStore (SpamRepository.KEY_ACTIVE_PROFILE) so the dashboard
+    // chip stays selected across process death and ViewModel recreation. Issue #2:
+    // tapping "Maximum" reset on next render because the StateFlow was in-memory only.
+    val activeProfile: StateFlow<BlockingProfiles.Profile?> = repo.activeProfileName
+        .map { name -> name?.let { runCatching { BlockingProfiles.Profile.valueOf(it) }.getOrNull() } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     fun applyProfile(profile: BlockingProfiles.Profile) {
         viewModelScope.launch {
             try {
                 BlockingProfiles.apply(appContext, profile)
-                _activeProfile.value = profile
+                repo.setActiveProfileName(profile.name)
             } catch (_: Exception) {
-                _activeProfile.value = null
+                repo.setActiveProfileName(null)
             }
         }
     }
