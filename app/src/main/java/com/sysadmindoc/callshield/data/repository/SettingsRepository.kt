@@ -61,6 +61,12 @@ class SettingsRepository(
         dataStore.data.map { it[SpamRepository.KEY_PUSH_ALERT_DISABLED] ?: emptySet() }
     val lastSyncTimestamp: Flow<Long> = dataStore.data.map { it[SpamRepository.KEY_LAST_SYNC] ?: 0L }
     val lastSyncSource: Flow<String> = dataStore.data.map { it[SpamRepository.KEY_LAST_SYNC_SOURCE] ?: "" }
+    val activeProfileName: Flow<String?> = dataStore.data.map { it[SpamRepository.KEY_ACTIVE_PROFILE] }
+
+    suspend fun setActiveProfileName(name: String?) = dataStore.edit { prefs ->
+        if (name == null) prefs.remove(SpamRepository.KEY_ACTIVE_PROFILE)
+        else prefs[SpamRepository.KEY_ACTIVE_PROFILE] = name
+    }
 
     // Optional AbstractAPI key for carrier/number-type enrichment in the Caller ID overlay.
     // Never used in the blocking pipeline; blocking stays local/offline.
