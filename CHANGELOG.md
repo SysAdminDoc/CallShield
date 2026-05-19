@@ -2,6 +2,12 @@
 
 All notable changes to CallShield will be documented in this file.
 
+## v1.7.11 — 2026-05-18
+
+### Fixed
+
+- **Profile selection auto-reset** ([#2](https://github.com/SysAdminDoc/CallShield/issues/2)) — Selecting a blocking profile (Work / Personal / Sleep / Maximum / Off) appeared to "reset" on the Dashboard chip row after process death or ViewModel recreation. The profile's underlying flag changes (block calls, aggressive mode, time block, etc.) were correctly applied and persisted, but the active-profile *indicator* itself was held in an in-memory `MutableStateFlow` and lost on every VM init. Now persisted to DataStore under `KEY_ACTIVE_PROFILE`; the dashboard chip stays selected across restarts.
+
 ## [Unreleased]
 
 Distribution prep after the v1.7.10 release.
