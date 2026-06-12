@@ -14,6 +14,10 @@ Distribution prep after the v1.7.10 release.
 
 ### Fixed
 
+- Aligned community-report number normalization with the hardened
+  ASCII-only screening normalizer across the Android app, Cloudflare Worker,
+  and Python report/import scripts, with regression coverage for Unicode
+  digit spoofing and overlong numbers.
 - Preserved pending community-report evidence for hot-list and spam-domain
   generation by deriving those feeds before the destructive report merge, with
   a Python regression test wired into CI.

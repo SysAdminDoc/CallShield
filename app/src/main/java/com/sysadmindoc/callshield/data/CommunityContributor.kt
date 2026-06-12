@@ -71,11 +71,11 @@ object CommunityContributor {
         value.replace("\\", "\\\\").replace("\"", "\\\"")
             .replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
 
-    private fun normalizeForReport(number: String): String? {
-        val digits = number.filter { it.isDigit() }
+    internal fun normalizeForReport(number: String): String? {
+        val normalized = normalizePhoneNumber(number)
+        val digits = normalized.filter { it in '0'..'9' }
         return when {
             digits.length == 10 -> "+1$digits"
-            digits.length == 11 && digits.startsWith("1") -> "+$digits"
             digits.length in 7..15 -> "+$digits"
             else -> null
         }

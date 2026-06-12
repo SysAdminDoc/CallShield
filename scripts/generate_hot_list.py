@@ -12,9 +12,9 @@ Called by the merge-reports GitHub Action workflow after each merge run.
 
 import json
 import os
-import re
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
+from phone_normalization import normalize_report_number
 
 DATA_DIR = Path(os.environ.get("CALLSHIELD_DATA_DIR", Path(__file__).parent.parent / "data"))
 REPORTS_DIR = Path(os.environ.get("CALLSHIELD_REPORTS_DIR", DATA_DIR / "reports"))
@@ -37,7 +37,7 @@ def current_time_utc() -> datetime:
 
 def npanxx_of(number: str) -> str:
     """Return first 6 digits of a US phone number, or '' if invalid."""
-    digits = re.sub(r'\D', '', number)
+    digits = "".join(ch for ch in number if "0" <= ch <= "9")
     if digits.startswith('1') and len(digits) == 11:
         digits = digits[1:]
     return digits[:6] if len(digits) >= 6 else ""
@@ -58,7 +58,7 @@ def main():
                 with open(report_file) as f:
                     report = json.load(f)
 
-                number = report.get("number", "")
+                number = normalize_report_number(report.get("number", ""))
                 spam_type = report.get("type", "unknown")
                 if not number or spam_type == "not_spam":
                     continue
@@ -100,7 +100,9 @@ def main():
             last_seen = entry.get("last_seen", "")
             # Include DB numbers updated today or yesterday with 5+ total reports
             if last_seen >= yesterday and entry.get("reports", 0) >= 5:
-                num = entry["number"]
+                num = normalize_report_number(entry.get("number", ""))
+                if not num:
+                    continue
                 if num in velocity:
                     # Already in community reports — merge
                     velocity[num]["reports"] += entry["reports"]

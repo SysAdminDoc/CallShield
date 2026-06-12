@@ -20,6 +20,7 @@ import time
 import argparse
 from datetime import datetime
 from pathlib import Path
+from phone_normalization import normalize_nanp_number
 from collections import Counter
 
 try:
@@ -126,13 +127,9 @@ def parse_records(records: list[dict]) -> list[dict]:
         if not phone:
             continue
 
-        # Normalize to +1XXXXXXXXXX
-        digits = "".join(c for c in phone if c.isdigit())
-        if len(digits) == 10:
-            digits = "1" + digits
-        if not (len(digits) == 11 and digits.startswith("1")):
+        normalized = normalize_nanp_number(phone)
+        if not normalized:
             continue
-        normalized = f"+{digits}"
 
         # Extract metadata
         subject = attrs.get("subject", "No Subject Provided")

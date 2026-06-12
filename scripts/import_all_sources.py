@@ -26,6 +26,7 @@ import argparse
 from datetime import datetime
 from pathlib import Path
 from collections import Counter
+from phone_normalization import normalize_nanp_number
 
 try:
     import requests
@@ -39,12 +40,7 @@ DB_FILE = DATA_DIR / "spam_numbers.json"
 
 
 def normalize_phone(raw: str) -> str | None:
-    digits = re.sub(r'\D', '', raw)
-    if len(digits) == 10:
-        digits = '1' + digits
-    if len(digits) == 11 and digits.startswith('1'):
-        return f'+{digits}'
-    return None
+    return normalize_nanp_number(raw)
 
 
 # ── Source 1: FTC API ──────────────────────────────────────────────────

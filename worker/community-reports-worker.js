@@ -1,3 +1,23 @@
+const FORMAT_CONTROL_CODES = new Set([0x200B, 0x200C, 0x200D, 0x200E, 0x200F, 0xFEFF]);
+
+export function normalizePhoneNumberForReport(number) {
+  if (typeof number !== "string") return null;
+
+  let cleaned = "";
+  for (const ch of number) {
+    if (!FORMAT_CONTROL_CODES.has(ch.charCodeAt(0))) cleaned += ch;
+  }
+
+  let digits = "";
+  for (const ch of cleaned.trim()) {
+    if (ch >= "0" && ch <= "9") digits += ch;
+  }
+
+  if (digits.length < 7 || digits.length > 15) return null;
+  if (digits.length === 10) return `+1${digits}`;
+  return `+${digits}`;
+}
+
 /**
  * CallShield Community Reports Worker
  * Deploy to Cloudflare Workers (free tier: 100K requests/day)
@@ -76,18 +96,12 @@ code{background:#252525;padding:2px 6px;border-radius:4px;font-size:12px;color:#
       const VALID_TYPES = ["spam", "robocall", "scam", "telemarketer", "debt_collector", "sms_spam", "not_spam", "unknown"];
       const type = VALID_TYPES.includes(body.type) ? body.type : "unknown";
 
-      // Validate phone number (must be 7-15 digits, optionally with +)
-      const digits = number?.replace(/\D/g, "") || "";
-      if (digits.length < 7 || digits.length > 15) {
+      const normalized = normalizePhoneNumberForReport(number);
+      if (!normalized) {
         return new Response(JSON.stringify({ error: "Invalid phone number" }), {
           status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" }
         });
       }
-
-      // Normalize to +1XXXXXXXXXX
-      let normalized = digits;
-      if (normalized.length === 10) normalized = "1" + normalized;
-      normalized = "+" + normalized;
 
       // Rate limit by IP (simple: reject if same IP submitted in last 10s)
       // In production, use Cloudflare KV for proper rate limiting
