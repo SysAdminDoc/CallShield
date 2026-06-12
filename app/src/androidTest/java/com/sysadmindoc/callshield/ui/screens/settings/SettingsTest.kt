@@ -7,12 +7,13 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import com.sysadmindoc.callshield.data.BackupRestore
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
 class SettingsTest {
-
     @get:Rule
     val composeRule = createComposeRule()
 
@@ -50,7 +51,7 @@ class SettingsTest {
             )
         }
 
-        composeRule.onNodeWithText("Quiet Hours").assertIsDisplayed()
+        composeRule.onNodeWithText("Block unknowns during quiet hours").assertIsDisplayed()
         composeRule.onNodeWithText("Start").assertIsDisplayed()
         composeRule.onNodeWithText("End").assertIsDisplayed()
         composeRule.onAllNodesWithText("10 PM").assertCountEquals(2)
@@ -65,10 +66,10 @@ class SettingsTest {
         }
 
         composeRule.onNodeWithText("10 PM").performClick()
-        composeRule.onNodeWithText("11 PM").performClick()
+        composeRule.onNodeWithText("12 AM").performClick()
 
         composeRule.runOnIdle {
-            assertEquals(23, selected)
+            assertEquals(0, selected)
         }
     }
 
@@ -77,5 +78,60 @@ class SettingsTest {
         assertEquals("12 AM", formatHourLabel(0))
         assertEquals("12 PM", formatHourLabel(12))
         assertEquals("11 PM", formatHourLabel(23))
+    }
+
+    @Test
+    fun restorePreviewPanelShowsCountsAndActions() {
+        var selectedMode: BackupRestore.RestoreMode? = null
+        var canceled = false
+        val preview =
+            BackupRestore.RestorePreview(
+                counts =
+                    BackupRestore.RestoreCounts(
+                        blockedNumbers = 2,
+                        whitelistNumbers = 1,
+                        wildcardRules = 1,
+                        keywordRules = 1,
+                    ),
+                conflicts = BackupRestore.RestoreCounts(blockedNumbers = 1),
+                backupTimestamp = 123L,
+                payload =
+                    BackupRestore.RestorePayload(
+                        blockedNumbers = emptyList(),
+                        whitelistNumbers = emptyList(),
+                        wildcardRules = emptyList(),
+                        keywordRules = emptyList(),
+                    ),
+            )
+
+        composeRule.setContent {
+            RestorePreviewPanel(
+                preview = preview,
+                onMerge = { selectedMode = BackupRestore.RestoreMode.MERGE },
+                onReplace = { selectedMode = BackupRestore.RestoreMode.REPLACE },
+                onCancel = { canceled = true },
+            )
+        }
+
+        composeRule.onNodeWithTag(SETTINGS_RESTORE_PREVIEW_TAG).assertIsDisplayed()
+        composeRule
+            .onNodeWithText("Blocked: 2; Whitelist: 1; Wildcards: 1; Keywords: 1")
+            .assertIsDisplayed()
+        composeRule
+            .onNodeWithText("1 existing items have matching keys and may be updated during merge.")
+            .assertIsDisplayed()
+
+        composeRule.onNodeWithText("Merge").performClick()
+        composeRule.runOnIdle {
+            assertEquals(BackupRestore.RestoreMode.MERGE, selectedMode)
+        }
+        composeRule.onNodeWithText("Replace").performClick()
+        composeRule.runOnIdle {
+            assertEquals(BackupRestore.RestoreMode.REPLACE, selectedMode)
+        }
+        composeRule.onNodeWithText("Cancel").performClick()
+        composeRule.runOnIdle {
+            assertTrue(canceled)
+        }
     }
 }

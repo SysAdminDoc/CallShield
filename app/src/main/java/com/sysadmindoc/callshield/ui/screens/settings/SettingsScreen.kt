@@ -39,10 +39,12 @@ import androidx.compose.ui.res.stringResource
 import com.sysadmindoc.callshield.BuildConfig
 import com.sysadmindoc.callshield.permissions.CallShieldPermissions
 import com.sysadmindoc.callshield.R
+import com.sysadmindoc.callshield.data.BackupRestore
 import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.theme.*
 
 internal const val SETTINGS_QUIET_HOURS_TOGGLE_TAG = "settings_quiet_hours_toggle"
+internal const val SETTINGS_RESTORE_PREVIEW_TAG = "settings_restore_preview"
 
 @Composable
 fun SettingsScreen(viewModel: MainViewModel) {
@@ -451,6 +453,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
                 uri?.let { viewModel.restore(it) }
             }
             val restoreResult by viewModel.restoreResult.collectAsStateWithLifecycle()
+            val restorePreview by viewModel.restorePreview.collectAsStateWithLifecycle()
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(
@@ -474,6 +477,23 @@ fun SettingsScreen(viewModel: MainViewModel) {
                     Spacer(Modifier.width(6.dp))
                     Text(stringResource(R.string.settings_restore), color = CatBlue)
                 }
+            }
+            restorePreview?.let { preview ->
+                RestorePreviewPanel(
+                    preview = preview,
+                    onMerge = {
+                        hapticTick(context)
+                        viewModel.applyRestore(BackupRestore.RestoreMode.MERGE)
+                    },
+                    onReplace = {
+                        hapticTick(context)
+                        viewModel.applyRestore(BackupRestore.RestoreMode.REPLACE)
+                    },
+                    onCancel = {
+                        hapticTick(context)
+                        viewModel.clearRestorePreview()
+                    },
+                )
             }
             restoreResult?.let {
                 Spacer(Modifier.height(4.dp))
@@ -624,6 +644,88 @@ fun SettingsScreen(viewModel: MainViewModel) {
             onReset = { viewModel.resetPushAlertPackages() },
             onDismiss = { showPushAlertSources = false },
         )
+    }
+}
+
+@Composable
+@Suppress("FunctionNaming", "LongMethod", "ktlint:standard:function-naming")
+internal fun RestorePreviewPanel(
+    preview: BackupRestore.RestorePreview,
+    onMerge: () -> Unit,
+    onReplace: () -> Unit,
+    onCancel: () -> Unit,
+) {
+    val counts = preview.counts
+    val conflictTotal = preview.conflicts.total
+
+    Spacer(Modifier.height(10.dp))
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag(SETTINGS_RESTORE_PREVIEW_TAG)
+            .background(CatMuted.copy(alpha = 0.32f), RoundedCornerShape(12.dp))
+            .padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(
+            stringResource(R.string.backup_restore_preview_title),
+            style = MaterialTheme.typography.titleSmall,
+            color = CatText,
+            fontWeight = FontWeight.Bold,
+        )
+        Text(
+            stringResource(
+                R.string.backup_restore_preview_summary,
+                counts.blockedNumbers,
+                counts.whitelistNumbers,
+                counts.wildcardRules,
+                counts.keywordRules,
+            ),
+            style = MaterialTheme.typography.bodySmall,
+            color = CatSubtext,
+        )
+        Text(
+            if (conflictTotal > 0) {
+                stringResource(R.string.backup_restore_preview_conflicts, conflictTotal)
+            } else {
+                stringResource(R.string.backup_restore_preview_no_conflicts)
+            },
+            style = MaterialTheme.typography.bodySmall,
+            color = if (conflictTotal > 0) CatPeach else CatGreen,
+        )
+        Text(
+            stringResource(R.string.backup_restore_replace_warning),
+            style = MaterialTheme.typography.labelSmall,
+            color = CatOverlay,
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            TextButton(
+                onClick = onCancel,
+                modifier = Modifier.weight(1f),
+            ) {
+                Icon(Icons.Default.Close, null, tint = CatOverlay)
+                Spacer(Modifier.width(4.dp))
+                Text(stringResource(R.string.backup_restore_cancel), color = CatOverlay)
+            }
+            OutlinedButton(
+                onClick = onMerge,
+                border = BorderStroke(1.dp, CatBlue.copy(alpha = 0.4f)),
+                modifier = Modifier.weight(1f),
+            ) {
+                Icon(Icons.Default.Restore, null, tint = CatBlue)
+                Spacer(Modifier.width(4.dp))
+                Text(stringResource(R.string.backup_restore_merge), color = CatBlue)
+            }
+            Button(
+                onClick = onReplace,
+                colors = ButtonDefaults.buttonColors(containerColor = CatPeach),
+                modifier = Modifier.weight(1f),
+            ) {
+                Icon(Icons.Default.DeleteSweep, null, tint = Black)
+                Spacer(Modifier.width(4.dp))
+                Text(stringResource(R.string.backup_restore_replace), color = Black)
+            }
+        }
     }
 }
 

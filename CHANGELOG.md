@@ -14,6 +14,9 @@ Distribution prep after the v1.7.10 release.
 
 ### Fixed
 
+- Added a backup restore preview step with parsed counts, conflict warnings,
+  and explicit Merge or Replace apply modes so restores validate before
+  mutating local blocklist state.
 - Enabled checked-in Room schema export with instrumented migration coverage
   from database versions 5 through 9, plus a CI guard that fails on
   uncommitted schema drift.
@@ -77,6 +80,8 @@ Distribution prep after the v1.7.10 release.
 
 ### Testing
 
+- Upgraded AndroidX Test/Espresso to the 1.7.0/3.7.0 line and refreshed locks
+  so Compose instrumented settings coverage runs on the API 36 emulator.
 - Added Kover 0.9.8 to the locked Gradle graph and wired CI to run
   `:app:koverVerifyDebug` plus `:app:koverXmlReportDebug`, gating the
   JVM-tested data/util core at a 35% minimum line-coverage threshold.
