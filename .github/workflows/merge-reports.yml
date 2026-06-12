@@ -19,14 +19,14 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Merge reports into database
-        run: python scripts/merge_community_reports.py
-
       - name: Extract spam domains from SMS reports
         run: python scripts/extract_spam_domains.py
 
       - name: Generate hot list + campaign ranges
         run: python scripts/generate_hot_list.py
+
+      - name: Merge reports into database
+        run: python scripts/merge_community_reports.py
 
       - name: Commit and Push
         run: |
