@@ -148,7 +148,7 @@ class BlocklistRepository(
             ),
         )
         CallShieldWidget.refreshAll(context)
-        NotificationHelper.notifyBlocked(context, number, matchReason, isCall)
+        NotificationHelper.notifyBlocked(context, number, matchReason, isCall, smsBody)
     }
 
     fun getBlockedCalls(): Flow<List<BlockedCall>> = dao.getBlockedCalls()

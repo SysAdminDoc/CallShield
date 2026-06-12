@@ -9,6 +9,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.PhoneFormatter
+import com.sysadmindoc.callshield.data.SmsContentAnalyzer
 import com.sysadmindoc.callshield.permissions.CallShieldPermissions
 import com.sysadmindoc.callshield.ui.MainActivity
 
@@ -23,6 +24,9 @@ object NotificationHelper {
     const val ACTION_SAFE = "com.sysadmindoc.callshield.ACTION_SAFE"
     const val EXTRA_NUMBER = "extra_number"
     const val EXTRA_NOTIF_ID = "extra_notif_id"
+    const val EXTRA_IS_CALL = "extra_is_call"
+    const val EXTRA_SMS_DOMAINS = "extra_sms_domains"
+    const val EXTRA_SMS_URL_INDICATORS = "extra_sms_url_indicators"
 
     private const val GROUP_BLOCKED = "com.sysadmindoc.callshield.BLOCKED"
     private const val SUMMARY_ID = 1
@@ -83,9 +87,21 @@ object NotificationHelper {
         )
     }
 
-    fun notifyBlocked(context: Context, number: String, reason: String, isCall: Boolean) {
+    fun notifyBlocked(
+        context: Context,
+        number: String,
+        reason: String,
+        isCall: Boolean,
+        smsBody: String? = null,
+    ) {
         val now = System.currentTimeMillis()
         val nid = stableId(number, if (isCall) 1 else 2)
+        val smsIndicators =
+            if (!isCall && !smsBody.isNullOrBlank()) {
+                SmsContentAnalyzer.extractReportableIndicators(smsBody)
+            } else {
+                SmsContentAnalyzer.SmsReportIndicators()
+            }
 
         // Rate limiting — batch rapid blocks into summary (synchronized to avoid race)
         synchronized(lock) {
@@ -112,7 +128,10 @@ object NotificationHelper {
         val blockIntent = PendingIntent.getBroadcast(
             context, stableId(number, 10),
             Intent(context, SpamActionReceiver::class.java).apply {
-                action = ACTION_BLOCK; putExtra(EXTRA_NUMBER, number); putExtra(EXTRA_NOTIF_ID, nid)
+                action = ACTION_BLOCK
+                putExtra(EXTRA_NUMBER, number)
+                putExtra(EXTRA_NOTIF_ID, nid)
+                putReportExtras(isCall, smsIndicators)
             },
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
@@ -120,7 +139,10 @@ object NotificationHelper {
         val reportIntent = PendingIntent.getBroadcast(
             context, stableId(number, 20),
             Intent(context, SpamActionReceiver::class.java).apply {
-                action = ACTION_REPORT; putExtra(EXTRA_NUMBER, number); putExtra(EXTRA_NOTIF_ID, nid)
+                action = ACTION_REPORT
+                putExtra(EXTRA_NUMBER, number)
+                putExtra(EXTRA_NOTIF_ID, nid)
+                putReportExtras(isCall, smsIndicators)
             },
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
@@ -137,6 +159,17 @@ object NotificationHelper {
 
         safeNotify(context, nid, builder)
         updateSummary(context)
+    }
+
+    private fun Intent.putReportExtras(
+        isCall: Boolean,
+        smsIndicators: SmsContentAnalyzer.SmsReportIndicators,
+    ) {
+        putExtra(EXTRA_IS_CALL, isCall)
+        if (!smsIndicators.isEmpty()) {
+            putStringArrayListExtra(EXTRA_SMS_DOMAINS, ArrayList(smsIndicators.domains))
+            putStringArrayListExtra(EXTRA_SMS_URL_INDICATORS, ArrayList(smsIndicators.urlIndicators))
+        }
     }
 
     /**

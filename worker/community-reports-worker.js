@@ -1,4 +1,8 @@
 const FORMAT_CONTROL_CODES = new Set([0x200B, 0x200C, 0x200D, 0x200E, 0x200F, 0xFEFF]);
+const MAX_SMS_DOMAINS = 10;
+const MAX_SMS_URL_INDICATORS = 10;
+const DOMAIN_RE = /^[a-z0-9](?:[a-z0-9.-]{0,251}[a-z0-9])?$/;
+const URL_INDICATOR_RE = /^[a-z_]{3,40}$/;
 
 export function normalizePhoneNumberForReport(number) {
   if (typeof number !== "string") return null;
@@ -16,6 +20,57 @@ export function normalizePhoneNumberForReport(number) {
   if (digits.length < 7 || digits.length > 15) return null;
   if (digits.length === 10) return `+1${digits}`;
   return `+${digits}`;
+}
+
+export function normalizeSmsDomain(value) {
+  if (typeof value !== "string") return null;
+
+  let domain = value.toLowerCase().trim();
+  domain = domain.replace(/^https?:\/\//, "").replace(/^www\./, "");
+  domain = domain.split("/")[0].split("?")[0].split("#")[0].split(":")[0];
+  domain = domain.replace(/^\.+|\.+$/g, "");
+  if (domain.length < 5 || domain.length > 253) return null;
+  if (!domain.includes(".")) return null;
+  if (!DOMAIN_RE.test(domain)) return null;
+
+  const labels = domain.split(".");
+  if (labels.some((label) => label.length < 1 || label.length > 63)) return null;
+  if (labels.some((label) => label.startsWith("-") || label.endsWith("-"))) return null;
+  return domain;
+}
+
+export function sanitizeSmsDomains(value) {
+  if (!Array.isArray(value)) return [];
+
+  const domains = [];
+  for (const raw of value) {
+    const domain = normalizeSmsDomain(raw);
+    if (domain && !domains.includes(domain)) domains.push(domain);
+    if (domains.length >= MAX_SMS_DOMAINS) break;
+  }
+  return domains;
+}
+
+export function sanitizeSmsUrlIndicators(value) {
+  if (!Array.isArray(value)) return [];
+
+  const indicators = [];
+  for (const raw of value) {
+    if (typeof raw !== "string") continue;
+    const indicator = raw.toLowerCase().trim();
+    if (URL_INDICATOR_RE.test(indicator) && !indicators.includes(indicator)) {
+      indicators.push(indicator);
+    }
+    if (indicators.length >= MAX_SMS_URL_INDICATORS) break;
+  }
+  return indicators;
+}
+
+export function sanitizeSmsReportFields(body) {
+  return {
+    sms_domains: sanitizeSmsDomains(body?.sms_domains),
+    sms_url_indicators: sanitizeSmsUrlIndicators(body?.sms_url_indicators),
+  };
 }
 
 /**
@@ -67,8 +122,9 @@ code{background:#252525;padding:2px 6px;border-radius:4px;font-size:12px;color:#
 <p>When users block a spam call or tap "Contribute to Community Database", the number is submitted here and merged into the open-source spam database on GitHub.</p>
 <p><strong>How it works:</strong><br>
 <code>POST</code> with <code>{"number":"+12125551234","type":"spam"}</code></p>
+<p>SMS spam reports may include redacted <code>sms_domains</code> and <code>sms_url_indicators</code>; raw SMS bodies are ignored.</p>
 <p><a href="https://github.com/SysAdminDoc/CallShield">View on GitHub</a> &middot; <a href="https://github.com/SysAdminDoc/CallShield/releases">Download APK</a></p>
-<p style="color:#6c7086;font-size:11px;margin-top:16px">No personal data is collected. Only phone numbers reported as spam are stored.</p>
+<p style="color:#6c7086;font-size:11px;margin-top:16px">No accounts are used. SMS message text is not stored.</p>
 </div></body></html>`, {
         status: 200, headers: { ...corsHeaders, "Content-Type": "text/html;charset=UTF-8" }
       });
@@ -95,6 +151,7 @@ code{background:#252525;padding:2px 6px;border-radius:4px;font-size:12px;color:#
       // Validate type against allowed values
       const VALID_TYPES = ["spam", "robocall", "scam", "telemarketer", "debt_collector", "sms_spam", "not_spam", "unknown"];
       const type = VALID_TYPES.includes(body.type) ? body.type : "unknown";
+      const smsReportFields = sanitizeSmsReportFields(body);
 
       const normalized = normalizePhoneNumberForReport(number);
       if (!normalized) {
@@ -110,12 +167,19 @@ code{background:#252525;padding:2px 6px;border-radius:4px;font-size:12px;color:#
       const timestamp = new Date().toISOString();
       const rand = crypto.randomUUID().substring(0, 8);
       const filename = `${normalized.replace("+", "")}_${Date.now()}_${rand}.json`;
-      const content = JSON.stringify({
+      const report = {
         number: normalized,
         type: type,
         reported_at: timestamp,
-        source: "community_app"
-      }, null, 2);
+        source: "community_app",
+      };
+      if (smsReportFields.sms_domains.length > 0) {
+        report.sms_domains = smsReportFields.sms_domains;
+      }
+      if (smsReportFields.sms_url_indicators.length > 0) {
+        report.sms_url_indicators = smsReportFields.sms_url_indicators;
+      }
+      const content = JSON.stringify(report, null, 2);
 
       const githubResponse = await fetch(
         `https://api.github.com/repos/SysAdminDoc/CallShield/contents/data/reports/${filename}`,

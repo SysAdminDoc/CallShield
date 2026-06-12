@@ -26,6 +26,7 @@ MIN_REPORTS = 3    # Domain must appear in 3+ distinct reports to be included
 MAX_DOMAINS = 500  # Top N domains
 
 URL_RE = re.compile(r'https?://([^/\s\'"<>]+)|www\.([^\s/\'"<>]+)', re.IGNORECASE)
+DOMAIN_RE = re.compile(r"^[a-z0-9](?:[a-z0-9.-]{0,251}[a-z0-9])?$")
 
 # Established legitimate domains — never flag these regardless of report count
 DOMAIN_WHITELIST = {
@@ -45,6 +46,51 @@ def extract_domain(raw: str) -> str:
     return domain.strip()
 
 
+def normalize_domain(raw: str) -> str:
+    """Normalize and validate a report-provided domain indicator."""
+    domain = extract_domain(raw).strip(".")
+    if len(domain) < 5 or len(domain) > 253:
+        return ""
+    if "." not in domain:
+        return ""
+    if not DOMAIN_RE.match(domain):
+        return ""
+    labels = domain.split(".")
+    if any(not label or len(label) > 63 for label in labels):
+        return ""
+    if any(label.startswith("-") or label.endswith("-") for label in labels):
+        return ""
+    if domain in DOMAIN_WHITELIST:
+        return ""
+    return domain
+
+
+def report_domains(report: dict) -> set[str]:
+    """Return body-free domain indicators, falling back to legacy fixtures."""
+    domains: set[str] = set()
+
+    sms_domains = report.get("sms_domains")
+    if isinstance(sms_domains, list):
+        for raw in sms_domains:
+            if isinstance(raw, str):
+                domain = normalize_domain(raw)
+                if domain:
+                    domains.add(domain)
+
+    # Backward compatibility only: historical local reports and older tests
+    # used raw SMS text before the worker started dropping body fields.
+    if not domains:
+        sms_body = report.get("sms_body") or report.get("body") or ""
+        if isinstance(sms_body, str):
+            for match in URL_RE.finditer(sms_body):
+                raw = match.group(1) or match.group(2) or ""
+                domain = normalize_domain(raw)
+                if domain:
+                    domains.add(domain)
+
+    return domains
+
+
 def main():
     print("=== CallShield Spam Domain Extractor ===\n")
 
@@ -60,17 +106,13 @@ def main():
                 if report.get("type") == "not_spam":
                     continue
 
-                # Support both sms_body and body field names
-                sms_body = report.get("sms_body") or report.get("body") or ""
-                if not sms_body:
+                domains = report_domains(report)
+                if not domains:
                     continue
 
                 reports_scanned += 1
-                for match in URL_RE.finditer(sms_body):
-                    raw = match.group(1) or match.group(2) or ""
-                    domain = extract_domain(raw)
-                    if domain and len(domain) >= 5 and "." in domain and domain not in DOMAIN_WHITELIST:
-                        domain_counts[domain] += 1
+                for domain in domains:
+                    domain_counts[domain] += 1
 
             except Exception as e:
                 print(f"  Skipping {report_file.name}: {e}")
