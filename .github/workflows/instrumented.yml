@@ -35,11 +35,19 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Single API level for now — minSdk=29. Add 34 later for dual-target
-        # validation once we have headroom in CI credits.
-        api-level: [29]
-        target: [google_apis]
-        arch: [x86_64]
+        include:
+          # Full minSdk regression suite.
+          - api-level: 29
+            target: google_apis
+            arch: x86_64
+            suite: full
+            command: ./gradlew connectedDebugAndroidTest --stacktrace
+          # Fast target-SDK smoke lane for modern permission/service behavior.
+          - api-level: 35
+            target: google_apis
+            arch: x86_64
+            suite: target-sdk-smoke
+            command: ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.sysadmindoc.callshield.platform.TargetSdkBehaviorSmokeTest --stacktrace
 
     steps:
       - uses: actions/checkout@v4
@@ -91,13 +99,13 @@ jobs:
           force-avd-creation: false
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
-          script: ./gradlew connectedDebugAndroidTest --stacktrace
+          script: ${{ matrix.command }}
 
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: instrumented-test-results-api-${{ matrix.api-level }}
+          name: instrumented-test-results-api-${{ matrix.api-level }}-${{ matrix.suite }}
           path: |
             app/build/reports/androidTests/
             app/build/outputs/androidTest-results/
