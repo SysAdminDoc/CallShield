@@ -11,7 +11,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.*
@@ -329,59 +328,49 @@ internal fun OnboardingScreenContent(
                             Spacer(Modifier.height(12.dp))
 
                             if (!permsGranted) {
-                                Button(
+                                PremiumActionButton(
+                                    label = stringResource(R.string.onboarding_grant_permissions),
+                                    icon = Icons.Default.Security,
+                                    color = CatBlue,
                                     onClick = {
                                         onRequestCorePermissions()
                                     },
-                                    colors = ButtonDefaults.buttonColors(containerColor = CatBlue),
-                                    shape = RoundedCornerShape(12.dp),
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .height(48.dp)
                                         .testTag(ONBOARDING_CORE_PERMISSIONS_BUTTON_TAG)
-                                ) {
-                                    Icon(Icons.Default.Security, null, tint = Black)
-                                    Spacer(Modifier.width(8.dp))
-                                    Text(stringResource(R.string.onboarding_grant_permissions), color = Black, fontWeight = FontWeight.Bold)
-                                }
+                                )
                             }
 
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !notificationsGranted) {
                                 Spacer(Modifier.height(10.dp))
-                                OutlinedButton(
+                                PremiumActionButton(
+                                    label = stringResource(R.string.onboarding_enable_notifications),
+                                    icon = Icons.Default.Notifications,
+                                    color = CatBlue,
                                     onClick = {
                                         onRequestNotifications()
                                     },
-                                    shape = RoundedCornerShape(12.dp),
-                                    border = BorderStroke(1.dp, CatBlue.copy(alpha = 0.3f)),
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .height(48.dp)
-                                        .testTag(ONBOARDING_NOTIFICATIONS_BUTTON_TAG)
-                                ) {
-                                    Icon(Icons.Default.Notifications, null, tint = CatBlue, modifier = Modifier.size(18.dp))
-                                    Spacer(Modifier.width(8.dp))
-                                    Text(stringResource(R.string.onboarding_enable_notifications), color = CatBlue, fontWeight = FontWeight.SemiBold)
-                                }
+                                        .testTag(ONBOARDING_NOTIFICATIONS_BUTTON_TAG),
+                                    outlined = true
+                                )
                             }
 
                             if (!overlayGranted) {
                                 Spacer(Modifier.height(10.dp))
-                                OutlinedButton(
+                                PremiumActionButton(
+                                    label = stringResource(R.string.onboarding_enable_overlay),
+                                    icon = Icons.Default.Layers,
+                                    color = CatBlue,
                                     onClick = {
                                         onRequestOverlay()
                                     },
-                                    shape = RoundedCornerShape(12.dp),
-                                    border = BorderStroke(1.dp, CatBlue.copy(alpha = 0.3f)),
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .height(48.dp)
-                                        .testTag(ONBOARDING_OVERLAY_BUTTON_TAG)
-                                ) {
-                                    Icon(Icons.Default.Layers, null, tint = CatBlue, modifier = Modifier.size(18.dp))
-                                    Spacer(Modifier.width(8.dp))
-                                    Text(stringResource(R.string.onboarding_enable_overlay), color = CatBlue, fontWeight = FontWeight.SemiBold)
-                                }
+                                        .testTag(ONBOARDING_OVERLAY_BUTTON_TAG),
+                                    outlined = true
+                                )
                             }
                         }
 
@@ -413,21 +402,17 @@ internal fun OnboardingScreenContent(
                             Spacer(Modifier.height(12.dp))
 
                             if (screenerSupported && !screenerGranted) {
-                                Button(
+                                PremiumActionButton(
+                                    label = stringResource(R.string.onboarding_set_screener),
+                                    icon = Icons.AutoMirrored.Filled.PhoneCallback,
+                                    color = CatMauve,
                                     onClick = {
                                         onRequestScreener()
                                     },
-                                    colors = ButtonDefaults.buttonColors(containerColor = CatMauve),
-                                    shape = RoundedCornerShape(12.dp),
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .height(48.dp)
                                         .testTag(ONBOARDING_SCREENER_BUTTON_TAG)
-                                ) {
-                                    Icon(Icons.AutoMirrored.Filled.PhoneCallback, null, tint = Black)
-                                    Spacer(Modifier.width(8.dp))
-                                    Text(stringResource(R.string.onboarding_set_screener), color = Black, fontWeight = FontWeight.Bold)
-                                }
+                                )
                             } else if (screenerGranted) {
                                 OnboardingStatusRow(
                                     label = stringResource(R.string.onboarding_screening_enabled),
@@ -566,30 +551,24 @@ internal fun OnboardingScreenContent(
                     Spacer(Modifier.width(1.dp))
                 }
 
-                Button(
+                PremiumActionButton(
+                    label = when {
+                        currentPage < pages.lastIndex -> stringResource(R.string.onboarding_next)
+                        requiredReady == 2 -> stringResource(R.string.onboarding_finish_setup)
+                        else -> stringResource(R.string.onboarding_continue_anyway)
+                    },
+                    icon = if (currentPage < pages.lastIndex) {
+                        Icons.AutoMirrored.Filled.ArrowForward
+                    } else {
+                        Icons.Default.Check
+                    },
+                    color = pages[currentPage].color,
                     onClick = {
                         if (currentPage < pages.lastIndex) currentPage++
                         else onComplete()
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = pages[currentPage].color),
-                    shape = RoundedCornerShape(12.dp),
-                    border = BorderStroke(1.dp, pages[currentPage].color.copy(alpha = 0.3f)),
                     modifier = Modifier.height(48.dp)
-                ) {
-                    Text(
-                        when {
-                            currentPage < pages.lastIndex -> stringResource(R.string.onboarding_next)
-                            requiredReady == 2 -> stringResource(R.string.onboarding_finish_setup)
-                            else -> stringResource(R.string.onboarding_continue_anyway)
-                        },
-                        color = Black,
-                        fontWeight = FontWeight.Bold
-                    )
-                    if (currentPage < pages.lastIndex) {
-                        Spacer(Modifier.width(4.dp))
-                        Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = stringResource(R.string.cd_next_page), tint = Black, modifier = Modifier.size(18.dp))
-                    }
-                }
+                )
             }
         }
     }
@@ -623,11 +602,11 @@ private fun OnboardingChecklistItem(
     badge: String
 ) {
     Row(verticalAlignment = Alignment.Top) {
-        Icon(
-            if (granted) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
-            contentDescription = null,
-            tint = if (granted) CatGreen else accentColor,
-            modifier = Modifier.padding(top = 2.dp).size(18.dp)
+        PremiumIconTile(
+            icon = if (granted) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
+            color = if (granted) CatGreen else accentColor,
+            size = 34.dp,
+            iconSize = 18.dp
         )
         Spacer(Modifier.width(10.dp))
         Column(modifier = Modifier.weight(1f)) {
@@ -664,11 +643,11 @@ private fun OnboardingBulletPoint(text: String, color: androidx.compose.ui.graph
 @Composable
 private fun OnboardingStatusRow(label: String, granted: Boolean, color: androidx.compose.ui.graphics.Color) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(
-            if (granted) Icons.Default.CheckCircle else Icons.Default.Warning,
-            contentDescription = null,
-            tint = color,
-            modifier = Modifier.size(20.dp)
+        PremiumIconTile(
+            icon = if (granted) Icons.Default.CheckCircle else Icons.Default.Warning,
+            color = color,
+            size = 34.dp,
+            iconSize = 18.dp
         )
         Spacer(Modifier.width(8.dp))
         Text(label, color = color, fontWeight = FontWeight.SemiBold)

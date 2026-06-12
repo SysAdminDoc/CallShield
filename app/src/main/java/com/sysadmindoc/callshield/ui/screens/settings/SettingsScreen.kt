@@ -35,6 +35,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import com.sysadmindoc.callshield.BuildConfig
 import com.sysadmindoc.callshield.permissions.CallShieldPermissions
@@ -208,21 +209,21 @@ fun SettingsScreen(viewModel: MainViewModel) {
                 if (!corePermissionsGranted || !screenerReadyForCurrentMode || !overlayGranted || !notificationsGranted) {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         if (!corePermissionsGranted) {
-                            Button(
+                            PremiumActionButton(
+                                label = stringResource(R.string.settings_grant_permissions),
+                                icon = Icons.Default.Security,
+                                color = CatBlue,
                                 onClick = {
                                     permissionLauncher.launch(CallShieldPermissions.corePermissions.toTypedArray())
                                 },
-                                colors = ButtonDefaults.buttonColors(containerColor = CatBlue),
-                                shape = RoundedCornerShape(12.dp),
                                 modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Icon(Icons.Default.Security, null, tint = Black)
-                                Spacer(Modifier.width(6.dp))
-                                Text(stringResource(R.string.settings_grant_permissions), color = Black, fontWeight = FontWeight.Bold)
-                            }
+                            )
                         }
                         if (blockCalls && !screenerGranted && roleManager != null) {
-                            Button(
+                            PremiumActionButton(
+                                label = stringResource(R.string.settings_call_screener),
+                                icon = Icons.AutoMirrored.Filled.PhoneCallback,
+                                color = CatMauve,
                                 onClick = {
                                     try {
                                         screeningLauncher.launch(roleManager.createRequestRoleIntent(RoleManager.ROLE_CALL_SCREENING))
@@ -231,31 +232,27 @@ fun SettingsScreen(viewModel: MainViewModel) {
                                         context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}")))
                                     }
                                 },
-                                colors = ButtonDefaults.buttonColors(containerColor = CatMauve),
-                                shape = RoundedCornerShape(12.dp),
                                 modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Icon(Icons.AutoMirrored.Filled.PhoneCallback, null, tint = Black)
-                                Spacer(Modifier.width(6.dp))
-                                Text(stringResource(R.string.settings_call_screener), color = Black, fontWeight = FontWeight.Bold)
-                            }
+                            )
                         }
                         if (!overlayGranted) {
-                            OutlinedButton(
+                            PremiumActionButton(
+                                label = stringResource(R.string.settings_overlay),
+                                icon = Icons.Default.Layers,
+                                color = CatBlue,
                                 onClick = {
                                     val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${context.packageName}"))
                                     context.startActivity(intent)
                                 },
-                                shape = RoundedCornerShape(12.dp),
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Icon(Icons.Default.Layers, null, tint = CatBlue)
-                                Spacer(Modifier.width(6.dp))
-                                Text(stringResource(R.string.settings_overlay), color = CatBlue)
-                            }
+                                modifier = Modifier.fillMaxWidth(),
+                                outlined = true
+                            )
                         }
                         if (!notificationsGranted) {
-                            OutlinedButton(
+                            PremiumActionButton(
+                                label = stringResource(R.string.settings_notifications),
+                                icon = Icons.Default.Notifications,
+                                color = CatMauve,
                                 onClick = {
                                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                                         notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
@@ -266,13 +263,9 @@ fun SettingsScreen(viewModel: MainViewModel) {
                                         context.startActivity(intent)
                                     }
                                 },
-                                shape = RoundedCornerShape(12.dp),
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Icon(Icons.Default.Notifications, null, tint = CatMauve)
-                                Spacer(Modifier.width(6.dp))
-                                Text(stringResource(R.string.settings_notifications), color = CatMauve)
-                            }
+                                modifier = Modifier.fillMaxWidth(),
+                                outlined = true
+                            )
                         }
                     }
                     Spacer(Modifier.height(8.dp))
@@ -326,15 +319,14 @@ fun SettingsScreen(viewModel: MainViewModel) {
             SettingsToggle(stringResource(R.string.settings_rcs_filter), stringResource(R.string.settings_rcs_filter_desc), Icons.Default.MarkChatRead, rcsFilter) { viewModel.setRcsFilter(it) }
             if (rcsFilter) {
                 Spacer(Modifier.height(4.dp))
-                OutlinedButton(
+                PremiumActionButton(
+                    label = stringResource(R.string.settings_grant_notification_access),
+                    icon = Icons.Default.NotificationsActive,
+                    color = CatMauve,
                     onClick = { context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) },
-                    shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(Icons.Default.NotificationsActive, null, tint = CatMauve)
-                    Spacer(Modifier.width(6.dp))
-                    Text(stringResource(R.string.settings_grant_notification_access), color = CatMauve)
-                }
+                    modifier = Modifier.fillMaxWidth(),
+                    outlined = true
+                )
             }
             GradientDivider()
             // A3: Push-alert bridge — notification-backed allow-through for
@@ -351,29 +343,24 @@ fun SettingsScreen(viewModel: MainViewModel) {
                 val totalSources = com.sysadmindoc.callshield.data.PushAlertRegistry.ALERT_SOURCE_PACKAGES.size
                 val activeSources = totalSources - pushAlertDisabledPackages.size
                 Spacer(Modifier.height(4.dp))
-                OutlinedButton(
+                PremiumActionButton(
+                    label = stringResource(R.string.settings_push_alert_sources),
+                    icon = Icons.Default.Tune,
+                    color = CatMauve,
                     onClick = { showPushAlertSources = true },
-                    shape = RoundedCornerShape(8.dp),
                     modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Icon(Icons.Default.Tune, null, tint = CatMauve)
-                    Spacer(Modifier.width(6.dp))
-                    Column(horizontalAlignment = Alignment.Start) {
-                        Text(
-                            stringResource(R.string.settings_push_alert_sources),
-                            color = CatMauve,
-                        )
-                        Text(
-                            stringResource(
-                                R.string.settings_push_alert_sources_count,
-                                activeSources,
-                                totalSources,
-                            ),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = CatSubtext,
-                        )
-                    }
-                }
+                    outlined = true
+                )
+                Text(
+                    stringResource(
+                        R.string.settings_push_alert_sources_count,
+                        activeSources,
+                        totalSources,
+                    ),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = CatSubtext,
+                    modifier = Modifier.padding(start = 4.dp)
+                )
             }
             GradientDivider()
             // Silent voicemail mode — send blocked calls to voicemail silently
@@ -434,16 +421,13 @@ fun SettingsScreen(viewModel: MainViewModel) {
 
         // Export log
         SettingsCard(stringResource(R.string.settings_export)) {
-            Button(
+            PremiumActionButton(
+                label = stringResource(R.string.settings_export_csv),
+                icon = Icons.Default.FileDownload,
+                color = CatBlue,
                 onClick = { hapticTick(context); viewModel.exportLog() },
-                colors = ButtonDefaults.buttonColors(containerColor = CatBlue),
-                border = BorderStroke(1.dp, CatBlue.copy(alpha = 0.3f)),
-                shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth().height(48.dp)
-            ) {
-                Icon(Icons.Default.FileDownload, null, tint = Black)
-                Spacer(Modifier.width(6.dp))
-                Text(stringResource(R.string.settings_export_csv), color = Black, fontWeight = FontWeight.Bold)
-            }
+                modifier = Modifier.fillMaxWidth()
+            )
             Text(stringResource(R.string.settings_export_csv_desc), style = MaterialTheme.typography.labelSmall, color = CatOverlay)
         }
 
@@ -456,27 +440,21 @@ fun SettingsScreen(viewModel: MainViewModel) {
             val restorePreview by viewModel.restorePreview.collectAsStateWithLifecycle()
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(
+                PremiumActionButton(
+                    label = stringResource(R.string.settings_backup),
+                    icon = Icons.Default.Backup,
+                    color = CatGreen,
                     onClick = { hapticTick(context); viewModel.backup() },
-                    colors = ButtonDefaults.buttonColors(containerColor = CatGreen),
-                    shape = RoundedCornerShape(12.dp),
-                    border = BorderStroke(1.dp, CatGreen.copy(alpha = 0.3f)),
-                    modifier = Modifier.weight(1f).height(48.dp)
-                ) {
-                    Icon(Icons.Default.Backup, null, tint = Black)
-                    Spacer(Modifier.width(6.dp))
-                    Text(stringResource(R.string.settings_backup), color = Black, fontWeight = FontWeight.Bold)
-                }
-                OutlinedButton(
+                    modifier = Modifier.weight(1f)
+                )
+                PremiumActionButton(
+                    label = stringResource(R.string.settings_restore),
+                    icon = Icons.Default.Restore,
+                    color = CatBlue,
                     onClick = { hapticTick(context); restoreLauncher.launch(arrayOf("application/json", "text/plain")) },
-                    shape = RoundedCornerShape(12.dp),
-                    border = BorderStroke(1.dp, CatBlue.copy(alpha = 0.3f)),
-                    modifier = Modifier.weight(1f).height(48.dp)
-                ) {
-                    Icon(Icons.Default.Restore, null, tint = CatBlue)
-                    Spacer(Modifier.width(6.dp))
-                    Text(stringResource(R.string.settings_restore), color = CatBlue)
-                }
+                    modifier = Modifier.weight(1f),
+                    outlined = true
+                )
             }
             restorePreview?.let { preview ->
                 RestorePreviewPanel(
@@ -583,7 +561,20 @@ fun SettingsScreen(viewModel: MainViewModel) {
                     horizontalPadding = 10.dp,
                     verticalPadding = 6.dp
                 )
-                Button(
+                PremiumActionButton(
+                    label = stringResource(
+                        if (trimmedApiKey.isBlank() && hasStoredApiKey) {
+                            R.string.settings_api_key_clear
+                        } else {
+                            R.string.settings_api_key_save
+                        }
+                    ),
+                    icon = if (trimmedApiKey.isBlank() && hasStoredApiKey) {
+                        Icons.Default.DeleteSweep
+                    } else {
+                        Icons.Default.Save
+                    },
+                    color = CatBlue,
                     onClick = {
                         viewModel.setAbstractApiKey(trimmedApiKey)
                         hapticTick(context)
@@ -598,25 +589,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
                         ).show()
                     },
                     enabled = hasApiKeyChanges,
-                    colors = ButtonDefaults.buttonColors(containerColor = CatBlue),
-                    shape = RoundedCornerShape(8.dp),
-                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 0.dp),
-                    modifier = Modifier.height(42.dp)
-                ) {
-                    Icon(Icons.Default.Save, contentDescription = null, tint = Black, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text(
-                        stringResource(
-                            if (trimmedApiKey.isBlank() && hasStoredApiKey) {
-                                R.string.settings_api_key_clear
-                            } else {
-                                R.string.settings_api_key_save
-                            }
-                        ),
-                        color = Black,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
+                )
             }
             Spacer(Modifier.height(8.dp))
             Text(
@@ -659,71 +632,88 @@ internal fun RestorePreviewPanel(
     val conflictTotal = preview.conflicts.total
 
     Spacer(Modifier.height(10.dp))
-    Column(
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .testTag(SETTINGS_RESTORE_PREVIEW_TAG)
-            .background(CatMuted.copy(alpha = 0.32f), RoundedCornerShape(12.dp))
-            .padding(12.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+            .testTag(SETTINGS_RESTORE_PREVIEW_TAG),
+        shape = RoundedCornerShape(12.dp),
+        color = CatBlue.copy(alpha = 0.08f),
+        border = BorderStroke(1.dp, CatBlue.copy(alpha = 0.20f))
     ) {
-        Text(
-            stringResource(R.string.backup_restore_preview_title),
-            style = MaterialTheme.typography.titleSmall,
-            color = CatText,
-            fontWeight = FontWeight.Bold,
-        )
-        Text(
-            stringResource(
-                R.string.backup_restore_preview_summary,
-                counts.blockedNumbers,
-                counts.whitelistNumbers,
-                counts.wildcardRules,
-                counts.keywordRules,
-            ),
-            style = MaterialTheme.typography.bodySmall,
-            color = CatSubtext,
-        )
-        Text(
-            if (conflictTotal > 0) {
-                stringResource(R.string.backup_restore_preview_conflicts, conflictTotal)
-            } else {
-                stringResource(R.string.backup_restore_preview_no_conflicts)
-            },
-            style = MaterialTheme.typography.bodySmall,
-            color = if (conflictTotal > 0) CatPeach else CatGreen,
-        )
-        Text(
-            stringResource(R.string.backup_restore_replace_warning),
-            style = MaterialTheme.typography.labelSmall,
-            color = CatOverlay,
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.Top
+            ) {
+                PremiumIconTile(icon = Icons.Default.Restore, color = CatBlue)
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        stringResource(R.string.backup_restore_preview_title),
+                        style = MaterialTheme.typography.titleSmall,
+                        color = CatText,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Text(
+                        stringResource(
+                            R.string.backup_restore_preview_summary,
+                            counts.blockedNumbers,
+                            counts.whitelistNumbers,
+                            counts.wildcardRules,
+                            counts.keywordRules,
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = CatSubtext,
+                    )
+                }
+            }
+            Text(
+                if (conflictTotal > 0) {
+                    pluralStringResource(
+                        R.plurals.backup_restore_preview_conflicts,
+                        conflictTotal,
+                        conflictTotal
+                    )
+                } else {
+                    stringResource(R.string.backup_restore_preview_no_conflicts)
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = if (conflictTotal > 0) CatPeach else CatGreen,
+            )
+            Text(
+                stringResource(R.string.backup_restore_replace_warning),
+                style = MaterialTheme.typography.labelSmall,
+                color = CatOverlay,
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                PremiumActionButton(
+                    label = stringResource(R.string.backup_restore_merge),
+                    icon = Icons.Default.Restore,
+                    color = CatBlue,
+                    onClick = onMerge,
+                    modifier = Modifier.weight(1f),
+                    outlined = true
+                )
+                PremiumActionButton(
+                    label = stringResource(R.string.backup_restore_replace),
+                    icon = Icons.Default.DeleteSweep,
+                    color = CatPeach,
+                    onClick = onReplace,
+                    modifier = Modifier.weight(1f)
+                )
+            }
             TextButton(
                 onClick = onCancel,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.fillMaxWidth(),
             ) {
-                Icon(Icons.Default.Close, null, tint = CatOverlay)
-                Spacer(Modifier.width(4.dp))
+                Icon(Icons.Default.Close, null, tint = CatOverlay, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(6.dp))
                 Text(stringResource(R.string.backup_restore_cancel), color = CatOverlay)
-            }
-            OutlinedButton(
-                onClick = onMerge,
-                border = BorderStroke(1.dp, CatBlue.copy(alpha = 0.4f)),
-                modifier = Modifier.weight(1f),
-            ) {
-                Icon(Icons.Default.Restore, null, tint = CatBlue)
-                Spacer(Modifier.width(4.dp))
-                Text(stringResource(R.string.backup_restore_merge), color = CatBlue)
-            }
-            Button(
-                onClick = onReplace,
-                colors = ButtonDefaults.buttonColors(containerColor = CatPeach),
-                modifier = Modifier.weight(1f),
-            ) {
-                Icon(Icons.Default.DeleteSweep, null, tint = Black)
-                Spacer(Modifier.width(4.dp))
-                Text(stringResource(R.string.backup_restore_replace), color = Black)
             }
         }
     }
@@ -821,13 +811,7 @@ fun SettingsToggle(
 ) {
     val context = LocalContext.current
     Row(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-        Box(
-            modifier = Modifier
-                .background(tintColor.copy(alpha = 0.08f), RoundedCornerShape(8.dp))
-                .padding(6.dp)
-        ) {
-            Icon(icon, null, tint = tintColor, modifier = Modifier.size(24.dp))
-        }
+        PremiumIconTile(icon = icon, color = tintColor, size = 38.dp, iconSize = 20.dp)
         Spacer(Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(title, style = MaterialTheme.typography.bodyLarge)

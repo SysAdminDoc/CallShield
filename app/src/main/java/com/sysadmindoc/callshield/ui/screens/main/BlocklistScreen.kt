@@ -79,6 +79,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -109,7 +110,9 @@ import com.sysadmindoc.callshield.ui.theme.CatSubtext
 import com.sysadmindoc.callshield.ui.theme.CatText
 import com.sysadmindoc.callshield.ui.theme.CatYellow
 import com.sysadmindoc.callshield.ui.theme.GradientDivider
+import com.sysadmindoc.callshield.ui.theme.PremiumActionButton
 import com.sysadmindoc.callshield.ui.theme.PremiumCard
+import com.sysadmindoc.callshield.ui.theme.PremiumIconTile
 import com.sysadmindoc.callshield.ui.theme.StatusPill
 import com.sysadmindoc.callshield.ui.theme.SurfaceBright
 import com.sysadmindoc.callshield.ui.theme.hapticConfirm
@@ -576,23 +579,22 @@ private fun BlocklistOverviewCard(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.Top
             ) {
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = workspace.accentColor.copy(alpha = 0.12f)
-                ) {
-                    Icon(
-                        imageVector = workspace.icon,
-                        contentDescription = null,
-                        tint = workspace.accentColor,
-                        modifier = Modifier.padding(14.dp)
-                    )
-                }
+                PremiumIconTile(
+                    icon = workspace.icon,
+                    color = workspace.accentColor,
+                    size = 54.dp,
+                    iconSize = 26.dp
+                )
                 Column(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     StatusPill(
-                        text = stringResource(R.string.blocklist_count_saved, workspace.count),
+                        text = pluralStringResource(
+                            R.plurals.blocklist_count_saved,
+                            workspace.count,
+                            workspace.count
+                        ),
                         color = workspace.accentColor,
                         horizontalPadding = 10.dp,
                         verticalPadding = 6.dp
@@ -617,26 +619,24 @@ private fun BlocklistOverviewCard(
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     workspace.primaryUtilityLabel?.let { label ->
-                        OutlinedButton(
+                        PremiumActionButton(
+                            label = label,
+                            icon = Icons.Default.FileOpen,
+                            color = workspace.accentColor,
                             onClick = { workspace.onPrimaryUtility?.invoke() },
                             modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Icon(Icons.Default.FileOpen, null, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text(label)
-                        }
+                            outlined = true
+                        )
                     }
                     workspace.secondaryUtilityLabel?.let { label ->
-                        OutlinedButton(
+                        PremiumActionButton(
+                            label = label,
+                            icon = Icons.Default.Share,
+                            color = workspace.accentColor,
                             onClick = { workspace.onSecondaryUtility?.invoke() },
                             modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Icon(Icons.Default.Share, null, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text(label)
-                        }
+                            outlined = true
+                        )
                     }
                 }
             }
@@ -951,7 +951,11 @@ fun DatabaseItem(number: SpamNumber) {
                         textStyle = MaterialTheme.typography.labelSmall
                     )
                     StatusPill(
-                        text = stringResource(R.string.blocklist_reports, number.reports),
+                        text = pluralStringResource(
+                            R.plurals.blocklist_reports,
+                            number.reports,
+                            number.reports
+                        ),
                         color = CatBlue,
                         horizontalPadding = 8.dp,
                         verticalPadding = 4.dp,
@@ -1020,13 +1024,13 @@ fun AddNumberDialog(onDismiss: () -> Unit, onAdd: (String, String) -> Unit) {
             }
         },
         confirmButton = {
-            androidx.compose.material3.Button(
+            PremiumActionButton(
+                label = stringResource(R.string.dialog_block),
+                icon = Icons.Default.Block,
+                color = CatRed,
                 onClick = { onAdd(normalizedNumber, description.trim()) },
-                enabled = canConfirm,
-                colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = CatGreen)
-            ) {
-                Text(stringResource(R.string.dialog_block), color = Black)
-            }
+                enabled = canConfirm
+            )
         },
         dismissButton = {
             androidx.compose.material3.TextButton(onClick = onDismiss) {
@@ -1099,7 +1103,10 @@ fun AddWildcardDialog(
             }
         },
         confirmButton = {
-            androidx.compose.material3.Button(
+            PremiumActionButton(
+                label = stringResource(R.string.dialog_add),
+                icon = Icons.Default.Add,
+                color = CatYellow,
                 onClick = {
                     if (trimmedPattern.isNotBlank() && !scheduleState.needsDaySelection) {
                         if (isRegex) {
@@ -1114,11 +1121,8 @@ fun AddWildcardDialog(
                         }
                     }
                 },
-                enabled = trimmedPattern.isNotBlank() && !scheduleState.needsDaySelection,
-                colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = CatYellow)
-            ) {
-                Text(stringResource(R.string.dialog_add), color = Black)
-            }
+                enabled = trimmedPattern.isNotBlank() && !scheduleState.needsDaySelection
+            )
         },
         dismissButton = {
             androidx.compose.material3.TextButton(onClick = onDismiss) {
@@ -1198,16 +1202,17 @@ fun AddWhitelistDialog(onDismiss: () -> Unit, onAdd: (String, String, Boolean) -
             }
         },
         confirmButton = {
-            androidx.compose.material3.Button(
+            PremiumActionButton(
+                label = if (emergency) {
+                    stringResource(R.string.emergency_contacts_add)
+                } else {
+                    stringResource(R.string.dialog_whitelist)
+                },
+                icon = if (emergency) Icons.Default.PriorityHigh else Icons.Default.CheckCircle,
+                color = if (emergency) CatRed else CatGreen,
                 onClick = { onAdd(normalizedNumber, description.trim(), emergency) },
-                enabled = canConfirm,
-                colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = if (emergency) CatRed else CatGreen),
-            ) {
-                Text(
-                    if (emergency) stringResource(R.string.emergency_contacts_add) else stringResource(R.string.dialog_whitelist),
-                    color = Black
-                )
-            }
+                enabled = canConfirm
+            )
         },
         dismissButton = {
             androidx.compose.material3.TextButton(onClick = onDismiss) {
@@ -1269,15 +1274,15 @@ fun AddKeywordDialog(
             }
         },
         confirmButton = {
-            androidx.compose.material3.Button(
+            PremiumActionButton(
+                label = stringResource(R.string.dialog_add),
+                icon = Icons.Default.TextFields,
+                color = CatMauve,
                 onClick = {
                     onAdd(trimmedKeyword, caseSensitive, description.trim(), scheduleState.toSchedule())
                 },
-                enabled = trimmedKeyword.isNotBlank() && !scheduleState.needsDaySelection,
-                colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = CatMauve)
-            ) {
-                Text(stringResource(R.string.dialog_add), color = Black)
-            }
+                enabled = trimmedKeyword.isNotBlank() && !scheduleState.needsDaySelection
+            )
         },
         dismissButton = {
             androidx.compose.material3.TextButton(onClick = onDismiss) {
@@ -1500,13 +1505,13 @@ fun AddHashWildcardDialog(
             }
         },
         confirmButton = {
-            androidx.compose.material3.Button(
+            PremiumActionButton(
+                label = stringResource(R.string.hash_wildcard_dialog_add),
+                icon = Icons.Default.Tune,
+                color = CatPeach,
                 onClick = { onAdd(trimmed, description.trim(), scheduleState.toSchedule()) },
-                enabled = canConfirm,
-                colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = CatPeach)
-            ) {
-                Text(stringResource(R.string.hash_wildcard_dialog_add), color = Black)
-            }
+                enabled = canConfirm
+            )
         },
         dismissButton = {
             androidx.compose.material3.TextButton(onClick = onDismiss) {

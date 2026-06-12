@@ -24,6 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -84,7 +85,14 @@ fun ProtectionTestScreen() {
             )
         }
 
-        Button(
+        PremiumActionButton(
+            label = if (testing) {
+                stringResource(R.string.protection_test_testing)
+            } else {
+                stringResource(R.string.protection_test_run_all)
+            },
+            icon = Icons.Default.PlayArrow,
+            color = CatGreen,
             onClick = {
                 testing = true
                 results = emptyList()
@@ -94,21 +102,9 @@ fun ProtectionTestScreen() {
                 }
             },
             enabled = !testing,
-            colors = ButtonDefaults.buttonColors(containerColor = CatGreen),
-            shape = RoundedCornerShape(12.dp),
-            border = BorderStroke(1.dp, CatGreen.copy(alpha = 0.3f)),
+            loading = testing,
             modifier = Modifier.fillMaxWidth().height(48.dp)
-        ) {
-            if (testing) {
-                CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp, color = Black)
-                Spacer(Modifier.width(8.dp))
-                Text(stringResource(R.string.protection_test_testing), color = Black, fontWeight = FontWeight.SemiBold)
-            } else {
-                Icon(Icons.Default.PlayArrow, null, tint = Black)
-                Spacer(Modifier.width(8.dp))
-                Text(stringResource(R.string.protection_test_run_all), color = Black, fontWeight = FontWeight.Bold)
-            }
-        }
+        )
 
         if (results.isEmpty()) {
             PremiumCard(accentColor = CatBlue) {
@@ -143,20 +139,12 @@ fun ProtectionTestScreen() {
                     verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(48.dp)
-                                .clip(CircleShape)
-                                .background(summaryColor.copy(alpha = 0.1f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                if (allPassed) Icons.Default.CheckCircle else Icons.Default.Warning,
-                                null,
-                                tint = summaryColor,
-                                modifier = Modifier.size(28.dp)
-                            )
-                        }
+                        PremiumIconTile(
+                            icon = if (allPassed) Icons.Default.CheckCircle else Icons.Default.Warning,
+                            color = summaryColor,
+                            size = 52.dp,
+                            iconSize = 28.dp
+                        )
                         Spacer(Modifier.width(16.dp))
                         Column {
                             val scorePercent = (passed * 100) / total
@@ -169,7 +157,12 @@ fun ProtectionTestScreen() {
                                 if (allPassed) {
                                     stringResource(R.string.protection_test_all_ok)
                                 } else {
-                                    stringResource(R.string.protection_test_issues, total - passed)
+                                    val issueCount = total - passed
+                                    pluralStringResource(
+                                        R.plurals.protection_test_issues,
+                                        issueCount,
+                                        issueCount
+                                    )
                                 },
                                 style = MaterialTheme.typography.bodySmall,
                                 color = summaryColor
@@ -211,7 +204,10 @@ fun ProtectionTestScreen() {
                             ProtectionIntroRow(step)
                         }
 
-                        OutlinedButton(
+                        PremiumActionButton(
+                            label = stringResource(R.string.protection_test_open_settings),
+                            icon = Icons.Default.Settings,
+                            color = CatBlue,
                             onClick = {
                                 context.startActivity(
                                     Intent(
@@ -220,15 +216,9 @@ fun ProtectionTestScreen() {
                                     )
                                 )
                             },
-                            shape = RoundedCornerShape(12.dp),
-                            border = BorderStroke(1.dp, CatBlue.copy(alpha = 0.3f))
-                        ) {
-                            Text(
-                                stringResource(R.string.protection_test_open_settings),
-                                color = CatBlue,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        }
+                            modifier = Modifier.fillMaxWidth(),
+                            outlined = true
+                        )
                     }
                 }
             }
@@ -322,20 +312,12 @@ private fun TestResultCard(result: TestResult) {
             modifier = Modifier.fillMaxWidth().padding(14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Box(
-                modifier = Modifier
-                    .size(32.dp)
-                    .clip(CircleShape)
-                    .background(iconTint.copy(alpha = 0.08f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    if (result.passed) Icons.Default.CheckCircle else Icons.Default.Warning,
-                    null,
-                    tint = iconTint,
-                    modifier = Modifier.size(18.dp)
-                )
-            }
+            PremiumIconTile(
+                icon = if (result.passed) Icons.Default.CheckCircle else Icons.Default.Warning,
+                color = iconTint,
+                size = 36.dp,
+                iconSize = 19.dp
+            )
             Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(

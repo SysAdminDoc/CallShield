@@ -22,7 +22,7 @@
 
 CallShield blocks spam calls and texts using a **15+ layer on-device detection engine** with a gradient-boosted tree ML scorer, campaign burst detection, RCS notification filter, and real-time caller ID overlay. Powered by a 32,933-number database with scheduled hot-list updates. Community-maintained, no accounts, no tracking.
 
-## v1.7.10 Highlights
+## v1.7.11 Highlights
 
 - **Compose BOM 2026.05.00 refresh** — UI dependencies now resolve on the
   current Compose 1.11.1 release train, with Material 3 1.4.0 and refreshed
@@ -58,7 +58,7 @@ CallShield blocks spam calls and texts using a **15+ layer on-device detection e
   compatible with the current Kotlin metadata used by the networking stack.
 - **Stats and scan feedback polish** — weekly activity labels now respect locale weekday names, Statistics detection-source labels are resource-backed, and scan permission/failure copy is consistent across call-log and SMS flows.
 - **Settings credential polish** — the optional AbstractAPI key is masked by default, has explicit show/hide control, reports "Not configured", "Saved locally", and "Unsaved changes" states before saving, and is now kept out of backed-up public preferences.
-- **Premium-polish UX pass** — tighter app chrome, restrained 12dp surface radius, zero negative type tracking, and selected navigation without pill-shaped backdrops.
+- **Premium-polish UX refresh** — shared premium action, compact-action, icon-tile, and state-card treatments now unify dashboard, lookup, details, recent-call, blocklist, diagnostics, onboarding, and settings flows.
 - **Clearer recovery states** — Blocked Log empty and filtered states now explain what happened and provide a direct "Show all activity" recovery action when filters hide records.
 - **Trust-focused settings feedback** — the trusted push-alert source picker now shows installed-source coverage and skeleton loading while package labels resolve.
 - **Hardening foundation from v1.7.2** — spoof-proof ASCII phone normalization, SMS size caps, regex ReDoS validation, LRU notice gates, separated PendingIntent IDs, and atomic crash-log writes.
@@ -77,7 +77,7 @@ CallShield blocks spam calls and texts using a **15+ layer on-device detection e
 5. **Callback-aware** — won't block callbacks from numbers you recently called, or urgent repeated callers
 6. **Community-driven** — one-tap anonymous contribution via Cloudflare Worker, daily merge into database
 
-## Detection Pipeline (v1.7.10)
+## Detection Pipeline (v1.7.11)
 
 All detection layers implement a shared `IChecker` interface and run in priority order via `CheckerPipeline.run` — first non-null result wins, every layer is testable in isolation. Priorities are stable numbers; the ladder below is the live order.
 
@@ -321,7 +321,7 @@ CI runs automatically via GitHub Actions on every push and pull request.
 | URL Safety | URLhaus (abuse.ch) |
 | CI | GitHub Actions |
 | Tests | 620 JVM unit tests (JUnit) |
-| Strings | 955+ resources and 6 plural groups (translation-ready) |
+| Strings | 952 string resources and 25 plural groups (translation-ready) |
 | Accessibility | 100+ content descriptions, 48dp touch targets |
 | Min SDK | 29 (Android 10) |
 | Target SDK | 36 |

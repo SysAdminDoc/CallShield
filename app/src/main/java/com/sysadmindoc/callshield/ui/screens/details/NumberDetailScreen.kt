@@ -76,7 +76,12 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
         }
     }
     val reportIssueTitle = stringResource(R.string.detail_report_issue_title, number)
-    val reportIssueBody = stringResource(R.string.detail_report_issue_body, number, numberCalls.size)
+    val reportIssueBody = pluralStringResource(
+        R.plurals.detail_report_issue_body,
+        numberCalls.size,
+        number,
+        numberCalls.size
+    )
 
     // Contact name resolution
     var contactName by remember(number) { mutableStateOf<String?>(null) }
@@ -205,15 +210,14 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
 
         // Block area code
         if (areaCode != null) {
-            OutlinedButton(
+            PremiumActionButton(
+                label = stringResource(R.string.detail_block_area_code, areaCode),
+                icon = Icons.Default.FilterAlt,
+                color = CatYellow,
                 onClick = { viewModel.addWildcardRule("+1$areaCode*", false, blockAreaCodeDescription.orEmpty()) },
-                shape = RoundedCornerShape(12.dp),
-                border = BorderStroke(1.dp, CatYellow.copy(alpha = 0.3f))
-            ) {
-                Icon(Icons.Default.FilterAlt, null, tint = CatYellow)
-                Spacer(Modifier.width(6.dp))
-                Text(stringResource(R.string.detail_block_area_code, areaCode), color = CatYellow)
-            }
+                modifier = Modifier.fillMaxWidth(),
+                outlined = true
+            )
         }
 
         // Stats
@@ -315,7 +319,10 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
                     SectionHeader(stringResource(R.string.detail_online_lookup), color = CatBlue)
                     Spacer(Modifier.weight(1f))
                     if (webResult == null) {
-                        OutlinedButton(
+                        PremiumActionButton(
+                            label = stringResource(R.string.detail_check_sources),
+                            icon = Icons.Default.Search,
+                            color = CatBlue,
                             onClick = {
                                 webLoading = true
                                 coroutineScope.launch {
@@ -326,16 +333,9 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
                                 }
                             },
                             enabled = !webLoading,
-                            shape = RoundedCornerShape(12.dp),
-                            border = BorderStroke(1.dp, if (webLoading) CatOverlay.copy(alpha = 0.3f) else CatBlue.copy(alpha = 0.3f)),
-                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
-                        ) {
-                            Text(
-                                stringResource(R.string.detail_check_sources),
-                                color = if (webLoading) CatOverlay else CatBlue,
-                                style = MaterialTheme.typography.labelSmall
-                            )
-                        }
+                            loading = webLoading,
+                            outlined = true
+                        )
                     }
                 }
                 if (webLoading) {
@@ -353,8 +353,18 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
                 webResult?.let { wr ->
                     Spacer(Modifier.height(8.dp))
                     if (wr.totalReports > 0) {
+                        val reportCount = pluralStringResource(
+                            R.plurals.detail_reports_count_plural,
+                            wr.totalReports,
+                            wr.totalReports
+                        )
+                        val sourceCount = pluralStringResource(
+                            R.plurals.detail_sources_count_plural,
+                            wr.sources.size,
+                            wr.sources.size
+                        )
                         Text(
-                            stringResource(R.string.detail_reports_across_sources, wr.totalReports, wr.sources.size),
+                            stringResource(R.string.detail_reports_across_sources, reportCount, sourceCount),
                             color = CatRed,
                             fontWeight = FontWeight.SemiBold
                         )
@@ -376,7 +386,11 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
                             Text(src.source, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold, modifier = Modifier.width(90.dp))
                             Text(
                                 if (src.reports > 0) {
-                                    stringResource(R.string.detail_reports_count, src.reports)
+                                    pluralStringResource(
+                                        R.plurals.detail_reports_count_label,
+                                        src.reports,
+                                        src.reports
+                                    )
                                 } else if (src.isSpam) {
                                     stringResource(R.string.detail_flagged)
                                 } else {
@@ -399,77 +413,62 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
         // Actions
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             if (!isBlocked) {
-                Button(
+                PremiumActionButton(
+                    label = stringResource(R.string.detail_block),
+                    icon = Icons.Default.Block,
+                    color = CatRed,
                     onClick = {
                         viewModel.blockNumber(number, "spam", blockedFromDetail)
                         hapticConfirm(context)
                         Toast.makeText(context, numberBlockedMessage, Toast.LENGTH_SHORT).show()
                     },
-                    modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.buttonColors(containerColor = CatRed),
-                    shape = RoundedCornerShape(12.dp),
-                    border = BorderStroke(1.dp, CatRed.copy(alpha = 0.3f))
-                ) {
-                    Icon(Icons.Default.Block, null, tint = Black)
-                    Spacer(Modifier.width(6.dp))
-                    Text(stringResource(R.string.detail_block), color = Black, fontWeight = FontWeight.Bold)
-                }
+                    modifier = Modifier.weight(1f)
+                )
             } else {
-                Button(
+                PremiumActionButton(
+                    label = stringResource(R.string.detail_unblock),
+                    icon = Icons.Default.CheckCircle,
+                    color = CatGreen,
                     onClick = {
                         userBlocked.find { it.number == number }?.let { viewModel.unblockNumber(it) }
                         hapticTick(context)
                         Toast.makeText(context, numberUnblockedMessage, Toast.LENGTH_SHORT).show()
                     },
-                    modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.buttonColors(containerColor = CatGreen),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Icon(Icons.Default.CheckCircle, null, tint = Black)
-                    Spacer(Modifier.width(6.dp))
-                    Text(stringResource(R.string.detail_unblock), color = Black, fontWeight = FontWeight.Bold)
-                }
+                    modifier = Modifier.weight(1f)
+                )
             }
-            OutlinedButton(
+            PremiumActionButton(
+                label = stringResource(R.string.detail_report),
+                icon = Icons.Default.Flag,
+                color = CatPeach,
                 onClick = {
                     val title = Uri.encode(reportIssueTitle)
                     val body = Uri.encode(reportIssueBody)
                     context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/SysAdminDoc/CallShield/issues/new?title=$title&body=$body&labels=spam-report")).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) })
                 },
                 modifier = Modifier.weight(1f),
-                shape = RoundedCornerShape(12.dp),
-                border = BorderStroke(1.dp, CatPeach.copy(alpha = 0.3f))
-            ) {
-                Icon(Icons.Default.Flag, null, tint = CatPeach)
-                Spacer(Modifier.width(6.dp))
-                Text(stringResource(R.string.detail_report), color = CatPeach)
-            }
+                outlined = true
+            )
         }
 
         // Community contribution buttons
         val contributeResult by viewModel.contributeResult.collectAsStateWithLifecycle()
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(
+            PremiumActionButton(
+                label = stringResource(R.string.detail_report_spam),
+                icon = Icons.Default.Flag,
+                color = CatRed,
                 onClick = { hapticTick(context); viewModel.contributeToDatabase(number, dbEntry?.type ?: liveResult?.type ?: "spam") },
-                modifier = Modifier.weight(1f),
-                colors = ButtonDefaults.buttonColors(containerColor = CatGreen),
-                shape = RoundedCornerShape(12.dp),
-                border = BorderStroke(1.dp, CatGreen.copy(alpha = 0.3f))
-            ) {
-                Icon(Icons.Default.Favorite, null, tint = Black)
-                Spacer(Modifier.width(4.dp))
-                Text(stringResource(R.string.detail_report_spam), color = Black, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelSmall)
-            }
-            OutlinedButton(
+                modifier = Modifier.weight(1f)
+            )
+            PremiumActionButton(
+                label = stringResource(R.string.detail_not_spam),
+                icon = Icons.Default.ThumbUp,
+                color = CatGreen,
                 onClick = { hapticTick(context); viewModel.reportNotSpam(number) },
                 modifier = Modifier.weight(1f),
-                shape = RoundedCornerShape(12.dp),
-                border = BorderStroke(1.dp, CatBlue.copy(alpha = 0.3f))
-            ) {
-                Icon(Icons.Default.ThumbUp, null, tint = CatBlue)
-                Spacer(Modifier.width(4.dp))
-                Text(stringResource(R.string.detail_not_spam), color = CatBlue, style = MaterialTheme.typography.labelSmall)
-            }
+                outlined = true
+            )
         }
         contributeResult?.let {
             Text(it, style = MaterialTheme.typography.bodySmall, color = if ("not spam" in it.lowercase() || "contributed" in it.lowercase()) CatGreen else CatRed)
@@ -482,56 +481,48 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
         // FTC fraud report — copies the number + opens reportfraud.ftc.gov.
         // The FTC form doesn't accept URL params, so we do the next-best
         // thing: clipboard-seed the number and tell the user to paste.
-        OutlinedButton(
+        PremiumActionButton(
+            label = stringResource(R.string.detail_ftc_complaint),
+            icon = Icons.Default.Gavel,
+            color = CatPeach,
             onClick = {
                 hapticTick(context)
                 com.sysadmindoc.callshield.data.ReportFraudHelper.report(context, number)
             },
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp),
-            border = BorderStroke(1.dp, CatPeach.copy(alpha = 0.3f))
-        ) {
-            Icon(Icons.Default.Gavel, null, tint = CatPeach)
-            Spacer(Modifier.width(6.dp))
-            Text(stringResource(R.string.detail_ftc_complaint), color = CatPeach, style = MaterialTheme.typography.labelSmall)
-        }
+            outlined = true
+        )
 
         // Whitelist / call / share actions
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(
+            PremiumActionButton(
+                label = stringResource(R.string.detail_whitelist),
+                icon = Icons.Default.CheckCircle,
+                color = CatGreen,
                 onClick = { viewModel.addToWhitelist(number, whitelistedFromDetail) },
                 modifier = Modifier.weight(1f),
-                shape = RoundedCornerShape(12.dp),
-                border = BorderStroke(1.dp, CatGreen.copy(alpha = 0.3f))
-            ) {
-                Icon(Icons.Default.CheckCircle, null, tint = CatGreen)
-                Spacer(Modifier.width(4.dp))
-                Text(stringResource(R.string.detail_whitelist), color = CatGreen, style = MaterialTheme.typography.labelSmall)
-            }
-            OutlinedButton(
+                outlined = true
+            )
+            PremiumActionButton(
+                label = stringResource(R.string.detail_call),
+                icon = Icons.Default.Phone,
+                color = CatBlue,
                 onClick = {
                     context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:$number")).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) })
                 },
                 modifier = Modifier.weight(1f),
-                shape = RoundedCornerShape(12.dp),
-                border = BorderStroke(1.dp, CatBlue.copy(alpha = 0.3f))
-            ) {
-                Icon(Icons.Default.Phone, null, tint = CatBlue)
-                Spacer(Modifier.width(4.dp))
-                Text(stringResource(R.string.detail_call), color = CatBlue, style = MaterialTheme.typography.labelSmall)
-            }
-            OutlinedButton(
+                outlined = true
+            )
+            PremiumActionButton(
+                label = stringResource(R.string.detail_share),
+                icon = Icons.Default.Share,
+                color = CatYellow,
                 onClick = {
                     viewModel.shareAsSpam(number, dbEntry?.type ?: liveResult?.type ?: "")
                 },
                 modifier = Modifier.weight(1f),
-                shape = RoundedCornerShape(12.dp),
-                border = BorderStroke(1.dp, CatYellow.copy(alpha = 0.3f))
-            ) {
-                Icon(Icons.Default.Share, null, tint = CatYellow)
-                Spacer(Modifier.width(4.dp))
-                Text(stringResource(R.string.detail_share), color = CatYellow, style = MaterialTheme.typography.labelSmall)
-            }
+                outlined = true
+            )
         }
     }
 }

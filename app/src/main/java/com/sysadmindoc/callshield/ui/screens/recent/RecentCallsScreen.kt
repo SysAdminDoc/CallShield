@@ -450,17 +450,7 @@ fun RecentCallItem(call: RecentCall, onOpenDetail: () -> Unit) {
 
 @Composable
 fun RecentActionButton(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, color: androidx.compose.ui.graphics.Color, onClick: () -> Unit) {
-    OutlinedButton(
-        onClick = onClick,
-        modifier = Modifier.height(32.dp),
-        shape = RoundedCornerShape(10.dp),
-        border = BorderStroke(1.dp, color.copy(alpha = 0.25f)),
-        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
-    ) {
-        Icon(icon, label, tint = color, modifier = Modifier.size(14.dp))
-        Spacer(Modifier.width(4.dp))
-        Text(label, color = color, style = MaterialTheme.typography.labelSmall)
-    }
+    PremiumCompactButton(label = label, icon = icon, color = color, onClick = onClick)
 }
 
 private suspend fun loadRecentCalls(context: Context): List<RecentCall> = withContext(Dispatchers.IO) {
@@ -672,13 +662,11 @@ private fun RecentCallsPermissionState(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 SectionHeader(stringResource(R.string.recent_permission_title), CatPeach)
-                Icon(
-                    Icons.Default.LockOpen,
-                    contentDescription = null,
-                    tint = CatPeach,
-                    modifier = Modifier
-                        .size(40.dp)
-                        .accentGlow(CatPeach, radius = 160f, alpha = 0.08f)
+                PremiumIconTile(
+                    icon = Icons.Default.LockOpen,
+                    color = CatPeach,
+                    size = 58.dp,
+                    iconSize = 30.dp
                 )
                 Text(
                     stringResource(R.string.recent_permission_title),
@@ -703,23 +691,13 @@ private fun RecentCallsPermissionState(
                     subtitle = stringResource(R.string.recent_permission_hint_recovery_body),
                     accentColor = CatPeach
                 )
-                Button(
+                PremiumActionButton(
+                    label = stringResource(R.string.recent_permission_cta),
+                    icon = Icons.Default.Settings,
+                    color = CatPeach,
                     onClick = onOpenSettings,
-                    colors = ButtonDefaults.buttonColors(containerColor = CatPeach),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Icon(
-                        Icons.Default.Settings,
-                        contentDescription = null,
-                        tint = Black
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        stringResource(R.string.recent_permission_cta),
-                        color = Black,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
         }
     }
@@ -745,13 +723,12 @@ private fun RecentEmptyStateCard(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Icon(
-                    Icons.AutoMirrored.Filled.PhoneMissed,
+                PremiumIconTile(
+                    icon = Icons.AutoMirrored.Filled.PhoneMissed,
                     contentDescription = stringResource(R.string.cd_no_recent_calls),
-                    tint = accentColor,
-                    modifier = Modifier
-                        .size(48.dp)
-                        .accentGlow(color = accentColor, radius = 140f, alpha = 0.10f)
+                    color = accentColor,
+                    size = 58.dp,
+                    iconSize = 30.dp
                 )
                 Text(title, color = CatText, style = MaterialTheme.typography.titleMedium)
                 Text(
@@ -760,13 +737,13 @@ private fun RecentEmptyStateCard(
                     style = MaterialTheme.typography.bodySmall
                 )
                 if (actionLabel != null && onAction != null) {
-                    OutlinedButton(
+                    PremiumActionButton(
+                        label = actionLabel,
+                        icon = Icons.Default.Refresh,
+                        color = accentColor,
                         onClick = onAction,
-                        shape = RoundedCornerShape(12.dp),
-                        border = BorderStroke(1.dp, accentColor.copy(alpha = 0.28f))
-                    ) {
-                        Text(actionLabel, color = accentColor, fontWeight = FontWeight.SemiBold)
-                    }
+                        outlined = true
+                    )
                 }
             }
         }
@@ -785,14 +762,7 @@ private fun RecentGuidanceRow(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.Top
     ) {
-        Box(
-            modifier = Modifier
-                .size(38.dp)
-                .background(accentColor.copy(alpha = 0.12f), RoundedCornerShape(12.dp)),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(icon, null, tint = accentColor, modifier = Modifier.size(18.dp))
-        }
+        PremiumIconTile(icon = icon, color = accentColor, size = 38.dp, iconSize = 18.dp)
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(title, style = MaterialTheme.typography.bodyMedium, color = CatText, fontWeight = FontWeight.SemiBold)
             Text(subtitle, style = MaterialTheme.typography.bodySmall, color = CatSubtext)

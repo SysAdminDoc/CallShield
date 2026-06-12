@@ -539,3 +539,60 @@ Plus RFC 8588 (SHAKEN profile), RFC 9027 (Traceback), Apache SpamAssassin / rspa
 ---
 
 *Roadmap maintained alongside `CHANGELOG.md` and `CLAUDE.md`. Update on every minor release; full re-research pass per major.*
+
+## Research-Driven Additions
+
+### P0
+
+- [ ] P0 — Durable post-response blocked-call logging
+  Why: `CallShieldScreeningService` correctly responds before Room logging to protect Android's 5-second deadline, but the async `appScope` insert can still be lost after `respondToCall()`.
+  Evidence: `app/src/main/java/com/sysadmindoc/callshield/service/CallShieldScreeningService.kt`; Android `CallScreeningService` docs.
+  Touches: `CallShieldScreeningService.kt`, `SpamRepository.kt`, `SpamDao.kt`, `NotificationHelper.kt`, a small pending-log entity or worker, unit/instrumented tests.
+  Acceptance: block response remains immediate; each blocked call is queued idempotently before/at response time; queued logs survive process death and are flushed exactly once; tests cover retry and duplicate suppression without adding hot-path latency.
+  Complexity: M
+
+- [ ] P0 — Add durable abuse limits to the current community-report Worker
+  Why: anonymous reports currently write GitHub files through the Cloudflare Worker, and the code still notes that production rate limiting should use KV; future Ktor rate limits do not protect the live Worker path.
+  Evidence: `worker/community-reports-worker.js`; recent `Community report:` commits in `rtk git log -200`; existing server-side rate-limit roadmap item only covers the future server.
+  Touches: `worker/community-reports-worker.js`, `worker/community-reports-worker.test.mjs`, `wrangler.toml`, `data/CommunityContributor.kt`.
+  Acceptance: KV or Durable Object rate limits persist across Worker isolates; burst submissions return 429 with `Retry-After`; normal reports still succeed; client backs off on 429; Worker tests cover burst, replay, SMS-domain, and valid-report paths.
+  Complexity: M
+
+### P1
+
+- [ ] P1 — Centralize ASCII-only phone normalization across imports and helper paths
+  Why: the canonical anti-spoof normalizer rejects non-ASCII digits, but backup/import, lookup, heuristic, formatter, scanner, notification, and RCS helper paths still use `Char.isDigit()`.
+  Evidence: `SpamRepository.kt` normalizer comment; `BackupRestore.kt`, `BlocklistExporter.kt`, `SpamHeuristics.kt`, `CallbackDetector.kt`, `PhoneFormatter.kt`, `SmsContextChecker.kt`, `SpamMLScorer.kt`, `CallLogScanner.kt`, `NotificationHelper.kt`, `RcsNotificationListener.kt`.
+  Touches: shared phone-normalization utility, import/restore/export parsers, call/SMS/RCS helpers, normalization tests.
+  Acceptance: Arabic-Indic/fullwidth and format-control digit spoof cases are rejected or normalized identically in restore, blocklist import, manual entry, call-log scan, RCS sender parsing, notifications, and community reports; display formatting remains locale-aware but security parsing stays ASCII-only.
+  Complexity: M
+
+- [ ] P1 — Invalidate contact and system block-list caches with content observers
+  Why: contact and system blocked-number reads are cached for hot-path speed, but changes made outside CallShield can stay stale until TTL or role recheck.
+  Evidence: `SpamHeuristics.kt` 60-second `ContactsContract` cache; `SystemBlockList.kt` 30-second lookup and 5-minute availability caches.
+  Touches: `SpamHeuristics.kt`, `SystemBlockList.kt`, app startup/lifecycle wiring, test fakes for observer callbacks.
+  Acceptance: Contacts and `BlockedNumberContract` changes call the existing cache-clear hooks without polling; role revocation/grant refreshes availability promptly; tests verify observer-triggered invalidation and no hot-path query regression.
+  Complexity: M
+
+- [ ] P1 — Add API 36 call-response behavior smoke coverage
+  Why: the app targets API 36, but instrumented CI currently smokes target behavior on API 35; active competitor reports show Android 16/GrapheneOS call notification behavior can diverge from older expectations.
+  Evidence: `app/build.gradle.kts` targetSdk 36; `.github/workflows/instrumented.yml`; SpamBlocker issue #492; Android 16 behavior docs.
+  Touches: `.github/workflows/instrumented.yml`, `TargetSdkBehaviorSmokeTest.kt`, `CallShieldScreeningService.kt`, settings/help copy if platform caveats are user-visible.
+  Acceptance: CI includes an API 36 smoke lane when emulator images are available; hard-reject and silent-voicemail response construction stay covered; any unavoidable Android 16/OEM notification caveat is documented in-app or in release docs.
+  Complexity: M
+
+### P2
+
+- [ ] P2 — Refresh v1.7.11 distribution metadata before F-Droid review
+  Why: app build metadata is v1.7.11/versionCode 39 and the README now reflects v1.7.11, while F-Droid submission files still point at v1.7.10/versionCode 38.
+  Evidence: `app/build.gradle.kts`; `README.md`; `docs/fdroid-submission.md`; `docs/fdroid/com.sysadmindoc.callshield.yml`; F-Droid inclusion docs.
+  Touches: `docs/fdroid-submission.md`, `docs/fdroid/com.sysadmindoc.callshield.yml`, `fastlane/metadata/android/en-US/changelogs/39.txt`, release SHA256/signature runbook.
+  Acceptance: F-Droid metadata `CurrentVersion`/`CurrentVersionCode`, release URL, versioned changelog, and verification commands all match v1.7.11; stale v1.7.10 claims remain only as historical changelog entries.
+  Complexity: S
+
+- [ ] P2 — Refresh Activity/Lifecycle/Navigation dependencies as one tested tranche
+  Why: the app already fixed lifecycle collection, but `libs.versions.toml` still pins Lifecycle 2.8.7, Activity Compose 1.9.3, and Navigation Compose 2.8.5 while current AndroidX releases include newer Compose lifecycle and predictive-back fixes.
+  Evidence: `gradle/libs.versions.toml`; AndroidX Lifecycle and Navigation release notes; existing B.U.8 predictive-back item.
+  Touches: `gradle/libs.versions.toml`, Gradle lockfiles, `MainActivity.kt`, navigation tests, predictive-back smoke coverage.
+  Acceptance: upgrade to current AGP-8-compatible stable AndroidX Activity/Lifecycle/Navigation versions; lockfiles refresh; unit, lint, and instrumented navigation/back tests pass; no Hilt 2.59 upgrade until AGP 9 migration.
+  Complexity: M

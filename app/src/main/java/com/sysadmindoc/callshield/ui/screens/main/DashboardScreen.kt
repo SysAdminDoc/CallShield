@@ -47,6 +47,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.DownloadDone
+import androidx.compose.material.icons.filled.FilterAlt
 import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.Notifications
@@ -61,9 +62,7 @@ import androidx.compose.material.icons.filled.SpeakerNotesOff
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.Today
 import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -87,6 +86,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -117,6 +117,9 @@ import com.sysadmindoc.callshield.ui.theme.CatText
 import com.sysadmindoc.callshield.ui.theme.CatYellow
 import com.sysadmindoc.callshield.ui.theme.GradientDivider
 import com.sysadmindoc.callshield.ui.theme.PremiumCard
+import com.sysadmindoc.callshield.ui.theme.PremiumActionButton
+import com.sysadmindoc.callshield.ui.theme.PremiumCompactButton
+import com.sysadmindoc.callshield.ui.theme.PremiumIconTile
 import com.sysadmindoc.callshield.ui.theme.SectionHeader
 import com.sysadmindoc.callshield.ui.theme.StatusPill
 import com.sysadmindoc.callshield.ui.theme.accentGlow
@@ -511,7 +514,11 @@ fun DashboardScreen(viewModel: MainViewModel) {
                     icon = Icons.Default.Sync,
                     title = stringResource(R.string.dashboard_sync_database),
                     subtitle = if (spamDatabaseReady) {
-                        stringResource(R.string.dashboard_action_sync_subtitle_ready, spamCount)
+                        pluralStringResource(
+                            R.plurals.dashboard_action_sync_subtitle_ready,
+                            spamCount,
+                            spamCount
+                        )
                     } else {
                         stringResource(R.string.dashboard_action_sync_subtitle)
                     },
@@ -631,47 +638,63 @@ fun DashboardScreen(viewModel: MainViewModel) {
                             Text(result.error, color = CatRed, style = MaterialTheme.typography.bodySmall)
                         }
                     } else {
-                            Text(
-                        stringResource(
-                            R.string.dashboard_scan_result,
-                            result.totalScanned,
-                            result.spamFound
-                        ),
-                        color = if (result.spamFound > 0) CatRed else CatGreen
-                    )
-                    for (spam in result.spamNumbers.take(5)) {
-                        Spacer(Modifier.height(6.dp))
-                        GradientDivider()
-                        Spacer(Modifier.height(6.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    PhoneFormatter.format(spam.number),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.SemiBold
+                        val totalScannedText =
+                            pluralStringResource(
+                                R.plurals.dashboard_scan_unique_numbers_scanned,
+                                result.totalScanned,
+                                result.totalScanned,
+                            )
+                        val spamFoundText =
+                            pluralStringResource(
+                                R.plurals.dashboard_scan_spam_found,
+                                result.spamFound,
+                                result.spamFound,
+                            )
+                        Text(
+                            stringResource(
+                                R.string.dashboard_scan_result,
+                                totalScannedText,
+                                spamFoundText,
+                            ),
+                            color = if (result.spamFound > 0) CatRed else CatGreen
+                        )
+                        for (spam in result.spamNumbers.take(5)) {
+                            Spacer(Modifier.height(6.dp))
+                            GradientDivider()
+                            Spacer(Modifier.height(6.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        PhoneFormatter.format(spam.number),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                    Text(
+                                        "${spam.callCount}x | ${spam.matchReason.replace("_", " ")}",
+                                        style = MaterialTheme.typography.bodySmall, color = CatSubtext
+                                    )
+                                }
+                                PremiumCompactButton(
+                                    label = stringResource(R.string.dashboard_block),
+                                    icon = Icons.Default.Block,
+                                    color = CatRed,
+                                    onClick = { viewModel.blockNumber(spam.number, spam.type) }
                                 )
-                                Text(
-                                    "${spam.callCount}x | ${spam.matchReason.replace("_", " ")}",
-                                    style = MaterialTheme.typography.bodySmall, color = CatSubtext
-                                )
-                            }
-                            TextButton(onClick = { viewModel.blockNumber(spam.number, spam.type) }) {
-                                Text(stringResource(R.string.dashboard_block), color = CatRed)
                             }
                         }
-                    }
-                    if (result.spamNumbers.size > 5) {
-                        Spacer(Modifier.height(4.dp))
-                        Text(
-                            stringResource(R.string.dashboard_scan_more, result.spamNumbers.size - 5),
-                            color = CatOverlay,
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                    }
+                        if (result.spamNumbers.size > 5) {
+                            Spacer(Modifier.height(4.dp))
+                            val moreCount = result.spamNumbers.size - 5
+                            Text(
+                                pluralStringResource(R.plurals.dashboard_scan_more, moreCount, moreCount),
+                                color = CatOverlay,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
                     } // else (no error)
                 }
             }
@@ -692,41 +715,57 @@ fun DashboardScreen(viewModel: MainViewModel) {
                             Text(result.error, color = CatRed, style = MaterialTheme.typography.bodySmall)
                         }
                     } else {
-                            Text(
-                        stringResource(
-                            R.string.dashboard_sms_scan_result,
-                            result.totalScanned,
-                            result.spamFound
-                        ),
-                        color = if (result.spamFound > 0) CatRed else CatGreen
-                    )
-                    for (sms in result.spamMessages.take(5)) {
-                        Spacer(Modifier.height(6.dp))
-                        GradientDivider()
-                        Spacer(Modifier.height(6.dp))
-                        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    PhoneFormatter.format(sms.number),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.SemiBold
+                        val totalScannedText =
+                            pluralStringResource(
+                                R.plurals.dashboard_sms_scan_messages_scanned,
+                                result.totalScanned,
+                                result.totalScanned,
+                            )
+                        val spamFoundText =
+                            pluralStringResource(
+                                R.plurals.dashboard_scan_spam_found,
+                                result.spamFound,
+                                result.spamFound,
+                            )
+                        Text(
+                            stringResource(
+                                R.string.dashboard_sms_scan_result,
+                                totalScannedText,
+                                spamFoundText,
+                            ),
+                            color = if (result.spamFound > 0) CatRed else CatGreen
+                        )
+                        for (sms in result.spamMessages.take(5)) {
+                            Spacer(Modifier.height(6.dp))
+                            GradientDivider()
+                            Spacer(Modifier.height(6.dp))
+                            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        PhoneFormatter.format(sms.number),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                    Text(sms.body, style = MaterialTheme.typography.bodySmall, color = CatSubtext, maxLines = 1)
+                                    Text(sms.matchReason.replace("_", " "), style = MaterialTheme.typography.labelSmall, color = CatPeach)
+                                }
+                                PremiumCompactButton(
+                                    label = stringResource(R.string.dashboard_block),
+                                    icon = Icons.Default.Block,
+                                    color = CatRed,
+                                    onClick = { viewModel.blockNumber(sms.number, sms.type) }
                                 )
-                                Text(sms.body, style = MaterialTheme.typography.bodySmall, color = CatSubtext, maxLines = 1)
-                                Text(sms.matchReason.replace("_", " "), style = MaterialTheme.typography.labelSmall, color = CatPeach)
-                            }
-                            TextButton(onClick = { viewModel.blockNumber(sms.number, sms.type) }) {
-                                Text(stringResource(R.string.dashboard_block), color = CatRed)
                             }
                         }
-                    }
-                    if (result.spamMessages.size > 5) {
-                        Spacer(Modifier.height(4.dp))
-                        Text(
-                            stringResource(R.string.dashboard_scan_more, result.spamMessages.size - 5),
-                            color = CatOverlay,
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                    }
+                        if (result.spamMessages.size > 5) {
+                            Spacer(Modifier.height(4.dp))
+                            val moreCount = result.spamMessages.size - 5
+                            Text(
+                                pluralStringResource(R.plurals.dashboard_scan_more, moreCount, moreCount),
+                                color = CatOverlay,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
                     } // else (no error)
                 }
             }
@@ -765,13 +804,12 @@ fun DashboardScreen(viewModel: MainViewModel) {
                                 style = MaterialTheme.typography.bodySmall,
                                 modifier = Modifier.weight(1f)
                             )
-                            TextButton(onClick = { viewModel.addWildcardRule("+1$ac*", false, "Block $ac ($loc)") }) {
-                                Text(
-                                    stringResource(R.string.dashboard_block_area, ac),
-                                    color = CatYellow,
-                                    style = MaterialTheme.typography.labelSmall
-                                )
-                            }
+                            PremiumCompactButton(
+                                label = stringResource(R.string.dashboard_block_area, ac),
+                                icon = Icons.Default.FilterAlt,
+                                color = CatYellow,
+                                onClick = { viewModel.addWildcardRule("+1$ac*", false, "Block $ac ($loc)") }
+                            )
                         }
                     }
                 }
@@ -901,9 +939,17 @@ internal fun DashboardHeroCard(
                 ) {
                     Text(
                         text = if (aggressiveMode) {
-                            stringResource(R.string.dashboard_engines_active_aggressive, engineCount)
+                            pluralStringResource(
+                                R.plurals.dashboard_engines_active_aggressive,
+                                engineCount,
+                                engineCount
+                            )
                         } else {
-                            stringResource(R.string.dashboard_engines_active, engineCount)
+                            pluralStringResource(
+                                R.plurals.dashboard_engines_active,
+                                engineCount,
+                                engineCount
+                            )
                         },
                         style = MaterialTheme.typography.bodySmall,
                         color = CatOverlay
@@ -915,33 +961,17 @@ internal fun DashboardHeroCard(
                     )
                 }
                 heroAction?.let { action ->
-                    Button(
+                    PremiumActionButton(
+                        label = action.label,
+                        icon = action.icon,
+                        color = heroAccent,
                         onClick = action.onClick,
                         enabled = syncState !is SyncState.Syncing || action.icon != Icons.Default.Sync,
-                        colors = ButtonDefaults.buttonColors(containerColor = heroAccent),
-                        shape = RoundedCornerShape(8.dp),
-                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),
+                        loading = syncState is SyncState.Syncing && action.icon == Icons.Default.Sync,
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(52.dp)
-                    ) {
-                        if (syncState is SyncState.Syncing && action.icon == Icons.Default.Sync) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(16.dp),
-                                strokeWidth = 2.dp,
-                                color = Black
-                            )
-                        } else {
-                            Icon(action.icon, null, tint = Black, modifier = Modifier.size(18.dp))
-                        }
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            action.label,
-                            color = Black,
-                            fontWeight = FontWeight.Bold,
-                            style = MaterialTheme.typography.labelLarge
-                        )
-                    }
+                    )
                 }
             }
         }
@@ -1000,7 +1030,11 @@ internal fun DashboardSetupChecklistCard(
                 detail = if (corePermissionsReady) {
                     stringResource(R.string.dashboard_permissions_ready_detail)
                 } else {
-                    stringResource(R.string.dashboard_permissions_needed_detail, missingPermissionCount)
+                    pluralStringResource(
+                        R.plurals.dashboard_permissions_needed_detail,
+                        missingPermissionCount,
+                        missingPermissionCount
+                    )
                 },
                 ready = corePermissionsReady,
                 accentColor = CatBlue,
@@ -1015,7 +1049,11 @@ internal fun DashboardSetupChecklistCard(
                 title = stringResource(R.string.dashboard_setup_database_title),
                 detail = when {
                     syncState is SyncState.Syncing -> stringResource(R.string.dashboard_database_syncing_detail)
-                    spamDatabaseReady -> stringResource(R.string.dashboard_database_ready_detail, spamCount)
+                    spamDatabaseReady -> pluralStringResource(
+                        R.plurals.dashboard_database_ready_detail,
+                        spamCount,
+                        spamCount
+                    )
                     else -> stringResource(R.string.dashboard_database_needed_detail)
                 },
                 ready = spamDatabaseReady,
@@ -1135,14 +1173,7 @@ private fun SetupChecklistRow(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
-            modifier = Modifier
-                .size(42.dp)
-                .background(accentColor.copy(alpha = 0.12f), RoundedCornerShape(12.dp)),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(icon, null, tint = accentColor, modifier = Modifier.size(20.dp))
-        }
+        PremiumIconTile(icon = icon, color = accentColor)
         Column(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(2.dp)
@@ -1153,15 +1184,13 @@ private fun SetupChecklistRow(
         when {
             ready -> SetupStateBadge(stringResource(R.string.dashboard_status_ready), CatGreen)
             actionLabel != null && onAction != null -> {
-                OutlinedButton(
+                PremiumActionButton(
+                    label = actionLabel,
+                    icon = Icons.Default.ChevronRight,
+                    color = accentColor,
                     onClick = onAction,
-                    shape = RoundedCornerShape(10.dp),
-                    border = BorderStroke(1.dp, accentColor.copy(alpha = 0.35f)),
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
-                    modifier = Modifier.height(34.dp)
-                ) {
-                    Text(actionLabel, color = accentColor, style = MaterialTheme.typography.labelMedium)
-                }
+                    outlined = true,
+                )
             }
             else -> SetupStateBadge(stringResource(R.string.dashboard_status_needed), CatYellow)
         }
@@ -1195,14 +1224,7 @@ private fun DashboardActionRow(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
-            modifier = Modifier
-                .size(42.dp)
-                .background(accentColor.copy(alpha = 0.12f), RoundedCornerShape(12.dp)),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(icon, null, tint = accentColor, modifier = Modifier.size(20.dp))
-        }
+        PremiumIconTile(icon = icon, color = accentColor)
         Column(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(2.dp)
@@ -1210,24 +1232,14 @@ private fun DashboardActionRow(
             Text(title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
             Text(subtitle, style = MaterialTheme.typography.bodySmall, color = CatSubtext)
         }
-        Button(
+        PremiumActionButton(
+            label = actionLabel,
+            icon = Icons.Default.ChevronRight,
+            color = accentColor,
             onClick = onClick,
             enabled = enabled,
-            colors = ButtonDefaults.buttonColors(containerColor = accentColor),
-            shape = RoundedCornerShape(12.dp),
-            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
-            modifier = Modifier.height(36.dp)
-        ) {
-            if (loading) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(15.dp),
-                    strokeWidth = 2.dp,
-                    color = Black
-                )
-            } else {
-                Text(actionLabel, color = Black, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium)
-            }
-        }
+            loading = loading,
+        )
     }
 }
 
@@ -1341,14 +1353,7 @@ fun QuickToggle(icon: ImageVector, label: String, checked: Boolean, onChanged: (
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
-            modifier = Modifier
-                .size(36.dp)
-                .background(tintColor.copy(alpha = 0.08f), RoundedCornerShape(10.dp)),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(icon, null, tint = tintColor, modifier = Modifier.size(20.dp))
-        }
+        PremiumIconTile(icon = icon, color = tintColor, size = 38.dp, iconSize = 19.dp)
         Text(label, modifier = Modifier.weight(1f), fontWeight = FontWeight.Medium)
         Switch(
             checked = checked,
@@ -1394,7 +1399,7 @@ fun StatCard(modifier: Modifier, title: String, value: String, icon: ImageVector
 
     PremiumCard(modifier = modifier, accentColor = color.copy(alpha = 0.5f)) {
         Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(icon, null, tint = color, modifier = Modifier.size(28.dp))
+            PremiumIconTile(icon = icon, color = color, size = 44.dp, iconSize = 22.dp)
             Spacer(Modifier.height(8.dp))
             Text(
                 animatedValue.toString(),

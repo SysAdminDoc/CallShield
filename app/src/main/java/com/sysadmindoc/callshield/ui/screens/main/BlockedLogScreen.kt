@@ -30,6 +30,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -251,12 +252,19 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
             title = { Text(stringResource(R.string.blocked_log_clear_title)) },
             text = {
                 Text(
-                    stringResource(R.string.blocked_log_clear_message, blockedCalls.size),
+                    pluralStringResource(
+                        R.plurals.blocked_log_clear_message,
+                        blockedCalls.size,
+                        blockedCalls.size
+                    ),
                     color = CatSubtext
                 )
             },
             confirmButton = {
-                Button(
+                PremiumActionButton(
+                    label = stringResource(R.string.blocked_log_clear_all),
+                    icon = Icons.Default.DeleteSweep,
+                    color = CatRed,
                     onClick = {
                         viewModel.clearLog()
                         hapticConfirm(context)
@@ -268,9 +276,7 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
                             )
                         }
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = CatRed),
-                    shape = RoundedCornerShape(12.dp)
-                ) { Text(stringResource(R.string.blocked_log_clear_all), color = Black, fontWeight = FontWeight.Bold) }
+                )
             },
             dismissButton = {
                 TextButton(onClick = { showClearDialog = false }) {
@@ -301,18 +307,13 @@ private fun BlockedLogEmptyState(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = accentColor.copy(alpha = 0.12f),
-                    border = BorderStroke(1.dp, accentColor.copy(alpha = 0.18f))
-                ) {
-                    Icon(
-                        Icons.Default.CheckCircle,
-                        contentDescription = stringResource(R.string.cd_no_items),
-                        tint = accentColor,
-                        modifier = Modifier.padding(14.dp).size(34.dp)
-                    )
-                }
+                PremiumIconTile(
+                    icon = Icons.Default.CheckCircle,
+                    contentDescription = stringResource(R.string.cd_no_items),
+                    color = accentColor,
+                    size = 58.dp,
+                    iconSize = 30.dp
+                )
                 Text(title, color = CatText, style = MaterialTheme.typography.titleMedium)
                 Text(
                     subtitle,
@@ -321,13 +322,13 @@ private fun BlockedLogEmptyState(
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center
                 )
                 if (actionLabel != null && onAction != null) {
-                    OutlinedButton(
+                    PremiumActionButton(
+                        label = actionLabel,
+                        icon = Icons.Default.Refresh,
+                        color = accentColor,
                         onClick = onAction,
-                        shape = RoundedCornerShape(12.dp),
-                        border = BorderStroke(1.dp, accentColor.copy(alpha = 0.28f))
-                    ) {
-                        Text(actionLabel, color = accentColor, fontWeight = FontWeight.SemiBold)
-                    }
+                        outlined = true
+                    )
                 }
             }
         }
@@ -449,17 +450,7 @@ fun BlockedCallItem(call: BlockedCall, onTap: () -> Unit) {
 
 @Composable
 fun SmallActionButton(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, color: androidx.compose.ui.graphics.Color, onClick: () -> Unit) {
-    OutlinedButton(
-        onClick = onClick,
-        modifier = Modifier.height(32.dp),
-        shape = RoundedCornerShape(8.dp),
-        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
-        border = BorderStroke(1.dp, color.copy(alpha = 0.2f))
-    ) {
-        Icon(icon, label, tint = color, modifier = Modifier.size(14.dp))
-        Spacer(Modifier.width(4.dp))
-        Text(label, color = color, style = MaterialTheme.typography.labelSmall)
-    }
+    PremiumCompactButton(label = label, icon = icon, color = color, onClick = onClick)
 }
 
 @Composable

@@ -8,7 +8,6 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -244,40 +243,19 @@ fun SearchResultsView(results: List<com.sysadmindoc.callshield.data.model.SpamNu
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            PremiumStateCard(
+                icon = Icons.Default.SearchOff,
+                title = stringResource(R.string.search_no_results),
+                body = stringResource(R.string.search_try_different),
+                accentColor = CatPeach,
+                modifier = Modifier.fillMaxWidth()
+            )
             PremiumCard(accentColor = CatPeach, modifier = Modifier.fillMaxWidth()) {
                 Column(
                     modifier = Modifier.padding(18.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Surface(
-                            shape = RoundedCornerShape(ShapeXl),
-                            color = CatPeach.copy(alpha = 0.12f)
-                        ) {
-                            Icon(
-                                Icons.Default.SearchOff,
-                                contentDescription = stringResource(R.string.cd_search_no_results),
-                                tint = CatPeach,
-                                modifier = Modifier.padding(12.dp)
-                            )
-                        }
-                        Column {
-                            Text(
-                                stringResource(R.string.search_no_results),
-                                color = CatText,
-                                style = MaterialTheme.typography.titleMedium
-                            )
-                            Text(
-                                stringResource(R.string.search_try_different),
-                                color = CatSubtext,
-                                style = MaterialTheme.typography.bodySmall
-                            )
-                        }
-                    }
-                    GradientDivider(color = CatPeach)
+                    SectionHeader(stringResource(R.string.search_idle_title), CatPeach)
                     SearchHintRow(
                         icon = Icons.Default.Phone,
                         title = stringResource(R.string.search_idle_hint_exact_title),
@@ -318,10 +296,19 @@ fun SearchResultsView(results: List<com.sysadmindoc.callshield.data.model.SpamNu
                     cornerRadius = 12.dp,
                     modifier = Modifier.padding(vertical = 2.dp)
                 ) {
-                    Row(modifier = Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                        Icon(Icons.Default.Warning, contentDescription = stringResource(R.string.cd_search_result_spam), tint = CatRed, modifier = Modifier.size(24.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(12.dp),
+                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                    ) {
+                        PremiumIconTile(
+                            icon = Icons.Default.Warning,
+                            contentDescription = stringResource(R.string.cd_search_result_spam),
+                            color = CatRed,
+                            size = 42.dp,
+                            iconSize = 20.dp
+                        )
                         Spacer(Modifier.width(12.dp))
-                        Column {
+                        Column(modifier = Modifier.weight(1f)) {
                             Text(com.sysadmindoc.callshield.data.PhoneFormatter.format(number.number), fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
                             Text(
                                 pluralStringResource(
@@ -333,7 +320,15 @@ fun SearchResultsView(results: List<com.sysadmindoc.callshield.data.model.SpamNu
                                 style = MaterialTheme.typography.bodySmall,
                                 color = CatSubtext
                             )
-                            if (number.description.isNotEmpty()) Text(number.description, style = MaterialTheme.typography.labelSmall, color = CatOverlay, maxLines = 1)
+                            if (number.description.isNotEmpty()) {
+                                Text(
+                                    number.description,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = CatOverlay,
+                                    maxLines = 1,
+                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                )
+                            }
                         }
                     }
                 }
@@ -465,7 +460,7 @@ private fun AppChrome(
                         ) {
                             StatusPill(
                                 text = if (spamCount > 0) {
-                                    stringResource(R.string.app_shell_status_numbers, spamCount)
+                                    pluralStringResource(R.plurals.app_shell_status_numbers, spamCount, spamCount)
                                 } else {
                                     stringResource(R.string.app_shell_status_setup_needed)
                                 },
@@ -562,11 +557,11 @@ private fun SearchIdleView() {
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Icon(
-                        Icons.Default.Search,
-                        contentDescription = null,
-                        tint = CatBlue,
-                        modifier = Modifier.size(24.dp)
+                    PremiumIconTile(
+                        icon = Icons.Default.Search,
+                        color = CatBlue,
+                        size = 42.dp,
+                        iconSize = 20.dp
                     )
                     Column {
                         Text(
@@ -616,17 +611,7 @@ private fun SearchHintRow(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.Top
     ) {
-        Surface(
-            shape = RoundedCornerShape(12.dp),
-            color = accentColor.copy(alpha = 0.12f)
-        ) {
-            Icon(
-                icon,
-                contentDescription = null,
-                tint = accentColor,
-                modifier = Modifier.padding(10.dp)
-            )
-        }
+        PremiumIconTile(icon = icon, color = accentColor, size = 40.dp, iconSize = 18.dp)
         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(
                 title,

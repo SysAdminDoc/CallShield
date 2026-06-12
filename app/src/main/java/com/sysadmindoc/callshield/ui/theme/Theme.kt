@@ -7,6 +7,8 @@ import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
 import androidx.compose.animation.core.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -19,12 +21,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -315,6 +320,196 @@ fun StatusPill(
             maxLines = 2,
             overflow = TextOverflow.Ellipsis
         )
+    }
+}
+
+@Composable
+fun PremiumIconTile(
+    icon: ImageVector,
+    color: Color,
+    modifier: Modifier = Modifier,
+    size: Dp = 42.dp,
+    iconSize: Dp = 20.dp,
+    contentDescription: String? = null,
+    containerAlpha: Float = 0.12f,
+    borderAlpha: Float = 0.14f,
+) {
+    Surface(
+        modifier = modifier.size(size),
+        shape = RoundedCornerShape(ShapeXl),
+        color = color.copy(alpha = containerAlpha),
+        border = BorderStroke(1.dp, color.copy(alpha = borderAlpha))
+    ) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Icon(
+                icon,
+                contentDescription = contentDescription,
+                tint = color,
+                modifier = Modifier.size(iconSize)
+            )
+        }
+    }
+}
+
+@Composable
+fun PremiumActionButton(
+    label: String,
+    icon: ImageVector,
+    color: Color,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    loading: Boolean = false,
+    outlined: Boolean = false,
+    contentDescription: String? = null,
+) {
+    val shape = RoundedCornerShape(ShapeXl)
+    val foregroundColor = when {
+        !enabled -> CatOverlay
+        outlined -> color
+        else -> Black
+    }
+    val content: @Composable RowScope.() -> Unit = {
+        if (loading) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(16.dp),
+                strokeWidth = 2.dp,
+                color = foregroundColor
+            )
+        } else {
+            Icon(
+                icon,
+                contentDescription = contentDescription,
+                tint = foregroundColor,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+        Spacer(Modifier.width(8.dp))
+        Text(
+            label,
+            color = foregroundColor,
+            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.labelLarge,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center
+        )
+    }
+
+    if (outlined) {
+        OutlinedButton(
+            onClick = onClick,
+            enabled = enabled,
+            shape = shape,
+            border = BorderStroke(1.dp, color.copy(alpha = if (enabled) 0.42f else 0.16f)),
+            colors = ButtonDefaults.outlinedButtonColors(
+                contentColor = color,
+                disabledContentColor = CatOverlay,
+                containerColor = color.copy(alpha = if (enabled) 0.05f else 0.02f)
+            ),
+            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 0.dp),
+            modifier = modifier.heightIn(min = 46.dp),
+            content = content
+        )
+    } else {
+        Button(
+            onClick = onClick,
+            enabled = enabled,
+            shape = shape,
+            border = BorderStroke(1.dp, color.copy(alpha = if (enabled) 0.30f else 0.10f)),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = color,
+                contentColor = Black,
+                disabledContainerColor = color.copy(alpha = 0.18f),
+                disabledContentColor = CatOverlay
+            ),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),
+            modifier = modifier.heightIn(min = 46.dp),
+            content = content
+        )
+    }
+}
+
+@Composable
+fun PremiumCompactButton(
+    label: String,
+    icon: ImageVector,
+    color: Color,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+) {
+    val foregroundColor = if (enabled) color else CatOverlay
+    OutlinedButton(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = modifier.heightIn(min = 34.dp),
+        shape = RoundedCornerShape(ShapeLg),
+        border = BorderStroke(1.dp, color.copy(alpha = if (enabled) 0.28f else 0.12f)),
+        contentPadding = PaddingValues(horizontal = 9.dp, vertical = 0.dp),
+        colors = ButtonDefaults.outlinedButtonColors(
+            contentColor = foregroundColor,
+            disabledContentColor = CatOverlay,
+            containerColor = color.copy(alpha = if (enabled) 0.04f else 0.02f)
+        )
+    ) {
+        Icon(icon, contentDescription = label, tint = foregroundColor, modifier = Modifier.size(14.dp))
+        Spacer(Modifier.width(5.dp))
+        Text(
+            label,
+            color = foregroundColor,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+@Composable
+fun PremiumStateCard(
+    icon: ImageVector,
+    title: String,
+    body: String,
+    accentColor: Color,
+    modifier: Modifier = Modifier,
+    actionLabel: String? = null,
+    onAction: (() -> Unit)? = null,
+) {
+    PremiumCard(accentColor = accentColor, modifier = modifier) {
+        Column(
+            modifier = Modifier.padding(20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            PremiumIconTile(
+                icon = icon,
+                color = accentColor,
+                size = 58.dp,
+                iconSize = 30.dp
+            )
+            Text(
+                title,
+                color = CatText,
+                style = MaterialTheme.typography.titleMedium,
+                textAlign = TextAlign.Center
+            )
+            Text(
+                body,
+                color = CatSubtext,
+                style = MaterialTheme.typography.bodySmall,
+                textAlign = TextAlign.Center
+            )
+            if (actionLabel != null && onAction != null) {
+                PremiumActionButton(
+                    label = actionLabel,
+                    icon = Icons.Default.Refresh,
+                    color = accentColor,
+                    onClick = onAction,
+                    outlined = true
+                )
+            }
+        }
     }
 }
 

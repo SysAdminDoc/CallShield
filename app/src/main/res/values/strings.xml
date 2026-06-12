@@ -28,9 +28,18 @@
     <string name="dashboard_tap_sync">Tap Sync below to download</string>
     <string name="dashboard_sync_inline_hint">Download the latest spam database to activate full protection.</string>
     <string name="dashboard_sync_database">Sync Database</string>
-    <string name="dashboard_numbers_in_db">Numbers in database: %d</string>
-    <string name="dashboard_engines_active">Protection engines active: %d</string>
-    <string name="dashboard_engines_active_aggressive">Protection engines active: %d | AGGRESSIVE</string>
+    <plurals name="dashboard_numbers_in_db">
+        <item quantity="one">Number in database: %d</item>
+        <item quantity="other">Numbers in database: %d</item>
+    </plurals>
+    <plurals name="dashboard_engines_active">
+        <item quantity="one">Protection engine active: %d</item>
+        <item quantity="other">Protection engines active: %d</item>
+    </plurals>
+    <plurals name="dashboard_engines_active_aggressive">
+        <item quantity="one">Protection engine active: %d | AGGRESSIVE</item>
+        <item quantity="other">Protection engines active: %d | AGGRESSIVE</item>
+    </plurals>
     <string name="dashboard_setup_progress_required">Core setup ready: %1$d/%2$d</string>
     <string name="dashboard_setup_checklist">Setup Checklist</string>
     <string name="dashboard_setup_required_summary">Complete the core steps below to enable full protection.</string>
@@ -43,8 +52,14 @@
     <string name="dashboard_setup_overlay_title">Caller ID overlay</string>
     <string name="dashboard_setup_notifications_title">Notifications</string>
     <string name="dashboard_permissions_ready_detail">Core permissions are granted.</string>
-    <string name="dashboard_permissions_needed_detail">Permissions still missing: %d</string>
-    <string name="dashboard_database_ready_detail">Spam numbers loaded: %d</string>
+    <plurals name="dashboard_permissions_needed_detail">
+        <item quantity="one">Permission still missing: %d</item>
+        <item quantity="other">Permissions still missing: %d</item>
+    </plurals>
+    <plurals name="dashboard_database_ready_detail">
+        <item quantity="one">Spam number loaded: %d</item>
+        <item quantity="other">Spam numbers loaded: %d</item>
+    </plurals>
     <string name="dashboard_database_needed_detail">Download the latest spam database to activate blocking.</string>
     <string name="dashboard_database_syncing_detail">Refreshing the spam database now.</string>
     <string name="dashboard_screener_ready_detail">CallShield is set as the device call screener.</string>
@@ -85,7 +100,10 @@
     <string name="dashboard_sync">Sync</string>
     <string name="dashboard_quick_actions">Quick Actions</string>
     <string name="dashboard_action_sync_subtitle">Refresh the spam database before unknown campaigns slip through.</string>
-    <string name="dashboard_action_sync_subtitle_ready">Refresh local spam records (%d) with the latest reports.</string>
+    <plurals name="dashboard_action_sync_subtitle_ready">
+        <item quantity="one">Refresh %d local spam record with the latest reports.</item>
+        <item quantity="other">Refresh %d local spam records with the latest reports.</item>
+    </plurals>
     <string name="dashboard_action_scan_calls_subtitle">Review recent calls against your latest protection rules.</string>
     <string name="dashboard_action_scan_sms_subtitle">Scan your SMS inbox for messages that match spam rules.</string>
     <string name="dashboard_action_calls_permissions_subtitle">Grant call log access before this scan can run.</string>
@@ -97,15 +115,30 @@
     <string name="dashboard_scan_calls">Scan Calls</string>
     <string name="dashboard_scan_sms_inbox">Scan SMS Inbox</string>
     <string name="dashboard_call_log_scan">Call Log Scan</string>
-    <string name="dashboard_scan_result">Unique numbers scanned: %1$d | Spam found: %2$d</string>
+    <string name="dashboard_scan_result">%1$s | %2$s</string>
+    <plurals name="dashboard_scan_unique_numbers_scanned">
+        <item quantity="one">%d unique number scanned</item>
+        <item quantity="other">%d unique numbers scanned</item>
+    </plurals>
+    <plurals name="dashboard_scan_spam_found">
+        <item quantity="one">%d spam match found</item>
+        <item quantity="other">%d spam matches found</item>
+    </plurals>
     <string name="dashboard_scan_failed">Scan failed: %s</string>
     <string name="dashboard_scan_unknown_error">unknown error</string>
     <string name="dashboard_call_log_permission_denied">Call log permission denied. Grant call log access in Settings.</string>
     <string name="dashboard_sms_inbox_permission_denied">SMS inbox permission denied. Grant SMS access in Settings.</string>
     <string name="dashboard_block">Block</string>
-    <string name="dashboard_scan_more">More matches: +%d</string>
+    <plurals name="dashboard_scan_more">
+        <item quantity="one">More match: +%d</item>
+        <item quantity="other">More matches: +%d</item>
+    </plurals>
     <string name="dashboard_sms_inbox_scan">SMS Inbox Scan</string>
-    <string name="dashboard_sms_scan_result">Messages scanned: %1$d | Spam found: %2$d</string>
+    <string name="dashboard_sms_scan_result">%1$s | %2$s</string>
+    <plurals name="dashboard_sms_scan_messages_scanned">
+        <item quantity="one">%d message scanned</item>
+        <item quantity="other">%d messages scanned</item>
+    </plurals>
     <string name="dashboard_smart_suggestions">Smart Suggestions</string>
     <string name="dashboard_spam_from_area">Spam count: %1$d | %2$s (%3$s)</string>
     <string name="dashboard_block_area">Block %s</string>
@@ -124,7 +157,10 @@
     <string name="blocked_log_undo">Undo</string>
     <string name="blocked_log_number_blocked">%s blocked</string>
     <string name="blocked_log_clear_title">Clear Blocked Log?</string>
-    <string name="blocked_log_clear_message">This will permanently delete the blocked call and SMS log. Total records: %d. This cannot be undone.</string>
+    <plurals name="blocked_log_clear_message">
+        <item quantity="one">This will permanently delete the blocked call and SMS log. Total record: %d. This cannot be undone.</item>
+        <item quantity="other">This will permanently delete the blocked call and SMS log. Total records: %d. This cannot be undone.</item>
+    </plurals>
     <string name="blocked_log_clear_all">Clear All</string>
     <string name="blocked_log_cancel">Cancel</string>
     <string name="blocked_log_log_cleared">Log cleared</string>
@@ -160,7 +196,10 @@
     <string name="blocklist_overview_whitelist_subtitle">Numbers here always pass through. Mark critical contacts as emergency so they stay visually prominent and easy to review.</string>
     <string name="blocklist_overview_database_title">Downloaded spam database</string>
     <string name="blocklist_overview_database_subtitle">This is the read-only protection feed CallShield uses during screening. Review what is loaded locally and how specific numbers are labeled.</string>
-    <string name="blocklist_count_saved">%1$,d entries</string>
+    <plurals name="blocklist_count_saved">
+        <item quantity="one">%1$,d entry</item>
+        <item quantity="other">%1$,d entries</item>
+    </plurals>
     <string name="blocklist_action_add_number">Add number</string>
     <string name="blocklist_action_add_wildcard">Add wildcard</string>
     <string name="blocklist_action_add_keyword">Add keyword</string>
@@ -231,7 +270,10 @@
     <string name="blocklist_wildcard">Wildcard</string>
     <string name="blocklist_case_sensitive">Case-sensitive</string>
     <string name="blocklist_case_insensitive">Case-insensitive</string>
-    <string name="blocklist_reports">Reports: %d</string>
+    <plurals name="blocklist_reports">
+        <item quantity="one">Report: %d</item>
+        <item quantity="other">Reports: %d</item>
+    </plurals>
     <string name="blocklist_manual_badge">Manual block</string>
     <string name="blocklist_export_subject">CallShield Blocklist</string>
     <string name="blocklist_export_chooser_title">Share blocklist</string>
@@ -586,7 +628,10 @@
     <string name="protection_test_run_all">Run All Tests</string>
     <string name="protection_test_summary">Progress: %1$d/%2$d passed (%3$d%%)</string>
     <string name="protection_test_all_ok">All systems operational</string>
-    <string name="protection_test_issues">Issues needing attention: %d</string>
+    <plurals name="protection_test_issues">
+        <item quantity="one">Issue needing attention: %d</item>
+        <item quantity="other">Issues needing attention: %d</item>
+    </plurals>
     <string name="protection_test_intro_title">What this checks</string>
     <string name="protection_test_intro_body">This diagnostic stays on-device and verifies the parts of CallShield that matter most before live calls or texts arrive.</string>
     <string name="protection_test_intro_permissions">Permissions and Android roles needed for screening.</string>
@@ -750,9 +795,12 @@
     <string name="detail_online_lookup">Online Lookup</string>
     <string name="detail_check_sources">Check 3 Sources</string>
     <string name="detail_checking_sources">Checking SkipCalls, PhoneBlock, WhoCalledMe…</string>
-    <string name="detail_reports_across_sources">Source reports: %1$d across %2$d sources</string>
+    <string name="detail_reports_across_sources">%1$s across %2$s</string>
     <string name="detail_clean_all_sources">Clean across all sources</string>
-    <string name="detail_reports_count">Reports: %d</string>
+    <plurals name="detail_reports_count_label">
+        <item quantity="one">Report: %d</item>
+        <item quantity="other">Reports: %d</item>
+    </plurals>
     <string name="detail_flagged">Flagged</string>
     <string name="detail_clean">Clean</string>
     <string name="detail_block">Block</string>
@@ -771,11 +819,18 @@
     <string name="detail_blocked_from_detail">Blocked from detail</string>
     <string name="detail_whitelisted_from_detail">Whitelisted from detail</string>
     <string name="detail_report_issue_title">[SPAM] %s</string>
-    <string name="detail_report_issue_body">## Phone Number\n%1$s\n\n## Type\nReported from CallShield\n\n## Description\nSeen %2$d times</string>
+    <plurals name="detail_report_issue_body">
+        <item quantity="one">## Phone Number\n%1$s\n\n## Type\nReported from CallShield\n\n## Description\nSeen %2$d time</item>
+        <item quantity="other">## Phone Number\n%1$s\n\n## Type\nReported from CallShield\n\n## Description\nSeen %2$d times</item>
+    </plurals>
     <string name="confidence_suffix"> (%d%%)</string>
     <plurals name="detail_reports_count_plural">
         <item quantity="one">%d report</item>
         <item quantity="other">%d reports</item>
+    </plurals>
+    <plurals name="detail_sources_count_plural">
+        <item quantity="one">%d source</item>
+        <item quantity="other">%d sources</item>
     </plurals>
 
     <!-- MainActivity / Navigation -->
@@ -795,7 +850,10 @@
     <string name="app_shell_status_calls">Calls on</string>
     <string name="app_shell_status_texts">SMS on</string>
     <string name="app_shell_status_paused">Protection paused</string>
-    <string name="app_shell_status_numbers">%1$,d numbers</string>
+    <plurals name="app_shell_status_numbers">
+        <item quantity="one">%1$,d number</item>
+        <item quantity="other">%1$,d numbers</item>
+    </plurals>
     <string name="app_shell_status_setup_needed">Sync needed</string>
     <string name="app_shell_mode_home">Dashboard</string>
     <string name="app_shell_mode_recent">Live review</string>
@@ -847,7 +905,10 @@
     <string name="backup_restore_preview_title">Restore preview</string>
     <string name="backup_restore_preview_ready">Backup ready: %1$d numbers, %2$d whitelist entries, %3$d wildcard rules, %4$d keyword rules</string>
     <string name="backup_restore_preview_summary">Blocked: %1$d; Whitelist: %2$d; Wildcards: %3$d; Keywords: %4$d</string>
-    <string name="backup_restore_preview_conflicts">%1$d existing items have matching keys and may be updated during merge.</string>
+    <plurals name="backup_restore_preview_conflicts">
+        <item quantity="one">%1$d existing item has a matching key and may be updated during merge.</item>
+        <item quantity="other">%1$d existing items have matching keys and may be updated during merge.</item>
+    </plurals>
     <string name="backup_restore_preview_no_conflicts">No matching local items found.</string>
     <string name="backup_restore_replace_warning">Replace clears current local blocklist, whitelist, wildcard, and keyword entries before restore. Synced feeds stay installed.</string>
     <string name="backup_restore_merge">Merge</string>
