@@ -9,9 +9,9 @@ import os
 from datetime import datetime
 from pathlib import Path
 
-DATA_DIR = Path(__file__).parent.parent / "data"
+DATA_DIR = Path(os.environ.get("CALLSHIELD_DATA_DIR", Path(__file__).parent.parent / "data"))
 DB_FILE = DATA_DIR / "spam_numbers.json"
-REPORTS_DIR = DATA_DIR / "reports"
+REPORTS_DIR = Path(os.environ.get("CALLSHIELD_REPORTS_DIR", DATA_DIR / "reports"))
 
 
 def main():

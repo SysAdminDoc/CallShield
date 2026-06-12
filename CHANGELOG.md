@@ -12,6 +12,12 @@ All notable changes to CallShield will be documented in this file.
 
 Distribution prep after the v1.7.10 release.
 
+### Fixed
+
+- Preserved pending community-report evidence for hot-list and spam-domain
+  generation by deriving those feeds before the destructive report merge, with
+  a Python regression test wired into CI.
+
 ### Architecture
 
 - Added production-used domain use-case wrappers for call spam checks, SMS spam

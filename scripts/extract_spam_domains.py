@@ -12,13 +12,14 @@ during the weekly full database rebuild.
 """
 
 import json
+import os
 import re
 from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 
-DATA_DIR = Path(__file__).parent.parent / "data"
-REPORTS_DIR = DATA_DIR / "reports"
+DATA_DIR = Path(os.environ.get("CALLSHIELD_DATA_DIR", Path(__file__).parent.parent / "data"))
+REPORTS_DIR = Path(os.environ.get("CALLSHIELD_REPORTS_DIR", DATA_DIR / "reports"))
 OUTPUT_FILE = DATA_DIR / "spam_domains.json"
 
 MIN_REPORTS = 3    # Domain must appear in 3+ distinct reports to be included

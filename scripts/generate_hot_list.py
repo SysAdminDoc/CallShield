@@ -11,12 +11,13 @@ Called by the merge-reports GitHub Action workflow after each merge run.
 """
 
 import json
+import os
 import re
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
-DATA_DIR = Path(__file__).parent.parent / "data"
-REPORTS_DIR = DATA_DIR / "reports"
+DATA_DIR = Path(os.environ.get("CALLSHIELD_DATA_DIR", Path(__file__).parent.parent / "data"))
+REPORTS_DIR = Path(os.environ.get("CALLSHIELD_REPORTS_DIR", DATA_DIR / "reports"))
 DB_FILE = DATA_DIR / "spam_numbers.json"
 HOT_LIST_FILE = DATA_DIR / "hot_numbers.json"
 HOT_RANGES_FILE = DATA_DIR / "hot_ranges.json"
@@ -25,6 +26,13 @@ HOT_LIST_SIZE = 500         # Max numbers to include
 HOT_WINDOW_HOURS = 24       # Look back this many hours
 MIN_REPORTS_HOT = 2         # Minimum community reports to appear in hot list
 CAMPAIGN_THRESHOLD = 3      # Distinct numbers from same NPA-NXX to flag the range
+
+
+def current_time_utc() -> datetime:
+    override = os.environ.get("CALLSHIELD_NOW")
+    if override:
+        return datetime.fromisoformat(override.replace("Z", "+00:00")).astimezone(timezone.utc)
+    return datetime.now(timezone.utc)
 
 
 def npanxx_of(number: str) -> str:
@@ -38,7 +46,7 @@ def npanxx_of(number: str) -> str:
 def main():
     print("=== CallShield Hot List Generator ===\n")
 
-    now = datetime.now(timezone.utc)
+    now = current_time_utc()
     cutoff = now - timedelta(hours=HOT_WINDOW_HOURS)
 
     # ── Tally reports from pending report files ────────────────────────
