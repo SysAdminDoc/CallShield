@@ -12,6 +12,17 @@ All notable changes to CallShield will be documented in this file.
 
 Distribution prep after the v1.7.10 release.
 
+### UX and visual polish
+
+- Extended the premium Compose component system across the major user-facing
+  flows, including dashboard scan actions, number details, recent-call recovery,
+  blocklist utilities, diagnostics, onboarding, and settings.
+- Replaced mixed raw action buttons and ad hoc icon wells with shared premium
+  actions, compact actions, and icon tiles so destructive, recovery, loading,
+  and secondary states read consistently across the app.
+- Tightened trust-critical copy and semantics for reporting, source checks,
+  permission recovery, import/export, and settings save actions.
+
 ### Fixed
 
 - Added a backup restore preview step with parsed counts, conflict warnings,

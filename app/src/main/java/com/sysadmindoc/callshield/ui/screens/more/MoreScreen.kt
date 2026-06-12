@@ -309,14 +309,7 @@ fun MoreNavCard(
     onClick: () -> Unit
 ) {
     TextButton(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
-        Box(
-            modifier = Modifier
-                .size(42.dp)
-                .background(color.copy(alpha = 0.10f), RoundedCornerShape(12.dp)),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(icon, null, tint = color, modifier = Modifier.size(22.dp))
-        }
+        PremiumIconTile(icon = icon, color = color, size = 42.dp, iconSize = 22.dp)
         Spacer(Modifier.width(14.dp))
         Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.Start) {
             Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, color = CatText)
@@ -336,14 +329,7 @@ fun QuickLink(
     onClick: () -> Unit
 ) {
     TextButton(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
-        Box(
-            modifier = Modifier
-                .size(42.dp)
-                .background(color.copy(alpha = 0.10f), RoundedCornerShape(12.dp)),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(icon, null, tint = color, modifier = Modifier.size(20.dp))
-        }
+        PremiumIconTile(icon = icon, color = color, size = 42.dp, iconSize = 20.dp)
         Spacer(Modifier.width(14.dp))
         Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.Start) {
             Text(label, color = CatText, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)

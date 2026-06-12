@@ -7,8 +7,6 @@ import android.os.VibratorManager
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -48,13 +46,10 @@ import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material.icons.filled.VerifiedUser
 import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.SnackbarHost
@@ -91,7 +86,6 @@ import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup
 import com.sysadmindoc.callshield.domain.model.SpamCheckResult
 import com.sysadmindoc.callshield.ui.MainViewModel
-import com.sysadmindoc.callshield.ui.theme.Black
 import com.sysadmindoc.callshield.ui.theme.CatBlue
 import com.sysadmindoc.callshield.ui.theme.CatGreen
 import com.sysadmindoc.callshield.ui.theme.CatOverlay
@@ -101,7 +95,9 @@ import com.sysadmindoc.callshield.ui.theme.CatSubtext
 import com.sysadmindoc.callshield.ui.theme.CatText
 import com.sysadmindoc.callshield.ui.theme.CatYellow
 import com.sysadmindoc.callshield.ui.theme.GradientDivider
+import com.sysadmindoc.callshield.ui.theme.PremiumActionButton
 import com.sysadmindoc.callshield.ui.theme.PremiumCard
+import com.sysadmindoc.callshield.ui.theme.PremiumIconTile
 import com.sysadmindoc.callshield.ui.theme.SectionHeader
 import com.sysadmindoc.callshield.ui.theme.StatusPill
 import com.sysadmindoc.callshield.ui.theme.SurfaceElevated
@@ -291,56 +287,39 @@ fun LookupScreen(viewModel: MainViewModel) {
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         if (!clipboardNumber.isNullOrBlank() && clipboardNumber != numberInput) {
-                            OutlinedButton(
+                            PremiumActionButton(
+                                label = stringResource(R.string.lookup_paste_clipboard),
+                                icon = Icons.Default.ContentPaste,
+                                color = CatYellow,
                                 onClick = {
                                     numberInput = clipboardNumber
                                     errorMessage = null
                                 },
                                 modifier = Modifier.weight(1f),
-                                shape = RoundedCornerShape(12.dp),
-                                border = BorderStroke(1.dp, CatYellow.copy(alpha = 0.28f))
-                            ) {
-                                Icon(Icons.Default.ContentPaste, contentDescription = null, tint = CatYellow, modifier = Modifier.size(16.dp))
-                                Spacer(Modifier.width(8.dp))
-                                Text(stringResource(R.string.lookup_paste_clipboard), color = CatYellow)
-                            }
+                                outlined = true
+                            )
                         }
                         if (numberInput.isNotBlank()) {
-                            OutlinedButton(
+                            PremiumActionButton(
+                                label = stringResource(R.string.lookup_clear),
+                                icon = Icons.Default.Close,
+                                color = CatSubtext,
                                 onClick = { clearLookup() },
                                 modifier = Modifier.weight(1f),
-                                shape = RoundedCornerShape(12.dp),
-                                border = BorderStroke(1.dp, CatOverlay.copy(alpha = 0.24f))
-                            ) {
-                                Icon(Icons.Default.Close, contentDescription = null, tint = CatSubtext, modifier = Modifier.size(16.dp))
-                                Spacer(Modifier.width(8.dp))
-                                Text(stringResource(R.string.lookup_clear), color = CatSubtext)
-                            }
+                                outlined = true
+                            )
                         }
                     }
 
-                    Button(
+                    PremiumActionButton(
+                        label = stringResource(R.string.lookup_check_number),
+                        icon = Icons.Default.Search,
+                        color = CatGreen,
                         onClick = { runLookup() },
                         enabled = canLookup && !checking,
-                        colors = ButtonDefaults.buttonColors(containerColor = CatGreen),
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(48.dp),
-                        border = BorderStroke(1.dp, CatGreen.copy(alpha = 0.3f))
-                    ) {
-                        if (checking) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(18.dp),
-                                strokeWidth = 2.dp,
-                                color = Black
-                            )
-                        } else {
-                            Icon(Icons.Default.Search, null, tint = Black)
-                        }
-                        Spacer(Modifier.width(8.dp))
-                        Text(stringResource(R.string.lookup_check_number), color = Black, fontWeight = FontWeight.Bold)
-                    }
+                        loading = checking,
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
             }
 
@@ -444,7 +423,10 @@ fun LookupScreen(viewModel: MainViewModel) {
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         if (lookupResult.isSpam) {
-                            Button(
+                            PremiumActionButton(
+                                label = stringResource(R.string.lookup_block),
+                                icon = Icons.Default.Block,
+                                color = CatRed,
                                 onClick = {
                                     val repo = SpamRepository.getInstance(context)
                                     scope.launch {
@@ -460,19 +442,17 @@ fun LookupScreen(viewModel: MainViewModel) {
                                         snackbarHostState.showSnackbar(message)
                                     }
                                 },
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(48.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = CatRed),
-                                shape = RoundedCornerShape(12.dp),
-                                border = BorderStroke(1.dp, CatRed.copy(alpha = 0.3f))
-                            ) {
-                                Icon(Icons.Default.Block, null, tint = Black, modifier = Modifier.size(18.dp))
-                                Spacer(Modifier.width(6.dp))
-                                Text(stringResource(R.string.lookup_block), color = Black, fontWeight = FontWeight.Bold)
-                            }
+                                modifier = Modifier.weight(1f)
+                            )
                         }
-                        OutlinedButton(
+                        PremiumActionButton(
+                            label = if (lookupResult.isSpam) {
+                                stringResource(R.string.lookup_report)
+                            } else {
+                                stringResource(R.string.lookup_mark_trusted)
+                            },
+                            icon = if (lookupResult.isSpam) Icons.Default.Flag else Icons.Default.VerifiedUser,
+                            color = CatGreen,
                             onClick = {
                                 scope.launch {
                                     val message = try {
@@ -498,42 +478,19 @@ fun LookupScreen(viewModel: MainViewModel) {
                                     snackbarHostState.showSnackbar(message)
                                 }
                             },
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(48.dp),
-                            shape = RoundedCornerShape(12.dp),
-                            border = BorderStroke(1.dp, CatGreen.copy(alpha = 0.3f))
-                        ) {
-                            Icon(
-                                if (lookupResult.isSpam) Icons.Default.Flag else Icons.Default.VerifiedUser,
-                                null,
-                                tint = CatGreen,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(Modifier.width(6.dp))
-                            Text(
-                                if (lookupResult.isSpam) {
-                                    stringResource(R.string.lookup_report)
-                                } else {
-                                    stringResource(R.string.lookup_mark_trusted)
-                                },
-                                color = CatGreen
-                            )
-                        }
+                            modifier = Modifier.weight(1f),
+                            outlined = true
+                        )
                     }
 
-                    OutlinedButton(
+                    PremiumActionButton(
+                        label = stringResource(R.string.lookup_open_detail),
+                        icon = Icons.AutoMirrored.Filled.OpenInNew,
+                        color = CatYellow,
                         onClick = { viewModel.openNumberDetail(normalizedNumber) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(48.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        border = BorderStroke(1.dp, CatYellow.copy(alpha = 0.3f))
-                    ) {
-                        Icon(Icons.AutoMirrored.Filled.OpenInNew, null, tint = CatYellow, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(8.dp))
-                        Text(stringResource(R.string.lookup_open_detail), color = CatYellow)
-                    }
+                        modifier = Modifier.fillMaxWidth(),
+                        outlined = true
+                    )
                 }
                 else -> LookupIdleCard()
             }
@@ -633,7 +590,7 @@ private fun LookupMessageCard(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.Top
         ) {
-            Icon(icon, null, tint = accentColor, modifier = Modifier.size(22.dp))
+            PremiumIconTile(icon = icon, color = accentColor)
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(title, style = MaterialTheme.typography.titleMedium, color = CatText)
                 Text(body, style = MaterialTheme.typography.bodySmall, color = CatSubtext)
@@ -653,14 +610,7 @@ private fun LookupHintRow(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.Top
     ) {
-        Box(
-            modifier = Modifier
-                .size(38.dp)
-                .background(accentColor.copy(alpha = 0.12f), RoundedCornerShape(12.dp)),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(icon, contentDescription = null, tint = accentColor, modifier = Modifier.size(18.dp))
-        }
+        PremiumIconTile(icon = icon, color = accentColor, size = 38.dp, iconSize = 18.dp)
         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(title, style = MaterialTheme.typography.bodyMedium, color = CatText, fontWeight = FontWeight.SemiBold)
             Text(subtitle, style = MaterialTheme.typography.bodySmall, color = CatSubtext)
