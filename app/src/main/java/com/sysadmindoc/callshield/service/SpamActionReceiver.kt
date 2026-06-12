@@ -8,6 +8,7 @@ import android.widget.Toast
 import com.sysadmindoc.callshield.CallShieldApp
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.CommunityContributor
+import com.sysadmindoc.callshield.data.SmsContentAnalyzer
 import com.sysadmindoc.callshield.data.SpamRepository
 import kotlinx.coroutines.launch
 
@@ -41,23 +42,27 @@ class SpamActionReceiver : BroadcastReceiver() {
             NotificationHelper.ACTION_BLOCK -> {
                 val number = intent.getStringExtra(NotificationHelper.EXTRA_NUMBER) ?: return
                 val notifId = intent.getIntExtra(NotificationHelper.EXTRA_NOTIF_ID, -1)
+                val reportType = intent.reportType()
+                val smsIndicators = intent.smsReportIndicators()
                 if (notifId >= 0) {
                     notificationManager.cancel(notifId)
                 }
                 suspend {
-                    repo.blockNumber(number, "spam", "Blocked from notification")
-                    CommunityContributor.contribute(number, "spam")
+                    repo.blockNumber(number, reportType, "Blocked from notification")
+                    CommunityContributor.contribute(number, reportType, smsIndicators)
                 }
             }
 
             NotificationHelper.ACTION_REPORT -> {
                 val number = intent.getStringExtra(NotificationHelper.EXTRA_NUMBER) ?: return
                 val notifId = intent.getIntExtra(NotificationHelper.EXTRA_NOTIF_ID, -1)
+                val reportType = intent.reportType()
+                val smsIndicators = intent.smsReportIndicators()
                 if (notifId >= 0) {
                     notificationManager.cancel(notifId)
                 }
                 suspend {
-                    CommunityContributor.contribute(number, "spam")
+                    CommunityContributor.contribute(number, reportType, smsIndicators)
                 }
             }
 
@@ -90,4 +95,17 @@ class SpamActionReceiver : BroadcastReceiver() {
             }
         }
     }
+
+    private fun Intent.reportType(): String =
+        if (getBooleanExtra(NotificationHelper.EXTRA_IS_CALL, true)) {
+            "spam"
+        } else {
+            "sms_spam"
+        }
+
+    private fun Intent.smsReportIndicators(): SmsContentAnalyzer.SmsReportIndicators =
+        SmsContentAnalyzer.SmsReportIndicators(
+            domains = getStringArrayListExtra(NotificationHelper.EXTRA_SMS_DOMAINS).orEmpty(),
+            urlIndicators = getStringArrayListExtra(NotificationHelper.EXTRA_SMS_URL_INDICATORS).orEmpty(),
+        )
 }

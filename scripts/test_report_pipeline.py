@@ -60,21 +60,21 @@ def seed_reports(data_dir: Path) -> None:
     )
 
     reports = [
-        ("r1.json", "+12125550101", "https://bad.example/a"),
-        ("r2.json", "+12125550101", ""),
-        ("r3.json", "+12125550102", "http://bad.example/b"),
-        ("r4.json", "+12125550102", ""),
-        ("r5.json", "+12125550103", "www.bad.example/c"),
-        ("r6.json", "+12125550103", ""),
+        ("r1.json", "+12125550101", ["Bad.Example"]),
+        ("r2.json", "+12125550101", []),
+        ("r3.json", "+12125550102", ["bad.example."]),
+        ("r4.json", "+12125550102", []),
+        ("r5.json", "+12125550103", ["www.bad.example/c"]),
+        ("r6.json", "+12125550103", []),
     ]
-    for filename, number, body in reports:
+    for filename, number, domains in reports:
         report = {
             "number": number,
             "type": "phishing",
             "reported_at": NOW,
         }
-        if body:
-            report["sms_body"] = body
+        if domains:
+            report["sms_domains"] = domains
         write_json(data_dir / "reports" / filename, report)
 
 

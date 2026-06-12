@@ -158,6 +158,27 @@ class SmsContentAnalyzerTest {
     }
 
     @Test
+    fun `report indicators contain domains and URL flags without paths`() {
+        val result =
+            SmsContentAnalyzer.extractReportableIndicators(
+                "Claim at https://bad.example/private?token=secret or https://bit.ly/a1",
+            )
+
+        assertEquals(listOf("bad.example", "bit.ly"), result.domains)
+        assertTrue(result.urlIndicators.contains("url_present"))
+        assertTrue(result.urlIndicators.contains("shortener"))
+    }
+
+    @Test
+    fun `report indicators cap domain count`() {
+        val body = (0..20).joinToString(" ") { "https://spam$it.example/path/$it" }
+        val result = SmsContentAnalyzer.extractReportableIndicators(body)
+
+        assertEquals(SmsContentAnalyzer.MAX_REPORT_DOMAINS, result.domains.size)
+        assertFalse(result.domains.any { "/" in it || "path" in it })
+    }
+
+    @Test
     fun `spam domain check skipped when blocklist empty`() {
         SmsContentAnalyzer.updateSpamDomains(emptyList())
         val result = SmsContentAnalyzer.analyze("Visit https://evil-spam.com/offer for more details and information about the product")
@@ -199,9 +220,10 @@ class SmsContentAnalyzerTest {
     @Test
     fun `multiple pattern hits increase score`() {
         // Triggers: "you have won", "claim your prize", "act now"
-        val result = SmsContentAnalyzer.analyze(
-            "You have won! Claim your prize now. Act now before it expires today!"
-        )
+        val result =
+            SmsContentAnalyzer.analyze(
+                "You have won! Claim your prize now. Act now before it expires today!",
+            )
         // First hit = 25, second = 15, third = 15 = 55 (capped at 3 patterns)
         assertTrue(result.score >= 40)
     }
@@ -209,10 +231,11 @@ class SmsContentAnalyzerTest {
     @Test
     fun `pattern hits capped at 3`() {
         // Even with many pattern matches, only 3 contribute
-        val result = SmsContentAnalyzer.analyze(
-            "You have won! Claim your prize. Act now! Final notice. " +
-            "Free gift card. Account suspended. Verify your identity."
-        )
+        val result =
+            SmsContentAnalyzer.analyze(
+                "You have won! Claim your prize. Act now! Final notice. " +
+                    "Free gift card. Account suspended. Verify your identity.",
+            )
         // Max from patterns: 25 + 15 + 15 = 55
         // Other signals may add but pattern contribution is capped
         assertTrue(result.score <= 100)
@@ -280,11 +303,12 @@ class SmsContentAnalyzerTest {
     fun `score is capped at 100`() {
         // Combine many spam signals to try to exceed 100
         SmsContentAnalyzer.updateSpamDomains(listOf("evil.com"))
-        val result = SmsContentAnalyzer.analyze(
-            "YOU HAVE WON! ACT NOW! FINAL NOTICE! Free gift! " +
-            "Click https://evil.com/x or https://bit.ly/abc " +
-            "Call us at 1-800-555-1234. !!! \$\$\$ *** !!!"
-        )
+        val result =
+            SmsContentAnalyzer.analyze(
+                "YOU HAVE WON! ACT NOW! FINAL NOTICE! Free gift! " +
+                    "Click https://evil.com/x or https://bit.ly/abc " +
+                    "Call us at 1-800-555-1234. !!! \$\$\$ *** !!!",
+            )
         assertTrue(result.score <= 100)
     }
 

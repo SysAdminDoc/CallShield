@@ -13,6 +13,13 @@ class SmsContentAnalyzer @Inject constructor() {
         val reasons: List<String>
     )
 
+    data class SmsReportIndicators(
+        val domains: List<String> = emptyList(),
+        val urlIndicators: List<String> = emptyList(),
+    ) {
+        fun isEmpty(): Boolean = domains.isEmpty() && urlIndicators.isEmpty()
+    }
+
     // URL shorteners frequently used in SMS spam
     private val shortenerDomains = setOf(
         "bit.ly", "tinyurl.com", "t.co", "goo.gl", "ow.ly", "is.gd",
@@ -95,6 +102,75 @@ class SmsContentAnalyzer @Inject constructor() {
             .removePrefix("https://").removePrefix("http://").removePrefix("www.")
         return lower.split("/")[0].split("?")[0].split("#")[0].split(":")[0]
     }
+
+    /**
+     * Extract only privacy-preserving SMS report fields. This never returns
+     * message text, URL paths, query strings, or fragments.
+     */
+    fun extractReportableIndicators(body: String): SmsReportIndicators {
+        if (body.isBlank()) return SmsReportIndicators()
+
+        val analysisBody = if (body.length > MAX_ANALYSIS_LENGTH) {
+            body.substring(0, MAX_ANALYSIS_LENGTH)
+        } else {
+            body
+        }
+        val domains = linkedSetOf<String>()
+        val indicators = linkedSetOf<String>()
+
+        urlPattern.findAll(analysisBody).forEach { match ->
+            val url = match.value.lowercase()
+            val domain = normalizeReportDomain(extractDomain(url))
+            indicators.add("url_present")
+            if (domain != null) {
+                if (domains.size < MAX_REPORT_DOMAINS) {
+                    domains.add(domain)
+                }
+                if (shortenerDomains.any { domain == it || domain.endsWith(".$it") }) {
+                    indicators.add("shortener")
+                }
+                if (suspiciousTlds.any { domain.endsWith(it) }) {
+                    indicators.add("suspicious_tld")
+                }
+                if (domain in spamDomains) {
+                    indicators.add("known_spam_domain")
+                }
+            }
+        }
+
+        return SmsReportIndicators(
+            domains = domains.toList(),
+            urlIndicators = indicators.sorted(),
+        )
+    }
+
+    private fun normalizeReportDomain(domain: String): String? {
+        val normalized = domain.lowercase().trim().trim('.')
+        val labels = normalized.split(".")
+        val isValid =
+            listOf(
+                normalized.length in MIN_REPORT_DOMAIN_LENGTH..MAX_REPORT_DOMAIN_LENGTH,
+                "." in normalized,
+                normalized.all(::isReportDomainChar),
+                labels.all(::isValidReportDomainLabel),
+            ).all { it }
+        return normalized.takeIf { isValid }
+    }
+
+    private fun isReportDomainChar(char: Char): Boolean =
+        when {
+            char in 'a'..'z' -> true
+            char in '0'..'9' -> true
+            char == '-' -> true
+            char == '.' -> true
+            else -> false
+        }
+
+    private fun isValidReportDomainLabel(label: String): Boolean =
+        label.isNotBlank() &&
+            label.length <= MAX_REPORT_DOMAIN_LABEL_LENGTH &&
+            !label.startsWith("-") &&
+            !label.endsWith("-")
 
     /**
      * Hard cap on the body length we attempt to deep-analyze. A real SMS is
@@ -196,6 +272,10 @@ class SmsContentAnalyzer @Inject constructor() {
         val shared: SmsContentAnalyzer = SmsContentAnalyzer()
 
         internal const val MAX_ANALYSIS_LENGTH = 16_384
+        internal const val MAX_REPORT_DOMAINS = 10
+        private const val MIN_REPORT_DOMAIN_LENGTH = 5
+        private const val MAX_REPORT_DOMAIN_LENGTH = 253
+        private const val MAX_REPORT_DOMAIN_LABEL_LENGTH = 63
 
         fun updateSpamDomains(domains: Collection<String>) {
             shared.updateSpamDomains(domains)
@@ -206,5 +286,8 @@ class SmsContentAnalyzer @Inject constructor() {
 
         fun analyze(body: String): SmsAnalysisResult =
             shared.analyze(body)
+
+        fun extractReportableIndicators(body: String): SmsReportIndicators =
+            shared.extractReportableIndicators(body)
     }
 }

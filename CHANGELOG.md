@@ -32,6 +32,9 @@ Distribution prep after the v1.7.10 release.
 - Preserved pending community-report evidence for hot-list and spam-domain
   generation by deriving those feeds before the destructive report merge, with
   a Python regression test wired into CI.
+- Added privacy-preserving SMS spam community reports that submit only
+  sanitized domain and URL-signal indicators, never raw message text, while
+  feeding fixture domains into `spam_domains.json`.
 
 ### Architecture
 
