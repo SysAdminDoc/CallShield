@@ -14,6 +14,9 @@ Distribution prep after the v1.7.10 release.
 
 ### Fixed
 
+- Migrated Compose ViewModel Flow collection to lifecycle-aware
+  `collectAsStateWithLifecycle()` so UI-only collectors stop with their
+  lifecycle instead of continuing while screens are stopped.
 - Aligned community-report number normalization with the hardened
   ASCII-only screening normalizer across the Android app, Cloudflare Worker,
   and Python report/import scripts, with regression coverage for Unicode

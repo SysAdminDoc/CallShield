@@ -39,6 +39,7 @@ import com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup
 import com.sysadmindoc.callshield.data.model.BlockedCall
 import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.theme.*
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
@@ -47,7 +48,7 @@ import java.util.*
 @Composable
 fun BlockedLogScreen(viewModel: MainViewModel) {
     val context = LocalContext.current
-    val blockedCalls by viewModel.blockedCalls.collectAsState()
+    val blockedCalls by viewModel.blockedCalls.collectAsStateWithLifecycle()
     var filterMode by rememberSaveable { mutableIntStateOf(0) }
     var grouped by rememberSaveable { mutableStateOf(false) }
     val snackbarHost = remember { SnackbarHostState() }

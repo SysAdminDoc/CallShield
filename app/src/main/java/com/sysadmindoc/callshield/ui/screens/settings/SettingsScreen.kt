@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.res.stringResource
 import com.sysadmindoc.callshield.BuildConfig
 import com.sysadmindoc.callshield.permissions.CallShieldPermissions
@@ -47,29 +48,29 @@ internal const val SETTINGS_QUIET_HOURS_TOGGLE_TAG = "settings_quiet_hours_toggl
 fun SettingsScreen(viewModel: MainViewModel) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
-    val blockCalls by viewModel.blockCallsEnabled.collectAsState()
-    val blockSms by viewModel.blockSmsEnabled.collectAsState()
-    val blockUnknown by viewModel.blockUnknownEnabled.collectAsState()
-    val stirShaken by viewModel.stirShakenEnabled.collectAsState()
-    val stirTrustedAllow by viewModel.stirTrustedAllowEnabled.collectAsState()
-    val autoMuteLowConfidence by viewModel.autoMuteLowConfidenceEnabled.collectAsState()
-    val neighborSpoof by viewModel.neighborSpoofEnabled.collectAsState()
-    val heuristics by viewModel.heuristicsEnabled.collectAsState()
-    val smsContent by viewModel.smsContentEnabled.collectAsState()
-    val contactWhitelist by viewModel.contactWhitelistEnabled.collectAsState()
-    val aggressiveMode by viewModel.aggressiveModeEnabled.collectAsState()
-    val autoCleanup by viewModel.autoCleanupEnabled.collectAsState()
-    val cleanupDays by viewModel.cleanupDays.collectAsState()
-    val timeBlock by viewModel.timeBlockEnabled.collectAsState()
-    val timeStart by viewModel.timeBlockStart.collectAsState()
-    val timeEnd by viewModel.timeBlockEnd.collectAsState()
-    val freqEscalation by viewModel.freqEscalationEnabled.collectAsState()
-    val mlScorer by viewModel.mlScorerEnabled.collectAsState()
-    val rcsFilter by viewModel.rcsFilterEnabled.collectAsState()
-    val silentVoicemail by viewModel.silentVoicemailEnabled.collectAsState()
-    val pushAlertEnabled by viewModel.pushAlertEnabled.collectAsState()
-    val pushAlertDisabledPackages by viewModel.pushAlertDisabledPackages.collectAsState()
-    val abstractApiKey by viewModel.abstractApiKey.collectAsState()
+    val blockCalls by viewModel.blockCallsEnabled.collectAsStateWithLifecycle()
+    val blockSms by viewModel.blockSmsEnabled.collectAsStateWithLifecycle()
+    val blockUnknown by viewModel.blockUnknownEnabled.collectAsStateWithLifecycle()
+    val stirShaken by viewModel.stirShakenEnabled.collectAsStateWithLifecycle()
+    val stirTrustedAllow by viewModel.stirTrustedAllowEnabled.collectAsStateWithLifecycle()
+    val autoMuteLowConfidence by viewModel.autoMuteLowConfidenceEnabled.collectAsStateWithLifecycle()
+    val neighborSpoof by viewModel.neighborSpoofEnabled.collectAsStateWithLifecycle()
+    val heuristics by viewModel.heuristicsEnabled.collectAsStateWithLifecycle()
+    val smsContent by viewModel.smsContentEnabled.collectAsStateWithLifecycle()
+    val contactWhitelist by viewModel.contactWhitelistEnabled.collectAsStateWithLifecycle()
+    val aggressiveMode by viewModel.aggressiveModeEnabled.collectAsStateWithLifecycle()
+    val autoCleanup by viewModel.autoCleanupEnabled.collectAsStateWithLifecycle()
+    val cleanupDays by viewModel.cleanupDays.collectAsStateWithLifecycle()
+    val timeBlock by viewModel.timeBlockEnabled.collectAsStateWithLifecycle()
+    val timeStart by viewModel.timeBlockStart.collectAsStateWithLifecycle()
+    val timeEnd by viewModel.timeBlockEnd.collectAsStateWithLifecycle()
+    val freqEscalation by viewModel.freqEscalationEnabled.collectAsStateWithLifecycle()
+    val mlScorer by viewModel.mlScorerEnabled.collectAsStateWithLifecycle()
+    val rcsFilter by viewModel.rcsFilterEnabled.collectAsStateWithLifecycle()
+    val silentVoicemail by viewModel.silentVoicemailEnabled.collectAsStateWithLifecycle()
+    val pushAlertEnabled by viewModel.pushAlertEnabled.collectAsStateWithLifecycle()
+    val pushAlertDisabledPackages by viewModel.pushAlertDisabledPackages.collectAsStateWithLifecycle()
+    val abstractApiKey by viewModel.abstractApiKey.collectAsStateWithLifecycle()
     var showPushAlertSources by remember { mutableStateOf(false) }
     val apiKeyClearedMessage = stringResource(R.string.settings_api_key_cleared)
     val apiKeySavedMessage = stringResource(R.string.settings_api_key_saved)
@@ -449,7 +450,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
             val restoreLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
                 uri?.let { viewModel.restore(it) }
             }
-            val restoreResult by viewModel.restoreResult.collectAsState()
+            val restoreResult by viewModel.restoreResult.collectAsStateWithLifecycle()
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(

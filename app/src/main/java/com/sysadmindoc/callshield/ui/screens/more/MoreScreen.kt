@@ -30,6 +30,7 @@ import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.screens.settings.SettingsScreen
 import com.sysadmindoc.callshield.ui.screens.stats.StatsScreen
 import com.sysadmindoc.callshield.ui.theme.*
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import java.text.NumberFormat
 
 @Composable
@@ -75,11 +76,11 @@ fun MoreTopBar(title: String, onBack: () -> Unit) {
 @Composable
 fun MoreHub(viewModel: MainViewModel, onStats: () -> Unit, onSettings: () -> Unit, onChangelog: () -> Unit, onTest: () -> Unit) {
     val context = LocalContext.current
-    val spamCount by viewModel.spamCount.collectAsState()
-    val blockedToday by viewModel.blockedToday.collectAsState()
-    val blockCallsEnabled by viewModel.blockCallsEnabled.collectAsState()
-    val blockSmsEnabled by viewModel.blockSmsEnabled.collectAsState()
-    val lastSync by viewModel.lastSyncTimestamp.collectAsState()
+    val spamCount by viewModel.spamCount.collectAsStateWithLifecycle()
+    val blockedToday by viewModel.blockedToday.collectAsStateWithLifecycle()
+    val blockCallsEnabled by viewModel.blockCallsEnabled.collectAsStateWithLifecycle()
+    val blockSmsEnabled by viewModel.blockSmsEnabled.collectAsStateWithLifecycle()
+    val lastSync by viewModel.lastSyncTimestamp.collectAsStateWithLifecycle()
     val protectionAccent = when {
         blockCallsEnabled || blockSmsEnabled -> CatGreen
         else -> CatPeach

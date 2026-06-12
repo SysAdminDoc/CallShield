@@ -66,7 +66,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -88,6 +87,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.PhoneFormatter
 import com.sysadmindoc.callshield.data.model.SmsKeywordRule
@@ -142,13 +142,13 @@ private data class BlocklistWorkspaceModel(
 @Composable
 fun BlocklistScreen(viewModel: MainViewModel) {
     val context = LocalContext.current
-    val userBlocked by viewModel.userBlockedNumbers.collectAsState()
-    val allSpam by viewModel.allSpamNumbers.collectAsState()
-    val wildcardRules by viewModel.wildcardRules.collectAsState()
-    val hashWildcardRules by viewModel.hashWildcardRules.collectAsState()
-    val whitelistEntries by viewModel.whitelistEntries.collectAsState()
-    val keywordRules by viewModel.keywordRules.collectAsState()
-    val importResult by viewModel.importResult.collectAsState()
+    val userBlocked by viewModel.userBlockedNumbers.collectAsStateWithLifecycle()
+    val allSpam by viewModel.allSpamNumbers.collectAsStateWithLifecycle()
+    val wildcardRules by viewModel.wildcardRules.collectAsStateWithLifecycle()
+    val hashWildcardRules by viewModel.hashWildcardRules.collectAsStateWithLifecycle()
+    val whitelistEntries by viewModel.whitelistEntries.collectAsStateWithLifecycle()
+    val keywordRules by viewModel.keywordRules.collectAsStateWithLifecycle()
+    val importResult by viewModel.importResult.collectAsStateWithLifecycle()
     var showAddDialog by remember { mutableStateOf(false) }
     var showWildcardDialog by remember { mutableStateOf(false) }
     var showRangeDialog by remember { mutableStateOf(false) }
