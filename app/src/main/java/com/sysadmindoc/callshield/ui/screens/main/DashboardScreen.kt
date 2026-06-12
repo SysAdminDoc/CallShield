@@ -76,7 +76,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -95,6 +94,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.BlockingProfiles
 import com.sysadmindoc.callshield.data.PhoneFormatter
@@ -125,30 +125,30 @@ import com.sysadmindoc.callshield.ui.theme.hapticTick
 
 @Composable
 fun DashboardScreen(viewModel: MainViewModel) {
-    val totalBlocked by viewModel.totalBlocked.collectAsState()
-    val blockedToday by viewModel.blockedToday.collectAsState()
-    val spamCount by viewModel.spamCount.collectAsState()
-    val syncState by viewModel.syncState.collectAsState()
-    val blockCallsEnabled by viewModel.blockCallsEnabled.collectAsState()
-    val blockSmsEnabled by viewModel.blockSmsEnabled.collectAsState()
-    val aggressiveMode by viewModel.aggressiveModeEnabled.collectAsState()
-    val heuristics by viewModel.heuristicsEnabled.collectAsState()
-    val smsContent by viewModel.smsContentEnabled.collectAsState()
-    val stirShaken by viewModel.stirShakenEnabled.collectAsState()
-    val neighborSpoof by viewModel.neighborSpoofEnabled.collectAsState()
-    val mlScorer by viewModel.mlScorerEnabled.collectAsState()
-    val rcsFilter by viewModel.rcsFilterEnabled.collectAsState()
-    val freqEscalation by viewModel.freqEscalationEnabled.collectAsState()
-    val blockedThisWeek by viewModel.blockedThisWeek.collectAsState()
-    val blockedLastWeek by viewModel.blockedLastWeek.collectAsState()
-    val blockedCalls by viewModel.blockedCalls.collectAsState()
-    val scanResult by viewModel.scanResult.collectAsState()
-    val smsScanResult by viewModel.smsScanResult.collectAsState()
-    val lastSync by viewModel.lastSyncTimestamp.collectAsState()
-    val lastSyncSource by viewModel.lastSyncSource.collectAsState()
-    val activeProfile by viewModel.activeProfile.collectAsState()
-    val scanningCalls by viewModel.scanningCalls.collectAsState()
-    val scanningSms by viewModel.scanningSms.collectAsState()
+    val totalBlocked by viewModel.totalBlocked.collectAsStateWithLifecycle()
+    val blockedToday by viewModel.blockedToday.collectAsStateWithLifecycle()
+    val spamCount by viewModel.spamCount.collectAsStateWithLifecycle()
+    val syncState by viewModel.syncState.collectAsStateWithLifecycle()
+    val blockCallsEnabled by viewModel.blockCallsEnabled.collectAsStateWithLifecycle()
+    val blockSmsEnabled by viewModel.blockSmsEnabled.collectAsStateWithLifecycle()
+    val aggressiveMode by viewModel.aggressiveModeEnabled.collectAsStateWithLifecycle()
+    val heuristics by viewModel.heuristicsEnabled.collectAsStateWithLifecycle()
+    val smsContent by viewModel.smsContentEnabled.collectAsStateWithLifecycle()
+    val stirShaken by viewModel.stirShakenEnabled.collectAsStateWithLifecycle()
+    val neighborSpoof by viewModel.neighborSpoofEnabled.collectAsStateWithLifecycle()
+    val mlScorer by viewModel.mlScorerEnabled.collectAsStateWithLifecycle()
+    val rcsFilter by viewModel.rcsFilterEnabled.collectAsStateWithLifecycle()
+    val freqEscalation by viewModel.freqEscalationEnabled.collectAsStateWithLifecycle()
+    val blockedThisWeek by viewModel.blockedThisWeek.collectAsStateWithLifecycle()
+    val blockedLastWeek by viewModel.blockedLastWeek.collectAsStateWithLifecycle()
+    val blockedCalls by viewModel.blockedCalls.collectAsStateWithLifecycle()
+    val scanResult by viewModel.scanResult.collectAsStateWithLifecycle()
+    val smsScanResult by viewModel.smsScanResult.collectAsStateWithLifecycle()
+    val lastSync by viewModel.lastSyncTimestamp.collectAsStateWithLifecycle()
+    val lastSyncSource by viewModel.lastSyncSource.collectAsStateWithLifecycle()
+    val activeProfile by viewModel.activeProfile.collectAsStateWithLifecycle()
+    val scanningCalls by viewModel.scanningCalls.collectAsStateWithLifecycle()
+    val scanningSms by viewModel.scanningSms.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val roleManager = remember(context) {

@@ -34,6 +34,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.ui.screens.details.NumberDetailScreen
@@ -74,8 +75,8 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun CallShieldRoot(viewModel: MainViewModel = viewModel(), launchRequest: LaunchRequest = LaunchRequest(id = 0)) {
-    val onboardingDone by viewModel.onboardingDone.collectAsState()
-    val selectedNumber by viewModel.selectedNumber.collectAsState()
+    val onboardingDone by viewModel.onboardingDone.collectAsStateWithLifecycle()
+    val selectedNumber by viewModel.selectedNumber.collectAsStateWithLifecycle()
 
     // Handle deep link and shortcuts
     var initialTab by remember { mutableIntStateOf(0) }
@@ -104,11 +105,11 @@ fun CallShieldRoot(viewModel: MainViewModel = viewModel(), launchRequest: Launch
 fun CallShieldApp(viewModel: MainViewModel, startTab: Int = 0) {
     var selectedTab by rememberSaveable { mutableIntStateOf(startTab) }
     var showSearch by rememberSaveable { mutableStateOf(false) }
-    val searchQuery by viewModel.searchQuery.collectAsState()
-    val searchResults by viewModel.searchResults.collectAsState()
-    val spamCount by viewModel.spamCount.collectAsState()
-    val blockCallsEnabled by viewModel.blockCallsEnabled.collectAsState()
-    val blockSmsEnabled by viewModel.blockSmsEnabled.collectAsState()
+    val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
+    val searchResults by viewModel.searchResults.collectAsStateWithLifecycle()
+    val spamCount by viewModel.spamCount.collectAsStateWithLifecycle()
+    val blockCallsEnabled by viewModel.blockCallsEnabled.collectAsStateWithLifecycle()
+    val blockSmsEnabled by viewModel.blockSmsEnabled.collectAsStateWithLifecycle()
 
     LaunchedEffect(startTab) {
         selectedTab = startTab

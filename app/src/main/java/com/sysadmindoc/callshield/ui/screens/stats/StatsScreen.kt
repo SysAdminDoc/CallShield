@@ -33,6 +33,7 @@ import com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup
 import com.sysadmindoc.callshield.data.model.BlockedCall
 import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.theme.*
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.delay
 import java.text.DateFormatSymbols
 import java.text.NumberFormat
@@ -47,9 +48,9 @@ private data class DailyStat(
 
 @Composable
 fun StatsScreen(viewModel: MainViewModel) {
-    val blockedCalls by viewModel.blockedCalls.collectAsState()
-    val totalBlocked by viewModel.totalBlocked.collectAsState()
-    val spamCount by viewModel.spamCount.collectAsState()
+    val blockedCalls by viewModel.blockedCalls.collectAsStateWithLifecycle()
+    val totalBlocked by viewModel.totalBlocked.collectAsStateWithLifecycle()
+    val spamCount by viewModel.spamCount.collectAsStateWithLifecycle()
     val numberFormatter = remember { NumberFormat.getIntegerInstance() }
 
     val callsOnly = blockedCalls.filter { it.isCall }

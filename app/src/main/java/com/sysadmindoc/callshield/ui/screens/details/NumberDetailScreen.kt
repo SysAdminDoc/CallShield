@@ -37,6 +37,7 @@ import com.sysadmindoc.callshield.ui.screens.lookup.SpamScoreGauge
 import com.sysadmindoc.callshield.ui.screens.lookup.detectionIcon
 import com.sysadmindoc.callshield.ui.theme.*
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -47,9 +48,9 @@ import java.util.*
 fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> Unit) {
     BackHandler { onBack() }
     val context = LocalContext.current
-    val blockedCalls by viewModel.blockedCalls.collectAsState()
-    val allSpam by viewModel.allSpamNumbers.collectAsState()
-    val userBlocked by viewModel.userBlockedNumbers.collectAsState()
+    val blockedCalls by viewModel.blockedCalls.collectAsStateWithLifecycle()
+    val allSpam by viewModel.allSpamNumbers.collectAsStateWithLifecycle()
+    val userBlocked by viewModel.userBlockedNumbers.collectAsStateWithLifecycle()
 
     val numberCalls = blockedCalls.filter { it.number == number }
     val dbEntry = allSpam.find { it.number == number }
@@ -446,7 +447,7 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
         }
 
         // Community contribution buttons
-        val contributeResult by viewModel.contributeResult.collectAsState()
+        val contributeResult by viewModel.contributeResult.collectAsStateWithLifecycle()
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(
                 onClick = { hapticTick(context); viewModel.contributeToDatabase(number, dbEntry?.type ?: liveResult?.type ?: "spam") },
