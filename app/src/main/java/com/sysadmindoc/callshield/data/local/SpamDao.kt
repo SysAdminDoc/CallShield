@@ -50,6 +50,12 @@ interface SpamDao {
     @Query("SELECT * FROM spam_numbers WHERE number IN (:numbers)")
     suspend fun getNumbersByNumbers(numbers: List<String>): List<SpamNumber>
 
+    @Query("UPDATE spam_numbers SET isUserBlocked = 0 WHERE isUserBlocked = 1 AND source != 'user'")
+    suspend fun clearUserBlockFlagsOnSyncedNumbers()
+
+    @Query("DELETE FROM spam_numbers WHERE isUserBlocked = 1 AND source = 'user'")
+    suspend fun deleteUserOwnedBlockedNumbers()
+
     @Transaction
     suspend fun replaceBySource(source: String, numbers: List<SpamNumber>) {
         deleteBySource(source)
@@ -130,6 +136,9 @@ interface SpamDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertWildcardRule(rule: WildcardRule)
 
+    @Query("DELETE FROM wildcard_rules")
+    suspend fun clearWildcardRules()
+
     @Delete
     suspend fun deleteWildcardRule(rule: WildcardRule)
 
@@ -174,6 +183,9 @@ interface SpamDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertWhitelistEntry(entry: WhitelistEntry)
 
+    @Query("DELETE FROM whitelist")
+    suspend fun clearWhitelist()
+
     @Delete
     suspend fun deleteWhitelistEntry(entry: WhitelistEntry)
 
@@ -194,6 +206,9 @@ interface SpamDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertKeywordRule(rule: SmsKeywordRule)
 
+    @Query("DELETE FROM sms_keyword_rules")
+    suspend fun clearKeywordRules()
+
     @Delete
     suspend fun deleteKeywordRule(rule: SmsKeywordRule)
 
@@ -210,4 +225,13 @@ interface SpamDao {
                  OR matchReason LIKE '%' || :query || '%' ESCAPE '\'
               ORDER BY timestamp DESC LIMIT 100""")
     fun searchLog(query: String): Flow<List<BlockedCall>>
+
+    @Transaction
+    suspend fun clearBackupRestorableData() {
+        clearUserBlockFlagsOnSyncedNumbers()
+        deleteUserOwnedBlockedNumbers()
+        clearWhitelist()
+        clearWildcardRules()
+        clearKeywordRules()
+    }
 }

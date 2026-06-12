@@ -147,26 +147,128 @@ class BackupRestoreTest {
         assertEquals("Invalid backup format", r.message)
     }
 
+    @Test
+    fun `restore validation rejects wrong app backups`() {
+        val validation =
+            BackupRestore.validateBackupForRestore(
+                Backup(
+                    app = "OtherApp",
+                    blockedNumbers = listOf(validBackupNumber()),
+                ),
+            )
+
+        assertInvalidRestore(validation, BackupRestore.RestoreFailure.WRONG_APP)
+    }
+
+    @Test
+    fun `restore validation rejects unsupported backup versions`() {
+        val validation =
+            BackupRestore.validateBackupForRestore(
+                Backup(
+                    version = 99,
+                    blockedNumbers = listOf(validBackupNumber()),
+                ),
+            )
+
+        assertInvalidRestore(validation, BackupRestore.RestoreFailure.UNSUPPORTED_VERSION)
+    }
+
+    @Test
+    fun `restore validation rejects empty backups`() {
+        val validation = BackupRestore.validateBackupForRestore(Backup())
+
+        assertInvalidRestore(validation, BackupRestore.RestoreFailure.EMPTY)
+    }
+
+    @Test
+    fun `restore validation rejects backups with no valid items`() {
+        val validation =
+            BackupRestore.validateBackupForRestore(
+                Backup(
+                    blockedNumbers = listOf(BackupNumber("12", "spam", "too short", "user")),
+                    whitelistNumbers = listOf(BackupWhitelist("abc", "not a number")),
+                    wildcardRules = listOf(BackupWildcard(" ", isRegex = false, description = "", enabled = true)),
+                    keywordRules = listOf(BackupKeyword(" ", caseSensitive = false, description = "", enabled = true)),
+                ),
+            )
+
+        assertInvalidRestore(validation, BackupRestore.RestoreFailure.NO_VALID_ITEMS)
+    }
+
+    @Test
+    fun `restore validation sanitizes valid payload before mutation`() {
+        val validation =
+            BackupRestore.validateBackupForRestore(
+                Backup(
+                    blockedNumbers = listOf(BackupNumber(" (212) 555-1234 ", "", "  Sales  ", "")),
+                    whitelistNumbers = listOf(BackupWhitelist("+1 303 555 0100", "  Clinic  ", isEmergency = true)),
+                    wildcardRules =
+                        listOf(
+                            BackupWildcard(
+                                pattern = " 800* ",
+                                isRegex = false,
+                                description = "  Toll free  ",
+                                enabled = true,
+                                scheduleDays = 0b111111111,
+                                scheduleStartHour = -4,
+                                scheduleEndHour = 42,
+                            ),
+                        ),
+                    keywordRules =
+                        listOf(
+                            BackupKeyword(
+                                keyword = "  verify now ",
+                                caseSensitive = true,
+                                description = "  Phish  ",
+                                enabled = false,
+                                scheduleDays = 0b1111111,
+                                scheduleStartHour = 22,
+                                scheduleEndHour = 6,
+                            ),
+                        ),
+                ),
+            )
+
+        assertTrue(validation is BackupRestore.RestoreValidation.Valid)
+        val payload = (validation as BackupRestore.RestoreValidation.Valid).payload
+        assertEquals(BackupRestore.RestoreCounts(1, 1, 1, 1), payload.counts)
+        assertEquals("2125551234", payload.blockedNumbers.single().number)
+        assertEquals("unknown", payload.blockedNumbers.single().type)
+        assertEquals("Sales", payload.blockedNumbers.single().description)
+        assertEquals("+13035550100", payload.whitelistNumbers.single().number)
+        assertEquals("Clinic", payload.whitelistNumbers.single().description)
+        assertEquals(0b1111111, payload.wildcardRules.single().scheduleDays)
+        assertEquals(0, payload.wildcardRules.single().scheduleStartHour)
+        assertEquals(23, payload.wildcardRules.single().scheduleEndHour)
+        assertEquals("verify now", payload.keywordRules.single().keyword)
+        assertFalse(payload.keywordRules.single().enabled)
+    }
+
     // ── Backup v2 format with populated data ─────────────────────────────
 
     @Test
     fun `Backup v3 with all sections populated`() {
-        val backup = Backup(
-            version = 3,
-            blockedNumbers = listOf(
-                BackupNumber("2125551234", "robocall", "Test", "user"),
-                BackupNumber("3105559876", "telemarketer", "Sales", "community")
-            ),
-            whitelistNumbers = listOf(
-                BackupWhitelist("5085551234", "Mom", isEmergency = true)
-            ),
-            wildcardRules = listOf(
-                BackupWildcard("800*", false, "Toll-free", true)
-            ),
-            keywordRules = listOf(
-                BackupKeyword("free money", false, "Spam phrase", true)
+        val backup =
+            Backup(
+                version = 3,
+                blockedNumbers =
+                    listOf(
+                        BackupNumber("2125551234", "robocall", "Test", "user"),
+                        BackupNumber("3105559876", "telemarketer", "Sales", "community"),
+                    ),
+                whitelistNumbers =
+                    listOf(
+                        BackupWhitelist("5085551234", "Mom", isEmergency = true),
+                    ),
+                wildcardRules =
+                    listOf(
+                        BackupWildcard("800*", false, "Toll-free", true),
+                    ),
+                keywordRules =
+                    listOf(
+                        BackupKeyword("free money", false, "Spam phrase", true),
+                    ),
             )
-        )
         assertEquals(3, backup.version)
         assertEquals(2, backup.blockedNumbers.size)
         assertEquals(1, backup.whitelistNumbers.size)
@@ -177,9 +279,10 @@ class BackupRestoreTest {
 
     @Test
     fun `Backup copy with modified version simulates v1`() {
-        val current = Backup(
-            blockedNumbers = listOf(BackupNumber("2125551234", "spam", "Test", "user"))
-        )
+        val current =
+            Backup(
+                blockedNumbers = listOf(BackupNumber("2125551234", "spam", "Test", "user")),
+            )
         val v1 = current.copy(version = 1)
         assertEquals(1, v1.version)
         assertEquals(current.blockedNumbers, v1.blockedNumbers)
@@ -199,15 +302,16 @@ class BackupRestoreTest {
 
     @Test
     fun `BackupWildcard carries schedule fields when present`() {
-        val rule = BackupWildcard(
-            pattern = "800*",
-            isRegex = false,
-            description = "Toll-free (business hours only)",
-            enabled = true,
-            scheduleDays = 0b0111110, // Mon–Fri
-            scheduleStartHour = 9,
-            scheduleEndHour = 17,
-        )
+        val rule =
+            BackupWildcard(
+                pattern = "800*",
+                isRegex = false,
+                description = "Toll-free (business hours only)",
+                enabled = true,
+                scheduleDays = 0b0111110, // Mon–Fri
+                scheduleStartHour = 9,
+                scheduleEndHour = 17,
+            )
         assertEquals(0b0111110, rule.scheduleDays)
         assertEquals(9, rule.scheduleStartHour)
         assertEquals(17, rule.scheduleEndHour)
@@ -215,15 +319,16 @@ class BackupRestoreTest {
 
     @Test
     fun `BackupKeyword carries schedule fields`() {
-        val kw = BackupKeyword(
-            keyword = "auto warranty",
-            caseSensitive = false,
-            description = "",
-            enabled = true,
-            scheduleDays = 0b1111111,
-            scheduleStartHour = 22,
-            scheduleEndHour = 6,
-        )
+        val kw =
+            BackupKeyword(
+                keyword = "auto warranty",
+                caseSensitive = false,
+                description = "",
+                enabled = true,
+                scheduleDays = 0b1111111,
+                scheduleStartHour = 22,
+                scheduleEndHour = 6,
+            )
         assertEquals(0b1111111, kw.scheduleDays)
         assertEquals(22, kw.scheduleStartHour)
         assertEquals(6, kw.scheduleEndHour)
@@ -241,15 +346,16 @@ class BackupRestoreTest {
 
     @Test
     fun `Backup data class supports destructuring`() {
-        val backup = Backup(
-            version = 3,
-            app = "CallShield",
-            timestamp = 1234567890L,
-            blockedNumbers = emptyList(),
-            whitelistNumbers = emptyList(),
-            wildcardRules = emptyList(),
-            keywordRules = emptyList()
-        )
+        val backup =
+            Backup(
+                version = 3,
+                app = "CallShield",
+                timestamp = 1234567890L,
+                blockedNumbers = emptyList(),
+                whitelistNumbers = emptyList(),
+                wildcardRules = emptyList(),
+                keywordRules = emptyList(),
+            )
         val (version, app, timestamp) = backup
         assertEquals(3, version)
         assertEquals("CallShield", app)
@@ -265,10 +371,21 @@ class BackupRestoreTest {
 
     @Test
     fun `Backup with large blocked list`() {
-        val numbers = (1..100).map {
-            BackupNumber("212555${it.toString().padStart(4, '0')}", "spam", "Entry $it", "user")
-        }
+        val numbers =
+            (1..100).map {
+                BackupNumber("212555${it.toString().padStart(4, '0')}", "spam", "Entry $it", "user")
+            }
         val backup = Backup(blockedNumbers = numbers)
         assertEquals(100, backup.blockedNumbers.size)
+    }
+
+    private fun validBackupNumber(): BackupNumber = BackupNumber("2125551234", "spam", "Test", "user")
+
+    private fun assertInvalidRestore(
+        validation: BackupRestore.RestoreValidation,
+        failure: BackupRestore.RestoreFailure,
+    ) {
+        assertTrue(validation is BackupRestore.RestoreValidation.Invalid)
+        assertEquals(failure, (validation as BackupRestore.RestoreValidation.Invalid).failure)
     }
 }

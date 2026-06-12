@@ -391,6 +391,11 @@ class SpamRepository(
     suspend fun deleteKeywordRule(rule: SmsKeywordRule) = blocklistRepository.deleteKeywordRule(rule)
     suspend fun toggleKeywordRule(id: Long, enabled: Boolean) = blocklistRepository.toggleKeywordRule(id, enabled)
 
+    fun invalidateRestoredRuleCaches() {
+        spamRepositoryImpl.invalidateWildcardCache()
+        spamRepositoryImpl.invalidateKeywordCache()
+    }
+
     // ── Search log ───────────────────────────────────────────────────
     fun searchLog(query: String): Flow<List<BlockedCall>> = blocklistRepository.searchLog(query)
 

@@ -175,8 +175,14 @@ class MainViewModel
     private val _restoreResult = MutableStateFlow<String?>(null)
     val restoreResult: StateFlow<String?> = _restoreResult
 
+    private val _restorePreview = MutableStateFlow<BackupRestore.RestorePreview?>(null)
+    val restorePreview: StateFlow<BackupRestore.RestorePreview?> = _restorePreview
+
     fun clearImportResult() { _importResult.value = null }
     fun clearRestoreResult() { _restoreResult.value = null }
+    fun clearRestorePreview() {
+        _restorePreview.value = null
+    }
     fun clearContributeResult() { _contributeResult.value = null }
 
     init {
@@ -340,8 +346,27 @@ class MainViewModel
     fun backup() { viewModelScope.launch { BackupRestore.shareBackup(appContext) } }
     fun restore(uri: Uri) {
         viewModelScope.launch {
-            val result = BackupRestore.restoreFromUri(appContext, uri)
+            val result = BackupRestore.previewRestoreFromUri(appContext, uri)
+            if (result.success) {
+                _restorePreview.value = result.preview
+                _restoreResult.value = null
+            } else {
+                _restorePreview.value = null
+                _restoreResult.value = result.message
+            }
+        }
+    }
+    fun applyRestore(mode: BackupRestore.RestoreMode) {
+        val preview = _restorePreview.value ?: run {
+            _restoreResult.value = appContext.getString(R.string.backup_restore_no_preview)
+            return
+        }
+        viewModelScope.launch {
+            val result = BackupRestore.restoreFromPreview(appContext, preview, mode)
             _restoreResult.value = result.message
+            if (result.success) {
+                _restorePreview.value = null
+            }
         }
     }
 
