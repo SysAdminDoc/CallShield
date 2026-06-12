@@ -32,6 +32,9 @@ jobs:
       - name: Compile debug APK
         run: ./gradlew assembleDebug
 
+      - name: Verify Room schema snapshots
+        run: git diff --exit-code -- app/schemas
+
       - name: Run unit tests
         run: ./gradlew testDebugUnitTest
 

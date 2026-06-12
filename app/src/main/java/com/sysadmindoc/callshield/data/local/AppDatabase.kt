@@ -107,8 +107,7 @@ val MIGRATION_8_9 = object : Migration(8, 9) {
         HashWildcardRule::class,
     ],
     version = DB_VERSION,
-    // exportSchema requires Room Gradle plugin (id 'androidx.room') — enable when adding proper migrations
-    exportSchema = false
+    exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun spamDao(): SpamDao
