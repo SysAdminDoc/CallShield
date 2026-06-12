@@ -83,8 +83,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Verify report pipeline ordering
-        run: python3 scripts/test_report_pipeline.py
+      - name: Verify report pipeline scripts
+        run: |
+          python3 scripts/test_phone_normalization.py
+          python3 scripts/test_report_pipeline.py
+          node --test worker/community-reports-worker.test.mjs
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4

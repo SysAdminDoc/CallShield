@@ -8,6 +8,7 @@ import json
 import os
 from datetime import datetime
 from pathlib import Path
+from phone_normalization import normalize_report_number
 
 DATA_DIR = Path(os.environ.get("CALLSHIELD_DATA_DIR", Path(__file__).parent.parent / "data"))
 DB_FILE = DATA_DIR / "spam_numbers.json"
@@ -52,7 +53,7 @@ def main():
             with open(report_file) as f:
                 report = json.load(f)
 
-            number = report.get("number", "")
+            number = normalize_report_number(report.get("number", ""))
             if not number:
                 processed_files.append(report_file)
                 continue
