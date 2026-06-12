@@ -14,6 +14,8 @@ Distribution prep after the v1.7.10 release.
 
 ### Fixed
 
+- Added a high-API instrumented smoke lane for target-SDK permission and
+  protected-service declarations while keeping the full API 29 emulator suite.
 - Migrated Compose ViewModel Flow collection to lifecycle-aware
   `collectAsStateWithLifecycle()` so UI-only collectors stop with their
   lifecycle instead of continuing while screens are stopped.
