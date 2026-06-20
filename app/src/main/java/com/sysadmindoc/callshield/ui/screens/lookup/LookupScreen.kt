@@ -37,6 +37,7 @@ import androidx.compose.material.icons.filled.MarkChatRead
 import androidx.compose.material.icons.filled.NearMe
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.Search
@@ -48,6 +49,7 @@ import androidx.compose.material.icons.filled.VerifiedUser
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Surface
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -119,6 +121,7 @@ fun LookupScreen(viewModel: MainViewModel) {
     val normalizedNumber = remember(numberInput) { normalizeLookupNumber(numberInput) }
     val previewLocation = remember(normalizedNumber) { AreaCodeLookup.lookup(normalizedNumber) }
     var result by remember { mutableStateOf<SpamCheckResult?>(null) }
+    var trace by remember { mutableStateOf<com.sysadmindoc.callshield.data.checker.PipelineTrace?>(null) }
     var checking by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     val canLookup = normalizedNumber.length >= 5
@@ -131,6 +134,7 @@ fun LookupScreen(viewModel: MainViewModel) {
     fun clearLookup() {
         numberInput = ""
         result = null
+        trace = null
         errorMessage = null
     }
 
@@ -139,6 +143,7 @@ fun LookupScreen(viewModel: MainViewModel) {
 
         checking = true
         result = null
+        trace = null
         errorMessage = null
         scope.launch {
             try {
@@ -146,7 +151,11 @@ fun LookupScreen(viewModel: MainViewModel) {
                 val lookupResult = withContext(Dispatchers.IO) {
                     repo.isSpam(normalizedNumber, realtimeCall = false)
                 }
+                val traceResult = withContext(Dispatchers.IO) {
+                    repo.traceRules(normalizedNumber)
+                }
                 result = lookupResult
+                trace = traceResult
                 haptic(context, lookupResult.isSpam)
             } catch (e: Exception) {
                 errorMessage = resources.getString(
@@ -416,6 +425,10 @@ fun LookupScreen(viewModel: MainViewModel) {
                                 )
                             }
                         }
+                    }
+
+                    trace?.let { pipelineTrace ->
+                        PipelineTraceSection(pipelineTrace)
                     }
 
                     Row(
@@ -748,6 +761,91 @@ private fun normalizeLookupNumber(input: String): String {
         "+$digitsOnly"
     } else {
         digitsOnly
+    }
+}
+
+@Composable
+private fun PipelineTraceSection(trace: com.sysadmindoc.callshield.data.checker.PipelineTrace) {
+    var expanded by remember { mutableStateOf(false) }
+    val activeEntries = trace.entries.filter {
+        it.verdict != com.sysadmindoc.callshield.data.checker.PipelineTraceVerdict.PASS &&
+            it.verdict != com.sysadmindoc.callshield.data.checker.PipelineTraceVerdict.DISABLED
+    }
+
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = SurfaceElevated,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Default.FilterAlt,
+                        contentDescription = null,
+                        tint = if (trace.hasConflict) CatYellow else CatBlue,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        stringResource(R.string.lookup_pipeline_trace),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = CatText,
+                    )
+                    if (trace.hasConflict) {
+                        Spacer(Modifier.width(6.dp))
+                        StatusPill(stringResource(R.string.lookup_conflict), CatYellow)
+                    }
+                }
+                androidx.compose.material3.TextButton(onClick = { expanded = !expanded }) {
+                    Text(
+                        if (expanded) stringResource(R.string.lookup_trace_hide)
+                        else stringResource(R.string.lookup_trace_show, activeEntries.size),
+                        style = MaterialTheme.typography.labelSmall,
+                    )
+                }
+            }
+            if (expanded) {
+                Spacer(Modifier.height(4.dp))
+                trace.entries.forEach { entry ->
+                    val (icon, tint, label) = when (entry.verdict) {
+                        com.sysadmindoc.callshield.data.checker.PipelineTraceVerdict.BLOCK ->
+                            Triple(Icons.Default.Block, CatRed, "BLOCK")
+                        com.sysadmindoc.callshield.data.checker.PipelineTraceVerdict.ALLOW ->
+                            Triple(Icons.Default.CheckCircle, CatGreen, "ALLOW")
+                        com.sysadmindoc.callshield.data.checker.PipelineTraceVerdict.DISABLED ->
+                            Triple(Icons.Default.Close, CatOverlay, "OFF")
+                        com.sysadmindoc.callshield.data.checker.PipelineTraceVerdict.PASS ->
+                            Triple(Icons.Default.Remove, CatSubtext, "PASS")
+                    }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(icon, contentDescription = label, tint = tint, modifier = Modifier.size(14.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            entry.checkerName.replace("_", " ").replaceFirstChar { it.uppercase() },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = tint,
+                            modifier = Modifier.weight(1f),
+                        )
+                        Text(
+                            label,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = tint,
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 

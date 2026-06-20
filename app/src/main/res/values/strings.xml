@@ -341,6 +341,10 @@
     <string name="lookup_details">Details</string>
     <string name="lookup_confidence">Confidence</string>
     <string name="lookup_confidence_value">%d%%</string>
+    <string name="lookup_pipeline_trace">Pipeline Trace</string>
+    <string name="lookup_conflict">Conflict</string>
+    <string name="lookup_trace_show">Show %d active</string>
+    <string name="lookup_trace_hide">Hide</string>
     <string name="lookup_block">Block</string>
     <string name="lookup_number_blocked">Number blocked</string>
     <string name="lookup_block_failed">Block failed: %s</string>

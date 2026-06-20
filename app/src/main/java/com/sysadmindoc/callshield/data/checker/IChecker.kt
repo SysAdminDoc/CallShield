@@ -204,27 +204,59 @@ object CheckerPriority {
 object CheckerPipeline {
     suspend fun run(sortedCheckers: List<IChecker>, ctx: CheckContext): BlockResult? {
         for (checker in sortedCheckers) {
-            // Budget insurance: if a slow checker earlier in the chain
-            // chewed through the 4.5 s window, bail instead of racing past
-            // the 5 s Android deadline. Returning null maps to "not spam"
-            // in the caller — the safer default under time pressure is to
-            // allow the call rather than let Android auto-allow on timeout
-            // without our telemetry.
             if (ctx.timeLeftMillis() <= 0L) return null
             if (!checker.isEnabled(ctx)) continue
             val result = try {
                 checker.check(ctx)
             } catch (e: Exception) {
-                // A buggy checker must never take down the pipeline — log
-                // nothing (we're on the hot path) and continue. SpamRepository
-                // keeps working with one fewer detection layer.
                 null
             }
             if (result != null) return result
         }
         return null
     }
+
+    /**
+     * Diagnostic mode: run ALL checkers and collect every non-null result
+     * instead of short-circuiting on the first. Used by the lookup screen
+     * rule tester, never on the hot screening path.
+     */
+    suspend fun traceAll(sortedCheckers: List<IChecker>, ctx: CheckContext): PipelineTrace {
+        val entries = mutableListOf<PipelineTraceEntry>()
+        for (checker in sortedCheckers) {
+            val enabled = try { checker.isEnabled(ctx) } catch (_: Exception) { false }
+            if (!enabled) {
+                entries.add(PipelineTraceEntry(checker.name, checker.priority, PipelineTraceVerdict.DISABLED))
+                continue
+            }
+            val result = try { checker.check(ctx) } catch (_: Exception) { null }
+            if (result == null) {
+                entries.add(PipelineTraceEntry(checker.name, checker.priority, PipelineTraceVerdict.PASS))
+            } else if (result.shouldBlock) {
+                entries.add(PipelineTraceEntry(checker.name, checker.priority, PipelineTraceVerdict.BLOCK, result))
+            } else {
+                entries.add(PipelineTraceEntry(checker.name, checker.priority, PipelineTraceVerdict.ALLOW, result))
+            }
+        }
+        val blocks = entries.filter { it.verdict == PipelineTraceVerdict.BLOCK }
+        val allows = entries.filter { it.verdict == PipelineTraceVerdict.ALLOW }
+        return PipelineTrace(entries, hasConflict = blocks.isNotEmpty() && allows.isNotEmpty())
+    }
 }
+
+enum class PipelineTraceVerdict { BLOCK, ALLOW, PASS, DISABLED }
+
+data class PipelineTraceEntry(
+    val checkerName: String,
+    val priority: Int,
+    val verdict: PipelineTraceVerdict,
+    val result: BlockResult? = null,
+)
+
+data class PipelineTrace(
+    val entries: List<PipelineTraceEntry>,
+    val hasConflict: Boolean,
+)
 
 /**
  * Factory for the canonical checker set plus SMS-only extensions.

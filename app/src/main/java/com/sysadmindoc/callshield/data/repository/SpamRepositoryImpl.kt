@@ -6,6 +6,7 @@ import com.sysadmindoc.callshield.data.checker.CheckContext
 import com.sysadmindoc.callshield.data.checker.CheckerDependencies
 import com.sysadmindoc.callshield.data.checker.CheckerPipeline
 import com.sysadmindoc.callshield.data.checker.IChecker
+import com.sysadmindoc.callshield.data.checker.PipelineTrace
 import com.sysadmindoc.callshield.data.checker.SpamCheckers
 import com.sysadmindoc.callshield.data.local.SpamDao
 import com.sysadmindoc.callshield.data.model.BlockedCall
@@ -146,4 +147,17 @@ class SpamRepositoryImpl(
     }
 
     fun normalizeNumber(number: String): String = normalizePhoneNumber(number)
+
+    suspend fun traceRules(number: String): PipelineTrace {
+        val normalized = normalizeNumber(number)
+        if (normalized.isBlank()) return PipelineTrace(emptyList(), false)
+        val prefs = settingsRepository.readPrefsSnapshot()
+        val ctx = CheckContext(
+            appContext = context,
+            number = normalized,
+            realtimeCall = false,
+            prefs = prefs,
+        )
+        return CheckerPipeline.traceAll(callChain, ctx)
+    }
 }

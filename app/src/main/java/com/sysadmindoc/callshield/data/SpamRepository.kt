@@ -290,6 +290,10 @@ class SpamRepository(
             prefsSnapshot = prefsSnapshot,
         )
 
+    // ── Pipeline trace (diagnostic) ─────────────────────────────────────
+    suspend fun traceRules(number: String): com.sysadmindoc.callshield.data.checker.PipelineTrace =
+        spamRepositoryImpl.traceRules(number)
+
     // ── Sync ───────────────────────────────────────────────────────────
     /**
      * @param force When true, skips the SHA check and always downloads.
