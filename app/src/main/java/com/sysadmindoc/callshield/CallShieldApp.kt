@@ -1,16 +1,25 @@
 package com.sysadmindoc.callshield
 
 import android.app.Application
+import android.database.ContentObserver
+import android.net.Uri
+import android.os.Handler
+import android.os.Looper
+import android.provider.BlockedNumberContract
+import android.provider.ContactsContract
 import android.util.Log
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
+import com.sysadmindoc.callshield.data.SpamHeuristics
 import com.sysadmindoc.callshield.data.SpamRepository
+import com.sysadmindoc.callshield.data.SystemBlockList
 import com.sysadmindoc.callshield.data.checker.CheckerDependencies
 import com.sysadmindoc.callshield.service.CrashReporter
 import com.sysadmindoc.callshield.service.DigestWorker
 import com.sysadmindoc.callshield.service.HotListSyncWorker
 import com.sysadmindoc.callshield.service.HotDataSync
 import com.sysadmindoc.callshield.service.NotificationHelper
+import com.sysadmindoc.callshield.service.PendingBlockedCallLogWorker
 import com.sysadmindoc.callshield.service.SyncWorker
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CoroutineScope
@@ -46,6 +55,9 @@ class CallShieldApp :
         SyncWorker.schedule(this)
         HotListSyncWorker.schedule(this)
         DigestWorker.schedule(this)
+        PendingBlockedCallLogWorker.schedule(this)
+
+        registerCacheInvalidationObservers()
 
         appScope.launch {
             checkerDependencies.spamMLScorer.loadWeights(this@CallShieldApp)
@@ -68,6 +80,34 @@ class CallShieldApp :
             } catch (e: Exception) {
                 Log.w("CallShieldApp", "Failed to clean up old logs", e)
             }
+        }
+    }
+
+    private fun registerCacheInvalidationObservers() {
+        val handler = Handler(Looper.getMainLooper())
+
+        contentResolver.registerContentObserver(
+            ContactsContract.Contacts.CONTENT_URI,
+            true,
+            object : ContentObserver(handler) {
+                override fun onChange(selfChange: Boolean, uri: Uri?) {
+                    checkerDependencies.spamHeuristics.clearContactCache()
+                }
+            },
+        )
+
+        try {
+            contentResolver.registerContentObserver(
+                BlockedNumberContract.BlockedNumbers.CONTENT_URI,
+                true,
+                object : ContentObserver(handler) {
+                    override fun onChange(selfChange: Boolean, uri: Uri?) {
+                        SystemBlockList.clearCache()
+                    }
+                },
+            )
+        } catch (_: SecurityException) {
+            // Not the default dialer — BlockedNumberContract may not be readable.
         }
     }
 
