@@ -542,30 +542,14 @@ Plus RFC 8588 (SHAKEN profile), RFC 9027 (Traceback), Apache SpamAssassin / rspa
 
 ## Research-Driven Additions
 
-### P0
-
-- [ ] P0 — Durable post-response blocked-call logging
-  Why: `CallShieldScreeningService` correctly responds before Room logging to protect Android's 5-second deadline, but the async `appScope` insert can still be lost after `respondToCall()`.
-  Evidence: `app/src/main/java/com/sysadmindoc/callshield/service/CallShieldScreeningService.kt`; Android `CallScreeningService` docs.
-  Touches: `CallShieldScreeningService.kt`, `SpamRepository.kt`, `SpamDao.kt`, `NotificationHelper.kt`, a small pending-log entity or worker, unit/instrumented tests.
-  Acceptance: block response remains immediate; each blocked call is queued idempotently before/at response time; queued logs survive process death and are flushed exactly once; tests cover retry and duplicate suppression without adding hot-path latency.
-  Complexity: M
-
-- [ ] P0 — Add durable abuse limits to the current community-report Worker
-  Why: anonymous reports currently write GitHub files through the Cloudflare Worker, and the code still notes that production rate limiting should use KV; future Ktor rate limits do not protect the live Worker path.
-  Evidence: `worker/community-reports-worker.js`; recent `Community report:` commits in `rtk git log -200`; existing server-side rate-limit roadmap item only covers the future server.
-  Touches: `worker/community-reports-worker.js`, `worker/community-reports-worker.test.mjs`, `wrangler.toml`, `data/CommunityContributor.kt`.
-  Acceptance: KV or Durable Object rate limits persist across Worker isolates; burst submissions return 429 with `Retry-After`; normal reports still succeed; client backs off on 429; Worker tests cover burst, replay, SMS-domain, and valid-report paths.
-  Complexity: M
-
 ### P1
 
-- [ ] P1 — Centralize ASCII-only phone normalization across imports and helper paths
-  Why: the canonical anti-spoof normalizer rejects non-ASCII digits, but backup/import, lookup, heuristic, formatter, scanner, notification, and RCS helper paths still use `Char.isDigit()`.
-  Evidence: `SpamRepository.kt` normalizer comment; `BackupRestore.kt`, `BlocklistExporter.kt`, `SpamHeuristics.kt`, `CallbackDetector.kt`, `PhoneFormatter.kt`, `SmsContextChecker.kt`, `SpamMLScorer.kt`, `CallLogScanner.kt`, `NotificationHelper.kt`, `RcsNotificationListener.kt`.
-  Touches: shared phone-normalization utility, import/restore/export parsers, call/SMS/RCS helpers, normalization tests.
-  Acceptance: Arabic-Indic/fullwidth and format-control digit spoof cases are rejected or normalized identically in restore, blocklist import, manual entry, call-log scan, RCS sender parsing, notifications, and community reports; display formatting remains locale-aware but security parsing stays ASCII-only.
-  Complexity: M
+- [ ] P1 — Fix last ASCII normalization gap in WildcardRule.numberVariants
+  Why: `WildcardRule.numberVariants()` at line 124 still uses `number.filter { it.isDigit() }` instead of the canonical `filterAsciiDigits()`. This is a matching path — Arabic-Indic digits could bypass wildcard rules. All other data/service paths were migrated to `filterAsciiDigits` in previous passes.
+  Evidence: `app/src/main/java/com/sysadmindoc/callshield/data/model/WildcardRule.kt:124`; grep confirms all other callers use `filterAsciiDigits`.
+  Touches: `WildcardRule.kt`, `WildcardRuleTest.kt`.
+  Acceptance: `numberVariants()` uses `filterAsciiDigits(number)` instead of `number.filter { it.isDigit() }`; test covers Arabic-Indic digit input producing no digit extraction.
+  Complexity: S
 
 - [ ] P1 — Invalidate contact and system block-list caches with content observers
   Why: contact and system blocked-number reads are cached for hot-path speed, but changes made outside CallShield can stay stale until TTL or role recheck.
@@ -595,4 +579,147 @@ Plus RFC 8588 (SHAKEN profile), RFC 9027 (Traceback), Apache SpamAssassin / rspa
   Evidence: `gradle/libs.versions.toml`; AndroidX Lifecycle and Navigation release notes; existing B.U.8 predictive-back item.
   Touches: `gradle/libs.versions.toml`, Gradle lockfiles, `MainActivity.kt`, navigation tests, predictive-back smoke coverage.
   Acceptance: upgrade to current AGP-8-compatible stable AndroidX Activity/Lifecycle/Navigation versions; lockfiles refresh; unit, lint, and instrumented navigation/back tests pass; no Hilt 2.59 upgrade until AGP 9 migration.
+  Complexity: M
+
+### Research Pass 2 — 2026-06-19
+
+#### P0
+
+- [ ] P0 — Document STIR A-level attestation over-attestation risk
+  Why: TNS 2026 data shows 13% of invalid-number calls receive A-level attestation via SIM box fraud. `KEY_STIR_TRUSTED_ALLOW` (default ON) can let SIM-box-spoofed calls bypass heuristic/ML layers. Users need to understand this risk; roadmap 2.3.5 (attestation as ML feature) is the long-term fix.
+  Evidence: TNS 2026 Robocall Report; `data/checker/Checkers.kt::StirShakenTrustChecker`; `data/repository/SettingsRepository.kt` `KEY_STIR_TRUSTED_ALLOW`.
+  Touches: Settings screen help text for STIR toggle, `CLAUDE.md` gotchas section.
+  Acceptance: STIR trusted-allow toggle description notes that A-level attestation is not fully reliable; in-app help or tooltip explains the SIM-box over-attestation risk; no behavioral change to default (keep ON) but documentation is explicit.
+  Complexity: S
+
+#### P1
+
+- [ ] P1 — AGP 9 + Kotlin 2.3 + Hilt 2.59 + Moshi→kotlinx.serialization migration tranche
+  Why: AGP 8.x is on a deprecation path; Hilt 2.59+ drops AGP 8 support; Moshi 1.x codegen requires KSP1 while KSP2 is now default; AGP 10 removes all escape hatches mid-2026. All four must move together.
+  Evidence: AGP 9 release notes; Dagger 2.59 release; Kotlin 2.3.0/2.3.20 changelogs; Moshi KSP2 compatibility issues.
+  Touches: `build.gradle.kts`, `app/build.gradle.kts`, `gradle/libs.versions.toml`, all Gradle lockfiles, `proguard-rules.pro` (R8 `-repackageclasses` validation), all JSON parsing sites (Moshi→kotlinx.serialization), Hilt module files.
+  Acceptance: project builds on AGP 9.x + Kotlin 2.3.x + Hilt 2.59+; JSON parsing uses `kotlinx.serialization` codegen; R8 `-repackageclasses` validated against Room/Hilt/KSP codegen; all tests pass; lockfiles refreshed.
+  Complexity: XL
+
+- [ ] P1 — Compose Testing v2 migration
+  Why: Compose Testing v1 APIs are deprecated in BOM 2026.04.01. The 11 instrumented UI test files use v1 APIs. Must migrate before the next BOM bump.
+  Evidence: Compose BOM 2026.04.01 deprecation notes; `app/src/androidTest/` test files.
+  Touches: all `androidTest` Compose UI test files, `app/build.gradle.kts` test dependencies.
+  Acceptance: all instrumented tests use Compose Testing v2 APIs; no deprecated v1 API calls remain; tests pass on current and next BOM.
+  Complexity: M
+
+- [ ] P1 — RCS E2EE graceful degradation in RcsNotificationListener
+  Why: GSMA Universal Profile 3.0 (MLS protocol) and 4.0 make RCS message content E2E encrypted. `RcsNotificationListener` reads notification text for content-based spam detection — this will become empty/opaque once E2EE rolls out. Must fall back to sender-metadata-only analysis.
+  Evidence: GSMA UP 3.0/4.0 specs; `service/RcsNotificationListener.kt` content-based analysis code.
+  Touches: `RcsNotificationListener.kt`, `SmsContentAnalyzer.kt` (null/empty body handling), tests.
+  Acceptance: when notification body is null, empty, or contains only a placeholder (encrypted message indicators), the listener falls back to sender-number heuristics, STIR status, and frequency patterns without crashing or false-negating; tests cover the empty-body code path.
+  Complexity: M
+
+- [ ] P1 — SMS Screening Provider mode (permission reduction)
+  Why: SpamBlocker v5.9 implemented Android's SMS screening ContentProvider protocol, eliminating the need for `RECEIVE_SMS` permission. CallShield's `SmsReceiver` approach requires this permission. The screening-provider architecture is cleaner and more privacy-preserving.
+  Evidence: SpamBlocker v5.9 release; Android SMS screening API docs; `service/SmsReceiver.kt`; `AndroidManifest.xml`.
+  Touches: new `service/SmsScreeningProvider.kt` ContentProvider, `AndroidManifest.xml`, `SmsReceiver.kt` (keep as fallback for older devices), settings toggle, tests.
+  Acceptance: when registered as SMS screening provider, incoming SMS is screened without `RECEIVE_SMS` permission; `SmsReceiver` remains as fallback for devices/apps that don't support the screening protocol; permission request flow is simplified.
+  Complexity: L
+
+- [ ] P1 — Hash community report submissions for privacy
+  Why: `CommunityContributor.kt` transmits raw E.164 numbers to the Cloudflare Worker, which writes them to GitHub. The repo functions as a public phone number directory. PhoneBlock uses HMAC-SHA256 hashed submissions so the server never sees raw numbers.
+  Evidence: PhoneBlock privacy model; `data/CommunityContributor.kt`; `worker/community-reports-worker.js`.
+  Touches: `CommunityContributor.kt`, `worker/community-reports-worker.js`, `worker/community-reports-worker.test.mjs`, `scripts/merge_community_reports.py`, report JSON schema.
+  Acceptance: reports transmit `HMAC-SHA256(app-embedded-secret, E.164-number)` instead of raw numbers; the Worker and merge scripts operate on hashes; exact-match lookups use the same HMAC; existing raw-number reports remain readable during transition; tests cover hash generation and lookup.
+  Complexity: M
+
+- [ ] P1 — Audit USE_FULL_SCREEN_INTENT for API 36
+  Why: Android 16 requires apps that display full-screen notifications to declare `USE_FULL_SCREEN_INTENT` in the manifest. `NotificationHelper` blocked-call notifications may be silently downgraded to standard notifications without it.
+  Evidence: Android 16 behavior changes docs; `service/NotificationHelper.kt`; `AndroidManifest.xml`.
+  Touches: `AndroidManifest.xml` (declaration), `NotificationHelper.kt` (verify channel importance), instrumented smoke test.
+  Acceptance: manifest declares `USE_FULL_SCREEN_INTENT` if any notification uses full-screen intent; notification display verified on API 36 emulator; no silent downgrades.
+  Complexity: S
+
+- [ ] P1 — IzzyOnDroid submission
+  Why: IzzyOnDroid is the fastest FOSS distribution path — developer-signed APKs accepted, daily update checker, privacy-community reach. F-Droid main repo requires longer review cycle.
+  Evidence: IzzyOnDroid inclusion policy docs; existing Fastlane metadata in `fastlane/metadata/android/en-US/`.
+  Touches: Fastlane metadata (verify completeness), GitHub Release APK attachment, IzzyOnDroid GitHub issue submission, Exodus Privacy scan to confirm zero trackers.
+  Acceptance: CallShield listed on IzzyOnDroid with current version; update checker picks up new GitHub Releases within 24h.
+  Complexity: S
+
+#### P2
+
+- [ ] P2 — Contacts-only blocking mode
+  Why: high community demand (XDA, F-Droid forums, SpamBlocker issues). Single toggle: block all calls not in the device address book. Distinct from the existing whitelist — this is a global "only contacts ring" mode.
+  Evidence: XDA forum threads; SpamBlocker community requests; KnownCalls-style mode requests.
+  Touches: `data/checker/Checkers.kt` (new checker or early-return in pipeline), `data/repository/SettingsRepository.kt` (new DataStore key), Settings screen toggle, tests.
+  Acceptance: when enabled, calls from numbers not in device contacts are blocked; whitelist entries still override; toggle is visible in Settings; tests cover the mode with and without contacts.
+  Complexity: S
+
+- [ ] P2 — Active calendar-event blocking ("meeting mode")
+  Why: SpamBlocker's most-requested feature after regex. Block non-contacts during active calendar events. Simpler than iCal URL subscription (B.F.9) — reads the device calendar directly.
+  Evidence: SpamBlocker wiki templates; `CalendarContract.Events` API; existing `TimeSchedule` infrastructure.
+  Touches: new `CalendarEventChecker` in checker pipeline, `CALENDAR_READ` permission request, Settings toggle, tests.
+  Acceptance: when enabled, calls from non-contacts are blocked during any active calendar event; contacts always ring; toggle visible in Settings with permission request; tests cover active/inactive event states.
+  Complexity: M
+
+- [ ] P2 — Split notification channels (blocking / digest / system)
+  Why: single notification channel prevents users from independently controlling blocking event notifications, digest summaries, and system alerts (permission issues, blocking paused).
+  Evidence: Android notification best practices; `service/NotificationHelper.kt`.
+  Touches: `NotificationHelper.kt` (channel creation and notification routing), `AndroidManifest.xml`, channel migration code for existing installs.
+  Acceptance: three distinct notification channels with appropriate importance levels; users can independently silence blocking events while keeping system alerts; channel migration preserves user preferences on upgrade.
+  Complexity: M
+
+- [ ] P2 — Android 17 SMS OTP delay compliance audit
+  Why: Android 17 withholds `SMS_RECEIVED_ACTION` for 3 hours on OTP-containing messages. CallShield's `SmsReceiver` listens on this action. Non-OTP spam is unaffected, but OTP-adjacent filtering logic should be audited.
+  Evidence: Android 17 behavior changes docs; `service/SmsReceiver.kt`; `service/SmsInboxScanner.kt`.
+  Touches: `SmsReceiver.kt` (audit for OTP-adjacent patterns), `SmsContextChecker.kt` (OTP trust bypass), docs/settings copy if user-visible caveats exist.
+  Acceptance: audit documents which CallShield SMS paths are affected by the 3-hour delay; no false-negative regressions for non-OTP spam; any user-visible limitation documented in-app.
+  Complexity: S
+
+- [ ] P2 — Database prefix auto-expansion for campaign coverage
+  Why: SpamBlocker v5.9 auto-blocks last-N-digit siblings when a number matches the spam DB (e.g., DB entry `xxxx55` blocks `xxxx00-xxxx99`). Extends campaign coverage without manual entry.
+  Evidence: SpamBlocker v5.9 release; `data/repository/SpamRepositoryImpl.kt` exact-match logic.
+  Touches: `SpamRepositoryImpl.kt` (prefix bucket check after exact miss), `SpamDao.kt` (prefix query), Settings toggle (configurable digit depth), tests.
+  Acceptance: when enabled, a number matching the DB minus last 2 digits triggers a configurable-confidence block; opt-in with a Settings toggle; tests cover prefix expansion with various digit depths.
+  Complexity: M
+
+- [ ] P2 — Threshold-based community reputation weighting
+  Why: current community reports are binary (in DB = spam). PhoneBlock weights by report count — 1-2 reports = LOW_CONFIDENCE, 10+ = HIGH. Reduces false-positive community blocks.
+  Evidence: PhoneBlock threshold model; `data/remote/SpamDataSource.kt`; hot-list JSON schema.
+  Touches: hot-list JSON schema (add `report_count` field), `SpamRepositoryImpl.kt` (confidence adjustment from report count), `SpamMLScorer.kt` (optional feature input), tests.
+  Acceptance: community-sourced numbers carry a report count; ML confidence blends with report count; low-report-count numbers produce lower-confidence blocks; schema change is backward-compatible.
+  Complexity: M
+
+- [ ] P2 — Weblate translation setup
+  Why: Weblate is the FOSS standard for crowd-sourced translation (free for FOSS at hosted.weblate.org). 952 string resources are translation-ready but no translation infrastructure exists.
+  Evidence: Weblate FOSS hosting docs; `res/values/strings.xml` (952 resources); F-Droid community Weblate adoption.
+  Touches: `.weblate.yml` config, Weblate project registration, `res/values-{de,fr}/strings.xml` initial stubs.
+  Acceptance: Weblate project linked to GitHub repo; translators can contribute via web UI; PRs auto-created for new translations; initial DE + FR stubs seeded.
+  Complexity: S
+
+- [ ] P2 — Device security patch date indicator in diagnostics
+  Why: actively exploited Android framework CVEs (e.g., CVE-2025-48595, CVSS 8.4) can let malware bypass CallShield's blocking. Users should see their device patch level in the protection-test/diagnostics screen.
+  Evidence: Android June 2026 security bulletin; `ui/screens/more/ProtectionTestScreen.kt`.
+  Touches: `ProtectionTestScreen.kt` (read `Build.VERSION.SECURITY_PATCH`), diagnostic export.
+  Acceptance: protection-test screen shows device security patch date; warns when patch is >90 days old; diagnostic export includes the date.
+  Complexity: S
+
+- [ ] P2 — Add ai_voice report type to community contribution schema
+  Why: FCC declared AI-generated voices illegal under TCPA (Feb 2024). Community reports should distinguish AI-voice spam from traditional robocalls for better category accuracy. Hiya's 2026 data shows 1 in 4 Americans received a deepfake voice call.
+  Evidence: FCC AI voice TCPA ruling; Hiya State of the Call 2026; `data/CommunityContributor.kt` `VALID_TYPES`.
+  Touches: `CommunityContributor.kt` (add `ai_voice` to valid types), `worker/community-reports-worker.js` (accept new type), community report UI (optional type selector), tests.
+  Acceptance: `ai_voice` is accepted as a report type by both client and Worker; UI offers it as an option during spam reporting; existing report flow unchanged for users who don't select it.
+  Complexity: S
+
+#### P3
+
+- [ ] P3 — Rich Call Data display in caller-ID overlay
+  Why: FCC proposed mandatory Rich Call Data (RCD) in October 2025 FNPRM — verified caller name, logo, and call purpose transmitted with A-level attestation. When carriers adopt RCD, `CallerIdOverlayService` could display verified business name from `Connection.getExtras()`.
+  Evidence: FCC FNPRM Oct 2025; TransNexus RCD documentation; `service/CallerIdOverlayService.kt`.
+  Touches: `CallerIdOverlayService.kt` (parse RCD extras), overlay UI (display verified name/purpose), tests.
+  Acceptance: when RCD data is present in call extras, overlay displays verified business name and call purpose; when absent, existing behavior unchanged; implementation is forward-compatible with the expected FCC timeline (2027+).
+  Complexity: M
+
+- [ ] P3 — Rule conflict detection indicator
+  Why: SpamBlocker v5.10 added visual rule conflict warnings when two rules at the same priority produce contradicting verdicts. CallShield's `IChecker` priority registry could surface this in the explain/debug drawer.
+  Evidence: SpamBlocker v5.10 release; `data/checker/IChecker.kt`; `data/checker/Checkers.kt`.
+  Touches: rule management UI, `CheckerPipeline` (conflict analysis), blocklist/wildcard/range screens.
+  Acceptance: when a user adds or edits a rule that conflicts with an existing rule at a similar priority, a visual indicator warns of the conflict; the explain drawer shows which rules would fire on a given number.
   Complexity: M
