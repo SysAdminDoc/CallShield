@@ -4,6 +4,7 @@ import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.sysadmindoc.callshield.data.TimeSchedule
+import com.sysadmindoc.callshield.util.filterAsciiDigits
 import java.util.Calendar
 
 /**
@@ -120,7 +121,7 @@ data class WildcardRule(
         /** Generate common US number normalizations so wildcard globs match
          *  regardless of whether the input has a +1 prefix or not. */
         internal fun numberVariants(number: String): List<String> {
-            val digits = number.filter { it.isDigit() }
+            val digits = filterAsciiDigits(number)
             return buildList {
                 add(number)
                 if (digits != number) add(digits) // raw digits without punctuation

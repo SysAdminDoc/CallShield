@@ -107,6 +107,25 @@ class WildcardRuleTest {
         assertFalse(hostile.matches("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab"))
     }
 
+    // ── ASCII-only normalization (anti-spoof) ────────────────────────
+
+    @Test fun `numberVariants strips Arabic-Indic digits as non-ASCII`() {
+        // Arabic-Indic digits (U+0660..U+0669) are visually similar to
+        // 0-9 but Char.isDigit() accepts them while filterAsciiDigits
+        // correctly drops them. A spoofed number like "٨٣٢٥٥٥١٢٣٤"
+        // must NOT produce +1-prefixed variants that could match US rules.
+        val arabicIndic = "٨٣٢٥٥٥١٢٣٤"
+        val variants = WildcardRule.numberVariants(arabicIndic)
+        assertTrue(variants.none { it.startsWith("+1") })
+        assertTrue(variants.none { it.all { c -> c in '0'..'9' } && it.length == 10 })
+    }
+
+    @Test fun `glob does not match Arabic-Indic spoofed number`() {
+        val rule = wildcard(pattern = "+1832555*", isRegex = false)
+        val arabicIndic = "٨٣٢٥٥٥١٢٣٤"
+        assertFalse(rule.matches(arabicIndic))
+    }
+
     // ── Empty/blank handling ────────────────────────────────────────
 
     @Test fun `blank pattern matches nothing`() {

@@ -128,25 +128,55 @@ class CallShieldScreeningService : CallScreeningService() {
         }
     }
 
-    private fun respondBlock(
+    private suspend fun respondBlock(
         callDetails: Call.Details,
         number: String,
         reason: String,
         confidence: Int = 100,
         prefs: androidx.datastore.preferences.core.Preferences,
     ) {
-        // Respond FIRST so Android always sees a decision before the 5-second
-        // deadline, regardless of whether the Room insert is quick or slow.
-        // The log/notification run async on appScope — losing them is better
-        // than losing the block decision itself.
+        val repository = repo
+        val logTimestamp = System.currentTimeMillis()
+        val logKey = blockedCallLogKey(callDetails, number, reason, confidence, logTimestamp)
+        var pendingLogQueued = false
+        try {
+            repository.enqueuePendingBlockedCallLog(
+                idempotencyKey = logKey,
+                number = number,
+                isCall = true,
+                matchReason = reason,
+                confidence = confidence,
+                timestamp = logTimestamp,
+            )
+            pendingLogQueued = true
+        } catch (_: Exception) {
+            // The block decision is still more important than logging. If the
+            // queue write failed, the async fallback below makes a best effort.
+        }
+
         val response = buildBlockResponse(prefs, confidence)
         respondToCall(callDetails, response)
 
-        val repository = repo
         CallShieldApp.appScope.launch {
             try {
-                repository.logBlockedCall(number = number, isCall = true, matchReason = reason, confidence = confidence)
-            } catch (_: Exception) { }
+                if (pendingLogQueued) {
+                    repository.flushPendingBlockedCallLogs()
+                } else {
+                    repository.logBlockedCall(
+                        number = number,
+                        isCall = true,
+                        matchReason = reason,
+                        confidence = confidence,
+                        timestamp = logTimestamp,
+                        logKey = logKey,
+                    )
+                }
+            } catch (_: Exception) {
+                // The queued row survives process death; a worker retry will
+                // pick it up on the next run.
+            } finally {
+                PendingBlockedCallLogWorker.schedule(applicationContext)
+            }
         }
     }
 
@@ -219,6 +249,18 @@ class CallShieldScreeningService : CallScreeningService() {
         ): Boolean =
             silentVoicemailEnabled ||
                 (autoMuteLowConfidenceEnabled && confidence < AUTO_MUTE_CONFIDENCE_THRESHOLD)
+    }
+
+    private fun blockedCallLogKey(
+        callDetails: Call.Details,
+        number: String,
+        reason: String,
+        confidence: Int,
+        fallbackTimestamp: Long,
+    ): String {
+        val callTimestamp = callDetails.creationTimeMillis.takeIf { it > 0 } ?: fallbackTimestamp
+        val caller = number.ifBlank { "hidden" }
+        return "call:$callTimestamp:$caller:$reason:$confidence"
     }
 
     private fun respondAllow(callDetails: Call.Details) {
