@@ -1,0 +1,10 @@
+Blocking profile selection now persists across restarts. Previously the
+active profile indicator (Work/Personal/Sleep/Maximum/Off) reset on
+process death while the underlying flag changes remained correctly
+applied.
+
+Premium Compose UX polish across dashboard, lookup, details, blocklist,
+diagnostics, onboarding, and settings flows. Backup restore preview
+with merge/replace modes. Room schema migration coverage. Lifecycle-aware
+Compose collection. SMS domain community reports. Hilt DI for detection
+helpers, screening service, and workers.
