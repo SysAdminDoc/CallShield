@@ -27,7 +27,7 @@ class TargetSdkBehaviorSmokeTest {
 
     @Test
     fun targetSdkModernPermissionDeclarationsArePresent() {
-        assertTrue(packageInfo.applicationInfo!!.targetSdkVersion >= 35)
+        assertTrue(packageInfo.applicationInfo!!.targetSdkVersion >= 36)
 
         val permissions = packageInfo.requestedPermissions.orEmpty().toSet()
         assertTrue(Manifest.permission.POST_NOTIFICATIONS in permissions)
