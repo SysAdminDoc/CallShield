@@ -944,6 +944,8 @@
     <string name="notif_channel_phishing_desc">Alert when a received SMS contains a known malicious URL</string>
     <string name="notif_channel_allowed">Allowed Call Decisions</string>
     <string name="notif_channel_allowed_desc">Explains calls CallShield allowed because of safety rules</string>
+    <string name="notif_channel_digest">Daily Digest</string>
+    <string name="notif_channel_digest_desc">Daily summary of blocked calls and messages</string>
     <string name="notif_blocked_title">Blocked spam %s</string>
     <string name="notif_blocked_text">%1$s (%2$s)</string>
     <string name="notif_type_call">call</string>

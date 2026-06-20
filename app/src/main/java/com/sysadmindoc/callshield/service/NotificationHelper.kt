@@ -12,6 +12,8 @@ import com.sysadmindoc.callshield.data.PhoneFormatter
 import com.sysadmindoc.callshield.data.SmsContentAnalyzer
 import com.sysadmindoc.callshield.permissions.CallShieldPermissions
 import com.sysadmindoc.callshield.ui.MainActivity
+import com.sysadmindoc.callshield.util.filterAsciiDigits
+import com.sysadmindoc.callshield.util.filterAsciiDigitsLast
 
 object NotificationHelper {
     const val CHANNEL_BLOCKED = "blocked_calls"
@@ -19,6 +21,7 @@ object NotificationHelper {
     const val CHANNEL_STATUS = "protection_status"
     const val CHANNEL_PHISHING = "phishing_warning"
     const val CHANNEL_ALLOWED = "allowed_call_decisions"
+    const val CHANNEL_DIGEST = "daily_digest"
     const val ACTION_BLOCK = "com.sysadmindoc.callshield.ACTION_BLOCK"
     const val ACTION_REPORT = "com.sysadmindoc.callshield.ACTION_REPORT"
     const val ACTION_SAFE = "com.sysadmindoc.callshield.ACTION_SAFE"
@@ -83,6 +86,11 @@ object NotificationHelper {
         nm.createNotificationChannel(
             NotificationChannel(CHANNEL_ALLOWED, context.getString(R.string.notif_channel_allowed), NotificationManager.IMPORTANCE_DEFAULT).apply {
                 description = context.getString(R.string.notif_channel_allowed_desc)
+            }
+        )
+        nm.createNotificationChannel(
+            NotificationChannel(CHANNEL_DIGEST, context.getString(R.string.notif_channel_digest), NotificationManager.IMPORTANCE_LOW).apply {
+                description = context.getString(R.string.notif_channel_digest_desc)
             }
         )
     }
@@ -228,7 +236,7 @@ object NotificationHelper {
 
     fun notifyAfterCall(context: Context, number: String) {
         // Don't show for very short numbers (short codes)
-        if (number.filter { it.isDigit() }.length < 7) return
+        if (filterAsciiDigits(number).length < 7) return
 
         // Create intents for "Spam" and "Not Spam" actions. Use distinct
         // [stableId] salts (instead of `number.hashCode()` / `+ 1`) so the
@@ -273,7 +281,7 @@ object NotificationHelper {
     }
 
     fun notifyRepeatedUrgentAllowed(context: Context, number: String) {
-        val digits = number.filter { it.isDigit() }.takeLast(10)
+        val digits = filterAsciiDigitsLast(number, 10)
         if (digits.length < 7) return
         if (!repeatedUrgentNoticeGate.shouldShow("repeated_urgent:$digits")) return
 
