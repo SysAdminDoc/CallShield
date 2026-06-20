@@ -423,6 +423,8 @@
     <string name="settings_contact_whitelist_desc">Never block numbers in your contacts</string>
     <string name="settings_contacts_only">Contacts-Only Mode</string>
     <string name="settings_contacts_only_desc">Block all calls from numbers not in your contacts. Whitelist entries and contacts always ring through.</string>
+    <string name="settings_db_prefix_expansion">Database Prefix Expansion</string>
+    <string name="settings_db_prefix_expansion_desc">Auto-block numbers sharing a prefix with known spam entries (last 2 digits ignored). Catches campaign number siblings at reduced confidence.</string>
     <string name="settings_detection_engines">Detection Engines</string>
     <string name="settings_stir_shaken">STIR/SHAKEN</string>
     <string name="settings_stir_shaken_desc">Block calls failing carrier caller ID auth (Android 11+)</string>

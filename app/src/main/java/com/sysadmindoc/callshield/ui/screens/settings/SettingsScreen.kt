@@ -62,6 +62,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
     val smsContent by viewModel.smsContentEnabled.collectAsStateWithLifecycle()
     val contactWhitelist by viewModel.contactWhitelistEnabled.collectAsStateWithLifecycle()
     val contactsOnly by viewModel.contactsOnlyEnabled.collectAsStateWithLifecycle()
+    val dbPrefixExpansion by viewModel.dbPrefixExpansionEnabled.collectAsStateWithLifecycle()
     val aggressiveMode by viewModel.aggressiveModeEnabled.collectAsStateWithLifecycle()
     val autoCleanup by viewModel.autoCleanupEnabled.collectAsStateWithLifecycle()
     val cleanupDays by viewModel.cleanupDays.collectAsStateWithLifecycle()
@@ -317,6 +318,8 @@ fun SettingsScreen(viewModel: MainViewModel) {
             SettingsToggle(stringResource(R.string.settings_repeat_caller), stringResource(R.string.settings_repeat_caller_desc), Icons.Default.Repeat, freqEscalation) { viewModel.setFreqEscalation(it) }
             GradientDivider()
             SettingsToggle(stringResource(R.string.settings_ml_scorer), stringResource(R.string.settings_ml_scorer_desc), Icons.Default.SmartToy, mlScorer) { viewModel.setMlScorer(it) }
+            GradientDivider()
+            SettingsToggle(stringResource(R.string.settings_db_prefix_expansion), stringResource(R.string.settings_db_prefix_expansion_desc), Icons.Default.CallSplit, dbPrefixExpansion) { viewModel.setDbPrefixExpansion(it) }
             GradientDivider()
             SettingsToggle(stringResource(R.string.settings_rcs_filter), stringResource(R.string.settings_rcs_filter_desc), Icons.Default.MarkChatRead, rcsFilter) { viewModel.setRcsFilter(it) }
             if (rcsFilter) {

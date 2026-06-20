@@ -115,6 +115,7 @@ class SpamRepository(
         val KEY_SMS_CONTENT = booleanPreferencesKey("sms_content_analysis_enabled")
         val KEY_CONTACT_WHITELIST = booleanPreferencesKey("contact_whitelist_enabled")
         val KEY_CONTACTS_ONLY = booleanPreferencesKey("contacts_only_mode_enabled")
+        val KEY_DB_PREFIX_EXPANSION = booleanPreferencesKey("db_prefix_expansion_enabled")
         val KEY_AGGRESSIVE_MODE = booleanPreferencesKey("aggressive_mode_enabled")
         // Feature 9: Time-based blocking
         val KEY_TIME_BLOCK = booleanPreferencesKey("time_block_enabled")
@@ -189,6 +190,7 @@ class SpamRepository(
     val smsContentEnabled: Flow<Boolean> = settingsRepository.smsContentEnabled
     val contactWhitelistEnabled: Flow<Boolean> = settingsRepository.contactWhitelistEnabled
     val contactsOnlyEnabled: Flow<Boolean> = settingsRepository.contactsOnlyEnabled
+    val dbPrefixExpansionEnabled: Flow<Boolean> = settingsRepository.dbPrefixExpansionEnabled
     val aggressiveModeEnabled: Flow<Boolean> = settingsRepository.aggressiveModeEnabled
     val timeBlockEnabled: Flow<Boolean> = settingsRepository.timeBlockEnabled
     val timeBlockStart: Flow<Int> = settingsRepository.timeBlockStart
@@ -231,6 +233,7 @@ class SpamRepository(
     suspend fun setSmsContent(enabled: Boolean) = settingsRepository.setSmsContent(enabled)
     suspend fun setContactWhitelist(enabled: Boolean) = settingsRepository.setContactWhitelist(enabled)
     suspend fun setContactsOnly(enabled: Boolean) = settingsRepository.setContactsOnly(enabled)
+    suspend fun setDbPrefixExpansion(enabled: Boolean) = settingsRepository.setDbPrefixExpansion(enabled)
     suspend fun setAggressiveMode(enabled: Boolean) = settingsRepository.setAggressiveMode(enabled)
     suspend fun setTimeBlock(enabled: Boolean) = settingsRepository.setTimeBlock(enabled)
     suspend fun setTimeBlockStart(hour: Int) = settingsRepository.setTimeBlockStart(hour)

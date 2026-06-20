@@ -42,6 +42,8 @@ class SettingsRepository(
         dataStore.data.map { it[SpamRepository.KEY_CONTACT_WHITELIST] ?: true }
     val contactsOnlyEnabled: Flow<Boolean> =
         dataStore.data.map { it[SpamRepository.KEY_CONTACTS_ONLY] ?: false }
+    val dbPrefixExpansionEnabled: Flow<Boolean> =
+        dataStore.data.map { it[SpamRepository.KEY_DB_PREFIX_EXPANSION] ?: false }
     val aggressiveModeEnabled: Flow<Boolean> = dataStore.data.map { it[SpamRepository.KEY_AGGRESSIVE_MODE] ?: false }
     val timeBlockEnabled: Flow<Boolean> = dataStore.data.map { it[SpamRepository.KEY_TIME_BLOCK] ?: false }
     val timeBlockStart: Flow<Int> =
@@ -133,6 +135,8 @@ class SettingsRepository(
         dataStore.edit { it[SpamRepository.KEY_CONTACT_WHITELIST] = enabled }
     suspend fun setContactsOnly(enabled: Boolean) =
         dataStore.edit { it[SpamRepository.KEY_CONTACTS_ONLY] = enabled }
+    suspend fun setDbPrefixExpansion(enabled: Boolean) =
+        dataStore.edit { it[SpamRepository.KEY_DB_PREFIX_EXPANSION] = enabled }
     suspend fun setAggressiveMode(enabled: Boolean) =
         dataStore.edit { it[SpamRepository.KEY_AGGRESSIVE_MODE] = enabled }
     suspend fun setTimeBlock(enabled: Boolean) =
