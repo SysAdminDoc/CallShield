@@ -35,10 +35,15 @@ Builds:
     commit: fe97701291fef879c0790b4bb5e183cde5bf8e2e
     gradle:
       - yes
+  - versionName: 1.7.11
+    versionCode: 39
+    commit: dd58b19
+    gradle:
+      - yes
 
 AllowedAPKSigningKeys: d179d0daa9eac6b52fc19d3a7126fd6ccb911923a43a3cf0bef9f74b12234ad2
 
 AutoUpdateMode: Version
 UpdateCheckMode: Tags ^v[0-9]+\.[0-9]+\.[0-9]+$
-CurrentVersion: 1.7.10
-CurrentVersionCode: 38
+CurrentVersion: 1.7.11
+CurrentVersionCode: 39
