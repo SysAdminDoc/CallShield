@@ -161,6 +161,7 @@ object CheckerPriority {
     // or push-alert. If the user intentionally blocked or wildcarded
     // this number, that intent is authoritative.
     const val USER_BLOCKLIST        =  7_000   // merged with GITHUB_DATABASE in DatabaseChecker
+    const val DB_PREFIX_EXPANSION   =  6_950   // auto-block last-2-digit siblings of DB entries
     const val SYSTEM_BLOCK_LIST     =  6_900   // reserved for A4 — BlockedNumberContract
     const val PREFIX_MATCH          =  6_000
     const val WILDCARD_RULE         =  5_500
@@ -245,6 +246,7 @@ object SpamCheckers {
             add(StirShakenTrustChecker())
             add(StirShakenChecker())
             add(DatabaseChecker(repo))
+            add(DbPrefixExpansionChecker(repo))
             add(SystemBlockListChecker(appContext))
             add(PrefixChecker(repo))
             add(WildcardChecker(repo))

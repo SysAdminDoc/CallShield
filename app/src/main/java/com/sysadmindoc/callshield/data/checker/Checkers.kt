@@ -219,6 +219,28 @@ internal class DatabaseChecker(private val repo: SpamRepositoryImpl) : IChecker 
 }
 
 /**
+ * Database prefix auto-expansion — when the exact number isn't in the DB
+ * but another entry sharing the same prefix (minus last 2 digits) exists,
+ * block with reduced confidence. Catches campaign number siblings.
+ */
+internal class DbPrefixExpansionChecker(private val repo: SpamRepositoryImpl) : IChecker {
+    override val priority = CheckerPriority.DB_PREFIX_EXPANSION
+    override val name = "db_prefix_expansion"
+
+    override suspend fun isEnabled(ctx: CheckContext): Boolean =
+        ctx.prefs[SpamRepository.KEY_DB_PREFIX_EXPANSION] ?: false
+
+    override suspend fun check(ctx: CheckContext): BlockResult? {
+        if (!repo.hasDbPrefixMatch(ctx.number)) return null
+        return BlockResult.block(
+            "db_prefix_expansion",
+            description = "Number shares prefix with a known spam entry",
+            confidence = 50,
+        )
+    }
+}
+
+/**
  * NPA-NXX (or arbitrary digit-prefix) matcher. Prefixes are loaded once
  * and cached in [SpamRepositoryImpl]; cache invalidation happens on sync.
  */

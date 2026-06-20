@@ -3,6 +3,7 @@ package com.sysadmindoc.callshield.data.local
 import androidx.room.*
 import com.sysadmindoc.callshield.data.model.BlockedCall
 import com.sysadmindoc.callshield.data.model.HashWildcardRule
+import com.sysadmindoc.callshield.data.model.PendingBlockedCallLog
 import com.sysadmindoc.callshield.data.model.SpamNumber
 import com.sysadmindoc.callshield.data.model.SpamPrefix
 import com.sysadmindoc.callshield.data.model.NumberCount
@@ -25,6 +26,9 @@ interface SpamDao {
 
     @Query("SELECT COUNT(*) FROM spam_numbers")
     suspend fun getSpamCount(): Int
+
+    @Query("SELECT COUNT(*) FROM spam_numbers WHERE number LIKE :prefix || '%' AND isUserBlocked = 0 LIMIT 1")
+    suspend fun countByPrefix(prefix: String): Int
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertNumber(number: SpamNumber)
@@ -83,6 +87,56 @@ interface SpamDao {
     // Call log
     @Insert(onConflict = androidx.room.OnConflictStrategy.REPLACE)
     suspend fun insertBlockedCall(call: BlockedCall)
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertBlockedCallIgnoringDuplicate(call: BlockedCall): Long
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertPendingBlockedCallLog(log: PendingBlockedCallLog): Long
+
+    @Query(
+        """
+        SELECT * FROM pending_blocked_call_logs
+        WHERE nextAttemptAt <= :now
+        ORDER BY createdAt ASC
+        LIMIT :limit
+        """
+    )
+    suspend fun getReadyPendingBlockedCallLogs(now: Long, limit: Int): List<PendingBlockedCallLog>
+
+    @Query("SELECT COUNT(*) FROM pending_blocked_call_logs")
+    suspend fun getPendingBlockedCallLogCount(): Int
+
+    @Query("DELETE FROM pending_blocked_call_logs WHERE idempotencyKey = :idempotencyKey")
+    suspend fun deletePendingBlockedCallLog(idempotencyKey: String): Int
+
+    @Query(
+        """
+        UPDATE pending_blocked_call_logs
+        SET attempts = attempts + 1, nextAttemptAt = :nextAttemptAt
+        WHERE idempotencyKey = :idempotencyKey
+        """
+    )
+    suspend fun markPendingBlockedCallLogFailed(idempotencyKey: String, nextAttemptAt: Long)
+
+    @Transaction
+    suspend fun consumePendingBlockedCallLog(log: PendingBlockedCallLog): Long {
+        val inserted =
+            insertBlockedCallIgnoringDuplicate(
+                BlockedCall(
+                    number = log.number,
+                    timestamp = log.timestamp,
+                    type = log.type,
+                    isCall = log.isCall,
+                    smsBody = log.smsBody,
+                    matchReason = log.matchReason,
+                    confidence = log.confidence,
+                    logKey = log.idempotencyKey,
+                ),
+            )
+        deletePendingBlockedCallLog(log.idempotencyKey)
+        return inserted
+    }
 
     @Query("SELECT * FROM call_log ORDER BY timestamp DESC")
     fun getBlockedCalls(): Flow<List<BlockedCall>>
