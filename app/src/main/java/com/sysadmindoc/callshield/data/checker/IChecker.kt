@@ -154,6 +154,7 @@ object CheckerPriority {
     // MUST sit under the explicit-allow tier above (CONTACT_WHITELIST,
     // MANUAL_WHITELIST), otherwise a whitelisted emergency contact on a
     // non-STIR carrier is hard-rejected (v1.6.0 bug).
+    const val CONTACTS_ONLY         =  8_800   // contacts-only mode — block all non-contacts
     const val STIR_SHAKEN           =  8_500
 
     // ── Explicit blocks — must NOT be overridden by recently-dialed ──
@@ -240,6 +241,7 @@ object SpamCheckers {
         buildList {
             add(WhitelistChecker(repo))
             add(ContactWhitelistChecker(appContext, dependencies.spamHeuristics))
+            add(ContactsOnlyChecker(appContext, dependencies.spamHeuristics))
             add(StirShakenTrustChecker())
             add(StirShakenChecker())
             add(DatabaseChecker(repo))

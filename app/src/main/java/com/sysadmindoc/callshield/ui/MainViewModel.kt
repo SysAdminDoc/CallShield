@@ -132,6 +132,7 @@ class MainViewModel
     val heuristicsEnabled = repo.heuristicsEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
     val smsContentEnabled = repo.smsContentEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
     val contactWhitelistEnabled = repo.contactWhitelistEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+    val contactsOnlyEnabled = repo.contactsOnlyEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
     val aggressiveModeEnabled = repo.aggressiveModeEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
     val timeBlockEnabled = repo.timeBlockEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
     val timeBlockStart = repo.timeBlockStart.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 22)
@@ -381,6 +382,7 @@ class MainViewModel
     fun setHeuristics(v: Boolean) = viewModelScope.launch { repo.setHeuristics(v) }
     fun setSmsContent(v: Boolean) = viewModelScope.launch { repo.setSmsContent(v) }
     fun setContactWhitelist(v: Boolean) = viewModelScope.launch { repo.setContactWhitelist(v) }
+    fun setContactsOnly(v: Boolean) = viewModelScope.launch { repo.setContactsOnly(v) }
     fun setAggressiveMode(v: Boolean) = viewModelScope.launch { repo.setAggressiveMode(v) }
     fun setTimeBlock(v: Boolean) = viewModelScope.launch { repo.setTimeBlock(v) }
     fun setTimeBlockStart(h: Int) = viewModelScope.launch { repo.setTimeBlockStart(h) }
