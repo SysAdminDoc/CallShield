@@ -73,6 +73,75 @@ export function sanitizeSmsReportFields(body) {
   };
 }
 
+// ── Rate-limit constants ──────────────────────────────────────────────
+// Per-IP burst window: at most RATE_LIMIT_MAX_REQUESTS reports within
+// RATE_LIMIT_WINDOW_S seconds. The KV key stores a JSON counter with an
+// expiration TTL equal to the window so stale keys self-clean.
+const RATE_LIMIT_WINDOW_S = 60;
+const RATE_LIMIT_MAX_REQUESTS = 5;
+
+// Per-number dedup window: the same IP cannot re-report the same
+// normalized number within this window. Prevents replay flooding.
+const DEDUP_WINDOW_S = 300;
+
+/**
+ * Check the per-IP rate limit against KV.
+ * Returns { allowed: boolean, remaining: number, retryAfter: number }.
+ *
+ * When `env.RATE_LIMIT` is not bound (local dev / test), the limiter is
+ * permissive so the worker still functions without KV provisioned.
+ */
+export async function checkRateLimit(ip, env) {
+  if (!env?.RATE_LIMIT) return { allowed: true, remaining: RATE_LIMIT_MAX_REQUESTS, retryAfter: 0 };
+
+  const key = `rl:${ip}`;
+  const raw = await env.RATE_LIMIT.get(key);
+
+  if (raw === null) {
+    // First request in window — initialize counter.
+    await env.RATE_LIMIT.put(key, JSON.stringify({ count: 1, windowStart: Date.now() }), {
+      expirationTtl: RATE_LIMIT_WINDOW_S,
+    });
+    return { allowed: true, remaining: RATE_LIMIT_MAX_REQUESTS - 1, retryAfter: 0 };
+  }
+
+  const state = JSON.parse(raw);
+  const elapsed = (Date.now() - state.windowStart) / 1000;
+
+  if (elapsed >= RATE_LIMIT_WINDOW_S) {
+    // Window expired but KV TTL hasn't fired yet — reset.
+    await env.RATE_LIMIT.put(key, JSON.stringify({ count: 1, windowStart: Date.now() }), {
+      expirationTtl: RATE_LIMIT_WINDOW_S,
+    });
+    return { allowed: true, remaining: RATE_LIMIT_MAX_REQUESTS - 1, retryAfter: 0 };
+  }
+
+  if (state.count >= RATE_LIMIT_MAX_REQUESTS) {
+    const retryAfter = Math.ceil(RATE_LIMIT_WINDOW_S - elapsed);
+    return { allowed: false, remaining: 0, retryAfter };
+  }
+
+  state.count += 1;
+  const ttl = Math.max(1, Math.ceil(RATE_LIMIT_WINDOW_S - elapsed));
+  await env.RATE_LIMIT.put(key, JSON.stringify(state), { expirationTtl: ttl });
+  return { allowed: true, remaining: RATE_LIMIT_MAX_REQUESTS - state.count, retryAfter: 0 };
+}
+
+/**
+ * Check per-IP + per-number dedup against KV.
+ * Returns true if this (IP, number) pair was already reported recently.
+ */
+export async function checkDedup(ip, normalizedNumber, env) {
+  if (!env?.RATE_LIMIT) return false;
+
+  const key = `dedup:${ip}:${normalizedNumber}`;
+  const existing = await env.RATE_LIMIT.get(key);
+  if (existing !== null) return true;
+
+  await env.RATE_LIMIT.put(key, "1", { expirationTtl: DEDUP_WINDOW_S });
+  return false;
+}
+
 /**
  * CallShield Community Reports Worker
  * Deploy to Cloudflare Workers (free tier: 100K requests/day)
@@ -83,10 +152,16 @@ export function sanitizeSmsReportFields(body) {
  *   3. wrangler login
  *   4. Create a fine-grained GitHub PAT with ONLY "Contents: Read and write" on this repo
  *   5. wrangler secret put GITHUB_TOKEN (paste the PAT)
- *   6. wrangler deploy
+ *   6. Create a KV namespace: wrangler kv namespace create RATE_LIMIT
+ *   7. Update wrangler.toml with the returned namespace ID
+ *   8. wrangler deploy
  *
  * The worker receives anonymous spam reports and creates files in data/reports/
  * via the GitHub API. A GitHub Action merges them into the main database daily.
+ *
+ * Rate limiting: per-IP burst limit (5 reports/60 s) and per-IP+number
+ * dedup (same number cannot be re-reported from same IP within 5 min).
+ * Both use Cloudflare KV with auto-expiring keys.
  */
 
 export default {
@@ -145,11 +220,25 @@ code{background:#252525;padding:2px 6px;border-radius:4px;font-size:12px;color:#
         });
       }
 
+      // Per-IP burst rate limit (KV-backed, persists across isolates)
+      const clientIp = request.headers.get("cf-connecting-ip") || "unknown";
+      const rl = await checkRateLimit(clientIp, env);
+      if (!rl.allowed) {
+        return new Response(JSON.stringify({ error: "Rate limited, please retry later" }), {
+          status: 429,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+            "Retry-After": String(rl.retryAfter),
+          },
+        });
+      }
+
       const body = await request.json();
       const number = body.number;
 
       // Validate type against allowed values
-      const VALID_TYPES = ["spam", "robocall", "scam", "telemarketer", "debt_collector", "sms_spam", "not_spam", "unknown"];
+      const VALID_TYPES = ["spam", "robocall", "scam", "telemarketer", "debt_collector", "sms_spam", "not_spam", "ai_voice", "unknown"];
       const type = VALID_TYPES.includes(body.type) ? body.type : "unknown";
       const smsReportFields = sanitizeSmsReportFields(body);
 
@@ -160,8 +249,18 @@ code{background:#252525;padding:2px 6px;border-radius:4px;font-size:12px;color:#
         });
       }
 
-      // Rate limit by IP (simple: reject if same IP submitted in last 10s)
-      // In production, use Cloudflare KV for proper rate limiting
+      // Per-IP + per-number dedup (prevents replaying the same report)
+      const isDuplicate = await checkDedup(clientIp, normalized, env);
+      if (isDuplicate) {
+        return new Response(JSON.stringify({ error: "Duplicate report, already submitted" }), {
+          status: 429,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+            "Retry-After": String(DEDUP_WINDOW_S),
+          },
+        });
+      }
 
       // Create report file via GitHub API
       const timestamp = new Date().toISOString();
