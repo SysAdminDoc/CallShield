@@ -5,6 +5,7 @@ import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import com.sysadmindoc.callshield.data.PushAlertRegistry
 import com.sysadmindoc.callshield.data.SpamRepository
+import com.sysadmindoc.callshield.util.filterAsciiDigits
 import com.sysadmindoc.callshield.data.repository.SpamRepositoryAdapter
 import com.sysadmindoc.callshield.data.remote.UrlSafetyChecker
 import com.sysadmindoc.callshield.domain.usecase.CheckSpamSmsUseCase
@@ -134,18 +135,13 @@ class RcsNotificationListener : NotificationListenerService() {
 
         val extras = sbn.notification.extras ?: return
 
-        // Extract sender and body from notification extras
         val sender = extras.getCharSequence(Notification.EXTRA_TITLE)?.toString() ?: ""
         val body = extras.getCharSequence(Notification.EXTRA_TEXT)?.toString() ?: ""
 
-        if (sender.isEmpty() || body.isEmpty()) return
+        if (sender.isEmpty()) return
 
-        // Check if sender looks like a phone number (RCS from known contacts shows name)
-        // We only process if the sender field is a phone number, not a contact name
-        val senderDigits = sender.filter { it.isDigit() }
+        val senderDigits = filterAsciiDigits(sender)
         if (senderDigits.length < 7) {
-            // Sender is a contact name — not anonymous, likely not spam
-            // Still run URL check in background though
             if (body.isNotEmpty()) {
                 scope.launch {
                     val malicious = UrlSafetyChecker.checkSmsBody(body)
@@ -158,30 +154,43 @@ class RcsNotificationListener : NotificationListenerService() {
             return
         }
 
-        val result = checkSpamSms(senderDigits, body)
+        // E2EE graceful degradation: when the body is empty or an encrypted
+        // placeholder, fall back to sender-number-only analysis (database +
+        // heuristics, no content rules). GSMA UP 3.0/4.0 MLS encryption
+        // will progressively make RCS notification bodies opaque.
+        val effectiveBody = body.takeIf { it.isNotBlank() && !isEncryptedPlaceholder(it) }
+        val result = if (effectiveBody != null) {
+            checkSpamSms(senderDigits, effectiveBody)
+        } else {
+            checkSpamSms(senderDigits, "")
+        }
 
         if (result.isSpam) {
-            // Cancel the notification — user won't see it ring/vibrate
             cancelNotification(sbn.key)
-
-            // Log to CallShield blocked log
             repo.logBlockedCall(
                 number = senderDigits,
                 isCall = false,
-                smsBody = body,
+                smsBody = effectiveBody,
                 matchReason = "rcs_${result.matchSource}",
-                confidence = result.confidence
+                confidence = result.confidence,
             )
-        } else {
-            // Not blocked — run background URL safety check
+        } else if (effectiveBody != null) {
             scope.launch {
-                val malicious = UrlSafetyChecker.checkSmsBody(body)
+                val malicious = UrlSafetyChecker.checkSmsBody(effectiveBody)
                 if (malicious.isNotEmpty()) {
                     val threats = malicious.joinToString(", ") { it.threat.ifEmpty { "malware" } }
                     NotificationHelper.notifyPhishingUrl(applicationContext, senderDigits, threats)
                 }
             }
         }
+    }
+
+    private fun isEncryptedPlaceholder(body: String): Boolean {
+        val lower = body.lowercase().trim()
+        return lower == "encrypted message" ||
+            lower == "message encrypted" ||
+            lower.startsWith("this message is encrypted") ||
+            lower.startsWith("end-to-end encrypted")
     }
 
     override fun onDestroy() {
