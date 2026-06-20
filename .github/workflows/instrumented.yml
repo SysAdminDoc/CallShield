@@ -43,7 +43,7 @@ jobs:
             suite: full
             command: ./gradlew connectedDebugAndroidTest --stacktrace
           # Fast target-SDK smoke lane for modern permission/service behavior.
-          - api-level: 35
+          - api-level: 36
             target: google_apis
             arch: x86_64
             suite: target-sdk-smoke
