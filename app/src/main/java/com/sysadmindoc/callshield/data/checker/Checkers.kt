@@ -57,6 +57,31 @@ internal class ContactWhitelistChecker(
 }
 
 /**
+ * Contacts-only mode — blocks all calls from numbers not in the device
+ * address book. Gated by `KEY_CONTACTS_ONLY` (default OFF).
+ *
+ * Sits below CONTACT_WHITELIST (so contacts are allowed first) and above
+ * STIR_SHAKEN and all explicit user rules. When active, only contacts
+ * and manual-whitelist entries ring through.
+ */
+internal class ContactsOnlyChecker(
+    private val appContext: Context,
+    private val spamHeuristics: SpamHeuristics,
+) : IChecker {
+    override val priority = CheckerPriority.CONTACTS_ONLY
+    override val name = "contacts_only"
+
+    override suspend fun isEnabled(ctx: CheckContext): Boolean =
+        ctx.prefs[SpamRepository.KEY_CONTACTS_ONLY] ?: false
+
+    override suspend fun check(ctx: CheckContext): BlockResult? {
+        return if (!spamHeuristics.isInContacts(appContext, ctx.number)) {
+            BlockResult.block("contacts_only", description = "Blocked — contacts-only mode is active")
+        } else null
+    }
+}
+
+/**
  * STIR/SHAKEN attestation-level TRUST allow.
  *
  * Complementary to [StirShakenChecker] (which blocks on `VERIFICATION_STATUS_FAILED`).

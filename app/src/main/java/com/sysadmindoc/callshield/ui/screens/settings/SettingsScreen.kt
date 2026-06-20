@@ -61,6 +61,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
     val heuristics by viewModel.heuristicsEnabled.collectAsStateWithLifecycle()
     val smsContent by viewModel.smsContentEnabled.collectAsStateWithLifecycle()
     val contactWhitelist by viewModel.contactWhitelistEnabled.collectAsStateWithLifecycle()
+    val contactsOnly by viewModel.contactsOnlyEnabled.collectAsStateWithLifecycle()
     val aggressiveMode by viewModel.aggressiveModeEnabled.collectAsStateWithLifecycle()
     val autoCleanup by viewModel.autoCleanupEnabled.collectAsStateWithLifecycle()
     val cleanupDays by viewModel.cleanupDays.collectAsStateWithLifecycle()
@@ -293,6 +294,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
         // Safety
         SettingsCard(stringResource(R.string.settings_safety)) {
             SettingsToggle(stringResource(R.string.settings_contact_whitelist), stringResource(R.string.settings_contact_whitelist_desc), Icons.Default.Contacts, contactWhitelist) { viewModel.setContactWhitelist(it) }
+            SettingsToggle(stringResource(R.string.settings_contacts_only), stringResource(R.string.settings_contacts_only_desc), Icons.Default.PhoneLocked, contactsOnly) { viewModel.setContactsOnly(it) }
         }
 
         // Detection engines

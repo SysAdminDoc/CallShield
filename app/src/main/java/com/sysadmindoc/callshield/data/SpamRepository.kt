@@ -114,6 +114,7 @@ class SpamRepository(
         val KEY_HEURISTICS = booleanPreferencesKey("heuristics_enabled")
         val KEY_SMS_CONTENT = booleanPreferencesKey("sms_content_analysis_enabled")
         val KEY_CONTACT_WHITELIST = booleanPreferencesKey("contact_whitelist_enabled")
+        val KEY_CONTACTS_ONLY = booleanPreferencesKey("contacts_only_mode_enabled")
         val KEY_AGGRESSIVE_MODE = booleanPreferencesKey("aggressive_mode_enabled")
         // Feature 9: Time-based blocking
         val KEY_TIME_BLOCK = booleanPreferencesKey("time_block_enabled")
@@ -187,6 +188,7 @@ class SpamRepository(
     val heuristicsEnabled: Flow<Boolean> = settingsRepository.heuristicsEnabled
     val smsContentEnabled: Flow<Boolean> = settingsRepository.smsContentEnabled
     val contactWhitelistEnabled: Flow<Boolean> = settingsRepository.contactWhitelistEnabled
+    val contactsOnlyEnabled: Flow<Boolean> = settingsRepository.contactsOnlyEnabled
     val aggressiveModeEnabled: Flow<Boolean> = settingsRepository.aggressiveModeEnabled
     val timeBlockEnabled: Flow<Boolean> = settingsRepository.timeBlockEnabled
     val timeBlockStart: Flow<Int> = settingsRepository.timeBlockStart
@@ -228,6 +230,7 @@ class SpamRepository(
     suspend fun setHeuristics(enabled: Boolean) = settingsRepository.setHeuristics(enabled)
     suspend fun setSmsContent(enabled: Boolean) = settingsRepository.setSmsContent(enabled)
     suspend fun setContactWhitelist(enabled: Boolean) = settingsRepository.setContactWhitelist(enabled)
+    suspend fun setContactsOnly(enabled: Boolean) = settingsRepository.setContactsOnly(enabled)
     suspend fun setAggressiveMode(enabled: Boolean) = settingsRepository.setAggressiveMode(enabled)
     suspend fun setTimeBlock(enabled: Boolean) = settingsRepository.setTimeBlock(enabled)
     suspend fun setTimeBlockStart(hour: Int) = settingsRepository.setTimeBlockStart(hour)
@@ -335,7 +338,30 @@ class SpamRepository(
         smsBody: String? = null,
         matchReason: String = "",
         confidence: Int = 100,
-    ) = blocklistRepository.logBlockedCall(number, isCall, smsBody, matchReason, confidence)
+        timestamp: Long = System.currentTimeMillis(),
+        logKey: String? = null,
+    ) = blocklistRepository.logBlockedCall(number, isCall, smsBody, matchReason, confidence, timestamp, logKey)
+
+    suspend fun enqueuePendingBlockedCallLog(
+        idempotencyKey: String,
+        number: String,
+        isCall: Boolean = true,
+        smsBody: String? = null,
+        matchReason: String = "",
+        confidence: Int = 100,
+        timestamp: Long = System.currentTimeMillis(),
+    ) = blocklistRepository.enqueuePendingBlockedCallLog(
+        idempotencyKey = idempotencyKey,
+        number = number,
+        isCall = isCall,
+        smsBody = smsBody,
+        matchReason = matchReason,
+        confidence = confidence,
+        timestamp = timestamp,
+    )
+
+    suspend fun flushPendingBlockedCallLogs(): Int = blocklistRepository.flushPendingBlockedCallLogs()
+    suspend fun getPendingBlockedCallLogCount(): Int = blocklistRepository.getPendingBlockedCallLogCount()
 
     fun getBlockedCalls(): Flow<List<BlockedCall>> = blocklistRepository.getBlockedCalls()
     fun getBlockedCallsOnly(): Flow<List<BlockedCall>> = blocklistRepository.getBlockedCallsOnly()
