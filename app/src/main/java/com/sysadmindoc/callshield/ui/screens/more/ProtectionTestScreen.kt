@@ -5,6 +5,7 @@ import android.app.role.RoleManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.provider.Settings
 import com.sysadmindoc.callshield.R
 import androidx.compose.animation.*
@@ -550,6 +551,28 @@ private suspend fun runTests(context: Context): List<TestResult> = withContext(D
             passed = true,
             detail = context.getString(R.string.test_feedback_ready),
             priority = TestPriority.Informational
+        )
+    )
+
+    val securityPatch = Build.VERSION.SECURITY_PATCH
+    val patchRecent = try {
+        val parts = securityPatch.split("-").map { it.toInt() }
+        if (parts.size == 3) {
+            val patchMillis = java.util.GregorianCalendar(parts[0], parts[1] - 1, parts[2]).timeInMillis
+            System.currentTimeMillis() - patchMillis < 90L * 24 * 60 * 60 * 1000
+        } else false
+    } catch (_: Exception) { false }
+    results.add(
+        TestResult(
+            name = context.getString(R.string.test_security_patch),
+            passed = patchRecent,
+            detail = if (patchRecent) {
+                context.getString(R.string.test_security_patch_current, securityPatch)
+            } else {
+                context.getString(R.string.test_security_patch_stale, securityPatch)
+            },
+            priority = TestPriority.Informational,
+            recoveryHint = if (patchRecent) null else context.getString(R.string.test_security_patch_hint),
         )
     )
 
