@@ -58,7 +58,7 @@ class DigestWorker @AssistedInject constructor(
             // User has not granted POST_NOTIFICATIONS on API 33+; skip quietly.
             return Result.success()
         }
-        val notif = NotificationCompat.Builder(applicationContext, NotificationHelper.CHANNEL_BLOCKED)
+        val notif = NotificationCompat.Builder(applicationContext, NotificationHelper.CHANNEL_DIGEST)
             .setSmallIcon(android.R.drawable.ic_menu_info_details)
             .setContentTitle(applicationContext.getString(R.string.digest_title))
             .setContentText(applicationContext.getString(R.string.digest_text, blocked, calls, sms))
