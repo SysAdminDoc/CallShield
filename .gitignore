@@ -21,3 +21,8 @@ CallShield-*.apk
 .kotlin/
 CLAUDE.md
 .claude/
+
+# AI config
+CODEX_CHANGELOG.md
+AGENTS.md
+.codex/
