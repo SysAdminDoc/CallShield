@@ -530,7 +530,7 @@ Plus RFC 8588 (SHAKEN profile), RFC 9027 (Traceback), Apache SpamAssassin / rspa
 
 ---
 
-*Roadmap maintained alongside `CHANGELOG.md` and `CLAUDE.md`. Update on every minor release; full re-research pass per major.*
+*Roadmap maintained alongside `CHANGELOG.md`. Update on every minor release; full re-research pass per major.*
 
 ## Research-Driven Additions
 
