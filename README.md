@@ -47,7 +47,7 @@ CallShield blocks spam calls and texts using a **15+ layer on-device detection e
   the resolved dependency graph is checked in, AGP VCS metadata is disabled for
   release APKs, and CI runs guards that block wall-clock build metadata from
   being embedded into APK inputs.
-- **Release hash sidecars** — release builds now produce SHA256 sidecars for
+- **Release hash sidecars** ��� release builds now produce SHA256 sidecars for
   APK artifact integrity, with Windows helpers for signed local releases and
   content-level APK rebuild comparisons.
 - **Network hardening** — OkHttp is upgraded to 5.3.2 and all direct data,
@@ -119,7 +119,7 @@ Any wildcard, range, or SMS keyword rule can be time-gated to specific days of t
 When a call comes in, CallShield shows a real-time overlay that queries **4 sources simultaneously**:
 
 ```
-┌──────────────────────────────────┐
+┌────────���──────────────���──────────┐
 │ LIKELY SPAM                      │
 │ (212) 555-1234                   │
 │ New York, NY                     │
@@ -128,10 +128,10 @@ When a call comes in, CallShield shows a real-time overlay that queries **4 sour
 │ ⚠ SkipCalls: Flagged            │
 │ ⚠ PhoneBlock: 5 reports         │
 │ ⚠ WhoCalledMe: 12 reports       │
-│ All sources checked              │
+│ All sources checked              ��
 │ [Search] [Block] [Dismiss]       │
-│ 🔈 Play SIT Tone (anti-dialer)  │
-└──────────────────────────────────┘
+�� 🔈 Play SIT Tone (anti-dialer)  │
+└��──────────────��──────────────��───┘
 ```
 
 - Shows instantly with area code, then updates live as each source responds
@@ -325,8 +325,6 @@ CI runs automatically via GitHub Actions on every push and pull request.
 | Accessibility | 100+ content descriptions, 48dp touch targets |
 | Min SDK | 29 (Android 10) |
 | Target SDK | 36 |
-
-For deep technical details, see [CLAUDE.md](CLAUDE.md).
 
 ## License
 
