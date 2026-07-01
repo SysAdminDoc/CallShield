@@ -579,3 +579,38 @@ Plus RFC 8588 (SHAKEN profile), RFC 9027 (Traceback), Apache SpamAssassin / rspa
   Touches: `app/src/androidTest/java/com/sysadmindoc/callshield/platform/TargetSdkBehaviorSmokeTest.kt`, `AndroidManifest.xml`, `NotificationHelper.kt`, test docs
   Acceptance: Instrumented smoke tests assert permissions, protected services, notification/full-screen assumptions, SDK version branching, and SMS/OTP documented behavior for target SDK 36+.
   Complexity: M
+
+- [ ] P1 - Revise STIR/SHAKEN badge semantics before PASSporT UI work
+  Why: Existing item 2.3.2 plans a green A-level attestation badge, but current STIR/SHAKEN research shows A-level attestation is not proof that a caller is safe or correctly identified.
+  Evidence: `ROADMAP.md` item 2.3.2; `app/src/main/res/values/strings.xml` `settings_stir_trusted_allow_desc`; TNS 2026 robocall report; FCC verified-caller rulemaking
+  Touches: `app/src/main/java/com/sysadmindoc/callshield/data/BlockReasoning.kt`, `app/src/main/java/com/sysadmindoc/callshield/service/CallerIdOverlayService.kt`, `app/src/main/res/values/strings.xml`, planned `StirShakenParser.kt`, tests
+  Acceptance: PASSporT/attestation UI says what was carrier-attested, avoids "safe"/"trusted" green-check copy, preserves explicit user/system block precedence, and has tests covering A/B/C wording and priority.
+  Complexity: S
+
+- [ ] P1 - Add a per-permission degraded-mode contract matrix
+  Why: CallShield depends on multiple Android permissions and roles, and users need exact behavior/recovery when any one is denied, revoked, unsupported, or OEM-broken.
+  Evidence: `AndroidManifest.xml`; `CallShieldPermissions.kt`; `DashboardStatusModel.kt`; `ProtectionTestScreen.kt`; SpamBlocker optional-permission model; GrapheneOS setup reports
+  Touches: `app/src/main/java/com/sysadmindoc/callshield/permissions/CallShieldPermissions.kt`, `ui/screens/main/DashboardStatusModel.kt`, `ui/screens/more/ProtectionTestScreen.kt`, `ui/screens/onboarding/OnboardingScreen.kt`, `ui/screens/settings/SettingsScreen.kt`, instrumentation tests
+  Acceptance: For call-screening role, call log, contacts, SMS read/receive, notification access, overlay, and post-notification permission states, tests prove no crash, dashboard/protection status names the degraded feature, and the UI exposes the right recovery action.
+  Complexity: M
+
+- [ ] P1 - Add enrichment source health and privacy diagnostics
+  Why: Overlay and lookup enrichments currently collapse timeout, parse failure, oversize response, rate limit, and no-hit states into null or UNKNOWN, making "source unavailable" indistinguishable from "source clean."
+  Evidence: `ExternalLookup.kt`; `WebLookup.kt`; `NumberTypeChecker.kt`; `CallerIdOverlayService.kt`; SpamBlocker privacy notes; SpamBlocker v5.11 large-response crash fix
+  Touches: `app/src/main/java/com/sysadmindoc/callshield/data/remote/ExternalLookup.kt`, `WebLookup.kt`, `NumberTypeChecker.kt`, `service/CallerIdOverlayService.kt`, diagnostics/export UI, tests
+  Acceptance: Each enrichment source returns typed states for success, clean/not-found, timeout, rate-limited, oversized, parse-error, disabled, and unavailable; overlay and diagnostics show per-source status without logging raw queried numbers.
+  Complexity: M
+
+- [ ] P1 - Harden external blocklist subscriptions before B.F.7/B.F.13
+  Why: User-supplied list URLs can mass-block legitimate callers or stall parsing unless they have caps, attribution, dry-run preview, disable, and rollback semantics before affecting live screening.
+  Evidence: Existing ROADMAP B.F.7/B.F.13; `HotDataSync.kt`; `data/repository/SyncRepository.kt`; Pi-hole gravity rebuild model
+  Touches: `app/src/main/java/com/sysadmindoc/callshield/service/HotDataSync.kt`, `app/src/main/java/com/sysadmindoc/callshield/data/repository/SyncRepository.kt`, Room source metadata, settings/import UI, tests
+  Acceptance: Subscription imports allow only HTTP(S), cap bytes and row count, validate CSV/TXT/JSON before commit, show add/remove counts and source attribution, can disable or roll back one feed, and never update hot-path caches until committed.
+  Complexity: L
+
+- [ ] P2 - Add selective backup/export/restore sections
+  Why: Current backup preview supports merge/replace for the combined payload, but users need to migrate rules without importing unrelated logs, settings, or stale personal data.
+  Evidence: `BackupRestore.kt`; `MainViewModel.kt`; `BackupRestoreTest.kt`; SpamBlocker v5.9 selective backup/restore release notes
+  Touches: `app/src/main/java/com/sysadmindoc/callshield/data/BackupRestore.kt`, `ui/MainViewModel.kt`, backup/restore UI strings, `BackupRestoreTest.kt`, `BackupRestoreIntegrationTest.kt`
+  Acceptance: Users can export and restore blocklist, whitelist, wildcard/range rules, SMS keyword rules, settings, and logs independently; preview shows selected counts/privacy impact; v1-v3 backups still restore safely.
+  Complexity: M
