@@ -2,63 +2,55 @@
 
 ## Executive Summary
 
-CallShield is a privacy-first Android call/SMS/RCS spam blocker with a strong current architecture: Kotlin/Compose, Hilt, Room, WorkManager, pinned OkHttp clients, on-device scoring, a priority-sorted checker pipeline, RCS notification filtering, URLhaus checks, community reporting, reproducible-build groundwork, and local verification. The highest-value direction is not feature sprawl; it is tightening trust boundaries around the existing pipeline: finish UI phone-number spoofing fixes, cap and type remote enrichment failures, keep STIR/SHAKEN from being over-presented as caller safety, prove permission-degraded behavior, make future list subscriptions reversible, and preserve Android 16/17 compatibility as platform SMS and notification behavior changes.
-
-Top opportunities, in priority order:
-- P0: Finish ASCII-only phone-number handling in all UI entry/review paths.
-- P1: Bound every enrichment response body and return typed failures instead of silent null/UNKNOWN states.
-- P1: Make STIR/SHAKEN/PASSporT UI language risk-neutral; A-level attestation is not proof that a caller is safe.
-- P1: Add answered-caller, emergency-callback, and SMS-burst context rules through the checker pipeline.
-- P1: Add a per-permission/role degraded-mode matrix for dashboard, onboarding, settings, diagnostics, call screening, SMS, RCS, and overlay flows.
-- P1: Add source-health and privacy diagnostics for SkipCalls, PhoneBlock, WhoCalledMe, OpenCNAM, AbstractAPI, URLhaus, GitHub data sync, and community reports.
-- P1: Add feed safety rails before external blocklist subscriptions: caps, preview, attribution, disable, and rollback.
-- P2: Expand Android 16/17 smoke tests for edge-to-edge, predictive back, notification, SMS OTP delay, and target-SDK branching.
-- P2: Add selective backup/export/restore sections so users can move rules without importing unrelated logs or settings.
+CallShield is a privacy-first Android call/SMS/RCS blocker with a mature local architecture: Kotlin/Compose, Hilt, Room, WorkManager, pinned OkHttp clients, on-device scoring, a priority-sorted checker pipeline, RCS notification filtering, URLhaus checks, community reporting, reproducible-build groundwork, and broad local verification. The highest-value direction is still trust-boundary hardening rather than a new product surface: finish UI number normalization, cap remote reads, make remote/source failures observable, keep STIR/SHAKEN copy precise, protect SMS content in logs and exports, and make every imported or queried data source reversible and privacy-aware. Top opportunities: P0 UI ASCII-only phone-number handling; P1 bounded enrichment and first-party feed reads; P1 SMS-body redaction by default; P1 URLhaus token/privacy mode; P1 STIR/PASSporT badge semantics; P1 per-permission degraded behavior; P1 answered/emergency/SMS-burst context rules; P2 temporary allow/block windows; P2 Android 16/17 compatibility smoke tests; P2 selective backup/export sections.
 
 ## Product Map
 
-- Core workflows: screen incoming calls under the `CallScreeningService` deadline; block/silence using local rules, Android system block list, STIR/SHAKEN, heuristics, campaign detection, and ML; filter SMS/RCS; inspect logs and reasons; sync public spam data; submit community reports.
+- Core workflows: screen incoming calls under the `CallScreeningService` deadline; block/silence via local rules, Android system block list, STIR/SHAKEN, heuristics, campaign detection, and ML; filter SMS/RCS; inspect logs and reasons; sync public spam data; submit community reports.
 - User personas: privacy-focused Android and F-Droid users, power users who want explainable local rules, and non-experts who need safe defaults plus direct recovery actions.
-- Platforms and distribution: Android minSdk 29 / targetSdk 36; GitHub Releases and direct APK install; Fastlane/F-Droid metadata and reproducible-build docs exist; F-Droid, IzzyOnDroid, and Accrescent publication remain externally blocked.
+- Platforms and distribution: Android minSdk 29 / targetSdk 36; GitHub Releases and direct APK install; Fastlane/F-Droid metadata and reproducible-build docs exist; F-Droid, IzzyOnDroid, and Accrescent publication remain blocked on external submission/review actions in `Roadmap_Blocked.md`.
 - Key integrations and data flows: GitHub raw feeds to WorkManager/Room; Cloudflare Worker report submission; URLhaus SMS URL checks; optional AbstractAPI no-backup key; SkipCalls, PhoneBlock, WhoCalledMe, and OpenCNAM overlay enrichment; local backup/restore and CSV export.
 
 ## Competitive Landscape
 
-- SpamBlocker: The closest OSS benchmark. It does optional-permission call/SMS blocking, SMS screening provider mode, rule priorities, answered/emergency context, API presets, conflict diagnostics, and recent large-response crash fixes well. CallShield should borrow the context-rule discipline and diagnostics, but avoid arbitrary workflow scripting in screening paths.
-- Fossify Phone and Silence: Good references for privacy-first call UX, multi-SIM ergonomics, contact-group rules, answered-call trust, and no-tracking positioning. CallShield should learn role/permission clarity without becoming a full dialer.
-- YetAnotherCallBlocker, Carrion, NoPhoneSpam, and F-Droid Call Blocker: Useful simple blocking references for crowdsourced databases, STIR/SHAKEN enforcement, prefix blocks, history, dual-SIM, backup/restore, and no-internet modes. Avoid unmaintained Java-era broadcast assumptions and under-tested migration paths.
-- Google Phone/Messages: Moving trust UX toward contact verification, on-device scam warnings, and RCS/Messages-integrated signals. CallShield should learn cautious confidence language and metadata fallback, but should not promise privileges only the system dialer or Messages app can provide.
-- Hiya, RoboKiller, YouMail, and carrier blockers: Commercial products sell caller identity, risk routing to voicemail, spam text protection, visual voicemail, assistants, synthetic-voice warnings, and business identity. CallShield should borrow risk routing, recovery, and source-health UX, while rejecting accounts, contact upload, ads, cloud audio, and voicemail replacement.
-- Pi-hole and similar blocklist systems: The useful analogy is not a plugin marketplace; it is subscribed-list safety: fetch caps, source attribution, dry-run diffs, rebuild/rollback, and per-source disable before user-supplied feeds affect live decisions.
+- SpamBlocker: Closest OSS benchmark. It does optional-permission call/SMS blocking, SMS screening provider mode, rule priorities, answered/emergency context, API presets, conflict diagnostics, SMS reply workflows, and recent large-response crash fixes well. CallShield should borrow context-rule discipline, source diagnostics, and capped network reads, but avoid arbitrary workflow scripting in hot screening paths.
+- Carrion and simpler FOSS blockers: Strong references for STIR/SHAKEN enforcement, public reputation DBs, prefix blocks, no-account use, and simple recovery. CallShield should learn the conservative STIR stance, but avoid under-tested legacy broadcast and migration assumptions.
+- NekoSMS and other SMS-only blockers: Good model for local sender/content rules, wildcard/regex behavior, backup/restore, and no-internet/no-telemetry positioning. CallShield should copy the privacy clarity, not split into a separate SMS app.
+- Google Phone/Messages and Android platform APIs: Platform direction favors verified-caller metadata, cautious scam warnings, tighter SMS/OTP access, and large-screen behavior enforcement. CallShield should keep compatibility tests current and avoid promising privileges only the system dialer or Messages app can provide.
+- Hiya, Truecaller, RoboKiller, YouMail, and carrier blockers: Commercial products sell caller identity, automatic spam rejection, SMS scam protection, call screening, visual voicemail, synthetic-voice warnings, and business identity. CallShield should borrow risk routing, recovery, and source-health UX while rejecting accounts, contact upload, ads, cloud audio, and voicemail replacement.
+- Pi-hole and URLhaus: The useful adjacent pattern is safe data ingestion: source attribution, fetch caps, dry-run diffs, rebuild/rollback, per-source disable, and privacy-aware URL submission before remote data affects live decisions.
 
 ## Security, Privacy, and Reliability
 
-- Verified: `app/src/main/java/com/sysadmindoc/callshield/ui/screens/lookup/LookupScreen.kt`, `BlocklistScreen.kt`, `BlockedLogScreen.kt`, and `RecentCallsScreen.kt` still use `Char.isDigit()` or Unicode-aware digit filters in UI-created actions. This can diverge from the ASCII-only checker/data path.
-- Verified: `ExternalLookup.kt`, `WebLookup.kt`, and `NumberTypeChecker.kt` use `ResponseBody.string()` and broad `catch (_: Exception)` fallbacks. Existing roadmap covers byte caps, but the app also needs typed result states so unavailable sources are not presented as clean results.
-- Verified: `settings_stir_trusted_allow_desc` warns about over-attestation, but `ROADMAP.md` item 2.3.2 still says A-level should display as green. TNS 2026 and FCC rulemaking both show A-level attestation alone is not enough consumer identity evidence.
-- Verified: `AndroidManifest.xml` declares `READ_CALL_LOG`, `READ_CONTACTS`, `READ_SMS`, `RECEIVE_SMS`, `SYSTEM_ALERT_WINDOW`, notification access service, and call-screening service entrypoints. Dashboard and Protection Test check several readiness states, but there is no explicit per-permission degraded-mode contract covering every revoked permission/role.
-- Verified: `CommunityContributor.kt` and `worker/community-reports-worker.js` still have a raw-number report pipeline; the hash-report migration is correctly parked in `Roadmap_Blocked.md` because it requires client, Worker, merge-script, and existing-report migration coordination.
-- Verified: Android 17 delays standard OTP SMS visibility for most apps, while Android 16 target-SDK behavior affects edge-to-edge, predictive back, and text rendering. Existing `TargetSdkBehaviorSmokeTest.kt` should grow into a standing compatibility matrix.
-- Verified: `BackupRestore.kt` now validates backup payloads and supports merge/replace preview, but exports/restores the app's backup sections as one combined payload rather than user-selected sections.
+- Verified: `LookupScreen.kt`, `BlocklistScreen.kt`, `BlockedLogScreen.kt`, and `RecentCallsScreen.kt` still contain UI-created phone-number paths using `Char.isDigit()` or Unicode-aware digit filters, while `PhoneDigits.kt` documents ASCII-only behavior for security-sensitive paths.
+- Verified: `ExternalLookup.kt`, `WebLookup.kt`, and `NumberTypeChecker.kt` use `response.body?.string()` and broad fallback states. Existing roadmap coverage should add byte caps and typed states so timeout, rate limit, parse failure, oversized body, and no-hit do not collapse into clean/null results.
+- Verified: `GitHubDataSource.kt` reads GitHub raw spam/hot/domain feeds with `response.body?.string()` and no explicit per-feed byte/row/schema caps. This is separate from optional future subscriptions because these trusted feeds already feed Room and hot-path caches.
+- Verified: `LogExporter.kt` writes a `SMSBody` column, `NumberDetailScreen.kt` and `BlockedLogScreen.kt` render stored SMS bodies, and `BlockedCall.smsBody`/`PendingBlockedCallLog.smsBody` persist raw message text. Default export/preview behavior should redact message bodies or sensitive indicators, with an explicit raw export action.
+- Verified: `UrlSafetyChecker.kt` extracts candidate URLs from full SMS/RCS body text and submits URLs to URLhaus. Because phishing URLs can contain recipient tokens, CallShield needs local-domain-first checks plus a setting that strips fragments and optionally query strings before remote lookup.
+- Verified: `settings_stir_trusted_allow_desc` warns about over-attestation, but `ROADMAP.md` item 2.3.2 still frames A-level attestation as a green badge. Android and STIR/SHAKEN sources support displaying carrier attestation status, not caller safety.
+- Verified: `AndroidManifest.xml` declares call-log, contacts, SMS, overlay, notification-access, notification-posting, internet, boot, and call-screening capabilities. Dashboard and Protection Test cover several readiness states, but no single per-permission degraded-mode contract covers every revoked, denied, unsupported, or OEM-broken state.
+- Verified: `BackupRestore.kt` validates backup payloads and supports merge/replace preview, but exports/restores sections as one combined payload. Selective rule/settings/log migration remains useful and distinct from diagnostics export.
+- Likely: Recent robocall research and commercial blocker updates make campaign context, answer history, source health, and cautious confidence language more valuable than adding cloud audio or account-backed reputation.
 
 ## Architecture Assessment
 
-- The checker pipeline remains the right boundary for new trust rules. Add answered-caller, emergency-callback, and SMS-burst behavior as priority slots rather than branching in services.
-- Remote enrichment should return typed source results: success, clean, not-found, timeout, rate-limited, oversized, parse-error, disabled, and unavailable. That gives overlay, diagnostics, and export code the same truth without leaking raw numbers into logs.
-- Subscription work should land behind a dedicated repository/model boundary before B.F.7/B.F.13. Do not merge user-supplied lists directly into the same path as trusted GitHub hot feeds without source attribution and rollback.
-- PASSporT parsing and attestation scoring should update `BlockReasoning.kt`, overlay UI, tests, and settings copy together. The UI should say what was cryptographically attested, not that the caller is safe.
-- Permission and role readiness belong in one shared model consumed by dashboard, onboarding, settings, Protection Test, and instrumentation tests. `CallShieldPermissions.kt` is already the right starting point.
-- Existing roadmap coverage is already strong for i18n/l10n, accessibility, distribution, offline resilience, testing, and future platform ideas. New roadmap work should therefore favor trust, observability, compatibility, and reversible data changes.
+- The checker pipeline remains the correct boundary for new trust rules. Add answered-caller, emergency-callback, temporary allow/block, and SMS-burst behavior as priority slots rather than service-layer branches.
+- Remote code needs a shared capped-body reader plus typed source result model. It should be reused by enrichment APIs, URLhaus, GitHub feed fetches, and future subscription imports.
+- SMS privacy should centralize around a redaction helper used by log export, log/detail UI, diagnostics, notifications, and tests. Store raw bodies only when needed for local detection/recovery, and make raw export explicit.
+- URL safety should prefer local `spam_domains`/domain extraction before remote URLhaus checks, then submit only the minimum configured URL form.
+- PASSporT parsing and attestation scoring should update `BlockReasoning.kt`, overlay UI, settings copy, and tests together. UI should say what was carrier-attested and keep explicit user/system blocks ahead of attestation.
+- Permission and role readiness belong in a single shared model consumed by dashboard, onboarding, settings, Protection Test, and instrumentation tests. `CallShieldPermissions.kt` is the right starting point.
+- Categories consciously covered: security, privacy, reliability, accessibility/readability, i18n/l10n, observability, testing, docs, distribution, offline resilience, mobile/platform compatibility, migration, and upgrade strategy. Plugin ecosystem work should start as reversible data subscriptions, not executable plugins. Multi-user/enterprise remains a later product track already represented in the roadmap/blocked list.
 
 ## Rejected Ideas
 
-- Full arbitrary workflow scripting from SpamBlocker: too much execution and maintenance risk for a 5-second local screening path.
-- Treating A-level STIR/SHAKEN as a green safe badge: rejected because TNS and FCC sources show attestation does not prove caller identity or legality.
-- Moving SMS screening provider mode back into the main roadmap now: it is correctly blocked because it needs a substantial provider implementation and SMS-app compatibility research.
-- Required Play Integrity, GMS-only checks, or account-backed reputation: incompatible with F-Droid/de-Googled users and the no-accounts philosophy.
+- SpamBlocker SMS Reply/meeting auto-reply as a near-term item: requires SEND_SMS-style behavior and pairs naturally with meeting mode, which is already blocked on a permission/product decision in `Roadmap_Blocked.md`.
+- Full arbitrary workflow scripting from SpamBlocker: high maintenance and execution risk inside a 5-second local screening path.
+- Treating A-level STIR/SHAKEN as a green safe badge: rejected because STIR/SHAKEN attests carrier/origination metadata, not caller intent or legality.
+- Required Play Integrity, SMS Retriever, GMS-only checks, or account-backed reputation: incompatible with F-Droid/de-Googled users as a core requirement, though optional Play-build contribution hardening can remain under consideration.
 - Contact upload, address-book graph matching, or always-on cloud reputation: incompatible with on-device-first privacy.
-- Cloud audio, assistant bots, voicemail replacement, or automatic call transcription: incompatible with the no-cloud-audio direction and too large for the current Android call-screening advantage.
-- KMP/iOS before telecom trust work: CallShield's strongest current value is Android-native call/SMS/RCS integration; portability should wait behind Room/AGP migration and trust hardening.
+- Cloud audio, assistant bots, voicemail replacement, or automatic call transcription: incompatible with the no-cloud-audio direction and too large for CallShield's current Android call-screening advantage.
+- KMP/iOS before telecom trust work: CallShield's strongest value is Android-native call/SMS/RCS integration; portability should wait behind Room/AGP migration and trust hardening.
 - Plugin marketplace before bounded subscriptions and diagnostics: executable third-party logic is the wrong first extension point; reversible data feeds are safer.
 
 ## Sources
@@ -67,40 +59,40 @@ Direct OSS competitors:
 - https://github.com/aj3423/SpamBlocker
 - https://github.com/aj3423/SpamBlocker/releases
 - https://github.com/aj3423/SpamBlocker/wiki/SMS-Screening-protocol
-- https://f-droid.org/packages/spam.blocker/
+- https://f-droid.org/en/packages/spam.blocker/
+- https://github.com/Divested-Mobile/Carrion
+- https://github.com/apsun/NekoSMS
 - https://github.com/adamff-dev/spam-call-blocker-app
-- https://github.com/FossifyOrg/Phone
-- https://gitlab.com/xynngh/YetAnotherCallBlocker
-- https://f-droid.org/packages/com.callblocker/
-- https://github.com/x13a/Silence
+- https://github.com/aj3423/SpamBlocker/issues/604
 
-Commercial, carrier, and platform:
-- https://blog.google/security/android-fake-call-detection/
-- https://www.hiya.com/
-- https://robokiller.com/
-- https://www.youmail.com/features/
-- https://www.t-mobile.com/benefits/scam-shield
-- https://www.att.com/security/active-armor/
-- https://www.verizon.com/solutions-and-services/add-ons/protection-and-security/call-filter/
+Commercial and community signal:
+- https://play.google.com/store/apps/details?hl=en_US&id=com.webascender.callerid
+- https://techcrunch.com/2024/03/18/truecaller-automatically-reject-all-spam-calls-android-update/
+- https://www.youmail.com/features/spam-blocking/
+- https://play.google.com/store/apps/details?hl=en_US&id=com.robokiller.app
+- https://forum.f-droid.org/t/what-app-to-block-spam-and-spoofed-calls/32085
 
 Standards and platform APIs:
 - https://developer.android.com/reference/android/telecom/CallScreeningService.CallResponse.Builder
+- https://developer.android.com/develop/connectivity/telecom/dialer-app/prevent-spoofing
 - https://developer.android.com/about/versions/16/behavior-changes-16
 - https://developer.android.com/about/versions/17/behavior-changes-17
+- https://android-developers.googleblog.com/2026/02/prepare-your-app-for-resizability-and.html
 - https://www.rfc-editor.org/rfc/rfc8225.html
 - https://datatracker.ietf.org/doc/html/rfc8588
-- https://tnsi.com/resource/com/tns-2026-robocall-report-going-further-than-stir-shaken-blog/
-- https://www.federalregister.gov/documents/2025/12/05/2025-22063/advanced-methods-to-target-and-eliminate-robocalls
+- https://www.fcc.gov/call-authentication
 - https://www.fcc.gov/consumers/guides/stop-unwanted-robocalls-and-texts
 
-Dependencies, security, and adjacent systems:
+Dependencies, security, adjacent systems, and research:
 - https://developer.android.com/build/releases/agp-9-0-0-release-notes
 - https://android-developers.googleblog.com/2026/03/room-30-modernizing-room.html
 - https://github.com/google/dagger/releases
 - https://square.github.io/okhttp/changelogs/changelog/
-- https://nvd.nist.gov/vuln/detail/cve-2024-7254
+- https://urlhaus.abuse.ch/api/
 - https://docs.pi-hole.net/main/pihole-command/
+- https://nvd.nist.gov/vuln/detail/cve-2024-7254
+- https://arxiv.org/html/2606.31790v1
 
 ## Open Questions
 
-None that block prioritization. External publication, hash-report migration, SMS screening provider mode, and AGP/Room/Hilt migration need dedicated implementation sessions, not more research.
+None that block prioritization. External store publication, hash-report migration, SMS screening provider mode, AGP/Room/Hilt migration, and meeting mode already have concrete blockers tracked in `Roadmap_Blocked.md`.
