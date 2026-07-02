@@ -22,6 +22,7 @@ import com.sysadmindoc.callshield.CallShieldApp
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.PhoneFormatter
 import com.sysadmindoc.callshield.data.remote.ExternalLookup
+import com.sysadmindoc.callshield.util.filterAsciiDigits
 import com.sysadmindoc.callshield.util.race
 import kotlinx.coroutines.*
 import java.text.NumberFormat
@@ -88,7 +89,7 @@ class CallerIdOverlayService : Service() {
         removeOverlay()
         windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
         val formatted = PhoneFormatter.format(number)
-        val digits = number.filter { it.isDigit() }
+        val digits = filterAsciiDigits(number)
         val sessionId = SystemClock.elapsedRealtimeNanos()
 
         overlayView = LinearLayout(this).apply {
@@ -347,16 +348,28 @@ class CallerIdOverlayService : Service() {
             handler.post {
                 if (!isCurrentSession(sessionId)) return@post
                 sourcesContainer?.addView(TextView(this).apply {
-                    val icon = if (result.isSpam) "\u26A0" else "\u2713"
-                    val info = if (result.reports > 0) {
-                        formatReports(result.reports)
-                    } else if (result.isSpam) {
-                        this@CallerIdOverlayService.getString(R.string.overlay_source_flagged)
-                    } else {
-                        this@CallerIdOverlayService.getString(R.string.overlay_source_clean)
+                    val isFallback = result.status.isFallback
+                    val icon = when {
+                        result.isSpam -> "\u26A0"
+                        isFallback -> "!"
+                        else -> "\u2713"
+                    }
+                    val info = when {
+                        result.reports > 0 -> formatReports(result.reports)
+                        result.isSpam -> this@CallerIdOverlayService.getString(R.string.overlay_source_flagged)
+                        isFallback -> this@CallerIdOverlayService.getString(R.string.overlay_source_unavailable)
+                        else -> this@CallerIdOverlayService.getString(R.string.overlay_source_clean)
                     }
                     text = this@CallerIdOverlayService.getString(R.string.overlay_source_result, icon, result.source, info)
-                    setTextColor(Color.parseColor(if (result.isSpam) "#FFF38BA8" else "#FFA6E3A1"))
+                    setTextColor(
+                        Color.parseColor(
+                            when {
+                                result.isSpam -> "#FFF38BA8"
+                                isFallback -> "#FFA6ADC8"
+                                else -> "#FFA6E3A1"
+                            }
+                        )
+                    )
                     textSize = 11f
                     setPadding(0, 3, 0, 3)
                 })

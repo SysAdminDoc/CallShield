@@ -391,6 +391,7 @@
     <string name="overlay_action_sit_tone">Play SIT Tone</string>
     <string name="overlay_source_flagged">Flagged</string>
     <string name="overlay_source_clean">Clean</string>
+    <string name="overlay_source_unavailable">Unavailable</string>
     <string name="overlay_source_result">%1$s %2$s: %3$s</string>
 
     <!-- Settings Screen -->
@@ -813,6 +814,7 @@
     </plurals>
     <string name="detail_flagged">Flagged</string>
     <string name="detail_clean">Clean</string>
+    <string name="detail_unavailable">Unavailable</string>
     <string name="detail_block">Block</string>
     <string name="detail_number_blocked">Number blocked</string>
     <string name="detail_unblock">Unblock</string>

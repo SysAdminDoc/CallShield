@@ -538,13 +538,6 @@ Plus RFC 8588 (SHAKEN profile), RFC 9027 (Traceback), Apache SpamAssassin / rspa
 
 ## Research-Driven Additions
 
-- [ ] P1 - Add bounded response guards for all enrichment lookups
-  Why: Overlay/enrichment lookups are not blocking-path gates, but unbounded third-party response bodies can still crash or stall UI work; SpamBlocker v5.11 fixed this exact class of API-query crash.
-  Evidence: SpamBlocker v5.11 release; `data/remote/ExternalLookup.kt`; `data/remote/WebLookup.kt`; `data/remote/NumberTypeChecker.kt`
-  Touches: `data/remote/ExternalLookup.kt`, `data/remote/WebLookup.kt`, `data/remote/NumberTypeChecker.kt`, `data/remote/*Test.kt`
-  Acceptance: Each remote parser caps bytes read, rejects oversized bodies with a typed fallback result, and unit tests prove oversized, malformed, and normal responses do not crash.
-  Complexity: M
-
 - [ ] P1 - Add answered-caller trust with age and count limits
   Why: Recently dialed calls are trusted, but numbers the user has answered and tolerated before are also strong local context; SpamBlocker exposes "Dialed Number" persistence and commercial blockers lean on interaction history.
   Evidence: SpamBlocker v5.6 release notes; existing `CallbackDetector.kt`; existing `recently_dialed` and `sms_context` trust rules
