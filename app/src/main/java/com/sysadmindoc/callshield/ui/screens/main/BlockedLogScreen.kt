@@ -36,6 +36,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.PhoneFormatter
+import com.sysadmindoc.callshield.data.SmsBodyRedactor
 import com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup
 import com.sysadmindoc.callshield.data.model.BlockedCall
 import com.sysadmindoc.callshield.ui.MainViewModel
@@ -405,8 +406,16 @@ fun BlockedCallItem(call: BlockedCall, onTap: () -> Unit) {
                         }
                         Text(label, style = MaterialTheme.typography.labelSmall, color = CatPeach)
                     }
-                    if (call.smsBody != null) {
-                        Text(call.smsBody, style = MaterialTheme.typography.bodySmall, color = CatSubtext, maxLines = 2)
+                    val redactedSmsBody = remember(call.smsBody) {
+                        SmsBodyRedactor.redactForPreview(call.smsBody)
+                    }
+                    if (redactedSmsBody != null) {
+                        Text(
+                            redactedSmsBody,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = CatSubtext,
+                            maxLines = 2,
+                        )
                     }
                 }
                 IconButton(onClick = { expanded = !expanded }) {

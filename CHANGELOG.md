@@ -57,6 +57,9 @@ Distribution prep after the v1.7.10 release.
   and number details so timeout, rate-limit, parse-error, oversized, disabled,
   unavailable, clean, and found states are visible without logging raw queried
   numbers.
+- Redacted blocked SMS bodies from default log previews and CSV exports while
+  keeping a separate warning-gated raw SMS export action for cases that require
+  original message text.
 - Added answered-caller trust with configurable count/window limits so repeated
   answered callers can bypass weaker heuristic/ML suspicion while explicit
   block rules still win first.

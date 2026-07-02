@@ -13,11 +13,14 @@ class ExportLogsUseCase
     constructor(
         @param:ApplicationContext private val context: Context,
     ) {
-    suspend fun exportBlockedLog(calls: List<BlockedCall>) {
-        LogExporter.exportAsCsv(context, calls)
-    }
+        suspend fun exportBlockedLog(
+            calls: List<BlockedCall>,
+            includeRawSmsBodies: Boolean = false,
+        ) {
+            LogExporter.exportAsCsv(context, calls, includeRawSmsBodies)
+        }
 
-    suspend fun exportBlocklist(numbers: List<SpamNumber>) {
-        BlocklistExporter.exportAndShare(context, numbers)
+        suspend fun exportBlocklist(numbers: List<SpamNumber>) {
+            BlocklistExporter.exportAndShare(context, numbers)
+        }
     }
-}

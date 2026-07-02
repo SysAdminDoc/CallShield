@@ -1,6 +1,9 @@
 package com.sysadmindoc.callshield.data
 
-import org.junit.Assert.*
+import com.sysadmindoc.callshield.data.model.BlockedCall
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.lang.reflect.Method
 
@@ -9,13 +12,12 @@ import java.lang.reflect.Method
  * Tests the csvEscape private method via reflection.
  */
 class LogExporterTest {
+    private val csvEscape: Method =
+        LogExporter::class.java.getDeclaredMethod("csvEscape", String::class.java).apply {
+            isAccessible = true
+        }
 
-    private val csvEscape: Method = LogExporter::class.java.getDeclaredMethod("csvEscape", String::class.java).apply {
-        isAccessible = true
-    }
-
-    private fun escape(value: String): String =
-        csvEscape.invoke(LogExporter, value) as String
+    private fun escape(value: String): String = csvEscape.invoke(LogExporter, value) as String
 
     // ── csvEscape: plain text ────────────────────────────────────────────
 
@@ -113,5 +115,54 @@ class LogExporterTest {
         val input = "This is a \"test\" message,\nwith multiple lines\r\nand various, special characters"
         val expected = "\"This is a \"\"test\"\" message, with multiple lines and various, special characters\""
         assertEquals(expected, escape(input))
+    }
+
+    @Test
+    fun `exportToCsv redacts SMS bodies by default`() {
+        val rawBody = "Your reset code is 987654. Tap https://phish.example/reset?token=secret"
+        val csv =
+            LogExporter.exportToCsv(
+                listOf(
+                    BlockedCall(
+                        number = "+15551234567",
+                        timestamp = 0L,
+                        type = "sms_spam",
+                        isCall = false,
+                        smsBody = rawBody,
+                        matchReason = "sms_content",
+                        confidence = 92,
+                    ),
+                ),
+            )
+
+        assertTrue(csv.contains("SMS body redacted"))
+        assertTrue(csv.contains("phish.example"))
+        assertTrue(csv.contains("code-like tokens hidden"))
+        assertFalse(csv.contains("Your reset code"))
+        assertFalse(csv.contains("987654"))
+        assertFalse(csv.contains("token=secret"))
+    }
+
+    @Test
+    fun `exportToCsv can include raw SMS bodies explicitly`() {
+        val rawBody = "Your reset code is 987654. Tap https://phish.example/reset?token=secret"
+        val csv =
+            LogExporter.exportToCsv(
+                calls =
+                    listOf(
+                        BlockedCall(
+                            number = "+15551234567",
+                            timestamp = 0L,
+                            type = "sms_spam",
+                            isCall = false,
+                            smsBody = rawBody,
+                            matchReason = "sms_content",
+                            confidence = 92,
+                        ),
+                    ),
+                includeRawSmsBodies = true,
+            )
+
+        assertTrue(csv.contains(rawBody))
     }
 }

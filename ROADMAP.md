@@ -559,13 +559,6 @@ Plus RFC 8588 (SHAKEN profile), RFC 9027 (Traceback), Apache SpamAssassin / rspa
   Acceptance: Users can export and restore blocklist, whitelist, wildcard/range rules, SMS keyword rules, settings, and logs independently; preview shows selected counts/privacy impact; v1-v3 backups still restore safely.
   Complexity: M
 
-- [ ] P1 - Redact SMS bodies from blocked-log previews and CSV exports by default
-  Why: CallShield currently stores and displays raw blocked SMS bodies and writes them to the `SMSBody` CSV column, which is risky for OTPs, reset links, phishing tokens, and support exports.
-  Evidence: `app/src/main/java/com/sysadmindoc/callshield/data/LogExporter.kt`; `BlockedLogScreen.kt`; `NumberDetailScreen.kt`; Android 17 OTP visibility changes; NekoSMS no-internet privacy model
-  Touches: `app/src/main/java/com/sysadmindoc/callshield/data/LogExporter.kt`, `ui/screens/main/BlockedLogScreen.kt`, `ui/screens/details/NumberDetailScreen.kt`, `SmsContentAnalyzer.kt`, `LogExporterTest.kt`, UI tests
-  Acceptance: Default UI/export output masks SMS body content and sensitive URL/OTP-like indicators, raw export is an explicit user action with warning copy, and tests prove CSV redaction preserves useful reason/source metadata without leaking the original body.
-  Complexity: M
-
 - [ ] P1 - Add size, row, and schema guardrails for first-party GitHub data feeds
   Why: Trusted GitHub raw spam/hot/domain/model feeds still use unbounded body reads before parsing, so a malformed or unexpectedly large first-party response can waste memory or poison Room/hot caches.
   Evidence: `app/src/main/java/com/sysadmindoc/callshield/data/remote/GitHubDataSource.kt`; SpamBlocker v5.11 large API-response crash fix; Pi-hole gravity rebuild model
