@@ -538,13 +538,6 @@ Plus RFC 8588 (SHAKEN profile), RFC 9027 (Traceback), Apache SpamAssassin / rspa
 
 ## Research-Driven Additions
 
-- [ ] P1 - Add SMS burst/flood detector with review-first recovery
-  Why: CallShield scores individual SMS bodies well, but OTP/phishing floods are a campaign behavior; Android 17 OTP broadcast delays make explicit non-OTP and delayed-OTP behavior worth separating.
-  Evidence: Android 17 behavior changes; `SmsReceiver.kt`; `SmsContextChecker.kt`; `SpamHeuristics.isRapidFire`
-  Touches: `data/SmsContextChecker.kt`, `data/checker/Checkers.kt`, `service/SmsReceiver.kt`, Room log queries, settings/tests
-  Acceptance: Repeated unknown SMS from the same sender/prefix in a short window are logged as `sms_burst`, user recovery actions can mark safe/report, and Android 17 OTP-delay behavior is documented in tests.
-  Complexity: M
-
 - [ ] P2 - Expand target-platform smoke tests for Android 16/17 behavior
   Why: API 36 smoke coverage exists, but Android 16 `SDK_INT_FULL`/notification behavior and Android 17 OTP broadcast delay are not pinned in a compatibility matrix.
   Evidence: Android 16 behavior changes; Android 17 behavior changes; `androidTest/.../TargetSdkBehaviorSmokeTest.kt`

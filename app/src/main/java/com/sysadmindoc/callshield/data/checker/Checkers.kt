@@ -590,6 +590,31 @@ internal class SmsContextChecker_Checker(
     }
 }
 
+internal class SmsBurstChecker(
+    private val appContext: Context,
+    private val smsContextChecker: SmsContextChecker,
+) : IChecker {
+    override val priority = CheckerPriority.SMS_BURST
+    override val name = "sms_burst"
+
+    override suspend fun isEnabled(ctx: CheckContext): Boolean =
+        ctx.prefs[SpamRepository.KEY_SMS_BURST] ?: true
+
+    override suspend fun check(ctx: CheckContext): BlockResult? {
+        val signal = smsContextChecker.findRecentBurst(appContext, ctx.number) ?: return null
+        return BlockResult.block(
+            matchSource = "sms_burst",
+            type = "sms_spam",
+            description = signal.description,
+            confidence = SMS_BURST_CONFIDENCE,
+        )
+    }
+
+    private companion object {
+        const val SMS_BURST_CONFIDENCE = 85
+    }
+}
+
 internal class SmsKeywordChecker(private val repo: SpamRepositoryImpl) : IChecker {
     override val priority = CheckerPriority.WILDCARD_RULE - 100
     override val name = "keyword"

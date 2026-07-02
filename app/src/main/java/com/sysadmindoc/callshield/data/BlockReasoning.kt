@@ -111,6 +111,13 @@ object BlockReasoning {
                 }
             }
 
+            matchReason == "sms_burst" -> {
+                headline = "This sender matched SMS burst protection."
+                bullets += "Multiple unknown SMS arrived from this sender or prefix in a short window."
+                bullets += "Use the notification actions to mark the sender safe or report the burst."
+                if (description.isNotBlank()) bullets += description
+            }
+
             matchReason.startsWith("rcs_") -> {
                 val inner = matchReason.removePrefix("rcs_")
                 headline = "RCS message blocked via notification filter."

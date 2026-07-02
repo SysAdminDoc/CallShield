@@ -452,6 +452,8 @@
     <string name="settings_heuristic_analysis_desc">VoIP ranges, premium rate, wangiri, rapid-fire</string>
     <string name="settings_sms_content">SMS Content Analysis</string>
     <string name="settings_sms_content_desc">Spam keywords, phishing links, scam patterns</string>
+    <string name="settings_sms_burst">SMS Burst Protection</string>
+    <string name="settings_sms_burst_desc">Review repeated unknown senders and flood patterns before they bury important messages</string>
     <string name="settings_repeat_caller">Repeat Caller Auto-Block</string>
     <string name="settings_repeat_caller_desc">Auto-block numbers that call 3+ times</string>
     <string name="settings_ml_scorer">ML Spam Scorer</string>

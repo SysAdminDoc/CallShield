@@ -182,6 +182,7 @@ object CheckerPriority {
     const val ANSWERED_CALLER       =  4_950   // user has answered this number repeatedly
     const val REPEATED_URGENT       =  4_900   // same number called 2+ times in 5 min
     const val PUSH_ALERT_BRIDGE     =  4_700   // reserved for A3 — notification-bridged allow
+    const val SMS_BURST             =  4_650   // repeated unknown SMS sender/prefix in short window
     const val CAMPAIGN_RECORDER     =  4_500   // side-effect only (records into in-memory map)
 
     // ── Weaker blocks (statistical / heuristic / temporal) ───────────
@@ -306,6 +307,7 @@ object SpamCheckers {
     ): List<IChecker> =
         buildList {
             add(SmsContextChecker_Checker(appContext, dependencies.smsContextChecker))
+            add(SmsBurstChecker(appContext, dependencies.smsContextChecker))
             add(SmsKeywordChecker(repo))
             add(SmsContentChecker(dependencies.smsContentAnalyzer))
         }.sortedByDescending { it.priority }

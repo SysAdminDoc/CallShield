@@ -67,6 +67,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
     val neighborSpoof by viewModel.neighborSpoofEnabled.collectAsStateWithLifecycle()
     val heuristics by viewModel.heuristicsEnabled.collectAsStateWithLifecycle()
     val smsContent by viewModel.smsContentEnabled.collectAsStateWithLifecycle()
+    val smsBurst by viewModel.smsBurstEnabled.collectAsStateWithLifecycle()
     val contactWhitelist by viewModel.contactWhitelistEnabled.collectAsStateWithLifecycle()
     val contactsOnly by viewModel.contactsOnlyEnabled.collectAsStateWithLifecycle()
     val dbPrefixExpansion by viewModel.dbPrefixExpansionEnabled.collectAsStateWithLifecycle()
@@ -364,6 +365,13 @@ fun SettingsScreen(viewModel: MainViewModel) {
             SettingsToggle(stringResource(R.string.settings_heuristic_analysis), stringResource(R.string.settings_heuristic_analysis_desc), Icons.Default.Psychology, heuristics) { viewModel.setHeuristics(it) }
             GradientDivider()
             SettingsToggle(stringResource(R.string.settings_sms_content), stringResource(R.string.settings_sms_content_desc), Icons.AutoMirrored.Filled.TextSnippet, smsContent) { viewModel.setSmsContent(it) }
+            GradientDivider()
+            SettingsToggle(
+                stringResource(R.string.settings_sms_burst),
+                stringResource(R.string.settings_sms_burst_desc),
+                Icons.Default.SmsFailed,
+                smsBurst,
+            ) { viewModel.setSmsBurst(it) }
             GradientDivider()
             SettingsToggle(stringResource(R.string.settings_repeat_caller), stringResource(R.string.settings_repeat_caller_desc), Icons.Default.Repeat, freqEscalation) { viewModel.setFreqEscalation(it) }
             GradientDivider()
