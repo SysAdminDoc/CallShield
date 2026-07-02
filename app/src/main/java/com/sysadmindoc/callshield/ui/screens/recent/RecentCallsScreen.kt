@@ -49,6 +49,9 @@ import com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup
 import com.sysadmindoc.callshield.permissions.CallShieldPermissions
 import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.theme.*
+import com.sysadmindoc.callshield.util.filterAsciiDigits
+import com.sysadmindoc.callshield.util.hasMinAsciiDigits
+import com.sysadmindoc.callshield.util.normalizePhoneNumberInput
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -404,7 +407,7 @@ fun RecentCallItem(call: RecentCall, onOpenDetail: () -> Unit) {
                         modifier = Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 10.dp),
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        val digits = call.number.filter { it.isDigit() }
+                        val digits = filterAsciiDigits(call.number)
                         RecentActionButton(
                             icon = Icons.Default.Search,
                             label = stringResource(R.string.recent_google),
@@ -474,8 +477,8 @@ private suspend fun loadRecentCalls(context: Context): List<RecentCall> = withCo
             val rawCalls = mutableListOf<RawCall>()
             while (c.moveToNext() && rawCalls.size < 100) {
                 val number = c.getString(numIdx) ?: continue
-                val clean = number.filter { it.isDigit() || it == '+' }
-                if (clean.length < 5) continue
+                val clean = normalizePhoneNumberInput(number)
+                if (!hasMinAsciiDigits(clean)) continue
                 rawCalls.add(RawCall(
                     number = clean,
                     type = if (typeIdx >= 0) c.getInt(typeIdx) else 0,

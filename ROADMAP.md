@@ -538,13 +538,6 @@ Plus RFC 8588 (SHAKEN profile), RFC 9027 (Traceback), Apache SpamAssassin / rspa
 
 ## Research-Driven Additions
 
-- [ ] P0 - Route every UI phone-number sanitizer through ASCII-only digit helpers
-  Why: The checker/data paths now use `PhoneDigits`, but lookup, blocklist, recent-call, and blocked-log UI helpers still accept Unicode digits via `Char.isDigit()`, creating inconsistent user-entered rules and review actions.
-  Evidence: `rg "isDigit" app/src/main/java/com/sysadmindoc/callshield/ui/screens`; `app/src/main/java/com/sysadmindoc/callshield/util/PhoneDigits.kt`
-  Touches: `ui/screens/lookup/LookupScreen.kt`, `ui/screens/main/BlocklistScreen.kt`, `ui/screens/main/BlockedLogScreen.kt`, `ui/screens/recent/RecentCallsScreen.kt`, existing UI tests
-  Acceptance: Arabic-Indic/fullwidth digit inputs are rejected or normalized exactly like screening-path numbers, and regression tests cover lookup, manual block, whitelist, and log actions.
-  Complexity: S
-
 - [ ] P1 - Add bounded response guards for all enrichment lookups
   Why: Overlay/enrichment lookups are not blocking-path gates, but unbounded third-party response bodies can still crash or stall UI work; SpamBlocker v5.11 fixed this exact class of API-query crash.
   Evidence: SpamBlocker v5.11 release; `data/remote/ExternalLookup.kt`; `data/remote/WebLookup.kt`; `data/remote/NumberTypeChecker.kt`

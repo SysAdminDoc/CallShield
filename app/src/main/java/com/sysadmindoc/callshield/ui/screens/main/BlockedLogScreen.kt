@@ -40,6 +40,7 @@ import com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup
 import com.sysadmindoc.callshield.data.model.BlockedCall
 import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.theme.*
+import com.sysadmindoc.callshield.util.filterAsciiDigits
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -426,7 +427,7 @@ fun BlockedCallItem(call: BlockedCall, onTap: () -> Unit) {
                     modifier = Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, bottom = 10.dp),
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    val digits = call.number.filter { it.isDigit() }
+                    val digits = filterAsciiDigits(call.number)
                     // Search Google
                     SmallActionButton(Icons.Default.Search, stringResource(R.string.blocked_log_google), CatBlue) {
                         val url = "https://www.google.com/search?q=${Uri.encode("$digits phone number spam")}"
