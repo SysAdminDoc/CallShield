@@ -148,5 +148,8 @@ object NumberTypeChecker {
         }
 
     private fun unknown(status: RemoteLookupStatus): NumberTypeResult =
-        NumberTypeResult(NumberLineType.UNKNOWN, status = status)
+        NumberTypeResult(
+            NumberLineType.UNKNOWN,
+            status = status,
+        )
 }

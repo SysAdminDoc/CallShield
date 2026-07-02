@@ -481,11 +481,11 @@ class MainViewModel
     }
 
     // Log export
-    fun exportLog() {
+    fun exportLog(includeRawSmsBodies: Boolean = false) {
         val calls = blockedCalls.value
         if (calls.isEmpty()) return
         viewModelScope.launch {
-            exportLogs.exportBlockedLog(calls)
+            exportLogs.exportBlockedLog(calls, includeRawSmsBodies)
         }
     }
 

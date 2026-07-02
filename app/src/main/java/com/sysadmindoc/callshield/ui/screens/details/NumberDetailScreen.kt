@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.PhoneFormatter
+import com.sysadmindoc.callshield.data.SmsBodyRedactor
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.remote.ExternalLookup
 import com.sysadmindoc.callshield.data.remote.RemoteLookupStatus
@@ -305,8 +306,17 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
                             Text(dateFormat.format(Date(call.timestamp)), style = MaterialTheme.typography.bodySmall, color = CatSubtext, modifier = Modifier.weight(1f))
                             if (call.confidence < 100) Text("${call.confidence}%", style = MaterialTheme.typography.labelSmall, color = CatOverlay)
                         }
-                        if (call.smsBody != null) {
-                            Text(call.smsBody, style = MaterialTheme.typography.bodySmall, color = CatSubtext.copy(alpha = 0.7f), maxLines = 2, modifier = Modifier.padding(start = 24.dp))
+                        val redactedSmsBody = remember(call.smsBody) {
+                            SmsBodyRedactor.redactForPreview(call.smsBody)
+                        }
+                        if (redactedSmsBody != null) {
+                            Text(
+                                redactedSmsBody,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = CatSubtext.copy(alpha = 0.7f),
+                                maxLines = 2,
+                                modifier = Modifier.padding(start = 24.dp),
+                            )
                         }
                     }
                 }

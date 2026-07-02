@@ -90,6 +90,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
     val pushAlertDisabledPackages by viewModel.pushAlertDisabledPackages.collectAsStateWithLifecycle()
     val abstractApiKey by viewModel.abstractApiKey.collectAsStateWithLifecycle()
     var showPushAlertSources by remember { mutableStateOf(false) }
+    var showRawSmsExportDialog by remember { mutableStateOf(false) }
     val apiKeyClearedMessage = stringResource(R.string.settings_api_key_cleared)
     val apiKeySavedMessage = stringResource(R.string.settings_api_key_saved)
 
@@ -497,6 +498,20 @@ fun SettingsScreen(viewModel: MainViewModel) {
                 modifier = Modifier.fillMaxWidth()
             )
             Text(stringResource(R.string.settings_export_csv_desc), style = MaterialTheme.typography.labelSmall, color = CatOverlay)
+            Spacer(Modifier.height(8.dp))
+            PremiumActionButton(
+                label = stringResource(R.string.settings_export_raw_sms_csv),
+                icon = Icons.Default.Warning,
+                color = CatPeach,
+                onClick = { hapticTick(context); showRawSmsExportDialog = true },
+                modifier = Modifier.fillMaxWidth(),
+                outlined = true,
+            )
+            Text(
+                stringResource(R.string.settings_export_raw_sms_csv_desc),
+                style = MaterialTheme.typography.labelSmall,
+                color = CatOverlay,
+            )
         }
 
         // Backup/restore
@@ -684,6 +699,41 @@ fun SettingsScreen(viewModel: MainViewModel) {
             onToggle = { pkg, allowed -> viewModel.setPushAlertPackageAllowed(pkg, allowed) },
             onReset = { viewModel.resetPushAlertPackages() },
             onDismiss = { showPushAlertSources = false },
+        )
+    }
+
+    if (showRawSmsExportDialog) {
+        AlertDialog(
+            onDismissRequest = { showRawSmsExportDialog = false },
+            containerColor = SurfaceBright,
+            icon = {
+                Icon(
+                    Icons.Default.Warning,
+                    null,
+                    tint = CatPeach,
+                    modifier = Modifier.size(32.dp),
+                )
+            },
+            title = { Text(stringResource(R.string.settings_export_raw_sms_confirm_title)) },
+            text = { Text(stringResource(R.string.settings_export_raw_sms_confirm_body)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showRawSmsExportDialog = false
+                        viewModel.exportLog(includeRawSmsBodies = true)
+                    },
+                ) {
+                    Text(stringResource(R.string.settings_export_raw_sms_confirm_action), color = CatPeach)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showRawSmsExportDialog = false }) {
+                    Text(
+                        stringResource(R.string.settings_export_raw_sms_cancel),
+                        color = CatSubtext,
+                    )
+                }
+            },
         )
     }
 }
