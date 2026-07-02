@@ -86,6 +86,9 @@ Distribution prep after the v1.7.10 release.
 - Added a backup restore preview step with parsed counts, conflict warnings,
   and explicit Merge or Replace apply modes so restores validate before
   mutating local blocklist state.
+- Added selective backup and restore sections for blocklist, whitelist,
+  wildcard/range rules, SMS keyword rules, non-secret settings, and opt-in logs
+  so transfers can avoid unrelated personal data.
 - Enabled checked-in Room schema export with instrumented migration coverage
   from database versions 5 through 9, plus a CI guard that fails on
   uncommitted schema drift.

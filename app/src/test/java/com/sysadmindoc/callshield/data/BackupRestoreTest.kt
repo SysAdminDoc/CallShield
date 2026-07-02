@@ -5,8 +5,17 @@ import com.sysadmindoc.callshield.data.BackupRestore.BackupNumber
 import com.sysadmindoc.callshield.data.BackupRestore.BackupWhitelist
 import com.sysadmindoc.callshield.data.BackupRestore.BackupWildcard
 import com.sysadmindoc.callshield.data.BackupRestore.BackupKeyword
+import com.sysadmindoc.callshield.data.BackupRestore.BackupLogEntry
+import com.sysadmindoc.callshield.data.BackupRestore.BackupRangeRule
+import com.sysadmindoc.callshield.data.BackupRestore.BackupSection
+import com.sysadmindoc.callshield.data.BackupRestore.BackupSettings
 import com.sysadmindoc.callshield.data.BackupRestore.RestoreResult
-import org.junit.Assert.*
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -15,16 +24,15 @@ import org.junit.Test
  * so we test the model/contract side here.
  */
 class BackupRestoreTest {
-
     // ── Backup data class defaults ───────────────────────────────────────
 
     @Test
-    fun `Backup default version is 3`() {
-        // v3 (v1.6.3): wildcard and keyword rules now carry schedule fields.
-        // Older versions (v1, v2) are still accepted by the restore path
-        // but writers always emit v3.
+    fun `Backup default version is 4`() {
+        // v4 adds selective range-rule, settings, and log sections. Older
+        // versions (v1-v3) are still accepted by the restore path, but
+        // writers always emit v4.
         val backup = Backup()
-        assertEquals(3, backup.version)
+        assertEquals(4, backup.version)
     }
 
     @Test
@@ -40,6 +48,9 @@ class BackupRestoreTest {
         assertTrue(backup.whitelistNumbers.isEmpty())
         assertTrue(backup.wildcardRules.isEmpty())
         assertTrue(backup.keywordRules.isEmpty())
+        assertTrue(backup.rangeRules.isEmpty())
+        assertNull(backup.settings)
+        assertTrue(backup.logs.isEmpty())
     }
 
     @Test
@@ -247,10 +258,10 @@ class BackupRestoreTest {
     // ── Backup v2 format with populated data ─────────────────────────────
 
     @Test
-    fun `Backup v3 with all sections populated`() {
+    fun `Backup v4 with all sections populated`() {
         val backup =
             Backup(
-                version = 3,
+                version = 4,
                 blockedNumbers =
                     listOf(
                         BackupNumber("2125551234", "robocall", "Test", "user"),
@@ -268,13 +279,19 @@ class BackupRestoreTest {
                     listOf(
                         BackupKeyword("free money", false, "Spam phrase", true),
                     ),
+                rangeRules = listOf(BackupRangeRule("+1555#######", "Range", true)),
+                settings = BackupSettings(blockCallsEnabled = false),
+                logs = listOf(BackupLogEntry("+15551234567", timestamp = 1000L, matchReason = "test")),
             )
-        assertEquals(3, backup.version)
+        assertEquals(4, backup.version)
         assertEquals(2, backup.blockedNumbers.size)
         assertEquals(1, backup.whitelistNumbers.size)
         assertTrue(backup.whitelistNumbers.single().isEmergency)
         assertEquals(1, backup.wildcardRules.size)
         assertEquals(1, backup.keywordRules.size)
+        assertEquals(1, backup.rangeRules.size)
+        assertNotNull(backup.settings)
+        assertEquals(1, backup.logs.size)
     }
 
     @Test
@@ -377,6 +394,30 @@ class BackupRestoreTest {
             }
         val backup = Backup(blockedNumbers = numbers)
         assertEquals(100, backup.blockedNumbers.size)
+    }
+
+    @Test
+    fun `restore validation filters to selected sections`() {
+        val validation =
+            BackupRestore.validateBackupForRestore(
+                Backup(
+                    blockedNumbers = listOf(validBackupNumber()),
+                    rangeRules = listOf(BackupRangeRule(" +1555####### ", "  Range  ", true)),
+                    settings = BackupSettings(blockCallsEnabled = false),
+                    logs = listOf(BackupLogEntry("(212) 555-0000", timestamp = -1L, confidence = 150)),
+                ),
+                sections = setOf(BackupSection.RANGE_RULES, BackupSection.LOGS),
+            )
+
+        assertTrue(validation is BackupRestore.RestoreValidation.Valid)
+        val payload = (validation as BackupRestore.RestoreValidation.Valid).payload
+        assertEquals(BackupRestore.RestoreCounts(rangeRules = 1, logs = 1), payload.counts)
+        assertTrue(payload.blockedNumbers.isEmpty())
+        assertNull(payload.settings)
+        assertEquals("+1555#######", payload.rangeRules.single().pattern)
+        assertEquals("2125550000", payload.logs.single().number)
+        assertEquals(0L, payload.logs.single().timestamp)
+        assertEquals(100, payload.logs.single().confidence)
     }
 
     private fun validBackupNumber(): BackupNumber = BackupNumber("2125551234", "spam", "Test", "user")

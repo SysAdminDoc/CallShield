@@ -59,6 +59,17 @@ internal const val SETTINGS_QUIET_HOURS_TOGGLE_TAG = "settings_quiet_hours_toggl
 internal const val SETTINGS_ANSWERED_CALLER_TOGGLE_TAG = "settings_answered_caller_toggle"
 internal const val SETTINGS_RESTORE_PREVIEW_TAG = "settings_restore_preview"
 
+private val backupSectionOrder =
+    listOf(
+        BackupRestore.BackupSection.BLOCKED_NUMBERS,
+        BackupRestore.BackupSection.WHITELIST,
+        BackupRestore.BackupSection.WILDCARD_RULES,
+        BackupRestore.BackupSection.RANGE_RULES,
+        BackupRestore.BackupSection.KEYWORD_RULES,
+        BackupRestore.BackupSection.SETTINGS,
+        BackupRestore.BackupSection.LOGS,
+    )
+
 @Composable
 fun SettingsScreen(viewModel: MainViewModel) {
     val context = LocalContext.current
@@ -534,18 +545,36 @@ fun SettingsScreen(viewModel: MainViewModel) {
 
         // Backup/restore
         SettingsCard(stringResource(R.string.settings_backup_restore)) {
+            var backupSections by remember { mutableStateOf(BackupRestore.defaultExportSections) }
+            var restoreSections by remember { mutableStateOf(BackupRestore.defaultRestoreSections) }
             val restoreLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-                uri?.let { viewModel.restore(it) }
+                uri?.let { viewModel.restore(it, restoreSections) }
             }
             val restoreResult by viewModel.restoreResult.collectAsStateWithLifecycle()
             val restorePreview by viewModel.restorePreview.collectAsStateWithLifecycle()
 
+            BackupSectionPicker(
+                title = stringResource(R.string.settings_backup_sections_title),
+                selectedSections = backupSections,
+                onSelectedSectionsChange = { backupSections = it },
+            )
+            Spacer(Modifier.height(8.dp))
+            BackupSectionPicker(
+                title = stringResource(R.string.settings_restore_sections_title),
+                selectedSections = restoreSections,
+                onSelectedSectionsChange = {
+                    restoreSections = it
+                    viewModel.clearRestorePreview()
+                },
+            )
+            Spacer(Modifier.height(8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 PremiumActionButton(
                     label = stringResource(R.string.settings_backup),
                     icon = Icons.Default.Backup,
                     color = CatGreen,
-                    onClick = { hapticTick(context); viewModel.backup() },
+                    onClick = { hapticTick(context); viewModel.backup(backupSections) },
+                    enabled = backupSections.isNotEmpty(),
                     modifier = Modifier.weight(1f)
                 )
                 PremiumActionButton(
@@ -553,6 +582,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
                     icon = Icons.Default.Restore,
                     color = CatBlue,
                     onClick = { hapticTick(context); restoreLauncher.launch(arrayOf("application/json", "text/plain")) },
+                    enabled = restoreSections.isNotEmpty(),
                     modifier = Modifier.weight(1f),
                     outlined = true
                 )
@@ -588,6 +618,16 @@ fun SettingsScreen(viewModel: MainViewModel) {
             }
             Spacer(Modifier.height(4.dp))
             Text(stringResource(R.string.settings_backup_includes), style = MaterialTheme.typography.labelSmall, color = CatOverlay)
+            if (
+                BackupRestore.BackupSection.LOGS in backupSections ||
+                BackupRestore.BackupSection.LOGS in restoreSections
+            ) {
+                Text(
+                    stringResource(R.string.settings_backup_logs_privacy),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = CatPeach,
+                )
+            }
         }
 
         // Advanced — optional API key for caller name lookup
@@ -784,6 +824,77 @@ fun SettingsScreen(viewModel: MainViewModel) {
 }
 
 @Composable
+@Suppress("FunctionNaming", "ktlint:standard:function-naming")
+private fun BackupSectionPicker(
+    title: String,
+    selectedSections: Set<BackupRestore.BackupSection>,
+    onSelectedSectionsChange: (Set<BackupRestore.BackupSection>) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(title, style = MaterialTheme.typography.labelMedium, color = CatSubtext)
+        backupSectionOrder.forEach { section ->
+            val selected = section in selectedSections
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Checkbox(
+                    checked = selected,
+                    onCheckedChange = { checked ->
+                        onSelectedSectionsChange(
+                            if (checked) {
+                                selectedSections + section
+                            } else {
+                                selectedSections - section
+                            },
+                        )
+                    },
+                    colors = CheckboxDefaults.colors(checkedColor = CatGreen, uncheckedColor = CatOverlay),
+                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        backupSectionTitle(section),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = CatText,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Text(
+                        backupSectionDescription(section),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (section == BackupRestore.BackupSection.LOGS) CatPeach else CatOverlay,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun backupSectionTitle(section: BackupRestore.BackupSection): String =
+    when (section) {
+        BackupRestore.BackupSection.BLOCKED_NUMBERS -> stringResource(R.string.backup_section_blocked)
+        BackupRestore.BackupSection.WHITELIST -> stringResource(R.string.backup_section_whitelist)
+        BackupRestore.BackupSection.WILDCARD_RULES -> stringResource(R.string.backup_section_wildcards)
+        BackupRestore.BackupSection.RANGE_RULES -> stringResource(R.string.backup_section_ranges)
+        BackupRestore.BackupSection.KEYWORD_RULES -> stringResource(R.string.backup_section_keywords)
+        BackupRestore.BackupSection.SETTINGS -> stringResource(R.string.backup_section_settings)
+        BackupRestore.BackupSection.LOGS -> stringResource(R.string.backup_section_logs)
+    }
+
+@Composable
+private fun backupSectionDescription(section: BackupRestore.BackupSection): String =
+    when (section) {
+        BackupRestore.BackupSection.BLOCKED_NUMBERS -> stringResource(R.string.backup_section_blocked_desc)
+        BackupRestore.BackupSection.WHITELIST -> stringResource(R.string.backup_section_whitelist_desc)
+        BackupRestore.BackupSection.WILDCARD_RULES -> stringResource(R.string.backup_section_wildcards_desc)
+        BackupRestore.BackupSection.RANGE_RULES -> stringResource(R.string.backup_section_ranges_desc)
+        BackupRestore.BackupSection.KEYWORD_RULES -> stringResource(R.string.backup_section_keywords_desc)
+        BackupRestore.BackupSection.SETTINGS -> stringResource(R.string.backup_section_settings_desc)
+        BackupRestore.BackupSection.LOGS -> stringResource(R.string.backup_section_logs_desc)
+    }
+
+@Composable
 @Suppress("FunctionNaming", "LongMethod", "ktlint:standard:function-naming")
 internal fun RestorePreviewPanel(
     preview: BackupRestore.RestorePreview,
@@ -829,11 +940,28 @@ internal fun RestorePreviewPanel(
                             counts.whitelistNumbers,
                             counts.wildcardRules,
                             counts.keywordRules,
+                            counts.rangeRules,
+                            counts.settings,
+                            counts.logs,
                         ),
                         style = MaterialTheme.typography.bodySmall,
                         color = CatSubtext,
                     )
                 }
+            }
+            if (counts.settings > 0) {
+                Text(
+                    stringResource(R.string.backup_restore_preview_settings_privacy),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = CatOverlay,
+                )
+            }
+            if (counts.logs > 0) {
+                Text(
+                    stringResource(R.string.backup_restore_preview_logs_privacy),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = CatPeach,
+                )
             }
             Text(
                 if (conflictTotal > 0) {

@@ -538,13 +538,6 @@ Plus RFC 8588 (SHAKEN profile), RFC 9027 (Traceback), Apache SpamAssassin / rspa
 
 ## Research-Driven Additions
 
-- [ ] P2 - Add selective backup/export/restore sections
-  Why: Current backup preview supports merge/replace for the combined payload, but users need to migrate rules without importing unrelated logs, settings, or stale personal data.
-  Evidence: `BackupRestore.kt`; `MainViewModel.kt`; `BackupRestoreTest.kt`; SpamBlocker v5.9 selective backup/restore release notes
-  Touches: `app/src/main/java/com/sysadmindoc/callshield/data/BackupRestore.kt`, `ui/MainViewModel.kt`, backup/restore UI strings, `BackupRestoreTest.kt`, `BackupRestoreIntegrationTest.kt`
-  Acceptance: Users can export and restore blocklist, whitelist, wildcard/range rules, SMS keyword rules, settings, and logs independently; preview shows selected counts/privacy impact; v1-v3 backups still restore safely.
-  Complexity: M
-
 - [ ] P2 - Add temporary allow/block expiry actions for one-off caller decisions
   Why: Users need reversible short-lived decisions for active callers without permanently changing blocklists; SpamBlocker users requested temporary repeated-call blocking and commercial blockers expose quick allow/block recovery actions.
   Evidence: SpamBlocker issue #604; existing `CallbackDetector.kt`; `BlockedLogScreen.kt`; `RecentCallsScreen.kt`; YouMail allow/block-list recovery patterns

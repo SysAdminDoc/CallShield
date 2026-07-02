@@ -264,6 +264,7 @@ class SpamRepository(
     suspend fun setTimeBlockStart(hour: Int) = settingsRepository.setTimeBlockStart(hour)
     suspend fun setTimeBlockEnd(hour: Int) = settingsRepository.setTimeBlockEnd(hour)
     suspend fun setFreqEscalation(enabled: Boolean) = settingsRepository.setFreqEscalation(enabled)
+    suspend fun setFreqThreshold(threshold: Int) = settingsRepository.setFreqThreshold(threshold)
 
     /**
      * Read the full preferences snapshot once. Use this from hot paths

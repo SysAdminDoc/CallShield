@@ -220,6 +220,8 @@ class SettingsRepository(
         dataStore.edit { it[SpamRepository.KEY_TIME_BLOCK_END] = hour }
     suspend fun setFreqEscalation(enabled: Boolean) =
         dataStore.edit { it[SpamRepository.KEY_FREQ_ESCALATION] = enabled }
+    suspend fun setFreqThreshold(threshold: Int) =
+        dataStore.edit { it[SpamRepository.KEY_FREQ_THRESHOLD] = threshold.coerceIn(1, 25) }
 
     suspend fun readPrefsSnapshot(): Preferences = dataStore.data.first()
 

@@ -139,10 +139,10 @@ class SettingsTest {
 
         composeRule.onNodeWithTag(SETTINGS_RESTORE_PREVIEW_TAG).assertIsDisplayed()
         composeRule
-            .onNodeWithText("Blocked: 2; Whitelist: 1; Wildcards: 1; Keywords: 1")
+            .onNodeWithText("Blocked: 2; Whitelist: 1; Wildcards: 1; Keywords: 1; Ranges: 0; Settings: 0; Logs: 0")
             .assertIsDisplayed()
         composeRule
-            .onNodeWithText("1 existing items have matching keys and may be updated during merge.")
+            .onNodeWithText("1 existing item has a matching key and may be updated during merge.")
             .assertIsDisplayed()
 
         composeRule.onNodeWithText("Merge").performClick()
