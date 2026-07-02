@@ -559,13 +559,6 @@ Plus RFC 8588 (SHAKEN profile), RFC 9027 (Traceback), Apache SpamAssassin / rspa
   Acceptance: Users can export and restore blocklist, whitelist, wildcard/range rules, SMS keyword rules, settings, and logs independently; preview shows selected counts/privacy impact; v1-v3 backups still restore safely.
   Complexity: M
 
-- [ ] P1 - Add size, row, and schema guardrails for first-party GitHub data feeds
-  Why: Trusted GitHub raw spam/hot/domain/model feeds still use unbounded body reads before parsing, so a malformed or unexpectedly large first-party response can waste memory or poison Room/hot caches.
-  Evidence: `app/src/main/java/com/sysadmindoc/callshield/data/remote/GitHubDataSource.kt`; SpamBlocker v5.11 large API-response crash fix; Pi-hole gravity rebuild model
-  Touches: `GitHubDataSource.kt`, `SyncRepository.kt`, `HotDataSync.kt`, `SpamMLScorer.kt`, `GitHubDataSourceTest.kt`, sync/hot-list integration tests
-  Acceptance: Each GitHub feed has a documented byte cap, max parsed row count, schema/version validation where applicable, typed failure reason, and atomic fallback that preserves the last known-good local database/model on oversize or malformed content.
-  Complexity: M
-
 - [ ] P1 - Add URLhaus privacy mode and local-domain-first SMS URL checks
   Why: URLhaus checks are useful, but full phishing URLs can contain per-victim tokens; CallShield should use local domain feeds first and submit only the minimum configured URL form remotely.
   Evidence: `app/src/main/java/com/sysadmindoc/callshield/data/remote/UrlSafetyChecker.kt`; `SmsContentAnalyzer.kt`; URLhaus API docs; `spam_domains.json` hot-feed path

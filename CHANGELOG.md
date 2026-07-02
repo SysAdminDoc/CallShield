@@ -53,6 +53,9 @@ Distribution prep after the v1.7.10 release.
 - Added bounded response-body guards and typed fallback statuses for
   enrichment lookups so oversized or malformed third-party responses do not
   crash overlay, details, or line-type parsing.
+- Added byte, row-count, and schema guardrails for first-party GitHub spam,
+  hot-list, spam-domain, and model-weight feeds so malformed responses fail
+  before replacing the last known-good local data.
 - Added typed per-source enrichment diagnostics and privacy copy across overlay
   and number details so timeout, rate-limit, parse-error, oversized, disabled,
   unavailable, clean, and found states are visible without logging raw queried
