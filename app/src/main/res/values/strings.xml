@@ -433,8 +433,8 @@
     <string name="settings_detection_engines">Detection Engines</string>
     <string name="settings_stir_shaken">STIR/SHAKEN</string>
     <string name="settings_stir_shaken_desc">Block calls failing carrier caller ID auth (Android 11+)</string>
-    <string name="settings_stir_trusted_allow">STIR Trusted-Caller Allow</string>
-    <string name="settings_stir_trusted_allow_desc">Allow calls verified by your carrier (attestation A/B) through heuristic &amp; ML layers. Note: up to 13&#37; of A-level attestations are unreliable due to SIM-box fraud — your explicit block rules always override. Disable if you see spam calls with carrier verification.</string>
+    <string name="settings_stir_trusted_allow">STIR/SHAKEN Authenticated Allow</string>
+    <string name="settings_stir_trusted_allow_desc">Let calls with carrier-authenticated caller ID bypass only weak heuristic and ML layers. This is not a spam verdict; explicit user, system, wildcard, range, and failed-verification blocks still win first.</string>
     <string name="settings_answered_caller_trust">Answered-Caller Trust</string>
     <string name="settings_answered_caller_trust_desc">Let numbers through after repeated answered calls on this device. Explicit block rules still win first.</string>
     <string name="settings_answered_caller_threshold">Answered calls</string>

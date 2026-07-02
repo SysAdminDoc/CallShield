@@ -52,6 +52,27 @@ class BlockReasoningTest {
     }
 
     @Test
+    fun `stir passed explanation avoids safe caller framing`() {
+        val r = BlockReasoning.explain("stir_shaken_trusted", "", 0)
+        val text = "${r.headline} ${r.bullets.joinToString(" ")}".lowercase()
+
+        assertTrue(r.headline.contains("authentication passed"))
+        assertTrue(text.contains("not a verdict"))
+        assertTrue(text.contains("explicit user and system block rules"))
+        assertTrue(!text.contains("safe"))
+        assertTrue(!text.contains("trusted"))
+    }
+
+    @Test
+    fun `stir failed explanation uses authentication failure language`() {
+        val r = BlockReasoning.explain("stir_shaken_failed", "", 100)
+
+        assertTrue(r.headline.contains("authentication failed"))
+        assertTrue(r.bullets.any { it.contains("could not authenticate") })
+        assertTrue(r.bullets.any { it.contains("spoofed") })
+    }
+
+    @Test
     fun `unknown match reason falls back to a safe default`() {
         val r = BlockReasoning.explain("something_new", "ad-hoc desc", 42)
         assertTrue(r.headline.contains("something_new"))
