@@ -538,13 +538,6 @@ Plus RFC 8588 (SHAKEN profile), RFC 9027 (Traceback), Apache SpamAssassin / rspa
 
 ## Research-Driven Additions
 
-- [ ] P2 - Expand target-platform smoke tests for Android 16/17 behavior
-  Why: API 36 smoke coverage exists, but Android 16 `SDK_INT_FULL`/notification behavior and Android 17 OTP broadcast delay are not pinned in a compatibility matrix.
-  Evidence: Android 16 behavior changes; Android 17 behavior changes; `androidTest/.../TargetSdkBehaviorSmokeTest.kt`
-  Touches: `app/src/androidTest/java/com/sysadmindoc/callshield/platform/TargetSdkBehaviorSmokeTest.kt`, `AndroidManifest.xml`, `NotificationHelper.kt`, test docs
-  Acceptance: Instrumented smoke tests assert permissions, protected services, notification/full-screen assumptions, SDK version branching, and SMS/OTP documented behavior for target SDK 36+.
-  Complexity: M
-
 - [ ] P2 - Add selective backup/export/restore sections
   Why: Current backup preview supports merge/replace for the combined payload, but users need to migrate rules without importing unrelated logs, settings, or stale personal data.
   Evidence: `BackupRestore.kt`; `MainViewModel.kt`; `BackupRestoreTest.kt`; SpamBlocker v5.9 selective backup/restore release notes

@@ -62,6 +62,9 @@ Distribution prep after the v1.7.10 release.
 - Added URLhaus privacy mode and local-domain-first SMS/RCS URL checks so
   spam-domain feed matches avoid remote lookups, fragments are always stripped,
   and query strings are removed by default before URLhaus submission.
+- Guarded the app-start contacts cache observer behind `READ_CONTACTS` so a
+  clean install without contacts permission still starts and runs instrumented
+  platform smoke tests.
 - Added typed per-source enrichment diagnostics and privacy copy across overlay
   and number details so timeout, rate-limit, parse-error, oversized, disabled,
   unavailable, clean, and found states are visible without logging raw queried
@@ -86,8 +89,10 @@ Distribution prep after the v1.7.10 release.
 - Enabled checked-in Room schema export with instrumented migration coverage
   from database versions 5 through 9, plus a CI guard that fails on
   uncommitted schema drift.
-- Added a high-API instrumented smoke lane for target-SDK permission and
-  protected-service declarations while keeping the full API 29 emulator suite.
+- Added a high-API instrumented smoke lane for target-SDK permission,
+  protected-service, Android 16 `SDK_INT_FULL`, notification-channel,
+  full-screen-permission, and Android 17 OTP-delay compatibility assumptions
+  while keeping the full API 29 emulator suite.
 - Migrated Compose ViewModel Flow collection to lifecycle-aware
   `collectAsStateWithLifecycle()` so UI-only collectors stop with their
   lifecycle instead of continuing while screens are stopped.

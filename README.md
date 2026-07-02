@@ -322,6 +322,7 @@ RELEASE_KEY_PASSWORD=...
 
 ```bash
 ./gradlew testDebugUnitTest   # 711 tests
+./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.sysadmindoc.callshield.platform.TargetSdkBehaviorSmokeTest
 ```
 
 Run tests, lint, release metadata checks, and artifact builds locally before publishing.
