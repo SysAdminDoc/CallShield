@@ -92,6 +92,7 @@ class CallShieldScreeningService : CallScreeningService() {
                     )
                 } else {
                     val repeatedUrgentAllow = result.matchSource == "repeated_urgent"
+                    val suppressFeedback = shouldSuppressAfterCallFeedback(result.matchSource)
                     // Unknown non-contact caller — area-code-only caller ID overlay
                     val location = AreaCodeLookup.lookup(number)
                     if (location != null) {
@@ -108,7 +109,7 @@ class CallShieldScreeningService : CallScreeningService() {
 
                     if (repeatedUrgentAllow) {
                         NotificationHelper.notifyRepeatedUrgentAllowed(appContext, number)
-                    } else {
+                    } else if (!suppressFeedback) {
                         // After-call feedback notification, deferred. Must run on
                         // appScope since the service is typically unbound by the
                         // time 10 s has passed. Contact status is re-checked at
@@ -249,6 +250,9 @@ class CallShieldScreeningService : CallScreeningService() {
         ): Boolean =
             silentVoicemailEnabled ||
                 (autoMuteLowConfidenceEnabled && confidence < AUTO_MUTE_CONFIDENCE_THRESHOLD)
+
+        fun shouldSuppressAfterCallFeedback(matchSource: String): Boolean =
+            matchSource == "emergency_callback"
     }
 
     private fun blockedCallLogKey(

@@ -538,13 +538,6 @@ Plus RFC 8588 (SHAKEN profile), RFC 9027 (Traceback), Apache SpamAssassin / rspa
 
 ## Research-Driven Additions
 
-- [ ] P1 - Add emergency-callback grace window after local emergency calls
-  Why: Emergency contacts are supported, but callbacks from dispatch, hospitals, or unknown public-safety numbers after a 911/emergency call can still look like unknown callers; SpamBlocker treats emergency semantics as priority-sensitive.
-  Evidence: SpamBlocker v5.10 emergency priority change; `CallShieldScreeningService.kt`; `CallbackDetector.kt`
-  Touches: `data/CallbackDetector.kt`, `data/checker/Checkers.kt`, `CallShieldScreeningService.kt`, settings copy, unit tests
-  Acceptance: After the user places a recognized emergency call, unknown incoming callbacks within a short configurable window are allowed or auto-muted with a clear log reason, while explicit user/system blocks still win.
-  Complexity: M
-
 - [ ] P1 - Add SMS burst/flood detector with review-first recovery
   Why: CallShield scores individual SMS bodies well, but OTP/phishing floods are a campaign behavior; Android 17 OTP broadcast delays make explicit non-OTP and delayed-OTP behavior worth separating.
   Evidence: Android 17 behavior changes; `SmsReceiver.kt`; `SmsContextChecker.kt`; `SpamHeuristics.isRapidFire`

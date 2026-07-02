@@ -2,6 +2,7 @@ package com.sysadmindoc.callshield.data
 
 import android.content.Context
 import android.provider.CallLog
+import com.sysadmindoc.callshield.util.filterAsciiDigits
 import com.sysadmindoc.callshield.util.filterAsciiDigitsLast
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -143,6 +144,37 @@ class CallbackDetector @Inject constructor() {
         false
     }
 
+    suspend fun hasRecentEmergencyCall(
+        context: Context,
+        windowMinutes: Int = DEFAULT_EMERGENCY_CALLBACK_WINDOW_MINUTES,
+    ): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val query = buildRecentEmergencyCallQuery(
+                nowMillis = System.currentTimeMillis(),
+                windowMinutes = windowMinutes,
+            )
+            val cursor = context.contentResolver.query(
+                CallLog.Calls.CONTENT_URI,
+                arrayOf(CallLog.Calls.NUMBER),
+                query.selection,
+                query.selectionArgs,
+                "${CallLog.Calls.DATE} DESC",
+            )
+            cursor?.use { c ->
+                val numIdx = c.getColumnIndex(CallLog.Calls.NUMBER)
+                if (numIdx < 0) return@withContext false
+                while (c.moveToNext()) {
+                    if (isEmergencyNumberCandidate(c.getString(numIdx) ?: "")) {
+                        return@withContext true
+                    }
+                }
+            }
+        } catch (_: SecurityException) {
+            return@withContext false
+        }
+        false
+    }
+
     internal fun buildRecentlyDialedQuery(
         nowMillis: Long,
         windowHours: Int,
@@ -202,11 +234,41 @@ class CallbackDetector @Inject constructor() {
         )
     }
 
+    internal fun buildRecentEmergencyCallQuery(
+        nowMillis: Long,
+        windowMinutes: Int,
+    ): CallLogQuery {
+        val safeWindowMinutes = windowMinutes.coerceAtLeast(1)
+        val cutoff = (nowMillis - safeWindowMinutes * MILLIS_PER_MINUTE).toString()
+        return CallLogQuery(
+            selection = "${CallLog.Calls.TYPE} = ? AND ${CallLog.Calls.DATE} > ?",
+            selectionArgs = arrayOf(
+                CallLog.Calls.OUTGOING_TYPE.toString(),
+                cutoff,
+            )
+        )
+    }
+
+    internal fun isEmergencyNumberCandidate(number: String): Boolean {
+        val digits = filterAsciiDigits(number)
+        return digits in EMERGENCY_NUMBERS ||
+            (
+                digits.length == EMERGENCY_COUNTRY_PREFIXED_DIGITS &&
+                    digits.startsWith(EMERGENCY_COUNTRY_PREFIX) &&
+                    digits.drop(1) in EMERGENCY_NUMBERS
+                )
+    }
+
     companion object {
         const val DEFAULT_ANSWERED_CALLER_WINDOW_DAYS = 30
         const val DEFAULT_ANSWERED_CALLER_THRESHOLD = 2
+        const val DEFAULT_EMERGENCY_CALLBACK_WINDOW_MINUTES = 240
         const val MIN_ANSWERED_CALL_DURATION_SECONDS = 1
         private const val MILLIS_PER_DAY = 86_400_000L
+        private const val MILLIS_PER_MINUTE = 60_000L
+        private const val EMERGENCY_COUNTRY_PREFIXED_DIGITS = 4
+        private const val EMERGENCY_COUNTRY_PREFIX = "1"
+        private val EMERGENCY_NUMBERS = setOf("000", "111", "112", "118", "119", "911", "999")
 
         val shared: CallbackDetector = CallbackDetector()
 
@@ -234,6 +296,12 @@ class CallbackDetector @Inject constructor() {
         ): Boolean =
             shared.wasAnsweredRepeatedly(context, number, windowDays, threshold, minDurationSeconds)
 
+        suspend fun hasRecentEmergencyCall(
+            context: Context,
+            windowMinutes: Int = DEFAULT_EMERGENCY_CALLBACK_WINDOW_MINUTES,
+        ): Boolean =
+            shared.hasRecentEmergencyCall(context, windowMinutes)
+
         internal fun buildRecentlyDialedQuery(
             nowMillis: Long,
             windowHours: Int,
@@ -255,5 +323,14 @@ class CallbackDetector @Inject constructor() {
             last7Digits: String,
         ): CallLogQuery =
             shared.buildAnsweredCallerQuery(nowMillis, windowDays, minDurationSeconds, last7Digits)
+
+        internal fun buildRecentEmergencyCallQuery(
+            nowMillis: Long,
+            windowMinutes: Int,
+        ): CallLogQuery =
+            shared.buildRecentEmergencyCallQuery(nowMillis, windowMinutes)
+
+        internal fun isEmergencyNumberCandidate(number: String): Boolean =
+            shared.isEmergencyNumberCandidate(number)
     }
 }

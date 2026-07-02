@@ -2,6 +2,7 @@ package com.sysadmindoc.callshield.service
 
 import com.sysadmindoc.callshield.service.CallShieldScreeningService.Companion.AUTO_MUTE_CONFIDENCE_THRESHOLD
 import com.sysadmindoc.callshield.service.CallShieldScreeningService.Companion.shouldSilence
+import com.sysadmindoc.callshield.service.CallShieldScreeningService.Companion.shouldSuppressAfterCallFeedback
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -94,5 +95,11 @@ class CallShieldScreeningServiceAutoMuteTest {
         // ever diverges from the heuristic threshold, update both.
         assertTrue("threshold must be positive", AUTO_MUTE_CONFIDENCE_THRESHOLD > 0)
         assertTrue("threshold must be <= 100", AUTO_MUTE_CONFIDENCE_THRESHOLD <= 100)
+    }
+
+    @Test fun `emergency callback allow suppresses after-call spam prompt`() {
+        assertTrue(shouldSuppressAfterCallFeedback("emergency_callback"))
+        assertFalse(shouldSuppressAfterCallFeedback("answered_caller"))
+        assertFalse(shouldSuppressAfterCallFeedback("manual_whitelist"))
     }
 }

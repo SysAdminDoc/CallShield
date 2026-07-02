@@ -355,6 +355,28 @@ internal class AnsweredCallerChecker(
     }
 }
 
+internal class EmergencyCallbackChecker(
+    private val appContext: Context,
+    private val callbackDetector: CallbackDetector,
+) : IChecker {
+    override val priority = CheckerPriority.EMERGENCY_CALLBACK
+    override val name = "emergency_callback"
+
+    override suspend fun isEnabled(ctx: CheckContext): Boolean =
+        ctx.prefs[SpamRepository.KEY_EMERGENCY_CALLBACK_GRACE] ?: true
+
+    override suspend fun check(ctx: CheckContext): BlockResult? {
+        val windowMinutes = (
+            ctx.prefs[SpamRepository.KEY_EMERGENCY_CALLBACK_WINDOW_MINUTES]
+                ?: CallbackDetector.DEFAULT_EMERGENCY_CALLBACK_WINDOW_MINUTES
+            ).coerceAtLeast(1)
+
+        return if (callbackDetector.hasRecentEmergencyCall(appContext, windowMinutes)) {
+            BlockResult.allow("emergency_callback")
+        } else null
+    }
+}
+
 internal class RepeatedUrgentChecker(
     private val appContext: Context,
     private val callbackDetector: CallbackDetector,

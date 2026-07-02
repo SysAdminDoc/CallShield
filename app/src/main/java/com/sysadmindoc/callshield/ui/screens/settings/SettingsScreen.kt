@@ -45,6 +45,8 @@ import com.sysadmindoc.callshield.data.repository.ANSWERED_CALLER_THRESHOLD_MAX
 import com.sysadmindoc.callshield.data.repository.ANSWERED_CALLER_THRESHOLD_MIN
 import com.sysadmindoc.callshield.data.repository.ANSWERED_CALLER_WINDOW_DAYS_MAX
 import com.sysadmindoc.callshield.data.repository.ANSWERED_CALLER_WINDOW_DAYS_MIN
+import com.sysadmindoc.callshield.data.repository.EMERGENCY_CALLBACK_WINDOW_MINUTES_MAX
+import com.sysadmindoc.callshield.data.repository.EMERGENCY_CALLBACK_WINDOW_MINUTES_MIN
 import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.theme.*
 
@@ -72,6 +74,8 @@ fun SettingsScreen(viewModel: MainViewModel) {
     val answeredCallerTrust by viewModel.answeredCallerTrustEnabled.collectAsStateWithLifecycle()
     val answeredCallerThreshold by viewModel.answeredCallerThreshold.collectAsStateWithLifecycle()
     val answeredCallerWindowDays by viewModel.answeredCallerWindowDays.collectAsStateWithLifecycle()
+    val emergencyCallbackGrace by viewModel.emergencyCallbackGraceEnabled.collectAsStateWithLifecycle()
+    val emergencyCallbackWindowMinutes by viewModel.emergencyCallbackWindowMinutes.collectAsStateWithLifecycle()
     val autoCleanup by viewModel.autoCleanupEnabled.collectAsStateWithLifecycle()
     val cleanupDays by viewModel.cleanupDays.collectAsStateWithLifecycle()
     val timeBlock by viewModel.timeBlockEnabled.collectAsStateWithLifecycle()
@@ -330,6 +334,30 @@ fun SettingsScreen(viewModel: MainViewModel) {
                 onThresholdChange = viewModel::setAnsweredCallerThreshold,
                 onWindowDaysChange = viewModel::setAnsweredCallerWindowDays,
             )
+            GradientDivider()
+            SettingsToggle(
+                stringResource(R.string.settings_emergency_callback_grace),
+                stringResource(R.string.settings_emergency_callback_grace_desc),
+                Icons.Default.Emergency,
+                emergencyCallbackGrace,
+                onCheckedChange = viewModel::setEmergencyCallbackGrace,
+            )
+            if (emergencyCallbackGrace) {
+                Spacer(Modifier.height(8.dp))
+                SettingsNumberStepper(
+                    label = stringResource(R.string.settings_emergency_callback_window),
+                    valueText = pluralStringResource(
+                        R.plurals.settings_emergency_callback_window_value,
+                        emergencyCallbackWindowMinutes,
+                        emergencyCallbackWindowMinutes,
+                    ),
+                    value = emergencyCallbackWindowMinutes,
+                    minValue = EMERGENCY_CALLBACK_WINDOW_MINUTES_MIN,
+                    maxValue = EMERGENCY_CALLBACK_WINDOW_MINUTES_MAX,
+                    step = EMERGENCY_CALLBACK_WINDOW_MINUTES_STEP,
+                    onValueChange = viewModel::setEmergencyCallbackWindowMinutes,
+                )
+            }
             GradientDivider()
             SettingsToggle(stringResource(R.string.settings_neighbor_spoofing), stringResource(R.string.settings_neighbor_spoofing_desc), Icons.Default.NearMe, neighborSpoof) { viewModel.setNeighborSpoof(it) }
             GradientDivider()
@@ -808,6 +836,7 @@ private fun SettingsNumberStepper(
     value: Int,
     minValue: Int,
     maxValue: Int,
+    step: Int = 1,
     onValueChange: (Int) -> Unit,
 ) {
     Row(
@@ -821,7 +850,7 @@ private fun SettingsNumberStepper(
         }
         Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             IconButton(
-                onClick = { onValueChange((value - 1).coerceAtLeast(minValue)) },
+                onClick = { onValueChange((value - step).coerceAtLeast(minValue)) },
                 enabled = value > minValue,
             ) {
                 Icon(
@@ -831,7 +860,7 @@ private fun SettingsNumberStepper(
                 )
             }
             IconButton(
-                onClick = { onValueChange((value + 1).coerceAtMost(maxValue)) },
+                onClick = { onValueChange((value + step).coerceAtMost(maxValue)) },
                 enabled = value < maxValue,
             ) {
                 Icon(
@@ -843,6 +872,8 @@ private fun SettingsNumberStepper(
         }
     }
 }
+
+private const val EMERGENCY_CALLBACK_WINDOW_MINUTES_STEP = 15
 
 @Composable
 internal fun QuietHoursSettings(
