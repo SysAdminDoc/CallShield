@@ -21,24 +21,27 @@ import java.util.concurrent.TimeUnit
  * Rate limit: generous, no key required.
  */
 object UrlSafetyChecker {
-
     data class UrlCheckResult(
         val url: String,
         val isMalicious: Boolean,
-        val threat: String = "",   // "malware", "phishing", "botnet_cc", etc.
-        val tags: List<String> = emptyList()
+        val threat: String = "", // "malware", "phishing", "botnet_cc", etc.
+        val tags: List<String> = emptyList(),
     )
 
     // URL pattern — extract all URLs from message body
-    private val URL_PATTERN = Regex(
-        """https?://[^\s<>"]+|www\.[^\s<>"]+""",
-        RegexOption.IGNORE_CASE
-    )
+    private val URL_PATTERN =
+        Regex(
+            """https?://[^\s<>"]+|www\.[^\s<>"]+""",
+            RegexOption.IGNORE_CASE,
+        )
 
-    private val client = HttpClient.shared.newBuilder()
-        .connectTimeout(10, TimeUnit.SECONDS)
-        .readTimeout(10, TimeUnit.SECONDS)
-        .build()
+    private val client =
+        HttpClient
+            .shared
+            .newBuilder()
+            .connectTimeout(10, TimeUnit.SECONDS)
+            .readTimeout(10, TimeUnit.SECONDS)
+            .build()
 
     private val JSON_TYPE = "application/json".toMediaType()
 
@@ -67,49 +70,69 @@ object UrlSafetyChecker {
     suspend fun checkUrl(
         url: String,
         stripQuery: Boolean = true,
-    ): UrlCheckResult = withContext(Dispatchers.IO) {
-        val lookupUrl = normalizeRemoteLookupUrl(url, stripQuery)
-        try {
-            val escapedUrl = lookupUrl.replace("\\", "\\\\").replace("\"", "\\\"")
-                .replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
-            val jsonBody = """{"url":"$escapedUrl"}""".toRequestBody(JSON_TYPE)
-            val request = Request.Builder()
-                .url("https://urlhaus-api.abuse.ch/v1/url/")
-                .post(jsonBody)
-                .header("User-Agent", "CallShield/1.0")
-                .build()
+    ): UrlCheckResult =
+        withContext(Dispatchers.IO) {
+            val lookupUrl = normalizeRemoteLookupUrl(url, stripQuery)
+            try {
+                val escapedUrl =
+                    lookupUrl
+                        .replace("\\", "\\\\")
+                        .replace("\"", "\\\"")
+                        .replace("\n", "\\n")
+                        .replace("\r", "\\r")
+                        .replace("\t", "\\t")
+                val jsonBody = """{"url":"$escapedUrl"}""".toRequestBody(JSON_TYPE)
+                val request =
+                    Request
+                        .Builder()
+                        .url("https://urlhaus-api.abuse.ch/v1/url/")
+                        .post(jsonBody)
+                        .header("User-Agent", "CallShield/1.0")
+                        .build()
 
-            client.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) return@withContext UrlCheckResult(lookupUrl, false)
+                client.newCall(request).execute().use { response ->
+                    if (!response.isSuccessful) return@withContext UrlCheckResult(lookupUrl, false)
 
-                val responseBody = response.body?.string() ?: return@withContext UrlCheckResult(lookupUrl, false)
+                    val responseBody =
+                        response.body?.string() ?: return@withContext UrlCheckResult(lookupUrl, false)
 
-                // Parse response
-                // {"query_status":"is_phishing","url_status":"online","threat":"phishing",...}
-                // {"query_status":"no_results"} — clean or unknown
-                val status = Regex(""""query_status"\s*:\s*"([^"]+)"""").find(responseBody)
-                    ?.groupValues?.get(1) ?: "no_results"
+                    // Parse response
+                    // {"query_status":"is_phishing","url_status":"online","threat":"phishing",...}
+                    // {"query_status":"no_results"} — clean or unknown
+                    val status =
+                        Regex(""""query_status"\s*:\s*"([^"]+)"""")
+                            .find(responseBody)
+                            ?.groupValues
+                            ?.get(1)
+                            ?: "no_results"
 
-                val isMalicious = status in listOf("is_malware", "is_phishing", "is_botnet_cc")
+                    val isMalicious = status in listOf("is_malware", "is_phishing", "is_botnet_cc")
 
-                if (!isMalicious) return@withContext UrlCheckResult(lookupUrl, false)
+                    if (!isMalicious) return@withContext UrlCheckResult(lookupUrl, false)
 
-                val threat = Regex(""""threat"\s*:\s*"([^"]+)"""").find(responseBody)
-                    ?.groupValues?.get(1) ?: status
+                    val threat =
+                        Regex(""""threat"\s*:\s*"([^"]+)"""")
+                            .find(responseBody)
+                            ?.groupValues
+                            ?.get(1)
+                            ?: status
 
-                val tagsMatch = Regex(""""tags"\s*:\s*\[([^\]]*)]""").find(responseBody)
-                val tags = tagsMatch?.groupValues?.get(1)
-                    ?.split(",")
-                    ?.map { it.trim().trim('"') }
-                    ?.filter { it.isNotEmpty() }
-                    ?: emptyList()
+                    val tagsMatch = Regex(""""tags"\s*:\s*\[([^\]]*)]""").find(responseBody)
+                    val tags =
+                        tagsMatch
+                            ?.groupValues
+                            ?.get(1)
+                            ?.split(",")
+                            ?.map { it.trim().trim('"') }
+                            ?.filter { it.isNotEmpty() }
+                            ?: emptyList()
 
-                UrlCheckResult(url = lookupUrl, isMalicious = true, threat = threat, tags = tags)
+                    UrlCheckResult(url = lookupUrl, isMalicious = true, threat = threat, tags = tags)
+                }
+            } catch (_: Exception) {
+                UrlCheckResult(lookupUrl, false) // Network error = don't flag
             }
-        } catch (_: Exception) {
-            UrlCheckResult(lookupUrl, false) // Network error = don't flag
         }
-    }
 
     internal fun localSpamDomainResult(
         url: String,
@@ -120,18 +143,21 @@ object UrlSafetyChecker {
             url = normalizeRemoteLookupUrl(url, stripQuery),
             isMalicious = true,
             threat = "known_spam_domain",
-            tags = listOf("local_spam_domain")
+            tags = listOf("local_spam_domain"),
         )
     }
 
-    internal fun extractCandidateUrls(body: String, limit: Int = 5): List<String> {
-        return URL_PATTERN.findAll(body)
+    internal fun extractCandidateUrls(
+        body: String,
+        limit: Int = 5,
+    ): List<String> =
+        URL_PATTERN
+            .findAll(body)
             .map { normalizeCandidateUrl(it.value) }
             .filter { it.isNotBlank() }
             .distinct()
             .take(limit.coerceAtLeast(1))
             .toList()
-    }
 
     internal fun normalizeCandidateUrl(rawUrl: String): String {
         val trimmed = rawUrl.trim().trimEnd('.', ',', '!', '?', ';', ':', ')', ']', '}')
@@ -147,9 +173,12 @@ object UrlSafetyChecker {
         stripQuery: Boolean = true,
     ): String {
         val normalizedUrl = normalizeCandidateUrl(rawUrl)
-        val parsedUrl = normalizedUrl.toHttpUrlOrNull() ?: return normalizedUrl
-            .substringBefore('#')
-            .let { if (stripQuery) it.substringBefore('?') else it }
+        val parsedUrl = normalizedUrl.toHttpUrlOrNull()
+        if (parsedUrl == null) {
+            val withoutFragment = normalizedUrl.substringBefore('#')
+            return if (stripQuery) withoutFragment.substringBefore('?') else withoutFragment
+        }
+
         val builder = parsedUrl.newBuilder().fragment(null)
         if (stripQuery) builder.query(null)
         return builder.build().toString()

@@ -53,14 +53,17 @@ class SmsReceiver : BroadcastReceiver() {
                 // parts. Capping at 16 KB matches the deep-analysis cap in
                 // [SmsContentAnalyzer] so we don't shovel data into a
                 // regex engine we won't read.
-                body = buildString {
-                    for (msg in messages) {
-                        val part = msg.messageBody ?: continue
-                        if (length >= MAX_REASSEMBLED_BODY) break
-                        val remaining = MAX_REASSEMBLED_BODY - length
-                        append(if (part.length <= remaining) part else part.substring(0, remaining))
+                body =
+                    buildString {
+                        for (msg in messages) {
+                            val part = msg.messageBody ?: continue
+                            if (length >= MAX_REASSEMBLED_BODY) break
+                            val remaining = MAX_REASSEMBLED_BODY - length
+                            append(
+                                if (part.length <= remaining) part else part.substring(0, remaining),
+                            )
+                        }
                     }
-                }
 
                 val result = checkSpamSms(sender, body, prefsSnapshot = prefs)
                 if (result.isSpam) {
@@ -69,7 +72,7 @@ class SmsReceiver : BroadcastReceiver() {
                         isCall = false,
                         smsBody = body,
                         matchReason = result.matchSource,
-                        confidence = result.confidence
+                        confidence = result.confidence,
                     )
                     // NOTE: we deliberately do NOT call abortBroadcast() here.
                     //

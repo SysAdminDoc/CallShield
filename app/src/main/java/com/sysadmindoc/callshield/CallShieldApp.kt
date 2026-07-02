@@ -1,6 +1,8 @@
 package com.sysadmindoc.callshield
 
+import android.Manifest
 import android.app.Application
+import android.content.pm.PackageManager
 import android.database.ContentObserver
 import android.net.Uri
 import android.os.Handler
@@ -16,8 +18,8 @@ import com.sysadmindoc.callshield.data.SystemBlockList
 import com.sysadmindoc.callshield.data.checker.CheckerDependencies
 import com.sysadmindoc.callshield.service.CrashReporter
 import com.sysadmindoc.callshield.service.DigestWorker
-import com.sysadmindoc.callshield.service.HotListSyncWorker
 import com.sysadmindoc.callshield.service.HotDataSync
+import com.sysadmindoc.callshield.service.HotListSyncWorker
 import com.sysadmindoc.callshield.service.NotificationHelper
 import com.sysadmindoc.callshield.service.PendingBlockedCallLogWorker
 import com.sysadmindoc.callshield.service.SyncWorker
@@ -40,7 +42,8 @@ class CallShieldApp :
 
     override val workManagerConfiguration: Configuration
         get() {
-            return Configuration.Builder()
+            return Configuration
+                .Builder()
                 .setWorkerFactory(workerFactory)
                 .build()
         }
@@ -86,28 +89,44 @@ class CallShieldApp :
     private fun registerCacheInvalidationObservers() {
         val handler = Handler(Looper.getMainLooper())
 
-        contentResolver.registerContentObserver(
-            ContactsContract.Contacts.CONTENT_URI,
-            true,
-            object : ContentObserver(handler) {
-                override fun onChange(selfChange: Boolean, uri: Uri?) {
-                    checkerDependencies.spamHeuristics.clearContactCache()
-                }
-            },
-        )
+        registerContactsObserver(handler)
 
         try {
             contentResolver.registerContentObserver(
                 BlockedNumberContract.BlockedNumbers.CONTENT_URI,
                 true,
                 object : ContentObserver(handler) {
-                    override fun onChange(selfChange: Boolean, uri: Uri?) {
+                    override fun onChange(
+                        selfChange: Boolean,
+                        uri: Uri?,
+                    ) {
                         SystemBlockList.clearCache()
                     }
                 },
             )
         } catch (_: SecurityException) {
             // Not the default dialer — BlockedNumberContract may not be readable.
+        }
+    }
+
+    private fun registerContactsObserver(handler: Handler) {
+        if (checkSelfPermission(Manifest.permission.READ_CONTACTS) != PackageManager.PERMISSION_GRANTED) return
+
+        try {
+            contentResolver.registerContentObserver(
+                ContactsContract.Contacts.CONTENT_URI,
+                true,
+                object : ContentObserver(handler) {
+                    override fun onChange(
+                        selfChange: Boolean,
+                        uri: Uri?,
+                    ) {
+                        checkerDependencies.spamHeuristics.clearContactCache()
+                    }
+                },
+            )
+        } catch (_: SecurityException) {
+            // Permission can be revoked between the check and registration.
         }
     }
 
