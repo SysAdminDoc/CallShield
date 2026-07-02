@@ -3,18 +3,18 @@ package com.sysadmindoc.callshield.service
 import android.app.Notification
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
+import androidx.datastore.preferences.core.Preferences
 import com.sysadmindoc.callshield.data.PushAlertRegistry
 import com.sysadmindoc.callshield.data.SpamRepository
-import com.sysadmindoc.callshield.util.filterAsciiDigits
-import com.sysadmindoc.callshield.data.repository.SpamRepositoryAdapter
 import com.sysadmindoc.callshield.data.remote.UrlSafetyChecker
+import com.sysadmindoc.callshield.data.repository.SpamRepositoryAdapter
 import com.sysadmindoc.callshield.domain.usecase.CheckSpamSmsUseCase
+import com.sysadmindoc.callshield.util.filterAsciiDigits
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 /**
@@ -42,16 +42,16 @@ import kotlinx.coroutines.launch
  *  - com.android.mms (AOSP Messages fallback)
  */
 class RcsNotificationListener : NotificationListenerService() {
-
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     // Package names of RCS/SMS messaging apps to monitor
-    private val MESSAGING_PACKAGES = setOf(
-        "com.google.android.apps.messaging",
-        "com.samsung.android.messaging",
-        "com.android.mms",
-        "com.microsoft.android.smsorganizer",
-    )
+    private val messagingPackages =
+        setOf(
+            "com.google.android.apps.messaging",
+            "com.samsung.android.messaging",
+            "com.android.mms",
+            "com.microsoft.android.smsorganizer",
+        )
 
     // A3 toggle state, observed off the hot path so onNotificationPosted
     // can read it without suspending. `true` until the DataStore observer
@@ -85,7 +85,7 @@ class RcsNotificationListener : NotificationListenerService() {
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification) {
-        if (sbn.isOngoing) return  // skip ongoing (media controls, etc.)
+        if (sbn.isOngoing) return // skip ongoing (media controls, etc.)
 
         // A3: Feed the push-alert registry for any allowlisted source app
         // that the user hasn't opted out of. Master toggle and per-package
@@ -95,12 +95,13 @@ class RcsNotificationListener : NotificationListenerService() {
             captureAlert(sbn)
         }
 
-        if (sbn.packageName !in MESSAGING_PACKAGES) return
+        if (sbn.packageName !in messagingPackages) return
 
         scope.launch {
             try {
                 processNotification(sbn)
-            } catch (_: Exception) { }
+            } catch (_: Exception) {
+            }
         }
     }
 
@@ -121,17 +122,18 @@ class RcsNotificationListener : NotificationListenerService() {
                 title = title,
                 body = body,
                 timestamp = sbn.postTime.takeIf { it > 0 } ?: System.currentTimeMillis(),
-            )
+            ),
         )
     }
 
     private suspend fun processNotification(sbn: StatusBarNotification) {
         val repo = SpamRepository.getInstance(applicationContext)
         val checkSpamSms = CheckSpamSmsUseCase(SpamRepositoryAdapter(repo))
+        val prefs = repo.readPrefsSnapshot()
+        val stripUrlhausQuery = prefs[SpamRepository.KEY_URLHAUS_STRIP_QUERY] ?: true
 
         // Respect the "Block SMS" and "RCS Filter" toggles
-        if (!repo.blockSmsEnabled.first()) return
-        if (!repo.rcsFilterEnabled.first()) return
+        if (!shouldProcessRcs(prefs)) return
 
         val extras = sbn.notification.extras ?: return
 
@@ -142,15 +144,7 @@ class RcsNotificationListener : NotificationListenerService() {
 
         val senderDigits = filterAsciiDigits(sender)
         if (senderDigits.length < 7) {
-            if (body.isNotEmpty()) {
-                scope.launch {
-                    val malicious = UrlSafetyChecker.checkSmsBody(body)
-                    if (malicious.isNotEmpty()) {
-                        val threats = malicious.joinToString(", ") { it.threat.ifEmpty { "malware" } }
-                        NotificationHelper.notifyPhishingUrl(applicationContext, sender, threats)
-                    }
-                }
-            }
+            launchUrlSafetyWarning(body, sender, stripUrlhausQuery)
             return
         }
 
@@ -159,11 +153,12 @@ class RcsNotificationListener : NotificationListenerService() {
         // heuristics, no content rules). GSMA UP 3.0/4.0 MLS encryption
         // will progressively make RCS notification bodies opaque.
         val effectiveBody = body.takeIf { it.isNotBlank() && !isEncryptedPlaceholder(it) }
-        val result = if (effectiveBody != null) {
-            checkSpamSms(senderDigits, effectiveBody)
-        } else {
-            checkSpamSms(senderDigits, "")
-        }
+        val result =
+            if (effectiveBody != null) {
+                checkSpamSms(senderDigits, effectiveBody, prefsSnapshot = prefs)
+            } else {
+                checkSpamSms(senderDigits, "", prefsSnapshot = prefs)
+            }
 
         if (result.isSpam) {
             cancelNotification(sbn.key)
@@ -175,12 +170,25 @@ class RcsNotificationListener : NotificationListenerService() {
                 confidence = result.confidence,
             )
         } else if (effectiveBody != null) {
-            scope.launch {
-                val malicious = UrlSafetyChecker.checkSmsBody(effectiveBody)
-                if (malicious.isNotEmpty()) {
-                    val threats = malicious.joinToString(", ") { it.threat.ifEmpty { "malware" } }
-                    NotificationHelper.notifyPhishingUrl(applicationContext, senderDigits, threats)
-                }
+            launchUrlSafetyWarning(effectiveBody, senderDigits, stripUrlhausQuery)
+        }
+    }
+
+    private fun shouldProcessRcs(prefs: Preferences): Boolean =
+        (prefs[SpamRepository.KEY_BLOCK_SMS] ?: true) &&
+            (prefs[SpamRepository.KEY_RCS_FILTER] ?: true)
+
+    private fun launchUrlSafetyWarning(
+        body: String,
+        sender: String,
+        stripQuery: Boolean,
+    ) {
+        if (body.isBlank()) return
+        scope.launch {
+            val malicious = UrlSafetyChecker.checkSmsBody(body, stripQuery = stripQuery)
+            if (malicious.isNotEmpty()) {
+                val threats = malicious.joinToString(", ") { it.threat.ifEmpty { "malware" } }
+                NotificationHelper.notifyPhishingUrl(applicationContext, sender, threats)
             }
         }
     }

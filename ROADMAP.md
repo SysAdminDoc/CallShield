@@ -552,13 +552,6 @@ Plus RFC 8588 (SHAKEN profile), RFC 9027 (Traceback), Apache SpamAssassin / rspa
   Acceptance: Users can export and restore blocklist, whitelist, wildcard/range rules, SMS keyword rules, settings, and logs independently; preview shows selected counts/privacy impact; v1-v3 backups still restore safely.
   Complexity: M
 
-- [ ] P1 - Add URLhaus privacy mode and local-domain-first SMS URL checks
-  Why: URLhaus checks are useful, but full phishing URLs can contain per-victim tokens; CallShield should use local domain feeds first and submit only the minimum configured URL form remotely.
-  Evidence: `app/src/main/java/com/sysadmindoc/callshield/data/remote/UrlSafetyChecker.kt`; `SmsContentAnalyzer.kt`; URLhaus API docs; `spam_domains.json` hot-feed path
-  Touches: `UrlSafetyChecker.kt`, `SmsContentAnalyzer.kt`, `HotDataSync.kt`, settings UI/strings, `UrlSafetyCheckerTest.kt`, SMS/RCS tests
-  Acceptance: SMS/RCS URL checks first match normalized hosts/domains against local spam-domain data, remote URLhaus lookups strip fragments and optionally query strings by setting, and tests cover tokenized URLs without logging or submitting full bodies.
-  Complexity: M
-
 - [ ] P2 - Add temporary allow/block expiry actions for one-off caller decisions
   Why: Users need reversible short-lived decisions for active callers without permanently changing blocklists; SpamBlocker users requested temporary repeated-call blocking and commercial blockers expose quick allow/block recovery actions.
   Evidence: SpamBlocker issue #604; existing `CallbackDetector.kt`; `BlockedLogScreen.kt`; `RecentCallsScreen.kt`; YouMail allow/block-list recovery patterns

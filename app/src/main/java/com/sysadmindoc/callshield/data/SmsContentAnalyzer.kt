@@ -10,7 +10,7 @@ class SmsContentAnalyzer @Inject constructor() {
 
     data class SmsAnalysisResult(
         val score: Int,
-        val reasons: List<String>
+        val reasons: List<String>,
     )
 
     data class SmsReportIndicators(
@@ -21,68 +21,109 @@ class SmsContentAnalyzer @Inject constructor() {
     }
 
     // URL shorteners frequently used in SMS spam
-    private val shortenerDomains = setOf(
-        "bit.ly", "tinyurl.com", "t.co", "goo.gl", "ow.ly", "is.gd",
-        "buff.ly", "rebrand.ly", "cutt.ly", "shorturl.at", "rb.gy",
-        "t.ly", "v.gd", "tiny.cc", "qr.ae", "bl.ink", "lnk.to"
-    )
+    private val shortenerDomains =
+        setOf(
+            "bit.ly",
+            "tinyurl.com",
+            "t.co",
+            "goo.gl",
+            "ow.ly",
+            "is.gd",
+            "buff.ly",
+            "rebrand.ly",
+            "cutt.ly",
+            "shorturl.at",
+            "rb.gy",
+            "t.ly",
+            "v.gd",
+            "tiny.cc",
+            "qr.ae",
+            "bl.ink",
+            "lnk.to",
+        )
 
     // Suspicious TLDs commonly used in phishing
-    private val suspiciousTlds = setOf(
-        ".xyz", ".top", ".club", ".work", ".buzz", ".icu", ".cam",
-        ".life", ".click", ".link", ".info", ".loan", ".win", ".bid",
-        ".stream", ".racing", ".download", ".gq", ".ml", ".tk", ".cf",
-        ".ga", ".pw"
-    )
+    private val suspiciousTlds =
+        setOf(
+            ".xyz",
+            ".top",
+            ".club",
+            ".work",
+            ".buzz",
+            ".icu",
+            ".cam",
+            ".life",
+            ".click",
+            ".link",
+            ".info",
+            ".loan",
+            ".win",
+            ".bid",
+            ".stream",
+            ".racing",
+            ".download",
+            ".gq",
+            ".ml",
+            ".tk",
+            ".cf",
+            ".ga",
+            ".pw",
+        )
 
     // Spam keyword patterns (case-insensitive)
-    private val spamPatterns = listOf(
-        // Financial scams
-        Regex("(?i)(you('ve| have)? (won|been selected|been chosen))"),
-        Regex("(?i)(claim (your|the) (prize|reward|gift|money))"),
-        Regex("(?i)(free (gift|money|cash|iphone|samsung|card))"),
-        Regex("(?i)(\\$\\d{2,}[,.]?\\d*\\s*(cash|reward|prize|gift))"),
-        Regex("(?i)(wire transfer|western union|money ?gram|crypto payment)"),
-        Regex("(?i)(bitcoin|btc|ethereum|eth|usdt).{0,20}(send|transfer|pay|wallet)"),
-
-        // Urgency / pressure tactics
-        Regex("(?i)(act (now|fast|immediately|today)|limited time|expires? (today|soon|now))"),
-        Regex("(?i)(urgent|immediate action|account (suspended|locked|compromised|closed))"),
-        Regex("(?i)(verify (your|the) (account|identity|information|ssn|social))"),
-        Regex("(?i)(your (package|delivery|shipment) (has|is|was) (held|delayed|stopped))"),
-        Regex("(?i)(final (notice|warning|attempt|reminder))"),
-
-        // Loan / debt scams
-        Regex("(?i)(pre-?approved|guaranteed approval|no credit check)"),
-        Regex("(?i)(student loan (forgive|relief|discharge))"),
-        Regex("(?i)(debt (relief|consolidation|settlement|forgive))"),
-        Regex("(?i)(irs|tax).{0,20}(owe|debt|lien|levy|refund)"),
-
-        // Impersonation
-        Regex("(?i)(amazon|apple|google|microsoft|paypal|netflix|fedex|ups|usps).{0,30}(verify|confirm|update|suspend|locked|expire)"),
-        Regex("(?i)(social security).{0,20}(suspend|compromis|fraud|block)"),
-
-        // Romance / adult scams
-        Regex("(?i)(meet (singles|women|men|hot)|dating (site|app)|hookup)"),
-        Regex("(?i)(adult|xxx|sexy).{0,15}(video|photo|pic|chat|call)"),
-
-        // Health scams
-        Regex("(?i)(miracle (cure|pill|drug|weight))"),
-        Regex("(?i)(lose \\d+ (lbs?|pounds|kg) (in|fast|quick))"),
-        Regex("(?i)(pharmacy|viagra|cialis|prescription).{0,20}(discount|cheap|free|order)"),
-
-        // Generic spam signals
-        Regex("(?i)(unsubscribe|opt.?out|stop to (end|cancel|quit|unsubscribe))"),
-        Regex("(?i)(congratulations|congrats).{0,20}(won|winner|selected|chosen)"),
-        Regex("(?i)text (yes|y|go|start|ok) to"),
-        Regex("(?i)reply (yes|y|stop|1|2)"),
-    )
+    private val spamPatterns =
+        listOf(
+            // Financial scams
+            Regex("(?i)(you('ve| have)? (won|been selected|been chosen))"),
+            Regex("(?i)(claim (your|the) (prize|reward|gift|money))"),
+            Regex("(?i)(free (gift|money|cash|iphone|samsung|card))"),
+            Regex("(?i)(\\$\\d{2,}[,.]?\\d*\\s*(cash|reward|prize|gift))"),
+            Regex("(?i)(wire transfer|western union|money ?gram|crypto payment)"),
+            Regex("(?i)(bitcoin|btc|ethereum|eth|usdt).{0,20}(send|transfer|pay|wallet)"),
+            // Urgency / pressure tactics
+            Regex("(?i)(act (now|fast|immediately|today)|limited time|expires? (today|soon|now))"),
+            Regex("(?i)(urgent|immediate action|account (suspended|locked|compromised|closed))"),
+            Regex("(?i)(verify (your|the) (account|identity|information|ssn|social))"),
+            Regex("(?i)(your (package|delivery|shipment) (has|is|was) (held|delayed|stopped))"),
+            Regex("(?i)(final (notice|warning|attempt|reminder))"),
+            // Loan / debt scams
+            Regex("(?i)(pre-?approved|guaranteed approval|no credit check)"),
+            Regex("(?i)(student loan (forgive|relief|discharge))"),
+            Regex("(?i)(debt (relief|consolidation|settlement|forgive))"),
+            Regex("(?i)(irs|tax).{0,20}(owe|debt|lien|levy|refund)"),
+            // Impersonation
+            Regex(
+                "(?i)(amazon|apple|google|microsoft|paypal|netflix|fedex|ups|usps)" +
+                    ".{0,30}(verify|confirm|update|suspend|locked|expire)",
+            ),
+            Regex("(?i)(social security).{0,20}(suspend|compromis|fraud|block)"),
+            // Romance / adult scams
+            Regex("(?i)(meet (singles|women|men|hot)|dating (site|app)|hookup)"),
+            Regex("(?i)(adult|xxx|sexy).{0,15}(video|photo|pic|chat|call)"),
+            // Health scams
+            Regex("(?i)(miracle (cure|pill|drug|weight))"),
+            Regex("(?i)(lose \\d+ (lbs?|pounds|kg) (in|fast|quick))"),
+            Regex("(?i)(pharmacy|viagra|cialis|prescription).{0,20}(discount|cheap|free|order)"),
+            // Generic spam signals
+            Regex("(?i)(unsubscribe|opt.?out|stop to (end|cancel|quit|unsubscribe))"),
+            Regex("(?i)(congratulations|congrats).{0,20}(won|winner|selected|chosen)"),
+            Regex("(?i)text (yes|y|go|start|ok) to"),
+            Regex("(?i)reply (yes|y|stop|1|2)"),
+        )
 
     // Phone number in SMS body (common in callback scams)
-    private val phoneInBody = Regex("(?:call|dial|text|contact)\\s*(?:us\\s+(?:at|on))?\\s*\\+?\\d[\\d\\s\\-()]{7,}", RegexOption.IGNORE_CASE)
+    private val phoneInBody =
+        Regex(
+            "(?:call|dial|text|contact)\\s*(?:us\\s+(?:at|on))?\\s*\\+?\\d[\\d\\s\\-()]{7,}",
+            RegexOption.IGNORE_CASE,
+        )
 
     // URL pattern — length-capped to prevent ReDoS on pathological inputs
-    private val urlPattern = Regex("https?://[^\\s]{1,2048}|www\\.[^\\s]{1,2048}|[a-zA-Z0-9][a-zA-Z0-9-]*\\.[a-zA-Z]{2,}/[^\\s]{0,2048}")
+    private val urlPattern =
+        Regex(
+            "https?://[^\\s]{1,2048}|www\\.[^\\s]{1,2048}|" +
+                "[a-zA-Z0-9][a-zA-Z0-9-]*\\.[a-zA-Z]{2,}/[^\\s]{0,2048}",
+        )
 
     // ── Spam Domain Blocklist ─────────────────────────────────────────
     // Community-reported phishing/spam domains. Loaded from GitHub's
@@ -91,16 +132,50 @@ class SmsContentAnalyzer @Inject constructor() {
     private var spamDomains: Set<String> = emptySet()
 
     fun updateSpamDomains(domains: Collection<String>) {
-        spamDomains = domains.toHashSet()
+        spamDomains =
+            domains
+                .asSequence()
+                .mapNotNull(::normalizeDomainCandidate)
+                .toSet()
     }
 
     fun hasSpamDomains(): Boolean = spamDomains.isNotEmpty()
 
     /** Extract root domain from a URL string (strips scheme, www, path, port). */
     private fun extractDomain(url: String): String {
-        val lower = url.lowercase()
-            .removePrefix("https://").removePrefix("http://").removePrefix("www.")
-        return lower.split("/")[0].split("?")[0].split("#")[0].split(":")[0]
+        val lower =
+            url
+                .lowercase()
+                .trim()
+                .trimEnd('.', ',', '!', '?', ';', ':', ')', ']', '}')
+        val withoutScheme =
+            lower
+                .substringAfter("://", lower)
+                .removePrefix("www.")
+        return withoutScheme
+            .substringBefore('/')
+            .substringBefore('?')
+            .substringBefore('#')
+            .substringBefore(':')
+    }
+
+    fun isKnownSpamDomainUrl(url: String): Boolean {
+        val domain = extractDomain(url)
+        return domain.isNotEmpty() && isKnownSpamDomain(domain)
+    }
+
+    private fun isKnownSpamDomain(domain: String): Boolean {
+        var matched = false
+        var candidate = if (spamDomains.isEmpty()) null else normalizeDomainCandidate(domain)
+        while (!matched && !candidate.isNullOrBlank()) {
+            if (candidate in spamDomains) {
+                matched = true
+            } else {
+                val dotIndex = candidate.indexOf('.')
+                candidate = if (dotIndex < 0) "" else candidate.substring(dotIndex + 1)
+            }
+        }
+        return matched
     }
 
     /**
@@ -110,17 +185,18 @@ class SmsContentAnalyzer @Inject constructor() {
     fun extractReportableIndicators(body: String): SmsReportIndicators {
         if (body.isBlank()) return SmsReportIndicators()
 
-        val analysisBody = if (body.length > MAX_ANALYSIS_LENGTH) {
-            body.substring(0, MAX_ANALYSIS_LENGTH)
-        } else {
-            body
-        }
+        val analysisBody =
+            if (body.length > MAX_ANALYSIS_LENGTH) {
+                body.substring(0, MAX_ANALYSIS_LENGTH)
+            } else {
+                body
+            }
         val domains = linkedSetOf<String>()
         val indicators = linkedSetOf<String>()
 
         urlPattern.findAll(analysisBody).forEach { match ->
             val url = match.value.lowercase()
-            val domain = normalizeReportDomain(extractDomain(url))
+            val domain = normalizeDomainCandidate(extractDomain(url))
             indicators.add("url_present")
             if (domain != null) {
                 if (domains.size < MAX_REPORT_DOMAINS) {
@@ -132,7 +208,7 @@ class SmsContentAnalyzer @Inject constructor() {
                 if (suspiciousTlds.any { domain.endsWith(it) }) {
                     indicators.add("suspicious_tld")
                 }
-                if (domain in spamDomains) {
+                if (isKnownSpamDomain(domain)) {
                     indicators.add("known_spam_domain")
                 }
             }
@@ -143,34 +219,6 @@ class SmsContentAnalyzer @Inject constructor() {
             urlIndicators = indicators.sorted(),
         )
     }
-
-    private fun normalizeReportDomain(domain: String): String? {
-        val normalized = domain.lowercase().trim().trim('.')
-        val labels = normalized.split(".")
-        val isValid =
-            listOf(
-                normalized.length in MIN_REPORT_DOMAIN_LENGTH..MAX_REPORT_DOMAIN_LENGTH,
-                "." in normalized,
-                normalized.all(::isReportDomainChar),
-                labels.all(::isValidReportDomainLabel),
-            ).all { it }
-        return normalized.takeIf { isValid }
-    }
-
-    private fun isReportDomainChar(char: Char): Boolean =
-        when {
-            char in 'a'..'z' -> true
-            char in '0'..'9' -> true
-            char == '-' -> true
-            char == '.' -> true
-            else -> false
-        }
-
-    private fun isValidReportDomainLabel(label: String): Boolean =
-        label.isNotBlank() &&
-            label.length <= MAX_REPORT_DOMAIN_LABEL_LENGTH &&
-            !label.startsWith("-") &&
-            !label.endsWith("-")
 
     /**
      * Hard cap on the body length we attempt to deep-analyze. A real SMS is
@@ -189,13 +237,14 @@ class SmsContentAnalyzer @Inject constructor() {
 
         // Length guard: cap the input we feed into the regex engine so a
         // hostile / malformed body can't pin the screening thread.
-        val analysisBody = if (body.length > MAX_ANALYSIS_LENGTH) {
-            score += 10
-            reasons.add("oversized_body")
-            body.substring(0, MAX_ANALYSIS_LENGTH)
-        } else {
-            body
-        }
+        val analysisBody =
+            if (body.length > MAX_ANALYSIS_LENGTH) {
+                score += 10
+                reasons.add("oversized_body")
+                body.substring(0, MAX_ANALYSIS_LENGTH)
+            } else {
+                body
+            }
 
         // Check for URL shorteners (high spam signal)
         val urls = urlPattern.findAll(analysisBody).map { it.value.lowercase() }.toList()
@@ -203,7 +252,7 @@ class SmsContentAnalyzer @Inject constructor() {
             // Community-reported spam domain — highest confidence
             if (spamDomains.isNotEmpty()) {
                 val domain = extractDomain(url)
-                if (domain.isNotEmpty() && domain in spamDomains) {
+                if (domain.isNotEmpty() && isKnownSpamDomain(domain)) {
                     score += 50
                     reasons.add("spam_domain")
                     continue
@@ -251,7 +300,9 @@ class SmsContentAnalyzer @Inject constructor() {
         }
 
         // Excessive special characters / emoji (common in spam)
-        val specialRatio = analysisBody.count { !it.isLetterOrDigit() && !it.isWhitespace() }.toFloat() / analysisBody.length.coerceAtLeast(1)
+        val specialRatio =
+            analysisBody.count { !it.isLetterOrDigit() && !it.isWhitespace() }.toFloat() /
+                analysisBody.length.coerceAtLeast(1)
         if (specialRatio > 0.15f && analysisBody.length > 20) {
             score += 10
             reasons.add("special_chars")
@@ -281,13 +332,51 @@ class SmsContentAnalyzer @Inject constructor() {
             shared.updateSpamDomains(domains)
         }
 
-        fun hasSpamDomains(): Boolean =
-            shared.hasSpamDomains()
+        fun hasSpamDomains(): Boolean = shared.hasSpamDomains()
 
-        fun analyze(body: String): SmsAnalysisResult =
-            shared.analyze(body)
+        fun isKnownSpamDomainUrl(url: String): Boolean = shared.isKnownSpamDomainUrl(url)
 
-        fun extractReportableIndicators(body: String): SmsReportIndicators =
-            shared.extractReportableIndicators(body)
+        internal fun normalizeDomainCandidate(rawDomain: String): String? {
+            val normalized =
+                rawDomain
+                    .trim()
+                    .trimEnd('.', ',', '!', '?', ';', ':', ')', ']', '}')
+                    .lowercase()
+                    .substringAfter("://")
+                    .removePrefix("www.")
+                    .substringBefore('/')
+                    .substringBefore('?')
+                    .substringBefore('#')
+                    .substringBefore(':')
+                    .trim('.')
+            val labels = normalized.split(".")
+            val isValid =
+                listOf(
+                    normalized.length in MIN_REPORT_DOMAIN_LENGTH..MAX_REPORT_DOMAIN_LENGTH,
+                    "." in normalized,
+                    normalized.all(::isReportDomainChar),
+                    labels.all(::isValidReportDomainLabel),
+                ).all { it }
+            return normalized.takeIf { isValid }
+        }
+
+        fun analyze(body: String): SmsAnalysisResult = shared.analyze(body)
+
+        fun extractReportableIndicators(body: String): SmsReportIndicators = shared.extractReportableIndicators(body)
+
+        private fun isReportDomainChar(char: Char): Boolean =
+            when {
+                char in 'a'..'z' -> true
+                char in '0'..'9' -> true
+                char == '-' -> true
+                char == '.' -> true
+                else -> false
+            }
+
+        private fun isValidReportDomainLabel(label: String): Boolean =
+            label.isNotBlank() &&
+                label.length <= MAX_REPORT_DOMAIN_LABEL_LENGTH &&
+                !label.startsWith("-") &&
+                !label.endsWith("-")
     }
 }

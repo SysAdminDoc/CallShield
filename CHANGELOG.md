@@ -59,6 +59,9 @@ Distribution prep after the v1.7.10 release.
 - Added external blocklist subscription guardrails: HTTP(S)-only CSV/TXT/JSON
   feeds are byte- and row-capped, preview add/remove/source impact before
   commit, and can be disabled or removed with feed-owned rows rolled back.
+- Added URLhaus privacy mode and local-domain-first SMS/RCS URL checks so
+  spam-domain feed matches avoid remote lookups, fragments are always stripped,
+  and query strings are removed by default before URLhaus submission.
 - Added typed per-source enrichment diagnostics and privacy copy across overlay
   and number details so timeout, rate-limit, parse-error, oversized, disabled,
   unavailable, clean, and found states are visible without logging raw queried

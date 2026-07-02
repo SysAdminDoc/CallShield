@@ -466,6 +466,8 @@
     <string name="settings_heuristic_analysis_desc">VoIP ranges, premium rate, wangiri, rapid-fire</string>
     <string name="settings_sms_content">SMS Content Analysis</string>
     <string name="settings_sms_content_desc">Spam keywords, phishing links, scam patterns</string>
+    <string name="settings_urlhaus_privacy">URLhaus Privacy Mode</string>
+    <string name="settings_urlhaus_privacy_desc">Strip URL fragments and query strings before remote URL checks; local spam-domain checks still run first.</string>
     <string name="settings_sms_burst">SMS Burst Protection</string>
     <string name="settings_sms_burst_desc">Review repeated unknown senders and flood patterns before they bury important messages</string>
     <string name="settings_repeat_caller">Repeat Caller Auto-Block</string>

@@ -12,7 +12,7 @@
 <p align="center">
   <a href="https://github.com/SysAdminDoc/CallShield/releases/latest"><img src="https://img.shields.io/github/v/release/SysAdminDoc/CallShield?style=flat-square&color=a6e3a1" alt="Release"></a>
   <img src="https://img.shields.io/badge/Spam%20Numbers-32%2C933-f38ba8?style=flat-square" alt="32,933 Numbers">
-  <img src="https://img.shields.io/badge/Tests-704-94e2d5?style=flat-square" alt="704 Tests">
+  <img src="https://img.shields.io/badge/Tests-711-94e2d5?style=flat-square" alt="711 Tests">
   <img src="https://img.shields.io/badge/Android-10%2B-89b4fa?style=flat-square" alt="Android 10+">
   <img src="https://img.shields.io/badge/License-MIT-cba6f7?style=flat-square" alt="MIT License">
   <img src="https://img.shields.io/badge/API%20Keys-None-fab387?style=flat-square" alt="No required API keys">
@@ -83,7 +83,7 @@ CallShield blocks spam calls and texts using a **15+ layer on-device detection e
 - **Answered-caller trust** — numbers answered repeatedly inside the configured lookback window can ring through lower-confidence heuristic/ML suspicion while explicit block rules still win first.
 - **Emergency callback grace** — unknown callbacks can ring through after a local emergency call for a configurable window while explicit block rules still win first.
 - **SMS burst protection** - repeated unknown SMS senders or same-prefix floods can be blocked as `sms_burst`, with blocked-SMS notification actions to mark safe or report.
-- **704 total JVM unit tests** - the local unit suite covers detection, workers, utilities, repository contracts, and permission readiness before release.
+- **711 total JVM unit tests** - the local unit suite covers detection, workers, utilities, repository contracts, and permission readiness before release.
 - **Gradient-Boosted Tree ML model** — 20 features, pure Kotlin, no TFLite dependency.
 - **Campaign burst detection** — NPA-NXX prefix clustering identifies coordinated spam waves.
 - **Full accessibility** — content descriptions across Compose UI, 48dp minimum touch targets.
@@ -129,7 +129,7 @@ SMS-specific layers (append after the shared chain): **SMS Context Trust** → *
 ### Additional Layers
 - **Caller ID Overlay** — suspicious calls (heuristic score 30-59) trigger a live multi-source lookup overlay with SkipCalls, PhoneBlock, WhoCalledMe + OpenCNAM caller name
 - **RCS Filter** — NotificationListenerService monitors Google/Samsung Messages for RCS spam
-- **URL Safety** — URLhaus (abuse.ch) checks for phishing/malware URLs in SMS/RCS (post-decision, notification only)
+- **URL Safety** — local spam-domain checks run before URLhaus (abuse.ch), with query-string stripping enabled by default for remote SMS/RCS URL checks
 - **STIR/SHAKEN** — blocks calls failing carrier caller ID verification (Android 11+)
 - **After-Call Feedback** — "Was this spam?" notification after suspicious calls for community reporting
 
@@ -263,7 +263,7 @@ Trained weekly from the CallShield database (50K positive + 50K negative samples
 ### URL Safety (post-decision)
 | Source | What It Checks |
 |--------|---------------|
-| **URLhaus** (abuse.ch) | Phishing/malware URLs in SMS/RCS bodies |
+| **URLhaus** (abuse.ch) | Phishing/malware URLs in SMS/RCS bodies after local spam-domain matching |
 
 ## Security
 
@@ -278,7 +278,7 @@ All detection runs on-device. No personal data is collected. Network requests:
 - Syncing spam database from GitHub (public)
 - Real-time lookups against free public APIs (number queried, not stored)
 - Community reports to Cloudflare Worker (phone number only, no identity)
-- URLhaus checks for SMS URL safety (URL only)
+- URLhaus checks for SMS URL safety after local spam-domain matching; fragments and query strings are stripped by default
 
 No required API keys. The optional AbstractAPI key stays on-device in no-backup storage. No accounts. No analytics. No ads.
 
@@ -321,7 +321,7 @@ RELEASE_KEY_PASSWORD=...
 ## Testing
 
 ```bash
-./gradlew testDebugUnitTest   # 704 tests
+./gradlew testDebugUnitTest   # 711 tests
 ```
 
 Run tests, lint, release metadata checks, and artifact builds locally before publishing.
@@ -342,7 +342,7 @@ Run tests, lint, release metadata checks, and artifact builds locally before pub
 | Community API | Cloudflare Workers |
 | URL Safety | URLhaus (abuse.ch) |
 | Verification | Local Gradle, lint, and release-artifact checks |
-| Tests | 704 JVM unit tests (JUnit) |
+| Tests | 711 JVM unit tests (JUnit) |
 | Strings | 1018 string resources and 28 plural groups (translation-ready) |
 | Accessibility | 100+ content descriptions, 48dp touch targets |
 | Min SDK | 29 (Android 10) |

@@ -73,6 +73,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
     val heuristics by viewModel.heuristicsEnabled.collectAsStateWithLifecycle()
     val smsContent by viewModel.smsContentEnabled.collectAsStateWithLifecycle()
     val smsBurst by viewModel.smsBurstEnabled.collectAsStateWithLifecycle()
+    val urlhausStripQuery by viewModel.urlhausStripQueryEnabled.collectAsStateWithLifecycle()
     val contactWhitelist by viewModel.contactWhitelistEnabled.collectAsStateWithLifecycle()
     val contactsOnly by viewModel.contactsOnlyEnabled.collectAsStateWithLifecycle()
     val dbPrefixExpansion by viewModel.dbPrefixExpansionEnabled.collectAsStateWithLifecycle()
@@ -376,6 +377,13 @@ fun SettingsScreen(viewModel: MainViewModel) {
             SettingsToggle(stringResource(R.string.settings_heuristic_analysis), stringResource(R.string.settings_heuristic_analysis_desc), Icons.Default.Psychology, heuristics) { viewModel.setHeuristics(it) }
             GradientDivider()
             SettingsToggle(stringResource(R.string.settings_sms_content), stringResource(R.string.settings_sms_content_desc), Icons.AutoMirrored.Filled.TextSnippet, smsContent) { viewModel.setSmsContent(it) }
+            GradientDivider()
+            SettingsToggle(
+                stringResource(R.string.settings_urlhaus_privacy),
+                stringResource(R.string.settings_urlhaus_privacy_desc),
+                Icons.Default.Security,
+                urlhausStripQuery,
+            ) { viewModel.setUrlhausStripQuery(it) }
             GradientDivider()
             SettingsToggle(
                 stringResource(R.string.settings_sms_burst),

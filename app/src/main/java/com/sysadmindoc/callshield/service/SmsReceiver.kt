@@ -33,8 +33,10 @@ class SmsReceiver : BroadcastReceiver() {
         CallShieldApp.appScope.launch {
             var sender = ""
             var body = ""
+            var stripUrlhausQuery = true
             try {
                 val prefs = repo.readPrefsSnapshot()
+                stripUrlhausQuery = prefs[SpamRepository.KEY_URLHAUS_STRIP_QUERY] ?: true
                 if (!(prefs[SpamRepository.KEY_BLOCK_SMS] ?: true)) {
                     return@launch
                 }
@@ -97,7 +99,7 @@ class SmsReceiver : BroadcastReceiver() {
             // propagate out of the receiver.
             if (body.isNotEmpty()) {
                 try {
-                    val maliciousUrls = UrlSafetyChecker.checkSmsBody(body)
+                    val maliciousUrls = UrlSafetyChecker.checkSmsBody(body, stripQuery = stripUrlhausQuery)
                     if (maliciousUrls.isNotEmpty()) {
                         val threats = maliciousUrls.joinToString(", ") { it.threat.ifEmpty { "malware" } }
                         NotificationHelper.notifyPhishingUrl(appContext, sender, threats)
