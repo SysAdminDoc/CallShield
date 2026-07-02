@@ -329,6 +329,32 @@ internal class RecentlyDialedChecker(
     }
 }
 
+internal class AnsweredCallerChecker(
+    private val appContext: Context,
+    private val callbackDetector: CallbackDetector,
+) : IChecker {
+    override val priority = CheckerPriority.ANSWERED_CALLER
+    override val name = "answered_caller"
+
+    override suspend fun isEnabled(ctx: CheckContext): Boolean =
+        ctx.prefs[SpamRepository.KEY_ANSWERED_CALLER_TRUST] ?: true
+
+    override suspend fun check(ctx: CheckContext): BlockResult? {
+        val threshold = (
+            ctx.prefs[SpamRepository.KEY_ANSWERED_CALLER_THRESHOLD]
+                ?: CallbackDetector.DEFAULT_ANSWERED_CALLER_THRESHOLD
+            ).coerceAtLeast(1)
+        val windowDays = (
+            ctx.prefs[SpamRepository.KEY_ANSWERED_CALLER_WINDOW_DAYS]
+                ?: CallbackDetector.DEFAULT_ANSWERED_CALLER_WINDOW_DAYS
+            ).coerceAtLeast(1)
+
+        return if (callbackDetector.wasAnsweredRepeatedly(appContext, ctx.number, windowDays, threshold)) {
+            BlockResult.allow("answered_caller")
+        } else null
+    }
+}
+
 internal class RepeatedUrgentChecker(
     private val appContext: Context,
     private val callbackDetector: CallbackDetector,

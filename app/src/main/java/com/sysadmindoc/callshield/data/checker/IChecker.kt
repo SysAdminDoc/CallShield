@@ -178,6 +178,7 @@ object CheckerPriority {
     // Paired with STIR_SHAKEN (block side) above.
     const val STIR_SHAKEN_TRUSTED   =  5_300
     const val RECENTLY_DIALED       =  5_000   // user just called this number
+    const val ANSWERED_CALLER       =  4_950   // user has answered this number repeatedly
     const val REPEATED_URGENT       =  4_900   // same number called 2+ times in 5 min
     const val PUSH_ALERT_BRIDGE     =  4_700   // reserved for A3 — notification-bridged allow
     const val CAMPAIGN_RECORDER     =  4_500   // side-effect only (records into in-memory map)
@@ -284,6 +285,7 @@ object SpamCheckers {
             add(WildcardChecker(repo))
             add(HashWildcardChecker(repo, dependencies.hashWildcardMatcher))
             add(RecentlyDialedChecker(appContext, dependencies.callbackDetector))
+            add(AnsweredCallerChecker(appContext, dependencies.callbackDetector))
             add(RepeatedUrgentChecker(appContext, dependencies.callbackDetector))
             add(PushAlertChecker())
             add(CampaignRecorderChecker(dependencies.campaignDetector))

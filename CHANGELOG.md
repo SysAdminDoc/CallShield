@@ -2,6 +2,26 @@
 
 All notable changes to CallShield will be documented in this file.
 
+## v1.7.12 — 2026-06-27
+
+### Hardening
+
+- Added a durable pending blocked-call log queue. `CallShieldScreeningService`
+  writes an idempotent Room row before responding to Android, then a
+  Hilt-backed WorkManager retry worker flushes it into `call_log` without
+  duplicate final rows, notifications, or widget refreshes.
+- Upgraded Room schema to v10 with `call_log.logKey` and
+  `pending_blocked_call_logs`, plus migration and DAO coverage for duplicate
+  suppression and retry timing.
+- Added a shared ASCII-only digit utility and routed security-sensitive phone
+  extraction paths away from Unicode digit matching.
+- Added Cloudflare Worker rate-limit/dedup tests and Android 429 retry-delay
+  feedback for community report submissions.
+
+### Testing
+
+- Verified `testDebugUnitTest`: 645 tests, 0 failures, 0 errors.
+
 ## v1.7.11 — 2026-05-18
 
 ### Fixed
@@ -25,6 +45,15 @@ Distribution prep after the v1.7.10 release.
 
 ### Fixed
 
+- Routed lookup, manual block, whitelist, recent-call, and blocked-log
+  phone-number inputs/actions through the shared ASCII-only digit helper, with
+  regression coverage for Unicode digit spoofing.
+- Added bounded response-body guards and typed fallback statuses for
+  enrichment lookups so oversized or malformed third-party responses do not
+  crash overlay, details, or line-type parsing.
+- Added answered-caller trust with configurable count/window limits so repeated
+  answered callers can bypass weaker heuristic/ML suspicion while explicit
+  block rules still win first.
 - Added a backup restore preview step with parsed counts, conflict warnings,
   and explicit Merge or Replace apply modes so restores validate before
   mutating local blocklist state.

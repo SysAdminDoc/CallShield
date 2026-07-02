@@ -12,7 +12,7 @@
 <p align="center">
   <a href="https://github.com/SysAdminDoc/CallShield/releases/latest"><img src="https://img.shields.io/github/v/release/SysAdminDoc/CallShield?style=flat-square&color=a6e3a1" alt="Release"></a>
   <img src="https://img.shields.io/badge/Spam%20Numbers-32%2C933-f38ba8?style=flat-square" alt="32,933 Numbers">
-  <img src="https://img.shields.io/badge/Tests-620-94e2d5?style=flat-square" alt="620 Tests">
+  <img src="https://img.shields.io/badge/Tests-661-94e2d5?style=flat-square" alt="661 Tests">
   <img src="https://img.shields.io/badge/Android-10%2B-89b4fa?style=flat-square" alt="Android 10+">
   <img src="https://img.shields.io/badge/License-MIT-cba6f7?style=flat-square" alt="MIT License">
   <img src="https://img.shields.io/badge/API%20Keys-None-fab387?style=flat-square" alt="No required API keys">
@@ -22,7 +22,21 @@
 
 CallShield blocks spam calls and texts using a **15+ layer on-device detection engine** with a gradient-boosted tree ML scorer, campaign burst detection, RCS notification filter, and real-time caller ID overlay. Powered by a 32,933-number database with scheduled hot-list updates. Community-maintained, no accounts, no tracking.
 
-## v1.7.11 Highlights
+## v1.7.12 Highlights
+
+- **Durable blocked-call logging** - blocked-call decisions now enqueue an
+  idempotent pending Room row before responding to Android, then a Hilt-backed
+  retry worker flushes the row into the final call log without duplicating
+  notifications or widget refreshes.
+- **Room v10 migration** - `call_log` now carries a nullable unique `logKey`,
+  `pending_blocked_call_logs` persists retry state, and migration/DAO tests
+  cover duplicate suppression and retry windows.
+- **Community-report abuse backoff** - the Cloudflare Worker rate-limit and
+  dedup helpers now have local tests, and the Android client surfaces HTTP 429
+  with the server-provided retry delay.
+- **ASCII-only digit utility** - security-sensitive phone-number extraction
+  and UI entry/review paths now share named ASCII-only helpers instead of
+  Unicode digit matching.
 
 - **Compose BOM 2026.05.00 refresh** — UI dependencies now resolve on the
   current Compose 1.11.1 release train, with Material 3 1.4.0 and refreshed
@@ -45,9 +59,9 @@ CallShield blocks spam calls and texts using a **15+ layer on-device detection e
   of Android Auto Backup scope on first read or save.
 - **Reproducible-build groundwork** — Gradle dependency locking is enabled,
   the resolved dependency graph is checked in, AGP VCS metadata is disabled for
-  release APKs, and CI runs guards that block wall-clock build metadata from
+  release APKs, and local release guards block wall-clock build metadata from
   being embedded into APK inputs.
-- **Release hash sidecars** ��� release builds now produce SHA256 sidecars for
+- **Release hash sidecars** — release builds now produce SHA256 sidecars for
   APK artifact integrity, with Windows helpers for signed local releases and
   content-level APK rebuild comparisons.
 - **Network hardening** — OkHttp is upgraded to 5.3.2 and all direct data,
@@ -63,7 +77,8 @@ CallShield blocks spam calls and texts using a **15+ layer on-device detection e
 - **Trust-focused settings feedback** — the trusted push-alert source picker now shows installed-source coverage and skeleton loading while package labels resolve.
 - **Hardening foundation from v1.7.2** — spoof-proof ASCII phone normalization, SMS size caps, regex ReDoS validation, LRU notice gates, separated PendingIntent IDs, and atomic crash-log writes.
 - **STIR/SHAKEN Trusted-Caller Allow** — carrier `PASSED` attestations can short-circuit heuristic / ML blocks while still yielding to every explicit user rule.
-- **620 total JVM unit tests + GitHub Actions CI** — automated test pipeline on every push.
+- **Answered-caller trust** — numbers answered repeatedly inside the configured lookback window can ring through lower-confidence heuristic/ML suspicion while explicit block rules still win first.
+- **661 total JVM unit tests** - the local unit suite covers detection, workers, utilities, and repository contracts before release.
 - **Gradient-Boosted Tree ML model** — 20 features, pure Kotlin, no TFLite dependency.
 - **Campaign burst detection** — NPA-NXX prefix clustering identifies coordinated spam waves.
 - **Full accessibility** — content descriptions across Compose UI, 48dp minimum touch targets.
@@ -74,10 +89,10 @@ CallShield blocks spam calls and texts using a **15+ layer on-device detection e
 2. **15+ layer detection + ML** — database, heuristics, campaign burst detection, on-device gradient-boosted tree, SMS content analysis, RCS filter, STIR/SHAKEN, and more
 3. **Real-time caller ID overlay** — parallel lookups against SkipCalls, PhoneBlock, WhoCalledMe + OpenCNAM caller name, with SIT tone anti-autodialer
 4. **Scheduled hot list** — trending spam numbers and campaign ranges refresh through the repository data pipeline
-5. **Callback-aware** — won't block callbacks from numbers you recently called, or urgent repeated callers
+5. **Callback-aware** — won't block callbacks from numbers you recently called, answered repeatedly, or urgent repeated callers
 6. **Community-driven** — one-tap anonymous contribution via Cloudflare Worker, daily merge into database
 
-## Detection Pipeline (v1.7.11)
+## Detection Pipeline (v1.7.12)
 
 All detection layers implement a shared `IChecker` interface and run in priority order via `CheckerPipeline.run` — first non-null result wins, every layer is testable in isolation. Priorities are stable numbers; the ladder below is the live order.
 
@@ -93,6 +108,7 @@ All detection layers implement a shared `IChecker` interface and run in priority
 |  5400 | **Range Patterns** (A5) | Block | Length-locked `#` patterns like `+33162######`, with schedule + coverage safety rail |
 |  5300 | **STIR/SHAKEN Trusted** | Allow | Carrier `PASSED` attestations can allow through lower-confidence heuristic/ML suspicion |
 |  5000 | **Recently Dialed** | Allow | Numbers you called in the last 24h — they're probably calling back |
+|  4950 | **Answered Caller** | Allow | Numbers answered repeatedly inside the configured lookback window |
 |  4900 | **Repeated Urgent** | Allow | Same number calls 2x in 5 min → allowed through |
 |  4700 | **Push-Alert Bridge** (A3) | Allow | Uber/DoorDash/Amazon/Gmail notification about an arriving call? Let it through |
 |  4500 | *Campaign Recorder* | — | Side-effect only; feeds burst detection below |
@@ -119,7 +135,7 @@ Any wildcard, range, or SMS keyword rule can be time-gated to specific days of t
 When a call comes in, CallShield shows a real-time overlay that queries **4 sources simultaneously**:
 
 ```
-┌────────���──────────────���──────────┐
+┌──────────────────────────────────┐
 │ LIKELY SPAM                      │
 │ (212) 555-1234                   │
 │ New York, NY                     │
@@ -128,10 +144,10 @@ When a call comes in, CallShield shows a real-time overlay that queries **4 sour
 │ ⚠ SkipCalls: Flagged            │
 │ ⚠ PhoneBlock: 5 reports         │
 │ ⚠ WhoCalledMe: 12 reports       │
-│ All sources checked              ��
+│ All sources checked              │
 │ [Search] [Block] [Dismiss]       │
-�� 🔈 Play SIT Tone (anti-dialer)  │
-└��──────────────��──────────────��───┘
+│ 🔈 Play SIT Tone (anti-dialer)  │
+└──────────────────────────────────┘
 ```
 
 - Shows instantly with area code, then updates live as each source responds
@@ -299,10 +315,10 @@ RELEASE_KEY_PASSWORD=...
 ## Testing
 
 ```bash
-./gradlew testDebugUnitTest   # 620 tests
+./gradlew testDebugUnitTest   # 661 tests
 ```
 
-CI runs automatically via GitHub Actions on every push and pull request.
+Run tests, lint, release metadata checks, and artifact builds locally before publishing.
 
 ## Tech Stack
 
@@ -311,7 +327,7 @@ CI runs automatically via GitHub Actions on every push and pull request.
 | Language | Kotlin 2.2.21 |
 | UI | Jetpack Compose BOM 2026.05.00 + Material 3 |
 | Theme | Premium AMOLED black + Catppuccin Mocha |
-| Database | Room 2.8.4 (SQLite) — 6 entities |
+| Database | Room 2.8.4 (SQLite) — 7 entities |
 | Networking | OkHttp 5.3.2 + certificate pinning |
 | JSON | Moshi |
 | ML | Pure Kotlin gradient-boosted tree (20 features) |
@@ -319,12 +335,14 @@ CI runs automatically via GitHub Actions on every push and pull request.
 | Background | WorkManager 2.11.2 |
 | Community API | Cloudflare Workers |
 | URL Safety | URLhaus (abuse.ch) |
-| CI | GitHub Actions |
-| Tests | 620 JVM unit tests (JUnit) |
-| Strings | 952 string resources and 25 plural groups (translation-ready) |
+| Verification | Local Gradle, lint, and release-artifact checks |
+| Tests | 661 JVM unit tests (JUnit) |
+| Strings | 976 string resources and 27 plural groups (translation-ready) |
 | Accessibility | 100+ content descriptions, 48dp touch targets |
 | Min SDK | 29 (Android 10) |
 | Target SDK | 36 |
+
+For deep technical details, see [CLAUDE.md](CLAUDE.md).
 
 ## License
 

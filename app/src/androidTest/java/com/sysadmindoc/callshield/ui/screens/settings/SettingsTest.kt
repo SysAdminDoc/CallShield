@@ -81,6 +81,30 @@ class SettingsTest {
     }
 
     @Test
+    fun answeredCallerTrustShowsConfiguredLimitsAndPersistsToggle() {
+        var enabled: Boolean? = null
+        composeRule.setContent {
+            AnsweredCallerTrustSettings(
+                enabled = true,
+                threshold = 2,
+                windowDays = 30,
+                onEnabledChange = { enabled = it },
+                onThresholdChange = {},
+                onWindowDaysChange = {},
+            )
+        }
+
+        composeRule.onNodeWithText("Answered-Caller Trust").assertIsDisplayed()
+        composeRule.onNodeWithText("2 answered calls").assertIsDisplayed()
+        composeRule.onNodeWithText("30 days").assertIsDisplayed()
+        composeRule.onNodeWithTag(SETTINGS_ANSWERED_CALLER_TOGGLE_TAG).performClick()
+
+        composeRule.runOnIdle {
+            assertEquals(false, enabled)
+        }
+    }
+
+    @Test
     fun restorePreviewPanelShowsCountsAndActions() {
         var selectedMode: BackupRestore.RestoreMode? = null
         var canceled = false

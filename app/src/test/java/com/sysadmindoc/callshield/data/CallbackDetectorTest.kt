@@ -67,18 +67,60 @@ class CallbackDetectorTest {
         assertEquals("%5551234", query.selectionArgs.last())
     }
 
+    @Test
+    fun `buildAnsweredCallerQuery targets answered incoming calls within cutoff`() {
+        val query =
+            CallbackDetector.buildAnsweredCallerQuery(
+                nowMillis = 3_000_000_000L,
+                windowDays = 30,
+                minDurationSeconds = 1,
+                last7Digits = "5551234",
+            )
+
+        assertEquals(
+            "${CallLog.Calls.TYPE} = ? AND ${CallLog.Calls.DATE} > ? " +
+                "AND ${CallLog.Calls.DURATION} >= ? AND ${CallLog.Calls.NUMBER} LIKE ?",
+            query.selection,
+        )
+        assertArrayEquals(
+            arrayOf(
+                CallLog.Calls.INCOMING_TYPE.toString(),
+                (3_000_000_000L - 30L * 86_400_000L).toString(),
+                "1",
+                "%5551234",
+            ),
+            query.selectionArgs,
+        )
+    }
+
+    @Test
+    fun `buildAnsweredCallerQuery clamps invalid windows and durations`() {
+        val query =
+            CallbackDetector.buildAnsweredCallerQuery(
+                nowMillis = 86_400_000L,
+                windowDays = 0,
+                minDurationSeconds = 0,
+                last7Digits = "5551234",
+            )
+
+        assertEquals("0", query.selectionArgs[1])
+        assertEquals("1", query.selectionArgs[2])
+        assertEquals("%5551234", query.selectionArgs.last())
+    }
+
     // v1.6.3 — number-prefilter regression tests
 
     @Test
     fun `buildRecentlyDialedQuery prefilters on trailing digits`() {
-        val query = CallbackDetector.buildRecentlyDialedQuery(
-            nowMillis = 10_000L,
-            windowHours = 24,
-            last7Digits = "1234567"
-        )
+        val query =
+            CallbackDetector.buildRecentlyDialedQuery(
+                nowMillis = 10_000L,
+                windowHours = 24,
+                last7Digits = "1234567",
+            )
         assertTrue(
             "selection must constrain the NUMBER column",
-            query.selection.contains("${CallLog.Calls.NUMBER} LIKE ?")
+            query.selection.contains("${CallLog.Calls.NUMBER} LIKE ?"),
         )
         assertEquals("%1234567", query.selectionArgs.last())
     }

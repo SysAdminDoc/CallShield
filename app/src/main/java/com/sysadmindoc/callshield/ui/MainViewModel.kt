@@ -9,6 +9,7 @@ import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.BackupRestore
 import com.sysadmindoc.callshield.data.BlockingProfiles
 import com.sysadmindoc.callshield.data.BlocklistExporter
+import com.sysadmindoc.callshield.data.CallbackDetector
 import com.sysadmindoc.callshield.data.CommunityContributor
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.TimeSchedule
@@ -132,9 +133,23 @@ class MainViewModel
     val heuristicsEnabled = repo.heuristicsEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
     val smsContentEnabled = repo.smsContentEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
     val contactWhitelistEnabled = repo.contactWhitelistEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
-    val contactsOnlyEnabled = repo.contactsOnlyEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
-    val dbPrefixExpansionEnabled = repo.dbPrefixExpansionEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+    val contactsOnlyEnabled = repo.contactsOnlyEnabled
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+    val dbPrefixExpansionEnabled = repo.dbPrefixExpansionEnabled
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
     val aggressiveModeEnabled = repo.aggressiveModeEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+    val answeredCallerTrustEnabled = repo.answeredCallerTrustEnabled
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+    val answeredCallerThreshold = repo.answeredCallerThreshold.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5000),
+        CallbackDetector.DEFAULT_ANSWERED_CALLER_THRESHOLD,
+    )
+    val answeredCallerWindowDays = repo.answeredCallerWindowDays.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5000),
+        CallbackDetector.DEFAULT_ANSWERED_CALLER_WINDOW_DAYS,
+    )
     val timeBlockEnabled = repo.timeBlockEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
     val timeBlockStart = repo.timeBlockStart.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 22)
     val timeBlockEnd = repo.timeBlockEnd.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 7)
@@ -386,6 +401,9 @@ class MainViewModel
     fun setContactsOnly(v: Boolean) = viewModelScope.launch { repo.setContactsOnly(v) }
     fun setDbPrefixExpansion(v: Boolean) = viewModelScope.launch { repo.setDbPrefixExpansion(v) }
     fun setAggressiveMode(v: Boolean) = viewModelScope.launch { repo.setAggressiveMode(v) }
+    fun setAnsweredCallerTrust(v: Boolean) = viewModelScope.launch { repo.setAnsweredCallerTrust(v) }
+    fun setAnsweredCallerThreshold(v: Int) = viewModelScope.launch { repo.setAnsweredCallerThreshold(v) }
+    fun setAnsweredCallerWindowDays(v: Int) = viewModelScope.launch { repo.setAnsweredCallerWindowDays(v) }
     fun setTimeBlock(v: Boolean) = viewModelScope.launch { repo.setTimeBlock(v) }
     fun setTimeBlockStart(h: Int) = viewModelScope.launch { repo.setTimeBlockStart(h) }
     fun setTimeBlockEnd(h: Int) = viewModelScope.launch { repo.setTimeBlockEnd(h) }

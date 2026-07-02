@@ -538,13 +538,6 @@ Plus RFC 8588 (SHAKEN profile), RFC 9027 (Traceback), Apache SpamAssassin / rspa
 
 ## Research-Driven Additions
 
-- [ ] P1 - Add answered-caller trust with age and count limits
-  Why: Recently dialed calls are trusted, but numbers the user has answered and tolerated before are also strong local context; SpamBlocker exposes "Dialed Number" persistence and commercial blockers lean on interaction history.
-  Evidence: SpamBlocker v5.6 release notes; existing `CallbackDetector.kt`; existing `recently_dialed` and `sms_context` trust rules
-  Touches: `data/CallbackDetector.kt`, `data/checker/Checkers.kt`, `data/checker/IChecker.kt`, `BlockReasoning.kt`, settings strings/tests
-  Acceptance: A number answered at least N times in the last configurable window can bypass heuristic/ML suspicion but still yields to explicit blocklist, wildcard/range, STIR-failed, and system-block-list rules.
-  Complexity: M
-
 - [ ] P1 - Add emergency-callback grace window after local emergency calls
   Why: Emergency contacts are supported, but callbacks from dispatch, hospitals, or unknown public-safety numbers after a 911/emergency call can still look like unknown callers; SpamBlocker treats emergency semantics as priority-sensitive.
   Evidence: SpamBlocker v5.10 emergency priority change; `CallShieldScreeningService.kt`; `CallbackDetector.kt`

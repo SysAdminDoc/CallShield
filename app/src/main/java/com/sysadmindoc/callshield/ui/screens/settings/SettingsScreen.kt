@@ -41,10 +41,15 @@ import com.sysadmindoc.callshield.BuildConfig
 import com.sysadmindoc.callshield.permissions.CallShieldPermissions
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.BackupRestore
+import com.sysadmindoc.callshield.data.repository.ANSWERED_CALLER_THRESHOLD_MAX
+import com.sysadmindoc.callshield.data.repository.ANSWERED_CALLER_THRESHOLD_MIN
+import com.sysadmindoc.callshield.data.repository.ANSWERED_CALLER_WINDOW_DAYS_MAX
+import com.sysadmindoc.callshield.data.repository.ANSWERED_CALLER_WINDOW_DAYS_MIN
 import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.theme.*
 
 internal const val SETTINGS_QUIET_HOURS_TOGGLE_TAG = "settings_quiet_hours_toggle"
+internal const val SETTINGS_ANSWERED_CALLER_TOGGLE_TAG = "settings_answered_caller_toggle"
 internal const val SETTINGS_RESTORE_PREVIEW_TAG = "settings_restore_preview"
 
 @Composable
@@ -64,6 +69,9 @@ fun SettingsScreen(viewModel: MainViewModel) {
     val contactsOnly by viewModel.contactsOnlyEnabled.collectAsStateWithLifecycle()
     val dbPrefixExpansion by viewModel.dbPrefixExpansionEnabled.collectAsStateWithLifecycle()
     val aggressiveMode by viewModel.aggressiveModeEnabled.collectAsStateWithLifecycle()
+    val answeredCallerTrust by viewModel.answeredCallerTrustEnabled.collectAsStateWithLifecycle()
+    val answeredCallerThreshold by viewModel.answeredCallerThreshold.collectAsStateWithLifecycle()
+    val answeredCallerWindowDays by viewModel.answeredCallerWindowDays.collectAsStateWithLifecycle()
     val autoCleanup by viewModel.autoCleanupEnabled.collectAsStateWithLifecycle()
     val cleanupDays by viewModel.cleanupDays.collectAsStateWithLifecycle()
     val timeBlock by viewModel.timeBlockEnabled.collectAsStateWithLifecycle()
@@ -295,7 +303,12 @@ fun SettingsScreen(viewModel: MainViewModel) {
         // Safety
         SettingsCard(stringResource(R.string.settings_safety)) {
             SettingsToggle(stringResource(R.string.settings_contact_whitelist), stringResource(R.string.settings_contact_whitelist_desc), Icons.Default.Contacts, contactWhitelist) { viewModel.setContactWhitelist(it) }
-            SettingsToggle(stringResource(R.string.settings_contacts_only), stringResource(R.string.settings_contacts_only_desc), Icons.Default.PhoneLocked, contactsOnly) { viewModel.setContactsOnly(it) }
+            SettingsToggle(
+                stringResource(R.string.settings_contacts_only),
+                stringResource(R.string.settings_contacts_only_desc),
+                Icons.Default.PhoneLocked,
+                contactsOnly,
+            ) { viewModel.setContactsOnly(it) }
         }
 
         // Detection engines
@@ -309,6 +322,15 @@ fun SettingsScreen(viewModel: MainViewModel) {
                 stirTrustedAllow,
             ) { viewModel.setStirTrustedAllow(it) }
             GradientDivider()
+            AnsweredCallerTrustSettings(
+                enabled = answeredCallerTrust,
+                threshold = answeredCallerThreshold,
+                windowDays = answeredCallerWindowDays,
+                onEnabledChange = viewModel::setAnsweredCallerTrust,
+                onThresholdChange = viewModel::setAnsweredCallerThreshold,
+                onWindowDaysChange = viewModel::setAnsweredCallerWindowDays,
+            )
+            GradientDivider()
             SettingsToggle(stringResource(R.string.settings_neighbor_spoofing), stringResource(R.string.settings_neighbor_spoofing_desc), Icons.Default.NearMe, neighborSpoof) { viewModel.setNeighborSpoof(it) }
             GradientDivider()
             SettingsToggle(stringResource(R.string.settings_heuristic_analysis), stringResource(R.string.settings_heuristic_analysis_desc), Icons.Default.Psychology, heuristics) { viewModel.setHeuristics(it) }
@@ -319,7 +341,12 @@ fun SettingsScreen(viewModel: MainViewModel) {
             GradientDivider()
             SettingsToggle(stringResource(R.string.settings_ml_scorer), stringResource(R.string.settings_ml_scorer_desc), Icons.Default.SmartToy, mlScorer) { viewModel.setMlScorer(it) }
             GradientDivider()
-            SettingsToggle(stringResource(R.string.settings_db_prefix_expansion), stringResource(R.string.settings_db_prefix_expansion_desc), Icons.Default.CallSplit, dbPrefixExpansion) { viewModel.setDbPrefixExpansion(it) }
+            SettingsToggle(
+                stringResource(R.string.settings_db_prefix_expansion),
+                stringResource(R.string.settings_db_prefix_expansion_desc),
+                Icons.Default.CallSplit,
+                dbPrefixExpansion,
+            ) { viewModel.setDbPrefixExpansion(it) }
             GradientDivider()
             SettingsToggle(stringResource(R.string.settings_rcs_filter), stringResource(R.string.settings_rcs_filter_desc), Icons.Default.MarkChatRead, rcsFilter) { viewModel.setRcsFilter(it) }
             if (rcsFilter) {
@@ -719,6 +746,99 @@ internal fun RestorePreviewPanel(
                 Icon(Icons.Default.Close, null, tint = CatOverlay, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(6.dp))
                 Text(stringResource(R.string.backup_restore_cancel), color = CatOverlay)
+            }
+        }
+    }
+}
+
+@Composable
+@Suppress("FunctionNaming", "LongParameterList")
+internal fun AnsweredCallerTrustSettings(
+    enabled: Boolean,
+    threshold: Int,
+    windowDays: Int,
+    onEnabledChange: (Boolean) -> Unit,
+    onThresholdChange: (Int) -> Unit,
+    onWindowDaysChange: (Int) -> Unit,
+) {
+    SettingsToggle(
+        stringResource(R.string.settings_answered_caller_trust),
+        stringResource(R.string.settings_answered_caller_trust_desc),
+        Icons.AutoMirrored.Filled.PhoneCallback,
+        enabled,
+        toggleTag = SETTINGS_ANSWERED_CALLER_TOGGLE_TAG,
+        onCheckedChange = onEnabledChange,
+    )
+    if (enabled) {
+        Spacer(Modifier.height(8.dp))
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            SettingsNumberStepper(
+                label = stringResource(R.string.settings_answered_caller_threshold),
+                valueText = pluralStringResource(
+                    R.plurals.settings_answered_caller_threshold_value,
+                    threshold,
+                    threshold,
+                ),
+                value = threshold,
+                minValue = ANSWERED_CALLER_THRESHOLD_MIN,
+                maxValue = ANSWERED_CALLER_THRESHOLD_MAX,
+                onValueChange = onThresholdChange,
+            )
+            SettingsNumberStepper(
+                label = stringResource(R.string.settings_answered_caller_window),
+                valueText = pluralStringResource(
+                    R.plurals.settings_answered_caller_window_value,
+                    windowDays,
+                    windowDays,
+                ),
+                value = windowDays,
+                minValue = ANSWERED_CALLER_WINDOW_DAYS_MIN,
+                maxValue = ANSWERED_CALLER_WINDOW_DAYS_MAX,
+                onValueChange = onWindowDaysChange,
+            )
+        }
+    }
+}
+
+@Composable
+@Suppress("FunctionNaming", "LongParameterList")
+private fun SettingsNumberStepper(
+    label: String,
+    valueText: String,
+    value: Int,
+    minValue: Int,
+    maxValue: Int,
+    onValueChange: (Int) -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(label, style = MaterialTheme.typography.labelMedium, color = CatSubtext)
+            Text(valueText, style = MaterialTheme.typography.bodyMedium, color = CatText)
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            IconButton(
+                onClick = { onValueChange((value - 1).coerceAtLeast(minValue)) },
+                enabled = value > minValue,
+            ) {
+                Icon(
+                    Icons.Default.Remove,
+                    contentDescription = stringResource(R.string.settings_decrease_value),
+                    tint = if (value > minValue) CatText else CatOverlay,
+                )
+            }
+            IconButton(
+                onClick = { onValueChange((value + 1).coerceAtMost(maxValue)) },
+                enabled = value < maxValue,
+            ) {
+                Icon(
+                    Icons.Default.Add,
+                    contentDescription = stringResource(R.string.settings_increase_value),
+                    tint = if (value < maxValue) CatText else CatOverlay,
+                )
             }
         }
     }

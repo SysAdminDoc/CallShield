@@ -117,6 +117,9 @@ class SpamRepository(
         val KEY_CONTACTS_ONLY = booleanPreferencesKey("contacts_only_mode_enabled")
         val KEY_DB_PREFIX_EXPANSION = booleanPreferencesKey("db_prefix_expansion_enabled")
         val KEY_AGGRESSIVE_MODE = booleanPreferencesKey("aggressive_mode_enabled")
+        val KEY_ANSWERED_CALLER_TRUST = booleanPreferencesKey("answered_caller_trust_enabled")
+        val KEY_ANSWERED_CALLER_THRESHOLD = intPreferencesKey("answered_caller_trust_threshold")
+        val KEY_ANSWERED_CALLER_WINDOW_DAYS = intPreferencesKey("answered_caller_trust_window_days")
         // Feature 9: Time-based blocking
         val KEY_TIME_BLOCK = booleanPreferencesKey("time_block_enabled")
         val KEY_TIME_BLOCK_START = intPreferencesKey("time_block_start_hour") // 0-23
@@ -192,6 +195,9 @@ class SpamRepository(
     val contactsOnlyEnabled: Flow<Boolean> = settingsRepository.contactsOnlyEnabled
     val dbPrefixExpansionEnabled: Flow<Boolean> = settingsRepository.dbPrefixExpansionEnabled
     val aggressiveModeEnabled: Flow<Boolean> = settingsRepository.aggressiveModeEnabled
+    val answeredCallerTrustEnabled: Flow<Boolean> = settingsRepository.answeredCallerTrustEnabled
+    val answeredCallerThreshold: Flow<Int> = settingsRepository.answeredCallerThreshold
+    val answeredCallerWindowDays: Flow<Int> = settingsRepository.answeredCallerWindowDays
     val timeBlockEnabled: Flow<Boolean> = settingsRepository.timeBlockEnabled
     val timeBlockStart: Flow<Int> = settingsRepository.timeBlockStart
     val timeBlockEnd: Flow<Int> = settingsRepository.timeBlockEnd
@@ -235,6 +241,9 @@ class SpamRepository(
     suspend fun setContactsOnly(enabled: Boolean) = settingsRepository.setContactsOnly(enabled)
     suspend fun setDbPrefixExpansion(enabled: Boolean) = settingsRepository.setDbPrefixExpansion(enabled)
     suspend fun setAggressiveMode(enabled: Boolean) = settingsRepository.setAggressiveMode(enabled)
+    suspend fun setAnsweredCallerTrust(enabled: Boolean) = settingsRepository.setAnsweredCallerTrust(enabled)
+    suspend fun setAnsweredCallerThreshold(threshold: Int) = settingsRepository.setAnsweredCallerThreshold(threshold)
+    suspend fun setAnsweredCallerWindowDays(days: Int) = settingsRepository.setAnsweredCallerWindowDays(days)
     suspend fun setTimeBlock(enabled: Boolean) = settingsRepository.setTimeBlock(enabled)
     suspend fun setTimeBlockStart(hour: Int) = settingsRepository.setTimeBlockStart(hour)
     suspend fun setTimeBlockEnd(hour: Int) = settingsRepository.setTimeBlockEnd(hour)
@@ -339,6 +348,7 @@ class SpamRepository(
         blocklistRepository.toggleHashWildcardRule(id, enabled)
 
     // ── Call log ───────────────────────────────────────────────────────
+    @Suppress("LongParameterList")
     suspend fun logBlockedCall(
         number: String,
         isCall: Boolean = true,
@@ -349,6 +359,7 @@ class SpamRepository(
         logKey: String? = null,
     ) = blocklistRepository.logBlockedCall(number, isCall, smsBody, matchReason, confidence, timestamp, logKey)
 
+    @Suppress("LongParameterList")
     suspend fun enqueuePendingBlockedCallLog(
         idempotencyKey: String,
         number: String,

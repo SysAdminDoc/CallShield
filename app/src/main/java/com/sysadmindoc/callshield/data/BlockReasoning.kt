@@ -151,6 +151,13 @@ object BlockReasoning {
                 bullets += "Matched layer 3 (callback detection) — any number you've dialed in the last 24h rings through even if it's in a spam database."
             }
 
+            matchReason == "answered_caller" -> {
+                headline = "You've answered this caller repeatedly."
+                bullets +=
+                    "Matched answered-caller trust — this number has recent answered-call history on this device."
+                bullets += "Explicit blocklist, wildcard, range, STIR-failed, and system block rules still win first."
+            }
+
             matchReason == "repeated_urgent" -> {
                 headline = "Likely urgent — same number called twice in under 5 minutes."
                 bullets += "Matched layer 4 (repeated-urgent-caller allow-through)."
@@ -170,7 +177,7 @@ object BlockReasoning {
             else -> {
                 headline = "Blocked at layer: $matchReason"
                 if (description.isNotBlank()) bullets += description
-                if (confidence in 1..99) bullets += "Confidence: ${confidence}%."
+                if (confidence in 1..99) bullets += "Confidence: $confidence%."
             }
         }
 

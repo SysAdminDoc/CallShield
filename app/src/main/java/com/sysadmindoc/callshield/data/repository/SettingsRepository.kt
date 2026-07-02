@@ -3,6 +3,7 @@ package com.sysadmindoc.callshield.data.repository
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
+import com.sysadmindoc.callshield.data.CallbackDetector
 import com.sysadmindoc.callshield.data.SpamRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emitAll
@@ -45,6 +46,18 @@ class SettingsRepository(
     val dbPrefixExpansionEnabled: Flow<Boolean> =
         dataStore.data.map { it[SpamRepository.KEY_DB_PREFIX_EXPANSION] ?: false }
     val aggressiveModeEnabled: Flow<Boolean> = dataStore.data.map { it[SpamRepository.KEY_AGGRESSIVE_MODE] ?: false }
+    val answeredCallerTrustEnabled: Flow<Boolean> =
+        dataStore.data.map { it[SpamRepository.KEY_ANSWERED_CALLER_TRUST] ?: true }
+    val answeredCallerThreshold: Flow<Int> =
+        dataStore.data.map {
+            it[SpamRepository.KEY_ANSWERED_CALLER_THRESHOLD]
+                ?: CallbackDetector.DEFAULT_ANSWERED_CALLER_THRESHOLD
+        }
+    val answeredCallerWindowDays: Flow<Int> =
+        dataStore.data.map {
+            it[SpamRepository.KEY_ANSWERED_CALLER_WINDOW_DAYS]
+                ?: CallbackDetector.DEFAULT_ANSWERED_CALLER_WINDOW_DAYS
+        }
     val timeBlockEnabled: Flow<Boolean> = dataStore.data.map { it[SpamRepository.KEY_TIME_BLOCK] ?: false }
     val timeBlockStart: Flow<Int> =
         dataStore.data.map { it[SpamRepository.KEY_TIME_BLOCK_START] ?: DEFAULT_TIME_BLOCK_START }
@@ -139,6 +152,22 @@ class SettingsRepository(
         dataStore.edit { it[SpamRepository.KEY_DB_PREFIX_EXPANSION] = enabled }
     suspend fun setAggressiveMode(enabled: Boolean) =
         dataStore.edit { it[SpamRepository.KEY_AGGRESSIVE_MODE] = enabled }
+    suspend fun setAnsweredCallerTrust(enabled: Boolean) =
+        dataStore.edit { it[SpamRepository.KEY_ANSWERED_CALLER_TRUST] = enabled }
+    suspend fun setAnsweredCallerThreshold(threshold: Int) =
+        dataStore.edit {
+            it[SpamRepository.KEY_ANSWERED_CALLER_THRESHOLD] = threshold.coerceIn(
+                ANSWERED_CALLER_THRESHOLD_MIN,
+                ANSWERED_CALLER_THRESHOLD_MAX,
+            )
+        }
+    suspend fun setAnsweredCallerWindowDays(days: Int) =
+        dataStore.edit {
+            it[SpamRepository.KEY_ANSWERED_CALLER_WINDOW_DAYS] = days.coerceIn(
+                ANSWERED_CALLER_WINDOW_DAYS_MIN,
+                ANSWERED_CALLER_WINDOW_DAYS_MAX,
+            )
+        }
     suspend fun setTimeBlock(enabled: Boolean) =
         dataStore.edit { it[SpamRepository.KEY_TIME_BLOCK] = enabled }
     suspend fun setTimeBlockStart(hour: Int) =
@@ -181,3 +210,8 @@ class SettingsRepository(
         }
     }
 }
+
+internal const val ANSWERED_CALLER_THRESHOLD_MIN = 1
+internal const val ANSWERED_CALLER_THRESHOLD_MAX = 10
+internal const val ANSWERED_CALLER_WINDOW_DAYS_MIN = 1
+internal const val ANSWERED_CALLER_WINDOW_DAYS_MAX = 365
