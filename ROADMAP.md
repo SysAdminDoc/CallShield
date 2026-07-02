@@ -545,13 +545,6 @@ Plus RFC 8588 (SHAKEN profile), RFC 9027 (Traceback), Apache SpamAssassin / rspa
   Acceptance: Instrumented smoke tests assert permissions, protected services, notification/full-screen assumptions, SDK version branching, and SMS/OTP documented behavior for target SDK 36+.
   Complexity: M
 
-- [ ] P1 - Harden external blocklist subscriptions before B.F.7/B.F.13
-  Why: User-supplied list URLs can mass-block legitimate callers or stall parsing unless they have caps, attribution, dry-run preview, disable, and rollback semantics before affecting live screening.
-  Evidence: Existing ROADMAP B.F.7/B.F.13; `HotDataSync.kt`; `data/repository/SyncRepository.kt`; Pi-hole gravity rebuild model
-  Touches: `app/src/main/java/com/sysadmindoc/callshield/service/HotDataSync.kt`, `app/src/main/java/com/sysadmindoc/callshield/data/repository/SyncRepository.kt`, Room source metadata, settings/import UI, tests
-  Acceptance: Subscription imports allow only HTTP(S), cap bytes and row count, validate CSV/TXT/JSON before commit, show add/remove counts and source attribution, can disable or roll back one feed, and never update hot-path caches until committed.
-  Complexity: L
-
 - [ ] P2 - Add selective backup/export/restore sections
   Why: Current backup preview supports merge/replace for the combined payload, but users need to migrate rules without importing unrelated logs, settings, or stale personal data.
   Evidence: `BackupRestore.kt`; `MainViewModel.kt`; `BackupRestoreTest.kt`; SpamBlocker v5.9 selective backup/restore release notes

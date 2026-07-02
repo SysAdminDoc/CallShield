@@ -56,6 +56,9 @@ Distribution prep after the v1.7.10 release.
 - Added byte, row-count, and schema guardrails for first-party GitHub spam,
   hot-list, spam-domain, and model-weight feeds so malformed responses fail
   before replacing the last known-good local data.
+- Added external blocklist subscription guardrails: HTTP(S)-only CSV/TXT/JSON
+  feeds are byte- and row-capped, preview add/remove/source impact before
+  commit, and can be disabled or removed with feed-owned rows rolled back.
 - Added typed per-source enrichment diagnostics and privacy copy across overlay
   and number details so timeout, rate-limit, parse-error, oversized, disabled,
   unavailable, clean, and found states are visible without logging raw queried

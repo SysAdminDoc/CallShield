@@ -3,8 +3,12 @@ package com.sysadmindoc.callshield.data.repository
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
+import com.squareup.moshi.Moshi
+import com.squareup.moshi.Types
+import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import com.sysadmindoc.callshield.data.CallbackDetector
 import com.sysadmindoc.callshield.data.SpamRepository
+import com.sysadmindoc.callshield.data.model.ExternalBlocklistSubscription
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.first
@@ -26,7 +30,20 @@ class SettingsRepository(
     }
 
     private val abstractApiKeyMigrationMutex = Mutex()
-    @Volatile private var abstractApiKeyMigrationComplete = false
+    private val externalBlocklistAdapter =
+        Moshi
+            .Builder()
+            .addLast(KotlinJsonAdapterFactory())
+            .build()
+            .adapter<List<ExternalBlocklistSubscription>>(
+                Types.newParameterizedType(
+                    List::class.java,
+                    ExternalBlocklistSubscription::class.java,
+                ),
+            )
+
+    @Volatile
+    private var abstractApiKeyMigrationComplete = false
 
     val blockCallsEnabled: Flow<Boolean> = dataStore.data.map { it[SpamRepository.KEY_BLOCK_CALLS] ?: true }
     val blockSmsEnabled: Flow<Boolean> = dataStore.data.map { it[SpamRepository.KEY_BLOCK_SMS] ?: true }
@@ -87,6 +104,10 @@ class SettingsRepository(
     val lastSyncTimestamp: Flow<Long> = dataStore.data.map { it[SpamRepository.KEY_LAST_SYNC] ?: 0L }
     val lastSyncSource: Flow<String> = dataStore.data.map { it[SpamRepository.KEY_LAST_SYNC_SOURCE] ?: "" }
     val activeProfileName: Flow<String?> = dataStore.data.map { it[SpamRepository.KEY_ACTIVE_PROFILE] }
+    val externalBlocklistSubscriptions: Flow<List<ExternalBlocklistSubscription>> =
+        dataStore.data.map { prefs ->
+            decodeExternalBlocklistSubscriptions(prefs[SpamRepository.KEY_EXTERNAL_BLOCKLIST_SUBSCRIPTIONS])
+        }
 
     suspend fun setActiveProfileName(name: String?) = dataStore.edit { prefs ->
         if (name == null) prefs.remove(SpamRepository.KEY_ACTIVE_PROFILE)
@@ -200,6 +221,21 @@ class SettingsRepository(
 
     suspend fun readLastDataSha(): String? = dataStore.data.first()[SpamRepository.KEY_LAST_SHA]
 
+    suspend fun readExternalBlocklistSubscriptions(): List<ExternalBlocklistSubscription> =
+        decodeExternalBlocklistSubscriptions(
+            dataStore.data.first()[SpamRepository.KEY_EXTERNAL_BLOCKLIST_SUBSCRIPTIONS],
+        )
+
+    suspend fun saveExternalBlocklistSubscriptions(subscriptions: List<ExternalBlocklistSubscription>) =
+        dataStore.edit { prefs ->
+            if (subscriptions.isEmpty()) {
+                prefs.remove(SpamRepository.KEY_EXTERNAL_BLOCKLIST_SUBSCRIPTIONS)
+            } else {
+                prefs[SpamRepository.KEY_EXTERNAL_BLOCKLIST_SUBSCRIPTIONS] =
+                    externalBlocklistAdapter.toJson(subscriptions.sortedBy { it.label.lowercase() })
+            }
+        }
+
     suspend fun recordSyncSuccess(
         sha: String?,
         syncSource: String,
@@ -227,6 +263,13 @@ class SettingsRepository(
             }
             abstractApiKeyMigrationComplete = true
         }
+    }
+
+    private fun decodeExternalBlocklistSubscriptions(raw: String?): List<ExternalBlocklistSubscription> {
+        if (raw.isNullOrBlank()) return emptyList()
+        return runCatching { externalBlocklistAdapter.fromJson(raw).orEmpty() }
+            .getOrDefault(emptyList())
+            .filter { it.id.isNotBlank() && it.url.isNotBlank() }
     }
 }
 

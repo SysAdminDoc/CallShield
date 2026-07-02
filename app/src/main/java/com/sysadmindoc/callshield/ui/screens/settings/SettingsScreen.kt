@@ -1,3 +1,5 @@
+@file:Suppress("TooManyFunctions")
+
 package com.sysadmindoc.callshield.ui.screens.settings
 
 import android.Manifest
@@ -16,6 +18,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Label
 import androidx.compose.material.icons.automirrored.filled.PhoneCallback
 import androidx.compose.material.icons.automirrored.filled.TextSnippet
 import androidx.compose.material.icons.filled.*
@@ -41,6 +44,8 @@ import com.sysadmindoc.callshield.BuildConfig
 import com.sysadmindoc.callshield.permissions.CallShieldPermissions
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.BackupRestore
+import com.sysadmindoc.callshield.data.model.ExternalBlocklistPreview
+import com.sysadmindoc.callshield.data.model.ExternalBlocklistSubscription
 import com.sysadmindoc.callshield.data.repository.ANSWERED_CALLER_THRESHOLD_MAX
 import com.sysadmindoc.callshield.data.repository.ANSWERED_CALLER_THRESHOLD_MIN
 import com.sysadmindoc.callshield.data.repository.ANSWERED_CALLER_WINDOW_DAYS_MAX
@@ -89,8 +94,13 @@ fun SettingsScreen(viewModel: MainViewModel) {
     val pushAlertEnabled by viewModel.pushAlertEnabled.collectAsStateWithLifecycle()
     val pushAlertDisabledPackages by viewModel.pushAlertDisabledPackages.collectAsStateWithLifecycle()
     val abstractApiKey by viewModel.abstractApiKey.collectAsStateWithLifecycle()
+    val externalBlocklists by viewModel.externalBlocklistSubscriptions.collectAsStateWithLifecycle()
+    val externalBlocklistPreview by viewModel.externalBlocklistPreview.collectAsStateWithLifecycle()
+    val externalBlocklistResult by viewModel.externalBlocklistResult.collectAsStateWithLifecycle()
     var showPushAlertSources by remember { mutableStateOf(false) }
     var showRawSmsExportDialog by remember { mutableStateOf(false) }
+    var externalBlocklistUrl by remember { mutableStateOf("") }
+    var externalBlocklistLabel by remember { mutableStateOf("") }
     val apiKeyClearedMessage = stringResource(R.string.settings_api_key_cleared)
     val apiKeySavedMessage = stringResource(R.string.settings_api_key_saved)
 
@@ -573,6 +583,33 @@ fun SettingsScreen(viewModel: MainViewModel) {
         }
 
         // Advanced — optional API key for caller name lookup
+        ExternalBlocklistSettings(
+            url = externalBlocklistUrl,
+            label = externalBlocklistLabel,
+            subscriptions = externalBlocklists,
+            preview = externalBlocklistPreview,
+            result = externalBlocklistResult,
+            onUrlChange = { externalBlocklistUrl = it },
+            onLabelChange = { externalBlocklistLabel = it },
+            onPreview = {
+                hapticTick(context)
+                viewModel.previewExternalBlocklist(externalBlocklistUrl, externalBlocklistLabel)
+            },
+            onApply = {
+                hapticTick(context)
+                viewModel.applyExternalBlocklist(externalBlocklistUrl, externalBlocklistLabel)
+            },
+            onToggle = { subscription, enabled ->
+                hapticTick(context)
+                viewModel.setExternalBlocklistEnabled(subscription, enabled)
+            },
+            onRemove = { subscription ->
+                hapticTick(context)
+                viewModel.removeExternalBlocklist(subscription)
+            },
+            onClearResult = viewModel::clearExternalBlocklistResult,
+        )
+
         SettingsCard(stringResource(R.string.settings_advanced)) {
             var apiKeyInput by remember { mutableStateOf(abstractApiKey) }
             var showApiKey by remember { mutableStateOf(false) }
@@ -833,6 +870,235 @@ internal fun RestorePreviewPanel(
                 Spacer(Modifier.width(6.dp))
                 Text(stringResource(R.string.backup_restore_cancel), color = CatOverlay)
             }
+        }
+    }
+}
+
+@Composable
+@Suppress("FunctionNaming", "LongMethod", "LongParameterList", "ktlint:standard:function-naming")
+private fun ExternalBlocklistSettings(
+    url: String,
+    label: String,
+    subscriptions: List<ExternalBlocklistSubscription>,
+    preview: ExternalBlocklistPreview?,
+    result: String?,
+    onUrlChange: (String) -> Unit,
+    onLabelChange: (String) -> Unit,
+    onPreview: () -> Unit,
+    onApply: () -> Unit,
+    onToggle: (ExternalBlocklistSubscription, Boolean) -> Unit,
+    onRemove: (ExternalBlocklistSubscription) -> Unit,
+    onClearResult: () -> Unit,
+) {
+    SettingsCard(stringResource(R.string.settings_external_blocklists)) {
+        Text(
+            stringResource(R.string.settings_external_blocklists_desc),
+            style = MaterialTheme.typography.bodySmall,
+            color = CatSubtext,
+        )
+        Spacer(Modifier.height(10.dp))
+        OutlinedTextField(
+            value = url,
+            onValueChange = onUrlChange,
+            label = { Text(stringResource(R.string.settings_external_blocklist_url)) },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+            leadingIcon = { Icon(Icons.Default.Link, contentDescription = null, tint = CatBlue) },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
+            shape = RoundedCornerShape(8.dp),
+            colors =
+                OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = CatBlue,
+                    unfocusedBorderColor = CardBorderAccent,
+                    focusedLabelColor = CatBlue,
+                    cursorColor = CatBlue,
+                ),
+        )
+        Spacer(Modifier.height(8.dp))
+        OutlinedTextField(
+            value = label,
+            onValueChange = onLabelChange,
+            label = { Text(stringResource(R.string.settings_external_blocklist_label)) },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+            leadingIcon = { Icon(Icons.AutoMirrored.Filled.Label, contentDescription = null, tint = CatMauve) },
+            shape = RoundedCornerShape(8.dp),
+            colors =
+                OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = CatMauve,
+                    unfocusedBorderColor = CardBorderAccent,
+                    focusedLabelColor = CatMauve,
+                    cursorColor = CatMauve,
+                ),
+        )
+        Spacer(Modifier.height(10.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+            PremiumActionButton(
+                label = stringResource(R.string.settings_external_blocklist_preview),
+                icon = Icons.Default.Search,
+                color = CatBlue,
+                onClick = onPreview,
+                enabled = url.isNotBlank(),
+                modifier = Modifier.weight(1f),
+                outlined = true,
+            )
+            PremiumActionButton(
+                label = stringResource(R.string.settings_external_blocklist_apply),
+                icon = Icons.Default.Save,
+                color = CatGreen,
+                onClick = onApply,
+                enabled = url.isNotBlank(),
+                modifier = Modifier.weight(1f),
+            )
+        }
+        preview?.let {
+            ExternalBlocklistPreviewPanel(preview = it, onApply = onApply)
+        }
+        result?.let {
+            val successfulResult =
+                preview != null ||
+                    listOf("Applied", "Disabled", "Removed").any { prefix -> it.startsWith(prefix) }
+            Spacer(Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color =
+                        if (successfulResult) {
+                            CatGreen
+                        } else {
+                            CatPeach
+                        },
+                    modifier = Modifier.weight(1f),
+                )
+                IconButton(onClick = onClearResult) {
+                    Icon(Icons.Default.Close, contentDescription = stringResource(R.string.cd_close), tint = CatOverlay)
+                }
+            }
+        }
+        if (subscriptions.isNotEmpty()) {
+            Spacer(Modifier.height(12.dp))
+            GradientDivider()
+            Spacer(Modifier.height(8.dp))
+            subscriptions.forEachIndexed { index, subscription ->
+                ExternalBlocklistSubscriptionRow(
+                    subscription = subscription,
+                    onToggle = { enabled -> onToggle(subscription, enabled) },
+                    onRemove = { onRemove(subscription) },
+                )
+                if (index < subscriptions.lastIndex) {
+                    GradientDivider()
+                }
+            }
+        }
+    }
+}
+
+@Composable
+@Suppress("FunctionNaming", "ktlint:standard:function-naming")
+private fun ExternalBlocklistPreviewPanel(
+    preview: ExternalBlocklistPreview,
+    onApply: () -> Unit,
+) {
+    Spacer(Modifier.height(10.dp))
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        color = CatBlue.copy(alpha = 0.08f),
+        border = BorderStroke(1.dp, CatBlue.copy(alpha = 0.20f)),
+    ) {
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Top) {
+                PremiumIconTile(icon = Icons.Default.Link, color = CatBlue)
+                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        stringResource(R.string.settings_external_blocklist_preview_title, preview.label),
+                        style = MaterialTheme.typography.titleSmall,
+                        color = CatText,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Text(
+                        stringResource(
+                            R.string.settings_external_blocklist_preview_summary,
+                            preview.format.uppercase(),
+                            preview.numberCount,
+                            preview.added,
+                            preview.removed,
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = CatSubtext,
+                    )
+                    Text(
+                        stringResource(
+                            R.string.settings_external_blocklist_preview_skips,
+                            preview.skippedRows,
+                            preview.blockedByOtherSources,
+                        ),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = CatOverlay,
+                    )
+                }
+            }
+            PremiumActionButton(
+                label = stringResource(R.string.settings_external_blocklist_commit_preview),
+                icon = Icons.Default.Save,
+                color = CatGreen,
+                onClick = onApply,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+    }
+}
+
+@Composable
+@Suppress("FunctionNaming", "ktlint:standard:function-naming")
+private fun ExternalBlocklistSubscriptionRow(
+    subscription: ExternalBlocklistSubscription,
+    onToggle: (Boolean) -> Unit,
+    onRemove: () -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        PremiumIconTile(
+            icon = if (subscription.enabled) Icons.Default.Link else Icons.Default.LinkOff,
+            color = if (subscription.enabled) CatGreen else CatOverlay,
+            size = 38.dp,
+            iconSize = 20.dp,
+        )
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            Text(subscription.label, style = MaterialTheme.typography.bodyMedium, color = CatText)
+            Text(subscription.url, style = MaterialTheme.typography.labelSmall, color = CatSubtext)
+            Text(
+                stringResource(
+                    R.string.settings_external_blocklist_subscription_stats,
+                    subscription.lastNumberCount,
+                    subscription.lastAdded,
+                    subscription.lastRemoved,
+                ),
+                style = MaterialTheme.typography.labelSmall,
+                color = if (subscription.enabled) CatGreen else CatOverlay,
+            )
+            if (subscription.lastError.isNotBlank()) {
+                Text(subscription.lastError, style = MaterialTheme.typography.labelSmall, color = CatPeach)
+            }
+        }
+        Switch(
+            checked = subscription.enabled,
+            onCheckedChange = onToggle,
+            colors = SwitchDefaults.colors(checkedTrackColor = CatGreen, checkedThumbColor = Black),
+        )
+        IconButton(onClick = onRemove) {
+            Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.cd_delete), tint = CatPeach)
         }
     }
 }

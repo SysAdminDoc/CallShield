@@ -134,6 +134,8 @@ class SpamRepository(
         internal val KEY_AUTO_CLEANUP = booleanPreferencesKey("auto_cleanup_enabled")
         internal val KEY_CLEANUP_DAYS = intPreferencesKey("cleanup_retention_days")
         internal val KEY_ABSTRACT_API_KEY = stringPreferencesKey("abstract_api_key")
+        internal val KEY_EXTERNAL_BLOCKLIST_SUBSCRIPTIONS =
+            stringPreferencesKey("external_blocklist_subscriptions")
         val KEY_ML_SCORER = booleanPreferencesKey("ml_scorer_enabled")
         val KEY_RCS_FILTER = booleanPreferencesKey("rcs_filter_enabled")
         // Silent voicemail mode: when enabled, blocked calls are silenced (no
@@ -221,6 +223,7 @@ class SpamRepository(
     val lastSyncTimestamp: Flow<Long> = settingsRepository.lastSyncTimestamp
     val lastSyncSource: Flow<String> = settingsRepository.lastSyncSource
     val activeProfileName: Flow<String?> = settingsRepository.activeProfileName
+    val externalBlocklistSubscriptions = settingsRepository.externalBlocklistSubscriptions
 
     suspend fun setActiveProfileName(name: String?) = settingsRepository.setActiveProfileName(name)
     suspend fun setAbstractApiKey(key: String) = settingsRepository.setAbstractApiKey(key)
@@ -319,6 +322,23 @@ class SpamRepository(
      *              Used for manual sync to guarantee fresh data.
      */
     suspend fun syncFromGitHub(force: Boolean = false): SyncResult = syncRepository.syncFromGitHub(force)
+
+    suspend fun previewExternalBlocklistSubscription(
+        url: String,
+        label: String = "",
+    ) = syncRepository.previewExternalBlocklistSubscription(url, label)
+
+    suspend fun applyExternalBlocklistSubscription(
+        url: String,
+        label: String = "",
+    ) = syncRepository.applyExternalBlocklistSubscription(url, label)
+
+    suspend fun setExternalBlocklistSubscriptionEnabled(
+        id: String,
+        enabled: Boolean,
+    ) = syncRepository.setExternalBlocklistSubscriptionEnabled(id, enabled)
+
+    suspend fun removeExternalBlocklistSubscription(id: String) = syncRepository.removeExternalBlocklistSubscription(id)
 
     // ── Blocklist management ───────────────────────────────────────────
     suspend fun blockNumber(
