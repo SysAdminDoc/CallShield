@@ -106,6 +106,10 @@ import com.sysadmindoc.callshield.ui.theme.SurfaceElevated
 import com.sysadmindoc.callshield.ui.theme.accentGlow
 import com.sysadmindoc.callshield.ui.theme.hapticConfirm
 import com.sysadmindoc.callshield.ui.theme.hapticTick
+import com.sysadmindoc.callshield.util.filterAsciiDigits
+import com.sysadmindoc.callshield.util.hasMinAsciiDigits
+import com.sysadmindoc.callshield.util.normalizePhoneNumberInput
+import com.sysadmindoc.callshield.util.sanitizePhoneNumberInput
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -124,7 +128,7 @@ fun LookupScreen(viewModel: MainViewModel) {
     var trace by remember { mutableStateOf<com.sysadmindoc.callshield.data.checker.PipelineTrace?>(null) }
     var checking by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
-    val canLookup = normalizedNumber.length >= 5
+    val canLookup = hasMinAsciiDigits(normalizedNumber)
     val lookupFailedUnknown = stringResource(R.string.lookup_failed_unknown).substringAfter(": ")
     val numberBlockedMessage = stringResource(R.string.lookup_number_blocked)
     val reportedMessage = stringResource(R.string.lookup_reported)
@@ -744,24 +748,11 @@ private fun haptic(context: android.content.Context, isSpam: Boolean) {
 }
 
 private fun sanitizeLookupInput(input: String): String {
-    val builder = StringBuilder()
-    input.forEach { char ->
-        when {
-            char.isDigit() -> builder.append(char)
-            char == '+' && builder.isEmpty() -> builder.append(char)
-            char == ' ' || char == '-' || char == '(' || char == ')' -> builder.append(char)
-        }
-    }
-    return builder.toString().take(24)
+    return sanitizePhoneNumberInput(input)
 }
 
 private fun normalizeLookupNumber(input: String): String {
-    val digitsOnly = input.filter { it.isDigit() }
-    return if (input.trim().startsWith("+")) {
-        "+$digitsOnly"
-    } else {
-        digitsOnly
-    }
+    return normalizePhoneNumberInput(input)
 }
 
 @Composable
@@ -854,7 +845,7 @@ private fun clipboardPhoneNumber(context: android.content.Context): String? {
         val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
         val clip = clipboard.primaryClip?.getItemAt(0)?.text?.toString() ?: return null
         val normalized = normalizeLookupNumber(clip)
-        normalized.takeIf { it.filter(Char::isDigit).length in 7..15 }
+        normalized.takeIf { filterAsciiDigits(it).length in 7..15 }
     } catch (_: Exception) {
         null
     }

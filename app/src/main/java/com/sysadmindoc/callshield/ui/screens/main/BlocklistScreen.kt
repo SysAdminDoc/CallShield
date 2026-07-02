@@ -117,6 +117,9 @@ import com.sysadmindoc.callshield.ui.theme.StatusPill
 import com.sysadmindoc.callshield.ui.theme.SurfaceBright
 import com.sysadmindoc.callshield.ui.theme.hapticConfirm
 import com.sysadmindoc.callshield.ui.theme.hapticTick
+import com.sysadmindoc.callshield.util.hasMinAsciiDigits
+import com.sysadmindoc.callshield.util.normalizePhoneNumberInput
+import com.sysadmindoc.callshield.util.sanitizePhoneNumberInput
 import kotlinx.coroutines.launch
 
 private const val BLOCKLIST_TAB_BLOCKED = 0
@@ -975,7 +978,7 @@ fun AddNumberDialog(onDismiss: () -> Unit, onAdd: (String, String) -> Unit) {
     var number by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
     val normalizedNumber = remember(number) { normalizePhoneInput(number) }
-    val canConfirm = normalizedNumber.filter(Char::isDigit).length >= 5
+    val canConfirm = hasMinAsciiDigits(normalizedNumber)
 
     androidx.compose.material3.AlertDialog(
         onDismissRequest = onDismiss,
@@ -1138,7 +1141,7 @@ fun AddWhitelistDialog(onDismiss: () -> Unit, onAdd: (String, String, Boolean) -
     var description by remember { mutableStateOf("") }
     var emergency by remember { mutableStateOf(false) }
     val normalizedNumber = remember(number) { normalizePhoneInput(number) }
-    val canConfirm = normalizedNumber.filter(Char::isDigit).length >= 5
+    val canConfirm = hasMinAsciiDigits(normalizedNumber)
 
     androidx.compose.material3.AlertDialog(
         onDismissRequest = onDismiss,
@@ -1293,24 +1296,11 @@ fun AddKeywordDialog(
 }
 
 private fun sanitizePhoneInput(input: String): String {
-    val builder = StringBuilder()
-    input.forEach { char ->
-        when {
-            char.isDigit() -> builder.append(char)
-            char == '+' && builder.isEmpty() -> builder.append(char)
-            char == ' ' || char == '-' || char == '(' || char == ')' -> builder.append(char)
-        }
-    }
-    return builder.toString().take(24)
+    return sanitizePhoneNumberInput(input)
 }
 
 private fun normalizePhoneInput(input: String): String {
-    val digitsOnly = input.filter { it.isDigit() }
-    return if (input.trim().startsWith("+")) {
-        "+$digitsOnly"
-    } else {
-        digitsOnly
-    }
+    return normalizePhoneNumberInput(input)
 }
 
 // ─────────────────────────────────────────────────────────────────────
