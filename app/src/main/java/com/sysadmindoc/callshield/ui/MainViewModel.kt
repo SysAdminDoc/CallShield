@@ -432,10 +432,15 @@ class MainViewModel
     }
 
     // Backup/restore
-    fun backup() { viewModelScope.launch { BackupRestore.shareBackup(appContext) } }
-    fun restore(uri: Uri) {
+    fun backup(sections: Set<BackupRestore.BackupSection> = BackupRestore.defaultExportSections) {
+        viewModelScope.launch { BackupRestore.shareBackup(appContext, sections) }
+    }
+    fun restore(
+        uri: Uri,
+        sections: Set<BackupRestore.BackupSection> = BackupRestore.defaultRestoreSections,
+    ) {
         viewModelScope.launch {
-            val result = BackupRestore.previewRestoreFromUri(appContext, uri)
+            val result = BackupRestore.previewRestoreFromUri(appContext, uri, sections)
             if (result.success) {
                 _restorePreview.value = result.preview
                 _restoreResult.value = null

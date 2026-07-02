@@ -6,11 +6,17 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.sysadmindoc.callshield.data.BackupRestore.Backup
 import com.sysadmindoc.callshield.data.BackupRestore.BackupKeyword
+import com.sysadmindoc.callshield.data.BackupRestore.BackupLogEntry
 import com.sysadmindoc.callshield.data.BackupRestore.BackupNumber
+import com.sysadmindoc.callshield.data.BackupRestore.BackupRangeRule
+import com.sysadmindoc.callshield.data.BackupRestore.BackupSection
+import com.sysadmindoc.callshield.data.BackupRestore.BackupSettings
 import com.sysadmindoc.callshield.data.BackupRestore.BackupWhitelist
 import com.sysadmindoc.callshield.data.BackupRestore.BackupWildcard
 import com.sysadmindoc.callshield.data.local.AppDatabase
 import com.sysadmindoc.callshield.data.local.SpamDao
+import com.sysadmindoc.callshield.data.model.BlockedCall
+import com.sysadmindoc.callshield.data.model.HashWildcardRule
 import com.sysadmindoc.callshield.data.model.SmsKeywordRule
 import com.sysadmindoc.callshield.data.model.SpamNumber
 import com.sysadmindoc.callshield.data.model.WhitelistEntry
@@ -145,8 +151,114 @@ class BackupRestoreIntegrationTest {
             assertEquals(listOf("verify"), restoredKeywords)
         }
 
-    private suspend fun preview(backup: Backup): BackupRestore.RestorePreview {
-        val result = BackupRestore.previewRestoreJson(context, BackupRestore.backupToJson(backup), dao)
+    @Test
+    fun selectedReplaceRestoreOnlyClearsSelectedSections() =
+        runBlocking {
+            dao.insertNumber(
+                SpamNumber(number = "+15550000001", type = "spam", source = "user", isUserBlocked = true),
+            )
+            dao.insertWhitelistEntry(WhitelistEntry(number = "+15550000002", description = "Existing"))
+            dao.insertWildcardRule(WildcardRule(pattern = "old?", isRegex = false, description = "Existing"))
+            dao.insertKeywordRule(SmsKeywordRule(keyword = "legacy", caseSensitive = false, description = "Existing"))
+            dao.insertHashWildcardRule(HashWildcardRule(pattern = "+1555#######", description = "Old range"))
+            dao.insertBlockedCall(
+                BlockedCall(
+                    number = "+15550000003",
+                    timestamp = 100L,
+                    matchReason = "Old log",
+                    logKey = "old-log",
+                ),
+            )
+
+            val backup =
+                Backup(
+                    blockedNumbers = listOf(BackupNumber("+15559990000", "spam", "Ignored", "user")),
+                    whitelistNumbers = listOf(BackupWhitelist("+15559990001", "Ignored")),
+                    wildcardRules = listOf(BackupWildcard("900*", isRegex = false, description = "Ignored", enabled = true)),
+                    keywordRules = listOf(BackupKeyword("verify", caseSensitive = false, description = "Ignored", enabled = true)),
+                    rangeRules = listOf(BackupRangeRule("+1666#######", "New range", enabled = true)),
+                    logs =
+                        listOf(
+                            BackupLogEntry(
+                                number = "+16660000000",
+                                timestamp = 200L,
+                                matchReason = "New log",
+                                logKey = "new-log",
+                            ),
+                        ),
+                )
+
+            val preview = preview(backup, setOf(BackupSection.RANGE_RULES, BackupSection.LOGS))
+            val result =
+                BackupRestore.restorePayload(
+                    context = context,
+                    payload = preview.payload,
+                    mode = BackupRestore.RestoreMode.REPLACE,
+                    dao = dao,
+                    repo = repo,
+                    selectedSections = preview.selectedSections,
+                )
+
+            assertTrue(result.success)
+            assertNotNull(dao.findByNumber("+15550000001"))
+            assertEquals(listOf("+15550000002"), dao.getAllWhitelist().first().map { it.number })
+            assertEquals(listOf("old?"), dao.getAllWildcardRules().first().map { it.pattern })
+            assertEquals(listOf("legacy"), dao.getAllKeywordRules().first().map { it.keyword })
+            assertEquals(listOf("+1666#######"), dao.getAllHashWildcardRules().first().map { it.pattern })
+            assertEquals(listOf("new-log"), dao.getBlockedCalls().first().map { it.logKey })
+        }
+
+    @Test
+    fun settingsRestoreAppliesSelectedSettingsWithoutOtherSections() =
+        runBlocking {
+            repo.setBlockCalls(true)
+            repo.setFreqEscalation(true)
+            repo.setFreqThreshold(3)
+            repo.setActiveProfileName(null)
+
+            val preview =
+                preview(
+                    Backup(
+                        blockedNumbers = listOf(BackupNumber("+15559990000", "spam", "Ignored", "user")),
+                        settings =
+                            BackupSettings(
+                                blockCallsEnabled = false,
+                                frequencyEscalationEnabled = false,
+                                frequencyThreshold = 8,
+                                activeProfileName = BlockingProfiles.Profile.SLEEP.name,
+                            ),
+                    ),
+                    setOf(BackupSection.SETTINGS),
+                )
+            val result =
+                BackupRestore.restorePayload(
+                    context = context,
+                    payload = preview.payload,
+                    mode = BackupRestore.RestoreMode.MERGE,
+                    dao = dao,
+                    repo = repo,
+                    selectedSections = preview.selectedSections,
+                )
+
+            assertTrue(result.success)
+            assertNull(dao.findByNumber("+15559990000"))
+            assertFalse(repo.blockCallsEnabled.first())
+            assertFalse(repo.freqEscalationEnabled.first())
+            assertEquals(8, repo.freqThreshold.first())
+            assertEquals(BlockingProfiles.Profile.SLEEP.name, repo.activeProfileName.first())
+
+            repo.setBlockCalls(true)
+            repo.setFreqEscalation(true)
+            repo.setFreqThreshold(3)
+            repo.setActiveProfileName(null)
+            Unit
+        }
+
+    private suspend fun preview(
+        backup: Backup,
+        sections: Set<BackupSection> = BackupRestore.defaultRestoreSections,
+    ): BackupRestore.RestorePreview {
+        val result = BackupRestore.previewRestoreJson(context, BackupRestore.backupToJson(backup), dao, sections)
         assertTrue(result.message, result.success)
         return result.preview!!
     }

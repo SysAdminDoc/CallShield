@@ -212,6 +212,9 @@ interface SpamDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertHashWildcardRule(rule: HashWildcardRule)
 
+    @Query("DELETE FROM hash_wildcard_rules")
+    suspend fun clearHashWildcardRules()
+
     @Delete
     suspend fun deleteHashWildcardRule(rule: HashWildcardRule)
 

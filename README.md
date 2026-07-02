@@ -228,7 +228,7 @@ Trained weekly from the CallShield database (50K positive + 50K negative samples
 - Share spam warnings to any app
 
 ### Data & System
-- Full backup/restore, CSV log export, auto-cleanup (7/14/30/90 days)
+- Selective backup/restore for rules, non-secret settings, and opt-in logs; CSV log export; auto-cleanup (7/14/30/90 days)
 - Weekly full sync + scheduled hot list refresh, daily digest notification
 - Quick Settings tile, app shortcuts, home screen widget
 - Protection test validates all layers and permissions
