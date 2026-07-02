@@ -42,6 +42,8 @@ Distribution prep after the v1.7.10 release.
   and secondary states read consistently across the app.
 - Tightened trust-critical copy and semantics for reporting, source checks,
   permission recovery, import/export, and settings save actions.
+- Added a shared per-permission degraded-mode matrix so dashboard and
+  Protection Test recovery states name the affected feature and next action.
 
 ### Fixed
 

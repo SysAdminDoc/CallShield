@@ -52,6 +52,7 @@
     <string name="dashboard_setup_overlay_title">Caller ID overlay</string>
     <string name="dashboard_setup_notifications_title">Notifications</string>
     <string name="dashboard_permissions_ready_detail">Core permissions are granted.</string>
+    <string name="dashboard_permissions_degraded_detail">%1$s: %2$s</string>
     <plurals name="dashboard_permissions_needed_detail">
         <item quantity="one">Permission still missing: %d</item>
         <item quantity="other">Permissions still missing: %d</item>
@@ -710,6 +711,21 @@
     <string name="protection_test_hot_list_data">Hot List Data</string>
     <string name="protection_test_overlay_permission">Overlay Permission</string>
     <string name="protection_test_notification_access">Notification Access (RCS)</string>
+    <string name="permission_contract_degraded_call_log">Recent-call scans, callback trust, frequency checks, and blocked-call history are limited without call log access.</string>
+    <string name="permission_contract_degraded_contacts">Contact whitelist and local caller trust cannot protect known callers without contacts access.</string>
+    <string name="permission_contract_degraded_read_sms">SMS inbox scans and blocked-message review cannot read existing texts without SMS inbox access.</string>
+    <string name="permission_contract_degraded_receive_sms">Incoming SMS spam filtering cannot inspect new texts until incoming-SMS access is granted.</string>
+    <string name="permission_contract_degraded_call_screening">Live call blocking is unavailable until CallShield is the active call screening app.</string>
+    <string name="permission_contract_call_screening_unsupported">This Android build does not expose the default call screening role.</string>
+    <string name="permission_contract_fix_call_screening_unsupported">Use a phone/OEM build that supports Android call screening, or keep SMS/RCS protection enabled.</string>
+    <string name="permission_contract_degraded_phone_state">Some OEM call-state compatibility paths may be unavailable without phone state access.</string>
+    <string name="permission_contract_degraded_answer_calls">Samsung/Xiaomi call-response compatibility may be reduced without answer-calls access.</string>
+    <string name="permission_contract_degraded_overlay">Floating caller ID and live enrichment cards stay hidden until overlay access is allowed.</string>
+    <string name="permission_contract_degraded_notification_access">RCS filtering and push-alert caller trust cannot read trusted message notifications until listener access is enabled.</string>
+    <string name="permission_contract_post_notifications_name">Notification Permission</string>
+    <string name="permission_contract_post_notifications_denied">Denied - alerts and review actions may be hidden</string>
+    <string name="permission_contract_degraded_post_notifications">Blocked-call/SMS alerts, review actions, and daily summaries may be suppressed until notification permission is granted.</string>
+    <string name="permission_contract_post_notifications_not_required">Not required on this Android version</string>
 
     <!-- Changelog Screen -->
     <string name="changelog_latest">LATEST</string>

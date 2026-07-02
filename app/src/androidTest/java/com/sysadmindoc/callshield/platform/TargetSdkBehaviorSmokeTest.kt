@@ -55,6 +55,20 @@ class TargetSdkBehaviorSmokeTest {
     }
 
     @Test
+    fun permissionContractManifestPermissionsRemainDeclared() {
+        val declaredPermissions = packageInfo.requestedPermissions.orEmpty().toSet()
+        val contractPermissions =
+            CallShieldPermissions.permissionCapabilityContracts
+                .mapNotNull { contract -> contract.manifestPermission }
+
+        assertTrue(contractPermissions.isNotEmpty())
+        assertTrue(contractPermissions.all { permission -> permission in declaredPermissions })
+
+        val contractStates = CallShieldPermissions.permissionContractStates(context)
+        assertEquals(CallShieldPermissions.permissionCapabilityContracts.size, contractStates.size)
+    }
+
+    @Test
     fun protectedPlatformServicesKeepRequiredBindPermissions() {
         val services = packageInfo.services.orEmpty().associateBy { it.name }
 
