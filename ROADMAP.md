@@ -545,13 +545,6 @@ Plus RFC 8588 (SHAKEN profile), RFC 9027 (Traceback), Apache SpamAssassin / rspa
   Acceptance: Instrumented smoke tests assert permissions, protected services, notification/full-screen assumptions, SDK version branching, and SMS/OTP documented behavior for target SDK 36+.
   Complexity: M
 
-- [ ] P1 - Add a per-permission degraded-mode contract matrix
-  Why: CallShield depends on multiple Android permissions and roles, and users need exact behavior/recovery when any one is denied, revoked, unsupported, or OEM-broken.
-  Evidence: `AndroidManifest.xml`; `CallShieldPermissions.kt`; `DashboardStatusModel.kt`; `ProtectionTestScreen.kt`; SpamBlocker optional-permission model; GrapheneOS setup reports
-  Touches: `app/src/main/java/com/sysadmindoc/callshield/permissions/CallShieldPermissions.kt`, `ui/screens/main/DashboardStatusModel.kt`, `ui/screens/more/ProtectionTestScreen.kt`, `ui/screens/onboarding/OnboardingScreen.kt`, `ui/screens/settings/SettingsScreen.kt`, instrumentation tests
-  Acceptance: For call-screening role, call log, contacts, SMS read/receive, notification access, overlay, and post-notification permission states, tests prove no crash, dashboard/protection status names the degraded feature, and the UI exposes the right recovery action.
-  Complexity: M
-
 - [ ] P1 - Add enrichment source health and privacy diagnostics
   Why: Overlay and lookup enrichments currently collapse timeout, parse failure, oversize response, rate limit, and no-hit states into null or UNKNOWN, making "source unavailable" indistinguishable from "source clean."
   Evidence: `ExternalLookup.kt`; `WebLookup.kt`; `NumberTypeChecker.kt`; `CallerIdOverlayService.kt`; SpamBlocker privacy notes; SpamBlocker v5.11 large-response crash fix

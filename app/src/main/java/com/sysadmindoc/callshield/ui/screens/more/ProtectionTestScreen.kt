@@ -1,7 +1,5 @@
 package com.sysadmindoc.callshield.ui.screens.more
 
-import android.Manifest
-import android.app.role.RoleManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -32,13 +30,19 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.permissions.CallShieldPermissions
+import com.sysadmindoc.callshield.permissions.PermissionCapabilityPriority
 import com.sysadmindoc.callshield.ui.theme.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.concurrent.TimeUnit
 
 private enum class TestPriority { Required, Recommended, Informational }
+
+private const val SECURITY_PATCH_PART_COUNT = 3
+private const val SECURITY_PATCH_MONTH_OFFSET = 1
+private const val SECURITY_PATCH_RECENT_DAYS = 90L
 
 private data class TestResult(
     val name: String,
@@ -348,44 +352,25 @@ private suspend fun runTests(context: Context): List<TestResult> = withContext(D
     val results = mutableListOf<TestResult>()
     val repo = SpamRepository.getInstance(context)
 
-    CallShieldPermissions.protectionTestPermissions.forEach { (_, perm) ->
-        val granted = CallShieldPermissions.isPermissionGranted(context, perm)
+    CallShieldPermissions.permissionContractStates(context).forEach { state ->
+        val priority = when (state.contract.priority) {
+            PermissionCapabilityPriority.Required -> TestPriority.Required
+            PermissionCapabilityPriority.Recommended -> TestPriority.Recommended
+        }
         results.add(
             TestResult(
-                name = permissionTestName(context, perm),
-                passed = granted,
-                detail = if (granted) {
-                    context.getString(R.string.protection_test_perm_granted)
+                name = context.getString(state.contract.nameRes),
+                passed = state.passed,
+                detail = if (state.passed) {
+                    context.getString(state.detailRes)
                 } else {
-                    context.getString(R.string.protection_test_perm_not_granted)
+                    context.getString(state.contract.degradedModeRes)
                 },
-                priority = when (perm) {
-                    Manifest.permission.READ_CALL_LOG,
-                    Manifest.permission.READ_CONTACTS,
-                    Manifest.permission.READ_SMS,
-                    Manifest.permission.RECEIVE_SMS -> TestPriority.Required
-                    else -> TestPriority.Recommended
-                },
-                recoveryHint = if (granted) null else context.getString(R.string.protection_test_fix_permissions)
+                priority = priority,
+                recoveryHint = state.recoveryHintRes?.takeUnless { state.passed }?.let(context::getString),
             )
         )
     }
-
-    val rm = context.getSystemService(Context.ROLE_SERVICE) as? RoleManager
-    val isScreener = rm?.isRoleHeld(RoleManager.ROLE_CALL_SCREENING) ?: false
-    results.add(
-        TestResult(
-            name = context.getString(R.string.protection_test_call_screener_role),
-            passed = isScreener,
-            detail = if (isScreener) {
-                context.getString(R.string.protection_test_screener_yes)
-            } else {
-                context.getString(R.string.protection_test_screener_no)
-            },
-            priority = TestPriority.Required,
-            recoveryHint = if (isScreener) null else context.getString(R.string.protection_test_fix_screener)
-        )
-    )
 
     val count = repo.getSpamCount()
     results.add(
@@ -487,38 +472,6 @@ private suspend fun runTests(context: Context): List<TestResult> = withContext(D
         )
     )
 
-    val canOverlay = Settings.canDrawOverlays(context)
-    results.add(
-        TestResult(
-            name = context.getString(R.string.protection_test_overlay_permission),
-            passed = canOverlay,
-            detail = if (canOverlay) {
-                context.getString(R.string.protection_test_overlay_pass)
-            } else {
-                context.getString(R.string.protection_test_overlay_fail)
-            },
-            priority = TestPriority.Recommended,
-            recoveryHint = if (canOverlay) null else context.getString(R.string.protection_test_fix_overlay)
-        )
-    )
-
-    val notifListenerEnabled = Settings.Secure.getString(
-        context.contentResolver, "enabled_notification_listeners"
-    )?.contains(context.packageName) ?: false
-    results.add(
-        TestResult(
-            name = context.getString(R.string.protection_test_notification_access),
-            passed = notifListenerEnabled,
-            detail = if (notifListenerEnabled) {
-                context.getString(R.string.protection_test_notif_pass)
-            } else {
-                context.getString(R.string.protection_test_notif_fail)
-            },
-            priority = TestPriority.Recommended,
-            recoveryHint = if (notifListenerEnabled) null else context.getString(R.string.protection_test_fix_notifications)
-        )
-    )
-
     val activeCampaigns = com.sysadmindoc.callshield.data.CampaignDetector.getActiveCampaigns()
     results.add(
         TestResult(
@@ -557,9 +510,14 @@ private suspend fun runTests(context: Context): List<TestResult> = withContext(D
     val securityPatch = Build.VERSION.SECURITY_PATCH
     val patchRecent = try {
         val parts = securityPatch.split("-").map { it.toInt() }
-        if (parts.size == 3) {
-            val patchMillis = java.util.GregorianCalendar(parts[0], parts[1] - 1, parts[2]).timeInMillis
-            System.currentTimeMillis() - patchMillis < 90L * 24 * 60 * 60 * 1000
+        if (parts.size == SECURITY_PATCH_PART_COUNT) {
+            val patchMillis =
+                java.util.GregorianCalendar(
+                    parts[0],
+                    parts[1] - SECURITY_PATCH_MONTH_OFFSET,
+                    parts[2],
+                ).timeInMillis
+            System.currentTimeMillis() - patchMillis < TimeUnit.DAYS.toMillis(SECURITY_PATCH_RECENT_DAYS)
         } else false
     } catch (_: Exception) { false }
     results.add(
@@ -577,14 +535,4 @@ private suspend fun runTests(context: Context): List<TestResult> = withContext(D
     )
 
     results
-}
-
-private fun permissionTestName(context: Context, permission: String): String = when (permission) {
-    Manifest.permission.READ_CALL_LOG -> context.getString(R.string.protection_test_perm_name_call_log)
-    Manifest.permission.READ_CONTACTS -> context.getString(R.string.protection_test_perm_name_contacts)
-    Manifest.permission.READ_SMS -> context.getString(R.string.protection_test_perm_name_sms)
-    Manifest.permission.RECEIVE_SMS -> context.getString(R.string.protection_test_perm_name_incoming_sms)
-    Manifest.permission.READ_PHONE_STATE -> context.getString(R.string.protection_test_perm_name_phone_state)
-    Manifest.permission.ANSWER_PHONE_CALLS -> context.getString(R.string.protection_test_perm_name_answer_calls)
-    else -> permission
 }

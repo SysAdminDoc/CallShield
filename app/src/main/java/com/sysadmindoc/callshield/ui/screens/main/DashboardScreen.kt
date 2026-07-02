@@ -203,7 +203,26 @@ fun DashboardScreen(viewModel: MainViewModel) {
     val notificationsGranted = remember(context, permissionRefreshTick) {
         CallShieldPermissions.hasNotificationPermission(context)
     }
+    val permissionContractStates =
+        remember(context, roleManager, permissionRefreshTick) {
+            CallShieldPermissions.permissionContractStates(context, roleManager)
+        }
     val corePermissionsReady = missingPerms.isEmpty()
+    val missingPermissionSet = remember(missingPerms) { missingPerms.toSet() }
+    val missingPermissionState =
+        remember(permissionContractStates, missingPermissionSet) {
+            permissionContractStates.firstOrNull { state ->
+                state.contract.manifestPermission in missingPermissionSet && !state.passed
+            }
+        }
+    val missingPermissionDetail =
+        missingPermissionState?.let { state ->
+            stringResource(
+                R.string.dashboard_permissions_degraded_detail,
+                stringResource(state.contract.nameRes),
+                stringResource(state.contract.degradedModeRes),
+            )
+        }
     val dashboardStatus = remember(
         blockCallsEnabled,
         blockSmsEnabled,
@@ -349,6 +368,7 @@ fun DashboardScreen(viewModel: MainViewModel) {
             setupSummary = setupSummary,
             corePermissionsReady = corePermissionsReady,
             missingPermissionCount = missingPerms.size,
+            missingPermissionDetail = missingPermissionDetail,
             syncState = syncState,
             spamDatabaseReady = spamDatabaseReady,
             spamCount = spamCount,
@@ -984,6 +1004,7 @@ internal fun DashboardSetupChecklistCard(
     setupSummary: String,
     corePermissionsReady: Boolean,
     missingPermissionCount: Int,
+    missingPermissionDetail: String? = null,
     syncState: SyncState,
     spamDatabaseReady: Boolean,
     spamCount: Int,
@@ -1030,7 +1051,7 @@ internal fun DashboardSetupChecklistCard(
                 detail = if (corePermissionsReady) {
                     stringResource(R.string.dashboard_permissions_ready_detail)
                 } else {
-                    pluralStringResource(
+                    missingPermissionDetail ?: pluralStringResource(
                         R.plurals.dashboard_permissions_needed_detail,
                         missingPermissionCount,
                         missingPermissionCount
