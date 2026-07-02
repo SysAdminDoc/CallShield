@@ -151,6 +151,17 @@ class SmsContentAnalyzerTest {
     }
 
     @Test
+    fun `analyze detects spam subdomain from parent blocklist`() {
+        SmsContentAnalyzer.updateSpamDomains(listOf("evil-spam.com"))
+        val result =
+            SmsContentAnalyzer.analyze(
+                "Claim at https://login.evil-spam.com/private?recipient=5551234&token=secret",
+            )
+        assertTrue(result.reasons.contains("spam_domain"))
+        assertTrue(result.score >= 50)
+    }
+
+    @Test
     fun `analyze does not flag domain not in blocklist`() {
         SmsContentAnalyzer.updateSpamDomains(listOf("evil-spam.com"))
         val result = SmsContentAnalyzer.analyze("Visit https://legitimate-business.com/page for more info and details about the product")
@@ -167,6 +178,20 @@ class SmsContentAnalyzerTest {
         assertEquals(listOf("bad.example", "bit.ly"), result.domains)
         assertTrue(result.urlIndicators.contains("url_present"))
         assertTrue(result.urlIndicators.contains("shortener"))
+    }
+
+    @Test
+    fun `report indicators flag spam parent domain for tokenized subdomain URLs`() {
+        SmsContentAnalyzer.updateSpamDomains(listOf("evil-spam.com"))
+
+        val result =
+            SmsContentAnalyzer.extractReportableIndicators(
+                "Claim at https://login.evil-spam.com/private?recipient=5551234&token=secret#frag",
+            )
+
+        assertEquals(listOf("login.evil-spam.com"), result.domains)
+        assertTrue(result.urlIndicators.contains("known_spam_domain"))
+        assertFalse(result.domains.any { "/" in it || "token" in it || "#" in it })
     }
 
     @Test
@@ -329,5 +354,14 @@ class SmsContentAnalyzerTest {
         val r2 = SmsContentAnalyzer.analyze("Visit https://second.com/x for more info and details about the product and services")
         assertFalse(r1.reasons.contains("spam_domain"))
         assertTrue(r2.reasons.contains("spam_domain"))
+    }
+
+    @Test
+    fun `updateSpamDomains normalizes feed URLs before matching`() {
+        SmsContentAnalyzer.updateSpamDomains(listOf(" HTTPS://www.Evil-Spam.com/path?token=secret#frag "))
+
+        val result = SmsContentAnalyzer.analyze("Visit https://login.evil-spam.com/x for more details today")
+
+        assertTrue(result.reasons.contains("spam_domain"))
     }
 }

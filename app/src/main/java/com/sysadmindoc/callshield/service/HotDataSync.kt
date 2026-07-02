@@ -2,6 +2,7 @@ package com.sysadmindoc.callshield.service
 
 import android.content.Context
 import com.sysadmindoc.callshield.data.SpamRepository
+import com.sysadmindoc.callshield.data.SmsContentAnalyzer
 import com.sysadmindoc.callshield.data.checker.CheckerDependencies
 import com.sysadmindoc.callshield.data.local.AppDatabase
 import com.sysadmindoc.callshield.data.local.SpamDao
@@ -175,18 +176,7 @@ internal object HotDataSync {
     internal fun sanitizeSpamDomains(domains: Collection<String>): List<String> {
         return domains
             .asSequence()
-            .map { domain ->
-                domain.trim()
-                    .lowercase()
-                    .removePrefix("https://")
-                    .removePrefix("http://")
-                    .removePrefix("www.")
-                    .substringBefore('/')
-                    .substringBefore('?')
-                    .substringBefore('#')
-                    .substringBefore(':')
-            }
-            .filter { it.isNotBlank() }
+            .mapNotNull(SmsContentAnalyzer::normalizeDomainCandidate)
             .distinct()
             .toList()
     }

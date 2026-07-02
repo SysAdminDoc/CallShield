@@ -1,7 +1,9 @@
 package com.sysadmindoc.callshield.data.remote
 
+import com.sysadmindoc.callshield.data.SmsContentAnalyzer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -45,24 +47,30 @@ object UrlSafetyChecker {
      * Returns a list of malicious URLs found, or empty list if clean/unreachable.
      * Safe to call from a background coroutine — never blocks the call/SMS decision.
      */
-    suspend fun checkSmsBody(body: String): List<UrlCheckResult> {
+    suspend fun checkSmsBody(
+        body: String,
+        stripQuery: Boolean = true,
+    ): List<UrlCheckResult> {
         val urls = extractCandidateUrls(body)
 
         if (urls.isEmpty()) return emptyList()
 
         return urls.mapNotNull { url ->
-            checkUrl(url).takeIf { it.isMalicious }
+            localSpamDomainResult(url, stripQuery)
+                ?: checkUrl(url, stripQuery).takeIf { it.isMalicious }
         }
     }
 
     /**
      * Check a single URL against URLhaus.
      */
-    suspend fun checkUrl(url: String): UrlCheckResult = withContext(Dispatchers.IO) {
+    suspend fun checkUrl(
+        url: String,
+        stripQuery: Boolean = true,
+    ): UrlCheckResult = withContext(Dispatchers.IO) {
+        val lookupUrl = normalizeRemoteLookupUrl(url, stripQuery)
         try {
-            val normalizedUrl = normalizeCandidateUrl(url)
-
-            val escapedUrl = normalizedUrl.replace("\\", "\\\\").replace("\"", "\\\"")
+            val escapedUrl = lookupUrl.replace("\\", "\\\\").replace("\"", "\\\"")
                 .replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
             val jsonBody = """{"url":"$escapedUrl"}""".toRequestBody(JSON_TYPE)
             val request = Request.Builder()
@@ -72,9 +80,9 @@ object UrlSafetyChecker {
                 .build()
 
             client.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) return@withContext UrlCheckResult(url, false)
+                if (!response.isSuccessful) return@withContext UrlCheckResult(lookupUrl, false)
 
-                val responseBody = response.body?.string() ?: return@withContext UrlCheckResult(url, false)
+                val responseBody = response.body?.string() ?: return@withContext UrlCheckResult(lookupUrl, false)
 
                 // Parse response
                 // {"query_status":"is_phishing","url_status":"online","threat":"phishing",...}
@@ -84,7 +92,7 @@ object UrlSafetyChecker {
 
                 val isMalicious = status in listOf("is_malware", "is_phishing", "is_botnet_cc")
 
-                if (!isMalicious) return@withContext UrlCheckResult(url, false)
+                if (!isMalicious) return@withContext UrlCheckResult(lookupUrl, false)
 
                 val threat = Regex(""""threat"\s*:\s*"([^"]+)"""").find(responseBody)
                     ?.groupValues?.get(1) ?: status
@@ -96,11 +104,24 @@ object UrlSafetyChecker {
                     ?.filter { it.isNotEmpty() }
                     ?: emptyList()
 
-                UrlCheckResult(url = url, isMalicious = true, threat = threat, tags = tags)
+                UrlCheckResult(url = lookupUrl, isMalicious = true, threat = threat, tags = tags)
             }
         } catch (_: Exception) {
-            UrlCheckResult(url, false) // Network error = don't flag
+            UrlCheckResult(lookupUrl, false) // Network error = don't flag
         }
+    }
+
+    internal fun localSpamDomainResult(
+        url: String,
+        stripQuery: Boolean = true,
+    ): UrlCheckResult? {
+        if (!SmsContentAnalyzer.isKnownSpamDomainUrl(url)) return null
+        return UrlCheckResult(
+            url = normalizeRemoteLookupUrl(url, stripQuery),
+            isMalicious = true,
+            threat = "known_spam_domain",
+            tags = listOf("local_spam_domain")
+        )
     }
 
     internal fun extractCandidateUrls(body: String, limit: Int = 5): List<String> {
@@ -119,5 +140,18 @@ object UrlSafetyChecker {
         } else {
             trimmed
         }
+    }
+
+    internal fun normalizeRemoteLookupUrl(
+        rawUrl: String,
+        stripQuery: Boolean = true,
+    ): String {
+        val normalizedUrl = normalizeCandidateUrl(rawUrl)
+        val parsedUrl = normalizedUrl.toHttpUrlOrNull() ?: return normalizedUrl
+            .substringBefore('#')
+            .let { if (stripQuery) it.substringBefore('?') else it }
+        val builder = parsedUrl.newBuilder().fragment(null)
+        if (stripQuery) builder.query(null)
+        return builder.build().toString()
     }
 }

@@ -135,6 +135,8 @@ class MainViewModel
     val heuristicsEnabled = repo.heuristicsEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
     val smsContentEnabled = repo.smsContentEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
     val smsBurstEnabled = repo.smsBurstEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+    val urlhausStripQueryEnabled = repo.urlhausStripQueryEnabled
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
     val contactWhitelistEnabled = repo.contactWhitelistEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
     val contactsOnlyEnabled = repo.contactsOnlyEnabled
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
@@ -468,6 +470,7 @@ class MainViewModel
     fun setHeuristics(v: Boolean) = viewModelScope.launch { repo.setHeuristics(v) }
     fun setSmsContent(v: Boolean) = viewModelScope.launch { repo.setSmsContent(v) }
     fun setSmsBurst(v: Boolean) = viewModelScope.launch { repo.setSmsBurst(v) }
+    fun setUrlhausStripQuery(v: Boolean) = viewModelScope.launch { repo.setUrlhausStripQuery(v) }
     fun setContactWhitelist(v: Boolean) = viewModelScope.launch { repo.setContactWhitelist(v) }
     fun setContactsOnly(v: Boolean) = viewModelScope.launch { repo.setContactsOnly(v) }
     fun setDbPrefixExpansion(v: Boolean) = viewModelScope.launch { repo.setDbPrefixExpansion(v) }

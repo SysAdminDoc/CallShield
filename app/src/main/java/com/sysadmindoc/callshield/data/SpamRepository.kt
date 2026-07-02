@@ -114,6 +114,7 @@ class SpamRepository(
         val KEY_HEURISTICS = booleanPreferencesKey("heuristics_enabled")
         val KEY_SMS_CONTENT = booleanPreferencesKey("sms_content_analysis_enabled")
         val KEY_SMS_BURST = booleanPreferencesKey("sms_burst_detection_enabled")
+        val KEY_URLHAUS_STRIP_QUERY = booleanPreferencesKey("urlhaus_strip_query_enabled")
         val KEY_CONTACT_WHITELIST = booleanPreferencesKey("contact_whitelist_enabled")
         val KEY_CONTACTS_ONLY = booleanPreferencesKey("contacts_only_mode_enabled")
         val KEY_DB_PREFIX_EXPANSION = booleanPreferencesKey("db_prefix_expansion_enabled")
@@ -197,6 +198,7 @@ class SpamRepository(
     val heuristicsEnabled: Flow<Boolean> = settingsRepository.heuristicsEnabled
     val smsContentEnabled: Flow<Boolean> = settingsRepository.smsContentEnabled
     val smsBurstEnabled: Flow<Boolean> = settingsRepository.smsBurstEnabled
+    val urlhausStripQueryEnabled: Flow<Boolean> = settingsRepository.urlhausStripQueryEnabled
     val contactWhitelistEnabled: Flow<Boolean> = settingsRepository.contactWhitelistEnabled
     val contactsOnlyEnabled: Flow<Boolean> = settingsRepository.contactsOnlyEnabled
     val dbPrefixExpansionEnabled: Flow<Boolean> = settingsRepository.dbPrefixExpansionEnabled
@@ -247,6 +249,7 @@ class SpamRepository(
     suspend fun setHeuristics(enabled: Boolean) = settingsRepository.setHeuristics(enabled)
     suspend fun setSmsContent(enabled: Boolean) = settingsRepository.setSmsContent(enabled)
     suspend fun setSmsBurst(enabled: Boolean) = settingsRepository.setSmsBurst(enabled)
+    suspend fun setUrlhausStripQuery(enabled: Boolean) = settingsRepository.setUrlhausStripQuery(enabled)
     suspend fun setContactWhitelist(enabled: Boolean) = settingsRepository.setContactWhitelist(enabled)
     suspend fun setContactsOnly(enabled: Boolean) = settingsRepository.setContactsOnly(enabled)
     suspend fun setDbPrefixExpansion(enabled: Boolean) = settingsRepository.setDbPrefixExpansion(enabled)
