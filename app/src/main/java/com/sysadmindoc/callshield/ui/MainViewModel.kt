@@ -150,6 +150,13 @@ class MainViewModel
         SharingStarted.WhileSubscribed(5000),
         CallbackDetector.DEFAULT_ANSWERED_CALLER_WINDOW_DAYS,
     )
+    val emergencyCallbackGraceEnabled = repo.emergencyCallbackGraceEnabled
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+    val emergencyCallbackWindowMinutes = repo.emergencyCallbackWindowMinutes.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5000),
+        CallbackDetector.DEFAULT_EMERGENCY_CALLBACK_WINDOW_MINUTES,
+    )
     val timeBlockEnabled = repo.timeBlockEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
     val timeBlockStart = repo.timeBlockStart.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 22)
     val timeBlockEnd = repo.timeBlockEnd.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 7)
@@ -404,6 +411,9 @@ class MainViewModel
     fun setAnsweredCallerTrust(v: Boolean) = viewModelScope.launch { repo.setAnsweredCallerTrust(v) }
     fun setAnsweredCallerThreshold(v: Int) = viewModelScope.launch { repo.setAnsweredCallerThreshold(v) }
     fun setAnsweredCallerWindowDays(v: Int) = viewModelScope.launch { repo.setAnsweredCallerWindowDays(v) }
+    fun setEmergencyCallbackGrace(v: Boolean) = viewModelScope.launch { repo.setEmergencyCallbackGrace(v) }
+    fun setEmergencyCallbackWindowMinutes(v: Int) =
+        viewModelScope.launch { repo.setEmergencyCallbackWindowMinutes(v) }
     fun setTimeBlock(v: Boolean) = viewModelScope.launch { repo.setTimeBlock(v) }
     fun setTimeBlockStart(h: Int) = viewModelScope.launch { repo.setTimeBlockStart(h) }
     fun setTimeBlockEnd(h: Int) = viewModelScope.launch { repo.setTimeBlockEnd(h) }

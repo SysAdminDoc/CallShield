@@ -3,6 +3,7 @@ package com.sysadmindoc.callshield.data
 import android.provider.CallLog
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -106,6 +107,47 @@ class CallbackDetectorTest {
         assertEquals("0", query.selectionArgs[1])
         assertEquals("1", query.selectionArgs[2])
         assertEquals("%5551234", query.selectionArgs.last())
+    }
+
+    @Test
+    fun `buildRecentEmergencyCallQuery targets outgoing calls within cutoff`() {
+        val query =
+            CallbackDetector.buildRecentEmergencyCallQuery(
+                nowMillis = 900_000L,
+                windowMinutes = 15,
+            )
+
+        assertEquals(
+            "${CallLog.Calls.TYPE} = ? AND ${CallLog.Calls.DATE} > ?",
+            query.selection,
+        )
+        assertArrayEquals(
+            arrayOf(
+                CallLog.Calls.OUTGOING_TYPE.toString(),
+                "0",
+            ),
+            query.selectionArgs,
+        )
+    }
+
+    @Test
+    fun `buildRecentEmergencyCallQuery clamps invalid windows`() {
+        val query =
+            CallbackDetector.buildRecentEmergencyCallQuery(
+                nowMillis = 60_000L,
+                windowMinutes = 0,
+            )
+
+        assertEquals("0", query.selectionArgs[1])
+    }
+
+    @Test
+    fun `isEmergencyNumberCandidate accepts known emergency numbers only`() {
+        assertTrue(CallbackDetector.isEmergencyNumberCandidate("911"))
+        assertTrue(CallbackDetector.isEmergencyNumberCandidate("+1 (911)"))
+        assertTrue(CallbackDetector.isEmergencyNumberCandidate("112"))
+        assertFalse(CallbackDetector.isEmergencyNumberCandidate("555911"))
+        assertFalse(CallbackDetector.isEmergencyNumberCandidate("411"))
     }
 
     // v1.6.3 — number-prefilter regression tests

@@ -158,6 +158,12 @@ object BlockReasoning {
                 bullets += "Explicit blocklist, wildcard, range, STIR-failed, and system block rules still win first."
             }
 
+            matchReason == "emergency_callback" -> {
+                headline = "Emergency callback grace is active."
+                bullets += "A local emergency call was placed recently, so unknown callbacks can ring through."
+                bullets += "Explicit blocklist, wildcard, range, STIR-failed, and system block rules still win first."
+            }
+
             matchReason == "repeated_urgent" -> {
                 headline = "Likely urgent — same number called twice in under 5 minutes."
                 bullets += "Matched layer 4 (repeated-urgent-caller allow-through)."

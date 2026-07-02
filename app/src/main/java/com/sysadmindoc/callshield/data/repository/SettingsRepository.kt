@@ -58,6 +58,13 @@ class SettingsRepository(
             it[SpamRepository.KEY_ANSWERED_CALLER_WINDOW_DAYS]
                 ?: CallbackDetector.DEFAULT_ANSWERED_CALLER_WINDOW_DAYS
         }
+    val emergencyCallbackGraceEnabled: Flow<Boolean> =
+        dataStore.data.map { it[SpamRepository.KEY_EMERGENCY_CALLBACK_GRACE] ?: true }
+    val emergencyCallbackWindowMinutes: Flow<Int> =
+        dataStore.data.map {
+            it[SpamRepository.KEY_EMERGENCY_CALLBACK_WINDOW_MINUTES]
+                ?: CallbackDetector.DEFAULT_EMERGENCY_CALLBACK_WINDOW_MINUTES
+        }
     val timeBlockEnabled: Flow<Boolean> = dataStore.data.map { it[SpamRepository.KEY_TIME_BLOCK] ?: false }
     val timeBlockStart: Flow<Int> =
         dataStore.data.map { it[SpamRepository.KEY_TIME_BLOCK_START] ?: DEFAULT_TIME_BLOCK_START }
@@ -168,6 +175,15 @@ class SettingsRepository(
                 ANSWERED_CALLER_WINDOW_DAYS_MAX,
             )
         }
+    suspend fun setEmergencyCallbackGrace(enabled: Boolean) =
+        dataStore.edit { it[SpamRepository.KEY_EMERGENCY_CALLBACK_GRACE] = enabled }
+    suspend fun setEmergencyCallbackWindowMinutes(minutes: Int) =
+        dataStore.edit {
+            it[SpamRepository.KEY_EMERGENCY_CALLBACK_WINDOW_MINUTES] = minutes.coerceIn(
+                EMERGENCY_CALLBACK_WINDOW_MINUTES_MIN,
+                EMERGENCY_CALLBACK_WINDOW_MINUTES_MAX,
+            )
+        }
     suspend fun setTimeBlock(enabled: Boolean) =
         dataStore.edit { it[SpamRepository.KEY_TIME_BLOCK] = enabled }
     suspend fun setTimeBlockStart(hour: Int) =
@@ -215,3 +231,5 @@ internal const val ANSWERED_CALLER_THRESHOLD_MIN = 1
 internal const val ANSWERED_CALLER_THRESHOLD_MAX = 10
 internal const val ANSWERED_CALLER_WINDOW_DAYS_MIN = 1
 internal const val ANSWERED_CALLER_WINDOW_DAYS_MAX = 365
+internal const val EMERGENCY_CALLBACK_WINDOW_MINUTES_MIN = 15
+internal const val EMERGENCY_CALLBACK_WINDOW_MINUTES_MAX = 360

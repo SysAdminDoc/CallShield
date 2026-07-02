@@ -12,7 +12,7 @@
 <p align="center">
   <a href="https://github.com/SysAdminDoc/CallShield/releases/latest"><img src="https://img.shields.io/github/v/release/SysAdminDoc/CallShield?style=flat-square&color=a6e3a1" alt="Release"></a>
   <img src="https://img.shields.io/badge/Spam%20Numbers-32%2C933-f38ba8?style=flat-square" alt="32,933 Numbers">
-  <img src="https://img.shields.io/badge/Tests-661-94e2d5?style=flat-square" alt="661 Tests">
+  <img src="https://img.shields.io/badge/Tests-667-94e2d5?style=flat-square" alt="667 Tests">
   <img src="https://img.shields.io/badge/Android-10%2B-89b4fa?style=flat-square" alt="Android 10+">
   <img src="https://img.shields.io/badge/License-MIT-cba6f7?style=flat-square" alt="MIT License">
   <img src="https://img.shields.io/badge/API%20Keys-None-fab387?style=flat-square" alt="No required API keys">
@@ -78,7 +78,8 @@ CallShield blocks spam calls and texts using a **15+ layer on-device detection e
 - **Hardening foundation from v1.7.2** — spoof-proof ASCII phone normalization, SMS size caps, regex ReDoS validation, LRU notice gates, separated PendingIntent IDs, and atomic crash-log writes.
 - **STIR/SHAKEN Trusted-Caller Allow** — carrier `PASSED` attestations can short-circuit heuristic / ML blocks while still yielding to every explicit user rule.
 - **Answered-caller trust** — numbers answered repeatedly inside the configured lookback window can ring through lower-confidence heuristic/ML suspicion while explicit block rules still win first.
-- **661 total JVM unit tests** - the local unit suite covers detection, workers, utilities, and repository contracts before release.
+- **Emergency callback grace** — unknown callbacks can ring through after a local emergency call for a configurable window while explicit block rules still win first.
+- **667 total JVM unit tests** - the local unit suite covers detection, workers, utilities, and repository contracts before release.
 - **Gradient-Boosted Tree ML model** — 20 features, pure Kotlin, no TFLite dependency.
 - **Campaign burst detection** — NPA-NXX prefix clustering identifies coordinated spam waves.
 - **Full accessibility** — content descriptions across Compose UI, 48dp minimum touch targets.
@@ -89,7 +90,7 @@ CallShield blocks spam calls and texts using a **15+ layer on-device detection e
 2. **15+ layer detection + ML** — database, heuristics, campaign burst detection, on-device gradient-boosted tree, SMS content analysis, RCS filter, STIR/SHAKEN, and more
 3. **Real-time caller ID overlay** — parallel lookups against SkipCalls, PhoneBlock, WhoCalledMe + OpenCNAM caller name, with SIT tone anti-autodialer
 4. **Scheduled hot list** — trending spam numbers and campaign ranges refresh through the repository data pipeline
-5. **Callback-aware** — won't block callbacks from numbers you recently called, answered repeatedly, or urgent repeated callers
+5. **Callback-aware** — won't block callbacks from numbers you recently called, answered repeatedly, after a local emergency call, or urgent repeated callers
 6. **Community-driven** — one-tap anonymous contribution via Cloudflare Worker, daily merge into database
 
 ## Detection Pipeline (v1.7.12)
@@ -108,6 +109,7 @@ All detection layers implement a shared `IChecker` interface and run in priority
 |  5400 | **Range Patterns** (A5) | Block | Length-locked `#` patterns like `+33162######`, with schedule + coverage safety rail |
 |  5300 | **STIR/SHAKEN Trusted** | Allow | Carrier `PASSED` attestations can allow through lower-confidence heuristic/ML suspicion |
 |  5000 | **Recently Dialed** | Allow | Numbers you called in the last 24h — they're probably calling back |
+|  4980 | **Emergency Callback** | Allow | Unknown callbacks can ring through after a local emergency call during the configured grace window |
 |  4950 | **Answered Caller** | Allow | Numbers answered repeatedly inside the configured lookback window |
 |  4900 | **Repeated Urgent** | Allow | Same number calls 2x in 5 min → allowed through |
 |  4700 | **Push-Alert Bridge** (A3) | Allow | Uber/DoorDash/Amazon/Gmail notification about an arriving call? Let it through |
@@ -315,7 +317,7 @@ RELEASE_KEY_PASSWORD=...
 ## Testing
 
 ```bash
-./gradlew testDebugUnitTest   # 661 tests
+./gradlew testDebugUnitTest   # 667 tests
 ```
 
 Run tests, lint, release metadata checks, and artifact builds locally before publishing.
@@ -336,8 +338,8 @@ Run tests, lint, release metadata checks, and artifact builds locally before pub
 | Community API | Cloudflare Workers |
 | URL Safety | URLhaus (abuse.ch) |
 | Verification | Local Gradle, lint, and release-artifact checks |
-| Tests | 661 JVM unit tests (JUnit) |
-| Strings | 976 string resources and 27 plural groups (translation-ready) |
+| Tests | 667 JVM unit tests (JUnit) |
+| Strings | 979 string resources and 28 plural groups (translation-ready) |
 | Accessibility | 100+ content descriptions, 48dp touch targets |
 | Min SDK | 29 (Android 10) |
 | Target SDK | 36 |

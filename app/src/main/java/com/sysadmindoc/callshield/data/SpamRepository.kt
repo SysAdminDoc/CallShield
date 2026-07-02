@@ -120,6 +120,8 @@ class SpamRepository(
         val KEY_ANSWERED_CALLER_TRUST = booleanPreferencesKey("answered_caller_trust_enabled")
         val KEY_ANSWERED_CALLER_THRESHOLD = intPreferencesKey("answered_caller_trust_threshold")
         val KEY_ANSWERED_CALLER_WINDOW_DAYS = intPreferencesKey("answered_caller_trust_window_days")
+        val KEY_EMERGENCY_CALLBACK_GRACE = booleanPreferencesKey("emergency_callback_grace_enabled")
+        val KEY_EMERGENCY_CALLBACK_WINDOW_MINUTES = intPreferencesKey("emergency_callback_grace_window_minutes")
         // Feature 9: Time-based blocking
         val KEY_TIME_BLOCK = booleanPreferencesKey("time_block_enabled")
         val KEY_TIME_BLOCK_START = intPreferencesKey("time_block_start_hour") // 0-23
@@ -198,6 +200,8 @@ class SpamRepository(
     val answeredCallerTrustEnabled: Flow<Boolean> = settingsRepository.answeredCallerTrustEnabled
     val answeredCallerThreshold: Flow<Int> = settingsRepository.answeredCallerThreshold
     val answeredCallerWindowDays: Flow<Int> = settingsRepository.answeredCallerWindowDays
+    val emergencyCallbackGraceEnabled: Flow<Boolean> = settingsRepository.emergencyCallbackGraceEnabled
+    val emergencyCallbackWindowMinutes: Flow<Int> = settingsRepository.emergencyCallbackWindowMinutes
     val timeBlockEnabled: Flow<Boolean> = settingsRepository.timeBlockEnabled
     val timeBlockStart: Flow<Int> = settingsRepository.timeBlockStart
     val timeBlockEnd: Flow<Int> = settingsRepository.timeBlockEnd
@@ -244,6 +248,9 @@ class SpamRepository(
     suspend fun setAnsweredCallerTrust(enabled: Boolean) = settingsRepository.setAnsweredCallerTrust(enabled)
     suspend fun setAnsweredCallerThreshold(threshold: Int) = settingsRepository.setAnsweredCallerThreshold(threshold)
     suspend fun setAnsweredCallerWindowDays(days: Int) = settingsRepository.setAnsweredCallerWindowDays(days)
+    suspend fun setEmergencyCallbackGrace(enabled: Boolean) = settingsRepository.setEmergencyCallbackGrace(enabled)
+    suspend fun setEmergencyCallbackWindowMinutes(minutes: Int) =
+        settingsRepository.setEmergencyCallbackWindowMinutes(minutes)
     suspend fun setTimeBlock(enabled: Boolean) = settingsRepository.setTimeBlock(enabled)
     suspend fun setTimeBlockStart(hour: Int) = settingsRepository.setTimeBlockStart(hour)
     suspend fun setTimeBlockEnd(hour: Int) = settingsRepository.setTimeBlockEnd(hour)
