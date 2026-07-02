@@ -12,7 +12,7 @@
 <p align="center">
   <a href="https://github.com/SysAdminDoc/CallShield/releases/latest"><img src="https://img.shields.io/github/v/release/SysAdminDoc/CallShield?style=flat-square&color=a6e3a1" alt="Release"></a>
   <img src="https://img.shields.io/badge/Spam%20Numbers-32%2C933-f38ba8?style=flat-square" alt="32,933 Numbers">
-  <img src="https://img.shields.io/badge/Tests-674-94e2d5?style=flat-square" alt="674 Tests">
+  <img src="https://img.shields.io/badge/Tests-681-94e2d5?style=flat-square" alt="681 Tests">
   <img src="https://img.shields.io/badge/Android-10%2B-89b4fa?style=flat-square" alt="Android 10+">
   <img src="https://img.shields.io/badge/License-MIT-cba6f7?style=flat-square" alt="MIT License">
   <img src="https://img.shields.io/badge/API%20Keys-None-fab387?style=flat-square" alt="No required API keys">
@@ -76,11 +76,11 @@ CallShield blocks spam calls and texts using a **15+ layer on-device detection e
 - **Clearer recovery states** — Blocked Log empty and filtered states now explain what happened and provide a direct "Show all activity" recovery action when filters hide records.
 - **Trust-focused settings feedback** — the trusted push-alert source picker now shows installed-source coverage and skeleton loading while package labels resolve.
 - **Hardening foundation from v1.7.2** — spoof-proof ASCII phone normalization, SMS size caps, regex ReDoS validation, LRU notice gates, separated PendingIntent IDs, and atomic crash-log writes.
-- **STIR/SHAKEN Trusted-Caller Allow** — carrier `PASSED` attestations can short-circuit heuristic / ML blocks while still yielding to every explicit user rule.
+- **STIR/SHAKEN Authenticated Allow** — carrier-authenticated caller ID can short-circuit weak heuristic / ML blocks while still yielding to every explicit user and system rule.
 - **Answered-caller trust** — numbers answered repeatedly inside the configured lookback window can ring through lower-confidence heuristic/ML suspicion while explicit block rules still win first.
 - **Emergency callback grace** — unknown callbacks can ring through after a local emergency call for a configurable window while explicit block rules still win first.
 - **SMS burst protection** - repeated unknown SMS senders or same-prefix floods can be blocked as `sms_burst`, with blocked-SMS notification actions to mark safe or report.
-- **674 total JVM unit tests** - the local unit suite covers detection, workers, utilities, and repository contracts before release.
+- **681 total JVM unit tests** - the local unit suite covers detection, workers, utilities, and repository contracts before release.
 - **Gradient-Boosted Tree ML model** — 20 features, pure Kotlin, no TFLite dependency.
 - **Campaign burst detection** — NPA-NXX prefix clustering identifies coordinated spam waves.
 - **Full accessibility** — content descriptions across Compose UI, 48dp minimum touch targets.
@@ -108,7 +108,7 @@ All detection layers implement a shared `IChecker` interface and run in priority
 |  6000 | **Prefix Rules** | Block | Wangiri country codes, US premium rate (+1900), international premium |
 |  5500 | **Wildcard / Regex** | Block | Custom patterns like `+1832555*` or full regex, now with optional schedule |
 |  5400 | **Range Patterns** (A5) | Block | Length-locked `#` patterns like `+33162######`, with schedule + coverage safety rail |
-|  5300 | **STIR/SHAKEN Trusted** | Allow | Carrier `PASSED` attestations can allow through lower-confidence heuristic/ML suspicion |
+|  5300 | **STIR/SHAKEN Authenticated** | Allow | Carrier-authenticated caller ID can allow through lower-confidence heuristic/ML suspicion while explicit blocks still win first |
 |  5000 | **Recently Dialed** | Allow | Numbers you called in the last 24h — they're probably calling back |
 |  4980 | **Emergency Callback** | Allow | Unknown callbacks can ring through after a local emergency call during the configured grace window |
 |  4950 | **Answered Caller** | Allow | Numbers answered repeatedly inside the configured lookback window |
@@ -318,7 +318,7 @@ RELEASE_KEY_PASSWORD=...
 ## Testing
 
 ```bash
-./gradlew testDebugUnitTest   # 674 tests
+./gradlew testDebugUnitTest   # 681 tests
 ```
 
 Run tests, lint, release metadata checks, and artifact builds locally before publishing.
@@ -339,7 +339,7 @@ Run tests, lint, release metadata checks, and artifact builds locally before pub
 | Community API | Cloudflare Workers |
 | URL Safety | URLhaus (abuse.ch) |
 | Verification | Local Gradle, lint, and release-artifact checks |
-| Tests | 674 JVM unit tests (JUnit) |
+| Tests | 681 JVM unit tests (JUnit) |
 | Strings | 981 string resources and 28 plural groups (translation-ready) |
 | Accessibility | 100+ content descriptions, 48dp touch targets |
 | Min SDK | 29 (Android 10) |

@@ -127,9 +127,22 @@ object BlockReasoning {
             }
 
             matchReason == "stir_shaken_failed" -> {
-                headline = "Caller ID verification failed (STIR/SHAKEN)."
-                bullets += "The carrier could not verify this call's caller ID."
-                bullets += "Usually means the number was spoofed."
+                val display =
+                    StirShakenSemantics.forAndroidVerificationStatus(
+                        StirShakenSemantics.VERIFICATION_STATUS_FAILED,
+                    )
+                headline = display?.headline ?: "Carrier caller ID authentication failed."
+                bullets += display?.bullets.orEmpty()
+            }
+
+            matchReason == "stir_shaken_trusted" -> {
+                val display =
+                    StirShakenSemantics.forAndroidVerificationStatus(
+                        StirShakenSemantics.VERIFICATION_STATUS_PASSED,
+                    )
+                headline = display?.headline ?: "Carrier caller ID authentication passed."
+                bullets += display?.bullets.orEmpty()
+                if (description.isNotBlank()) bullets += description
             }
 
             matchReason == "hidden_number" -> {

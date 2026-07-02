@@ -59,6 +59,9 @@ Distribution prep after the v1.7.10 release.
   still win first.
 - Added SMS burst protection for repeated unknown senders and same-prefix flood
   patterns, including blocked-SMS notification actions to mark safe or report.
+- Revised STIR/SHAKEN authenticated-allow copy and reasoning details
+  so carrier attestation is described as caller-ID authentication, not caller
+  safety, with A/B/C PASSporT wording covered by JVM tests.
 - Added a backup restore preview step with parsed counts, conflict warnings,
   and explicit Merge or Replace apply modes so restores validate before
   mutating local blocklist state.

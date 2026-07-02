@@ -23,15 +23,17 @@ class SmsContextCheckerTest {
     fun `Android 17 delayed otp broadcast counts current message when provider has only prior rows`() {
         val signal =
             SmsContextChecker.evaluateSmsBurst(
-                observations = listOf(
-                    SmsBurstObservation("55555", timestamp = 1_700_000L),
-                    SmsBurstObservation("55555", timestamp = 1_200_000L),
-                ),
+                observations =
+                    listOf(
+                        SmsBurstObservation("55555", timestamp = 1_700_000L),
+                        SmsBurstObservation("55555", timestamp = 1_200_000L),
+                    ),
                 sender = "55555",
                 nowMillis = 1_800_000L,
-                config = SmsBurstConfig(
-                    windowMinutes = 30,
-                ),
+                config =
+                    SmsBurstConfig(
+                        windowMinutes = 30,
+                    ),
             )
 
         assertEquals(SmsBurstKind.SENDER, signal?.kind)
@@ -42,15 +44,17 @@ class SmsContextCheckerTest {
     fun `current provider row is not double counted`() {
         val signal =
             SmsContextChecker.evaluateSmsBurst(
-                observations = listOf(
-                    SmsBurstObservation("55555", timestamp = 1_798_000L),
-                    SmsBurstObservation("55555", timestamp = 1_200_000L),
-                ),
+                observations =
+                    listOf(
+                        SmsBurstObservation("55555", timestamp = 1_798_000L),
+                        SmsBurstObservation("55555", timestamp = 1_200_000L),
+                    ),
                 sender = "55555",
                 nowMillis = 1_800_000L,
-                config = SmsBurstConfig(
-                    windowMinutes = 30,
-                ),
+                config =
+                    SmsBurstConfig(
+                        windowMinutes = 30,
+                    ),
             )
 
         assertNull(signal)
@@ -60,17 +64,19 @@ class SmsContextCheckerTest {
     fun `distinct same-prefix senders trigger prefix burst`() {
         val signal =
             SmsContextChecker.evaluateSmsBurst(
-                observations = listOf(
-                    SmsBurstObservation("+1 212-555-0101", timestamp = 1_700_000L),
-                    SmsBurstObservation("+1 212-555-0102", timestamp = 1_600_000L),
-                    SmsBurstObservation("+1 212-555-0103", timestamp = 1_500_000L),
-                    SmsBurstObservation("+1 212-555-0104", timestamp = 1_400_000L),
-                ),
+                observations =
+                    listOf(
+                        SmsBurstObservation("+1 212-555-0101", timestamp = 1_700_000L),
+                        SmsBurstObservation("+1 212-555-0102", timestamp = 1_600_000L),
+                        SmsBurstObservation("+1 212-555-0103", timestamp = 1_500_000L),
+                        SmsBurstObservation("+1 212-555-0104", timestamp = 1_400_000L),
+                    ),
                 sender = "+1 212-555-0105",
                 nowMillis = 1_800_000L,
-                config = SmsBurstConfig(
-                    windowMinutes = 30,
-                ),
+                config =
+                    SmsBurstConfig(
+                        windowMinutes = 30,
+                    ),
             )
 
         assertEquals(SmsBurstKind.PREFIX, signal?.kind)
@@ -82,15 +88,17 @@ class SmsContextCheckerTest {
     fun `stale observations do not trigger burst`() {
         val signal =
             SmsContextChecker.evaluateSmsBurst(
-                observations = listOf(
-                    SmsBurstObservation("55555", timestamp = 1L),
-                    SmsBurstObservation("55555", timestamp = 2L),
-                ),
+                observations =
+                    listOf(
+                        SmsBurstObservation("55555", timestamp = 1L),
+                        SmsBurstObservation("55555", timestamp = 2L),
+                    ),
                 sender = "55555",
                 nowMillis = 1_800_000L,
-                config = SmsBurstConfig(
-                    windowMinutes = 10,
-                ),
+                config =
+                    SmsBurstConfig(
+                        windowMinutes = 10,
+                    ),
             )
 
         assertNull(signal)

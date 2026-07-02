@@ -179,7 +179,7 @@ v1.7.0 shipped the binary trusted-allow / FAIL-block layer. Remaining: **PASSpor
 | Task | Size | Depends | Files |
 |------|------|---------|-------|
 | 2.3.1 Parse full PASSporT token per **RFC 8225** (header `typ=passport, alg=ES256, x5u=…`; payload `iat`, `orig`, `dest`, optional `mky`) [src 14]. Android exposes the SIP `Identity` header on API 30+ via `Connection.getExtras()`. | L | — | New `data/StirShakenParser.kt` |
-| 2.3.2 Per **RFC 8588 SHAKEN profile**: extract `attest` (A/B/C) and `origid` (UUID) claims. Display attestation badge in caller-ID overlay (green=A full, yellow=B partial, gray=C gateway/no opinion). [src 14] | M | 2.3.1 | overlay UI, `BlockedCall` model |
+| 2.3.2 Per **RFC 8588 SHAKEN profile**: extract `attest` (A/B/C) and `origid` (UUID) claims. Display neutral carrier-authentication status in caller-ID overlay (A=caller+number authenticated, B=caller authenticated only, C=gateway only/no opinion); never label attestation as safe/trusted caller status. [src 14] | M | 2.3.1 | overlay UI, `BlockedCall` model |
 | 2.3.3 `iat` replay-attack guard — reject tokens with `iat` more than 60 s old/skewed [src 14] | S | 2.3.1 | parser |
 | 2.3.4 Persist `origid` UUID in BlockedCall for **RFC 9027 traceback** participation. Future-proofs FCC traceback consortium reporting. [src research, RFC 9027] | S | 2.3.1 | `SpamDao`, `BlockedCall` |
 | 2.3.5 Attestation level as ML feature (A reduces score, C raises) | M | 2.3.1, 2.2.5 | `SpamMLScorer.extractFeatures()` |
@@ -544,13 +544,6 @@ Plus RFC 8588 (SHAKEN profile), RFC 9027 (Traceback), Apache SpamAssassin / rspa
   Touches: `app/src/androidTest/java/com/sysadmindoc/callshield/platform/TargetSdkBehaviorSmokeTest.kt`, `AndroidManifest.xml`, `NotificationHelper.kt`, test docs
   Acceptance: Instrumented smoke tests assert permissions, protected services, notification/full-screen assumptions, SDK version branching, and SMS/OTP documented behavior for target SDK 36+.
   Complexity: M
-
-- [ ] P1 - Revise STIR/SHAKEN badge semantics before PASSporT UI work
-  Why: Existing item 2.3.2 plans a green A-level attestation badge, but current STIR/SHAKEN research shows A-level attestation is not proof that a caller is safe or correctly identified.
-  Evidence: `ROADMAP.md` item 2.3.2; `app/src/main/res/values/strings.xml` `settings_stir_trusted_allow_desc`; TNS 2026 robocall report; FCC verified-caller rulemaking
-  Touches: `app/src/main/java/com/sysadmindoc/callshield/data/BlockReasoning.kt`, `app/src/main/java/com/sysadmindoc/callshield/service/CallerIdOverlayService.kt`, `app/src/main/res/values/strings.xml`, planned `StirShakenParser.kt`, tests
-  Acceptance: PASSporT/attestation UI says what was carrier-attested, avoids "safe"/"trusted" green-check copy, preserves explicit user/system block precedence, and has tests covering A/B/C wording and priority.
-  Complexity: S
 
 - [ ] P1 - Add a per-permission degraded-mode contract matrix
   Why: CallShield depends on multiple Android permissions and roles, and users need exact behavior/recovery when any one is denied, revoked, unsupported, or OEM-broken.
