@@ -1,5 +1,6 @@
 package com.sysadmindoc.callshield.data.remote
 
+import com.sysadmindoc.callshield.util.filterAsciiDigits
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -38,8 +39,13 @@ object ExternalLookup {
         val source: String,
         val isSpam: Boolean,
         val reports: Int = 0,
-        val detail: String = ""
+        val detail: String = "",
+        val status: RemoteLookupStatus = RemoteLookupStatus.CLEAN
     )
+
+    private const val JSON_RESPONSE_LIMIT_BYTES = 64L * 1024L
+    private const val HTML_RESPONSE_LIMIT_BYTES = 128L * 1024L
+    private const val CNAM_RESPONSE_LIMIT_BYTES = 16L * 1024L
 
     private val client = HttpClient.shared.newBuilder()
         .connectTimeout(8, TimeUnit.SECONDS)
@@ -56,7 +62,7 @@ object ExternalLookup {
      * Query all sources in parallel and merge results.
      */
     suspend fun lookupAll(number: String): MultiLookupResult = coroutineScope {
-        val digits = number.filter { it.isDigit() }
+        val digits = filterAsciiDigits(number)
         if (digits.length < 7) return@coroutineScope MultiLookupResult()
 
         val spamDeferred = spamLookupSources().map { source ->
@@ -80,7 +86,7 @@ object ExternalLookup {
     }
 
     suspend fun lookupSpamSource(numberOrDigits: String, source: SpamLookupSource): SourceResult? {
-        val digits = numberOrDigits.filter { it.isDigit() }
+        val digits = filterAsciiDigits(numberOrDigits)
         if (digits.length < 7) return null
         return when (source) {
             SpamLookupSource.SKIP_CALLS -> checkSkipCalls(digits)
@@ -90,7 +96,7 @@ object ExternalLookup {
     }
 
     suspend fun lookupCallerName(numberOrDigits: String): String {
-        val digits = numberOrDigits.filter { it.isDigit() }
+        val digits = filterAsciiDigits(numberOrDigits)
         if (digits.length < 7) return ""
         return fetchCallerName(digits)
     }
@@ -103,20 +109,17 @@ object ExternalLookup {
                 .header("User-Agent", "CallShield/1.0")
                 .build()
             client.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) return@withContext null
-                val body = response.body?.string() ?: return@withContext null
-
-                // Parse JSON response
-                val isSpam = body.contains("\"spam\":true", ignoreCase = true) ||
-                             body.contains("\"isSpam\":true", ignoreCase = true) ||
-                             body.contains("\"status\":\"spam\"", ignoreCase = true)
-                val reportMatch = Regex(""""(?:reports?|count)":\s*(\d+)""").find(body)
-                val reports = reportMatch?.groupValues?.get(1)?.toIntOrNull() ?: if (isSpam) 1 else 0
-
-                SourceResult("SkipCalls", isSpam, reports, if (isSpam) "Flagged as spam" else "")
+                if (!response.isSuccessful) {
+                    return@withContext sourceFallback("SkipCalls", RemoteLookupStatus.HTTP_ERROR)
+                }
+                when (val body = response.body?.readUtf8Bounded(JSON_RESPONSE_LIMIT_BYTES)) {
+                    is BoundedResponseBody.Text -> parseSkipCallsBody(body.value)
+                    null -> sourceFallback("SkipCalls", RemoteLookupStatus.EMPTY_BODY)
+                    else -> sourceFallback("SkipCalls", body.status())
+                }
             }
         } catch (_: Exception) {
-            null
+            sourceFallback("SkipCalls", RemoteLookupStatus.UNAVAILABLE)
         }
     }
 
@@ -129,26 +132,17 @@ object ExternalLookup {
                 .header("Accept", "application/json")
                 .build()
             client.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) return@withContext null
-                val body = response.body?.string() ?: return@withContext null
-
-                val votesMatch = Regex(""""votes":\s*(\d+)""").find(body)
-                val votes = votesMatch?.groupValues?.get(1)?.toIntOrNull() ?: 0
-                val blacklisted = body.contains("\"blackListed\":true")
-                val rating = Regex(""""rating":\s*"([^"]+)"""").find(body)?.groupValues?.get(1) ?: ""
-                val isSpam = blacklisted || votes >= 3 || rating.startsWith("D_") || rating.startsWith("E_")
-
-                SourceResult(
-                    "PhoneBlock", isSpam, votes,
-                    when {
-                        blacklisted -> "Blacklisted ($votes votes)"
-                        votes > 0 -> "$votes community votes"
-                        else -> "Rating: $rating"
-                    }
-                )
+                if (!response.isSuccessful) {
+                    return@withContext sourceFallback("PhoneBlock", RemoteLookupStatus.HTTP_ERROR)
+                }
+                when (val body = response.body?.readUtf8Bounded(JSON_RESPONSE_LIMIT_BYTES)) {
+                    is BoundedResponseBody.Text -> parsePhoneBlockBody(body.value)
+                    null -> sourceFallback("PhoneBlock", RemoteLookupStatus.EMPTY_BODY)
+                    else -> sourceFallback("PhoneBlock", body.status())
+                }
             }
         } catch (_: Exception) {
-            null
+            sourceFallback("PhoneBlock", RemoteLookupStatus.UNAVAILABLE)
         }
     }
 
@@ -160,17 +154,17 @@ object ExternalLookup {
                 .header("User-Agent", "Mozilla/5.0")
                 .build()
             client.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) return@withContext null
-                val body = response.body?.string() ?: return@withContext null
-                val reportMatch = Regex("""(\d+)\s*(?:report|complaint|comment)""", RegexOption.IGNORE_CASE).find(body)
-                val reports = reportMatch?.groupValues?.get(1)?.toIntOrNull() ?: 0
-
-                if (reports > 0) {
-                    SourceResult("WhoCalledMe", reports >= 3, reports, "$reports reports")
-                } else null
+                if (!response.isSuccessful) {
+                    return@withContext sourceFallback("WhoCalledMe", RemoteLookupStatus.HTTP_ERROR)
+                }
+                when (val body = response.body?.readUtf8Bounded(HTML_RESPONSE_LIMIT_BYTES)) {
+                    is BoundedResponseBody.Text -> parseWhoCalledMeBody(body.value)
+                    null -> sourceFallback("WhoCalledMe", RemoteLookupStatus.EMPTY_BODY)
+                    else -> sourceFallback("WhoCalledMe", body.status())
+                }
             }
         } catch (_: Exception) {
-            null
+            sourceFallback("WhoCalledMe", RemoteLookupStatus.UNAVAILABLE)
         }
     }
 
@@ -193,13 +187,16 @@ object ExternalLookup {
                 .build()
             client.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) return@withContext ""
-                val body = response.body?.string() ?: return@withContext ""
-                // Response: {"number":"+15551234567","name":"JOHN DOE"}
-                val nameMatch = Regex(""""name"\s*:\s*"([^"]+)"""").find(body)
-                nameMatch?.groupValues?.get(1)?.trim() ?: ""
+                when (val body = response.body?.readUtf8Bounded(CNAM_RESPONSE_LIMIT_BYTES)) {
+                    is BoundedResponseBody.Text -> parseCallerNameBody(body.value)
+                    else -> ""
+                }
             }
         } catch (_: Exception) {
             ""
         }
     }
+
+    private fun sourceFallback(source: String, status: RemoteLookupStatus): SourceResult =
+        SourceResult(source = source, isSpam = false, status = status)
 }

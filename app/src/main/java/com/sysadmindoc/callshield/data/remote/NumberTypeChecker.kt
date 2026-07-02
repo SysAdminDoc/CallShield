@@ -1,5 +1,6 @@
 package com.sysadmindoc.callshield.data.remote
 
+import com.sysadmindoc.callshield.util.filterAsciiDigits
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.Request
@@ -35,8 +36,11 @@ object NumberTypeChecker {
     data class NumberTypeResult(
         val lineType: NumberLineType,
         val carrier: String = "",
-        val country: String = ""
+        val country: String = "",
+        val status: RemoteLookupStatus = RemoteLookupStatus.CLEAN
     )
+
+    private const val NUMBER_TYPE_RESPONSE_LIMIT_BYTES = 64L * 1024L
 
     private val client = HttpClient.shared.newBuilder()
         .connectTimeout(8, TimeUnit.SECONDS)
@@ -48,10 +52,15 @@ object NumberTypeChecker {
      * Only call this for numbers with a pre-existing heuristic score > 30.
      */
     suspend fun check(number: String, apiKey: String): NumberTypeResult = withContext(Dispatchers.IO) {
-        if (apiKey.isBlank()) return@withContext NumberTypeResult(NumberLineType.UNKNOWN)
+        if (apiKey.isBlank()) {
+            return@withContext NumberTypeResult(NumberLineType.UNKNOWN, status = RemoteLookupStatus.DISABLED)
+        }
 
         try {
-            val e164 = normalizeE164(number) ?: return@withContext NumberTypeResult(NumberLineType.UNKNOWN)
+            val e164 = normalizeE164(number) ?: return@withContext NumberTypeResult(
+                NumberLineType.UNKNOWN,
+                status = RemoteLookupStatus.INVALID_INPUT
+            )
             val url = "https://phonevalidation.abstractapi.com/v1/?api_key=$apiKey&phone=${e164.removePrefix("+")}"
 
             val request = Request.Builder()
@@ -60,33 +69,18 @@ object NumberTypeChecker {
                 .build()
 
             client.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) return@withContext NumberTypeResult(NumberLineType.UNKNOWN)
-
-                val body = response.body?.string() ?: return@withContext NumberTypeResult(NumberLineType.UNKNOWN)
-
-                // Parse type field: {"type":{"type":"VoIP","is_prepaid":false,...},...}
-                val typeMatch = Regex(""""type"\s*:\s*"([^"]+)"""").find(body)
-                val rawType = typeMatch?.groupValues?.get(1)?.lowercase() ?: ""
-
-                val isPrepaid = body.contains(""""is_prepaid":true""")
-
-                val lineType = when {
-                    "voip" in rawType || "virtual" in rawType -> NumberLineType.VOIP
-                    isPrepaid -> NumberLineType.PREPAID
-                    "mobile" in rawType || "wireless" in rawType -> NumberLineType.MOBILE
-                    "landline" in rawType || "fixed" in rawType -> NumberLineType.LANDLINE
-                    else -> NumberLineType.UNKNOWN
+                if (!response.isSuccessful) {
+                    return@withContext unknown(RemoteLookupStatus.HTTP_ERROR)
                 }
 
-                val carrier = Regex(""""name"\s*:\s*"([^"]+)"""").find(body)
-                    ?.groupValues?.get(1) ?: ""
-                val country = Regex(""""country_code"\s*:\s*"([^"]+)"""").find(body)
-                    ?.groupValues?.get(1) ?: ""
-
-                NumberTypeResult(lineType = lineType, carrier = carrier, country = country)
+                when (val body = response.body?.readUtf8Bounded(NUMBER_TYPE_RESPONSE_LIMIT_BYTES)) {
+                    is BoundedResponseBody.Text -> parseNumberTypeBody(body.value)
+                    null -> unknown(RemoteLookupStatus.EMPTY_BODY)
+                    else -> unknown(body.status())
+                }
             }
         } catch (_: Exception) {
-            NumberTypeResult(NumberLineType.UNKNOWN)
+            unknown(RemoteLookupStatus.UNAVAILABLE)
         }
     }
 
@@ -100,7 +94,7 @@ object NumberTypeChecker {
     }
 
     private fun normalizeE164(number: String): String? {
-        val digits = number.filter { it.isDigit() }
+        val digits = filterAsciiDigits(number)
         return when {
             digits.length == 10 -> "+1$digits"
             digits.length == 11 && digits.startsWith("1") -> "+$digits"
@@ -108,4 +102,44 @@ object NumberTypeChecker {
             else -> null
         }
     }
+
+    internal fun parseNumberTypeBody(body: String): NumberTypeResult {
+        // Parse type field: {"type":{"type":"VoIP","is_prepaid":false,...},...}
+        val typeMatch = Regex(""""type"\s*:\s*"([^"]+)"""").find(body)
+        val rawType = typeMatch?.groupValues?.get(1)?.lowercase() ?: ""
+        val lineType = classifyLineType(rawType, body.contains(""""is_prepaid":true"""))
+        val carrier = Regex(""""name"\s*:\s*"([^"]+)"""").find(body)
+            ?.groupValues?.get(1) ?: ""
+        val country = Regex(""""country_code"\s*:\s*"([^"]+)"""").find(body)
+            ?.groupValues?.get(1) ?: ""
+
+        return NumberTypeResult(
+            lineType = lineType,
+            carrier = carrier,
+            country = country,
+            status = statusForParsedType(lineType, carrier, country)
+        )
+    }
+
+    private fun classifyLineType(rawType: String, isPrepaid: Boolean): NumberLineType = when {
+        "voip" in rawType || "virtual" in rawType -> NumberLineType.VOIP
+        isPrepaid -> NumberLineType.PREPAID
+        "mobile" in rawType || "wireless" in rawType -> NumberLineType.MOBILE
+        "landline" in rawType || "fixed" in rawType -> NumberLineType.LANDLINE
+        else -> NumberLineType.UNKNOWN
+    }
+
+    private fun statusForParsedType(
+        lineType: NumberLineType,
+        carrier: String,
+        country: String
+    ): RemoteLookupStatus =
+        if (lineType == NumberLineType.UNKNOWN && carrier.isBlank() && country.isBlank()) {
+            RemoteLookupStatus.CLEAN
+        } else {
+            RemoteLookupStatus.FOUND
+        }
+
+    private fun unknown(status: RemoteLookupStatus): NumberTypeResult =
+        NumberTypeResult(NumberLineType.UNKNOWN, status = status)
 }

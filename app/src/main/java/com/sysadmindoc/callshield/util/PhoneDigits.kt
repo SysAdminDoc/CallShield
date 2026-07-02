@@ -70,7 +70,12 @@ private fun stripPhoneFormatControls(value: String): String =
     buildString(value.length) {
         for (ch in value) {
             when (ch.code) {
-                0x200B, 0x200C, 0x200D, 0x200E, 0x200F, 0xFEFF -> Unit
+                ZERO_WIDTH_SPACE,
+                ZERO_WIDTH_NON_JOINER,
+                ZERO_WIDTH_JOINER,
+                LEFT_TO_RIGHT_MARK,
+                RIGHT_TO_LEFT_MARK,
+                BYTE_ORDER_MARK -> Unit
                 else -> append(ch)
             }
         }
@@ -78,3 +83,9 @@ private fun stripPhoneFormatControls(value: String): String =
 
 private const val DEFAULT_PHONE_INPUT_LENGTH = 24
 private const val MIN_CONFIRMABLE_PHONE_DIGITS = 5
+private const val ZERO_WIDTH_SPACE = 0x200B
+private const val ZERO_WIDTH_NON_JOINER = 0x200C
+private const val ZERO_WIDTH_JOINER = 0x200D
+private const val LEFT_TO_RIGHT_MARK = 0x200E
+private const val RIGHT_TO_LEFT_MARK = 0x200F
+private const val BYTE_ORDER_MARK = 0xFEFF

@@ -377,26 +377,33 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
                     }
                     Spacer(Modifier.height(4.dp))
                     wr.sources.forEach { src ->
+                        val isFallback = src.status.isFallback
                         Row(modifier = Modifier.padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
                             Icon(
                                 if (src.isSpam) Icons.Default.Warning else Icons.Default.CheckCircle,
-                                null, tint = if (src.isSpam) CatRed else CatGreen, modifier = Modifier.size(14.dp)
+                                null,
+                                tint = when {
+                                    src.isSpam -> CatRed
+                                    isFallback -> CatSubtext
+                                    else -> CatGreen
+                                },
+                                modifier = Modifier.size(14.dp)
                             )
                             Spacer(Modifier.width(6.dp))
                             Text(src.source, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold, modifier = Modifier.width(90.dp))
                             Text(
-                                if (src.reports > 0) {
-                                    pluralStringResource(
+                                when {
+                                    src.reports > 0 -> pluralStringResource(
                                         R.plurals.detail_reports_count_label,
                                         src.reports,
                                         src.reports
                                     )
-                                } else if (src.isSpam) {
-                                    stringResource(R.string.detail_flagged)
-                                } else {
-                                    stringResource(R.string.detail_clean)
+                                    src.isSpam -> stringResource(R.string.detail_flagged)
+                                    isFallback -> stringResource(R.string.detail_unavailable)
+                                    else -> stringResource(R.string.detail_clean)
                                 },
-                                style = MaterialTheme.typography.bodySmall, color = CatSubtext
+                                style = MaterialTheme.typography.bodySmall,
+                                color = CatSubtext
                             )
                         }
                     }
