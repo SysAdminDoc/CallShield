@@ -2,6 +2,7 @@ package com.sysadmindoc.callshield.data
 
 import android.content.Context
 import android.provider.CallLog
+import com.sysadmindoc.callshield.util.filterAsciiDigitsLast
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
@@ -36,7 +37,7 @@ class CallbackDetector @Inject constructor() {
      * for [windowHours] hours — they're likely calling back.
      */
     suspend fun wasRecentlyDialed(context: Context, number: String, windowHours: Int = 24): Boolean = withContext(Dispatchers.IO) {
-        val digits = number.filter { it.isDigit() }.takeLast(10)
+        val digits = filterAsciiDigitsLast(number, 10)
         if (digits.length < 7) return@withContext false
         val last7 = digits.takeLast(7)
 
@@ -53,7 +54,7 @@ class CallbackDetector @Inject constructor() {
                 val numIdx = c.getColumnIndex(CallLog.Calls.NUMBER)
                 if (numIdx < 0) return@withContext false
                 while (c.moveToNext()) {
-                    val dialedDigits = (c.getString(numIdx) ?: "").filter { it.isDigit() }.takeLast(10)
+                    val dialedDigits = filterAsciiDigitsLast(c.getString(numIdx) ?: "", 10)
                     if (dialedDigits == digits) return@withContext true
                 }
             }
@@ -70,7 +71,7 @@ class CallbackDetector @Inject constructor() {
         context: Context, number: String,
         windowMinutes: Int = 5, threshold: Int = 2
     ): Boolean = withContext(Dispatchers.IO) {
-        val digits = number.filter { it.isDigit() }.takeLast(10)
+        val digits = filterAsciiDigitsLast(number, 10)
         if (digits.length < 7) return@withContext false
         val last7 = digits.takeLast(7)
 
@@ -88,7 +89,7 @@ class CallbackDetector @Inject constructor() {
                 val numIdx = c.getColumnIndex(CallLog.Calls.NUMBER)
                 if (numIdx < 0) return@withContext false
                 while (c.moveToNext()) {
-                    val callDigits = (c.getString(numIdx) ?: "").filter { it.isDigit() }.takeLast(10)
+                    val callDigits = filterAsciiDigitsLast(c.getString(numIdx) ?: "", 10)
                     if (callDigits == digits) count++
                 }
             }
@@ -96,6 +97,50 @@ class CallbackDetector @Inject constructor() {
         } catch (_: SecurityException) {
             false
         }
+    }
+
+    suspend fun wasAnsweredRepeatedly(
+        context: Context,
+        number: String,
+        windowDays: Int = DEFAULT_ANSWERED_CALLER_WINDOW_DAYS,
+        threshold: Int = DEFAULT_ANSWERED_CALLER_THRESHOLD,
+        minDurationSeconds: Int = MIN_ANSWERED_CALL_DURATION_SECONDS,
+    ): Boolean = withContext(Dispatchers.IO) {
+        val digits = filterAsciiDigitsLast(number, 10)
+        if (digits.length < 7) return@withContext false
+        val last7 = digits.takeLast(7)
+        val safeThreshold = threshold.coerceAtLeast(1)
+
+        try {
+            val query = buildAnsweredCallerQuery(
+                nowMillis = System.currentTimeMillis(),
+                windowDays = windowDays,
+                minDurationSeconds = minDurationSeconds,
+                last7Digits = last7,
+            )
+            val cursor = context.contentResolver.query(
+                CallLog.Calls.CONTENT_URI,
+                arrayOf(CallLog.Calls.NUMBER),
+                query.selection,
+                query.selectionArgs,
+                "${CallLog.Calls.DATE} DESC",
+            )
+            var count = 0
+            cursor?.use { c ->
+                val numIdx = c.getColumnIndex(CallLog.Calls.NUMBER)
+                if (numIdx < 0) return@withContext false
+                while (c.moveToNext()) {
+                    val answeredDigits = filterAsciiDigitsLast(c.getString(numIdx) ?: "", 10)
+                    if (answeredDigits == digits) {
+                        count++
+                        if (count >= safeThreshold) return@withContext true
+                    }
+                }
+            }
+        } catch (_: SecurityException) {
+            return@withContext false
+        }
+        false
     }
 
     internal fun buildRecentlyDialedQuery(
@@ -136,7 +181,33 @@ class CallbackDetector @Inject constructor() {
         )
     }
 
+    internal fun buildAnsweredCallerQuery(
+        nowMillis: Long,
+        windowDays: Int,
+        minDurationSeconds: Int,
+        last7Digits: String,
+    ): CallLogQuery {
+        val safeWindowDays = windowDays.coerceAtLeast(1)
+        val safeDurationSeconds = minDurationSeconds.coerceAtLeast(1)
+        val cutoff = (nowMillis - safeWindowDays * MILLIS_PER_DAY).toString()
+        return CallLogQuery(
+            selection = "${CallLog.Calls.TYPE} = ? AND ${CallLog.Calls.DATE} > ? " +
+                "AND ${CallLog.Calls.DURATION} >= ? AND ${CallLog.Calls.NUMBER} LIKE ?",
+            selectionArgs = arrayOf(
+                CallLog.Calls.INCOMING_TYPE.toString(),
+                cutoff,
+                safeDurationSeconds.toString(),
+                "%$last7Digits",
+            )
+        )
+    }
+
     companion object {
+        const val DEFAULT_ANSWERED_CALLER_WINDOW_DAYS = 30
+        const val DEFAULT_ANSWERED_CALLER_THRESHOLD = 2
+        const val MIN_ANSWERED_CALL_DURATION_SECONDS = 1
+        private const val MILLIS_PER_DAY = 86_400_000L
+
         val shared: CallbackDetector = CallbackDetector()
 
         suspend fun wasRecentlyDialed(
@@ -154,6 +225,15 @@ class CallbackDetector @Inject constructor() {
         ): Boolean =
             shared.isRepeatedUrgentCall(context, number, windowMinutes, threshold)
 
+        suspend fun wasAnsweredRepeatedly(
+            context: Context,
+            number: String,
+            windowDays: Int = DEFAULT_ANSWERED_CALLER_WINDOW_DAYS,
+            threshold: Int = DEFAULT_ANSWERED_CALLER_THRESHOLD,
+            minDurationSeconds: Int = MIN_ANSWERED_CALL_DURATION_SECONDS,
+        ): Boolean =
+            shared.wasAnsweredRepeatedly(context, number, windowDays, threshold, minDurationSeconds)
+
         internal fun buildRecentlyDialedQuery(
             nowMillis: Long,
             windowHours: Int,
@@ -167,5 +247,13 @@ class CallbackDetector @Inject constructor() {
             last7Digits: String,
         ): CallLogQuery =
             shared.buildRepeatedUrgentCallQuery(nowMillis, windowMinutes, last7Digits)
+
+        internal fun buildAnsweredCallerQuery(
+            nowMillis: Long,
+            windowDays: Int,
+            minDurationSeconds: Int,
+            last7Digits: String,
+        ): CallLogQuery =
+            shared.buildAnsweredCallerQuery(nowMillis, windowDays, minDurationSeconds, last7Digits)
     }
 }
