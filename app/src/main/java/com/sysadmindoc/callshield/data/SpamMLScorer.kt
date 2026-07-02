@@ -1,15 +1,12 @@
 package com.sysadmindoc.callshield.data
 
 import android.content.Context
+import com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup
 import com.sysadmindoc.callshield.data.remote.GitHubDataSource
-import com.sysadmindoc.callshield.data.remote.HttpClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import okhttp3.Request
-import com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup
 import java.io.File
 import java.util.Calendar
-import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import kotlin.math.cos
 import kotlin.math.exp
@@ -158,38 +155,11 @@ class SpamMLScorer @Inject constructor() {
      */
     suspend fun syncWeights(context: Context) = withContext(Dispatchers.IO) {
         try {
-            val client = HttpClient.shared.newBuilder()
-                .connectTimeout(15, TimeUnit.SECONDS)
-                .readTimeout(15, TimeUnit.SECONDS)
-                .build()
-            val urls = listOf("main", "master").map { branch ->
-                GitHubDataSource.buildRawUrl(
-                    owner = GitHubDataSource.DEFAULT_REPO_OWNER,
-                    repo = GitHubDataSource.DEFAULT_REPO_NAME,
-                    branch = branch,
-                    path = GitHubDataSource.MODEL_WEIGHTS_PATH
-                )
-            }
-
-            var body: String? = null
-            for (url in urls.distinct()) {
-                val request = Request.Builder()
-                    .url(url)
-                    .header("Cache-Control", "no-store, max-age=0")
-                    .header("User-Agent", "CallShield/1.0")
-                    .build()
-                client.newCall(request).execute().use { response ->
-                    if (response.isSuccessful) {
-                        body = response.body?.string()
-                    }
-                }
-                if (body != null) break
-            }
-
-            if (body == null) {
-                body = GitHubDataSource.readBundledAsset(context, GitHubDataSource.BUNDLED_MODEL_WEIGHTS_ASSET)
+            val body =
+                GitHubDataSource().fetchModelWeightsJson()
                     .getOrNull()
-            }
+                    ?: GitHubDataSource.readBundledAsset(context, GitHubDataSource.BUNDLED_MODEL_WEIGHTS_ASSET)
+                        .getOrNull()
 
             val json = body ?: return@withContext
 
