@@ -394,6 +394,19 @@
     <string name="overlay_source_clean">Clean</string>
     <string name="overlay_source_unavailable">Unavailable</string>
     <string name="overlay_source_result">%1$s %2$s: %3$s</string>
+    <string name="remote_lookup_status_found">Found</string>
+    <string name="remote_lookup_status_caller_id_found">Caller ID found</string>
+    <string name="remote_lookup_status_clean">Clean / not found</string>
+    <string name="remote_lookup_status_disabled">Disabled</string>
+    <string name="remote_lookup_status_invalid_input">Invalid input</string>
+    <string name="remote_lookup_status_timeout">Timed out</string>
+    <string name="remote_lookup_status_rate_limited">Rate limited</string>
+    <string name="remote_lookup_status_http_error">HTTP error</string>
+    <string name="remote_lookup_status_empty_body">Empty response</string>
+    <string name="remote_lookup_status_body_too_large">Response too large</string>
+    <string name="remote_lookup_status_unreadable_body">Unreadable response</string>
+    <string name="remote_lookup_status_parse_error">Parse error</string>
+    <string name="remote_lookup_status_unavailable">Unavailable</string>
 
     <!-- Settings Screen -->
     <string name="settings_call_screening">Call Screening</string>
@@ -831,10 +844,12 @@
     <string name="detail_match_reasons">Match reasons:</string>
     <string name="detail_recent_activity">Recent Activity</string>
     <string name="detail_online_lookup">Online Lookup</string>
-    <string name="detail_check_sources">Check 3 Sources</string>
-    <string name="detail_checking_sources">Checking SkipCalls, PhoneBlock, WhoCalledMe…</string>
+    <string name="detail_check_sources">Check 4 Sources</string>
+    <string name="detail_checking_sources">Checking SkipCalls, PhoneBlock, WhoCalledMe, and OpenCNAM...</string>
     <string name="detail_reports_across_sources">%1$s across %2$s</string>
-    <string name="detail_clean_all_sources">Clean across all sources</string>
+    <string name="detail_clean_all_sources">No reports in available sources</string>
+    <string name="detail_no_definitive_source_result">No source returned a definitive result</string>
+    <string name="detail_lookup_privacy_note">Source status is shown without saving the queried number.</string>
     <plurals name="detail_reports_count_label">
         <item quantity="one">Report: %d</item>
         <item quantity="other">Reports: %d</item>

@@ -30,6 +30,7 @@ import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.PhoneFormatter
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.remote.ExternalLookup
+import com.sysadmindoc.callshield.data.remote.RemoteLookupStatus
 import com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup
 import com.sysadmindoc.callshield.domain.model.SpamCheckResult
 import com.sysadmindoc.callshield.ui.MainViewModel
@@ -350,6 +351,12 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
                         )
                     }
                 }
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    stringResource(R.string.detail_lookup_privacy_note),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = CatOverlay
+                )
                 webResult?.let { wr ->
                     Spacer(Modifier.height(8.dp))
                     if (wr.totalReports > 0) {
@@ -369,8 +376,15 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
                             fontWeight = FontWeight.SemiBold
                         )
                     } else {
+                        val hasDefinitiveSource = wr.sources.any { src -> !src.status.isFallback }
                         Text(
-                            stringResource(R.string.detail_clean_all_sources),
+                            stringResource(
+                                if (hasDefinitiveSource) {
+                                    R.string.detail_clean_all_sources
+                                } else {
+                                    R.string.detail_no_definitive_source_result
+                                }
+                            ),
                             color = CatGreen,
                             style = MaterialTheme.typography.bodySmall
                         )
@@ -380,7 +394,11 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
                         val isFallback = src.status.isFallback
                         Row(modifier = Modifier.padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
                             Icon(
-                                if (src.isSpam) Icons.Default.Warning else Icons.Default.CheckCircle,
+                                when {
+                                    src.isSpam -> Icons.Default.Warning
+                                    isFallback -> Icons.Default.Info
+                                    else -> Icons.Default.CheckCircle
+                                },
                                 null,
                                 tint = when {
                                     src.isSpam -> CatRed
@@ -399,8 +417,7 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
                                         src.reports
                                     )
                                     src.isSpam -> stringResource(R.string.detail_flagged)
-                                    isFallback -> stringResource(R.string.detail_unavailable)
-                                    else -> stringResource(R.string.detail_clean)
+                                    else -> remoteLookupStatusLabel(src)
                                 },
                                 style = MaterialTheme.typography.bodySmall,
                                 color = CatSubtext
@@ -533,6 +550,73 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
         }
     }
 }
+
+@Composable
+private fun remoteLookupStatusLabel(source: ExternalLookup.SourceResult): String =
+    stringResource(
+        remoteLookupStatusStringRes(
+            status = source.status,
+            hasDetail = source.detail.isNotBlank(),
+        ),
+    )
+
+private fun remoteLookupStatusStringRes(
+    status: RemoteLookupStatus,
+    hasDetail: Boolean,
+): Int =
+    when (status) {
+        RemoteLookupStatus.FOUND -> {
+            if (hasDetail) {
+                R.string.remote_lookup_status_caller_id_found
+            } else {
+                R.string.remote_lookup_status_found
+            }
+        }
+
+        RemoteLookupStatus.CLEAN -> {
+            R.string.remote_lookup_status_clean
+        }
+
+        RemoteLookupStatus.DISABLED -> {
+            R.string.remote_lookup_status_disabled
+        }
+
+        RemoteLookupStatus.INVALID_INPUT -> {
+            R.string.remote_lookup_status_invalid_input
+        }
+
+        RemoteLookupStatus.TIMEOUT -> {
+            R.string.remote_lookup_status_timeout
+        }
+
+        RemoteLookupStatus.RATE_LIMITED -> {
+            R.string.remote_lookup_status_rate_limited
+        }
+
+        RemoteLookupStatus.HTTP_ERROR -> {
+            R.string.remote_lookup_status_http_error
+        }
+
+        RemoteLookupStatus.EMPTY_BODY -> {
+            R.string.remote_lookup_status_empty_body
+        }
+
+        RemoteLookupStatus.BODY_TOO_LARGE -> {
+            R.string.remote_lookup_status_body_too_large
+        }
+
+        RemoteLookupStatus.UNREADABLE_BODY -> {
+            R.string.remote_lookup_status_unreadable_body
+        }
+
+        RemoteLookupStatus.PARSE_ERROR -> {
+            R.string.remote_lookup_status_parse_error
+        }
+
+        RemoteLookupStatus.UNAVAILABLE -> {
+            R.string.remote_lookup_status_unavailable
+        }
+    }
 
 @Composable
 fun StatChip(label: String, value: String, color: androidx.compose.ui.graphics.Color) {

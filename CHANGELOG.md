@@ -53,6 +53,10 @@ Distribution prep after the v1.7.10 release.
 - Added bounded response-body guards and typed fallback statuses for
   enrichment lookups so oversized or malformed third-party responses do not
   crash overlay, details, or line-type parsing.
+- Added typed per-source enrichment diagnostics and privacy copy across overlay
+  and number details so timeout, rate-limit, parse-error, oversized, disabled,
+  unavailable, clean, and found states are visible without logging raw queried
+  numbers.
 - Added answered-caller trust with configurable count/window limits so repeated
   answered callers can bypass weaker heuristic/ML suspicion while explicit
   block rules still win first.
