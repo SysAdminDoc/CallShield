@@ -15,6 +15,23 @@ import com.sysadmindoc.callshield.ui.MainActivity
 import com.sysadmindoc.callshield.util.filterAsciiDigits
 import com.sysadmindoc.callshield.util.filterAsciiDigitsLast
 
+private const val STABLE_ID_MULTIPLIER = 0x9E3779B9.toInt()
+private const val STABLE_ID_MASK = 0x7FFFFFFF
+
+private fun stableId(number: String, salt: Int = 0): Int {
+    return (number.hashCode() xor (salt * STABLE_ID_MULTIPLIER)) and STABLE_ID_MASK
+}
+
+private fun reportableSmsIndicators(
+    isCall: Boolean,
+    smsBody: String?,
+): SmsContentAnalyzer.SmsReportIndicators =
+    if (!isCall && !smsBody.isNullOrBlank()) {
+        SmsContentAnalyzer.extractReportableIndicators(smsBody)
+    } else {
+        SmsContentAnalyzer.SmsReportIndicators()
+    }
+
 object NotificationHelper {
     const val CHANNEL_BLOCKED = "blocked_calls"
     const val CHANNEL_RATING = "spam_rating"
@@ -35,15 +52,12 @@ object NotificationHelper {
     private const val SUMMARY_ID = 1
     private const val STATUS_ID = 2
     private const val RATE_LIMIT_MS = 5_000L // Min 5s between block notifications
+    private const val SMS_SAFE_ACTION_SALT = 30
 
     private var lastNotifTime = 0L
     private var blockedSinceLastNotif = 0
     private val lock = Any()
     private val repeatedUrgentNoticeGate = OneShotNoticeGate()
-
-    private fun stableId(number: String, salt: Int = 0): Int {
-        return (number.hashCode() xor (salt * 0x9E3779B9.toInt())) and 0x7FFFFFFF
-    }
 
     /**
      * Safely post a notification, honoring the API 33+ POST_NOTIFICATIONS runtime
@@ -104,12 +118,7 @@ object NotificationHelper {
     ) {
         val now = System.currentTimeMillis()
         val nid = stableId(number, if (isCall) 1 else 2)
-        val smsIndicators =
-            if (!isCall && !smsBody.isNullOrBlank()) {
-                SmsContentAnalyzer.extractReportableIndicators(smsBody)
-            } else {
-                SmsContentAnalyzer.SmsReportIndicators()
-            }
+        val smsIndicators = reportableSmsIndicators(isCall, smsBody)
 
         // Rate limiting — batch rapid blocks into summary (synchronized to avoid race)
         synchronized(lock) {
@@ -164,9 +173,34 @@ object NotificationHelper {
             .setGroup(GROUP_BLOCKED)
             .addAction(android.R.drawable.ic_menu_close_clear_cancel, context.getString(R.string.notif_action_block_forever), blockIntent)
             .addAction(android.R.drawable.ic_menu_send, context.getString(R.string.notif_action_report), reportIntent)
+        builder.addSmsSafeAction(context, number, nid, isCall)
 
         safeNotify(context, nid, builder)
         updateSummary(context)
+    }
+
+    private fun NotificationCompat.Builder.addSmsSafeAction(
+        context: Context,
+        number: String,
+        notificationId: Int,
+        isCall: Boolean,
+    ) {
+        if (isCall) return
+        val safeIntent = PendingIntent.getBroadcast(
+            context,
+            stableId(number, SMS_SAFE_ACTION_SALT),
+            Intent(context, SpamActionReceiver::class.java).apply {
+                action = ACTION_SAFE
+                putExtra(EXTRA_NUMBER, number)
+                putExtra(EXTRA_NOTIF_ID, notificationId)
+            },
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
+        addAction(
+            android.R.drawable.ic_menu_save,
+            context.getString(R.string.notif_repeated_urgent_action_safe),
+            safeIntent,
+        )
     }
 
     private fun Intent.putReportExtras(

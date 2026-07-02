@@ -39,6 +39,7 @@ class SettingsRepository(
     val neighborSpoofEnabled: Flow<Boolean> = dataStore.data.map { it[SpamRepository.KEY_NEIGHBOR_SPOOF] ?: true }
     val heuristicsEnabled: Flow<Boolean> = dataStore.data.map { it[SpamRepository.KEY_HEURISTICS] ?: true }
     val smsContentEnabled: Flow<Boolean> = dataStore.data.map { it[SpamRepository.KEY_SMS_CONTENT] ?: true }
+    val smsBurstEnabled: Flow<Boolean> = dataStore.data.map { it[SpamRepository.KEY_SMS_BURST] ?: true }
     val contactWhitelistEnabled: Flow<Boolean> =
         dataStore.data.map { it[SpamRepository.KEY_CONTACT_WHITELIST] ?: true }
     val contactsOnlyEnabled: Flow<Boolean> =
@@ -151,6 +152,8 @@ class SettingsRepository(
         dataStore.edit { it[SpamRepository.KEY_HEURISTICS] = enabled }
     suspend fun setSmsContent(enabled: Boolean) =
         dataStore.edit { it[SpamRepository.KEY_SMS_CONTENT] = enabled }
+    suspend fun setSmsBurst(enabled: Boolean) =
+        dataStore.edit { it[SpamRepository.KEY_SMS_BURST] = enabled }
     suspend fun setContactWhitelist(enabled: Boolean) =
         dataStore.edit { it[SpamRepository.KEY_CONTACT_WHITELIST] = enabled }
     suspend fun setContactsOnly(enabled: Boolean) =

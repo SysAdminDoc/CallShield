@@ -57,6 +57,8 @@ Distribution prep after the v1.7.10 release.
 - Added emergency-callback grace with a configurable window so unknown callers
   can ring through after a local emergency call while explicit block rules
   still win first.
+- Added SMS burst protection for repeated unknown senders and same-prefix flood
+  patterns, including blocked-SMS notification actions to mark safe or report.
 - Added a backup restore preview step with parsed counts, conflict warnings,
   and explicit Merge or Replace apply modes so restores validate before
   mutating local blocklist state.

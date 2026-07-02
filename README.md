@@ -12,7 +12,7 @@
 <p align="center">
   <a href="https://github.com/SysAdminDoc/CallShield/releases/latest"><img src="https://img.shields.io/github/v/release/SysAdminDoc/CallShield?style=flat-square&color=a6e3a1" alt="Release"></a>
   <img src="https://img.shields.io/badge/Spam%20Numbers-32%2C933-f38ba8?style=flat-square" alt="32,933 Numbers">
-  <img src="https://img.shields.io/badge/Tests-667-94e2d5?style=flat-square" alt="667 Tests">
+  <img src="https://img.shields.io/badge/Tests-674-94e2d5?style=flat-square" alt="674 Tests">
   <img src="https://img.shields.io/badge/Android-10%2B-89b4fa?style=flat-square" alt="Android 10+">
   <img src="https://img.shields.io/badge/License-MIT-cba6f7?style=flat-square" alt="MIT License">
   <img src="https://img.shields.io/badge/API%20Keys-None-fab387?style=flat-square" alt="No required API keys">
@@ -79,7 +79,8 @@ CallShield blocks spam calls and texts using a **15+ layer on-device detection e
 - **STIR/SHAKEN Trusted-Caller Allow** — carrier `PASSED` attestations can short-circuit heuristic / ML blocks while still yielding to every explicit user rule.
 - **Answered-caller trust** — numbers answered repeatedly inside the configured lookback window can ring through lower-confidence heuristic/ML suspicion while explicit block rules still win first.
 - **Emergency callback grace** — unknown callbacks can ring through after a local emergency call for a configurable window while explicit block rules still win first.
-- **667 total JVM unit tests** - the local unit suite covers detection, workers, utilities, and repository contracts before release.
+- **SMS burst protection** - repeated unknown SMS senders or same-prefix floods can be blocked as `sms_burst`, with blocked-SMS notification actions to mark safe or report.
+- **674 total JVM unit tests** - the local unit suite covers detection, workers, utilities, and repository contracts before release.
 - **Gradient-Boosted Tree ML model** — 20 features, pure Kotlin, no TFLite dependency.
 - **Campaign burst detection** — NPA-NXX prefix clustering identifies coordinated spam waves.
 - **Full accessibility** — content descriptions across Compose UI, 48dp minimum touch targets.
@@ -87,7 +88,7 @@ CallShield blocks spam calls and texts using a **15+ layer on-device detection e
 ## How It Works
 
 1. **32,933 confirmed spam numbers** — sourced from 1.75M FCC consumer complaints (2+ reports each), FTC Do Not Call, ToastedSpam, and community reports
-2. **15+ layer detection + ML** — database, heuristics, campaign burst detection, on-device gradient-boosted tree, SMS content analysis, RCS filter, STIR/SHAKEN, and more
+2. **15+ layer detection + ML** — database, heuristics, campaign burst detection, on-device gradient-boosted tree, SMS content/burst analysis, RCS filter, STIR/SHAKEN, and more
 3. **Real-time caller ID overlay** — parallel lookups against SkipCalls, PhoneBlock, WhoCalledMe + OpenCNAM caller name, with SIT tone anti-autodialer
 4. **Scheduled hot list** — trending spam numbers and campaign ranges refresh through the repository data pipeline
 5. **Callback-aware** — won't block callbacks from numbers you recently called, answered repeatedly, after a local emergency call, or urgent repeated callers
@@ -120,7 +121,7 @@ All detection layers implement a shared `IChecker` interface and run in priority
 |  2500 | **Campaign Burst** | Block | NPA-NXX prefix clustering detects coordinated spam waves |
 |  2000 | **ML Spam Scorer** | Block | 20-feature on-device gradient-boosted tree model |
 
-SMS-specific layers (append after the shared chain): **SMS Context Trust** → **SMS Keyword Rules** (with schedule) → **SMS Content Analysis** (30+ regex patterns, URL shorteners, suspicious TLDs, spam domain blocklist).
+SMS-specific layers (append after the shared chain): **SMS Context Trust** → **SMS Keyword Rules** (with schedule) → **SMS Burst Protection** → **SMS Content Analysis** (30+ regex patterns, URL shorteners, suspicious TLDs, spam domain blocklist).
 
 ### Additional Layers
 - **Caller ID Overlay** — suspicious calls (heuristic score 30-59) trigger a live multi-source lookup overlay with SkipCalls, PhoneBlock, WhoCalledMe + OpenCNAM caller name
@@ -317,7 +318,7 @@ RELEASE_KEY_PASSWORD=...
 ## Testing
 
 ```bash
-./gradlew testDebugUnitTest   # 667 tests
+./gradlew testDebugUnitTest   # 674 tests
 ```
 
 Run tests, lint, release metadata checks, and artifact builds locally before publishing.
@@ -338,8 +339,8 @@ Run tests, lint, release metadata checks, and artifact builds locally before pub
 | Community API | Cloudflare Workers |
 | URL Safety | URLhaus (abuse.ch) |
 | Verification | Local Gradle, lint, and release-artifact checks |
-| Tests | 667 JVM unit tests (JUnit) |
-| Strings | 979 string resources and 28 plural groups (translation-ready) |
+| Tests | 674 JVM unit tests (JUnit) |
+| Strings | 981 string resources and 28 plural groups (translation-ready) |
 | Accessibility | 100+ content descriptions, 48dp touch targets |
 | Min SDK | 29 (Android 10) |
 | Target SDK | 36 |
