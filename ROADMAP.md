@@ -545,13 +545,6 @@ Plus RFC 8588 (SHAKEN profile), RFC 9027 (Traceback), Apache SpamAssassin / rspa
   Acceptance: Instrumented smoke tests assert permissions, protected services, notification/full-screen assumptions, SDK version branching, and SMS/OTP documented behavior for target SDK 36+.
   Complexity: M
 
-- [ ] P1 - Add enrichment source health and privacy diagnostics
-  Why: Overlay and lookup enrichments currently collapse timeout, parse failure, oversize response, rate limit, and no-hit states into null or UNKNOWN, making "source unavailable" indistinguishable from "source clean."
-  Evidence: `ExternalLookup.kt`; `WebLookup.kt`; `NumberTypeChecker.kt`; `CallerIdOverlayService.kt`; SpamBlocker privacy notes; SpamBlocker v5.11 large-response crash fix
-  Touches: `app/src/main/java/com/sysadmindoc/callshield/data/remote/ExternalLookup.kt`, `WebLookup.kt`, `NumberTypeChecker.kt`, `service/CallerIdOverlayService.kt`, diagnostics/export UI, tests
-  Acceptance: Each enrichment source returns typed states for success, clean/not-found, timeout, rate-limited, oversized, parse-error, disabled, and unavailable; overlay and diagnostics show per-source status without logging raw queried numbers.
-  Complexity: M
-
 - [ ] P1 - Harden external blocklist subscriptions before B.F.7/B.F.13
   Why: User-supplied list URLs can mass-block legitimate callers or stall parsing unless they have caps, attribution, dry-run preview, disable, and rollback semantics before affecting live screening.
   Evidence: Existing ROADMAP B.F.7/B.F.13; `HotDataSync.kt`; `data/repository/SyncRepository.kt`; Pi-hole gravity rebuild model

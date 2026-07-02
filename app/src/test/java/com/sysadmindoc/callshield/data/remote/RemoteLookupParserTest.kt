@@ -16,22 +16,23 @@ class RemoteLookupParserTest {
     }
 
     @Test
-    fun `skipcalls parser handles malformed response as clean fallback`() {
+    fun `skipcalls parser handles malformed response as parse error fallback`() {
         val result = parseSkipCallsBody("""{"spam":""")
 
         assertFalse(result.isSpam)
         assertEquals(0, result.reports)
-        assertEquals(RemoteLookupStatus.CLEAN, result.status)
+        assertEquals(RemoteLookupStatus.PARSE_ERROR, result.status)
     }
 
     @Test
     fun `web lookup parser extracts bounded notes from normal html`() {
-        val body = listOf(
-            "<html>",
-            """<div class="comment">Repeated vehicle warranty calls every morning.</div>""",
-            "<p>12 reports</p>",
-            "</html>",
-        ).joinToString("\n")
+        val body =
+            listOf(
+                "<html>",
+                """<div class="comment">Repeated vehicle warranty calls every morning.</div>""",
+                "<p>12 reports</p>",
+                "</html>",
+            ).joinToString("\n")
 
         val result = WebLookup.parseLookupBody(body)
 
@@ -46,18 +47,19 @@ class RemoteLookupParserTest {
 
         assertEquals(NumberTypeChecker.NumberLineType.UNKNOWN, result.lineType)
         assertEquals("", result.carrier)
-        assertEquals(RemoteLookupStatus.CLEAN, result.status)
+        assertEquals(RemoteLookupStatus.PARSE_ERROR, result.status)
     }
 
     @Test
     fun `number type parser detects voip normal response`() {
-        val body = listOf(
-            "{",
-            """"type": {"type": "VoIP", "is_prepaid": false},""",
-            """"carrier": {"name": "Example Voice"},""",
-            """"country_code": "US"""",
-            "}",
-        ).joinToString("\n")
+        val body =
+            listOf(
+                "{",
+                """"type": {"type": "VoIP", "is_prepaid": false},""",
+                """"carrier": {"name": "Example Voice"},""",
+                """"country_code": "US"""",
+                "}",
+            ).joinToString("\n")
 
         val result = NumberTypeChecker.parseNumberTypeBody(body)
 
@@ -65,5 +67,23 @@ class RemoteLookupParserTest {
         assertEquals("Example Voice", result.carrier)
         assertEquals("US", result.country)
         assertEquals(RemoteLookupStatus.FOUND, result.status)
+    }
+
+    @Test
+    fun `caller name parser exposes clean and found status`() {
+        val found = parseCallerNameBody("""{"number":"+15551234567","name":"ACME SERVICE"}""")
+        val clean = parseCallerNameBody("""{"number":"+15551234567","name":""}""")
+
+        assertEquals("ACME SERVICE", found.callerName)
+        assertEquals(RemoteLookupStatus.FOUND, found.status)
+        assertEquals("", clean.callerName)
+        assertEquals(RemoteLookupStatus.CLEAN, clean.status)
+    }
+
+    @Test
+    fun `remote lookup status distinguishes rate limits from generic http errors`() {
+        assertEquals(RemoteLookupStatus.RATE_LIMITED, RemoteLookupStatus.fromHttpCode(429))
+        assertEquals(RemoteLookupStatus.HTTP_ERROR, RemoteLookupStatus.fromHttpCode(500))
+        assertTrue(RemoteLookupStatus.RATE_LIMITED.isFallback)
     }
 }

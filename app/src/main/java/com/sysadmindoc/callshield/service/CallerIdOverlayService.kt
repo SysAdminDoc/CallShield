@@ -22,6 +22,7 @@ import com.sysadmindoc.callshield.CallShieldApp
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.PhoneFormatter
 import com.sysadmindoc.callshield.data.remote.ExternalLookup
+import com.sysadmindoc.callshield.data.remote.RemoteLookupStatus
 import com.sysadmindoc.callshield.util.filterAsciiDigits
 import com.sysadmindoc.callshield.util.race
 import kotlinx.coroutines.*
@@ -357,8 +358,7 @@ class CallerIdOverlayService : Service() {
                     val info = when {
                         result.reports > 0 -> formatReports(result.reports)
                         result.isSpam -> this@CallerIdOverlayService.getString(R.string.overlay_source_flagged)
-                        isFallback -> this@CallerIdOverlayService.getString(R.string.overlay_source_unavailable)
-                        else -> this@CallerIdOverlayService.getString(R.string.overlay_source_clean)
+                        else -> sourceStatusText(result)
                     }
                     text = this@CallerIdOverlayService.getString(R.string.overlay_source_result, icon, result.source, info)
                     setTextColor(
@@ -457,15 +457,15 @@ class CallerIdOverlayService : Service() {
                     }
 
                     launch {
-                        val callerName = ExternalLookup.lookupCallerName(number)
-                        if (callerName.isNotBlank()) {
+                        val callerNameResult = ExternalLookup.lookupCallerNameResult(number)
+                        if (callerNameResult.callerName.isNotBlank()) {
                             handler.post {
                                 if (!isCurrentSession(sessionId)) return@post
-                                callerNameText?.text = callerName
+                                callerNameText?.text = callerNameResult.callerName
                                 callerNameText?.visibility = android.view.View.VISIBLE
                             }
                         }
-                        markSourceFinished()
+                        addSourceResult(callerNameResult.asSourceResult())
                     }
                 }
             } catch (_: CancellationException) {
@@ -487,6 +487,64 @@ class CallerIdOverlayService : Service() {
     private fun formatReports(reports: Int): String {
         val localizedCount = NumberFormat.getIntegerInstance().format(reports)
         return resources.getQuantityString(R.plurals.overlay_reports_count, reports, localizedCount)
+    }
+
+    private fun sourceStatusText(result: ExternalLookup.SourceResult): String {
+        val statusRes =
+            when (result.status) {
+                RemoteLookupStatus.FOUND -> {
+                    if (result.detail.isNotBlank()) {
+                        R.string.remote_lookup_status_caller_id_found
+                    } else {
+                        R.string.remote_lookup_status_found
+                    }
+                }
+
+                RemoteLookupStatus.CLEAN -> {
+                    R.string.remote_lookup_status_clean
+                }
+
+                RemoteLookupStatus.DISABLED -> {
+                    R.string.remote_lookup_status_disabled
+                }
+
+                RemoteLookupStatus.INVALID_INPUT -> {
+                    R.string.remote_lookup_status_invalid_input
+                }
+
+                RemoteLookupStatus.TIMEOUT -> {
+                    R.string.remote_lookup_status_timeout
+                }
+
+                RemoteLookupStatus.RATE_LIMITED -> {
+                    R.string.remote_lookup_status_rate_limited
+                }
+
+                RemoteLookupStatus.HTTP_ERROR -> {
+                    R.string.remote_lookup_status_http_error
+                }
+
+                RemoteLookupStatus.EMPTY_BODY -> {
+                    R.string.remote_lookup_status_empty_body
+                }
+
+                RemoteLookupStatus.BODY_TOO_LARGE -> {
+                    R.string.remote_lookup_status_body_too_large
+                }
+
+                RemoteLookupStatus.UNREADABLE_BODY -> {
+                    R.string.remote_lookup_status_unreadable_body
+                }
+
+                RemoteLookupStatus.PARSE_ERROR -> {
+                    R.string.remote_lookup_status_parse_error
+                }
+
+                RemoteLookupStatus.UNAVAILABLE -> {
+                    R.string.remote_lookup_status_unavailable
+                }
+            }
+        return getString(statusRes)
     }
 
     private fun dismiss(expectedSessionId: Long? = null) {
