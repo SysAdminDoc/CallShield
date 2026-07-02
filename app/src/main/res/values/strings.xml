@@ -504,6 +504,17 @@
     <string name="settings_backup">Backup</string>
     <string name="settings_restore">Restore</string>
     <string name="settings_backup_includes">Includes blocklist, whitelist, wildcard rules, and keyword rules.</string>
+    <string name="settings_external_blocklists">External blocklists</string>
+    <string name="settings_external_blocklists_desc">Subscribe to CSV, TXT, or JSON number lists. CallShield previews changes, caps imports, and stores each feed under its own removable source.</string>
+    <string name="settings_external_blocklist_url">Blocklist URL</string>
+    <string name="settings_external_blocklist_label">Label (optional)</string>
+    <string name="settings_external_blocklist_preview">Preview</string>
+    <string name="settings_external_blocklist_apply">Apply</string>
+    <string name="settings_external_blocklist_preview_title">%s preview</string>
+    <string name="settings_external_blocklist_preview_summary">%1$s feed: %2$d numbers, +%3$d / -%4$d</string>
+    <string name="settings_external_blocklist_preview_skips">%1$d skipped rows, %2$d already owned by stronger sources</string>
+    <string name="settings_external_blocklist_commit_preview">Commit preview</string>
+    <string name="settings_external_blocklist_subscription_stats">%1$d active, +%2$d / -%3$d last sync</string>
     <string name="settings_advanced">Advanced</string>
     <string name="settings_abstract_api_key">AbstractAPI Key (optional)</string>
     <string name="settings_abstract_api_desc">Free 250 lookups/month for carrier &amp; line-type enrichment in the caller ID overlay. Never used for blocking.</string>

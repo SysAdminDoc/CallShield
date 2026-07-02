@@ -48,6 +48,9 @@ interface SpamDao {
     @Query("SELECT COUNT(*) FROM spam_numbers WHERE source = :source")
     suspend fun getCountBySource(source: String): Int
 
+    @Query("SELECT * FROM spam_numbers WHERE source = :source")
+    suspend fun getNumbersBySource(source: String): List<SpamNumber>
+
     @Query("SELECT * FROM spam_numbers WHERE isUserBlocked = 1")
     suspend fun getUserBlockedNumbersSync(): List<SpamNumber>
 

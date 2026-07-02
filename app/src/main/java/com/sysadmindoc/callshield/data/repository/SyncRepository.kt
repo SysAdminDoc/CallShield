@@ -2,13 +2,20 @@ package com.sysadmindoc.callshield.data.repository
 
 import android.content.Context
 import com.sysadmindoc.callshield.R
+import com.sysadmindoc.callshield.data.ExternalBlocklistParser
+import com.sysadmindoc.callshield.data.ParsedExternalBlocklist
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.local.SpamDao
 import com.sysadmindoc.callshield.data.mergeHotListNumbers
+import com.sysadmindoc.callshield.data.model.ExternalBlocklistImportResult
+import com.sysadmindoc.callshield.data.model.ExternalBlocklistPreview
+import com.sysadmindoc.callshield.data.model.ExternalBlocklistSubscription
 import com.sysadmindoc.callshield.data.model.SpamDatabase
 import com.sysadmindoc.callshield.data.model.SpamNumber
 import com.sysadmindoc.callshield.data.model.SpamPrefix
+import com.sysadmindoc.callshield.data.remote.ExternalBlocklistDataSource
 import com.sysadmindoc.callshield.data.remote.GitHubDataSource
+import com.sysadmindoc.callshield.data.remote.OkHttpExternalBlocklistDataSource
 import com.sysadmindoc.callshield.data.remote.SpamDataSource
 import com.sysadmindoc.callshield.data.sanitizeDatabaseNumbers
 import com.sysadmindoc.callshield.domain.model.SyncResult
@@ -18,7 +25,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
-@Suppress("LongParameterList")
+@Suppress("LongParameterList", "TooManyFunctions")
 class SyncRepository(
     private val context: Context,
     private val dao: SpamDao,
@@ -26,6 +33,7 @@ class SyncRepository(
     private val settingsRepository: SettingsRepository,
     private val normalizeNumber: (String) -> String,
     private val invalidateAllCaches: () -> Unit,
+    private val externalBlocklistDataSource: ExternalBlocklistDataSource = OkHttpExternalBlocklistDataSource(),
 ) {
     private val syncMutex = Mutex()
 
@@ -34,112 +42,213 @@ class SyncRepository(
      *              Used for manual sync to guarantee fresh data.
      */
     @Suppress("LongMethod", "TooGenericExceptionCaught")
-    suspend fun syncFromGitHub(force: Boolean = false): SyncResult = withContext(Dispatchers.IO) {
-        syncMutex.withLock {
-            try {
-                val currentCount = dao.getSpamCount()
-                if (!force) {
-                    val currentSha = settingsRepository.readLastDataSha()
-                    val remoteResult = remote.checkForUpdate()
-                    val newSha = remoteResult.getOrNull()
+    suspend fun syncFromGitHub(force: Boolean = false): SyncResult =
+        withContext(Dispatchers.IO) {
+            syncMutex.withLock {
+                try {
+                    val currentCount = dao.getSpamCount()
+                    if (!force) {
+                        val currentSha = settingsRepository.readLastDataSha()
+                        val remoteResult = remote.checkForUpdate()
+                        val newSha = remoteResult.getOrNull()
 
-                    if (newSha != null && newSha == currentSha) {
+                        if (newSha != null && newSha == currentSha) {
+                            return@withContext SyncResult(
+                                success = true,
+                                message = context.getString(R.string.sync_database_up_to_date),
+                            )
+                        }
+                    }
+
+                    val result = remote.fetchSpamDatabase()
+                    if (result.isSuccess) {
+                        val database = result.getOrThrow()
+                        val newSha = remote.checkForUpdate().getOrNull()
+                        val (numberCount, prefixCount) =
+                            persistSpamDatabase(
+                                database = database,
+                                sha = newSha,
+                                syncSource = SpamRepository.SYNC_SOURCE_REMOTE,
+                            )
                         return@withContext SyncResult(
                             success = true,
-                            message = context.getString(R.string.sync_database_up_to_date)
+                            message = context.getString(R.string.sync_success_counts, numberCount, prefixCount),
+                        )
+                    }
+
+                    val remoteError =
+                        result.exceptionOrNull()?.message
+                            ?: context.getString(R.string.sync_unknown_error)
+                    if (currentCount > 0) {
+                        return@withContext SyncResult(
+                            success = true,
+                            message = context.getString(R.string.sync_remote_unavailable_existing, remoteError),
+                            warning = true,
+                        )
+                    }
+
+                    val bundledDatabase = loadBundledSpamDatabase()
+                    if (bundledDatabase.isSuccess) {
+                        val database = bundledDatabase.getOrThrow()
+                        val (numberCount, prefixCount) =
+                            persistSpamDatabase(
+                                database = database,
+                                sha = null,
+                                syncSource = SpamRepository.SYNC_SOURCE_BUNDLED,
+                            )
+                        return@withContext SyncResult(
+                            success = true,
+                            message =
+                                context.getString(
+                                    R.string.sync_bundled_snapshot_loaded,
+                                    numberCount,
+                                    prefixCount,
+                                ),
+                            warning = true,
+                        )
+                    }
+
+                    val bundledError = bundledDatabase.exceptionOrNull()?.message
+                    val message =
+                        buildString {
+                            append(context.getString(R.string.sync_unavailable_prefix, remoteError))
+                            if (!bundledError.isNullOrBlank()) {
+                                append(context.getString(R.string.sync_bundled_fallback_failed, bundledError))
+                            }
+                        }
+
+                    SyncResult(
+                        success = false,
+                        message = message,
+                        shouldRetry = shouldRetrySync(remoteError),
+                    )
+                } catch (e: Exception) {
+                    SyncResult(
+                        success = false,
+                        message = context.getString(R.string.sync_error, e.message ?: ""),
+                        shouldRetry = true,
+                    )
+                }
+            }
+        }
+
+    suspend fun replaceHotList(numbers: List<SpamNumber>) =
+        withContext(Dispatchers.IO) {
+            val hotNumbers =
+                numbers
+                    .filter { it.number.isNotBlank() }
+                    .distinctBy { it.number }
+
+            val existingByNumber =
+                if (hotNumbers.isEmpty()) {
+                    emptyMap()
+                } else {
+                    val existingRows = dao.getNumbersByNumbers(hotNumbers.map { it.number })
+                    existingRows.associateBy { it.number }
+                }
+
+            val mergedHotNumbers =
+                mergeHotListNumbers(
+                    hotNumbers = hotNumbers,
+                    existingByNumber = existingByNumber,
+                )
+
+            dao.deleteBySource("hot_list")
+            if (mergedHotNumbers.isNotEmpty()) {
+                dao.insertNumbers(mergedHotNumbers)
+            }
+            // Hot list entries are exact number rows. Prefix/rule caches do not change here.
+        }
+
+    suspend fun previewExternalBlocklistSubscription(
+        url: String,
+        label: String = "",
+    ): ExternalBlocklistImportResult =
+        withContext(Dispatchers.IO) {
+            syncMutex.withLock {
+                runExternalBlocklistOperation {
+                    val parsed = fetchAndParseExternalBlocklist(url, label)
+                    val preview = buildExternalBlocklistPreview(parsed)
+                    ExternalBlocklistImportResult(
+                        success = true,
+                        message = externalPreviewMessage(preview),
+                        preview = preview,
+                    )
+                }
+            }
+        }
+
+    suspend fun applyExternalBlocklistSubscription(
+        url: String,
+        label: String = "",
+    ): ExternalBlocklistImportResult =
+        withContext(Dispatchers.IO) {
+            syncMutex.withLock {
+                runExternalBlocklistOperation {
+                    val parsed = fetchAndParseExternalBlocklist(url, label)
+                    commitExternalBlocklist(parsed)
+                }
+            }
+        }
+
+    suspend fun setExternalBlocklistSubscriptionEnabled(
+        id: String,
+        enabled: Boolean,
+    ): ExternalBlocklistImportResult =
+        withContext(Dispatchers.IO) {
+            syncMutex.withLock {
+                runExternalBlocklistOperation {
+                    val subscriptions = settingsRepository.readExternalBlocklistSubscriptions()
+                    val subscription =
+                        subscriptions.firstOrNull { it.id == id }
+                            ?: return@runExternalBlocklistOperation ExternalBlocklistImportResult(
+                                success = false,
+                                message = "External blocklist subscription was not found",
+                            )
+                    if (enabled) {
+                        val parsed = fetchAndParseExternalBlocklist(subscription.url, subscription.label)
+                        commitExternalBlocklist(parsed)
+                    } else {
+                        val removed = disableExternalBlocklist(subscription, subscriptions)
+                        ExternalBlocklistImportResult(
+                            success = true,
+                            message = "Disabled ${subscription.label}: removed $removed feed-owned numbers",
+                            subscription =
+                                subscription.copy(
+                                    enabled = false,
+                                    lastRemoved = removed,
+                                    lastError = "",
+                                ),
                         )
                     }
                 }
-
-                val result = remote.fetchSpamDatabase()
-                if (result.isSuccess) {
-                    val database = result.getOrThrow()
-                    val newSha = remote.checkForUpdate().getOrNull()
-                    val (numberCount, prefixCount) = persistSpamDatabase(
-                        database = database,
-                        sha = newSha,
-                        syncSource = SpamRepository.SYNC_SOURCE_REMOTE,
-                    )
-                    return@withContext SyncResult(
-                        success = true,
-                        message = context.getString(R.string.sync_success_counts, numberCount, prefixCount),
-                    )
-                }
-
-                val remoteError = result.exceptionOrNull()?.message ?: context.getString(R.string.sync_unknown_error)
-                if (currentCount > 0) {
-                    return@withContext SyncResult(
-                        success = true,
-                        message = context.getString(R.string.sync_remote_unavailable_existing, remoteError),
-                        warning = true,
-                    )
-                }
-
-                val bundledDatabase = loadBundledSpamDatabase()
-                if (bundledDatabase.isSuccess) {
-                    val database = bundledDatabase.getOrThrow()
-                    val (numberCount, prefixCount) = persistSpamDatabase(
-                        database = database,
-                        sha = null,
-                        syncSource = SpamRepository.SYNC_SOURCE_BUNDLED,
-                    )
-                    return@withContext SyncResult(
-                        success = true,
-                        message = context.getString(
-                            R.string.sync_bundled_snapshot_loaded,
-                            numberCount,
-                            prefixCount
-                        ),
-                        warning = true,
-                    )
-                }
-
-                val bundledError = bundledDatabase.exceptionOrNull()?.message
-                val message = buildString {
-                    append(context.getString(R.string.sync_unavailable_prefix, remoteError))
-                    if (!bundledError.isNullOrBlank()) {
-                        append(context.getString(R.string.sync_bundled_fallback_failed, bundledError))
-                    }
-                }
-
-                SyncResult(
-                    success = false,
-                    message = message,
-                    shouldRetry = shouldRetrySync(remoteError),
-                )
-            } catch (e: Exception) {
-                SyncResult(
-                    success = false,
-                    message = context.getString(R.string.sync_error, e.message ?: ""),
-                    shouldRetry = true,
-                )
             }
         }
-    }
 
-    suspend fun replaceHotList(numbers: List<SpamNumber>) = withContext(Dispatchers.IO) {
-        val hotNumbers = numbers
-            .filter { it.number.isNotBlank() }
-            .distinctBy { it.number }
-
-        val existingByNumber = if (hotNumbers.isEmpty()) {
-            emptyMap()
-        } else {
-            dao.getNumbersByNumbers(hotNumbers.map { it.number })
-                .associateBy { it.number }
+    suspend fun removeExternalBlocklistSubscription(id: String): ExternalBlocklistImportResult =
+        withContext(Dispatchers.IO) {
+            syncMutex.withLock {
+                runExternalBlocklistOperation {
+                    val subscriptions = settingsRepository.readExternalBlocklistSubscriptions()
+                    val subscription =
+                        subscriptions.firstOrNull { it.id == id }
+                            ?: return@runExternalBlocklistOperation ExternalBlocklistImportResult(
+                                success = false,
+                                message = "External blocklist subscription was not found",
+                            )
+                    val before = dao.getCountBySource(subscription.source)
+                    dao.deleteBySource(subscription.source)
+                    settingsRepository.saveExternalBlocklistSubscriptions(subscriptions.filterNot { it.id == id })
+                    invalidateAllCaches()
+                    CallShieldWidget.refreshAll(context)
+                    ExternalBlocklistImportResult(
+                        success = true,
+                        message = "Removed ${subscription.label}: rolled back $before feed-owned numbers",
+                        subscription = subscription.copy(enabled = false, lastRemoved = before),
+                    )
+                }
+            }
         }
-
-        val mergedHotNumbers = mergeHotListNumbers(
-            hotNumbers = hotNumbers,
-            existingByNumber = existingByNumber,
-        )
-
-        dao.deleteBySource("hot_list")
-        if (mergedHotNumbers.isNotEmpty()) {
-            dao.insertNumbers(mergedHotNumbers)
-        }
-        // Hot list entries are exact number rows. Prefix/rule caches do not change here.
-    }
 
     private suspend fun loadBundledSpamDatabase(): Result<SpamDatabase> {
         val asset = GitHubDataSource.readBundledAsset(context, GitHubDataSource.BUNDLED_DATABASE_ASSET)
@@ -154,28 +263,28 @@ class SyncRepository(
         sha: String?,
         syncSource: String,
     ): Pair<Int, Int> {
-        val preservedUserBlocks = dao.getUserBlockedNumbersSync()
-            .asSequence()
-            .map { it.number }
-            .toSet()
+        val preservedUserRows = dao.getUserBlockedNumbersSync()
+        val preservedUserBlocks = preservedUserRows.map { it.number }.toSet()
 
-        val numbers = sanitizeDatabaseNumbers(
-            databaseNumbers = database.numbers,
-            normalizeNumber = normalizeNumber,
-            preservedUserBlockedNumbers = preservedUserBlocks,
-        )
-        val prefixes = database.prefixes.mapNotNull { json ->
-            val trimmedPrefix = json.prefix.trim()
-            if (trimmedPrefix.isBlank()) {
-                null
-            } else {
-                SpamPrefix(
-                    prefix = trimmedPrefix,
-                    type = json.type.trim().ifBlank { "unknown" },
-                    description = json.description.trim(),
-                )
+        val numbers =
+            sanitizeDatabaseNumbers(
+                databaseNumbers = database.numbers,
+                normalizeNumber = normalizeNumber,
+                preservedUserBlockedNumbers = preservedUserBlocks,
+            )
+        val prefixes =
+            database.prefixes.mapNotNull { json ->
+                val trimmedPrefix = json.prefix.trim()
+                if (trimmedPrefix.isBlank()) {
+                    null
+                } else {
+                    SpamPrefix(
+                        prefix = trimmedPrefix,
+                        type = json.type.trim().ifBlank { "unknown" },
+                        description = json.description.trim(),
+                    )
+                }
             }
-        }
 
         dao.replaceGithubData(numbers, prefixes)
         invalidateAllCaches()
@@ -190,8 +299,168 @@ class SyncRepository(
         return numbers.size to prefixes.size
     }
 
+    private suspend fun fetchAndParseExternalBlocklist(
+        url: String,
+        label: String,
+    ): ParsedExternalBlocklist =
+        externalBlocklistDataSource
+            .fetchText(url)
+            .map { body ->
+                ExternalBlocklistParser.parse(
+                    rawUrl = url,
+                    rawLabel = label,
+                    body = body,
+                    normalizeNumber = normalizeNumber,
+                )
+            }.getOrThrow()
+
+    private suspend fun buildExternalBlocklistPreview(parsed: ParsedExternalBlocklist): ExternalBlocklistPreview {
+        val currentRows = dao.getNumbersBySource(parsed.source)
+        val currentKeys = currentRows.map { ExternalBlocklistParser.canonicalNumberKey(it.number) }.toSet()
+        val candidates = resolveExternalBlocklistCandidates(parsed)
+        val nextKeys = candidates.accepted.map { ExternalBlocklistParser.canonicalNumberKey(it.number) }.toSet()
+        return ExternalBlocklistPreview(
+            id = parsed.id,
+            label = parsed.label,
+            url = parsed.url,
+            source = parsed.source,
+            format = parsed.format,
+            numberCount = candidates.accepted.size,
+            added = (nextKeys - currentKeys).size,
+            removed = (currentKeys - nextKeys).size,
+            unchanged = currentKeys.intersect(nextKeys).size,
+            skippedRows = parsed.skippedRows,
+            blockedByOtherSources = candidates.blockedByOtherSources,
+        )
+    }
+
+    private suspend fun commitExternalBlocklist(parsed: ParsedExternalBlocklist): ExternalBlocklistImportResult {
+        val preview = buildExternalBlocklistPreview(parsed)
+        val candidates = resolveExternalBlocklistCandidates(parsed)
+        dao.replaceBySource(parsed.source, candidates.accepted)
+        invalidateAllCaches()
+
+        val subscription =
+            ExternalBlocklistSubscription(
+                id = parsed.id,
+                label = parsed.label,
+                url = parsed.url,
+                enabled = true,
+                lastSyncedAt = System.currentTimeMillis(),
+                lastNumberCount = candidates.accepted.size,
+                lastAdded = preview.added,
+                lastRemoved = preview.removed,
+                lastError = "",
+            )
+        upsertExternalBlocklistSubscription(subscription)
+        CallShieldWidget.refreshAll(context)
+        return ExternalBlocklistImportResult(
+            success = true,
+            message = externalAppliedMessage(preview),
+            preview = preview,
+            subscription = subscription,
+        )
+    }
+
+    private suspend fun resolveExternalBlocklistCandidates(parsed: ParsedExternalBlocklist): ExternalCandidateSet {
+        val requestedNumbers = parsed.numbers.distinctBy { ExternalBlocklistParser.canonicalNumberKey(it.number) }
+        if (requestedNumbers.isEmpty()) return ExternalCandidateSet(emptyList(), 0)
+        val existingByKey =
+            requestedNumbers
+                .map { it.number }
+                .chunked(EXTERNAL_BLOCKLIST_LOOKUP_CHUNK_SIZE)
+                .flatMap { chunk -> dao.getNumbersByNumbers(chunk) }
+                .associateBy { ExternalBlocklistParser.canonicalNumberKey(it.number) }
+        var blockedByOtherSources = 0
+        val accepted =
+            requestedNumbers.mapNotNull { candidate ->
+                val key = ExternalBlocklistParser.canonicalNumberKey(candidate.number)
+                val existing = existingByKey[key]
+                when {
+                    existing == null -> {
+                        candidate
+                    }
+
+                    existing.source == parsed.source -> {
+                        candidate.copy(
+                            id = existing.id,
+                            isUserBlocked = existing.isUserBlocked,
+                        )
+                    }
+
+                    else -> {
+                        blockedByOtherSources++
+                        null
+                    }
+                }
+            }
+        return ExternalCandidateSet(accepted, blockedByOtherSources)
+    }
+
+    private suspend fun upsertExternalBlocklistSubscription(subscription: ExternalBlocklistSubscription) {
+        val subscriptions = settingsRepository.readExternalBlocklistSubscriptions()
+        settingsRepository.saveExternalBlocklistSubscriptions(
+            subscriptions.filterNot { it.id == subscription.id } + subscription,
+        )
+    }
+
+    private suspend fun disableExternalBlocklist(
+        subscription: ExternalBlocklistSubscription,
+        subscriptions: List<ExternalBlocklistSubscription>,
+    ): Int {
+        val before = dao.getCountBySource(subscription.source)
+        dao.deleteBySource(subscription.source)
+        settingsRepository.saveExternalBlocklistSubscriptions(
+            subscriptions.map {
+                if (it.id == subscription.id) {
+                    it.copy(
+                        enabled = false,
+                        lastSyncedAt = System.currentTimeMillis(),
+                        lastNumberCount = 0,
+                        lastAdded = 0,
+                        lastRemoved = before,
+                        lastError = "",
+                    )
+                } else {
+                    it
+                }
+            },
+        )
+        invalidateAllCaches()
+        CallShieldWidget.refreshAll(context)
+        return before
+    }
+
+    private fun externalPreviewMessage(preview: ExternalBlocklistPreview): String =
+        "Previewed ${preview.label}: ${preview.numberCount} numbers, " +
+            "+${preview.added}/-${preview.removed}, ${preview.blockedByOtherSources} already owned by stronger sources"
+
+    private fun externalAppliedMessage(preview: ExternalBlocklistPreview): String =
+        "Applied ${preview.label}: ${preview.numberCount} numbers, " +
+            "+${preview.added}/-${preview.removed}"
+
+    @Suppress("TooGenericExceptionCaught")
+    private inline fun runExternalBlocklistOperation(
+        block: () -> ExternalBlocklistImportResult,
+    ): ExternalBlocklistImportResult =
+        try {
+            block()
+        } catch (e: Exception) {
+            ExternalBlocklistImportResult(
+                success = false,
+                message = e.message ?: context.getString(R.string.sync_unknown_error),
+            )
+        }
+
     private fun shouldRetrySync(message: String): Boolean {
         val permanentFailureCodes = listOf("HTTP 400", "HTTP 401", "HTTP 403", "HTTP 404")
         return permanentFailureCodes.none { code -> message.contains(code) }
     }
+
+    private data class ExternalCandidateSet(
+        val accepted: List<SpamNumber>,
+        val blockedByOtherSources: Int,
+    )
 }
+
+private const val EXTERNAL_BLOCKLIST_LOOKUP_CHUNK_SIZE = 500

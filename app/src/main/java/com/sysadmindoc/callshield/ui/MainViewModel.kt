@@ -14,6 +14,8 @@ import com.sysadmindoc.callshield.data.CommunityContributor
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.TimeSchedule
 import com.sysadmindoc.callshield.data.model.BlockedCall
+import com.sysadmindoc.callshield.data.model.ExternalBlocklistPreview
+import com.sysadmindoc.callshield.data.model.ExternalBlocklistSubscription
 import com.sysadmindoc.callshield.data.model.HashWildcardRule
 import com.sysadmindoc.callshield.data.model.SpamNumber
 import com.sysadmindoc.callshield.data.model.SmsKeywordRule
@@ -175,6 +177,8 @@ class MainViewModel
     val pushAlertDisabledPackages = repo.pushAlertDisabledPackages
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
     val abstractApiKey = repo.abstractApiKey.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
+    val externalBlocklistSubscriptions = repo.externalBlocklistSubscriptions
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val _syncState = MutableStateFlow<SyncState>(SyncState.Idle)
     val syncState: StateFlow<SyncState> = _syncState
@@ -203,10 +207,20 @@ class MainViewModel
     private val _restorePreview = MutableStateFlow<BackupRestore.RestorePreview?>(null)
     val restorePreview: StateFlow<BackupRestore.RestorePreview?> = _restorePreview
 
+    private val _externalBlocklistPreview = MutableStateFlow<ExternalBlocklistPreview?>(null)
+    val externalBlocklistPreview: StateFlow<ExternalBlocklistPreview?> = _externalBlocklistPreview
+
+    private val _externalBlocklistResult = MutableStateFlow<String?>(null)
+    val externalBlocklistResult: StateFlow<String?> = _externalBlocklistResult
+
     fun clearImportResult() { _importResult.value = null }
     fun clearRestoreResult() { _restoreResult.value = null }
     fun clearRestorePreview() {
         _restorePreview.value = null
+    }
+    fun clearExternalBlocklistResult() {
+        _externalBlocklistPreview.value = null
+        _externalBlocklistResult.value = null
     }
     fun clearContributeResult() { _contributeResult.value = null }
 
@@ -238,6 +252,54 @@ class MainViewModel
                     SyncState.Success(result.message)
                 }
             } else SyncState.Error(result.message)
+        }
+    }
+
+    fun previewExternalBlocklist(
+        url: String,
+        label: String = "",
+    ) {
+        viewModelScope.launch {
+            val result = repo.previewExternalBlocklistSubscription(url, label)
+            _externalBlocklistPreview.value = result.preview
+            _externalBlocklistResult.value = result.message
+        }
+    }
+
+    fun applyExternalBlocklist(
+        url: String,
+        label: String = "",
+    ) {
+        viewModelScope.launch {
+            val result = repo.applyExternalBlocklistSubscription(url, label)
+            _externalBlocklistPreview.value = if (result.success) null else result.preview
+            _externalBlocklistResult.value = result.message
+            if (result.success) {
+                _spamCount.value = repo.getSpamCount()
+            }
+        }
+    }
+
+    fun setExternalBlocklistEnabled(
+        subscription: ExternalBlocklistSubscription,
+        enabled: Boolean,
+    ) {
+        viewModelScope.launch {
+            val result = repo.setExternalBlocklistSubscriptionEnabled(subscription.id, enabled)
+            _externalBlocklistResult.value = result.message
+            if (result.success) {
+                _spamCount.value = repo.getSpamCount()
+            }
+        }
+    }
+
+    fun removeExternalBlocklist(subscription: ExternalBlocklistSubscription) {
+        viewModelScope.launch {
+            val result = repo.removeExternalBlocklistSubscription(subscription.id)
+            _externalBlocklistResult.value = result.message
+            if (result.success) {
+                _spamCount.value = repo.getSpamCount()
+            }
         }
     }
 
