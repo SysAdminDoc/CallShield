@@ -10,7 +10,6 @@ import java.lang.reflect.Method
  * Unit tests for CampaignDetector — NPA-NXX prefix clustering.
  */
 class CampaignDetectorTest {
-
     /** Reflection handle for private extractNpaNxx(String): String? */
     private lateinit var extractNpaNxx: Method
 
@@ -224,15 +223,16 @@ class CampaignDetectorTest {
 
     @Test
     fun threadSafety_rapidConcurrentCalls_doNotCrash() {
-        val threads = (1..10).map { threadNum ->
-            Thread {
-                repeat(50) { i ->
-                    CampaignDetector.recordCall("${200 + threadNum}555${1000 + i}")
-                    CampaignDetector.isActiveCampaign("${200 + threadNum}5551234")
-                    CampaignDetector.getActiveCampaigns()
+        val threads =
+            (1..10).map { threadNum ->
+                Thread {
+                    repeat(50) { i ->
+                        CampaignDetector.recordCall("${200 + threadNum}555${1000 + i}")
+                        CampaignDetector.isActiveCampaign("${200 + threadNum}5551234")
+                        CampaignDetector.getActiveCampaigns()
+                    }
                 }
             }
-        }
         threads.forEach { it.start() }
         threads.forEach { it.join(5000) }
         // If we get here without exceptions, the smoke test passes
@@ -252,7 +252,5 @@ class CampaignDetectorTest {
 
     // ─── Helper ──────────────────────────────────────────────────────
 
-    private fun callExtract(number: String): String? {
-        return extractNpaNxx.invoke(CampaignDetector.shared, number) as String?
-    }
+    private fun callExtract(number: String): String? = extractNpaNxx.invoke(CampaignDetector.shared, number) as String?
 }

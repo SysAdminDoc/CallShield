@@ -7,7 +7,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class HashWildcardMatcherTest {
-
     // ── matches ─────────────────────────────────────────────────────
 
     @Test fun `exact match with no wildcards`() {
@@ -55,7 +54,7 @@ class HashWildcardMatcherTest {
             HashWildcardMatcher.matchesWithVariants(
                 pattern = "+33612######",
                 number = "0612345678",
-            )
+            ),
         )
     }
 
@@ -64,7 +63,7 @@ class HashWildcardMatcherTest {
             HashWildcardMatcher.matchesWithVariants(
                 pattern = "0612######",
                 number = "+33612345678",
-            )
+            ),
         )
     }
 
@@ -73,7 +72,7 @@ class HashWildcardMatcherTest {
             HashWildcardMatcher.matchesWithVariants(
                 pattern = "+15551######",
                 number = "5551234567",
-            )
+            ),
         )
     }
 
@@ -101,7 +100,7 @@ class HashWildcardMatcherTest {
     @Test fun `identical patterns are equal`() {
         assertEquals(
             Overlap.EQUAL,
-            HashWildcardMatcher.coversOrCoveredBy("+1555123####", "+1555123####")
+            HashWildcardMatcher.coversOrCoveredBy("+1555123####", "+1555123####"),
         )
     }
 
@@ -109,28 +108,28 @@ class HashWildcardMatcherTest {
         // +1555####### covers +1555123#### (one has wider # range)
         assertEquals(
             Overlap.A_COVERS_B,
-            HashWildcardMatcher.coversOrCoveredBy("+1555#######", "+1555123####")
+            HashWildcardMatcher.coversOrCoveredBy("+1555#######", "+1555123####"),
         )
     }
 
     @Test fun `narrower pattern is covered by broader`() {
         assertEquals(
             Overlap.B_COVERS_A,
-            HashWildcardMatcher.coversOrCoveredBy("+1555123####", "+1555#######")
+            HashWildcardMatcher.coversOrCoveredBy("+1555123####", "+1555#######"),
         )
     }
 
     @Test fun `different prefix means no overlap`() {
         assertEquals(
             Overlap.NONE,
-            HashWildcardMatcher.coversOrCoveredBy("+1555123####", "+1212123####")
+            HashWildcardMatcher.coversOrCoveredBy("+1555123####", "+1212123####"),
         )
     }
 
     @Test fun `different length means no overlap`() {
         assertEquals(
             Overlap.NONE,
-            HashWildcardMatcher.coversOrCoveredBy("+1555123####", "+15551239####")
+            HashWildcardMatcher.coversOrCoveredBy("+1555123####", "+15551239####"),
         )
     }
 
@@ -139,20 +138,21 @@ class HashWildcardMatcherTest {
         // that disagree. Neither covers the other.
         assertEquals(
             Overlap.NONE,
-            HashWildcardMatcher.coversOrCoveredBy("+1555#23####", "+1555#34####")
+            HashWildcardMatcher.coversOrCoveredBy("+1555#23####", "+1555#34####"),
         )
     }
 
     // ── HashWildcardRule entity delegates correctly ─────────────────
 
     @Test fun `HashWildcardRule matches delegates to matcher with variants`() {
-        val rule = com.sysadmindoc.callshield.data.model.HashWildcardRule(
-            pattern = "+33612######",
-            description = "Test",
-        )
+        val rule =
+            com.sysadmindoc.callshield.data.model.HashWildcardRule(
+                pattern = "+33612######",
+                description = "Test",
+            )
         assertTrue(rule.matches("+33612345678"))
-        assertTrue(rule.matches("0612345678"))       // national-format variant
-        assertFalse(rule.matches("+33712345678"))    // different exchange
-        assertFalse(rule.matches("+336123456789"))   // different length
+        assertTrue(rule.matches("0612345678")) // national-format variant
+        assertFalse(rule.matches("+33712345678")) // different exchange
+        assertFalse(rule.matches("+336123456789")) // different length
     }
 }

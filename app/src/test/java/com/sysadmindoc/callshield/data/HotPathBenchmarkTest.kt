@@ -20,17 +20,23 @@ import org.junit.Test
  * the `callshield.benchHeadroom` system property.
  */
 class HotPathBenchmarkTest {
-
     private val headroom: Double =
         System.getProperty("callshield.benchHeadroom")?.toDoubleOrNull() ?: 1.0
 
     @Test
     fun wildcardRule_matches_10k_iterations_under_ceiling() {
         val rule = WildcardRule(pattern = "+1212*")
-        val numbers = listOf(
-            "+12125551234", "2125551234", "12125551234", "+13105551234",
-            "+19175550001", "5165551234", "+18005551234", "+12025551234",
-        )
+        val numbers =
+            listOf(
+                "+12125551234",
+                "2125551234",
+                "12125551234",
+                "+13105551234",
+                "+19175550001",
+                "5165551234",
+                "+18005551234",
+                "+12025551234",
+            )
         // Warm up JIT
         repeat(1_000) { rule.matches(numbers[it % numbers.size]) }
 
@@ -44,7 +50,7 @@ class HotPathBenchmarkTest {
         val ceilingMs = 500.0 * headroom
         assertTrue(
             "wildcard match 10k iters took ${elapsedMs}ms, ceiling ${ceilingMs}ms",
-            elapsedMs < ceilingMs
+            elapsedMs < ceilingMs,
         )
     }
 
@@ -69,17 +75,24 @@ class HotPathBenchmarkTest {
         val ceilingMs = 200.0 * headroom
         assertTrue(
             "CampaignDetector 1k cycles took ${elapsedMs}ms, ceiling ${ceilingMs}ms",
-            elapsedMs < ceilingMs
+            elapsedMs < ceilingMs,
         )
         clearCampaignDetectorState()
     }
 
     @Test
     fun spamMLScorer_extractFeatures_plus_score_1k_iterations_under_ceiling() {
-        val numbers = listOf(
-            "+12125551234", "+18005551234", "+19005551234", "+15555555555",
-            "+13105550000", "+16465551111", "+17185559999", "+14155551234",
-        )
+        val numbers =
+            listOf(
+                "+12125551234",
+                "+18005551234",
+                "+19005551234",
+                "+15555555555",
+                "+13105550000",
+                "+16465551111",
+                "+17185559999",
+                "+14155551234",
+            )
         // Warm up
         repeat(100) { SpamMLScorer.score(numbers[it % numbers.size]) }
 
@@ -95,7 +108,7 @@ class HotPathBenchmarkTest {
         val ceilingMs = 300.0 * headroom
         assertTrue(
             "SpamMLScorer 1k score iters took ${elapsedMs}ms, ceiling ${ceilingMs}ms",
-            elapsedMs < ceilingMs
+            elapsedMs < ceilingMs,
         )
     }
 
@@ -120,7 +133,7 @@ class HotPathBenchmarkTest {
         val ceilingMs = 100.0 * headroom
         assertTrue(
             "SpamHeuristics 1k pure-check cycles took ${elapsedMs}ms, ceiling ${ceilingMs}ms",
-            elapsedMs < ceilingMs
+            elapsedMs < ceilingMs,
         )
     }
 
@@ -131,6 +144,7 @@ class HotPathBenchmarkTest {
      */
     private fun clearCampaignDetectorState() {
         val field = CampaignDetector::class.java.getDeclaredField("recentPrefixes").apply { isAccessible = true }
+
         @Suppress("UNCHECKED_CAST")
         val map = field.get(CampaignDetector.shared) as MutableMap<String, MutableList<Long>>
         map.clear()

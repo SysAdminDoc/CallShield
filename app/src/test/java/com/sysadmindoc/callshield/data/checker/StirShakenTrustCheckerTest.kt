@@ -23,7 +23,6 @@ import org.junit.Test
  *   VERIFICATION_STATUS_FAILED       = 2
  */
 class StirShakenTrustCheckerTest {
-
     private val notVerified = 0
     private val failed = 2
 

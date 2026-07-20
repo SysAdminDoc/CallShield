@@ -37,21 +37,23 @@ internal fun buildDashboardStatusModel(
     val shieldActive = protectionEnabled && callProtectionReady && smsProtectionReady
 
     val screenerReadyForCurrentMode = !blockCallsEnabled || callScreenerReady
-    val requiredSetupComplete = listOf(
-        permissionsReady,
-        spamDatabaseReady,
-        screenerReadyForCurrentMode,
-    ).count { it }
+    val requiredSetupComplete =
+        listOf(
+            permissionsReady,
+            spamDatabaseReady,
+            screenerReadyForCurrentMode,
+        ).count { it }
     val requiredSetupTotal = 3
     val optionalSetupComplete = listOf(overlayGranted, notificationsGranted).count { it }
     val optionalSetupTotal = 2
     val setupComplete = requiredSetupComplete == requiredSetupTotal
 
-    val heroMode = when {
-        shieldActive -> DashboardHeroMode.Active
-        protectionEnabled && !setupComplete -> DashboardHeroMode.SetupNeeded
-        else -> DashboardHeroMode.Disabled
-    }
+    val heroMode =
+        when {
+            shieldActive -> DashboardHeroMode.Active
+            protectionEnabled && !setupComplete -> DashboardHeroMode.SetupNeeded
+            else -> DashboardHeroMode.Disabled
+        }
 
     return DashboardStatusModel(
         protectionEnabled = protectionEnabled,

@@ -39,7 +39,6 @@ import java.util.Locale
  * swallowed — the priority is not breaking the original crash signal.
  */
 object CrashReporter {
-
     private const val CRASH_DIR = "crashes"
     private const val KEEP_LATEST = 5
     private const val MAX_STACK_DEPTH = 200 // Guard against pathological chains
@@ -73,18 +72,20 @@ object CrashReporter {
     fun latestCrash(context: Context): File? {
         val dir = crashDir(context)
         if (!dir.exists()) return null
-        return dir.listFiles { f -> f.name.startsWith("crash_") && f.name.endsWith(".txt") }
+        return dir
+            .listFiles { f -> f.name.startsWith("crash_") && f.name.endsWith(".txt") }
             ?.maxByOrNull { it.lastModified() }
     }
 
     /** Build a share intent for the latest crash. Returns null if there's nothing to share. */
     fun shareLatestCrashIntent(context: Context): Intent? {
         val file = latestCrash(context) ?: return null
-        val uri: Uri = FileProvider.getUriForFile(
-            context,
-            "${context.packageName}.fileprovider",
-            file
-        )
+        val uri: Uri =
+            FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.fileprovider",
+                file,
+            )
         return Intent(Intent.ACTION_SEND).apply {
             type = "text/plain"
             putExtra(Intent.EXTRA_STREAM, uri)
@@ -100,10 +101,14 @@ object CrashReporter {
 
     private fun crashDir(context: Context): File = File(context.filesDir, CRASH_DIR)
 
-    private fun persistCrash(context: Context, thread: Thread, throwable: Throwable) {
+    private fun persistCrash(
+        context: Context,
+        thread: Thread,
+        throwable: Throwable,
+    ) {
         val dir = crashDir(context).apply { mkdirs() }
         val stamp = System.currentTimeMillis()
-        val fileName = "crash_${stamp}.txt"
+        val fileName = "crash_$stamp.txt"
         val file = File(dir, fileName)
 
         val stackWriter = StringWriter()
@@ -119,7 +124,7 @@ object CrashReporter {
             pw.println("device   : ${Build.MANUFACTURER} ${Build.MODEL}")
             @Suppress("DEPRECATION") // Thread.id deprecated in Java 19+, but threadId is API 34+ only.
             val tid = thread.id
-            pw.println("thread   : ${thread.name} [id=${tid}, priority=${thread.priority}]")
+            pw.println("thread   : ${thread.name} [id=$tid, priority=${thread.priority}]")
             pw.println()
 
             // Bounded stack dump to avoid pathological chains eating disk.
@@ -166,11 +171,13 @@ object CrashReporter {
     }
 
     private fun rotate(dir: File) {
-        val files = dir.listFiles { f -> f.name.startsWith("crash_") && f.name.endsWith(".txt") }
-            ?: return
+        val files =
+            dir.listFiles { f -> f.name.startsWith("crash_") && f.name.endsWith(".txt") }
+                ?: return
         if (files.size <= KEEP_LATEST) return
         // Delete oldest first so the newest `KEEP_LATEST` survive.
-        files.sortedBy { it.lastModified() }
+        files
+            .sortedBy { it.lastModified() }
             .take(files.size - KEEP_LATEST)
             .forEach { runCatching { it.delete() } }
     }

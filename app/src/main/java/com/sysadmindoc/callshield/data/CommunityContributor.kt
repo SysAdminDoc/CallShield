@@ -1,8 +1,8 @@
 package com.sysadmindoc.callshield.data
 
+import com.sysadmindoc.callshield.data.remote.HttpClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import com.sysadmindoc.callshield.data.remote.HttpClient
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -17,23 +17,29 @@ import java.util.concurrent.TimeUnit
  * Supports both spam reports AND false positive reports ("not_spam").
  */
 object CommunityContributor {
-
     private const val WORKER_URL = "https://callshield-reports.snafumatthew.workers.dev"
     private const val MAX_SMS_REPORT_DOMAINS = 10
     private const val MAX_SMS_URL_INDICATORS = 10
     private const val MIN_SMS_REPORT_DOMAIN_LENGTH = 5
     private const val MAX_SMS_REPORT_DOMAIN_LENGTH = 253
     private const val MAX_SMS_REPORT_DOMAIN_LABEL_LENGTH = 63
+    private const val HTTP_TOO_MANY_REQUESTS = 429
+    private const val DEFAULT_RETRY_AFTER_SECONDS = 60
 
     private val reportDomainPattern = Regex("^[a-z0-9](?:[a-z0-9.-]{0,251}[a-z0-9])?$")
     private val urlIndicatorPattern = Regex("^[a-z_]{3,40}$")
 
-    private val client = HttpClient.shared.newBuilder()
-        .connectTimeout(10, TimeUnit.SECONDS)
-        .readTimeout(10, TimeUnit.SECONDS)
-        .build()
+    private val client =
+        HttpClient.shared
+            .newBuilder()
+            .connectTimeout(10, TimeUnit.SECONDS)
+            .readTimeout(10, TimeUnit.SECONDS)
+            .build()
 
-    data class ContributeResult(val success: Boolean, val message: String)
+    data class ContributeResult(
+        val success: Boolean,
+        val message: String,
+    )
 
     /**
      * Report a number as spam.
@@ -42,66 +48,74 @@ object CommunityContributor {
         number: String,
         type: String = "spam",
         smsIndicators: SmsContentAnalyzer.SmsReportIndicators? = null,
-    ): ContributeResult {
-        return post(number, type, smsIndicators)
-    }
+    ): ContributeResult = post(number, type, smsIndicators)
 
     /**
      * Report SMS spam with body-free URL/domain indicators only.
      */
-    suspend fun contributeSmsSpam(number: String, smsBody: String): ContributeResult {
-        return post(number, "sms_spam", SmsContentAnalyzer.extractReportableIndicators(smsBody))
-    }
+    suspend fun contributeSmsSpam(
+        number: String,
+        smsBody: String,
+    ): ContributeResult = post(number, "sms_spam", SmsContentAnalyzer.extractReportableIndicators(smsBody))
 
     /**
      * Report a false positive — this number is NOT spam.
      * The merge script will subtract votes from this number.
      */
-    suspend fun reportNotSpam(number: String): ContributeResult {
-        return post(number, "not_spam")
-    }
+    suspend fun reportNotSpam(number: String): ContributeResult = post(number, "not_spam")
 
     private suspend fun post(
         number: String,
         type: String,
         smsIndicators: SmsContentAnalyzer.SmsReportIndicators? = null,
-    ): ContributeResult = withContext(Dispatchers.IO) {
-        try {
-            val normalized = normalizeForReport(number) ?: return@withContext ContributeResult(false, "Invalid number")
-            val json = buildReportJson(normalized, type, smsIndicators)
-            val body = json.toRequestBody("application/json".toMediaType())
+    ): ContributeResult =
+        withContext(Dispatchers.IO) {
+            try {
+                val normalized = normalizeForReport(number) ?: return@withContext ContributeResult(false, "Invalid number")
+                val json = buildReportJson(normalized, type, smsIndicators)
+                val body = json.toRequestBody("application/json".toMediaType())
 
-            val request = Request.Builder()
-                .url(WORKER_URL)
-                .post(body)
-                .build()
+                val request =
+                    Request
+                        .Builder()
+                        .url(WORKER_URL)
+                        .post(body)
+                        .build()
 
-            client.newCall(request).execute().use { response ->
-                if (response.isSuccessful) {
-                    val msg = if (type == "not_spam") "Reported as not spam" else "Contributed anonymously"
-                    ContributeResult(true, msg)
-                } else {
-                    ContributeResult(false, "Server error (${response.code})")
+                client.newCall(request).execute().use { response ->
+                    if (response.isSuccessful) {
+                        val msg = if (type == "not_spam") "Reported as not spam" else "Contributed anonymously"
+                        ContributeResult(true, msg)
+                    } else if (response.code == HTTP_TOO_MANY_REQUESTS) {
+                        val retryAfter = response.header("Retry-After")?.toIntOrNull() ?: DEFAULT_RETRY_AFTER_SECONDS
+                        ContributeResult(false, "Too many reports. Please wait ${retryAfter}s and try again.")
+                    } else {
+                        ContributeResult(false, "Server error (${response.code})")
+                    }
                 }
+            } catch (e: Exception) {
+                ContributeResult(false, "Network error: ${e.message}")
             }
-        } catch (e: Exception) {
-            ContributeResult(false, "Network error: ${e.message}")
         }
-    }
 
     private fun escapeJson(value: String): String =
-        value.replace("\\", "\\\\").replace("\"", "\\\"")
-            .replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
+        value
+            .replace("\\", "\\\\")
+            .replace("\"", "\\\"")
+            .replace("\n", "\\n")
+            .replace("\r", "\\r")
+            .replace("\t", "\\t")
 
     internal fun buildReportJson(
         normalizedNumber: String,
         type: String,
         smsIndicators: SmsContentAnalyzer.SmsReportIndicators? = null,
     ): String {
-        val fields = mutableListOf(
-            """"number":"${escapeJson(normalizedNumber)}"""",
-            """"type":"${escapeJson(type)}"""",
-        )
+        val fields =
+            mutableListOf(
+                """"number":"${escapeJson(normalizedNumber)}"""",
+                """"type":"${escapeJson(type)}"""",
+            )
         val sanitized = sanitizeSmsIndicators(smsIndicators)
         if (!sanitized.isEmpty()) {
             if (sanitized.domains.isNotEmpty()) {
@@ -134,7 +148,8 @@ object CommunityContributor {
 
     private fun normalizeSmsDomainForReport(value: String): String? {
         val domain =
-            value.lowercase()
+            value
+                .lowercase()
                 .trim()
                 .removePrefix("https://")
                 .removePrefix("http://")
@@ -163,8 +178,7 @@ object CommunityContributor {
         return domain.takeIf { isValid }
     }
 
-    private fun jsonStringList(values: List<String>): String =
-        values.joinToString(prefix = "[", postfix = "]") { """"${escapeJson(it)}"""" }
+    private fun jsonStringList(values: List<String>): String = values.joinToString(prefix = "[", postfix = "]") { """"${escapeJson(it)}"""" }
 
     internal fun normalizeForReport(number: String): String? {
         val normalized = normalizePhoneNumber(number)

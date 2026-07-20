@@ -5,7 +5,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class BlockReasoningTest {
-
     @Test
     fun `user_blocklist explanation names the layer and includes note`() {
         val r = BlockReasoning.explain("user_blocklist", "Spammer, blocked manually", 100)

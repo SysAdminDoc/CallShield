@@ -111,17 +111,22 @@ class SettingsRepository(
             decodeExternalBlocklistSubscriptions(prefs[SpamRepository.KEY_EXTERNAL_BLOCKLIST_SUBSCRIPTIONS])
         }
 
-    suspend fun setActiveProfileName(name: String?) = dataStore.edit { prefs ->
-        if (name == null) prefs.remove(SpamRepository.KEY_ACTIVE_PROFILE)
-        else prefs[SpamRepository.KEY_ACTIVE_PROFILE] = name
-    }
+    suspend fun setActiveProfileName(name: String?) =
+        dataStore.edit { prefs ->
+            if (name == null) {
+                prefs.remove(SpamRepository.KEY_ACTIVE_PROFILE)
+            } else {
+                prefs[SpamRepository.KEY_ACTIVE_PROFILE] = name
+            }
+        }
 
     // Optional AbstractAPI key for carrier/number-type enrichment in the Caller ID overlay.
     // Never used in the blocking pipeline; blocking stays local/offline.
-    val abstractApiKey: Flow<String> = flow {
-        migrateAbstractApiKeyIfNeeded()
-        emitAll(privateDataStore.data.map { it[SpamRepository.KEY_ABSTRACT_API_KEY] ?: "" })
-    }
+    val abstractApiKey: Flow<String> =
+        flow {
+            migrateAbstractApiKeyIfNeeded()
+            emitAll(privateDataStore.data.map { it[SpamRepository.KEY_ABSTRACT_API_KEY] ?: "" })
+        }
 
     suspend fun setAbstractApiKey(key: String) {
         migrateAbstractApiKeyIfNeeded()
@@ -137,12 +142,17 @@ class SettingsRepository(
     }
 
     suspend fun setMlScorer(enabled: Boolean) = dataStore.edit { it[SpamRepository.KEY_ML_SCORER] = enabled }
+
     suspend fun setRcsFilter(enabled: Boolean) = dataStore.edit { it[SpamRepository.KEY_RCS_FILTER] = enabled }
-    suspend fun setSilentVoicemail(enabled: Boolean) =
-        dataStore.edit { it[SpamRepository.KEY_SILENT_VOICEMAIL] = enabled }
+
+    suspend fun setSilentVoicemail(enabled: Boolean) = dataStore.edit { it[SpamRepository.KEY_SILENT_VOICEMAIL] = enabled }
+
     suspend fun setPushAlert(enabled: Boolean) = dataStore.edit { it[SpamRepository.KEY_PUSH_ALERT] = enabled }
 
-    suspend fun togglePushAlertPackage(pkg: String, allowed: Boolean) = dataStore.edit { prefs ->
+    suspend fun togglePushAlertPackage(
+        pkg: String,
+        allowed: Boolean,
+    ) = dataStore.edit { prefs ->
         val current = prefs[SpamRepository.KEY_PUSH_ALERT_DISABLED] ?: emptySet()
         val next = if (allowed) current - pkg else current + pkg
         if (next.isEmpty()) {
@@ -152,76 +162,84 @@ class SettingsRepository(
         }
     }
 
-    suspend fun resetPushAlertPackages() =
-        dataStore.edit { it.remove(SpamRepository.KEY_PUSH_ALERT_DISABLED) }
+    suspend fun resetPushAlertPackages() = dataStore.edit { it.remove(SpamRepository.KEY_PUSH_ALERT_DISABLED) }
 
     suspend fun setOnboardingDone() = dataStore.edit { it[SpamRepository.KEY_ONBOARDING_DONE] = true }
-    suspend fun setAutoCleanup(enabled: Boolean) =
-        dataStore.edit { it[SpamRepository.KEY_AUTO_CLEANUP] = enabled }
+
+    suspend fun setAutoCleanup(enabled: Boolean) = dataStore.edit { it[SpamRepository.KEY_AUTO_CLEANUP] = enabled }
+
     suspend fun setCleanupDays(days: Int) = dataStore.edit { it[SpamRepository.KEY_CLEANUP_DAYS] = days }
+
     suspend fun setBlockCalls(enabled: Boolean) = dataStore.edit { it[SpamRepository.KEY_BLOCK_CALLS] = enabled }
+
     suspend fun setBlockSms(enabled: Boolean) = dataStore.edit { it[SpamRepository.KEY_BLOCK_SMS] = enabled }
-    suspend fun setBlockUnknown(enabled: Boolean) =
-        dataStore.edit { it[SpamRepository.KEY_BLOCK_UNKNOWN] = enabled }
-    suspend fun setStirShaken(enabled: Boolean) =
-        dataStore.edit { it[SpamRepository.KEY_STIR_SHAKEN] = enabled }
-    suspend fun setStirTrustedAllow(enabled: Boolean) =
-        dataStore.edit { it[SpamRepository.KEY_STIR_TRUSTED_ALLOW] = enabled }
-    suspend fun setAutoMuteLowConfidence(enabled: Boolean) =
-        dataStore.edit { it[SpamRepository.KEY_AUTOMUTE_LOW_CONFIDENCE] = enabled }
-    suspend fun setNeighborSpoof(enabled: Boolean) =
-        dataStore.edit { it[SpamRepository.KEY_NEIGHBOR_SPOOF] = enabled }
-    suspend fun setHeuristics(enabled: Boolean) =
-        dataStore.edit { it[SpamRepository.KEY_HEURISTICS] = enabled }
-    suspend fun setSmsContent(enabled: Boolean) =
-        dataStore.edit { it[SpamRepository.KEY_SMS_CONTENT] = enabled }
-    suspend fun setSmsBurst(enabled: Boolean) =
-        dataStore.edit { it[SpamRepository.KEY_SMS_BURST] = enabled }
-    suspend fun setUrlhausStripQuery(enabled: Boolean) =
-        dataStore.edit { it[SpamRepository.KEY_URLHAUS_STRIP_QUERY] = enabled }
-    suspend fun setContactWhitelist(enabled: Boolean) =
-        dataStore.edit { it[SpamRepository.KEY_CONTACT_WHITELIST] = enabled }
-    suspend fun setContactsOnly(enabled: Boolean) =
-        dataStore.edit { it[SpamRepository.KEY_CONTACTS_ONLY] = enabled }
-    suspend fun setDbPrefixExpansion(enabled: Boolean) =
-        dataStore.edit { it[SpamRepository.KEY_DB_PREFIX_EXPANSION] = enabled }
-    suspend fun setAggressiveMode(enabled: Boolean) =
-        dataStore.edit { it[SpamRepository.KEY_AGGRESSIVE_MODE] = enabled }
-    suspend fun setAnsweredCallerTrust(enabled: Boolean) =
-        dataStore.edit { it[SpamRepository.KEY_ANSWERED_CALLER_TRUST] = enabled }
+
+    suspend fun setBlockUnknown(enabled: Boolean) = dataStore.edit { it[SpamRepository.KEY_BLOCK_UNKNOWN] = enabled }
+
+    suspend fun setStirShaken(enabled: Boolean) = dataStore.edit { it[SpamRepository.KEY_STIR_SHAKEN] = enabled }
+
+    suspend fun setStirTrustedAllow(enabled: Boolean) = dataStore.edit { it[SpamRepository.KEY_STIR_TRUSTED_ALLOW] = enabled }
+
+    suspend fun setAutoMuteLowConfidence(enabled: Boolean) = dataStore.edit { it[SpamRepository.KEY_AUTOMUTE_LOW_CONFIDENCE] = enabled }
+
+    suspend fun setNeighborSpoof(enabled: Boolean) = dataStore.edit { it[SpamRepository.KEY_NEIGHBOR_SPOOF] = enabled }
+
+    suspend fun setHeuristics(enabled: Boolean) = dataStore.edit { it[SpamRepository.KEY_HEURISTICS] = enabled }
+
+    suspend fun setSmsContent(enabled: Boolean) = dataStore.edit { it[SpamRepository.KEY_SMS_CONTENT] = enabled }
+
+    suspend fun setSmsBurst(enabled: Boolean) = dataStore.edit { it[SpamRepository.KEY_SMS_BURST] = enabled }
+
+    suspend fun setUrlhausStripQuery(enabled: Boolean) = dataStore.edit { it[SpamRepository.KEY_URLHAUS_STRIP_QUERY] = enabled }
+
+    suspend fun setContactWhitelist(enabled: Boolean) = dataStore.edit { it[SpamRepository.KEY_CONTACT_WHITELIST] = enabled }
+
+    suspend fun setContactsOnly(enabled: Boolean) = dataStore.edit { it[SpamRepository.KEY_CONTACTS_ONLY] = enabled }
+
+    suspend fun setDbPrefixExpansion(enabled: Boolean) = dataStore.edit { it[SpamRepository.KEY_DB_PREFIX_EXPANSION] = enabled }
+
+    suspend fun setAggressiveMode(enabled: Boolean) = dataStore.edit { it[SpamRepository.KEY_AGGRESSIVE_MODE] = enabled }
+
+    suspend fun setAnsweredCallerTrust(enabled: Boolean) = dataStore.edit { it[SpamRepository.KEY_ANSWERED_CALLER_TRUST] = enabled }
+
     suspend fun setAnsweredCallerThreshold(threshold: Int) =
         dataStore.edit {
-            it[SpamRepository.KEY_ANSWERED_CALLER_THRESHOLD] = threshold.coerceIn(
-                ANSWERED_CALLER_THRESHOLD_MIN,
-                ANSWERED_CALLER_THRESHOLD_MAX,
-            )
+            it[SpamRepository.KEY_ANSWERED_CALLER_THRESHOLD] =
+                threshold.coerceIn(
+                    ANSWERED_CALLER_THRESHOLD_MIN,
+                    ANSWERED_CALLER_THRESHOLD_MAX,
+                )
         }
+
     suspend fun setAnsweredCallerWindowDays(days: Int) =
         dataStore.edit {
-            it[SpamRepository.KEY_ANSWERED_CALLER_WINDOW_DAYS] = days.coerceIn(
-                ANSWERED_CALLER_WINDOW_DAYS_MIN,
-                ANSWERED_CALLER_WINDOW_DAYS_MAX,
-            )
+            it[SpamRepository.KEY_ANSWERED_CALLER_WINDOW_DAYS] =
+                days.coerceIn(
+                    ANSWERED_CALLER_WINDOW_DAYS_MIN,
+                    ANSWERED_CALLER_WINDOW_DAYS_MAX,
+                )
         }
-    suspend fun setEmergencyCallbackGrace(enabled: Boolean) =
-        dataStore.edit { it[SpamRepository.KEY_EMERGENCY_CALLBACK_GRACE] = enabled }
+
+    suspend fun setEmergencyCallbackGrace(enabled: Boolean) = dataStore.edit { it[SpamRepository.KEY_EMERGENCY_CALLBACK_GRACE] = enabled }
+
     suspend fun setEmergencyCallbackWindowMinutes(minutes: Int) =
         dataStore.edit {
-            it[SpamRepository.KEY_EMERGENCY_CALLBACK_WINDOW_MINUTES] = minutes.coerceIn(
-                EMERGENCY_CALLBACK_WINDOW_MINUTES_MIN,
-                EMERGENCY_CALLBACK_WINDOW_MINUTES_MAX,
-            )
+            it[SpamRepository.KEY_EMERGENCY_CALLBACK_WINDOW_MINUTES] =
+                minutes.coerceIn(
+                    EMERGENCY_CALLBACK_WINDOW_MINUTES_MIN,
+                    EMERGENCY_CALLBACK_WINDOW_MINUTES_MAX,
+                )
         }
-    suspend fun setTimeBlock(enabled: Boolean) =
-        dataStore.edit { it[SpamRepository.KEY_TIME_BLOCK] = enabled }
-    suspend fun setTimeBlockStart(hour: Int) =
-        dataStore.edit { it[SpamRepository.KEY_TIME_BLOCK_START] = hour }
-    suspend fun setTimeBlockEnd(hour: Int) =
-        dataStore.edit { it[SpamRepository.KEY_TIME_BLOCK_END] = hour }
-    suspend fun setFreqEscalation(enabled: Boolean) =
-        dataStore.edit { it[SpamRepository.KEY_FREQ_ESCALATION] = enabled }
-    suspend fun setFreqThreshold(threshold: Int) =
-        dataStore.edit { it[SpamRepository.KEY_FREQ_THRESHOLD] = threshold.coerceIn(1, 25) }
+
+    suspend fun setTimeBlock(enabled: Boolean) = dataStore.edit { it[SpamRepository.KEY_TIME_BLOCK] = enabled }
+
+    suspend fun setTimeBlockStart(hour: Int) = dataStore.edit { it[SpamRepository.KEY_TIME_BLOCK_START] = hour }
+
+    suspend fun setTimeBlockEnd(hour: Int) = dataStore.edit { it[SpamRepository.KEY_TIME_BLOCK_END] = hour }
+
+    suspend fun setFreqEscalation(enabled: Boolean) = dataStore.edit { it[SpamRepository.KEY_FREQ_ESCALATION] = enabled }
+
+    suspend fun setFreqThreshold(threshold: Int) = dataStore.edit { it[SpamRepository.KEY_FREQ_THRESHOLD] = threshold.coerceIn(1, 25) }
 
     suspend fun readPrefsSnapshot(): Preferences = dataStore.data.first()
 

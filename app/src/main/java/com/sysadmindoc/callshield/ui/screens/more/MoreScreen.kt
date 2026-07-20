@@ -1,8 +1,9 @@
 package com.sysadmindoc.callshield.ui.screens.more
 
-import androidx.activity.compose.BackHandler
 import android.content.Intent
 import android.net.Uri
+import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -22,7 +23,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import android.widget.Toast
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sysadmindoc.callshield.BuildConfig
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.service.CrashReporter
@@ -30,7 +31,6 @@ import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.screens.settings.SettingsScreen
 import com.sysadmindoc.callshield.ui.screens.stats.StatsScreen
 import com.sysadmindoc.callshield.ui.theme.*
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import java.text.NumberFormat
 
 @Composable
@@ -40,33 +40,62 @@ fun MoreScreen(viewModel: MainViewModel) {
     if (currentView != 0) BackHandler { currentView = 0 }
 
     when (currentView) {
-        1 -> { Column(Modifier.fillMaxSize()) { MoreTopBar(stringResource(R.string.more_statistics)) { currentView = 0 }; StatsScreen(viewModel) } }
-        2 -> { Column(Modifier.fillMaxSize()) { MoreTopBar(stringResource(R.string.more_settings)) { currentView = 0 }; SettingsScreen(viewModel) } }
-        3 -> { Column(Modifier.fillMaxSize()) { MoreTopBar(stringResource(R.string.more_whats_new)) { currentView = 0 }; ChangelogScreen() } }
-        4 -> { Column(Modifier.fillMaxSize()) { MoreTopBar(stringResource(R.string.more_protection_test)) { currentView = 0 }; ProtectionTestScreen() } }
-        else -> MoreHub(
-            viewModel = viewModel,
-            onStats = { currentView = 1 },
-            onSettings = { currentView = 2 },
-            onChangelog = { currentView = 3 },
-            onTest = { currentView = 4 }
-        )
+        1 -> {
+            Column(Modifier.fillMaxSize()) {
+                MoreTopBar(stringResource(R.string.more_statistics)) { currentView = 0 }
+                StatsScreen(viewModel)
+            }
+        }
+
+        2 -> {
+            Column(Modifier.fillMaxSize()) {
+                MoreTopBar(stringResource(R.string.more_settings)) { currentView = 0 }
+                SettingsScreen(viewModel)
+            }
+        }
+
+        3 -> {
+            Column(Modifier.fillMaxSize()) {
+                MoreTopBar(stringResource(R.string.more_whats_new)) { currentView = 0 }
+                ChangelogScreen()
+            }
+        }
+
+        4 -> {
+            Column(Modifier.fillMaxSize()) {
+                MoreTopBar(stringResource(R.string.more_protection_test)) { currentView = 0 }
+                ProtectionTestScreen()
+            }
+        }
+
+        else -> {
+            MoreHub(
+                viewModel = viewModel,
+                onStats = { currentView = 1 },
+                onSettings = { currentView = 2 },
+                onChangelog = { currentView = 3 },
+                onTest = { currentView = 4 },
+            )
+        }
     }
 }
 
 @Composable
-fun MoreTopBar(title: String, onBack: () -> Unit) {
+fun MoreTopBar(
+    title: String,
+    onBack: () -> Unit,
+) {
     Column {
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back), tint = CatSubtext) }
             Spacer(Modifier.width(4.dp))
             Text(
                 title,
                 style = MaterialTheme.typography.titleLarge.copy(letterSpacing = 0.sp),
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
             )
         }
         GradientDivider()
@@ -74,42 +103,54 @@ fun MoreTopBar(title: String, onBack: () -> Unit) {
 }
 
 @Composable
-fun MoreHub(viewModel: MainViewModel, onStats: () -> Unit, onSettings: () -> Unit, onChangelog: () -> Unit, onTest: () -> Unit) {
+fun MoreHub(
+    viewModel: MainViewModel,
+    onStats: () -> Unit,
+    onSettings: () -> Unit,
+    onChangelog: () -> Unit,
+    onTest: () -> Unit,
+) {
     val context = LocalContext.current
     val spamCount by viewModel.spamCount.collectAsStateWithLifecycle()
     val blockedToday by viewModel.blockedToday.collectAsStateWithLifecycle()
     val blockCallsEnabled by viewModel.blockCallsEnabled.collectAsStateWithLifecycle()
     val blockSmsEnabled by viewModel.blockSmsEnabled.collectAsStateWithLifecycle()
     val lastSync by viewModel.lastSyncTimestamp.collectAsStateWithLifecycle()
-    val protectionAccent = when {
-        blockCallsEnabled || blockSmsEnabled -> CatGreen
-        else -> CatPeach
-    }
+    val protectionAccent =
+        when {
+            blockCallsEnabled || blockSmsEnabled -> CatGreen
+            else -> CatPeach
+        }
     val appVersion = "v${BuildConfig.VERSION_NAME}"
     val localizedSpamCount = remember(spamCount) { NumberFormat.getIntegerInstance().format(spamCount) }
     val localizedBlockedToday = remember(blockedToday) { NumberFormat.getIntegerInstance().format(blockedToday) }
-    val protectionLabel = when {
-        blockCallsEnabled && blockSmsEnabled -> stringResource(R.string.more_snapshot_calls_texts)
-        blockCallsEnabled -> stringResource(R.string.more_snapshot_calls)
-        blockSmsEnabled -> stringResource(R.string.more_snapshot_texts)
-        else -> stringResource(R.string.more_snapshot_paused)
-    }
-    val syncLabel = when {
-        lastSync <= 0L -> stringResource(R.string.more_snapshot_never_synced)
-        else -> {
-            val ago = System.currentTimeMillis() - lastSync
-            when {
-                ago < 60_000 -> stringResource(R.string.dashboard_synced_just_now)
-                ago < 3_600_000 -> stringResource(R.string.dashboard_synced_minutes_ago, (ago / 60_000).toInt())
-                ago < 86_400_000 -> stringResource(R.string.dashboard_synced_hours_ago, (ago / 3_600_000).toInt())
-                else -> stringResource(R.string.dashboard_synced_days_ago, (ago / 86_400_000).toInt())
+    val protectionLabel =
+        when {
+            blockCallsEnabled && blockSmsEnabled -> stringResource(R.string.more_snapshot_calls_texts)
+            blockCallsEnabled -> stringResource(R.string.more_snapshot_calls)
+            blockSmsEnabled -> stringResource(R.string.more_snapshot_texts)
+            else -> stringResource(R.string.more_snapshot_paused)
+        }
+    val syncLabel =
+        when {
+            lastSync <= 0L -> {
+                stringResource(R.string.more_snapshot_never_synced)
+            }
+
+            else -> {
+                val ago = System.currentTimeMillis() - lastSync
+                when {
+                    ago < 60_000 -> stringResource(R.string.dashboard_synced_just_now)
+                    ago < 3_600_000 -> stringResource(R.string.dashboard_synced_minutes_ago, (ago / 60_000).toInt())
+                    ago < 86_400_000 -> stringResource(R.string.dashboard_synced_hours_ago, (ago / 3_600_000).toInt())
+                    else -> stringResource(R.string.dashboard_synced_days_ago, (ago / 86_400_000).toInt())
+                }
             }
         }
-    }
 
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         PremiumCard(accentColor = protectionAccent) {
             Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -118,33 +159,33 @@ fun MoreHub(viewModel: MainViewModel, onStats: () -> Unit, onSettings: () -> Uni
                     protectionLabel,
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
-                    color = protectionAccent
+                    color = protectionAccent,
                 )
                 Text(
                     syncLabel,
                     style = MaterialTheme.typography.bodySmall,
-                    color = CatSubtext
+                    color = CatSubtext,
                 )
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     StatusPill(
                         text = stringResource(R.string.more_trust_on_device),
-                        color = CatGreen
+                        color = CatGreen,
                     )
                     StatusPill(
                         text = stringResource(R.string.more_trust_open_source),
-                        color = CatBlue
+                        color = CatBlue,
                     )
                     StatusPill(
                         text = stringResource(R.string.more_trust_no_account),
-                        color = CatPeach
+                        color = CatPeach,
                     )
                 }
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
                     AboutStat(localizedSpamCount, stringResource(R.string.more_snapshot_database), CatGreen)
                     AboutStat(localizedBlockedToday, stringResource(R.string.more_snapshot_today), CatPeach)
@@ -162,7 +203,7 @@ fun MoreHub(viewModel: MainViewModel, onStats: () -> Unit, onSettings: () -> Uni
                     title = stringResource(R.string.more_statistics),
                     subtitle = stringResource(R.string.more_statistics_subtitle),
                     color = CatYellow,
-                    onClick = onStats
+                    onClick = onStats,
                 )
                 GradientDivider()
                 MoreNavCard(
@@ -170,7 +211,7 @@ fun MoreHub(viewModel: MainViewModel, onStats: () -> Unit, onSettings: () -> Uni
                     title = stringResource(R.string.more_protection_test),
                     subtitle = stringResource(R.string.more_protection_test_subtitle),
                     color = CatGreen,
-                    onClick = onTest
+                    onClick = onTest,
                 )
                 GradientDivider()
                 MoreNavCard(
@@ -178,7 +219,7 @@ fun MoreHub(viewModel: MainViewModel, onStats: () -> Unit, onSettings: () -> Uni
                     title = stringResource(R.string.more_settings),
                     subtitle = stringResource(R.string.more_settings_subtitle),
                     color = CatMauve,
-                    onClick = onSettings
+                    onClick = onSettings,
                 )
             }
         }
@@ -192,7 +233,7 @@ fun MoreHub(viewModel: MainViewModel, onStats: () -> Unit, onSettings: () -> Uni
                     title = stringResource(R.string.more_whats_new),
                     subtitle = stringResource(R.string.more_whats_new_subtitle),
                     color = CatPeach,
-                    onClick = onChangelog
+                    onClick = onChangelog,
                 )
                 GradientDivider()
                 QuickLink(
@@ -200,13 +241,15 @@ fun MoreHub(viewModel: MainViewModel, onStats: () -> Unit, onSettings: () -> Uni
                     label = stringResource(R.string.more_share_crash_log),
                     subtitle = stringResource(R.string.more_share_crash_log_subtitle),
                     color = CatMauve,
-                    external = false
+                    external = false,
                 ) {
                     val intent = CrashReporter.shareLatestCrashIntent(context)
                     if (intent != null) {
-                        context.startActivity(Intent.createChooser(intent, null).apply {
-                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                        })
+                        context.startActivity(
+                            Intent.createChooser(intent, null).apply {
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            },
+                        )
                     } else {
                         Toast.makeText(context, R.string.more_no_crash_logs, Toast.LENGTH_SHORT).show()
                     }
@@ -222,7 +265,7 @@ fun MoreHub(viewModel: MainViewModel, onStats: () -> Unit, onSettings: () -> Uni
                     icon = Icons.Default.Code,
                     label = stringResource(R.string.more_github_repo),
                     subtitle = stringResource(R.string.more_github_repo_subtitle),
-                    color = CatGreen
+                    color = CatGreen,
                 ) {
                     context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/SysAdminDoc/CallShield")).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) })
                 }
@@ -231,7 +274,7 @@ fun MoreHub(viewModel: MainViewModel, onStats: () -> Unit, onSettings: () -> Uni
                     icon = Icons.Default.BugReport,
                     label = stringResource(R.string.more_report_bug),
                     subtitle = stringResource(R.string.more_report_bug_subtitle),
-                    color = CatPeach
+                    color = CatPeach,
                 ) {
                     context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/SysAdminDoc/CallShield/issues/new")).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) })
                 }
@@ -240,7 +283,7 @@ fun MoreHub(viewModel: MainViewModel, onStats: () -> Unit, onSettings: () -> Uni
                     icon = Icons.Default.Star,
                     label = stringResource(R.string.more_star_github),
                     subtitle = stringResource(R.string.more_star_github_subtitle),
-                    color = CatYellow
+                    color = CatYellow,
                 ) {
                     context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/SysAdminDoc/CallShield")).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) })
                 }
@@ -249,7 +292,7 @@ fun MoreHub(viewModel: MainViewModel, onStats: () -> Unit, onSettings: () -> Uni
                     icon = Icons.Default.Flag,
                     label = stringResource(R.string.more_report_spam_number),
                     subtitle = stringResource(R.string.more_report_spam_number_subtitle),
-                    color = CatRed
+                    color = CatRed,
                 ) {
                     context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/SysAdminDoc/CallShield/issues/new?template=spam_report.md")).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) })
                 }
@@ -264,20 +307,21 @@ fun MoreHub(viewModel: MainViewModel, onStats: () -> Unit, onSettings: () -> Uni
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
                     color = CatGreen,
-                    modifier = Modifier.accentGlow(CatGreen, 300f, 0.04f)
+                    modifier = Modifier.accentGlow(CatGreen, 300f, 0.04f),
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(appVersion, style = MaterialTheme.typography.bodyMedium, color = CatSubtext)
                 Spacer(Modifier.height(12.dp))
                 Text(
                     stringResource(R.string.more_about_description),
-                    style = MaterialTheme.typography.bodySmall, color = CatOverlay,
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    style = MaterialTheme.typography.bodySmall,
+                    color = CatOverlay,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                 )
                 Spacer(Modifier.height(16.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
+                    horizontalArrangement = Arrangement.SpaceEvenly,
                 ) {
                     AboutStat(stringResource(R.string.more_about_layers), stringResource(R.string.more_about_layers_label), CatGreen)
                     AboutStat(stringResource(R.string.more_about_lines), stringResource(R.string.more_about_lines_label), CatPeach)
@@ -304,9 +348,10 @@ fun MoreHub(viewModel: MainViewModel, onStats: () -> Unit, onSettings: () -> Uni
 @Composable
 fun MoreNavCard(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
-    title: String, subtitle: String,
+    title: String,
+    subtitle: String,
     color: androidx.compose.ui.graphics.Color,
-    onClick: () -> Unit
+    onClick: () -> Unit,
 ) {
     TextButton(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
         PremiumIconTile(icon = icon, color = color, size = 42.dp, iconSize = 22.dp)
@@ -326,7 +371,7 @@ fun QuickLink(
     subtitle: String,
     color: androidx.compose.ui.graphics.Color,
     external: Boolean = true,
-    onClick: () -> Unit
+    onClick: () -> Unit,
 ) {
     TextButton(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
         PremiumIconTile(icon = icon, color = color, size = 42.dp, iconSize = 20.dp)
@@ -339,13 +384,17 @@ fun QuickLink(
             if (external) Icons.AutoMirrored.Filled.OpenInNew else Icons.Default.ChevronRight,
             contentDescription = if (external) stringResource(R.string.cd_open_external) else stringResource(R.string.cd_chevron_right),
             tint = CatOverlay,
-            modifier = Modifier.size(16.dp)
+            modifier = Modifier.size(16.dp),
         )
     }
 }
 
 @Composable
-fun AboutStat(value: String, label: String, color: androidx.compose.ui.graphics.Color) {
+fun AboutStat(
+    value: String,
+    label: String,
+    color: androidx.compose.ui.graphics.Color,
+) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = color)
         Text(label, style = MaterialTheme.typography.labelSmall, color = CatSubtext)

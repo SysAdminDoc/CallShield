@@ -13,73 +13,79 @@ import com.sysadmindoc.callshield.data.SpamRepository
 import kotlinx.coroutines.launch
 
 class SpamActionReceiver : BroadcastReceiver() {
-    override fun onReceive(context: Context, intent: Intent) {
+    override fun onReceive(
+        context: Context,
+        intent: Intent,
+    ) {
         val appContext = context.applicationContext
         val notificationManager = appContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val repo = SpamRepository.getInstance(appContext)
 
-        val work = when (intent.action) {
-            "com.sysadmindoc.callshield.FEEDBACK_SPAM" -> {
-                val number = intent.getStringExtra("number") ?: return
-                notificationManager.cancel(number.hashCode() + 10000)
-                Toast.makeText(appContext, appContext.getString(R.string.feedback_blocked), Toast.LENGTH_SHORT).show()
-                suspend {
-                    repo.blockNumber(number, "spam", "Blocked from after-call feedback")
-                    CommunityContributor.contribute(number, "spam")
+        val work =
+            when (intent.action) {
+                "com.sysadmindoc.callshield.FEEDBACK_SPAM" -> {
+                    val number = intent.getStringExtra("number") ?: return
+                    notificationManager.cancel(number.hashCode() + 10000)
+                    Toast.makeText(appContext, appContext.getString(R.string.feedback_blocked), Toast.LENGTH_SHORT).show()
+                    suspend {
+                        repo.blockNumber(number, "spam", "Blocked from after-call feedback")
+                        CommunityContributor.contribute(number, "spam")
+                    }
                 }
-            }
 
-            "com.sysadmindoc.callshield.FEEDBACK_NOT_SPAM" -> {
-                val number = intent.getStringExtra("number") ?: return
-                notificationManager.cancel(number.hashCode() + 10000)
-                Toast.makeText(appContext, appContext.getString(R.string.feedback_whitelisted), Toast.LENGTH_SHORT).show()
-                suspend {
-                    repo.addToWhitelist(number, "Marked safe from after-call feedback")
-                    CommunityContributor.reportNotSpam(number)
+                "com.sysadmindoc.callshield.FEEDBACK_NOT_SPAM" -> {
+                    val number = intent.getStringExtra("number") ?: return
+                    notificationManager.cancel(number.hashCode() + 10000)
+                    Toast.makeText(appContext, appContext.getString(R.string.feedback_whitelisted), Toast.LENGTH_SHORT).show()
+                    suspend {
+                        repo.addToWhitelist(number, "Marked safe from after-call feedback")
+                        CommunityContributor.reportNotSpam(number)
+                    }
                 }
-            }
 
-            NotificationHelper.ACTION_BLOCK -> {
-                val number = intent.getStringExtra(NotificationHelper.EXTRA_NUMBER) ?: return
-                val notifId = intent.getIntExtra(NotificationHelper.EXTRA_NOTIF_ID, -1)
-                val reportType = intent.reportType()
-                val smsIndicators = intent.smsReportIndicators()
-                if (notifId >= 0) {
-                    notificationManager.cancel(notifId)
+                NotificationHelper.ACTION_BLOCK -> {
+                    val number = intent.getStringExtra(NotificationHelper.EXTRA_NUMBER) ?: return
+                    val notifId = intent.getIntExtra(NotificationHelper.EXTRA_NOTIF_ID, -1)
+                    val reportType = intent.reportType()
+                    val smsIndicators = intent.smsReportIndicators()
+                    if (notifId >= 0) {
+                        notificationManager.cancel(notifId)
+                    }
+                    suspend {
+                        repo.blockNumber(number, reportType, "Blocked from notification")
+                        CommunityContributor.contribute(number, reportType, smsIndicators)
+                    }
                 }
-                suspend {
-                    repo.blockNumber(number, reportType, "Blocked from notification")
-                    CommunityContributor.contribute(number, reportType, smsIndicators)
-                }
-            }
 
-            NotificationHelper.ACTION_REPORT -> {
-                val number = intent.getStringExtra(NotificationHelper.EXTRA_NUMBER) ?: return
-                val notifId = intent.getIntExtra(NotificationHelper.EXTRA_NOTIF_ID, -1)
-                val reportType = intent.reportType()
-                val smsIndicators = intent.smsReportIndicators()
-                if (notifId >= 0) {
-                    notificationManager.cancel(notifId)
+                NotificationHelper.ACTION_REPORT -> {
+                    val number = intent.getStringExtra(NotificationHelper.EXTRA_NUMBER) ?: return
+                    val notifId = intent.getIntExtra(NotificationHelper.EXTRA_NOTIF_ID, -1)
+                    val reportType = intent.reportType()
+                    val smsIndicators = intent.smsReportIndicators()
+                    if (notifId >= 0) {
+                        notificationManager.cancel(notifId)
+                    }
+                    suspend {
+                        CommunityContributor.contribute(number, reportType, smsIndicators)
+                    }
                 }
-                suspend {
-                    CommunityContributor.contribute(number, reportType, smsIndicators)
-                }
-            }
 
-            NotificationHelper.ACTION_SAFE -> {
-                val number = intent.getStringExtra(NotificationHelper.EXTRA_NUMBER) ?: return
-                val notifId = intent.getIntExtra(NotificationHelper.EXTRA_NOTIF_ID, -1)
-                if (notifId >= 0) {
-                    notificationManager.cancel(notifId)
+                NotificationHelper.ACTION_SAFE -> {
+                    val number = intent.getStringExtra(NotificationHelper.EXTRA_NUMBER) ?: return
+                    val notifId = intent.getIntExtra(NotificationHelper.EXTRA_NOTIF_ID, -1)
+                    if (notifId >= 0) {
+                        notificationManager.cancel(notifId)
+                    }
+                    suspend {
+                        repo.addToWhitelist(number, "Reported as not spam from notification")
+                        CommunityContributor.reportNotSpam(number)
+                    }
                 }
-                suspend {
-                    repo.addToWhitelist(number, "Reported as not spam from notification")
-                    CommunityContributor.reportNotSpam(number)
-                }
-            }
 
-            else -> null
-        } ?: return
+                else -> {
+                    null
+                }
+            } ?: return
 
         // Previously this created a fresh CoroutineScope(SupervisorJob+IO) per
         // broadcast, which was never cancelled and leaked a Job on every

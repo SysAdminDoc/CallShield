@@ -7,7 +7,6 @@ import org.junit.Test
  * Unit tests for BlockingProfiles — profile enum values and properties.
  */
 class BlockingProfilesTest {
-
     // ─── All Profile enum values exist ───────────────────────────────
 
     @Test
@@ -96,17 +95,26 @@ class BlockingProfilesTest {
 
     @Test
     fun profile_WORK_descriptionMentionsSpam() {
-        assertTrue(BlockingProfiles.Profile.WORK.description.contains("spam", ignoreCase = true))
+        assertTrue(
+            BlockingProfiles.Profile.WORK.description
+                .contains("spam", ignoreCase = true),
+        )
     }
 
     @Test
     fun profile_OFF_descriptionMentionsDisable() {
-        assertTrue(BlockingProfiles.Profile.OFF.description.contains("disable", ignoreCase = true))
+        assertTrue(
+            BlockingProfiles.Profile.OFF.description
+                .contains("disable", ignoreCase = true),
+        )
     }
 
     @Test
     fun profile_SLEEP_descriptionMentionsContacts() {
-        assertTrue(BlockingProfiles.Profile.SLEEP.description.contains("contacts", ignoreCase = true))
+        assertTrue(
+            BlockingProfiles.Profile.SLEEP.description
+                .contains("contacts", ignoreCase = true),
+        )
     }
 
     // ─── Ordinal ordering ────────────────────────────────────────────

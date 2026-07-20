@@ -6,19 +6,21 @@ import android.content.Intent
 import android.provider.Telephony
 import com.sysadmindoc.callshield.CallShieldApp
 import com.sysadmindoc.callshield.data.SpamRepository
-import com.sysadmindoc.callshield.data.repository.SpamRepositoryAdapter
 import com.sysadmindoc.callshield.data.remote.UrlSafetyChecker
+import com.sysadmindoc.callshield.data.repository.SpamRepositoryAdapter
 import com.sysadmindoc.callshield.domain.usecase.CheckSpamSmsUseCase
 import kotlinx.coroutines.launch
 
 class SmsReceiver : BroadcastReceiver() {
-
     companion object {
         /** Hard cap on reassembled multipart body length (16 KB). */
         internal const val MAX_REASSEMBLED_BODY = 16_384
     }
 
-    override fun onReceive(context: Context, intent: Intent) {
+    override fun onReceive(
+        context: Context,
+        intent: Intent,
+    ) {
         if (intent.action != Telephony.Sms.Intents.SMS_RECEIVED_ACTION) return
 
         val appContext = context.applicationContext

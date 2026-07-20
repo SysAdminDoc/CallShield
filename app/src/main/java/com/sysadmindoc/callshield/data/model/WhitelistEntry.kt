@@ -19,12 +19,18 @@ import androidx.room.PrimaryKey
  */
 @Entity(
     tableName = "whitelist",
-    indices = [Index(value = ["number"], unique = true)]
+    indices = [
+        Index(value = ["number"], unique = true),
+        Index(value = ["expiresAt"]),
+    ],
 )
 data class WhitelistEntry(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val number: String,
     val description: String = "",
     val addedTimestamp: Long = System.currentTimeMillis(),
-    val isEmergency: Boolean = false
-)
+    val isEmergency: Boolean = false,
+    val expiresAt: Long? = null,
+) {
+    fun isExpired(now: Long = System.currentTimeMillis()): Boolean = expiresAt != null && expiresAt <= now
+}

@@ -15,7 +15,6 @@ package com.sysadmindoc.callshield.data
  * the number, or report a false positive.
  */
 object BlockReasoning {
-
     data class Reasoning(
         /** One-line summary shown at the top of the panel. */
         val headline: String,
@@ -34,7 +33,11 @@ object BlockReasoning {
      * @param confidence 0-100 score (only meaningful for heuristic, ML,
      *   campaign_burst, sms_content layers).
      */
-    fun explain(matchReason: String, description: String, confidence: Int): Reasoning {
+    fun explain(
+        matchReason: String,
+        description: String,
+        confidence: Int,
+    ): Reasoning {
         val bullets = mutableListOf<String>()
         val headline: String
 
@@ -76,7 +79,7 @@ object BlockReasoning {
             }
 
             matchReason == "heuristic" -> {
-                headline = "Flagged by the heuristic engine at ${confidence}% confidence."
+                headline = "Flagged by the heuristic engine at $confidence% confidence."
                 bullets += "Matched at detection layer 11 (heuristics)."
                 description.split(",").map { it.trim().replace("_", " ") }.filter { it.isNotBlank() }.forEach {
                     bullets += "• $it"
@@ -87,11 +90,11 @@ object BlockReasoning {
                 headline = "This prefix is running an active spam campaign."
                 bullets += "Matched at detection layer 11.5 (campaign burst detector)."
                 bullets += "5+ distinct numbers from this NPA-NXX prefix have called in the last hour."
-                bullets += "Campaign confidence: ${confidence}%."
+                bullets += "Campaign confidence: $confidence%."
             }
 
             matchReason == "ml_scorer" -> {
-                headline = "The on-device ML model flagged this number as ${confidence}% likely spam."
+                headline = "The on-device ML model flagged this number as $confidence% likely spam."
                 bullets += "Matched at detection layer 15 (gradient-boosted tree spam scorer)."
                 bullets += "The model runs entirely on your device — no data sent anywhere."
                 if (description.isNotBlank()) bullets += description
@@ -104,7 +107,7 @@ object BlockReasoning {
             }
 
             matchReason == "sms_content" -> {
-                headline = "The SMS content looked like spam (${confidence}% confidence)."
+                headline = "The SMS content looked like spam ($confidence% confidence)."
                 bullets += "Matched at detection layer 14 (SMS content analysis)."
                 description.split(",").map { it.trim().replace("_", " ") }.filter { it.isNotBlank() }.forEach {
                     bullets += "• $it"

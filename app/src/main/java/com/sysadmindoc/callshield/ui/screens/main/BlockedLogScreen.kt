@@ -34,15 +34,18 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.PhoneFormatter
 import com.sysadmindoc.callshield.data.SmsBodyRedactor
 import com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup
 import com.sysadmindoc.callshield.data.model.BlockedCall
 import com.sysadmindoc.callshield.ui.MainViewModel
+import com.sysadmindoc.callshield.ui.TemporaryDecisionDuration
+import com.sysadmindoc.callshield.ui.TemporaryDecisionMenu
+import com.sysadmindoc.callshield.ui.rememberTemporaryDecisionDurations
 import com.sysadmindoc.callshield.ui.theme.*
 import com.sysadmindoc.callshield.util.filterAsciiDigits
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
@@ -58,69 +61,78 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
     val scope = rememberCoroutineScope()
     var showClearDialog by remember { mutableStateOf(false) }
 
-    val filtered = when (filterMode) {
-        1 -> blockedCalls.filter { it.isCall }
-        2 -> blockedCalls.filter { !it.isCall }
-        else -> blockedCalls
-    }
+    val filtered =
+        when (filterMode) {
+            1 -> blockedCalls.filter { it.isCall }
+            2 -> blockedCalls.filter { !it.isCall }
+            else -> blockedCalls
+        }
 
     // Grouped view: collapse by number
-    val groupedList = if (grouped) {
-        filtered.groupBy { it.number }.map { (number, calls) ->
-            calls.first().copy() to calls.size
-        }.sortedByDescending { it.second }
-    } else null
+    val groupedList =
+        if (grouped) {
+            filtered
+                .groupBy { it.number }
+                .map { (number, calls) ->
+                    calls.first().copy() to calls.size
+                }.sortedByDescending { it.second }
+        } else {
+            null
+        }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHost) },
-        containerColor = Black
+        containerColor = Black,
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
             // Filter chips
             Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 FilterChip(
                     selected = filterMode == 0,
                     onClick = { filterMode = 0 },
                     label = { Text(stringResource(R.string.blocked_log_filter_all, blockedCalls.size)) },
                     shape = RoundedCornerShape(8.dp),
-                    colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = CatGreen.copy(alpha = 0.2f),
-                        selectedLabelColor = CatGreen
-                    ),
-                    border = BorderStroke(1.dp, if (filterMode == 0) CatGreen.copy(alpha = 0.3f) else CatMuted.copy(alpha = 0.3f))
+                    colors =
+                        FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = CatGreen.copy(alpha = 0.2f),
+                            selectedLabelColor = CatGreen,
+                        ),
+                    border = BorderStroke(1.dp, if (filterMode == 0) CatGreen.copy(alpha = 0.3f) else CatMuted.copy(alpha = 0.3f)),
                 )
                 FilterChip(
                     selected = filterMode == 1,
                     onClick = { filterMode = 1 },
                     label = { Text(stringResource(R.string.blocked_log_filter_calls)) },
                     shape = RoundedCornerShape(8.dp),
-                    colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = CatBlue.copy(alpha = 0.2f),
-                        selectedLabelColor = CatBlue
-                    ),
-                    border = BorderStroke(1.dp, if (filterMode == 1) CatBlue.copy(alpha = 0.3f) else CatMuted.copy(alpha = 0.3f))
+                    colors =
+                        FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = CatBlue.copy(alpha = 0.2f),
+                            selectedLabelColor = CatBlue,
+                        ),
+                    border = BorderStroke(1.dp, if (filterMode == 1) CatBlue.copy(alpha = 0.3f) else CatMuted.copy(alpha = 0.3f)),
                 )
                 FilterChip(
                     selected = filterMode == 2,
                     onClick = { filterMode = 2 },
                     label = { Text(stringResource(R.string.blocked_log_filter_sms)) },
                     shape = RoundedCornerShape(8.dp),
-                    colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = CatMauve.copy(alpha = 0.2f),
-                        selectedLabelColor = CatMauve
-                    ),
-                    border = BorderStroke(1.dp, if (filterMode == 2) CatMauve.copy(alpha = 0.3f) else CatMuted.copy(alpha = 0.3f))
+                    colors =
+                        FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = CatMauve.copy(alpha = 0.2f),
+                            selectedLabelColor = CatMauve,
+                        ),
+                    border = BorderStroke(1.dp, if (filterMode == 2) CatMauve.copy(alpha = 0.3f) else CatMuted.copy(alpha = 0.3f)),
                 )
                 Spacer(Modifier.weight(1f))
                 IconButton(onClick = { grouped = !grouped }) {
                     Icon(
                         if (grouped) Icons.AutoMirrored.Filled.ViewList else Icons.Default.GroupWork,
                         contentDescription = stringResource(if (grouped) R.string.cd_ungroup else R.string.cd_group),
-                        tint = if (grouped) CatYellow else CatOverlay
+                        tint = if (grouped) CatYellow else CatOverlay,
                     )
                 }
                 if (blockedCalls.isNotEmpty()) {
@@ -132,31 +144,39 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
 
             if (filtered.isEmpty()) {
                 BlockedLogEmptyState(
-                    title = if (blockedCalls.isEmpty()) {
-                        stringResource(R.string.blocked_log_empty_all_title)
-                    } else {
-                        stringResource(R.string.blocked_log_empty_filter_title)
-                    },
-                    subtitle = if (blockedCalls.isEmpty()) {
-                        stringResource(R.string.blocked_log_empty_all_body)
-                    } else {
-                        stringResource(R.string.blocked_log_empty_filter_body)
-                    },
+                    title =
+                        if (blockedCalls.isEmpty()) {
+                            stringResource(R.string.blocked_log_empty_all_title)
+                        } else {
+                            stringResource(R.string.blocked_log_empty_filter_title)
+                        },
+                    subtitle =
+                        if (blockedCalls.isEmpty()) {
+                            stringResource(R.string.blocked_log_empty_all_body)
+                        } else {
+                            stringResource(R.string.blocked_log_empty_filter_body)
+                        },
                     accentColor = if (blockedCalls.isEmpty()) CatGreen else CatPeach,
                     actionLabel = if (blockedCalls.isEmpty()) null else stringResource(R.string.blocked_log_show_all),
-                    onAction = if (blockedCalls.isEmpty()) null else { { filterMode = 0 } }
+                    onAction =
+                        if (blockedCalls.isEmpty()) {
+                            null
+                        } else {
+                            { filterMode = 0 }
+                        },
                 )
             } else if (grouped && groupedList != null) {
                 // Grouped view
                 LazyColumn(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     itemsIndexed(
                         items = groupedList,
-                        key = { _, item -> item.first.number }
+                        key = { _, item -> item.first.number },
                     ) { _, (call, count) ->
                         GroupedCallItem(
-                            call = call, count = count,
+                            call = call,
+                            count = count,
                             onTap = { viewModel.openNumberDetail(call.number) },
-                            onBlock = { viewModel.blockNumber(call.number) }
+                            onBlock = { viewModel.blockNumber(call.number) },
                         )
                     }
                 }
@@ -167,75 +187,132 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
                         val visible = remember { mutableStateOf(false) }
                         val deletedMessage = stringResource(R.string.blocked_log_deleted)
                         val undoLabel = stringResource(R.string.blocked_log_undo)
-                        val blockedMessage = stringResource(
-                            R.string.blocked_log_number_blocked,
-                            PhoneFormatter.format(call.number)
-                        )
+                        val blockedMessage =
+                            stringResource(
+                                R.string.blocked_log_number_blocked,
+                                PhoneFormatter.format(call.number),
+                            )
                         LaunchedEffect(Unit) {
                             kotlinx.coroutines.delay(index.toLong().coerceAtMost(15) * 30)
                             visible.value = true
                         }
                         AnimatedVisibility(visible = visible.value, enter = slideInVertically { 40 } + fadeIn()) {
-                            val dismissState = rememberSwipeToDismissBoxState(
-                                confirmValueChange = { value ->
-                                    when (value) {
-                                        SwipeToDismissBoxValue.EndToStart -> {
-                                            viewModel.deleteLogEntry(call)
-                                            hapticTick(context)
-                                            scope.launch {
-                                                val result = snackbarHost.showSnackbar(
-                                                    message = deletedMessage,
-                                                    actionLabel = undoLabel,
-                                                    duration = SnackbarDuration.Short
-                                                )
-                                                if (result == SnackbarResult.ActionPerformed) {
-                                                    viewModel.restoreLogEntry(call)
+                            val dismissState =
+                                rememberSwipeToDismissBoxState(
+                                    confirmValueChange = { value ->
+                                        when (value) {
+                                            SwipeToDismissBoxValue.EndToStart -> {
+                                                viewModel.deleteLogEntry(call)
+                                                hapticTick(context)
+                                                scope.launch {
+                                                    val result =
+                                                        snackbarHost.showSnackbar(
+                                                            message = deletedMessage,
+                                                            actionLabel = undoLabel,
+                                                            duration = SnackbarDuration.Short,
+                                                        )
+                                                    if (result == SnackbarResult.ActionPerformed) {
+                                                        viewModel.restoreLogEntry(call)
+                                                    }
                                                 }
+                                                true
                                             }
-                                            true
-                                        }
-                                        SwipeToDismissBoxValue.StartToEnd -> {
-                                            viewModel.blockNumber(call.number, "spam", "Blocked from log swipe")
-                                            hapticConfirm(context)
-                                            scope.launch {
-                                                snackbarHost.showSnackbar(
-                                                    blockedMessage,
-                                                    duration = SnackbarDuration.Short
-                                                )
+
+                                            SwipeToDismissBoxValue.StartToEnd -> {
+                                                viewModel.blockNumber(call.number, "spam", "Blocked from log swipe")
+                                                hapticConfirm(context)
+                                                scope.launch {
+                                                    snackbarHost.showSnackbar(
+                                                        blockedMessage,
+                                                        duration = SnackbarDuration.Short,
+                                                    )
+                                                }
+                                                true
                                             }
-                                            true
+
+                                            else -> {
+                                                false
+                                            }
                                         }
-                                        else -> false
-                                    }
-                                }
-                            )
+                                    },
+                                )
                             SwipeToDismissBox(
                                 state = dismissState,
                                 backgroundContent = {
                                     val direction = dismissState.dismissDirection
-                                    val color = when (direction) {
-                                        SwipeToDismissBoxValue.StartToEnd -> CatYellow.copy(alpha = 0.3f)
-                                        SwipeToDismissBoxValue.EndToStart -> CatRed.copy(alpha = 0.3f)
-                                        else -> SurfaceBright
-                                    }
-                                    val icon = when (direction) {
-                                        SwipeToDismissBoxValue.StartToEnd -> Icons.Default.Block
-                                        SwipeToDismissBoxValue.EndToStart -> Icons.Default.Delete
-                                        else -> Icons.Default.Block
-                                    }
-                                    val align = when (direction) {
-                                        SwipeToDismissBoxValue.StartToEnd -> Alignment.CenterStart
-                                        else -> Alignment.CenterEnd
-                                    }
+                                    val color =
+                                        when (direction) {
+                                            SwipeToDismissBoxValue.StartToEnd -> CatYellow.copy(alpha = 0.3f)
+                                            SwipeToDismissBoxValue.EndToStart -> CatRed.copy(alpha = 0.3f)
+                                            else -> SurfaceBright
+                                        }
+                                    val icon =
+                                        when (direction) {
+                                            SwipeToDismissBoxValue.StartToEnd -> Icons.Default.Block
+                                            SwipeToDismissBoxValue.EndToStart -> Icons.Default.Delete
+                                            else -> Icons.Default.Block
+                                        }
+                                    val align =
+                                        when (direction) {
+                                            SwipeToDismissBoxValue.StartToEnd -> Alignment.CenterStart
+                                            else -> Alignment.CenterEnd
+                                        }
                                     Box(
-                                        modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(12.dp)).background(color).padding(horizontal = 20.dp),
-                                        contentAlignment = align
+                                        modifier =
+                                            Modifier
+                                                .fillMaxSize()
+                                                .clip(RoundedCornerShape(12.dp))
+                                                .background(color)
+                                                .padding(horizontal = 20.dp),
+                                        contentAlignment = align,
                                     ) {
                                         Icon(icon, null, tint = CatText)
                                     }
-                                }
+                                },
                             ) {
-                                BlockedCallItem(call = call, onTap = { viewModel.openNumberDetail(call.number) })
+                                val allowReason = stringResource(R.string.blocked_log_temporary_allow_reason)
+                                val blockReason = stringResource(R.string.blocked_log_temporary_block_reason)
+                                BlockedCallItem(
+                                    call = call,
+                                    onTap = { viewModel.openNumberDetail(call.number) },
+                                    onTemporaryAllow = { duration ->
+                                        viewModel.temporaryAllowNumber(
+                                            call.number,
+                                            duration.durationMillis,
+                                            allowReason,
+                                        )
+                                        hapticConfirm(context)
+                                        scope.launch {
+                                            snackbarHost.showSnackbar(
+                                                context.getString(
+                                                    R.string.temporary_decision_allowed,
+                                                    PhoneFormatter.format(call.number),
+                                                    duration.label,
+                                                ),
+                                                duration = SnackbarDuration.Short,
+                                            )
+                                        }
+                                    },
+                                    onTemporaryBlock = { duration ->
+                                        viewModel.temporaryBlockNumber(
+                                            call.number,
+                                            duration.durationMillis,
+                                            "spam",
+                                            blockReason,
+                                        )
+                                        hapticConfirm(context)
+                                        scope.launch {
+                                            snackbarHost.showSnackbar(
+                                                context.getString(
+                                                    R.string.temporary_decision_blocked,
+                                                    PhoneFormatter.format(call.number),
+                                                    duration.label,
+                                                ),
+                                                duration = SnackbarDuration.Short,
+                                            )
+                                        }
+                                    },
+                                )
                             }
                         }
                     }
@@ -257,9 +334,9 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
                     pluralStringResource(
                         R.plurals.blocked_log_clear_message,
                         blockedCalls.size,
-                        blockedCalls.size
+                        blockedCalls.size,
                     ),
-                    color = CatSubtext
+                    color = CatSubtext,
                 )
             },
             confirmButton = {
@@ -274,7 +351,7 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
                         scope.launch {
                             snackbarHost.showSnackbar(
                                 logClearedMessage,
-                                duration = SnackbarDuration.Short
+                                duration = SnackbarDuration.Short,
                             )
                         }
                     },
@@ -284,7 +361,7 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
                 TextButton(onClick = { showClearDialog = false }) {
                     Text(stringResource(R.string.blocked_log_cancel), color = CatSubtext)
                 }
-            }
+            },
         )
     }
 }
@@ -295,33 +372,34 @@ private fun BlockedLogEmptyState(
     subtitle: String,
     accentColor: Color,
     actionLabel: String? = null,
-    onAction: (() -> Unit)? = null
+    onAction: (() -> Unit)? = null,
 ) {
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        contentAlignment = Alignment.Center
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+        contentAlignment = Alignment.Center,
     ) {
         PremiumCard(accentColor = accentColor, modifier = Modifier.fillMaxWidth()) {
             Column(
                 modifier = Modifier.padding(20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 PremiumIconTile(
                     icon = Icons.Default.CheckCircle,
                     contentDescription = stringResource(R.string.cd_no_items),
                     color = accentColor,
                     size = 58.dp,
-                    iconSize = 30.dp
+                    iconSize = 30.dp,
                 )
                 Text(title, color = CatText, style = MaterialTheme.typography.titleMedium)
                 Text(
                     subtitle,
                     color = CatSubtext,
                     style = MaterialTheme.typography.bodySmall,
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                 )
                 if (actionLabel != null && onAction != null) {
                     PremiumActionButton(
@@ -329,7 +407,7 @@ private fun BlockedLogEmptyState(
                         icon = Icons.Default.Refresh,
                         color = accentColor,
                         onClick = onAction,
-                        outlined = true
+                        outlined = true,
                     )
                 }
             }
@@ -337,13 +415,20 @@ private fun BlockedLogEmptyState(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
+@Suppress("FunctionNaming", "LongMethod", "ktlint:standard:function-naming")
+@OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
 @Composable
-fun BlockedCallItem(call: BlockedCall, onTap: () -> Unit) {
+fun BlockedCallItem(
+    call: BlockedCall,
+    onTap: () -> Unit,
+    onTemporaryAllow: (TemporaryDecisionDuration) -> Unit,
+    onTemporaryBlock: (TemporaryDecisionDuration) -> Unit,
+) {
     val context = LocalContext.current
     val dateFormat = remember { SimpleDateFormat("MMM d, h:mm a", Locale.getDefault()) }
     val location = remember(call.number) { AreaCodeLookup.lookup(call.number) }
     var expanded by remember { mutableStateOf(false) }
+    val temporaryDurations = rememberTemporaryDecisionDurations()
     val copiedMessage = stringResource(R.string.blocked_log_copied, PhoneFormatter.format(call.number))
     val copiedShortMessage = stringResource(R.string.blocked_log_copied_short)
     val clipLabelPhone = stringResource(R.string.clip_label_phone)
@@ -351,28 +436,31 @@ fun BlockedCallItem(call: BlockedCall, onTap: () -> Unit) {
 
     PremiumCard(
         cornerRadius = 12.dp,
-        modifier = Modifier.combinedClickable(
-            onClick = onTap,
-            onLongClick = {
-                val clip = ClipData.newPlainText(clipLabelPhoneNumber, call.number)
-                (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(clip)
-                Toast.makeText(
-                    context,
-                    copiedMessage,
-                    Toast.LENGTH_SHORT
-                ).show()
-            }
-        )
+        modifier =
+            Modifier.combinedClickable(
+                onClick = onTap,
+                onLongClick = {
+                    val clip = ClipData.newPlainText(clipLabelPhoneNumber, call.number)
+                    (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(clip)
+                    Toast
+                        .makeText(
+                            context,
+                            copiedMessage,
+                            Toast.LENGTH_SHORT,
+                        ).show()
+                },
+            ),
     ) {
         Column {
             Row(modifier = Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     imageVector = if (call.isCall) Icons.Default.PhoneDisabled else Icons.Default.SpeakerNotesOff,
-                    contentDescription = stringResource(
-                        if (call.isCall) R.string.blocked_log_blocked_call else R.string.blocked_log_blocked_sms
-                    ),
+                    contentDescription =
+                        stringResource(
+                            if (call.isCall) R.string.blocked_log_blocked_call else R.string.blocked_log_blocked_sms,
+                        ),
                     tint = if (call.isCall) CatRed else CatMauve,
-                    modifier = Modifier.size(32.dp)
+                    modifier = Modifier.size(32.dp),
                 )
                 Spacer(Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
@@ -383,32 +471,36 @@ fun BlockedCallItem(call: BlockedCall, onTap: () -> Unit) {
                     }
                     if (call.matchReason.isNotEmpty()) {
                         val reasonText = call.matchReason.replace("_", " ").replaceFirstChar { it.uppercase() }
-                        val confidenceText = if (call.confidence < 100) {
-                            stringResource(R.string.confidence_suffix, call.confidence)
-                        } else {
-                            ""
-                        }
+                        val confidenceText =
+                            if (call.confidence < 100) {
+                                stringResource(R.string.confidence_suffix, call.confidence)
+                            } else {
+                                ""
+                            }
                         // Feature A: prepend the resolved CallCategory label.
                         // Falls back silently to just the raw reason if the
                         // resolver lands on Unknown — no noise, no mislabels.
-                        val category = remember(call.matchReason, call.type, call.confidence) {
-                            com.sysadmindoc.callshield.data.CallCategoryResolver.resolveFromLog(
-                                matchReason = call.matchReason,
-                                type = call.type,
-                                description = "",
-                                confidence = call.confidence,
-                            )
-                        }
-                        val label = if (category != com.sysadmindoc.callshield.data.CallCategory.Unknown) {
-                            "${category.emoji} ${stringResource(category.stringResId)} · $reasonText$confidenceText"
-                        } else {
-                            "$reasonText$confidenceText"
-                        }
+                        val category =
+                            remember(call.matchReason, call.type, call.confidence) {
+                                com.sysadmindoc.callshield.data.CallCategoryResolver.resolveFromLog(
+                                    matchReason = call.matchReason,
+                                    type = call.type,
+                                    description = "",
+                                    confidence = call.confidence,
+                                )
+                            }
+                        val label =
+                            if (category != com.sysadmindoc.callshield.data.CallCategory.Unknown) {
+                                "${category.emoji} ${stringResource(category.stringResId)} · $reasonText$confidenceText"
+                            } else {
+                                "$reasonText$confidenceText"
+                            }
                         Text(label, style = MaterialTheme.typography.labelSmall, color = CatPeach)
                     }
-                    val redactedSmsBody = remember(call.smsBody) {
-                        SmsBodyRedactor.redactForPreview(call.smsBody)
-                    }
+                    val redactedSmsBody =
+                        remember(call.smsBody) {
+                            SmsBodyRedactor.redactForPreview(call.smsBody)
+                        }
                     if (redactedSmsBody != null) {
                         Text(
                             redactedSmsBody,
@@ -421,20 +513,22 @@ fun BlockedCallItem(call: BlockedCall, onTap: () -> Unit) {
                 IconButton(onClick = { expanded = !expanded }) {
                     Icon(
                         if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                        contentDescription = stringResource(
-                            if (expanded) R.string.cd_collapse else R.string.cd_expand
-                        ),
+                        contentDescription =
+                            stringResource(
+                                if (expanded) R.string.cd_collapse else R.string.cd_expand,
+                            ),
                         tint = CatOverlay,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(20.dp),
                     )
                 }
             }
 
             // Expandable action buttons
             AnimatedVisibility(visible = expanded) {
-                Row(
+                FlowRow(
                     modifier = Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, bottom = 10.dp),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
                     val digits = filterAsciiDigits(call.number)
                     // Search Google
@@ -452,6 +546,20 @@ fun BlockedCallItem(call: BlockedCall, onTap: () -> Unit) {
                     }
                     // Detail
                     SmallActionButton(Icons.Default.Info, stringResource(R.string.blocked_log_detail), CatMauve) { onTap() }
+                    TemporaryDecisionMenu(
+                        label = stringResource(R.string.temporary_decision_allow),
+                        icon = Icons.Default.CheckCircle,
+                        color = CatGreen,
+                        durations = temporaryDurations,
+                        onSelect = onTemporaryAllow,
+                    )
+                    TemporaryDecisionMenu(
+                        label = stringResource(R.string.temporary_decision_block),
+                        icon = Icons.Default.Block,
+                        color = CatYellow,
+                        durations = temporaryDurations,
+                        onSelect = onTemporaryBlock,
+                    )
                 }
             }
         }
@@ -459,45 +567,63 @@ fun BlockedCallItem(call: BlockedCall, onTap: () -> Unit) {
 }
 
 @Composable
-fun SmallActionButton(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, color: androidx.compose.ui.graphics.Color, onClick: () -> Unit) {
+fun SmallActionButton(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    color: androidx.compose.ui.graphics.Color,
+    onClick: () -> Unit,
+) {
     PremiumCompactButton(label = label, icon = icon, color = color, onClick = onClick)
 }
 
 @Composable
-fun GroupedCallItem(call: BlockedCall, count: Int, onTap: () -> Unit, onBlock: () -> Unit) {
+fun GroupedCallItem(
+    call: BlockedCall,
+    count: Int,
+    onTap: () -> Unit,
+    onBlock: () -> Unit,
+) {
     val location = remember(call.number) { AreaCodeLookup.lookup(call.number) }
 
-    val accentColor = if (count >= 5) CatRed else if (count >= 3) CatPeach else CatYellow
+    val accentColor =
+        if (count >= 5) {
+            CatRed
+        } else if (count >= 3) {
+            CatPeach
+        } else {
+            CatYellow
+        }
 
     PremiumCard(
         cornerRadius = 12.dp,
         accentColor = if (count >= 5) CatRed.copy(alpha = 0.5f) else null,
-        onClick = onTap
+        onClick = onTap,
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .drawBehind {
-                    drawRect(
-                        color = accentColor.copy(alpha = 0.5f),
-                        topLeft = Offset(0f, 0f),
-                        size = Size(3.dp.toPx(), size.height)
-                    )
-                }
-                .padding(start = 14.dp, end = 12.dp, top = 12.dp, bottom = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .drawBehind {
+                        drawRect(
+                            color = accentColor.copy(alpha = 0.5f),
+                            topLeft = Offset(0f, 0f),
+                            size = Size(3.dp.toPx(), size.height),
+                        )
+                    }.padding(start = 14.dp, end = 12.dp, top = 12.dp, bottom = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             // Count badge — color intensity scales with repeat count. Square-ish
             // rounded backdrop (10.dp) deliberately avoids a pill/full-circle
             // shape for text-bearing badges.
             val badgeShape = RoundedCornerShape(10.dp)
             Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(badgeShape)
-                    .background(accentColor.copy(alpha = 0.15f))
-                    .border(BorderStroke(1.dp, accentColor.copy(alpha = 0.3f)), badgeShape),
-                contentAlignment = Alignment.Center
+                modifier =
+                    Modifier
+                        .size(40.dp)
+                        .clip(badgeShape)
+                        .background(accentColor.copy(alpha = 0.15f))
+                        .border(BorderStroke(1.dp, accentColor.copy(alpha = 0.3f)), badgeShape),
+                contentAlignment = Alignment.Center,
             ) {
                 Text("${count}x", color = accentColor, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
             }
@@ -509,7 +635,7 @@ fun GroupedCallItem(call: BlockedCall, count: Int, onTap: () -> Unit, onBlock: (
                     Text(
                         stringResource(if (call.isCall) R.string.blocked_log_call else R.string.blocked_log_sms),
                         style = MaterialTheme.typography.labelSmall,
-                        color = CatSubtext
+                        color = CatSubtext,
                     )
                 }
                 if (call.matchReason.isNotEmpty()) {

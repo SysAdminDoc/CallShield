@@ -263,8 +263,18 @@ class SyncRepository(
         sha: String?,
         syncSource: String,
     ): Pair<Int, Int> {
+        val now = System.currentTimeMillis()
         val preservedUserRows = dao.getUserBlockedNumbersSync()
-        val preservedUserBlocks = preservedUserRows.map { it.number }.toSet()
+        val preservedUserBlocks =
+            preservedUserRows
+                .mapNotNull { row ->
+                    val activeRow = row.activeDecision(now)
+                    if (activeRow?.isUserBlocked == true) {
+                        activeRow.number to activeRow.expiresAt
+                    } else {
+                        null
+                    }
+                }.toMap()
 
         val numbers =
             sanitizeDatabaseNumbers(

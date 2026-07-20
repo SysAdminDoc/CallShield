@@ -2,6 +2,7 @@ package com.sysadmindoc.callshield.data.checker
 
 import com.sysadmindoc.callshield.data.PushAlertRegistry
 import com.sysadmindoc.callshield.data.SpamRepository
+import com.sysadmindoc.callshield.util.filterAsciiDigitsLast
 
 /**
  * Trust-allows an unknown caller when a messaging / delivery / rideshare
@@ -46,8 +47,7 @@ internal class PushAlertChecker : IChecker {
     override val priority = CheckerPriority.PUSH_ALERT_BRIDGE
     override val name = "push_alert"
 
-    override suspend fun isEnabled(ctx: CheckContext): Boolean =
-        ctx.prefs[SpamRepository.KEY_PUSH_ALERT] ?: true
+    override suspend fun isEnabled(ctx: CheckContext): Boolean = ctx.prefs[SpamRepository.KEY_PUSH_ALERT] ?: true
 
     companion object {
         /** Shared TTL for both match paths — 10 minutes. */
@@ -58,21 +58,23 @@ internal class PushAlertChecker : IChecker {
          * that sometimes get followed by a human callback. Verification
          * phrases only fire for these.
          */
-        private val VERIFICATION_SENDERS = setOf(
-            "com.google.android.apps.messaging",
-            "com.samsung.android.messaging",
-            "com.android.mms",
-            "com.microsoft.android.smsorganizer",
-        )
+        private val VERIFICATION_SENDERS =
+            setOf(
+                "com.google.android.apps.messaging",
+                "com.samsung.android.messaging",
+                "com.android.mms",
+                "com.microsoft.android.smsorganizer",
+            )
 
         /**
          * Packages with a meaningful "appointment" / meeting-reminder
          * surface. Everything else (including Outlook mail notifications
          * that happen to contain the word "calendar") is a non-signal.
          */
-        private val CALENDAR_APPS = setOf(
-            "com.google.android.calendar",
-        )
+        private val CALENDAR_APPS =
+            setOf(
+                "com.google.android.calendar",
+            )
 
         /**
          * Gated trust phrase. When [allowedFromPackages] is `null` the
@@ -83,8 +85,7 @@ internal class PushAlertChecker : IChecker {
             val regex: Regex,
             val allowedFromPackages: Set<String>? = null,
         ) {
-            fun appliesTo(pkg: String): Boolean =
-                allowedFromPackages == null || pkg in allowedFromPackages
+            fun appliesTo(pkg: String): Boolean = allowedFromPackages == null || pkg in allowedFromPackages
         }
 
         /**
@@ -92,45 +93,45 @@ internal class PushAlertChecker : IChecker {
          * to ring". Loosened forms that matched too widely in v1.6.0 —
          * bare "outside", bare "calendar" — have been dropped.
          */
-        val TRUST_PHRASES: List<TrustPhrase> = listOf(
-            // Rideshare / delivery — broad, any sender
-            TrustPhrase(Regex("(?i)your driver")),
-            TrustPhrase(Regex("(?i)your (ride|trip) is (arriving|nearby|close)")),
-            TrustPhrase(Regex("(?i)arriving (in |now|soon)")),
-            TrustPhrase(Regex("(?i)(is |has |arriving |i'?m |we'?re )outside")),
-            TrustPhrase(Regex("(?i)your (order|package|delivery|shipment)")),
-            TrustPhrase(Regex("(?i)delivery (driver|partner|courier)")),
-            TrustPhrase(Regex("(?i)out for delivery")),
-            // Verification — only from messaging apps that actually send SMS codes
-            TrustPhrase(
-                Regex("(?i)(verify|verification) (code|pin)"),
-                allowedFromPackages = VERIFICATION_SENDERS,
-            ),
-            TrustPhrase(
-                Regex("(?i)(one-?time|otp) (passcode|password|pin|code)"),
-                allowedFromPackages = VERIFICATION_SENDERS,
-            ),
-            // Appointment reminders — only from calendar apps
-            TrustPhrase(
-                Regex("(?i)appointment reminder"),
-                allowedFromPackages = CALENDAR_APPS,
-            ),
-        )
+        val TRUST_PHRASES: List<TrustPhrase> =
+            listOf(
+                // Rideshare / delivery — broad, any sender
+                TrustPhrase(Regex("(?i)your driver")),
+                TrustPhrase(Regex("(?i)your (ride|trip) is (arriving|nearby|close)")),
+                TrustPhrase(Regex("(?i)arriving (in |now|soon)")),
+                TrustPhrase(Regex("(?i)(is |has |arriving |i'?m |we'?re )outside")),
+                TrustPhrase(Regex("(?i)your (order|package|delivery|shipment)")),
+                TrustPhrase(Regex("(?i)delivery (driver|partner|courier)")),
+                TrustPhrase(Regex("(?i)out for delivery")),
+                // Verification — only from messaging apps that actually send SMS codes
+                TrustPhrase(
+                    Regex("(?i)(verify|verification) (code|pin)"),
+                    allowedFromPackages = VERIFICATION_SENDERS,
+                ),
+                TrustPhrase(
+                    Regex("(?i)(one-?time|otp) (passcode|password|pin|code)"),
+                    allowedFromPackages = VERIFICATION_SENDERS,
+                ),
+                // Appointment reminders — only from calendar apps
+                TrustPhrase(
+                    Regex("(?i)appointment reminder"),
+                    allowedFromPackages = CALENDAR_APPS,
+                ),
+            )
 
         /**
          * Anchor a digit suffix so it only matches a standalone 7-digit
          * run. Lookbehind / lookahead reject adjacent digits — prevents
          * "5551234" from matching inside "15551234567".
          */
-        internal fun anchoredDigitRegex(last7: String): Regex =
-            Regex("(?<!\\d)${Regex.escape(last7)}(?!\\d)")
+        internal fun anchoredDigitRegex(last7: String): Regex = Regex("(?<!\\d)${Regex.escape(last7)}(?!\\d)")
     }
 
     override suspend fun check(ctx: CheckContext): BlockResult? {
         val alerts = PushAlertRegistry.snapshot(ttlMs = TRUST_WINDOW_MS)
         if (alerts.isEmpty()) return null
 
-        val last7 = ctx.number.filter { it.isDigit() }.takeLast(7)
+        val last7 = filterAsciiDigitsLast(ctx.number, 7)
         val digitMatcher = if (last7.length == 7) anchoredDigitRegex(last7) else null
 
         for (alert in alerts) {
@@ -143,9 +144,10 @@ internal class PushAlertChecker : IChecker {
             }
             // Package-gated phrase match — full searchText (title+body).
             // Phrases like "Your driver" legitimately appear in titles.
-            val matched = TRUST_PHRASES.any { phrase ->
-                phrase.appliesTo(alert.packageName) && phrase.regex.containsMatchIn(alert.searchText)
-            }
+            val matched =
+                TRUST_PHRASES.any { phrase ->
+                    phrase.appliesTo(alert.packageName) && phrase.regex.containsMatchIn(alert.searchText)
+                }
             if (matched) {
                 return BlockResult.allow("push_alert")
             }

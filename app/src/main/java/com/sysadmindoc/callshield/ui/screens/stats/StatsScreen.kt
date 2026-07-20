@@ -27,13 +27,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.PhoneFormatter
 import com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup
 import com.sysadmindoc.callshield.data.model.BlockedCall
 import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.theme.*
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.delay
 import java.text.DateFormatSymbols
 import java.text.NumberFormat
@@ -43,7 +43,7 @@ private data class DailyStat(
     val label: String,
     val startMillis: Long,
     val endMillis: Long,
-    val count: Int
+    val count: Int,
 )
 
 @Composable
@@ -57,15 +57,21 @@ fun StatsScreen(viewModel: MainViewModel) {
     val smsOnly = blockedCalls.filter { !it.isCall }
 
     // Type breakdown
-    val typeBreakdown = blockedCalls.groupBy { it.matchReason.ifEmpty { "unknown" } }
-        .mapValues { it.value.size }
-        .entries.sortedByDescending { it.value }
+    val typeBreakdown =
+        blockedCalls
+            .groupBy { it.matchReason.ifEmpty { "unknown" } }
+            .mapValues { it.value.size }
+            .entries
+            .sortedByDescending { it.value }
 
     // Top offenders
-    val topOffenders = blockedCalls.groupBy { it.number }
-        .mapValues { it.value.size }
-        .entries.sortedByDescending { it.value }
-        .take(10)
+    val topOffenders =
+        blockedCalls
+            .groupBy { it.number }
+            .mapValues { it.value.size }
+            .entries
+            .sortedByDescending { it.value }
+            .take(10)
 
     val dayBucket = rememberDayBucket()
 
@@ -77,62 +83,75 @@ fun StatsScreen(viewModel: MainViewModel) {
     val weeklyData = remember(dailyStats) { dailyStats.map { it.count } }
     val maxWeekly = weeklyData.maxOrNull()?.coerceAtLeast(1) ?: 1
     val weeklyTotal = remember(dailyStats) { dailyStats.sumOf { it.count } }
-    val previousWeekTotal = remember(blockedCalls, dailyStats) {
-        previousWeekCount(blockedCalls, dailyStats.firstOrNull()?.startMillis)
-    }
+    val previousWeekTotal =
+        remember(blockedCalls, dailyStats) {
+            previousWeekCount(blockedCalls, dailyStats.firstOrNull()?.startMillis)
+        }
     val weeklyDelta = weeklyTotal - previousWeekTotal
     val busiestDay = remember(dailyStats) { dailyStats.maxByOrNull { it.count } }
 
     // Source breakdown for donut chart
-    val sourceBreakdown = remember(blockedCalls) {
-        blockedCalls.groupBy { it.matchReason.ifEmpty { "unknown" } }
-            .mapValues { it.value.size }
-            .entries.sortedByDescending { it.value }
-            .take(8)
-            .associate { it.key to it.value }
-    }
+    val sourceBreakdown =
+        remember(blockedCalls) {
+            blockedCalls
+                .groupBy { it.matchReason.ifEmpty { "unknown" } }
+                .mapValues { it.value.size }
+                .entries
+                .sortedByDescending { it.value }
+                .take(8)
+                .associate { it.key to it.value }
+        }
 
     // Monthly trend
-    val monthlyTrend = remember(blockedCalls, dayBucket) {
-        val thisMonthStart = Calendar.getInstance().apply {
-            set(Calendar.DAY_OF_MONTH, 1)
-            set(Calendar.HOUR_OF_DAY, 0)
-            set(Calendar.MINUTE, 0)
-            set(Calendar.SECOND, 0)
-            set(Calendar.MILLISECOND, 0)
-        }.timeInMillis
-        val lastMonthStart = Calendar.getInstance().apply {
-            add(Calendar.MONTH, -1)
-            set(Calendar.DAY_OF_MONTH, 1)
-            set(Calendar.HOUR_OF_DAY, 0)
-            set(Calendar.MINUTE, 0)
-            set(Calendar.SECOND, 0)
-            set(Calendar.MILLISECOND, 0)
-        }.timeInMillis
+    val monthlyTrend =
+        remember(blockedCalls, dayBucket) {
+            val thisMonthStart =
+                Calendar
+                    .getInstance()
+                    .apply {
+                        set(Calendar.DAY_OF_MONTH, 1)
+                        set(Calendar.HOUR_OF_DAY, 0)
+                        set(Calendar.MINUTE, 0)
+                        set(Calendar.SECOND, 0)
+                        set(Calendar.MILLISECOND, 0)
+                    }.timeInMillis
+            val lastMonthStart =
+                Calendar
+                    .getInstance()
+                    .apply {
+                        add(Calendar.MONTH, -1)
+                        set(Calendar.DAY_OF_MONTH, 1)
+                        set(Calendar.HOUR_OF_DAY, 0)
+                        set(Calendar.MINUTE, 0)
+                        set(Calendar.SECOND, 0)
+                        set(Calendar.MILLISECOND, 0)
+                    }.timeInMillis
 
-        val thisMonth = blockedCalls.count { it.timestamp >= thisMonthStart }
-        val lastMonth = blockedCalls.count { it.timestamp in lastMonthStart until thisMonthStart }
-        Pair(thisMonth, lastMonth)
-    }
+            val thisMonth = blockedCalls.count { it.timestamp >= thisMonthStart }
+            val lastMonth = blockedCalls.count { it.timestamp in lastMonthStart until thisMonthStart }
+            Pair(thisMonth, lastMonth)
+        }
 
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp)
+        verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
         StatsOverviewCard(
             weeklyTotal = weeklyTotal,
             weeklyDelta = weeklyDelta,
             topSource = typeBreakdown.firstOrNull()?.key,
-            peakHour = blockedCalls.takeIf { it.isNotEmpty() }?.let {
-                val hourCounts = IntArray(24).also { hours ->
-                    blockedCalls.forEach { call ->
-                        val hour = Calendar.getInstance().apply { timeInMillis = call.timestamp }.get(Calendar.HOUR_OF_DAY)
-                        hours[hour]++
-                    }
-                }
-                val peakHourIndex = hourCounts.indices.maxByOrNull { index -> hourCounts[index] } ?: 0
-                if (hourCounts[peakHourIndex] > 0) formatHourRange(peakHourIndex) else null
-            }
+            peakHour =
+                blockedCalls.takeIf { it.isNotEmpty() }?.let {
+                    val hourCounts =
+                        IntArray(24).also { hours ->
+                            blockedCalls.forEach { call ->
+                                val hour = Calendar.getInstance().apply { timeInMillis = call.timestamp }.get(Calendar.HOUR_OF_DAY)
+                                hours[hour]++
+                            }
+                        }
+                    val peakHourIndex = hourCounts.indices.maxByOrNull { index -> hourCounts[index] } ?: 0
+                    if (hourCounts[peakHourIndex] > 0) formatHourRange(peakHourIndex) else null
+                },
         )
 
         // Summary row
@@ -142,297 +161,320 @@ fun StatsScreen(viewModel: MainViewModel) {
             MiniStat(Modifier.weight(1f), stringResource(R.string.stats_db_size), numberFormatter.format(spamCount), CatGreen)
         }
 
-        // Weekly Activity bar chart (Canvas)
-        PremiumCard {
-            Column(modifier = Modifier.padding(18.dp)) {
-                SectionHeader(stringResource(R.string.stats_weekly_activity), CatBlue)
-                Spacer(Modifier.height(12.dp))
-                WeeklyBarChart(dailyCounts = dailyCounts, modifier = Modifier.fillMaxWidth())
-            }
-        }
-
-        // Source Breakdown donut chart
-        if (sourceBreakdown.isNotEmpty()) {
+        if (blockedCalls.isEmpty()) {
+            PremiumStateCard(
+                icon = Icons.Default.BarChart,
+                title = stringResource(R.string.stats_no_data),
+                body = stringResource(R.string.stats_no_data_desc),
+                accentColor = CatBlue,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        } else {
+            // Weekly Activity bar chart (Canvas)
             PremiumCard {
                 Column(modifier = Modifier.padding(18.dp)) {
-                    SectionHeader(stringResource(R.string.stats_source_breakdown), CatGreen)
+                    SectionHeader(stringResource(R.string.stats_weekly_activity), CatBlue)
+                    Spacer(Modifier.height(12.dp))
+                    WeeklyBarChart(dailyCounts = dailyCounts, modifier = Modifier.fillMaxWidth())
+                }
+            }
+
+            // Source Breakdown donut chart
+            if (sourceBreakdown.isNotEmpty()) {
+                PremiumCard {
+                    Column(modifier = Modifier.padding(18.dp)) {
+                        SectionHeader(stringResource(R.string.stats_source_breakdown), CatGreen)
+                        Spacer(Modifier.height(12.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceEvenly,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            SourceDonutChart(
+                                sources = sourceBreakdown,
+                                modifier = Modifier,
+                            )
+                            Spacer(Modifier.width(16.dp))
+                            SourceLegend(
+                                sources = sourceBreakdown,
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Monthly trend
+            PremiumCard {
+                Column(modifier = Modifier.padding(18.dp)) {
+                    SectionHeader(stringResource(R.string.stats_monthly_trend), CatTeal)
                     Spacer(Modifier.height(12.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceEvenly,
-                        verticalAlignment = Alignment.CenterVertically
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        SourceDonutChart(
-                            sources = sourceBreakdown,
-                            modifier = Modifier
-                        )
-                        Spacer(Modifier.width(16.dp))
-                        SourceLegend(
-                            sources = sourceBreakdown,
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                }
-            }
-        }
-
-        // Monthly trend
-        PremiumCard {
-            Column(modifier = Modifier.padding(18.dp)) {
-                SectionHeader(stringResource(R.string.stats_monthly_trend), CatTeal)
-                Spacer(Modifier.height(12.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column {
-                        Text(
-                            stringResource(R.string.stats_this_month),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = CatSubtext
-                        )
-                        Text(
-                            monthlyTrend.first.toString(),
-                            style = MaterialTheme.typography.headlineMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = CatText
-                        )
-                    }
-                    val diff = monthlyTrend.first - monthlyTrend.second
-                    val trendColor = when {
-                        diff > 0 -> CatRed
-                        diff < 0 -> CatGreen
-                        else -> CatSubtext
-                    }
-                    val trendIcon = when {
-                        diff > 0 -> Icons.AutoMirrored.Filled.TrendingUp
-                        diff < 0 -> Icons.AutoMirrored.Filled.TrendingDown
-                        else -> Icons.AutoMirrored.Filled.TrendingFlat
-                    }
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(
-                            trendIcon,
-                            contentDescription = null,
-                            tint = trendColor,
-                            modifier = Modifier.size(28.dp)
-                        )
-                        val trendText = when {
-                            diff > 0 -> stringResource(R.string.stats_trend_up, diff)
-                            diff < 0 -> stringResource(R.string.stats_trend_down, -diff)
-                            else -> stringResource(R.string.stats_trend_same)
+                        Column {
+                            Text(
+                                stringResource(R.string.stats_this_month),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = CatSubtext,
+                            )
+                            Text(
+                                monthlyTrend.first.toString(),
+                                style = MaterialTheme.typography.headlineMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = CatText,
+                            )
                         }
-                        Text(
-                            trendText,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = trendColor
-                        )
-                    }
-                    Column(horizontalAlignment = Alignment.End) {
-                        Text(
-                            stringResource(R.string.stats_last_month),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = CatSubtext
-                        )
-                        Text(
-                            monthlyTrend.second.toString(),
-                            style = MaterialTheme.typography.headlineMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = CatOverlay
-                        )
-                    }
-                }
-            }
-        }
-
-        PremiumCard(accentColor = CatBlue) {
-            Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                SectionHeader(stringResource(R.string.stats_weekly_highlights), CatBlue)
-
-                StatsInsightRow(
-                    title = stringResource(R.string.stats_highlight_weekly_change),
-                    value = when {
-                        weeklyDelta > 0 -> stringResource(R.string.stats_change_up, weeklyDelta)
-                        weeklyDelta < 0 -> stringResource(R.string.stats_change_down, -weeklyDelta)
-                        else -> stringResource(R.string.stats_change_same)
-                    },
-                    color = when {
-                        weeklyDelta > 0 -> CatRed
-                        weeklyDelta < 0 -> CatGreen
-                        else -> CatOverlay
-                    }
-                )
-
-                StatsInsightRow(
-                    title = stringResource(R.string.stats_highlight_busiest_day),
-                    value = busiestDay?.takeIf { it.count > 0 }?.let {
-                        stringResource(R.string.stats_highlight_busiest_value, it.label, it.count)
-                    } ?: stringResource(R.string.stats_insight_waiting),
-                    color = CatBlue
-                )
-
-                val peakHourCount = blockedCalls.groupingBy {
-                    Calendar.getInstance().apply { timeInMillis = it.timestamp }.get(Calendar.HOUR_OF_DAY)
-                }.eachCount()
-                val peakHourEntry = peakHourCount.maxByOrNull { it.value }
-                StatsInsightRow(
-                    title = stringResource(R.string.stats_highlight_peak_window),
-                    value = peakHourEntry?.let {
-                        stringResource(
-                            R.string.stats_highlight_peak_value,
-                            formatHourRange(it.key),
-                            it.value
-                        )
-                    } ?: stringResource(R.string.stats_insight_waiting),
-                    color = CatMauve
-                )
-            }
-        }
-
-        // Type breakdown
-        if (typeBreakdown.isNotEmpty()) {
-            PremiumCard {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    SectionHeader(stringResource(R.string.stats_by_detection_method), CatGreen)
-                    Spacer(Modifier.height(8.dp))
-                    typeBreakdown.take(8).forEach { (type, count) ->
-                        val fraction = count.toFloat() / totalBlocked.coerceAtLeast(1)
-                        val color = when {
-                            "database" in type || "hot_list" in type -> CatGreen
-                            "heuristic" in type || "hot_campaign" in type -> CatBlue
-                            "sms_content" in type || "spam_domain" in type -> CatMauve
-                            "ml_scorer" in type -> CatTeal
-                            "rcs_" in type -> CatLavender
-                            "stir" in type -> CatYellow
-                            "prefix" in type -> CatPeach
-                            "user" in type -> CatRed
-                            "wildcard" in type -> CatYellow
-                            "time" in type -> CatMauve
-                            "frequency" in type -> CatPeach
-                            "keyword" in type -> CatMauve
-                            else -> CatSubtext
-                        }
-                        Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Text(friendlyMatchReasonLabel(type), modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
-                            Text(numberFormatter.format(count), color = color, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall)
-                        }
-                        LinearProgressIndicator(
-                            progress = { fraction },
-                            modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
-                            color = color, trackColor = CatMuted.copy(alpha = 0.2f)
-                        )
-                        Spacer(Modifier.height(4.dp))
-                    }
-                }
-            }
-        }
-
-        // Top offenders
-        if (topOffenders.isNotEmpty()) {
-            PremiumCard {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    SectionHeader(stringResource(R.string.stats_top_offenders), CatRed)
-                    Spacer(Modifier.height(8.dp))
-                    topOffenders.forEachIndexed { i, (number, count) ->
-                        val displayNumber = number.takeIf { it.isNotBlank() }?.let(PhoneFormatter::format)
-                            ?: stringResource(R.string.stats_unknown_caller)
-                        val location = number.takeIf { it.isNotBlank() }?.let(AreaCodeLookup::lookup)
-                            ?: stringResource(R.string.stats_unknown_origin)
-
-                        Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Text("${i + 1}.", color = CatOverlay, modifier = Modifier.width(24.dp), style = MaterialTheme.typography.bodySmall)
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(displayNumber, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodyMedium)
-                                Text(location, color = CatSubtext, style = MaterialTheme.typography.labelSmall)
+                        val diff = monthlyTrend.first - monthlyTrend.second
+                        val trendColor =
+                            when {
+                                diff > 0 -> CatRed
+                                diff < 0 -> CatGreen
+                                else -> CatSubtext
                             }
-                            Text(stringResource(R.string.stats_repeat_hits, count), color = CatRed, fontWeight = FontWeight.Bold)
+                        val trendIcon =
+                            when {
+                                diff > 0 -> Icons.AutoMirrored.Filled.TrendingUp
+                                diff < 0 -> Icons.AutoMirrored.Filled.TrendingDown
+                                else -> Icons.AutoMirrored.Filled.TrendingFlat
+                            }
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                trendIcon,
+                                contentDescription = null,
+                                tint = trendColor,
+                                modifier = Modifier.size(28.dp),
+                            )
+                            val trendText =
+                                when {
+                                    diff > 0 -> stringResource(R.string.stats_trend_up, diff)
+                                    diff < 0 -> stringResource(R.string.stats_trend_down, -diff)
+                                    else -> stringResource(R.string.stats_trend_same)
+                                }
+                            Text(
+                                trendText,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = trendColor,
+                            )
+                        }
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text(
+                                stringResource(R.string.stats_last_month),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = CatSubtext,
+                            )
+                            Text(
+                                monthlyTrend.second.toString(),
+                                style = MaterialTheme.typography.headlineMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = CatOverlay,
+                            )
                         }
                     }
                 }
             }
-        }
 
-        // Area code heatmap
-        val areaCodeCounts = remember(blockedCalls) {
-            blockedCalls.mapNotNull { AreaCodeLookup.getAreaCode(it.number) }
-                .groupBy { it }
-                .mapValues { it.value.size }
-                .entries.sortedByDescending { it.value }
-                .take(15)
-        }
-        if (areaCodeCounts.isNotEmpty()) {
-            PremiumCard(accentColor = CatPeach) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    SectionHeader(stringResource(R.string.stats_spam_by_area_code), CatPeach)
-                    Spacer(Modifier.height(8.dp))
-                    val maxAc = areaCodeCounts.first().value.coerceAtLeast(1)
-                    areaCodeCounts.forEach { (ac, count) ->
-                        val loc = AreaCodeLookup.lookup("+1$ac") ?: ac
-                        val fraction = count.toFloat() / maxAc
-                        Row(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Text(ac, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall, modifier = Modifier.width(36.dp), color = CatPeach)
-                            Text(loc, style = MaterialTheme.typography.labelSmall, color = CatSubtext, modifier = Modifier.width(120.dp))
+            PremiumCard(accentColor = CatBlue) {
+                Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    SectionHeader(stringResource(R.string.stats_weekly_highlights), CatBlue)
+
+                    StatsInsightRow(
+                        title = stringResource(R.string.stats_highlight_weekly_change),
+                        value =
+                            when {
+                                weeklyDelta > 0 -> stringResource(R.string.stats_change_up, weeklyDelta)
+                                weeklyDelta < 0 -> stringResource(R.string.stats_change_down, -weeklyDelta)
+                                else -> stringResource(R.string.stats_change_same)
+                            },
+                        color =
+                            when {
+                                weeklyDelta > 0 -> CatRed
+                                weeklyDelta < 0 -> CatGreen
+                                else -> CatOverlay
+                            },
+                    )
+
+                    StatsInsightRow(
+                        title = stringResource(R.string.stats_highlight_busiest_day),
+                        value =
+                            busiestDay?.takeIf { it.count > 0 }?.let {
+                                stringResource(R.string.stats_highlight_busiest_value, it.label, it.count)
+                            } ?: stringResource(R.string.stats_insight_waiting),
+                        color = CatBlue,
+                    )
+
+                    val peakHourCount =
+                        blockedCalls
+                            .groupingBy {
+                                Calendar.getInstance().apply { timeInMillis = it.timestamp }.get(Calendar.HOUR_OF_DAY)
+                            }.eachCount()
+                    val peakHourEntry = peakHourCount.maxByOrNull { it.value }
+                    StatsInsightRow(
+                        title = stringResource(R.string.stats_highlight_peak_window),
+                        value =
+                            peakHourEntry?.let {
+                                stringResource(
+                                    R.string.stats_highlight_peak_value,
+                                    formatHourRange(it.key),
+                                    it.value,
+                                )
+                            } ?: stringResource(R.string.stats_insight_waiting),
+                        color = CatMauve,
+                    )
+                }
+            }
+
+            // Type breakdown
+            if (typeBreakdown.isNotEmpty()) {
+                PremiumCard {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        SectionHeader(stringResource(R.string.stats_by_detection_method), CatGreen)
+                        Spacer(Modifier.height(8.dp))
+                        typeBreakdown.take(8).forEach { (type, count) ->
+                            val fraction = count.toFloat() / totalBlocked.coerceAtLeast(1)
+                            val color =
+                                when {
+                                    "database" in type || "hot_list" in type -> CatGreen
+                                    "heuristic" in type || "hot_campaign" in type -> CatBlue
+                                    "sms_content" in type || "spam_domain" in type -> CatMauve
+                                    "ml_scorer" in type -> CatTeal
+                                    "rcs_" in type -> CatLavender
+                                    "stir" in type -> CatYellow
+                                    "prefix" in type -> CatPeach
+                                    "user" in type -> CatRed
+                                    "wildcard" in type -> CatYellow
+                                    "time" in type -> CatMauve
+                                    "frequency" in type -> CatPeach
+                                    "keyword" in type -> CatMauve
+                                    else -> CatSubtext
+                                }
+                            Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Text(friendlyMatchReasonLabel(type), modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
+                                Text(numberFormatter.format(count), color = color, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall)
+                            }
                             LinearProgressIndicator(
                                 progress = { fraction },
-                                modifier = Modifier.weight(1f).height(8.dp).clip(RoundedCornerShape(3.dp)),
-                                color = CatPeach, trackColor = CatMuted.copy(alpha = 0.2f)
+                                modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
+                                color = color,
+                                trackColor = CatMuted.copy(alpha = 0.2f),
                             )
-                            Spacer(Modifier.width(8.dp))
-                            Text("$count", style = MaterialTheme.typography.labelSmall, color = CatPeach, fontWeight = FontWeight.Bold)
+                            Spacer(Modifier.height(4.dp))
                         }
                     }
                 }
             }
-        }
 
-        // Time-of-day heatmap
-        if (blockedCalls.size >= 5) {
-            val hourCounts = remember(blockedCalls) {
-                IntArray(24).also { hours ->
-                    blockedCalls.forEach { call ->
-                        val hour = Calendar.getInstance().apply { timeInMillis = call.timestamp }.get(Calendar.HOUR_OF_DAY)
-                        hours[hour]++
-                    }
-                }
-            }
-            val maxHour = hourCounts.max().coerceAtLeast(1)
-            PremiumCard {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    SectionHeader(stringResource(R.string.stats_spam_by_hour), CatMauve)
-                    Text(stringResource(R.string.stats_spam_concentrate), style = MaterialTheme.typography.labelSmall, color = CatOverlay)
-                    Spacer(Modifier.height(8.dp))
-                    Row(modifier = Modifier.fillMaxWidth().height(60.dp), horizontalArrangement = Arrangement.spacedBy(1.dp), verticalAlignment = Alignment.Bottom) {
-                        hourCounts.forEachIndexed { hour, count ->
-                            val fraction = count.toFloat() / maxHour
-                            val barColor = when {
-                                fraction > 0.7f -> CatRed
-                                fraction > 0.4f -> CatPeach
-                                fraction > 0f -> CatBlue.copy(alpha = 0.5f)
-                                else -> CatOverlay.copy(alpha = 0.1f)
+            // Top offenders
+            if (topOffenders.isNotEmpty()) {
+                PremiumCard {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        SectionHeader(stringResource(R.string.stats_top_offenders), CatRed)
+                        Spacer(Modifier.height(8.dp))
+                        topOffenders.forEachIndexed { i, (number, count) ->
+                            val displayNumber =
+                                number.takeIf { it.isNotBlank() }?.let(PhoneFormatter::format)
+                                    ?: stringResource(R.string.stats_unknown_caller)
+                            val location =
+                                number.takeIf { it.isNotBlank() }?.let(AreaCodeLookup::lookup)
+                                    ?: stringResource(R.string.stats_unknown_origin)
+
+                            Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Text("${i + 1}.", color = CatOverlay, modifier = Modifier.width(24.dp), style = MaterialTheme.typography.bodySmall)
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(displayNumber, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodyMedium)
+                                    Text(location, color = CatSubtext, style = MaterialTheme.typography.labelSmall)
+                                }
+                                Text(stringResource(R.string.stats_repeat_hits, count), color = CatRed, fontWeight = FontWeight.Bold)
                             }
-                            Box(
-                                modifier = Modifier.weight(1f).fillMaxHeight(fraction.coerceAtLeast(0.02f)).clip(RoundedCornerShape(topStart = 2.dp, topEnd = 2.dp)).background(barColor)
-                            )
                         }
-                    }
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text(stringResource(R.string.stats_time_12a), style = MaterialTheme.typography.labelSmall, color = CatOverlay)
-                        Text(stringResource(R.string.stats_time_6a), style = MaterialTheme.typography.labelSmall, color = CatOverlay)
-                        Text(stringResource(R.string.stats_time_12p), style = MaterialTheme.typography.labelSmall, color = CatOverlay)
-                        Text(stringResource(R.string.stats_time_6p), style = MaterialTheme.typography.labelSmall, color = CatOverlay)
-                        Text(stringResource(R.string.stats_time_12a), style = MaterialTheme.typography.labelSmall, color = CatOverlay)
                     }
                 }
             }
-        }
 
-        if (blockedCalls.isEmpty()) {
-            Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(Icons.Default.BarChart, contentDescription = stringResource(R.string.cd_bar_chart), tint = CatOverlay, modifier = Modifier.size(64.dp).accentGlow(CatOverlay, 150f, 0.04f))
-                    Spacer(Modifier.height(12.dp))
-                    Text(stringResource(R.string.stats_no_data), color = CatSubtext)
-                    Text(stringResource(R.string.stats_no_data_desc), color = CatOverlay, style = MaterialTheme.typography.bodySmall)
+            // Area code heatmap
+            val areaCodeCounts =
+                remember(blockedCalls) {
+                    blockedCalls
+                        .mapNotNull { AreaCodeLookup.getAreaCode(it.number) }
+                        .groupBy { it }
+                        .mapValues { it.value.size }
+                        .entries
+                        .sortedByDescending { it.value }
+                        .take(15)
+                }
+            if (areaCodeCounts.isNotEmpty()) {
+                PremiumCard(accentColor = CatPeach) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        SectionHeader(stringResource(R.string.stats_spam_by_area_code), CatPeach)
+                        Spacer(Modifier.height(8.dp))
+                        val maxAc = areaCodeCounts.first().value.coerceAtLeast(1)
+                        areaCodeCounts.forEach { (ac, count) ->
+                            val loc = AreaCodeLookup.lookup("+1$ac") ?: ac
+                            val fraction = count.toFloat() / maxAc
+                            Row(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Text(ac, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall, modifier = Modifier.width(36.dp), color = CatPeach)
+                                Text(loc, style = MaterialTheme.typography.labelSmall, color = CatSubtext, modifier = Modifier.width(120.dp))
+                                LinearProgressIndicator(
+                                    progress = { fraction },
+                                    modifier = Modifier.weight(1f).height(8.dp).clip(RoundedCornerShape(3.dp)),
+                                    color = CatPeach,
+                                    trackColor = CatMuted.copy(alpha = 0.2f),
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Text("$count", style = MaterialTheme.typography.labelSmall, color = CatPeach, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Time-of-day heatmap
+            if (blockedCalls.size >= 5) {
+                val hourCounts =
+                    remember(blockedCalls) {
+                        IntArray(24).also { hours ->
+                            blockedCalls.forEach { call ->
+                                val hour = Calendar.getInstance().apply { timeInMillis = call.timestamp }.get(Calendar.HOUR_OF_DAY)
+                                hours[hour]++
+                            }
+                        }
+                    }
+                val maxHour = hourCounts.max().coerceAtLeast(1)
+                PremiumCard {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        SectionHeader(stringResource(R.string.stats_spam_by_hour), CatMauve)
+                        Text(stringResource(R.string.stats_spam_concentrate), style = MaterialTheme.typography.labelSmall, color = CatOverlay)
+                        Spacer(Modifier.height(8.dp))
+                        Row(modifier = Modifier.fillMaxWidth().height(60.dp), horizontalArrangement = Arrangement.spacedBy(1.dp), verticalAlignment = Alignment.Bottom) {
+                            hourCounts.forEachIndexed { hour, count ->
+                                val fraction = count.toFloat() / maxHour
+                                val barColor =
+                                    when {
+                                        fraction > 0.7f -> CatRed
+                                        fraction > 0.4f -> CatPeach
+                                        fraction > 0f -> CatBlue.copy(alpha = 0.5f)
+                                        else -> CatOverlay.copy(alpha = 0.1f)
+                                    }
+                                Box(
+                                    modifier =
+                                        Modifier
+                                            .weight(1f)
+                                            .fillMaxHeight(fraction.coerceAtLeast(0.02f))
+                                            .clip(RoundedCornerShape(topStart = 2.dp, topEnd = 2.dp))
+                                            .background(barColor),
+                                )
+                            }
+                        }
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text(stringResource(R.string.stats_time_12a), style = MaterialTheme.typography.labelSmall, color = CatOverlay)
+                            Text(stringResource(R.string.stats_time_6a), style = MaterialTheme.typography.labelSmall, color = CatOverlay)
+                            Text(stringResource(R.string.stats_time_12p), style = MaterialTheme.typography.labelSmall, color = CatOverlay)
+                            Text(stringResource(R.string.stats_time_6p), style = MaterialTheme.typography.labelSmall, color = CatOverlay)
+                            Text(stringResource(R.string.stats_time_12a), style = MaterialTheme.typography.labelSmall, color = CatOverlay)
+                        }
+                    }
                 }
             }
         }
@@ -444,7 +486,7 @@ private fun StatsOverviewCard(
     weeklyTotal: Int,
     weeklyDelta: Int,
     topSource: String?,
-    peakHour: String?
+    peakHour: String?,
 ) {
     PremiumCard(accentColor = if (weeklyTotal > 0) CatGreen else CatOverlay) {
         Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -452,51 +494,54 @@ private fun StatsOverviewCard(
             Text(
                 stringResource(R.string.stats_overview_subtitle),
                 style = MaterialTheme.typography.bodySmall,
-                color = CatSubtext
+                color = CatSubtext,
             )
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 StatsInsightTile(
                     modifier = Modifier.weight(1f),
                     label = stringResource(R.string.stats_overview_week),
                     value = weeklyTotal.toString(),
-                    color = CatBlue
+                    color = CatBlue,
                 )
                 StatsInsightTile(
                     modifier = Modifier.weight(1f),
                     label = stringResource(R.string.stats_overview_change),
-                    value = when {
-                        weeklyDelta > 0 -> stringResource(R.string.stats_change_up, weeklyDelta)
-                        weeklyDelta < 0 -> stringResource(R.string.stats_change_down, -weeklyDelta)
-                        else -> stringResource(R.string.stats_change_same)
-                    },
-                    color = when {
-                        weeklyDelta > 0 -> CatRed
-                        weeklyDelta < 0 -> CatGreen
-                        else -> CatOverlay
-                    }
+                    value =
+                        when {
+                            weeklyDelta > 0 -> stringResource(R.string.stats_change_up, weeklyDelta)
+                            weeklyDelta < 0 -> stringResource(R.string.stats_change_down, -weeklyDelta)
+                            else -> stringResource(R.string.stats_change_same)
+                        },
+                    color =
+                        when {
+                            weeklyDelta > 0 -> CatRed
+                            weeklyDelta < 0 -> CatGreen
+                            else -> CatOverlay
+                        },
                 )
             }
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 StatsInsightTile(
                     modifier = Modifier.weight(1f),
                     label = stringResource(R.string.stats_overview_top_source),
-                    value = topSource?.let { friendlyMatchReasonLabel(it) }
-                        ?: stringResource(R.string.stats_overview_no_source),
-                    color = CatGreen
+                    value =
+                        topSource?.let { friendlyMatchReasonLabel(it) }
+                            ?: stringResource(R.string.stats_overview_no_source),
+                    color = CatGreen,
                 )
                 StatsInsightTile(
                     modifier = Modifier.weight(1f),
                     label = stringResource(R.string.stats_overview_peak_hour),
                     value = peakHour ?: stringResource(R.string.stats_overview_no_peak),
-                    color = CatMauve
+                    color = CatMauve,
                 )
             }
         }
@@ -508,12 +553,12 @@ private fun StatsInsightTile(
     modifier: Modifier,
     label: String,
     value: String,
-    color: Color
+    color: Color,
 ) {
     Surface(
         modifier = modifier,
         shape = RoundedCornerShape(12.dp),
-        color = color.copy(alpha = 0.08f)
+        color = color.copy(alpha = 0.08f),
     ) {
         Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
             Text(label, style = MaterialTheme.typography.labelSmall, color = CatSubtext)
@@ -522,7 +567,7 @@ private fun StatsInsightTile(
                 value,
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold,
-                color = color
+                color = color,
             )
         }
     }
@@ -532,14 +577,15 @@ private fun StatsInsightTile(
 private fun StatsInsightRow(
     title: String,
     value: String,
-    color: Color
+    color: Color,
 ) {
     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Box(
-            modifier = Modifier
-                .size(10.dp)
-                .clip(CircleShape)
-                .background(color)
+            modifier =
+                Modifier
+                    .size(10.dp)
+                    .clip(CircleShape)
+                    .background(color),
         )
         Spacer(Modifier.width(10.dp))
         Column(modifier = Modifier.weight(1f)) {
@@ -548,7 +594,7 @@ private fun StatsInsightRow(
                 value,
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold,
-                color = CatText
+                color = CatText,
             )
         }
     }
@@ -575,91 +621,113 @@ private fun currentDayBucket(): Int {
 
 private fun millisUntilNextDay(): Long {
     val now = Calendar.getInstance()
-    val nextMidnight = Calendar.getInstance().apply {
-        timeInMillis = now.timeInMillis
-        add(Calendar.DAY_OF_YEAR, 1)
-        set(Calendar.HOUR_OF_DAY, 0)
-        set(Calendar.MINUTE, 0)
-        set(Calendar.SECOND, 0)
-        set(Calendar.MILLISECOND, 0)
-    }
+    val nextMidnight =
+        Calendar.getInstance().apply {
+            timeInMillis = now.timeInMillis
+            add(Calendar.DAY_OF_YEAR, 1)
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
     return (nextMidnight.timeInMillis - now.timeInMillis).coerceAtLeast(60_000L)
 }
 
 private fun buildRecentDailyStats(blockedCalls: List<BlockedCall>): List<DailyStat> {
-    val todayStart = Calendar.getInstance().apply {
-        set(Calendar.HOUR_OF_DAY, 0)
-        set(Calendar.MINUTE, 0)
-        set(Calendar.SECOND, 0)
-        set(Calendar.MILLISECOND, 0)
-    }.timeInMillis
+    val todayStart =
+        Calendar
+            .getInstance()
+            .apply {
+                set(Calendar.HOUR_OF_DAY, 0)
+                set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+            }.timeInMillis
 
     return (6 downTo 0).map { daysAgo ->
-        val dayStart = Calendar.getInstance().apply {
-            timeInMillis = todayStart
-            add(Calendar.DAY_OF_YEAR, -daysAgo)
-        }.timeInMillis
-        val dayEnd = Calendar.getInstance().apply {
-            timeInMillis = dayStart
-            add(Calendar.DAY_OF_YEAR, 1)
-        }.timeInMillis
-        val label = Calendar.getInstance().apply {
-            timeInMillis = dayStart
-        }.let { calendar ->
-            DateFormatSymbols.getInstance()
-                .shortWeekdays[calendar.get(Calendar.DAY_OF_WEEK)]
-                .ifBlank { calendar.get(Calendar.DAY_OF_WEEK).toString() }
-        }
+        val dayStart =
+            Calendar
+                .getInstance()
+                .apply {
+                    timeInMillis = todayStart
+                    add(Calendar.DAY_OF_YEAR, -daysAgo)
+                }.timeInMillis
+        val dayEnd =
+            Calendar
+                .getInstance()
+                .apply {
+                    timeInMillis = dayStart
+                    add(Calendar.DAY_OF_YEAR, 1)
+                }.timeInMillis
+        val label =
+            Calendar
+                .getInstance()
+                .apply {
+                    timeInMillis = dayStart
+                }.let { calendar ->
+                    DateFormatSymbols
+                        .getInstance()
+                        .shortWeekdays[calendar.get(Calendar.DAY_OF_WEEK)]
+                        .ifBlank { calendar.get(Calendar.DAY_OF_WEEK).toString() }
+                }
 
         DailyStat(
             label = label,
             startMillis = dayStart,
             endMillis = dayEnd,
-            count = blockedCalls.count { it.timestamp in dayStart until dayEnd }
+            count = blockedCalls.count { it.timestamp in dayStart until dayEnd },
         )
     }
 }
 
-private fun previousWeekCount(blockedCalls: List<BlockedCall>, currentWeekStart: Long?): Int {
+private fun previousWeekCount(
+    blockedCalls: List<BlockedCall>,
+    currentWeekStart: Long?,
+): Int {
     currentWeekStart ?: return 0
 
-    val previousWeekStart = Calendar.getInstance().apply {
-        timeInMillis = currentWeekStart
-        add(Calendar.DAY_OF_YEAR, -7)
-    }.timeInMillis
+    val previousWeekStart =
+        Calendar
+            .getInstance()
+            .apply {
+                timeInMillis = currentWeekStart
+                add(Calendar.DAY_OF_YEAR, -7)
+            }.timeInMillis
 
     return blockedCalls.count { it.timestamp in previousWeekStart until currentWeekStart }
 }
 
 @Composable
-private fun friendlyMatchReasonLabel(reason: String): String = when {
-    reason.contains("database", ignoreCase = true) -> stringResource(R.string.stats_reason_spam_database)
-    reason.contains("hot_list", ignoreCase = true) -> stringResource(R.string.stats_reason_hot_list)
-    reason.contains("hot_campaign", ignoreCase = true) -> stringResource(R.string.stats_reason_live_campaign)
-    reason.contains("heuristic", ignoreCase = true) -> stringResource(R.string.stats_reason_heuristic)
-    reason.contains("sms_content", ignoreCase = true) -> stringResource(R.string.stats_reason_sms_content)
-    reason.contains("spam_domain", ignoreCase = true) -> stringResource(R.string.stats_reason_spam_domain)
-    reason.contains("ml_scorer", ignoreCase = true) -> stringResource(R.string.stats_reason_ml_scorer)
-    reason.contains("rcs_", ignoreCase = true) -> stringResource(R.string.stats_reason_rcs_filter)
-    reason.contains("stir", ignoreCase = true) -> stringResource(R.string.stats_reason_stir_shaken)
-    reason.contains("prefix", ignoreCase = true) -> stringResource(R.string.stats_reason_prefix_match)
-    reason.contains("wildcard", ignoreCase = true) -> stringResource(R.string.stats_reason_wildcard_rule)
-    reason.contains("keyword", ignoreCase = true) -> stringResource(R.string.stats_reason_keyword_rule)
-    reason.contains("frequency", ignoreCase = true) -> stringResource(R.string.stats_reason_repeat_caller)
-    reason.contains("time", ignoreCase = true) -> stringResource(R.string.stats_reason_quiet_hours)
-    reason.contains("user", ignoreCase = true) -> stringResource(R.string.stats_reason_manual_block)
-    reason.isBlank() || reason == "unknown" -> stringResource(R.string.stats_reason_unknown)
-    else -> reason.replace("_", " ").replaceFirstChar { it.uppercase() }
-}
+private fun friendlyMatchReasonLabel(reason: String): String =
+    when {
+        reason.contains("database", ignoreCase = true) -> stringResource(R.string.stats_reason_spam_database)
+        reason.contains("hot_list", ignoreCase = true) -> stringResource(R.string.stats_reason_hot_list)
+        reason.contains("hot_campaign", ignoreCase = true) -> stringResource(R.string.stats_reason_live_campaign)
+        reason.contains("heuristic", ignoreCase = true) -> stringResource(R.string.stats_reason_heuristic)
+        reason.contains("sms_content", ignoreCase = true) -> stringResource(R.string.stats_reason_sms_content)
+        reason.contains("spam_domain", ignoreCase = true) -> stringResource(R.string.stats_reason_spam_domain)
+        reason.contains("ml_scorer", ignoreCase = true) -> stringResource(R.string.stats_reason_ml_scorer)
+        reason.contains("rcs_", ignoreCase = true) -> stringResource(R.string.stats_reason_rcs_filter)
+        reason.contains("stir", ignoreCase = true) -> stringResource(R.string.stats_reason_stir_shaken)
+        reason.contains("prefix", ignoreCase = true) -> stringResource(R.string.stats_reason_prefix_match)
+        reason.contains("wildcard", ignoreCase = true) -> stringResource(R.string.stats_reason_wildcard_rule)
+        reason.contains("keyword", ignoreCase = true) -> stringResource(R.string.stats_reason_keyword_rule)
+        reason.contains("frequency", ignoreCase = true) -> stringResource(R.string.stats_reason_repeat_caller)
+        reason.contains("time", ignoreCase = true) -> stringResource(R.string.stats_reason_quiet_hours)
+        reason.contains("user", ignoreCase = true) -> stringResource(R.string.stats_reason_manual_block)
+        reason.isBlank() || reason == "unknown" -> stringResource(R.string.stats_reason_unknown)
+        else -> reason.replace("_", " ").replaceFirstChar { it.uppercase() }
+    }
 
 private fun formatHourRange(hour: Int): String {
     fun formatSingleHour(value: Int): String {
         val normalized = value % 24
         val suffix = if (normalized < 12) "AM" else "PM"
-        val displayHour = when (normalized % 12) {
-            0 -> 12
-            else -> normalized % 12
-        }
+        val displayHour =
+            when (normalized % 12) {
+                0 -> 12
+                else -> normalized % 12
+            }
         return "$displayHour $suffix"
     }
 
@@ -668,7 +736,10 @@ private fun formatHourRange(hour: Int): String {
 
 // ─── Weekly Bar Chart (Canvas) ──────────────────────────────────────
 @Composable
-fun WeeklyBarChart(dailyCounts: List<Pair<String, Int>>, modifier: Modifier = Modifier) {
+fun WeeklyBarChart(
+    dailyCounts: List<Pair<String, Int>>,
+    modifier: Modifier = Modifier,
+) {
     val maxCount = dailyCounts.maxOfOrNull { it.second }?.coerceAtLeast(1) ?: 1
 
     androidx.compose.foundation.Canvas(modifier = modifier.fillMaxWidth().height(160.dp)) {
@@ -684,7 +755,7 @@ fun WeeklyBarChart(dailyCounts: List<Pair<String, Int>>, modifier: Modifier = Mo
                 color = CatGreen,
                 topLeft = Offset(x, size.height - 30.dp.toPx() - barHeight),
                 size = Size(barWidth, barHeight),
-                cornerRadius = CornerRadius(4.dp.toPx())
+                cornerRadius = CornerRadius(4.dp.toPx()),
             )
         }
     }
@@ -701,7 +772,10 @@ fun WeeklyBarChart(dailyCounts: List<Pair<String, Int>>, modifier: Modifier = Mo
 
 // ─── Source Donut Chart (Canvas) ────────────────────────────────────
 @Composable
-fun SourceDonutChart(sources: Map<String, Int>, modifier: Modifier = Modifier) {
+fun SourceDonutChart(
+    sources: Map<String, Int>,
+    modifier: Modifier = Modifier,
+) {
     val total = sources.values.sum().coerceAtLeast(1)
     val colors = listOf(CatGreen, CatBlue, CatMauve, CatPeach, CatRed, CatYellow, CatTeal, CatLavender)
 
@@ -717,7 +791,7 @@ fun SourceDonutChart(sources: Map<String, Int>, modifier: Modifier = Modifier) {
                     useCenter = false,
                     style = Stroke(width = 24.dp.toPx(), cap = StrokeCap.Butt),
                     topLeft = Offset(12.dp.toPx(), 12.dp.toPx()),
-                    size = Size(size.width - 24.dp.toPx(), size.height - 24.dp.toPx())
+                    size = Size(size.width - 24.dp.toPx(), size.height - 24.dp.toPx()),
                 )
                 startAngle += sweep
             }
@@ -727,12 +801,12 @@ fun SourceDonutChart(sources: Map<String, Int>, modifier: Modifier = Modifier) {
                 total.toString(),
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
-                color = CatText
+                color = CatText,
             )
             Text(
                 stringResource(R.string.stats_donut_total),
                 style = MaterialTheme.typography.labelSmall,
-                color = CatSubtext
+                color = CatSubtext,
             )
         }
     }
@@ -740,7 +814,10 @@ fun SourceDonutChart(sources: Map<String, Int>, modifier: Modifier = Modifier) {
 
 // ─── Source Legend ──────────────────────────────────────────────────
 @Composable
-fun SourceLegend(sources: Map<String, Int>, modifier: Modifier = Modifier) {
+fun SourceLegend(
+    sources: Map<String, Int>,
+    modifier: Modifier = Modifier,
+) {
     val total = sources.values.sum().coerceAtLeast(1)
     val colors = listOf(CatGreen, CatBlue, CatMauve, CatPeach, CatRed, CatYellow, CatTeal, CatLavender)
 
@@ -749,22 +826,23 @@ fun SourceLegend(sources: Map<String, Int>, modifier: Modifier = Modifier) {
             val pct = (count * 100f / total).toInt()
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
-                    modifier = Modifier
-                        .size(10.dp)
-                        .background(colors[index % colors.size], CircleShape)
+                    modifier =
+                        Modifier
+                            .size(10.dp)
+                            .background(colors[index % colors.size], CircleShape),
                 )
                 Spacer(Modifier.width(8.dp))
                 Text(
                     friendlyMatchReasonLabel(source),
                     style = MaterialTheme.typography.labelSmall,
                     color = CatSubtext,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
                 )
                 Text(
                     stringResource(R.string.stats_source_count_percent, count, pct),
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Bold,
-                    color = colors[index % colors.size]
+                    color = colors[index % colors.size],
                 )
             }
         }
@@ -772,14 +850,19 @@ fun SourceLegend(sources: Map<String, Int>, modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun MiniStat(modifier: Modifier, label: String, value: String, color: Color) {
+fun MiniStat(
+    modifier: Modifier,
+    label: String,
+    value: String,
+    color: Color,
+) {
     PremiumCard(modifier = modifier, accentColor = color, cornerRadius = 12.dp) {
         Column(modifier = Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Text(value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = color)
             Text(
                 label.uppercase(),
                 style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 0.sp),
-                color = CatSubtext
+                color = CatSubtext,
             )
         }
     }

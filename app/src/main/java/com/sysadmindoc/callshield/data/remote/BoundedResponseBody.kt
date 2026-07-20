@@ -10,9 +10,16 @@ import java.nio.charset.StandardCharsets
 private const val READ_CHUNK_BYTES = 8_192L
 
 internal sealed interface BoundedResponseBody {
-    data class Text(val value: String) : BoundedResponseBody
+    data class Text(
+        val value: String,
+    ) : BoundedResponseBody
+
     data object Empty : BoundedResponseBody
-    data class Oversized(val maxBytes: Long) : BoundedResponseBody
+
+    data class Oversized(
+        val maxBytes: Long,
+    ) : BoundedResponseBody
+
     data object Unreadable : BoundedResponseBody
 }
 
@@ -46,15 +53,27 @@ private fun ResponseBody.readUtf8BoundedSource(maxBytes: Long): BoundedResponseB
 private data class BodyReadState(
     val maxBytes: Long,
     val buffer: Buffer = Buffer(),
-    var totalBytes: Long = 0L
+    var totalBytes: Long = 0L,
 ) {
-    fun readNext(source: BufferedSource, charset: Charset?): BoundedResponseBody? {
+    fun readNext(
+        source: BufferedSource,
+        charset: Charset?,
+    ): BoundedResponseBody? {
         val nextLimit = minOf(READ_CHUNK_BYTES, maxBytes + 1 - totalBytes)
         val read = if (nextLimit > 0L) source.read(buffer, nextLimit) else 0L
         return when {
-            nextLimit <= 0L -> BoundedResponseBody.Oversized(maxBytes)
-            read == -1L -> buffer.toBoundedText(charset)
-            totalBytes + read > maxBytes -> BoundedResponseBody.Oversized(maxBytes)
+            nextLimit <= 0L -> {
+                BoundedResponseBody.Oversized(maxBytes)
+            }
+
+            read == -1L -> {
+                buffer.toBoundedText(charset)
+            }
+
+            totalBytes + read > maxBytes -> {
+                BoundedResponseBody.Oversized(maxBytes)
+            }
+
             else -> {
                 totalBytes += read
                 null
@@ -70,9 +89,10 @@ private fun Buffer.toBoundedText(charset: Charset?): BoundedResponseBody =
         BoundedResponseBody.Text(readString(charset ?: StandardCharsets.UTF_8))
     }
 
-internal fun BoundedResponseBody.status(): RemoteLookupStatus = when (this) {
-    is BoundedResponseBody.Text -> RemoteLookupStatus.FOUND
-    BoundedResponseBody.Empty -> RemoteLookupStatus.EMPTY_BODY
-    is BoundedResponseBody.Oversized -> RemoteLookupStatus.BODY_TOO_LARGE
-    BoundedResponseBody.Unreadable -> RemoteLookupStatus.UNREADABLE_BODY
-}
+internal fun BoundedResponseBody.status(): RemoteLookupStatus =
+    when (this) {
+        is BoundedResponseBody.Text -> RemoteLookupStatus.FOUND
+        BoundedResponseBody.Empty -> RemoteLookupStatus.EMPTY_BODY
+        is BoundedResponseBody.Oversized -> RemoteLookupStatus.BODY_TOO_LARGE
+        BoundedResponseBody.Unreadable -> RemoteLookupStatus.UNREADABLE_BODY
+    }

@@ -23,7 +23,6 @@ import org.junit.runner.RunWith
  */
 @RunWith(AndroidJUnit4::class)
 class CrashReporterInstrumentedTest {
-
     private val ctx get() = ApplicationProvider.getApplicationContext<android.content.Context>()
 
     @After
@@ -80,14 +79,15 @@ class CrashReporterInstrumentedTest {
         val dir = java.io.File(ctx.filesDir, "crashes")
         assertFalse(
             "no crash_*.txt files should remain",
-            dir.exists() && dir.listFiles()?.any { it.name.startsWith("crash_") } == true
+            dir.exists() && dir.listFiles()?.any { it.name.startsWith("crash_") } == true,
         )
     }
 
     private fun invokePersist(t: Throwable) {
-        val method = CrashReporter::class.java
-            .getDeclaredMethod("persistCrash", android.content.Context::class.java, Thread::class.java, Throwable::class.java)
-            .apply { isAccessible = true }
+        val method =
+            CrashReporter::class.java
+                .getDeclaredMethod("persistCrash", android.content.Context::class.java, Thread::class.java, Throwable::class.java)
+                .apply { isAccessible = true }
         method.invoke(CrashReporter, ctx, Thread.currentThread(), t)
     }
 }

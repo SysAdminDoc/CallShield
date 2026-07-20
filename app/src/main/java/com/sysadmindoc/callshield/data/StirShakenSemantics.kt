@@ -13,7 +13,7 @@ object StirShakenSemantics {
 
     fun forAndroidVerificationStatus(status: Int): StirShakenDisplay? =
         when (status) {
-            VERIFICATION_STATUS_PASSED ->
+            VERIFICATION_STATUS_PASSED -> {
                 StirShakenDisplay(
                     headline = "Carrier caller ID authentication passed.",
                     bullets =
@@ -23,8 +23,9 @@ object StirShakenSemantics {
                             "Explicit user and system block rules stay ahead of this signal.",
                         ),
                 )
+            }
 
-            VERIFICATION_STATUS_FAILED ->
+            VERIFICATION_STATUS_FAILED -> {
                 StirShakenDisplay(
                     headline = "Carrier caller ID authentication failed.",
                     bullets =
@@ -33,8 +34,9 @@ object StirShakenSemantics {
                             "This usually means the displayed number may have been spoofed.",
                         ),
                 )
+            }
 
-            VERIFICATION_STATUS_NOT_VERIFIED ->
+            VERIFICATION_STATUS_NOT_VERIFIED -> {
                 StirShakenDisplay(
                     headline = "Carrier caller ID authentication was not available.",
                     bullets =
@@ -43,13 +45,16 @@ object StirShakenSemantics {
                             "CallShield keeps evaluating the normal local rules.",
                         ),
                 )
+            }
 
-            else -> null
+            else -> {
+                null
+            }
         }
 
     fun forPassportAttestation(attestation: String?): StirShakenDisplay =
         when (attestation?.trim()?.uppercase()) {
-            "A" ->
+            "A" -> {
                 StirShakenDisplay(
                     headline = "Carrier attestation A: caller and number were authenticated.",
                     bullets =
@@ -59,8 +64,9 @@ object StirShakenSemantics {
                             "Explicit user and system block rules stay ahead of this signal.",
                         ),
                 )
+            }
 
-            "B" ->
+            "B" -> {
                 StirShakenDisplay(
                     headline = "Carrier attestation B: caller was authenticated, number use was not fully confirmed.",
                     bullets =
@@ -70,8 +76,9 @@ object StirShakenSemantics {
                             "Explicit user and system block rules stay ahead of this signal.",
                         ),
                 )
+            }
 
-            "C" ->
+            "C" -> {
                 StirShakenDisplay(
                     headline = "Carrier attestation C: only the network gateway was authenticated.",
                     bullets =
@@ -81,8 +88,9 @@ object StirShakenSemantics {
                             "Explicit user and system block rules stay ahead of this signal.",
                         ),
                 )
+            }
 
-            else ->
+            else -> {
                 StirShakenDisplay(
                     headline = "Carrier attestation unavailable.",
                     bullets =
@@ -91,6 +99,7 @@ object StirShakenSemantics {
                             "CallShield keeps evaluating the normal local rules.",
                         ),
                 )
+            }
         }
 }
 

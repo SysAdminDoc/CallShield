@@ -1,14 +1,13 @@
 package com.sysadmindoc.callshield.data
 
-import org.junit.Assert.*
 import org.junit.After
+import org.junit.Assert.*
 import org.junit.Test
 
 /**
  * Unit tests for SmsContentAnalyzer — SMS spam content analysis.
  */
 class SmsContentAnalyzerTest {
-
     @After
     fun tearDown() {
         SmsContentAnalyzer.updateSpamDomains(emptyList())
@@ -50,7 +49,7 @@ class SmsContentAnalyzerTest {
         val elapsedMs = (System.nanoTime() - start) / 1_000_000
         assertTrue(
             "analysis took too long: ${elapsedMs}ms — regex DoS guard regressed",
-            elapsedMs < 3_000
+            elapsedMs < 3_000,
         )
         assertTrue("oversized_body reason should be reported", "oversized_body" in result.reasons)
     }
@@ -87,7 +86,8 @@ class SmsContentAnalyzerTest {
 
     @Test
     fun `long message with URL does not trigger short_msg_with_url`() {
-        val longMsg = "This is a longer message that contains a lot of regular text and information. " +
+        val longMsg =
+            "This is a longer message that contains a lot of regular text and information. " +
                 "Visit https://example.com for more details about the event."
         val result = SmsContentAnalyzer.analyze(longMsg)
         assertFalse(result.reasons.contains("short_msg_with_url"))

@@ -11,7 +11,6 @@ import org.junit.Test
  * the `+1` form would quietly miss SMS senders arriving as bare digits.
  */
 class WildcardRuleTest {
-
     // ── Glob path (unchanged) ───────────────────────────────────────
 
     @Test fun `glob matches exact E164 number`() {
@@ -133,7 +132,10 @@ class WildcardRuleTest {
         assertFalse(wildcard(pattern = "   ", isRegex = true).matches("5551234"))
     }
 
-    private fun wildcard(pattern: String, isRegex: Boolean): WildcardRule =
+    private fun wildcard(
+        pattern: String,
+        isRegex: Boolean,
+    ): WildcardRule =
         WildcardRule(
             pattern = pattern,
             isRegex = isRegex,

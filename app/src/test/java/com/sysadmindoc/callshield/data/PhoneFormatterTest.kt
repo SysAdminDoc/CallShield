@@ -7,7 +7,6 @@ import org.junit.Test
  * Unit tests for PhoneFormatter — phone number display formatting.
  */
 class PhoneFormatterTest {
-
     // ── format(): US 10-digit numbers ────────────────────────────────────
 
     @Test

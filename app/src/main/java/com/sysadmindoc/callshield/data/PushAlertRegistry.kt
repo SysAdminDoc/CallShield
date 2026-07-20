@@ -29,40 +29,40 @@ import java.util.ArrayDeque
  *   thread writes, the call-screening coroutine reads.
  */
 object PushAlertRegistry {
-
     /**
      * Default allowlist of packages whose notifications carry
      * trust-building context about an unknown caller. User-editable in a
      * future settings screen; for now a sensible default covers the
      * 80/20 case.
      */
-    val ALERT_SOURCE_PACKAGES = setOf(
-        // Rideshare
-        "com.ubercab",
-        "com.ubercab.driver",
-        "com.lyft.android",
-        // Delivery
-        "com.dd.doordash",
-        "com.grubhub.android",
-        "com.ubercab.eats",
-        "com.instacart.client",
-        "com.amazon.mShop.android.shopping",
-        "com.amazon.logistics.driver",
-        "com.fedex.ida.android",
-        "com.ups.mobile.android",
-        // USPS Informed Delivery
-        "gov.usps.mobile",
-        // Messaging bridges — a verification text from Google/Apple can precede the call
-        "com.google.android.apps.messaging",
-        "com.samsung.android.messaging",
-        "com.android.mms",
-        // Generic business (calendar alerts often precede an expected call)
-        "com.google.android.calendar",
-        "com.microsoft.office.outlook",
-    )
+    val ALERT_SOURCE_PACKAGES =
+        setOf(
+            // Rideshare
+            "com.ubercab",
+            "com.ubercab.driver",
+            "com.lyft.android",
+            // Delivery
+            "com.dd.doordash",
+            "com.grubhub.android",
+            "com.ubercab.eats",
+            "com.instacart.client",
+            "com.amazon.mShop.android.shopping",
+            "com.amazon.logistics.driver",
+            "com.fedex.ida.android",
+            "com.ups.mobile.android",
+            // USPS Informed Delivery
+            "gov.usps.mobile",
+            // Messaging bridges — a verification text from Google/Apple can precede the call
+            "com.google.android.apps.messaging",
+            "com.samsung.android.messaging",
+            "com.android.mms",
+            // Generic business (calendar alerts often precede an expected call)
+            "com.google.android.calendar",
+            "com.microsoft.office.outlook",
+        )
 
     /** Default TTL — how long a notification stays relevant. */
-    const val DEFAULT_TTL_MS = 30L * 60L * 1000L   // 30 minutes
+    const val DEFAULT_TTL_MS = 30L * 60L * 1000L // 30 minutes
 
     private const val MAX_ENTRIES = 128
 
@@ -112,8 +112,7 @@ object PushAlertRegistry {
      * turned it off. The check runs on the notification-listener thread,
      * so it avoids allocation and is a hash-set-contains pair.
      */
-    fun isAllowedSource(pkg: String): Boolean =
-        pkg in ALERT_SOURCE_PACKAGES && pkg !in disabledPackages
+    fun isAllowedSource(pkg: String): Boolean = pkg in ALERT_SOURCE_PACKAGES && pkg !in disabledPackages
 
     /**
      * Drop cached alerts that originated from any of [packages]. Called
@@ -158,7 +157,9 @@ object PushAlertRegistry {
                 recent.title == alert.title &&
                 recent.body == alert.body &&
                 alert.timestamp - recent.timestamp < 5_000
-            ) return
+            ) {
+                return
+            }
 
             while (buffer.size >= MAX_ENTRIES) {
                 buffer.pollFirst()
@@ -171,7 +172,10 @@ object PushAlertRegistry {
      * Return a defensive copy of all alerts newer than [olderThanTtlMs]
      * ago. The checker iterates this snapshot without holding the lock.
      */
-    fun snapshot(nowMillis: Long = System.currentTimeMillis(), ttlMs: Long = DEFAULT_TTL_MS): List<Alert> {
+    fun snapshot(
+        nowMillis: Long = System.currentTimeMillis(),
+        ttlMs: Long = DEFAULT_TTL_MS,
+    ): List<Alert> {
         val cutoff = nowMillis - ttlMs
         // Iterate newest-first so the checker sees the most recent match
         // quickly. Copy to a Kotlin List before reversing; java.util.Deque

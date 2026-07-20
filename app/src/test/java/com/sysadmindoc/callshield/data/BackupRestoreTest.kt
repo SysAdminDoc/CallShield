@@ -1,14 +1,14 @@
 package com.sysadmindoc.callshield.data
 
 import com.sysadmindoc.callshield.data.BackupRestore.Backup
-import com.sysadmindoc.callshield.data.BackupRestore.BackupNumber
-import com.sysadmindoc.callshield.data.BackupRestore.BackupWhitelist
-import com.sysadmindoc.callshield.data.BackupRestore.BackupWildcard
 import com.sysadmindoc.callshield.data.BackupRestore.BackupKeyword
 import com.sysadmindoc.callshield.data.BackupRestore.BackupLogEntry
+import com.sysadmindoc.callshield.data.BackupRestore.BackupNumber
 import com.sysadmindoc.callshield.data.BackupRestore.BackupRangeRule
 import com.sysadmindoc.callshield.data.BackupRestore.BackupSection
 import com.sysadmindoc.callshield.data.BackupRestore.BackupSettings
+import com.sysadmindoc.callshield.data.BackupRestore.BackupWhitelist
+import com.sysadmindoc.callshield.data.BackupRestore.BackupWildcard
 import com.sysadmindoc.callshield.data.BackupRestore.RestoreResult
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse

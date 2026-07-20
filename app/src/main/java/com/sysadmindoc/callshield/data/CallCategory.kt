@@ -16,33 +16,41 @@ import com.sysadmindoc.callshield.domain.model.SpamCheckResult
  * [Unknown]. Mislabeling a bank as Scam destroys trust faster than a
  * missing label does.
  */
-enum class CallCategory(val stringResId: Int, val emoji: String) {
-    DebtCollector(com.sysadmindoc.callshield.R.string.call_category_debt_collector, "\uD83D\uDCB3"),   // 💳
-    Political(com.sysadmindoc.callshield.R.string.call_category_political, "\uD83D\uDDF3"),            // 🗳
-    Robocall(com.sysadmindoc.callshield.R.string.call_category_robocall, "\uD83E\uDD16"),              // 🤖
-    Scam(com.sysadmindoc.callshield.R.string.call_category_scam, "\u26A0\uFE0F"),                      // ⚠
-    Phishing(com.sysadmindoc.callshield.R.string.call_category_phishing, "\uD83C\uDFA3"),              // 🎣
-    Telemarketer(com.sysadmindoc.callshield.R.string.call_category_telemarketer, "\uD83D\uDCE2"),      // 📢
-    Wangiri(com.sysadmindoc.callshield.R.string.call_category_wangiri, "\uD83C\uDF0D"),                // 🌍
-    Survey(com.sysadmindoc.callshield.R.string.call_category_survey, "\uD83D\uDCCB"),                  // 📋
-    Business(com.sysadmindoc.callshield.R.string.call_category_business, "\uD83C\uDFE2"),              // 🏢
-    Unknown(com.sysadmindoc.callshield.R.string.call_category_unknown, "\u2753"),                      // ❓
+enum class CallCategory(
+    val stringResId: Int,
+    val emoji: String,
+) {
+    DebtCollector(com.sysadmindoc.callshield.R.string.call_category_debt_collector, "\uD83D\uDCB3"), // 💳
+    Political(com.sysadmindoc.callshield.R.string.call_category_political, "\uD83D\uDDF3"), // 🗳
+    Robocall(com.sysadmindoc.callshield.R.string.call_category_robocall, "\uD83E\uDD16"), // 🤖
+    Scam(com.sysadmindoc.callshield.R.string.call_category_scam, "\u26A0\uFE0F"), // ⚠
+    Phishing(com.sysadmindoc.callshield.R.string.call_category_phishing, "\uD83C\uDFA3"), // 🎣
+    Telemarketer(com.sysadmindoc.callshield.R.string.call_category_telemarketer, "\uD83D\uDCE2"), // 📢
+    Wangiri(com.sysadmindoc.callshield.R.string.call_category_wangiri, "\uD83C\uDF0D"), // 🌍
+    Survey(com.sysadmindoc.callshield.R.string.call_category_survey, "\uD83D\uDCCB"), // 📋
+    Business(com.sysadmindoc.callshield.R.string.call_category_business, "\uD83C\uDFE2"), // 🏢
+    Unknown(com.sysadmindoc.callshield.R.string.call_category_unknown, "\u2753"), // ❓
 }
 
 object CallCategoryResolver {
-
     /** Convenience overload for callers holding a persisted `BlockedCall`
      *  (which doesn't carry a SpamCheckResult type field but does carry
      *  matchReason, description, and confidence). */
-    fun resolveFromLog(matchReason: String, type: String, description: String, confidence: Int): CallCategory {
+    fun resolveFromLog(
+        matchReason: String,
+        type: String,
+        description: String,
+        confidence: Int,
+    ): CallCategory {
         if (matchReason.isBlank()) return CallCategory.Unknown
-        val synthetic = SpamCheckResult(
-            isSpam = true,
-            matchSource = matchReason,
-            type = type,
-            description = description,
-            confidence = confidence,
-        )
+        val synthetic =
+            SpamCheckResult(
+                isSpam = true,
+                matchSource = matchReason,
+                type = type,
+                description = description,
+                confidence = confidence,
+            )
         return resolve(synthetic)
     }
 

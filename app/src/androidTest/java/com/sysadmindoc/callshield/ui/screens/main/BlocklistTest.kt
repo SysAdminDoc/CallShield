@@ -17,7 +17,6 @@ import org.junit.Rule
 import org.junit.Test
 
 class BlocklistTest {
-
     @get:Rule
     val composeRule = createComposeRule()
 
@@ -97,12 +96,13 @@ class BlocklistTest {
         }
     }
 
-    private fun manualSpamNumber(): SpamNumber = SpamNumber(
-        id = 1,
-        number = "+12125550101",
-        type = "spam",
-        description = "Manual block",
-        source = "user",
-        isUserBlocked = true,
-    )
+    private fun manualSpamNumber(): SpamNumber =
+        SpamNumber(
+            id = 1,
+            number = "+12125550101",
+            type = "spam",
+            description = "Manual block",
+            source = "user",
+            isUserBlocked = true,
+        )
 }

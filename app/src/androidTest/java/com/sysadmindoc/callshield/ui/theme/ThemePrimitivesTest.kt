@@ -25,7 +25,6 @@ import org.junit.Test
  * androidTest and run on an emulator via the CI workflow.
  */
 class ThemePrimitivesTest {
-
     @get:Rule
     val composeRule = createComposeRule()
 
@@ -63,9 +62,10 @@ class ThemePrimitivesTest {
         // on an empty box (the radius/alpha math has been a regression hotspot).
         composeRule.setContent {
             Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .accentGlow(Color.Red, radius = 200f, alpha = 0.08f)
+                modifier =
+                    Modifier
+                        .size(48.dp)
+                        .accentGlow(Color.Red, radius = 200f, alpha = 0.08f),
             ) { Text("glow") }
         }
         composeRule.onNodeWithText("glow").assertIsDisplayed()

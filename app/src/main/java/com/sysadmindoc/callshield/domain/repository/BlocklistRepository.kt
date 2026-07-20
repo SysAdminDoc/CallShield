@@ -15,6 +15,19 @@ interface BlocklistRepository {
         description: String,
     )
 
+    suspend fun temporaryBlockNumber(
+        number: String,
+        expiresAt: Long,
+        type: String,
+        description: String,
+    )
+
+    suspend fun temporaryAllowNumber(
+        number: String,
+        expiresAt: Long,
+        description: String,
+    )
+
     suspend fun unblockNumber(number: SpamNumber)
 
     suspend fun addWildcardRule(

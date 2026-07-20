@@ -18,9 +18,10 @@ import com.sysadmindoc.callshield.util.filterAsciiDigitsLast
 private const val STABLE_ID_MULTIPLIER = 0x9E3779B9.toInt()
 private const val STABLE_ID_MASK = 0x7FFFFFFF
 
-private fun stableId(number: String, salt: Int = 0): Int {
-    return (number.hashCode() xor (salt * STABLE_ID_MULTIPLIER)) and STABLE_ID_MASK
-}
+private fun stableId(
+    number: String,
+    salt: Int = 0,
+): Int = (number.hashCode() xor (salt * STABLE_ID_MULTIPLIER)) and STABLE_ID_MASK
 
 private fun reportableSmsIndicators(
     isCall: Boolean,
@@ -66,7 +67,11 @@ object NotificationHelper {
      * crash on devices that enforce the permission strictly. Channel creation does
      * not need a permission, only the actual post.
      */
-    private fun safeNotify(context: Context, id: Int, builder: NotificationCompat.Builder) {
+    private fun safeNotify(
+        context: Context,
+        id: Int,
+        builder: NotificationCompat.Builder,
+    ) {
         if (!CallShieldPermissions.hasNotificationPermission(context)) return
         try {
             NotificationManagerCompat.from(context).notify(id, builder.build())
@@ -80,32 +85,32 @@ object NotificationHelper {
         nm.createNotificationChannel(
             NotificationChannel(CHANNEL_BLOCKED, context.getString(R.string.notif_channel_blocked), NotificationManager.IMPORTANCE_LOW).apply {
                 description = context.getString(R.string.notif_channel_blocked_desc)
-            }
+            },
         )
         nm.createNotificationChannel(
             NotificationChannel(CHANNEL_RATING, context.getString(R.string.notif_channel_rating), NotificationManager.IMPORTANCE_DEFAULT).apply {
                 description = context.getString(R.string.notif_channel_rating_desc)
-            }
+            },
         )
         nm.createNotificationChannel(
             NotificationChannel(CHANNEL_STATUS, context.getString(R.string.notif_channel_status), NotificationManager.IMPORTANCE_MIN).apply {
                 description = context.getString(R.string.notif_channel_status_desc)
-            }
+            },
         )
         nm.createNotificationChannel(
             NotificationChannel(CHANNEL_PHISHING, context.getString(R.string.notif_channel_phishing), NotificationManager.IMPORTANCE_HIGH).apply {
                 description = context.getString(R.string.notif_channel_phishing_desc)
-            }
+            },
         )
         nm.createNotificationChannel(
             NotificationChannel(CHANNEL_ALLOWED, context.getString(R.string.notif_channel_allowed), NotificationManager.IMPORTANCE_DEFAULT).apply {
                 description = context.getString(R.string.notif_channel_allowed_desc)
-            }
+            },
         )
         nm.createNotificationChannel(
             NotificationChannel(CHANNEL_DIGEST, context.getString(R.string.notif_channel_digest), NotificationManager.IMPORTANCE_LOW).apply {
                 description = context.getString(R.string.notif_channel_digest_desc)
-            }
+            },
         )
     }
 
@@ -133,46 +138,54 @@ object NotificationHelper {
 
         val typeText = context.getString(if (isCall) R.string.notif_type_call else R.string.notif_type_sms)
 
-        val openIntent = PendingIntent.getActivity(
-            context, stableId(number, 40),
-            Intent(context, MainActivity::class.java).apply {
-                putExtra("open_number", number)
-                flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
-            },
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
-        )
+        val openIntent =
+            PendingIntent.getActivity(
+                context,
+                stableId(number, 40),
+                Intent(context, MainActivity::class.java).apply {
+                    putExtra("open_number", number)
+                    flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
+                },
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            )
 
-        val blockIntent = PendingIntent.getBroadcast(
-            context, stableId(number, 10),
-            Intent(context, SpamActionReceiver::class.java).apply {
-                action = ACTION_BLOCK
-                putExtra(EXTRA_NUMBER, number)
-                putExtra(EXTRA_NOTIF_ID, nid)
-                putReportExtras(isCall, smsIndicators)
-            },
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
-        )
+        val blockIntent =
+            PendingIntent.getBroadcast(
+                context,
+                stableId(number, 10),
+                Intent(context, SpamActionReceiver::class.java).apply {
+                    action = ACTION_BLOCK
+                    putExtra(EXTRA_NUMBER, number)
+                    putExtra(EXTRA_NOTIF_ID, nid)
+                    putReportExtras(isCall, smsIndicators)
+                },
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            )
 
-        val reportIntent = PendingIntent.getBroadcast(
-            context, stableId(number, 20),
-            Intent(context, SpamActionReceiver::class.java).apply {
-                action = ACTION_REPORT
-                putExtra(EXTRA_NUMBER, number)
-                putExtra(EXTRA_NOTIF_ID, nid)
-                putReportExtras(isCall, smsIndicators)
-            },
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
-        )
+        val reportIntent =
+            PendingIntent.getBroadcast(
+                context,
+                stableId(number, 20),
+                Intent(context, SpamActionReceiver::class.java).apply {
+                    action = ACTION_REPORT
+                    putExtra(EXTRA_NUMBER, number)
+                    putExtra(EXTRA_NOTIF_ID, nid)
+                    putReportExtras(isCall, smsIndicators)
+                },
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            )
 
-        val builder = NotificationCompat.Builder(context, CHANNEL_BLOCKED)
-            .setSmallIcon(android.R.drawable.ic_menu_close_clear_cancel)
-            .setContentTitle(context.getString(R.string.notif_blocked_title, typeText))
-            .setContentText(context.getString(R.string.notif_blocked_text, PhoneFormatter.format(number), reason))
-            .setContentIntent(openIntent)
-            .setAutoCancel(true)
-            .setGroup(GROUP_BLOCKED)
-            .addAction(android.R.drawable.ic_menu_close_clear_cancel, context.getString(R.string.notif_action_block_forever), blockIntent)
-            .addAction(android.R.drawable.ic_menu_send, context.getString(R.string.notif_action_report), reportIntent)
+        val builder =
+            NotificationCompat
+                .Builder(context, CHANNEL_BLOCKED)
+                .setSmallIcon(android.R.drawable.ic_menu_close_clear_cancel)
+                .setContentTitle(context.getString(R.string.notif_blocked_title, typeText))
+                .setContentText(context.getString(R.string.notif_blocked_text, PhoneFormatter.format(number), reason))
+                .setContentIntent(openIntent)
+                .setAutoCancel(true)
+                .setGroup(GROUP_BLOCKED)
+                .addAction(android.R.drawable.ic_menu_close_clear_cancel, context.getString(R.string.notif_action_block_forever), blockIntent)
+                .addAction(android.R.drawable.ic_menu_send, context.getString(R.string.notif_action_report), reportIntent)
         builder.addSmsSafeAction(context, number, nid, isCall)
 
         safeNotify(context, nid, builder)
@@ -186,16 +199,17 @@ object NotificationHelper {
         isCall: Boolean,
     ) {
         if (isCall) return
-        val safeIntent = PendingIntent.getBroadcast(
-            context,
-            stableId(number, SMS_SAFE_ACTION_SALT),
-            Intent(context, SpamActionReceiver::class.java).apply {
-                action = ACTION_SAFE
-                putExtra(EXTRA_NUMBER, number)
-                putExtra(EXTRA_NOTIF_ID, notificationId)
-            },
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
-        )
+        val safeIntent =
+            PendingIntent.getBroadcast(
+                context,
+                stableId(number, SMS_SAFE_ACTION_SALT),
+                Intent(context, SpamActionReceiver::class.java).apply {
+                    action = ACTION_SAFE
+                    putExtra(EXTRA_NUMBER, number)
+                    putExtra(EXTRA_NOTIF_ID, notificationId)
+                },
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            )
         addAction(
             android.R.drawable.ic_menu_save,
             context.getString(R.string.notif_repeated_urgent_action_safe),
@@ -230,45 +244,63 @@ object NotificationHelper {
         val count = synchronized(lock) { blockedSinceLastNotif }
         if (count <= 0) {
             val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            try { nm.cancel(SUMMARY_ID) } catch (_: SecurityException) {}
+            try {
+                nm.cancel(SUMMARY_ID)
+            } catch (_: SecurityException) {
+            }
             return
         }
         val summaryText = context.resources.getQuantityString(R.plurals.notif_summary_text_recent, count, count)
-        val summary = NotificationCompat.Builder(context, CHANNEL_BLOCKED)
-            .setSmallIcon(android.R.drawable.ic_menu_close_clear_cancel)
-            .setContentTitle(context.getString(R.string.app_name))
-            .setContentText(summaryText)
-            .setGroup(GROUP_BLOCKED)
-            .setGroupSummary(true)
-            .setAutoCancel(true)
+        val summary =
+            NotificationCompat
+                .Builder(context, CHANNEL_BLOCKED)
+                .setSmallIcon(android.R.drawable.ic_menu_close_clear_cancel)
+                .setContentTitle(context.getString(R.string.app_name))
+                .setContentText(summaryText)
+                .setGroup(GROUP_BLOCKED)
+                .setGroupSummary(true)
+                .setAutoCancel(true)
         safeNotify(context, SUMMARY_ID, summary)
     }
 
-    fun notifyPhishingUrl(context: Context, sender: String, threats: String) {
+    fun notifyPhishingUrl(
+        context: Context,
+        sender: String,
+        threats: String,
+    ) {
         val nid = stableId(sender, 50)
 
-        val openIntent = PendingIntent.getActivity(
-            context, stableId(sender, 51),
-            Intent(context, MainActivity::class.java).apply {
-                putExtra("open_number", sender)
-                flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
-            },
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
-        )
+        val openIntent =
+            PendingIntent.getActivity(
+                context,
+                stableId(sender, 51),
+                Intent(context, MainActivity::class.java).apply {
+                    putExtra("open_number", sender)
+                    flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
+                },
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            )
 
-        val builder = NotificationCompat.Builder(context, CHANNEL_PHISHING)
-            .setSmallIcon(android.R.drawable.ic_dialog_alert)
-            .setContentTitle(context.getString(R.string.notif_phishing_title))
-            .setContentText(context.getString(R.string.notif_phishing_text, PhoneFormatter.format(sender), threats))
-            .setStyle(NotificationCompat.BigTextStyle()
-                .bigText(context.getString(R.string.notif_phishing_big_text, PhoneFormatter.format(sender), threats)))
-            .setContentIntent(openIntent)
-            .setAutoCancel(true)
+        val builder =
+            NotificationCompat
+                .Builder(context, CHANNEL_PHISHING)
+                .setSmallIcon(android.R.drawable.ic_dialog_alert)
+                .setContentTitle(context.getString(R.string.notif_phishing_title))
+                .setContentText(context.getString(R.string.notif_phishing_text, PhoneFormatter.format(sender), threats))
+                .setStyle(
+                    NotificationCompat
+                        .BigTextStyle()
+                        .bigText(context.getString(R.string.notif_phishing_big_text, PhoneFormatter.format(sender), threats)),
+                ).setContentIntent(openIntent)
+                .setAutoCancel(true)
 
         safeNotify(context, nid, builder)
     }
 
-    fun notifyAfterCall(context: Context, number: String) {
+    fun notifyAfterCall(
+        context: Context,
+        number: String,
+    ) {
         // Don't show for very short numbers (short codes)
         if (filterAsciiDigits(number).length < 7) return
 
@@ -278,34 +310,44 @@ object NotificationHelper {
         // block notification uses for its own intents — `hashCode()` and
         // `hashCode() + 1` previously had a real chance of clashing with
         // the block path's `stableId(number, 10/20/40)` outputs.
-        val spamIntent = Intent(context, SpamActionReceiver::class.java).apply {
-            action = "com.sysadmindoc.callshield.FEEDBACK_SPAM"
-            putExtra("number", number)
-        }
-        val notSpamIntent = Intent(context, SpamActionReceiver::class.java).apply {
-            action = "com.sysadmindoc.callshield.FEEDBACK_NOT_SPAM"
-            putExtra("number", number)
-        }
+        val spamIntent =
+            Intent(context, SpamActionReceiver::class.java).apply {
+                action = "com.sysadmindoc.callshield.FEEDBACK_SPAM"
+                putExtra("number", number)
+            }
+        val notSpamIntent =
+            Intent(context, SpamActionReceiver::class.java).apply {
+                action = "com.sysadmindoc.callshield.FEEDBACK_NOT_SPAM"
+                putExtra("number", number)
+            }
 
-        val spamPending = PendingIntent.getBroadcast(
-            context, stableId(number, 60), spamIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-        val notSpamPending = PendingIntent.getBroadcast(
-            context, stableId(number, 61), notSpamIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
+        val spamPending =
+            PendingIntent.getBroadcast(
+                context,
+                stableId(number, 60),
+                spamIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
+        val notSpamPending =
+            PendingIntent.getBroadcast(
+                context,
+                stableId(number, 61),
+                notSpamIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
 
         val formatted = PhoneFormatter.format(number)
 
-        val builder = NotificationCompat.Builder(context, CHANNEL_RATING)
-            .setSmallIcon(android.R.drawable.ic_menu_call)
-            .setContentTitle(context.getString(R.string.feedback_title))
-            .setContentText(context.getString(R.string.feedback_text, formatted))
-            .addAction(0, context.getString(R.string.feedback_spam), spamPending)
-            .addAction(0, context.getString(R.string.feedback_not_spam), notSpamPending)
-            .setAutoCancel(true)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
+        val builder =
+            NotificationCompat
+                .Builder(context, CHANNEL_RATING)
+                .setSmallIcon(android.R.drawable.ic_menu_call)
+                .setContentTitle(context.getString(R.string.feedback_title))
+                .setContentText(context.getString(R.string.feedback_text, formatted))
+                .addAction(0, context.getString(R.string.feedback_spam), spamPending)
+                .addAction(0, context.getString(R.string.feedback_not_spam), notSpamPending)
+                .setAutoCancel(true)
+                .setPriority(NotificationCompat.PRIORITY_LOW)
 
         // Distinct notification ID via [stableId] with salt 62 — avoids the
         // previous `number.hashCode() + 10_000` scheme, which produced IDs
@@ -314,74 +356,93 @@ object NotificationHelper {
         safeNotify(context, stableId(number, 62), builder)
     }
 
-    fun notifyRepeatedUrgentAllowed(context: Context, number: String) {
+    fun notifyRepeatedUrgentAllowed(
+        context: Context,
+        number: String,
+    ) {
         val digits = filterAsciiDigitsLast(number, 10)
         if (digits.length < 7) return
         if (!repeatedUrgentNoticeGate.shouldShow("repeated_urgent:$digits")) return
 
         val nid = stableId(number, 70)
         val formatted = PhoneFormatter.format(number)
-        val openIntent = PendingIntent.getActivity(
-            context, stableId(number, 71),
-            Intent(context, MainActivity::class.java).apply {
-                putExtra("open_number", number)
-                flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
-            },
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
-        )
-        val blockIntent = PendingIntent.getBroadcast(
-            context, stableId(number, 72),
-            Intent(context, SpamActionReceiver::class.java).apply {
-                action = ACTION_BLOCK
-                putExtra(EXTRA_NUMBER, number)
-                putExtra(EXTRA_NOTIF_ID, nid)
-            },
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
-        )
-        val safeIntent = PendingIntent.getBroadcast(
-            context, stableId(number, 73),
-            Intent(context, SpamActionReceiver::class.java).apply {
-                action = ACTION_SAFE
-                putExtra(EXTRA_NUMBER, number)
-                putExtra(EXTRA_NOTIF_ID, nid)
-            },
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
-        )
-
-        val builder = NotificationCompat.Builder(context, CHANNEL_ALLOWED)
-            .setSmallIcon(android.R.drawable.ic_menu_call)
-            .setContentTitle(context.getString(R.string.notif_repeated_urgent_title))
-            .setContentText(context.getString(R.string.notif_repeated_urgent_text, formatted))
-            .setStyle(
-                NotificationCompat.BigTextStyle().bigText(
-                    context.getString(R.string.notif_repeated_urgent_big_text, formatted)
-                )
+        val openIntent =
+            PendingIntent.getActivity(
+                context,
+                stableId(number, 71),
+                Intent(context, MainActivity::class.java).apply {
+                    putExtra("open_number", number)
+                    flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
+                },
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
             )
-            .setContentIntent(openIntent)
-            .setAutoCancel(true)
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-            .addAction(android.R.drawable.ic_menu_close_clear_cancel, context.getString(R.string.notif_action_block_forever), blockIntent)
-            .addAction(android.R.drawable.ic_menu_save, context.getString(R.string.notif_repeated_urgent_action_safe), safeIntent)
+        val blockIntent =
+            PendingIntent.getBroadcast(
+                context,
+                stableId(number, 72),
+                Intent(context, SpamActionReceiver::class.java).apply {
+                    action = ACTION_BLOCK
+                    putExtra(EXTRA_NUMBER, number)
+                    putExtra(EXTRA_NOTIF_ID, nid)
+                },
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            )
+        val safeIntent =
+            PendingIntent.getBroadcast(
+                context,
+                stableId(number, 73),
+                Intent(context, SpamActionReceiver::class.java).apply {
+                    action = ACTION_SAFE
+                    putExtra(EXTRA_NUMBER, number)
+                    putExtra(EXTRA_NOTIF_ID, nid)
+                },
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            )
+
+        val builder =
+            NotificationCompat
+                .Builder(context, CHANNEL_ALLOWED)
+                .setSmallIcon(android.R.drawable.ic_menu_call)
+                .setContentTitle(context.getString(R.string.notif_repeated_urgent_title))
+                .setContentText(context.getString(R.string.notif_repeated_urgent_text, formatted))
+                .setStyle(
+                    NotificationCompat.BigTextStyle().bigText(
+                        context.getString(R.string.notif_repeated_urgent_big_text, formatted),
+                    ),
+                ).setContentIntent(openIntent)
+                .setAutoCancel(true)
+                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                .addAction(android.R.drawable.ic_menu_close_clear_cancel, context.getString(R.string.notif_action_block_forever), blockIntent)
+                .addAction(android.R.drawable.ic_menu_save, context.getString(R.string.notif_repeated_urgent_action_safe), safeIntent)
 
         safeNotify(context, nid, builder)
     }
 
-    fun showPersistentStatus(context: Context, active: Boolean) {
+    fun showPersistentStatus(
+        context: Context,
+        active: Boolean,
+    ) {
         if (!active) {
             val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             nm.cancel(STATUS_ID)
             return
         }
-        val openIntent = PendingIntent.getActivity(
-            context, 0, Intent(context, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE
-        )
-        val builder = NotificationCompat.Builder(context, CHANNEL_STATUS)
-            .setSmallIcon(android.R.drawable.ic_menu_view)
-            .setContentTitle(context.getString(R.string.notif_status_title))
-            .setContentText(context.getString(R.string.notif_status_text))
-            .setContentIntent(openIntent)
-            .setOngoing(true)
-            .setSilent(true)
+        val openIntent =
+            PendingIntent.getActivity(
+                context,
+                0,
+                Intent(context, MainActivity::class.java),
+                PendingIntent.FLAG_IMMUTABLE,
+            )
+        val builder =
+            NotificationCompat
+                .Builder(context, CHANNEL_STATUS)
+                .setSmallIcon(android.R.drawable.ic_menu_view)
+                .setContentTitle(context.getString(R.string.notif_status_title))
+                .setContentText(context.getString(R.string.notif_status_text))
+                .setContentIntent(openIntent)
+                .setOngoing(true)
+                .setSilent(true)
         safeNotify(context, STATUS_ID, builder)
     }
 }

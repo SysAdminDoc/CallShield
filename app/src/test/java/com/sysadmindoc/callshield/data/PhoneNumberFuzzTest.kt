@@ -12,7 +12,6 @@ import org.junit.Test
  * gracefully regardless of input.
  */
 class PhoneNumberFuzzTest {
-
     // ── Helper: exercise every parsing path for one input ──────────────
 
     private fun fuzzAllParsers(input: String) {
@@ -365,41 +364,42 @@ class PhoneNumberFuzzTest {
 
     @Test
     fun `fuzz batch of adversarial strings`() {
-        val inputs = listOf(
-            "\t\t\t",
-            "   \n   ",
-            "+",
-            "-",
-            ".",
-            ",,,,,",
-            "()()()(",
-            "//////////",
-            "0",
-            "00",
-            "000",
-            "0000000000",
-            "99999999999",
-            "+" + "0".repeat(20),
-            "1" + "0".repeat(9),
-            "abcdefghij",
-            "ABCDEFGHIJ",
-            "+-*/=@#\$%",
-            "NaN",
-            "Infinity",
-            "-Infinity",
-            "null",
-            "undefined",
-            "true",
-            "false",
-            "0x1234ABCD",
-            "0b10101010",
-            "1e10",
-            "1.23e-4",
-            "2147483647",     // Int.MAX_VALUE
-            "2147483648",     // Int.MAX_VALUE + 1
-            "-2147483648",    // Int.MIN_VALUE
-            "9223372036854775807", // Long.MAX_VALUE
-        )
+        val inputs =
+            listOf(
+                "\t\t\t",
+                "   \n   ",
+                "+",
+                "-",
+                ".",
+                ",,,,,",
+                "()()()(",
+                "//////////",
+                "0",
+                "00",
+                "000",
+                "0000000000",
+                "99999999999",
+                "+" + "0".repeat(20),
+                "1" + "0".repeat(9),
+                "abcdefghij",
+                "ABCDEFGHIJ",
+                "+-*/=@#\$%",
+                "NaN",
+                "Infinity",
+                "-Infinity",
+                "null",
+                "undefined",
+                "true",
+                "false",
+                "0x1234ABCD",
+                "0b10101010",
+                "1e10",
+                "1.23e-4",
+                "2147483647", // Int.MAX_VALUE
+                "2147483648", // Int.MAX_VALUE + 1
+                "-2147483648", // Int.MIN_VALUE
+                "9223372036854775807", // Long.MAX_VALUE
+            )
         for (input in inputs) {
             try {
                 fuzzAllParsers(input)

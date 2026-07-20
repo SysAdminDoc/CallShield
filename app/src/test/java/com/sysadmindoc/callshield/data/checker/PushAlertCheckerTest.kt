@@ -1,10 +1,10 @@
 package com.sysadmindoc.callshield.data.checker
 
-import org.junit.Test
-import org.junit.Assert.assertTrue
-import org.junit.Assert.assertFalse
-import com.sysadmindoc.callshield.data.checker.PushAlertChecker.Companion.anchoredDigitRegex
 import com.sysadmindoc.callshield.data.checker.PushAlertChecker.Companion.TRUST_PHRASES
+import com.sysadmindoc.callshield.data.checker.PushAlertChecker.Companion.anchoredDigitRegex
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Test
 
 /**
  * Regression tests for the v1.6.1 push-alert hardening (H1-H3 in the
@@ -13,14 +13,13 @@ import com.sysadmindoc.callshield.data.checker.PushAlertChecker.Companion.TRUST_
  * prefs snapshot + registry fixtures.
  */
 class PushAlertCheckerTest {
-
     // ── H1: anchored digit match ───────────────────────────────────────
 
     @Test fun `anchored regex matches standalone 7-digit run`() {
         assertTrue(
             anchoredDigitRegex("5551234").containsMatchIn(
-                "Your driver is arriving — call 5551234 if needed"
-            )
+                "Your driver is arriving — call 5551234 if needed",
+            ),
         )
     }
 
@@ -29,8 +28,8 @@ class PushAlertCheckerTest {
         // matched; post-H1 the lookbehind/lookahead rejects it.
         assertFalse(
             anchoredDigitRegex("5551234").containsMatchIn(
-                "Tracking number 15551234567 — delivery in progress"
-            )
+                "Tracking number 15551234567 — delivery in progress",
+            ),
         )
     }
 
@@ -39,19 +38,19 @@ class PushAlertCheckerTest {
         // so the boundary allows it. That's the intended behaviour —
         // digit-adjacent is what matters, not letter-adjacent.
         assertTrue(
-            anchoredDigitRegex("5551234").containsMatchIn("ABC5551234XYZ")
+            anchoredDigitRegex("5551234").containsMatchIn("ABC5551234XYZ"),
         )
     }
 
     @Test fun `anchored regex matches at start of string`() {
         assertTrue(
-            anchoredDigitRegex("5551234").containsMatchIn("5551234 is your code")
+            anchoredDigitRegex("5551234").containsMatchIn("5551234 is your code"),
         )
     }
 
     @Test fun `anchored regex matches at end of string`() {
         assertTrue(
-            anchoredDigitRegex("5551234").containsMatchIn("Call 5551234")
+            anchoredDigitRegex("5551234").containsMatchIn("Call 5551234"),
         )
     }
 
@@ -70,14 +69,14 @@ class PushAlertCheckerTest {
         // this is intentional for phrase matches.
         assertTrue(
             "anchored regex ignores `\\n` as a non-digit boundary, so a title-embedded 7-digit run still satisfies the pattern",
-            anchoredDigitRegex("5551234").containsMatchIn(searchText)
+            anchoredDigitRegex("5551234").containsMatchIn(searchText),
         )
         // But the v1.6.3 fix in PushAlertChecker.check() runs the digit
         // regex against `alert.body` only — so the body-scoped invocation
         // must NOT match.
         assertFalse(
             "body-scoped digit match must ignore the title",
-            anchoredDigitRegex("5551234").containsMatchIn(body)
+            anchoredDigitRegex("5551234").containsMatchIn(body),
         )
     }
 
@@ -86,7 +85,7 @@ class PushAlertCheckerTest {
         // (e.g. a courier note with a callback number), so we still allow.
         val body = "Call 5551234 if no one is home"
         assertTrue(
-            anchoredDigitRegex("5551234").containsMatchIn(body)
+            anchoredDigitRegex("5551234").containsMatchIn(body),
         )
     }
 
@@ -97,29 +96,32 @@ class PushAlertCheckerTest {
         // push-alert bridge. v1.6.1 drops the bare regex; only
         // "appointment reminder" (from calendar apps) remains.
         val bareCalendar = "Your calendar for today has three events"
-        val hit = TRUST_PHRASES.any { phrase ->
-            phrase.allowedFromPackages == null &&
-                phrase.regex.containsMatchIn(bareCalendar)
-        }
+        val hit =
+            TRUST_PHRASES.any { phrase ->
+                phrase.allowedFromPackages == null &&
+                    phrase.regex.containsMatchIn(bareCalendar)
+            }
         assertFalse(hit)
     }
 
     @Test fun `bare outside word no longer qualifies alone`() {
         // "Dress warm — it's 28 degrees outside" previously fired the rule.
         val weatherAlert = "Dress warm — it's 28 degrees outside today"
-        val hit = TRUST_PHRASES.any { phrase ->
-            phrase.allowedFromPackages == null &&
-                phrase.regex.containsMatchIn(weatherAlert)
-        }
+        val hit =
+            TRUST_PHRASES.any { phrase ->
+                phrase.allowedFromPackages == null &&
+                    phrase.regex.containsMatchIn(weatherAlert)
+            }
         assertFalse(hit)
     }
 
     @Test fun `driver outside still matches after tightening`() {
         val deliveryAlert = "Your driver is outside"
-        val hit = TRUST_PHRASES.any { phrase ->
-            phrase.allowedFromPackages == null &&
-                phrase.regex.containsMatchIn(deliveryAlert)
-        }
+        val hit =
+            TRUST_PHRASES.any { phrase ->
+                phrase.allowedFromPackages == null &&
+                    phrase.regex.containsMatchIn(deliveryAlert)
+            }
         assertTrue(hit)
     }
 
@@ -127,32 +129,36 @@ class PushAlertCheckerTest {
 
     @Test fun `MFA phrase does not fire for non-messaging app`() {
         val outlookMfa = "Your verification code is 483921"
-        val hit = TRUST_PHRASES.any { phrase ->
-            phrase.appliesTo("com.microsoft.office.outlook") &&
-                phrase.regex.containsMatchIn(outlookMfa)
-        }
+        val hit =
+            TRUST_PHRASES.any { phrase ->
+                phrase.appliesTo("com.microsoft.office.outlook") &&
+                    phrase.regex.containsMatchIn(outlookMfa)
+            }
         assertFalse(hit)
     }
 
     @Test fun `MFA phrase fires for Google Messages`() {
         val smsVerification = "Your verification code is 483921"
-        val hit = TRUST_PHRASES.any { phrase ->
-            phrase.appliesTo("com.google.android.apps.messaging") &&
-                phrase.regex.containsMatchIn(smsVerification)
-        }
+        val hit =
+            TRUST_PHRASES.any { phrase ->
+                phrase.appliesTo("com.google.android.apps.messaging") &&
+                    phrase.regex.containsMatchIn(smsVerification)
+            }
         assertTrue(hit)
     }
 
     @Test fun `appointment reminder only fires for calendar apps`() {
         val reminder = "Appointment reminder: dentist at 3pm"
-        val fromCalendar = TRUST_PHRASES.any { phrase ->
-            phrase.appliesTo("com.google.android.calendar") &&
-                phrase.regex.containsMatchIn(reminder)
-        }
-        val fromEmail = TRUST_PHRASES.any { phrase ->
-            phrase.appliesTo("com.microsoft.office.outlook") &&
-                phrase.regex.containsMatchIn(reminder)
-        }
+        val fromCalendar =
+            TRUST_PHRASES.any { phrase ->
+                phrase.appliesTo("com.google.android.calendar") &&
+                    phrase.regex.containsMatchIn(reminder)
+            }
+        val fromEmail =
+            TRUST_PHRASES.any { phrase ->
+                phrase.appliesTo("com.microsoft.office.outlook") &&
+                    phrase.regex.containsMatchIn(reminder)
+            }
         assertTrue(fromCalendar)
         assertFalse(fromEmail)
     }
@@ -161,14 +167,16 @@ class PushAlertCheckerTest {
 
     @Test fun `driver phrase fires regardless of sender package`() {
         val deliveryBody = "Your driver Michael is arriving soon"
-        val fromUber = TRUST_PHRASES.any { phrase ->
-            phrase.appliesTo("com.ubercab") &&
-                phrase.regex.containsMatchIn(deliveryBody)
-        }
-        val fromRandom = TRUST_PHRASES.any { phrase ->
-            phrase.appliesTo("com.random.unknown") &&
-                phrase.regex.containsMatchIn(deliveryBody)
-        }
+        val fromUber =
+            TRUST_PHRASES.any { phrase ->
+                phrase.appliesTo("com.ubercab") &&
+                    phrase.regex.containsMatchIn(deliveryBody)
+            }
+        val fromRandom =
+            TRUST_PHRASES.any { phrase ->
+                phrase.appliesTo("com.random.unknown") &&
+                    phrase.regex.containsMatchIn(deliveryBody)
+            }
         assertTrue(fromUber)
         assertTrue(fromRandom)
     }

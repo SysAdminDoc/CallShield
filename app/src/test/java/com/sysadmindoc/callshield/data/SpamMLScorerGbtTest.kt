@@ -15,7 +15,6 @@ import kotlin.math.sin
  * new features 16-20, and backward compatibility.
  */
 class SpamMLScorerGbtTest {
-
     /** Reflection handle for private scoreGbt(DoubleArray, List<*>, Double): Double */
     private lateinit var scoreGbtMethod: Method
 
@@ -38,19 +37,30 @@ class SpamMLScorerGbtTest {
         gbtTreeConstructor = gbtTreeClass.declaredConstructors.first().also { it.isAccessible = true }
 
         // scoreGbt(features: DoubleArray, trees: List<GbtTree>, learningRate: Double): Double
-        scoreGbtMethod = SpamMLScorer::class.java.getDeclaredMethod(
-            "scoreGbt", DoubleArray::class.java, List::class.java, Double::class.javaPrimitiveType
-        ).also { it.isAccessible = true }
+        scoreGbtMethod =
+            SpamMLScorer::class.java
+                .getDeclaredMethod(
+                    "scoreGbt",
+                    DoubleArray::class.java,
+                    List::class.java,
+                    Double::class.javaPrimitiveType,
+                ).also { it.isAccessible = true }
 
         // extractFeatures(number: String): DoubleArray
-        extractFeaturesMethod = SpamMLScorer::class.java.getDeclaredMethod(
-            "extractFeatures", String::class.java
-        ).also { it.isAccessible = true }
+        extractFeaturesMethod =
+            SpamMLScorer::class.java
+                .getDeclaredMethod(
+                    "extractFeatures",
+                    String::class.java,
+                ).also { it.isAccessible = true }
 
         // sigmoid(x: Double): Double
-        sigmoidMethod = SpamMLScorer::class.java.getDeclaredMethod(
-            "sigmoid", Double::class.javaPrimitiveType
-        ).also { it.isAccessible = true }
+        sigmoidMethod =
+            SpamMLScorer::class.java
+                .getDeclaredMethod(
+                    "sigmoid",
+                    Double::class.javaPrimitiveType,
+                ).also { it.isAccessible = true }
     }
 
     // ─── Helper: build a GbtTree via reflection ──────────────────────
@@ -60,34 +70,31 @@ class SpamMLScorerGbtTest {
         threshold: DoubleArray,
         childrenLeft: IntArray,
         childrenRight: IntArray,
-        value: DoubleArray
-    ): Any {
-        return gbtTreeConstructor.newInstance(feature, threshold, childrenLeft, childrenRight, value)
-    }
+        value: DoubleArray,
+    ): Any = gbtTreeConstructor.newInstance(feature, threshold, childrenLeft, childrenRight, value)
 
-    private fun callScoreGbt(features: DoubleArray, trees: List<Any>, learningRate: Double): Double {
-        return scoreGbtMethod.invoke(SpamMLScorer.shared, features, trees, learningRate) as Double
-    }
+    private fun callScoreGbt(
+        features: DoubleArray,
+        trees: List<Any>,
+        learningRate: Double,
+    ): Double = scoreGbtMethod.invoke(SpamMLScorer.shared, features, trees, learningRate) as Double
 
-    private fun callExtractFeatures(number: String): DoubleArray {
-        return extractFeaturesMethod.invoke(SpamMLScorer.shared, number) as DoubleArray
-    }
+    private fun callExtractFeatures(number: String): DoubleArray = extractFeaturesMethod.invoke(SpamMLScorer.shared, number) as DoubleArray
 
-    private fun sigmoid(x: Double): Double {
-        return sigmoidMethod.invoke(SpamMLScorer.shared, x) as Double
-    }
+    private fun sigmoid(x: Double): Double = sigmoidMethod.invoke(SpamMLScorer.shared, x) as Double
 
     // ─── GbtTree data class construction ─────────────────────────────
 
     @Test
     fun gbtTree_constructionAndFieldAccess() {
-        val tree = makeTree(
-            feature = intArrayOf(-2),
-            threshold = doubleArrayOf(0.0),
-            childrenLeft = intArrayOf(-1),
-            childrenRight = intArrayOf(-1),
-            value = doubleArrayOf(1.5)
-        )
+        val tree =
+            makeTree(
+                feature = intArrayOf(-2),
+                threshold = doubleArrayOf(0.0),
+                childrenLeft = intArrayOf(-1),
+                childrenRight = intArrayOf(-1),
+                value = doubleArrayOf(1.5),
+            )
         // Access fields via reflection
         val featureField = gbtTreeClass.getDeclaredField("feature").also { it.isAccessible = true }
         val valueField = gbtTreeClass.getDeclaredField("value").also { it.isAccessible = true }
@@ -104,13 +111,14 @@ class SpamMLScorerGbtTest {
     @Test
     fun scoreGbt_singleLeafNode_returnsKnownValue() {
         // A tree with just one leaf node (feature=-2) that returns value 2.0
-        val tree = makeTree(
-            feature = intArrayOf(-2),
-            threshold = doubleArrayOf(0.0),
-            childrenLeft = intArrayOf(-1),
-            childrenRight = intArrayOf(-1),
-            value = doubleArrayOf(2.0)
-        )
+        val tree =
+            makeTree(
+                feature = intArrayOf(-2),
+                threshold = doubleArrayOf(0.0),
+                childrenLeft = intArrayOf(-1),
+                childrenRight = intArrayOf(-1),
+                value = doubleArrayOf(2.0),
+            )
         val features = DoubleArray(20) { 0.0 }
         val lr = 1.0
         val result = callScoreGbt(features, listOf(tree), lr)
@@ -127,13 +135,14 @@ class SpamMLScorerGbtTest {
         //   Node 0: split on feature[0] <= 0.5 -> left=1, right=2
         //   Node 1: leaf, value = -1.0
         //   Node 2: leaf, value =  3.0
-        val tree = makeTree(
-            feature = intArrayOf(0, -2, -2),
-            threshold = doubleArrayOf(0.5, 0.0, 0.0),
-            childrenLeft = intArrayOf(1, -1, -1),
-            childrenRight = intArrayOf(2, -1, -1),
-            value = doubleArrayOf(0.0, -1.0, 3.0)
-        )
+        val tree =
+            makeTree(
+                feature = intArrayOf(0, -2, -2),
+                threshold = doubleArrayOf(0.5, 0.0, 0.0),
+                childrenLeft = intArrayOf(1, -1, -1),
+                childrenRight = intArrayOf(2, -1, -1),
+                value = doubleArrayOf(0.0, -1.0, 3.0),
+            )
         val lr = 1.0
 
         // Feature[0] = 0.0 <= 0.5, so go left -> leaf value = -1.0
@@ -154,20 +163,22 @@ class SpamMLScorerGbtTest {
     @Test
     fun scoreGbt_multipleTrees_sumContributions() {
         // Two single-leaf trees with values 1.0 and 0.5, learning_rate = 0.5
-        val tree1 = makeTree(
-            feature = intArrayOf(-2),
-            threshold = doubleArrayOf(0.0),
-            childrenLeft = intArrayOf(-1),
-            childrenRight = intArrayOf(-1),
-            value = doubleArrayOf(1.0)
-        )
-        val tree2 = makeTree(
-            feature = intArrayOf(-2),
-            threshold = doubleArrayOf(0.0),
-            childrenLeft = intArrayOf(-1),
-            childrenRight = intArrayOf(-1),
-            value = doubleArrayOf(0.5)
-        )
+        val tree1 =
+            makeTree(
+                feature = intArrayOf(-2),
+                threshold = doubleArrayOf(0.0),
+                childrenLeft = intArrayOf(-1),
+                childrenRight = intArrayOf(-1),
+                value = doubleArrayOf(1.0),
+            )
+        val tree2 =
+            makeTree(
+                feature = intArrayOf(-2),
+                threshold = doubleArrayOf(0.0),
+                childrenLeft = intArrayOf(-1),
+                childrenRight = intArrayOf(-1),
+                value = doubleArrayOf(0.5),
+            )
         val features = DoubleArray(20) { 0.0 }
         val lr = 0.5
         val result = callScoreGbt(features, listOf(tree1, tree2), lr)
@@ -190,13 +201,14 @@ class SpamMLScorerGbtTest {
     fun scoreGbt_invalidNodeIndices_doesNotCrash() {
         // Tree where left/right child point out of bounds
         // Node 0: split on feature[0] <= 0.5 -> left=99 (out of bounds), right=98
-        val tree = makeTree(
-            feature = intArrayOf(0),
-            threshold = doubleArrayOf(0.5),
-            childrenLeft = intArrayOf(99),
-            childrenRight = intArrayOf(98),
-            value = doubleArrayOf(1.0)
-        )
+        val tree =
+            makeTree(
+                feature = intArrayOf(0),
+                threshold = doubleArrayOf(0.5),
+                childrenLeft = intArrayOf(99),
+                childrenRight = intArrayOf(98),
+                value = doubleArrayOf(1.0),
+            )
         val features = DoubleArray(20) { 0.0 }
         // Should not crash — the while loop has a bounds check
         val result = callScoreGbt(features, listOf(tree), 1.0)
@@ -209,13 +221,14 @@ class SpamMLScorerGbtTest {
     @Test
     fun scoreGbt_treeWithInvalidFeatureIndex_doesNotCrash() {
         // Tree node references feature index beyond feature array bounds
-        val tree = makeTree(
-            feature = intArrayOf(999, -2, -2),
-            threshold = doubleArrayOf(0.5, 0.0, 0.0),
-            childrenLeft = intArrayOf(1, -1, -1),
-            childrenRight = intArrayOf(2, -1, -1),
-            value = doubleArrayOf(0.0, -1.0, 3.0)
-        )
+        val tree =
+            makeTree(
+                feature = intArrayOf(999, -2, -2),
+                threshold = doubleArrayOf(0.5, 0.0, 0.0),
+                childrenLeft = intArrayOf(1, -1, -1),
+                childrenRight = intArrayOf(2, -1, -1),
+                value = doubleArrayOf(0.0, -1.0, 3.0),
+            )
         val features = DoubleArray(20) { 0.0 }
         // featureIdx=999 >= features.size(20), so breaks at node=0
         // value.getOrElse(0) { 0.0 } = 0.0, rawScore = 0.0
@@ -226,13 +239,14 @@ class SpamMLScorerGbtTest {
     @Test
     fun scoreGbt_negativeFeatureIndex_notLeaf_breaks() {
         // feature[0] = -5 which is < 0 but not -2 (not a leaf), so featureIdx<0 triggers break
-        val tree = makeTree(
-            feature = intArrayOf(-5),
-            threshold = doubleArrayOf(0.0),
-            childrenLeft = intArrayOf(-1),
-            childrenRight = intArrayOf(-1),
-            value = doubleArrayOf(7.0)
-        )
+        val tree =
+            makeTree(
+                feature = intArrayOf(-5),
+                threshold = doubleArrayOf(0.0),
+                childrenLeft = intArrayOf(-1),
+                childrenRight = intArrayOf(-1),
+                value = doubleArrayOf(7.0),
+            )
         val features = DoubleArray(20) { 0.0 }
         // Malformed split nodes should fail closed instead of contributing arbitrary values.
         val result = callScoreGbt(features, listOf(tree), 1.0)
@@ -241,13 +255,14 @@ class SpamMLScorerGbtTest {
 
     @Test
     fun scoreGbt_circularChildren_returnsNeutralScore() {
-        val tree = makeTree(
-            feature = intArrayOf(0, 0, 0),
-            threshold = doubleArrayOf(0.5, 0.5, 0.5),
-            childrenLeft = intArrayOf(1, 2, 0),
-            childrenRight = intArrayOf(2, 0, 1),
-            value = doubleArrayOf(0.0, 5.0, -4.0)
-        )
+        val tree =
+            makeTree(
+                feature = intArrayOf(0, 0, 0),
+                threshold = doubleArrayOf(0.5, 0.5, 0.5),
+                childrenLeft = intArrayOf(1, 2, 0),
+                childrenRight = intArrayOf(2, 0, 1),
+                value = doubleArrayOf(0.0, 5.0, -4.0),
+            )
         val features = DoubleArray(20) { 0.0 }
 
         val result = callScoreGbt(features, listOf(tree), 1.0)
@@ -363,8 +378,10 @@ class SpamMLScorerGbtTest {
 
     /** Parse JSON with parseModel and commit the resulting state. */
     private fun parseAndCommit(json: String): Boolean {
-        val parseModel = SpamMLScorer::class.java.getDeclaredMethod("parseModel", String::class.java)
-            .also { it.isAccessible = true }
+        val parseModel =
+            SpamMLScorer::class.java
+                .getDeclaredMethod("parseModel", String::class.java)
+                .also { it.isAccessible = true }
         val parsed = parseModel.invoke(SpamMLScorer.shared, json) ?: return false
         val stateField = SpamMLScorer::class.java.getDeclaredField("state").also { it.isAccessible = true }
         stateField.set(SpamMLScorer.shared, parsed)
@@ -373,13 +390,14 @@ class SpamMLScorerGbtTest {
 
     @Test
     fun backwardCompat_15featureWeights_paddedToTwenty() {
-        val json = """
-        {
-            "version": 2,
-            "weights": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0],
-            "bias": -1.5
-        }
-        """.trimIndent()
+        val json =
+            """
+            {
+                "version": 2,
+                "weights": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0],
+                "bias": -1.5
+            }
+            """.trimIndent()
 
         assertTrue("parseModel should succeed for valid v2 JSON", parseAndCommit(json))
 
@@ -398,13 +416,14 @@ class SpamMLScorerGbtTest {
     @Test
     fun backwardCompat_20featureWeights_notPadded() {
         val weightsStr = (1..20).joinToString(", ") { "$it.0" }
-        val json = """
-        {
-            "version": 2,
-            "weights": [$weightsStr],
-            "bias": -2.0
-        }
-        """.trimIndent()
+        val json =
+            """
+            {
+                "version": 2,
+                "weights": [$weightsStr],
+                "bias": -2.0
+            }
+            """.trimIndent()
 
         assertTrue("parseModel should succeed for valid v2 JSON", parseAndCommit(json))
 
@@ -435,13 +454,14 @@ class SpamMLScorerGbtTest {
 
     @Test
     fun scoreGbt_learningRate_scalesContributions() {
-        val tree = makeTree(
-            feature = intArrayOf(-2),
-            threshold = doubleArrayOf(0.0),
-            childrenLeft = intArrayOf(-1),
-            childrenRight = intArrayOf(-1),
-            value = doubleArrayOf(4.0)
-        )
+        val tree =
+            makeTree(
+                feature = intArrayOf(-2),
+                threshold = doubleArrayOf(0.0),
+                childrenLeft = intArrayOf(-1),
+                childrenRight = intArrayOf(-1),
+                value = doubleArrayOf(4.0),
+            )
         val features = DoubleArray(20) { 0.0 }
 
         // lr=1.0: rawScore=4.0

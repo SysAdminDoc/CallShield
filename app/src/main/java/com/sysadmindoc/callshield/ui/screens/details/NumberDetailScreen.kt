@@ -1,6 +1,5 @@
 package com.sysadmindoc.callshield.ui.screens.details
 
-import androidx.activity.compose.BackHandler
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -8,6 +7,7 @@ import android.content.Intent
 import android.net.Uri
 import android.provider.ContactsContract
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -18,6 +18,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -26,20 +27,19 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.PhoneFormatter
 import com.sysadmindoc.callshield.data.SmsBodyRedactor
 import com.sysadmindoc.callshield.data.SpamRepository
+import com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup
 import com.sysadmindoc.callshield.data.remote.ExternalLookup
 import com.sysadmindoc.callshield.data.remote.RemoteLookupStatus
-import com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup
 import com.sysadmindoc.callshield.domain.model.SpamCheckResult
 import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.screens.lookup.SpamScoreGauge
 import com.sysadmindoc.callshield.ui.screens.lookup.detectionIcon
 import com.sysadmindoc.callshield.ui.theme.*
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -47,7 +47,11 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 @Composable
-fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> Unit) {
+fun NumberDetailScreen(
+    number: String,
+    viewModel: MainViewModel,
+    onBack: () -> Unit,
+) {
     BackHandler { onBack() }
     val context = LocalContext.current
     val blockedCalls by viewModel.blockedCalls.collectAsStateWithLifecycle()
@@ -70,27 +74,30 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
     val clipLabelPhone = stringResource(R.string.clip_label_phone)
     val blockedFromDetail = stringResource(R.string.detail_blocked_from_detail)
     val whitelistedFromDetail = stringResource(R.string.detail_whitelisted_from_detail)
-    val blockAreaCodeDescription = areaCode?.let { code ->
-        if (location != null) {
-            stringResource(R.string.detail_block_area_code_description_location, code, location)
-        } else {
-            stringResource(R.string.detail_block_area_code_description, code)
+    val blockAreaCodeDescription =
+        areaCode?.let { code ->
+            if (location != null) {
+                stringResource(R.string.detail_block_area_code_description_location, code, location)
+            } else {
+                stringResource(R.string.detail_block_area_code_description, code)
+            }
         }
-    }
     val reportIssueTitle = stringResource(R.string.detail_report_issue_title, number)
-    val reportIssueBody = pluralStringResource(
-        R.plurals.detail_report_issue_body,
-        numberCalls.size,
-        number,
-        numberCalls.size
-    )
+    val reportIssueBody =
+        pluralStringResource(
+            R.plurals.detail_report_issue_body,
+            numberCalls.size,
+            number,
+            numberCalls.size,
+        )
 
     // Contact name resolution
     var contactName by remember(number) { mutableStateOf<String?>(null) }
     LaunchedEffect(context.applicationContext, number) {
-        contactName = withContext(Dispatchers.IO) {
-            lookupContactName(context.applicationContext, number)
-        }
+        contactName =
+            withContext(Dispatchers.IO) {
+                lookupContactName(context.applicationContext, number)
+            }
     }
 
     // Live spam check result
@@ -110,7 +117,7 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
 
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp)
+        verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
         // Header
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -130,9 +137,11 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
                 // etc.) once the live spam check completes. Only shown for
                 // spam matches; allow-through results don't need a label.
                 liveResult?.takeIf { it.isSpam }?.let { r ->
-                    val category = remember(r.matchSource, r.type, r.description, r.confidence) {
-                        com.sysadmindoc.callshield.data.CallCategoryResolver.resolve(r)
-                    }
+                    val category =
+                        remember(r.matchSource, r.type, r.description, r.confidence) {
+                            com.sysadmindoc.callshield.data.CallCategoryResolver
+                                .resolve(r)
+                        }
                     Spacer(Modifier.height(6.dp))
                     StatusPill(
                         text = "${category.emoji} ${stringResource(category.stringResId)}",
@@ -155,15 +164,15 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
         liveResult?.let { r ->
             PremiumCard(accentColor = if (r.isSpam) CatRed else CatGreen) {
                 Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .accentGlow(
-                            color = if (r.isSpam) CatRed else CatGreen,
-                            radius = 300f,
-                            alpha = 0.06f
-                        )
-                        .padding(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .accentGlow(
+                                color = if (r.isSpam) CatRed else CatGreen,
+                                radius = 300f,
+                                alpha = 0.06f,
+                            ).padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     SectionHeader(stringResource(R.string.detail_spam_score), color = if (r.isSpam) CatRed else CatGreen)
                     Spacer(Modifier.height(8.dp))
@@ -184,13 +193,14 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
         // allow-through results so the user understands why *anything*
         // happened (e.g. "This number is in your emergency contacts").
         liveResult?.let { r ->
-            val reasoning = remember(r.matchSource, r.description, r.confidence) {
-                com.sysadmindoc.callshield.data.BlockReasoning.explain(
-                    matchReason = r.matchSource,
-                    description = r.description,
-                    confidence = r.confidence,
-                )
-            }
+            val reasoning =
+                remember(r.matchSource, r.description, r.confidence) {
+                    com.sysadmindoc.callshield.data.BlockReasoning.explain(
+                        matchReason = r.matchSource,
+                        description = r.description,
+                        confidence = r.confidence,
+                    )
+                }
             val accent = if (r.isSpam) CatPeach else CatGreen
             PremiumCard(accentColor = accent) {
                 Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
@@ -218,7 +228,7 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
                 color = CatYellow,
                 onClick = { viewModel.addWildcardRule("+1$areaCode*", false, blockAreaCodeDescription.orEmpty()) },
                 modifier = Modifier.fillMaxWidth(),
-                outlined = true
+                outlined = true,
             )
         }
 
@@ -242,18 +252,19 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
                             color = CatRed,
                             horizontalPadding = 10.dp,
                             verticalPadding = 6.dp,
-                            textStyle = MaterialTheme.typography.labelSmall
+                            textStyle = MaterialTheme.typography.labelSmall,
                         )
                         StatusPill(
-                            text = pluralStringResource(
-                                R.plurals.detail_reports_count_plural,
-                                dbEntry.reports,
-                                dbEntry.reports
-                            ),
+                            text =
+                                pluralStringResource(
+                                    R.plurals.detail_reports_count_plural,
+                                    dbEntry.reports,
+                                    dbEntry.reports,
+                                ),
                             color = CatPeach,
                             horizontalPadding = 10.dp,
                             verticalPadding = 6.dp,
-                            textStyle = MaterialTheme.typography.labelSmall
+                            textStyle = MaterialTheme.typography.labelSmall,
                         )
                     }
                     if (dbEntry.description.isNotEmpty()) {
@@ -300,15 +311,20 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
                     Spacer(Modifier.height(8.dp))
                     numberCalls.take(10).forEach { call ->
                         Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Icon(if (call.isCall) Icons.Default.Phone else Icons.Default.Sms, null,
-                                tint = if (call.isCall) CatRed else CatMauve, modifier = Modifier.size(16.dp))
+                            Icon(
+                                if (call.isCall) Icons.Default.Phone else Icons.Default.Sms,
+                                null,
+                                tint = if (call.isCall) CatRed else CatMauve,
+                                modifier = Modifier.size(16.dp),
+                            )
                             Spacer(Modifier.width(8.dp))
                             Text(dateFormat.format(Date(call.timestamp)), style = MaterialTheme.typography.bodySmall, color = CatSubtext, modifier = Modifier.weight(1f))
                             if (call.confidence < 100) Text("${call.confidence}%", style = MaterialTheme.typography.labelSmall, color = CatOverlay)
                         }
-                        val redactedSmsBody = remember(call.smsBody) {
-                            SmsBodyRedactor.redactForPreview(call.smsBody)
-                        }
+                        val redactedSmsBody =
+                            remember(call.smsBody) {
+                                SmsBodyRedactor.redactForPreview(call.smsBody)
+                            }
                         if (redactedSmsBody != null) {
                             Text(
                                 redactedSmsBody,
@@ -339,13 +355,14 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
                                 coroutineScope.launch {
                                     try {
                                         webResult = ExternalLookup.lookupAll(number)
-                                    } catch (_: Exception) {}
+                                    } catch (_: Exception) {
+                                    }
                                     webLoading = false
                                 }
                             },
                             enabled = !webLoading,
                             loading = webLoading,
-                            outlined = true
+                            outlined = true,
                         )
                     }
                 }
@@ -357,7 +374,7 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
                         Text(
                             stringResource(R.string.detail_checking_sources),
                             style = MaterialTheme.typography.bodySmall,
-                            color = CatSubtext
+                            color = CatSubtext,
                         )
                     }
                 }
@@ -365,25 +382,27 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
                 Text(
                     stringResource(R.string.detail_lookup_privacy_note),
                     style = MaterialTheme.typography.labelSmall,
-                    color = CatOverlay
+                    color = CatOverlay,
                 )
                 webResult?.let { wr ->
                     Spacer(Modifier.height(8.dp))
                     if (wr.totalReports > 0) {
-                        val reportCount = pluralStringResource(
-                            R.plurals.detail_reports_count_plural,
-                            wr.totalReports,
-                            wr.totalReports
-                        )
-                        val sourceCount = pluralStringResource(
-                            R.plurals.detail_sources_count_plural,
-                            wr.sources.size,
-                            wr.sources.size
-                        )
+                        val reportCount =
+                            pluralStringResource(
+                                R.plurals.detail_reports_count_plural,
+                                wr.totalReports,
+                                wr.totalReports,
+                            )
+                        val sourceCount =
+                            pluralStringResource(
+                                R.plurals.detail_sources_count_plural,
+                                wr.sources.size,
+                                wr.sources.size,
+                            )
                         Text(
                             stringResource(R.string.detail_reports_across_sources, reportCount, sourceCount),
                             color = CatRed,
-                            fontWeight = FontWeight.SemiBold
+                            fontWeight = FontWeight.SemiBold,
                         )
                     } else {
                         val hasDefinitiveSource = wr.sources.any { src -> !src.status.isFallback }
@@ -393,10 +412,10 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
                                     R.string.detail_clean_all_sources
                                 } else {
                                     R.string.detail_no_definitive_source_result
-                                }
+                                },
                             ),
                             color = CatGreen,
-                            style = MaterialTheme.typography.bodySmall
+                            style = MaterialTheme.typography.bodySmall,
                         )
                     }
                     Spacer(Modifier.height(4.dp))
@@ -410,27 +429,36 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
                                     else -> Icons.Default.CheckCircle
                                 },
                                 null,
-                                tint = when {
-                                    src.isSpam -> CatRed
-                                    isFallback -> CatSubtext
-                                    else -> CatGreen
-                                },
-                                modifier = Modifier.size(14.dp)
+                                tint =
+                                    when {
+                                        src.isSpam -> CatRed
+                                        isFallback -> CatSubtext
+                                        else -> CatGreen
+                                    },
+                                modifier = Modifier.size(14.dp),
                             )
                             Spacer(Modifier.width(6.dp))
                             Text(src.source, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold, modifier = Modifier.width(90.dp))
                             Text(
                                 when {
-                                    src.reports > 0 -> pluralStringResource(
-                                        R.plurals.detail_reports_count_label,
-                                        src.reports,
-                                        src.reports
-                                    )
-                                    src.isSpam -> stringResource(R.string.detail_flagged)
-                                    else -> remoteLookupStatusLabel(src)
+                                    src.reports > 0 -> {
+                                        pluralStringResource(
+                                            R.plurals.detail_reports_count_label,
+                                            src.reports,
+                                            src.reports,
+                                        )
+                                    }
+
+                                    src.isSpam -> {
+                                        stringResource(R.string.detail_flagged)
+                                    }
+
+                                    else -> {
+                                        remoteLookupStatusLabel(src)
+                                    }
                                 },
                                 style = MaterialTheme.typography.bodySmall,
-                                color = CatSubtext
+                                color = CatSubtext,
                             )
                         }
                     }
@@ -456,7 +484,7 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
                         hapticConfirm(context)
                         Toast.makeText(context, numberBlockedMessage, Toast.LENGTH_SHORT).show()
                     },
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
                 )
             } else {
                 PremiumActionButton(
@@ -468,7 +496,7 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
                         hapticTick(context)
                         Toast.makeText(context, numberUnblockedMessage, Toast.LENGTH_SHORT).show()
                     },
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
                 )
             }
             PremiumActionButton(
@@ -481,7 +509,7 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
                     context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/SysAdminDoc/CallShield/issues/new?title=$title&body=$body&labels=spam-report")).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) })
                 },
                 modifier = Modifier.weight(1f),
-                outlined = true
+                outlined = true,
             )
         }
 
@@ -492,16 +520,22 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
                 label = stringResource(R.string.detail_report_spam),
                 icon = Icons.Default.Flag,
                 color = CatRed,
-                onClick = { hapticTick(context); viewModel.contributeToDatabase(number, dbEntry?.type ?: liveResult?.type ?: "spam") },
-                modifier = Modifier.weight(1f)
+                onClick = {
+                    hapticTick(context)
+                    viewModel.contributeToDatabase(number, dbEntry?.type ?: liveResult?.type ?: "spam")
+                },
+                modifier = Modifier.weight(1f),
             )
             PremiumActionButton(
                 label = stringResource(R.string.detail_not_spam),
                 icon = Icons.Default.ThumbUp,
                 color = CatGreen,
-                onClick = { hapticTick(context); viewModel.reportNotSpam(number) },
+                onClick = {
+                    hapticTick(context)
+                    viewModel.reportNotSpam(number)
+                },
                 modifier = Modifier.weight(1f),
-                outlined = true
+                outlined = true,
             )
         }
         contributeResult?.let {
@@ -521,10 +555,11 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
             color = CatPeach,
             onClick = {
                 hapticTick(context)
-                com.sysadmindoc.callshield.data.ReportFraudHelper.report(context, number)
+                com.sysadmindoc.callshield.data.ReportFraudHelper
+                    .report(context, number)
             },
             modifier = Modifier.fillMaxWidth(),
-            outlined = true
+            outlined = true,
         )
 
         // Whitelist / call / share actions
@@ -535,7 +570,7 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
                 color = CatGreen,
                 onClick = { viewModel.addToWhitelist(number, whitelistedFromDetail) },
                 modifier = Modifier.weight(1f),
-                outlined = true
+                outlined = true,
             )
             PremiumActionButton(
                 label = stringResource(R.string.detail_call),
@@ -545,7 +580,7 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
                     context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:$number")).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) })
                 },
                 modifier = Modifier.weight(1f),
-                outlined = true
+                outlined = true,
             )
             PremiumActionButton(
                 label = stringResource(R.string.detail_share),
@@ -555,7 +590,7 @@ fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -> U
                     viewModel.shareAsSpam(number, dbEntry?.type ?: liveResult?.type ?: "")
                 },
                 modifier = Modifier.weight(1f),
-                outlined = true
+                outlined = true,
             )
         }
     }
@@ -629,7 +664,11 @@ private fun remoteLookupStatusStringRes(
     }
 
 @Composable
-fun StatChip(label: String, value: String, color: androidx.compose.ui.graphics.Color) {
+fun StatChip(
+    label: String,
+    value: String,
+    color: androidx.compose.ui.graphics.Color,
+) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(value, style = MaterialTheme.typography.titleLarge.copy(letterSpacing = 0.sp), fontWeight = FontWeight.Bold, color = color)
         Text(label, style = MaterialTheme.typography.labelSmall, color = CatSubtext)
@@ -637,17 +676,24 @@ fun StatChip(label: String, value: String, color: androidx.compose.ui.graphics.C
 }
 
 @Composable
-fun TimelineRow(label: String, value: String) {
+fun TimelineRow(
+    label: String,
+    value: String,
+) {
     Row(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
         Text(label, style = MaterialTheme.typography.bodySmall, color = CatOverlay, modifier = Modifier.width(80.dp))
         Text(value, style = MaterialTheme.typography.bodySmall, color = CatText)
     }
 }
 
-private fun lookupContactName(context: Context, number: String): String? {
-    return try {
+private fun lookupContactName(
+    context: Context,
+    number: String,
+): String? =
+    try {
         val uri = Uri.withAppendedPath(ContactsContract.PhoneLookup.CONTENT_FILTER_URI, Uri.encode(number))
         val cursor = context.contentResolver.query(uri, arrayOf(ContactsContract.PhoneLookup.DISPLAY_NAME), null, null, null)
         cursor?.use { if (it.moveToFirst()) it.getString(0) else null }
-    } catch (_: Exception) { null }
-}
+    } catch (_: Exception) {
+        null
+    }

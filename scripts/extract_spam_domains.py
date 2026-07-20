@@ -7,7 +7,7 @@ and outputs data/spam_domains.json. The Android app loads this
 every 30 minutes to score SMS messages containing known phishing
 or spam domains — a layer that regex alone cannot provide.
 
-Called by GitHub Actions after each community report merge and
+Called by the local/community report merge workflow and
 during the weekly full database rebuild.
 """
 

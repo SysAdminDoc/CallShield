@@ -19,7 +19,10 @@ internal class OneShotNoticeGate(
     private val shownAt = linkedMapOf<String, Long>()
 
     @Synchronized
-    fun shouldShow(key: String, nowMillis: Long = System.currentTimeMillis()): Boolean {
+    fun shouldShow(
+        key: String,
+        nowMillis: Long = System.currentTimeMillis(),
+    ): Boolean {
         prune(nowMillis)
         if (shownAt.containsKey(key)) return false
         shownAt[key] = nowMillis
@@ -57,7 +60,9 @@ internal class OneShotNoticeGate(
             if (first.hasNext()) {
                 first.next()
                 first.remove()
-            } else break
+            } else {
+                break
+            }
         }
     }
 }

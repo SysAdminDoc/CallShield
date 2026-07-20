@@ -125,7 +125,7 @@ class GitHubDataSourceTest {
                   "prefixes": []
                 }
                 """.trimIndent(),
-        )
+            )
 
         assertFeedValidationResult(GitHubFeedFailureReason.MISSING_SCHEMA_FIELD, parsed)
     }

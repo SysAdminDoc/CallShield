@@ -34,10 +34,22 @@ Items moved here from ROADMAP.md because they require external action, dedicated
 
 ## Blocked on External Action
 
+- [ ] P1 — F-Droid submission and signature-copy verification
+  Why: Metadata, Fastlane listing, release signer handoff, and local runbook exist, but the actual publication requires an fdroiddata fork/MR plus fdroidserver/apksigcopier verification in that environment.
+  Blocker: Requires external GitLab/fdroiddata workflow and F-Droid review.
+  Evidence: `docs/fdroid/com.sysadmindoc.callshield.yml`, `docs/fdroid-submission.md`, `fastlane/metadata/android/en-US/`.
+  Complexity: M
+
 - [ ] P1 — IzzyOnDroid submission
   Why: Fastest FOSS distribution path — developer-signed APKs accepted, daily update checker.
   Blocker: Requires manual GitHub issue submission at IzzyOnDroid/repo and Exodus Privacy scan confirmation.
   Evidence: IzzyOnDroid inclusion policy docs; existing Fastlane metadata.
+  Complexity: S
+
+- [ ] P2 — Accrescent submission
+  Why: GrapheneOS-friendly distribution channel with key pinning and signed metadata.
+  Blocker: Requires Accrescent publisher registration and external repository metadata review.
+  Evidence: Accrescent publishing requirements; existing Fastlane metadata and GitHub release artifacts.
   Complexity: S
 
 ## Blocked on Permission Decision

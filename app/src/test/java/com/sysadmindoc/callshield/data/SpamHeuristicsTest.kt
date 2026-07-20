@@ -1,7 +1,7 @@
 package com.sysadmindoc.callshield.data
 
-import org.junit.Assert.*
 import org.junit.After
+import org.junit.Assert.*
 import org.junit.Test
 
 /**
@@ -9,7 +9,6 @@ import org.junit.Test
  * Tests only the pure-logic methods that don't require Android Context.
  */
 class SpamHeuristicsTest {
-
     @After
     fun tearDown() {
         // Reset hot campaign ranges after each test
@@ -268,43 +267,47 @@ class SpamHeuristicsTest {
     @Test
     fun `isRapidFire returns true when threshold met`() {
         val now = System.currentTimeMillis()
-        val recent = listOf(
-            "2125551234" to now - 1000,
-            "2125551234" to now - 2000,
-            "2125551234" to now - 3000
-        )
+        val recent =
+            listOf(
+                "2125551234" to now - 1000,
+                "2125551234" to now - 2000,
+                "2125551234" to now - 3000,
+            )
         assertTrue(SpamHeuristics.isRapidFire(recent, "2125551234"))
     }
 
     @Test
     fun `isRapidFire returns false when below threshold`() {
         val now = System.currentTimeMillis()
-        val recent = listOf(
-            "2125551234" to now - 1000,
-            "2125551234" to now - 2000
-        )
+        val recent =
+            listOf(
+                "2125551234" to now - 1000,
+                "2125551234" to now - 2000,
+            )
         assertFalse(SpamHeuristics.isRapidFire(recent, "2125551234"))
     }
 
     @Test
     fun `isRapidFire ignores calls outside window`() {
         val now = System.currentTimeMillis()
-        val recent = listOf(
-            "2125551234" to now - 1000,
-            "2125551234" to now - 2000,
-            "2125551234" to (now - 7_200_000) // 2 hours ago, outside 1h window
-        )
+        val recent =
+            listOf(
+                "2125551234" to now - 1000,
+                "2125551234" to now - 2000,
+                "2125551234" to (now - 7_200_000), // 2 hours ago, outside 1h window
+            )
         assertFalse(SpamHeuristics.isRapidFire(recent, "2125551234"))
     }
 
     @Test
     fun `isRapidFire normalizes number formats`() {
         val now = System.currentTimeMillis()
-        val recent = listOf(
-            "+12125551234" to now - 1000,
-            "12125551234" to now - 2000,
-            "(212) 555-1234" to now - 3000
-        )
+        val recent =
+            listOf(
+                "+12125551234" to now - 1000,
+                "12125551234" to now - 2000,
+                "(212) 555-1234" to now - 3000,
+            )
         assertTrue(SpamHeuristics.isRapidFire(recent, "2125551234"))
     }
 

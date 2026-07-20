@@ -47,11 +47,12 @@ data class HashWildcardRule(
 ) {
     /** Convenience accessor — bundles the three schedule columns. */
     val schedule: TimeSchedule
-        get() = TimeSchedule(
-            daysMask = scheduleDays,
-            startHour = scheduleStartHour,
-            endHour = scheduleEndHour,
-        )
+        get() =
+            TimeSchedule(
+                daysMask = scheduleDays,
+                startHour = scheduleStartHour,
+                endHour = scheduleEndHour,
+            )
 
     /**
      * Gated match — returns `true` iff the pattern matches [number] AND
@@ -76,6 +77,5 @@ data class HashWildcardRule(
     fun matches(
         number: String,
         matcher: HashWildcardMatcher = HashWildcardMatcher.shared,
-    ): Boolean =
-        matcher.matchesWithVariants(pattern, number)
+    ): Boolean = matcher.matchesWithVariants(pattern, number)
 }

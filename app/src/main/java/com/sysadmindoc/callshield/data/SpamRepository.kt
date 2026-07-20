@@ -29,7 +29,10 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(na
 private object NoBackupPreferenceStores {
     private val stores = ConcurrentHashMap<String, DataStore<Preferences>>()
 
-    fun get(context: Context, name: String): DataStore<Preferences> {
+    fun get(
+        context: Context,
+        name: String,
+    ): DataStore<Preferences> {
         val appContext = context.applicationContext
         val key = "${appContext.noBackupFilesDir.absolutePath}/$name"
         return stores.computeIfAbsent(key) {
@@ -38,14 +41,13 @@ private object NoBackupPreferenceStores {
                 produceFile = {
                     File(appContext.noBackupFilesDir, "datastore").apply { mkdirs() }
                     File(File(appContext.noBackupFilesDir, "datastore"), "$name.preferences_pb")
-                }
+                },
             )
         }
     }
 }
 
-private fun Context.noBackupDataStore(name: String): DataStore<Preferences> =
-    NoBackupPreferenceStores.get(this, name)
+private fun Context.noBackupDataStore(name: String): DataStore<Preferences> = NoBackupPreferenceStores.get(this, name)
 
 @Suppress("TooManyFunctions")
 class SpamRepository(
@@ -56,33 +58,37 @@ class SpamRepository(
 ) {
     private val appContext: Context = context.applicationContext
     private val dao: SpamDao = database.spamDao()
-    private val settingsRepository = SettingsRepository(
-        dataStore = appContext.dataStore,
-        privateDataStore = appContext.noBackupDataStore("callshield_private_prefs"),
-    )
-    private val spamRepositoryImpl = SpamRepositoryImpl(
-        context = appContext,
-        dao = dao,
-        settingsRepository = settingsRepository,
-        checkerDependencies = checkerDependencies,
-    )
-    private val syncRepository = SyncRepository(
-        context = appContext,
-        dao = dao,
-        remote = remote,
-        settingsRepository = settingsRepository,
-        normalizeNumber = ::normalizeNumber,
-        invalidateAllCaches = spamRepositoryImpl::invalidateAllCaches,
-    )
-    private val blocklistRepository = BlocklistRepository(
-        context = appContext,
-        dao = dao,
-        settingsRepository = settingsRepository,
-        normalizeNumber = ::normalizeNumber,
-        invalidateWildcardCache = spamRepositoryImpl::invalidateWildcardCache,
-        invalidateKeywordCache = spamRepositoryImpl::invalidateKeywordCache,
-        invalidateHashWildcardCache = spamRepositoryImpl::invalidateHashWildcardCache,
-    )
+    private val settingsRepository =
+        SettingsRepository(
+            dataStore = appContext.dataStore,
+            privateDataStore = appContext.noBackupDataStore("callshield_private_prefs"),
+        )
+    private val spamRepositoryImpl =
+        SpamRepositoryImpl(
+            context = appContext,
+            dao = dao,
+            settingsRepository = settingsRepository,
+            checkerDependencies = checkerDependencies,
+        )
+    private val syncRepository =
+        SyncRepository(
+            context = appContext,
+            dao = dao,
+            remote = remote,
+            settingsRepository = settingsRepository,
+            normalizeNumber = ::normalizeNumber,
+            invalidateAllCaches = spamRepositoryImpl::invalidateAllCaches,
+        )
+    private val blocklistRepository =
+        BlocklistRepository(
+            context = appContext,
+            dao = dao,
+            settingsRepository = settingsRepository,
+            normalizeNumber = ::normalizeNumber,
+            invalidateWildcardCache = spamRepositoryImpl::invalidateWildcardCache,
+            invalidateKeywordCache = spamRepositoryImpl::invalidateKeywordCache,
+            invalidateHashWildcardCache = spamRepositoryImpl::invalidateHashWildcardCache,
+        )
 
     companion object {
         internal val KEY_LAST_SYNC = longPreferencesKey("last_sync_timestamp")
@@ -93,6 +99,7 @@ class SpamRepository(
         val KEY_BLOCK_SMS = booleanPreferencesKey("block_sms_enabled")
         val KEY_BLOCK_UNKNOWN = booleanPreferencesKey("block_unknown_enabled")
         val KEY_STIR_SHAKEN = booleanPreferencesKey("stir_shaken_enabled")
+
         // STIR/SHAKEN attestation-level TRUST allow. When enabled, a
         // carrier-verified PASS (attestation A/B equivalent) short-circuits
         // the weaker downstream blockers (heuristic, ML, campaign-burst,
@@ -102,6 +109,7 @@ class SpamRepository(
         // priority order). Defaulted on: the FP-fighting value is large
         // and the data is carrier-signed, not self-asserted.
         val KEY_STIR_TRUSTED_ALLOW = booleanPreferencesKey("stir_trusted_allow_enabled")
+
         // Auto-mute mode. When enabled, blocks with confidence < 60 (weaker
         // heuristic/ML hits) are silenced via setSilenceCall() instead of
         // hard-rejected — the call reaches voicemail with no ring, and the
@@ -124,10 +132,12 @@ class SpamRepository(
         val KEY_ANSWERED_CALLER_WINDOW_DAYS = intPreferencesKey("answered_caller_trust_window_days")
         val KEY_EMERGENCY_CALLBACK_GRACE = booleanPreferencesKey("emergency_callback_grace_enabled")
         val KEY_EMERGENCY_CALLBACK_WINDOW_MINUTES = intPreferencesKey("emergency_callback_grace_window_minutes")
+
         // Feature 9: Time-based blocking
         val KEY_TIME_BLOCK = booleanPreferencesKey("time_block_enabled")
         val KEY_TIME_BLOCK_START = intPreferencesKey("time_block_start_hour") // 0-23
         val KEY_TIME_BLOCK_END = intPreferencesKey("time_block_end_hour")
+
         // Feature 10: Frequency auto-escalation
         val KEY_FREQ_ESCALATION = booleanPreferencesKey("freq_escalation_enabled")
         val KEY_FREQ_THRESHOLD = intPreferencesKey("freq_threshold")
@@ -139,18 +149,21 @@ class SpamRepository(
             stringPreferencesKey("external_blocklist_subscriptions")
         val KEY_ML_SCORER = booleanPreferencesKey("ml_scorer_enabled")
         val KEY_RCS_FILTER = booleanPreferencesKey("rcs_filter_enabled")
+
         // Silent voicemail mode: when enabled, blocked calls are silenced (no
         // ring) and routed to voicemail instead of hard-rejected. Less
         // disruptive — phone stays quiet, caller hears normal rings and
         // reaches voicemail, user can review later without the interruption
         // or the missed-call entry from a rejection.
         val KEY_SILENT_VOICEMAIL = booleanPreferencesKey("silent_voicemail_mode")
+
         // A3 push-alert bridge — master toggle. When off, the registry is
         // not fed by RcsNotificationListener and PushAlertChecker returns
         // null unconditionally, so the pipeline behaves as if the feature
         // didn't exist. Default on — the bridge is the single biggest
         // false-positive fix and opt-in adoption would waste it.
         val KEY_PUSH_ALERT = booleanPreferencesKey("push_alert_enabled")
+
         // A3 source allowlist — opt-out semantics. The hardcoded default
         // set lives in [PushAlertRegistry.ALERT_SOURCE_PACKAGES]; this
         // StringSet records packages the user has turned OFF. An empty /
@@ -158,6 +171,7 @@ class SpamRepository(
         // additions to the default list propagate to existing users
         // without them re-enabling anything.
         val KEY_PUSH_ALERT_DISABLED = stringSetPreferencesKey("push_alert_disabled_packages")
+
         // Last-applied blocking profile name (BlockingProfiles.Profile.name). Persisted so the
         // Dashboard chip-row reflects the user's choice across process death / config change.
         // Without this key, _activeProfile defaulted back to null on every VM init, so the
@@ -175,8 +189,8 @@ class SpamRepository(
             database: AppDatabase = AppDatabase.getInstance(context),
             remote: SpamDataSource = GitHubDataSource(),
             checkerDependencies: CheckerDependencies = CheckerDependencies(),
-        ): SpamRepository {
-            return INSTANCE ?: synchronized(this) {
+        ): SpamRepository =
+            INSTANCE ?: synchronized(this) {
                 INSTANCE ?: SpamRepository(
                     context = context.applicationContext,
                     database = database,
@@ -184,7 +198,6 @@ class SpamRepository(
                     checkerDependencies = checkerDependencies,
                 ).also { INSTANCE = it }
             }
-        }
     }
 
     // Settings
@@ -228,42 +241,78 @@ class SpamRepository(
     val externalBlocklistSubscriptions = settingsRepository.externalBlocklistSubscriptions
 
     suspend fun setActiveProfileName(name: String?) = settingsRepository.setActiveProfileName(name)
+
     suspend fun setAbstractApiKey(key: String) = settingsRepository.setAbstractApiKey(key)
+
     suspend fun setMlScorer(enabled: Boolean) = settingsRepository.setMlScorer(enabled)
+
     suspend fun setRcsFilter(enabled: Boolean) = settingsRepository.setRcsFilter(enabled)
+
     suspend fun setSilentVoicemail(enabled: Boolean) = settingsRepository.setSilentVoicemail(enabled)
+
     suspend fun setPushAlert(enabled: Boolean) = settingsRepository.setPushAlert(enabled)
-    suspend fun togglePushAlertPackage(pkg: String, allowed: Boolean) =
-        settingsRepository.togglePushAlertPackage(pkg, allowed)
+
+    suspend fun togglePushAlertPackage(
+        pkg: String,
+        allowed: Boolean,
+    ) = settingsRepository.togglePushAlertPackage(pkg, allowed)
+
     suspend fun resetPushAlertPackages() = settingsRepository.resetPushAlertPackages()
+
     suspend fun setOnboardingDone() = settingsRepository.setOnboardingDone()
+
     suspend fun setAutoCleanup(enabled: Boolean) = settingsRepository.setAutoCleanup(enabled)
+
     suspend fun setCleanupDays(days: Int) = settingsRepository.setCleanupDays(days)
+
     suspend fun setBlockCalls(enabled: Boolean) = settingsRepository.setBlockCalls(enabled)
+
     suspend fun setBlockSms(enabled: Boolean) = settingsRepository.setBlockSms(enabled)
+
     suspend fun setBlockUnknown(enabled: Boolean) = settingsRepository.setBlockUnknown(enabled)
+
     suspend fun setStirShaken(enabled: Boolean) = settingsRepository.setStirShaken(enabled)
+
     suspend fun setStirTrustedAllow(enabled: Boolean) = settingsRepository.setStirTrustedAllow(enabled)
+
     suspend fun setAutoMuteLowConfidence(enabled: Boolean) = settingsRepository.setAutoMuteLowConfidence(enabled)
+
     suspend fun setNeighborSpoof(enabled: Boolean) = settingsRepository.setNeighborSpoof(enabled)
+
     suspend fun setHeuristics(enabled: Boolean) = settingsRepository.setHeuristics(enabled)
+
     suspend fun setSmsContent(enabled: Boolean) = settingsRepository.setSmsContent(enabled)
+
     suspend fun setSmsBurst(enabled: Boolean) = settingsRepository.setSmsBurst(enabled)
+
     suspend fun setUrlhausStripQuery(enabled: Boolean) = settingsRepository.setUrlhausStripQuery(enabled)
+
     suspend fun setContactWhitelist(enabled: Boolean) = settingsRepository.setContactWhitelist(enabled)
+
     suspend fun setContactsOnly(enabled: Boolean) = settingsRepository.setContactsOnly(enabled)
+
     suspend fun setDbPrefixExpansion(enabled: Boolean) = settingsRepository.setDbPrefixExpansion(enabled)
+
     suspend fun setAggressiveMode(enabled: Boolean) = settingsRepository.setAggressiveMode(enabled)
+
     suspend fun setAnsweredCallerTrust(enabled: Boolean) = settingsRepository.setAnsweredCallerTrust(enabled)
+
     suspend fun setAnsweredCallerThreshold(threshold: Int) = settingsRepository.setAnsweredCallerThreshold(threshold)
+
     suspend fun setAnsweredCallerWindowDays(days: Int) = settingsRepository.setAnsweredCallerWindowDays(days)
+
     suspend fun setEmergencyCallbackGrace(enabled: Boolean) = settingsRepository.setEmergencyCallbackGrace(enabled)
-    suspend fun setEmergencyCallbackWindowMinutes(minutes: Int) =
-        settingsRepository.setEmergencyCallbackWindowMinutes(minutes)
+
+    suspend fun setEmergencyCallbackWindowMinutes(minutes: Int) = settingsRepository.setEmergencyCallbackWindowMinutes(minutes)
+
     suspend fun setTimeBlock(enabled: Boolean) = settingsRepository.setTimeBlock(enabled)
+
     suspend fun setTimeBlockStart(hour: Int) = settingsRepository.setTimeBlockStart(hour)
+
     suspend fun setTimeBlockEnd(hour: Int) = settingsRepository.setTimeBlockEnd(hour)
+
     suspend fun setFreqEscalation(enabled: Boolean) = settingsRepository.setFreqEscalation(enabled)
+
     suspend fun setFreqThreshold(threshold: Int) = settingsRepository.setFreqThreshold(threshold)
 
     /**
@@ -274,6 +323,7 @@ class SpamRepository(
     suspend fun readPrefsSnapshot(): Preferences = settingsRepository.readPrefsSnapshot()
 
     // ── Primary spam check ─────────────────────────────────────────────
+
     /**
      * @param realtimeCall `true` for live incoming calls/SMS (the default) —
      *   feeds `CampaignDetector` and may surface the suspicious-caller overlay.
@@ -302,6 +352,7 @@ class SpamRepository(
         )
 
     // ── SMS-specific check ─────────────────────────────────────────────
+
     /** @param realtimeCall see [isSpam] — pass `false` from historical scanners. */
     suspend fun isSpamSms(
         number: String,
@@ -317,10 +368,10 @@ class SpamRepository(
         )
 
     // ── Pipeline trace (diagnostic) ─────────────────────────────────────
-    suspend fun traceRules(number: String): com.sysadmindoc.callshield.data.checker.PipelineTrace =
-        spamRepositoryImpl.traceRules(number)
+    suspend fun traceRules(number: String): com.sysadmindoc.callshield.data.checker.PipelineTrace = spamRepositoryImpl.traceRules(number)
 
     // ── Sync ───────────────────────────────────────────────────────────
+
     /**
      * @param force When true, skips the SHA check and always downloads.
      *              Used for manual sync to guarantee fresh data.
@@ -351,6 +402,19 @@ class SpamRepository(
         description: String = "",
     ) = blocklistRepository.blockNumber(number, type, description)
 
+    suspend fun temporaryBlockNumber(
+        number: String,
+        expiresAt: Long,
+        type: String = "unknown",
+        description: String = "",
+    ) = blocklistRepository.temporaryBlockNumber(number, expiresAt, type, description)
+
+    suspend fun temporaryAllowNumber(
+        number: String,
+        expiresAt: Long,
+        description: String = "",
+    ) = blocklistRepository.temporaryAllowNumber(number, expiresAt, description)
+
     suspend fun unblockNumber(number: SpamNumber) = blocklistRepository.unblockNumber(number)
 
     // ── Wildcard rules (Feature 8) ─────────────────────────────────────
@@ -365,7 +429,10 @@ class SpamRepository(
 
     suspend fun deleteWildcardRule(rule: WildcardRule) = blocklistRepository.deleteWildcardRule(rule)
 
-    suspend fun toggleWildcardRule(id: Long, enabled: Boolean) = blocklistRepository.toggleWildcardRule(id, enabled)
+    suspend fun toggleWildcardRule(
+        id: Long,
+        enabled: Boolean,
+    ) = blocklistRepository.toggleWildcardRule(id, enabled)
 
     // ── Hash wildcard rules (A5, length-locked `#` patterns) ───────────
     fun getAllHashWildcardRules(): Flow<List<HashWildcardRule>> = blocklistRepository.getAllHashWildcardRules()
@@ -378,8 +445,10 @@ class SpamRepository(
 
     suspend fun deleteHashWildcardRule(rule: HashWildcardRule) = blocklistRepository.deleteHashWildcardRule(rule)
 
-    suspend fun toggleHashWildcardRule(id: Long, enabled: Boolean) =
-        blocklistRepository.toggleHashWildcardRule(id, enabled)
+    suspend fun toggleHashWildcardRule(
+        id: Long,
+        enabled: Boolean,
+    ) = blocklistRepository.toggleHashWildcardRule(id, enabled)
 
     // ── Call log ───────────────────────────────────────────────────────
     @Suppress("LongParameterList")
@@ -413,20 +482,34 @@ class SpamRepository(
     )
 
     suspend fun flushPendingBlockedCallLogs(): Int = blocklistRepository.flushPendingBlockedCallLogs()
+
     suspend fun getPendingBlockedCallLogCount(): Int = blocklistRepository.getPendingBlockedCallLogCount()
 
     fun getBlockedCalls(): Flow<List<BlockedCall>> = blocklistRepository.getBlockedCalls()
+
     fun getBlockedCallsOnly(): Flow<List<BlockedCall>> = blocklistRepository.getBlockedCallsOnly()
+
     fun getBlockedSmsOnly(): Flow<List<BlockedCall>> = blocklistRepository.getBlockedSmsOnly()
+
     fun getTotalBlockedCount(): Flow<Int> = blocklistRepository.getTotalBlockedCount()
+
     fun getBlockedCountSince(since: Long): Flow<Int> = blocklistRepository.getBlockedCountSince(since)
-    fun getBlockedCountBetween(start: Long, end: Long): Flow<Int> =
-        blocklistRepository.getBlockedCountBetween(start, end)
+
+    fun getBlockedCountBetween(
+        start: Long,
+        end: Long,
+    ): Flow<Int> = blocklistRepository.getBlockedCountBetween(start, end)
+
     fun getAllSpamNumbers(): Flow<List<SpamNumber>> = blocklistRepository.getAllSpamNumbers()
+
     fun getUserBlockedNumbers(): Flow<List<SpamNumber>> = blocklistRepository.getUserBlockedNumbers()
+
     suspend fun getSpamCount(): Int = blocklistRepository.getSpamCount()
+
     suspend fun clearCallLog() = blocklistRepository.clearCallLog()
+
     suspend fun deleteBlockedCall(call: BlockedCall) = blocklistRepository.deleteBlockedCall(call)
+
     suspend fun insertBlockedCall(call: BlockedCall) = blocklistRepository.insertBlockedCall(call)
 
     // ── Search ─────────────────────────────────────────────────────────
@@ -447,8 +530,10 @@ class SpamRepository(
     suspend fun removeFromWhitelist(entry: WhitelistEntry) = blocklistRepository.removeFromWhitelist(entry)
 
     /** Toggle emergency flag on an existing whitelist entry without deleting it. */
-    suspend fun setWhitelistEmergency(id: Long, emergency: Boolean) =
-        blocklistRepository.setWhitelistEmergency(id, emergency)
+    suspend fun setWhitelistEmergency(
+        id: Long,
+        emergency: Boolean,
+    ) = blocklistRepository.setWhitelistEmergency(id, emergency)
 
     // ── Hot list (30-minute trending sync) ────────────────────────────
     suspend fun replaceHotList(numbers: List<SpamNumber>) = syncRepository.replaceHotList(numbers)
@@ -467,7 +552,11 @@ class SpamRepository(
     ) = blocklistRepository.addKeywordRule(keyword, caseSensitive, description, schedule)
 
     suspend fun deleteKeywordRule(rule: SmsKeywordRule) = blocklistRepository.deleteKeywordRule(rule)
-    suspend fun toggleKeywordRule(id: Long, enabled: Boolean) = blocklistRepository.toggleKeywordRule(id, enabled)
+
+    suspend fun toggleKeywordRule(
+        id: Long,
+        enabled: Boolean,
+    ) = blocklistRepository.toggleKeywordRule(id, enabled)
 
     fun invalidateRestoredRuleCaches() {
         spamRepositoryImpl.invalidateWildcardCache()
@@ -504,19 +593,21 @@ internal fun normalizePhoneNumber(number: String): String {
     // and bypass naive `trim()` (which only sees ASCII whitespace).
     // Doing this first means the `startsWith("+")` check below sees the
     // real leading character.
-    val cleaned = buildString(number.length) {
-        for (ch in number) {
-            when (ch.code) {
-                0x200B, 0x200C, 0x200D, 0x200E, 0x200F, 0xFEFF -> Unit
-                else -> append(ch)
+    val cleaned =
+        buildString(number.length) {
+            for (ch in number) {
+                when (ch.code) {
+                    0x200B, 0x200C, 0x200D, 0x200E, 0x200F, 0xFEFF -> Unit
+                    else -> append(ch)
+                }
             }
         }
-    }
     val trimmed = cleaned.trim()
     val hasPlus = trimmed.startsWith("+")
-    val digits = buildString(trimmed.length) {
-        for (ch in trimmed) if (ch in '0'..'9') append(ch)
-    }
+    val digits =
+        buildString(trimmed.length) {
+            for (ch in trimmed) if (ch in '0'..'9') append(ch)
+        }
     return when {
         digits.isEmpty() -> ""
         hasPlus -> "+$digits"
@@ -529,8 +620,7 @@ internal fun normalizePhoneNumber(number: String): String {
  * treated literally (prevents a blank/"%" search from returning the
  * whole table). Paired with an ESCAPE '\' clause on the Room queries.
  */
-internal fun escapeLikeQuery(query: String): String =
-    query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+internal fun escapeLikeQuery(query: String): String = query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
 
 /**
  * Bridge between the new [BlockResult] type returned by the checker
@@ -538,20 +628,21 @@ internal fun escapeLikeQuery(query: String): String =
  * of the app (UI, service, notification code). Keeps the checker
  * internals decoupled from legacy call sites.
  */
-internal fun BlockResult.toSpamCheckResult(): SpamCheckResult = SpamCheckResult(
-    isSpam = shouldBlock,
-    matchSource = matchSource,
-    type = type,
-    description = description,
-    confidence = confidence,
-)
+internal fun BlockResult.toSpamCheckResult(): SpamCheckResult =
+    SpamCheckResult(
+        isSpam = shouldBlock,
+        matchSource = matchSource,
+        type = type,
+        description = description,
+        confidence = confidence,
+    )
 
 internal fun sanitizeDatabaseNumbers(
     databaseNumbers: Collection<SpamNumberJson>,
     normalizeNumber: (String) -> String,
-    preservedUserBlockedNumbers: Set<String>,
-): List<SpamNumber> {
-    return databaseNumbers.mapNotNull { json ->
+    preservedUserBlockedNumbers: Map<String, Long?>,
+): List<SpamNumber> =
+    databaseNumbers.mapNotNull { json ->
         val normalizedNumber = normalizeNumber(json.number)
         if (normalizedNumber.isBlank()) {
             null
@@ -564,19 +655,22 @@ internal fun sanitizeDatabaseNumbers(
                 lastSeen = json.lastSeen,
                 description = json.description.trim(),
                 source = "github",
-                isUserBlocked = normalizedNumber in preservedUserBlockedNumbers
+                isUserBlocked = normalizedNumber in preservedUserBlockedNumbers,
+                expiresAt = preservedUserBlockedNumbers[normalizedNumber],
             )
         }
     }
-}
 
 internal fun mergeHotListNumbers(
     hotNumbers: Collection<SpamNumber>,
     existingByNumber: Map<String, SpamNumber>,
-): List<SpamNumber> {
-    return hotNumbers.mapNotNull { hotNumber ->
+): List<SpamNumber> =
+    hotNumbers.mapNotNull { hotNumber ->
         when (val existing = existingByNumber[hotNumber.number]) {
-            null -> hotNumber
+            null -> {
+                hotNumber
+            }
+
             else -> {
                 // Never let ephemeral hot-list data overwrite a stronger row from
                 // the main database. If we already know this number from GitHub or
@@ -586,18 +680,24 @@ internal fun mergeHotListNumbers(
                 } else {
                     hotNumber.copy(
                         id = existing.id,
-                        isUserBlocked = existing.isUserBlocked
+                        isUserBlocked = existing.isUserBlocked,
+                        expiresAt = existing.expiresAt,
                     )
                 }
             }
         }
     }
-}
 
 internal sealed interface SpamNumberWhitelistResolution {
     data object None : SpamNumberWhitelistResolution
-    data class Update(val number: SpamNumber) : SpamNumberWhitelistResolution
-    data class Delete(val number: SpamNumber) : SpamNumberWhitelistResolution
+
+    data class Update(
+        val number: SpamNumber,
+    ) : SpamNumberWhitelistResolution
+
+    data class Delete(
+        val number: SpamNumber,
+    ) : SpamNumberWhitelistResolution
 }
 
 internal fun resolveSpamNumberForWhitelist(existing: SpamNumber?): SpamNumberWhitelistResolution {
@@ -608,6 +708,6 @@ internal fun resolveSpamNumberForWhitelist(existing: SpamNumber?): SpamNumberWhi
     return if (existing.source == "user") {
         SpamNumberWhitelistResolution.Delete(existing)
     } else {
-        SpamNumberWhitelistResolution.Update(existing.copy(isUserBlocked = false))
+        SpamNumberWhitelistResolution.Update(existing.copy(isUserBlocked = false, expiresAt = null))
     }
 }

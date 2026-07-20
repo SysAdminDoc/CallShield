@@ -3,11 +3,11 @@ package com.sysadmindoc.callshield.data.local
 import androidx.room.*
 import com.sysadmindoc.callshield.data.model.BlockedCall
 import com.sysadmindoc.callshield.data.model.HashWildcardRule
+import com.sysadmindoc.callshield.data.model.NumberCount
 import com.sysadmindoc.callshield.data.model.PendingBlockedCallLog
+import com.sysadmindoc.callshield.data.model.SmsKeywordRule
 import com.sysadmindoc.callshield.data.model.SpamNumber
 import com.sysadmindoc.callshield.data.model.SpamPrefix
-import com.sysadmindoc.callshield.data.model.NumberCount
-import com.sysadmindoc.callshield.data.model.SmsKeywordRule
 import com.sysadmindoc.callshield.data.model.WhitelistEntry
 import com.sysadmindoc.callshield.data.model.WildcardRule
 import kotlinx.coroutines.flow.Flow
@@ -57,14 +57,34 @@ interface SpamDao {
     @Query("SELECT * FROM spam_numbers WHERE number IN (:numbers)")
     suspend fun getNumbersByNumbers(numbers: List<String>): List<SpamNumber>
 
-    @Query("UPDATE spam_numbers SET isUserBlocked = 0 WHERE isUserBlocked = 1 AND source != 'user'")
+    @Query("UPDATE spam_numbers SET isUserBlocked = 0, expiresAt = NULL WHERE isUserBlocked = 1 AND source != 'user'")
     suspend fun clearUserBlockFlagsOnSyncedNumbers()
 
     @Query("DELETE FROM spam_numbers WHERE isUserBlocked = 1 AND source = 'user'")
     suspend fun deleteUserOwnedBlockedNumbers()
 
+    @Query(
+        """
+        DELETE FROM spam_numbers
+        WHERE isUserBlocked = 1 AND source = 'user' AND expiresAt IS NOT NULL AND expiresAt <= :now
+        """,
+    )
+    suspend fun deleteExpiredUserOwnedBlocks(now: Long): Int
+
+    @Query(
+        """
+        UPDATE spam_numbers
+        SET isUserBlocked = 0, expiresAt = NULL
+        WHERE isUserBlocked = 1 AND source != 'user' AND expiresAt IS NOT NULL AND expiresAt <= :now
+        """,
+    )
+    suspend fun clearExpiredSyncedUserBlockFlags(now: Long): Int
+
     @Transaction
-    suspend fun replaceBySource(source: String, numbers: List<SpamNumber>) {
+    suspend fun replaceBySource(
+        source: String,
+        numbers: List<SpamNumber>,
+    ) {
         deleteBySource(source)
         if (numbers.isNotEmpty()) insertNumbers(numbers)
     }
@@ -80,7 +100,10 @@ interface SpamDao {
     suspend fun deleteAllPrefixes()
 
     @Transaction
-    suspend fun replaceGithubData(numbers: List<SpamNumber>, prefixes: List<SpamPrefix>) {
+    suspend fun replaceGithubData(
+        numbers: List<SpamNumber>,
+        prefixes: List<SpamPrefix>,
+    ) {
         deleteBySource("github")
         deleteAllPrefixes()
         if (numbers.isNotEmpty()) insertNumbers(numbers)
@@ -103,9 +126,12 @@ interface SpamDao {
         WHERE nextAttemptAt <= :now
         ORDER BY createdAt ASC
         LIMIT :limit
-        """
+        """,
     )
-    suspend fun getReadyPendingBlockedCallLogs(now: Long, limit: Int): List<PendingBlockedCallLog>
+    suspend fun getReadyPendingBlockedCallLogs(
+        now: Long,
+        limit: Int,
+    ): List<PendingBlockedCallLog>
 
     @Query("SELECT COUNT(*) FROM pending_blocked_call_logs")
     suspend fun getPendingBlockedCallLogCount(): Int
@@ -118,9 +144,12 @@ interface SpamDao {
         UPDATE pending_blocked_call_logs
         SET attempts = attempts + 1, nextAttemptAt = :nextAttemptAt
         WHERE idempotencyKey = :idempotencyKey
-        """
+        """,
     )
-    suspend fun markPendingBlockedCallLogFailed(idempotencyKey: String, nextAttemptAt: Long)
+    suspend fun markPendingBlockedCallLogFailed(
+        idempotencyKey: String,
+        nextAttemptAt: Long,
+    )
 
     @Transaction
     suspend fun consumePendingBlockedCallLog(log: PendingBlockedCallLog): Long {
@@ -160,10 +189,16 @@ interface SpamDao {
     suspend fun getBlockedCountSinceSync(since: Long): Int
 
     @Query("SELECT COUNT(*) FROM call_log WHERE wasBlocked = 1 AND timestamp > :start AND timestamp <= :end")
-    fun getBlockedCountBetween(start: Long, end: Long): Flow<Int>
+    fun getBlockedCountBetween(
+        start: Long,
+        end: Long,
+    ): Flow<Int>
 
     @Query("SELECT COUNT(*) FROM call_log WHERE wasBlocked = 1 AND timestamp > :start AND timestamp <= :end")
-    suspend fun getBlockedCountBetweenSync(start: Long, end: Long): Int
+    suspend fun getBlockedCountBetweenSync(
+        start: Long,
+        end: Long,
+    ): Int
 
     @Query("SELECT MAX(timestamp) FROM call_log WHERE wasBlocked = 1")
     suspend fun getLastBlockedTimestamp(): Long?
@@ -181,7 +216,10 @@ interface SpamDao {
     // the log within a time window. Unbounded counts caused false positives for
     // legitimate callers with 3+ calls spread over months.
     @Query("SELECT COUNT(*) FROM call_log WHERE number = :number AND timestamp > :since")
-    suspend fun getNumberFrequencySince(number: String, since: Long): Int
+    suspend fun getNumberFrequencySince(
+        number: String,
+        since: Long,
+    ): Int
 
     // Wildcard rules (Feature 8)
     @Query("SELECT * FROM wildcard_rules WHERE enabled = 1")
@@ -200,7 +238,10 @@ interface SpamDao {
     suspend fun deleteWildcardRule(rule: WildcardRule)
 
     @Query("UPDATE wildcard_rules SET enabled = :enabled WHERE id = :id")
-    suspend fun setWildcardRuleEnabled(id: Long, enabled: Boolean)
+    suspend fun setWildcardRuleEnabled(
+        id: Long,
+        enabled: Boolean,
+    )
 
     // Hash wildcard rules (length-locked `#` patterns, DB v7+)
     @Query("SELECT * FROM hash_wildcard_rules WHERE enabled = 1")
@@ -219,15 +260,20 @@ interface SpamDao {
     suspend fun deleteHashWildcardRule(rule: HashWildcardRule)
 
     @Query("UPDATE hash_wildcard_rules SET enabled = :enabled WHERE id = :id")
-    suspend fun setHashWildcardRuleEnabled(id: Long, enabled: Boolean)
+    suspend fun setHashWildcardRuleEnabled(
+        id: Long,
+        enabled: Boolean,
+    )
 
     // Search — repository pre-escapes `%`, `_`, and `\` in the user query
     // so typing a literal `%` doesn't silently become a wildcard and a
     // blank search doesn't return the whole table.
-    @Query("""SELECT * FROM spam_numbers
+    @Query(
+        """SELECT * FROM spam_numbers
               WHERE number LIKE '%' || :query || '%' ESCAPE '\'
                  OR description LIKE '%' || :query || '%' ESCAPE '\'
-              ORDER BY reports DESC LIMIT 100""")
+              ORDER BY reports DESC LIMIT 100""",
+    )
     fun searchNumbers(query: String): Flow<List<SpamNumber>>
 
     // Whitelist
@@ -240,6 +286,15 @@ interface SpamDao {
     @Query("SELECT * FROM whitelist WHERE number = :number LIMIT 1")
     suspend fun findWhitelistEntry(number: String): WhitelistEntry?
 
+    @Query("SELECT * FROM whitelist WHERE number = :number AND expiresAt IS NULL LIMIT 1")
+    suspend fun findPermanentWhitelistEntry(number: String): WhitelistEntry?
+
+    @Query("SELECT * FROM whitelist WHERE number = :number AND expiresAt IS NOT NULL AND expiresAt > :now LIMIT 1")
+    suspend fun findActiveTemporaryWhitelistEntry(
+        number: String,
+        now: Long,
+    ): WhitelistEntry?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertWhitelistEntry(entry: WhitelistEntry)
 
@@ -250,7 +305,13 @@ interface SpamDao {
     suspend fun deleteWhitelistEntry(entry: WhitelistEntry)
 
     @Query("UPDATE whitelist SET isEmergency = :emergency WHERE id = :id")
-    suspend fun setWhitelistEmergency(id: Long, emergency: Boolean)
+    suspend fun setWhitelistEmergency(
+        id: Long,
+        emergency: Boolean,
+    )
+
+    @Query("DELETE FROM whitelist WHERE expiresAt IS NOT NULL AND expiresAt <= :now")
+    suspend fun deleteExpiredWhitelistEntries(now: Long): Int
 
     // Auto-cleanup
     @Query("DELETE FROM call_log WHERE timestamp < :before")
@@ -273,17 +334,22 @@ interface SpamDao {
     suspend fun deleteKeywordRule(rule: SmsKeywordRule)
 
     @Query("UPDATE sms_keyword_rules SET enabled = :enabled WHERE id = :id")
-    suspend fun setKeywordRuleEnabled(id: Long, enabled: Boolean)
+    suspend fun setKeywordRuleEnabled(
+        id: Long,
+        enabled: Boolean,
+    )
 
     // Grouped blocked numbers — count per number
     @Query("SELECT number, COUNT(*) as cnt FROM call_log WHERE wasBlocked = 1 GROUP BY number ORDER BY cnt DESC LIMIT :limit")
     suspend fun getGroupedBlockedNumbers(limit: Int = 50): List<NumberCount>
 
     // Search across log — escaped like above
-    @Query("""SELECT * FROM call_log
+    @Query(
+        """SELECT * FROM call_log
               WHERE number LIKE '%' || :query || '%' ESCAPE '\'
                  OR matchReason LIKE '%' || :query || '%' ESCAPE '\'
-              ORDER BY timestamp DESC LIMIT 100""")
+              ORDER BY timestamp DESC LIMIT 100""",
+    )
     fun searchLog(query: String): Flow<List<BlockedCall>>
 
     @Transaction
