@@ -68,12 +68,6 @@ object HttpClient {
                     "sha256/A7AXWj1rjKywVBFqQcQvoHEEWHeViDOFXrwzRs984Xc=",
                     "sha256/68l4rg3Z5YItaxllJZb2IMk9fK76lSGRywUKYyypAF8=",
                 ),
-            "phonevalidation.abstractapi.com" to
-                listOf(
-                    "sha256/+RrudNqgW6672HhSINNZzjvkzMGcd3TpA3LqIDVqAWk=",
-                    "sha256/DxH4tt40L+eduF6szpY6TONlxhZhBd+pJ9wbHlQ2fuw=",
-                    "sha256/++MBgDH5WGvL9Bcn5Be30cRcL0f5O+NyoXuWtQdX1aI=",
-                ),
         )
 
     internal val certificatePinner: CertificatePinner =

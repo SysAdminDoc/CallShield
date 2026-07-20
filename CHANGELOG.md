@@ -2,6 +2,30 @@
 
 All notable changes to CallShield will be documented in this file.
 
+## v1.7.13 — 2026-07-20
+
+### Changed
+
+- **Removed the only manual API-key entry.** The optional AbstractAPI carrier /
+  line-type key field is gone from Settings. CallShield now requires and offers
+  no credential entry of any kind — every lookup and enrichment source it uses
+  is free and keyless (GitHub raw data, SkipCalls, PhoneBlock, WhoCalledMe,
+  OpenCNAM, URLhaus, and the app's own Cloudflare Worker).
+- Any AbstractAPI key stored by an earlier build is purged from both the public
+  and private no-backup DataStores on first launch (`purgeLegacyAbstractApiKey`).
+
+### Removed
+
+- Deleted the unused `NumberTypeChecker` (AbstractAPI phone-validation client);
+  it was never invoked on the screening or overlay path.
+- Dropped the `phonevalidation.abstractapi.com` certificate pin and its
+  `HttpClientTest` assertion, plus the AbstractAPI Settings strings.
+
+### Testing
+
+- Updated `RemoteLookupParserTest` and `HttpClientTest` to match the removed
+  surface; `testDebugUnitTest` green.
+
 ## v1.7.12 — 2026-06-27
 
 ### Hardening

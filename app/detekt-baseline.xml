@@ -25,7 +25,6 @@
     <ID>CyclomaticComplexMethod:MainActivity.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun CallShieldApp(viewModel: MainViewModel, startTab: Int = 0)</ID>
     <ID>CyclomaticComplexMethod:MoreScreen.kt$@Composable fun MoreHub(viewModel: MainViewModel, onStats: () -&gt; Unit, onSettings: () -&gt; Unit, onChangelog: () -&gt; Unit, onTest: () -&gt; Unit)</ID>
     <ID>CyclomaticComplexMethod:NumberDetailScreen.kt$@Composable fun NumberDetailScreen(number: String, viewModel: MainViewModel, onBack: () -&gt; Unit)</ID>
-    <ID>CyclomaticComplexMethod:NumberTypeChecker.kt$NumberTypeChecker$suspend fun check(number: String, apiKey: String): NumberTypeResult</ID>
     <ID>CyclomaticComplexMethod:OnboardingScreen.kt$@Composable internal fun OnboardingScreenContent( permsGranted: Boolean, notificationsGranted: Boolean, overlayGranted: Boolean, screenerGranted: Boolean, screenerSupported: Boolean, onRequestCorePermissions: () -&gt; Unit, onRequestNotifications: () -&gt; Unit, onRequestOverlay: () -&gt; Unit, onRequestScreener: () -&gt; Unit, onComplete: () -&gt; Unit, snackbarHostState: SnackbarHostState = remember { SnackbarHostState() }, )</ID>
     <ID>CyclomaticComplexMethod:ProtectionTestScreen.kt$private suspend fun runTests(context: Context): List&lt;TestResult&gt;</ID>
     <ID>CyclomaticComplexMethod:RecentCallsScreen.kt$@Composable fun RecentCallItem(call: RecentCall, onOpenDetail: () -&gt; Unit)</ID>
@@ -357,14 +356,6 @@
     <ID>MagicNumber:NumberDetailScreen.kt$100</ID>
     <ID>MagicNumber:NumberDetailScreen.kt$3</ID>
     <ID>MagicNumber:NumberDetailScreen.kt$4000</ID>
-    <ID>MagicNumber:NumberTypeChecker.kt$NumberTypeChecker$10</ID>
-    <ID>MagicNumber:NumberTypeChecker.kt$NumberTypeChecker$11</ID>
-    <ID>MagicNumber:NumberTypeChecker.kt$NumberTypeChecker$15</ID>
-    <ID>MagicNumber:NumberTypeChecker.kt$NumberTypeChecker$20</ID>
-    <ID>MagicNumber:NumberTypeChecker.kt$NumberTypeChecker$30</ID>
-    <ID>MagicNumber:NumberTypeChecker.kt$NumberTypeChecker$5</ID>
-    <ID>MagicNumber:NumberTypeChecker.kt$NumberTypeChecker$7</ID>
-    <ID>MagicNumber:NumberTypeChecker.kt$NumberTypeChecker$8</ID>
     <ID>MagicNumber:OnboardingScreen.kt$0.10f</ID>
     <ID>MagicNumber:OnboardingScreen.kt$300f</ID>
     <ID>MagicNumber:OneShotNoticeGate.kt$OneShotNoticeGate$1_000L</ID>

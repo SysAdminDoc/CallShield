@@ -10,12 +10,8 @@ import com.sysadmindoc.callshield.data.CallbackDetector
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.model.ExternalBlocklistSubscription
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 
 @Suppress("TooManyFunctions")
 class SettingsRepository(
@@ -29,7 +25,6 @@ class SettingsRepository(
         const val DEFAULT_CLEANUP_DAYS = 30
     }
 
-    private val abstractApiKeyMigrationMutex = Mutex()
     private val externalBlocklistAdapter =
         Moshi
             .Builder()
@@ -41,9 +36,6 @@ class SettingsRepository(
                     ExternalBlocklistSubscription::class.java,
                 ),
             )
-
-    @Volatile
-    private var abstractApiKeyMigrationComplete = false
 
     val blockCallsEnabled: Flow<Boolean> = dataStore.data.map { it[SpamRepository.KEY_BLOCK_CALLS] ?: true }
     val blockSmsEnabled: Flow<Boolean> = dataStore.data.map { it[SpamRepository.KEY_BLOCK_SMS] ?: true }
@@ -119,27 +111,6 @@ class SettingsRepository(
                 prefs[SpamRepository.KEY_ACTIVE_PROFILE] = name
             }
         }
-
-    // Optional AbstractAPI key for carrier/number-type enrichment in the Caller ID overlay.
-    // Never used in the blocking pipeline; blocking stays local/offline.
-    val abstractApiKey: Flow<String> =
-        flow {
-            migrateAbstractApiKeyIfNeeded()
-            emitAll(privateDataStore.data.map { it[SpamRepository.KEY_ABSTRACT_API_KEY] ?: "" })
-        }
-
-    suspend fun setAbstractApiKey(key: String) {
-        migrateAbstractApiKeyIfNeeded()
-        val sanitizedKey = key.trim()
-        privateDataStore.edit { prefs ->
-            if (sanitizedKey.isBlank()) {
-                prefs.remove(SpamRepository.KEY_ABSTRACT_API_KEY)
-            } else {
-                prefs[SpamRepository.KEY_ABSTRACT_API_KEY] = sanitizedKey
-            }
-        }
-        dataStore.edit { it.remove(SpamRepository.KEY_ABSTRACT_API_KEY) }
-    }
 
     suspend fun setMlScorer(enabled: Boolean) = dataStore.edit { it[SpamRepository.KEY_ML_SCORER] = enabled }
 
@@ -271,21 +242,17 @@ class SettingsRepository(
         if (sha != null) it[SpamRepository.KEY_LAST_SHA] = sha
     }
 
-    private suspend fun migrateAbstractApiKeyIfNeeded() {
-        if (abstractApiKeyMigrationComplete) return
-
-        abstractApiKeyMigrationMutex.withLock {
-            if (abstractApiKeyMigrationComplete) return@withLock
-
-            val privateKey = privateDataStore.data.first()[SpamRepository.KEY_ABSTRACT_API_KEY]
-            val legacyKey = dataStore.data.first()[SpamRepository.KEY_ABSTRACT_API_KEY]
-            if (privateKey.isNullOrBlank() && !legacyKey.isNullOrBlank()) {
-                privateDataStore.edit { it[SpamRepository.KEY_ABSTRACT_API_KEY] = legacyKey.trim() }
-            }
-            if (legacyKey != null) {
-                dataStore.edit { it.remove(SpamRepository.KEY_ABSTRACT_API_KEY) }
-            }
-            abstractApiKeyMigrationComplete = true
+    /**
+     * One-time cleanup of the retired optional AbstractAPI key. Earlier builds let users
+     * paste a carrier-enrichment key; that entry has been removed (the app is fully free and
+     * keyless), so purge any residual value from both the public and private no-backup stores.
+     */
+    suspend fun purgeLegacyAbstractApiKey() {
+        if (privateDataStore.data.first()[SpamRepository.KEY_ABSTRACT_API_KEY] != null) {
+            privateDataStore.edit { it.remove(SpamRepository.KEY_ABSTRACT_API_KEY) }
+        }
+        if (dataStore.data.first()[SpamRepository.KEY_ABSTRACT_API_KEY] != null) {
+            dataStore.edit { it.remove(SpamRepository.KEY_ABSTRACT_API_KEY) }
         }
     }
 

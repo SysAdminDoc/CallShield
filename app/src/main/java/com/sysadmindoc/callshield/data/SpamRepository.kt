@@ -229,7 +229,6 @@ class SpamRepository(
     val onboardingDone: Flow<Boolean> = settingsRepository.onboardingDone
     val autoCleanupEnabled: Flow<Boolean> = settingsRepository.autoCleanupEnabled
     val cleanupDays: Flow<Int> = settingsRepository.cleanupDays
-    val abstractApiKey: Flow<String> = settingsRepository.abstractApiKey
     val mlScorerEnabled: Flow<Boolean> = settingsRepository.mlScorerEnabled
     val rcsFilterEnabled: Flow<Boolean> = settingsRepository.rcsFilterEnabled
     val silentVoicemailEnabled: Flow<Boolean> = settingsRepository.silentVoicemailEnabled
@@ -242,7 +241,7 @@ class SpamRepository(
 
     suspend fun setActiveProfileName(name: String?) = settingsRepository.setActiveProfileName(name)
 
-    suspend fun setAbstractApiKey(key: String) = settingsRepository.setAbstractApiKey(key)
+    suspend fun purgeLegacyAbstractApiKey() = settingsRepository.purgeLegacyAbstractApiKey()
 
     suspend fun setMlScorer(enabled: Boolean) = settingsRepository.setMlScorer(enabled)
 

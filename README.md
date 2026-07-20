@@ -22,6 +22,15 @@
 
 CallShield blocks spam calls and texts using a **15+ layer on-device detection engine** with a gradient-boosted tree ML scorer, campaign burst detection, RCS notification filter, and real-time caller ID overlay. Powered by a 32,933-number database with scheduled hot-list updates. Community-maintained, no accounts, no tracking.
 
+## v1.7.13 Highlights
+
+- **Fully free, zero API keys** — the optional AbstractAPI key field has been
+  removed from Settings. CallShield no longer has any manual credential entry;
+  every lookup and enrichment source it uses is free and needs no sign-up. Any
+  key saved by an earlier version is purged from the device on first launch.
+- **Dead code removed** — the unused carrier/line-type network checker
+  (`NumberTypeChecker`) and its certificate pin are gone.
+
 ## v1.7.12 Highlights
 
 - **Durable blocked-call logging** - blocked-call decisions now enqueue an
@@ -97,7 +106,7 @@ CallShield blocks spam calls and texts using a **15+ layer on-device detection e
 5. **Callback-aware** — won't block callbacks from numbers you recently called, answered repeatedly, after a local emergency call, or urgent repeated callers
 6. **Community-driven** — one-tap anonymous contribution via Cloudflare Worker, daily merge into database
 
-## Detection Pipeline (v1.7.12)
+## Detection Pipeline (v1.7.13)
 
 All detection layers implement a shared `IChecker` interface and run in priority order via `CheckerPipeline.run` — first non-null result wins, every layer is testable in isolation. Priorities are stable numbers; the ladder below is the live order.
 
@@ -258,7 +267,6 @@ Trained weekly from the CallShield database (50K positive + 50K negative samples
 | **PhoneBlock.net** | Votes, rating, blacklist | None |
 | **WhoCalledMe** | Report count, notes | None |
 | **OpenCNAM** | Caller name (CNAM) | None (60/hr) |
-| **AbstractAPI** | Carrier, line type | Optional key |
 
 ### URL Safety (post-decision)
 | Source | What It Checks |
@@ -270,7 +278,7 @@ Trained weekly from the CallShield database (50K positive + 50K negative samples
 - **Network security config** — cleartext traffic disabled in production
 - **Signing credentials** — stored in `local.properties`, not hardcoded in build files
 - **Restricted FileProvider paths** — scoped to export directory only
-- **Scoped backup** — database and public settings are backed up for transfer/restore, while the optional AbstractAPI key is migrated to a private no-backup DataStore
+- **Scoped backup** — database and public settings are backed up for transfer/restore; no credentials are stored anywhere
 
 ## Privacy
 
@@ -280,7 +288,7 @@ All detection runs on-device. No personal data is collected. Network requests:
 - Community reports to Cloudflare Worker (phone number only, no identity)
 - URLhaus checks for SMS URL safety after local spam-domain matching; fragments and query strings are stripped by default
 
-No required API keys. The optional AbstractAPI key stays on-device in no-backup storage. No accounts. No analytics. No ads.
+No API keys — none required, none optional, no credential entry anywhere in the app. No accounts. No analytics. No ads.
 
 ## Requirements
 

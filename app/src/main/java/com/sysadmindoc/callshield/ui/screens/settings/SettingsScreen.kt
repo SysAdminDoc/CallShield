@@ -33,8 +33,6 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -105,7 +103,6 @@ fun SettingsScreen(viewModel: MainViewModel) {
     val silentVoicemail by viewModel.silentVoicemailEnabled.collectAsStateWithLifecycle()
     val pushAlertEnabled by viewModel.pushAlertEnabled.collectAsStateWithLifecycle()
     val pushAlertDisabledPackages by viewModel.pushAlertDisabledPackages.collectAsStateWithLifecycle()
-    val abstractApiKey by viewModel.abstractApiKey.collectAsStateWithLifecycle()
     val externalBlocklists by viewModel.externalBlocklistSubscriptions.collectAsStateWithLifecycle()
     val externalBlocklistPreview by viewModel.externalBlocklistPreview.collectAsStateWithLifecycle()
     val externalBlocklistResult by viewModel.externalBlocklistResult.collectAsStateWithLifecycle()
@@ -113,8 +110,6 @@ fun SettingsScreen(viewModel: MainViewModel) {
     var showRawSmsExportDialog by remember { mutableStateOf(false) }
     var externalBlocklistUrl by remember { mutableStateOf("") }
     var externalBlocklistLabel by remember { mutableStateOf("") }
-    val apiKeyClearedMessage = stringResource(R.string.settings_api_key_cleared)
-    val apiKeySavedMessage = stringResource(R.string.settings_api_key_saved)
 
     val roleManager =
         remember(context) {
@@ -659,7 +654,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
             }
         }
 
-        // Advanced — optional API key for caller name lookup
+        // External blocklist subscriptions (Pi-hole-style URL feeds)
         ExternalBlocklistSettings(
             url = externalBlocklistUrl,
             label = externalBlocklistLabel,
@@ -686,123 +681,6 @@ fun SettingsScreen(viewModel: MainViewModel) {
             },
             onClearResult = viewModel::clearExternalBlocklistResult,
         )
-
-        SettingsCard(stringResource(R.string.settings_advanced)) {
-            var apiKeyInput by remember { mutableStateOf(abstractApiKey) }
-            var showApiKey by remember { mutableStateOf(false) }
-            LaunchedEffect(abstractApiKey) {
-                apiKeyInput = abstractApiKey
-            }
-            val trimmedApiKey = apiKeyInput.trim()
-            val hasStoredApiKey = abstractApiKey.isNotBlank()
-            val hasApiKeyChanges = trimmedApiKey != abstractApiKey
-            val apiStatusText =
-                stringResource(
-                    when {
-                        hasApiKeyChanges -> R.string.settings_api_key_unsaved
-                        hasStoredApiKey -> R.string.settings_api_key_saved_locally
-                        else -> R.string.settings_api_key_not_configured
-                    },
-                )
-            val apiStatusColor =
-                when {
-                    hasApiKeyChanges -> CatYellow
-                    hasStoredApiKey -> CatGreen
-                    else -> CatOverlay
-                }
-            Text(stringResource(R.string.settings_abstract_api_key), style = MaterialTheme.typography.bodyMedium)
-            Text(stringResource(R.string.settings_abstract_api_desc), style = MaterialTheme.typography.bodySmall, color = CatSubtext)
-            Spacer(Modifier.height(8.dp))
-            OutlinedTextField(
-                value = apiKeyInput,
-                onValueChange = { apiKeyInput = it },
-                label = { Text(stringResource(R.string.settings_api_key)) },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-                leadingIcon = {
-                    Icon(Icons.Default.Key, contentDescription = null, tint = CatBlue)
-                },
-                visualTransformation =
-                    if (showApiKey) {
-                        VisualTransformation.None
-                    } else {
-                        PasswordVisualTransformation()
-                    },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                trailingIcon = {
-                    IconButton(onClick = { showApiKey = !showApiKey }) {
-                        Icon(
-                            imageVector = if (showApiKey) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                            contentDescription =
-                                stringResource(
-                                    if (showApiKey) R.string.settings_api_key_hide else R.string.settings_api_key_show,
-                                ),
-                            tint = CatSubtext,
-                        )
-                    }
-                },
-                shape = RoundedCornerShape(8.dp),
-                colors =
-                    OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = CatBlue,
-                        unfocusedBorderColor = CardBorderAccent,
-                        focusedLabelColor = CatBlue,
-                        cursorColor = CatBlue,
-                    ),
-            )
-            Spacer(Modifier.height(10.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                StatusPill(
-                    text = apiStatusText,
-                    color = apiStatusColor,
-                    modifier = Modifier.weight(1f),
-                    horizontalPadding = 10.dp,
-                    verticalPadding = 6.dp,
-                )
-                PremiumActionButton(
-                    label =
-                        stringResource(
-                            if (trimmedApiKey.isBlank() && hasStoredApiKey) {
-                                R.string.settings_api_key_clear
-                            } else {
-                                R.string.settings_api_key_save
-                            },
-                        ),
-                    icon =
-                        if (trimmedApiKey.isBlank() && hasStoredApiKey) {
-                            Icons.Default.DeleteSweep
-                        } else {
-                            Icons.Default.Save
-                        },
-                    color = CatBlue,
-                    onClick = {
-                        viewModel.setAbstractApiKey(trimmedApiKey)
-                        hapticTick(context)
-                        android.widget.Toast
-                            .makeText(
-                                context,
-                                if (trimmedApiKey.isBlank()) {
-                                    apiKeyClearedMessage
-                                } else {
-                                    apiKeySavedMessage
-                                },
-                                android.widget.Toast.LENGTH_SHORT,
-                            ).show()
-                    },
-                    enabled = hasApiKeyChanges,
-                )
-            }
-            Spacer(Modifier.height(8.dp))
-            Text(
-                stringResource(R.string.settings_api_key_local_only),
-                style = MaterialTheme.typography.labelSmall,
-                color = CatOverlay,
-            )
-        }
 
         // About
         PremiumCard {

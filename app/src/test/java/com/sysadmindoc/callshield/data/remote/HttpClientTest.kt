@@ -31,7 +31,6 @@ class HttpClientTest {
                 "www.whocalledme.com",
                 "api.opencnam.com",
                 "urlhaus-api.abuse.ch",
-                "phonevalidation.abstractapi.com",
             ),
             HttpClient.pinnedEndpointPins.keys,
         )
