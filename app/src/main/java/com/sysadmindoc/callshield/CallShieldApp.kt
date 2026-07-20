@@ -84,6 +84,14 @@ class CallShieldApp :
                 Log.w("CallShieldApp", "Failed to clean up old logs", e)
             }
         }
+
+        appScope.launch {
+            try {
+                SpamRepository.getInstance(this@CallShieldApp).purgeLegacyAbstractApiKey()
+            } catch (e: Exception) {
+                Log.w("CallShieldApp", "Failed to purge legacy API key", e)
+            }
+        }
     }
 
     private fun registerCacheInvalidationObservers() {

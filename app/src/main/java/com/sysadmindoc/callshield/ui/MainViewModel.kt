@@ -207,7 +207,6 @@ class MainViewModel
         val pushAlertDisabledPackages =
             repo.pushAlertDisabledPackages
                 .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
-        val abstractApiKey = repo.abstractApiKey.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
         val externalBlocklistSubscriptions =
             repo.externalBlocklistSubscriptions
                 .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -657,7 +656,6 @@ class MainViewModel
             viewModelScope.launch { repo.resetPushAlertPackages() }
         }
 
-        fun setAbstractApiKey(key: String) = viewModelScope.launch { repo.setAbstractApiKey(key) }
 
         // Profiles
         // Persisted in DataStore (SpamRepository.KEY_ACTIVE_PROFILE) so the dashboard

@@ -42,34 +42,6 @@ class RemoteLookupParserTest {
     }
 
     @Test
-    fun `number type parser keeps malformed payload unknown without crashing`() {
-        val result = NumberTypeChecker.parseNumberTypeBody("""{"type":{""")
-
-        assertEquals(NumberTypeChecker.NumberLineType.UNKNOWN, result.lineType)
-        assertEquals("", result.carrier)
-        assertEquals(RemoteLookupStatus.PARSE_ERROR, result.status)
-    }
-
-    @Test
-    fun `number type parser detects voip normal response`() {
-        val body =
-            listOf(
-                "{",
-                """"type": {"type": "VoIP", "is_prepaid": false},""",
-                """"carrier": {"name": "Example Voice"},""",
-                """"country_code": "US"""",
-                "}",
-            ).joinToString("\n")
-
-        val result = NumberTypeChecker.parseNumberTypeBody(body)
-
-        assertEquals(NumberTypeChecker.NumberLineType.VOIP, result.lineType)
-        assertEquals("Example Voice", result.carrier)
-        assertEquals("US", result.country)
-        assertEquals(RemoteLookupStatus.FOUND, result.status)
-    }
-
-    @Test
     fun `caller name parser exposes clean and found status`() {
         val found = parseCallerNameBody("""{"number":"+15551234567","name":"ACME SERVICE"}""")
         val clean = parseCallerNameBody("""{"number":"+15551234567","name":""}""")

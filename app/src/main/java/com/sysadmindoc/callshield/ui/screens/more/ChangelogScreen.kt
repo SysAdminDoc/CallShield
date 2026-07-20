@@ -25,9 +25,20 @@ fun ChangelogScreen() {
         verticalArrangement = Arrangement.spacedBy(0.dp),
     ) {
         VersionEntry(
+            "1.7.13",
+            "Fully free and keyless: the optional API key entry is gone",
+            isLatest = true,
+            changes =
+                listOf(
+                    "Removed the optional AbstractAPI key field from Settings — CallShield now needs no API keys at all",
+                    "Every lookup and enrichment source the app uses is free and requires no sign-up or credentials",
+                    "Any key stored by an earlier version is purged from the device on first launch",
+                    "Dropped the unused carrier/line-type network checker and its certificate pin",
+                ),
+        )
+        VersionEntry(
             "1.7.12",
             "Durable blocked-call logging and community-report backoff",
-            isLatest = true,
             changes =
                 listOf(
                     "Blocked-call decisions persist pending log rows before the call response",

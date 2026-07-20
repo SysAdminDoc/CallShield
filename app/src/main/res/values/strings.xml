@@ -537,21 +537,8 @@
     <string name="settings_external_blocklist_commit_preview">Commit preview</string>
     <string name="settings_external_blocklist_subscription_stats">%1$d active, +%2$d / -%3$d last sync</string>
     <string name="settings_advanced">Advanced</string>
-    <string name="settings_abstract_api_key">AbstractAPI Key (optional)</string>
-    <string name="settings_abstract_api_desc">Free 250 lookups/month for carrier &amp; line-type enrichment in the caller ID overlay. Never used for blocking.</string>
-    <string name="settings_api_key">API Key</string>
     <string name="settings_save">Save</string>
-    <string name="settings_api_key_cleared">API key cleared</string>
-    <string name="settings_api_key_saved">API key saved</string>
-    <string name="settings_api_key_save">Save key</string>
-    <string name="settings_api_key_clear">Clear key</string>
-    <string name="settings_api_key_show">Show API key</string>
-    <string name="settings_api_key_hide">Hide API key</string>
-    <string name="settings_api_key_not_configured">Not configured</string>
-    <string name="settings_api_key_saved_locally">Saved locally</string>
-    <string name="settings_api_key_unsaved">Unsaved changes</string>
-    <string name="settings_api_key_local_only">Stored only on this device. Leave blank to disable optional carrier enrichment.</string>
-    <string name="settings_about_desc">Open-source spam blocker. No subscriptions, no tracking.</string>
+    <string name="settings_about_desc">Open-source spam blocker. No subscriptions, no tracking, no API keys.</string>
 
     <!-- Stats Screen -->
     <string name="stats_calls">Calls</string>
