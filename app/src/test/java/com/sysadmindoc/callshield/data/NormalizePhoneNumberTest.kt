@@ -11,7 +11,6 @@ import org.junit.Test
  * empty string when no ASCII digits are present).
  */
 class NormalizePhoneNumberTest {
-
     @Test fun `plain US 10-digit passes through`() {
         assertEquals("2125551234", normalizePhoneNumber("2125551234"))
     }

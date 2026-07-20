@@ -1,0 +1,6 @@
+Durable blocked-call logging and community-report backoff.
+
+- Blocked calls are queued durably before Android receives the screening response.
+- A retry worker flushes queued blocked-call logs without duplicate log rows or notifications.
+- Community-report rate-limit responses now show a retry delay.
+- Security-sensitive number parsing uses shared ASCII-only digit extraction.

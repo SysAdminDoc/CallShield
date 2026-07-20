@@ -10,16 +10,21 @@ import android.content.Context
  * Off: disable all blocking
  */
 object BlockingProfiles {
-
-    enum class Profile(val label: String, val description: String) {
+    enum class Profile(
+        val label: String,
+        val description: String,
+    ) {
         WORK("Work", "Block spam, allow unknown callers"),
         PERSONAL("Personal", "Block spam + unknown numbers"),
         SLEEP("Sleep", "Block everything except contacts"),
         MAX("Maximum", "Aggressive mode + block unknowns + quiet hours"),
-        OFF("Off", "Disable all blocking")
+        OFF("Off", "Disable all blocking"),
     }
 
-    suspend fun apply(context: Context, profile: Profile) {
+    suspend fun apply(
+        context: Context,
+        profile: Profile,
+    ) {
         val repo = SpamRepository.getInstance(context)
         when (profile) {
             Profile.WORK -> {
@@ -29,6 +34,7 @@ object BlockingProfiles {
                 repo.setAggressiveMode(false)
                 repo.setTimeBlock(false)
             }
+
             Profile.PERSONAL -> {
                 repo.setBlockCalls(true)
                 repo.setBlockSms(true)
@@ -36,6 +42,7 @@ object BlockingProfiles {
                 repo.setAggressiveMode(false)
                 repo.setTimeBlock(false)
             }
+
             Profile.SLEEP -> {
                 repo.setBlockCalls(true)
                 repo.setBlockSms(true)
@@ -43,6 +50,7 @@ object BlockingProfiles {
                 repo.setAggressiveMode(false)
                 repo.setTimeBlock(true)
             }
+
             Profile.MAX -> {
                 repo.setBlockCalls(true)
                 repo.setBlockSms(true)
@@ -50,6 +58,7 @@ object BlockingProfiles {
                 repo.setAggressiveMode(true)
                 repo.setTimeBlock(true)
             }
+
             Profile.OFF -> {
                 repo.setBlockCalls(false)
                 repo.setBlockSms(false)

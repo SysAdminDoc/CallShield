@@ -55,10 +55,10 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRowDefaults
 import androidx.compose.material3.Text
@@ -90,13 +90,13 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sysadmindoc.callshield.R
+import com.sysadmindoc.callshield.data.HashWildcardMatcher
 import com.sysadmindoc.callshield.data.PhoneFormatter
+import com.sysadmindoc.callshield.data.TimeSchedule
+import com.sysadmindoc.callshield.data.model.HashWildcardRule
 import com.sysadmindoc.callshield.data.model.SmsKeywordRule
 import com.sysadmindoc.callshield.data.model.SpamNumber
 import com.sysadmindoc.callshield.data.model.WhitelistEntry
-import com.sysadmindoc.callshield.data.HashWildcardMatcher
-import com.sysadmindoc.callshield.data.TimeSchedule
-import com.sysadmindoc.callshield.data.model.HashWildcardRule
 import com.sysadmindoc.callshield.data.model.WildcardRule
 import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.theme.Black
@@ -124,7 +124,7 @@ import kotlinx.coroutines.launch
 
 private const val BLOCKLIST_TAB_BLOCKED = 0
 private const val BLOCKLIST_TAB_WILDCARDS = 1
-private const val BLOCKLIST_TAB_RANGES = 2        // A5: length-locked # patterns
+private const val BLOCKLIST_TAB_RANGES = 2 // A5: length-locked # patterns
 private const val BLOCKLIST_TAB_KEYWORDS = 3
 private const val BLOCKLIST_TAB_WHITELIST = 4
 private const val BLOCKLIST_TAB_DATABASE = 5
@@ -164,9 +164,10 @@ fun BlocklistScreen(viewModel: MainViewModel) {
     val snackbarHost = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
-    val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        uri?.let { viewModel.importBlocklist(it) }
-    }
+    val importLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+            uri?.let { viewModel.importBlocklist(it) }
+        }
 
     LaunchedEffect(importResult) {
         val message = importResult ?: return@LaunchedEffect
@@ -177,91 +178,114 @@ fun BlocklistScreen(viewModel: MainViewModel) {
 
     val numberRemovedMessage = stringResource(R.string.blocklist_number_removed)
     val undoLabel = stringResource(R.string.blocklist_undo)
+
     fun removeBlockedNumberWithUndo(number: SpamNumber) {
         viewModel.unblockNumber(number)
         hapticTick(context)
         scope.launch {
             snackbarHost.currentSnackbarData?.dismiss()
-            val result = snackbarHost.showSnackbar(
-                message = numberRemovedMessage,
-                actionLabel = undoLabel,
-                duration = SnackbarDuration.Short
-            )
+            val result =
+                snackbarHost.showSnackbar(
+                    message = numberRemovedMessage,
+                    actionLabel = undoLabel,
+                    duration = SnackbarDuration.Short,
+                )
             if (result == SnackbarResult.ActionPerformed) {
                 viewModel.blockNumber(
                     number = number.number,
                     type = number.type,
-                    description = number.description
+                    description = number.description,
                 )
             }
         }
     }
 
-    val workspace = when (tabIndex) {
-        BLOCKLIST_TAB_BLOCKED -> BlocklistWorkspaceModel(
-            title = stringResource(R.string.blocklist_overview_blocked_title),
-            subtitle = stringResource(R.string.blocklist_overview_blocked_subtitle),
-            count = userBlocked.size,
-            accentColor = CatRed,
-            icon = Icons.Default.Block,
-            addActionLabel = stringResource(R.string.blocklist_action_add_number),
-            primaryUtilityLabel = stringResource(R.string.blocklist_action_import),
-            onPrimaryUtility = { importLauncher.launch(arrayOf("application/json", "text/plain")) },
-            secondaryUtilityLabel = userBlocked.takeIf { it.isNotEmpty() }?.let {
-                stringResource(R.string.blocklist_action_export)
-            },
-            onSecondaryUtility = userBlocked.takeIf { it.isNotEmpty() }?.let {
-                { viewModel.exportBlocklist() }
+    val workspace =
+        when (tabIndex) {
+            BLOCKLIST_TAB_BLOCKED -> {
+                BlocklistWorkspaceModel(
+                    title = stringResource(R.string.blocklist_overview_blocked_title),
+                    subtitle = stringResource(R.string.blocklist_overview_blocked_subtitle),
+                    count = userBlocked.size,
+                    accentColor = CatRed,
+                    icon = Icons.Default.Block,
+                    addActionLabel = stringResource(R.string.blocklist_action_add_number),
+                    primaryUtilityLabel = stringResource(R.string.blocklist_action_import),
+                    onPrimaryUtility = { importLauncher.launch(arrayOf("application/json", "text/plain")) },
+                    secondaryUtilityLabel =
+                        userBlocked.takeIf { it.isNotEmpty() }?.let {
+                            stringResource(R.string.blocklist_action_export)
+                        },
+                    onSecondaryUtility =
+                        userBlocked.takeIf { it.isNotEmpty() }?.let {
+                            { viewModel.exportBlocklist() }
+                        },
+                )
             }
-        )
-        BLOCKLIST_TAB_WILDCARDS -> BlocklistWorkspaceModel(
-            title = stringResource(R.string.blocklist_overview_wildcards_title),
-            subtitle = stringResource(R.string.blocklist_overview_wildcards_subtitle),
-            count = wildcardRules.size,
-            accentColor = CatYellow,
-            icon = Icons.Default.FilterAlt,
-            addActionLabel = stringResource(R.string.blocklist_action_add_wildcard)
-        )
-        BLOCKLIST_TAB_RANGES -> BlocklistWorkspaceModel(
-            title = stringResource(R.string.blocklist_overview_ranges_title),
-            subtitle = stringResource(R.string.blocklist_overview_ranges_subtitle),
-            count = hashWildcardRules.size,
-            accentColor = CatPeach,
-            icon = Icons.Default.Tune,
-            addActionLabel = stringResource(R.string.blocklist_action_add_range)
-        )
-        BLOCKLIST_TAB_KEYWORDS -> BlocklistWorkspaceModel(
-            title = stringResource(R.string.blocklist_overview_keywords_title),
-            subtitle = stringResource(R.string.blocklist_overview_keywords_subtitle),
-            count = keywordRules.size,
-            accentColor = CatMauve,
-            icon = Icons.Default.TextFields,
-            addActionLabel = stringResource(R.string.blocklist_action_add_keyword)
-        )
-        BLOCKLIST_TAB_WHITELIST -> BlocklistWorkspaceModel(
-            title = stringResource(R.string.blocklist_overview_whitelist_title),
-            subtitle = stringResource(R.string.blocklist_overview_whitelist_subtitle),
-            count = whitelistEntries.size,
-            accentColor = CatGreen,
-            icon = Icons.Default.CheckCircle,
-            addActionLabel = stringResource(R.string.blocklist_action_add_trusted)
-        )
-        else -> BlocklistWorkspaceModel(
-            title = stringResource(R.string.blocklist_overview_database_title),
-            subtitle = stringResource(R.string.blocklist_overview_database_subtitle),
-            count = allSpam.size,
-            accentColor = CatBlue,
-            icon = Icons.Default.Storage,
-        )
-    }
+
+            BLOCKLIST_TAB_WILDCARDS -> {
+                BlocklistWorkspaceModel(
+                    title = stringResource(R.string.blocklist_overview_wildcards_title),
+                    subtitle = stringResource(R.string.blocklist_overview_wildcards_subtitle),
+                    count = wildcardRules.size,
+                    accentColor = CatYellow,
+                    icon = Icons.Default.FilterAlt,
+                    addActionLabel = stringResource(R.string.blocklist_action_add_wildcard),
+                )
+            }
+
+            BLOCKLIST_TAB_RANGES -> {
+                BlocklistWorkspaceModel(
+                    title = stringResource(R.string.blocklist_overview_ranges_title),
+                    subtitle = stringResource(R.string.blocklist_overview_ranges_subtitle),
+                    count = hashWildcardRules.size,
+                    accentColor = CatPeach,
+                    icon = Icons.Default.Tune,
+                    addActionLabel = stringResource(R.string.blocklist_action_add_range),
+                )
+            }
+
+            BLOCKLIST_TAB_KEYWORDS -> {
+                BlocklistWorkspaceModel(
+                    title = stringResource(R.string.blocklist_overview_keywords_title),
+                    subtitle = stringResource(R.string.blocklist_overview_keywords_subtitle),
+                    count = keywordRules.size,
+                    accentColor = CatMauve,
+                    icon = Icons.Default.TextFields,
+                    addActionLabel = stringResource(R.string.blocklist_action_add_keyword),
+                )
+            }
+
+            BLOCKLIST_TAB_WHITELIST -> {
+                BlocklistWorkspaceModel(
+                    title = stringResource(R.string.blocklist_overview_whitelist_title),
+                    subtitle = stringResource(R.string.blocklist_overview_whitelist_subtitle),
+                    count = whitelistEntries.size,
+                    accentColor = CatGreen,
+                    icon = Icons.Default.CheckCircle,
+                    addActionLabel = stringResource(R.string.blocklist_action_add_trusted),
+                )
+            }
+
+            else -> {
+                BlocklistWorkspaceModel(
+                    title = stringResource(R.string.blocklist_overview_database_title),
+                    subtitle = stringResource(R.string.blocklist_overview_database_subtitle),
+                    count = allSpam.size,
+                    accentColor = CatBlue,
+                    icon = Icons.Default.Storage,
+                )
+            }
+        }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
             BlocklistOverviewCard(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                workspace = workspace
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                workspace = workspace,
             )
 
             ScrollableTabRow(
@@ -272,49 +296,49 @@ fun BlocklistScreen(viewModel: MainViewModel) {
                 divider = {},
                 indicator = {
                     TabRowDefaults.SecondaryIndicator(color = workspace.accentColor)
-                }
+                },
             ) {
                 Tab(
                     selected = tabIndex == BLOCKLIST_TAB_BLOCKED,
                     onClick = { tabIndex = BLOCKLIST_TAB_BLOCKED },
                     selectedContentColor = CatText,
                     unselectedContentColor = CatSubtext,
-                    text = { Text(stringResource(R.string.blocklist_tab_blocked_short)) }
+                    text = { Text(stringResource(R.string.blocklist_tab_blocked_short)) },
                 )
                 Tab(
                     selected = tabIndex == BLOCKLIST_TAB_WILDCARDS,
                     onClick = { tabIndex = BLOCKLIST_TAB_WILDCARDS },
                     selectedContentColor = CatText,
                     unselectedContentColor = CatSubtext,
-                    text = { Text(stringResource(R.string.blocklist_tab_wildcards_short)) }
+                    text = { Text(stringResource(R.string.blocklist_tab_wildcards_short)) },
                 )
                 Tab(
                     selected = tabIndex == BLOCKLIST_TAB_RANGES,
                     onClick = { tabIndex = BLOCKLIST_TAB_RANGES },
                     selectedContentColor = CatText,
                     unselectedContentColor = CatSubtext,
-                    text = { Text(stringResource(R.string.blocklist_tab_ranges_short)) }
+                    text = { Text(stringResource(R.string.blocklist_tab_ranges_short)) },
                 )
                 Tab(
                     selected = tabIndex == BLOCKLIST_TAB_KEYWORDS,
                     onClick = { tabIndex = BLOCKLIST_TAB_KEYWORDS },
                     selectedContentColor = CatText,
                     unselectedContentColor = CatSubtext,
-                    text = { Text(stringResource(R.string.blocklist_tab_keywords_short)) }
+                    text = { Text(stringResource(R.string.blocklist_tab_keywords_short)) },
                 )
                 Tab(
                     selected = tabIndex == BLOCKLIST_TAB_WHITELIST,
                     onClick = { tabIndex = BLOCKLIST_TAB_WHITELIST },
                     selectedContentColor = CatText,
                     unselectedContentColor = CatSubtext,
-                    text = { Text(stringResource(R.string.blocklist_tab_whitelist_short)) }
+                    text = { Text(stringResource(R.string.blocklist_tab_whitelist_short)) },
                 )
                 Tab(
                     selected = tabIndex == BLOCKLIST_TAB_DATABASE,
                     onClick = { tabIndex = BLOCKLIST_TAB_DATABASE },
                     selectedContentColor = CatText,
                     unselectedContentColor = CatSubtext,
-                    text = { Text(stringResource(R.string.blocklist_tab_database_short)) }
+                    text = { Text(stringResource(R.string.blocklist_tab_database_short)) },
                 )
             }
 
@@ -326,12 +350,12 @@ fun BlocklistScreen(viewModel: MainViewModel) {
                                 title = stringResource(R.string.blocklist_empty_blocked),
                                 subtitle = stringResource(R.string.blocklist_empty_blocked_sub),
                                 icon = Icons.Default.Block,
-                                accentColor = CatRed
+                                accentColor = CatRed,
                             )
                         } else {
                             LazyColumn(
                                 contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 104.dp),
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                                verticalArrangement = Arrangement.spacedBy(8.dp),
                             ) {
                                 items(userBlocked, key = { it.id }) { number ->
                                     SwipeToRemoveBlocklistItem(
@@ -342,110 +366,115 @@ fun BlocklistScreen(viewModel: MainViewModel) {
                             }
                         }
                     }
+
                     BLOCKLIST_TAB_WILDCARDS -> {
                         if (wildcardRules.isEmpty()) {
                             EmptyStateCard(
                                 title = stringResource(R.string.blocklist_empty_wildcards),
                                 subtitle = stringResource(R.string.blocklist_empty_wildcards_sub),
                                 icon = Icons.Default.FilterAlt,
-                                accentColor = CatYellow
+                                accentColor = CatYellow,
                             )
                         } else {
                             LazyColumn(
                                 contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 104.dp),
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                                verticalArrangement = Arrangement.spacedBy(8.dp),
                             ) {
                                 items(wildcardRules, key = { it.id }) { rule ->
                                     WildcardRuleItem(
                                         rule = rule,
                                         onToggle = { viewModel.toggleWildcardRule(rule.id, it) },
-                                        onDelete = { viewModel.deleteWildcardRule(rule) }
+                                        onDelete = { viewModel.deleteWildcardRule(rule) },
                                     )
                                 }
                             }
                         }
                     }
+
                     BLOCKLIST_TAB_RANGES -> {
                         if (hashWildcardRules.isEmpty()) {
                             EmptyStateCard(
                                 title = stringResource(R.string.blocklist_empty_ranges),
                                 subtitle = stringResource(R.string.blocklist_empty_ranges_sub),
                                 icon = Icons.Default.Tune,
-                                accentColor = CatPeach
+                                accentColor = CatPeach,
                             )
                         } else {
                             LazyColumn(
                                 contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 104.dp),
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                                verticalArrangement = Arrangement.spacedBy(8.dp),
                             ) {
                                 items(hashWildcardRules, key = { it.id }) { rule ->
                                     HashWildcardRuleItem(
                                         rule = rule,
                                         onToggle = { viewModel.toggleHashWildcardRule(rule.id, it) },
-                                        onDelete = { viewModel.deleteHashWildcardRule(rule) }
+                                        onDelete = { viewModel.deleteHashWildcardRule(rule) },
                                     )
                                 }
                             }
                         }
                     }
+
                     BLOCKLIST_TAB_KEYWORDS -> {
                         if (keywordRules.isEmpty()) {
                             EmptyStateCard(
                                 title = stringResource(R.string.blocklist_empty_keywords),
                                 subtitle = stringResource(R.string.blocklist_empty_keywords_sub),
                                 icon = Icons.Default.TextFields,
-                                accentColor = CatMauve
+                                accentColor = CatMauve,
                             )
                         } else {
                             LazyColumn(
                                 contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 104.dp),
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                                verticalArrangement = Arrangement.spacedBy(8.dp),
                             ) {
                                 items(keywordRules, key = { it.id }) { rule ->
                                     KeywordRuleItem(
                                         rule = rule,
                                         onToggle = { viewModel.toggleKeywordRule(rule.id, it) },
-                                        onDelete = { viewModel.deleteKeywordRule(rule) }
+                                        onDelete = { viewModel.deleteKeywordRule(rule) },
                                     )
                                 }
                             }
                         }
                     }
+
                     BLOCKLIST_TAB_WHITELIST -> {
                         if (whitelistEntries.isEmpty()) {
                             EmptyStateCard(
                                 title = stringResource(R.string.blocklist_empty_whitelist),
                                 subtitle = stringResource(R.string.blocklist_empty_whitelist_sub),
                                 icon = Icons.Default.CheckCircle,
-                                accentColor = CatGreen
+                                accentColor = CatGreen,
                             )
                         } else {
                             LazyColumn(
                                 contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 104.dp),
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                                verticalArrangement = Arrangement.spacedBy(8.dp),
                             ) {
                                 items(whitelistEntries, key = { it.id }) { entry ->
                                     WhitelistItem(
                                         entry = entry,
                                         onRemove = { viewModel.removeFromWhitelist(entry) },
-                                        onToggleEmergency = { viewModel.toggleWhitelistEmergency(entry.id, !entry.isEmergency) }
+                                        onToggleEmergency = { viewModel.toggleWhitelistEmergency(entry.id, !entry.isEmergency) },
                                     )
                                 }
                             }
                         }
                     }
+
                     else -> {
                         if (allSpam.isEmpty()) {
                             EmptyStateCard(
                                 title = stringResource(R.string.blocklist_empty_database),
                                 subtitle = stringResource(R.string.blocklist_empty_database_sub),
                                 icon = Icons.Default.Storage,
-                                accentColor = CatBlue
+                                accentColor = CatBlue,
                             )
                         } else {
                             LazyColumn(
                                 contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 32.dp),
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                                verticalArrangement = Arrangement.spacedBy(8.dp),
                             ) {
                                 items(allSpam, key = { it.id }) { number ->
                                     DatabaseItem(number)
@@ -466,14 +495,15 @@ fun BlocklistScreen(viewModel: MainViewModel) {
                                 BLOCKLIST_TAB_WHITELIST -> showWhitelistDialog = true
                             }
                         },
-                        modifier = Modifier
-                            .align(Alignment.BottomEnd)
-                            .padding(16.dp),
+                        modifier =
+                            Modifier
+                                .align(Alignment.BottomEnd)
+                                .padding(16.dp),
                         containerColor = workspace.accentColor,
                         contentColor = Black,
                         shape = RoundedCornerShape(12.dp),
                         icon = { Icon(Icons.Default.Add, stringResource(R.string.cd_add)) },
-                        text = { Text(addLabel, fontWeight = FontWeight.Bold) }
+                        text = { Text(addLabel, fontWeight = FontWeight.Bold) },
                     )
                 }
             }
@@ -481,9 +511,10 @@ fun BlocklistScreen(viewModel: MainViewModel) {
 
         SnackbarHost(
             hostState = snackbarHost,
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(horizontal = 16.dp, vertical = 12.dp)
+            modifier =
+                Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
         )
     }
 
@@ -501,7 +532,7 @@ fun BlocklistScreen(viewModel: MainViewModel) {
             scope.launch {
                 snackbarHost.showSnackbar(
                     numberBlockedMessage,
-                    duration = SnackbarDuration.Short
+                    duration = SnackbarDuration.Short,
                 )
             }
         }
@@ -514,7 +545,7 @@ fun BlocklistScreen(viewModel: MainViewModel) {
             scope.launch {
                 snackbarHost.showSnackbar(
                     ruleAddedMessage,
-                    duration = SnackbarDuration.Short
+                    duration = SnackbarDuration.Short,
                 )
             }
         }
@@ -530,7 +561,7 @@ fun BlocklistScreen(viewModel: MainViewModel) {
             scope.launch {
                 snackbarHost.showSnackbar(
                     ruleAddedMessage,
-                    duration = SnackbarDuration.Short
+                    duration = SnackbarDuration.Short,
                 )
             }
         }
@@ -540,11 +571,12 @@ fun BlocklistScreen(viewModel: MainViewModel) {
             viewModel.addToWhitelist(number, description, isEmergency = emergency)
             showWhitelistDialog = false
             hapticTick(context)
-            val message = if (emergency) {
-                emergencyContactsAddedMessage
-            } else {
-                numberWhitelistedMessage
-            }
+            val message =
+                if (emergency) {
+                    emergencyContactsAddedMessage
+                } else {
+                    numberWhitelistedMessage
+                }
             scope.launch { snackbarHost.showSnackbar(message, duration = SnackbarDuration.Short) }
         }
     }
@@ -556,7 +588,7 @@ fun BlocklistScreen(viewModel: MainViewModel) {
             scope.launch {
                 snackbarHost.showSnackbar(
                     keywordRuleAddedMessage,
-                    duration = SnackbarDuration.Short
+                    duration = SnackbarDuration.Short,
                 )
             }
         }
@@ -571,46 +603,47 @@ private fun BlocklistOverviewCard(
     PremiumCard(
         modifier = modifier,
         accentColor = workspace.accentColor,
-        cornerRadius = 12.dp
+        cornerRadius = 12.dp,
     ) {
         Column(
             modifier = Modifier.padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+            verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.Top
+                verticalAlignment = Alignment.Top,
             ) {
                 PremiumIconTile(
                     icon = workspace.icon,
                     color = workspace.accentColor,
                     size = 54.dp,
-                    iconSize = 26.dp
+                    iconSize = 26.dp,
                 )
                 Column(
                     modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     StatusPill(
-                        text = pluralStringResource(
-                            R.plurals.blocklist_count_saved,
-                            workspace.count,
-                            workspace.count
-                        ),
+                        text =
+                            pluralStringResource(
+                                R.plurals.blocklist_count_saved,
+                                workspace.count,
+                                workspace.count,
+                            ),
                         color = workspace.accentColor,
                         horizontalPadding = 10.dp,
-                        verticalPadding = 6.dp
+                        verticalPadding = 6.dp,
                     )
                     Text(
                         text = workspace.title,
                         style = MaterialTheme.typography.titleLarge,
-                        color = CatText
+                        color = CatText,
                     )
                     Text(
                         text = workspace.subtitle,
                         style = MaterialTheme.typography.bodySmall,
-                        color = CatSubtext
+                        color = CatSubtext,
                     )
                 }
             }
@@ -619,7 +652,7 @@ private fun BlocklistOverviewCard(
                 GradientDivider(color = workspace.accentColor)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     workspace.primaryUtilityLabel?.let { label ->
                         PremiumActionButton(
@@ -628,7 +661,7 @@ private fun BlocklistOverviewCard(
                             color = workspace.accentColor,
                             onClick = { workspace.onPrimaryUtility?.invoke() },
                             modifier = Modifier.weight(1f),
-                            outlined = true
+                            outlined = true,
                         )
                     }
                     workspace.secondaryUtilityLabel?.let { label ->
@@ -638,7 +671,7 @@ private fun BlocklistOverviewCard(
                             color = workspace.accentColor,
                             onClick = { workspace.onSecondaryUtility?.invoke() },
                             modifier = Modifier.weight(1f),
-                            outlined = true
+                            outlined = true,
                         )
                     }
                 }
@@ -655,45 +688,47 @@ private fun EmptyStateCard(
     accentColor: Color,
 ) {
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        contentAlignment = Alignment.Center
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+        contentAlignment = Alignment.Center,
     ) {
         PremiumCard(
             modifier = Modifier.fillMaxWidth(),
             accentColor = accentColor,
-            cornerRadius = 12.dp
+            cornerRadius = 12.dp,
         ) {
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 28.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 28.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 Surface(
                     shape = RoundedCornerShape(12.dp),
-                    color = accentColor.copy(alpha = 0.12f)
+                    color = accentColor.copy(alpha = 0.12f),
                 ) {
                     Icon(
                         imageVector = icon,
                         contentDescription = stringResource(R.string.cd_empty_list),
                         tint = accentColor,
-                        modifier = Modifier.padding(16.dp)
+                        modifier = Modifier.padding(16.dp),
                     )
                 }
                 Text(
                     text = title,
                     style = MaterialTheme.typography.titleMedium,
                     color = CatText,
-                    textAlign = TextAlign.Center
+                    textAlign = TextAlign.Center,
                 )
                 Text(
                     text = subtitle,
                     style = MaterialTheme.typography.bodySmall,
                     color = CatSubtext,
-                    textAlign = TextAlign.Center
+                    textAlign = TextAlign.Center,
                 )
             }
         }
@@ -706,51 +741,57 @@ internal fun SwipeToRemoveBlocklistItem(
     number: SpamNumber,
     onRemove: () -> Unit,
 ) {
-    val dismissState = rememberSwipeToDismissBoxState(
-        confirmValueChange = { value ->
-            if (value == SwipeToDismissBoxValue.EndToStart) {
-                onRemove()
-                true
-            } else {
-                false
-            }
-        }
-    )
+    val dismissState =
+        rememberSwipeToDismissBoxState(
+            confirmValueChange = { value ->
+                if (value == SwipeToDismissBoxValue.EndToStart) {
+                    onRemove()
+                    true
+                } else {
+                    false
+                }
+            },
+        )
     SwipeToDismissBox(
         state = dismissState,
         modifier = Modifier.testTag(BLOCKLIST_SWIPE_ITEM_TAG),
         backgroundContent = {
             val active = dismissState.dismissDirection == SwipeToDismissBoxValue.EndToStart
             Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(if (active) CatRed.copy(alpha = 0.28f) else SurfaceBright)
-                    .padding(horizontal = 20.dp),
-                contentAlignment = Alignment.CenterEnd
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(if (active) CatRed.copy(alpha = 0.28f) else SurfaceBright)
+                        .padding(horizontal = 20.dp),
+                contentAlignment = Alignment.CenterEnd,
             ) {
                 Icon(Icons.Default.Delete, null, tint = CatText)
             }
-        }
+        },
     ) {
         BlocklistItem(number, onUnblock = onRemove)
     }
 }
 
 @Composable
-fun BlocklistItem(number: SpamNumber, onUnblock: () -> Unit) {
+fun BlocklistItem(
+    number: SpamNumber,
+    onUnblock: () -> Unit,
+) {
     PremiumCard(cornerRadius = 12.dp, accentColor = CatRed) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(Icons.Default.Block, null, tint = CatRed, modifier = Modifier.size(24.dp))
             Spacer(Modifier.width(12.dp))
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(6.dp)
+                verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 Text(PhoneFormatter.format(number.number), fontWeight = FontWeight.SemiBold, color = CatText)
                 if (number.description.isNotEmpty()) {
@@ -761,7 +802,7 @@ fun BlocklistItem(number: SpamNumber, onUnblock: () -> Unit) {
                     color = CatRed,
                     horizontalPadding = 8.dp,
                     verticalPadding = 4.dp,
-                    textStyle = MaterialTheme.typography.labelSmall
+                    textStyle = MaterialTheme.typography.labelSmall,
                 )
             }
             IconButton(onClick = onUnblock) {
@@ -772,24 +813,29 @@ fun BlocklistItem(number: SpamNumber, onUnblock: () -> Unit) {
 }
 
 @Composable
-fun WildcardRuleItem(rule: WildcardRule, onToggle: (Boolean) -> Unit, onDelete: () -> Unit) {
+fun WildcardRuleItem(
+    rule: WildcardRule,
+    onToggle: (Boolean) -> Unit,
+    onDelete: () -> Unit,
+) {
     PremiumCard(cornerRadius = 12.dp, accentColor = CatYellow) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
                 if (rule.isRegex) Icons.Default.Code else Icons.Default.FilterAlt,
                 null,
                 tint = CatYellow,
-                modifier = Modifier.size(24.dp)
+                modifier = Modifier.size(24.dp),
             )
             Spacer(Modifier.width(12.dp))
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(6.dp)
+                verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 Text(rule.pattern, fontWeight = FontWeight.SemiBold, color = CatText)
                 if (rule.description.isNotEmpty()) {
@@ -800,17 +846,18 @@ fun WildcardRuleItem(rule: WildcardRule, onToggle: (Boolean) -> Unit, onDelete: 
                     color = CatYellow,
                     horizontalPadding = 8.dp,
                     verticalPadding = 4.dp,
-                    textStyle = MaterialTheme.typography.labelSmall
+                    textStyle = MaterialTheme.typography.labelSmall,
                 )
                 SchedulePill(rule.schedule)
             }
             androidx.compose.material3.Switch(
                 checked = rule.enabled,
                 onCheckedChange = onToggle,
-                colors = androidx.compose.material3.SwitchDefaults.colors(
-                    checkedTrackColor = CatGreen,
-                    checkedThumbColor = Black
-                )
+                colors =
+                    androidx.compose.material3.SwitchDefaults.colors(
+                        checkedTrackColor = CatGreen,
+                        checkedThumbColor = Black,
+                    ),
             )
             IconButton(onClick = onDelete) {
                 Icon(Icons.Default.Close, stringResource(R.string.cd_delete_rule), tint = CatRed.copy(alpha = 0.7f))
@@ -820,19 +867,24 @@ fun WildcardRuleItem(rule: WildcardRule, onToggle: (Boolean) -> Unit, onDelete: 
 }
 
 @Composable
-fun KeywordRuleItem(rule: SmsKeywordRule, onToggle: (Boolean) -> Unit, onDelete: () -> Unit) {
+fun KeywordRuleItem(
+    rule: SmsKeywordRule,
+    onToggle: (Boolean) -> Unit,
+    onDelete: () -> Unit,
+) {
     PremiumCard(cornerRadius = 12.dp, accentColor = CatMauve) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(Icons.Default.TextFields, null, tint = CatMauve, modifier = Modifier.size(24.dp))
             Spacer(Modifier.width(12.dp))
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(6.dp)
+                verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 Text("\"${rule.keyword}\"", fontWeight = FontWeight.SemiBold, color = CatText)
                 if (rule.description.isNotEmpty()) {
@@ -843,17 +895,18 @@ fun KeywordRuleItem(rule: SmsKeywordRule, onToggle: (Boolean) -> Unit, onDelete:
                     color = CatMauve,
                     horizontalPadding = 8.dp,
                     verticalPadding = 4.dp,
-                    textStyle = MaterialTheme.typography.labelSmall
+                    textStyle = MaterialTheme.typography.labelSmall,
                 )
                 SchedulePill(rule.schedule)
             }
             androidx.compose.material3.Switch(
                 checked = rule.enabled,
                 onCheckedChange = onToggle,
-                colors = androidx.compose.material3.SwitchDefaults.colors(
-                    checkedTrackColor = CatGreen,
-                    checkedThumbColor = Black
-                )
+                colors =
+                    androidx.compose.material3.SwitchDefaults.colors(
+                        checkedTrackColor = CatGreen,
+                        checkedThumbColor = Black,
+                    ),
             )
             IconButton(onClick = onDelete) {
                 Icon(Icons.Default.Close, stringResource(R.string.cd_delete_rule), tint = CatRed.copy(alpha = 0.7f))
@@ -869,28 +922,30 @@ fun WhitelistItem(
     onToggleEmergency: () -> Unit,
 ) {
     val accent = if (entry.isEmergency) CatRed else CatGreen
-    val emergencyDescription = if (entry.isEmergency) {
-        stringResource(R.string.emergency_contacts_unmark)
-    } else {
-        stringResource(R.string.emergency_contacts_mark_as)
-    }
+    val emergencyDescription =
+        if (entry.isEmergency) {
+            stringResource(R.string.emergency_contacts_unmark)
+        } else {
+            stringResource(R.string.emergency_contacts_mark_as)
+        }
     PremiumCard(cornerRadius = 12.dp, accentColor = accent) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
                 if (entry.isEmergency) Icons.Default.PriorityHigh else Icons.Default.CheckCircle,
                 null,
                 tint = accent,
-                modifier = Modifier.size(24.dp)
+                modifier = Modifier.size(24.dp),
             )
             Spacer(Modifier.width(12.dp))
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(6.dp)
+                verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 Text(PhoneFormatter.format(entry.number), fontWeight = FontWeight.SemiBold, color = CatText)
                 if (entry.description.isNotEmpty()) {
@@ -902,7 +957,7 @@ fun WhitelistItem(
                         color = CatRed,
                         horizontalPadding = 8.dp,
                         verticalPadding = 4.dp,
-                        textStyle = MaterialTheme.typography.labelSmall
+                        textStyle = MaterialTheme.typography.labelSmall,
                     )
                 }
             }
@@ -925,24 +980,26 @@ fun WhitelistItem(
 
 @Composable
 fun DatabaseItem(number: SpamNumber) {
-    val typeColor = when (number.type.lowercase()) {
-        "robocall" -> CatRed
-        "scam" -> com.sysadmindoc.callshield.ui.theme.CatPeach
-        "telemarketer" -> CatYellow
-        else -> CatBlue
-    }
+    val typeColor =
+        when (number.type.lowercase()) {
+            "robocall" -> CatRed
+            "scam" -> com.sysadmindoc.callshield.ui.theme.CatPeach
+            "telemarketer" -> CatYellow
+            else -> CatBlue
+        }
     PremiumCard(cornerRadius = 12.dp, accentColor = typeColor) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(Icons.Default.Storage, null, tint = typeColor, modifier = Modifier.size(24.dp))
             Spacer(Modifier.width(12.dp))
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(6.dp)
+                verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 Text(PhoneFormatter.format(number.number), fontWeight = FontWeight.SemiBold, color = CatText)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -951,18 +1008,19 @@ fun DatabaseItem(number: SpamNumber) {
                         color = typeColor,
                         horizontalPadding = 8.dp,
                         verticalPadding = 4.dp,
-                        textStyle = MaterialTheme.typography.labelSmall
+                        textStyle = MaterialTheme.typography.labelSmall,
                     )
                     StatusPill(
-                        text = pluralStringResource(
-                            R.plurals.blocklist_reports,
-                            number.reports,
-                            number.reports
-                        ),
+                        text =
+                            pluralStringResource(
+                                R.plurals.blocklist_reports,
+                                number.reports,
+                                number.reports,
+                            ),
                         color = CatBlue,
                         horizontalPadding = 8.dp,
                         verticalPadding = 4.dp,
-                        textStyle = MaterialTheme.typography.labelSmall
+                        textStyle = MaterialTheme.typography.labelSmall,
                     )
                 }
                 if (number.description.isNotEmpty()) {
@@ -974,7 +1032,10 @@ fun DatabaseItem(number: SpamNumber) {
 }
 
 @Composable
-fun AddNumberDialog(onDismiss: () -> Unit, onAdd: (String, String) -> Unit) {
+fun AddNumberDialog(
+    onDismiss: () -> Unit,
+    onAdd: (String, String) -> Unit,
+) {
     var number by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
     val normalizedNumber = remember(number) { normalizePhoneInput(number) }
@@ -992,37 +1053,43 @@ fun AddNumberDialog(onDismiss: () -> Unit, onAdd: (String, String) -> Unit) {
                     label = { Text(stringResource(R.string.dialog_phone_number)) },
                     placeholder = { Text(stringResource(R.string.dialog_phone_placeholder)) },
                     singleLine = true,
-                    supportingText = if (canConfirm) {
-                        { Text(PhoneFormatter.format(normalizedNumber), color = CatSubtext) }
-                    } else {
-                        null
-                    },
-                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Phone,
-                        imeAction = androidx.compose.ui.text.input.ImeAction.Next
-                    ),
-                    colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = CatGreen,
-                        cursorColor = CatGreen
-                    )
+                    supportingText =
+                        if (canConfirm) {
+                            { Text(PhoneFormatter.format(normalizedNumber), color = CatSubtext) }
+                        } else {
+                            null
+                        },
+                    keyboardOptions =
+                        androidx.compose.foundation.text.KeyboardOptions(
+                            keyboardType = androidx.compose.ui.text.input.KeyboardType.Phone,
+                            imeAction = androidx.compose.ui.text.input.ImeAction.Next,
+                        ),
+                    colors =
+                        androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = CatGreen,
+                            cursorColor = CatGreen,
+                        ),
                 )
                 androidx.compose.material3.OutlinedTextField(
                     value = description,
                     onValueChange = { description = it },
                     label = { Text(stringResource(R.string.dialog_description_optional)) },
                     singleLine = true,
-                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                        imeAction = androidx.compose.ui.text.input.ImeAction.Done
-                    ),
-                    keyboardActions = androidx.compose.foundation.text.KeyboardActions(
-                        onDone = {
-                            if (canConfirm) onAdd(normalizedNumber, description.trim())
-                        }
-                    ),
-                    colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = CatGreen,
-                        cursorColor = CatGreen
-                    )
+                    keyboardOptions =
+                        androidx.compose.foundation.text.KeyboardOptions(
+                            imeAction = androidx.compose.ui.text.input.ImeAction.Done,
+                        ),
+                    keyboardActions =
+                        androidx.compose.foundation.text.KeyboardActions(
+                            onDone = {
+                                if (canConfirm) onAdd(normalizedNumber, description.trim())
+                            },
+                        ),
+                    colors =
+                        androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = CatGreen,
+                            cursorColor = CatGreen,
+                        ),
                 )
             }
         },
@@ -1032,14 +1099,14 @@ fun AddNumberDialog(onDismiss: () -> Unit, onAdd: (String, String) -> Unit) {
                 icon = Icons.Default.Block,
                 color = CatRed,
                 onClick = { onAdd(normalizedNumber, description.trim()) },
-                enabled = canConfirm
+                enabled = canConfirm,
             )
         },
         dismissButton = {
             androidx.compose.material3.TextButton(onClick = onDismiss) {
                 Text(stringResource(R.string.dialog_cancel), color = CatSubtext)
             }
-        }
+        },
     )
 }
 
@@ -1071,34 +1138,39 @@ fun AddWildcardDialog(
                     placeholder = { Text(stringResource(if (isRegex) R.string.dialog_regex_placeholder else R.string.dialog_wildcard_placeholder)) },
                     singleLine = true,
                     isError = regexErrorDetail != null,
-                    supportingText = regexErrorDetail?.let { detail ->
-                        { Text(stringResource(R.string.dialog_invalid_regex, detail), color = CatRed) }
-                    },
-                    colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = CatYellow,
-                        cursorColor = CatYellow
-                    )
+                    supportingText =
+                        regexErrorDetail?.let { detail ->
+                            { Text(stringResource(R.string.dialog_invalid_regex, detail), color = CatRed) }
+                        },
+                    colors =
+                        androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = CatYellow,
+                            cursorColor = CatYellow,
+                        ),
                 )
                 androidx.compose.material3.OutlinedTextField(
                     value = description,
                     onValueChange = { description = it },
                     label = { Text(stringResource(R.string.dialog_description)) },
                     singleLine = true,
-                    colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = CatYellow,
-                        cursorColor = CatYellow
-                    )
+                    colors =
+                        androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = CatYellow,
+                            cursorColor = CatYellow,
+                        ),
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                androidx.compose.material3.Checkbox(
-                    checked = isRegex,
-                    onCheckedChange = {
-                        isRegex = it
-                        regexErrorDetail = null
-                    },
-                    modifier = Modifier.testTag(BLOCKLIST_REGEX_CHECKBOX_TAG),
-                    colors = androidx.compose.material3.CheckboxDefaults.colors(checkedColor = CatYellow)
-                )
+                    androidx.compose.material3.Checkbox(
+                        checked = isRegex,
+                        onCheckedChange = {
+                            isRegex = it
+                            regexErrorDetail = null
+                        },
+                        modifier = Modifier.testTag(BLOCKLIST_REGEX_CHECKBOX_TAG),
+                        colors =
+                            androidx.compose.material3.CheckboxDefaults
+                                .colors(checkedColor = CatYellow),
+                    )
                     Text(stringResource(R.string.dialog_use_regex), style = MaterialTheme.typography.bodySmall)
                 }
                 GradientDivider(color = CatYellow)
@@ -1124,19 +1196,22 @@ fun AddWildcardDialog(
                         }
                     }
                 },
-                enabled = trimmedPattern.isNotBlank() && !scheduleState.needsDaySelection
+                enabled = trimmedPattern.isNotBlank() && !scheduleState.needsDaySelection,
             )
         },
         dismissButton = {
             androidx.compose.material3.TextButton(onClick = onDismiss) {
                 Text(stringResource(R.string.dialog_cancel), color = CatSubtext)
             }
-        }
+        },
     )
 }
 
 @Composable
-fun AddWhitelistDialog(onDismiss: () -> Unit, onAdd: (String, String, Boolean) -> Unit) {
+fun AddWhitelistDialog(
+    onDismiss: () -> Unit,
+    onAdd: (String, String, Boolean) -> Unit,
+) {
     var number by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
     var emergency by remember { mutableStateOf(false) }
@@ -1154,50 +1229,58 @@ fun AddWhitelistDialog(onDismiss: () -> Unit, onAdd: (String, String, Boolean) -
                     onValueChange = { number = sanitizePhoneInput(it) },
                     label = { Text(stringResource(R.string.dialog_phone_number)) },
                     singleLine = true,
-                    supportingText = if (canConfirm) {
-                        { Text(PhoneFormatter.format(normalizedNumber), color = CatSubtext) }
-                    } else {
-                        null
-                    },
-                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Phone,
-                        imeAction = androidx.compose.ui.text.input.ImeAction.Next
-                    ),
-                    colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = CatGreen,
-                        cursorColor = CatGreen
-                    )
+                    supportingText =
+                        if (canConfirm) {
+                            { Text(PhoneFormatter.format(normalizedNumber), color = CatSubtext) }
+                        } else {
+                            null
+                        },
+                    keyboardOptions =
+                        androidx.compose.foundation.text.KeyboardOptions(
+                            keyboardType = androidx.compose.ui.text.input.KeyboardType.Phone,
+                            imeAction = androidx.compose.ui.text.input.ImeAction.Next,
+                        ),
+                    colors =
+                        androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = CatGreen,
+                            cursorColor = CatGreen,
+                        ),
                 )
                 androidx.compose.material3.OutlinedTextField(
                     value = description,
                     onValueChange = { description = it },
                     label = { Text(stringResource(R.string.dialog_description)) },
                     singleLine = true,
-                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                        imeAction = androidx.compose.ui.text.input.ImeAction.Done
-                    ),
-                    keyboardActions = androidx.compose.foundation.text.KeyboardActions(
-                        onDone = {
-                            if (canConfirm) onAdd(normalizedNumber, description.trim(), emergency)
-                        }
-                    ),
-                    colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = CatGreen,
-                        cursorColor = CatGreen
-                    )
+                    keyboardOptions =
+                        androidx.compose.foundation.text.KeyboardOptions(
+                            imeAction = androidx.compose.ui.text.input.ImeAction.Done,
+                        ),
+                    keyboardActions =
+                        androidx.compose.foundation.text.KeyboardActions(
+                            onDone = {
+                                if (canConfirm) onAdd(normalizedNumber, description.trim(), emergency)
+                            },
+                        ),
+                    colors =
+                        androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = CatGreen,
+                            cursorColor = CatGreen,
+                        ),
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     androidx.compose.material3.Checkbox(
                         checked = emergency,
                         onCheckedChange = { emergency = it },
-                        colors = androidx.compose.material3.CheckboxDefaults.colors(checkedColor = CatRed)
+                        colors =
+                            androidx.compose.material3.CheckboxDefaults
+                                .colors(checkedColor = CatRed),
                     )
                     Column(modifier = Modifier.weight(1f)) {
                         Text(stringResource(R.string.emergency_contacts_mark_as), style = MaterialTheme.typography.bodyMedium)
                         Text(
                             stringResource(R.string.emergency_contacts_subtitle),
                             style = MaterialTheme.typography.labelSmall,
-                            color = CatSubtext
+                            color = CatSubtext,
                         )
                     }
                 }
@@ -1206,22 +1289,23 @@ fun AddWhitelistDialog(onDismiss: () -> Unit, onAdd: (String, String, Boolean) -
         },
         confirmButton = {
             PremiumActionButton(
-                label = if (emergency) {
-                    stringResource(R.string.emergency_contacts_add)
-                } else {
-                    stringResource(R.string.dialog_whitelist)
-                },
+                label =
+                    if (emergency) {
+                        stringResource(R.string.emergency_contacts_add)
+                    } else {
+                        stringResource(R.string.dialog_whitelist)
+                    },
                 icon = if (emergency) Icons.Default.PriorityHigh else Icons.Default.CheckCircle,
                 color = if (emergency) CatRed else CatGreen,
                 onClick = { onAdd(normalizedNumber, description.trim(), emergency) },
-                enabled = canConfirm
+                enabled = canConfirm,
             )
         },
         dismissButton = {
             androidx.compose.material3.TextButton(onClick = onDismiss) {
                 Text(stringResource(R.string.dialog_cancel), color = CatSubtext)
             }
-        }
+        },
     )
 }
 
@@ -1248,26 +1332,30 @@ fun AddKeywordDialog(
                     label = { Text(stringResource(R.string.dialog_keyword)) },
                     placeholder = { Text(stringResource(R.string.dialog_keyword_placeholder)) },
                     singleLine = true,
-                    colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = CatMauve,
-                        cursorColor = CatMauve
-                    )
+                    colors =
+                        androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = CatMauve,
+                            cursorColor = CatMauve,
+                        ),
                 )
                 androidx.compose.material3.OutlinedTextField(
                     value = description,
                     onValueChange = { description = it },
                     label = { Text(stringResource(R.string.dialog_description)) },
                     singleLine = true,
-                    colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = CatMauve,
-                        cursorColor = CatMauve
-                    )
+                    colors =
+                        androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = CatMauve,
+                            cursorColor = CatMauve,
+                        ),
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     androidx.compose.material3.Checkbox(
                         checked = caseSensitive,
                         onCheckedChange = { caseSensitive = it },
-                        colors = androidx.compose.material3.CheckboxDefaults.colors(checkedColor = CatMauve)
+                        colors =
+                            androidx.compose.material3.CheckboxDefaults
+                                .colors(checkedColor = CatMauve),
                     )
                     Text(stringResource(R.string.blocklist_case_sensitive), style = MaterialTheme.typography.bodySmall)
                 }
@@ -1284,24 +1372,20 @@ fun AddKeywordDialog(
                 onClick = {
                     onAdd(trimmedKeyword, caseSensitive, description.trim(), scheduleState.toSchedule())
                 },
-                enabled = trimmedKeyword.isNotBlank() && !scheduleState.needsDaySelection
+                enabled = trimmedKeyword.isNotBlank() && !scheduleState.needsDaySelection,
             )
         },
         dismissButton = {
             androidx.compose.material3.TextButton(onClick = onDismiss) {
                 Text(stringResource(R.string.dialog_cancel), color = CatSubtext)
             }
-        }
+        },
     )
 }
 
-private fun sanitizePhoneInput(input: String): String {
-    return sanitizePhoneNumberInput(input)
-}
+private fun sanitizePhoneInput(input: String): String = sanitizePhoneNumberInput(input)
 
-private fun normalizePhoneInput(input: String): String {
-    return normalizePhoneNumberInput(input)
-}
+private fun normalizePhoneInput(input: String): String = normalizePhoneNumberInput(input)
 
 // ─────────────────────────────────────────────────────────────────────
 // A5 — Hash wildcard ("range") rules UI
@@ -1309,7 +1393,9 @@ private fun normalizePhoneInput(input: String): String {
 
 /** Format a coverage count with thousand-separators (e.g. 10_000 → "10,000"). */
 private fun formatCoverage(count: Long): String =
-    java.text.NumberFormat.getIntegerInstance().format(count)
+    java.text.NumberFormat
+        .getIntegerInstance()
+        .format(count)
 
 @Composable
 fun HashWildcardRuleItem(
@@ -1320,28 +1406,29 @@ fun HashWildcardRuleItem(
     val coverage = remember(rule.pattern) { HashWildcardMatcher.coveredNumberCount(rule.pattern) }
     PremiumCard(cornerRadius = 12.dp, accentColor = CatPeach) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(Icons.Default.Tune, null, tint = CatPeach, modifier = Modifier.size(24.dp))
             Spacer(Modifier.width(12.dp))
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(6.dp)
+                verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 Text(
                     rule.pattern,
                     fontWeight = FontWeight.SemiBold,
                     color = CatText,
-                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
                 )
                 if (rule.description.isNotEmpty()) {
                     Text(
                         rule.description,
                         style = MaterialTheme.typography.bodySmall,
-                        color = CatSubtext
+                        color = CatSubtext,
                     )
                 }
                 StatusPill(
@@ -1349,23 +1436,24 @@ fun HashWildcardRuleItem(
                     color = CatPeach,
                     horizontalPadding = 8.dp,
                     verticalPadding = 4.dp,
-                    textStyle = MaterialTheme.typography.labelSmall
+                    textStyle = MaterialTheme.typography.labelSmall,
                 )
                 SchedulePill(rule.schedule)
             }
             androidx.compose.material3.Switch(
                 checked = rule.enabled,
                 onCheckedChange = onToggle,
-                colors = androidx.compose.material3.SwitchDefaults.colors(
-                    checkedTrackColor = CatGreen,
-                    checkedThumbColor = Black
-                )
+                colors =
+                    androidx.compose.material3.SwitchDefaults.colors(
+                        checkedTrackColor = CatGreen,
+                        checkedThumbColor = Black,
+                    ),
             )
             IconButton(onClick = onDelete) {
                 Icon(
                     Icons.Default.Close,
                     stringResource(R.string.cd_delete_rule),
-                    tint = CatRed.copy(alpha = 0.7f)
+                    tint = CatRed.copy(alpha = 0.7f),
                 )
             }
         }
@@ -1398,43 +1486,69 @@ fun AddHashWildcardDialog(
     val trimmed = pattern.trim()
 
     val hashCount = remember(trimmed) { trimmed.count { it == '#' } }
-    val coverage = remember(trimmed) {
-        if (trimmed.isEmpty() || hashCount == 0) 0L
-        else HashWildcardMatcher.coveredNumberCount(trimmed)
-    }
-    val overlap = remember(trimmed, existing) {
-        if (trimmed.isEmpty()) null
-        else existing.asSequence()
-            .mapNotNull { rule ->
-                val kind = HashWildcardMatcher.coversOrCoveredBy(trimmed, rule.pattern)
-                if (kind == HashWildcardMatcher.Overlap.NONE) null else rule to kind
+    val coverage =
+        remember(trimmed) {
+            if (trimmed.isEmpty() || hashCount == 0) {
+                0L
+            } else {
+                HashWildcardMatcher.coveredNumberCount(trimmed)
             }
-            .firstOrNull()
-    }
+        }
+    val overlap =
+        remember(trimmed, existing) {
+            if (trimmed.isEmpty()) {
+                null
+            } else {
+                existing
+                    .asSequence()
+                    .mapNotNull { rule ->
+                        val kind = HashWildcardMatcher.coversOrCoveredBy(trimmed, rule.pattern)
+                        if (kind == HashWildcardMatcher.Overlap.NONE) null else rule to kind
+                    }.firstOrNull()
+            }
+        }
 
     val tooBroad = coverage > 100_000_000L
     val isDuplicate = overlap?.second == HashWildcardMatcher.Overlap.EQUAL
-    val canConfirm = trimmed.isNotEmpty() && hashCount >= 1 && !tooBroad &&
-        !isDuplicate && !scheduleState.needsDaySelection
+    val canConfirm =
+        trimmed.isNotEmpty() && hashCount >= 1 && !tooBroad &&
+            !isDuplicate && !scheduleState.needsDaySelection
 
-    val overlapMessage: String? = overlap?.let { (rule, kind) ->
-        when (kind) {
-            HashWildcardMatcher.Overlap.EQUAL ->
-                stringResource(R.string.hash_wildcard_dialog_overlap_equal)
-            HashWildcardMatcher.Overlap.B_COVERS_A ->
-                stringResource(R.string.hash_wildcard_dialog_overlap_covered, rule.pattern)
-            HashWildcardMatcher.Overlap.A_COVERS_B ->
-                stringResource(R.string.hash_wildcard_dialog_overlap_covers, rule.pattern)
-            HashWildcardMatcher.Overlap.NONE -> null
+    val overlapMessage: String? =
+        overlap?.let { (rule, kind) ->
+            when (kind) {
+                HashWildcardMatcher.Overlap.EQUAL -> {
+                    stringResource(R.string.hash_wildcard_dialog_overlap_equal)
+                }
+
+                HashWildcardMatcher.Overlap.B_COVERS_A -> {
+                    stringResource(R.string.hash_wildcard_dialog_overlap_covered, rule.pattern)
+                }
+
+                HashWildcardMatcher.Overlap.A_COVERS_B -> {
+                    stringResource(R.string.hash_wildcard_dialog_overlap_covers, rule.pattern)
+                }
+
+                HashWildcardMatcher.Overlap.NONE -> {
+                    null
+                }
+            }
         }
-    }
 
-    val patternError: String? = when {
-        trimmed.isNotEmpty() && hashCount == 0 ->
-            stringResource(R.string.hash_wildcard_dialog_empty_error)
-        tooBroad -> stringResource(R.string.hash_wildcard_dialog_too_broad)
-        else -> null
-    }
+    val patternError: String? =
+        when {
+            trimmed.isNotEmpty() && hashCount == 0 -> {
+                stringResource(R.string.hash_wildcard_dialog_empty_error)
+            }
+
+            tooBroad -> {
+                stringResource(R.string.hash_wildcard_dialog_too_broad)
+            }
+
+            else -> {
+                null
+            }
+        }
 
     androidx.compose.material3.AlertDialog(
         onDismissRequest = onDismiss,
@@ -1450,43 +1564,46 @@ fun AddHashWildcardDialog(
                     singleLine = true,
                     isError = patternError != null,
                     supportingText = patternError?.let { msg -> { Text(msg, color = CatRed) } },
-                    colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = CatPeach,
-                        cursorColor = CatPeach
-                    )
+                    colors =
+                        androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = CatPeach,
+                            cursorColor = CatPeach,
+                        ),
                 )
                 androidx.compose.material3.OutlinedTextField(
                     value = description,
                     onValueChange = { description = it },
                     label = { Text(stringResource(R.string.hash_wildcard_dialog_description_label)) },
                     singleLine = true,
-                    colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = CatPeach,
-                        cursorColor = CatPeach
-                    )
+                    colors =
+                        androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = CatPeach,
+                            cursorColor = CatPeach,
+                        ),
                 )
                 Text(
                     stringResource(R.string.hash_wildcard_dialog_help),
                     style = MaterialTheme.typography.bodySmall,
-                    color = CatSubtext
+                    color = CatSubtext,
                 )
                 if (hashCount > 0 && !tooBroad) {
                     StatusPill(
-                        text = stringResource(
-                            R.string.hash_wildcard_dialog_coverage_label,
-                            formatCoverage(coverage)
-                        ),
+                        text =
+                            stringResource(
+                                R.string.hash_wildcard_dialog_coverage_label,
+                                formatCoverage(coverage),
+                            ),
                         color = CatPeach,
                         horizontalPadding = 8.dp,
                         verticalPadding = 4.dp,
-                        textStyle = MaterialTheme.typography.labelSmall
+                        textStyle = MaterialTheme.typography.labelSmall,
                     )
                 }
                 overlapMessage?.let { msg ->
                     Text(
                         msg,
                         style = MaterialTheme.typography.bodySmall,
-                        color = if (isDuplicate) CatRed else CatPeach
+                        color = if (isDuplicate) CatRed else CatPeach,
                     )
                 }
 
@@ -1500,14 +1617,13 @@ fun AddHashWildcardDialog(
                 icon = Icons.Default.Tune,
                 color = CatPeach,
                 onClick = { onAdd(trimmed, description.trim(), scheduleState.toSchedule()) },
-                enabled = canConfirm
+                enabled = canConfirm,
             )
         },
         dismissButton = {
             androidx.compose.material3.TextButton(onClick = onDismiss) {
                 Text(stringResource(R.string.hash_wildcard_dialog_cancel), color = CatSubtext)
             }
-        }
+        },
     )
 }
-

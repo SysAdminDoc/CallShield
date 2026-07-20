@@ -14,7 +14,6 @@ import java.lang.reflect.Method
  * public API — those are the contracts callers depend on.
  */
 class SpamMLScorerTest {
-
     private lateinit var extractFeatures: Method
     private lateinit var sigmoid: Method
     private lateinit var parseModel: Method
@@ -41,11 +40,9 @@ class SpamMLScorerTest {
 
     // ── Helpers ──────────────────────────────────────────────────────────
 
-    private fun features(number: String): DoubleArray =
-        extractFeatures.invoke(SpamMLScorer.shared, number) as DoubleArray
+    private fun features(number: String): DoubleArray = extractFeatures.invoke(SpamMLScorer.shared, number) as DoubleArray
 
-    private fun sig(x: Double): Double =
-        sigmoid.invoke(SpamMLScorer.shared, x) as Double
+    private fun sig(x: Double): Double = sigmoid.invoke(SpamMLScorer.shared, x) as Double
 
     /** Invoke the pure parser; returns null when the payload is un-parseable. */
     private fun parseOrNull(json: String): Any? = parseModel.invoke(SpamMLScorer.shared, json)
@@ -63,8 +60,7 @@ class SpamMLScorerTest {
         stateField.set(SpamMLScorer.shared, defaultMethod.invoke(SpamMLScorer.shared))
     }
 
-    private fun snapshotState(): Any =
-        stateField.get(SpamMLScorer.shared) ?: error("SpamMLScorer state should always be initialized")
+    private fun snapshotState(): Any = stateField.get(SpamMLScorer.shared) ?: error("SpamMLScorer state should always be initialized")
 
     // Feature indices
     private val TOLL_FREE = 0
@@ -415,14 +411,15 @@ class SpamMLScorerTest {
 
     @Test
     fun `parseModel with valid v2 JSON yields a committable model`() {
-        val json = """
-        {
-            "version": 2,
-            "weights": [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5],
-            "bias": -1.5,
-            "threshold": 0.65
-        }
-        """.trimIndent()
+        val json =
+            """
+            {
+                "version": 2,
+                "weights": [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5],
+                "bias": -1.5,
+                "threshold": 0.65
+            }
+            """.trimIndent()
         assertTrue(applyParsed(json))
 
         val s = SpamMLScorer.score("2125551234")
@@ -447,11 +444,12 @@ class SpamMLScorerTest {
 
     @Test
     fun `parseModel with missing bias yields a model using default bias`() {
-        val json = """
-        {
-            "weights": [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5]
-        }
-        """.trimIndent()
+        val json =
+            """
+            {
+                "weights": [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5]
+            }
+            """.trimIndent()
         assertTrue(applyParsed(json))
         val s = SpamMLScorer.score("2125551234")
         assertTrue(s in 0.0..1.0)
@@ -463,14 +461,15 @@ class SpamMLScorerTest {
         // should mutate in the failure path — the whole point of the
         // parseModel/commit split is that a bad payload can't regress to
         // defaults while a working model is in place.
-        val validJson = """
-        {
-            "version": 2,
-            "weights": [0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4],
-            "bias": -1.2,
-            "threshold": 0.61
-        }
-        """.trimIndent()
+        val validJson =
+            """
+            {
+                "version": 2,
+                "weights": [0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4],
+                "bias": -1.2,
+                "threshold": 0.61
+            }
+            """.trimIndent()
         assertTrue(applyParsed(validJson))
         val before = snapshotState()
 

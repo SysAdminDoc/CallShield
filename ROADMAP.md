@@ -544,3 +544,84 @@ Plus RFC 8588 (SHAKEN profile), RFC 9027 (Traceback), Apache SpamAssassin / rspa
   Touches: `data/model/SpamNumber.kt`, `SpamDao.kt`, `BlocklistRepository.kt`, `data/checker/Checkers.kt`, `BlockedLogScreen.kt`, `RecentCallsScreen.kt`, Room migration/tests
   Acceptance: From recent-call and blocked-log actions, users can allow or block a number for fixed windows such as 15 minutes, 1 hour, or 24 hours; expired entries are ignored/cleaned up; explicit permanent user and system blocks keep priority; tests cover expiry and checker ordering.
   Complexity: M
+  > NOTE (2026-07-20 research pass): IMPLEMENTED in v1.7.x — `SpamNumber.expiresAt` + `SpamNumber.activeDecision(now)` + `TemporaryAllowChecker`/`UserBlocklistChecker` enforce expiry at query time. Item is satisfied; kept for history only.
+
+## Research-Driven Additions (2026-07-20 pass — anchored to v1.7.13)
+
+Fresh 30+ source sweep (SpamBlocker 2026 releases + issue tracker, SpamBlocker Extended, Fossify, Hiya/Truecaller, Google Phone/Messages security posts, FCC 2025 branding FNPRM, Android 16/17 behavior changes, dependency changelogs, NVD). Only NEW signal not already covered by Phases 1-5, Addendum A/B, or `Roadmap_Blocked.md`. Prior-pass local trust-hardening backlog (UI digit sanitization, bounded bodies, SMS redaction, URLhaus privacy mode, permission degraded-mode matrix, selective backup, external-blocklist subscription, temp allow/block) is verified SHIPPED and intentionally omitted.
+
+### P1
+
+- [ ] P1 — Android 17 SMS-read strategy: OTP 3-hour read-delay resilience + capability detection
+  Why: Apps targeting API 37 that read SMS directly have OTP-bearing messages withheld 3 hours unless they hold the default-SMS-app role or use SMS Retriever/User Consent. A scam-SMS classifier reading `SMS_RECEIVED` is crippled on API 37; also on Android 16 cross-process ordered-broadcast priority (SmsReceiver priority 999) is no longer honored. Must be settled before the Play API-36→37 cadence forces the target bump.
+  Evidence: https://developer.android.com/about/versions/17/behavior-changes-all ; https://developer.android.com/about/versions/16/behavior-changes-all ; `service/SmsReceiver.kt`; cross-ref `Roadmap_Blocked.md` "SMS Screening Provider mode"
+  Touches: `service/SmsReceiver.kt`, new SMS User Consent path, `CallShieldPermissions.kt` degraded-mode matrix, settings copy, `docs/`
+  Acceptance: build documents the chosen path (default-SMS role vs SMS User Consent); app detects API ≥37 at runtime and surfaces a clear degraded-mode message for OTP SMS instead of silently missing them; SmsReceiver behavior on API 36+ verified by an instrumented smoke test.
+  Complexity: L
+
+### P2
+
+- [ ] P2 — Blocked-event notifications survive Android 16 forced-grouping + cooldown
+  Why: Android 16 auto-groups same-app notifications and cooldown-mutes rapid back-to-back alerts; CallShield's per-event blocked-call/SMS notices (plus digest ID 9999) can be silently bundled/muted, hiding protection activity.
+  Evidence: https://developer.android.com/about/versions/16/behavior-changes-all ; https://www.androidauthority.com/android-16-force-group-notifications-3565400/ ; `NotificationHelper.kt`, `DigestWorker.kt`
+  Touches: `NotificationHelper.kt`, notification channels, `DigestWorker.kt`, instrumented notification test
+  Acceptance: blocked-event notifications use an explicit group key + summary (or a single coalescing/updating notification) so bursts remain visible and are not silenced on Android 16; verified on an API 36 emulator.
+  Complexity: M
+
+- [ ] P2 — Generalize notification-layer screening to opt-in OTT sources (Signal/WhatsApp/generic)
+  Why: E2EE RCS and platform-internal Google detection close every other content path; the notification-listener layer is the only durable third-party foothold for OTT spam. `RcsNotificationListener` is hardcoded to Google + Samsung Messages only. SpamBlocker Extended already screens RCS/Signal/WhatsApp/email at the notification layer.
+  Evidence: https://f-droid.org/packages/dev.kerballone.spamblocker/ ; `service/RcsNotificationListener.kt` (only `com.google.android.apps.messaging`, `com.samsung.android.messaging`); reuse `SmsContentAnalyzer.kt`
+  Touches: `service/RcsNotificationListener.kt` (→ per-source taxonomy), settings picker (opt-in per source), privacy disclosure copy, `SmsContentAnalyzer` reuse, tests
+  Acceptance: user can opt each supported messaging app in/out; opted-in apps' notification text runs through the SMS content analyzer and can be flagged with a lightweight alert; default is Google/Samsung only; per-source privacy disclosure shown; nothing read for un-opted apps.
+  Complexity: L
+
+- [ ] P2 — Rule-priority conflict detection UI
+  Why: The pipeline has ~29 priority slots plus user wildcard/range/keyword/temp rules; overlapping allow/block rules silently resolve by priority with no user visibility. SpamBlocker shipped a visual conflict warning (v5.10).
+  Evidence: SpamBlocker v5.10 release notes (https://github.com/aj3423/SpamBlocker/releases); `data/checker/IChecker.kt` (`CheckerPriority`); rules screens
+  Touches: rule-management UI, a conflict-analysis helper over the checker/rule set, `BlockReasoning.kt`
+  Acceptance: when a user adds/edits a rule that a higher-priority rule would override (or that overrides a system/emergency allow), the UI flags the conflict inline with the winning rule named; no false positives on non-overlapping rules; unit tests cover representative conflicts.
+  Complexity: M
+
+- [ ] P2 — Region / CNAP-based rules (block out-of-region; trust by displayed caller name)
+  Why: SpamBlocker's geo-location regex + "Local Number" preset (v5.2) and CNAP name-trust mode (v5.1) are popular parity features; complements the existing area-code tooling with user-facing region gating.
+  Evidence: SpamBlocker v5.1/v5.2 release notes (https://github.com/aj3423/SpamBlocker/releases); existing `PhoneFormatter.kt` area-code data; `data/checker/Checkers.kt`
+  Touches: new region/CNAP checkers in `data/checker/`, `CheckerPriority` slot, rules UI + copy, tests
+  Acceptance: user can block all numbers outside their home region (or an allowlist of regions) and, where the platform exposes CNAP, allow calls whose presented name matches a user pattern; explicit user/system blocks keep priority; tests cover region match + CNAP allow ordering.
+  Complexity: M
+
+- [ ] P2 — CallScreeningService bind-lifecycle + 5s-deadline instrumentation test
+  Why: No instrumented test binds the real `CallShieldScreeningService` and asserts a verdict within Android's 5s deadline; `onScreenCall → classify → respondToCall` cold-start latency is unmeasured on-device. Cross-refs 2.6.2 (perf benchmark, WIP) and 2.6.4 (baseline profile).
+  Evidence: https://developer.android.com/reference/android/telecom/CallScreeningService ; `service/CallShieldScreeningService.kt`; existing `HotPathBenchmarkTest.kt` is JVM-only
+  Touches: `app/src/androidTest/.../service/`, optional Macrobenchmark module, add a DEX-layout startup profile to 2.6.4
+  Acceptance: an instrumented test binds the service (or a faithful harness), drives a screening call cold, and asserts a verdict is produced well under 5s; latency is recorded; a startup profile covering the screening path is generated.
+  Complexity: M
+
+- [ ] P2 — Warn on runtime revocation of contacts permission while contacts-only mode is on
+  Why: Contacts-only / contact-whitelist modes degrade silently to null behavior if `READ_CONTACTS` is revoked after enablement, quietly weakening protection. The degraded-mode matrix exists but does not surface this specific runtime transition.
+  Evidence: code recon of contacts-only path + `permissions/CallShieldPermissions.kt`; `ContactWhitelistChecker`/`ContactsOnlyChecker` in `Checkers.kt`
+  Touches: `CallShieldPermissions.kt`, dashboard/protection-diagnostics surfaces, settings toggle guard
+  Acceptance: if a contacts-dependent mode is enabled but `READ_CONTACTS` is currently denied, the dashboard/settings show an actionable degraded-mode warning; re-granting clears it; covered by a readiness-matrix test.
+  Complexity: S
+
+### P3
+
+- [ ] P3 — Frequency-escalation window decay + pruning
+  Why: The 7-day frequency-escalation counter weights day-1 and day-7 calls equally and never prunes aged entries from the in-memory counter, causing stale escalation and unbounded growth.
+  Evidence: code recon of `FrequencyEscalationChecker` / frequency counter; cross-ref 2.2.2 (call-frequency ML feature)
+  Touches: frequency-tracking data structure, `Checkers.kt` (`FrequencyEscalationChecker`), tests
+  Acceptance: calls outside the configured window are pruned; recency-weighted or strictly windowed counting is used; unit tests cover boundary/aging behavior and memory bound.
+  Complexity: S
+
+- [ ] P3 — Quiet-hours timezone / DST correctness
+  Why: Quiet-hours blocking uses raw device system time with no timezone/DST handling; calls near DST boundaries or after travel can be mis-gated.
+  Evidence: code recon of `TimeBlockChecker` + `TimeSchedule.kt`
+  Touches: `TimeSchedule.kt`, `TimeBlockChecker`, tests
+  Acceptance: quiet-hours evaluation is timezone/DST-correct (documented behavior at boundaries); unit tests cover a DST transition and an overnight-wrap window.
+  Complexity: S
+
+- [ ] P3 — Typed model-sync parse/health observability
+  Why: `SpamMLScorer` weight sync parses trees with regex and silently falls back to logistic regression on malformed JSON, with no health signal or log — a silent detection-quality regression. Mirrors the enrichment-source diagnostics already shipped.
+  Evidence: code recon of `SpamMLScorer` GBT parse/fallback path; existing enrichment-source health-state pattern
+  Touches: `data/SpamMLScorer.kt`, model-sync worker, a typed health/diagnostics surface, tests
+  Acceptance: a malformed/oversized model payload yields a typed parse-failure state that is observable in diagnostics (and logged without leaking data), rather than a silent LR fallback; test covers the malformed-payload path. (Full move off regex parsing to kotlinx.serialization stays in the Moshi tranche in `Roadmap_Blocked.md`.)
+  Complexity: S

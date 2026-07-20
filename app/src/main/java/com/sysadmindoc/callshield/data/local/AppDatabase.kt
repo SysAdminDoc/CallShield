@@ -9,7 +9,9 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import com.sysadmindoc.callshield.data.model.*
 
 /** Single source of truth for the Room database version. */
-const val DB_VERSION = 9
+const val DB_VERSION = 11
+private const val DB_VERSION_9 = 9
+private const val DB_VERSION_10 = 10
 
 /**
  * v5 → v6: Add `isEmergency INTEGER NOT NULL DEFAULT 0` to the whitelist
@@ -18,11 +20,12 @@ const val DB_VERSION = 9
  * aggressive mode, blocklist, etc. Default 0 so existing whitelist rows
  * retain their current behavior.
  */
-val MIGRATION_5_6 = object : Migration(5, 6) {
-    override fun migrate(db: SupportSQLiteDatabase) {
-        db.execSQL("ALTER TABLE whitelist ADD COLUMN isEmergency INTEGER NOT NULL DEFAULT 0")
+val MIGRATION_5_6 =
+    object : Migration(5, 6) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE whitelist ADD COLUMN isEmergency INTEGER NOT NULL DEFAULT 0")
+        }
     }
-}
 
 /**
  * v6 → v7: Add the `hash_wildcard_rules` table for Saracroche-style
@@ -40,25 +43,26 @@ val MIGRATION_5_6 = object : Migration(5, 6) {
  * with its own semantics rather than a confusing "isHashPattern: Boolean"
  * flag on a shared row.
  */
-val MIGRATION_6_7 = object : Migration(6, 7) {
-    override fun migrate(db: SupportSQLiteDatabase) {
-        db.execSQL(
-            """
-            CREATE TABLE IF NOT EXISTS `hash_wildcard_rules` (
-                `id` INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-                `pattern` TEXT NOT NULL,
-                `description` TEXT NOT NULL DEFAULT '',
-                `enabled` INTEGER NOT NULL DEFAULT 1,
-                `addedTimestamp` INTEGER NOT NULL DEFAULT 0
+val MIGRATION_6_7 =
+    object : Migration(6, 7) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `hash_wildcard_rules` (
+                    `id` INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+                    `pattern` TEXT NOT NULL,
+                    `description` TEXT NOT NULL DEFAULT '',
+                    `enabled` INTEGER NOT NULL DEFAULT 1,
+                    `addedTimestamp` INTEGER NOT NULL DEFAULT 0
+                )
+                """.trimIndent(),
             )
-            """.trimIndent()
-        )
-        db.execSQL(
-            "CREATE UNIQUE INDEX IF NOT EXISTS `index_hash_wildcard_rules_pattern` " +
-                "ON `hash_wildcard_rules`(`pattern`)"
-        )
+            db.execSQL(
+                "CREATE UNIQUE INDEX IF NOT EXISTS `index_hash_wildcard_rules_pattern` " +
+                    "ON `hash_wildcard_rules`(`pattern`)",
+            )
+        }
     }
-}
 
 /**
  * v7 → v8: Add A7 per-rule schedule gating to `hash_wildcard_rules`.
@@ -69,13 +73,14 @@ val MIGRATION_6_7 = object : Migration(6, 7) {
  * this migration) still behaves as "always active" without any special
  * handling. Default values ensure the ALTER is safe.
  */
-val MIGRATION_7_8 = object : Migration(7, 8) {
-    override fun migrate(db: SupportSQLiteDatabase) {
-        db.execSQL("ALTER TABLE hash_wildcard_rules ADD COLUMN scheduleDays INTEGER NOT NULL DEFAULT 0")
-        db.execSQL("ALTER TABLE hash_wildcard_rules ADD COLUMN scheduleStartHour INTEGER NOT NULL DEFAULT 0")
-        db.execSQL("ALTER TABLE hash_wildcard_rules ADD COLUMN scheduleEndHour INTEGER NOT NULL DEFAULT 0")
+val MIGRATION_7_8 =
+    object : Migration(7, 8) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE hash_wildcard_rules ADD COLUMN scheduleDays INTEGER NOT NULL DEFAULT 0")
+            db.execSQL("ALTER TABLE hash_wildcard_rules ADD COLUMN scheduleStartHour INTEGER NOT NULL DEFAULT 0")
+            db.execSQL("ALTER TABLE hash_wildcard_rules ADD COLUMN scheduleEndHour INTEGER NOT NULL DEFAULT 0")
+        }
     }
-}
 
 /**
  * v8 → v9: Extend the A7 schedule gating to the remaining rule tables —
@@ -85,16 +90,82 @@ val MIGRATION_7_8 = object : Migration(7, 8) {
  * Additive ALTER statements keep existing rows untouched; users who
  * haven't set a schedule experience identical pre-v9 behaviour.
  */
-val MIGRATION_8_9 = object : Migration(8, 9) {
-    override fun migrate(db: SupportSQLiteDatabase) {
-        db.execSQL("ALTER TABLE wildcard_rules ADD COLUMN scheduleDays INTEGER NOT NULL DEFAULT 0")
-        db.execSQL("ALTER TABLE wildcard_rules ADD COLUMN scheduleStartHour INTEGER NOT NULL DEFAULT 0")
-        db.execSQL("ALTER TABLE wildcard_rules ADD COLUMN scheduleEndHour INTEGER NOT NULL DEFAULT 0")
-        db.execSQL("ALTER TABLE sms_keyword_rules ADD COLUMN scheduleDays INTEGER NOT NULL DEFAULT 0")
-        db.execSQL("ALTER TABLE sms_keyword_rules ADD COLUMN scheduleStartHour INTEGER NOT NULL DEFAULT 0")
-        db.execSQL("ALTER TABLE sms_keyword_rules ADD COLUMN scheduleEndHour INTEGER NOT NULL DEFAULT 0")
+val MIGRATION_8_9 =
+    object : Migration(8, 9) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE wildcard_rules ADD COLUMN scheduleDays INTEGER NOT NULL DEFAULT 0")
+            db.execSQL("ALTER TABLE wildcard_rules ADD COLUMN scheduleStartHour INTEGER NOT NULL DEFAULT 0")
+            db.execSQL("ALTER TABLE wildcard_rules ADD COLUMN scheduleEndHour INTEGER NOT NULL DEFAULT 0")
+            db.execSQL("ALTER TABLE sms_keyword_rules ADD COLUMN scheduleDays INTEGER NOT NULL DEFAULT 0")
+            db.execSQL("ALTER TABLE sms_keyword_rules ADD COLUMN scheduleStartHour INTEGER NOT NULL DEFAULT 0")
+            db.execSQL("ALTER TABLE sms_keyword_rules ADD COLUMN scheduleEndHour INTEGER NOT NULL DEFAULT 0")
+        }
     }
-}
+
+/**
+ * v9 -> v10: Add a durable, idempotent pending-log queue for blocked calls.
+ *
+ * CallScreeningService still answers Android immediately, but now inserts a
+ * tiny pending row first. A follow-up worker consumes that row into `call_log`.
+ * The nullable unique `logKey` on final call-log rows prevents duplicate log
+ * entries if a retry races with an already-consumed pending row.
+ */
+val MIGRATION_9_10 =
+    object : Migration(DB_VERSION_9, DB_VERSION_10) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE call_log ADD COLUMN logKey TEXT")
+            db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_call_log_logKey` ON `call_log`(`logKey`)")
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `pending_blocked_call_logs` (
+                    `idempotencyKey` TEXT NOT NULL,
+                    `number` TEXT NOT NULL,
+                    `timestamp` INTEGER NOT NULL,
+                    `type` TEXT NOT NULL,
+                    `isCall` INTEGER NOT NULL,
+                    `smsBody` TEXT,
+                    `matchReason` TEXT NOT NULL,
+                    `confidence` INTEGER NOT NULL,
+                    `createdAt` INTEGER NOT NULL,
+                    `attempts` INTEGER NOT NULL,
+                    `nextAttemptAt` INTEGER NOT NULL,
+                    PRIMARY KEY(`idempotencyKey`)
+                )
+                """.trimIndent(),
+            )
+            db.execSQL(
+                "CREATE INDEX IF NOT EXISTS `index_pending_blocked_call_logs_createdAt` " +
+                    "ON `pending_blocked_call_logs`(`createdAt`)",
+            )
+            db.execSQL(
+                "CREATE INDEX IF NOT EXISTS `index_pending_blocked_call_logs_nextAttemptAt` " +
+                    "ON `pending_blocked_call_logs`(`nextAttemptAt`)",
+            )
+        }
+    }
+
+/**
+ * v10 -> v11: Add nullable expiry timestamps for temporary user decisions.
+ *
+ * `spam_numbers.expiresAt` scopes temporary block rows and temporary user-block
+ * flags on synced rows. `whitelist.expiresAt` scopes temporary allow rows.
+ * NULL keeps existing permanent block/allow semantics.
+ */
+val MIGRATION_10_11 =
+    object : Migration(DB_VERSION_10, DB_VERSION) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE spam_numbers ADD COLUMN expiresAt INTEGER")
+            db.execSQL("ALTER TABLE whitelist ADD COLUMN expiresAt INTEGER")
+            db.execSQL(
+                "CREATE INDEX IF NOT EXISTS `index_spam_numbers_expiresAt` " +
+                    "ON `spam_numbers`(`expiresAt`)",
+            )
+            db.execSQL(
+                "CREATE INDEX IF NOT EXISTS `index_whitelist_expiresAt` " +
+                    "ON `whitelist`(`expiresAt`)",
+            )
+        }
+    }
 
 @Database(
     entities = [
@@ -105,25 +176,26 @@ val MIGRATION_8_9 = object : Migration(8, 9) {
         WhitelistEntry::class,
         SmsKeywordRule::class,
         HashWildcardRule::class,
+        PendingBlockedCallLog::class,
     ],
     version = DB_VERSION,
-    exportSchema = true
+    exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun spamDao(): SpamDao
 
     companion object {
-
         @Volatile
         private var INSTANCE: AppDatabase? = null
 
-        fun getInstance(context: Context): AppDatabase {
-            return INSTANCE ?: synchronized(this) {
-                INSTANCE ?: Room.databaseBuilder(
-                    context.applicationContext,
-                    AppDatabase::class.java,
-                    "callshield.db"
-                )
+        fun getInstance(context: Context): AppDatabase =
+            INSTANCE ?: synchronized(this) {
+                INSTANCE ?: Room
+                    .databaseBuilder(
+                        context.applicationContext,
+                        AppDatabase::class.java,
+                        "callshield.db",
+                    )
                     // Destructive migration is restricted to legacy schema versions (1–4)
                     // whose schemas were never exported, so retroactive Migration objects
                     // cannot be written. From DB_VERSION 5 onward EVERY version bump
@@ -131,9 +203,15 @@ abstract class AppDatabase : RoomDatabase() {
                     // IllegalStateException at startup if one is missing instead of
                     // silently wiping user data.
                     .fallbackToDestructiveMigrationFrom(true, 1, 2, 3, 4)
-                    .addMigrations(MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9)
-                    .build().also { INSTANCE = it }
+                    .addMigrations(
+                        MIGRATION_5_6,
+                        MIGRATION_6_7,
+                        MIGRATION_7_8,
+                        MIGRATION_8_9,
+                        MIGRATION_9_10,
+                        MIGRATION_10_11,
+                    ).build()
+                    .also { INSTANCE = it }
             }
-        }
     }
 }

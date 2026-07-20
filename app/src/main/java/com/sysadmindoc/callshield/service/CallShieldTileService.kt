@@ -21,7 +21,6 @@ import kotlinx.coroutines.sync.withLock
  * write so back-to-back taps alternate correctly.
  */
 class CallShieldTileService : TileService() {
-
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val toggleMutex = Mutex()
 
@@ -54,9 +53,10 @@ class CallShieldTileService : TileService() {
                 val currentTile = qsTile ?: return@withContext
                 currentTile.state = if (active) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
                 currentTile.label = getString(R.string.app_name)
-                currentTile.subtitle = getString(
-                    if (active) R.string.tile_protection_on else R.string.tile_protection_off
-                )
+                currentTile.subtitle =
+                    getString(
+                        if (active) R.string.tile_protection_on else R.string.tile_protection_off,
+                    )
                 currentTile.updateTile()
             }
         }

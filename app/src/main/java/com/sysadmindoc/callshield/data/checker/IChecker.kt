@@ -129,11 +129,14 @@ data class BlockResult(
     val confidence: Int = 100,
 ) {
     companion object {
-        fun block(matchSource: String, type: String = "", description: String = "", confidence: Int = 100) =
-            BlockResult(true, matchSource, type, description, confidence)
+        fun block(
+            matchSource: String,
+            type: String = "",
+            description: String = "",
+            confidence: Int = 100,
+        ) = BlockResult(true, matchSource, type, description, confidence)
 
-        fun allow(matchSource: String) =
-            BlockResult(false, matchSource)
+        fun allow(matchSource: String) = BlockResult(false, matchSource)
     }
 }
 
@@ -147,25 +150,24 @@ data class BlockResult(
  */
 object CheckerPriority {
     // ── Top-priority allows — can override every block below ─────────
-    const val MANUAL_WHITELIST      = 10_000   // user-added entries; emergency contacts
-    const val CONTACT_WHITELIST     =  9_000   // device contacts lookup
+    const val MANUAL_WHITELIST = 10_000 // user-added entries; emergency contacts
+    const val CONTACT_WHITELIST = 9_000 // device contacts lookup
 
     // ── Carrier-signed block verdict — attestation C verified-fail.
     // MUST sit under the explicit-allow tier above (CONTACT_WHITELIST,
     // MANUAL_WHITELIST), otherwise a whitelisted emergency contact on a
     // non-STIR carrier is hard-rejected (v1.6.0 bug).
-    const val CONTACTS_ONLY         =  8_800   // contacts-only mode — block all non-contacts
-    const val STIR_SHAKEN           =  8_500
+    const val CONTACTS_ONLY = 8_800 // contacts-only mode — block all non-contacts
+    const val STIR_SHAKEN = 8_500
 
     // ── Explicit blocks — must NOT be overridden by recently-dialed ──
     // or push-alert. If the user intentionally blocked or wildcarded
     // this number, that intent is authoritative.
-    const val USER_BLOCKLIST        =  7_000   // merged with GITHUB_DATABASE in DatabaseChecker
-    const val DB_PREFIX_EXPANSION   =  6_950   // auto-block last-2-digit siblings of DB entries
-    const val SYSTEM_BLOCK_LIST     =  6_900   // reserved for A4 — BlockedNumberContract
-    const val PREFIX_MATCH          =  6_000
-    const val WILDCARD_RULE         =  5_500
-    const val HASH_WILDCARD_RULE    =  5_400   // reserved for A5 — length-locked # patterns
+    const val USER_BLOCKLIST = 7_000 // personal exact blocks, permanent or active temporary
+    const val SYSTEM_BLOCK_LIST = 6_900 // reserved for A4 — BlockedNumberContract
+    const val PREFIX_MATCH = 6_000
+    const val WILDCARD_RULE = 5_500
+    const val HASH_WILDCARD_RULE = 5_400 // reserved for A5 — length-locked # patterns
 
     // ── Conditional allows — trust signals that sit UNDER explicit
     // user blocks but ABOVE weaker detection layers.
@@ -176,24 +178,27 @@ object CheckerPriority {
     // against it. Placed at the top of the conditional-allow block so it
     // still beats statistical heuristics / ML / campaign-burst below.
     // Paired with STIR_SHAKEN (block side) above.
-    const val STIR_SHAKEN_TRUSTED   =  5_300
-    const val RECENTLY_DIALED       =  5_000   // user just called this number
-    const val EMERGENCY_CALLBACK    =  4_980   // callback grace after local emergency call
-    const val ANSWERED_CALLER       =  4_950   // user has answered this number repeatedly
-    const val REPEATED_URGENT       =  4_900   // same number called 2+ times in 5 min
-    const val PUSH_ALERT_BRIDGE     =  4_700   // reserved for A3 — notification-bridged allow
-    const val SMS_BURST             =  4_650   // repeated unknown SMS sender/prefix in short window
-    const val CAMPAIGN_RECORDER     =  4_500   // side-effect only (records into in-memory map)
+    const val STIR_SHAKEN_TRUSTED = 5_300
+    const val TEMPORARY_ALLOW = 5_250 // one-off false-positive recovery
+    const val GITHUB_DATABASE = 5_200 // downloaded exact reputation rows
+    const val DB_PREFIX_EXPANSION = 5_150 // auto-block last-2-digit siblings of DB entries
+    const val RECENTLY_DIALED = 5_000 // user just called this number
+    const val EMERGENCY_CALLBACK = 4_980 // callback grace after local emergency call
+    const val ANSWERED_CALLER = 4_950 // user has answered this number repeatedly
+    const val REPEATED_URGENT = 4_900 // same number called 2+ times in 5 min
+    const val PUSH_ALERT_BRIDGE = 4_700 // reserved for A3 — notification-bridged allow
+    const val SMS_BURST = 4_650 // repeated unknown SMS sender/prefix in short window
+    const val CAMPAIGN_RECORDER = 4_500 // side-effect only (records into in-memory map)
 
     // ── Weaker blocks (statistical / heuristic / temporal) ───────────
-    const val TIME_BLOCK            =  4_000
-    const val FREQUENCY_ESCALATION  =  3_500
-    const val HEURISTIC             =  3_000
-    const val CAMPAIGN_BURST        =  2_500
-    const val ML_SCORER             =  2_000
+    const val TIME_BLOCK = 4_000
+    const val FREQUENCY_ESCALATION = 3_500
+    const val HEURISTIC = 3_000
+    const val CAMPAIGN_BURST = 2_500
+    const val ML_SCORER = 2_000
 
     // ── Catch-all ─────────────────────────────────────────────────────
-    const val PASS_BY_DEFAULT       =  Int.MIN_VALUE
+    const val PASS_BY_DEFAULT = Int.MIN_VALUE
 }
 
 /**
@@ -205,15 +210,19 @@ object CheckerPriority {
  * already-sorted list (see [SpamCheckers.sorted]) to keep the hot path fast.
  */
 object CheckerPipeline {
-    suspend fun run(sortedCheckers: List<IChecker>, ctx: CheckContext): BlockResult? {
+    suspend fun run(
+        sortedCheckers: List<IChecker>,
+        ctx: CheckContext,
+    ): BlockResult? {
         for (checker in sortedCheckers) {
             if (ctx.timeLeftMillis() <= 0L) return null
             if (!checker.isEnabled(ctx)) continue
-            val result = try {
-                checker.check(ctx)
-            } catch (e: Exception) {
-                null
-            }
+            val result =
+                try {
+                    checker.check(ctx)
+                } catch (e: Exception) {
+                    null
+                }
             if (result != null) return result
         }
         return null
@@ -224,15 +233,28 @@ object CheckerPipeline {
      * instead of short-circuiting on the first. Used by the lookup screen
      * rule tester, never on the hot screening path.
      */
-    suspend fun traceAll(sortedCheckers: List<IChecker>, ctx: CheckContext): PipelineTrace {
+    suspend fun traceAll(
+        sortedCheckers: List<IChecker>,
+        ctx: CheckContext,
+    ): PipelineTrace {
         val entries = mutableListOf<PipelineTraceEntry>()
         for (checker in sortedCheckers) {
-            val enabled = try { checker.isEnabled(ctx) } catch (_: Exception) { false }
+            val enabled =
+                try {
+                    checker.isEnabled(ctx)
+                } catch (_: Exception) {
+                    false
+                }
             if (!enabled) {
                 entries.add(PipelineTraceEntry(checker.name, checker.priority, PipelineTraceVerdict.DISABLED))
                 continue
             }
-            val result = try { checker.check(ctx) } catch (_: Exception) { null }
+            val result =
+                try {
+                    checker.check(ctx)
+                } catch (_: Exception) {
+                    null
+                }
             if (result == null) {
                 entries.add(PipelineTraceEntry(checker.name, checker.priority, PipelineTraceVerdict.PASS))
             } else if (result.shouldBlock) {
@@ -280,6 +302,8 @@ object SpamCheckers {
             add(ContactsOnlyChecker(appContext, dependencies.spamHeuristics))
             add(StirShakenTrustChecker())
             add(StirShakenChecker())
+            add(UserBlocklistChecker(repo))
+            add(TemporaryAllowChecker(repo))
             add(DatabaseChecker(repo))
             add(DbPrefixExpansionChecker(repo))
             add(SystemBlockListChecker(appContext))

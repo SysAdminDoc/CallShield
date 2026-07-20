@@ -25,22 +25,31 @@ import java.util.concurrent.TimeUnit
  * Entire widget is clickable — opens the app.
  */
 class CallShieldWidget : AppWidgetProvider() {
-
-    override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
+    override fun onUpdate(
+        context: Context,
+        appWidgetManager: AppWidgetManager,
+        appWidgetIds: IntArray,
+    ) {
         for (id in appWidgetIds) {
             updateWidget(context, appWidgetManager, id)
         }
     }
 
-    private fun updateWidget(context: Context, manager: AppWidgetManager, widgetId: Int) {
+    private fun updateWidget(
+        context: Context,
+        manager: AppWidgetManager,
+        widgetId: Int,
+    ) {
         val views = RemoteViews(context.packageName, R.layout.widget_callshield)
 
         // Entire widget opens the app
-        val intent = PendingIntent.getActivity(
-            context, 0,
-            Intent(context, MainActivity::class.java),
-            PendingIntent.FLAG_IMMUTABLE
-        )
+        val intent =
+            PendingIntent.getActivity(
+                context,
+                0,
+                Intent(context, MainActivity::class.java),
+                PendingIntent.FLAG_IMMUTABLE,
+            )
         views.setOnClickPendingIntent(R.id.widget_root, intent)
 
         // Set click listeners immediately, data updates async
@@ -58,12 +67,15 @@ class CallShieldWidget : AppWidgetProvider() {
 
                 // Calculate start-of-today and start-of-yesterday
                 val now = System.currentTimeMillis()
-                val todayStart = Calendar.getInstance().apply {
-                    set(Calendar.HOUR_OF_DAY, 0)
-                    set(Calendar.MINUTE, 0)
-                    set(Calendar.SECOND, 0)
-                    set(Calendar.MILLISECOND, 0)
-                }.timeInMillis
+                val todayStart =
+                    Calendar
+                        .getInstance()
+                        .apply {
+                            set(Calendar.HOUR_OF_DAY, 0)
+                            set(Calendar.MINUTE, 0)
+                            set(Calendar.SECOND, 0)
+                            set(Calendar.MILLISECOND, 0)
+                        }.timeInMillis
                 val yesterdayStart = todayStart - 86_400_000L
 
                 val todayCount = dao.getBlockedCountBetweenSync(todayStart, now)
@@ -74,11 +86,12 @@ class CallShieldWidget : AppWidgetProvider() {
                 val localizedTotalCount = numberFormatter.format(totalCount)
 
                 // Trend arrow: compare today vs yesterday
-                val trendText = when {
-                    todayCount > yesterdayCount -> appContext.getString(R.string.widget_today_trend_up, localizedTodayCount)
-                    todayCount < yesterdayCount -> appContext.getString(R.string.widget_today_trend_down, localizedTodayCount)
-                    else -> appContext.getString(R.string.widget_today_trend_same, localizedTodayCount)
-                }
+                val trendText =
+                    when {
+                        todayCount > yesterdayCount -> appContext.getString(R.string.widget_today_trend_up, localizedTodayCount)
+                        todayCount < yesterdayCount -> appContext.getString(R.string.widget_today_trend_down, localizedTodayCount)
+                        else -> appContext.getString(R.string.widget_today_trend_same, localizedTodayCount)
+                    }
 
                 // Last blocked time
                 val lastTimestamp = dao.getLastBlockedTimestamp()
@@ -93,7 +106,7 @@ class CallShieldWidget : AppWidgetProvider() {
                 views.setTextViewText(R.id.widget_trend, trendText)
                 views.setTextViewText(
                     R.id.widget_total,
-                    appContext.getString(R.string.widget_total_blocked, localizedTotalCount)
+                    appContext.getString(R.string.widget_total_blocked, localizedTotalCount),
                 )
                 views.setTextViewText(R.id.widget_last_blocked, lastBlockedText)
 
@@ -118,7 +131,11 @@ class CallShieldWidget : AppWidgetProvider() {
     /**
      * Formats the last-blocked timestamp into a human-readable relative string.
      */
-    private fun formatLastBlocked(context: Context, timestamp: Long?, now: Long): String {
+    private fun formatLastBlocked(
+        context: Context,
+        timestamp: Long?,
+        now: Long,
+    ): String {
         if (timestamp == null || timestamp == 0L) {
             return context.getString(R.string.widget_last_never)
         }
@@ -137,11 +154,14 @@ class CallShieldWidget : AppWidgetProvider() {
 
     companion object {
         fun refreshAll(context: Context) {
-            val intent = Intent(context, CallShieldWidget::class.java).apply {
-                action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
-            }
-            val ids = AppWidgetManager.getInstance(context)
-                .getAppWidgetIds(ComponentName(context, CallShieldWidget::class.java))
+            val intent =
+                Intent(context, CallShieldWidget::class.java).apply {
+                    action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
+                }
+            val ids =
+                AppWidgetManager
+                    .getInstance(context)
+                    .getAppWidgetIds(ComponentName(context, CallShieldWidget::class.java))
             intent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, ids)
             context.sendBroadcast(intent)
         }

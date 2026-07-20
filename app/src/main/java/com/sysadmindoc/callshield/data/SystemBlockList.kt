@@ -22,7 +22,6 @@ import android.provider.BlockedNumberContract
  * Reference: Fossify Phone's `Context.isNumberBlocked` extension.
  */
 object SystemBlockList {
-
     // Short TTL cache for the hot path — querying a content provider
     // takes a few ms and we may look up the same number 2-3 times per
     // screening call (checker chain + UI lookup).
@@ -30,10 +29,10 @@ object SystemBlockList {
     private const val CACHE_MAX = 128
 
     private val cacheLock = Any()
-    private val cache = object : LinkedHashMap<String, Pair<Long, Boolean>>(16, 0.75f, true) {
-        override fun removeEldestEntry(eldest: Map.Entry<String, Pair<Long, Boolean>>?): Boolean =
-            size > CACHE_MAX
-    }
+    private val cache =
+        object : LinkedHashMap<String, Pair<Long, Boolean>>(16, 0.75f, true) {
+            override fun removeEldestEntry(eldest: Map.Entry<String, Pair<Long, Boolean>>?): Boolean = size > CACHE_MAX
+        }
 
     /**
      * Availability signal — `false` when we know reads will throw on this
@@ -54,11 +53,12 @@ object SystemBlockList {
     private fun checkAvailability(context: Context): Boolean {
         val now = System.currentTimeMillis()
         if (now - availableAt < AVAILABILITY_RECHECK_MS) return available
-        available = try {
-            BlockedNumberContract.canCurrentUserBlockNumbers(context)
-        } catch (_: Throwable) {
-            false
-        }
+        available =
+            try {
+                BlockedNumberContract.canCurrentUserBlockNumbers(context)
+            } catch (_: Throwable) {
+                false
+            }
         availableAt = now
         return available
     }
@@ -68,7 +68,10 @@ object SystemBlockList {
      *         `false` otherwise, including when the app lacks permission
      *         to read the table.
      */
-    fun isBlocked(context: Context, number: String): Boolean {
+    fun isBlocked(
+        context: Context,
+        number: String,
+    ): Boolean {
         if (number.isBlank()) return false
         if (!checkAvailability(context)) return false
 
@@ -79,20 +82,21 @@ object SystemBlockList {
             }
         }
 
-        val found = try {
-            BlockedNumberContract.isBlocked(context, number)
-        } catch (_: SecurityException) {
-            // Role was revoked between availability check and this call —
-            // clear the availability so we don't keep retrying, and wipe
-            // the lookup cache so stale `true` entries from the previous
-            // dialer-role session can't influence subsequent checks.
-            available = false
-            availableAt = System.currentTimeMillis()
-            synchronized(cacheLock) { cache.clear() }
-            false
-        } catch (_: Throwable) {
-            false
-        }
+        val found =
+            try {
+                BlockedNumberContract.isBlocked(context, number)
+            } catch (_: SecurityException) {
+                // Role was revoked between availability check and this call —
+                // clear the availability so we don't keep retrying, and wipe
+                // the lookup cache so stale `true` entries from the previous
+                // dialer-role session can't influence subsequent checks.
+                available = false
+                availableAt = System.currentTimeMillis()
+                synchronized(cacheLock) { cache.clear() }
+                false
+            } catch (_: Throwable) {
+                false
+            }
 
         synchronized(cacheLock) {
             cache[number] = System.currentTimeMillis() to found

@@ -58,6 +58,23 @@ class SpamRepositoryAdapter(
         repository.blockNumber(number, type, description)
     }
 
+    override suspend fun temporaryBlockNumber(
+        number: String,
+        expiresAt: Long,
+        type: String,
+        description: String,
+    ) {
+        repository.temporaryBlockNumber(number, expiresAt, type, description)
+    }
+
+    override suspend fun temporaryAllowNumber(
+        number: String,
+        expiresAt: Long,
+        description: String,
+    ) {
+        repository.temporaryAllowNumber(number, expiresAt, description)
+    }
+
     override suspend fun unblockNumber(number: SpamNumber) {
         repository.unblockNumber(number)
     }

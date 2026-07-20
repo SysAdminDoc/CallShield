@@ -37,20 +37,20 @@ import kotlin.math.sin
  * Android requires user interaction for call audio injection.
  */
 object SitTonePlayer {
-
     private const val SAMPLE_RATE = 44100
     private const val CHANNELS = AudioFormat.CHANNEL_OUT_MONO
     private const val ENCODING = AudioFormat.ENCODING_PCM_16BIT
 
     // SIT tone frequencies and durations (ms)
-    private val SIT_SEGMENTS = listOf(
-        Pair(985.2,  380),  // Low
-        Pair(1428.5, 380),  // Mid
-        Pair(1776.7, 380),  // High
-    )
+    private val SIT_SEGMENTS =
+        listOf(
+            Pair(985.2, 380), // Low
+            Pair(1428.5, 380), // Mid
+            Pair(1776.7, 380), // High
+        )
 
-    private const val SEGMENT_GAP_MS = 80   // Silence between tones
-    private const val FADE_MS = 15          // Fade in/out to avoid clicks
+    private const val SEGMENT_GAP_MS = 80 // Silence between tones
+    private const val FADE_MS = 15 // Fade in/out to avoid clicks
 
     // AtomicBoolean rather than @Volatile + guarded write: two coroutines
     // entering play() concurrently would both see `false` on a plain
@@ -64,14 +64,15 @@ object SitTonePlayer {
      * Must be called from a coroutine; runs on Dispatchers.IO.
      * Safe to call multiple times — concurrent plays are rejected.
      */
-    suspend fun play(context: Context) = withContext(Dispatchers.IO) {
-        if (!playing.compareAndSet(false, true)) return@withContext
-        try {
-            playSequence(context)
-        } finally {
-            playing.set(false)
+    suspend fun play(context: Context) =
+        withContext(Dispatchers.IO) {
+            if (!playing.compareAndSet(false, true)) return@withContext
+            try {
+                playSequence(context)
+            } finally {
+                playing.set(false)
+            }
         }
-    }
 
     fun isPlaying(): Boolean = playing.get()
 
@@ -83,7 +84,7 @@ object SitTonePlayer {
         am.requestAudioFocus(
             null,
             AudioManager.STREAM_VOICE_CALL,
-            AudioManager.AUDIOFOCUS_GAIN_TRANSIENT
+            AudioManager.AUDIOFOCUS_GAIN_TRANSIENT,
         )
 
         try {
@@ -104,7 +105,10 @@ object SitTonePlayer {
         }
     }
 
-    private suspend fun playTone(frequencyHz: Double, durationMs: Int) {
+    private suspend fun playTone(
+        frequencyHz: Double,
+        durationMs: Int,
+    ) {
         val numSamples = SAMPLE_RATE * durationMs / 1000
         val fadeSamples = SAMPLE_RATE * FADE_MS / 1000
         val buffer = ShortArray(numSamples)
@@ -115,8 +119,12 @@ object SitTonePlayer {
             // Fade in
             val fadeIn = if (i < fadeSamples) i.toDouble() / fadeSamples else 1.0
             // Fade out
-            val fadeOut = if (i > numSamples - fadeSamples)
-                (numSamples - i).toDouble() / fadeSamples else 1.0
+            val fadeOut =
+                if (i > numSamples - fadeSamples) {
+                    (numSamples - i).toDouble() / fadeSamples
+                } else {
+                    1.0
+                }
 
             buffer[i] = (sample * fadeIn * fadeOut * Short.MAX_VALUE * 0.9).toInt().toShort()
         }
@@ -124,23 +132,25 @@ object SitTonePlayer {
         val minBufSize = AudioTrack.getMinBufferSize(SAMPLE_RATE, CHANNELS, ENCODING)
         val bufferSize = maxOf(minBufSize, buffer.size * 2)
 
-        val track = AudioTrack.Builder()
-            .setAudioAttributes(
-                AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_VOICE_COMMUNICATION)
-                    .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
-                    .build()
-            )
-            .setAudioFormat(
-                AudioFormat.Builder()
-                    .setSampleRate(SAMPLE_RATE)
-                    .setChannelMask(CHANNELS)
-                    .setEncoding(ENCODING)
-                    .build()
-            )
-            .setBufferSizeInBytes(bufferSize)
-            .setTransferMode(AudioTrack.MODE_STATIC)
-            .build()
+        val track =
+            AudioTrack
+                .Builder()
+                .setAudioAttributes(
+                    AudioAttributes
+                        .Builder()
+                        .setUsage(AudioAttributes.USAGE_VOICE_COMMUNICATION)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                        .build(),
+                ).setAudioFormat(
+                    AudioFormat
+                        .Builder()
+                        .setSampleRate(SAMPLE_RATE)
+                        .setChannelMask(CHANNELS)
+                        .setEncoding(ENCODING)
+                        .build(),
+                ).setBufferSizeInBytes(bufferSize)
+                .setTransferMode(AudioTrack.MODE_STATIC)
+                .build()
 
         try {
             track.write(buffer, 0, buffer.size)

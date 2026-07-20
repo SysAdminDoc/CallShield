@@ -8,18 +8,14 @@ import java.util.Calendar
 import java.util.GregorianCalendar
 
 class TimeScheduleTest {
-
     /** 2026-04-22 (Wednesday) at the given hour, local timezone. */
-    private fun wednesdayAt(hour: Int): Calendar =
-        GregorianCalendar(2026, Calendar.APRIL, 22, hour, 0)
+    private fun wednesdayAt(hour: Int): Calendar = GregorianCalendar(2026, Calendar.APRIL, 22, hour, 0)
 
     /** 2026-04-18 (Saturday). */
-    private fun saturdayAt(hour: Int): Calendar =
-        GregorianCalendar(2026, Calendar.APRIL, 18, hour, 0)
+    private fun saturdayAt(hour: Int): Calendar = GregorianCalendar(2026, Calendar.APRIL, 18, hour, 0)
 
     /** 2026-04-19 (Sunday). */
-    private fun sundayAt(hour: Int): Calendar =
-        GregorianCalendar(2026, Calendar.APRIL, 19, hour, 0)
+    private fun sundayAt(hour: Int): Calendar = GregorianCalendar(2026, Calendar.APRIL, 19, hour, 0)
 
     // ── isGating sentinel ───────────────────────────────────────────
 
@@ -83,7 +79,7 @@ class TimeScheduleTest {
     @Test fun `business hours rule is inactive outside business hours`() {
         val sched = TimeSchedule.everyDay(9, 17)
         assertFalse(sched.isActiveAt(wednesdayAt(8)))
-        assertFalse(sched.isActiveAt(wednesdayAt(17)))  // end is exclusive
+        assertFalse(sched.isActiveAt(wednesdayAt(17))) // end is exclusive
         assertFalse(sched.isActiveAt(wednesdayAt(20)))
     }
 
@@ -138,7 +134,7 @@ class TimeScheduleTest {
     @Test fun `describe weekdays 9 to 17`() {
         assertEquals(
             "Mon–Fri · 09:00–17:00",
-            TimeSchedule(TimeSchedule.DAYS_WEEKDAYS, 9, 17).describe()
+            TimeSchedule(TimeSchedule.DAYS_WEEKDAYS, 9, 17).describe(),
         )
     }
 

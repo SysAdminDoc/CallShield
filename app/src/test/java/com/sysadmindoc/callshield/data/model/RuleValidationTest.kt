@@ -8,7 +8,6 @@ import java.util.Calendar
 import java.util.GregorianCalendar
 
 class RuleValidationTest {
-
     @Test
     fun `blank keyword does not match any sms body`() {
         assertFalse(SmsKeywordRule(keyword = "   ").matches("free gift card"))
@@ -78,6 +77,7 @@ class RuleValidationTest {
 
     /** Wednesday 2026-04-22 12:00. */
     private fun wednesdayNoon(): Calendar = GregorianCalendar(2026, Calendar.APRIL, 22, 12, 0)
+
     /** Saturday 2026-04-18 12:00. */
     private fun saturdayNoon(): Calendar = GregorianCalendar(2026, Calendar.APRIL, 18, 12, 0)
 
@@ -91,24 +91,26 @@ class RuleValidationTest {
     @Test
     fun `WildcardRule with weekday schedule skips weekend matches`() {
         val sched = TimeSchedule.weekdaysAllDay()
-        val rule = WildcardRule(
-            pattern = "+1212*",
-            scheduleDays = sched.daysMask,
-            scheduleStartHour = sched.startHour,
-            scheduleEndHour = sched.endHour,
-        )
+        val rule =
+            WildcardRule(
+                pattern = "+1212*",
+                scheduleDays = sched.daysMask,
+                scheduleStartHour = sched.startHour,
+                scheduleEndHour = sched.endHour,
+            )
         assertTrue(rule.matchesNow("2125551234", wednesdayNoon()))
         assertFalse(rule.matchesNow("2125551234", saturdayNoon()))
     }
 
     @Test
     fun `SmsKeywordRule respects schedule via matchesNow`() {
-        val rule = SmsKeywordRule(
-            keyword = "urgent",
-            scheduleDays = TimeSchedule.DAYS_WEEKDAYS,
-            scheduleStartHour = 9,
-            scheduleEndHour = 17,
-        )
+        val rule =
+            SmsKeywordRule(
+                keyword = "urgent",
+                scheduleDays = TimeSchedule.DAYS_WEEKDAYS,
+                scheduleStartHour = 9,
+                scheduleEndHour = 17,
+            )
         // Inside window
         assertTrue(rule.matchesNow("This is urgent", wednesdayNoon()))
         // Same match, outside window

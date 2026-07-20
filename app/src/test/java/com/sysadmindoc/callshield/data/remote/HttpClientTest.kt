@@ -5,7 +5,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class HttpClientTest {
-
     @Test
     fun `shared client enforces configured certificate pins`() {
         HttpClient.pinnedEndpointPins.keys.forEach { host ->
@@ -32,9 +31,9 @@ class HttpClientTest {
                 "www.whocalledme.com",
                 "api.opencnam.com",
                 "urlhaus-api.abuse.ch",
-                "phonevalidation.abstractapi.com"
+                "phonevalidation.abstractapi.com",
             ),
-            HttpClient.pinnedEndpointPins.keys
+            HttpClient.pinnedEndpointPins.keys,
         )
     }
 

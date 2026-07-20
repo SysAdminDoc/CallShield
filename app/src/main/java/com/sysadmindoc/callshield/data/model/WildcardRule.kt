@@ -16,11 +16,11 @@ import java.util.Calendar
  */
 @Entity(
     tableName = "wildcard_rules",
-    indices = [Index(value = ["pattern"], unique = true)]
+    indices = [Index(value = ["pattern"], unique = true)],
 )
 data class WildcardRule(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    val pattern: String,         // e.g., "+1832555*" or regex
+    val pattern: String, // e.g., "+1832555*" or regex
     val isRegex: Boolean = false,
     val description: String = "",
     val enabled: Boolean = true,
@@ -35,7 +35,10 @@ data class WildcardRule(
      * Schedule-aware match. Short-circuits on the schedule before running
      * the (potentially expensive) regex compile + match.
      */
-    fun matchesNow(number: String, calendar: Calendar = Calendar.getInstance()): Boolean {
+    fun matchesNow(
+        number: String,
+        calendar: Calendar = Calendar.getInstance(),
+    ): Boolean {
         if (!schedule.isActiveAt(calendar)) return false
         return matches(number)
     }
@@ -61,17 +64,31 @@ data class WildcardRule(
             // Escape ALL regex metacharacters first, then convert our globs.
             // Without this, a pattern like "212.555*" would treat '.' as
             // regex any-char and match "2120555..." unexpectedly.
-            val escaped = buildString {
-                for (ch in normalizedPattern) {
-                    when (ch) {
-                        '*' -> append("\\d*")
-                        '?' -> append("\\d")
-                        '+', '.', '(', ')', '[', ']', '{', '}',
-                        '|', '^', '$', '\\' -> { append('\\'); append(ch) }
-                        else -> append(ch)
+            val escaped =
+                buildString {
+                    for (ch in normalizedPattern) {
+                        when (ch) {
+                            '*' -> {
+                                append("\\d*")
+                            }
+
+                            '?' -> {
+                                append("\\d")
+                            }
+
+                            '+', '.', '(', ')', '[', ']', '{', '}',
+                            '|', '^', '$', '\\',
+                            -> {
+                                append('\\')
+                                append(ch)
+                            }
+
+                            else -> {
+                                append(ch)
+                            }
+                        }
                     }
                 }
-            }
             try {
                 val regex = Regex("^$escaped$")
                 // Try the input as-is first, then normalized forms so that

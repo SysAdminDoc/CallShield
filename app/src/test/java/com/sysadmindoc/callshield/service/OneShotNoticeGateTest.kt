@@ -5,7 +5,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class OneShotNoticeGateTest {
-
     @Test
     fun `shouldShow allows first notice and suppresses duplicate`() {
         val gate = OneShotNoticeGate(retentionMillis = 1_000L)
@@ -34,7 +33,7 @@ class OneShotNoticeGateTest {
         }
         assertTrue(
             "map should be bounded by maxEntries — was ${gate.size()}",
-            gate.size() <= 16
+            gate.size() <= 16,
         )
         // Oldest entry should have been evicted; newest survives.
         assertFalse(gate.shouldShow("caller-999", nowMillis = 1_999L))

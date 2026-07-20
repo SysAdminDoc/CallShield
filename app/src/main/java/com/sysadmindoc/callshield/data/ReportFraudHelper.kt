@@ -28,7 +28,6 @@ import com.sysadmindoc.callshield.R
  * form at a known URL.
  */
 object ReportFraudHelper {
-
     const val FTC_REPORT_URL = "https://reportfraud.ftc.gov/"
     const val FCC_REPORT_URL = "https://consumercomplaints.fcc.gov/hc/en-us/requests/new?ticket_form_id=39744"
 
@@ -38,24 +37,31 @@ object ReportFraudHelper {
      * Copy the number + launch the agency's report form in the browser.
      * Returns true on success, false if no browser was available.
      */
-    fun report(context: Context, number: String, authority: Authority = Authority.FTC): Boolean {
+    fun report(
+        context: Context,
+        number: String,
+        authority: Authority = Authority.FTC,
+    ): Boolean {
         copyToClipboard(context, number)
 
-        val url = when (authority) {
-            Authority.FTC -> FTC_REPORT_URL
-            Authority.FCC -> FCC_REPORT_URL
-        }
+        val url =
+            when (authority) {
+                Authority.FTC -> FTC_REPORT_URL
+                Authority.FCC -> FCC_REPORT_URL
+            }
 
-        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        }
+        val intent =
+            Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
         return try {
             context.startActivity(intent)
-            Toast.makeText(
-                context,
-                context.getString(R.string.ftc_report_toast, PhoneFormatter.format(number)),
-                Toast.LENGTH_LONG
-            ).show()
+            Toast
+                .makeText(
+                    context,
+                    context.getString(R.string.ftc_report_toast, PhoneFormatter.format(number)),
+                    Toast.LENGTH_LONG,
+                ).show()
             true
         } catch (_: Exception) {
             Toast.makeText(context, R.string.ftc_report_no_browser, Toast.LENGTH_LONG).show()
@@ -63,7 +69,10 @@ object ReportFraudHelper {
         }
     }
 
-    private fun copyToClipboard(context: Context, number: String) {
+    private fun copyToClipboard(
+        context: Context,
+        number: String,
+    ) {
         val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager ?: return
         cm.setPrimaryClip(ClipData.newPlainText(context.getString(R.string.clip_label_spam_number), number))
     }

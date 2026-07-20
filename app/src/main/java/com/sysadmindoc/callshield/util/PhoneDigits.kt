@@ -35,13 +35,19 @@ fun filterAsciiDigits(value: String): String =
  * Extract the trailing [n] ASCII digits from [value].
  * Equivalent to `value.filter { it in '0'..'9' }.takeLast(n)`.
  */
-fun filterAsciiDigitsLast(value: String, n: Int): String = filterAsciiDigits(value).takeLast(n)
+fun filterAsciiDigitsLast(
+    value: String,
+    n: Int,
+): String = filterAsciiDigits(value).takeLast(n)
 
 /**
  * Keep only characters users expect in a phone input field while rejecting
  * Unicode digit classes that would diverge from screening-path matching.
  */
-fun sanitizePhoneNumberInput(value: String, maxLength: Int = DEFAULT_PHONE_INPUT_LENGTH): String =
+fun sanitizePhoneNumberInput(
+    value: String,
+    maxLength: Int = DEFAULT_PHONE_INPUT_LENGTH,
+): String =
     buildString(value.length) {
         for (ch in value) {
             when {
@@ -63,8 +69,10 @@ fun normalizePhoneNumberInput(value: String): String {
     return if (trimmed.startsWith("+")) "+$digits" else digits
 }
 
-fun hasMinAsciiDigits(value: String, minimum: Int = MIN_CONFIRMABLE_PHONE_DIGITS): Boolean =
-    filterAsciiDigits(value).length >= minimum
+fun hasMinAsciiDigits(
+    value: String,
+    minimum: Int = MIN_CONFIRMABLE_PHONE_DIGITS,
+): Boolean = filterAsciiDigits(value).length >= minimum
 
 private fun stripPhoneFormatControls(value: String): String =
     buildString(value.length) {
@@ -75,7 +83,9 @@ private fun stripPhoneFormatControls(value: String): String =
                 ZERO_WIDTH_JOINER,
                 LEFT_TO_RIGHT_MARK,
                 RIGHT_TO_LEFT_MARK,
-                BYTE_ORDER_MARK -> Unit
+                BYTE_ORDER_MARK,
+                -> Unit
+
                 else -> append(ch)
             }
         }

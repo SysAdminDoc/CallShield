@@ -1,11 +1,11 @@
 package com.sysadmindoc.callshield.data.remote
 
 import android.content.Context
-import com.sysadmindoc.callshield.data.model.HotNumber
-import com.sysadmindoc.callshield.data.model.SpamDatabase
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.Types
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
+import com.sysadmindoc.callshield.data.model.HotNumber
+import com.sysadmindoc.callshield.data.model.SpamDatabase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.Request

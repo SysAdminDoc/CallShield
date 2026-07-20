@@ -24,7 +24,9 @@ import java.util.Calendar
  * entries surface with `emergency_contact` matchSource so the block log
  * and detail screen can distinguish them.
  */
-internal class WhitelistChecker(private val repo: SpamRepositoryImpl) : IChecker {
+internal class WhitelistChecker(
+    private val repo: SpamRepositoryImpl,
+) : IChecker {
     override val priority = CheckerPriority.MANUAL_WHITELIST
     override val name = "manual_whitelist"
 
@@ -46,14 +48,14 @@ internal class ContactWhitelistChecker(
     override val priority = CheckerPriority.CONTACT_WHITELIST
     override val name = "contact_whitelist"
 
-    override suspend fun isEnabled(ctx: CheckContext): Boolean =
-        ctx.prefs[SpamRepository.KEY_CONTACT_WHITELIST] ?: true
+    override suspend fun isEnabled(ctx: CheckContext): Boolean = ctx.prefs[SpamRepository.KEY_CONTACT_WHITELIST] ?: true
 
-    override suspend fun check(ctx: CheckContext): BlockResult? {
-        return if (spamHeuristics.isInContacts(appContext, ctx.number)) {
+    override suspend fun check(ctx: CheckContext): BlockResult? =
+        if (spamHeuristics.isInContacts(appContext, ctx.number)) {
             BlockResult.allow("contact_whitelist")
-        } else null
-    }
+        } else {
+            null
+        }
 }
 
 /**
@@ -71,14 +73,14 @@ internal class ContactsOnlyChecker(
     override val priority = CheckerPriority.CONTACTS_ONLY
     override val name = "contacts_only"
 
-    override suspend fun isEnabled(ctx: CheckContext): Boolean =
-        ctx.prefs[SpamRepository.KEY_CONTACTS_ONLY] ?: false
+    override suspend fun isEnabled(ctx: CheckContext): Boolean = ctx.prefs[SpamRepository.KEY_CONTACTS_ONLY] ?: false
 
-    override suspend fun check(ctx: CheckContext): BlockResult? {
-        return if (!spamHeuristics.isInContacts(appContext, ctx.number)) {
+    override suspend fun check(ctx: CheckContext): BlockResult? =
+        if (!spamHeuristics.isInContacts(appContext, ctx.number)) {
             BlockResult.block("contacts_only", description = "Blocked — contacts-only mode is active")
-        } else null
-    }
+        } else {
+            null
+        }
 }
 
 /**
@@ -117,8 +119,7 @@ internal class StirShakenTrustChecker : IChecker {
             verificationStatus = ctx.verificationStatus,
         )
 
-    override suspend fun check(ctx: CheckContext): BlockResult? =
-        decidePure(ctx.verificationStatus)
+    override suspend fun check(ctx: CheckContext): BlockResult? = decidePure(ctx.verificationStatus)
 
     companion object {
         // android.telecom.Connection.VERIFICATION_STATUS_PASSED == 1 (AOSP).
@@ -130,14 +131,18 @@ internal class StirShakenTrustChecker : IChecker {
         internal const val VERIFICATION_STATUS_PASSED = 1
 
         /** Pure-logic helper — testable without a CheckContext or Android. */
-        internal fun isEnabledPure(settingEnabled: Boolean, verificationStatus: Int?): Boolean =
-            settingEnabled && verificationStatus != null
+        internal fun isEnabledPure(
+            settingEnabled: Boolean,
+            verificationStatus: Int?,
+        ): Boolean = settingEnabled && verificationStatus != null
 
         /** Pure-logic helper — returns the allow result iff the carrier signed PASSED. */
         internal fun decidePure(verificationStatus: Int?): BlockResult? =
             if (verificationStatus == VERIFICATION_STATUS_PASSED) {
                 BlockResult.allow("stir_shaken_trusted")
-            } else null
+            } else {
+                null
+            }
     }
 }
 
@@ -162,8 +167,7 @@ internal class StirShakenChecker : IChecker {
     override val priority = CheckerPriority.STIR_SHAKEN
     override val name = "stir_shaken_failed"
 
-    override suspend fun isEnabled(ctx: CheckContext): Boolean =
-        (ctx.prefs[SpamRepository.KEY_STIR_SHAKEN] ?: true) && ctx.verificationStatus != null
+    override suspend fun isEnabled(ctx: CheckContext): Boolean = (ctx.prefs[SpamRepository.KEY_STIR_SHAKEN] ?: true) && ctx.verificationStatus != null
 
     override suspend fun check(ctx: CheckContext): BlockResult? {
         @Suppress("DEPRECATION")
@@ -172,9 +176,11 @@ internal class StirShakenChecker : IChecker {
             BlockResult.block(
                 matchSource = "stir_shaken_failed",
                 type = "spoofed",
-                description = "Carrier could not verify caller identity"
+                description = "Carrier could not verify caller identity",
             )
-        } else null
+        } else {
+            null
+        }
     }
 }
 
@@ -183,38 +189,85 @@ internal class StirShakenChecker : IChecker {
 // ─────────────────────────────────────────────────────────────────────
 
 /**
+ * Short-lived allow for one-off caller recovery. It lives below permanent
+ * explicit blocks but above downloaded exact reputation rows.
+ */
+internal class TemporaryAllowChecker(
+    private val repo: SpamRepositoryImpl,
+) : IChecker {
+    override val priority = CheckerPriority.TEMPORARY_ALLOW
+    override val name = "temporary_allow"
+
+    override suspend fun check(ctx: CheckContext): BlockResult? {
+        repo.findTemporaryWhitelistEntryInternal(ctx.number) ?: return null
+        return BlockResult.allow("temporary_allow")
+    }
+}
+
+/**
  * Read-only view of Android's system-wide block list (A4). Allows
  * CallShield to respect blocks set by the stock Phone / Messages app
  * without maintaining a bidirectional mirror. Silently no-ops when the
  * app lacks the default-dialer role.
  */
-internal class SystemBlockListChecker(private val appContext: Context) : IChecker {
+internal class SystemBlockListChecker(
+    private val appContext: Context,
+) : IChecker {
     override val priority = CheckerPriority.SYSTEM_BLOCK_LIST
     override val name = "system_block_list"
 
-    override suspend fun check(ctx: CheckContext): BlockResult? {
-        return if (SystemBlockList.isBlocked(appContext, ctx.number)) {
+    override suspend fun check(ctx: CheckContext): BlockResult? =
+        if (SystemBlockList.isBlocked(appContext, ctx.number)) {
             BlockResult.block(
                 matchSource = "system_block_list",
                 type = "user_blocked",
-                description = "Blocked via system block list"
+                description = "Blocked via system block list",
             )
-        } else null
-    }
+        } else {
+            null
+        }
 }
 
 /**
  * Combined user-blocklist + GitHub database lookup — both live in the
  * same `spam_numbers` table. A single Room query handles both.
  */
-internal class DatabaseChecker(private val repo: SpamRepositoryImpl) : IChecker {
+internal class UserBlocklistChecker(
+    private val repo: SpamRepositoryImpl,
+) : IChecker {
     override val priority = CheckerPriority.USER_BLOCKLIST
+    override val name = "user_blocklist"
+
+    override suspend fun check(ctx: CheckContext): BlockResult? {
+        val entry = repo.findByNumberInternal(ctx.number)
+        return if (entry?.isUserBlocked == true) {
+            val source = if (entry.expiresAt == null) "user_blocklist" else "temporary_block"
+            val description =
+                if (entry.expiresAt == null) {
+                    entry.description
+                } else {
+                    entry.description.ifBlank { "Temporarily blocked" }
+                }
+            BlockResult.block(source, entry.type, description)
+        } else {
+            null
+        }
+    }
+}
+
+internal class DatabaseChecker(
+    private val repo: SpamRepositoryImpl,
+) : IChecker {
+    override val priority = CheckerPriority.GITHUB_DATABASE
     override val name = "database"
 
     override suspend fun check(ctx: CheckContext): BlockResult? {
-        val entry = repo.findByNumberInternal(ctx.number) ?: return null
-        val source = if (entry.isUserBlocked) "user_blocklist" else "database"
-        return BlockResult.block(source, entry.type, entry.description)
+        val entry = repo.findByNumberInternal(ctx.number)
+        return if (entry != null && !entry.isUserBlocked) {
+            BlockResult.block("database", entry.type, entry.description)
+        } else {
+            null
+        }
     }
 }
 
@@ -223,12 +276,13 @@ internal class DatabaseChecker(private val repo: SpamRepositoryImpl) : IChecker 
  * but another entry sharing the same prefix (minus last 2 digits) exists,
  * block with reduced confidence. Catches campaign number siblings.
  */
-internal class DbPrefixExpansionChecker(private val repo: SpamRepositoryImpl) : IChecker {
+internal class DbPrefixExpansionChecker(
+    private val repo: SpamRepositoryImpl,
+) : IChecker {
     override val priority = CheckerPriority.DB_PREFIX_EXPANSION
     override val name = "db_prefix_expansion"
 
-    override suspend fun isEnabled(ctx: CheckContext): Boolean =
-        ctx.prefs[SpamRepository.KEY_DB_PREFIX_EXPANSION] ?: false
+    override suspend fun isEnabled(ctx: CheckContext): Boolean = ctx.prefs[SpamRepository.KEY_DB_PREFIX_EXPANSION] ?: false
 
     override suspend fun check(ctx: CheckContext): BlockResult? {
         if (!repo.hasDbPrefixMatch(ctx.number)) return null
@@ -244,7 +298,9 @@ internal class DbPrefixExpansionChecker(private val repo: SpamRepositoryImpl) : 
  * NPA-NXX (or arbitrary digit-prefix) matcher. Prefixes are loaded once
  * and cached in [SpamRepositoryImpl]; cache invalidation happens on sync.
  */
-internal class PrefixChecker(private val repo: SpamRepositoryImpl) : IChecker {
+internal class PrefixChecker(
+    private val repo: SpamRepositoryImpl,
+) : IChecker {
     override val priority = CheckerPriority.PREFIX_MATCH
     override val name = "prefix"
 
@@ -263,7 +319,9 @@ internal class PrefixChecker(private val repo: SpamRepositoryImpl) : IChecker {
  * A7 schedule gating: rules may carry a day/hour window that skips the
  * (potentially expensive) regex match when inactive.
  */
-internal class WildcardChecker(private val repo: SpamRepositoryImpl) : IChecker {
+internal class WildcardChecker(
+    private val repo: SpamRepositoryImpl,
+) : IChecker {
     override val priority = CheckerPriority.WILDCARD_RULE
     override val name = "wildcard"
 
@@ -322,11 +380,12 @@ internal class RecentlyDialedChecker(
     override val priority = CheckerPriority.RECENTLY_DIALED
     override val name = "recently_dialed"
 
-    override suspend fun check(ctx: CheckContext): BlockResult? {
-        return if (callbackDetector.wasRecentlyDialed(appContext, ctx.number)) {
+    override suspend fun check(ctx: CheckContext): BlockResult? =
+        if (callbackDetector.wasRecentlyDialed(appContext, ctx.number)) {
             BlockResult.allow("recently_dialed")
-        } else null
-    }
+        } else {
+            null
+        }
 }
 
 internal class AnsweredCallerChecker(
@@ -336,22 +395,25 @@ internal class AnsweredCallerChecker(
     override val priority = CheckerPriority.ANSWERED_CALLER
     override val name = "answered_caller"
 
-    override suspend fun isEnabled(ctx: CheckContext): Boolean =
-        ctx.prefs[SpamRepository.KEY_ANSWERED_CALLER_TRUST] ?: true
+    override suspend fun isEnabled(ctx: CheckContext): Boolean = ctx.prefs[SpamRepository.KEY_ANSWERED_CALLER_TRUST] ?: true
 
     override suspend fun check(ctx: CheckContext): BlockResult? {
-        val threshold = (
-            ctx.prefs[SpamRepository.KEY_ANSWERED_CALLER_THRESHOLD]
-                ?: CallbackDetector.DEFAULT_ANSWERED_CALLER_THRESHOLD
+        val threshold =
+            (
+                ctx.prefs[SpamRepository.KEY_ANSWERED_CALLER_THRESHOLD]
+                    ?: CallbackDetector.DEFAULT_ANSWERED_CALLER_THRESHOLD
             ).coerceAtLeast(1)
-        val windowDays = (
-            ctx.prefs[SpamRepository.KEY_ANSWERED_CALLER_WINDOW_DAYS]
-                ?: CallbackDetector.DEFAULT_ANSWERED_CALLER_WINDOW_DAYS
+        val windowDays =
+            (
+                ctx.prefs[SpamRepository.KEY_ANSWERED_CALLER_WINDOW_DAYS]
+                    ?: CallbackDetector.DEFAULT_ANSWERED_CALLER_WINDOW_DAYS
             ).coerceAtLeast(1)
 
         return if (callbackDetector.wasAnsweredRepeatedly(appContext, ctx.number, windowDays, threshold)) {
             BlockResult.allow("answered_caller")
-        } else null
+        } else {
+            null
+        }
     }
 }
 
@@ -362,18 +424,20 @@ internal class EmergencyCallbackChecker(
     override val priority = CheckerPriority.EMERGENCY_CALLBACK
     override val name = "emergency_callback"
 
-    override suspend fun isEnabled(ctx: CheckContext): Boolean =
-        ctx.prefs[SpamRepository.KEY_EMERGENCY_CALLBACK_GRACE] ?: true
+    override suspend fun isEnabled(ctx: CheckContext): Boolean = ctx.prefs[SpamRepository.KEY_EMERGENCY_CALLBACK_GRACE] ?: true
 
     override suspend fun check(ctx: CheckContext): BlockResult? {
-        val windowMinutes = (
-            ctx.prefs[SpamRepository.KEY_EMERGENCY_CALLBACK_WINDOW_MINUTES]
-                ?: CallbackDetector.DEFAULT_EMERGENCY_CALLBACK_WINDOW_MINUTES
+        val windowMinutes =
+            (
+                ctx.prefs[SpamRepository.KEY_EMERGENCY_CALLBACK_WINDOW_MINUTES]
+                    ?: CallbackDetector.DEFAULT_EMERGENCY_CALLBACK_WINDOW_MINUTES
             ).coerceAtLeast(1)
 
         return if (callbackDetector.hasRecentEmergencyCall(appContext, windowMinutes)) {
             BlockResult.allow("emergency_callback")
-        } else null
+        } else {
+            null
+        }
     }
 }
 
@@ -384,11 +448,12 @@ internal class RepeatedUrgentChecker(
     override val priority = CheckerPriority.REPEATED_URGENT
     override val name = "repeated_urgent"
 
-    override suspend fun check(ctx: CheckContext): BlockResult? {
-        return if (callbackDetector.isRepeatedUrgentCall(appContext, ctx.number)) {
+    override suspend fun check(ctx: CheckContext): BlockResult? =
+        if (callbackDetector.isRepeatedUrgentCall(appContext, ctx.number)) {
             BlockResult.allow("repeated_urgent")
-        } else null
-    }
+        } else {
+            null
+        }
 }
 
 /**
@@ -410,7 +475,7 @@ internal class CampaignRecorderChecker(
         if (ctx.realtimeCall) {
             campaignDetector.recordCall(ctx.number)
         }
-        return null  // never blocks
+        return null // never blocks
     }
 }
 
@@ -422,38 +487,46 @@ internal class TimeBlockChecker : IChecker {
     override val priority = CheckerPriority.TIME_BLOCK
     override val name = "time_block"
 
-    override suspend fun isEnabled(ctx: CheckContext): Boolean =
-        ctx.prefs[SpamRepository.KEY_TIME_BLOCK] ?: false
+    override suspend fun isEnabled(ctx: CheckContext): Boolean = ctx.prefs[SpamRepository.KEY_TIME_BLOCK] ?: false
 
     override suspend fun check(ctx: CheckContext): BlockResult? {
         val start = (ctx.prefs[SpamRepository.KEY_TIME_BLOCK_START] ?: 22).coerceIn(0, 23)
         val end = (ctx.prefs[SpamRepository.KEY_TIME_BLOCK_END] ?: 7).coerceIn(0, 23)
-        if (start == end) return null  // same hour = feature disabled
+        if (start == end) return null // same hour = feature disabled
 
         val now = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
-        val inWindow = if (start < end) now in start until end
-                       else now >= start || now < end   // overnight wrap
+        val inWindow =
+            if (start < end) {
+                now in start until end
+            } else {
+                now >= start || now < end // overnight wrap
+            }
 
         return if (inWindow) {
             BlockResult.block("time_block", "unknown", "Blocked during quiet hours")
-        } else null
+        } else {
+            null
+        }
     }
 }
 
-internal class FrequencyEscalationChecker(private val repo: SpamRepositoryImpl) : IChecker {
+internal class FrequencyEscalationChecker(
+    private val repo: SpamRepositoryImpl,
+) : IChecker {
     override val priority = CheckerPriority.FREQUENCY_ESCALATION
     override val name = "frequency"
 
-    override suspend fun isEnabled(ctx: CheckContext): Boolean =
-        ctx.prefs[SpamRepository.KEY_FREQ_ESCALATION] ?: true
+    override suspend fun isEnabled(ctx: CheckContext): Boolean = ctx.prefs[SpamRepository.KEY_FREQ_ESCALATION] ?: true
 
     override suspend fun check(ctx: CheckContext): BlockResult? {
-        val windowMs = 7 * 86_400_000L  // 7-day window
+        val windowMs = 7 * 86_400_000L // 7-day window
         val freq = repo.getNumberFrequencySinceInternal(ctx.number, System.currentTimeMillis() - windowMs)
         val threshold = (ctx.prefs[SpamRepository.KEY_FREQ_THRESHOLD] ?: 3).coerceAtLeast(2)
         return if (freq >= threshold) {
             BlockResult.block("frequency", "repeat_caller", "Called $freq times in 7 days - auto-blocked")
-        } else null
+        } else {
+            null
+        }
     }
 }
 
@@ -465,19 +538,19 @@ internal class HeuristicChecker(
     override val priority = CheckerPriority.HEURISTIC
     override val name = "heuristic"
 
-    override suspend fun isEnabled(ctx: CheckContext): Boolean =
-        ctx.prefs[SpamRepository.KEY_HEURISTICS] ?: true
+    override suspend fun isEnabled(ctx: CheckContext): Boolean = ctx.prefs[SpamRepository.KEY_HEURISTICS] ?: true
 
     override suspend fun check(ctx: CheckContext): BlockResult? {
         val recentBlocked = repo.getRecentBlockedNumbersInternal(System.currentTimeMillis() - 3_600_000L)
         val sms = if (ctx.prefs[SpamRepository.KEY_SMS_CONTENT] ?: true) ctx.smsBody else null
 
-        val hResult = spamHeuristics.analyze(
-            context = appContext,
-            number = ctx.number,
-            smsBody = sms,
-            recentBlockedNumbers = recentBlocked.map { it.number to it.timestamp }
-        )
+        val hResult =
+            spamHeuristics.analyze(
+                context = appContext,
+                number = ctx.number,
+                smsBody = sms,
+                recentBlockedNumbers = recentBlocked.map { it.number to it.timestamp },
+            )
 
         val aggressive = ctx.prefs[SpamRepository.KEY_AGGRESSIVE_MODE] ?: false
         val threshold = if (aggressive) 30 else 60
@@ -487,44 +560,55 @@ internal class HeuristicChecker(
                 matchSource = "heuristic",
                 type = classifyHeuristicReasons(hResult.reasons),
                 description = hResult.reasons.joinToString(", ") { it.replace("_", " ") },
-                confidence = hResult.score
+                confidence = hResult.score,
             )
         }
 
         // Suspicious-but-not-blocked overlay (realtime only, score 30..threshold)
         if (ctx.realtimeCall && hResult.score in 30 until threshold) {
             showCallerIdOverlay(
-                appContext, ctx.number, hResult.score,
-                hResult.reasons.firstOrNull() ?: "suspicious"
+                appContext,
+                ctx.number,
+                hResult.score,
+                hResult.reasons.firstOrNull() ?: "suspicious",
             )
         }
         return null
     }
 
-    private fun classifyHeuristicReasons(reasons: List<String>): String = when {
-        "premium_rate" in reasons -> "premium_scam"
-        "wangiri_country" in reasons -> "wangiri_scam"
-        "neighbor_spoof" in reasons -> "spoofed"
-        "rapid_fire" in reasons -> "robocall"
-        "spam_keywords" in reasons -> "sms_spam"
-        "shortened_url" in reasons || "suspicious_tld" in reasons -> "phishing"
-        "voip_spam_range" in reasons -> "robocall"
-        else -> "suspicious"
-    }
+    private fun classifyHeuristicReasons(reasons: List<String>): String =
+        when {
+            "premium_rate" in reasons -> "premium_scam"
+            "wangiri_country" in reasons -> "wangiri_scam"
+            "neighbor_spoof" in reasons -> "spoofed"
+            "rapid_fire" in reasons -> "robocall"
+            "spam_keywords" in reasons -> "sms_spam"
+            "shortened_url" in reasons || "suspicious_tld" in reasons -> "phishing"
+            "voip_spam_range" in reasons -> "robocall"
+            else -> "suspicious"
+        }
 
-    private fun showCallerIdOverlay(ctx: Context, number: String, confidence: Int, reason: String) {
+    private fun showCallerIdOverlay(
+        ctx: Context,
+        number: String,
+        confidence: Int,
+        reason: String,
+    ) {
         try {
-            val intent = Intent(ctx, CallerIdOverlayService::class.java).apply {
-                putExtra("number", number)
-                putExtra("confidence", confidence)
-                putExtra("reason", reason)
-                putExtra(
-                    "verification_status",
-                    CallerIdOverlayService.VERIFICATION_STATUS_UNKNOWN
-                )
-            }
+            val intent =
+                Intent(ctx, CallerIdOverlayService::class.java).apply {
+                    putExtra("number", number)
+                    putExtra("confidence", confidence)
+                    putExtra("reason", reason)
+                    putExtra(
+                        "verification_status",
+                        CallerIdOverlayService.VERIFICATION_STATUS_UNKNOWN,
+                    )
+                }
             ctx.startService(intent)
-        } catch (_: Exception) { /* overlay is best-effort */ }
+        } catch (_: Exception) {
+            // overlay is best-effort
+        }
     }
 }
 
@@ -534,16 +618,17 @@ internal class CampaignBurstChecker(
     override val priority = CheckerPriority.CAMPAIGN_BURST
     override val name = "campaign_burst"
 
-    override suspend fun check(ctx: CheckContext): BlockResult? {
-        return if (campaignDetector.isActiveCampaign(ctx.number)) {
+    override suspend fun check(ctx: CheckContext): BlockResult? =
+        if (campaignDetector.isActiveCampaign(ctx.number)) {
             BlockResult.block(
                 matchSource = "campaign_burst",
                 type = "robocall",
                 description = "Active spam campaign detected from this prefix",
-                confidence = 75
+                confidence = 75,
             )
-        } else null
-    }
+        } else {
+            null
+        }
 }
 
 internal class MlScorerChecker(
@@ -552,8 +637,7 @@ internal class MlScorerChecker(
     override val priority = CheckerPriority.ML_SCORER
     override val name = "ml_scorer"
 
-    override suspend fun isEnabled(ctx: CheckContext): Boolean =
-        ctx.prefs[SpamRepository.KEY_ML_SCORER] ?: true
+    override suspend fun isEnabled(ctx: CheckContext): Boolean = ctx.prefs[SpamRepository.KEY_ML_SCORER] ?: true
 
     override suspend fun check(ctx: CheckContext): BlockResult? {
         val verdict = spamMLScorer.verdict(ctx.number)
@@ -562,9 +646,11 @@ internal class MlScorerChecker(
                 matchSource = "ml_scorer",
                 type = "robocall",
                 description = "ML model: ${verdict.confidence}% spam probability",
-                confidence = verdict.confidence
+                confidence = verdict.confidence,
             )
-        } else null
+        } else {
+            null
+        }
     }
 }
 
@@ -580,14 +666,15 @@ internal class SmsContextChecker_Checker(
     private val appContext: Context,
     private val smsContextChecker: SmsContextChecker,
 ) : IChecker {
-    override val priority = CheckerPriority.PUSH_ALERT_BRIDGE  // sits at trust tier
+    override val priority = CheckerPriority.PUSH_ALERT_BRIDGE // sits at trust tier
     override val name = "sms_context"
 
-    override suspend fun check(ctx: CheckContext): BlockResult? {
-        return if (smsContextChecker.isTrustedSender(appContext, ctx.number)) {
+    override suspend fun check(ctx: CheckContext): BlockResult? =
+        if (smsContextChecker.isTrustedSender(appContext, ctx.number)) {
             BlockResult.allow("sms_context")
-        } else null
-    }
+        } else {
+            null
+        }
 }
 
 internal class SmsBurstChecker(
@@ -597,8 +684,7 @@ internal class SmsBurstChecker(
     override val priority = CheckerPriority.SMS_BURST
     override val name = "sms_burst"
 
-    override suspend fun isEnabled(ctx: CheckContext): Boolean =
-        ctx.prefs[SpamRepository.KEY_SMS_BURST] ?: true
+    override suspend fun isEnabled(ctx: CheckContext): Boolean = ctx.prefs[SpamRepository.KEY_SMS_BURST] ?: true
 
     override suspend fun check(ctx: CheckContext): BlockResult? {
         val signal = smsContextChecker.findRecentBurst(appContext, ctx.number) ?: return null
@@ -615,7 +701,9 @@ internal class SmsBurstChecker(
     }
 }
 
-internal class SmsKeywordChecker(private val repo: SpamRepositoryImpl) : IChecker {
+internal class SmsKeywordChecker(
+    private val repo: SpamRepositoryImpl,
+) : IChecker {
     override val priority = CheckerPriority.WILDCARD_RULE - 100
     override val name = "keyword"
 
@@ -639,8 +727,7 @@ internal class SmsContentChecker(
     override val priority = CheckerPriority.ML_SCORER - 100
     override val name = "sms_content"
 
-    override suspend fun isEnabled(ctx: CheckContext): Boolean =
-        ctx.prefs[SpamRepository.KEY_SMS_CONTENT] ?: true
+    override suspend fun isEnabled(ctx: CheckContext): Boolean = ctx.prefs[SpamRepository.KEY_SMS_CONTENT] ?: true
 
     override suspend fun check(ctx: CheckContext): BlockResult? {
         val body = ctx.smsBody ?: return null
@@ -652,8 +739,10 @@ internal class SmsContentChecker(
                 matchSource = "sms_content",
                 type = "sms_spam",
                 description = result.reasons.joinToString(", ") { it.replace("_", " ") },
-                confidence = result.score
+                confidence = result.score,
             )
-        } else null
+        } else {
+            null
+        }
     }
 }

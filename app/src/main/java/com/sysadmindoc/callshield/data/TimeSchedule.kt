@@ -52,7 +52,7 @@ data class TimeSchedule(
 
         // Calendar.SUNDAY == 1, …, Calendar.SATURDAY == 7. Convert to 0..6.
         val dayBit = calendar.get(Calendar.DAY_OF_WEEK) - Calendar.SUNDAY
-        if (dayBit !in 0..6) return true  // defensive — should never happen
+        if (dayBit !in 0..6) return true // defensive — should never happen
         if ((daysMask shr dayBit) and 1 == 0) return false
 
         // Hours: equal endpoints disable hour filter on selected days.
@@ -60,8 +60,11 @@ data class TimeSchedule(
         val s = startHour.coerceIn(0, 23)
         val e = endHour.coerceIn(0, 23)
         val h = calendar.get(Calendar.HOUR_OF_DAY)
-        return if (s < e) h in s until e
-               else h >= s || h < e   // wraps midnight
+        return if (s < e) {
+            h in s until e
+        } else {
+            h >= s || h < e // wraps midnight
+        }
     }
 
     /**
@@ -95,13 +98,15 @@ data class TimeSchedule(
         val DAY_LABELS = listOf("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
 
         const val DAYS_NONE = 0
-        const val DAYS_WEEKDAYS = 0b0111110   // Mon–Fri
-        const val DAYS_WEEKEND  = 0b1000001   // Sun + Sat
-        const val DAYS_ALL      = 0b1111111
+        const val DAYS_WEEKDAYS = 0b0111110 // Mon–Fri
+        const val DAYS_WEEKEND = 0b1000001 // Sun + Sat
+        const val DAYS_ALL = 0b1111111
 
         /** Convenience: build a [TimeSchedule] for "every day, given hours". */
-        fun everyDay(startHour: Int, endHour: Int): TimeSchedule =
-            TimeSchedule(DAYS_ALL, startHour, endHour)
+        fun everyDay(
+            startHour: Int,
+            endHour: Int,
+        ): TimeSchedule = TimeSchedule(DAYS_ALL, startHour, endHour)
 
         /** Convenience: build a [TimeSchedule] for "weekdays only, all hours". */
         fun weekdaysAllDay(): TimeSchedule = TimeSchedule(DAYS_WEEKDAYS, 0, 0)

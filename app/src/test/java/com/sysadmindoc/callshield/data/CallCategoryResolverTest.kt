@@ -5,7 +5,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class CallCategoryResolverTest {
-
     @Test
     fun `not spam resolves to unknown`() {
         val result = SpamCheckResult(isSpam = false, matchSource = "manual_whitelist")
@@ -40,20 +39,26 @@ class CallCategoryResolverTest {
 
     @Test
     fun `prefix rule with wangiri description resolves to Wangiri`() {
-        val result = SpamCheckResult(
-            isSpam = true, matchSource = "prefix",
-            type = "wangiri_scam", description = "Wangiri callback scam",
-        )
+        val result =
+            SpamCheckResult(
+                isSpam = true,
+                matchSource = "prefix",
+                type = "wangiri_scam",
+                description = "Wangiri callback scam",
+            )
         // Type wins over matchSource description per the resolver contract.
         assertEquals(CallCategory.Wangiri, CallCategoryResolver.resolve(result))
     }
 
     @Test
     fun `sms_content always resolves to Phishing`() {
-        val result = SpamCheckResult(
-            isSpam = true, matchSource = "sms_content",
-            description = "shortened url, urgent_language, callback_number", confidence = 75,
-        )
+        val result =
+            SpamCheckResult(
+                isSpam = true,
+                matchSource = "sms_content",
+                description = "shortened url, urgent_language, callback_number",
+                confidence = 75,
+            )
         assertEquals(CallCategory.Phishing, CallCategoryResolver.resolve(result))
     }
 
@@ -65,19 +70,25 @@ class CallCategoryResolverTest {
 
     @Test
     fun `heuristic with neighbor_spoof resolves to Scam`() {
-        val result = SpamCheckResult(
-            isSpam = true, matchSource = "heuristic",
-            description = "neighbor_spoof, voip_spam_range", confidence = 70,
-        )
+        val result =
+            SpamCheckResult(
+                isSpam = true,
+                matchSource = "heuristic",
+                description = "neighbor_spoof, voip_spam_range",
+                confidence = 70,
+            )
         assertEquals(CallCategory.Scam, CallCategoryResolver.resolve(result))
     }
 
     @Test
     fun `heuristic with rapid_fire resolves to Robocall`() {
-        val result = SpamCheckResult(
-            isSpam = true, matchSource = "heuristic",
-            description = "rapid_fire", confidence = 65,
-        )
+        val result =
+            SpamCheckResult(
+                isSpam = true,
+                matchSource = "heuristic",
+                description = "rapid_fire",
+                confidence = 65,
+            )
         assertEquals(CallCategory.Robocall, CallCategoryResolver.resolve(result))
     }
 

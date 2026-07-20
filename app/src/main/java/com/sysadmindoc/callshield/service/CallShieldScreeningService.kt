@@ -74,14 +74,17 @@ class CallShieldScreeningService : CallScreeningService() {
                 val verificationStatus: Int? =
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                         callDetails.callerNumberVerificationStatus
-                    } else null
+                    } else {
+                        null
+                    }
 
                 // Full spam check — reuses the snapshot so we don't re-read DataStore.
-                val result = checkSpam(
-                    number = number,
-                    prefsSnapshot = prefs,
-                    verificationStatus = verificationStatus,
-                )
+                val result =
+                    checkSpam(
+                        number = number,
+                        prefsSnapshot = prefs,
+                        verificationStatus = verificationStatus,
+                    )
                 if (result.isSpam) {
                     respondBlock(
                         callDetails = callDetails,
@@ -97,13 +100,15 @@ class CallShieldScreeningService : CallScreeningService() {
                     val location = AreaCodeLookup.lookup(number)
                     if (location != null) {
                         try {
-                            val intent = android.content.Intent(appContext, CallerIdOverlayService::class.java).apply {
-                                putExtra("number", number)
-                                putExtra("confidence", 0)
-                                putExtra("reason", location)
-                            }
+                            val intent =
+                                android.content.Intent(appContext, CallerIdOverlayService::class.java).apply {
+                                    putExtra("number", number)
+                                    putExtra("confidence", 0)
+                                    putExtra("reason", location)
+                                }
                             appContext.startService(intent)
-                        } catch (_: Exception) {}
+                        } catch (_: Exception) {
+                        }
                     }
                     respondAllow(callDetails)
 
@@ -124,7 +129,10 @@ class CallShieldScreeningService : CallScreeningService() {
                 }
             } catch (_: Exception) {
                 // Guarantee a response even on error — fail-open (allow call through)
-                try { respondAllow(callDetails) } catch (_: Exception) {}
+                try {
+                    respondAllow(callDetails)
+                } catch (_: Exception) {
+                }
             }
         }
     }
@@ -208,13 +216,15 @@ class CallShieldScreeningService : CallScreeningService() {
         val silentVoicemail = prefs[SpamRepository.KEY_SILENT_VOICEMAIL] ?: false
         val autoMuteLowConf = prefs[SpamRepository.KEY_AUTOMUTE_LOW_CONFIDENCE] ?: false
         return if (shouldSilence(silentVoicemail, autoMuteLowConf, confidence)) {
-            CallResponse.Builder()
+            CallResponse
+                .Builder()
                 .setSilenceCall(true)
                 .setSkipCallLog(false)
                 .setSkipNotification(false)
                 .build()
         } else {
-            CallResponse.Builder()
+            CallResponse
+                .Builder()
                 .setDisallowCall(true)
                 .setRejectCall(true)
                 .setSkipCallLog(false)
@@ -251,8 +261,7 @@ class CallShieldScreeningService : CallScreeningService() {
             silentVoicemailEnabled ||
                 (autoMuteLowConfidenceEnabled && confidence < AUTO_MUTE_CONFIDENCE_THRESHOLD)
 
-        fun shouldSuppressAfterCallFeedback(matchSource: String): Boolean =
-            matchSource == "emergency_callback"
+        fun shouldSuppressAfterCallFeedback(matchSource: String): Boolean = matchSource == "emergency_callback"
     }
 
     private fun blockedCallLogKey(
@@ -268,10 +277,12 @@ class CallShieldScreeningService : CallScreeningService() {
     }
 
     private fun respondAllow(callDetails: Call.Details) {
-        val response = CallResponse.Builder()
-            .setDisallowCall(false)
-            .setRejectCall(false)
-            .build()
+        val response =
+            CallResponse
+                .Builder()
+                .setDisallowCall(false)
+                .setRejectCall(false)
+                .build()
         respondToCall(callDetails, response)
     }
 }

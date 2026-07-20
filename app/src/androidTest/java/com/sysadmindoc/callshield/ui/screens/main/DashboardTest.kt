@@ -13,24 +13,24 @@ import org.junit.Rule
 import org.junit.Test
 
 class DashboardTest {
-
     @get:Rule
     val composeRule = createComposeRule()
 
     @Test
     fun heroShowsProtectionStateSetupProgressAndSyncFreshness() {
         var syncRequests = 0
-        val status = buildDashboardStatusModel(
-            blockCallsEnabled = true,
-            blockSmsEnabled = true,
-            callPermissionsReady = true,
-            smsPermissionsReady = true,
-            permissionsReady = true,
-            spamDatabaseReady = true,
-            callScreenerReady = true,
-            overlayGranted = true,
-            notificationsGranted = true,
-        )
+        val status =
+            buildDashboardStatusModel(
+                blockCallsEnabled = true,
+                blockSmsEnabled = true,
+                callPermissionsReady = true,
+                smsPermissionsReady = true,
+                permissionsReady = true,
+                spamDatabaseReady = true,
+                callScreenerReady = true,
+                overlayGranted = true,
+                notificationsGranted = true,
+            )
         val now = System.currentTimeMillis()
 
         composeRule.setContent {
@@ -48,11 +48,12 @@ class DashboardTest {
                 lastSync = now,
                 lastSyncSource = "",
                 syncState = SyncState.Idle,
-                heroAction = HeroAction(
-                    label = "Sync Database",
-                    icon = Icons.Default.Sync,
-                    onClick = { syncRequests++ },
-                ),
+                heroAction =
+                    HeroAction(
+                        label = "Sync Database",
+                        icon = Icons.Default.Sync,
+                        onClick = { syncRequests++ },
+                    ),
             )
         }
 
@@ -91,17 +92,18 @@ class DashboardTest {
     @Test
     fun setupChecklistShowsCallScreenerActionWhenRequired() {
         var screenerRequests = 0
-        val status = buildDashboardStatusModel(
-            blockCallsEnabled = true,
-            blockSmsEnabled = true,
-            callPermissionsReady = true,
-            smsPermissionsReady = true,
-            permissionsReady = true,
-            spamDatabaseReady = true,
-            callScreenerReady = false,
-            overlayGranted = true,
-            notificationsGranted = true,
-        )
+        val status =
+            buildDashboardStatusModel(
+                blockCallsEnabled = true,
+                blockSmsEnabled = true,
+                callPermissionsReady = true,
+                smsPermissionsReady = true,
+                permissionsReady = true,
+                spamDatabaseReady = true,
+                callScreenerReady = false,
+                overlayGranted = true,
+                notificationsGranted = true,
+            )
 
         composeRule.setContent {
             DashboardSetupChecklistCard(

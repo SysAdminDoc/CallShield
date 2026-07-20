@@ -19,7 +19,6 @@ import org.junit.Test
  * the only thing that varies is whether the phone rings.
  */
 class CallShieldScreeningServiceAutoMuteTest {
-
     // ── 1) silentVoicemail wins unconditionally ──────────────────────────
 
     @Test fun `silentVoicemail=true silences every block regardless of other flags`() {
@@ -31,7 +30,7 @@ class CallShieldScreeningServiceAutoMuteTest {
                         silentVoicemailEnabled = true,
                         autoMuteLowConfidenceEnabled = autoMute,
                         confidence = confidence,
-                    )
+                    ),
                 )
             }
         }
@@ -45,7 +44,7 @@ class CallShieldScreeningServiceAutoMuteTest {
                 silentVoicemailEnabled = false,
                 autoMuteLowConfidenceEnabled = true,
                 confidence = AUTO_MUTE_CONFIDENCE_THRESHOLD - 1,
-            )
+            ),
         )
     }
 
@@ -56,7 +55,7 @@ class CallShieldScreeningServiceAutoMuteTest {
                 silentVoicemailEnabled = false,
                 autoMuteLowConfidenceEnabled = true,
                 confidence = AUTO_MUTE_CONFIDENCE_THRESHOLD,
-            )
+            ),
         )
     }
 
@@ -66,7 +65,7 @@ class CallShieldScreeningServiceAutoMuteTest {
                 silentVoicemailEnabled = false,
                 autoMuteLowConfidenceEnabled = true,
                 confidence = 95,
-            )
+            ),
         )
     }
 
@@ -80,7 +79,7 @@ class CallShieldScreeningServiceAutoMuteTest {
                     silentVoicemailEnabled = false,
                     autoMuteLowConfidenceEnabled = false,
                     confidence = confidence,
-                )
+                ),
             )
         }
     }

@@ -8,9 +8,9 @@ This repo now carries the upstream metadata needed before opening an F-Droid
 - App ID: `com.sysadmindoc.callshield`
 - License: MIT
 - Source: `https://github.com/SysAdminDoc/CallShield`
-- Latest release prepared for verification: `v1.7.11`
-- Version code: `39`
-- Release APK: `https://github.com/SysAdminDoc/CallShield/releases/download/v1.7.11/CallShield-v1.7.11.apk`
+- Latest release prepared for verification: `v1.7.12`
+- Version code: `40`
+- Release APK: `https://github.com/SysAdminDoc/CallShield/releases/download/v1.7.12/CallShield-v1.7.12.apk`
 - APK SHA256: *(generate with `scripts/write-release-sha256.ps1` after signing)*
 - Signer SHA256: `d179d0daa9eac6b52fc19d3a7126fd6ccb911923a43a3cf0bef9f74b12234ad2`
 
@@ -27,8 +27,8 @@ developer-signed binary.
 
 ```powershell
 .\gradlew.bat --no-daemon verifyReproducibleBuildInputs verifyReleaseApkReproducibleMetadata :app:testDebugUnitTest :app:lintDebug
-.\scripts\write-release-sha256.ps1 -ApkPath .\CallShield-v1.7.11.apk
-& "$env:LOCALAPPDATA\Android\Sdk\build-tools\36.1.0\apksigner.bat" verify --verbose --print-certs .\CallShield-v1.7.11.apk
+.\scripts\write-release-sha256.ps1 -ApkPath .\CallShield-v1.7.12.apk
+& "$env:LOCALAPPDATA\Android\Sdk\build-tools\36.1.0\apksigner.bat" verify --verbose --print-certs .\CallShield-v1.7.12.apk
 ```
 
 Expected signer:
@@ -44,7 +44,7 @@ d179d0daa9eac6b52fc19d3a7126fd6ccb911923a43a3cf0bef9f74b12234ad2
 3. Copy the Fastlane listing if reviewers request upstream localized metadata.
 4. Run `fdroid rewritemeta com.sysadmindoc.callshield`.
 5. Run `fdroid lint com.sysadmindoc.callshield`.
-6. Run an fdroidserver build for version code 39.
+6. Run an fdroidserver build for version code 40.
 7. Run F-Droid signature-copy verification against the upstream APK.
 8. Open the GitLab merge request and include the release URL, signer SHA256,
    APK SHA256, and the local verification command output.

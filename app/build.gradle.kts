@@ -1,7 +1,7 @@
-import java.util.Properties
 import io.gitlab.arturbosch.detekt.Detekt
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jlleitschuh.gradle.ktlint.reporter.ReporterType
+import java.util.Properties
 
 plugins {
     alias(libs.plugins.android.application)
@@ -15,15 +15,15 @@ plugins {
     alias(libs.plugins.room)
 }
 
-val localProperties = Properties().apply {
-    val localPropsFile = rootProject.file("local.properties")
-    if (localPropsFile.exists()) {
-        localPropsFile.inputStream().use { load(it) }
+val localProperties =
+    Properties().apply {
+        val localPropsFile = rootProject.file("local.properties")
+        if (localPropsFile.exists()) {
+            localPropsFile.inputStream().use { load(it) }
+        }
     }
-}
 
-fun signingProp(key: String): String? =
-    localProperties.getProperty(key) ?: System.getenv(key)
+fun signingProp(key: String): String? = localProperties.getProperty(key) ?: System.getenv(key)
 
 android {
     namespace = "com.sysadmindoc.callshield"
@@ -33,8 +33,8 @@ android {
         applicationId = "com.sysadmindoc.callshield"
         minSdk = 29
         targetSdk = 36
-        versionCode = 39
-        versionName = "1.7.11"
+        versionCode = 40
+        versionName = "1.7.12"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -61,14 +61,15 @@ android {
             vcsInfo {
                 include = false
             }
-            signingConfig = if (listOf(releaseStoreFile, releaseStorePassword, releaseKeyAlias, releaseKeyPassword).all { it != null }) {
-                signingConfigs.getByName("release")
-            } else {
-                null
-            }
+            signingConfig =
+                if (listOf(releaseStoreFile, releaseStorePassword, releaseKeyAlias, releaseKeyPassword).all { it != null }) {
+                    signingConfigs.getByName("release")
+                } else {
+                    null
+                }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
+                "proguard-rules.pro",
             )
         }
     }
@@ -111,7 +112,7 @@ kover {
                 includes {
                     classes(
                         "com.sysadmindoc.callshield.data.*",
-                        "com.sysadmindoc.callshield.util.*"
+                        "com.sysadmindoc.callshield.util.*",
                     )
                 }
                 excludes {
@@ -146,7 +147,7 @@ detekt {
     source.setFrom(
         "src/main/java",
         "src/test/java",
-        "src/androidTest/java"
+        "src/androidTest/java",
     )
     baseline = file("detekt-baseline.xml")
     basePath = rootDir.absolutePath

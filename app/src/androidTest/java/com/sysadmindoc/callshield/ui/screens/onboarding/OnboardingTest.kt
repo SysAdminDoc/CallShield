@@ -15,7 +15,6 @@ import org.junit.Rule
 import org.junit.Test
 
 class OnboardingTest {
-
     @get:Rule
     val composeRule = createComposeRule()
 
@@ -64,13 +63,15 @@ class OnboardingTest {
 
         composeRule.onNodeWithText("Next").performClick()
 
-        composeRule.onNodeWithTag(ONBOARDING_CORE_PERMISSIONS_BUTTON_TAG)
+        composeRule
+            .onNodeWithTag(ONBOARDING_CORE_PERMISSIONS_BUTTON_TAG)
             .performScrollTo()
             .assertIsDisplayed()
             .performClick()
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            composeRule.onNodeWithTag(ONBOARDING_NOTIFICATIONS_BUTTON_TAG)
+            composeRule
+                .onNodeWithTag(ONBOARDING_NOTIFICATIONS_BUTTON_TAG)
                 .performScrollTo()
                 .assertIsDisplayed()
                 .performClick()
@@ -78,7 +79,8 @@ class OnboardingTest {
             composeRule.onAllNodesWithTag(ONBOARDING_NOTIFICATIONS_BUTTON_TAG).assertCountEquals(0)
         }
 
-        composeRule.onNodeWithTag(ONBOARDING_OVERLAY_BUTTON_TAG)
+        composeRule
+            .onNodeWithTag(ONBOARDING_OVERLAY_BUTTON_TAG)
             .performScrollTo()
             .assertIsDisplayed()
             .performClick()
@@ -105,7 +107,8 @@ class OnboardingTest {
         composeRule.onNodeWithText("Next").performClick()
         composeRule.onNodeWithText("Next").performClick()
 
-        composeRule.onNodeWithTag(ONBOARDING_SCREENER_BUTTON_TAG)
+        composeRule
+            .onNodeWithTag(ONBOARDING_SCREENER_BUTTON_TAG)
             .performScrollTo()
             .assertIsDisplayed()
             .performClick()
@@ -128,7 +131,8 @@ class OnboardingTest {
         composeRule.onNodeWithText("Next").performClick()
         composeRule.onNodeWithText("Next").performClick()
 
-        composeRule.onNodeWithText("Call screening unavailable on this device")
+        composeRule
+            .onNodeWithText("Call screening unavailable on this device")
             .performScrollTo()
             .assertIsDisplayed()
         composeRule.onAllNodesWithTag(ONBOARDING_SCREENER_BUTTON_TAG).assertCountEquals(0)
@@ -162,7 +166,10 @@ class OnboardingTest {
         }
     }
 
-    private fun assertPage(page: Int, title: String) {
+    private fun assertPage(
+        page: Int,
+        title: String,
+    ) {
         composeRule.onNodeWithContentDescription("Onboarding page $page of 4").assertIsDisplayed()
         composeRule.onNodeWithText(title).assertIsDisplayed()
     }

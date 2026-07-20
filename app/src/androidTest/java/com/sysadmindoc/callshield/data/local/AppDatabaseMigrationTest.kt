@@ -54,6 +54,8 @@ class AppDatabaseMigrationTest {
                 MIGRATION_6_7,
                 MIGRATION_7_8,
                 MIGRATION_8_9,
+                MIGRATION_9_10,
+                MIGRATION_10_11,
             )
 
         db.assertSingleInt("SELECT COUNT(*) FROM spam_numbers", 1)
@@ -61,6 +63,10 @@ class AppDatabaseMigrationTest {
         db.assertSingleInt("SELECT scheduleDays FROM wildcard_rules WHERE pattern = '+1555*'", 0)
         db.assertSingleInt("SELECT scheduleStartHour FROM sms_keyword_rules WHERE keyword = 'prize'", 0)
         db.assertHasColumn("hash_wildcard_rules", "scheduleEndHour")
+        db.assertHasColumn("call_log", "logKey")
+        db.assertHasColumn("pending_blocked_call_logs", "idempotencyKey")
+        db.assertHasColumn("spam_numbers", "expiresAt")
+        db.assertHasColumn("whitelist", "expiresAt")
         db.close()
     }
 
@@ -80,6 +86,8 @@ class AppDatabaseMigrationTest {
                 MIGRATION_6_7,
                 MIGRATION_7_8,
                 MIGRATION_8_9,
+                MIGRATION_9_10,
+                MIGRATION_10_11,
             )
 
         db.assertSingleInt("SELECT isEmergency FROM whitelist WHERE number = '+15550000003'", 1)
@@ -102,6 +110,8 @@ class AppDatabaseMigrationTest {
                 true,
                 MIGRATION_7_8,
                 MIGRATION_8_9,
+                MIGRATION_9_10,
+                MIGRATION_10_11,
             )
 
         db.assertSingleInt(
@@ -129,6 +139,8 @@ class AppDatabaseMigrationTest {
                 DB_VERSION,
                 true,
                 MIGRATION_8_9,
+                MIGRATION_9_10,
+                MIGRATION_10_11,
             )
 
         db.assertSingleInt("SELECT scheduleDays FROM wildcard_rules WHERE pattern = '+1666*'", 0)
@@ -137,6 +149,33 @@ class AppDatabaseMigrationTest {
             "SELECT scheduleStartHour FROM hash_wildcard_rules WHERE pattern = '+1666######'",
             9,
         )
+        db.assertHasColumn("pending_blocked_call_logs", "nextAttemptAt")
+        db.close()
+    }
+
+    @Test
+    fun migrateFromVersion9ToCurrentAddsPendingBlockedCallLogQueue() {
+        createLegacyDatabase(
+            version = 9,
+            createSchema = { createVersion9Schema() },
+            seed = { seedVersion9Data() },
+        )
+
+        val db =
+            helper.runMigrationsAndValidate(
+                TEST_DB,
+                DB_VERSION,
+                true,
+                MIGRATION_9_10,
+                MIGRATION_10_11,
+            )
+
+        db.assertSingleInt("SELECT COUNT(*) FROM call_log WHERE number = '+17770000001'", 1)
+        db.assertHasColumn("call_log", "logKey")
+        db.assertHasColumn("pending_blocked_call_logs", "idempotencyKey")
+        db.assertHasColumn("pending_blocked_call_logs", "nextAttemptAt")
+        db.assertHasColumn("spam_numbers", "expiresAt")
+        db.assertHasColumn("whitelist", "expiresAt")
         db.close()
     }
 
@@ -197,6 +236,14 @@ class AppDatabaseMigrationTest {
 
     private fun SupportSQLiteDatabase.createVersion8Schema() {
         createVersion6Schema()
+        createHashWildcardRulesTable(includeSchedule = true)
+    }
+
+    private fun SupportSQLiteDatabase.createVersion9Schema() {
+        createCommonTables()
+        createWildcardRulesTable(includeSchedule = true)
+        createWhitelistTable(includeEmergency = true)
+        createSmsKeywordRulesTable(includeSchedule = true)
         createHashWildcardRulesTable(includeSchedule = true)
     }
 
@@ -412,6 +459,16 @@ class AppDatabaseMigrationTest {
             INSERT INTO hash_wildcard_rules
                 (pattern, description, enabled, addedTimestamp, scheduleDays, scheduleStartHour, scheduleEndHour)
             VALUES ('+1666######', 'scheduled hash', 1, 45678, 62, 9, 17)
+            """.trimIndent(),
+        )
+    }
+
+    private fun SupportSQLiteDatabase.seedVersion9Data() {
+        execSQL(
+            """
+            INSERT INTO call_log
+                (number, timestamp, type, wasBlocked, isCall, smsBody, matchReason, confidence)
+            VALUES ('+17770000001', 7777, 'unknown', 1, 1, NULL, 'database', 100)
             """.trimIndent(),
         )
     }

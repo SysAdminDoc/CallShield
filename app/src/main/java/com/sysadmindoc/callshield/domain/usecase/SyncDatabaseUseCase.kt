@@ -9,5 +9,5 @@ class SyncDatabaseUseCase
     constructor(
         private val repository: SyncRepository,
     ) {
-    suspend operator fun invoke(force: Boolean = false): SyncResult = repository.syncDatabase(force = force)
-}
+        suspend operator fun invoke(force: Boolean = false): SyncResult = repository.syncDatabase(force = force)
+    }

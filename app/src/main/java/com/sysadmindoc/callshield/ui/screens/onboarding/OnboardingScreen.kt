@@ -12,8 +12,8 @@ import androidx.compose.animation.*
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -38,8 +38,8 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import com.sysadmindoc.callshield.permissions.CallShieldPermissions
 import com.sysadmindoc.callshield.R
+import com.sysadmindoc.callshield.permissions.CallShieldPermissions
 import com.sysadmindoc.callshield.ui.theme.*
 import kotlinx.coroutines.launch
 
@@ -47,7 +47,7 @@ data class OnboardingPage(
     val icon: androidx.compose.ui.graphics.vector.ImageVector,
     val title: String,
     val subtitle: String,
-    val color: androidx.compose.ui.graphics.Color
+    val color: androidx.compose.ui.graphics.Color,
 )
 
 internal const val ONBOARDING_CORE_PERMISSIONS_BUTTON_TAG = "onboarding_core_permissions_button"
@@ -58,9 +58,10 @@ internal const val ONBOARDING_SCREENER_BUTTON_TAG = "onboarding_screener_button"
 @Composable
 fun OnboardingScreen(onComplete: () -> Unit) {
     val context = LocalContext.current
-    val roleManager = remember {
-        context.getSystemService(Context.ROLE_SERVICE) as? RoleManager
-    }
+    val roleManager =
+        remember {
+            context.getSystemService(Context.ROLE_SERVICE) as? RoleManager
+        }
     var permsGranted by remember(context) { mutableStateOf(CallShieldPermissions.hasCorePermissions(context)) }
     var notificationsGranted by remember(context) { mutableStateOf(CallShieldPermissions.hasNotificationPermission(context)) }
     var overlayGranted by remember(context) { mutableStateOf(CallShieldPermissions.canDrawOverlays(context)) }
@@ -70,30 +71,34 @@ fun OnboardingScreen(onComplete: () -> Unit) {
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
-    val permLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
-        permsGranted = CallShieldPermissions.hasCorePermissions(context)
-    }
+    val permLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
+            permsGranted = CallShieldPermissions.hasCorePermissions(context)
+        }
 
     // Notification permission (Android 13+) — separate launcher since it's a single permission
-    val notifPermLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
-        notificationsGranted = CallShieldPermissions.hasNotificationPermission(context)
-    }
+    val notifPermLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
+            notificationsGranted = CallShieldPermissions.hasNotificationPermission(context)
+        }
 
     val screenerErrorMessage = stringResource(R.string.onboarding_screener_error)
 
-    val screeningLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-        screenerGranted = CallShieldPermissions.hasCallScreeningRole(roleManager)
-    }
+    val screeningLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+            screenerGranted = CallShieldPermissions.hasCallScreeningRole(roleManager)
+        }
 
     DisposableEffect(lifecycleOwner, context, roleManager) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
-                permsGranted = CallShieldPermissions.hasCorePermissions(context)
-                notificationsGranted = CallShieldPermissions.hasNotificationPermission(context)
-                overlayGranted = CallShieldPermissions.canDrawOverlays(context)
-                screenerGranted = CallShieldPermissions.hasCallScreeningRole(roleManager)
+        val observer =
+            LifecycleEventObserver { _, event ->
+                if (event == Lifecycle.Event.ON_RESUME) {
+                    permsGranted = CallShieldPermissions.hasCorePermissions(context)
+                    notificationsGranted = CallShieldPermissions.hasNotificationPermission(context)
+                    overlayGranted = CallShieldPermissions.canDrawOverlays(context)
+                    screenerGranted = CallShieldPermissions.hasCallScreeningRole(roleManager)
+                }
             }
-        }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
@@ -112,10 +117,11 @@ fun OnboardingScreen(onComplete: () -> Unit) {
             notifPermLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
         },
         onRequestOverlay = {
-            val intent = android.content.Intent(
-                Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                Uri.parse("package:${context.packageName}")
-            )
+            val intent =
+                android.content.Intent(
+                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                    Uri.parse("package:${context.packageName}"),
+                )
             context.startActivity(intent)
         },
         onRequestScreener = {
@@ -150,31 +156,34 @@ internal fun OnboardingScreenContent(
     var currentPage by remember { mutableIntStateOf(0) }
     val requiredReady = listOf(permsGranted, screenerGranted).count { it }
     val optionalReady = listOf(notificationsGranted, overlayGranted).count { it }
-    val pages = listOf(
-        OnboardingPage(Icons.Default.Shield, stringResource(R.string.onboarding_welcome_title), stringResource(R.string.onboarding_welcome_subtitle), CatGreen),
-        OnboardingPage(Icons.Default.Security, stringResource(R.string.onboarding_permissions_title), stringResource(R.string.onboarding_permissions_subtitle), CatBlue),
-        OnboardingPage(Icons.AutoMirrored.Filled.PhoneCallback, stringResource(R.string.onboarding_screener_title), stringResource(R.string.onboarding_screener_subtitle), CatMauve),
-        OnboardingPage(Icons.Default.Sync, stringResource(R.string.onboarding_sync_title), stringResource(R.string.onboarding_sync_subtitle), CatPeach),
-    )
-    val pageContentDescription = stringResource(
-        R.string.cd_onboarding_page,
-        currentPage + 1,
-        pages.size
-    )
+    val pages =
+        listOf(
+            OnboardingPage(Icons.Default.Shield, stringResource(R.string.onboarding_welcome_title), stringResource(R.string.onboarding_welcome_subtitle), CatGreen),
+            OnboardingPage(Icons.Default.Security, stringResource(R.string.onboarding_permissions_title), stringResource(R.string.onboarding_permissions_subtitle), CatBlue),
+            OnboardingPage(Icons.AutoMirrored.Filled.PhoneCallback, stringResource(R.string.onboarding_screener_title), stringResource(R.string.onboarding_screener_subtitle), CatMauve),
+            OnboardingPage(Icons.Default.Sync, stringResource(R.string.onboarding_sync_title), stringResource(R.string.onboarding_sync_subtitle), CatPeach),
+        )
+    val pageContentDescription =
+        stringResource(
+            R.string.cd_onboarding_page,
+            currentPage + 1,
+            pages.size,
+        )
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Black)
-            .padding(start = 24.dp, end = 24.dp, top = 24.dp)
-            .navigationBarsPadding()
-            .padding(bottom = 16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(Black)
+                .padding(start = 24.dp, end = 24.dp, top = 24.dp)
+                .navigationBarsPadding()
+                .padding(bottom = 16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
             stringResource(R.string.onboarding_step, currentPage + 1, pages.size),
             style = MaterialTheme.typography.labelMedium,
-            color = CatOverlay
+            color = CatOverlay,
         )
         Spacer(Modifier.height(12.dp))
 
@@ -183,26 +192,26 @@ internal fun OnboardingScreenContent(
                 SectionHeader(stringResource(R.string.onboarding_progress_title), pages[currentPage].color)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     StatusPill(
                         text = stringResource(R.string.onboarding_progress_required_badge, requiredReady, 2),
                         color = pages[currentPage].color,
                         textStyle = MaterialTheme.typography.labelSmall,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
                     )
                     StatusPill(
                         text = stringResource(R.string.onboarding_progress_optional_badge, optionalReady, 2),
                         color = if (optionalReady > 0) CatGreen else CatOverlay,
                         textStyle = MaterialTheme.typography.labelSmall,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
                     )
                 }
                 LinearProgressIndicator(
                     progress = { (requiredReady + optionalReady) / 4f },
                     modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
                     color = pages[currentPage].color,
-                    trackColor = CatMuted.copy(alpha = 0.2f)
+                    trackColor = CatMuted.copy(alpha = 0.2f),
                 )
             }
         }
@@ -210,31 +219,34 @@ internal fun OnboardingScreenContent(
         Spacer(Modifier.height(20.dp))
 
         Box(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
-                .semantics {
-                    contentDescription = pageContentDescription
-                },
-            contentAlignment = Alignment.Center
+            modifier =
+                Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .semantics {
+                        contentDescription = pageContentDescription
+                    },
+            contentAlignment = Alignment.Center,
         ) {
             AnimatedContent(targetState = currentPage, transitionSpec = {
                 slideInHorizontally { it } + fadeIn() togetherWith slideOutHorizontally { -it } + fadeOut()
             }, label = "onboarding") { page ->
                 val p = pages[page]
                 Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .verticalScroll(rememberScrollState()),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .verticalScroll(rememberScrollState()),
+                    horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Icon(
                         p.icon,
                         contentDescription = p.title,
                         tint = p.color,
-                        modifier = Modifier
-                            .size(96.dp)
-                            .accentGlow(p.color, 300f, 0.10f)
+                        modifier =
+                            Modifier
+                                .size(96.dp)
+                                .accentGlow(p.color, 300f, 0.10f),
                     )
                     Spacer(Modifier.height(24.dp))
                     Text(
@@ -242,14 +254,14 @@ internal fun OnboardingScreenContent(
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.ExtraBold,
                         color = p.color,
-                        textAlign = TextAlign.Center
+                        textAlign = TextAlign.Center,
                     )
                     Spacer(Modifier.height(12.dp))
                     Text(
                         p.subtitle,
                         style = MaterialTheme.typography.bodyLarge.copy(lineHeight = 26.sp),
                         color = CatSubtext,
-                        textAlign = TextAlign.Center
+                        textAlign = TextAlign.Center,
                     )
                     Spacer(Modifier.height(24.dp))
 
@@ -257,44 +269,44 @@ internal fun OnboardingScreenContent(
                         0 -> {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
                             ) {
                                 StatusPill(
                                     text = stringResource(R.string.onboarding_trust_no_account),
                                     color = CatGreen,
                                     textStyle = MaterialTheme.typography.labelSmall,
-                                    modifier = Modifier.weight(1f)
+                                    modifier = Modifier.weight(1f),
                                 )
                                 StatusPill(
                                     text = stringResource(R.string.onboarding_trust_on_device),
                                     color = CatBlue,
                                     textStyle = MaterialTheme.typography.labelSmall,
-                                    modifier = Modifier.weight(1f)
+                                    modifier = Modifier.weight(1f),
                                 )
                                 StatusPill(
                                     text = stringResource(R.string.onboarding_trust_open_source),
                                     color = CatPeach,
                                     textStyle = MaterialTheme.typography.labelSmall,
-                                    modifier = Modifier.weight(1f)
+                                    modifier = Modifier.weight(1f),
                                 )
                             }
                             Spacer(Modifier.height(12.dp))
                             OnboardingFeatureCard(
                                 title = stringResource(R.string.onboarding_feature_private_title),
                                 body = stringResource(R.string.onboarding_feature_private_body),
-                                accentColor = CatGreen
+                                accentColor = CatGreen,
                             )
                             Spacer(Modifier.height(10.dp))
                             OnboardingFeatureCard(
                                 title = stringResource(R.string.onboarding_feature_local_title),
                                 body = stringResource(R.string.onboarding_feature_local_body),
-                                accentColor = CatBlue
+                                accentColor = CatBlue,
                             )
                             Spacer(Modifier.height(10.dp))
                             OnboardingFeatureCard(
                                 title = stringResource(R.string.onboarding_feature_updates_title),
                                 body = stringResource(R.string.onboarding_feature_updates_body),
-                                accentColor = CatPeach
+                                accentColor = CatPeach,
                             )
                         }
 
@@ -306,21 +318,21 @@ internal fun OnboardingScreenContent(
                                         detail = stringResource(R.string.onboarding_core_permissions_detail),
                                         granted = permsGranted,
                                         accentColor = CatBlue,
-                                        badge = stringResource(R.string.onboarding_permissions_required)
+                                        badge = stringResource(R.string.onboarding_permissions_required),
                                     )
                                     OnboardingChecklistItem(
                                         title = stringResource(R.string.settings_notifications),
                                         detail = stringResource(R.string.onboarding_notification_detail),
                                         granted = notificationsGranted,
                                         accentColor = CatBlue,
-                                        badge = stringResource(R.string.onboarding_permissions_optional)
+                                        badge = stringResource(R.string.onboarding_permissions_optional),
                                     )
                                     OnboardingChecklistItem(
                                         title = stringResource(R.string.settings_overlay),
                                         detail = stringResource(R.string.onboarding_overlay_detail),
                                         granted = overlayGranted,
                                         accentColor = CatBlue,
-                                        badge = stringResource(R.string.onboarding_permissions_optional)
+                                        badge = stringResource(R.string.onboarding_permissions_optional),
                                     )
                                 }
                             }
@@ -335,9 +347,10 @@ internal fun OnboardingScreenContent(
                                     onClick = {
                                         onRequestCorePermissions()
                                     },
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .testTag(ONBOARDING_CORE_PERMISSIONS_BUTTON_TAG)
+                                    modifier =
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .testTag(ONBOARDING_CORE_PERMISSIONS_BUTTON_TAG),
                                 )
                             }
 
@@ -350,10 +363,11 @@ internal fun OnboardingScreenContent(
                                     onClick = {
                                         onRequestNotifications()
                                     },
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .testTag(ONBOARDING_NOTIFICATIONS_BUTTON_TAG),
-                                    outlined = true
+                                    modifier =
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .testTag(ONBOARDING_NOTIFICATIONS_BUTTON_TAG),
+                                    outlined = true,
                                 )
                             }
 
@@ -366,10 +380,11 @@ internal fun OnboardingScreenContent(
                                     onClick = {
                                         onRequestOverlay()
                                     },
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .testTag(ONBOARDING_OVERLAY_BUTTON_TAG),
-                                    outlined = true
+                                    modifier =
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .testTag(ONBOARDING_OVERLAY_BUTTON_TAG),
+                                    outlined = true,
                                 )
                             }
                         }
@@ -378,23 +393,25 @@ internal fun OnboardingScreenContent(
                             PremiumCard(accentColor = CatMauve, modifier = Modifier.fillMaxWidth()) {
                                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                                     OnboardingChecklistItem(
-                                        title = if (screenerSupported) {
-                                            stringResource(R.string.onboarding_set_screener)
-                                        } else {
-                                            stringResource(R.string.onboarding_screener_unavailable)
-                                        },
-                                        detail = if (screenerSupported) {
-                                            if (screenerGranted) {
-                                                stringResource(R.string.onboarding_screener_ready_detail)
+                                        title =
+                                            if (screenerSupported) {
+                                                stringResource(R.string.onboarding_set_screener)
                                             } else {
-                                                stringResource(R.string.onboarding_screener_pending_detail)
-                                            }
-                                        } else {
-                                            stringResource(R.string.onboarding_screener_unavailable_detail)
-                                        },
+                                                stringResource(R.string.onboarding_screener_unavailable)
+                                            },
+                                        detail =
+                                            if (screenerSupported) {
+                                                if (screenerGranted) {
+                                                    stringResource(R.string.onboarding_screener_ready_detail)
+                                                } else {
+                                                    stringResource(R.string.onboarding_screener_pending_detail)
+                                                }
+                                            } else {
+                                                stringResource(R.string.onboarding_screener_unavailable_detail)
+                                            },
                                         granted = screenerGranted,
                                         accentColor = CatMauve,
-                                        badge = stringResource(R.string.onboarding_permissions_required)
+                                        badge = stringResource(R.string.onboarding_permissions_required),
                                     )
                                 }
                             }
@@ -409,15 +426,16 @@ internal fun OnboardingScreenContent(
                                     onClick = {
                                         onRequestScreener()
                                     },
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .testTag(ONBOARDING_SCREENER_BUTTON_TAG)
+                                    modifier =
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .testTag(ONBOARDING_SCREENER_BUTTON_TAG),
                                 )
                             } else if (screenerGranted) {
                                 OnboardingStatusRow(
                                     label = stringResource(R.string.onboarding_screening_enabled),
                                     granted = true,
-                                    color = CatGreen
+                                    color = CatGreen,
                                 )
                             }
                         }
@@ -425,7 +443,7 @@ internal fun OnboardingScreenContent(
                         else -> {
                             PremiumCard(
                                 accentColor = if (requiredReady == 2) CatGreen else CatYellow,
-                                modifier = Modifier.fillMaxWidth()
+                                modifier = Modifier.fillMaxWidth(),
                             ) {
                                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                                     Text(
@@ -436,7 +454,7 @@ internal fun OnboardingScreenContent(
                                         },
                                         style = MaterialTheme.typography.titleMedium,
                                         fontWeight = FontWeight.Bold,
-                                        color = if (requiredReady == 2) CatGreen else CatYellow
+                                        color = if (requiredReady == 2) CatGreen else CatYellow,
                                     )
                                     Text(
                                         if (requiredReady == 2) {
@@ -445,44 +463,48 @@ internal fun OnboardingScreenContent(
                                             stringResource(R.string.onboarding_finish_later_subtitle)
                                         },
                                         style = MaterialTheme.typography.bodySmall,
-                                        color = CatSubtext
+                                        color = CatSubtext,
                                     )
 
                                     OnboardingStatusRow(
-                                        label = if (permsGranted) {
-                                            stringResource(R.string.onboarding_permissions_granted)
-                                        } else {
-                                            stringResource(R.string.settings_permissions_needed)
-                                        },
+                                        label =
+                                            if (permsGranted) {
+                                                stringResource(R.string.onboarding_permissions_granted)
+                                            } else {
+                                                stringResource(R.string.settings_permissions_needed)
+                                            },
                                         granted = permsGranted,
-                                        color = if (permsGranted) CatGreen else CatYellow
+                                        color = if (permsGranted) CatGreen else CatYellow,
                                     )
                                     OnboardingStatusRow(
-                                        label = if (screenerGranted) {
-                                            stringResource(R.string.onboarding_screening_enabled)
-                                        } else {
-                                            stringResource(R.string.settings_call_screener_needed)
-                                        },
+                                        label =
+                                            if (screenerGranted) {
+                                                stringResource(R.string.onboarding_screening_enabled)
+                                            } else {
+                                                stringResource(R.string.settings_call_screener_needed)
+                                            },
                                         granted = screenerGranted,
-                                        color = if (screenerGranted) CatGreen else CatYellow
+                                        color = if (screenerGranted) CatGreen else CatYellow,
                                     )
                                     OnboardingStatusRow(
-                                        label = if (notificationsGranted) {
-                                            stringResource(R.string.settings_notifications_enabled)
-                                        } else {
-                                            stringResource(R.string.settings_notifications_optional)
-                                        },
+                                        label =
+                                            if (notificationsGranted) {
+                                                stringResource(R.string.settings_notifications_enabled)
+                                            } else {
+                                                stringResource(R.string.settings_notifications_optional)
+                                            },
                                         granted = notificationsGranted,
-                                        color = if (notificationsGranted) CatGreen else CatOverlay
+                                        color = if (notificationsGranted) CatGreen else CatOverlay,
                                     )
                                     OnboardingStatusRow(
-                                        label = if (overlayGranted) {
-                                            stringResource(R.string.settings_overlay_enabled)
-                                        } else {
-                                            stringResource(R.string.settings_overlay_needed)
-                                        },
+                                        label =
+                                            if (overlayGranted) {
+                                                stringResource(R.string.settings_overlay_enabled)
+                                            } else {
+                                                stringResource(R.string.settings_overlay_needed)
+                                            },
                                         granted = overlayGranted,
-                                        color = if (overlayGranted) CatGreen else CatOverlay
+                                        color = if (overlayGranted) CatGreen else CatOverlay,
                                     )
                                 }
                             }
@@ -495,7 +517,7 @@ internal fun OnboardingScreenContent(
                                         stringResource(R.string.onboarding_sync_card_title),
                                         style = MaterialTheme.typography.titleSmall,
                                         fontWeight = FontWeight.Bold,
-                                        color = CatPeach
+                                        color = CatPeach,
                                     )
                                     OnboardingBulletPoint(stringResource(R.string.onboarding_sync_bundled), CatPeach)
                                     OnboardingBulletPoint(stringResource(R.string.onboarding_sync_refresh), CatPeach)
@@ -516,14 +538,15 @@ internal fun OnboardingScreenContent(
                 val indicatorWidth by animateDpAsState(
                     targetValue = if (isSelected) 24.dp else 8.dp,
                     animationSpec = spring(dampingRatio = 0.7f),
-                    label = "indicator"
+                    label = "indicator",
                 )
                 Box(
-                    modifier = Modifier
-                        .width(indicatorWidth)
-                        .height(8.dp)
-                        .clip(RoundedCornerShape(3.dp))
-                        .background(if (isSelected) p.color else CatOverlay)
+                    modifier =
+                        Modifier
+                            .width(indicatorWidth)
+                            .height(8.dp)
+                            .clip(RoundedCornerShape(3.dp))
+                            .background(if (isSelected) p.color else CatOverlay),
                 )
             }
         }
@@ -534,14 +557,15 @@ internal fun OnboardingScreenContent(
 
         PremiumCard(
             accentColor = if (currentPage == pages.lastIndex && requiredReady == 2) CatGreen else pages[currentPage].color,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
         ) {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(12.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(12.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 if (currentPage > 0) {
                     TextButton(onClick = { currentPage-- }) {
@@ -552,22 +576,27 @@ internal fun OnboardingScreenContent(
                 }
 
                 PremiumActionButton(
-                    label = when {
-                        currentPage < pages.lastIndex -> stringResource(R.string.onboarding_next)
-                        requiredReady == 2 -> stringResource(R.string.onboarding_finish_setup)
-                        else -> stringResource(R.string.onboarding_continue_anyway)
-                    },
-                    icon = if (currentPage < pages.lastIndex) {
-                        Icons.AutoMirrored.Filled.ArrowForward
-                    } else {
-                        Icons.Default.Check
-                    },
+                    label =
+                        when {
+                            currentPage < pages.lastIndex -> stringResource(R.string.onboarding_next)
+                            requiredReady == 2 -> stringResource(R.string.onboarding_finish_setup)
+                            else -> stringResource(R.string.onboarding_continue_anyway)
+                        },
+                    icon =
+                        if (currentPage < pages.lastIndex) {
+                            Icons.AutoMirrored.Filled.ArrowForward
+                        } else {
+                            Icons.Default.Check
+                        },
                     color = pages[currentPage].color,
                     onClick = {
-                        if (currentPage < pages.lastIndex) currentPage++
-                        else onComplete()
+                        if (currentPage < pages.lastIndex) {
+                            currentPage++
+                        } else {
+                            onComplete()
+                        }
                     },
-                    modifier = Modifier.height(48.dp)
+                    modifier = Modifier.height(48.dp),
                 )
             }
         }
@@ -575,19 +604,23 @@ internal fun OnboardingScreenContent(
 }
 
 @Composable
-private fun OnboardingFeatureCard(title: String, body: String, accentColor: androidx.compose.ui.graphics.Color) {
+private fun OnboardingFeatureCard(
+    title: String,
+    body: String,
+    accentColor: androidx.compose.ui.graphics.Color,
+) {
     PremiumCard(accentColor = accentColor, modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text(
                 title,
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
-                color = accentColor
+                color = accentColor,
             )
             Text(
                 body,
                 style = MaterialTheme.typography.bodySmall,
-                color = CatSubtext
+                color = CatSubtext,
             )
         }
     }
@@ -599,14 +632,14 @@ private fun OnboardingChecklistItem(
     detail: String,
     granted: Boolean,
     accentColor: androidx.compose.ui.graphics.Color,
-    badge: String
+    badge: String,
 ) {
     Row(verticalAlignment = Alignment.Top) {
         PremiumIconTile(
             icon = if (granted) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
             color = if (granted) CatGreen else accentColor,
             size = 34.dp,
-            iconSize = 18.dp
+            iconSize = 18.dp,
         )
         Spacer(Modifier.width(10.dp))
         Column(modifier = Modifier.weight(1f)) {
@@ -619,21 +652,25 @@ private fun OnboardingChecklistItem(
                 color = accentColor,
                 horizontalPadding = 8.dp,
                 verticalPadding = 4.dp,
-                textStyle = MaterialTheme.typography.labelSmall
+                textStyle = MaterialTheme.typography.labelSmall,
             )
         }
     }
 }
 
 @Composable
-private fun OnboardingBulletPoint(text: String, color: androidx.compose.ui.graphics.Color) {
+private fun OnboardingBulletPoint(
+    text: String,
+    color: androidx.compose.ui.graphics.Color,
+) {
     Row(verticalAlignment = Alignment.Top) {
         Box(
-            modifier = Modifier
-                .padding(top = 6.dp)
-                .size(8.dp)
-                .clip(CircleShape)
-                .background(color)
+            modifier =
+                Modifier
+                    .padding(top = 6.dp)
+                    .size(8.dp)
+                    .clip(CircleShape)
+                    .background(color),
         )
         Spacer(Modifier.width(10.dp))
         Text(text, style = MaterialTheme.typography.bodySmall, color = CatText)
@@ -641,13 +678,17 @@ private fun OnboardingBulletPoint(text: String, color: androidx.compose.ui.graph
 }
 
 @Composable
-private fun OnboardingStatusRow(label: String, granted: Boolean, color: androidx.compose.ui.graphics.Color) {
+private fun OnboardingStatusRow(
+    label: String,
+    granted: Boolean,
+    color: androidx.compose.ui.graphics.Color,
+) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         PremiumIconTile(
             icon = if (granted) Icons.Default.CheckCircle else Icons.Default.Warning,
             color = color,
             size = 34.dp,
-            iconSize = 18.dp
+            iconSize = 18.dp,
         )
         Spacer(Modifier.width(8.dp))
         Text(label, color = color, fontWeight = FontWeight.SemiBold)

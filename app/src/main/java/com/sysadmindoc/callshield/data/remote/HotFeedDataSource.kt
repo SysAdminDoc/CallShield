@@ -19,6 +19,8 @@ interface HotFeedDataSource {
     ): Result<List<String>>
 
     fun parseHotListJson(body: String): List<HotNumber>
+
     fun parseHotRangesJson(body: String): List<String>
+
     fun parseSpamDomainsJson(body: String): List<String>
 }

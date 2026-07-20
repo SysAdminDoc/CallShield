@@ -1,5 +1,7 @@
 package com.sysadmindoc.callshield.data
 
+import com.sysadmindoc.callshield.util.filterAsciiDigits
+
 /**
  * Formats phone numbers for display throughout the app.
  * +12125551234 -> (212) 555-1234
@@ -7,16 +9,16 @@ package com.sysadmindoc.callshield.data
  * International numbers pass through with just + prefix formatting.
  */
 object PhoneFormatter {
-
     fun format(number: String): String {
-        val digits = number.filter { it.isDigit() }
+        val digits = filterAsciiDigits(number)
 
         // US/CA: 10 digits or 11 starting with 1
-        val usDigits = when {
-            digits.length == 11 && digits.startsWith("1") -> digits.substring(1)
-            digits.length == 10 -> digits
-            else -> null
-        }
+        val usDigits =
+            when {
+                digits.length == 11 && digits.startsWith("1") -> digits.substring(1)
+                digits.length == 10 -> digits
+                else -> null
+            }
 
         if (usDigits != null) {
             val area = usDigits.substring(0, 3)
@@ -37,12 +39,13 @@ object PhoneFormatter {
     }
 
     fun formatWithCountryCode(number: String): String {
-        val digits = number.filter { it.isDigit() }
-        val usDigits = when {
-            digits.length == 11 && digits.startsWith("1") -> digits.substring(1)
-            digits.length == 10 -> digits
-            else -> null
-        }
+        val digits = filterAsciiDigits(number)
+        val usDigits =
+            when {
+                digits.length == 11 && digits.startsWith("1") -> digits.substring(1)
+                digits.length == 10 -> digits
+                else -> null
+            }
         if (usDigits != null) {
             return "+1 (${usDigits.substring(0, 3)}) ${usDigits.substring(3, 6)}-${usDigits.substring(6)}"
         }

@@ -1,10 +1,10 @@
 package com.sysadmindoc.callshield.util
 
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -66,31 +66,34 @@ suspend fun <C, T> race(
     // from synthesizing `onTimeout` and winning the race just because
     // `decisive(onTimeout)` happens to be true for this caller.
     return coroutineScope {
-        val jobs = competitors.map { competitor ->
-            launch {
-                val outcome: Outcome<T> = try {
-                    Outcome.Ok(block(competitor))
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (_: Throwable) {
-                    Outcome.Failed
-                }
-                when (outcome) {
-                    is Outcome.Ok -> {
-                        if (decisive(outcome.value)) {
-                            channel.trySend(outcome.value)
-                        } else if (remaining.decrementAndGet() == 0) {
-                            channel.trySend(onTimeout)
+        val jobs =
+            competitors.map { competitor ->
+                launch {
+                    val outcome: Outcome<T> =
+                        try {
+                            Outcome.Ok(block(competitor))
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (_: Throwable) {
+                            Outcome.Failed
                         }
-                    }
-                    Outcome.Failed -> {
-                        if (remaining.decrementAndGet() == 0) {
-                            channel.trySend(onTimeout)
+                    when (outcome) {
+                        is Outcome.Ok -> {
+                            if (decisive(outcome.value)) {
+                                channel.trySend(outcome.value)
+                            } else if (remaining.decrementAndGet() == 0) {
+                                channel.trySend(onTimeout)
+                            }
+                        }
+
+                        Outcome.Failed -> {
+                            if (remaining.decrementAndGet() == 0) {
+                                channel.trySend(onTimeout)
+                            }
                         }
                     }
                 }
             }
-        }
 
         try {
             withTimeoutOrNull(timeoutMillis) { channel.receive() } ?: onTimeout
@@ -110,7 +113,10 @@ suspend fun <C, T> race(
  * from "the block returned onTimeout." Callers never see this type.
  */
 private sealed interface Outcome<out T> {
-    data class Ok<T>(val value: T) : Outcome<T>
+    data class Ok<T>(
+        val value: T,
+    ) : Outcome<T>
+
     data object Failed : Outcome<Nothing>
 }
 
@@ -122,10 +128,11 @@ suspend fun <C> raceAny(
     competitors: List<C>,
     timeoutMillis: Long,
     block: suspend (C) -> Boolean,
-): Boolean = race(
-    competitors = competitors,
-    timeoutMillis = timeoutMillis,
-    decisive = { it },
-    onTimeout = false,
-    block = block,
-)
+): Boolean =
+    race(
+        competitors = competitors,
+        timeoutMillis = timeoutMillis,
+        decisive = { it },
+        onTimeout = false,
+        block = block,
+    )

@@ -34,54 +34,56 @@ import java.util.concurrent.TimeUnit
  * refreshed every 30 min anyway.
  */
 @HiltWorker
-class HotListSyncWorker @AssistedInject constructor(
-    @Assisted context: Context,
-    @Assisted params: WorkerParameters,
-    private val repo: SpamRepository,
-    private val dao: SpamDao,
-    private val hotFeedDataSource: HotFeedDataSource,
-    private val checkerDependencies: CheckerDependencies,
-) : CoroutineWorker(context, params) {
-
-    override suspend fun doWork(): Result {
-        return try {
-            val outcome = HotDataSync.refresh(
-                context = applicationContext,
-                source = hotFeedDataSource,
-                repo = repo,
-                dao = dao,
-                dependencies = checkerDependencies,
-            )
-            if (outcome.refreshedAnyFeed || outcome.hasAnyHotProtection) {
-                Result.success()
-            } else {
+class HotListSyncWorker
+    @AssistedInject
+    constructor(
+        @Assisted context: Context,
+        @Assisted params: WorkerParameters,
+        private val repo: SpamRepository,
+        private val dao: SpamDao,
+        private val hotFeedDataSource: HotFeedDataSource,
+        private val checkerDependencies: CheckerDependencies,
+    ) : CoroutineWorker(context, params) {
+        override suspend fun doWork(): Result =
+            try {
+                val outcome =
+                    HotDataSync.refresh(
+                        context = applicationContext,
+                        source = hotFeedDataSource,
+                        repo = repo,
+                        dao = dao,
+                        dependencies = checkerDependencies,
+                    )
+                if (outcome.refreshedAnyFeed || outcome.hasAnyHotProtection) {
+                    Result.success()
+                } else {
+                    Result.retry()
+                }
+            } catch (_: Exception) {
                 Result.retry()
             }
-        } catch (_: Exception) {
-            Result.retry()
+
+        companion object {
+            private const val WORK_NAME = "callshield_hot_list_sync"
+
+            fun schedule(context: Context) {
+                WorkManager.getInstance(context).enqueueUniquePeriodicWork(
+                    WORK_NAME,
+                    ExistingPeriodicWorkPolicy.KEEP,
+                    periodicRequest(),
+                )
+            }
+
+            internal fun periodicRequest(): PeriodicWorkRequest =
+                PeriodicWorkRequestBuilder<HotListSyncWorker>(30, TimeUnit.MINUTES)
+                    .setConstraints(networkConstraints())
+                    .setBackoffCriteria(BackoffPolicy.LINEAR, 5, TimeUnit.MINUTES)
+                    .build()
+
+            private fun networkConstraints(): Constraints =
+                Constraints
+                    .Builder()
+                    .setRequiredNetworkType(NetworkType.CONNECTED)
+                    .build()
         }
     }
-
-    companion object {
-        private const val WORK_NAME = "callshield_hot_list_sync"
-
-        fun schedule(context: Context) {
-            WorkManager.getInstance(context).enqueueUniquePeriodicWork(
-                WORK_NAME,
-                ExistingPeriodicWorkPolicy.KEEP,
-                periodicRequest()
-            )
-        }
-
-        internal fun periodicRequest(): PeriodicWorkRequest =
-            PeriodicWorkRequestBuilder<HotListSyncWorker>(30, TimeUnit.MINUTES)
-                .setConstraints(networkConstraints())
-                .setBackoffCriteria(BackoffPolicy.LINEAR, 5, TimeUnit.MINUTES)
-                .build()
-
-        private fun networkConstraints(): Constraints =
-            Constraints.Builder()
-                .setRequiredNetworkType(NetworkType.CONNECTED)
-                .build()
-    }
-}

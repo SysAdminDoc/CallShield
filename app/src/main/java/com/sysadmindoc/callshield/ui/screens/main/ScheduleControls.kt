@@ -52,8 +52,11 @@ data class ScheduleUiState(
      * active).
      */
     fun toSchedule(): TimeSchedule =
-        if (!enabled || daysMask == 0) TimeSchedule()
-        else TimeSchedule(daysMask, startHour, endHour)
+        if (!enabled || daysMask == 0) {
+            TimeSchedule()
+        } else {
+            TimeSchedule(daysMask, startHour, endHour)
+        }
 
     /** Validation gate surfaced on the Add button. */
     val needsDaySelection: Boolean get() = enabled && daysMask == 0
@@ -83,10 +86,11 @@ fun ScheduleSection(
         Switch(
             checked = state.enabled,
             onCheckedChange = { onChange(state.copy(enabled = it)) },
-            colors = SwitchDefaults.colors(
-                checkedTrackColor = CatBlue,
-                checkedThumbColor = Black,
-            ),
+            colors =
+                SwitchDefaults.colors(
+                    checkedTrackColor = CatBlue,
+                    checkedThumbColor = Black,
+                ),
         )
     }
     if (state.enabled) {
@@ -147,12 +151,16 @@ fun ScheduleSection(
  * verbose locales so we don't depend on the experimental FlowRow.
  */
 @Composable
-private fun DayOfWeekChips(daysMask: Int, onChange: (Int) -> Unit) {
+private fun DayOfWeekChips(
+    daysMask: Int,
+    onChange: (Int) -> Unit,
+) {
     val scroll = rememberScrollState()
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .horizontalScroll(scroll),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .horizontalScroll(scroll),
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -163,10 +171,11 @@ private fun DayOfWeekChips(daysMask: Int, onChange: (Int) -> Unit) {
                 onClick = { onChange(daysMask xor (1 shl dayBit)) },
                 label = { Text(TimeSchedule.DAY_LABELS[dayBit]) },
                 shape = RoundedCornerShape(8.dp),
-                colors = FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = CatBlue.copy(alpha = 0.25f),
-                    selectedLabelColor = CatText,
-                ),
+                colors =
+                    FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = CatBlue.copy(alpha = 0.25f),
+                        selectedLabelColor = CatText,
+                    ),
             )
         }
     }

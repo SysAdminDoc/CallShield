@@ -31,8 +31,11 @@ class SpamRepositoryImpl(
     // wildcard rules, and keyword rules from Room on every call adds
     // avoidable I/O latency, so writes invalidate these process caches.
     @Volatile private var cachedPrefixes: List<SpamPrefix>? = null
+
     @Volatile private var cachedWildcardRules: List<WildcardRule>? = null
+
     @Volatile private var cachedKeywordRules: List<SmsKeywordRule>? = null
+
     @Volatile private var cachedHashWildcardRules: List<HashWildcardRule>? = null
 
     internal fun invalidatePrefixCache() {
@@ -58,11 +61,11 @@ class SpamRepositoryImpl(
         cachedHashWildcardRules = null
     }
 
-    internal suspend fun findWhitelistEntryInternal(normalized: String): WhitelistEntry? =
-        dao.findWhitelistEntry(normalized)
+    internal suspend fun findWhitelistEntryInternal(normalized: String): WhitelistEntry? = dao.findPermanentWhitelistEntry(normalized)
 
-    internal suspend fun findByNumberInternal(normalized: String): SpamNumber? =
-        dao.findByNumber(normalized)
+    internal suspend fun findTemporaryWhitelistEntryInternal(normalized: String): WhitelistEntry? = dao.findActiveTemporaryWhitelistEntry(normalized, System.currentTimeMillis())
+
+    internal suspend fun findByNumberInternal(normalized: String): SpamNumber? = dao.findByNumber(normalized)?.activeDecision()
 
     internal suspend fun hasDbPrefixMatch(normalized: String): Boolean {
         if (normalized.length < 9) return false
@@ -70,23 +73,20 @@ class SpamRepositoryImpl(
         return dao.countByPrefix(prefix) > 0
     }
 
-    internal suspend fun getPrefixesCachedInternal(): List<SpamPrefix> =
-        cachedPrefixes ?: dao.getAllPrefixes().also { cachedPrefixes = it }
+    internal suspend fun getPrefixesCachedInternal(): List<SpamPrefix> = cachedPrefixes ?: dao.getAllPrefixes().also { cachedPrefixes = it }
 
-    internal suspend fun getActiveWildcardsCachedInternal(): List<WildcardRule> =
-        cachedWildcardRules ?: dao.getActiveWildcardRules().also { cachedWildcardRules = it }
+    internal suspend fun getActiveWildcardsCachedInternal(): List<WildcardRule> = cachedWildcardRules ?: dao.getActiveWildcardRules().also { cachedWildcardRules = it }
 
-    internal suspend fun getActiveKeywordsCachedInternal(): List<SmsKeywordRule> =
-        cachedKeywordRules ?: dao.getActiveKeywordRules().also { cachedKeywordRules = it }
+    internal suspend fun getActiveKeywordsCachedInternal(): List<SmsKeywordRule> = cachedKeywordRules ?: dao.getActiveKeywordRules().also { cachedKeywordRules = it }
 
-    internal suspend fun getActiveHashWildcardsCachedInternal(): List<HashWildcardRule> =
-        cachedHashWildcardRules ?: dao.getActiveHashWildcardRules().also { cachedHashWildcardRules = it }
+    internal suspend fun getActiveHashWildcardsCachedInternal(): List<HashWildcardRule> = cachedHashWildcardRules ?: dao.getActiveHashWildcardRules().also { cachedHashWildcardRules = it }
 
-    internal suspend fun getNumberFrequencySinceInternal(number: String, since: Long): Int =
-        dao.getNumberFrequencySince(number, since)
+    internal suspend fun getNumberFrequencySinceInternal(
+        number: String,
+        since: Long,
+    ): Int = dao.getNumberFrequencySince(number, since)
 
-    internal suspend fun getRecentBlockedNumbersInternal(since: Long): List<BlockedCall> =
-        dao.getRecentBlockedNumbers(since)
+    internal suspend fun getRecentBlockedNumbersInternal(since: Long): List<BlockedCall> = dao.getRecentBlockedNumbers(since)
 
     private val callChain: List<IChecker> by lazy {
         SpamCheckers.buildCallChain(this, context, checkerDependencies)
@@ -106,17 +106,19 @@ class SpamRepositoryImpl(
         if (normalized.isBlank()) return SpamCheckResult(false)
 
         val prefs = prefsSnapshot ?: settingsRepository.readPrefsSnapshot()
-        val ctx = CheckContext(
-            appContext = context,
-            number = normalized,
-            smsBody = smsBody,
-            realtimeCall = realtimeCall,
-            prefs = prefs,
-            verificationStatus = verificationStatus,
-        )
+        val ctx =
+            CheckContext(
+                appContext = context,
+                number = normalized,
+                smsBody = smsBody,
+                realtimeCall = realtimeCall,
+                prefs = prefs,
+                verificationStatus = verificationStatus,
+            )
 
-        val verdict = CheckerPipeline.run(callChain, ctx)
-            ?: return SpamCheckResult(false)
+        val verdict =
+            CheckerPipeline.run(callChain, ctx)
+                ?: return SpamCheckResult(false)
 
         return verdict.toSpamCheckResult()
     }
@@ -133,15 +135,17 @@ class SpamRepositoryImpl(
 
         val normalized = normalizeNumber(number)
         if (normalized.isBlank()) return SpamCheckResult(false)
-        val ctx = CheckContext(
-            appContext = context,
-            number = normalized,
-            smsBody = body,
-            realtimeCall = realtimeCall,
-            prefs = prefs,
-        )
-        val verdict = CheckerPipeline.run(smsExtensions, ctx)
-            ?: return SpamCheckResult(false)
+        val ctx =
+            CheckContext(
+                appContext = context,
+                number = normalized,
+                smsBody = body,
+                realtimeCall = realtimeCall,
+                prefs = prefs,
+            )
+        val verdict =
+            CheckerPipeline.run(smsExtensions, ctx)
+                ?: return SpamCheckResult(false)
 
         return verdict.toSpamCheckResult()
     }
@@ -152,12 +156,13 @@ class SpamRepositoryImpl(
         val normalized = normalizeNumber(number)
         if (normalized.isBlank()) return PipelineTrace(emptyList(), false)
         val prefs = settingsRepository.readPrefsSnapshot()
-        val ctx = CheckContext(
-            appContext = context,
-            number = normalized,
-            realtimeCall = false,
-            prefs = prefs,
-        )
+        val ctx =
+            CheckContext(
+                appContext = context,
+                number = normalized,
+                realtimeCall = false,
+                prefs = prefs,
+            )
         return CheckerPipeline.traceAll(callChain, ctx)
     }
 }

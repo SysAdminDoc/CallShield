@@ -15,7 +15,7 @@ import java.util.Calendar
  */
 @Entity(
     tableName = "sms_keyword_rules",
-    indices = [Index(value = ["keyword"], unique = true)]
+    indices = [Index(value = ["keyword"], unique = true)],
 )
 data class SmsKeywordRule(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -34,7 +34,10 @@ data class SmsKeywordRule(
      * Schedule-aware match. Callers on the hot path should prefer this —
      * skips the case-fold + substring scan when the rule is inactive.
      */
-    fun matchesNow(text: String, calendar: Calendar = Calendar.getInstance()): Boolean {
+    fun matchesNow(
+        text: String,
+        calendar: Calendar = Calendar.getInstance(),
+    ): Boolean {
         if (!schedule.isActiveAt(calendar)) return false
         return matches(text)
     }
@@ -42,7 +45,10 @@ data class SmsKeywordRule(
     fun matches(text: String): Boolean {
         val normalizedKeyword = keyword.trim()
         if (!enabled || normalizedKeyword.isBlank()) return false
-        return if (caseSensitive) text.contains(normalizedKeyword)
-        else text.lowercase().contains(normalizedKeyword.lowercase())
+        return if (caseSensitive) {
+            text.contains(normalizedKeyword)
+        } else {
+            text.lowercase().contains(normalizedKeyword.lowercase())
+        }
     }
 }

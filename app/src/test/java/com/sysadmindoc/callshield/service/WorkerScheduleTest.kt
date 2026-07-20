@@ -43,4 +43,13 @@ class WorkerScheduleTest {
         assertEquals(TimeUnit.HOURS.toMillis(1), spec.initialDelay)
         assertEquals(NetworkType.NOT_REQUIRED, spec.constraints.requiredNetworkType)
     }
+
+    @Test
+    fun pendingBlockedCallLogRequestDoesNotRequireNetworkAndRetries() {
+        val spec = PendingBlockedCallLogWorker.pendingRequest().workSpec
+
+        assertEquals(NetworkType.NOT_REQUIRED, spec.constraints.requiredNetworkType)
+        assertEquals(BackoffPolicy.EXPONENTIAL, spec.backoffPolicy)
+        assertEquals(TimeUnit.MINUTES.toMillis(1), spec.backoffDelayDuration)
+    }
 }

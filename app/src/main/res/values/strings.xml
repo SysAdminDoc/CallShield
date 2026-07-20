@@ -173,6 +173,8 @@
     <string name="blocked_log_copy">Copy</string>
     <string name="blocked_log_copied_short">Copied</string>
     <string name="blocked_log_detail">Detail</string>
+    <string name="blocked_log_temporary_allow_reason">Allowed from blocked log</string>
+    <string name="blocked_log_temporary_block_reason">Blocked from blocked log</string>
     <string name="blocked_log_call">Call</string>
     <string name="blocked_log_sms">SMS</string>
 
@@ -865,6 +867,17 @@
     <string name="recent_copy">Copy</string>
     <string name="recent_copied">Copied</string>
     <string name="recent_detail">Detail</string>
+    <string name="recent_temporary_allow_reason">Allowed from recent calls</string>
+    <string name="recent_temporary_block_reason">Blocked from recent calls</string>
+
+    <!-- Temporary decisions -->
+    <string name="temporary_decision_allow">Allow</string>
+    <string name="temporary_decision_block">Block</string>
+    <string name="temporary_decision_15_minutes">15 minutes</string>
+    <string name="temporary_decision_1_hour">1 hour</string>
+    <string name="temporary_decision_24_hours">24 hours</string>
+    <string name="temporary_decision_allowed">%1$s allowed for %2$s</string>
+    <string name="temporary_decision_blocked">%1$s blocked for %2$s</string>
 
     <!-- Number Detail Screen -->
     <string name="detail_copied">Copied</string>

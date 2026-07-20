@@ -1,22 +1,24 @@
 package com.sysadmindoc.callshield.ui.screens.recent
 
 import android.Manifest
-import android.content.Context
-import android.provider.CallLog
-import androidx.compose.animation.*
 import android.content.ClipData
 import android.content.ClipboardManager
+import android.content.Context
 import android.content.Intent
+import android.net.Uri
+import android.provider.CallLog
+import android.provider.ContactsContract
 import android.provider.Settings
 import android.widget.Toast
+import androidx.compose.animation.*
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.CallMade
@@ -40,14 +42,15 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import android.net.Uri
-import android.provider.ContactsContract
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.PhoneFormatter
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup
 import com.sysadmindoc.callshield.permissions.CallShieldPermissions
 import com.sysadmindoc.callshield.ui.MainViewModel
+import com.sysadmindoc.callshield.ui.TemporaryDecisionDuration
+import com.sysadmindoc.callshield.ui.TemporaryDecisionMenu
+import com.sysadmindoc.callshield.ui.rememberTemporaryDecisionDurations
 import com.sysadmindoc.callshield.ui.theme.*
 import com.sysadmindoc.callshield.util.filterAsciiDigits
 import com.sysadmindoc.callshield.util.hasMinAsciiDigits
@@ -66,7 +69,7 @@ data class RecentCall(
     val duration: Int,
     val isSpam: Boolean = false,
     val spamReason: String = "",
-    val contactName: String? = null
+    val contactName: String? = null,
 )
 
 @Composable
@@ -83,8 +86,8 @@ fun RecentCallsScreen(viewModel: MainViewModel) {
         mutableStateOf(
             CallShieldPermissions.isPermissionGranted(
                 context,
-                Manifest.permission.READ_CALL_LOG
-            )
+                Manifest.permission.READ_CALL_LOG,
+            ),
         )
     }
 
@@ -129,62 +132,67 @@ fun RecentCallsScreen(viewModel: MainViewModel) {
     }
 
     DisposableEffect(lifecycleOwner, context.applicationContext) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
-                hasCallLogPermission = CallShieldPermissions.isPermissionGranted(
-                    context.applicationContext,
-                    Manifest.permission.READ_CALL_LOG
-                )
+        val observer =
+            LifecycleEventObserver { _, event ->
+                if (event == Lifecycle.Event.ON_RESUME) {
+                    hasCallLogPermission =
+                        CallShieldPermissions.isPermissionGranted(
+                            context.applicationContext,
+                            Manifest.permission.READ_CALL_LOG,
+                        )
+                }
+                if (event == Lifecycle.Event.ON_RESUME && initialLoadCompleted && hasCallLogPermission) {
+                    refreshRecentCallsState.value(false)
+                }
             }
-            if (event == Lifecycle.Event.ON_RESUME && initialLoadCompleted && hasCallLogPermission) {
-                refreshRecentCallsState.value(false)
-            }
-        }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    val filtered = when (filterMode) {
-        1 -> calls.filter { it.type == CallLog.Calls.INCOMING_TYPE }
-        2 -> calls.filter { it.type == CallLog.Calls.OUTGOING_TYPE }
-        3 -> calls.filter { it.type == CallLog.Calls.MISSED_TYPE || it.type == CallLog.Calls.REJECTED_TYPE }
-        4 -> calls.filter { it.isSpam }
-        else -> calls
-    }
+    val filtered =
+        when (filterMode) {
+            1 -> calls.filter { it.type == CallLog.Calls.INCOMING_TYPE }
+            2 -> calls.filter { it.type == CallLog.Calls.OUTGOING_TYPE }
+            3 -> calls.filter { it.type == CallLog.Calls.MISSED_TYPE || it.type == CallLog.Calls.REJECTED_TYPE }
+            4 -> calls.filter { it.isSpam }
+            else -> calls
+        }
     val spamCount = calls.count { it.isSpam }
-    val missedCount = calls.count {
-        it.type == CallLog.Calls.MISSED_TYPE || it.type == CallLog.Calls.REJECTED_TYPE
-    }
+    val missedCount =
+        calls.count {
+            it.type == CallLog.Calls.MISSED_TYPE || it.type == CallLog.Calls.REJECTED_TYPE
+        }
     val incomingCount = calls.count { it.type == CallLog.Calls.INCOMING_TYPE }
     val outgoingCount = calls.count { it.type == CallLog.Calls.OUTGOING_TYPE }
     val contactCount = calls.count { it.contactName != null }
-    val filterOptions = listOf(
-        RecentFilterOption(
-            mode = 0,
-            label = stringResource(R.string.recent_filter_all, calls.size),
-            color = CatGreen
-        ),
-        RecentFilterOption(
-            mode = 1,
-            label = stringResource(R.string.recent_filter_incoming, incomingCount),
-            color = CatBlue
-        ),
-        RecentFilterOption(
-            mode = 2,
-            label = stringResource(R.string.recent_filter_outgoing, outgoingCount),
-            color = CatTeal
-        ),
-        RecentFilterOption(
-            mode = 3,
-            label = stringResource(R.string.recent_filter_missed, missedCount),
-            color = CatPeach
-        ),
-        RecentFilterOption(
-            mode = 4,
-            label = stringResource(R.string.recent_filter_spam, spamCount),
-            color = CatRed
+    val filterOptions =
+        listOf(
+            RecentFilterOption(
+                mode = 0,
+                label = stringResource(R.string.recent_filter_all, calls.size),
+                color = CatGreen,
+            ),
+            RecentFilterOption(
+                mode = 1,
+                label = stringResource(R.string.recent_filter_incoming, incomingCount),
+                color = CatBlue,
+            ),
+            RecentFilterOption(
+                mode = 2,
+                label = stringResource(R.string.recent_filter_outgoing, outgoingCount),
+                color = CatTeal,
+            ),
+            RecentFilterOption(
+                mode = 3,
+                label = stringResource(R.string.recent_filter_missed, missedCount),
+                color = CatPeach,
+            ),
+            RecentFilterOption(
+                mode = 4,
+                label = stringResource(R.string.recent_filter_spam, spamCount),
+                color = CatRed,
+            ),
         )
-    )
 
     Column(modifier = Modifier.fillMaxSize()) {
         if (!hasCallLogPermission) {
@@ -193,10 +201,10 @@ fun RecentCallsScreen(viewModel: MainViewModel) {
                     context.startActivity(
                         Intent(
                             Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                            Uri.parse("package:${context.packageName}")
-                        )
+                            Uri.parse("package:${context.packageName}"),
+                        ),
                     )
-                }
+                },
             )
         } else if (!loading) {
             RecentCallsSummaryCard(
@@ -205,12 +213,12 @@ fun RecentCallsScreen(viewModel: MainViewModel) {
                 missedCount = missedCount,
                 contactCount = contactCount,
                 refreshing = refreshing,
-                onRefresh = { refreshRecentCalls(false) }
+                onRefresh = { refreshRecentCalls(false) },
             )
             if (calls.isNotEmpty()) {
                 LazyRow(
                     contentPadding = PaddingValues(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     items(filterOptions.size) { index ->
                         val option = filterOptions[index]
@@ -219,18 +227,20 @@ fun RecentCallsScreen(viewModel: MainViewModel) {
                             onClick = { filterMode = option.mode },
                             label = { Text(option.label) },
                             shape = RoundedCornerShape(8.dp),
-                            border = BorderStroke(
-                                1.dp,
-                                if (filterMode == option.mode) {
-                                    option.color.copy(alpha = 0.35f)
-                                } else {
-                                    CatMuted.copy(alpha = 0.3f)
-                                }
-                            ),
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = option.color.copy(alpha = 0.18f),
-                                selectedLabelColor = option.color
-                            )
+                            border =
+                                BorderStroke(
+                                    1.dp,
+                                    if (filterMode == option.mode) {
+                                        option.color.copy(alpha = 0.35f)
+                                    } else {
+                                        CatMuted.copy(alpha = 0.3f)
+                                    },
+                                ),
+                            colors =
+                                FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = option.color.copy(alpha = 0.18f),
+                                    selectedLabelColor = option.color,
+                                ),
                         )
                     }
                 }
@@ -242,37 +252,44 @@ fun RecentCallsScreen(viewModel: MainViewModel) {
             // Premium shimmer skeleton while loading
             Column(
                 modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+                verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 repeat(8) { SkeletonListItem(modifier = Modifier.fillMaxWidth()) }
             }
         } else if (hasCallLogPermission && filtered.isEmpty()) {
             RecentEmptyStateCard(
-                title = if (filterMode == 0) {
-                    stringResource(R.string.recent_no_calls)
-                } else {
-                    stringResource(R.string.recent_no_matching)
-                },
-                subtitle = if (filterMode == 0) {
-                    stringResource(R.string.recent_no_calls_desc)
-                } else {
-                    stringResource(R.string.recent_no_matching_desc)
-                },
+                title =
+                    if (filterMode == 0) {
+                        stringResource(R.string.recent_no_calls)
+                    } else {
+                        stringResource(R.string.recent_no_matching)
+                    },
+                subtitle =
+                    if (filterMode == 0) {
+                        stringResource(R.string.recent_no_calls_desc)
+                    } else {
+                        stringResource(R.string.recent_no_matching_desc)
+                    },
                 accentColor = if (filterMode == 0) CatBlue else CatPeach,
                 actionLabel = if (filterMode == 0) null else stringResource(R.string.recent_show_all),
-                onAction = if (filterMode == 0) null else { { filterMode = 0 } }
+                onAction =
+                    if (filterMode == 0) {
+                        null
+                    } else {
+                        { filterMode = 0 }
+                    },
             )
         } else if (hasCallLogPermission) {
             LazyColumn(
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+                verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 itemsIndexed(
                     items = filtered,
                     // Include index — the (number,date,type) triple is not guaranteed
                     // unique (dual-SIM duplicates, MMS group rows, sync re-inserts), and
                     // collisions crash LazyColumn with "Key was already used".
-                    key = { index, call -> "${call.number}|${call.date}|${call.type}|$index" }
+                    key = { index, call -> "${call.number}|${call.date}|${call.type}|$index" },
                 ) { index, call ->
                     val visible = remember(call.number, call.date) { mutableStateOf(false) }
                     LaunchedEffect(call.number, call.date) {
@@ -280,9 +297,42 @@ fun RecentCallsScreen(viewModel: MainViewModel) {
                         visible.value = true
                     }
                     AnimatedVisibility(visible = visible.value, enter = slideInVertically { 30 } + fadeIn()) {
+                        val allowReason = stringResource(R.string.recent_temporary_allow_reason)
+                        val blockReason = stringResource(R.string.recent_temporary_block_reason)
                         RecentCallItem(
                             call = call,
-                            onOpenDetail = { viewModel.openNumberDetail(call.number) }
+                            onOpenDetail = { viewModel.openNumberDetail(call.number) },
+                            onTemporaryAllow = { duration ->
+                                viewModel.temporaryAllowNumber(call.number, duration.durationMillis, allowReason)
+                                Toast
+                                    .makeText(
+                                        context,
+                                        context.getString(
+                                            R.string.temporary_decision_allowed,
+                                            PhoneFormatter.format(call.number),
+                                            duration.label,
+                                        ),
+                                        Toast.LENGTH_SHORT,
+                                    ).show()
+                            },
+                            onTemporaryBlock = { duration ->
+                                viewModel.temporaryBlockNumber(
+                                    call.number,
+                                    duration.durationMillis,
+                                    "spam",
+                                    blockReason,
+                                )
+                                Toast
+                                    .makeText(
+                                        context,
+                                        context.getString(
+                                            R.string.temporary_decision_blocked,
+                                            PhoneFormatter.format(call.number),
+                                            duration.label,
+                                        ),
+                                        Toast.LENGTH_SHORT,
+                                    ).show()
+                            },
                         )
                     }
                 }
@@ -291,38 +341,54 @@ fun RecentCallsScreen(viewModel: MainViewModel) {
     }
 }
 
+@Suppress(
+    "FunctionNaming",
+    "LongMethod",
+    "CyclomaticComplexMethod",
+    "ktlint:standard:function-naming",
+)
 @Composable
-fun RecentCallItem(call: RecentCall, onOpenDetail: () -> Unit) {
+@OptIn(ExperimentalLayoutApi::class)
+fun RecentCallItem(
+    call: RecentCall,
+    onOpenDetail: () -> Unit,
+    onTemporaryAllow: (TemporaryDecisionDuration) -> Unit,
+    onTemporaryBlock: (TemporaryDecisionDuration) -> Unit,
+) {
     val dateFormat = remember { SimpleDateFormat("MMM d, h:mm a", Locale.getDefault()) }
     val location = remember(call.number) { AreaCodeLookup.lookup(call.number) }
 
-    val typeIcon = when (call.type) {
-        CallLog.Calls.INCOMING_TYPE -> Icons.AutoMirrored.Filled.CallReceived
-        CallLog.Calls.OUTGOING_TYPE -> Icons.AutoMirrored.Filled.CallMade
-        CallLog.Calls.MISSED_TYPE -> Icons.AutoMirrored.Filled.PhoneMissed
-        CallLog.Calls.REJECTED_TYPE -> Icons.Default.CallEnd
-        else -> Icons.Default.Phone
-    }
-    val typeColor = when (call.type) {
-        CallLog.Calls.INCOMING_TYPE -> CatGreen
-        CallLog.Calls.OUTGOING_TYPE -> CatBlue
-        CallLog.Calls.MISSED_TYPE -> CatRed
-        CallLog.Calls.REJECTED_TYPE -> CatPeach
-        else -> CatSubtext
-    }
+    val typeIcon =
+        when (call.type) {
+            CallLog.Calls.INCOMING_TYPE -> Icons.AutoMirrored.Filled.CallReceived
+            CallLog.Calls.OUTGOING_TYPE -> Icons.AutoMirrored.Filled.CallMade
+            CallLog.Calls.MISSED_TYPE -> Icons.AutoMirrored.Filled.PhoneMissed
+            CallLog.Calls.REJECTED_TYPE -> Icons.Default.CallEnd
+            else -> Icons.Default.Phone
+        }
+    val typeColor =
+        when (call.type) {
+            CallLog.Calls.INCOMING_TYPE -> CatGreen
+            CallLog.Calls.OUTGOING_TYPE -> CatBlue
+            CallLog.Calls.MISSED_TYPE -> CatRed
+            CallLog.Calls.REJECTED_TYPE -> CatPeach
+            else -> CatSubtext
+        }
 
     // Left accent bar color: calls get CatBlue, SMS-related types could be CatMauve
     // Since RecentCall represents call log entries, we use CatBlue for calls
     // and CatMauve if it were an SMS. Here type is call log type, so we differentiate
     // by spam status for visual interest, but per spec: calls=CatBlue, SMS=CatMauve.
     // Call log entries are always calls, so we use CatBlue as default, CatRed for spam.
-    val accentBarColor = when {
-        call.isSpam -> CatRed
-        else -> CatBlue
-    }
+    val accentBarColor =
+        when {
+            call.isSpam -> CatRed
+            else -> CatBlue
+        }
 
     val context = LocalContext.current
     var expanded by remember { mutableStateOf(false) }
+    val temporaryDurations = rememberTemporaryDecisionDurations()
     val copiedMessage = stringResource(R.string.recent_copied)
     val clipLabelPhone = stringResource(R.string.clip_label_phone)
 
@@ -334,24 +400,25 @@ fun RecentCallItem(call: RecentCall, onOpenDetail: () -> Unit) {
         Column {
             Box {
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .drawBehind {
-                            // Draw a subtle 3dp accent bar on the left side
-                            drawRect(
-                                color = accentBarColor.copy(alpha = 0.5f),
-                                topLeft = Offset(0f, 0f),
-                                size = Size(3.dp.toPx(), size.height)
-                            )
-                        }
-                        .padding(start = 12.dp, end = 12.dp, top = 12.dp, bottom = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .drawBehind {
+                                // Draw a subtle 3dp accent bar on the left side
+                                drawRect(
+                                    color = accentBarColor.copy(alpha = 0.5f),
+                                    topLeft = Offset(0f, 0f),
+                                    size = Size(3.dp.toPx(), size.height),
+                                )
+                            }.padding(start = 12.dp, end = 12.dp, top = 12.dp, bottom = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    val riskColor = when {
-                        call.contactName != null -> CatGreen
-                        call.isSpam -> CatRed
-                        else -> CatYellow
-                    }
+                    val riskColor =
+                        when {
+                            call.contactName != null -> CatGreen
+                            call.isSpam -> CatRed
+                            else -> CatYellow
+                        }
                     Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(riskColor))
                     Spacer(Modifier.width(8.dp))
                     Icon(typeIcon, null, tint = typeColor, modifier = Modifier.size(24.dp))
@@ -374,7 +441,7 @@ fun RecentCallItem(call: RecentCall, onOpenDetail: () -> Unit) {
                                 Text(
                                     stringResource(R.string.recent_duration, call.duration),
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = CatOverlay
+                                    color = CatOverlay,
                                 )
                             }
                         }
@@ -383,18 +450,19 @@ fun RecentCallItem(call: RecentCall, onOpenDetail: () -> Unit) {
                             Text(
                                 call.spamReason.replace("_", " "),
                                 style = MaterialTheme.typography.labelSmall,
-                                color = CatRed
+                                color = CatRed,
                             )
                         }
                     }
                     IconButton(onClick = { expanded = !expanded }) {
                         Icon(
                             if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                            contentDescription = stringResource(
-                                if (expanded) R.string.cd_collapse else R.string.cd_expand
-                            ),
+                            contentDescription =
+                                stringResource(
+                                    if (expanded) R.string.cd_collapse else R.string.cd_expand,
+                                ),
                             tint = CatOverlay,
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(20.dp),
                         )
                     }
                 }
@@ -403,15 +471,16 @@ fun RecentCallItem(call: RecentCall, onOpenDetail: () -> Unit) {
             AnimatedVisibility(visible = expanded) {
                 Column {
                     GradientDivider(modifier = Modifier.padding(horizontal = 12.dp))
-                    Row(
+                    FlowRow(
                         modifier = Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 10.dp),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
                     ) {
                         val digits = filterAsciiDigits(call.number)
                         RecentActionButton(
                             icon = Icons.Default.Search,
                             label = stringResource(R.string.recent_google),
-                            color = CatBlue
+                            color = CatBlue,
                         ) {
                             context.startActivity(
                                 Intent(
@@ -419,31 +488,46 @@ fun RecentCallItem(call: RecentCall, onOpenDetail: () -> Unit) {
                                     android.net.Uri.parse(
                                         "https://www.google.com/search?q=${
                                             android.net.Uri.encode("$digits phone number spam")
-                                        }"
-                                    )
+                                        }",
+                                    ),
                                 ).apply {
                                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                }
+                                },
                             )
                         }
                         RecentActionButton(
                             icon = Icons.Default.ContentCopy,
                             label = stringResource(R.string.recent_copy),
-                            color = CatSubtext
+                            color = CatSubtext,
                         ) {
                             (context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as ClipboardManager)
                                 .setPrimaryClip(ClipData.newPlainText(clipLabelPhone, call.number))
-                            Toast.makeText(
-                                context,
-                                copiedMessage,
-                                Toast.LENGTH_SHORT
-                            ).show()
+                            Toast
+                                .makeText(
+                                    context,
+                                    copiedMessage,
+                                    Toast.LENGTH_SHORT,
+                                ).show()
                         }
                         RecentActionButton(
                             icon = Icons.Default.Info,
                             label = stringResource(R.string.recent_detail),
-                            color = CatMauve
+                            color = CatMauve,
                         ) { onOpenDetail() }
+                        TemporaryDecisionMenu(
+                            label = stringResource(R.string.temporary_decision_allow),
+                            icon = Icons.Default.CheckCircle,
+                            color = CatGreen,
+                            durations = temporaryDurations,
+                            onSelect = onTemporaryAllow,
+                        )
+                        TemporaryDecisionMenu(
+                            label = stringResource(R.string.temporary_decision_block),
+                            icon = Icons.Default.Block,
+                            color = CatYellow,
+                            durations = temporaryDurations,
+                            onSelect = onTemporaryBlock,
+                        )
                     }
                 }
             }
@@ -452,73 +536,95 @@ fun RecentCallItem(call: RecentCall, onOpenDetail: () -> Unit) {
 }
 
 @Composable
-fun RecentActionButton(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, color: androidx.compose.ui.graphics.Color, onClick: () -> Unit) {
+fun RecentActionButton(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    color: androidx.compose.ui.graphics.Color,
+    onClick: () -> Unit,
+) {
     PremiumCompactButton(label = label, icon = icon, color = color, onClick = onClick)
 }
 
-private suspend fun loadRecentCalls(context: Context): List<RecentCall> = withContext(Dispatchers.IO) {
-    val repo = SpamRepository.getInstance(context)
-    val calls = mutableListOf<RecentCall>()
-    try {
-        val cursor = context.contentResolver.query(
-            CallLog.Calls.CONTENT_URI,
-            arrayOf(CallLog.Calls.NUMBER, CallLog.Calls.TYPE, CallLog.Calls.DATE, CallLog.Calls.DURATION),
-            null, null, "${CallLog.Calls.DATE} DESC"
-        )
-        cursor?.use { c ->
-            val numIdx = c.getColumnIndex(CallLog.Calls.NUMBER)
-            val typeIdx = c.getColumnIndex(CallLog.Calls.TYPE)
-            val dateIdx = c.getColumnIndex(CallLog.Calls.DATE)
-            val durIdx = c.getColumnIndex(CallLog.Calls.DURATION)
-            if (numIdx < 0) return@use
+private suspend fun loadRecentCalls(context: Context): List<RecentCall> =
+    withContext(Dispatchers.IO) {
+        val repo = SpamRepository.getInstance(context)
+        val calls = mutableListOf<RecentCall>()
+        try {
+            val cursor =
+                context.contentResolver.query(
+                    CallLog.Calls.CONTENT_URI,
+                    arrayOf(CallLog.Calls.NUMBER, CallLog.Calls.TYPE, CallLog.Calls.DATE, CallLog.Calls.DURATION),
+                    null,
+                    null,
+                    "${CallLog.Calls.DATE} DESC",
+                )
+            cursor?.use { c ->
+                val numIdx = c.getColumnIndex(CallLog.Calls.NUMBER)
+                val typeIdx = c.getColumnIndex(CallLog.Calls.TYPE)
+                val dateIdx = c.getColumnIndex(CallLog.Calls.DATE)
+                val durIdx = c.getColumnIndex(CallLog.Calls.DURATION)
+                if (numIdx < 0) return@use
 
-            // First pass: collect raw call log entries
-            data class RawCall(val number: String, val type: Int, val date: Long, val duration: Int)
-            val rawCalls = mutableListOf<RawCall>()
-            while (c.moveToNext() && rawCalls.size < 100) {
-                val number = c.getString(numIdx) ?: continue
-                val clean = normalizePhoneNumberInput(number)
-                if (!hasMinAsciiDigits(clean)) continue
-                rawCalls.add(RawCall(
-                    number = clean,
-                    type = if (typeIdx >= 0) c.getInt(typeIdx) else 0,
-                    date = if (dateIdx >= 0) c.getLong(dateIdx) else 0,
-                    duration = if (durIdx >= 0) c.getInt(durIdx) else 0,
-                ))
+                // First pass: collect raw call log entries
+                data class RawCall(
+                    val number: String,
+                    val type: Int,
+                    val date: Long,
+                    val duration: Int,
+                )
+                val rawCalls = mutableListOf<RawCall>()
+                while (c.moveToNext() && rawCalls.size < 100) {
+                    val number = c.getString(numIdx) ?: continue
+                    val clean = normalizePhoneNumberInput(number)
+                    if (!hasMinAsciiDigits(clean)) continue
+                    rawCalls.add(
+                        RawCall(
+                            number = clean,
+                            type = if (typeIdx >= 0) c.getInt(typeIdx) else 0,
+                            date = if (dateIdx >= 0) c.getLong(dateIdx) else 0,
+                            duration = if (durIdx >= 0) c.getInt(durIdx) else 0,
+                        ),
+                    )
+                }
+
+                // Batch spam check: only check unique numbers once
+                val uniqueNumbers = rawCalls.map { it.number }.distinct()
+                val spamCache = uniqueNumbers.associateWith { repo.isSpam(it, realtimeCall = false) }
+
+                // Batch contact lookup
+                val contactCache = mutableMapOf<String, String?>()
+                for (num in uniqueNumbers) {
+                    if (num in contactCache) continue
+                    contactCache[num] =
+                        try {
+                            val uri = Uri.withAppendedPath(ContactsContract.PhoneLookup.CONTENT_FILTER_URI, Uri.encode(num))
+                            val cc = context.contentResolver.query(uri, arrayOf(ContactsContract.PhoneLookup.DISPLAY_NAME), null, null, null)
+                            cc?.use { if (it.moveToFirst()) it.getString(0) else null }
+                        } catch (_: Exception) {
+                            null
+                        }
+                }
+
+                // Build final list
+                for (raw in rawCalls) {
+                    val spamResult = spamCache[raw.number]
+                    calls.add(
+                        RecentCall(
+                            number = raw.number,
+                            type = raw.type,
+                            date = raw.date,
+                            duration = raw.duration,
+                            isSpam = spamResult?.isSpam ?: false,
+                            spamReason = spamResult?.matchSource ?: "",
+                            contactName = contactCache[raw.number],
+                        ),
+                    )
+                }
             }
-
-            // Batch spam check: only check unique numbers once
-            val uniqueNumbers = rawCalls.map { it.number }.distinct()
-            val spamCache = uniqueNumbers.associateWith { repo.isSpam(it, realtimeCall = false) }
-
-            // Batch contact lookup
-            val contactCache = mutableMapOf<String, String?>()
-            for (num in uniqueNumbers) {
-                if (num in contactCache) continue
-                contactCache[num] = try {
-                    val uri = Uri.withAppendedPath(ContactsContract.PhoneLookup.CONTENT_FILTER_URI, Uri.encode(num))
-                    val cc = context.contentResolver.query(uri, arrayOf(ContactsContract.PhoneLookup.DISPLAY_NAME), null, null, null)
-                    cc?.use { if (it.moveToFirst()) it.getString(0) else null }
-                } catch (_: Exception) { null }
-            }
-
-            // Build final list
-            for (raw in rawCalls) {
-                val spamResult = spamCache[raw.number]
-                calls.add(RecentCall(
-                    number = raw.number,
-                    type = raw.type,
-                    date = raw.date,
-                    duration = raw.duration,
-                    isSpam = spamResult?.isSpam ?: false,
-                    spamReason = spamResult?.matchSource ?: "",
-                    contactName = contactCache[raw.number]
-                ))
-            }
+        } catch (_: SecurityException) {
         }
-    } catch (_: SecurityException) {}
-    calls
-}
+        calls
+    }
 
 private data class RecentFilterOption(
     val mode: Int,
@@ -536,35 +642,40 @@ private fun RecentCallsSummaryCard(
     onRefresh: () -> Unit,
 ) {
     val formatter = remember { NumberFormat.getIntegerInstance() }
-    PremiumCard(accentColor = CatBlue, modifier = Modifier
-        .fillMaxWidth()
-        .padding(horizontal = 16.dp, vertical = 12.dp)) {
+    PremiumCard(
+        accentColor = CatBlue,
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+    ) {
         Column(
             modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+            verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     SectionHeader(stringResource(R.string.recent_summary_title), CatBlue)
                     Text(
                         stringResource(R.string.recent_summary_subtitle),
                         style = MaterialTheme.typography.bodySmall,
-                        color = CatSubtext
+                        color = CatSubtext,
                     )
                     StatusPill(
-                        text = if (refreshing) {
-                            stringResource(R.string.recent_summary_refreshing)
-                        } else {
-                            stringResource(R.string.recent_summary_live)
-                        },
+                        text =
+                            if (refreshing) {
+                                stringResource(R.string.recent_summary_refreshing)
+                            } else {
+                                stringResource(R.string.recent_summary_live)
+                            },
                         color = if (refreshing) CatPeach else CatBlue,
                         horizontalPadding = 10.dp,
                         verticalPadding = 6.dp,
-                        textStyle = MaterialTheme.typography.labelSmall
+                        textStyle = MaterialTheme.typography.labelSmall,
                     )
                 }
                 IconButton(onClick = onRefresh, enabled = !refreshing) {
@@ -572,44 +683,44 @@ private fun RecentCallsSummaryCard(
                         CircularProgressIndicator(
                             modifier = Modifier.size(18.dp),
                             strokeWidth = 2.dp,
-                            color = CatBlue
+                            color = CatBlue,
                         )
                     } else {
                         Icon(
                             Icons.Default.Refresh,
                             contentDescription = stringResource(R.string.cd_refresh_recent),
-                            tint = CatBlue
+                            tint = CatBlue,
                         )
                     }
                 }
             }
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 RecentSummaryPill(
                     value = formatter.format(totalCount),
                     label = stringResource(R.string.recent_summary_total),
                     color = CatBlue,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
                 )
                 RecentSummaryPill(
                     value = formatter.format(spamCount),
                     label = stringResource(R.string.recent_summary_spam),
                     color = CatRed,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
                 )
                 RecentSummaryPill(
                     value = formatter.format(missedCount),
                     label = stringResource(R.string.recent_summary_missed),
                     color = CatPeach,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
                 )
                 RecentSummaryPill(
                     value = formatter.format(contactCount),
                     label = stringResource(R.string.recent_summary_known),
                     color = CatGreen,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
                 )
             }
         }
@@ -627,22 +738,22 @@ private fun RecentSummaryPill(
         modifier = modifier,
         color = color.copy(alpha = 0.12f),
         shape = RoundedCornerShape(12.dp),
-        border = BorderStroke(1.dp, color.copy(alpha = 0.18f))
+        border = BorderStroke(1.dp, color.copy(alpha = 0.18f)),
     ) {
         Column(
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(2.dp)
+            verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
             Text(
                 value,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = color
+                color = color,
             )
             Text(
                 label,
                 style = MaterialTheme.typography.labelSmall,
-                color = CatSubtext
+                color = CatSubtext,
             )
         }
     }
@@ -653,53 +764,54 @@ private fun RecentCallsPermissionState(
     onOpenSettings: () -> Unit,
 ) {
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        contentAlignment = Alignment.Center
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+        contentAlignment = Alignment.Center,
     ) {
         PremiumCard(accentColor = CatPeach, modifier = Modifier.fillMaxWidth()) {
             Column(
                 modifier = Modifier.padding(20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 SectionHeader(stringResource(R.string.recent_permission_title), CatPeach)
                 PremiumIconTile(
                     icon = Icons.Default.LockOpen,
                     color = CatPeach,
                     size = 58.dp,
-                    iconSize = 30.dp
+                    iconSize = 30.dp,
                 )
                 Text(
                     stringResource(R.string.recent_permission_title),
                     style = MaterialTheme.typography.titleMedium,
-                    color = CatText
+                    color = CatText,
                 )
                 Text(
                     stringResource(R.string.recent_permission_body),
                     style = MaterialTheme.typography.bodySmall,
-                    color = CatSubtext
+                    color = CatSubtext,
                 )
                 GradientDivider(color = CatPeach)
                 RecentGuidanceRow(
                     icon = Icons.Default.PrivacyTip,
                     title = stringResource(R.string.recent_permission_hint_private_title),
                     subtitle = stringResource(R.string.recent_permission_hint_private_body),
-                    accentColor = CatBlue
+                    accentColor = CatBlue,
                 )
                 RecentGuidanceRow(
                     icon = Icons.Default.Settings,
                     title = stringResource(R.string.recent_permission_hint_recovery_title),
                     subtitle = stringResource(R.string.recent_permission_hint_recovery_body),
-                    accentColor = CatPeach
+                    accentColor = CatPeach,
                 )
                 PremiumActionButton(
                     label = stringResource(R.string.recent_permission_cta),
                     icon = Icons.Default.Settings,
                     color = CatPeach,
                     onClick = onOpenSettings,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 )
             }
         }
@@ -715,29 +827,30 @@ private fun RecentEmptyStateCard(
     onAction: (() -> Unit)? = null,
 ) {
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        contentAlignment = Alignment.Center
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+        contentAlignment = Alignment.Center,
     ) {
         PremiumCard(accentColor = accentColor, modifier = Modifier.fillMaxWidth()) {
             Column(
                 modifier = Modifier.padding(20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 PremiumIconTile(
                     icon = Icons.AutoMirrored.Filled.PhoneMissed,
                     contentDescription = stringResource(R.string.cd_no_recent_calls),
                     color = accentColor,
                     size = 58.dp,
-                    iconSize = 30.dp
+                    iconSize = 30.dp,
                 )
                 Text(title, color = CatText, style = MaterialTheme.typography.titleMedium)
                 Text(
                     subtitle,
                     color = CatSubtext,
-                    style = MaterialTheme.typography.bodySmall
+                    style = MaterialTheme.typography.bodySmall,
                 )
                 if (actionLabel != null && onAction != null) {
                     PremiumActionButton(
@@ -745,7 +858,7 @@ private fun RecentEmptyStateCard(
                         icon = Icons.Default.Refresh,
                         color = accentColor,
                         onClick = onAction,
-                        outlined = true
+                        outlined = true,
                     )
                 }
             }
@@ -763,7 +876,7 @@ private fun RecentGuidanceRow(
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.Top
+        verticalAlignment = Alignment.Top,
     ) {
         PremiumIconTile(icon = icon, color = accentColor, size = 38.dp, iconSize = 18.dp)
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
