@@ -73,6 +73,10 @@ class GitHubDataSource :
             Types.newParameterizedType(List::class.java, String::class.java),
         )
 
+    // Cache of resolved default branch per "owner/repo" → (branch, resolvedAtMs).
+    private val defaultBranchLock = Any()
+    private val defaultBranchCache = mutableMapOf<String, Pair<String, Long>>()
+
     companion object {
         const val DEFAULT_REPO_OWNER = "SysAdminDoc"
         const val DEFAULT_REPO_NAME = "CallShield"
@@ -105,6 +109,9 @@ class GitHubDataSource :
         private const val USER_AGENT = "CallShield/1.0"
         private const val MAX_GITHUB_API_BYTES = 256L * 1024L
         private const val READ_CHUNK_BYTES = 8192L
+
+        /** How long a resolved default branch stays cached before re-querying. */
+        private const val DEFAULT_BRANCH_TTL_MS = 6L * 60L * 60L * 1000L // 6 hours
         private val FALLBACK_BRANCHES = listOf("main", "master")
         private val RAW_FEED_SPECS =
             mapOf(
@@ -404,8 +411,36 @@ class GitHubDataSource :
         owner: String,
         repo: String,
     ): List<String> {
-        val defaultBranch = fetchDefaultBranch(owner, repo).getOrNull()
+        val defaultBranch = cachedDefaultBranch(owner, repo)
         return listOfNotNull(defaultBranch).plus(FALLBACK_BRANCHES).distinct()
+    }
+
+    /**
+     * Resolve the repo's default branch, caching the result per (owner/repo)
+     * for [DEFAULT_BRANCH_TTL_MS]. Every raw-feed fetch used to issue a fresh
+     * unauthenticated `GET /repos/{owner}/{repo}`; a single hot-list refresh
+     * (3 feeds) plus model-weight sync could burn 4+ of GitHub's 60 req/hr
+     * unauthenticated budget, after which all feeds silently fall back to
+     * bundled data. Caching collapses that to one call per TTL window while
+     * still picking up a branch rename within a few hours.
+     */
+    private suspend fun cachedDefaultBranch(
+        owner: String,
+        repo: String,
+    ): String? {
+        val key = "$owner/$repo"
+        val now = System.currentTimeMillis()
+        synchronized(defaultBranchLock) {
+            val cached = defaultBranchCache[key]
+            if (cached != null && now - cached.second < DEFAULT_BRANCH_TTL_MS) {
+                return cached.first
+            }
+        }
+        val resolved = fetchDefaultBranch(owner, repo).getOrNull() ?: return null
+        synchronized(defaultBranchLock) {
+            defaultBranchCache[key] = resolved to now
+        }
+        return resolved
     }
 
     private suspend fun fetchDefaultBranch(

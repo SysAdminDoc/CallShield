@@ -54,6 +54,14 @@ object NotificationHelper {
     private const val STATUS_ID = 2
     private const val RATE_LIMIT_MS = 5_000L // Min 5s between block notifications
     private const val SMS_SAFE_ACTION_SALT = 30
+    private const val FEEDBACK_ID_SALT = 62
+
+    /**
+     * Notification ID for the after-call "Was this spam?" feedback notice.
+     * Single source of truth so the posting site and the action receiver
+     * (which must cancel it after the user taps Spam/Not-Spam) always agree.
+     */
+    fun feedbackNotificationId(number: String): Int = stableId(number, FEEDBACK_ID_SALT)
 
     private var lastNotifTime = 0L
     private var blockedSinceLastNotif = 0
@@ -349,11 +357,12 @@ object NotificationHelper {
                 .setAutoCancel(true)
                 .setPriority(NotificationCompat.PRIORITY_LOW)
 
-        // Distinct notification ID via [stableId] with salt 62 — avoids the
-        // previous `number.hashCode() + 10_000` scheme, which produced IDs
-        // that could collide with blocked-notification IDs from a different
-        // number whose `hashCode()` differed by ~10 000.
-        safeNotify(context, stableId(number, 62), builder)
+        // Distinct notification ID via [feedbackNotificationId] (salt 62) —
+        // avoids the previous `number.hashCode() + 10_000` scheme, which
+        // produced IDs that could collide with blocked-notification IDs from a
+        // different number whose `hashCode()` differed by ~10 000. The action
+        // receiver cancels this same ID when the user taps Spam/Not-Spam.
+        safeNotify(context, feedbackNotificationId(number), builder)
     }
 
     fun notifyRepeatedUrgentAllowed(

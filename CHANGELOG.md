@@ -2,6 +2,34 @@
 
 All notable changes to CallShield will be documented in this file.
 
+## v1.7.14 — 2026-07-20
+
+### Fixed
+
+- **After-call feedback notification is now dismissed by its own action buttons.**
+  The "Was this spam?" notice was posted with one ID (`stableId(number, 62)`) but
+  the Spam / Not-Spam actions cancelled a different, long-abandoned ID
+  (`number.hashCode() + 10000`), leaving the notification stuck on screen. Both
+  sites now use a single shared `NotificationHelper.feedbackNotificationId()`.
+- **Phishing-URL (URLhaus) warnings no longer require SMS spam blocking to be on.**
+  `SmsReceiver` returned early when "Block SMS" was disabled, before the message
+  body was assembled, so the URLhaus malware-URL check could never run. Message
+  extraction and the phishing check now run independently of the block-SMS
+  toggle; only spam classification and block-logging remain gated behind it.
+- **SMS senders no longer pollute the voice-call campaign detector.** SMS checks
+  reuse the voice-call checker chain, so every incoming SMS sender's NPA-NXX was
+  being recorded into the in-memory call-burst detector — a burst of legitimate
+  SMS from one carrier prefix could trip campaign-burst blocking of real voice
+  calls from that prefix. The recorder now ignores SMS-path invocations.
+
+### Changed
+
+- **GitHub default-branch resolution is cached (6 h TTL).** Every raw-feed fetch
+  used to issue a fresh unauthenticated `GET /repos/{owner}/{repo}`; a single
+  hot-list refresh plus model-weight sync could burn several of GitHub's 60
+  requests/hour unauthenticated budget, after which all feeds silently fell back
+  to bundled data. Resolution is now cached per repo.
+
 ## v1.7.13 — 2026-07-20
 
 ### Changed

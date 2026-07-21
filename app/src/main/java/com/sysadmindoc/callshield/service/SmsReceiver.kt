@@ -39,9 +39,7 @@ class SmsReceiver : BroadcastReceiver() {
             try {
                 val prefs = repo.readPrefsSnapshot()
                 stripUrlhausQuery = prefs[SpamRepository.KEY_URLHAUS_STRIP_QUERY] ?: true
-                if (!(prefs[SpamRepository.KEY_BLOCK_SMS] ?: true)) {
-                    return@launch
-                }
+                val blockSmsEnabled = prefs[SpamRepository.KEY_BLOCK_SMS] ?: true
 
                 val messages = Telephony.Sms.Intents.getMessagesFromIntent(intent)
                 if (messages.isNullOrEmpty()) {
@@ -67,15 +65,22 @@ class SmsReceiver : BroadcastReceiver() {
                         }
                     }
 
-                val result = checkSpamSms(sender, body, prefsSnapshot = prefs)
-                if (result.isSpam) {
-                    repo.logBlockedCall(
-                        number = sender,
-                        isCall = false,
-                        smsBody = body,
-                        matchReason = result.matchSource,
-                        confidence = result.confidence,
-                    )
+                // Spam classification + block logging is gated behind the
+                // Block-SMS toggle. The URLhaus phishing-URL check below runs
+                // regardless — a user who turns off SMS spam blocking still
+                // expects malware-URL warnings, and gating both behind one
+                // toggle silently disabled phishing protection.
+                if (blockSmsEnabled) {
+                    val result = checkSpamSms(sender, body, prefsSnapshot = prefs)
+                    if (result.isSpam) {
+                        repo.logBlockedCall(
+                            number = sender,
+                            isCall = false,
+                            smsBody = body,
+                            matchReason = result.matchSource,
+                            confidence = result.confidence,
+                        )
+                    }
                     // NOTE: we deliberately do NOT call abortBroadcast() here.
                     //
                     // abortBroadcast() is only meaningful on ordered broadcasts

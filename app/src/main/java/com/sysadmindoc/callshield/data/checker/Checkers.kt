@@ -464,6 +464,12 @@ internal class RepeatedUrgentChecker(
  *
  * Non-realtime invocations (historical scans) skip the record to avoid
  * flagging old prefixes as active campaigns.
+ *
+ * SMS checks reuse the voice-call checker chain (`isSpamSms` delegates to
+ * `isSpam` with a non-null `smsBody`). The campaign detector tracks *call*
+ * bursts, so SMS senders must not be recorded into it — otherwise a burst of
+ * legitimate SMS from a single carrier prefix could trip campaign-burst
+ * blocking of real voice calls from that same NPA-NXX.
  */
 internal class CampaignRecorderChecker(
     private val campaignDetector: CampaignDetector,
@@ -472,10 +478,24 @@ internal class CampaignRecorderChecker(
     override val name = "campaign_recorder"
 
     override suspend fun check(ctx: CheckContext): BlockResult? {
-        if (ctx.realtimeCall) {
+        if (shouldRecord(realtimeCall = ctx.realtimeCall, isSms = ctx.smsBody != null)) {
             campaignDetector.recordCall(ctx.number)
         }
         return null // never blocks
+    }
+
+    companion object {
+        /**
+         * Record only live *voice* calls. Historical re-scans (`realtimeCall`
+         * false) must not fabricate active campaigns, and SMS checks (non-null
+         * `smsBody`, which reuse this call chain) must not feed the call-burst
+         * detector — otherwise an SMS burst from one prefix could trip
+         * campaign-burst blocking of real voice calls from that NPA-NXX.
+         */
+        fun shouldRecord(
+            realtimeCall: Boolean,
+            isSms: Boolean,
+        ): Boolean = realtimeCall && !isSms
     }
 }
 
