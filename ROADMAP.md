@@ -682,11 +682,11 @@ Focus areas not covered by prior passes: the Developer-Verification survival pat
 
 ### P2
 
-- [ ] P2 — Shipped ML model is stale v2 (LR-only) and inert at the on-device threshold
-  Why: `data/spam_model_weights.json` is `version=2, trees=0` (logistic-regression fallback only), but the app and `train_spam_model.py` are v3 GBT. Worse, evaluated with the exact on-device inference (`SpamMLScorer.scoreGbt`/LR + `isSpam = score >= threshold`, threshold 0.7), the shipped LR model scores **nothing** as spam (precision=recall=0 on the labeled set) — the ML layer is effectively dead weight in production. Regenerating v3 GBT is the obvious fix, BUT the on-device `scoreGbt` drops sklearn's `init_` prior log-odds, so a freshly-trained v3 model may also under-score at 0.7; validate the on-device GBT metrics with `evaluate_model.py` (which reports on-device inference) BEFORE shipping, and either carry `init_` into the exported model / Kotlin inference or recalibrate the threshold.
-  Evidence: `scripts/evaluate_model.py` output (v2, trees=0, on-device LR prec=rec=0 at 0.7); `data/SpamMLScorer.kt:370-381` (`scoreGbt` has no `init_`); `scripts/train_spam_model.py` (exports trees only, no `init_`); cross-ref 2.2.5
-  Touches: `scripts/train_spam_model.py` (export `init_`?), `data/SpamMLScorer.kt` (`scoreGbt` init term), `data/spam_model_weights.json` (regenerate v3), `data/spam_numbers.json` version bump
-  Acceptance: the committed model is v3 GBT; `evaluate_model.py` shows the on-device GBT inference achieves non-trivial precision/recall at the shipped threshold (not 0/0); the LR fallback path stays sane; existing `SpamMLScorer` tests pass.
+- [ ] P2 — Improve on-device GBT recall (carry sklearn `init_` or recalibrate threshold)
+  Why: The committed model is now v3 GBT (regenerated — was a dead v2 LR file scoring 0/0), but the on-device inference (`SpamMLScorer.scoreGbt`) drops sklearn's `init_` prior log-odds, so at threshold 0.7 it is high-precision / low-recall: precision≈0.985 but recall≈0.283 (per `evaluate_model.py`). Safe and conservative, but the ML layer catches only ~28% of spam it could. Either export `init_` from `train_spam_model.py` and add it to `scoreGbt`, or recalibrate the threshold to trade a little precision for materially more recall — validate the new FP/FN balance with `evaluate_model.py` before shipping.
+  Evidence: `scripts/evaluate_model.py` on-device GBT metrics (0.985/0.283 @ 0.7); `data/SpamMLScorer.kt:370-381` (`scoreGbt` has no `init_`); `scripts/train_spam_model.py` (`export_tree` omits `init_`); cross-ref 2.2.5
+  Touches: `scripts/train_spam_model.py` (export `init_`), `data/SpamMLScorer.kt` (`scoreGbt` init term / threshold), `data/spam_model_weights.json` (regenerate), `SpamMLScorerGbtTest.kt`
+  Acceptance: `evaluate_model.py` shows on-device GBT recall materially above 0.28 without precision dropping below ~0.90; `SpamMLScorer` tests updated/passing; threshold/`init_` change documented.
   Complexity: M
 
 ### P3
