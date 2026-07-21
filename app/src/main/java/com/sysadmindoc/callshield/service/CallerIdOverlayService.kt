@@ -51,6 +51,12 @@ class CallerIdOverlayService : Service() {
     private var lookupJob: Job? = null
     private var dismissRunnable: Runnable? = null
 
+    // Call-state watcher so the overlay dismisses when the call actually ends,
+    // instead of lingering for the full 20 s backstop. Held as Any?/nullable so
+    // the API 31+ TelephonyCallback type is never referenced on older devices.
+    private var callStateCallback: Any? = null
+    private var phoneStateListener: android.telephony.PhoneStateListener? = null
+
     @Volatile private var isOverlayActive = false
 
     @Volatile private var activeSessionId = 0L
@@ -342,10 +348,90 @@ class CallerIdOverlayService : Service() {
             return null
         }
 
-        // Auto-dismiss after 20 seconds (longer now since we're showing lookup results)
+        // Auto-dismiss after 20 seconds (backstop). The call-state watcher below
+        // dismisses sooner, right when the call ends, so a 2-3 s blocked/rejected
+        // call's overlay doesn't hover over unrelated UI for the full 20 s.
         dismissRunnable = Runnable { dismiss(sessionId) }
         handler.postDelayed(dismissRunnable!!, 20_000)
+        registerCallStateWatcher(sessionId)
         return sessionId
+    }
+
+    /**
+     * Dismiss the overlay when the phone returns to [TelephonyManager.CALL_STATE_IDLE].
+     * Permission-gated and best-effort: if READ_PHONE_STATE isn't granted or
+     * registration fails, the 20 s handler backstop still dismisses the overlay,
+     * so current behavior is never regressed.
+     */
+    private fun registerCallStateWatcher(sessionId: Long) {
+        try {
+            if (checkSelfPermission(android.Manifest.permission.READ_PHONE_STATE) !=
+                android.content.pm.PackageManager.PERMISSION_GRANTED
+            ) {
+                return
+            }
+            val tm = getSystemService(android.telephony.TelephonyManager::class.java) ?: return
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                registerModernCallStateWatcher(tm, sessionId)
+            } else {
+                @Suppress("DEPRECATION")
+                val listener =
+                    object : android.telephony.PhoneStateListener() {
+                        @Deprecated("Legacy pre-API-31 call-state listener")
+                        override fun onCallStateChanged(
+                            state: Int,
+                            phoneNumber: String?,
+                        ) {
+                            if (state == android.telephony.TelephonyManager.CALL_STATE_IDLE) {
+                                dismiss(sessionId)
+                            }
+                        }
+                    }
+                phoneStateListener = listener
+                @Suppress("DEPRECATION")
+                tm.listen(listener, android.telephony.PhoneStateListener.LISTEN_CALL_STATE)
+            }
+        } catch (_: Exception) {
+            // Best-effort — the 20 s handler backstop guarantees dismissal.
+        }
+    }
+
+    @androidx.annotation.RequiresApi(android.os.Build.VERSION_CODES.S)
+    private fun registerModernCallStateWatcher(
+        tm: android.telephony.TelephonyManager,
+        sessionId: Long,
+    ) {
+        val callback =
+            object :
+                android.telephony.TelephonyCallback(),
+                android.telephony.TelephonyCallback.CallStateListener {
+                override fun onCallStateChanged(state: Int) {
+                    if (state == android.telephony.TelephonyManager.CALL_STATE_IDLE) {
+                        dismiss(sessionId)
+                    }
+                }
+            }
+        callStateCallback = callback
+        tm.registerTelephonyCallback(mainExecutor, callback)
+    }
+
+    private fun unregisterCallStateWatcher() {
+        try {
+            val tm = getSystemService(android.telephony.TelephonyManager::class.java)
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                (callStateCallback as? android.telephony.TelephonyCallback)?.let {
+                    tm?.unregisterTelephonyCallback(it)
+                }
+            } else {
+                @Suppress("DEPRECATION")
+                phoneStateListener?.let { tm?.listen(it, android.telephony.PhoneStateListener.LISTEN_NONE) }
+            }
+        } catch (_: Exception) {
+            // ignore
+        } finally {
+            callStateCallback = null
+            phoneStateListener = null
+        }
     }
 
     /**
@@ -650,6 +736,7 @@ class CallerIdOverlayService : Service() {
         }
         cancelLookup()
         clearDismissCallback()
+        unregisterCallStateWatcher()
         handler.removeCallbacksAndMessages(null)
         deactivateOverlaySession()
         removeOverlay()
@@ -691,6 +778,7 @@ class CallerIdOverlayService : Service() {
     override fun onDestroy() {
         cancelLookup()
         clearDismissCallback()
+        unregisterCallStateWatcher()
         deactivateOverlaySession()
         handler.removeCallbacksAndMessages(null)
         removeOverlay()
