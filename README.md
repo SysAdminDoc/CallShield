@@ -12,7 +12,7 @@
 <p align="center">
   <a href="https://github.com/SysAdminDoc/CallShield/releases/latest"><img src="https://img.shields.io/github/v/release/SysAdminDoc/CallShield?style=flat-square&color=a6e3a1" alt="Release"></a>
   <img src="https://img.shields.io/badge/Spam%20Numbers-32%2C933-f38ba8?style=flat-square" alt="32,933 Numbers">
-  <img src="https://img.shields.io/badge/Tests-711-94e2d5?style=flat-square" alt="711 Tests">
+  <img src="https://img.shields.io/badge/Tests-730-94e2d5?style=flat-square" alt="730 Tests">
   <img src="https://img.shields.io/badge/Android-10%2B-89b4fa?style=flat-square" alt="Android 10+">
   <img src="https://img.shields.io/badge/License-MIT-cba6f7?style=flat-square" alt="MIT License">
   <img src="https://img.shields.io/badge/API%20Keys-None-fab387?style=flat-square" alt="No required API keys">
@@ -21,6 +21,21 @@
 ---
 
 CallShield blocks spam calls and texts using a **15+ layer on-device detection engine** with a gradient-boosted tree ML scorer, campaign burst detection, RCS notification filter, and real-time caller ID overlay. Powered by a 32,933-number database with scheduled hot-list updates. Community-maintained, no accounts, no tracking.
+
+## v1.7.14 Highlights
+
+- **Correctness fixes** — the after-call "Was this spam?" notification now
+  dismisses when you tap its buttons; phishing-URL (URLhaus) warnings no longer
+  require SMS blocking to be on; and a burst of legitimate SMS from one carrier
+  prefix can no longer trip campaign blocking of real voice calls.
+- **Caller-ID overlay dismisses when the call ends** instead of lingering for a
+  fixed 20 seconds.
+- **RTL-safe numbers** — phone numbers are bidi-isolated in notifications so they
+  render correctly inside Arabic/Hebrew text.
+- **Hardening** — malformed ML fallback weights are rejected instead of silently
+  zeroed; GitHub default-branch lookups are cached to avoid rate-limit
+  exhaustion; RCS encrypted-message placeholders are detected across more
+  languages; CVE-2026-53914 build-cache posture documented.
 
 ## v1.7.13 Highlights
 
@@ -106,7 +121,7 @@ CallShield blocks spam calls and texts using a **15+ layer on-device detection e
 5. **Callback-aware** — won't block callbacks from numbers you recently called, answered repeatedly, after a local emergency call, or urgent repeated callers
 6. **Community-driven** — one-tap anonymous contribution via Cloudflare Worker, daily merge into database
 
-## Detection Pipeline (v1.7.13)
+## Detection Pipeline (v1.7.14)
 
 All detection layers implement a shared `IChecker` interface and run in priority order via `CheckerPipeline.run` — first non-null result wins, every layer is testable in isolation. Priorities are stable numbers; the ladder below is the live order.
 
