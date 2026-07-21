@@ -420,13 +420,14 @@ object BackupRestore {
     ): RestorePreviewResult =
         withContext(Dispatchers.IO) {
             try {
+                // Bounded read — a huge/hostile backup file is rejected rather
+                // than materialized whole into memory before validation.
                 val json =
-                    context.contentResolver.openInputStream(uri)?.use { stream ->
-                        stream.bufferedReader().readText()
-                    } ?: return@withContext RestorePreviewResult(
-                        false,
-                        context.getString(R.string.backup_restore_could_not_read),
-                    )
+                    context.contentResolver.openInputStream(uri)?.readTextBounded()
+                        ?: return@withContext RestorePreviewResult(
+                            false,
+                            context.getString(R.string.backup_restore_could_not_read),
+                        )
 
                 previewRestoreJson(context, json, AppDatabase.getInstance(context).spamDao(), sections)
             } catch (e: Exception) {

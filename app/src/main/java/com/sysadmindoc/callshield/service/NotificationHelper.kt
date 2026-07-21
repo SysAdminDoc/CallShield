@@ -192,6 +192,10 @@ object NotificationHelper {
                 .setContentIntent(openIntent)
                 .setAutoCancel(true)
                 .setGroup(GROUP_BLOCKED)
+                // Android 16 auto-groups same-app notifications and cooldown-mutes
+                // rapid children. Alert via the summary only so a burst of blocks
+                // stays a single coherent, non-muted group.
+                .setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_SUMMARY)
                 .addAction(android.R.drawable.ic_menu_close_clear_cancel, context.getString(R.string.notif_action_block_forever), blockIntent)
                 .addAction(android.R.drawable.ic_menu_send, context.getString(R.string.notif_action_report), reportIntent)
         builder.addSmsSafeAction(context, number, nid, isCall)
@@ -267,6 +271,7 @@ object NotificationHelper {
                 .setContentText(summaryText)
                 .setGroup(GROUP_BLOCKED)
                 .setGroupSummary(true)
+                .setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_SUMMARY)
                 .setAutoCancel(true)
         safeNotify(context, SUMMARY_ID, summary)
     }

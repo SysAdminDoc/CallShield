@@ -96,6 +96,7 @@ object BlocklistExporter {
             .asSequence()
             .mapNotNull(::sanitizeImportEntry)
             .distinctBy { it.number }
+            .take(MAX_IMPORT_ROWS)
             .toList()
     }
 
@@ -131,14 +132,21 @@ object BlocklistExporter {
     ): ImportResult =
         withContext(Dispatchers.IO) {
             try {
-                val json =
-                    context.contentResolver
-                        .openInputStream(uri)
-                        ?.bufferedReader()
-                        ?.use { it.readText() }
+                val stream =
+                    context.contentResolver.openInputStream(uri)
                         ?: return@withContext ImportResult(
                             importedCount = 0,
                             message = context.getString(R.string.blocklist_import_could_not_open),
+                            success = false,
+                        )
+                // Bounded read — reject a pathologically large file instead of
+                // materializing it whole into memory (OOM guard at the import
+                // trust boundary).
+                val json =
+                    stream.readTextBounded()
+                        ?: return@withContext ImportResult(
+                            importedCount = 0,
+                            message = context.getString(R.string.blocklist_import_fallback_read_error),
                             success = false,
                         )
                 if (json.isBlank()) {
