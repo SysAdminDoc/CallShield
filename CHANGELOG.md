@@ -2,6 +2,51 @@
 
 All notable changes to CallShield will be documented in this file.
 
+## v1.7.17 — 2026-07-21
+
+Reliability drain — background-execution survival, corrupt-DB recovery, bounded
+digest, and off-device test coverage of the receiver hot paths.
+
+### Added
+
+- **OEM background-kill risk detection.** `BackgroundExecutionStatus` classifies
+  the AOSP-portable risk that an aggressive battery manager (MIUI/HyperOS
+  autostart, Samsung, ColorOS) silently kills sync and unbinds the listener,
+  using `ActivityManager.isBackgroundRestricted()` +
+  `PowerManager.isIgnoringBatteryOptimizations()`, with a best-effort MIUI
+  autostart probe and the settings intent to fix it.
+- **Sync-staleness predicate.** `SyncFreshness` flags when local hot-campaign
+  data has decayed past a configurable threshold (default 3× the 6h cadence),
+  so protection quietly falling back to the bundled snapshot can be surfaced.
+- **Robolectric harness.** Adopted Robolectric 4.16 (no `returnDefaultValues`)
+  with real-framework tests over `SpamActionReceiver` (notification-cancel hot
+  path) and a pure `SmsReceiver.reassembleBody` multipart 16 KB-cap helper.
+
+### Changed
+
+- **Bounded daily digest.** `DigestWorker` computes blocked/call/SMS counts via
+  aggregate SQL and reads only the short `matchReason` column for the source
+  breakdown, instead of materializing the full 24 h `call_log` window (including
+  message bodies) in a constrained background process.
+- **Dependency freshness.** OkHttp 5.3.2 → 5.4.0, Moshi 1.15.1 → 1.15.2 (the
+  AGP-8-safe subset; core-ktx/activity-compose/navigation upgrades require AGP 9
+  and stay in the blocked tranche).
+
+### Fixed
+
+- **RCS filter self-heals after an OS unbind.** `RcsNotificationListener` now
+  `requestRebind()`s in `onListenerDisconnected()`, so a low-memory/app-update/
+  OEM unbind no longer silently stops all RCS filtering and push-alert capture
+  until reboot.
+- **Protection re-asserted on in-place update.** `BootReceiver` now also handles
+  `MY_PACKAGE_REPLACED` (auto-update without reboot), reschedules the pending
+  blocked-call-log worker, and rebinds the notification listener alongside the
+  existing worker reschedules.
+- **Corrupt database no longer fails open forever.** The call screener detects
+  on-disk SQLite corruption in its fail-open catch, rebuilds a clean database,
+  and re-syncs from GitHub/bundled data instead of allowing every call through
+  indefinitely with no signal.
+
 ## v1.7.16 — 2026-07-21
 
 ### Added
