@@ -361,6 +361,40 @@ object CallShieldPermissions {
             contract.grantedDetailRes
         }
 
+    /**
+     * True when a contacts-dependent screening mode is enabled but
+     * `READ_CONTACTS` is currently denied — a silent protection degradation.
+     * Contacts-only mode and the contact-whitelist layer both resolve to "no
+     * opinion" (null) when the permission is missing, so the user believes
+     * contacts are trusted/gating while the layer is actually inert. The base
+     * readiness matrix reports `READ_CONTACTS` as a generic degraded row but
+     * does not tie it to the *enabled mode*; this predicate does.
+     *
+     * Pure (boolean-in, boolean-out) so it is unit-testable off-device; the
+     * mode flags come from the caller's DataStore snapshot to avoid a
+     * permissions→data layering dependency.
+     */
+    fun isContactsModeDegraded(
+        contactWhitelistEnabled: Boolean,
+        contactsOnlyEnabled: Boolean,
+        readContactsGranted: Boolean,
+    ): Boolean = (contactWhitelistEnabled || contactsOnlyEnabled) && !readContactsGranted
+
+    /**
+     * Live overload: reads the current `READ_CONTACTS` grant, with the enabled
+     * mode flags supplied by the caller (they own the DataStore read).
+     */
+    fun isContactsModeDegraded(
+        context: Context,
+        contactWhitelistEnabled: Boolean,
+        contactsOnlyEnabled: Boolean,
+    ): Boolean =
+        isContactsModeDegraded(
+            contactWhitelistEnabled = contactWhitelistEnabled,
+            contactsOnlyEnabled = contactsOnlyEnabled,
+            readContactsGranted = isPermissionGranted(context, Manifest.permission.READ_CONTACTS),
+        )
+
     fun isPermissionGranted(
         context: Context,
         permission: String,

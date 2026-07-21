@@ -581,13 +581,6 @@ Fresh 30+ source sweep (SpamBlocker 2026 releases + issue tracker, SpamBlocker E
   Acceptance: an instrumented test binds the service (or a faithful harness), drives a screening call cold, and asserts a verdict is produced well under 5s; latency is recorded; a startup profile covering the screening path is generated.
   Complexity: M
 
-- [ ] P2 — Warn on runtime revocation of contacts permission while contacts-only mode is on
-  Why: Contacts-only / contact-whitelist modes degrade silently to null behavior if `READ_CONTACTS` is revoked after enablement, quietly weakening protection. The degraded-mode matrix exists but does not surface this specific runtime transition.
-  Evidence: code recon of contacts-only path + `permissions/CallShieldPermissions.kt`; `ContactWhitelistChecker`/`ContactsOnlyChecker` in `Checkers.kt`
-  Touches: `CallShieldPermissions.kt`, dashboard/protection-diagnostics surfaces, settings toggle guard
-  Acceptance: if a contacts-dependent mode is enabled but `READ_CONTACTS` is currently denied, the dashboard/settings show an actionable degraded-mode warning; re-granting clears it; covered by a readiness-matrix test.
-  Complexity: S
-
 ### P3
 
 ## Research-Driven Additions (2026-07-20 pass 2 — code audit + distribution/a11y/i18n sweep)

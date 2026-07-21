@@ -3,6 +3,7 @@ package com.sysadmindoc.callshield.permissions
 import android.Manifest
 import com.sysadmindoc.callshield.R
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -92,6 +93,47 @@ class CallShieldPermissionsTest {
 
         assertTrue(state.passed)
         assertEquals(R.string.permission_contract_post_notifications_not_required, state.detailRes)
+    }
+
+    @Test
+    fun `contacts mode degraded when a contacts-dependent mode is on but READ_CONTACTS denied`() {
+        // Contact-whitelist on, permission denied → degraded.
+        assertTrue(
+            CallShieldPermissions.isContactsModeDegraded(
+                contactWhitelistEnabled = true,
+                contactsOnlyEnabled = false,
+                readContactsGranted = false,
+            ),
+        )
+        // Contacts-only on, permission denied → degraded.
+        assertTrue(
+            CallShieldPermissions.isContactsModeDegraded(
+                contactWhitelistEnabled = false,
+                contactsOnlyEnabled = true,
+                readContactsGranted = false,
+            ),
+        )
+    }
+
+    @Test
+    fun `contacts mode not degraded when permission granted or no contacts mode enabled`() {
+        // Modes on but permission granted → fine.
+        assertFalse(
+            CallShieldPermissions.isContactsModeDegraded(
+                contactWhitelistEnabled = true,
+                contactsOnlyEnabled = true,
+                readContactsGranted = true,
+            ),
+        )
+        // No contacts-dependent mode enabled, permission denied → not degraded
+        // (nothing depends on contacts).
+        assertFalse(
+            CallShieldPermissions.isContactsModeDegraded(
+                contactWhitelistEnabled = false,
+                contactsOnlyEnabled = false,
+                readContactsGranted = false,
+            ),
+        )
     }
 
     @Test
