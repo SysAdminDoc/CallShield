@@ -18,6 +18,10 @@ All notable changes to CallShield will be documented in this file.
   blocked-event notifications and their summary now use `GROUP_ALERT_SUMMARY`,
   so a burst of blocks alerts through the single group summary rather than
   per-child — keeping protection activity visible without being cooldown-muted.
+- **On-device ML model health is now observable.** A corrupt or incompatible
+  model payload that silently fell back to logistic regression (or failed to
+  parse during sync) is now recorded as a typed `ModelHealth` state and logged,
+  instead of degrading detection quality with no signal.
 
 Deep audit pass — correctness, data-safety, and security hardening in the
 data/persistence/network layers.
