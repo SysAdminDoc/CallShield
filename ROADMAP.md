@@ -681,13 +681,6 @@ Focus areas not covered by prior passes: the Developer-Verification survival pat
 
 ### P1
 
-- [ ] P1 — Accrescent packaging readiness (`.apks` split set + single-cert non-debug signing)
-  Why: Developer Verification starts 2026-09-30 (BR/ID/SG/TH) and expands globally through 2027; F-Droid has said it cannot comply. Accrescent has *already registered itself* in the verification program (GrapheneOS-default), so a developer-submitted `.apks` is the viable survival path. But Accrescent rejects debug-signed and multi-cert APKs and wants a bundletool `.apks` set, and CallShield's current release artifact is debug-key-signed. This is the *actionable* half of the operator-gated "Developer Verification readiness" item and of the blocked "Accrescent submission" (registration) item — do the packaging now so a listing is one operator decision away.
-  Evidence: https://blog.accrescent.app/posts/android-developer-verification/ ; https://accrescent.app/docs/guide/publish/requirements.html (v2/v3/v3.1, no debug cert, single cert, bundletool ≥1.11.4, `.apks` ≤150 MiB, 512×512 PNG icon); cross-ref P1 "Google Developer Verification readiness" (this roadmap) and Roadmap_Blocked "Accrescent submission"
-  Touches: `app/build.gradle.kts` (add `bundleRelease` + a bundletool/`accrescent/bundletool-gradle-plugin` `.apks` task, or a `scripts/build-accrescent-apks.ps1`), release signing config (real `callshield-release.jks`, v3.1, single cert — creds operator-supplied), a 512×512 launcher PNG, `fastlane/metadata`
-  Acceptance: `./gradlew bundleRelease` + a documented step produces a validated `.apks` set signed with a single non-debug cert, ≤150 MiB, with a 512×512 icon; a dry-run passes Accrescent's documented validation checks; the signing-key requirement (real release key, not debug) is documented. (Actual submission remains the operator-gated identity decision.)
-  Complexity: M
-
 ### P2
 
 ### P3
