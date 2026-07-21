@@ -675,9 +675,3 @@ Fresh sweep on under-covered angles: OEM background-execution survival, distribu
   Acceptance: after-call/caller-ID notifications render as `CallStyle` on API 31+; sync/persistent-protection notification uses `ProgressStyle` on API 36 with graceful fallback below; no regression on older APIs.
   Complexity: M
 
-- [ ] P3 — Dependency freshness bumps deferred to the AGP 9 tranche
-  Why: OkHttp 5.3.2→5.4.0 and Moshi 1.15.1→1.15.2 shipped (pure-JVM, AGP-agnostic). The remaining candidates from the 2026-07-21 sweep are NOT AGP-8-safe despite the earlier note: core-ktx 1.19.0 hard-requires AGP 9.1.0, and activity-compose 1.12.0 / navigation-compose 2.9.5 require compileSdk 37 (AGP 9). Hilt 2.60.1 is likewise AGP-9-gated (see §1.6). These belong with the Compose/lifecycle/Kotlin/AGP 9 tranche in `Roadmap_Blocked.md`, not here.
-  Evidence: build error — `androidx.core:core-ktx:1.19.0 requires Android Gradle plugin 9.1.0`; compileSdk-37 requirement from activity/navigation; §1.6 Hilt AGP-9 pin.
-  Touches: `gradle/libs.versions.toml` (with the AGP 9 upgrade)
-  Acceptance: folded into the AGP 9 upgrade in `Roadmap_Blocked.md`.
-  Complexity: S
