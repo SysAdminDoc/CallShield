@@ -110,9 +110,39 @@ class SpamHeuristics
                 "1900", // US premium with country code
             )
 
-        // Known international wangiri/premium rate country codes
-        // These originate one-ring scam calls (wangiri) to bait callbacks to premium numbers.
-        private val wangiriCountryCodes =
+        // Caribbean NANP area codes that genuinely share the +1 country code and
+        // are heavily abused for wangiri/premium callback scams. These are the
+        // ONLY codes that may be matched against a +1 NANP number's area code.
+        // (They are not mainland US/CA geographic NPAs, so matching them can't
+        // hard-block a legitimate domestic caller.)
+        private val caribbeanWangiriNpas =
+            setOf(
+                "284", // British Virgin Islands
+                "649", // Turks and Caicos
+                "767", // Dominica
+                "809", // Dominican Republic
+                "829", // Dominican Republic
+                "849", // Dominican Republic
+                "876", // Jamaica
+                "268", // Antigua
+                "473", // Grenada
+                "664", // Montserrat
+                "721", // Sint Maarten
+                "758", // Saint Lucia
+                "784", // Saint Vincent
+                "868", // Trinidad & Tobago
+                "869", // Saint Kitts
+            )
+
+        // Non-NANP international country codes that originate wangiri scam calls.
+        // These are matched ONLY against genuinely international (+cc, cc != 1)
+        // numbers. Several of these digit strings collide with real US/Canada
+        // area codes (e.g. 224 Chicago, 248 Detroit, 252 Greenville NC, 267
+        // Philadelphia, 269 Kalamazoo, 385 Salt Lake City, 386 Daytona, 672
+        // Vancouver, 678 Atlanta) — matching them against +1 numbers previously
+        // hard-blocked legitimate domestic callers, so they are never applied to
+        // NANP numbers now.
+        private val internationalWangiriCountryCodes =
             setOf(
                 // Africa (high wangiri origination)
                 "232", // Sierra Leone
@@ -139,22 +169,6 @@ class SpamHeuristics
                 "386", // Slovenia (some premium exchanges)
                 "387", // Bosnia and Herzegovina
                 "389", // North Macedonia
-                // Caribbean (heavily abused — share +1 country code but distinct NPA)
-                "284", // British Virgin Islands (+1-284)
-                "649", // Turks and Caicos (+1-649)
-                "767", // Dominica (+1-767)
-                "809", // Dominican Republic (+1-809)
-                "829", // Dominican Republic (+1-829)
-                "849", // Dominican Republic (+1-849)
-                "876", // Jamaica (+1-876)
-                "268", // Antigua (+1-268)
-                "473", // Grenada (+1-473)
-                "664", // Montserrat (+1-664)
-                "721", // Sint Maarten (+1-721)
-                "758", // Saint Lucia (+1-758)
-                "784", // Saint Vincent (+1-784)
-                "868", // Trinidad & Tobago (+1-868)
-                "869", // Saint Kitts (+1-869)
                 // Pacific / other
                 "672", // Norfolk Island
                 "674", // Nauru
@@ -167,22 +181,44 @@ class SpamHeuristics
                 "692", // Marshall Islands
             )
 
+        /**
+         * Area code of a NANP number, or null if [clean] (digits only, no `+`)
+         * isn't NANP-shaped. Handles both bare 10-digit and 11-digit `1`-prefixed
+         * forms — `normalizePhoneNumber` does not add a `+1`, so both occur.
+         */
+        private fun nanpAreaCode(clean: String): String? =
+            when {
+                clean.length == 11 && clean.startsWith("1") -> clean.substring(1, 4)
+                clean.length == 10 -> clean.substring(0, 3)
+                else -> null
+            }
+
         fun isInternationalPremium(number: String): Boolean {
+            // 900/976 are US/CA NANP premium NPAs. A genuinely international
+            // number (+cc, cc != 1) that merely starts with those digits — e.g.
+            // Mongolia (+976) — is not a US premium line, so never flag it.
             val clean = number.removePrefix("+")
-            return premiumCountryCodes.any { clean.startsWith(it) }
+            if (number.startsWith("+") && !clean.startsWith("1")) return false
+            val npa = nanpAreaCode(clean) ?: return false
+            return npa == "900" || npa == "976"
         }
 
         fun isWangiriCountryCode(number: String): Boolean {
+            val hasPlus = number.startsWith("+")
             val clean = number.removePrefix("+")
-            if (clean.startsWith("1") && clean.length == 11) {
-                // +1 number — check the NPA (area code) against Caribbean wangiri NPAs.
-                // The wangiriCountryCodes set includes Caribbean NPAs like 876 (Jamaica),
-                // 284 (BVI), 649 (Turks & Caicos), etc. that share the +1 country code
-                // but are heavily abused for wangiri/premium-rate callback scams.
-                val npa = clean.substring(1, 4)
-                return npa in wangiriCountryCodes
+            // Genuinely international (+cc, cc != 1): match the country-code prefix.
+            if (hasPlus && !clean.startsWith("1")) {
+                return internationalWangiriCountryCodes.any { clean.startsWith(it) }
             }
-            return wangiriCountryCodes.any { clean.startsWith(it) }
+            // NANP number (+1… or bare 10/11-digit): only genuine Caribbean +1
+            // NPAs count — never the international codes, which collide with real
+            // domestic area codes.
+            val npa = nanpAreaCode(clean)
+            return if (npa != null) {
+                npa in caribbeanWangiriNpas
+            } else {
+                internationalWangiriCountryCodes.any { clean.startsWith(it) }
+            }
         }
 
         // ── VoIP Range Detection ───────────────────────────────────────────

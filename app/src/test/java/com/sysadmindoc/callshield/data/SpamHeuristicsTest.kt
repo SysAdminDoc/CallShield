@@ -96,7 +96,10 @@ class SpamHeuristicsTest {
 
     @Test
     fun `isWangiriCountryCode detects Somalia 252`() {
-        assertTrue(SpamHeuristics.isWangiriCountryCode("2521234567"))
+        // Genuine international form (+252…). A bare 10-digit "252…" is a domestic
+        // NANP number (252 = Greenville NC) and must NOT be flagged — see the
+        // regression test below.
+        assertTrue(SpamHeuristics.isWangiriCountryCode("+2521234567"))
     }
 
     @Test
@@ -106,8 +109,25 @@ class SpamHeuristicsTest {
 
     @Test
     fun `isWangiriCountryCode detects Jamaica 876 (Caribbean)`() {
-        // Jamaica uses +1-876 format but code checks if clean starts with "876"
-        assertTrue(SpamHeuristics.isWangiriCountryCode("+8761234567"))
+        // Jamaica is a +1-876 NANP number; its NPA matches the Caribbean set.
+        assertTrue(SpamHeuristics.isWangiriCountryCode("+18761234567"))
+    }
+
+    @Test
+    fun `isWangiriCountryCode does not flag legitimate US area codes`() {
+        // Regression: these NPAs collide with international wangiri country codes
+        // but are real US/CA area codes and must not be hard-blocked.
+        assertFalse(SpamHeuristics.isWangiriCountryCode("+16785551234")) // Atlanta 678
+        assertFalse(SpamHeuristics.isWangiriCountryCode("+12675551234")) // Philadelphia 267
+        assertFalse(SpamHeuristics.isWangiriCountryCode("+13855551234")) // Salt Lake City 385
+        assertFalse(SpamHeuristics.isWangiriCountryCode("2245551234")) // Chicago 224 (bare 10-digit)
+        assertFalse(SpamHeuristics.isWangiriCountryCode("+12525551234")) // Greenville NC 252
+    }
+
+    @Test
+    fun `isWangiriCountryCode still detects Caribbean numbers via plus-one`() {
+        assertTrue(SpamHeuristics.isWangiriCountryCode("+18091234567")) // Dominican Republic 809
+        assertTrue(SpamHeuristics.isWangiriCountryCode("+12681234567")) // Antigua 268
     }
 
     @Test
@@ -157,6 +177,13 @@ class SpamHeuristicsTest {
     @Test
     fun `isInternationalPremium returns false for regular number`() {
         assertFalse(SpamHeuristics.isInternationalPremium("2125551234"))
+    }
+
+    @Test
+    fun `isInternationalPremium does not flag international numbers sharing 900 or 976 digits`() {
+        // Regression: Mongolia is +976; it is not a US 900/976 premium line.
+        assertFalse(SpamHeuristics.isInternationalPremium("+9761234567")) // Mongolia
+        assertTrue(SpamHeuristics.isInternationalPremium("+19765551234")) // US +1-976 premium
     }
 
     // ── isHighSpamVoipRange ──────────────────────────────────────────────
