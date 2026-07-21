@@ -675,3 +675,48 @@ Fresh sweep on under-covered angles: OEM background-execution survival, distribu
   Acceptance: after-call/caller-ID notifications render as `CallStyle` on API 31+; sync/persistent-protection notification uses `ProgressStyle` on API 36 with graceful fallback below; no regression on older APIs.
   Complexity: M
 
+## Research-Driven Additions (2026-07-21 pass 3 — distribution survival + detection reality-check, anchored to v1.7.18)
+
+Focus areas not covered by prior passes: the Developer-Verification survival path (Accrescent, which self-registered — the option F-Droid can't offer), release-signing hygiene, model-retrain reproducibility, and closing an infeasible detection tranche. The reliability/survival backlog from the 2026-07-21 (v1.7.16) pass is now shipped (v1.7.17–v1.7.18).
+
+### P1
+
+- [ ] P1 — Accrescent packaging readiness (`.apks` split set + single-cert non-debug signing)
+  Why: Developer Verification starts 2026-09-30 (BR/ID/SG/TH) and expands globally through 2027; F-Droid has said it cannot comply. Accrescent has *already registered itself* in the verification program (GrapheneOS-default), so a developer-submitted `.apks` is the viable survival path. But Accrescent rejects debug-signed and multi-cert APKs and wants a bundletool `.apks` set, and CallShield's current release artifact is debug-key-signed. This is the *actionable* half of the operator-gated "Developer Verification readiness" item and of the blocked "Accrescent submission" (registration) item — do the packaging now so a listing is one operator decision away.
+  Evidence: https://blog.accrescent.app/posts/android-developer-verification/ ; https://accrescent.app/docs/guide/publish/requirements.html (v2/v3/v3.1, no debug cert, single cert, bundletool ≥1.11.4, `.apks` ≤150 MiB, 512×512 PNG icon); cross-ref P1 "Google Developer Verification readiness" (this roadmap) and Roadmap_Blocked "Accrescent submission"
+  Touches: `app/build.gradle.kts` (add `bundleRelease` + a bundletool/`accrescent/bundletool-gradle-plugin` `.apks` task, or a `scripts/build-accrescent-apks.ps1`), release signing config (real `callshield-release.jks`, v3.1, single cert — creds operator-supplied), a 512×512 launcher PNG, `fastlane/metadata`
+  Acceptance: `./gradlew bundleRelease` + a documented step produces a validated `.apks` set signed with a single non-debug cert, ≤150 MiB, with a 512×512 icon; a dry-run passes Accrescent's documented validation checks; the signing-key requirement (real release key, not debug) is documented. (Actual submission remains the operator-gated identity decision.)
+  Complexity: M
+
+### P2
+
+- [ ] P2 — Release-signing hygiene gate: fail the build if a release APK is debug-signed or multi-cert
+  Why: The release build makes signing conditional on `RELEASE_STORE_*` in `local.properties` and yields an *unsigned* APK (then debug-signed locally) when they're absent (`app/build.gradle.kts:41-69`) — this session's `CallShield-v1.7.18.apk` is debug-signed. Debug/multi-cert releases break key continuity, can't co-install with a real-key build, are rejected by Accrescent, and fail Dev-Verification's single-stable-key prerequisite. A guard turns a silent distribution-blocker into a build-time error.
+  Evidence: `app/build.gradle.kts:41-69` (conditional `signingConfig`); https://accrescent.app/docs/guide/publish/requirements.html (no debug cert, single cert); Android debug cert DN `CN=Android Debug`
+  Touches: a Gradle verification task or `scripts/verify-release-signing.ps1` invoked in the release flow (apksigner `verify --print-certs` → assert non-`CN=Android Debug` and exactly one signer), `docs/reproducible-builds.md`
+  Acceptance: a release build/verify step fails with a clear message if the packaged cert is the Android debug cert or if more than one signer is present; passes for a real-key single-cert build.
+  Complexity: S
+
+- [ ] P2 — Reconcile model-retrain reproducibility (README claims CI retrain; CI is prohibited)
+  Why: README/roadmap describe a "weekly CI retrain" of `spam_model_weights.json`, but GitHub Actions are prohibited by repo policy, so weights cannot auto-retrain — the shipped model is effectively static and the docs mislead. Establish and document a reproducible *local* retrain+eval flow so detection quality (incl. the behavioral features in 2.2.x) can actually improve. Complements 2.6.3 (the eval metrics script) — this item is the doc/flow reconciliation, not the metrics.
+  Evidence: no `.github/workflows/`; README "weekly CI retrain" claim; `scripts/train_spam_model.py` present, `scripts/evaluate_model.py` absent (cross-ref 2.6.3); repo no-GitHub-Actions policy
+  Touches: `scripts/train_spam_model.py`, README (correct the CI-retrain claim), `docs/` (local retrain+eval runbook), `data/spam_model_weights.json`
+  Acceptance: README no longer claims CI retraining; a documented local command retrains + evaluates the model and emits a versioned weights JSON with a schema/threshold check; a dry run is reproducible on this machine.
+  Complexity: S
+
+### P3
+
+- [ ] P3 — Validate STIR PASSporT/attestation exposure, else formally close 2.3.1–2.3.5
+  Why: The public `CallScreeningService` API exposes only `getCallerNumberVerificationStatus()` (PASSED/FAILED/NOT_VERIFIED) — not the raw SIP `Identity`/PASSporT token, attestation A/B/C, or `origid`, which go to the terminating carrier/dialer only. So the roadmap's PASSporT-depth items (2.3.1 full parse, 2.3.2 attest A/B/C display, 2.3.3 `iat` replay guard, 2.3.4 `origid` persistence, 2.3.5 attestation-as-ML-feature) are likely infeasible for a third-party app. Validate on one STIR-capable device; if the token isn't reachable, close 2.3.1–2.3.5 so no one implements dead code. `StirShakenTrustChecker` stays the ceiling.
+  Evidence: https://developer.android.com/develop/connectivity/telecom/dialer-app/prevent-spoofing ; AOSP `telecomm/.../CallScreeningService.java`; `data/StirShakenSemantics.kt` (verdict-only today); cross-ref roadmap 2.3.1–2.3.5
+  Touches: a one-off device probe (log `Call.Details`/`getExtras()` on a STIR-capable carrier), roadmap 2.3.x disposition
+  Acceptance: documented evidence of whether attestation level / the SIP `Identity` header is reachable from a `CallScreeningService` on a shipping device; if not, 2.3.1–2.3.5 are marked rejected with this finding.
+  Complexity: S
+
+- [ ] P3 — Complement (not replace) the after-call notification with `ACTION_POST_CALL`
+  Why: `ACTION_POST_CALL` is the platform-blessed post-call screen for marking a call as spam / adding a contact (better system ranking on API 30+). CallShield uses a custom `NotificationHelper.notifyAfterCall`, which gives more control and is less intrusive, so this is an *additive experiment* for users who prefer the native surface — not a replacement. Keep the custom notification as the default.
+  Evidence: https://developer.android.com/develop/connectivity/telecom/dialer-app/screen-calls (ACTION_POST_CALL); `service/CallShieldScreeningService.kt:127` + `service/NotificationHelper.kt:313` (`notifyAfterCall`)
+  Touches: a new post-call `Activity` handling `ACTION_POST_CALL`, `AndroidManifest.xml`, an opt-in setting (UI owned by a concurrent agent — land the Activity + intent handling first)
+  Acceptance: on API 30+, a post-call screen offers mark-spam / add-contact and routes into the existing block/whitelist paths; the custom after-call notification remains the default; no regression when disabled.
+  Complexity: M
+
