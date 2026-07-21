@@ -538,14 +538,6 @@ Plus RFC 8588 (SHAKEN profile), RFC 9027 (Traceback), Apache SpamAssassin / rspa
 
 ## Research-Driven Additions
 
-- [ ] P2 - Add temporary allow/block expiry actions for one-off caller decisions
-  Why: Users need reversible short-lived decisions for active callers without permanently changing blocklists; SpamBlocker users requested temporary repeated-call blocking and commercial blockers expose quick allow/block recovery actions.
-  Evidence: SpamBlocker issue #604; existing `CallbackDetector.kt`; `BlockedLogScreen.kt`; `RecentCallsScreen.kt`; YouMail allow/block-list recovery patterns
-  Touches: `data/model/SpamNumber.kt`, `SpamDao.kt`, `BlocklistRepository.kt`, `data/checker/Checkers.kt`, `BlockedLogScreen.kt`, `RecentCallsScreen.kt`, Room migration/tests
-  Acceptance: From recent-call and blocked-log actions, users can allow or block a number for fixed windows such as 15 minutes, 1 hour, or 24 hours; expired entries are ignored/cleaned up; explicit permanent user and system blocks keep priority; tests cover expiry and checker ordering.
-  Complexity: M
-  > NOTE (2026-07-20 research pass): IMPLEMENTED in v1.7.x — `SpamNumber.expiresAt` + `SpamNumber.activeDecision(now)` + `TemporaryAllowChecker`/`UserBlocklistChecker` enforce expiry at query time. Item is satisfied; kept for history only.
-
 ## Research-Driven Additions (2026-07-20 pass — anchored to v1.7.13)
 
 Fresh 30+ source sweep (SpamBlocker 2026 releases + issue tracker, SpamBlocker Extended, Fossify, Hiya/Truecaller, Google Phone/Messages security posts, FCC 2025 branding FNPRM, Android 16/17 behavior changes, dependency changelogs, NVD). Only NEW signal not already covered by Phases 1-5, Addendum A/B, or `Roadmap_Blocked.md`. Prior-pass local trust-hardening backlog (UI digit sanitization, bounded bodies, SMS redaction, URLhaus privacy mode, permission degraded-mode matrix, selective backup, external-blocklist subscription, temp allow/block) is verified SHIPPED and intentionally omitted.
@@ -560,13 +552,6 @@ Fresh 30+ source sweep (SpamBlocker 2026 releases + issue tracker, SpamBlocker E
   Complexity: L
 
 ### P2
-
-- [ ] P2 — Blocked-event notifications survive Android 16 forced-grouping + cooldown
-  Why: Android 16 auto-groups same-app notifications and cooldown-mutes rapid back-to-back alerts; CallShield's per-event blocked-call/SMS notices (plus digest ID 9999) can be silently bundled/muted, hiding protection activity.
-  Evidence: https://developer.android.com/about/versions/16/behavior-changes-all ; https://www.androidauthority.com/android-16-force-group-notifications-3565400/ ; `NotificationHelper.kt`, `DigestWorker.kt`
-  Touches: `NotificationHelper.kt`, notification channels, `DigestWorker.kt`, instrumented notification test
-  Acceptance: blocked-event notifications use an explicit group key + summary (or a single coalescing/updating notification) so bursts remain visible and are not silenced on Android 16; verified on an API 36 emulator.
-  Complexity: M
 
 - [ ] P2 — Generalize notification-layer screening to opt-in OTT sources (Signal/WhatsApp/generic)
   Why: E2EE RCS and platform-internal Google detection close every other content path; the notification-listener layer is the only durable third-party foothold for OTT spam. `RcsNotificationListener` is hardcoded to Google + Samsung Messages only. SpamBlocker Extended already screens RCS/Signal/WhatsApp/email at the notification layer.
@@ -605,23 +590,136 @@ Fresh 30+ source sweep (SpamBlocker 2026 releases + issue tracker, SpamBlocker E
 
 ### P3
 
-- [ ] P3 — Frequency-escalation window decay + pruning
-  Why: The 7-day frequency-escalation counter weights day-1 and day-7 calls equally and never prunes aged entries from the in-memory counter, causing stale escalation and unbounded growth.
-  Evidence: code recon of `FrequencyEscalationChecker` / frequency counter; cross-ref 2.2.2 (call-frequency ML feature)
-  Touches: frequency-tracking data structure, `Checkers.kt` (`FrequencyEscalationChecker`), tests
-  Acceptance: calls outside the configured window are pruned; recency-weighted or strictly windowed counting is used; unit tests cover boundary/aging behavior and memory bound.
+## Research-Driven Additions (2026-07-20 pass 2 — code audit + distribution/a11y/i18n sweep)
+
+Second same-day pass. Adds verified code-correctness bugs (grounded in file:line reads) plus distribution, security-CVE, accessibility, and i18n signal not covered by the earlier pass, Phases 1-5, Addendum A/B, or `Roadmap_Blocked.md`. No duplicates of the pass-1 items above.
+
+### P1
+
+### P2
+
+- [ ] P2 — Per-app language: `localeConfig` + in-app language picker (LocaleManager API 33+)
+  Why: Strings are extracted but the app cannot switch language without changing the system locale; per-app language is table-stakes for F-Droid/IzzyOnDroid quality listings and pairs with the existing (LATER) translation item 4.7.2.
+  Evidence: https://developer.android.com/guide/topics/resources/app-languages ; `res/values/strings.xml` (only base locale exists); cross-ref roadmap 4.7.2/4.7.3
+  Touches: new `res/xml/locales_config.xml`, `AndroidManifest.xml` (`android:localeConfig`), settings language picker (LocaleManager on API 33+, AppCompatDelegate below), tests
+  Acceptance: user can pick app language in-app independent of system locale; selection persists across restart; base locale falls back correctly; `localeConfig` declared. (Actual translations remain 4.7.2.)
+  Complexity: M
+
+- [ ] P2 — RTL correctness: adopt `PhoneFormatter.formatIsolated` across UI screens + logical-padding audit
+  Why: The `isolate()`/`formatIsolated()` bidi helpers now exist and are applied at the notification layer, but the Compose screens (dashboard, blocked log, recent calls, lookup, details) still interpolate numbers via plain `format()`; and any `left/right` padding on number rows must move to logical `start/end`.
+  Evidence: `data/PhoneFormatter.kt` (helpers shipped); notification sites done in `NotificationHelper.kt`; remaining call sites in `ui/screens/**`; cross-ref 4.7.3
+  Touches: `ui/screens/**` number-bearing composables (switch `format`→`formatIsolated` where numbers sit in localized text), padding audit
+  Acceptance: numbers display left-to-right and correctly ordered inside an RTL (or `ar-XB` pseudolocale) UI across all screens; no `left/right` padding remains on number-bearing rows; screenshot under `ar-XB` verifies.
+  Complexity: M
+
+### P3
+
+- [ ] P3 — Unit-test the untested hot/critical paths
+  Why: No coverage for `SpamActionReceiver` (would have caught the notification-ID bug), `SmsReceiver` reassembly/URLhaus gating (would have caught the phishing-off bug), the call-vs-SMS campaign separation, or the `CheckerPipeline.run` `timeLeftMillis() <= 0` short-circuit — the actual 5s-deadline hot path.
+  Evidence: absence of these tests under `app/src/test/`; `PipelineTraceTest` only covers `traceAll`
+  Touches: `app/src/test/.../service/`, `app/src/test/.../checker/`
+  Acceptance: unit tests exist for SpamActionReceiver action→cancel/write, SmsReceiver URLhaus gating under block-SMS-off, and CheckerPipeline.run early short-circuit ordering.
+  Complexity: M
+
+- [ ] P3 — Accessibility CI gate + Android 16 semantics
+  Why: Espresso/Compose `AccessibilityChecks` (label presence, 48dp targets, contrast) can be asserted in instrumented tests on Compose 1.8+; Android 16 adds expandable-state/`stateDescription` and duration `TtsSpan` semantics; the AMOLED theme must be verified with system "outline text" ON. EAA/WCAG 2.2 AA is the 2026 bar. Complements roadmap 4.6.1-4.6.4.
+  Evidence: https://developer.android.com/develop/ui/compose/accessibility/testing ; https://developer.android.com/about/versions/16/features ; https://www.levelaccess.com/compliance-overview/european-accessibility-act-eaa/ ; cross-ref 4.6
+  Touches: androidTest a11y harness (`AccessibilityChecks.enable()`), expandable/detail cards + quiet-hours durations (`Modifier.semantics`), theme verification with outline text
+  Acceptance: an instrumented a11y check runs over onboarding/dashboard/blocklist/settings and fails on missing labels/small targets; expandable cards expose expand/collapse state to TalkBack; durations use `TtsSpan`; screens verified with outline-text ON.
+  Complexity: M
+
+- [ ] P3 — Add `en-XA`/`ar-XB` pseudolocale screenshot check for the debug variant
+  Why: Pseudolocales surface truncation, clipped status pills, hardcoded strings, and RTL breaks before real translations exist — cheap coverage while 4.7.2 is still LATER.
+  Evidence: https://developer.android.com/guide/topics/resources/pseudolocales ; cross-ref 4.7.2/4.7.3 and the RTL bidi item above
+  Touches: debug variant pseudolocale enablement, a scripted screenshot capture of key screens
+  Acceptance: debug builds render `en-XA` and `ar-XB`; captured screenshots of onboarding/dashboard/blocklist/settings show no clipping or untranslated-literal leakage regressions.
   Complexity: S
 
-- [ ] P3 — Quiet-hours timezone / DST correctness
-  Why: Quiet-hours blocking uses raw device system time with no timezone/DST handling; calls near DST boundaries or after travel can be mis-gated.
-  Evidence: code recon of `TimeBlockChecker` + `TimeSchedule.kt`
-  Touches: `TimeSchedule.kt`, `TimeBlockChecker`, tests
-  Acceptance: quiet-hours evaluation is timezone/DST-correct (documented behavior at boundaries); unit tests cover a DST transition and an overnight-wrap window.
+## Deep-Audit Findings (2026-07-20 — not fixed this pass)
+
+- [ ] P3 — UI/UX/visual/theme/microcopy/accessibility audit of the Compose screens
+  Why: This deep-audit pass could NOT cover `ui/screens/**`, `MainActivity`, or `res/values/strings.xml` — they had uncommitted in-flight edits from a concurrent agent, so touching them would entangle changes. The visual-quality, theme-token, empty/loading/error-state, microcopy, and accessibility (focus ring, contrast, touch targets, TalkBack, RTL) dimensions of the UI layer remain unaudited by this pass.
+  Where: `ui/screens/**`, `ui/theme/**`, `res/values/strings.xml`, `MainActivity.kt`
+  Acceptance: once the UI files are settled, run a dedicated UI/UX + theme + a11y audit across every screen in AMOLED/light and all nested surfaces.
+
+## Deep-Audit — Considered and Rejected (do not re-investigate)
+
+- Blocking private/loopback/link-local hosts in `ExternalBlocklistParser.validateHttpUrl` (SSRF-shaping): REJECTED — the URL is user-entered and the body is not reflected; blocking private IPs would break the legitimate use case of subscribing to a LAN-hosted blocklist (e.g. a self-hosted NAS at 192.168.x). Impact on a mobile app is negligible.
+
+- [ ] P3 — Surface `SpamMLScorer.modelHealth` in the diagnostics UI
+  Why: The typed `ModelHealth` state (GBT_ACTIVE / LR_ACTIVE / DEGRADED_TO_LR / PARSE_FAILED / DEFAULTS) and logging now exist, but the value is not yet shown in the in-app diagnostics/protection surface. UI wiring only.
+  Where: a diagnostics/protection composable (currently owned by a concurrent agent) reading `SpamMLScorer.modelHealth()`
+  Acceptance: the diagnostics screen shows the current model health with a clear label; a degraded/parse-failed state is visibly flagged.
+
+## Research-Driven Additions (2026-07-21 pass — anchored to v1.7.16)
+
+Fresh sweep on under-covered angles: OEM background-execution survival, distribution policy, service-rebind reliability, and testability. All items verified against current code (v1.7.16). The prior-pass correctness/hardening backlog is now shipped and intentionally omitted. Wear OS (B.D.5) and CNAP name-*trust* (the "Region / CNAP-based rules" item) already exist and are not duplicated; the block-by-name item below is the inverse (blocklist) direction and cross-references it.
+
+### P1
+
+- [ ] P1 — Google Developer Verification readiness (distribution survival) — operator-gated decision
+  Why: From Sep 2026 (staged) / 2027 (enforced), sideloaded APKs on certified Android devices must come from a Google-verified developer (gov ID + fee + registered signing key). CallShield's GitHub-Releases/Obtainium/F-Droid distribution is directly in the blast radius; F-Droid has stated it cannot comply.
+  Evidence: https://f-droid.org/2026/02/24/open-letter-opposing-developer-verification.html ; https://android.gadgethacks.com/news/how-android-sideloading-verification-rules-affect-f-droid-and-privacy-tools/
+  Touches: signing config (single stable release key), release/distribution docs, IzzyOnDroid listing (partial hedge)
+  Acceptance: a documented decision (register the key under the SysAdminDoc identity when the flow opens, vs accept certified-device breakage); the release key is confirmed single/stable/backed-up so it can be registered if chosen. NOTE: the register-or-not choice is a human/business decision (operator-gated); the signing-key hygiene prep is actionable now.
+  Complexity: M
+
+### P2
+
+- [ ] P2 — Complete BootReceiver: MY_PACKAGE_REPLACED + pending-log reschedule + rebind
+  Why: `BootReceiver` only handles `ACTION_BOOT_COMPLETED` and reschedules Sync/HotList/Digest — it misses `MY_PACKAGE_REPLACED` (Play auto-update without reboot leaves the listener unbound and nothing re-asserted), never reschedules `PendingBlockedCallLogWorker`, and never `requestRebind`s the listener.
+  Evidence: `service/BootReceiver.kt` (BOOT_COMPLETED only); `AndroidManifest.xml` boot receiver intent-filter
+  Touches: `service/BootReceiver.kt`, `AndroidManifest.xml` (add `MY_PACKAGE_REPLACED` action)
+  Acceptance: on boot AND app-replace, all four workers are rescheduled and the notification listener is rebind-requested; verified by broadcasting both actions on an emulator.
   Complexity: S
 
-- [ ] P3 — Typed model-sync parse/health observability
-  Why: `SpamMLScorer` weight sync parses trees with regex and silently falls back to logistic regression on malformed JSON, with no health signal or log — a silent detection-quality regression. Mirrors the enrichment-source diagnostics already shipped.
-  Evidence: code recon of `SpamMLScorer` GBT parse/fallback path; existing enrichment-source health-state pattern
-  Touches: `data/SpamMLScorer.kt`, model-sync worker, a typed health/diagnostics surface, tests
-  Acceptance: a malformed/oversized model payload yields a typed parse-failure state that is observable in diagnostics (and logged without leaking data), rather than a silent LR fallback; test covers the malformed-payload path. (Full move off regex parsing to kotlinx.serialization stays in the Moshi tranche in `Roadmap_Blocked.md`.)
+- [ ] P2 — OEM background-kill warning surface
+  Why: Aggressive OEM battery managers (MIUI/HyperOS autostart-off, Samsung, ColorOS) silently kill WorkManager sync and unbind the listener; the app has no warning. AOSP-portable signals exist to detect the risk.
+  Evidence: https://dontkillmyapp.com/problem ; https://dontkillmyapp.com/xiaomi ; `ActivityManager.isBackgroundRestricted()` + `PowerManager.isIgnoringBatteryOptimizations()`
+  Touches: a detection helper exposing background-restriction state; dashboard/protection warning + battery-optimization-exemption intent (UI owned by a concurrent agent — land detection logic + test first)
+  Acceptance: when the app is background-restricted or not battery-optimization-exempt, a helper reports it (with an intent to the exemption/settings screen); optional MIUI autostart probe on Xiaomi; detection covered by a unit test; UI display can follow.
+  Complexity: M
+
+- [ ] P2 — Adopt Robolectric to test the screening/SMS/listener hot paths
+  Why: The most safety-critical path (`CallShieldScreeningService.onScreenCall` under the 5s deadline, allow/silence/reject branches) is untestable off-device today; the repo has zero Robolectric and works around the telecom stub with `decidePure()`/`isEnabledPure()`. Robolectric ships `ShadowCallScreeningService`/`ShadowTelephonyManager`/`ShadowNotificationListenerService`. Unblocks and supersedes the existing "unit-test the untested hot/critical paths" P3.
+  Evidence: https://github.com/robolectric/robolectric (ShadowTelephonyManager/ShadowCallScreeningService); repo has no Robolectric (grep-clean)
+  Touches: `app/build.gradle.kts` (testImplementation robolectric 4.16+), new `app/src/test/.../service/` tests, `@Config(sdk=[34 or 36])`
+  Acceptance: Robolectric is wired without setting `returnDefaultValues=true`; a test drives the real `onScreenCall` end-to-end and `SmsReceiver.onReceive` (multipart cap, phishing-when-block-disabled), both green.
+  Complexity: M
+
+- [ ] P3 — Sync-staleness threshold warning (beyond the existing freshness display)
+  Why: The dashboard already displays `lastSyncTimestamp` ("last synced …"), but there is no proactive *warning* when it crosses a staleness threshold (offline for days / restricted App-Standby bucket), so a user won't notice hot-campaign protection silently decaying to the bundled snapshot.
+  Evidence: `data/repository/SettingsRepository.kt:98,239` (timestamp exists + displayed; no threshold warning)
+  Touches: a pure staleness predicate over `lastSyncTimestamp`; dashboard/diagnostics warning state (UI owned by a concurrent agent — land the predicate + test first)
+  Acceptance: a unit-tested predicate reports "sync stale" past a configurable threshold (e.g. > 3× the sync interval); the warning can be surfaced when the UI settles.
+  Complexity: S
+
+- [ ] P2 — Bound DigestWorker's 24h block-window query
+  Why: `SpamDao.getRecentBlockedNumbers(since)` (`SpamDao.kt:213`) is `SELECT * … ORDER BY timestamp DESC` with no LIMIT; `DigestWorker` then does four in-memory passes over the full window including `smsBody`. A heavy-spam day materializes thousands of rows in a constrained background process.
+  Evidence: `data/local/SpamDao.kt:212-213`; `service/DigestWorker.kt:35`
+  Touches: `data/local/SpamDao.kt` (aggregate `COUNT(*) … GROUP BY` queries or a LIMIT), `service/DigestWorker.kt`
+  Acceptance: the digest computes call/SMS/source counts via aggregate SQL (or a bounded read) without loading the full window; output unchanged for representative data; covered by a DAO/worker test.
+  Complexity: S
+
+### P3
+
+- [ ] P3 — CallerNameChecker: block by resolved caller-ID (CNAM) name pattern
+  Why: Spammers rotate numbers but reuse the display name (SpamBlocker #120, persistent open ask). CallShield already resolves caller names for the overlay, so a name-pattern blocklist is a differentiating, low-cost layer. Inverse of the existing "Region / CNAP-based rules" item (which is name-*trust*/allow).
+  Evidence: https://github.com/aj3423/SpamBlocker/issues/120 ; existing overlay name resolution; `data/checker/` registry
+  Touches: new `CallerNameChecker` in `data/checker/`, a `CheckerPriority` slot, a name-pattern rule store + rules UI (UI owned by concurrent agent), tests
+  Acceptance: a user list of name patterns blocks calls whose resolved CNAM matches; explicit user/system allows keep priority; unit tests cover match + ordering. Enrichment is best-effort (network), so this is a weak/late layer, never gating.
+  Complexity: M
+
+- [ ] P3 — Adopt Notification.CallStyle and Notification.ProgressStyle
+  Why: `CallStyle` (API 31+) is the system-blessed template for call notifications (correct ranking/heads-up, less collapsing) — a fit for the after-call feedback + caller-ID surface; `ProgressStyle` (API 36 Live Updates) suits sync-progress and a persistent "protecting you" notification that also anchors process priority against OEM kills.
+  Evidence: https://developer.android.com/reference/android/app/Notification.CallStyle ; https://developer.android.com/about/versions/16/features/progress-centric-notifications
+  Touches: `service/NotificationHelper.kt`, `service/DigestWorker.kt`/sync notifications
+  Acceptance: after-call/caller-ID notifications render as `CallStyle` on API 31+; sync/persistent-protection notification uses `ProgressStyle` on API 36 with graceful fallback below; no regression on older APIs.
+  Complexity: M
+
+- [ ] P3 — Safe dependency freshness bumps (non-AGP-9 tranche)
+  Why: Several low-risk deps lag: core-ktx 1.15.0→1.19.0 (biggest gap), activity-compose 1.9.3→1.12/1.13 (predictive-back/edge-to-edge on targetSdk 36), navigation-compose 2.8.5→2.9.x, OkHttp 5.3.2→5.4.0, Moshi 1.15.1→1.15.2, Hilt 2.58→2.60.1. Compose/lifecycle/Kotlin/AGP stay with the AGP 9 tranche in `Roadmap_Blocked.md`.
+  Evidence: Maven Central + Google Maven metadata (verified 2026-07-21); https://repo1.maven.org/maven2/com/squareup/okhttp3/okhttp/
+  Touches: `gradle/libs.versions.toml`, `app/gradle.lockfile` (regen locks)
+  Acceptance: the listed deps bump to stable, lockfiles regenerated, full JVM suite + `assembleRelease` green; no behavior change. Excludes anything requiring AGP 9 / Kotlin ≥2.4.
   Complexity: S

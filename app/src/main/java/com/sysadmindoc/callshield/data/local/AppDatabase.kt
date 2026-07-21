@@ -213,5 +213,51 @@ abstract class AppDatabase : RoomDatabase() {
                     ).build()
                     .also { INSTANCE = it }
             }
+
+        /** SQLite corruption messages that a rebuild can recover from. */
+        private val CORRUPTION_MESSAGES =
+            listOf(
+                "database disk image is malformed",
+                "file is not a database",
+                "file is encrypted or is not a database",
+            )
+
+        /**
+         * True when [t] (or any cause in its chain) indicates on-disk SQLite
+         * corruption rather than a transient/logic error. Pure type/string
+         * matching so it is unit-testable off-device without touching the
+         * Android SQLite stack. The cause chain is walked with a depth bound
+         * so a self-referential cause can't spin.
+         */
+        fun isCorruptionException(t: Throwable?): Boolean {
+            var cur = t
+            var depth = 0
+            while (cur != null && depth < 12) {
+                if (cur.javaClass.name.endsWith("SQLiteDatabaseCorruptException")) return true
+                val msg = cur.message?.lowercase().orEmpty()
+                if (CORRUPTION_MESSAGES.any { msg.contains(it) }) return true
+                cur = cur.cause
+                depth++
+            }
+            return false
+        }
+
+        /**
+         * Delete a corrupt on-disk database and drop the cached instance so
+         * the next [getInstance] rebuilds a clean schema. Spam numbers are
+         * re-syncable from GitHub/bundled data, so wiping the local copy is an
+         * acceptable recovery from an otherwise-unrecoverable file — far
+         * better than the DAO throwing forever and the screener failing open.
+         * Returns true if a database file was deleted.
+         */
+        fun recoverFromCorruption(context: Context): Boolean =
+            synchronized(this) {
+                try {
+                    INSTANCE?.close()
+                } catch (_: Exception) {
+                }
+                INSTANCE = null
+                context.applicationContext.deleteDatabase("callshield.db")
+            }
     }
 }
