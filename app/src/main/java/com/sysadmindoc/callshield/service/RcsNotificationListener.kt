@@ -1,6 +1,7 @@
 package com.sysadmindoc.callshield.service
 
 import android.app.Notification
+import android.content.ComponentName
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import androidx.datastore.preferences.core.Preferences
@@ -191,6 +192,34 @@ class RcsNotificationListener : NotificationListenerService() {
                 NotificationHelper.notifyPhishingUrl(applicationContext, sender, threats)
             }
         }
+    }
+
+    /**
+     * The OS unbinds this listener on low memory, app update, or an OEM
+     * process kill. Without an explicit rebind the service stays dead —
+     * all RCS filtering and push-alert capture silently stop until the
+     * next reboot or a manual Settings → Notification Access toggle. Ask
+     * the framework to rebind so protection self-heals.
+     */
+    override fun onListenerDisconnected() {
+        super.onListenerDisconnected()
+        try {
+            requestRebind(ComponentName(this, RcsNotificationListener::class.java))
+        } catch (_: Exception) {
+            // requestRebind can throw if notification access was revoked;
+            // nothing more we can do from here — user must re-grant.
+        }
+    }
+
+    /**
+     * After a rebind the framework may deliver an empty active-notification
+     * set before the messaging app re-posts; nothing to seed, so this is a
+     * defensive no-op that documents the handled edge.
+     */
+    override fun onListenerConnected() {
+        super.onListenerConnected()
+        // getActiveNotifications() can legitimately be empty post-rebind.
+        // No priming needed: the registry rebuilds from live onNotificationPosted.
     }
 
     override fun onDestroy() {

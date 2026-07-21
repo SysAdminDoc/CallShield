@@ -3,9 +3,11 @@ package com.sysadmindoc.callshield.service
 import android.os.Build
 import android.telecom.Call
 import android.telecom.CallScreeningService
+import android.util.Log
 import com.sysadmindoc.callshield.CallShieldApp
 import com.sysadmindoc.callshield.data.SpamHeuristics
 import com.sysadmindoc.callshield.data.SpamRepository
+import com.sysadmindoc.callshield.data.local.AppDatabase
 import com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup
 import com.sysadmindoc.callshield.domain.usecase.CheckSpamUseCase
 import dagger.hilt.android.AndroidEntryPoint
@@ -127,11 +129,25 @@ class CallShieldScreeningService : CallScreeningService() {
                         }
                     }
                 }
-            } catch (_: Exception) {
-                // Guarantee a response even on error — fail-open (allow call through)
+            } catch (e: Exception) {
+                // Guarantee a response even on error — fail-open (allow call through).
                 try {
                     respondAllow(callDetails)
                 } catch (_: Exception) {
+                }
+                // A corrupt on-disk database would otherwise fail every DAO
+                // call and leave the screener permanently fail-open with no
+                // signal. Detect that specific case, rebuild a clean DB, and
+                // re-sync so protection self-heals on the next call.
+                if (AppDatabase.isCorruptionException(e)) {
+                    try {
+                        if (AppDatabase.recoverFromCorruption(appContext)) {
+                            Log.w(TAG, "Recovered from corrupt database; re-syncing spam data")
+                            SyncWorker.syncNow(appContext)
+                            HotListSyncWorker.schedule(appContext)
+                        }
+                    } catch (_: Exception) {
+                    }
                 }
             }
         }
@@ -234,6 +250,8 @@ class CallShieldScreeningService : CallScreeningService() {
     }
 
     companion object {
+        private const val TAG = "CallShieldScreening"
+
         // Blocks at or above this confidence are always hard-rejected even
         // with auto-mute on — a database hit, user blocklist, STIR fail, or
         // high-scoring heuristic is certain enough that the user shouldn't
