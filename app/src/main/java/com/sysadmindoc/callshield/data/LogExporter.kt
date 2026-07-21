@@ -88,11 +88,23 @@ object LogExporter {
     }
 
     private fun csvEscape(value: String): String {
+        // Neutralize spreadsheet formula injection: a cell beginning with
+        // = + - @ (or tab/CR) is interpreted as a live formula by Excel/Sheets.
+        // matchReason and (with raw bodies) the SMS text are attacker-influenced,
+        // so prefix a single quote before quoting. Standard CSV-injection defense.
+        val guarded =
+            if (value.isNotEmpty() && value.first() in FORMULA_TRIGGERS) {
+                "'$value"
+            } else {
+                value
+            }
         val escaped =
-            value
+            guarded
                 .replace("\"", "\"\"")
                 .replace("\n", " ")
                 .replace("\r", "")
         return "\"$escaped\""
     }
+
+    private val FORMULA_TRIGGERS = charArrayOf('=', '+', '-', '@', '\t', '\r')
 }
