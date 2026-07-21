@@ -690,13 +690,6 @@ Focus areas not covered by prior passes: the Developer-Verification survival pat
 
 ### P2
 
-- [ ] P2 — Release-signing hygiene gate: fail the build if a release APK is debug-signed or multi-cert
-  Why: The release build makes signing conditional on `RELEASE_STORE_*` in `local.properties` and yields an *unsigned* APK (then debug-signed locally) when they're absent (`app/build.gradle.kts:41-69`) — this session's `CallShield-v1.7.18.apk` is debug-signed. Debug/multi-cert releases break key continuity, can't co-install with a real-key build, are rejected by Accrescent, and fail Dev-Verification's single-stable-key prerequisite. A guard turns a silent distribution-blocker into a build-time error.
-  Evidence: `app/build.gradle.kts:41-69` (conditional `signingConfig`); https://accrescent.app/docs/guide/publish/requirements.html (no debug cert, single cert); Android debug cert DN `CN=Android Debug`
-  Touches: a Gradle verification task or `scripts/verify-release-signing.ps1` invoked in the release flow (apksigner `verify --print-certs` → assert non-`CN=Android Debug` and exactly one signer), `docs/reproducible-builds.md`
-  Acceptance: a release build/verify step fails with a clear message if the packaged cert is the Android debug cert or if more than one signer is present; passes for a real-key single-cert build.
-  Complexity: S
-
 - [ ] P2 — Reconcile model-retrain reproducibility (README claims CI retrain; CI is prohibited)
   Why: README/roadmap describe a "weekly CI retrain" of `spam_model_weights.json`, but GitHub Actions are prohibited by repo policy, so weights cannot auto-retrain — the shipped model is effectively static and the docs mislead. Establish and document a reproducible *local* retrain+eval flow so detection quality (incl. the behavioral features in 2.2.x) can actually improve. Complements 2.6.3 (the eval metrics script) — this item is the doc/flow reconciliation, not the metrics.
   Evidence: no `.github/workflows/`; README "weekly CI retrain" claim; `scripts/train_spam_model.py` present, `scripts/evaluate_model.py` absent (cross-ref 2.6.3); repo no-GitHub-Actions policy

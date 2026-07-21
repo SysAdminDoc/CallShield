@@ -35,9 +35,19 @@ Use PowerShell on Windows:
 ```powershell
 .\gradlew.bat --no-daemon verifyReproducibleBuildInputs :app:assembleRelease
 .\gradlew.bat --no-daemon verifyReleaseApkReproducibleMetadata
+.\scripts\verify-release-signing.ps1
 .\scripts\write-release-sha256.ps1
 Get-Content .\app\build\outputs\apk\release\app-release.apk.sha256
 ```
+
+`verify-release-signing.ps1` is a mandatory release gate. It fails the release
+if the APK is **debug-signed** or carries **more than one signer certificate**.
+Debug or multi-certificate releases break signing-key continuity (they cannot
+co-install with a real-key build), are rejected by Accrescent, and fail Google
+Developer Verification's single-stable-key requirement. When `RELEASE_STORE_*`
+is absent from `local.properties`, `assembleRelease` produces an *unsigned* APK
+(then debug-signed for local testing) — this gate is what stops such a build
+from being shipped as a release.
 
 The signed APK is written to:
 
