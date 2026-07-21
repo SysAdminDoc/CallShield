@@ -666,26 +666,12 @@ Fresh sweep on under-covered angles: OEM background-execution survival, distribu
 
 ### P2
 
-- [ ] P2 — OEM background-kill warning surface
-  Why: Aggressive OEM battery managers (MIUI/HyperOS autostart-off, Samsung, ColorOS) silently kill WorkManager sync and unbind the listener; the app has no warning. AOSP-portable signals exist to detect the risk.
-  Evidence: https://dontkillmyapp.com/problem ; https://dontkillmyapp.com/xiaomi ; `ActivityManager.isBackgroundRestricted()` + `PowerManager.isIgnoringBatteryOptimizations()`
-  Touches: a detection helper exposing background-restriction state; dashboard/protection warning + battery-optimization-exemption intent (UI owned by a concurrent agent — land detection logic + test first)
-  Acceptance: when the app is background-restricted or not battery-optimization-exempt, a helper reports it (with an intent to the exemption/settings screen); optional MIUI autostart probe on Xiaomi; detection covered by a unit test; UI display can follow.
-  Complexity: M
-
 - [ ] P2 — Adopt Robolectric to test the screening/SMS/listener hot paths
   Why: The most safety-critical path (`CallShieldScreeningService.onScreenCall` under the 5s deadline, allow/silence/reject branches) is untestable off-device today; the repo has zero Robolectric and works around the telecom stub with `decidePure()`/`isEnabledPure()`. Robolectric ships `ShadowCallScreeningService`/`ShadowTelephonyManager`/`ShadowNotificationListenerService`. Unblocks and supersedes the existing "unit-test the untested hot/critical paths" P3.
   Evidence: https://github.com/robolectric/robolectric (ShadowTelephonyManager/ShadowCallScreeningService); repo has no Robolectric (grep-clean)
   Touches: `app/build.gradle.kts` (testImplementation robolectric 4.16+), new `app/src/test/.../service/` tests, `@Config(sdk=[34 or 36])`
   Acceptance: Robolectric is wired without setting `returnDefaultValues=true`; a test drives the real `onScreenCall` end-to-end and `SmsReceiver.onReceive` (multipart cap, phishing-when-block-disabled), both green.
   Complexity: M
-
-- [ ] P3 — Sync-staleness threshold warning (beyond the existing freshness display)
-  Why: The dashboard already displays `lastSyncTimestamp` ("last synced …"), but there is no proactive *warning* when it crosses a staleness threshold (offline for days / restricted App-Standby bucket), so a user won't notice hot-campaign protection silently decaying to the bundled snapshot.
-  Evidence: `data/repository/SettingsRepository.kt:98,239` (timestamp exists + displayed; no threshold warning)
-  Touches: a pure staleness predicate over `lastSyncTimestamp`; dashboard/diagnostics warning state (UI owned by a concurrent agent — land the predicate + test first)
-  Acceptance: a unit-tested predicate reports "sync stale" past a configurable threshold (e.g. > 3× the sync interval); the warning can be surfaced when the UI settles.
-  Complexity: S
 
 ### P3
 
