@@ -2,7 +2,22 @@
 
 All notable changes to CallShield will be documented in this file.
 
-## v1.7.15 — 2026-07-20
+## v1.7.16 — 2026-07-21
+
+### Added
+
+- **Import/restore files are size- and row-bounded.** Blocklist import and
+  backup-restore preview read the SAF-selected file through a bounded reader
+  (32 MB cap) and cap applied blocklist rows (100k), instead of materializing an
+  arbitrarily large file whole into memory — an OOM/ANR guard at the import
+  trust boundary. Oversize files fail gracefully with the existing error copy.
+
+### Changed
+
+- **Blocked-call notifications align with Android 16 grouping.** The grouped
+  blocked-event notifications and their summary now use `GROUP_ALERT_SUMMARY`,
+  so a burst of blocks alerts through the single group summary rather than
+  per-child — keeping protection activity visible without being cooldown-muted.
 
 Deep audit pass — correctness, data-safety, and security hardening in the
 data/persistence/network layers.
