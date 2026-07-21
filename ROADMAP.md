@@ -666,11 +666,11 @@ Fresh sweep on under-covered angles: OEM background-execution survival, distribu
 
 ### P2
 
-- [ ] P2 — Adopt Robolectric to test the screening/SMS/listener hot paths
-  Why: The most safety-critical path (`CallShieldScreeningService.onScreenCall` under the 5s deadline, allow/silence/reject branches) is untestable off-device today; the repo has zero Robolectric and works around the telecom stub with `decidePure()`/`isEnabledPure()`. Robolectric ships `ShadowCallScreeningService`/`ShadowTelephonyManager`/`ShadowNotificationListenerService`. Unblocks and supersedes the existing "unit-test the untested hot/critical paths" P3.
-  Evidence: https://github.com/robolectric/robolectric (ShadowTelephonyManager/ShadowCallScreeningService); repo has no Robolectric (grep-clean)
-  Touches: `app/build.gradle.kts` (testImplementation robolectric 4.16+), new `app/src/test/.../service/` tests, `@Config(sdk=[34 or 36])`
-  Acceptance: Robolectric is wired without setting `returnDefaultValues=true`; a test drives the real `onScreenCall` end-to-end and `SmsReceiver.onReceive` (multipart cap, phishing-when-block-disabled), both green.
+- [ ] P3 — Robolectric end-to-end `onScreenCall`/`SmsReceiver.onReceive` (needs injectable appScope)
+  Why: Robolectric is now adopted (4.16, `isIncludeAndroidResources=true`, `returnDefaultValues` intentionally OFF) with green tests over `SpamActionReceiver` (notification-cancel hot path) and `SmsReceiver.reassembleBody` (multipart 16KB cap). The remaining full end-to-end drive of `CallShieldScreeningService.onScreenCall` (allow/silence/reject) and `SmsReceiver.onReceive` (phishing-when-block-disabled) is blocked on the fire-and-forget `CallShieldApp.appScope`: a test cannot deterministically await the response posted from a process-wide scope. Requires making the screening/SMS scope injectable (e.g. a `@Inject CoroutineScope` or a `TestScope` seam) first.
+  Evidence: `service/CallShieldScreeningService.kt` (launches on `CallShieldApp.appScope`); `service/SmsReceiver.kt` (same); existing `decidePure()`/`isEnabledPure()` seams
+  Touches: `CallShieldApp.appScope` injection seam, `CallShieldScreeningService`, `SmsReceiver`, new Robolectric tests with an awaited `TestScope`
+  Acceptance: with an injectable scope, a Robolectric test drives real `onScreenCall` allow/silence/reject and `SmsReceiver.onReceive` phishing-when-block-disabled to completion, both green.
   Complexity: M
 
 ### P3

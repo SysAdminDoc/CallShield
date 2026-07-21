@@ -89,6 +89,16 @@ android {
             assets.srcDir("../data")
         }
     }
+
+    testOptions {
+        unitTests {
+            // Robolectric needs merged Android resources/manifest to run the
+            // real framework classes off-device. returnDefaultValues stays
+            // OFF intentionally — it masks real bugs; Robolectric shadows
+            // provide genuine framework behavior instead.
+            isIncludeAndroidResources = true
+        }
+    }
 }
 
 room {
@@ -192,6 +202,8 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     testImplementation(libs.junit4)
     testImplementation(libs.kotlinx.serialization.json)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.test.core)
 
     // Instrumentation tests (emulator / device)
     androidTestImplementation(platform(libs.androidx.compose.bom))
