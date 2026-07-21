@@ -690,13 +690,6 @@ Focus areas not covered by prior passes: the Developer-Verification survival pat
 
 ### P2
 
-- [ ] P2 — Reconcile model-retrain reproducibility (README claims CI retrain; CI is prohibited)
-  Why: README/roadmap describe a "weekly CI retrain" of `spam_model_weights.json`, but GitHub Actions are prohibited by repo policy, so weights cannot auto-retrain — the shipped model is effectively static and the docs mislead. Establish and document a reproducible *local* retrain+eval flow so detection quality (incl. the behavioral features in 2.2.x) can actually improve. Complements 2.6.3 (the eval metrics script) — this item is the doc/flow reconciliation, not the metrics.
-  Evidence: no `.github/workflows/`; README "weekly CI retrain" claim; `scripts/train_spam_model.py` present, `scripts/evaluate_model.py` absent (cross-ref 2.6.3); repo no-GitHub-Actions policy
-  Touches: `scripts/train_spam_model.py`, README (correct the CI-retrain claim), `docs/` (local retrain+eval runbook), `data/spam_model_weights.json`
-  Acceptance: README no longer claims CI retraining; a documented local command retrains + evaluates the model and emits a versioned weights JSON with a schema/threshold check; a dry run is reproducible on this machine.
-  Complexity: S
-
 ### P3
 
 - [ ] P3 — Validate STIR PASSporT/attestation exposure, else formally close 2.3.1–2.3.5
