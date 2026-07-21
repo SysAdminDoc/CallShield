@@ -498,91 +498,99 @@ object BackupRestore {
         selectedSections: Set<BackupSection> = defaultRestoreSections,
     ): RestoreResult =
         try {
-            if (mode == RestoreMode.REPLACE) {
-                clearSelectedBackupSections(dao, selectedSections)
-            }
-
             var numbersRestored = 0
-            for (n in payload.blockedNumbers) {
-                repo.blockNumber(n.number, n.type, n.description)
-                numbersRestored++
-            }
-
             var whitelistRestored = 0
-            for (w in payload.whitelistNumbers) {
-                repo.addToWhitelist(w.number, w.description, isEmergency = w.isEmergency)
-                whitelistRestored++
-            }
-
             var rulesRestored = 0
-            for (r in payload.wildcardRules) {
-                dao.insertWildcardRule(
-                    WildcardRule(
-                        pattern = r.pattern,
-                        isRegex = r.isRegex,
-                        description = r.description,
-                        enabled = r.enabled,
-                        scheduleDays = r.scheduleDays,
-                        scheduleStartHour = r.scheduleStartHour,
-                        scheduleEndHour = r.scheduleEndHour,
-                    ),
-                )
-                rulesRestored++
-            }
-
             var keywordsRestored = 0
-            for (k in payload.keywordRules) {
-                dao.insertKeywordRule(
-                    SmsKeywordRule(
-                        keyword = k.keyword,
-                        caseSensitive = k.caseSensitive,
-                        description = k.description,
-                        enabled = k.enabled,
-                        scheduleDays = k.scheduleDays,
-                        scheduleStartHour = k.scheduleStartHour,
-                        scheduleEndHour = k.scheduleEndHour,
-                    ),
-                )
-                keywordsRestored++
-            }
-
             var rangesRestored = 0
-            for (r in payload.rangeRules) {
-                dao.insertHashWildcardRule(
-                    HashWildcardRule(
-                        pattern = r.pattern,
-                        description = r.description,
-                        enabled = r.enabled,
-                        scheduleDays = r.scheduleDays,
-                        scheduleStartHour = r.scheduleStartHour,
-                        scheduleEndHour = r.scheduleEndHour,
-                    ),
-                )
-                rangesRestored++
+            var logsRestored = 0
+
+            // Atomic: in REPLACE mode the clear and every re-insert run in a
+            // single Room transaction so a mid-restore failure rolls back to the
+            // pre-restore state instead of leaving the user's data half-cleared
+            // and half-restored (data loss). Settings live in DataStore, not
+            // Room, so they are applied after the transaction commits.
+            repo.runInTransaction {
+                if (mode == RestoreMode.REPLACE) {
+                    clearSelectedBackupSections(dao, selectedSections)
+                }
+
+                for (n in payload.blockedNumbers) {
+                    repo.blockNumber(n.number, n.type, n.description)
+                    numbersRestored++
+                }
+
+                for (w in payload.whitelistNumbers) {
+                    repo.addToWhitelist(w.number, w.description, isEmergency = w.isEmergency)
+                    whitelistRestored++
+                }
+
+                for (r in payload.wildcardRules) {
+                    dao.insertWildcardRule(
+                        WildcardRule(
+                            pattern = r.pattern,
+                            isRegex = r.isRegex,
+                            description = r.description,
+                            enabled = r.enabled,
+                            scheduleDays = r.scheduleDays,
+                            scheduleStartHour = r.scheduleStartHour,
+                            scheduleEndHour = r.scheduleEndHour,
+                        ),
+                    )
+                    rulesRestored++
+                }
+
+                for (k in payload.keywordRules) {
+                    dao.insertKeywordRule(
+                        SmsKeywordRule(
+                            keyword = k.keyword,
+                            caseSensitive = k.caseSensitive,
+                            description = k.description,
+                            enabled = k.enabled,
+                            scheduleDays = k.scheduleDays,
+                            scheduleStartHour = k.scheduleStartHour,
+                            scheduleEndHour = k.scheduleEndHour,
+                        ),
+                    )
+                    keywordsRestored++
+                }
+
+                for (r in payload.rangeRules) {
+                    dao.insertHashWildcardRule(
+                        HashWildcardRule(
+                            pattern = r.pattern,
+                            description = r.description,
+                            enabled = r.enabled,
+                            scheduleDays = r.scheduleDays,
+                            scheduleStartHour = r.scheduleStartHour,
+                            scheduleEndHour = r.scheduleEndHour,
+                        ),
+                    )
+                    rangesRestored++
+                }
+
+                for (log in payload.logs) {
+                    dao.insertBlockedCall(
+                        BlockedCall(
+                            number = log.number,
+                            timestamp = log.timestamp,
+                            type = log.type,
+                            wasBlocked = log.wasBlocked,
+                            isCall = log.isCall,
+                            smsBody = log.smsBody,
+                            matchReason = log.matchReason,
+                            confidence = log.confidence,
+                            logKey = log.logKey,
+                        ),
+                    )
+                    logsRestored++
+                }
             }
 
             var settingsRestored = 0
             payload.settings?.let {
                 it.applyTo(repo)
                 settingsRestored = 1
-            }
-
-            var logsRestored = 0
-            for (log in payload.logs) {
-                dao.insertBlockedCall(
-                    BlockedCall(
-                        number = log.number,
-                        timestamp = log.timestamp,
-                        type = log.type,
-                        wasBlocked = log.wasBlocked,
-                        isCall = log.isCall,
-                        smsBody = log.smsBody,
-                        matchReason = log.matchReason,
-                        confidence = log.confidence,
-                        logKey = log.logKey,
-                    ),
-                )
-                logsRestored++
             }
 
             repo.invalidateRestoredRuleCaches()

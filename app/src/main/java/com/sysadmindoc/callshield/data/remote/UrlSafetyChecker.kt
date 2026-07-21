@@ -43,6 +43,9 @@ object UrlSafetyChecker {
             .readTimeout(10, TimeUnit.SECONDS)
             .build()
 
+    // URLhaus URL-status responses are small JSON; cap generously to bound memory.
+    private const val MAX_URLHAUS_BYTES = 256L * 1024L
+
     private val JSON_TYPE = "application/json".toMediaType()
 
     /**
@@ -93,8 +96,14 @@ object UrlSafetyChecker {
                 client.newCall(request).execute().use { response ->
                     if (!response.isSuccessful) return@withContext UrlCheckResult(lookupUrl, false)
 
+                    // Bound the response read — every other remote lookup caps its
+                    // body; a large/abusive endpoint response should not inflate
+                    // memory on the post-decision SMS/RCS URL-scan path.
                     val responseBody =
-                        response.body?.string() ?: return@withContext UrlCheckResult(lookupUrl, false)
+                        when (val bounded = response.body?.readUtf8Bounded(MAX_URLHAUS_BYTES)) {
+                            is BoundedResponseBody.Text -> bounded.value
+                            else -> return@withContext UrlCheckResult(lookupUrl, false)
+                        }
 
                     // Parse response
                     // {"query_status":"is_phishing","url_status":"online","threat":"phishing",...}

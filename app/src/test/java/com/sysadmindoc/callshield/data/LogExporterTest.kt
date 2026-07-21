@@ -143,6 +143,49 @@ class LogExporterTest {
         assertFalse(csv.contains("token=secret"))
     }
 
+    // ── csvEscape: spreadsheet formula-injection neutralization ──────────
+
+    @Test
+    fun `csvEscape neutralizes leading equals formula`() {
+        assertEquals("\"'=HYPERLINK(\"\"http://evil\"\")\"", escape("=HYPERLINK(\"http://evil\")"))
+    }
+
+    @Test
+    fun `csvEscape neutralizes leading plus minus at`() {
+        assertEquals("\"'+1+2\"", escape("+1+2"))
+        assertEquals("\"'-2+3\"", escape("-2+3"))
+        assertEquals("\"'@SUM(A1)\"", escape("@SUM(A1)"))
+    }
+
+    @Test
+    fun `csvEscape leaves safe leading characters untouched`() {
+        assertEquals("\"1+2\"", escape("1+2"))
+        assertEquals("\"spam\"", escape("spam"))
+        assertEquals("\"(212) 555-1234\"", escape("(212) 555-1234"))
+    }
+
+    @Test
+    fun `exportToCsv neutralizes formula in an attacker-influenced SMS body`() {
+        val csv =
+            LogExporter.exportToCsv(
+                calls =
+                    listOf(
+                        BlockedCall(
+                            number = "+15551234567",
+                            timestamp = 0L,
+                            type = "sms_spam",
+                            isCall = false,
+                            smsBody = "=cmd|'/c calc'!A1",
+                            matchReason = "sms_content",
+                            confidence = 92,
+                        ),
+                    ),
+                includeRawSmsBodies = true,
+            )
+        assertTrue(csv.contains("\"'=cmd"))
+        assertFalse(csv.contains(",\"=cmd"))
+    }
+
     @Test
     fun `exportToCsv can include raw SMS bodies explicitly`() {
         val rawBody = "Your reset code is 987654. Tap https://phish.example/reset?token=secret"

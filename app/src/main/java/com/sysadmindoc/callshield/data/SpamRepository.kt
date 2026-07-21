@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
+import androidx.room.withTransaction
 import com.sysadmindoc.callshield.data.checker.BlockResult
 import com.sysadmindoc.callshield.data.checker.CheckerDependencies
 import com.sysadmindoc.callshield.data.local.AppDatabase
@@ -57,6 +58,7 @@ class SpamRepository(
     checkerDependencies: CheckerDependencies = CheckerDependencies(),
 ) {
     private val appContext: Context = context.applicationContext
+    private val db: AppDatabase = database
     private val dao: SpamDao = database.spamDao()
     private val settingsRepository =
         SettingsRepository(
@@ -561,6 +563,15 @@ class SpamRepository(
         spamRepositoryImpl.invalidateWildcardCache()
         spamRepositoryImpl.invalidateKeywordCache()
     }
+
+    /**
+     * Run [block] inside a single Room transaction on this repository's own
+     * database, so a multi-step mutation (e.g. backup restore's clear +
+     * re-insert) commits or rolls back atomically. Uses the repo's actual
+     * AppDatabase — the production singleton in the app, or an injected
+     * in-memory database under test — so nested DAO calls join the transaction.
+     */
+    suspend fun <T> runInTransaction(block: suspend () -> T): T = db.withTransaction { block() }
 
     // ── Search log ───────────────────────────────────────────────────
     fun searchLog(query: String): Flow<List<BlockedCall>> = blocklistRepository.searchLog(query)

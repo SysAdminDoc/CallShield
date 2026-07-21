@@ -2,7 +2,33 @@
 
 All notable changes to CallShield will be documented in this file.
 
-## v1.7.14 — 2026-07-20
+## v1.7.15 — 2026-07-20
+
+Deep audit pass — correctness, data-safety, and security hardening in the
+data/persistence/network layers.
+
+### Fixed
+
+- **Backup restore is now atomic (prevents data loss).** In Replace mode the
+  restore cleared the selected sections and then re-inserted rows in a bare
+  loop; a failure partway through left the user's data half-cleared and
+  half-restored. The clear plus every re-insert now run in a single Room
+  transaction that rolls back on any error. Settings (stored in DataStore) are
+  applied after the transaction commits.
+- **Hot-list refresh is now atomic.** `replaceHotList` deleted the old
+  `hot_list` rows and inserted the new ones as two separate statements, leaving
+  a window (every 30-minute sync) where a concurrent call-screening lookup could
+  miss a hot-list number. It now uses the DAO's transactional `replaceBySource`.
+
+### Security
+
+- **CSV log export neutralizes spreadsheet formula injection.** A blocked-call
+  `matchReason` or (with raw bodies enabled) SMS text beginning with `= + - @`
+  could execute as a formula when the exported CSV was opened in Excel/Sheets.
+  Such cells are now prefixed with a single quote.
+- **URLhaus response bodies are size-capped.** The phishing-URL check read the
+  response with no bound, unlike every other remote lookup; it now uses the
+  shared bounded reader (256 KB cap).
 
 ### Security
 

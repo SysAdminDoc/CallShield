@@ -153,10 +153,11 @@ class SyncRepository(
                     existingByNumber = existingByNumber,
                 )
 
-            dao.deleteBySource("hot_list")
-            if (mergedHotNumbers.isNotEmpty()) {
-                dao.insertNumbers(mergedHotNumbers)
-            }
+            // Atomic delete + insert via the DAO's @Transaction helper. A bare
+            // deleteBySource()/insertNumbers() pair left a window where a
+            // concurrent screening lookup (HotListSyncWorker runs every 30 min)
+            // could miss a hot-list number between the two statements.
+            dao.replaceBySource("hot_list", mergedHotNumbers)
             // Hot list entries are exact number rows. Prefix/rule caches do not change here.
         }
 
