@@ -15,6 +15,25 @@ class SmsReceiver : BroadcastReceiver() {
     companion object {
         /** Hard cap on reassembled multipart body length (16 KB). */
         internal const val MAX_REASSEMBLED_BODY = 16_384
+
+        /**
+         * Reassemble a multipart SMS body with a hard length cap. A legitimate
+         * SMS spans at most ~40 segments (GSM/UCS-2 limit ~6 400 chars); a
+         * malformed or hostile delivery can claim hundreds of parts. Capping at
+         * [MAX_REASSEMBLED_BODY] matches the deep-analysis cap in
+         * [com.sysadmindoc.callshield.data.SmsContentAnalyzer] so we never
+         * shovel data into a regex engine we won't read. Pure so it is
+         * unit-testable without the Telephony stack.
+         */
+        internal fun reassembleBody(parts: List<String?>): String =
+            buildString {
+                for (part in parts) {
+                    if (part == null) continue
+                    if (length >= MAX_REASSEMBLED_BODY) break
+                    val remaining = MAX_REASSEMBLED_BODY - length
+                    append(if (part.length <= remaining) part else part.substring(0, remaining))
+                }
+            }
     }
 
     override fun onReceive(
@@ -47,23 +66,7 @@ class SmsReceiver : BroadcastReceiver() {
                 }
 
                 sender = messages[0].originatingAddress ?: return@launch
-                // Cap reassembled multipart body length. A legitimate SMS
-                // spans at most ~40 segments (GSM/UCS-2 limit ~ 6 400 chars);
-                // a malformed or hostile delivery can claim hundreds of
-                // parts. Capping at 16 KB matches the deep-analysis cap in
-                // [SmsContentAnalyzer] so we don't shovel data into a
-                // regex engine we won't read.
-                body =
-                    buildString {
-                        for (msg in messages) {
-                            val part = msg.messageBody ?: continue
-                            if (length >= MAX_REASSEMBLED_BODY) break
-                            val remaining = MAX_REASSEMBLED_BODY - length
-                            append(
-                                if (part.length <= remaining) part else part.substring(0, remaining),
-                            )
-                        }
-                    }
+                body = reassembleBody(messages.map { it.messageBody })
 
                 // Spam classification + block logging is gated behind the
                 // Block-SMS toggle. The URLhaus phishing-URL check below runs
