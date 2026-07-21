@@ -29,6 +29,10 @@ All notable changes to CallShield will be documented in this file.
   being recorded into the in-memory call-burst detector — a burst of legitimate
   SMS from one carrier prefix could trip campaign-burst blocking of real voice
   calls from that prefix. The recorder now ignores SMS-path invocations.
+- **Caller-ID overlay now dismisses when the call actually ends.** It previously
+  stayed up for a fixed 20 seconds, hovering over unrelated UI after a 2-3 s
+  blocked/rejected call. A permission-gated call-state watcher dismisses it on
+  `CALL_STATE_IDLE`; the 20 s timeout remains as a backstop.
 
 - **Malformed v3 `fallback_weights` are rejected instead of silently zeroed.**
   The logistic-regression fallback guard checked the (always-20) array size, so
@@ -56,6 +60,10 @@ All notable changes to CallShield will be documented in this file.
   is a coarse fixed-reference NPA proxy, not true user-relative geography (a
   user-relative feature remains roadmap 2.2.4). Behavior and model schema
   unchanged.
+- **Phone numbers are bidi-isolated in notification text** so they render
+  left-to-right and correctly ordered inside RTL (Arabic/Hebrew) sentences.
+  Added reusable `PhoneFormatter.isolate()` / `formatIsolated()` helpers; the
+  wider UI-screen adoption + logical-padding audit remains tracked in ROADMAP.
 
 ## v1.7.13 — 2026-07-20
 

@@ -9,6 +9,28 @@ import com.sysadmindoc.callshield.util.filterAsciiDigits
  * International numbers pass through with just + prefix formatting.
  */
 object PhoneFormatter {
+    // Unicode bidirectional isolate controls. Wrapping a phone number (an LTR
+    // run of digits, spaces, parens and dashes) in FSI…PDI keeps it displayed
+    // left-to-right and correctly ordered when it is embedded inside an RTL
+    // sentence (Arabic/Hebrew/Farsi/Urdu). Without isolation the digits and
+    // punctuation reorder and garble. The controls are invisible in LTR UIs.
+    private const val FIRST_STRONG_ISOLATE = '⁦'
+    private const val POP_DIRECTIONAL_ISOLATE = '⁩'
+
+    /**
+     * Wrap [text] in a bidirectional isolate so an embedded LTR run (like a
+     * phone number) renders correctly inside RTL surrounding text. Safe to use
+     * anywhere; a no-op visually in LTR layouts. Empty input is returned as-is.
+     */
+    fun isolate(text: String): String =
+        if (text.isEmpty()) text else "$FIRST_STRONG_ISOLATE$text$POP_DIRECTIONAL_ISOLATE"
+
+    /**
+     * [format] the number and wrap it in a bidi isolate for safe display inside
+     * localized (possibly RTL) sentences — notifications, overlays, log rows.
+     */
+    fun formatIsolated(number: String): String = isolate(format(number))
+
     fun format(number: String): String {
         val digits = filterAsciiDigits(number)
 

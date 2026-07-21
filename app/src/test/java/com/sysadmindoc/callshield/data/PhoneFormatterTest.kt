@@ -135,4 +135,31 @@ class PhoneFormatterTest {
     fun `formatWithCountryCode with formatted US number`() {
         assertEquals("+1 (212) 555-1234", PhoneFormatter.formatWithCountryCode("(212) 555-1234"))
     }
+
+    // ── isolate() / formatIsolated(): RTL bidi safety ───────────────────
+
+    private val fsi = '⁦'
+    private val pdi = '⁩'
+
+    @Test
+    fun `isolate wraps text in first-strong-isolate and pop-directional-isolate`() {
+        assertEquals("$fsi(212) 555-1234$pdi", PhoneFormatter.isolate("(212) 555-1234"))
+    }
+
+    @Test
+    fun `isolate leaves empty string untouched`() {
+        assertEquals("", PhoneFormatter.isolate(""))
+    }
+
+    @Test
+    fun `formatIsolated formats then wraps the number`() {
+        assertEquals("$fsi(212) 555-1234$pdi", PhoneFormatter.formatIsolated("2125551234"))
+    }
+
+    @Test
+    fun `formatIsolated inner content matches plain format`() {
+        val n = "+442012345678"
+        val isolated = PhoneFormatter.formatIsolated(n)
+        assertEquals(PhoneFormatter.format(n), isolated.trim(fsi, pdi))
+    }
 }

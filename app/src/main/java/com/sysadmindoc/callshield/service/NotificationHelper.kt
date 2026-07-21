@@ -188,7 +188,7 @@ object NotificationHelper {
                 .Builder(context, CHANNEL_BLOCKED)
                 .setSmallIcon(android.R.drawable.ic_menu_close_clear_cancel)
                 .setContentTitle(context.getString(R.string.notif_blocked_title, typeText))
-                .setContentText(context.getString(R.string.notif_blocked_text, PhoneFormatter.format(number), reason))
+                .setContentText(context.getString(R.string.notif_blocked_text, PhoneFormatter.formatIsolated(number), reason))
                 .setContentIntent(openIntent)
                 .setAutoCancel(true)
                 .setGroup(GROUP_BLOCKED)
@@ -294,11 +294,11 @@ object NotificationHelper {
                 .Builder(context, CHANNEL_PHISHING)
                 .setSmallIcon(android.R.drawable.ic_dialog_alert)
                 .setContentTitle(context.getString(R.string.notif_phishing_title))
-                .setContentText(context.getString(R.string.notif_phishing_text, PhoneFormatter.format(sender), threats))
+                .setContentText(context.getString(R.string.notif_phishing_text, PhoneFormatter.formatIsolated(sender), threats))
                 .setStyle(
                     NotificationCompat
                         .BigTextStyle()
-                        .bigText(context.getString(R.string.notif_phishing_big_text, PhoneFormatter.format(sender), threats)),
+                        .bigText(context.getString(R.string.notif_phishing_big_text, PhoneFormatter.formatIsolated(sender), threats)),
                 ).setContentIntent(openIntent)
                 .setAutoCancel(true)
 
@@ -344,7 +344,7 @@ object NotificationHelper {
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
             )
 
-        val formatted = PhoneFormatter.format(number)
+        val formatted = PhoneFormatter.formatIsolated(number)
 
         val builder =
             NotificationCompat
@@ -374,7 +374,7 @@ object NotificationHelper {
         if (!repeatedUrgentNoticeGate.shouldShow("repeated_urgent:$digits")) return
 
         val nid = stableId(number, 70)
-        val formatted = PhoneFormatter.format(number)
+        val formatted = PhoneFormatter.formatIsolated(number)
         val openIntent =
             PendingIntent.getActivity(
                 context,
