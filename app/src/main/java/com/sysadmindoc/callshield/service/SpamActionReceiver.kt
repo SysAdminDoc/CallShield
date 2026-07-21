@@ -25,7 +25,7 @@ class SpamActionReceiver : BroadcastReceiver() {
             when (intent.action) {
                 "com.sysadmindoc.callshield.FEEDBACK_SPAM" -> {
                     val number = intent.getStringExtra("number") ?: return
-                    notificationManager.cancel(number.hashCode() + 10000)
+                    notificationManager.cancel(NotificationHelper.feedbackNotificationId(number))
                     Toast.makeText(appContext, appContext.getString(R.string.feedback_blocked), Toast.LENGTH_SHORT).show()
                     suspend {
                         repo.blockNumber(number, "spam", "Blocked from after-call feedback")
@@ -35,7 +35,7 @@ class SpamActionReceiver : BroadcastReceiver() {
 
                 "com.sysadmindoc.callshield.FEEDBACK_NOT_SPAM" -> {
                     val number = intent.getStringExtra("number") ?: return
-                    notificationManager.cancel(number.hashCode() + 10000)
+                    notificationManager.cancel(NotificationHelper.feedbackNotificationId(number))
                     Toast.makeText(appContext, appContext.getString(R.string.feedback_whitelisted), Toast.LENGTH_SHORT).show()
                     suspend {
                         repo.addToWhitelist(number, "Marked safe from after-call feedback")
