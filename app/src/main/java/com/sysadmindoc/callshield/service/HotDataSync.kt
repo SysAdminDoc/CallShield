@@ -10,6 +10,8 @@ import com.sysadmindoc.callshield.data.model.HotNumber
 import com.sysadmindoc.callshield.data.model.SpamNumber
 import com.sysadmindoc.callshield.data.remote.GitHubDataSource
 import com.sysadmindoc.callshield.data.remote.HotFeedDataSource
+import com.sysadmindoc.callshield.util.filterAsciiDigits
+import com.sysadmindoc.callshield.util.isAsciiDigit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -194,7 +196,10 @@ internal object HotDataSync {
         ranges
             .asSequence()
             .map { it.trim() }
-            .filter { it.length == 6 && it.all(Char::isDigit) }
+            // ASCII-only digits: the screening path compares against
+            // filterAsciiDigits() output, so a Unicode-digit range would be
+            // admitted here yet never match (silent hot-campaign degradation).
+            .filter { range -> range.length == 6 && range.all { it.isAsciiDigit() } }
             .distinct()
             .toList()
 
@@ -206,7 +211,7 @@ internal object HotDataSync {
             .toList()
 
     private fun canonicalNumberKey(number: String): String {
-        val digits = number.filter(Char::isDigit)
+        val digits = filterAsciiDigits(number)
         return if (digits.length == 11 && digits.startsWith("1")) digits.drop(1) else digits
     }
 }

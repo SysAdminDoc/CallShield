@@ -44,7 +44,7 @@ class DigestWorker
                 val bySource =
                     recent.filter { it.wasBlocked }.groupBy { call ->
                         when {
-                            call.matchReason.startsWith("database") || call.matchReason.startsWith("user_blocklist") || call.matchReason.startsWith("hot_list") -> "database"
+                            call.matchReason.startsWith("database") || call.matchReason.startsWith("user_blocklist") -> "database"
                             call.matchReason.startsWith("heuristic") -> "heuristic"
                             call.matchReason.startsWith("ml_scorer") -> "ML"
                             call.matchReason.startsWith("sms_content") || call.matchReason.startsWith("keyword") -> "content"

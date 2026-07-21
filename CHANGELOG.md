@@ -9,6 +9,17 @@ data/persistence/network layers.
 
 ### Fixed
 
+- **Legitimate US/Canada callers are no longer misblocked as international
+  "wangiri" scams.** The heuristic checked a +1 caller's area code against a set
+  that mixed genuine Caribbean codes with international country codes, so real
+  domestic area codes that collide with them — 678 (Atlanta), 267
+  (Philadelphia), 224 (Chicago), 385 (Salt Lake City), 386 (Daytona), 248
+  (Detroit), 252 (Greenville NC), 269 (Kalamazoo), 672 (Vancouver) — scored +80
+  and were hard-blocked. NANP numbers are now only matched against genuine
+  Caribbean area codes; international codes apply only to international numbers.
+- **International numbers sharing digits with US premium NPAs are no longer
+  misblocked.** A number such as Mongolia (+976) was flagged as a US 976
+  premium-rate line; the premium check is now scoped to NANP numbers.
 - **Backup restore is now atomic (prevents data loss).** In Replace mode the
   restore cleared the selected sections and then re-inserted rows in a bare
   loop; a failure partway through left the user's data half-cleared and
@@ -29,6 +40,15 @@ data/persistence/network layers.
 - **URLhaus response bodies are size-capped.** The phishing-URL check read the
   response with no bound, unlike every other remote lookup; it now uses the
   shared bounded reader (256 KB cap).
+- **Hot-list/range sanitization enforces ASCII-only digits.** `HotDataSync`
+  used Kotlin's Unicode-aware `Char.isDigit`, so a malformed feed row with
+  non-ASCII digits could enter the hot-range set or dedup key yet never match
+  the ASCII-normalized screening path. It now uses the project's `isAsciiDigit`.
+
+### Changed
+
+- Removed a dead `hot_list`-prefix branch in the daily digest's source
+  breakdown (database hits always record `matchReason = "database"`).
 
 ### Security
 
