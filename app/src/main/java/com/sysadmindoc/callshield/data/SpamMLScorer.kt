@@ -14,6 +14,51 @@ import kotlin.math.exp
 import kotlin.math.sin
 
 /**
+ * Observable outcome of the most recent model load/sync — lets a silent
+ * detection-quality regression (a corrupt GBT payload falling back to logistic
+ * regression) become visible instead of failing quietly.
+ */
+enum class ModelHealth {
+    /** No load attempted yet. */
+    UNINITIALIZED,
+
+    /** Gradient-boosted-tree ensemble active (best). */
+    GBT_ACTIVE,
+
+    /** Logistic-regression model active — an intended v2/LR model. */
+    LR_ACTIVE,
+
+    /** A v3 GBT model was declared but its trees failed to parse — running LR. */
+    DEGRADED_TO_LR,
+
+    /** Payload could not be parsed at all; the previous model was kept. */
+    PARSE_FAILED,
+
+    /** No usable model found; built-in default weights are in use. */
+    DEFAULTS,
+}
+
+/** True when [json] declares a v3+ gradient-boosted-tree model. */
+internal fun jsonDeclaresGbt(json: String): Boolean {
+    val version = Regex(""""version"\s*:\s*(\d+)""").find(json)?.groupValues?.get(1)?.toIntOrNull() ?: 2
+    val type = Regex(""""model_type"\s*:\s*"(\w+)"""").find(json)?.groupValues?.get(1) ?: ""
+    return version >= 3 && type == "gbt"
+}
+
+/** Classify a load/sync outcome into a [ModelHealth] (pure, for testability). */
+internal fun modelHealthFor(
+    parseSucceeded: Boolean,
+    usingGbt: Boolean,
+    declaredGbt: Boolean,
+): ModelHealth =
+    when {
+        !parseSucceeded -> ModelHealth.PARSE_FAILED
+        usingGbt -> ModelHealth.GBT_ACTIVE
+        declaredGbt -> ModelHealth.DEGRADED_TO_LR
+        else -> ModelHealth.LR_ACTIVE
+    }
+
+/**
  * Detection Layer 15 — On-Device ML Spam Scorer (v3: Gradient-Boosted Trees)
  *
  * Scores incoming numbers using either:
@@ -140,6 +185,16 @@ class SpamMLScorer
         @Volatile
         private var state: ModelState = defaultModelState()
 
+        @Volatile
+        private var _modelHealth: ModelHealth = ModelHealth.UNINITIALIZED
+
+        /** Health of the most recent model load/sync (for diagnostics/logging). */
+        val modelHealth: ModelHealth get() = _modelHealth
+
+        private fun logDegradedModel(source: String) {
+            android.util.Log.w("SpamMLScorer", "Model $source degraded: $_modelHealth")
+        }
+
         /**
          * A single decision tree in the GBT ensemble.
          * Arrays follow scikit-learn's internal tree format:
@@ -178,27 +233,43 @@ class SpamMLScorer
 
                 val file = File(context.filesDir, "spam_model_weights.json")
                 if (file.exists()) {
-                    val parsed = parseModel(file.readText())
+                    val json = file.readText()
+                    val parsed = parseModel(json)
                     if (parsed != null) {
                         state = parsed
+                        recordModelHealth(json, parsed, "cache")
                         return
                     }
                 }
 
                 val bundled = GitHubDataSource.readBundledAsset(context, GitHubDataSource.BUNDLED_MODEL_WEIGHTS_ASSET)
                 if (bundled.isSuccess) {
-                    val parsed = parseModel(bundled.getOrThrow())
+                    val json = bundled.getOrThrow()
+                    val parsed = parseModel(json)
                     if (parsed != null) {
                         state = parsed
+                        recordModelHealth(json, parsed, "bundled")
                         return
                     }
                 }
 
                 // Only fall all the way back to defaults if we have nothing at all.
                 state = defaultModelState()
+                _modelHealth = ModelHealth.DEFAULTS
+                logDegradedModel("load")
             } catch (_: Exception) {
                 state = defaultModelState()
+                _modelHealth = ModelHealth.DEFAULTS
             }
+        }
+
+        private fun recordModelHealth(
+            json: String,
+            parsed: ModelState,
+            source: String,
+        ) {
+            _modelHealth = modelHealthFor(parseSucceeded = true, usingGbt = parsed.useGbt, declaredGbt = jsonDeclaresGbt(json))
+            if (_modelHealth == ModelHealth.DEGRADED_TO_LR) logDegradedModel(source)
         }
 
         /**
@@ -221,8 +292,16 @@ class SpamMLScorer
                     // Parse first, only touch state + disk on success. This keeps the
                     // running model intact if the remote payload is corrupted and
                     // prevents transient blips where isSpam() would see defaults.
-                    val parsed = parseModel(json) ?: return@withContext
+                    val parsed = parseModel(json)
+                    if (parsed == null) {
+                        // Malformed payload — keep the previous model, but record
+                        // and log the failure instead of degrading silently.
+                        _modelHealth = ModelHealth.PARSE_FAILED
+                        logDegradedModel("sync")
+                        return@withContext
+                    }
                     state = parsed
+                    recordModelHealth(json, parsed, "sync")
                     persistModelJson(context, json)
                 } catch (_: Exception) {
                 }
@@ -810,5 +889,8 @@ class SpamMLScorer
             fun confidence(number: String): Int = shared.confidence(number)
 
             fun verdict(number: String): Verdict = shared.verdict(number)
+
+            /** Health of the most recent model load/sync. */
+            fun modelHealth(): ModelHealth = shared.modelHealth
         }
     }
