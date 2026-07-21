@@ -22,6 +22,17 @@ All notable changes to CallShield will be documented in this file.
   SMS from one carrier prefix could trip campaign-burst blocking of real voice
   calls from that prefix. The recorder now ignores SMS-path invocations.
 
+- **Malformed v3 `fallback_weights` are rejected instead of silently zeroed.**
+  The logistic-regression fallback guard checked the (always-20) array size, so
+  a model whose fallback keys failed to parse produced an all-zero LR that never
+  flagged spam. It now requires a minimum count of successfully-parsed named
+  weights.
+- **RCS encrypted-message placeholder detection is now locale-tolerant.** It
+  matched English literals only, so on non-English devices the localized
+  "encrypted message" placeholder was fed to the SMS content rules as real
+  content. Detection is now keyword-anchored (en/es/pt/fr/de/it/nl) and
+  length-bounded so it cannot misclassify real short messages.
+
 ### Changed
 
 - **GitHub default-branch resolution is cached (6 h TTL).** Every raw-feed fetch
@@ -29,6 +40,14 @@ All notable changes to CallShield will be documented in this file.
   hot-list refresh plus model-weight sync could burn several of GitHub's 60
   requests/hour unauthenticated budget, after which all feeds silently fell back
   to bundled data. Resolution is now cached per repo.
+- **SMS-only checkers use dedicated priority constants** (`SMS_KEYWORD`,
+  `SMS_CONTEXT_TRUST`, `SMS_CONTENT`) instead of borrowing call-ladder values by
+  arithmetic, so a future renumber of the call ladder can't silently reorder SMS
+  checks. Values and ordering are unchanged.
+- Corrected the misleading "geographic_distance" ML-feature documentation — it
+  is a coarse fixed-reference NPA proxy, not true user-relative geography (a
+  user-relative feature remains roadmap 2.2.4). Behavior and model schema
+  unchanged.
 
 ## v1.7.13 — 2026-07-20
 

@@ -397,15 +397,19 @@ class SpamMLScorer
             val timeSin = sin(timeAngle)
             val timeCos = cos(timeAngle)
 
-            // Geographic distance — caller's area code differs from a reference
-            // area code by >200 numerically and both are valid US area codes
+            // "geographic_distance" feature (model position 18). NOTE: this is
+            // NOT true user-relative geographic distance — NPA codes are not
+            // ordered by geography. It is a coarse proxy: whether the caller's
+            // NPA is numerically far (>200) from a fixed central reference
+            // (312). It fires only when the NPA resolves to a known US area
+            // code. A genuinely user-relative feature (distance from the user's
+            // home area code) is roadmap item 2.2.4; the feature name/position
+            // is kept stable so existing trained model weights stay valid.
             val callerNpa = npa.toIntOrNull() ?: 0
             val callerLocation = AreaCodeLookup.lookup(number)
             val geoDist =
                 if (callerLocation != null) {
-                    // Use 312 (Chicago) as a central US reference area code
-                    // This flags calls from geographically distant area codes
-                    val refNpa = 312
+                    val refNpa = REFERENCE_NPA
                     if (kotlin.math.abs(callerNpa - refNpa) > 200) 1.0 else 0.0
                 } else {
                     0.0
@@ -536,7 +540,7 @@ class SpamMLScorer
          * For v2: reads "weights" array and "bias".
          * For v3: reads "fallback_weights" object and "fallback_bias".
          */
-        private fun parseFallbackWeights(
+        internal fun parseFallbackWeights(
             json: String,
             version: Int,
         ): Pair<DoubleArray, Double>? {
@@ -575,9 +579,19 @@ class SpamMLScorer
                             "short_number",
                             "plus_one_prefix",
                         )
+                    // Count how many of the named weights were actually present
+                    // in the parsed block. The old guard checked
+                    // `parsedWeights.size >= 15`, but `featureNames.map { ... }`
+                    // always yields exactly 20 entries, so that guard was always
+                    // true — a `fallback_weights` block whose keys failed to
+                    // parse silently produced an all-zero LR (constant output,
+                    // never spam). Require a minimum count of *present* named
+                    // weights instead so a malformed block is rejected here and
+                    // falls through to the v2-style / null path.
+                    val presentCount = featureNames.count { pairs.containsKey(it) }
                     val parsedWeights = featureNames.map { pairs[it] ?: 0.0 }.toDoubleArray()
 
-                    if (parsedWeights.size >= 15) {
+                    if (presentCount >= MIN_FALLBACK_NAMED_WEIGHTS) {
                         val bias = fbBiasMatch?.groupValues?.get(1)?.toDoubleOrNull() ?: -2.5
                         return parsedWeights to bias
                     }
@@ -766,6 +780,20 @@ class SpamMLScorer
             val shared: SpamMLScorer = SpamMLScorer()
 
             private const val GBT_LEAF_NODE = -2
+
+            /**
+             * Fixed reference NPA for the coarse "geographic_distance" feature
+             * proxy. Not a real geographic anchor — see the extraction site.
+             */
+            private const val REFERENCE_NPA = 312
+
+            /**
+             * Minimum number of *named* logistic-regression fallback weights
+             * that must be present in a v3 `fallback_weights` block before it is
+             * accepted. Guards against a malformed block silently producing an
+             * all-zero LR (constant output, never spam).
+             */
+            internal const val MIN_FALLBACK_NAMED_WEIGHTS = 15
 
             fun loadWeights(context: Context) {
                 shared.loadWeights(context)

@@ -197,6 +197,18 @@ object CheckerPriority {
     const val CAMPAIGN_BURST = 2_500
     const val ML_SCORER = 2_000
 
+    // ── SMS-only extension chain ─────────────────────────────────────
+    // These run in a separate pipeline (`smsExtensions`) after the shared
+    // chain passes, so they never compete with the call ladder at runtime.
+    // They keep their own explicit constants — rather than borrowing
+    // call-ladder values by arithmetic (e.g. `WILDCARD_RULE - 100`) — so a
+    // future renumber of the call ladder cannot silently reorder SMS checks.
+    // Values are chosen to preserve the historical relative ordering:
+    // keyword block → trusted-sender allow → content analysis.
+    const val SMS_KEYWORD = 5_400 // keyword rule block
+    const val SMS_CONTEXT_TRUST = 4_700 // trusted-sender allow (notification/context)
+    const val SMS_CONTENT = 1_900 // content heuristic analysis
+
     // ── Catch-all ─────────────────────────────────────────────────────
     const val PASS_BY_DEFAULT = Int.MIN_VALUE
 }
