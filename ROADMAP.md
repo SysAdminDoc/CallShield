@@ -614,13 +614,6 @@ Second same-day pass. Adds verified code-correctness bugs (grounded in file:line
 
 ### P3
 
-- [ ] P3 — Unit-test the untested hot/critical paths
-  Why: No coverage for `SpamActionReceiver` (would have caught the notification-ID bug), `SmsReceiver` reassembly/URLhaus gating (would have caught the phishing-off bug), the call-vs-SMS campaign separation, or the `CheckerPipeline.run` `timeLeftMillis() <= 0` short-circuit — the actual 5s-deadline hot path.
-  Evidence: absence of these tests under `app/src/test/`; `PipelineTraceTest` only covers `traceAll`
-  Touches: `app/src/test/.../service/`, `app/src/test/.../checker/`
-  Acceptance: unit tests exist for SpamActionReceiver action→cancel/write, SmsReceiver URLhaus gating under block-SMS-off, and CheckerPipeline.run early short-circuit ordering.
-  Complexity: M
-
 - [ ] P3 — Accessibility CI gate + Android 16 semantics
   Why: Espresso/Compose `AccessibilityChecks` (label presence, 48dp targets, contrast) can be asserted in instrumented tests on Compose 1.8+; Android 16 adds expandable-state/`stateDescription` and duration `TtsSpan` semantics; the AMOLED theme must be verified with system "outline text" ON. EAA/WCAG 2.2 AA is the 2026 bar. Complements roadmap 4.6.1-4.6.4.
   Evidence: https://developer.android.com/develop/ui/compose/accessibility/testing ; https://developer.android.com/about/versions/16/features ; https://www.levelaccess.com/compliance-overview/european-accessibility-act-eaa/ ; cross-ref 4.6
