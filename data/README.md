@@ -58,10 +58,17 @@ python scripts/extract_spam_domains.py
 
 # 4. Retrain the on-device GBT scorer and emit versioned weights
 python scripts/train_spam_model.py --output data/spam_model_weights.json
+
+# 5. Evaluate the shipped model before committing (local quality gate)
+python scripts/evaluate_model.py            # exits non-zero if CV F1 regresses
 ```
 
 `train_spam_model.py` prints the learned per-feature weights and writes a
 version-stamped `spam_model_weights.json` (GBT trees + a logistic-regression
-fallback). Bump the `version` field in `spam_numbers.json` so clients know to
-re-sync, then commit the regenerated `data/*.json`. Model precision/recall/F1
-evaluation is tracked separately (see `ROADMAP.md`, item 2.6.3).
+fallback). `evaluate_model.py` reports precision/recall/F1 two ways: with the
+exact **on-device** inference the app runs (so it catches export/inference
+drift the trainer's sklearn-side metrics hide) and via stratified k-fold
+cross-validation (an honest generalization estimate); it exits non-zero when the
+cross-validated F1 drops below `--min-f1` so it can gate a bad retrain. Bump the
+`version` field in `spam_numbers.json` so clients re-sync, then commit the
+regenerated `data/*.json`.

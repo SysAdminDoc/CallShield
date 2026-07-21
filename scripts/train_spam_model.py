@@ -271,6 +271,60 @@ def export_tree(tree) -> dict:
     }
 
 
+# Negative examples — common legitimate US NPA codes with random subscribers
+LEGIT_NPAS = [
+    "212", "203", "312", "305", "214", "206", "503", "412",
+    "216", "313", "804", "901", "701", "406", "605", "304",
+    "207", "802", "603", "307",
+]
+
+
+def build_dataset() -> tuple[list[list[float]], list[int], list[str], list[str]]:
+    """Build the labeled (X, y) training set — spam positives from the database
+    plus synthetic legitimate-format negatives.
+
+    Returns ``(X, y, spam_numbers, negative_numbers)`` with positives first,
+    then negatives (unshuffled). Deterministic (``random.seed(42)``) so the
+    trainer and the evaluator (``evaluate_model.py``) build the identical set.
+    """
+    if not DB_FILE.exists():
+        raise FileNotFoundError(
+            f"{DB_FILE} not found. Run import_all_sources.py first."
+        )
+
+    with open(DB_FILE) as f:
+        db = json.load(f)
+
+    spam_numbers = [n["number"] for n in db["numbers"] if n.get("number")]
+
+    random.seed(42)
+    negative_numbers: list[str] = []
+    spam_set = set(spam_numbers)
+    target_negatives = min(len(spam_numbers), 50000)
+
+    while len(negative_numbers) < target_negatives:
+        npa = random.choice(LEGIT_NPAS)
+        nxx = str(random.randint(200, 899))   # Valid NXX range
+        sub = str(random.randint(1, 9998)).zfill(4)
+        num = f"+1{npa}{nxx}{sub}"
+        if num not in spam_set:
+            negative_numbers.append(num)
+
+    # Cap positive examples to balance dataset
+    train_spam = spam_numbers[:50000]
+
+    X: list[list[float]] = []
+    y: list[int] = []
+    for num in train_spam:
+        X.append(extract_features(num))
+        y.append(1)
+    for num in negative_numbers:
+        X.append(extract_features(num))
+        y.append(0)
+
+    return X, y, spam_numbers, negative_numbers
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", default=str(OUTPUT_FILE))
@@ -278,49 +332,14 @@ def main():
 
     print("=== CallShield Spam Model Trainer v3 (GBT + LR fallback, 20 features) ===\n")
 
-    if not DB_FILE.exists():
-        print(f"ERROR: {DB_FILE} not found. Run import_all_sources.py first.")
+    try:
+        X, y, spam_numbers, negative_numbers = build_dataset()
+    except FileNotFoundError as e:
+        print(f"ERROR: {e}")
         return
 
-    with open(DB_FILE) as f:
-        db = json.load(f)
-
-    spam_numbers = [n["number"] for n in db["numbers"] if n.get("number")]
     print(f"Spam examples available: {len(spam_numbers):,}")
-
-    # Negative examples — common legitimate US NPA codes with random subscribers
-    legit_npas = [
-        "212", "203", "312", "305", "214", "206", "503", "412",
-        "216", "313", "804", "901", "701", "406", "605", "304",
-        "207", "802", "603", "307",
-    ]
-    random.seed(42)
-    negative_numbers = []
-    spam_set = set(spam_numbers)
-    target_negatives = min(len(spam_numbers), 50000)
-
-    while len(negative_numbers) < target_negatives:
-        npa = random.choice(legit_npas)
-        nxx = str(random.randint(200, 899))   # Valid NXX range
-        sub = str(random.randint(1, 9998)).zfill(4)
-        num = f"+1{npa}{nxx}{sub}"
-        if num not in spam_set:
-            negative_numbers.append(num)
-
     print(f"Negative examples: {len(negative_numbers):,}")
-
-    # Cap positive examples to balance dataset
-    train_spam = spam_numbers[:50000]
-
-    X: list[list[float]] = []
-    y: list[int] = []
-
-    for num in train_spam:
-        X.append(extract_features(num))
-        y.append(1)
-    for num in negative_numbers:
-        X.append(extract_features(num))
-        y.append(0)
 
     combined = list(zip(X, y))
     random.shuffle(combined)
