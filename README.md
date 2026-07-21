@@ -12,7 +12,7 @@
 <p align="center">
   <a href="https://github.com/SysAdminDoc/CallShield/releases/latest"><img src="https://img.shields.io/github/v/release/SysAdminDoc/CallShield?style=flat-square&color=a6e3a1" alt="Release"></a>
   <img src="https://img.shields.io/badge/Spam%20Numbers-32%2C933-f38ba8?style=flat-square" alt="32,933 Numbers">
-  <img src="https://img.shields.io/badge/Tests-782-94e2d5?style=flat-square" alt="782 Tests">
+  <img src="https://img.shields.io/badge/Tests-787-94e2d5?style=flat-square" alt="787 Tests">
   <img src="https://img.shields.io/badge/Android-10%2B-89b4fa?style=flat-square" alt="Android 10+">
   <img src="https://img.shields.io/badge/License-MIT-cba6f7?style=flat-square" alt="MIT License">
   <img src="https://img.shields.io/badge/API%20Keys-None-fab387?style=flat-square" alt="No required API keys">
@@ -35,7 +35,7 @@ CallShield blocks spam calls and texts using a **15+ layer on-device detection e
   battery manager is likely to kill background protection, and when the spam
   database has gone stale, so those risks can be surfaced.
 - **More tested internals** — Robolectric now exercises the notification-action
-  and SMS reassembly hot paths (782 tests total).
+  and SMS reassembly hot paths (787 tests total).
 
 ## v1.7.16 Highlights
 

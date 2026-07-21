@@ -20,7 +20,9 @@ digest, and off-device test coverage of the receiver hot paths.
   so protection quietly falling back to the bundled snapshot can be surfaced.
 - **Robolectric harness.** Adopted Robolectric 4.16 (no `returnDefaultValues`)
   with real-framework tests over `SpamActionReceiver` (notification-cancel hot
-  path) and a pure `SmsReceiver.reassembleBody` multipart 16 KB-cap helper.
+  path), `CheckerPipeline.run` (5s-deadline short-circuit / first-non-null-wins
+  ordering / exception tolerance), and a pure `SmsReceiver.reassembleBody`
+  multipart 16 KB-cap helper.
 
 ### Changed
 
