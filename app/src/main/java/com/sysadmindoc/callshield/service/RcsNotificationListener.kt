@@ -193,16 +193,54 @@ class RcsNotificationListener : NotificationListenerService() {
         }
     }
 
-    private fun isEncryptedPlaceholder(body: String): Boolean {
-        val lower = body.lowercase().trim()
-        return lower == "encrypted message" ||
-            lower == "message encrypted" ||
-            lower.startsWith("this message is encrypted") ||
-            lower.startsWith("end-to-end encrypted")
-    }
-
     override fun onDestroy() {
         scope.cancel()
         super.onDestroy()
+    }
+
+    companion object {
+        /** Longest body still treated as a possible encryption placeholder. */
+        private const val MAX_PLACEHOLDER_LEN = 48
+
+        /**
+         * Encryption-keyword roots across the Latin-script locales CallShield
+         * targets (en/es/pt/fr/de/it/nl). Placeholder detection is
+         * keyword-anchored AND length-bounded so it can't swallow real short
+         * spam like "You won! bit.ly/x", which carries a URL/offer rather than
+         * an encryption keyword. Non-Latin locales (ar/zh/ru) still need their
+         * own strings — tracked as future work.
+         */
+        private val ENCRYPTION_KEYWORD_ROOTS =
+            listOf(
+                "encrypt", // en (encrypted / encryption)
+                "cifrad", // es / pt (cifrado / cifrada)
+                "chiffr", // fr (chiffré / chiffre)
+                "verschlüsselt", // de
+                "crittograf", // it (crittografato)
+                "versleuteld", // nl
+            )
+
+        /**
+         * True when the RCS notification body is an E2EE placeholder rather
+         * than real content. Matching is locale-tolerant: exact known English
+         * phrasings, plus any short body built around an encryption keyword.
+         * A false positive here is safe — it only downgrades to sender-only
+         * analysis (no content rules), never a block.
+         */
+        internal fun isEncryptedPlaceholder(body: String): Boolean {
+            val lower = body.lowercase().trim().trim('"', '.', ' ')
+            if (lower.isEmpty()) return true
+            if (lower == "encrypted message" ||
+                lower == "message encrypted" ||
+                lower == "encrypted" ||
+                lower.startsWith("this message is encrypted") ||
+                lower.startsWith("message is encrypted") ||
+                lower.startsWith("end-to-end encrypted")
+            ) {
+                return true
+            }
+            return lower.length <= MAX_PLACEHOLDER_LEN &&
+                ENCRYPTION_KEYWORD_ROOTS.any { lower.contains(it) }
+        }
     }
 }

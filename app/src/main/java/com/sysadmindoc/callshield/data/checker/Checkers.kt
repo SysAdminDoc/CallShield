@@ -686,7 +686,7 @@ internal class SmsContextChecker_Checker(
     private val appContext: Context,
     private val smsContextChecker: SmsContextChecker,
 ) : IChecker {
-    override val priority = CheckerPriority.PUSH_ALERT_BRIDGE // sits at trust tier
+    override val priority = CheckerPriority.SMS_CONTEXT_TRUST // sits at trust tier
     override val name = "sms_context"
 
     override suspend fun check(ctx: CheckContext): BlockResult? =
@@ -724,7 +724,7 @@ internal class SmsBurstChecker(
 internal class SmsKeywordChecker(
     private val repo: SpamRepositoryImpl,
 ) : IChecker {
-    override val priority = CheckerPriority.WILDCARD_RULE - 100
+    override val priority = CheckerPriority.SMS_KEYWORD
     override val name = "keyword"
 
     override suspend fun check(ctx: CheckContext): BlockResult? {
@@ -744,7 +744,7 @@ internal class SmsKeywordChecker(
 internal class SmsContentChecker(
     private val smsContentAnalyzer: SmsContentAnalyzer,
 ) : IChecker {
-    override val priority = CheckerPriority.ML_SCORER - 100
+    override val priority = CheckerPriority.SMS_CONTENT
     override val name = "sms_content"
 
     override suspend fun isEnabled(ctx: CheckContext): Boolean = ctx.prefs[SpamRepository.KEY_SMS_CONTENT] ?: true
