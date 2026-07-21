@@ -4,6 +4,14 @@ All notable changes to CallShield will be documented in this file.
 
 ## v1.7.14 — 2026-07-20
 
+### Security
+
+- **CVE-2026-53914 (Kotlin build-cache deserialization) posture documented.** The
+  runtime is unaffected; the exposure requires a shared/remote Gradle build cache
+  feeding untrusted metadata. CallShield configures none, so the vector is not
+  reachable. `gradle.properties` now documents this and warns against adding a
+  remote cache until Kotlin reaches ≥ 2.4.20 (that bump rides the AGP 9 tranche).
+
 ### Fixed
 
 - **After-call feedback notification is now dismissed by its own action buttons.**
