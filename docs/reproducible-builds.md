@@ -101,6 +101,36 @@ signature copying before comparing the resulting APK.
 For the current F-Droid submission draft, release signer fingerprint, and
 fdroidserver handoff steps, see `docs/fdroid-submission.md`.
 
+## Accrescent Packaging (Developer Verification survival path)
+
+Google's Developer Verification (2026-09-30 in BR/ID/SG/TH, global through 2027)
+blocks sideloaded APKs on certified devices from unverified developers, and
+F-Droid has stated it cannot comply. Accrescent — which self-registered in the
+verification program and is a GrapheneOS-default store — accepts a
+developer-signed bundletool `.apks` split set and is the viable survival path.
+
+Build and validate an Accrescent-ready split set:
+
+```powershell
+# bundletool >= 1.11.4 (default lookup: $env:BUNDLETOOL_JAR, then ~/repos/bundletool.jar)
+.\scripts\build-accrescent-apks.ps1 `
+    -KeystorePath callshield-release.jks `
+    -KeystorePassword $env:RELEASE_STORE_PASSWORD `
+    -KeyAlias callshield `
+    -KeyPassword $env:RELEASE_KEY_PASSWORD
+```
+
+The script runs `:app:bundleRelease`, generates a signed `.apks` via bundletool,
+and enforces Accrescent's documented requirements: single **non-debug** signer
+certificate, `.apks` ≤ 150 MiB, bundletool ≥ 1.11.4. Upload the resulting
+`.apks` with the 512×512 icon at `app/src/main/ic_launcher-playstore.png`.
+
+Requirements not covered by the script (operator-gated): the release must be
+signed with the real `callshield-release.jks` (Accrescent rejects debug certs —
+see `verify-release-signing.ps1`), and publishing requires developer-identity
+registration on the Accrescent console. A dry-run with a throwaway key validates
+the pipeline structurally but must not be published.
+
 ## Updating Locks
 
 When dependency versions change intentionally:
