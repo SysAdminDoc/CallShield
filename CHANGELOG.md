@@ -2,6 +2,18 @@
 
 All notable changes to CallShield will be documented in this file.
 
+## v1.7.18 — 2026-07-21
+
+### Added
+
+- **Contacts-mode degradation detection.** `CallShieldPermissions`
+  `isContactsModeDegraded()` reports when a contacts-dependent screening mode
+  (contact-whitelist or contacts-only) is enabled but `READ_CONTACTS` is
+  currently denied — a silent protection weakening that the base permission
+  readiness matrix flagged only generically. Pure boolean predicate plus a
+  `Context` overload; covered by readiness-matrix tests (789 tests total). The
+  UI warning surfacing follows separately.
+
 ## v1.7.17 — 2026-07-21
 
 Reliability drain — background-execution survival, corrupt-DB recovery, bounded

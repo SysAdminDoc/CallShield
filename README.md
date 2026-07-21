@@ -12,7 +12,7 @@
 <p align="center">
   <a href="https://github.com/SysAdminDoc/CallShield/releases/latest"><img src="https://img.shields.io/github/v/release/SysAdminDoc/CallShield?style=flat-square&color=a6e3a1" alt="Release"></a>
   <img src="https://img.shields.io/badge/Spam%20Numbers-32%2C933-f38ba8?style=flat-square" alt="32,933 Numbers">
-  <img src="https://img.shields.io/badge/Tests-787-94e2d5?style=flat-square" alt="787 Tests">
+  <img src="https://img.shields.io/badge/Tests-789-94e2d5?style=flat-square" alt="789 Tests">
   <img src="https://img.shields.io/badge/Android-10%2B-89b4fa?style=flat-square" alt="Android 10+">
   <img src="https://img.shields.io/badge/License-MIT-cba6f7?style=flat-square" alt="MIT License">
   <img src="https://img.shields.io/badge/API%20Keys-None-fab387?style=flat-square" alt="No required API keys">
@@ -21,6 +21,13 @@
 ---
 
 CallShield blocks spam calls and texts using a **15+ layer on-device detection engine** with a gradient-boosted tree ML scorer, campaign burst detection, RCS notification filter, and real-time caller ID overlay. Powered by a 32,933-number database with scheduled hot-list updates. Community-maintained, no accounts, no tracking.
+
+## v1.7.18 Highlights
+
+- **Contacts-mode safety check** — CallShield now detects when a contacts-based
+  screening mode (contact-whitelist or contacts-only) is switched on but the
+  Contacts permission has since been denied — a state that silently weakens
+  protection — so the risk can be surfaced instead of failing quietly.
 
 ## v1.7.17 Highlights
 
@@ -35,7 +42,7 @@ CallShield blocks spam calls and texts using a **15+ layer on-device detection e
   battery manager is likely to kill background protection, and when the spam
   database has gone stale, so those risks can be surfaced.
 - **More tested internals** — Robolectric now exercises the notification-action
-  and SMS reassembly hot paths (787 tests total).
+  and SMS reassembly hot paths (789 tests total).
 
 ## v1.7.16 Highlights
 
@@ -158,7 +165,7 @@ CallShield blocks spam calls and texts using a **15+ layer on-device detection e
 5. **Callback-aware** — won't block callbacks from numbers you recently called, answered repeatedly, after a local emergency call, or urgent repeated callers
 6. **Community-driven** — one-tap anonymous contribution via Cloudflare Worker, daily merge into database
 
-## Detection Pipeline (v1.7.17)
+## Detection Pipeline (v1.7.18)
 
 All detection layers implement a shared `IChecker` interface and run in priority order via `CheckerPipeline.run` — first non-null result wins, every layer is testable in isolation. Priorities are stable numbers; the ladder below is the live order.
 
