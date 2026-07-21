@@ -32,30 +32,23 @@ class DigestWorker
         override suspend fun doWork(): Result {
             try {
                 val since = System.currentTimeMillis() - 86_400_000 // Last 24h
-                val recent = dao.getRecentBlockedNumbers(since)
-                val blocked = recent.count { it.wasBlocked }
+                val blocked = dao.getBlockedCountSinceSync(since)
 
                 if (blocked == 0) return Result.success()
 
-                val calls = recent.count { it.isCall && it.wasBlocked }
-                val sms = recent.count { !it.isCall && it.wasBlocked }
+                val calls = dao.getBlockedCallCountSince(since)
+                val sms = dao.getBlockedSmsCountSince(since)
 
-                // Source breakdown from matchReason prefix
-                val bySource =
-                    recent.filter { it.wasBlocked }.groupBy { call ->
-                        when {
-                            call.matchReason.startsWith("database") || call.matchReason.startsWith("user_blocklist") -> "database"
-                            call.matchReason.startsWith("heuristic") -> "heuristic"
-                            call.matchReason.startsWith("ml_scorer") -> "ML"
-                            call.matchReason.startsWith("sms_content") || call.matchReason.startsWith("keyword") -> "content"
-                            call.matchReason.startsWith("rcs_") -> "RCS filter"
-                            else -> "other"
-                        }
-                    }
+                // Source breakdown from matchReason prefix — reads only the
+                // short matchReason column, not full BlockedCall rows.
                 val breakdown =
-                    bySource.entries
-                        .sortedByDescending { it.value.size }
-                        .joinToString(" · ") { "${it.value.size} ${it.key}" }
+                    dao
+                        .getBlockedMatchReasonsSince(since)
+                        .groupingBy { matchReasonBucket(it) }
+                        .eachCount()
+                        .entries
+                        .sortedByDescending { it.value }
+                        .joinToString(" · ") { "${it.value} ${it.key}" }
 
                 if (!CallShieldPermissions.hasNotificationPermission(applicationContext)) {
                     // User has not granted POST_NOTIFICATIONS on API 33+; skip quietly.
@@ -88,6 +81,20 @@ class DigestWorker
 
         companion object {
             private const val WORK_NAME = "callshield_digest"
+
+            /**
+             * Map a checker's `matchReason` to a coarse, user-facing source
+             * bucket for the digest breakdown. Pure so it is unit-testable.
+             */
+            internal fun matchReasonBucket(reason: String): String =
+                when {
+                    reason.startsWith("database") || reason.startsWith("user_blocklist") -> "database"
+                    reason.startsWith("heuristic") -> "heuristic"
+                    reason.startsWith("ml_scorer") -> "ML"
+                    reason.startsWith("sms_content") || reason.startsWith("keyword") -> "content"
+                    reason.startsWith("rcs_") -> "RCS filter"
+                    else -> "other"
+                }
 
             fun schedule(context: Context) {
                 WorkManager.getInstance(context).enqueueUniquePeriodicWork(

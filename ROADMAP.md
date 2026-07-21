@@ -666,13 +666,6 @@ Fresh sweep on under-covered angles: OEM background-execution survival, distribu
 
 ### P2
 
-- [ ] P2 — Complete BootReceiver: MY_PACKAGE_REPLACED + pending-log reschedule + rebind
-  Why: `BootReceiver` only handles `ACTION_BOOT_COMPLETED` and reschedules Sync/HotList/Digest — it misses `MY_PACKAGE_REPLACED` (Play auto-update without reboot leaves the listener unbound and nothing re-asserted), never reschedules `PendingBlockedCallLogWorker`, and never `requestRebind`s the listener.
-  Evidence: `service/BootReceiver.kt` (BOOT_COMPLETED only); `AndroidManifest.xml` boot receiver intent-filter
-  Touches: `service/BootReceiver.kt`, `AndroidManifest.xml` (add `MY_PACKAGE_REPLACED` action)
-  Acceptance: on boot AND app-replace, all four workers are rescheduled and the notification listener is rebind-requested; verified by broadcasting both actions on an emulator.
-  Complexity: S
-
 - [ ] P2 — OEM background-kill warning surface
   Why: Aggressive OEM battery managers (MIUI/HyperOS autostart-off, Samsung, ColorOS) silently kill WorkManager sync and unbind the listener; the app has no warning. AOSP-portable signals exist to detect the risk.
   Evidence: https://dontkillmyapp.com/problem ; https://dontkillmyapp.com/xiaomi ; `ActivityManager.isBackgroundRestricted()` + `PowerManager.isIgnoringBatteryOptimizations()`
@@ -692,13 +685,6 @@ Fresh sweep on under-covered angles: OEM background-execution survival, distribu
   Evidence: `data/repository/SettingsRepository.kt:98,239` (timestamp exists + displayed; no threshold warning)
   Touches: a pure staleness predicate over `lastSyncTimestamp`; dashboard/diagnostics warning state (UI owned by a concurrent agent — land the predicate + test first)
   Acceptance: a unit-tested predicate reports "sync stale" past a configurable threshold (e.g. > 3× the sync interval); the warning can be surfaced when the UI settles.
-  Complexity: S
-
-- [ ] P2 — Bound DigestWorker's 24h block-window query
-  Why: `SpamDao.getRecentBlockedNumbers(since)` (`SpamDao.kt:213`) is `SELECT * … ORDER BY timestamp DESC` with no LIMIT; `DigestWorker` then does four in-memory passes over the full window including `smsBody`. A heavy-spam day materializes thousands of rows in a constrained background process.
-  Evidence: `data/local/SpamDao.kt:212-213`; `service/DigestWorker.kt:35`
-  Touches: `data/local/SpamDao.kt` (aggregate `COUNT(*) … GROUP BY` queries or a LIMIT), `service/DigestWorker.kt`
-  Acceptance: the digest computes call/SMS/source counts via aggregate SQL (or a bounded read) without loading the full window; output unchanged for representative data; covered by a DAO/worker test.
   Complexity: S
 
 ### P3

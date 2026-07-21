@@ -212,6 +212,19 @@ interface SpamDao {
     @Query("SELECT * FROM call_log WHERE timestamp > :since ORDER BY timestamp DESC")
     suspend fun getRecentBlockedNumbers(since: Long): List<BlockedCall>
 
+    // Bounded digest aggregates — avoid materializing the full 24h window
+    // (including smsBody) in a constrained background process on heavy-spam
+    // days. Counts are computed in SQL; the source breakdown reads only the
+    // short matchReason column, never full rows.
+    @Query("SELECT COUNT(*) FROM call_log WHERE wasBlocked = 1 AND isCall = 1 AND timestamp > :since")
+    suspend fun getBlockedCallCountSince(since: Long): Int
+
+    @Query("SELECT COUNT(*) FROM call_log WHERE wasBlocked = 1 AND isCall = 0 AND timestamp > :since")
+    suspend fun getBlockedSmsCountSince(since: Long): Int
+
+    @Query("SELECT matchReason FROM call_log WHERE wasBlocked = 1 AND timestamp > :since")
+    suspend fun getBlockedMatchReasonsSince(since: Long): List<String>
+
     // Feature 10: Frequency tracking — count how many times a number appears in
     // the log within a time window. Unbounded counts caused false positives for
     // legitimate callers with 3+ calls spread over months.
