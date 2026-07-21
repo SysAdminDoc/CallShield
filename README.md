@@ -304,7 +304,7 @@ Trained weekly from the CallShield database (50K positive + 50K negative samples
 
 ## Data Sources
 
-### Database (32,933 numbers, weekly CI)
+### Database (32,933 numbers, locally maintained)
 | Source | Method |
 |--------|--------|
 | **FCC Consumer Complaints** | Socrata API, 500K records, min 2 reports |

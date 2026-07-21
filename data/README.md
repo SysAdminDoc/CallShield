@@ -34,3 +34,34 @@ This directory contains the spam number database that the CallShield app pulls f
 - **FTC Complaint Data** - Bulk imported from FTC Do Not Call Registry reports
 - **FCC Complaints** - From FCC consumer complaint database
 - **Community Reports** - User-submitted via GitHub Issues and PRs
+
+## Regenerating the Database and Model (local)
+
+The database, hot lists, and on-device ML model are **maintained locally** and
+committed to the repo — there is **no CI/GitHub Actions pipeline** (the app then
+pulls the committed `data/*.json` from this repo's raw URL). Regenerate on a
+maintainer machine with Python 3.12:
+
+```bash
+pip install -r scripts/requirements.txt   # scikit-learn, numpy
+
+# 1. Rebuild the number database from all free public sources
+python scripts/import_all_sources.py                       # writes data/spam_numbers.json
+python scripts/update_ftc.py --days 365                    # merge recent FTC complaints
+
+# 2. Fold in anonymous community reports (consumes data/reports/*.json)
+python scripts/merge_community_reports.py
+
+# 3. Regenerate the hot lists (trending numbers / NPA-NXX ranges / domains)
+python scripts/generate_hot_list.py
+python scripts/extract_spam_domains.py
+
+# 4. Retrain the on-device GBT scorer and emit versioned weights
+python scripts/train_spam_model.py --output data/spam_model_weights.json
+```
+
+`train_spam_model.py` prints the learned per-feature weights and writes a
+version-stamped `spam_model_weights.json` (GBT trees + a logistic-regression
+fallback). Bump the `version` field in `spam_numbers.json` so clients know to
+re-sync, then commit the regenerated `data/*.json`. Model precision/recall/F1
+evaluation is tracked separately (see `ROADMAP.md`, item 2.6.3).
