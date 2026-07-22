@@ -1089,6 +1089,8 @@
     <string name="notif_channel_rating_desc">Rate calls as spam after they end</string>
     <string name="notif_channel_status">Protection Status</string>
     <string name="notif_channel_status_desc">Persistent protection status indicator</string>
+    <string name="notif_channel_sync">Protection updates</string>
+    <string name="notif_channel_sync_desc">Progress while refreshing spam protection data</string>
     <string name="notif_channel_phishing">Phishing URL Warning</string>
     <string name="notif_channel_phishing_desc">Alert when a received SMS contains a known malicious URL</string>
     <string name="notif_channel_allowed">Allowed Call Decisions</string>
@@ -1117,6 +1119,8 @@
     <string name="notif_phishing_big_text">An SMS from %1$s contains a URL flagged by URLhaus as %2$s. Do not tap any links in this message.</string>
     <string name="notif_status_title">CallShield active</string>
     <string name="notif_status_text">Protecting against spam calls &amp; texts</string>
+    <string name="notif_sync_title">Refreshing protection</string>
+    <string name="notif_sync_text">Updating spam numbers and detection data…</string>
     <string name="notif_repeated_urgent_title">Repeated caller allowed</string>
     <string name="notif_repeated_urgent_text">%s rang through after repeated calls</string>
     <string name="notif_repeated_urgent_big_text">CallShield allowed %s because the same number called repeatedly within a few minutes. Block it if this was unwanted, or mark it safe to trust future calls.</string>

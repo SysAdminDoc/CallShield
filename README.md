@@ -12,7 +12,7 @@
 <p align="center">
   <a href="https://github.com/SysAdminDoc/CallShield/releases/latest"><img src="https://img.shields.io/github/v/release/SysAdminDoc/CallShield?style=flat-square&color=a6e3a1" alt="Release"></a>
   <img src="https://img.shields.io/badge/Spam%20Numbers-32%2C933-f38ba8?style=flat-square" alt="32,933 Numbers">
-  <img src="https://img.shields.io/badge/Tests-829-94e2d5?style=flat-square" alt="829 Tests">
+  <img src="https://img.shields.io/badge/Tests-831-94e2d5?style=flat-square" alt="831 Tests">
   <img src="https://img.shields.io/badge/Android-10%2B-89b4fa?style=flat-square" alt="Android 10+">
   <img src="https://img.shields.io/badge/License-MIT-cba6f7?style=flat-square" alt="MIT License">
   <img src="https://img.shields.io/badge/API%20Keys-None-fab387?style=flat-square" alt="No required API keys">
@@ -40,6 +40,8 @@ CallShield blocks spam calls and texts using a **15+ layer on-device detection e
   and Android 16 receives native duration speech annotations.
 - **Caller-name blocking** — bounded `*`/`?` patterns can now reject recurring
   carrier-presented spam names after stronger explicit and behavioral rules.
+- **Native sync progress** — manual protection refreshes use Android 16's
+  progress-centric notification style with a truthful fallback on older APIs.
 
 ## v1.7.17 Highlights
 
@@ -55,7 +57,7 @@ CallShield blocks spam calls and texts using a **15+ layer on-device detection e
   database has gone stale, so those risks can be surfaced.
 - **More tested internals** — Robolectric now exercises notification actions,
   SMS reassembly, real call-screening allow/silence/reject outcomes, and the
-  SMS phishing-warning entrypoint (829 tests total).
+  SMS phishing-warning entrypoint (831 tests total).
 
 ## v1.7.16 Highlights
 
@@ -164,7 +166,7 @@ CallShield blocks spam calls and texts using a **15+ layer on-device detection e
 - **Answered-caller trust** — numbers answered repeatedly inside the configured lookback window can ring through lower-confidence heuristic/ML suspicion while explicit block rules still win first.
 - **Emergency callback grace** — unknown callbacks can ring through after a local emergency call for a configurable window while explicit block rules still win first.
 - **SMS burst protection** - repeated unknown SMS senders or same-prefix floods can be blocked as `sms_burst`, with blocked-SMS notification actions to mark safe or report.
-- **829 total JVM unit tests** - the local unit suite covers detection, workers, utilities, repository contracts, and permission readiness before release.
+- **831 total JVM unit tests** - the local unit suite covers detection, workers, utilities, repository contracts, and permission readiness before release.
 - **Gradient-Boosted Tree ML model** — 20 features, pure Kotlin, no TFLite dependency.
 - **Campaign burst detection** — NPA-NXX prefix clustering identifies coordinated spam waves.
 - **Full accessibility** — content descriptions across Compose UI, 48dp minimum touch targets.
@@ -404,7 +406,7 @@ RELEASE_KEY_PASSWORD=...
 ## Testing
 
 ```bash
-./gradlew testDebugUnitTest   # 829 tests
+./gradlew testDebugUnitTest   # 831 tests
 ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.sysadmindoc.callshield.platform.TargetSdkBehaviorSmokeTest
 ```
 
@@ -426,7 +428,7 @@ Run tests, lint, release metadata checks, and artifact builds locally before pub
 | Community API | Cloudflare Workers |
 | URL Safety | URLhaus (abuse.ch) |
 | Verification | Local Gradle, lint, and release-artifact checks |
-| Tests | 829 JVM unit tests (JUnit) |
+| Tests | 831 JVM unit tests (JUnit) |
 | Strings | 1018 string resources and 28 plural groups (translation-ready) |
 | Accessibility | 100+ content descriptions, 48dp touch targets |
 | Min SDK | 29 (Android 10) |
