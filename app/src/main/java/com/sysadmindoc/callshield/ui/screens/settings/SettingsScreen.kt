@@ -93,6 +93,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
     val regionBlockEnabled by viewModel.regionBlockEnabled.collectAsStateWithLifecycle()
     val allowedRegions by viewModel.allowedRegions.collectAsStateWithLifecycle()
     val cnapTrustPatterns by viewModel.cnapTrustPatterns.collectAsStateWithLifecycle()
+    val cnapBlockPatterns by viewModel.cnapBlockPatterns.collectAsStateWithLifecycle()
     val dbPrefixExpansion by viewModel.dbPrefixExpansionEnabled.collectAsStateWithLifecycle()
     val aggressiveMode by viewModel.aggressiveModeEnabled.collectAsStateWithLifecycle()
     val answeredCallerTrust by viewModel.answeredCallerTrustEnabled.collectAsStateWithLifecycle()
@@ -371,6 +372,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
                     R.string.settings_region_cnap_summary,
                     if (regionBlockEnabled) allowedRegions.size else 0,
                     cnapTrustPatterns.size,
+                    cnapBlockPatterns.size,
                 ),
                 style = MaterialTheme.typography.labelSmall,
                 color = CatSubtext,
@@ -764,6 +766,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
             regionBlockEnabled = regionBlockEnabled,
             allowedRegions = allowedRegions,
             cnapTrustPatterns = cnapTrustPatterns,
+            cnapBlockPatterns = cnapBlockPatterns,
             onSave = viewModel::saveRegionAndCnapRules,
             onDismiss = { showRegionCnapRules = false },
         )

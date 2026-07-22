@@ -59,10 +59,17 @@ object RegionRules {
         presentedName: String?,
         patterns: Set<String>,
     ): Boolean {
-        val name = presentedName?.trim()?.replace(WHITESPACE, " ").orEmpty()
+        val name = normalizePresentedName(presentedName)
         if (name.isEmpty()) return false
         return normalizeNamePatterns(patterns).any { pattern -> globMatches(name, pattern) }
     }
+
+    fun normalizePresentedName(presentedName: String?): String =
+        presentedName
+            ?.trim()
+            ?.replace(WHITESPACE, " ")
+            ?.take(MAX_NAME_PATTERN_LENGTH)
+            .orEmpty()
 
     /** Case-insensitive `*`/`?` glob matching without regex backtracking. */
     private fun globMatches(

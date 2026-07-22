@@ -63,6 +63,8 @@ class SettingsRepository(
         dataStore.data.map { RegionRules.normalizeRegionCodes(it[SpamRepository.KEY_ALLOWED_REGIONS].orEmpty()) }
     val cnapTrustPatterns: Flow<Set<String>> =
         dataStore.data.map { RegionRules.normalizeNamePatterns(it[SpamRepository.KEY_CNAP_TRUST_PATTERNS].orEmpty()) }
+    val cnapBlockPatterns: Flow<Set<String>> =
+        dataStore.data.map { RegionRules.normalizeNamePatterns(it[SpamRepository.KEY_CNAP_BLOCK_PATTERNS].orEmpty()) }
     val dbPrefixExpansionEnabled: Flow<Boolean> =
         dataStore.data.map { it[SpamRepository.KEY_DB_PREFIX_EXPANSION] ?: false }
     val aggressiveModeEnabled: Flow<Boolean> = dataStore.data.map { it[SpamRepository.KEY_AGGRESSIVE_MODE] ?: false }
@@ -215,6 +217,16 @@ class SettingsRepository(
                 prefs.remove(SpamRepository.KEY_CNAP_TRUST_PATTERNS)
             } else {
                 prefs[SpamRepository.KEY_CNAP_TRUST_PATTERNS] = normalized
+            }
+        }
+
+    suspend fun setCnapBlockPatterns(patterns: Set<String>) =
+        dataStore.edit { prefs ->
+            val normalized = RegionRules.normalizeNamePatterns(patterns)
+            if (normalized.isEmpty()) {
+                prefs.remove(SpamRepository.KEY_CNAP_BLOCK_PATTERNS)
+            } else {
+                prefs[SpamRepository.KEY_CNAP_BLOCK_PATTERNS] = normalized
             }
         }
 

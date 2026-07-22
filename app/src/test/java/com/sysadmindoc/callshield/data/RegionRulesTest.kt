@@ -1,5 +1,6 @@
 package com.sysadmindoc.callshield.data
 
+import com.sysadmindoc.callshield.data.checker.CallerNameBlockChecker
 import com.sysadmindoc.callshield.data.checker.CallerNameTrustChecker
 import com.sysadmindoc.callshield.data.checker.CheckerPriority
 import com.sysadmindoc.callshield.data.checker.RegionBlockChecker
@@ -69,6 +70,17 @@ class RegionRulesTest {
     }
 
     @Test
+    fun `caller name block checker rejects a matching presented name`() {
+        val match = CallerNameBlockChecker.decidePure("MEDICARE BENEFITS CENTER", setOf("MEDICARE BENEFITS*"))
+
+        assertEquals(true, match?.shouldBlock)
+        assertEquals("caller_name", match?.matchSource)
+        assertTrue(match?.description.orEmpty().contains("MEDICARE BENEFITS CENTER"))
+        assertNull(CallerNameBlockChecker.decidePure("CITY SCHOOL", setOf("MEDICARE*")))
+        assertNull(CallerNameBlockChecker.decidePure(null, setOf("MEDICARE*")))
+    }
+
+    @Test
     fun `region checker reports the out of region code`() {
         val result = RegionBlockChecker.decidePure("+14155550123", setOf("NY"))
 
@@ -88,5 +100,17 @@ class RegionRulesTest {
         assertTrue(CheckerPriority.CALLER_NAME_TRUST > CheckerPriority.REGION_BLOCK)
         assertTrue(CheckerPriority.REGION_BLOCK > CheckerPriority.TIME_BLOCK)
         assertTrue(CheckerPriority.REGION_BLOCK > CheckerPriority.HEURISTIC)
+    }
+
+    @Test
+    fun `caller name block stays below every allow and near the bottom of detection`() {
+        assertTrue(CheckerPriority.CALLER_NAME_BLOCK < CheckerPriority.MANUAL_WHITELIST)
+        assertTrue(CheckerPriority.CALLER_NAME_BLOCK < CheckerPriority.CONTACT_WHITELIST)
+        assertTrue(CheckerPriority.CALLER_NAME_BLOCK < CheckerPriority.TEMPORARY_ALLOW)
+        assertTrue(CheckerPriority.CALLER_NAME_BLOCK < CheckerPriority.RECENTLY_DIALED)
+        assertTrue(CheckerPriority.CALLER_NAME_BLOCK < CheckerPriority.EMERGENCY_CALLBACK)
+        assertTrue(CheckerPriority.CALLER_NAME_BLOCK < CheckerPriority.CALLER_NAME_TRUST)
+        assertTrue(CheckerPriority.CALLER_NAME_BLOCK < CheckerPriority.CAMPAIGN_BURST)
+        assertTrue(CheckerPriority.CALLER_NAME_BLOCK > CheckerPriority.ML_SCORER)
     }
 }

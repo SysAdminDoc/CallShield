@@ -11,6 +11,10 @@ All notable changes to CallShield will be documented in this file.
   then block calls outside that set. Optional case-insensitive CNAP glob
   patterns allow carrier-presented names through weaker region/statistical
   layers, while exact, system, prefix, and wildcard blocks remain authoritative.
+- **Carrier-name block patterns.** The same bounded, case-insensitive CNAP glob
+  rules can now reject recurring spam display names even as their numbers
+  rotate. This best-effort layer runs after explicit and behavioral allows,
+  persists through backup/restore, and fails open when no name is presented.
 - **Opt-in notification screening for RCS, private messengers, and email.**
   Google and Samsung Messages remain the only defaults; users can separately
   enable AOSP Messages, SMS Organizer, Signal, WhatsApp, WhatsApp Business,

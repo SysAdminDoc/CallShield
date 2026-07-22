@@ -164,6 +164,10 @@ object BackupRestore {
         val silentVoicemailEnabled: Boolean = false,
         val pushAlertEnabled: Boolean = true,
         val pushAlertDisabledPackages: List<String> = emptyList(),
+        val regionBlockEnabled: Boolean = false,
+        val allowedRegions: List<String> = emptyList(),
+        val cnapTrustPatterns: List<String> = emptyList(),
+        val cnapBlockPatterns: List<String> = emptyList(),
         val activeProfileName: String? = null,
     )
 
@@ -846,6 +850,13 @@ object BackupRestore {
             silentVoicemailEnabled = this[SpamRepository.KEY_SILENT_VOICEMAIL] ?: false,
             pushAlertEnabled = this[SpamRepository.KEY_PUSH_ALERT] ?: true,
             pushAlertDisabledPackages = (this[SpamRepository.KEY_PUSH_ALERT_DISABLED] ?: emptySet()).sorted(),
+            regionBlockEnabled = this[SpamRepository.KEY_REGION_BLOCK] ?: false,
+            allowedRegions =
+                RegionRules.normalizeRegionCodes(this[SpamRepository.KEY_ALLOWED_REGIONS].orEmpty()).sorted(),
+            cnapTrustPatterns =
+                RegionRules.normalizeNamePatterns(this[SpamRepository.KEY_CNAP_TRUST_PATTERNS].orEmpty()).sorted(),
+            cnapBlockPatterns =
+                RegionRules.normalizeNamePatterns(this[SpamRepository.KEY_CNAP_BLOCK_PATTERNS].orEmpty()).sorted(),
             activeProfileName = this[SpamRepository.KEY_ACTIVE_PROFILE],
         )
 
@@ -864,6 +875,9 @@ object BackupRestore {
                     .filter { it.isNotBlank() }
                     .distinct()
                     .sorted(),
+            allowedRegions = RegionRules.normalizeRegionCodes(allowedRegions).sorted(),
+            cnapTrustPatterns = RegionRules.normalizeNamePatterns(cnapTrustPatterns).sorted(),
+            cnapBlockPatterns = RegionRules.normalizeNamePatterns(cnapBlockPatterns).sorted(),
             activeProfileName = activeProfileName?.trim()?.ifBlank { null },
         )
 
@@ -903,6 +917,10 @@ object BackupRestore {
         repo.setPushAlert(sanitized.pushAlertEnabled)
         repo.resetPushAlertPackages()
         sanitized.pushAlertDisabledPackages.forEach { repo.togglePushAlertPackage(it, allowed = false) }
+        repo.setAllowedRegions(sanitized.allowedRegions.toSet())
+        repo.setRegionBlock(sanitized.regionBlockEnabled && sanitized.allowedRegions.isNotEmpty())
+        repo.setCnapTrustPatterns(sanitized.cnapTrustPatterns.toSet())
+        repo.setCnapBlockPatterns(sanitized.cnapBlockPatterns.toSet())
         repo.setActiveProfileName(sanitized.activeProfileName)
     }
 

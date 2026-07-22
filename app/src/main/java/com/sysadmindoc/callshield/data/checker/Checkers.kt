@@ -491,6 +491,48 @@ internal class CallerNameTrustChecker : IChecker {
     }
 }
 
+/**
+ * Blocks a call when its carrier-presented caller name matches a user pattern.
+ * This intentionally runs near the bottom of the call chain: explicit number
+ * rules and every behavioral or carrier trust allow remain authoritative.
+ */
+internal class CallerNameBlockChecker : IChecker {
+    override val priority = CheckerPriority.CALLER_NAME_BLOCK
+    override val name = "caller_name"
+
+    override suspend fun isEnabled(ctx: CheckContext): Boolean =
+        ctx.smsBody == null &&
+            ctx.callerName?.isNotBlank() == true &&
+            !ctx.prefs[SpamRepository.KEY_CNAP_BLOCK_PATTERNS].isNullOrEmpty()
+
+    override suspend fun check(ctx: CheckContext): BlockResult? =
+        decidePure(
+            presentedName = ctx.callerName,
+            patterns = ctx.prefs[SpamRepository.KEY_CNAP_BLOCK_PATTERNS].orEmpty(),
+            descriptionForName = { callerName ->
+                ctx.appContext.getString(R.string.block_reason_caller_name, callerName)
+            },
+        )
+
+    companion object {
+        internal fun decidePure(
+            presentedName: String?,
+            patterns: Set<String>,
+            descriptionForName: (String) -> String = { callerName ->
+                "Blocked — caller name $callerName matched a name rule"
+            },
+        ): BlockResult? {
+            val normalizedName = RegionRules.normalizePresentedName(presentedName)
+            if (!RegionRules.matchesPresentedName(normalizedName, patterns)) return null
+            return BlockResult.block(
+                matchSource = "caller_name",
+                type = "caller_name",
+                description = descriptionForName(normalizedName),
+            )
+        }
+    }
+}
+
 /** Blocks calls whose NANP state/province is not in the user's allowlist. */
 internal class RegionBlockChecker : IChecker {
     override val priority = CheckerPriority.REGION_BLOCK
