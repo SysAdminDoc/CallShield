@@ -1,6 +1,7 @@
 package com.sysadmindoc.callshield.data
 
 import android.content.Context
+import android.net.Uri
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -32,6 +33,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.io.File
 import java.io.IOException
 
 @RunWith(AndroidJUnit4::class)
@@ -54,6 +56,48 @@ class BackupRestoreIntegrationTest {
     fun tearDown() {
         db.close()
     }
+
+    @Test
+    fun protectedBackupRequiresCorrectPassphraseAndRejectsTampering() =
+        runBlocking {
+            val passphrase = "correct horse battery staple".toCharArray()
+            val backup =
+                Backup(
+                    blockedNumbers = listOf(BackupNumber("+15551234567", "scam", "Test", "user")),
+                )
+            val plaintext = BackupRestore.backupToJson(backup).toByteArray()
+            val encrypted = PortableBackupCrypto.encrypt(plaintext, passphrase)
+            val file = File(context.cacheDir, "protected-backup-test.csbackup")
+
+            try {
+                file.writeBytes(encrypted)
+                val uri = Uri.fromFile(file)
+
+                assertFalse(BackupRestore.previewRestoreFromUri(context, uri).success)
+                assertFalse(
+                    BackupRestore
+                        .previewRestoreFromUri(
+                            context,
+                            uri,
+                            passphrase = "wrong passphrase".toCharArray(),
+                        ).success,
+                )
+                val valid = BackupRestore.previewRestoreFromUri(context, uri, passphrase = passphrase)
+                assertTrue(valid.success)
+                assertEquals(1, valid.preview?.counts?.blockedNumbers)
+
+                val tampered = encrypted.copyOf()
+                tampered[tampered.lastIndex] = (tampered.last().toInt() xor 1).toByte()
+                file.writeBytes(tampered)
+                assertFalse(BackupRestore.previewRestoreFromUri(context, uri, passphrase = passphrase).success)
+
+                file.writeText(BackupRestore.backupToJson(backup))
+                assertTrue(BackupRestore.previewRestoreFromUri(context, uri).success)
+            } finally {
+                file.delete()
+                passphrase.fill('\u0000')
+            }
+        }
 
     @Test
     fun previewReportsCountsAndConflictsBeforeMutation() =

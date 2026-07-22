@@ -29,6 +29,15 @@ class StreamLimitsTest {
     }
 
     @Test
+    fun `bounded byte reader preserves binary content`() {
+        val bytes = byteArrayOf(0, 1, 2, 0x7f, 0xff.toByte())
+
+        val result = ByteArrayInputStream(bytes).readBytesBounded(maxBytes = bytes.size.toLong())
+
+        assertTrue(bytes.contentEquals(requireNotNull(result)))
+    }
+
+    @Test
     fun `closes the stream on success and on rejection`() {
         var closedOk = false
         val ok =

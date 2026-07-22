@@ -24,7 +24,12 @@ internal const val MAX_IMPORT_ROWS: Int = 100_000
  * Unlike `bufferedReader().readText()`, this caps the read so a hostile or
  * accidentally huge SAF-selected file can't OOM the import/restore path.
  */
-internal fun InputStream.readTextBounded(maxBytes: Long = MAX_IMPORT_FILE_BYTES): String? =
+internal fun InputStream.readTextBounded(
+    maxBytes: Long = MAX_IMPORT_FILE_BYTES,
+): String? = readBytesBounded(maxBytes)?.toString(Charsets.UTF_8)
+
+/** Read this stream into memory without exceeding [maxBytes]. */
+internal fun InputStream.readBytesBounded(maxBytes: Long = MAX_IMPORT_FILE_BYTES): ByteArray? =
     use { stream ->
         val out = ByteArrayOutputStream()
         val chunk = ByteArray(8192)
@@ -36,5 +41,5 @@ internal fun InputStream.readTextBounded(maxBytes: Long = MAX_IMPORT_FILE_BYTES)
             if (total > maxBytes) return null
             out.write(chunk, 0, read)
         }
-        out.toByteArray().toString(Charsets.UTF_8)
+        out.toByteArray()
     }

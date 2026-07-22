@@ -387,6 +387,7 @@ object BackupRestore {
     suspend fun shareBackup(
         context: Context,
         sections: Set<BackupSection> = defaultExportSections,
+        passphrase: CharArray? = null,
     ) {
         val json = createBackup(context, sections)
         val chooserIntent =
@@ -394,13 +395,23 @@ object BackupRestore {
                 val dir = File(context.cacheDir, "backups")
                 dir.mkdirs()
                 dir.listFiles()?.forEach { it.delete() }
-                val file = File(dir, "callshield_backup.json")
-                file.writeText(json)
+                val encrypted = passphrase != null && passphrase.isNotEmpty()
+                val file = File(dir, if (encrypted) "callshield_backup.csbackup" else "callshield_backup.json")
+                if (encrypted) {
+                    file.writeBytes(
+                        PortableBackupCrypto.encrypt(
+                            json.toByteArray(Charsets.UTF_8),
+                            requireNotNull(passphrase),
+                        ),
+                    )
+                } else {
+                    file.writeText(json)
+                }
 
                 val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
                 val intent =
                     Intent(Intent.ACTION_SEND).apply {
-                        type = "application/json"
+                        type = if (encrypted) "application/octet-stream" else "application/json"
                         putExtra(Intent.EXTRA_STREAM, uri)
                         putExtra(Intent.EXTRA_SUBJECT, context.getString(R.string.backup_subject))
                         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -419,9 +430,10 @@ object BackupRestore {
         context: Context,
         uri: Uri,
         sections: Set<BackupSection> = defaultRestoreSections,
+        passphrase: CharArray? = null,
     ): RestoreResult =
         withContext(Dispatchers.IO) {
-            val previewResult = previewRestoreFromUri(context, uri, sections)
+            val previewResult = previewRestoreFromUri(context, uri, sections, passphrase)
             val preview = previewResult.preview
             if (!previewResult.success || preview == null) {
                 return@withContext RestoreResult(false, previewResult.message)
@@ -433,21 +445,77 @@ object BackupRestore {
         context: Context,
         uri: Uri,
         sections: Set<BackupSection> = defaultRestoreSections,
+        passphrase: CharArray? = null,
     ): RestorePreviewResult =
         withContext(Dispatchers.IO) {
             try {
                 // Bounded read — a huge/hostile backup file is rejected rather
                 // than materialized whole into memory before validation.
-                val json =
-                    context.contentResolver.openInputStream(uri)?.readTextBounded()
+                val input =
+                    context.contentResolver.openInputStream(uri)
                         ?: return@withContext RestorePreviewResult(
                             false,
                             context.getString(R.string.backup_restore_could_not_read),
                         )
+                val bytes =
+                    input.readBytesBounded(PortableBackupCrypto.maxEnvelopeBytes)
+                        ?: return@withContext RestorePreviewResult(
+                            false,
+                            context.getString(R.string.backup_restore_file_too_large),
+                        )
+                val json =
+                    when (val decrypted = PortableBackupCrypto.decrypt(bytes, passphrase)) {
+                        PortableBackupCrypto.DecryptionResult.NotEncrypted -> {
+                            if (bytes.size.toLong() > MAX_IMPORT_FILE_BYTES) {
+                                return@withContext RestorePreviewResult(
+                                    false,
+                                    context.getString(R.string.backup_restore_file_too_large),
+                                )
+                            }
+                            bytes.toString(Charsets.UTF_8)
+                        }
+
+                        PortableBackupCrypto.DecryptionResult.PassphraseRequired -> {
+                            return@withContext RestorePreviewResult(
+                                false,
+                                context.getString(R.string.backup_restore_passphrase_required),
+                            )
+                        }
+
+                        is PortableBackupCrypto.DecryptionResult.Invalid -> {
+                            return@withContext RestorePreviewResult(
+                                false,
+                                decrypted.message(context),
+                            )
+                        }
+
+                        is PortableBackupCrypto.DecryptionResult.Success -> {
+                            decrypted.plaintext.toString(Charsets.UTF_8)
+                        }
+                    }
 
                 previewRestoreJson(context, json, AppDatabase.getInstance(context).spamDao(), sections)
             } catch (e: Exception) {
                 RestorePreviewResult(false, context.getString(R.string.backup_restore_error, e.message ?: ""))
+            }
+        }
+
+    private fun PortableBackupCrypto.DecryptionResult.Invalid.message(context: Context): String =
+        when (reason) {
+            PortableBackupCrypto.InvalidReason.TOO_LARGE -> {
+                context.getString(R.string.backup_restore_file_too_large)
+            }
+
+            PortableBackupCrypto.InvalidReason.UNSUPPORTED_VERSION -> {
+                context.getString(R.string.backup_restore_encryption_version_unsupported)
+            }
+
+            PortableBackupCrypto.InvalidReason.AUTHENTICATION_FAILED -> {
+                context.getString(R.string.backup_restore_decryption_failed)
+            }
+
+            PortableBackupCrypto.InvalidReason.INVALID_FORMAT -> {
+                context.getString(R.string.backup_restore_encrypted_invalid)
             }
         }
 

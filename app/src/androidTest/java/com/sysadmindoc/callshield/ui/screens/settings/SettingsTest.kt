@@ -1,5 +1,6 @@
 package com.sysadmindoc.callshield.ui.screens.settings
 
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.accessibility.enableAccessibilityChecks
@@ -9,6 +10,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.tryPerformAccessibilityChecks
 import com.sysadmindoc.callshield.data.BackupRestore
 import org.junit.Assert.assertEquals
@@ -121,6 +123,28 @@ class SettingsTest {
 
         composeRule.runOnIdle {
             assertEquals(false, enabled)
+        }
+    }
+
+    @Test
+    fun backupProtectionKeepsPassphrasesEphemeralAndValidatesConfirmation() {
+        val form = mutableStateOf(BackupProtectionForm())
+        composeRule.setContent {
+            BackupProtectionControls(
+                form = form.value,
+                onFormChange = { form.value = it },
+            )
+        }
+
+        composeRule.onNodeWithTag(SETTINGS_BACKUP_PASSPHRASE_TAG).assertDoesNotExist()
+        composeRule.onNodeWithTag(SETTINGS_BACKUP_ENCRYPTION_TOGGLE_TAG).performClick()
+        composeRule.onNodeWithTag(SETTINGS_BACKUP_PASSPHRASE_TAG).performTextInput("strong backup phrase")
+        composeRule.onNodeWithTag(SETTINGS_BACKUP_CONFIRM_TAG).performTextInput("different phrase")
+
+        composeRule.onNodeWithText("Passphrases do not match").assertIsDisplayed()
+        composeRule.runOnIdle {
+            assertEquals("strong backup phrase", form.value.passphrase)
+            assertEquals("different phrase", form.value.confirmation)
         }
     }
 
