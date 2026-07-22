@@ -2,6 +2,7 @@ package com.sysadmindoc.callshield.domain.usecase
 
 import androidx.datastore.preferences.core.Preferences
 import com.sysadmindoc.callshield.domain.model.SpamCheckResult
+import com.sysadmindoc.callshield.domain.model.CallerIdentity
 import com.sysadmindoc.callshield.domain.repository.SpamCheckRepository
 
 class CheckSpamUseCase(
@@ -12,13 +13,13 @@ class CheckSpamUseCase(
         smsBody: String? = null,
         realtimeCall: Boolean = true,
         prefsSnapshot: Preferences? = null,
-        verificationStatus: Int? = null,
+        callerIdentity: CallerIdentity? = null,
     ): SpamCheckResult =
         repository.checkSpam(
             number = number,
             smsBody = smsBody,
             realtimeCall = realtimeCall,
             prefsSnapshot = prefsSnapshot,
-            verificationStatus = verificationStatus,
+            callerIdentity = callerIdentity,
         )
 }

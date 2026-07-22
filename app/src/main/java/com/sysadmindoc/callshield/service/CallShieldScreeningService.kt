@@ -3,6 +3,7 @@ package com.sysadmindoc.callshield.service
 import android.os.Build
 import android.telecom.Call
 import android.telecom.CallScreeningService
+import android.telecom.TelecomManager
 import android.util.Log
 import com.sysadmindoc.callshield.CallShieldApp
 import com.sysadmindoc.callshield.data.SpamHeuristics
@@ -10,6 +11,7 @@ import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.local.AppDatabase
 import com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup
 import com.sysadmindoc.callshield.domain.usecase.CheckSpamUseCase
+import com.sysadmindoc.callshield.domain.model.CallerIdentity
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -79,13 +81,18 @@ class CallShieldScreeningService : CallScreeningService() {
                     } else {
                         null
                     }
+                val callerName =
+                    callDetails.callerDisplayName?.takeIf {
+                        callDetails.callerDisplayNamePresentation == TelecomManager.PRESENTATION_ALLOWED &&
+                            it.isNotBlank()
+                    }
 
                 // Full spam check — reuses the snapshot so we don't re-read DataStore.
                 val result =
                     checkSpam(
                         number = number,
                         prefsSnapshot = prefs,
-                        verificationStatus = verificationStatus,
+                        callerIdentity = CallerIdentity(verificationStatus, callerName),
                     )
                 if (result.isSpam) {
                     respondBlock(

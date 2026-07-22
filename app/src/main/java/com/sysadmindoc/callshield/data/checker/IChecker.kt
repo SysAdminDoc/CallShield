@@ -93,6 +93,11 @@ data class CheckContext(
      * checker ignores this field.
      */
     val verificationStatus: Int? = null,
+    /**
+     * Carrier-presented caller name (CNAP), when Telecom exposes it with an
+     * allowed presentation. This is deliberately not a contacts-derived name.
+     */
+    val callerName: String? = null,
     /** Entry epoch for budget accounting. */
     val startTimeMillis: Long = System.currentTimeMillis(),
 ) {
@@ -186,11 +191,13 @@ object CheckerPriority {
     const val EMERGENCY_CALLBACK = 4_980 // callback grace after local emergency call
     const val ANSWERED_CALLER = 4_950 // user has answered this number repeatedly
     const val REPEATED_URGENT = 4_900 // same number called 2+ times in 5 min
+    const val CALLER_NAME_TRUST = 4_850 // carrier-presented name matches a user trust pattern
     const val PUSH_ALERT_BRIDGE = 4_700 // reserved for A3 — notification-bridged allow
     const val SMS_BURST = 4_650 // repeated unknown SMS sender/prefix in short window
     const val CAMPAIGN_RECORDER = 4_500 // side-effect only (records into in-memory map)
 
     // ── Weaker blocks (statistical / heuristic / temporal) ───────────
+    const val REGION_BLOCK = 4_300 // opt-in block outside user-selected NANP regions
     const val TIME_BLOCK = 4_000
     const val FREQUENCY_ESCALATION = 3_500
     const val HEURISTIC = 3_000
@@ -326,8 +333,10 @@ object SpamCheckers {
             add(EmergencyCallbackChecker(appContext, dependencies.callbackDetector))
             add(AnsweredCallerChecker(appContext, dependencies.callbackDetector))
             add(RepeatedUrgentChecker(appContext, dependencies.callbackDetector))
+            add(CallerNameTrustChecker())
             add(PushAlertChecker())
             add(CampaignRecorderChecker(dependencies.campaignDetector))
+            add(RegionBlockChecker())
             add(TimeBlockChecker())
             add(FrequencyEscalationChecker(repo))
             add(HeuristicChecker(repo, appContext, dependencies.spamHeuristics))

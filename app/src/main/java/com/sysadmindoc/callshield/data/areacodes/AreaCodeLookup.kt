@@ -27,6 +27,24 @@ object AreaCodeLookup {
         }
     }
 
+    /**
+     * Returns the postal abbreviation for the NANP state, province, or
+     * territory represented by [number]. Toll-free numbers use `TF` so users
+     * can explicitly include or exclude them in regional rules.
+     */
+    fun getRegionCode(number: String): String? =
+        when (val location = lookup(number)) {
+            null -> null
+            "Toll-Free" -> "TF"
+            "US Virgin Islands" -> "VI"
+            "Saskatchewan" -> "SK"
+            "New Brunswick" -> "NB"
+            "Newfoundland" -> "NL"
+            "Northern Territories" -> "NT"
+            "Nova Scotia" -> "NS"
+            else -> location.substringAfterLast(", ", missingDelimiterValue = "").takeIf { it.length == 2 }
+        }
+
     // Top ~330 US/CA area codes
     private val AREA_CODES =
         mapOf(

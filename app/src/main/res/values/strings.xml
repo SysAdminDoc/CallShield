@@ -1277,4 +1277,21 @@
         <item quantity="one">Blocked %d spam item recently</item>
         <item quantity="other">Blocked %d spam items recently</item>
     </plurals>
+    <string name="settings_region_cnap_rules">Region &amp; caller-name rules</string>
+    <string name="settings_region_cnap_summary">%1$d allowed regions · %2$d trusted name patterns</string>
+    <string name="region_rules_title">Region &amp; caller-name rules</string>
+    <string name="region_rules_disclosure">These rules run entirely on your device. Region blocking uses the incoming number’s NANP area code. Caller-name trust uses only a carrier-presented name that Android exposes to the screening service.</string>
+    <string name="region_rules_block_outside">Block calls outside allowed regions</string>
+    <string name="region_rules_block_outside_desc">Allow selected US states, Canadian provinces, and territories; block other and international numbers.</string>
+    <string name="region_rules_allowed_regions">Allowed region codes</string>
+    <string name="region_rules_regions_hint">Comma-separated two-letter codes, for example NY, NJ, ON. Use TF for toll-free.</string>
+    <string name="region_rules_regions_required">Add at least one valid two-letter region code.</string>
+    <string name="region_rules_regions_count">%1$d valid region codes</string>
+    <string name="cnap_trust_title">Trust a presented caller name</string>
+    <string name="cnap_trust_desc">When the carrier provides a caller name, matching calls can bypass region and statistical blocks.</string>
+    <string name="cnap_trust_patterns">Trusted name patterns</string>
+    <string name="cnap_trust_patterns_hint">One pattern per line. Use * for any text and ? for one character, for example SCHOOL DISTRICT*.</string>
+    <string name="cnap_trust_priority_notice">Exact number, system, prefix, and wildcard blocks still win over caller-name trust.</string>
+    <string name="block_reason_out_of_region">Blocked — %1$s is outside allowed regions</string>
+    <string name="block_reason_out_of_region_unknown">Blocked — international or unknown region is outside allowed regions</string>
 </resources>

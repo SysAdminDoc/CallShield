@@ -2,9 +2,11 @@ package com.sysadmindoc.callshield.data.checker
 
 import android.content.Context
 import android.content.Intent
+import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.CallbackDetector
 import com.sysadmindoc.callshield.data.CampaignDetector
 import com.sysadmindoc.callshield.data.HashWildcardMatcher
+import com.sysadmindoc.callshield.data.RegionRules
 import com.sysadmindoc.callshield.data.SmsContentAnalyzer
 import com.sysadmindoc.callshield.data.SmsContextChecker
 import com.sysadmindoc.callshield.data.SpamHeuristics
@@ -454,6 +456,81 @@ internal class RepeatedUrgentChecker(
         } else {
             null
         }
+}
+
+/**
+ * Allows a call when its carrier-presented CNAP name matches a user pattern.
+ * This is intentionally below every explicit number/prefix/wildcard/system
+ * block but above regional and statistical rules.
+ */
+internal class CallerNameTrustChecker : IChecker {
+    override val priority = CheckerPriority.CALLER_NAME_TRUST
+    override val name = "caller_name_trust"
+
+    override suspend fun isEnabled(ctx: CheckContext): Boolean =
+        ctx.smsBody == null &&
+            ctx.callerName?.isNotBlank() == true &&
+            !ctx.prefs[SpamRepository.KEY_CNAP_TRUST_PATTERNS].isNullOrEmpty()
+
+    override suspend fun check(ctx: CheckContext): BlockResult? =
+        decidePure(
+            presentedName = ctx.callerName,
+            patterns = ctx.prefs[SpamRepository.KEY_CNAP_TRUST_PATTERNS].orEmpty(),
+        )
+
+    companion object {
+        internal fun decidePure(
+            presentedName: String?,
+            patterns: Set<String>,
+        ): BlockResult? =
+            if (RegionRules.matchesPresentedName(presentedName, patterns)) {
+                BlockResult.allow("caller_name_trust")
+            } else {
+                null
+            }
+    }
+}
+
+/** Blocks calls whose NANP state/province is not in the user's allowlist. */
+internal class RegionBlockChecker : IChecker {
+    override val priority = CheckerPriority.REGION_BLOCK
+    override val name = "region_block"
+
+    override suspend fun isEnabled(ctx: CheckContext): Boolean =
+        ctx.smsBody == null &&
+            (ctx.prefs[SpamRepository.KEY_REGION_BLOCK] ?: false) &&
+            !ctx.prefs[SpamRepository.KEY_ALLOWED_REGIONS].isNullOrEmpty()
+
+    override suspend fun check(ctx: CheckContext): BlockResult? =
+        decidePure(
+            number = ctx.number,
+            allowedRegions = ctx.prefs[SpamRepository.KEY_ALLOWED_REGIONS].orEmpty(),
+            descriptionForRegion = { region ->
+                if (region == null) {
+                    ctx.appContext.getString(R.string.block_reason_out_of_region_unknown)
+                } else {
+                    ctx.appContext.getString(R.string.block_reason_out_of_region, region)
+                }
+            },
+        )
+
+    companion object {
+        internal fun decidePure(
+            number: String,
+            allowedRegions: Set<String>,
+            descriptionForRegion: (String?) -> String = { region ->
+                "Blocked — ${region ?: "international or unknown"} is outside allowed regions"
+            },
+        ): BlockResult? {
+            if (!RegionRules.isOutsideAllowedRegions(number, allowedRegions)) return null
+            val region = RegionRules.regionCode(number)
+            return BlockResult.block(
+                matchSource = "region_block",
+                type = "out_of_region",
+                description = descriptionForRegion(region),
+            )
+        }
+    }
 }
 
 /**
