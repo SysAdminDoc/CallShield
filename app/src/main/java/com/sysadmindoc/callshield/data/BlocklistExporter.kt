@@ -114,10 +114,16 @@ object BlocklistExporter {
             )
         }
 
+        // One transaction for the whole import: a mid-loop failure must not
+        // leave thousands of rows committed behind a "Import failed" message
+        // (the user would retry and re-import), and per-row autocommit fsyncs
+        // make a 100k-row import pathologically slow.
         var count = 0
-        for (n in numbers) {
-            repo.blockNumber(n.number, n.type, n.description)
-            count++
+        repo.runInTransaction {
+            for (n in numbers) {
+                repo.blockNumber(n.number, n.type, n.description)
+                count++
+            }
         }
         return ImportResult(
             importedCount = count,

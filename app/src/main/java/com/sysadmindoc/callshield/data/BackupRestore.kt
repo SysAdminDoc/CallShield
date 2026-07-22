@@ -397,9 +397,16 @@ object BackupRestore {
             withContext(Dispatchers.IO) {
                 val dir = File(context.cacheDir, "backups")
                 dir.mkdirs()
-                dir.listFiles()?.forEach { it.delete() }
+                // Timestamped name + prefix-scoped pruning (same pattern as
+                // LogExporter): a fixed name would overwrite a prior backup a
+                // share target may still be reading through the FileProvider
+                // URI, and would collide when two backups run back to back.
+                dir
+                    .listFiles { file -> file.name.startsWith("callshield_backup_") }
+                    ?.forEach { it.delete() }
                 val encrypted = passphrase != null && passphrase.isNotEmpty()
-                val file = File(dir, if (encrypted) "callshield_backup.csbackup" else "callshield_backup.json")
+                val timestamp = System.currentTimeMillis()
+                val file = File(dir, if (encrypted) "callshield_backup_$timestamp.csbackup" else "callshield_backup_$timestamp.json")
                 if (encrypted) {
                     file.writeBytes(
                         PortableBackupCrypto.encrypt(
@@ -469,6 +476,17 @@ object BackupRestore {
                 val json =
                     when (val decrypted = PortableBackupCrypto.decrypt(bytes, passphrase)) {
                         PortableBackupCrypto.DecryptionResult.NotEncrypted -> {
+                            if (passphrase != null && passphrase.isNotEmpty()) {
+                                // The user typed a passphrase expecting an
+                                // authenticated file. Silently restoring an
+                                // unauthenticated plaintext one instead would
+                                // be an integrity downgrade (a swapped file
+                                // could inject whitelist entries unnoticed).
+                                return@withContext RestorePreviewResult(
+                                    false,
+                                    context.getString(R.string.backup_restore_not_protected),
+                                )
+                            }
                             if (bytes.size.toLong() > MAX_IMPORT_FILE_BYTES) {
                                 return@withContext RestorePreviewResult(
                                     false,
@@ -632,22 +650,26 @@ object BackupRestore {
                     }
 
                     for (n in payload.blockedNumbers) {
-                        if (n.expiresAt != null) {
-                            repo.temporaryBlockNumber(n.number, n.expiresAt, n.type, n.description)
-                        } else {
-                            repo.blockNumber(n.number, n.type, n.description)
-                        }
-                        numbersRestored++
+                        val applied =
+                            if (n.expiresAt != null) {
+                                repo.temporaryBlockNumber(n.number, n.expiresAt, n.type, n.description)
+                            } else {
+                                repo.blockNumber(n.number, n.type, n.description)
+                            }
+                        // A temp block refused by a local permanent allow (and
+                        // vice versa below) must not inflate the success toast.
+                        if (applied) numbersRestored++
                     }
 
                     for (w in payload.whitelistNumbers) {
-                        repo.addToWhitelist(
-                            number = w.number,
-                            description = w.description,
-                            isEmergency = w.isEmergency,
-                            expiresAt = w.expiresAt,
-                        )
-                        whitelistRestored++
+                        val applied =
+                            repo.addToWhitelist(
+                                number = w.number,
+                                description = w.description,
+                                isEmergency = w.isEmergency,
+                                expiresAt = w.expiresAt,
+                            )
+                        if (applied) whitelistRestored++
                     }
 
                     for (r in payload.wildcardRules) {
@@ -694,7 +716,20 @@ object BackupRestore {
                         rangesRestored++
                     }
 
+                    // Rows without a logKey escape the unique-index dedupe
+                    // (SQLite unique indexes treat NULLs as distinct), so
+                    // restoring the same pre-logKey backup twice would
+                    // duplicate every legacy log row. Skip fallback-key
+                    // matches, mirroring the preview's conflict counting;
+                    // keyed rows keep REPLACE semantics via the index.
+                    val existingLogKeys =
+                        if (payload.logs.any { it.logKey.isNullOrBlank() }) {
+                            dao.getBlockedCallConflictKeysSync().toHashSet()
+                        } else {
+                            emptySet()
+                        }
                     for (log in payload.logs) {
+                        if (log.logKey.isNullOrBlank() && log.conflictKey in existingLogKeys) continue
                         dao.insertBlockedCall(
                             BlockedCall(
                                 number = log.number,

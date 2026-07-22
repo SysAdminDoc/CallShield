@@ -4,6 +4,8 @@ package com.sysadmindoc.callshield.ui
 
 import android.content.Context
 import android.net.Uri
+import android.util.Log
+import android.widget.Toast
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sysadmindoc.callshield.CallShieldApp
@@ -589,8 +591,27 @@ class MainViewModel
         fun exportBlocklist() {
             val numbers = userBlockedNumbers.value
             if (numbers.isEmpty()) return
-            viewModelScope.launch {
+            launchExport {
                 exportLogs.exportBlocklist(numbers)
+            }
+        }
+
+        /**
+         * Exports/backups write to cache storage and can legitimately fail
+         * (full data partition, oversized encrypted payload). An uncaught
+         * throw in [viewModelScope] crashes the process — catch, log, and
+         * tell the user instead.
+         */
+        private fun launchExport(work: suspend () -> Unit) {
+            viewModelScope.launch {
+                try {
+                    work()
+                } catch (e: Exception) {
+                    Log.w("MainViewModel", "Export failed", e)
+                    Toast
+                        .makeText(appContext, appContext.getString(R.string.export_share_failed), Toast.LENGTH_LONG)
+                        .show()
+                }
             }
         }
 
@@ -608,7 +629,7 @@ class MainViewModel
         ) {
             val ownedPassphrase = passphrase?.copyOf()
             passphrase?.fill('\u0000')
-            viewModelScope.launch {
+            launchExport {
                 try {
                     BackupRestore.shareBackup(appContext, sections, ownedPassphrase)
                 } finally {
@@ -839,7 +860,7 @@ class MainViewModel
         fun exportLog(includeRawSmsBodies: Boolean = false) {
             val calls = blockedCalls.value
             if (calls.isEmpty()) return
-            viewModelScope.launch {
+            launchExport {
                 exportLogs.exportBlockedLog(calls, includeRawSmsBodies)
             }
         }

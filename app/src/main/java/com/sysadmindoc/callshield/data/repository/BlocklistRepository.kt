@@ -39,18 +39,19 @@ class BlocklistRepository(
         const val PENDING_LOG_RETRY_DELAY_MS = 60_000L
     }
 
+    /** @return true when the number is blocked afterwards; false when refused (invalid input or a permanent allow wins). */
     suspend fun blockNumber(
         number: String,
         type: String = "unknown",
         description: String = "",
         expiresAt: Long? = null,
-    ) {
+    ): Boolean {
         val normalized = normalizeNumber(number)
-        if (normalized.isBlank()) return
+        if (normalized.isBlank()) return false
         cleanupExpiredTemporaryDecisions()
         val existingWhitelist = dao.findWhitelistEntry(normalized)
         val permanentAllowExists = expiresAt != null && existingWhitelist != null && existingWhitelist.expiresAt == null
-        if (permanentAllowExists) return
+        if (permanentAllowExists) return false
 
         existingWhitelist?.let { dao.deleteWhitelistEntry(it) }
         when (val existing = dao.findByNumber(normalized)) {
@@ -81,6 +82,7 @@ class BlocklistRepository(
                 }
             }
         }
+        return true
     }
 
     suspend fun temporaryBlockNumber(
@@ -315,18 +317,19 @@ class BlocklistRepository(
             rows.filterNot { it.isExpired(now) }
         }
 
+    /** @return true when the number is whitelisted afterwards; false when refused (invalid input or a permanent block wins). */
     suspend fun addToWhitelist(
         number: String,
         description: String = "",
         isEmergency: Boolean = false,
         expiresAt: Long? = null,
-    ) {
+    ): Boolean {
         val normalized = normalizeNumber(number)
-        if (normalized.isBlank()) return
+        if (normalized.isBlank()) return false
         cleanupExpiredTemporaryDecisions()
         val existingSpam = dao.findByNumber(normalized)
         val permanentUserBlock = existingSpam?.isUserBlocked == true && existingSpam.expiresAt == null
-        if (expiresAt != null && permanentUserBlock) return
+        if (expiresAt != null && permanentUserBlock) return false
         if (expiresAt == null || existingSpam?.expiresAt != null) {
             when (val resolution = resolveSpamNumberForWhitelist(existingSpam)) {
                 SpamNumberWhitelistResolution.None -> Unit
@@ -342,6 +345,7 @@ class BlocklistRepository(
                 expiresAt = expiresAt,
             ),
         )
+        return true
     }
 
     suspend fun removeFromWhitelist(entry: WhitelistEntry) = dao.deleteWhitelistEntry(entry)

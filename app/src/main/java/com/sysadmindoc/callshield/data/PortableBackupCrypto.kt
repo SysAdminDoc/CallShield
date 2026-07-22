@@ -24,6 +24,12 @@ internal object PortableBackupCrypto {
     const val MAX_PASSPHRASE_LENGTH = 128
     const val KDF_ITERATIONS = 600_000
 
+    // The header's iteration field is honored on decrypt (within this range)
+    // so backups written before a future KDF_ITERATIONS bump stay restorable.
+    // The header is AAD-authenticated, so a tampered count still fails the tag.
+    private const val MIN_KDF_ITERATIONS = 100_000
+    private const val MAX_KDF_ITERATIONS = 10_000_000
+
     private const val FORMAT_VERSION: Byte = 1
     private const val KEY_BITS = 256
     private const val SALT_BYTES = 16
@@ -108,7 +114,7 @@ internal object PortableBackupCrypto {
             return DecryptionResult.Invalid(InvalidReason.UNSUPPORTED_VERSION)
         }
         val iterations = buffer.int
-        if (iterations != KDF_ITERATIONS) {
+        if (iterations !in MIN_KDF_ITERATIONS..MAX_KDF_ITERATIONS) {
             return DecryptionResult.Invalid(InvalidReason.INVALID_FORMAT)
         }
         val salt = ByteArray(SALT_BYTES).also(buffer::get)
@@ -128,7 +134,7 @@ internal object PortableBackupCrypto {
         val header = envelope.copyOfRange(0, headerBytes)
         val ciphertext = envelope.copyOfRange(headerBytes, envelope.size)
         return try {
-            val key = deriveKey(providedPassphrase, salt)
+            val key = deriveKey(providedPassphrase, salt, iterations)
             val cipher = Cipher.getInstance("AES/GCM/NoPadding")
             cipher.init(Cipher.DECRYPT_MODE, key, GCMParameterSpec(GCM_TAG_BITS, nonce))
             cipher.updateAAD(header)
@@ -148,8 +154,9 @@ internal object PortableBackupCrypto {
     private fun deriveKey(
         passphrase: CharArray,
         salt: ByteArray,
+        iterations: Int = KDF_ITERATIONS,
     ): SecretKeySpec {
-        val keySpec = PBEKeySpec(passphrase, salt, KDF_ITERATIONS, KEY_BITS)
+        val keySpec = PBEKeySpec(passphrase, salt, iterations, KEY_BITS)
         val encoded = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256").generateSecret(keySpec).encoded
         return try {
             SecretKeySpec(encoded, "AES")
