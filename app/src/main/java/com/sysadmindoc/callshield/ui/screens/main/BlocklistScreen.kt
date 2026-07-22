@@ -103,7 +103,6 @@ import com.sysadmindoc.callshield.data.model.SpamNumber
 import com.sysadmindoc.callshield.data.model.WhitelistEntry
 import com.sysadmindoc.callshield.data.model.WildcardRule
 import com.sysadmindoc.callshield.ui.MainViewModel
-import com.sysadmindoc.callshield.ui.theme.Black
 import com.sysadmindoc.callshield.ui.theme.CatBlue
 import com.sysadmindoc.callshield.ui.theme.CatGreen
 import com.sysadmindoc.callshield.ui.theme.CatMauve
@@ -506,7 +505,7 @@ fun BlocklistScreen(viewModel: MainViewModel) {
                                 .align(Alignment.BottomEnd)
                                 .padding(16.dp),
                         containerColor = workspace.accentColor,
-                        contentColor = Black,
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
                         shape = RoundedCornerShape(12.dp),
                         icon = { Icon(Icons.Default.Add, stringResource(R.string.cd_add)) },
                         text = { Text(addLabel, fontWeight = FontWeight.Bold) },
@@ -842,7 +841,7 @@ fun WildcardRuleItem(
                 colors =
                     androidx.compose.material3.SwitchDefaults.colors(
                         checkedTrackColor = CatGreen,
-                        checkedThumbColor = Black,
+                        checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
                     ),
             )
             IconButton(onClick = onDelete) {
@@ -891,7 +890,7 @@ fun KeywordRuleItem(
                 colors =
                     androidx.compose.material3.SwitchDefaults.colors(
                         checkedTrackColor = CatGreen,
-                        checkedThumbColor = Black,
+                        checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
                     ),
             )
             IconButton(onClick = onDelete) {
@@ -1512,7 +1511,7 @@ fun HashWildcardRuleItem(
                 colors =
                     androidx.compose.material3.SwitchDefaults.colors(
                         checkedTrackColor = CatGreen,
-                        checkedThumbColor = Black,
+                        checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
                     ),
             )
             IconButton(onClick = onDelete) {

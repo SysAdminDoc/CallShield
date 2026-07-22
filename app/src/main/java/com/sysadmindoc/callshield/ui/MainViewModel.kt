@@ -28,6 +28,7 @@ import com.sysadmindoc.callshield.domain.usecase.SyncDatabaseUseCase
 import com.sysadmindoc.callshield.service.CallLogScanner
 import com.sysadmindoc.callshield.service.NotificationHelper
 import com.sysadmindoc.callshield.service.SmsInboxScanner
+import com.sysadmindoc.callshield.ui.theme.AppThemeMode
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -146,6 +147,10 @@ class MainViewModel
         val selectedNumber: StateFlow<String?> = _selectedNumber
 
         // Settings
+        val appTheme =
+            repo.appTheme
+                .map(AppThemeMode::fromStorage)
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), AppThemeMode.Amoled)
         val blockCallsEnabled = repo.blockCallsEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
         val blockSmsEnabled = repo.blockSmsEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
         val blockUnknownEnabled = repo.blockUnknownEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
@@ -612,6 +617,8 @@ class MainViewModel
         }
 
         // Settings
+        fun setAppTheme(theme: AppThemeMode) = viewModelScope.launch { repo.setAppTheme(theme.storageValue) }
+
         fun setBlockCalls(v: Boolean) = viewModelScope.launch { repo.setBlockCalls(v) }
 
         fun setBlockSms(v: Boolean) = viewModelScope.launch { repo.setBlockSms(v) }

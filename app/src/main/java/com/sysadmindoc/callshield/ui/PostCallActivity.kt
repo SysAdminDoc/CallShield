@@ -43,6 +43,7 @@ import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.PhoneFormatter
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.service.SpamActionReceiver
+import com.sysadmindoc.callshield.ui.theme.AppThemeMode
 import com.sysadmindoc.callshield.ui.theme.Black
 import com.sysadmindoc.callshield.ui.theme.CallShieldTheme
 import com.sysadmindoc.callshield.ui.theme.CatBlue
@@ -77,9 +78,10 @@ class PostCallActivity : AppCompatActivity() {
         }
 
         lifecycleScope.launch {
+            val repository = SpamRepository.getInstance(applicationContext)
             val enabled =
                 runCatching {
-                    SpamRepository.getInstance(applicationContext).postCallScreenEnabled.first()
+                    repository.postCallScreenEnabled.first()
                 }.onFailure { Log.w(TAG, "Unable to read post-call preference", it) }
                     .getOrDefault(false)
             if (!enabled) {
@@ -87,8 +89,13 @@ class PostCallActivity : AppCompatActivity() {
                 return@launch
             }
 
+            val appTheme =
+                runCatching { AppThemeMode.fromStorage(repository.appTheme.first()) }
+                    .onFailure { Log.w(TAG, "Unable to read app theme", it) }
+                    .getOrDefault(AppThemeMode.Amoled)
+
             setContent {
-                CallShieldTheme {
+                CallShieldTheme(themeMode = appTheme) {
                     PostCallScreen(
                         details = details,
                         onMarkSpam = ::markSpam,
@@ -178,14 +185,14 @@ private fun PostCallScreen(
                     .padding(padding)
                     .statusBarsPadding()
                     .navigationBarsPadding()
-                    .padding(horizontal = 20.dp, vertical = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(18.dp),
+                    .padding(horizontal = 16.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             PostCallHeader()
             PremiumCard(accentColor = CatBlue, modifier = Modifier.fillMaxWidth()) {
                 Column(
-                    modifier = Modifier.padding(20.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     Text(
                         stringResource(R.string.post_call_number_label),

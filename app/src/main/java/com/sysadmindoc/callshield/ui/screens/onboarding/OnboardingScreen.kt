@@ -36,7 +36,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -197,9 +196,9 @@ internal fun OnboardingScreenContent(
                 .fillMaxSize()
                 .background(Black)
                 .statusBarsPadding()
-                .padding(start = 20.dp, end = 20.dp, top = 12.dp)
+                .padding(start = 16.dp, end = 16.dp, top = 8.dp)
                 .navigationBarsPadding()
-                .padding(bottom = 16.dp),
+                .padding(bottom = 12.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Row(
@@ -226,7 +225,7 @@ internal fun OnboardingScreenContent(
             trackColor = CatMuted.copy(alpha = 0.35f),
         )
 
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(8.dp))
 
         Box(
             modifier =
@@ -253,32 +252,32 @@ internal fun OnboardingScreenContent(
                         Image(
                             painter = painterResource(R.drawable.ic_launcher_foreground),
                             contentDescription = p.title,
-                            modifier = Modifier.size(64.dp),
+                            modifier = Modifier.size(48.dp),
                         )
                     } else {
                         Icon(
                             p.icon,
                             contentDescription = p.title,
                             tint = p.color,
-                            modifier = Modifier.size(64.dp),
+                            modifier = Modifier.size(48.dp),
                         )
                     }
-                    Spacer(Modifier.height(14.dp))
+                    Spacer(Modifier.height(10.dp))
                     Text(
                         p.title,
                         style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.ExtraBold,
+                        fontWeight = FontWeight.SemiBold,
                         color = p.color,
                         textAlign = TextAlign.Center,
                     )
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(6.dp))
                     Text(
                         p.subtitle,
-                        style = MaterialTheme.typography.bodyLarge.copy(lineHeight = 26.sp),
+                        style = MaterialTheme.typography.bodyMedium,
                         color = CatSubtext,
                         textAlign = TextAlign.Center,
                     )
-                    Spacer(Modifier.height(16.dp))
+                    Spacer(Modifier.height(12.dp))
 
                     when (page) {
                         0 -> {
@@ -288,40 +287,37 @@ internal fun OnboardingScreenContent(
                             ) {
                                 StatusPill(
                                     text = stringResource(R.string.onboarding_trust_no_account),
-                                    color = CatGreen,
+                                    color = CatSubtext,
                                     textStyle = MaterialTheme.typography.labelSmall,
                                     modifier = Modifier.weight(1f),
                                 )
                                 StatusPill(
                                     text = stringResource(R.string.onboarding_trust_on_device),
-                                    color = CatBlue,
+                                    color = CatSubtext,
                                     textStyle = MaterialTheme.typography.labelSmall,
                                     modifier = Modifier.weight(1f),
                                 )
                                 StatusPill(
                                     text = stringResource(R.string.onboarding_trust_open_source),
-                                    color = CatPeach,
+                                    color = CatSubtext,
                                     textStyle = MaterialTheme.typography.labelSmall,
                                     modifier = Modifier.weight(1f),
                                 )
                             }
-                            Spacer(Modifier.height(12.dp))
+                            Spacer(Modifier.height(8.dp))
                             OnboardingFeatureCard(
                                 title = stringResource(R.string.onboarding_feature_private_title),
                                 body = stringResource(R.string.onboarding_feature_private_body),
-                                accentColor = CatGreen,
                             )
-                            Spacer(Modifier.height(10.dp))
+                            Spacer(Modifier.height(4.dp))
                             OnboardingFeatureCard(
                                 title = stringResource(R.string.onboarding_feature_local_title),
                                 body = stringResource(R.string.onboarding_feature_local_body),
-                                accentColor = CatBlue,
                             )
-                            Spacer(Modifier.height(10.dp))
+                            Spacer(Modifier.height(4.dp))
                             OnboardingFeatureCard(
                                 title = stringResource(R.string.onboarding_feature_updates_title),
                                 body = stringResource(R.string.onboarding_feature_updates_body),
-                                accentColor = CatPeach,
                             )
                         }
 
@@ -545,7 +541,7 @@ internal fun OnboardingScreenContent(
             }
         }
 
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(12.dp))
 
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
             pages.forEachIndexed { i, p ->
@@ -566,9 +562,9 @@ internal fun OnboardingScreenContent(
             }
         }
 
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(10.dp))
         SnackbarHost(hostState = snackbarHostState)
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(8.dp))
 
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -604,7 +600,7 @@ internal fun OnboardingScreenContent(
                         onComplete()
                     }
                 },
-                modifier = Modifier.height(48.dp),
+                modifier = Modifier.height(44.dp),
             )
         }
     }
@@ -614,11 +610,10 @@ internal fun OnboardingScreenContent(
 private fun OnboardingFeatureCard(
     title: String,
     body: String,
-    accentColor: androidx.compose.ui.graphics.Color,
 ) {
     Column(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 7.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
         Text(
             title,
@@ -632,7 +627,7 @@ private fun OnboardingFeatureCard(
             color = CatSubtext,
             maxLines = 2,
         )
-        GradientDivider(color = accentColor)
+        GradientDivider()
     }
 }
 

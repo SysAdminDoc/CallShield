@@ -11,12 +11,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -25,7 +23,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sysadmindoc.callshield.BuildConfig
 import com.sysadmindoc.callshield.R
@@ -37,76 +34,39 @@ import com.sysadmindoc.callshield.ui.theme.*
 import java.text.NumberFormat
 
 @Composable
-fun MoreScreen(viewModel: MainViewModel) {
-    var currentView by rememberSaveable { mutableIntStateOf(0) }
-
-    if (currentView != 0) BackHandler { currentView = 0 }
+fun MoreScreen(
+    viewModel: MainViewModel,
+    currentView: Int,
+    onViewChange: (Int) -> Unit,
+) {
+    if (currentView != 0) BackHandler { onViewChange(0) }
 
     when (currentView) {
         1 -> {
-            Column(Modifier.fillMaxSize()) {
-                MoreTopBar(stringResource(R.string.more_statistics)) { currentView = 0 }
-                StatsScreen(viewModel)
-            }
+            StatsScreen(viewModel)
         }
 
         2 -> {
-            Column(Modifier.fillMaxSize()) {
-                MoreTopBar(stringResource(R.string.more_settings)) { currentView = 0 }
-                SettingsScreen(viewModel)
-            }
+            SettingsScreen(viewModel)
         }
 
         3 -> {
-            Column(Modifier.fillMaxSize()) {
-                MoreTopBar(stringResource(R.string.more_whats_new)) { currentView = 0 }
-                ChangelogScreen()
-            }
+            ChangelogScreen()
         }
 
         4 -> {
-            Column(Modifier.fillMaxSize()) {
-                MoreTopBar(stringResource(R.string.more_protection_test)) { currentView = 0 }
-                ProtectionTestScreen()
-            }
+            ProtectionTestScreen()
         }
 
         else -> {
             MoreHub(
                 viewModel = viewModel,
-                onStats = { currentView = 1 },
-                onSettings = { currentView = 2 },
-                onChangelog = { currentView = 3 },
-                onTest = { currentView = 4 },
+                onStats = { onViewChange(1) },
+                onSettings = { onViewChange(2) },
+                onChangelog = { onViewChange(3) },
+                onTest = { onViewChange(4) },
             )
         }
-    }
-}
-
-@Composable
-fun MoreTopBar(
-    title: String,
-    onBack: () -> Unit,
-) {
-    Column {
-        Row(
-            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).padding(horizontal = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            IconButton(onClick = onBack) {
-                Icon(
-                    Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = stringResource(R.string.cd_back),
-                    tint = CatSubtext,
-                )
-            }
-            Text(
-                title,
-                style = MaterialTheme.typography.titleMedium.copy(letterSpacing = 0.sp),
-                fontWeight = FontWeight.SemiBold,
-            )
-        }
-        GradientDivider()
     }
 }
 
@@ -174,24 +134,19 @@ fun MoreHub(
             Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(22.dp),
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
             SectionHeader(stringResource(R.string.more_snapshot_title))
             Text(
                 protectionLabel,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.SemiBold,
                 color = CatText,
             )
             Text(syncLabel, style = MaterialTheme.typography.bodyMedium, color = CatSubtext)
-            Text(
-                stringResource(R.string.more_trust_summary),
-                style = MaterialTheme.typography.bodySmall,
-                color = CatOverlay,
-            )
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(6.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -210,7 +165,7 @@ fun MoreHub(
                 MoreMetricDivider()
                 MoreMetric(appVersion, stringResource(R.string.more_snapshot_version), Modifier.weight(1f))
             }
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(6.dp))
             GradientDivider()
         }
 
@@ -332,7 +287,6 @@ fun MoreHub(
                     color = CatSubtext,
                 )
             }
-            StatusPill(stringResource(R.string.more_trust_on_device), CatGreen)
         }
     }
 }
@@ -344,9 +298,9 @@ private fun MoreSection(
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         SectionHeader(title)
-        Spacer(Modifier.height(6.dp))
+        Spacer(Modifier.height(3.dp))
         content()
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(4.dp))
         GradientDivider()
     }
 }
@@ -378,13 +332,13 @@ fun MoreNavCard(
 ) {
     TextButton(
         onClick = onClick,
-        modifier = Modifier.fillMaxWidth().heightIn(min = 62.dp),
-        contentPadding = PaddingValues(horizontal = 0.dp, vertical = 6.dp),
+        modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
+        contentPadding = PaddingValues(horizontal = 0.dp, vertical = 4.dp),
     ) {
-        PremiumIconTile(icon = icon, color = color, size = 36.dp, iconSize = 21.dp)
-        Spacer(Modifier.width(12.dp))
+        PremiumIconTile(icon = icon, color = color, size = 34.dp, iconSize = 19.dp)
+        Spacer(Modifier.width(10.dp))
         Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.Start) {
-            Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, color = CatText)
+            Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, color = CatText)
             Text(
                 subtitle,
                 style = MaterialTheme.typography.bodySmall,
@@ -413,11 +367,11 @@ fun QuickLink(
 ) {
     TextButton(
         onClick = onClick,
-        modifier = Modifier.fillMaxWidth().heightIn(min = 58.dp),
-        contentPadding = PaddingValues(horizontal = 0.dp, vertical = 5.dp),
+        modifier = Modifier.fillMaxWidth().heightIn(min = 54.dp),
+        contentPadding = PaddingValues(horizontal = 0.dp, vertical = 4.dp),
     ) {
-        PremiumIconTile(icon = icon, color = color, size = 36.dp, iconSize = 19.dp)
-        Spacer(Modifier.width(12.dp))
+        PremiumIconTile(icon = icon, color = color, size = 34.dp, iconSize = 18.dp)
+        Spacer(Modifier.width(10.dp))
         Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.Start) {
             Text(label, color = CatText, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
             Text(
