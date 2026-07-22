@@ -49,7 +49,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.ScrollableTabRow
+import androidx.compose.material3.PrimaryScrollableTabRow
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -293,7 +293,7 @@ fun BlocklistScreen(viewModel: MainViewModel) {
                 workspace = workspace,
             )
 
-            ScrollableTabRow(
+            PrimaryScrollableTabRow(
                 selectedTabIndex = tabIndex,
                 containerColor = com.sysadmindoc.callshield.ui.theme.Surface,
                 contentColor = CatText,

@@ -35,6 +35,7 @@ import java.text.NumberFormat
  * and WhoCalledMe in parallel. Updates the overlay in real-time as each
  * source responds. Shows aggregate spam score + Google search button.
  */
+@Suppress("DEPRECATION")
 class CallerIdOverlayService : Service() {
     companion object {
         // Sentinel for "no data" — used when we haven't collected a STIR/SHAKEN
@@ -378,6 +379,7 @@ class CallerIdOverlayService : Service() {
                 val listener =
                     object : android.telephony.PhoneStateListener() {
                         @Deprecated("Legacy pre-API-31 call-state listener")
+                        @Suppress("OVERRIDE_DEPRECATION")
                         override fun onCallStateChanged(
                             state: Int,
                             phoneNumber: String?,

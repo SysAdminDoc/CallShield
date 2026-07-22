@@ -37,6 +37,19 @@ All notable changes to CallShield will be documented in this file.
 - Exported telephone deep links and post-call handles are now normalized with
   bounded work before reaching number details, preventing oversized or
   Unicode-homoglyph input from crossing the UI trust boundary.
+- Language changes now preserve the active main tab and nested More screen
+  instead of returning users to Home. Launcher shortcuts still navigate to
+  their requested destination.
+- Swipe-to-block in the activity log now restores the row after applying the
+  block; swipe-to-delete retains its working Undo action on the current
+  Material 3 dismissal API.
+- Setup and statistics copy now correctly identifies the caller-ID overlay as
+  optional and reports database entries rather than implying a byte size.
+- The trusted-notification source picker now shows stable app names for all 17
+  supported packages and uses a neutral state when none are installed.
+- Deprecated Compose tab and swipe APIs were replaced, and the required API
+  29–30 phone-state compatibility path is explicitly isolated, restoring a
+  warning-free Kotlin build.
 
 ## v1.7.19 — 2026-07-21
 

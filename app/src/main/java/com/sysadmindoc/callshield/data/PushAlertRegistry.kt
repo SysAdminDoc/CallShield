@@ -31,9 +31,8 @@ import java.util.ArrayDeque
 object PushAlertRegistry {
     /**
      * Default allowlist of packages whose notifications carry
-     * trust-building context about an unknown caller. User-editable in a
-     * future settings screen; for now a sensible default covers the
-     * 80/20 case.
+     * trust-building context about an unknown caller. The settings source
+     * picker lets users opt individual packages out.
      */
     val ALERT_SOURCE_PACKAGES =
         setOf(
@@ -60,6 +59,34 @@ object PushAlertRegistry {
             "com.google.android.calendar",
             "com.microsoft.office.outlook",
         )
+
+    private val SOURCE_LABELS =
+        mapOf(
+            "com.ubercab" to "Uber",
+            "com.ubercab.driver" to "Uber Driver",
+            "com.lyft.android" to "Lyft",
+            "com.dd.doordash" to "DoorDash",
+            "com.grubhub.android" to "Grubhub",
+            "com.ubercab.eats" to "Uber Eats",
+            "com.instacart.client" to "Instacart",
+            "com.amazon.mShop.android.shopping" to "Amazon Shopping",
+            "com.amazon.logistics.driver" to "Amazon Logistics",
+            "com.fedex.ida.android" to "FedEx",
+            "com.ups.mobile.android" to "UPS",
+            "gov.usps.mobile" to "USPS",
+            "com.google.android.apps.messaging" to "Google Messages",
+            "com.samsung.android.messaging" to "Samsung Messages",
+            "com.android.mms" to "AOSP Messages",
+            "com.google.android.calendar" to "Google Calendar",
+            "com.microsoft.office.outlook" to "Outlook",
+        )
+
+    internal fun displayNameFor(packageName: String): String =
+        SOURCE_LABELS[packageName]
+            ?: packageName
+                .substringAfterLast('.')
+                .replace('_', ' ')
+                .replace('-', ' ')
 
     /** Default TTL — how long a notification stays relevant. */
     const val DEFAULT_TTL_MS = 30L * 60L * 1000L // 30 minutes
