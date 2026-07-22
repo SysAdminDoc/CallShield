@@ -54,6 +54,7 @@ import com.sysadmindoc.callshield.data.repository.EMERGENCY_CALLBACK_WINDOW_MINU
 import com.sysadmindoc.callshield.data.repository.EMERGENCY_CALLBACK_WINDOW_MINUTES_MIN
 import com.sysadmindoc.callshield.permissions.CallShieldPermissions
 import com.sysadmindoc.callshield.ui.AppLanguage
+import com.sysadmindoc.callshield.ui.DurationTtsText
 import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.theme.*
 
@@ -1363,6 +1364,8 @@ private fun SettingsNumberStepper(
 }
 
 private const val EMERGENCY_CALLBACK_WINDOW_MINUTES_STEP = 15
+private const val HOURS_PER_DAY = 24
+private const val SECONDS_PER_HOUR = 3_600
 
 @Composable
 internal fun QuietHoursSettings(
@@ -1383,6 +1386,14 @@ internal fun QuietHoursSettings(
             onCheckedChange = onEnabledChange,
         )
         if (enabled) {
+            val durationHours =
+                if (startHour == endHour) {
+                    HOURS_PER_DAY
+                } else {
+                    (endHour - startHour + HOURS_PER_DAY) % HOURS_PER_DAY
+                }
+            val durationText = pluralStringResource(R.plurals.duration_hours, durationHours, durationHours)
+            val quietPeriodText = stringResource(R.string.settings_quiet_period_duration, durationText)
             Spacer(Modifier.height(8.dp))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Column(modifier = Modifier.weight(1f)) {
@@ -1394,6 +1405,14 @@ internal fun QuietHoursSettings(
                     HourPicker(endHour, onSelect = onEndChange)
                 }
             }
+            Spacer(Modifier.height(8.dp))
+            DurationTtsText(
+                text = quietPeriodText,
+                durationText = durationText,
+                durationSeconds = durationHours * SECONDS_PER_HOUR,
+                style = MaterialTheme.typography.bodySmall,
+                color = CatSubtext,
+            )
             if (startHour == endHour) {
                 Spacer(Modifier.height(8.dp))
                 Text(

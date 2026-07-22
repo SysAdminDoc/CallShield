@@ -44,6 +44,12 @@ All notable changes to CallShield will be documented in this file.
   compatible logistic model, built-in defaults, or a degraded fallback is
   active. Parse failures and GBT-to-LR degradation use explicit warning states
   instead of remaining visible only in local logs.
+- **Automated accessibility regression coverage.** Compose Accessibility Test
+  Framework checks now gate onboarding, dashboard, blocklist, and Settings for
+  missing labels, undersized targets, contrast, and traversal problems.
+  Expandable detail controls announce expanded/collapsed state, while duration
+  labels use Android 16's native `TtsSpan` with a plain-text fallback below API
+  36. The core surfaces also pass on-device checks with system outline text on.
 - **Contacts-mode degradation detection.** `CallShieldPermissions`
   `isContactsModeDegraded()` reports when a contacts-dependent screening mode
   (contact-whitelist or contacts-only) is enabled but `READ_CONTACTS` is

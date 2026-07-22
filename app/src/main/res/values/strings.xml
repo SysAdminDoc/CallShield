@@ -1150,6 +1150,13 @@
     <string name="cd_ungroup">Show list view</string>
     <string name="cd_clear_log">Clear log</string>
     <string name="cd_expand">Expand details</string>
+    <string name="accessibility_state_expanded">Expanded</string>
+    <string name="accessibility_state_collapsed">Collapsed</string>
+    <string name="settings_quiet_period_duration">Quiet period: %1$s</string>
+    <plurals name="duration_hours">
+        <item quantity="one">%d hour</item>
+        <item quantity="other">%d hours</item>
+    </plurals>
     <string name="cd_collapse">Collapse details</string>
     <string name="cd_block">Block number</string>
     <string name="cd_unblock">Unblock number</string>

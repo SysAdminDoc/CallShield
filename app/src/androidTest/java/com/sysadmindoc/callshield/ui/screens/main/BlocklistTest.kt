@@ -2,14 +2,17 @@ package com.sysadmindoc.callshield.ui.screens.main
 
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.junit4.accessibility.enableAccessibilityChecks
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeLeft
+import androidx.compose.ui.test.tryPerformAccessibilityChecks
 import com.sysadmindoc.callshield.data.TimeSchedule
 import com.sysadmindoc.callshield.data.model.SpamNumber
 import com.sysadmindoc.callshield.data.model.WhitelistEntry
@@ -20,6 +23,19 @@ import org.junit.Test
 class BlocklistTest {
     @get:Rule
     val composeRule = createComposeRule()
+
+    @Test
+    fun blocklistScreenPassesAutomatedAccessibilityChecks() {
+        composeRule.setContent {
+            SwipeToRemoveBlocklistItem(
+                number = manualSpamNumber(),
+                onRemove = {},
+            )
+        }
+
+        composeRule.enableAccessibilityChecks()
+        composeRule.onRoot().tryPerformAccessibilityChecks()
+    }
 
     @Test
     fun addNumberDialogNormalizesAndSubmitsManualBlock() {

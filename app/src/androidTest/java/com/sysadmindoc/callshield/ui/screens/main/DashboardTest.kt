@@ -3,9 +3,12 @@ package com.sysadmindoc.callshield.ui.screens.main
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.junit4.accessibility.enableAccessibilityChecks
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.tryPerformAccessibilityChecks
 import com.sysadmindoc.callshield.ui.SyncState
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -14,6 +17,39 @@ import org.junit.Test
 class DashboardTest {
     @get:Rule
     val composeRule = createComposeRule()
+
+    @Test
+    fun dashboardScreenPassesAutomatedAccessibilityChecks() {
+        val status =
+            buildDashboardStatusModel(
+                blockCallsEnabled = true,
+                blockSmsEnabled = true,
+                callPermissionsReady = true,
+                smsPermissionsReady = true,
+                permissionsReady = true,
+                spamDatabaseReady = true,
+                callScreenerReady = true,
+                overlayGranted = true,
+                notificationsGranted = true,
+            )
+        composeRule.setContent {
+            DashboardHeroCard(
+                dashboardStatus = status,
+                heroTitle = "Protection Active",
+                heroSubtitle = "Calls and texts are actively protected.",
+                requiredSetupComplete = 3,
+                requiredSetupTotal = 3,
+                engineCount = 8,
+                lastSync = System.currentTimeMillis(),
+                lastSyncSource = "",
+                syncState = SyncState.Idle,
+                heroAction = null,
+            )
+        }
+
+        composeRule.enableAccessibilityChecks()
+        composeRule.onRoot().tryPerformAccessibilityChecks()
+    }
 
     @Test
     fun heroShowsProtectionStateSetupProgressAndSyncFreshness() {

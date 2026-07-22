@@ -48,9 +48,11 @@ import com.sysadmindoc.callshield.data.PhoneFormatter
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup
 import com.sysadmindoc.callshield.permissions.CallShieldPermissions
+import com.sysadmindoc.callshield.ui.DurationTtsText
 import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.TemporaryDecisionDuration
 import com.sysadmindoc.callshield.ui.TemporaryDecisionMenu
+import com.sysadmindoc.callshield.ui.expandableStateSemantics
 import com.sysadmindoc.callshield.ui.rememberTemporaryDecisionDurations
 import com.sysadmindoc.callshield.ui.theme.*
 import com.sysadmindoc.callshield.util.filterAsciiDigits
@@ -393,6 +395,8 @@ fun RecentCallItem(
     val temporaryDurations = rememberTemporaryDecisionDurations()
     val copiedMessage = stringResource(R.string.recent_copied)
     val clipLabelPhone = stringResource(R.string.clip_label_phone)
+    val expandedStateDescription = stringResource(R.string.accessibility_state_expanded)
+    val collapsedStateDescription = stringResource(R.string.accessibility_state_collapsed)
 
     PremiumCard(
         onClick = onOpenDetail,
@@ -459,8 +463,9 @@ fun RecentCallItem(
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text(dateFormat.format(Date(call.date)), style = MaterialTheme.typography.bodySmall, color = CatSubtext)
                             if (call.duration > 0) {
-                                Text(
-                                    stringResource(R.string.recent_duration, call.duration),
+                                DurationTtsText(
+                                    text = stringResource(R.string.recent_duration, call.duration),
+                                    durationSeconds = call.duration,
                                     style = MaterialTheme.typography.bodySmall,
                                     color = CatOverlay,
                                 )
@@ -475,7 +480,16 @@ fun RecentCallItem(
                             )
                         }
                     }
-                    IconButton(onClick = { expanded = !expanded }) {
+                    IconButton(
+                        onClick = { expanded = !expanded },
+                        modifier =
+                            Modifier.expandableStateSemantics(
+                                expanded = expanded,
+                                expandedStateDescription = expandedStateDescription,
+                                collapsedStateDescription = collapsedStateDescription,
+                                onExpandedChange = { expanded = it },
+                            ),
+                    ) {
                         Icon(
                             if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
                             contentDescription =

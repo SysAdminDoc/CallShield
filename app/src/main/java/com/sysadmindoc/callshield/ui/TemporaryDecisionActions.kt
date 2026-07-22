@@ -5,7 +5,7 @@ package com.sysadmindoc.callshield.ui
 import androidx.compose.foundation.layout.Box
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.Text
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -48,12 +48,21 @@ fun TemporaryDecisionMenu(
     modifier: Modifier = Modifier,
 ) {
     var expanded by remember { mutableStateOf(false) }
+    val expandedStateDescription = stringResource(R.string.accessibility_state_expanded)
+    val collapsedStateDescription = stringResource(R.string.accessibility_state_collapsed)
     Box(modifier = modifier) {
         PremiumCompactButton(
             label = label,
             icon = icon,
             color = color,
             onClick = { expanded = true },
+            modifier =
+                Modifier.expandableStateSemantics(
+                    expanded = expanded,
+                    expandedStateDescription = expandedStateDescription,
+                    collapsedStateDescription = collapsedStateDescription,
+                    onExpandedChange = { expanded = it },
+                ),
         )
         DropdownMenu(
             expanded = expanded,
@@ -61,7 +70,14 @@ fun TemporaryDecisionMenu(
         ) {
             durations.forEach { duration ->
                 DropdownMenuItem(
-                    text = { Text(duration.label) },
+                    text = {
+                        DurationTtsText(
+                            text = duration.label,
+                            durationSeconds = (duration.durationMillis / 1_000L).toInt(),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                    },
                     onClick = {
                         expanded = false
                         onSelect(duration)
