@@ -97,7 +97,6 @@ import com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup
 import com.sysadmindoc.callshield.permissions.CallShieldPermissions
 import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.SyncState
-import com.sysadmindoc.callshield.ui.theme.Black
 import com.sysadmindoc.callshield.ui.theme.CatBlue
 import com.sysadmindoc.callshield.ui.theme.CatGreen
 import com.sysadmindoc.callshield.ui.theme.CatMauve
@@ -1381,7 +1380,11 @@ fun QuickToggle(
                 hapticTick(context)
                 onChanged(it)
             },
-            colors = SwitchDefaults.colors(checkedTrackColor = CatGreen, checkedThumbColor = Black),
+            colors =
+                SwitchDefaults.colors(
+                    checkedTrackColor = CatGreen,
+                    checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                ),
         )
     }
 }

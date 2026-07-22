@@ -133,8 +133,8 @@ fun StatsScreen(viewModel: MainViewModel) {
         }
 
     Column(
-        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp),
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         StatsOverviewCard(
             weeklyTotal = weeklyTotal,
@@ -172,9 +172,9 @@ fun StatsScreen(viewModel: MainViewModel) {
         } else {
             // Weekly Activity bar chart (Canvas)
             PremiumCard {
-                Column(modifier = Modifier.padding(18.dp)) {
+                Column(modifier = Modifier.padding(14.dp)) {
                     SectionHeader(stringResource(R.string.stats_weekly_activity), CatBlue)
-                    Spacer(Modifier.height(12.dp))
+                    Spacer(Modifier.height(8.dp))
                     WeeklyBarChart(dailyCounts = dailyCounts, modifier = Modifier.fillMaxWidth())
                 }
             }
@@ -182,9 +182,9 @@ fun StatsScreen(viewModel: MainViewModel) {
             // Source Breakdown donut chart
             if (sourceBreakdown.isNotEmpty()) {
                 PremiumCard {
-                    Column(modifier = Modifier.padding(18.dp)) {
+                    Column(modifier = Modifier.padding(14.dp)) {
                         SectionHeader(stringResource(R.string.stats_source_breakdown), CatGreen)
-                        Spacer(Modifier.height(12.dp))
+                        Spacer(Modifier.height(8.dp))
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceEvenly,
@@ -206,9 +206,9 @@ fun StatsScreen(viewModel: MainViewModel) {
 
             // Monthly trend
             PremiumCard {
-                Column(modifier = Modifier.padding(18.dp)) {
+                Column(modifier = Modifier.padding(14.dp)) {
                     SectionHeader(stringResource(R.string.stats_monthly_trend), CatTeal)
-                    Spacer(Modifier.height(12.dp))
+                    Spacer(Modifier.height(8.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -741,6 +741,7 @@ fun WeeklyBarChart(
     modifier: Modifier = Modifier,
 ) {
     val maxCount = dailyCounts.maxOfOrNull { it.second }?.coerceAtLeast(1) ?: 1
+    val barColor = CatGreen
 
     androidx.compose.foundation.Canvas(modifier = modifier.fillMaxWidth().height(160.dp)) {
         val barWidth = size.width / (dailyCounts.size * 2f)
@@ -752,7 +753,7 @@ fun WeeklyBarChart(
 
             // Bar with rounded top
             drawRoundRect(
-                color = CatGreen,
+                color = barColor,
                 topLeft = Offset(x, size.height - 30.dp.toPx() - barHeight),
                 size = Size(barWidth, barHeight),
                 cornerRadius = CornerRadius(4.dp.toPx()),

@@ -15,6 +15,10 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
+private val validAppThemes = setOf("system", "light", "graphite", "amoled")
+
+internal fun sanitizeAppTheme(value: String?): String = value?.takeIf(validAppThemes::contains) ?: "amoled"
+
 @Suppress("TooManyFunctions")
 class SettingsRepository(
     private val dataStore: DataStore<Preferences>,
@@ -114,6 +118,7 @@ class SettingsRepository(
     val lastSyncTimestamp: Flow<Long> = dataStore.data.map { it[SpamRepository.KEY_LAST_SYNC] ?: 0L }
     val lastSyncSource: Flow<String> = dataStore.data.map { it[SpamRepository.KEY_LAST_SYNC_SOURCE] ?: "" }
     val activeProfileName: Flow<String?> = dataStore.data.map { it[SpamRepository.KEY_ACTIVE_PROFILE] }
+    val appTheme: Flow<String> = dataStore.data.map { sanitizeAppTheme(it[SpamRepository.KEY_APP_THEME]) }
     val externalBlocklistSubscriptions: Flow<List<ExternalBlocklistSubscription>> =
         dataStore.data.map { prefs ->
             decodeExternalBlocklistSubscriptions(prefs[SpamRepository.KEY_EXTERNAL_BLOCKLIST_SUBSCRIPTIONS])
@@ -125,6 +130,16 @@ class SettingsRepository(
                 prefs.remove(SpamRepository.KEY_ACTIVE_PROFILE)
             } else {
                 prefs[SpamRepository.KEY_ACTIVE_PROFILE] = name
+            }
+        }
+
+    suspend fun setAppTheme(theme: String) =
+        dataStore.edit { preferences ->
+            val sanitized = sanitizeAppTheme(theme)
+            if (sanitized == "amoled") {
+                preferences.remove(SpamRepository.KEY_APP_THEME)
+            } else {
+                preferences[SpamRepository.KEY_APP_THEME] = sanitized
             }
         }
 

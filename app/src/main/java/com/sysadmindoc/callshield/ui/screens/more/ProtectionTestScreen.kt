@@ -28,7 +28,6 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.ModelHealth
 import com.sysadmindoc.callshield.data.SpamMLScorer
@@ -136,24 +135,14 @@ fun ProtectionTestScreen() {
         }
 
     Column(
-        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Column {
-            Text(
-                stringResource(R.string.protection_test_title),
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                color = CatGreen,
-                letterSpacing = 0.sp,
-            )
-            Spacer(Modifier.height(4.dp))
-            Text(
-                stringResource(R.string.protection_test_subtitle),
-                style = MaterialTheme.typography.bodySmall,
-                color = CatSubtext,
-            )
-        }
+        Text(
+            stringResource(R.string.protection_test_subtitle),
+            style = MaterialTheme.typography.bodySmall,
+            color = CatSubtext,
+        )
 
         ModelHealthCard(SpamMLScorer.modelHealth())
 
@@ -181,7 +170,7 @@ fun ProtectionTestScreen() {
 
         if (results.isEmpty()) {
             PremiumCard(accentColor = CatBlue) {
-                Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
                         stringResource(R.string.protection_test_intro_title),
                         style = MaterialTheme.typography.titleMedium,
@@ -209,8 +198,8 @@ fun ProtectionTestScreen() {
                         Modifier
                             .fillMaxWidth()
                             .accentGlow(summaryColor, 300f, 0.06f)
-                            .padding(20.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                            .padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         PremiumIconTile(

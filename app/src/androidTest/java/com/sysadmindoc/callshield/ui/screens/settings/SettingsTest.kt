@@ -114,7 +114,7 @@ class SettingsTest {
             )
         }
 
-        composeRule.onNodeWithText("Answered-Caller Trust").assertIsDisplayed()
+        composeRule.onNodeWithText("Answered-caller trust").assertIsDisplayed()
         composeRule.onNodeWithText("2 answered calls").assertIsDisplayed()
         composeRule.onNodeWithText("30 days").assertIsDisplayed()
         composeRule.onNodeWithTag(SETTINGS_ANSWERED_CALLER_TOGGLE_TAG).performClick()

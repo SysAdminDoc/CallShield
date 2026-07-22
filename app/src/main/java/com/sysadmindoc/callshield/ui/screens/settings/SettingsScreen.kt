@@ -1,4 +1,4 @@
-@file:Suppress("TooManyFunctions")
+@file:Suppress("TooManyFunctions", "ktlint:standard:function-naming")
 
 package com.sysadmindoc.callshield.ui.screens.settings
 
@@ -16,6 +16,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -34,6 +35,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -61,6 +63,7 @@ import com.sysadmindoc.callshield.ui.theme.*
 internal const val SETTINGS_QUIET_HOURS_TOGGLE_TAG = "settings_quiet_hours_toggle"
 internal const val SETTINGS_ANSWERED_CALLER_TOGGLE_TAG = "settings_answered_caller_toggle"
 internal const val SETTINGS_RESTORE_PREVIEW_TAG = "settings_restore_preview"
+internal const val SETTINGS_THEME_ROW_TAG = "settings_theme_row"
 
 private val backupSectionOrder =
     listOf(
@@ -77,6 +80,7 @@ private val backupSectionOrder =
 fun SettingsScreen(viewModel: MainViewModel) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
+    val appTheme by viewModel.appTheme.collectAsStateWithLifecycle()
     val blockCalls by viewModel.blockCallsEnabled.collectAsStateWithLifecycle()
     val blockSms by viewModel.blockSmsEnabled.collectAsStateWithLifecycle()
     val blockUnknown by viewModel.blockUnknownEnabled.collectAsStateWithLifecycle()
@@ -121,6 +125,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
     var showNotificationScreeningSources by remember { mutableStateOf(false) }
     var showRegionCnapRules by remember { mutableStateOf(false) }
     var showRawSmsExportDialog by remember { mutableStateOf(false) }
+    var showThemeDialog by remember { mutableStateOf(false) }
     var showLanguageDialog by remember { mutableStateOf(false) }
     var externalBlocklistUrl by remember { mutableStateOf("") }
     var externalBlocklistLabel by remember { mutableStateOf("") }
@@ -186,8 +191,12 @@ fun SettingsScreen(viewModel: MainViewModel) {
     }
 
     Column(
-        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             Row(
@@ -312,33 +321,29 @@ fun SettingsScreen(viewModel: MainViewModel) {
             GradientDivider()
         }
 
-        // Language
+        // Appearance
         val languageOptions = AppLanguage.options()
         val currentLanguageTag = AppLanguage.currentLanguageTag()
         val currentLanguage =
             languageOptions.firstOrNull { it.languageTag == currentLanguageTag }
                 ?: languageOptions.first()
-        SettingsCard(stringResource(R.string.settings_language)) {
-            Row(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .clickable { showLanguageDialog = true }
-                        .padding(vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                PremiumIconTile(icon = Icons.Default.Language, color = CatBlue, size = 38.dp, iconSize = 20.dp)
-                Spacer(Modifier.width(12.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(stringResource(currentLanguage.labelRes), style = MaterialTheme.typography.bodyLarge)
-                    Text(
-                        stringResource(R.string.settings_language_desc),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = CatSubtext,
-                    )
-                }
-                Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = CatOverlay)
-            }
+        SettingsCard(stringResource(R.string.settings_appearance)) {
+            SettingsLinkRow(
+                title = stringResource(R.string.settings_theme),
+                value = stringResource(appTheme.labelResource()),
+                icon = Icons.Default.Palette,
+                tintColor = CatGreen,
+                modifier = Modifier.testTag(SETTINGS_THEME_ROW_TAG),
+                onClick = { showThemeDialog = true },
+            )
+            GradientDivider()
+            SettingsLinkRow(
+                title = stringResource(R.string.settings_language),
+                value = stringResource(currentLanguage.labelRes),
+                icon = Icons.Default.Language,
+                tintColor = CatBlue,
+                onClick = { showLanguageDialog = true },
+            )
         }
 
         // Blocking
@@ -778,6 +783,48 @@ fun SettingsScreen(viewModel: MainViewModel) {
             cnapBlockPatterns = cnapBlockPatterns,
             onSave = viewModel::saveRegionAndCnapRules,
             onDismiss = { showRegionCnapRules = false },
+        )
+    }
+
+    if (showThemeDialog) {
+        AlertDialog(
+            onDismissRequest = { showThemeDialog = false },
+            containerColor = SurfaceBright,
+            icon = { Icon(Icons.Default.Palette, contentDescription = null, tint = CatGreen) },
+            title = { Text(stringResource(R.string.settings_theme_dialog_title)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    AppThemeMode.entries.forEach { option ->
+                        Row(
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .selectable(
+                                        selected = option == appTheme,
+                                        role = Role.RadioButton,
+                                        onClick = {
+                                            viewModel.setAppTheme(option)
+                                            showThemeDialog = false
+                                        },
+                                    ).testTag("settings_theme_option_${option.storageValue}")
+                                    .padding(vertical = 7.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            RadioButton(
+                                selected = option == appTheme,
+                                onClick = null,
+                                colors = RadioButtonDefaults.colors(selectedColor = CatGreen),
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = stringResource(option.labelResource()),
+                                style = MaterialTheme.typography.bodyLarge,
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
         )
     }
 
@@ -1269,7 +1316,11 @@ private fun ExternalBlocklistSubscriptionRow(
         Switch(
             checked = subscription.enabled,
             onCheckedChange = onToggle,
-            colors = SwitchDefaults.colors(checkedTrackColor = CatGreen, checkedThumbColor = Black),
+            colors =
+                SwitchDefaults.colors(
+                    checkedTrackColor = CatGreen,
+                    checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                ),
         )
         IconButton(onClick = onRemove) {
             Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.cd_delete), tint = CatPeach)
@@ -1479,13 +1530,53 @@ fun SettingsCard(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Column(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
     ) {
         SectionHeader(title)
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(4.dp))
         content()
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(4.dp))
         GradientDivider()
+    }
+}
+
+private fun AppThemeMode.labelResource(): Int =
+    when (this) {
+        AppThemeMode.System -> R.string.settings_theme_system
+        AppThemeMode.Light -> R.string.settings_theme_light
+        AppThemeMode.Graphite -> R.string.settings_theme_graphite
+        AppThemeMode.Amoled -> R.string.settings_theme_amoled
+    }
+
+@Composable
+@Suppress("FunctionNaming", "LongParameterList")
+private fun SettingsLinkRow(
+    title: String,
+    value: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    tintColor: androidx.compose.ui.graphics.Color,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick)
+                .padding(vertical = 7.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        PremiumIconTile(icon = icon, color = tintColor, size = 34.dp, iconSize = 18.dp)
+        Spacer(Modifier.width(10.dp))
+        Text(title, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+        Text(value, style = MaterialTheme.typography.bodySmall, color = CatSubtext)
+        Spacer(Modifier.width(8.dp))
+        Icon(
+            Icons.AutoMirrored.Filled.ArrowForward,
+            contentDescription = null,
+            tint = CatOverlay,
+            modifier = Modifier.size(18.dp),
+        )
     }
 }
 
@@ -1500,14 +1591,22 @@ fun SettingsToggle(
     onCheckedChange: (Boolean) -> Unit,
 ) {
     val context = LocalContext.current
-    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-        PremiumIconTile(icon = icon, color = tintColor, size = 38.dp, iconSize = 20.dp)
-        Spacer(Modifier.width(12.dp))
+    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+        PremiumIconTile(icon = icon, color = tintColor, size = 34.dp, iconSize = 18.dp)
+        Spacer(Modifier.width(10.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(title, style = MaterialTheme.typography.bodyLarge)
-            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = CatSubtext)
+            if (subtitle.isNotBlank()) {
+                Text(
+                    subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = CatSubtext,
+                    maxLines = 2,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                )
+            }
         }
-        Spacer(Modifier.width(8.dp))
+        Spacer(Modifier.width(6.dp))
         Switch(
             checked = checked,
             onCheckedChange = {
@@ -1515,7 +1614,11 @@ fun SettingsToggle(
                 onCheckedChange(it)
             },
             modifier = if (toggleTag != null) Modifier.testTag(toggleTag) else Modifier,
-            colors = SwitchDefaults.colors(checkedTrackColor = CatGreen, checkedThumbColor = Black),
+            colors =
+                SwitchDefaults.colors(
+                    checkedTrackColor = CatGreen,
+                    checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                ),
         )
     }
 }

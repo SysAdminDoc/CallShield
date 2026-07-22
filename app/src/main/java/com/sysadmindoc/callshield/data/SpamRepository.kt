@@ -200,6 +200,7 @@ class SpamRepository(
         // Without this key, _activeProfile defaulted back to null on every VM init, so the
         // Maximum profile (and every other profile) would visually "reset" — issue #2.
         val KEY_ACTIVE_PROFILE = stringPreferencesKey("active_profile_name")
+        internal val KEY_APP_THEME = stringPreferencesKey("app_theme")
 
         const val SYNC_SOURCE_REMOTE = "remote"
         const val SYNC_SOURCE_BUNDLED = "bundled"
@@ -266,9 +267,12 @@ class SpamRepository(
     val lastSyncTimestamp: Flow<Long> = settingsRepository.lastSyncTimestamp
     val lastSyncSource: Flow<String> = settingsRepository.lastSyncSource
     val activeProfileName: Flow<String?> = settingsRepository.activeProfileName
+    val appTheme: Flow<String> = settingsRepository.appTheme
     val externalBlocklistSubscriptions = settingsRepository.externalBlocklistSubscriptions
 
     suspend fun setActiveProfileName(name: String?) = settingsRepository.setActiveProfileName(name)
+
+    suspend fun setAppTheme(theme: String) = settingsRepository.setAppTheme(theme)
 
     suspend fun purgeLegacyAbstractApiKey() = settingsRepository.purgeLegacyAbstractApiKey()
 

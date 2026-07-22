@@ -23,7 +23,6 @@ import androidx.compose.ui.unit.dp
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.TimeSchedule
 import com.sysadmindoc.callshield.ui.screens.settings.HourPicker
-import com.sysadmindoc.callshield.ui.theme.Black
 import com.sysadmindoc.callshield.ui.theme.CatBlue
 import com.sysadmindoc.callshield.ui.theme.CatRed
 import com.sysadmindoc.callshield.ui.theme.CatSubtext
@@ -89,7 +88,7 @@ fun ScheduleSection(
             colors =
                 SwitchDefaults.colors(
                     checkedTrackColor = CatBlue,
-                    checkedThumbColor = Black,
+                    checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
                 ),
         )
     }

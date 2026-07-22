@@ -65,7 +65,7 @@ class MainActivity : AppCompatActivity() {
         enableEdgeToEdge()
         launchRequest = intent.toLaunchRequest(nextId = 1)
 
-        setContent { CallShieldTheme { CallShieldRoot(launchRequest = launchRequest) } }
+        setContent { CallShieldRoot(launchRequest = launchRequest) }
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -82,6 +82,7 @@ fun CallShieldRoot(
 ) {
     val onboardingDone by viewModel.onboardingDone.collectAsStateWithLifecycle()
     val selectedNumber by viewModel.selectedNumber.collectAsStateWithLifecycle()
+    val appTheme by viewModel.appTheme.collectAsStateWithLifecycle()
 
     // Handle deep link and shortcuts
     var initialTab by remember { mutableIntStateOf(0) }
@@ -104,25 +105,27 @@ fun CallShieldRoot(
         }
     }
 
-    when {
-        !onboardingDone -> {
-            OnboardingScreen(onComplete = { viewModel.completeOnboarding() })
-        }
+    CallShieldTheme(themeMode = appTheme) {
+        when {
+            !onboardingDone -> {
+                OnboardingScreen(onComplete = { viewModel.completeOnboarding() })
+            }
 
-        selectedNumber != null -> {
-            NumberDetailScreen(
-                number = selectedNumber!!,
-                viewModel = viewModel,
-                onBack = { viewModel.closeNumberDetail() },
-            )
-        }
+            selectedNumber != null -> {
+                NumberDetailScreen(
+                    number = selectedNumber!!,
+                    viewModel = viewModel,
+                    onBack = { viewModel.closeNumberDetail() },
+                )
+            }
 
-        else -> {
-            CallShieldApp(
-                viewModel = viewModel,
-                startTab = initialTab,
-                tabRequestId = launchRequest.id.takeIf { launchRequest.shortcutAction != null },
-            )
+            else -> {
+                CallShieldApp(
+                    viewModel = viewModel,
+                    startTab = initialTab,
+                    tabRequestId = launchRequest.id.takeIf { launchRequest.shortcutAction != null },
+                )
+            }
         }
     }
 }
@@ -138,6 +141,7 @@ fun CallShieldApp(
     val context = LocalContext.current
     var selectedTab by rememberSaveable { mutableIntStateOf(startTab) }
     var showSearch by rememberSaveable { mutableStateOf(false) }
+    var moreView by rememberSaveable { mutableIntStateOf(0) }
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     val searchResults by viewModel.searchResults.collectAsStateWithLifecycle()
     val spamCount by viewModel.spamCount.collectAsStateWithLifecycle()
@@ -156,15 +160,38 @@ fun CallShieldApp(
         }
     }
 
-    val navBarTopBorder = Color.White.copy(alpha = 0.04f)
+    val navBarTopBorder = DividerColor
     val currentTitle =
         when (selectedTab) {
-            0 -> stringResource(R.string.app_name)
-            1 -> stringResource(R.string.nav_recent)
-            2 -> stringResource(R.string.nav_log)
-            3 -> stringResource(R.string.nav_lookup)
-            4 -> stringResource(R.string.nav_blocklist)
-            else -> stringResource(R.string.nav_more)
+            0 -> {
+                stringResource(R.string.app_name)
+            }
+
+            1 -> {
+                stringResource(R.string.nav_recent)
+            }
+
+            2 -> {
+                stringResource(R.string.nav_log)
+            }
+
+            3 -> {
+                stringResource(R.string.nav_lookup)
+            }
+
+            4 -> {
+                stringResource(R.string.nav_blocklist)
+            }
+
+            else -> {
+                when (moreView) {
+                    1 -> stringResource(R.string.more_statistics)
+                    2 -> stringResource(R.string.more_settings)
+                    3 -> stringResource(R.string.more_whats_new)
+                    4 -> stringResource(R.string.more_protection_test)
+                    else -> stringResource(R.string.nav_more)
+                }
+            }
         }
     // Keep the shell unmistakably CallShield. Screen content can still use
     // semantic warning/error colours, but navigation should not become a
@@ -206,6 +233,7 @@ fun CallShieldApp(
                     showSearch = false
                     viewModel.setSearchQuery("")
                 },
+                onBack = if (selectedTab == 5 && moreView != 0) ({ moreView = 0 }) else null,
             )
         },
         bottomBar = {
@@ -293,7 +321,7 @@ fun CallShieldApp(
                         2 -> BlockedLogScreen(viewModel)
                         3 -> LookupScreen(viewModel)
                         4 -> BlocklistScreen(viewModel)
-                        5 -> MoreScreen(viewModel)
+                        5 -> MoreScreen(viewModel, currentView = moreView, onViewChange = { moreView = it })
                     }
                 }
             }
@@ -424,6 +452,7 @@ private fun AppChrome(
     onSearchQueryChange: (String) -> Unit,
     onOpenSearch: () -> Unit,
     onCloseSearch: () -> Unit,
+    onBack: (() -> Unit)? = null,
 ) {
     val focusManager = LocalFocusManager.current
     val keyboard = LocalSoftwareKeyboardController.current
@@ -434,11 +463,11 @@ private fun AppChrome(
                 Modifier
                     .fillMaxWidth()
                     .statusBarsPadding()
-                    .padding(horizontal = 20.dp, vertical = 6.dp),
+                    .padding(horizontal = 16.dp, vertical = 2.dp),
         ) {
             if (showSearch) {
                 Row(
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 58.dp),
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 50.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
@@ -461,32 +490,44 @@ private fun AppChrome(
                 }
             } else {
                 Row(
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 58.dp),
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 50.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Image(
-                        painter = painterResource(R.drawable.ic_launcher_foreground),
-                        contentDescription = null,
-                        modifier = Modifier.size(28.dp),
-                    )
-                    Spacer(Modifier.width(12.dp))
+                    if (onBack != null) {
+                        IconButton(onClick = onBack) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = stringResource(R.string.cd_back),
+                                tint = CatText,
+                            )
+                        }
+                    } else {
+                        Image(
+                            painter = painterResource(R.drawable.ic_launcher_foreground),
+                            contentDescription = null,
+                            modifier = Modifier.size(24.dp),
+                        )
+                        Spacer(Modifier.width(8.dp))
+                    }
                     Text(
                         title,
                         modifier = Modifier.weight(1f),
                         color = CatText,
-                        style = MaterialTheme.typography.titleLarge,
+                        style = MaterialTheme.typography.titleMedium,
                     )
-                    StatusPill(
-                        text = statusLabel,
-                        color =
-                            if (statusLabel == stringResource(R.string.app_shell_status_setup_needed)) {
-                                CatYellow
-                            } else {
-                                accentColor
-                            },
-                        textStyle = MaterialTheme.typography.labelMedium,
-                    )
-                    Spacer(Modifier.width(4.dp))
+                    if (onBack == null) {
+                        StatusPill(
+                            text = statusLabel,
+                            color =
+                                if (statusLabel == stringResource(R.string.app_shell_status_setup_needed)) {
+                                    CatYellow
+                                } else {
+                                    accentColor
+                                },
+                            textStyle = MaterialTheme.typography.labelSmall,
+                        )
+                        Spacer(Modifier.width(4.dp))
+                    }
                     IconButton(onClick = onOpenSearch) {
                         Icon(
                             Icons.Default.Search,

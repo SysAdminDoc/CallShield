@@ -1,3 +1,5 @@
+@file:Suppress("MagicNumber", "TooManyFunctions", "ktlint:standard:no-wildcard-imports")
+
 package com.sysadmindoc.callshield.ui.theme
 
 import android.app.Activity
@@ -9,14 +11,18 @@ import android.os.VibratorManager
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
@@ -36,166 +42,317 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
 
-// ─── AMOLED Black + Catppuccin Mocha ───────────────────────────────
-val Black = Color(0xFF000000)
-val Surface = Color(0xFF070807)
-val SurfaceVariant = Color(0xFF0D0F0E)
-val SurfaceBright = Color(0xFF151715)
-val SurfaceElevated = Color(0xFF1A1C1A)
+enum class AppThemeMode(
+    val storageValue: String,
+) {
+    System("system"),
+    Light("light"),
+    Graphite("graphite"),
+    Amoled("amoled"),
+    ;
 
-// Catppuccin Mocha accent palette
-val CatGreen = Color(0xFFA6E3A1)
-val CatRed = Color(0xFFF38BA8)
-val CatBlue = Color(0xFF89B4FA)
-val CatYellow = Color(0xFFF9E2AF)
-val CatMauve = Color(0xFFCBA6F7)
-val CatPeach = Color(0xFFFAB387)
-val CatTeal = Color(0xFF94E2D5)
-val CatLavender = Color(0xFFB4BEFE)
+    companion object {
+        fun fromStorage(value: String?): AppThemeMode = entries.firstOrNull { it.storageValue == value } ?: Amoled
+    }
+}
 
-// Text hierarchy
-val CatText = Color(0xFFF2F3F0)
-val CatSubtext = Color(0xFFA8ADA8)
-val CatOverlay = Color(0xFF747A75)
-val CatMuted = Color(0xFF2B2F2C)
+@Immutable
+data class CallShieldPalette(
+    val background: Color,
+    val surface: Color,
+    val surfaceVariant: Color,
+    val surfaceBright: Color,
+    val surfaceElevated: Color,
+    val primary: Color,
+    val onPrimary: Color,
+    val error: Color,
+    val blue: Color,
+    val warning: Color,
+    val mauve: Color,
+    val peach: Color,
+    val teal: Color,
+    val lavender: Color,
+    val text: Color,
+    val subtext: Color,
+    val overlay: Color,
+    val muted: Color,
+    val isLight: Boolean,
+)
 
-// ─── Premium surface borders ───────────────────────────────────────
-val CardBorder = Color.White.copy(alpha = 0.06f)
-val CardBorderAccent = Color.White.copy(alpha = 0.09f)
-val DividerColor = Color.White.copy(alpha = 0.04f)
+private val AmoledPalette =
+    CallShieldPalette(
+        background = Color(0xFF000000),
+        surface = Color(0xFF070807),
+        surfaceVariant = Color(0xFF0D0F0E),
+        surfaceBright = Color(0xFF151715),
+        surfaceElevated = Color(0xFF1A1C1A),
+        primary = Color(0xFFA6E3A1),
+        onPrimary = Color(0xFF071108),
+        error = Color(0xFFF38BA8),
+        blue = Color(0xFF89B4FA),
+        warning = Color(0xFFF9E2AF),
+        mauve = Color(0xFFCBA6F7),
+        peach = Color(0xFFFAB387),
+        teal = Color(0xFF94E2D5),
+        lavender = Color(0xFFB4BEFE),
+        text = Color(0xFFF2F3F0),
+        subtext = Color(0xFFA8ADA8),
+        overlay = Color(0xFF747A75),
+        muted = Color(0xFF2B2F2C),
+        isLight = false,
+    )
+
+private val GraphitePalette =
+    CallShieldPalette(
+        background = Color(0xFF0F1216),
+        surface = Color(0xFF14181D),
+        surfaceVariant = Color(0xFF1A2027),
+        surfaceBright = Color(0xFF222A33),
+        surfaceElevated = Color(0xFF29333E),
+        primary = Color(0xFF8FD3B2),
+        onPrimary = Color(0xFF082117),
+        error = Color(0xFFFF9AAE),
+        blue = Color(0xFF8AB8FF),
+        warning = Color(0xFFE9CC81),
+        mauve = Color(0xFFC7B1FF),
+        peach = Color(0xFFF0AD7F),
+        teal = Color(0xFF82CEC7),
+        lavender = Color(0xFFABB9FF),
+        text = Color(0xFFF3F6F8),
+        subtext = Color(0xFFB1BBC5),
+        overlay = Color(0xFF7E8995),
+        muted = Color(0xFF333D48),
+        isLight = false,
+    )
+
+private val LightPalette =
+    CallShieldPalette(
+        background = Color(0xFFF5F6F7),
+        surface = Color(0xFFFFFFFF),
+        surfaceVariant = Color(0xFFEEF1F3),
+        surfaceBright = Color(0xFFE5E9EC),
+        surfaceElevated = Color(0xFFFFFFFF),
+        primary = Color(0xFF176B53),
+        onPrimary = Color(0xFFFFFFFF),
+        error = Color(0xFFB32642),
+        blue = Color(0xFF285FAE),
+        warning = Color(0xFF765900),
+        mauve = Color(0xFF6D4EA1),
+        peach = Color(0xFF98552D),
+        teal = Color(0xFF126B66),
+        lavender = Color(0xFF4E5F9E),
+        text = Color(0xFF171B1F),
+        subtext = Color(0xFF4E5963),
+        overlay = Color(0xFF68737D),
+        muted = Color(0xFFD6DDE2),
+        isLight = true,
+    )
+
+private val LocalCallShieldPalette = staticCompositionLocalOf { AmoledPalette }
+
+internal fun paletteFor(
+    themeMode: AppThemeMode,
+    systemDark: Boolean,
+): CallShieldPalette =
+    when (themeMode) {
+        AppThemeMode.System -> if (systemDark) GraphitePalette else LightPalette
+        AppThemeMode.Light -> LightPalette
+        AppThemeMode.Graphite -> GraphitePalette
+        AppThemeMode.Amoled -> AmoledPalette
+    }
+
+val Black: Color
+    @Composable get() = LocalCallShieldPalette.current.background
+val Surface: Color
+    @Composable get() = LocalCallShieldPalette.current.surface
+val SurfaceVariant: Color
+    @Composable get() = LocalCallShieldPalette.current.surfaceVariant
+val SurfaceBright: Color
+    @Composable get() = LocalCallShieldPalette.current.surfaceBright
+val SurfaceElevated: Color
+    @Composable get() = LocalCallShieldPalette.current.surfaceElevated
+val CatGreen: Color
+    @Composable get() = LocalCallShieldPalette.current.primary
+val CatRed: Color
+    @Composable get() = LocalCallShieldPalette.current.error
+val CatBlue: Color
+    @Composable get() = LocalCallShieldPalette.current.blue
+val CatYellow: Color
+    @Composable get() = LocalCallShieldPalette.current.warning
+val CatMauve: Color
+    @Composable get() = LocalCallShieldPalette.current.mauve
+val CatPeach: Color
+    @Composable get() = LocalCallShieldPalette.current.peach
+val CatTeal: Color
+    @Composable get() = LocalCallShieldPalette.current.teal
+val CatLavender: Color
+    @Composable get() = LocalCallShieldPalette.current.lavender
+val CatText: Color
+    @Composable get() = LocalCallShieldPalette.current.text
+val CatSubtext: Color
+    @Composable get() = LocalCallShieldPalette.current.subtext
+val CatOverlay: Color
+    @Composable get() = LocalCallShieldPalette.current.overlay
+val CatMuted: Color
+    @Composable get() = LocalCallShieldPalette.current.muted
+val CardBorder: Color
+    @Composable get() = LocalCallShieldPalette.current.overlay.copy(alpha = 0.16f)
+val CardBorderAccent: Color
+    @Composable get() = LocalCallShieldPalette.current.overlay.copy(alpha = 0.24f)
+val DividerColor: Color
+    @Composable get() = LocalCallShieldPalette.current.overlay.copy(alpha = 0.16f)
 
 // Shared shape rhythm. Text-bearing backdrops intentionally stay rectangular
 // with modest corners; full-pill shapes are banned by the product rules.
 val ShapeXs = 4.dp
 val ShapeSm = 6.dp
 val ShapeMd = 8.dp
-val ShapeLg = 10.dp
-val ShapeXl = 12.dp
+val ShapeLg = 8.dp
+val ShapeXl = 10.dp
 
 // ─── Gradient presets ──────────────────────────────────────────────
-val SurfaceGradient =
-    Brush.verticalGradient(
-        colors = listOf(SurfaceVariant, Color(0xFF0D0D10)),
-    )
-val HeroGradient =
-    Brush.radialGradient(
-        colors = listOf(CatGreen.copy(alpha = 0.08f), Color.Transparent),
-        radius = 600f,
-    )
-val DangerGradient =
-    Brush.radialGradient(
-        colors = listOf(CatRed.copy(alpha = 0.06f), Color.Transparent),
-        radius = 400f,
-    )
+val SurfaceGradient: Brush
+    @Composable get() = Brush.verticalGradient(listOf(SurfaceVariant, Surface))
+val HeroGradient: Brush
+    @Composable get() = Brush.radialGradient(listOf(CatGreen.copy(alpha = 0.08f), Color.Transparent), radius = 600f)
+val DangerGradient: Brush
+    @Composable get() = Brush.radialGradient(listOf(CatRed.copy(alpha = 0.06f), Color.Transparent), radius = 400f)
 
-private val DarkColorScheme =
-    darkColorScheme(
-        primary = CatGreen,
-        onPrimary = Black,
-        primaryContainer = Color(0xFF162016),
-        secondary = CatBlue,
-        onSecondary = Black,
-        secondaryContainer = Color(0xFF141C2A),
-        tertiary = CatMauve,
-        error = CatRed,
-        onError = Black,
-        background = Black,
-        onBackground = CatText,
-        surface = Surface,
-        onSurface = CatText,
-        surfaceVariant = SurfaceVariant,
-        onSurfaceVariant = CatSubtext,
-        outline = CatOverlay,
-        surfaceContainerLowest = Black,
-        surfaceContainerLow = Color(0xFF0A0A0C),
-        surfaceContainer = Color(0xFF0F0F12),
-        surfaceContainerHigh = SurfaceVariant,
-        surfaceContainerHighest = SurfaceBright,
-    )
+@Suppress("LongMethod")
+private fun colorScheme(palette: CallShieldPalette): ColorScheme {
+    val common: (Boolean) -> ColorScheme = { light ->
+        if (light) {
+            lightColorScheme(
+                primary = palette.primary,
+                onPrimary = palette.onPrimary,
+                primaryContainer = palette.surfaceVariant,
+                onPrimaryContainer = palette.primary,
+                secondary = palette.blue,
+                onSecondary = palette.onPrimary,
+                secondaryContainer = palette.surfaceVariant,
+                onSecondaryContainer = palette.blue,
+                tertiary = palette.mauve,
+                error = palette.error,
+                onError = palette.onPrimary,
+                background = palette.background,
+                onBackground = palette.text,
+                surface = palette.surface,
+                onSurface = palette.text,
+                surfaceVariant = palette.surfaceVariant,
+                onSurfaceVariant = palette.subtext,
+                outline = palette.overlay,
+                outlineVariant = palette.muted,
+                surfaceContainerLowest = palette.background,
+                surfaceContainerLow = palette.surface,
+                surfaceContainer = palette.surfaceVariant,
+                surfaceContainerHigh = palette.surfaceBright,
+                surfaceContainerHighest = palette.surfaceElevated,
+            )
+        } else {
+            darkColorScheme(
+                primary = palette.primary,
+                onPrimary = palette.onPrimary,
+                primaryContainer = palette.surfaceVariant,
+                onPrimaryContainer = palette.primary,
+                secondary = palette.blue,
+                onSecondary = palette.onPrimary,
+                secondaryContainer = palette.surfaceVariant,
+                onSecondaryContainer = palette.blue,
+                tertiary = palette.mauve,
+                error = palette.error,
+                onError = palette.onPrimary,
+                background = palette.background,
+                onBackground = palette.text,
+                surface = palette.surface,
+                onSurface = palette.text,
+                surfaceVariant = palette.surfaceVariant,
+                onSurfaceVariant = palette.subtext,
+                outline = palette.overlay,
+                outlineVariant = palette.muted,
+                surfaceContainerLowest = palette.background,
+                surfaceContainerLow = palette.surface,
+                surfaceContainer = palette.surfaceVariant,
+                surfaceContainerHigh = palette.surfaceBright,
+                surfaceContainerHighest = palette.surfaceElevated,
+            )
+        }
+    }
+    return common(palette.isLight)
+}
 
 // ─── Custom Typography ─────────────────────────────────────────────
 // Tighter headlines, wider labels — the hallmark of premium type
-private val PremiumTypography =
+private val CallShieldTypography =
     Typography(
         headlineLarge =
             TextStyle(
-                fontWeight = FontWeight.Bold,
-                fontSize = 30.sp,
-                letterSpacing = 0.sp,
-                lineHeight = 36.sp,
-                color = CatText,
-            ),
-        headlineMedium =
-            TextStyle(
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.SemiBold,
                 fontSize = 26.sp,
                 letterSpacing = 0.sp,
                 lineHeight = 32.sp,
-                color = CatText,
             ),
-        headlineSmall =
+        headlineMedium =
             TextStyle(
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.SemiBold,
                 fontSize = 22.sp,
                 letterSpacing = 0.sp,
                 lineHeight = 28.sp,
-                color = CatText,
+            ),
+        headlineSmall =
+            TextStyle(
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 19.sp,
+                letterSpacing = 0.sp,
+                lineHeight = 24.sp,
             ),
         titleLarge =
             TextStyle(
                 fontWeight = FontWeight.SemiBold,
-                fontSize = 20.sp,
+                fontSize = 18.sp,
                 letterSpacing = 0.sp,
-                lineHeight = 26.sp,
-                color = CatText,
+                lineHeight = 24.sp,
             ),
         titleMedium =
             TextStyle(
                 fontWeight = FontWeight.SemiBold,
-                fontSize = 17.sp,
-                letterSpacing = 0.sp,
-                lineHeight = 23.sp,
-                color = CatText,
-            ),
-        titleSmall =
-            TextStyle(
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 15.sp,
-                letterSpacing = 0.sp,
-                lineHeight = 20.sp,
-                color = CatText,
-            ),
-        bodyLarge =
-            TextStyle(
-                fontWeight = FontWeight.Normal,
                 fontSize = 16.sp,
                 letterSpacing = 0.sp,
-                lineHeight = 23.sp,
-                color = CatText,
+                lineHeight = 21.sp,
             ),
-        bodyMedium =
-            TextStyle(
-                fontWeight = FontWeight.Normal,
-                fontSize = 14.sp,
-                letterSpacing = 0.sp,
-                lineHeight = 20.sp,
-                color = CatText,
-            ),
-        bodySmall =
-            TextStyle(
-                fontWeight = FontWeight.Normal,
-                fontSize = 13.sp,
-                letterSpacing = 0.sp,
-                lineHeight = 18.sp,
-                color = CatSubtext,
-            ),
-        labelLarge =
+        titleSmall =
             TextStyle(
                 fontWeight = FontWeight.SemiBold,
                 fontSize = 14.sp,
                 letterSpacing = 0.sp,
                 lineHeight = 19.sp,
-                color = CatSubtext,
+            ),
+        bodyLarge =
+            TextStyle(
+                fontWeight = FontWeight.Normal,
+                fontSize = 15.sp,
+                letterSpacing = 0.sp,
+                lineHeight = 21.sp,
+            ),
+        bodyMedium =
+            TextStyle(
+                fontWeight = FontWeight.Normal,
+                fontSize = 13.sp,
+                letterSpacing = 0.sp,
+                lineHeight = 18.sp,
+            ),
+        bodySmall =
+            TextStyle(
+                fontWeight = FontWeight.Normal,
+                fontSize = 12.sp,
+                letterSpacing = 0.sp,
+                lineHeight = 17.sp,
+            ),
+        labelLarge =
+            TextStyle(
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 13.sp,
+                letterSpacing = 0.sp,
+                lineHeight = 18.sp,
             ),
         labelMedium =
             TextStyle(
@@ -203,7 +360,6 @@ private val PremiumTypography =
                 fontSize = 12.sp,
                 letterSpacing = 0.sp,
                 lineHeight = 16.sp,
-                color = CatSubtext,
             ),
         labelSmall =
             TextStyle(
@@ -211,36 +367,42 @@ private val PremiumTypography =
                 fontSize = 11.sp,
                 letterSpacing = 0.sp,
                 lineHeight = 15.sp,
-                color = CatOverlay,
             ),
     )
 
 @Composable
-fun CallShieldTheme(content: @Composable () -> Unit) {
+@Suppress("FunctionNaming")
+fun CallShieldTheme(
+    themeMode: AppThemeMode = AppThemeMode.Amoled,
+    content: @Composable () -> Unit,
+) {
+    val systemDark = isSystemInDarkTheme()
+    val palette = paletteFor(themeMode, systemDark)
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
             @Suppress("DEPRECATION")
-            window.statusBarColor = Black.toArgb()
+            window.statusBarColor = palette.background.toArgb()
             @Suppress("DEPRECATION")
-            window.navigationBarColor = Black.toArgb()
+            window.navigationBarColor = palette.background.toArgb()
             WindowCompat.getInsetsController(window, view).apply {
-                isAppearanceLightStatusBars = false
-                isAppearanceLightNavigationBars = false
+                isAppearanceLightStatusBars = palette.isLight
+                isAppearanceLightNavigationBars = palette.isLight
             }
         }
     }
 
     MaterialTheme(
-        colorScheme = DarkColorScheme,
-        typography = PremiumTypography,
-        content = content,
-    )
+        colorScheme = colorScheme(palette),
+        typography = CallShieldTypography,
+    ) {
+        CompositionLocalProvider(LocalCallShieldPalette provides palette, content = content)
+    }
 }
 
-// ─── Premium Card ──────────────────────────────────────────────────
-// The default card primitive — subtle border + refined surface
+// Shared quiet surface. Hierarchy comes from tone and spacing, not stacked
+// outlines, gradients, or decorative elevation.
 @Composable
 fun PremiumCard(
     modifier: Modifier = Modifier,
@@ -250,7 +412,8 @@ fun PremiumCard(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val shape = RoundedCornerShape(cornerRadius)
-    val colors = CardDefaults.cardColors(containerColor = SurfaceVariant)
+    val colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
+    val elevation = CardDefaults.cardElevation(defaultElevation = 0.dp, pressedElevation = 0.dp)
 
     if (onClick != null) {
         Card(
@@ -258,6 +421,7 @@ fun PremiumCard(
             modifier = modifier,
             colors = colors,
             shape = shape,
+            elevation = elevation,
             content = content,
         )
     } else {
@@ -265,13 +429,13 @@ fun PremiumCard(
             modifier = modifier,
             colors = colors,
             shape = shape,
+            elevation = elevation,
             content = content,
         )
     }
 }
 
-// ─── Section Header ────────────────────────────────────────────────
-// Uppercase label with accent bar — used in settings, stats, etc.
+// Compact section label. It should orient, not compete with page content.
 @Composable
 fun SectionHeader(
     title: String,
@@ -279,9 +443,9 @@ fun SectionHeader(
 ) {
     Text(
         title,
-        modifier = Modifier.padding(vertical = 2.dp),
-        style = MaterialTheme.typography.titleMedium,
-        color = if (color == CatOverlay) CatText else color,
+        modifier = Modifier.padding(vertical = 1.dp),
+        style = MaterialTheme.typography.labelLarge,
+        color = if (color == CatOverlay) CatSubtext else color,
         fontWeight = FontWeight.SemiBold,
     )
 }
@@ -330,8 +494,8 @@ fun PremiumIconTile(
     icon: ImageVector,
     color: Color,
     modifier: Modifier = Modifier,
-    size: Dp = 42.dp,
-    iconSize: Dp = 20.dp,
+    size: Dp = 36.dp,
+    iconSize: Dp = 18.dp,
     contentDescription: String? = null,
 ) {
     Box(
@@ -364,7 +528,7 @@ fun PremiumActionButton(
         when {
             !enabled -> CatOverlay
             outlined -> color
-            else -> Black
+            else -> MaterialTheme.colorScheme.onPrimary
         }
     val content: @Composable RowScope.() -> Unit = {
         if (loading) {
@@ -403,7 +567,7 @@ fun PremiumActionButton(
                     contentColor = color,
                     disabledContentColor = CatOverlay,
                 ),
-            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 0.dp),
+            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
             modifier = modifier.heightIn(min = 44.dp),
             content = content,
         )
@@ -415,12 +579,12 @@ fun PremiumActionButton(
             colors =
                 ButtonDefaults.buttonColors(
                     containerColor = color,
-                    contentColor = Black,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
                     disabledContainerColor = color.copy(alpha = 0.18f),
                     disabledContentColor = CatOverlay,
                 ),
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),
-            modifier = modifier.heightIn(min = 50.dp),
+            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 0.dp),
+            modifier = modifier.heightIn(min = 44.dp),
             content = content,
         )
     }
@@ -473,15 +637,15 @@ fun PremiumStateCard(
 ) {
     PremiumCard(accentColor = accentColor, modifier = modifier) {
         Column(
-            modifier = Modifier.padding(20.dp),
+            modifier = Modifier.padding(14.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             PremiumIconTile(
                 icon = icon,
                 color = accentColor,
-                size = 58.dp,
-                iconSize = 30.dp,
+                size = 44.dp,
+                iconSize = 24.dp,
             )
             Text(
                 title,
@@ -523,7 +687,8 @@ fun Modifier.accentGlow(
         )
     }
 
-// ─── Gradient Divider ──────────────────────────────────────────────
+// Legacy name retained for call sites; the visual is intentionally a plain
+// hairline so groups do not accumulate decorative gradients.
 @Composable
 fun GradientDivider(
     modifier: Modifier = Modifier,
@@ -534,17 +699,7 @@ fun GradientDivider(
             modifier
                 .fillMaxWidth()
                 .height(1.dp)
-                .background(
-                    Brush.horizontalGradient(
-                        colors =
-                            listOf(
-                                Color.Transparent,
-                                color.copy(alpha = 0.15f),
-                                color.copy(alpha = 0.15f),
-                                Color.Transparent,
-                            ),
-                    ),
-                ),
+                .background(if (color == CatOverlay) DividerColor else color.copy(alpha = 0.16f)),
     )
 }
 
