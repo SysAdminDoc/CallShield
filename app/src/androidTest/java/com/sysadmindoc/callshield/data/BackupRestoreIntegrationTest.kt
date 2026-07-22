@@ -32,6 +32,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.io.IOException
 
 @RunWith(AndroidJUnit4::class)
 class BackupRestoreIntegrationTest {
@@ -253,6 +254,94 @@ class BackupRestoreIntegrationTest {
             repo.setActiveProfileName(null)
             Unit
         }
+
+    @Test
+    fun mergeRestoreLeavesEveryRoomSectionUnchangedWhenSettingsFail() =
+        runBlocking {
+            assertRoomStateSurvivesSettingsFailure(BackupRestore.RestoreMode.MERGE)
+        }
+
+    @Test
+    fun replaceRestoreLeavesEveryRoomSectionUnchangedWhenSettingsFail() =
+        runBlocking {
+            assertRoomStateSurvivesSettingsFailure(BackupRestore.RestoreMode.REPLACE)
+        }
+
+    private suspend fun assertRoomStateSurvivesSettingsFailure(mode: BackupRestore.RestoreMode) {
+        dao.insertNumber(
+            SpamNumber(number = "+15550000001", type = "spam", source = "user", isUserBlocked = true),
+        )
+        dao.insertWhitelistEntry(WhitelistEntry(number = "+15550000002", description = "Existing"))
+        dao.insertWildcardRule(WildcardRule(pattern = "old?", isRegex = false, description = "Existing"))
+        dao.insertKeywordRule(SmsKeywordRule(keyword = "legacy", caseSensitive = false, description = "Existing"))
+        dao.insertHashWildcardRule(HashWildcardRule(pattern = "+1555#######", description = "Existing"))
+        dao.insertBlockedCall(
+            BlockedCall(
+                number = "+15550000003",
+                timestamp = 100L,
+                matchReason = "Existing",
+                logKey = "existing-log",
+            ),
+        )
+        repo.setBlockCalls(true)
+        val before = roomSnapshot()
+        val selectedSections = BackupSection.entries.toSet()
+        val preview =
+            preview(
+                Backup(
+                    blockedNumbers = listOf(BackupNumber("+15559990000", "spam", "New", "user")),
+                    whitelistNumbers = listOf(BackupWhitelist("+15559990001", "New")),
+                    wildcardRules = listOf(BackupWildcard("900*", false, "New", true)),
+                    keywordRules = listOf(BackupKeyword("verify", false, "New", true)),
+                    rangeRules = listOf(BackupRangeRule("+1666#######", "New", true)),
+                    settings = BackupSettings(blockCallsEnabled = false),
+                    logs =
+                        listOf(
+                            BackupLogEntry(
+                                number = "+15559990002",
+                                timestamp = 200L,
+                                matchReason = "New",
+                                logKey = "new-log",
+                            ),
+                        ),
+                ),
+                selectedSections,
+            )
+
+        val result =
+            BackupRestore.restorePayload(
+                context = context,
+                payload = preview.payload,
+                mode = mode,
+                dao = dao,
+                repo = repo,
+                selectedSections = selectedSections,
+                settingsWriter = { _, _ -> throw IOException("Injected settings failure") },
+            )
+
+        assertFalse(result.success)
+        assertEquals(before, roomSnapshot())
+        assertTrue(repo.blockCallsEnabled.first())
+    }
+
+    private suspend fun roomSnapshot(): RoomSnapshot =
+        RoomSnapshot(
+            blockedNumbers = dao.getUserBlockedNumbers().first(),
+            whitelistNumbers = dao.getAllWhitelist().first(),
+            wildcardRules = dao.getAllWildcardRules().first(),
+            keywordRules = dao.getAllKeywordRules().first(),
+            rangeRules = dao.getAllHashWildcardRules().first(),
+            logs = dao.getBlockedCalls().first(),
+        )
+
+    private data class RoomSnapshot(
+        val blockedNumbers: List<SpamNumber>,
+        val whitelistNumbers: List<WhitelistEntry>,
+        val wildcardRules: List<WildcardRule>,
+        val keywordRules: List<SmsKeywordRule>,
+        val rangeRules: List<HashWildcardRule>,
+        val logs: List<BlockedCall>,
+    )
 
     private suspend fun preview(
         backup: Backup,

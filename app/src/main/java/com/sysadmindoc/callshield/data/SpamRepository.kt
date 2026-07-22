@@ -3,6 +3,7 @@ package com.sysadmindoc.callshield.data
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
+import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
@@ -374,6 +375,14 @@ class SpamRepository(
      * once — calling [Flow.first] per key regresses the 5-second deadline.
      */
     suspend fun readPrefsSnapshot(): Preferences = settingsRepository.readPrefsSnapshot()
+
+    internal suspend fun editPreferences(transform: suspend (MutablePreferences) -> Unit) {
+        settingsRepository.editPreferences(transform)
+    }
+
+    internal suspend fun replacePrefsSnapshot(snapshot: Preferences) {
+        settingsRepository.replacePrefsSnapshot(snapshot)
+    }
 
     // ── Primary spam check ─────────────────────────────────────────────
 

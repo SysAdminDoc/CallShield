@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.core.content.FileProvider
+import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
@@ -501,7 +502,7 @@ object BackupRestore {
             }
         }
 
-    @Suppress("LongMethod")
+    @Suppress("LongMethod", "LongParameterList")
     internal suspend fun restorePayload(
         context: Context,
         payload: RestorePayload,
@@ -509,6 +510,9 @@ object BackupRestore {
         dao: SpamDao,
         repo: SpamRepository,
         selectedSections: Set<BackupSection> = defaultRestoreSections,
+        settingsWriter: suspend (BackupSettings, SpamRepository) -> Unit = { settings, repository ->
+            settings.applyTo(repository)
+        },
     ): RestoreResult =
         try {
             var numbersRestored = 0
@@ -517,102 +521,123 @@ object BackupRestore {
             var keywordsRestored = 0
             var rangesRestored = 0
             var logsRestored = 0
+            var settingsRestored = 0
 
-            // Atomic: in REPLACE mode the clear and every re-insert run in a
-            // single Room transaction so a mid-restore failure rolls back to the
-            // pre-restore state instead of leaving the user's data half-cleared
-            // and half-restored (data loss). Settings live in DataStore, not
-            // Room, so they are applied after the transaction commits.
-            repo.runInTransaction {
-                if (mode == RestoreMode.REPLACE) {
-                    clearSelectedBackupSections(dao, selectedSections)
-                }
-
-                for (n in payload.blockedNumbers) {
-                    if (n.expiresAt != null) {
-                        repo.temporaryBlockNumber(n.number, n.expiresAt, n.type, n.description)
-                    } else {
-                        repo.blockNumber(n.number, n.type, n.description)
+            // DataStore and Room cannot share a transaction. Commit the
+            // settings in one atomic DataStore edit before touching Room; if
+            // it fails, every database table is still untouched. Keep the
+            // exact prior preference snapshot so a later Room failure can be
+            // compensated without losing unrelated settings.
+            val preferencesBeforeRestore = payload.settings?.let { repo.readPrefsSnapshot() }
+            payload.settings?.let { settings ->
+                try {
+                    settingsWriter(settings, repo)
+                    settingsRestored = 1
+                } catch (settingsFailure: Exception) {
+                    preferencesBeforeRestore?.let { snapshot ->
+                        runCatching { repo.replacePrefsSnapshot(snapshot) }
+                            .exceptionOrNull()
+                            ?.let(settingsFailure::addSuppressed)
                     }
-                    numbersRestored++
-                }
-
-                for (w in payload.whitelistNumbers) {
-                    repo.addToWhitelist(
-                        number = w.number,
-                        description = w.description,
-                        isEmergency = w.isEmergency,
-                        expiresAt = w.expiresAt,
-                    )
-                    whitelistRestored++
-                }
-
-                for (r in payload.wildcardRules) {
-                    dao.insertWildcardRule(
-                        WildcardRule(
-                            pattern = r.pattern,
-                            isRegex = r.isRegex,
-                            description = r.description,
-                            enabled = r.enabled,
-                            scheduleDays = r.scheduleDays,
-                            scheduleStartHour = r.scheduleStartHour,
-                            scheduleEndHour = r.scheduleEndHour,
-                        ),
-                    )
-                    rulesRestored++
-                }
-
-                for (k in payload.keywordRules) {
-                    dao.insertKeywordRule(
-                        SmsKeywordRule(
-                            keyword = k.keyword,
-                            caseSensitive = k.caseSensitive,
-                            description = k.description,
-                            enabled = k.enabled,
-                            scheduleDays = k.scheduleDays,
-                            scheduleStartHour = k.scheduleStartHour,
-                            scheduleEndHour = k.scheduleEndHour,
-                        ),
-                    )
-                    keywordsRestored++
-                }
-
-                for (r in payload.rangeRules) {
-                    dao.insertHashWildcardRule(
-                        HashWildcardRule(
-                            pattern = r.pattern,
-                            description = r.description,
-                            enabled = r.enabled,
-                            scheduleDays = r.scheduleDays,
-                            scheduleStartHour = r.scheduleStartHour,
-                            scheduleEndHour = r.scheduleEndHour,
-                        ),
-                    )
-                    rangesRestored++
-                }
-
-                for (log in payload.logs) {
-                    dao.insertBlockedCall(
-                        BlockedCall(
-                            number = log.number,
-                            timestamp = log.timestamp,
-                            type = log.type,
-                            wasBlocked = log.wasBlocked,
-                            isCall = log.isCall,
-                            smsBody = log.smsBody,
-                            matchReason = log.matchReason,
-                            confidence = log.confidence,
-                            logKey = log.logKey,
-                        ),
-                    )
-                    logsRestored++
+                    throw settingsFailure
                 }
             }
 
-            var settingsRestored = 0
-            payload.settings?.let {
-                it.applyTo(repo)
-                settingsRestored = 1
+            try {
+                // Atomic within Room: in REPLACE mode the clear and every
+                // re-insert either commit together or roll back together.
+                repo.runInTransaction {
+                    if (mode == RestoreMode.REPLACE) {
+                        clearSelectedBackupSections(dao, selectedSections)
+                    }
+
+                    for (n in payload.blockedNumbers) {
+                        if (n.expiresAt != null) {
+                            repo.temporaryBlockNumber(n.number, n.expiresAt, n.type, n.description)
+                        } else {
+                            repo.blockNumber(n.number, n.type, n.description)
+                        }
+                        numbersRestored++
+                    }
+
+                    for (w in payload.whitelistNumbers) {
+                        repo.addToWhitelist(
+                            number = w.number,
+                            description = w.description,
+                            isEmergency = w.isEmergency,
+                            expiresAt = w.expiresAt,
+                        )
+                        whitelistRestored++
+                    }
+
+                    for (r in payload.wildcardRules) {
+                        dao.insertWildcardRule(
+                            WildcardRule(
+                                pattern = r.pattern,
+                                isRegex = r.isRegex,
+                                description = r.description,
+                                enabled = r.enabled,
+                                scheduleDays = r.scheduleDays,
+                                scheduleStartHour = r.scheduleStartHour,
+                                scheduleEndHour = r.scheduleEndHour,
+                            ),
+                        )
+                        rulesRestored++
+                    }
+
+                    for (k in payload.keywordRules) {
+                        dao.insertKeywordRule(
+                            SmsKeywordRule(
+                                keyword = k.keyword,
+                                caseSensitive = k.caseSensitive,
+                                description = k.description,
+                                enabled = k.enabled,
+                                scheduleDays = k.scheduleDays,
+                                scheduleStartHour = k.scheduleStartHour,
+                                scheduleEndHour = k.scheduleEndHour,
+                            ),
+                        )
+                        keywordsRestored++
+                    }
+
+                    for (r in payload.rangeRules) {
+                        dao.insertHashWildcardRule(
+                            HashWildcardRule(
+                                pattern = r.pattern,
+                                description = r.description,
+                                enabled = r.enabled,
+                                scheduleDays = r.scheduleDays,
+                                scheduleStartHour = r.scheduleStartHour,
+                                scheduleEndHour = r.scheduleEndHour,
+                            ),
+                        )
+                        rangesRestored++
+                    }
+
+                    for (log in payload.logs) {
+                        dao.insertBlockedCall(
+                            BlockedCall(
+                                number = log.number,
+                                timestamp = log.timestamp,
+                                type = log.type,
+                                wasBlocked = log.wasBlocked,
+                                isCall = log.isCall,
+                                smsBody = log.smsBody,
+                                matchReason = log.matchReason,
+                                confidence = log.confidence,
+                                logKey = log.logKey,
+                            ),
+                        )
+                        logsRestored++
+                    }
+                }
+            } catch (roomFailure: Exception) {
+                preferencesBeforeRestore?.let { snapshot ->
+                    runCatching { repo.replacePrefsSnapshot(snapshot) }
+                        .exceptionOrNull()
+                        ?.let(roomFailure::addSuppressed)
+                }
+                throw roomFailure
             }
 
             repo.invalidateRestoredRuleCaches()
@@ -940,47 +965,73 @@ object BackupRestore {
     @Suppress("LongMethod")
     private suspend fun BackupSettings.applyTo(repo: SpamRepository) {
         val sanitized = sanitized()
-        repo.setBlockCalls(sanitized.blockCallsEnabled)
-        repo.setBlockSms(sanitized.blockSmsEnabled)
-        repo.setBlockUnknown(sanitized.blockUnknownEnabled)
-        repo.setStirShaken(sanitized.stirShakenEnabled)
-        repo.setStirTrustedAllow(sanitized.stirTrustedAllowEnabled)
-        repo.setAutoMuteLowConfidence(sanitized.autoMuteLowConfidenceEnabled)
-        repo.setNeighborSpoof(sanitized.neighborSpoofEnabled)
-        repo.setHeuristics(sanitized.heuristicsEnabled)
-        repo.setSmsContent(sanitized.smsContentEnabled)
-        repo.setSmsBurst(sanitized.smsBurstEnabled)
-        repo.setUrlhausStripQuery(sanitized.urlhausStripQueryEnabled)
-        repo.setContactWhitelist(sanitized.contactWhitelistEnabled)
-        repo.setContactsOnly(sanitized.contactsOnlyEnabled)
-        repo.setDbPrefixExpansion(sanitized.dbPrefixExpansionEnabled)
-        repo.setAggressiveMode(sanitized.aggressiveModeEnabled)
-        repo.setAnsweredCallerTrust(sanitized.answeredCallerTrustEnabled)
-        repo.setAnsweredCallerThreshold(sanitized.answeredCallerThreshold)
-        repo.setAnsweredCallerWindowDays(sanitized.answeredCallerWindowDays)
-        repo.setEmergencyCallbackGrace(sanitized.emergencyCallbackGraceEnabled)
-        repo.setEmergencyCallbackWindowMinutes(sanitized.emergencyCallbackWindowMinutes)
-        repo.setTimeBlock(sanitized.timeBlockEnabled)
-        repo.setTimeBlockStart(sanitized.timeBlockStartHour)
-        repo.setTimeBlockEnd(sanitized.timeBlockEndHour)
-        repo.setFreqEscalation(sanitized.frequencyEscalationEnabled)
-        repo.setFreqThreshold(sanitized.frequencyThreshold)
-        repo.setAutoCleanup(sanitized.autoCleanupEnabled)
-        repo.setCleanupDays(sanitized.cleanupDays)
-        repo.setMlScorer(sanitized.mlScorerEnabled)
-        repo.setRcsFilter(sanitized.rcsFilterEnabled)
-        repo.setPostCallScreen(sanitized.postCallScreenEnabled)
-        repo.setSilentVoicemail(sanitized.silentVoicemailEnabled)
-        repo.setPushAlert(sanitized.pushAlertEnabled)
-        repo.resetPushAlertPackages()
-        sanitized.pushAlertDisabledPackages.forEach { repo.togglePushAlertPackage(it, allowed = false) }
-        repo.setAllowedRegions(sanitized.allowedRegions.toSet())
-        repo.setRegionBlock(sanitized.regionBlockEnabled && sanitized.allowedRegions.isNotEmpty())
-        repo.setCnapTrustPatterns(sanitized.cnapTrustPatterns.toSet())
-        repo.setCnapBlockPatterns(sanitized.cnapBlockPatterns.toSet())
-        repo.setActiveProfileName(sanitized.activeProfileName)
-        sanitized.notificationScreeningPackages?.let {
-            repo.setNotificationScreeningPackages(it.toSet())
+        repo.editPreferences { preferences ->
+            sanitized.writeTo(preferences)
+        }
+    }
+
+    @Suppress("LongMethod")
+    private fun BackupSettings.writeTo(preferences: MutablePreferences) {
+        preferences[SpamRepository.KEY_BLOCK_CALLS] = blockCallsEnabled
+        preferences[SpamRepository.KEY_BLOCK_SMS] = blockSmsEnabled
+        preferences[SpamRepository.KEY_BLOCK_UNKNOWN] = blockUnknownEnabled
+        preferences[SpamRepository.KEY_STIR_SHAKEN] = stirShakenEnabled
+        preferences[SpamRepository.KEY_STIR_TRUSTED_ALLOW] = stirTrustedAllowEnabled
+        preferences[SpamRepository.KEY_AUTOMUTE_LOW_CONFIDENCE] = autoMuteLowConfidenceEnabled
+        preferences[SpamRepository.KEY_NEIGHBOR_SPOOF] = neighborSpoofEnabled
+        preferences[SpamRepository.KEY_HEURISTICS] = heuristicsEnabled
+        preferences[SpamRepository.KEY_SMS_CONTENT] = smsContentEnabled
+        preferences[SpamRepository.KEY_SMS_BURST] = smsBurstEnabled
+        preferences[SpamRepository.KEY_URLHAUS_STRIP_QUERY] = urlhausStripQueryEnabled
+        preferences[SpamRepository.KEY_CONTACT_WHITELIST] = contactWhitelistEnabled
+        preferences[SpamRepository.KEY_CONTACTS_ONLY] = contactsOnlyEnabled
+        preferences[SpamRepository.KEY_DB_PREFIX_EXPANSION] = dbPrefixExpansionEnabled
+        preferences[SpamRepository.KEY_AGGRESSIVE_MODE] = aggressiveModeEnabled
+        preferences[SpamRepository.KEY_ANSWERED_CALLER_TRUST] = answeredCallerTrustEnabled
+        preferences[SpamRepository.KEY_ANSWERED_CALLER_THRESHOLD] = answeredCallerThreshold
+        preferences[SpamRepository.KEY_ANSWERED_CALLER_WINDOW_DAYS] = answeredCallerWindowDays
+        preferences[SpamRepository.KEY_EMERGENCY_CALLBACK_GRACE] = emergencyCallbackGraceEnabled
+        preferences[SpamRepository.KEY_EMERGENCY_CALLBACK_WINDOW_MINUTES] = emergencyCallbackWindowMinutes
+        preferences[SpamRepository.KEY_TIME_BLOCK] = timeBlockEnabled
+        preferences[SpamRepository.KEY_TIME_BLOCK_START] = timeBlockStartHour
+        preferences[SpamRepository.KEY_TIME_BLOCK_END] = timeBlockEndHour
+        preferences[SpamRepository.KEY_FREQ_ESCALATION] = frequencyEscalationEnabled
+        preferences[SpamRepository.KEY_FREQ_THRESHOLD] = frequencyThreshold
+        preferences[SpamRepository.KEY_AUTO_CLEANUP] = autoCleanupEnabled
+        preferences[SpamRepository.KEY_CLEANUP_DAYS] = cleanupDays
+        preferences[SpamRepository.KEY_ML_SCORER] = mlScorerEnabled
+        preferences[SpamRepository.KEY_RCS_FILTER] = rcsFilterEnabled
+        preferences[SpamRepository.KEY_POST_CALL_SCREEN] = postCallScreenEnabled
+        preferences[SpamRepository.KEY_SILENT_VOICEMAIL] = silentVoicemailEnabled
+        preferences[SpamRepository.KEY_PUSH_ALERT] = pushAlertEnabled
+        if (pushAlertDisabledPackages.isEmpty()) {
+            preferences.remove(SpamRepository.KEY_PUSH_ALERT_DISABLED)
+        } else {
+            preferences[SpamRepository.KEY_PUSH_ALERT_DISABLED] = pushAlertDisabledPackages.toSet()
+        }
+        if (allowedRegions.isEmpty()) {
+            preferences.remove(SpamRepository.KEY_ALLOWED_REGIONS)
+        } else {
+            preferences[SpamRepository.KEY_ALLOWED_REGIONS] = allowedRegions.toSet()
+        }
+        preferences[SpamRepository.KEY_REGION_BLOCK] = regionBlockEnabled && allowedRegions.isNotEmpty()
+        if (cnapTrustPatterns.isEmpty()) {
+            preferences.remove(SpamRepository.KEY_CNAP_TRUST_PATTERNS)
+        } else {
+            preferences[SpamRepository.KEY_CNAP_TRUST_PATTERNS] = cnapTrustPatterns.toSet()
+        }
+        if (cnapBlockPatterns.isEmpty()) {
+            preferences.remove(SpamRepository.KEY_CNAP_BLOCK_PATTERNS)
+        } else {
+            preferences[SpamRepository.KEY_CNAP_BLOCK_PATTERNS] = cnapBlockPatterns.toSet()
+        }
+        if (activeProfileName == null) {
+            preferences.remove(SpamRepository.KEY_ACTIVE_PROFILE)
+        } else {
+            preferences[SpamRepository.KEY_ACTIVE_PROFILE] = activeProfileName
+        }
+        notificationScreeningPackages?.let {
+            preferences[SpamRepository.KEY_NOTIFICATION_SCREENING_PACKAGES] = it.toSet()
         }
     }
 
