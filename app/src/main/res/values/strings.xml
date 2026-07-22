@@ -1039,6 +1039,7 @@
     <string name="backup_restore_wrong_app">This backup was not created by CallShield</string>
     <string name="backup_restore_unsupported_version">Unsupported backup version %d</string>
     <string name="backup_restore_no_data">Backup file contains no restorable data</string>
+    <string name="backup_restore_too_many_items">This backup contains more than %d items and was not imported.</string>
     <string name="backup_restore_no_valid_items">Backup file contained no valid items</string>
     <string name="backup_restore_no_preview">Choose a backup file before restoring</string>
     <string name="backup_restore_preview_title">Restore preview</string>
