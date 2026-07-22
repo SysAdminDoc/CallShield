@@ -1,0 +1,77 @@
+# ktlint owns formatting and Kotlin/Compose naming. Detekt focuses on defects and
+# maintainability signals that remain useful for this declarative Android codebase.
+complexity:
+  active: true
+  ComplexCondition:
+    active: true
+    threshold: 8
+  CyclomaticComplexMethod:
+    active: true
+    threshold: 45
+    excludes: ['**/ui/**']
+    ignoreSingleWhenExpression: true
+    ignoreSimpleWhenEntries: true
+  LargeClass:
+    active: true
+    threshold: 1000
+  LongMethod:
+    active: true
+    threshold: 250
+    excludes: ['**/ui/**']
+  LongParameterList:
+    active: true
+    functionThreshold: 8
+    constructorThreshold: 10
+    ignoreDefaultParameters: true
+    ignoreDataClasses: true
+    excludes: ['**/ui/**']
+  NestedBlockDepth:
+    active: true
+    threshold: 5
+  TooManyFunctions:
+    active: true
+    thresholdInFiles: 20
+    thresholdInClasses: 25
+    thresholdInInterfaces: 100
+    thresholdInObjects: 25
+    thresholdInEnums: 20
+    ignoreDeprecated: true
+    ignorePrivate: true
+    ignoreOverridden: true
+
+naming:
+  active: true
+  FunctionNaming:
+    active: true
+    excludes:
+      - '**/ui/**'
+      - '**/test/**'
+      - '**/androidTest/**'
+  MatchingDeclarationName:
+    active: false
+
+style:
+  active: true
+  LoopWithTooManyJumpStatements:
+    active: true
+    maxJumpCount: 3
+  MagicNumber:
+    active: false
+  MaxLineLength:
+    active: false
+  ReturnCount:
+    active: true
+    max: 6
+    excludedFunctions: ['equals']
+    excludeLabeled: false
+    excludeReturnFromLambda: true
+    excludeGuardClauses: true
+  WildcardImport:
+    active: false
+
+exceptions:
+  active: true
+  # Android lifecycle, worker, parser, and remote-data boundaries intentionally
+  # contain unexpected library failures so screening remains fail-open.
+  TooGenericExceptionCaught:
+    active: false

@@ -1,8 +1,8 @@
 package com.sysadmindoc.callshield.domain.usecase
 
 import androidx.datastore.preferences.core.Preferences
-import com.sysadmindoc.callshield.domain.model.SpamCheckResult
 import com.sysadmindoc.callshield.domain.model.CallerIdentity
+import com.sysadmindoc.callshield.domain.model.SpamCheckResult
 import com.sysadmindoc.callshield.domain.repository.SpamCheckRepository
 
 class CheckSpamUseCase(

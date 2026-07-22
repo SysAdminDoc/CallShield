@@ -51,6 +51,5 @@ class PhoneIdentityCanonicalizerTest {
     private fun canonicalizer(
         region: String?,
         formatted: Map<String, String>,
-    ): PhoneIdentityCanonicalizer =
-        PhoneIdentityCanonicalizer(region) { number, _ -> formatted[number] }
+    ): PhoneIdentityCanonicalizer = PhoneIdentityCanonicalizer(region) { number, _ -> formatted[number] }
 }

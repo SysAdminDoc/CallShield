@@ -58,8 +58,7 @@ object NotificationScreeningSources {
 
     fun sourceFor(packageName: String): NotificationScreeningSource? = byPackage[packageName]
 
-    fun enabledPackages(storedPackages: Set<String>?): Set<String> =
-        supportedOnly(storedPackages ?: defaultEnabledPackages)
+    fun enabledPackages(storedPackages: Set<String>?): Set<String> = supportedOnly(storedPackages ?: defaultEnabledPackages)
 
     private fun supportedOnly(packages: Set<String>): Set<String> = packages.filterTo(linkedSetOf()) { it in byPackage }
 

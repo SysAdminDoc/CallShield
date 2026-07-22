@@ -272,7 +272,7 @@ class GitHubDataSource :
     override fun parseSpamDatabaseJson(body: String): Result<SpamDatabase> =
         runCatching {
             val adapter = moshi.adapter(SpamDatabase::class.java)
-            val database = adapter.fromJson(body) ?: throw IllegalStateException("Failed to parse spam database")
+            val database = adapter.fromJson(body) ?: error("Failed to parse spam database")
             validateSpamDatabase(database)
             database
         }
@@ -283,16 +283,16 @@ class GitHubDataSource :
             when {
                 trimmedBody.startsWith("{") -> {
                     hotListEnvelopeAdapter.fromJson(body)?.numbers
-                        ?: throw IllegalStateException("Failed to parse hot list payload")
+                        ?: error("Failed to parse hot list payload")
                 }
 
                 trimmedBody.startsWith("[") -> {
                     hotListArrayAdapter.fromJson(body)
-                        ?: throw IllegalStateException("Failed to parse hot list array")
+                        ?: error("Failed to parse hot list array")
                 }
 
                 else -> {
-                    throw IllegalStateException("Unsupported hot list JSON format")
+                    error("Unsupported hot list JSON format")
                 }
             }
         requireFeed(entries.size <= MAX_HOT_LIST_ROWS, GitHubFeedFailureReason.ROW_LIMIT) {
@@ -327,11 +327,11 @@ class GitHubDataSource :
 
                 trimmedBody.startsWith("[") -> {
                     hotRangesArrayAdapter.fromJson(body)
-                        ?: throw IllegalStateException("Failed to parse hot ranges array")
+                        ?: error("Failed to parse hot ranges array")
                 }
 
                 else -> {
-                    throw IllegalStateException("Unsupported hot ranges JSON format")
+                    error("Unsupported hot ranges JSON format")
                 }
             }
         requireFeed(ranges.size <= MAX_HOT_RANGE_ROWS, GitHubFeedFailureReason.ROW_LIMIT) {
@@ -353,11 +353,11 @@ class GitHubDataSource :
 
                 trimmedBody.startsWith("[") -> {
                     spamDomainsArrayAdapter.fromJson(body)
-                        ?: throw IllegalStateException("Failed to parse spam domains array")
+                        ?: error("Failed to parse spam domains array")
                 }
 
                 else -> {
-                    throw IllegalStateException("Unsupported spam domains JSON format")
+                    error("Unsupported spam domains JSON format")
                 }
             }
         requireFeed(domains.size <= MAX_SPAM_DOMAIN_ROWS, GitHubFeedFailureReason.ROW_LIMIT) {

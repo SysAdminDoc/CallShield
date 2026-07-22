@@ -37,7 +37,6 @@ data class HashWildcardRule(
     val enabled: Boolean = true,
     /** Creation timestamp — shown in rule-edit UI sorted newest-first. */
     val addedTimestamp: Long = System.currentTimeMillis(),
-    // ── A7 schedule gating ──────────────────────────────────────────
     /** 7-bit day-of-week mask; 0 = "no schedule gating, always active". */
     val scheduleDays: Int = 0,
     /** 0..23; inclusive start hour. Ignored when [scheduleDays] == 0. */

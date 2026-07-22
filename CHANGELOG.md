@@ -6,6 +6,10 @@ All notable changes to CallShield will be documented in this file.
 
 ### Changed
 
+- Detekt and ktlint now run as zero-baseline gates in the standard Android
+  verification lifecycle. Kotlin sources were normalized to the shared style,
+  Compose-specific conventions are explicit, and actionable complexity,
+  correctness, and unused-code checks remain enforced.
 - Release verification now rejects app-version drift across Gradle, README
   highlights and badges, Fastlane changelogs and store copy, signing examples,
   and the F-Droid handoff. The F-Droid draft now labels v1.7.12 as the last
@@ -36,6 +40,9 @@ All notable changes to CallShield will be documented in this file.
 
 ### Fixed
 
+- Checker failures are now recorded before the fail-open detection pipeline
+  continues. Static cleanup also removes an unused overlay verification payload,
+  stale statistics state, and an avoidable certificate-pin array copy.
 - Release preflight now scans tracked build, script, and configuration sources
   for literal signing passwords and private-key material. Environment/property
   lookups remain valid, and synthetic guard tests prove failures never echo the

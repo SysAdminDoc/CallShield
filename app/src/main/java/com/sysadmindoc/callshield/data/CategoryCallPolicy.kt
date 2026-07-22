@@ -38,8 +38,7 @@ object CategoryCallPolicy {
 
     val configurableCategories: List<CallCategory> = CallCategory.entries.filterNot { it == CallCategory.Unknown }
 
-    fun decode(serialized: Set<String>): Map<CallCategory, CategoryCallAction> =
-        serialized.mapNotNull(::decodeEntry).toMap()
+    fun decode(serialized: Set<String>): Map<CallCategory, CategoryCallAction> = serialized.mapNotNull(::decodeEntry).toMap()
 
     fun encode(actions: Map<CallCategory, CategoryCallAction>): Set<String> =
         actions
@@ -73,8 +72,9 @@ object CategoryCallPolicy {
         if (!result.isSpam || result.matchSource in explicitBlockSources) return result
         val category = CallCategoryResolver.resolve(result)
         if (category == CallCategory.Unknown) return result
-        val action = decode(preferences[SpamRepository.KEY_CATEGORY_CALL_ACTIONS].orEmpty())[category]
-            ?: CategoryCallAction.INHERIT
+        val action =
+            decode(preferences[SpamRepository.KEY_CATEGORY_CALL_ACTIONS].orEmpty())[category]
+                ?: CategoryCallAction.INHERIT
         if (action == CategoryCallAction.INHERIT) return result
         return result.copy(matchSource = encodeMatchSource(category, action, result.matchSource))
     }

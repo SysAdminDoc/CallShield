@@ -11,16 +11,72 @@ object RegionRules {
 
     val supportedRegionCodes: Set<String> =
         setOf(
-            "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "DC", "FL", "GA", "HI",
-            "ID", "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD", "MA", "MI", "MN",
-            "MS", "MO", "MT", "NE", "NV", "NH", "NJ", "NM", "NY", "NC", "ND", "OH",
-            "OK", "OR", "PA", "RI", "SC", "SD", "TN", "TX", "UT", "VT", "VA", "WA",
-            "WV", "WI", "WY", "VI", "AB", "BC", "MB", "NB", "NL", "NS", "NT", "ON",
-            "QC", "SK", "TF",
+            "AL",
+            "AK",
+            "AZ",
+            "AR",
+            "CA",
+            "CO",
+            "CT",
+            "DE",
+            "DC",
+            "FL",
+            "GA",
+            "HI",
+            "ID",
+            "IL",
+            "IN",
+            "IA",
+            "KS",
+            "KY",
+            "LA",
+            "ME",
+            "MD",
+            "MA",
+            "MI",
+            "MN",
+            "MS",
+            "MO",
+            "MT",
+            "NE",
+            "NV",
+            "NH",
+            "NJ",
+            "NM",
+            "NY",
+            "NC",
+            "ND",
+            "OH",
+            "OK",
+            "OR",
+            "PA",
+            "RI",
+            "SC",
+            "SD",
+            "TN",
+            "TX",
+            "UT",
+            "VT",
+            "VA",
+            "WA",
+            "WV",
+            "WI",
+            "WY",
+            "VI",
+            "AB",
+            "BC",
+            "MB",
+            "NB",
+            "NL",
+            "NS",
+            "NT",
+            "ON",
+            "QC",
+            "SK",
+            "TF",
         )
 
-    fun parseRegionCodes(raw: String): Set<String> =
-        normalizeRegionCodes(raw.split(',', ';', '\n', '\t', ' '))
+    fun parseRegionCodes(raw: String): Set<String> = normalizeRegionCodes(raw.split(',', ';', '\n', '\t', ' '))
 
     fun normalizeRegionCodes(regions: Iterable<String>): Set<String> =
         regions
@@ -31,8 +87,7 @@ object RegionRules {
             .take(MAX_ALLOWED_REGIONS)
             .toCollection(linkedSetOf())
 
-    fun parseNamePatterns(raw: String): Set<String> =
-        normalizeNamePatterns(raw.split('\n', ',', ';'))
+    fun parseNamePatterns(raw: String): Set<String> = normalizeNamePatterns(raw.split('\n', ',', ';'))
 
     fun normalizeNamePatterns(patterns: Iterable<String>): Set<String> =
         patterns
@@ -88,15 +143,20 @@ object RegionRules {
                     textIndex++
                     globIndex++
                 }
+
                 globIndex < glob.length && glob[globIndex] == '*' -> {
                     starIndex = globIndex++
                     retryTextIndex = textIndex
                 }
+
                 starIndex >= 0 -> {
                     globIndex = starIndex + 1
                     textIndex = ++retryTextIndex
                 }
-                else -> return false
+
+                else -> {
+                    return false
+                }
             }
         }
         while (globIndex < glob.length && glob[globIndex] == '*') globIndex++

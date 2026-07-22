@@ -13,3 +13,7 @@ ktlint_code_style = ktlint_official
 ij_kotlin_allow_trailing_comma = true
 ij_kotlin_allow_trailing_comma_on_call_site = true
 ktlint_standard_max-line-length = disabled
+# Compose component functions intentionally use PascalCase, matching the Android API.
+ktlint_function_naming_ignore_when_annotated_with = Composable
+# Grouped imports keep the large Compose surfaces readable and are resolved at compile time.
+ktlint_standard_no-wildcard-imports = disabled

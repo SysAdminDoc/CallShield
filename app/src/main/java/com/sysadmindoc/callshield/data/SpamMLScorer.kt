@@ -40,7 +40,12 @@ enum class ModelHealth {
 
 /** True when [json] declares a v3+ gradient-boosted-tree model. */
 internal fun jsonDeclaresGbt(json: String): Boolean {
-    val version = Regex(""""version"\s*:\s*(\d+)""").find(json)?.groupValues?.get(1)?.toIntOrNull() ?: 2
+    val version =
+        Regex(""""version"\s*:\s*(\d+)""")
+            .find(json)
+            ?.groupValues
+            ?.get(1)
+            ?.toIntOrNull() ?: 2
     val type = Regex(""""model_type"\s*:\s*"(\w+)"""").find(json)?.groupValues?.get(1) ?: ""
     return version >= 3 && type == "gbt"
 }
@@ -825,24 +830,27 @@ class SpamMLScorer
             var escape = false
             for (i in startIdx until s.length) {
                 val c = s[i]
-                if (escape) {
-                    escape = false
-                    continue
-                }
-                if (c == '\\') {
-                    escape = true
-                    continue
-                }
-                if (c == '"') {
-                    inString = !inString
-                    continue
-                }
-                if (inString) continue
-                if (c == open) {
-                    depth++
-                } else if (c == close) {
-                    depth--
-                    if (depth == 0) return i
+                when {
+                    escape -> {
+                        escape = false
+                    }
+
+                    c == '\\' -> {
+                        escape = true
+                    }
+
+                    c == '"' -> {
+                        inString = !inString
+                    }
+
+                    !inString && c == open -> {
+                        depth++
+                    }
+
+                    !inString && c == close -> {
+                        depth--
+                        if (depth == 0) return i
+                    }
                 }
             }
             return -1

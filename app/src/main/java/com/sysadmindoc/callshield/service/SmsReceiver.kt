@@ -5,9 +5,9 @@ import android.content.Context
 import android.content.Intent
 import android.provider.Telephony
 import com.sysadmindoc.callshield.data.SpamRepository
-import com.sysadmindoc.callshield.di.ApplicationScope
 import com.sysadmindoc.callshield.data.remote.UrlSafetyChecker
 import com.sysadmindoc.callshield.data.repository.SpamRepositoryAdapter
+import com.sysadmindoc.callshield.di.ApplicationScope
 import com.sysadmindoc.callshield.domain.usecase.CheckSpamSmsUseCase
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope

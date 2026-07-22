@@ -72,6 +72,7 @@ object CallCategoryResolver {
      *   4. Fallback to `Unknown` when evidence isn't strong enough to
      *      avoid mis-labeling legitimate callers.
      */
+    @Suppress("ReturnCount")
     fun resolve(result: SpamCheckResult): CallCategory {
         if (!result.isSpam) return CallCategory.Unknown
         CategoryCallPolicy.parseMatchSource(result.matchSource)?.let { return it.category }

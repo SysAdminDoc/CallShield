@@ -90,11 +90,6 @@ class HashWildcardMatcher
         ): Boolean = numberVariants(number, countryPrefixes).any { matches(pattern, it) }
 
         /**
-         * Common North American / European prefixes. Callers can override with
-         * a narrower list when they know the device's locale.
-         */
-
-        /**
          * Generate plausible normalization variants for [number].
          *
          * Intended for matching against user-entered patterns — if the user

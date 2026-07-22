@@ -22,8 +22,7 @@ object PhoneFormatter {
      * phone number) renders correctly inside RTL surrounding text. Safe to use
      * anywhere; a no-op visually in LTR layouts. Empty input is returned as-is.
      */
-    fun isolate(text: String): String =
-        if (text.isEmpty()) text else "$FIRST_STRONG_ISOLATE$text$POP_DIRECTIONAL_ISOLATE"
+    fun isolate(text: String): String = if (text.isEmpty()) text else "$FIRST_STRONG_ISOLATE$text$POP_DIRECTIONAL_ISOLATE"
 
     /**
      * [format] the number and wrap it in a bidi isolate for safe display inside

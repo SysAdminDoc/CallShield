@@ -172,6 +172,7 @@ ktlint {
 detekt {
     toolVersion = libs.versions.detekt.get()
     buildUponDefaultConfig = true
+    config.setFrom(file("config/detekt/detekt.yml"))
     parallel = true
     ignoreFailures = false
     source.setFrom(
@@ -179,7 +180,6 @@ detekt {
         "src/test/java",
         "src/androidTest/java",
     )
-    baseline = file("detekt-baseline.xml")
     basePath = rootDir.absolutePath
 }
 

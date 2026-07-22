@@ -362,12 +362,20 @@ class CallShieldScreeningService : CallScreeningService() {
             categoryAction: CategoryCallAction = CategoryCallAction.INHERIT,
         ): Boolean =
             when (categoryAction) {
-                CategoryCallAction.SILENCE -> true
-                CategoryCallAction.BLOCK -> false
+                CategoryCallAction.SILENCE -> {
+                    true
+                }
+
+                CategoryCallAction.BLOCK -> {
+                    false
+                }
+
                 CategoryCallAction.INHERIT,
                 CategoryCallAction.ALLOW,
-                -> silentVoicemailEnabled ||
-                    (autoMuteLowConfidenceEnabled && confidence < AUTO_MUTE_CONFIDENCE_THRESHOLD)
+                -> {
+                    silentVoicemailEnabled ||
+                        (autoMuteLowConfidenceEnabled && confidence < AUTO_MUTE_CONFIDENCE_THRESHOLD)
+                }
             }
 
         fun shouldSuppressAfterCallFeedback(matchSource: String): Boolean = matchSource == "emergency_callback"

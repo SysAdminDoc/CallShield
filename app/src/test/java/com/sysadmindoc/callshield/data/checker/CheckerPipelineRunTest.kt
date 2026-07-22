@@ -39,7 +39,7 @@ class CheckerPipelineRunTest {
 
         override suspend fun check(ctx: CheckContext): BlockResult? {
             checked = true
-            if (throwOnCheck) throw IllegalStateException("boom")
+            if (throwOnCheck) error("boom")
             return result
         }
     }

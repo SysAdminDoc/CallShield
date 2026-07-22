@@ -75,7 +75,7 @@ object HttpClient {
             .Builder()
             .apply {
                 pinnedEndpointPins.forEach { (host, pins) ->
-                    add(host, *pins.toTypedArray())
+                    pins.forEach { pin -> add(host, pin) }
                 }
             }.build()
 

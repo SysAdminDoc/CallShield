@@ -1,6 +1,7 @@
 package com.sysadmindoc.callshield.data.checker
 
 import android.content.Context
+import android.util.Log
 import androidx.datastore.preferences.core.Preferences
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.repository.SpamRepositoryImpl
@@ -240,7 +241,8 @@ object CheckerPipeline {
             val result =
                 try {
                     checker.check(ctx)
-                } catch (e: Exception) {
+                } catch (failure: Exception) {
+                    Log.w("CheckerPipeline", "Checker ${checker.name} failed", failure)
                     null
                 }
             if (result != null) return result
@@ -353,7 +355,7 @@ object SpamCheckers {
         dependencies: CheckerDependencies = CheckerDependencies(),
     ): List<IChecker> =
         buildList {
-            add(SmsContextChecker_Checker(appContext, dependencies.smsContextChecker))
+            add(SmsContextTrustChecker(appContext, dependencies.smsContextChecker))
             add(SmsBurstChecker(appContext, dependencies.smsContextChecker))
             add(SmsKeywordChecker(repo))
             add(SmsContentChecker(dependencies.smsContentAnalyzer))

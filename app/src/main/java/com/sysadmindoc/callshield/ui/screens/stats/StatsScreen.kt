@@ -80,8 +80,6 @@ fun StatsScreen(viewModel: MainViewModel) {
     // fixes the "today" bucket after midnight.
     val dailyStats = remember(blockedCalls, dayBucket) { buildRecentDailyStats(blockedCalls) }
     val dailyCounts = remember(dailyStats) { dailyStats.map { it.label to it.count } }
-    val weeklyData = remember(dailyStats) { dailyStats.map { it.count } }
-    val maxWeekly = weeklyData.maxOrNull()?.coerceAtLeast(1) ?: 1
     val weeklyTotal = remember(dailyStats) { dailyStats.sumOf { it.count } }
     val previousWeekTotal =
         remember(blockedCalls, dailyStats) {

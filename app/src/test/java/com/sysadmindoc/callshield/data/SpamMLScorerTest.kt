@@ -62,22 +62,24 @@ class SpamMLScorerTest {
 
     private fun snapshotState(): Any = stateField.get(SpamMLScorer.shared) ?: error("SpamMLScorer state should always be initialized")
 
-    // Feature indices
-    private val TOLL_FREE = 0
-    private val HIGH_SPAM_NPA = 1
-    private val VOIP_RANGE = 2
-    private val REPEATED_RATIO = 3
-    private val SEQ_ASC_RATIO = 4
-    private val ALL_SAME = 5
-    private val NXX_555 = 6
-    private val LAST4_ZERO = 7
-    private val INVALID_NXX = 8
-    private val SUB_ALL_SAME = 9
-    private val ALTERNATING = 10
-    private val SEQ_DESC_RATIO = 11
-    private val NXX_BELOW_200 = 12
-    private val LOW_ENTROPY = 13
-    private val SUB_SEQUENTIAL = 14
+    private companion object {
+        // Feature indices
+        const val TOLL_FREE = 0
+        const val HIGH_SPAM_NPA = 1
+        const val VOIP_RANGE = 2
+        const val REPEATED_RATIO = 3
+        const val SEQ_ASC_RATIO = 4
+        const val ALL_SAME = 5
+        const val NXX_555 = 6
+        const val LAST4_ZERO = 7
+        const val INVALID_NXX = 8
+        const val SUB_ALL_SAME = 9
+        const val ALTERNATING = 10
+        const val SEQ_DESC_RATIO = 11
+        const val NXX_BELOW_200 = 12
+        const val LOW_ENTROPY = 13
+        const val SUB_SEQUENTIAL = 14
+    }
 
     // ── extractFeatures: input normalization ─────────────────────────────
 

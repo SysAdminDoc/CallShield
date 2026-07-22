@@ -404,6 +404,7 @@ fun CallShieldTheme(
 // Shared quiet surface. Hierarchy comes from tone and spacing, not stacked
 // outlines, gradients, or decorative elevation.
 @Composable
+@Suppress("UnusedParameter")
 fun PremiumCard(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,

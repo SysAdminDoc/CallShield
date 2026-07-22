@@ -18,8 +18,8 @@ import com.sysadmindoc.callshield.data.model.SpamPrefix
 import com.sysadmindoc.callshield.data.model.WhitelistEntry
 import com.sysadmindoc.callshield.data.model.WildcardRule
 import com.sysadmindoc.callshield.data.toSpamCheckResult
-import com.sysadmindoc.callshield.domain.model.SpamCheckResult
 import com.sysadmindoc.callshield.domain.model.CallerIdentity
+import com.sysadmindoc.callshield.domain.model.SpamCheckResult
 
 @Suppress("TooManyFunctions", "ReturnCount")
 class SpamRepositoryImpl(

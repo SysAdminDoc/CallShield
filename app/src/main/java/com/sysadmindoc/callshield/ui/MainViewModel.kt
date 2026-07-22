@@ -765,8 +765,7 @@ class MainViewModel
             enabled: Boolean,
         ) = viewModelScope.launch { repo.setNotificationScreeningPackage(packageName, enabled) }
 
-        fun resetNotificationScreeningPackages() =
-            viewModelScope.launch { repo.resetNotificationScreeningPackages() }
+        fun resetNotificationScreeningPackages() = viewModelScope.launch { repo.resetNotificationScreeningPackages() }
 
         fun setSilentVoicemail(v: Boolean) = viewModelScope.launch { repo.setSilentVoicemail(v) }
 
@@ -783,7 +782,6 @@ class MainViewModel
         fun resetPushAlertPackages() {
             viewModelScope.launch { repo.resetPushAlertPackages() }
         }
-
 
         // Profiles
         // Persisted in DataStore (SpamRepository.KEY_ACTIVE_PROFILE) so the dashboard

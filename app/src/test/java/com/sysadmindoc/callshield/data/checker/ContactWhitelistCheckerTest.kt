@@ -100,8 +100,7 @@ class ContactWhitelistCheckerTest {
             assertFalse(observedScope.isNullOrEmpty())
         }
 
-    private fun checker(lookup: (Context, String, Set<String>?) -> Boolean) =
-        ContactWhitelistChecker(context, SpamHeuristics(), lookup)
+    private fun checker(lookup: (Context, String, Set<String>?) -> Boolean) = ContactWhitelistChecker(context, SpamHeuristics(), lookup)
 
     private fun checkContext(
         preferences: androidx.datastore.preferences.core.Preferences = emptyPreferences(),

@@ -43,12 +43,6 @@ class CallerIdOverlayService : Service() {
         private const val EXTRA_NUMBER = "number"
         private const val EXTRA_CONFIDENCE = "confidence"
         private const val EXTRA_REASON = "reason"
-        private const val EXTRA_VERIFICATION_STATUS = "verification_status"
-
-        // Sentinel for "no data" — used when we haven't collected a STIR/SHAKEN
-        // verdict yet (e.g. heuristic-triggered overlays on pre-Android-11 devices,
-        // or call-screening paths that don't expose verification status).
-        const val VERIFICATION_STATUS_UNKNOWN = -1
         private const val FAST_SPAM_HIT_TIMEOUT_MS = 1_500L
 
         internal fun outgoingRiskIntent(
@@ -98,9 +92,6 @@ class CallerIdOverlayService : Service() {
         val number = intent?.getStringExtra(EXTRA_NUMBER) ?: ""
         val confidence = intent?.getIntExtra(EXTRA_CONFIDENCE, 0) ?: 0
         val reason = intent?.getStringExtra(EXTRA_REASON) ?: ""
-        val verificationStatus =
-            intent?.getIntExtra(EXTRA_VERIFICATION_STATUS, VERIFICATION_STATUS_UNKNOWN)
-                ?: VERIFICATION_STATUS_UNKNOWN
         val outgoingRiskWarning = intent?.getBooleanExtra(EXTRA_OUTGOING_RISK_WARNING, false) ?: false
 
         if (number.isEmpty()) {
@@ -109,7 +100,7 @@ class CallerIdOverlayService : Service() {
         }
 
         val sessionId =
-            showOverlay(number, confidence, reason, verificationStatus, outgoingRiskWarning)
+            showOverlay(number, confidence, reason, outgoingRiskWarning)
                 ?: return START_NOT_STICKY
         if (!outgoingRiskWarning) {
             // Incoming caller ID may be enriched live. Outgoing warnings stay
@@ -119,12 +110,10 @@ class CallerIdOverlayService : Service() {
         return START_NOT_STICKY
     }
 
-    @Suppress("LongParameterList")
     private fun showOverlay(
         number: String,
         confidence: Int,
         reason: String,
-        verificationStatus: Int,
         outgoingRiskWarning: Boolean,
     ): Long? {
         if (!android.provider.Settings.canDrawOverlays(this)) {
