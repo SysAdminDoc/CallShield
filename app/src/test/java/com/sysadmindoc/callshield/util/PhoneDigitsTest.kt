@@ -39,4 +39,19 @@ class PhoneDigitsTest {
 
         assertEquals("12125550101", filterAsciiDigits(spoofed))
     }
+
+    @Test
+    fun `normalization bounds untrusted source length`() {
+        val oversized = "+" + "1".repeat(10_000)
+
+        assertEquals("+" + "1".repeat(24), normalizePhoneNumberInput(oversized))
+        assertEquals("1".repeat(24), sanitizePhoneNumberInput("1".repeat(10_000)))
+    }
+
+    @Test
+    fun `normalization keeps a plus after leading whitespace and format controls`() {
+        val formatted = " \u200E+1 (212) 555-0101"
+
+        assertEquals("+12125550101", normalizePhoneNumberInput(formatted))
+    }
 }

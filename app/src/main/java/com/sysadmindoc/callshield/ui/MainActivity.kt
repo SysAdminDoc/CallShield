@@ -46,6 +46,8 @@ import com.sysadmindoc.callshield.ui.screens.more.MoreScreen
 import com.sysadmindoc.callshield.ui.screens.onboarding.OnboardingScreen
 import com.sysadmindoc.callshield.ui.screens.recent.RecentCallsScreen
 import com.sysadmindoc.callshield.ui.theme.*
+import com.sysadmindoc.callshield.util.hasMinAsciiDigits
+import com.sysadmindoc.callshield.util.normalizePhoneNumberInput
 import dagger.hilt.android.AndroidEntryPoint
 
 data class LaunchRequest(
@@ -685,16 +687,20 @@ fun RowScope.NavItem(
     )
 }
 
-private fun Intent?.toLaunchRequest(nextId: Int): LaunchRequest {
+internal fun Intent?.toLaunchRequest(nextId: Int): LaunchRequest {
     if (this == null) {
         return LaunchRequest(id = nextId)
     }
 
-    val deepLinkNumber =
+    val rawDeepLinkNumber =
         getStringExtra("open_number")
             ?: data?.schemeSpecificPart?.takeIf {
                 action == Intent.ACTION_VIEW && data?.scheme == "tel"
             }
+    val deepLinkNumber =
+        rawDeepLinkNumber
+            ?.let(::normalizePhoneNumberInput)
+            ?.takeIf(::hasMinAsciiDigits)
 
     return LaunchRequest(
         id = nextId,
