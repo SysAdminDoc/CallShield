@@ -71,6 +71,42 @@ class CallbackDetectorTest {
     }
 
     @Test
+    fun `urgent retry spacing rejects duplicate and burst call rows`() {
+        assertFalse(
+            CallbackDetector.hasUrgentRetrySpacing(
+                timestamps = listOf(100_000L, 100_000L),
+                threshold = 2,
+            ),
+        )
+        assertFalse(
+            CallbackDetector.hasUrgentRetrySpacing(
+                timestamps = listOf(100_000L, 99_000L, 98_000L),
+                threshold = 2,
+            ),
+        )
+    }
+
+    @Test
+    fun `urgent retry spacing accepts deliberate retries`() {
+        assertTrue(
+            CallbackDetector.hasUrgentRetrySpacing(
+                timestamps = listOf(100_000L, 80_000L),
+                threshold = 2,
+            ),
+        )
+    }
+
+    @Test
+    fun `urgent retry spacing requires at least two attempts`() {
+        assertFalse(
+            CallbackDetector.hasUrgentRetrySpacing(
+                timestamps = listOf(100_000L),
+                threshold = 0,
+            ),
+        )
+    }
+
+    @Test
     fun `buildAnsweredCallerQuery targets answered incoming calls within cutoff`() {
         val query =
             CallbackDetector.buildAnsweredCallerQuery(
