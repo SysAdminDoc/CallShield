@@ -505,11 +505,15 @@ object NotificationHelper {
                 .Segment(PROGRESS_TOTAL)
                 .setColor(context.getColor(android.R.color.holo_blue_light))
         val style =
-            Notification.ProgressStyle()
+            Notification
+                .ProgressStyle()
                 .setProgressIndeterminate(true)
                 .setProgressSegments(listOf(segment))
                 .setProgressTrackerIcon(Icon.createWithResource(context, android.R.drawable.stat_sys_download))
-        return Notification.Builder.recoverBuilder(context, fallback).setStyle(style).build()
+        return Notification.Builder
+            .recoverBuilder(context, fallback)
+            .setStyle(style)
+            .build()
     }
 
     fun notifyRepeatedUrgentAllowed(
