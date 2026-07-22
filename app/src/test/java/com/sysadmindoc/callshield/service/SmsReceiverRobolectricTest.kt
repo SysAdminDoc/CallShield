@@ -8,6 +8,7 @@ import android.content.Context
 import android.content.Intent
 import android.provider.Telephony
 import androidx.test.core.app.ApplicationProvider
+import com.sysadmindoc.callshield.data.IsolatedRepositoryFixture
 import com.sysadmindoc.callshield.data.SmsContentAnalyzer
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.remote.UrlSafetyChecker
@@ -36,14 +37,17 @@ import java.util.concurrent.atomic.AtomicReference
 @Config(sdk = [34])
 class SmsReceiverRobolectricTest {
     private val context: Context = ApplicationProvider.getApplicationContext()
-    private val repository = SpamRepository.getInstance(context)
     private val coroutineFailure = AtomicReference<Throwable?>()
     private val exceptionHandler = CoroutineExceptionHandler { _, throwable -> coroutineFailure.set(throwable) }
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default + exceptionHandler)
     private val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+    private lateinit var fixture: IsolatedRepositoryFixture
+    private lateinit var repository: SpamRepository
 
     @Before
     fun setUp() {
+        fixture = IsolatedRepositoryFixture(context)
+        repository = fixture.repository
         shadowOf(context.applicationContext as Application).grantPermissions(Manifest.permission.POST_NOTIFICATIONS)
         NotificationHelper.createChannels(context)
         notificationManager.cancelAll()
@@ -55,6 +59,7 @@ class SmsReceiverRobolectricTest {
         SmsContentAnalyzer.updateSpamDomains(emptySet())
         scope.cancel()
         notificationManager.cancelAll()
+        fixture.close()
     }
 
     @Test
@@ -99,12 +104,18 @@ class SmsReceiverRobolectricTest {
 
     private fun awaitPhishingNotification(): Notification =
         runBlocking {
+            val expectedTitle = context.getString(com.sysadmindoc.callshield.R.string.notif_phishing_title)
             withTimeout(5_000L) {
-                while (shadowOf(notificationManager).allNotifications.isEmpty()) {
+                var phishingNotification: Notification? = null
+                while (phishingNotification == null) {
                     coroutineFailure.get()?.let { throw AssertionError("SMS receiver coroutine failed", it) }
+                    phishingNotification =
+                        shadowOf(notificationManager).allNotifications.firstOrNull {
+                            it.extras.getString(Notification.EXTRA_TITLE) == expectedTitle
+                        }
                     delay(10L)
                 }
-                shadowOf(notificationManager).allNotifications.single()
+                requireNotNull(phishingNotification)
             }
         }
 

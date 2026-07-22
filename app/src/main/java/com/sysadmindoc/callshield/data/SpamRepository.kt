@@ -66,20 +66,23 @@ private object NoBackupPreferenceStores {
 
 private fun Context.noBackupDataStore(name: String): DataStore<Preferences> = NoBackupPreferenceStores.get(this, name)
 
-@Suppress("TooManyFunctions")
+@Suppress("TooManyFunctions", "LongParameterList")
 class SpamRepository(
     context: Context,
     database: AppDatabase = AppDatabase.getInstance(context),
     remote: SpamDataSource = GitHubDataSource(),
     checkerDependencies: CheckerDependencies = CheckerDependencies(),
+    settingsDataStore: DataStore<Preferences>? = null,
+    privateSettingsDataStore: DataStore<Preferences>? = null,
 ) {
     private val appContext: Context = context.applicationContext
     private val db: AppDatabase = database
     private val dao: SpamDao = database.spamDao()
     private val settingsRepository =
         SettingsRepository(
-            dataStore = appContext.dataStore,
-            privateDataStore = appContext.noBackupDataStore("callshield_private_prefs"),
+            dataStore = settingsDataStore ?: appContext.dataStore,
+            privateDataStore =
+                privateSettingsDataStore ?: appContext.noBackupDataStore("callshield_private_prefs"),
         )
     private val spamRepositoryImpl =
         SpamRepositoryImpl(

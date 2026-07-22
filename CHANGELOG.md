@@ -9,6 +9,9 @@ All notable changes to CallShield will be documented in this file.
 - Portable restore now writes all selected settings in one atomic DataStore
   update before mutating Room. A settings failure leaves every selected table
   untouched, and a later Room failure restores the exact prior preferences.
+- Robolectric screening and SMS tests now own isolated DataStore files, Room
+  databases, and coroutine lifecycles, eliminating cross-sandbox preference
+  leakage and intermittent Windows atomic-rename failures.
 
 ## v1.7.21 — 2026-07-22
 
