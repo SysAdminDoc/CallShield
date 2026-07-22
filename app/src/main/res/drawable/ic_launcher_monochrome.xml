@@ -4,18 +4,9 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- Shield -->
+    <!-- Single-color mask with the handset preserved as negative space. -->
     <path
         android:fillColor="#FFFFFFFF"
-        android:pathData="M54,16 L26,30 L26,54 C26,76 38,90 54,96 C70,90 82,76 82,54 L82,30 Z" />
-    <!-- Phone cutout -->
-    <path
-        android:fillColor="#FF000000"
-        android:pathData="M46,42 L46,58 C46,59.1 46.9,60 48,60 L60,60 C61.1,60 62,59.1 62,58 L62,42 C62,40.9 61.1,40 60,40 L48,40 C46.9,40 46,40.9 46,42 Z M49,43 L59,43 L59,57 L49,57 Z" />
-    <!-- Block slash cutout -->
-    <path
-        android:fillColor="#FF000000"
-        android:pathData="M43,63 L45,61 L63,39 L65,37 L63,39 Z"
-        android:strokeColor="#FF000000"
-        android:strokeWidth="2.5" />
+        android:fillType="evenOdd"
+        android:pathData="M54,20 C62,27 71,32 79,35 L71,43 L79,51 L79,58 C78,73 69,83 54,90 C39,83 30,73 29,58 L29,35 C39,32 47,27 54,20 Z M40,37 C36,40 36,44 37,49 C40,62 49,72 61,79 C66,82 71,82 75,78 L78,75 C79,73 79,71 77,69 L72,63 C70,61 68,61 66,62 L60,66 C53,62 47,55 44,48 L47,44 C49,42 49,40 47,38 L45,36 C43,35 41,35 40,37 Z M85,36 L78,43 L85,50 Z" />
 </vector>
