@@ -11,6 +11,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -28,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -247,12 +249,20 @@ internal fun OnboardingScreenContent(
                             .verticalScroll(rememberScrollState()),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    Icon(
-                        p.icon,
-                        contentDescription = p.title,
-                        tint = p.color,
-                        modifier = Modifier.size(64.dp),
-                    )
+                    if (page == 0) {
+                        Image(
+                            painter = painterResource(R.drawable.ic_launcher_foreground),
+                            contentDescription = p.title,
+                            modifier = Modifier.size(64.dp),
+                        )
+                    } else {
+                        Icon(
+                            p.icon,
+                            contentDescription = p.title,
+                            tint = p.color,
+                            modifier = Modifier.size(64.dp),
+                        )
+                    }
                     Spacer(Modifier.height(14.dp))
                     Text(
                         p.title,

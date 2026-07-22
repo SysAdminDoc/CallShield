@@ -4,22 +4,20 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- Shield body -->
+    <!-- Mint half of the protective shield. -->
     <path
         android:fillColor="#FFA6E3A1"
-        android:pathData="M54,16 L26,30 L26,54 C26,76 38,90 54,96 C70,90 82,76 82,54 L82,30 Z" />
-    <!-- Shield inner shadow -->
+        android:pathData="M54,20 C47,27 39,32 29,35 L29,58 C30,73 39,83 54,90 Z" />
+    <!-- Teal half with an interrupted incoming-call notch. -->
     <path
-        android:fillColor="#FF89B4FA"
-        android:fillAlpha="0.3"
-        android:pathData="M54,22 L32,34 L32,54 C32,72 42,84 54,90 C66,84 76,72 76,54 L76,34 Z" />
-    <!-- Phone with block slash -->
+        android:fillColor="#FF94E2D5"
+        android:pathData="M54,20 C62,27 71,32 79,35 L71,43 L79,51 L79,58 C78,73 69,83 54,90 Z" />
+    <!-- Telephone handset. -->
     <path
-        android:fillColor="#FF000000"
-        android:pathData="M46,42 L46,58 C46,59.1 46.9,60 48,60 L60,60 C61.1,60 62,59.1 62,58 L62,42 C62,40.9 61.1,40 60,40 L48,40 C46.9,40 46,40.9 46,42 Z M49,43 L59,43 L59,57 L49,57 Z" />
-    <!-- Block line -->
+        android:fillColor="#FFF2F3F0"
+        android:pathData="M40,37 C36,40 36,44 37,49 C40,62 49,72 61,79 C66,82 71,82 75,78 L78,75 C79,73 79,71 77,69 L72,63 C70,61 68,61 66,62 L60,66 C53,62 47,55 44,48 L47,44 C49,42 49,40 47,38 L45,36 C43,35 41,35 40,37 Z" />
+    <!-- A compact threat pulse stopped at the shield edge. -->
     <path
-        android:strokeColor="#FFF38BA8"
-        android:strokeWidth="3"
-        android:pathData="M44,62 L64,38" />
+        android:fillColor="#FFF38BA8"
+        android:pathData="M85,36 L78,43 L85,50 Z" />
 </vector>

@@ -69,6 +69,10 @@ All notable changes to CallShield will be documented in this file.
 
 ### Changed
 
+- **CallShield has a new cohesive icon system.** A flatter protected-handset
+  mark now covers the repository logo, Play Store artwork, legacy square and
+  round launchers, adaptive icons, shortcuts, splash screen, and Android 13+
+  monochrome theming while retaining the app's AMOLED Catppuccin palette.
 - **Manual refresh uses Android 16 progress notifications.** User-triggered
   database sync now shows a native `ProgressStyle` journey on API 36+ and an
   indeterminate progress notification on older releases, then removes it when
