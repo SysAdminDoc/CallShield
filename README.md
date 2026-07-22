@@ -12,7 +12,7 @@
 <p align="center">
   <a href="https://github.com/SysAdminDoc/CallShield/releases/latest"><img src="https://img.shields.io/github/v/release/SysAdminDoc/CallShield?style=flat-square&color=a6e3a1" alt="Release"></a>
   <img src="https://img.shields.io/badge/Spam%20Numbers-32%2C933-f38ba8?style=flat-square" alt="32,933 Numbers">
-  <img src="https://img.shields.io/badge/Tests-836-94e2d5?style=flat-square" alt="836 Tests">
+  <img src="https://img.shields.io/badge/Tests-860-94e2d5?style=flat-square" alt="860 Tests">
   <img src="https://img.shields.io/badge/Android-10%2B-89b4fa?style=flat-square" alt="Android 10+">
   <img src="https://img.shields.io/badge/License-MIT-cba6f7?style=flat-square" alt="MIT License">
   <img src="https://img.shields.io/badge/API%20Keys-None-fab387?style=flat-square" alt="No required API keys">
@@ -22,29 +22,28 @@
 
 CallShield blocks spam calls and texts using a **15+ layer on-device detection engine** with a gradient-boosted tree ML scorer, campaign burst detection, RCS notification filter, and real-time caller ID overlay. Powered by a 32,933-number database with scheduled hot-list updates. Community-maintained, no accounts, no tracking.
 
-## v1.7.19 Highlights
+## v1.7.20 Highlights
 
-- **Independent app language** — Settings now offers a persistent language
-  picker backed by Android's per-app locale APIs (including the system App
-  Languages surface on Android 13+); debug builds expose both Android
-  pseudolocales for repeatable layout QA.
-- **Contacts-mode safety check** — CallShield now detects when a contacts-based
-  screening mode (contact-whitelist or contacts-only) is switched on but the
-  Contacts permission has since been denied — a state that silently weakens
-  protection — so the risk can be surfaced instead of failing quietly.
-- **Visible ML health** — Protection Test labels the active GBT/logistic/default
-  model and clearly flags a failed update or degraded fallback.
-- **Accessibility regression gate** — Compose's Accessibility Test Framework
-  now checks onboarding, dashboard, blocklist, and Settings for labels, touch
-  targets, contrast, and traversal. Expandable details announce their state,
-  and Android 16 receives native duration speech annotations.
-- **Caller-name blocking** — bounded `*`/`?` patterns can now reject recurring
-  carrier-presented spam names after stronger explicit and behavioral rules.
-- **Native sync progress** — manual protection refreshes use Android 16's
-  progress-centric notification style with a truthful fallback on older APIs.
-- **Optional Android post-call review** — Android 11+ can open a platform
-  post-call surface with block/report and save-contact actions; the existing
-  lightweight rating notification remains the default.
+- **Private Android backups** — cloud backup now excludes the Room database and
+  its phone numbers, call history, and raw blocked-message bodies. Direct
+  device transfer and explicit portable backups remain available.
+- **Smaller, auditable APK assets** — builds package only the five runtime data
+  feeds. Verification tasks fail if repository-only report payloads enter a
+  debug or release APK.
+- **Safer screening boundaries** — outgoing calls leave the inbound pipeline
+  immediately, while malformed, text-only, or overlong caller IDs follow the
+  user's unknown-caller rule instead of bypassing it.
+- **More complete portable backups** — active temporary block/allow expiries
+  and selected notification-screening apps now survive a validated v5 backup
+  round trip; oversized restores are rejected before expensive processing.
+- **Resilient local settings** — corrupt public or private DataStore files
+  recover to safe defaults instead of repeatedly breaking startup and call
+  screening.
+- **Privacy-safe diagnostics** — shared crash reports redact phone-like values,
+  credential fields, and private URL components, with bounded exception output.
+- **Refined secondary flows** — language changes stay on the current nested
+  screen, activity-log swipes recover correctly, and source/status labels are
+  clear even when supported apps are not installed.
 
 ## v1.7.17 Highlights
 
@@ -170,7 +169,7 @@ CallShield blocks spam calls and texts using a **15+ layer on-device detection e
 - **Answered-caller trust** — numbers answered repeatedly inside the configured lookback window can ring through lower-confidence heuristic/ML suspicion while explicit block rules still win first.
 - **Emergency callback grace** — unknown callbacks can ring through after a local emergency call for a configurable window while explicit block rules still win first.
 - **SMS burst protection** - repeated unknown SMS senders or same-prefix floods can be blocked as `sms_burst`, with blocked-SMS notification actions to mark safe or report.
-- **836 total JVM unit tests** - the local unit suite covers detection, workers, utilities, repository contracts, and permission readiness before release.
+- **860 total JVM unit tests** - the local unit suite covers detection, workers, utilities, repository contracts, and permission readiness before release.
 - **Gradient-Boosted Tree ML model** — 20 features, pure Kotlin, no TFLite dependency.
 - **Campaign burst detection** — NPA-NXX prefix clustering identifies coordinated spam waves.
 - **Full accessibility** — content descriptions across Compose UI, 48dp minimum touch targets.
@@ -184,7 +183,7 @@ CallShield blocks spam calls and texts using a **15+ layer on-device detection e
 5. **Callback-aware** — won't block callbacks from numbers you recently called, answered repeatedly, after a local emergency call, or urgent repeated callers
 6. **Community-driven** — one-tap anonymous contribution via Cloudflare Worker, daily merge into database
 
-## Detection Pipeline (v1.7.19)
+## Detection Pipeline (v1.7.20)
 
 All detection layers implement a shared `IChecker` interface and run in priority order via `CheckerPipeline.run` — first non-null result wins, every layer is testable in isolation. Priorities are stable numbers; the ladder below is the live order.
 
@@ -414,7 +413,7 @@ RELEASE_KEY_PASSWORD=...
 ## Testing
 
 ```bash
-./gradlew testDebugUnitTest   # 836 tests
+./gradlew testDebugUnitTest   # 860 tests
 ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.sysadmindoc.callshield.platform.TargetSdkBehaviorSmokeTest
 ```
 
@@ -436,7 +435,7 @@ Run tests, lint, release metadata checks, and artifact builds locally before pub
 | Community API | Cloudflare Workers |
 | URL Safety | URLhaus (abuse.ch) |
 | Verification | Local Gradle, lint, and release-artifact checks |
-| Tests | 836 JVM unit tests (JUnit) |
+| Tests | 860 JVM unit tests (JUnit) |
 | Strings | 1160 string resources and 29 plural groups (translation-ready) |
 | Accessibility | 100+ content descriptions, 48dp touch targets |
 | Min SDK | 29 (Android 10) |
