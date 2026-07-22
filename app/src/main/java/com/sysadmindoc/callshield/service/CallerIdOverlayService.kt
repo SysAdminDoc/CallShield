@@ -112,7 +112,7 @@ class CallerIdOverlayService : Service() {
         deactivateOverlaySession()
         removeOverlay()
         windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
-        val formatted = PhoneFormatter.format(number)
+        val formatted = PhoneFormatter.formatIsolated(number)
         val digits = filterAsciiDigits(number)
         val sessionId = SystemClock.elapsedRealtimeNanos()
 

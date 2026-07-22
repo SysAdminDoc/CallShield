@@ -59,7 +59,7 @@ object ReportFraudHelper {
             Toast
                 .makeText(
                     context,
-                    context.getString(R.string.ftc_report_toast, PhoneFormatter.format(number)),
+                    context.getString(R.string.ftc_report_toast, PhoneFormatter.formatIsolated(number)),
                     Toast.LENGTH_LONG,
                 ).show()
             true

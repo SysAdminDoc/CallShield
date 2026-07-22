@@ -6,6 +6,10 @@ All notable changes to CallShield will be documented in this file.
 
 ### Added
 
+- **Repeatable pseudolocale screenshot QA.** Debug builds now include Android's
+  `en-XA` and `ar-XB` resources, and an emulator script captures onboarding,
+  dashboard, blocklist, and Settings in both locales while restoring the app's
+  locale afterward.
 - **A device-level call-screening deadline gate.** An API 35 instrumentation
   harness starts the real Hilt service lifecycle, drives the cold Room,
   DataStore, contact, and checker path, records latency, and reserves a full
@@ -35,6 +39,10 @@ All notable changes to CallShield will be documented in this file.
 
 ### Fixed
 
+- **Phone numbers stay left-to-right inside RTL screens.** Every in-app,
+  overlay, and localized-toast display path now wraps formatted numbers in
+  Unicode bidi isolation; the UI padding audit found no physical left/right
+  padding to migrate.
 - **Onboarding respects edge-to-edge system insets.** Its progress header no
   longer renders underneath the Android status bar.
 

@@ -374,7 +374,7 @@ fun StatsScreen(viewModel: MainViewModel) {
                         Spacer(Modifier.height(8.dp))
                         topOffenders.forEachIndexed { i, (number, count) ->
                             val displayNumber =
-                                number.takeIf { it.isNotBlank() }?.let(PhoneFormatter::format)
+                                number.takeIf { it.isNotBlank() }?.let(PhoneFormatter::formatIsolated)
                                     ?: stringResource(R.string.stats_unknown_caller)
                             val location =
                                 number.takeIf { it.isNotBlank() }?.let(AreaCodeLookup::lookup)

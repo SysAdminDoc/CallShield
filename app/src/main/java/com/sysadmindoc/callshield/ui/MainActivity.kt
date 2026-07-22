@@ -374,7 +374,7 @@ fun SearchResultsView(
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 com.sysadmindoc.callshield.data.PhoneFormatter
-                                    .format(number.number),
+                                    .formatIsolated(number.number),
                                 fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
                             )
                             Text(

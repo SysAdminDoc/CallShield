@@ -762,7 +762,7 @@ fun BlocklistItem(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                Text(PhoneFormatter.format(number.number), fontWeight = FontWeight.SemiBold, color = CatText)
+                Text(PhoneFormatter.formatIsolated(number.number), fontWeight = FontWeight.SemiBold, color = CatText)
                 if (number.description.isNotEmpty()) {
                     Text(number.description, style = MaterialTheme.typography.bodySmall, color = CatSubtext)
                 }
@@ -916,7 +916,7 @@ fun WhitelistItem(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                Text(PhoneFormatter.format(entry.number), fontWeight = FontWeight.SemiBold, color = CatText)
+                Text(PhoneFormatter.formatIsolated(entry.number), fontWeight = FontWeight.SemiBold, color = CatText)
                 if (entry.description.isNotEmpty()) {
                     Text(entry.description, style = MaterialTheme.typography.bodySmall, color = CatSubtext)
                 }
@@ -970,7 +970,7 @@ fun DatabaseItem(number: SpamNumber) {
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                Text(PhoneFormatter.format(number.number), fontWeight = FontWeight.SemiBold, color = CatText)
+                Text(PhoneFormatter.formatIsolated(number.number), fontWeight = FontWeight.SemiBold, color = CatText)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     StatusPill(
                         text = number.type.replaceFirstChar { it.uppercase() },
@@ -1024,7 +1024,7 @@ fun AddNumberDialog(
                     singleLine = true,
                     supportingText =
                         if (canConfirm) {
-                            { Text(PhoneFormatter.format(normalizedNumber), color = CatSubtext) }
+                            { Text(PhoneFormatter.formatIsolated(normalizedNumber), color = CatSubtext) }
                         } else {
                             null
                         },
@@ -1200,7 +1200,7 @@ fun AddWhitelistDialog(
                     singleLine = true,
                     supportingText =
                         if (canConfirm) {
-                            { Text(PhoneFormatter.format(normalizedNumber), color = CatSubtext) }
+                            { Text(PhoneFormatter.formatIsolated(normalizedNumber), color = CatSubtext) }
                         } else {
                             null
                         },

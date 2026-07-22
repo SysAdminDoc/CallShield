@@ -204,7 +204,7 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
                         val blockedMessage =
                             stringResource(
                                 R.string.blocked_log_number_blocked,
-                                PhoneFormatter.format(call.number),
+                                PhoneFormatter.formatIsolated(call.number),
                             )
                         LaunchedEffect(Unit) {
                             kotlinx.coroutines.delay(index.toLong().coerceAtMost(15) * 30)
@@ -300,7 +300,7 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
                                             snackbarHost.showSnackbar(
                                                 resources.getString(
                                                     R.string.temporary_decision_allowed,
-                                                    PhoneFormatter.format(call.number),
+                                                    PhoneFormatter.formatIsolated(call.number),
                                                     duration.label,
                                                 ),
                                                 duration = SnackbarDuration.Short,
@@ -319,7 +319,7 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
                                             snackbarHost.showSnackbar(
                                                 resources.getString(
                                                     R.string.temporary_decision_blocked,
-                                                    PhoneFormatter.format(call.number),
+                                                    PhoneFormatter.formatIsolated(call.number),
                                                     duration.label,
                                                 ),
                                                 duration = SnackbarDuration.Short,
@@ -439,7 +439,7 @@ fun BlockedCallItem(
     val location = remember(call.number) { AreaCodeLookup.lookup(call.number) }
     var expanded by remember { mutableStateOf(false) }
     val temporaryDurations = rememberTemporaryDecisionDurations()
-    val copiedMessage = stringResource(R.string.blocked_log_copied, PhoneFormatter.format(call.number))
+    val copiedMessage = stringResource(R.string.blocked_log_copied, PhoneFormatter.formatIsolated(call.number))
     val copiedShortMessage = stringResource(R.string.blocked_log_copied_short)
     val clipLabelPhone = stringResource(R.string.clip_label_phone)
     val clipLabelPhoneNumber = stringResource(R.string.clip_label_phone_number)
@@ -474,7 +474,7 @@ fun BlockedCallItem(
                 )
                 Spacer(Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(PhoneFormatter.format(call.number), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+                    Text(PhoneFormatter.formatIsolated(call.number), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(dateFormat.format(Date(call.timestamp)), style = MaterialTheme.typography.bodySmall, color = CatSubtext)
                         if (location != null) Text(location, style = MaterialTheme.typography.labelSmall, color = CatOverlay)
@@ -640,7 +640,7 @@ fun GroupedCallItem(
             }
             Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(PhoneFormatter.format(call.number), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+                Text(PhoneFormatter.formatIsolated(call.number), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     if (location != null) Text(location, style = MaterialTheme.typography.bodySmall, color = CatOverlay)
                     Text(

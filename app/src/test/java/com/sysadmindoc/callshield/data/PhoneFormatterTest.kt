@@ -162,4 +162,20 @@ class PhoneFormatterTest {
         val isolated = PhoneFormatter.formatIsolated(n)
         assertEquals(PhoneFormatter.format(n), isolated.trim(fsi, pdi))
     }
+
+    @Test
+    fun `formatWithCountryCodeIsolated formats then wraps the number`() {
+        assertEquals(
+            "$fsi+1 (212) 555-1234$pdi",
+            PhoneFormatter.formatWithCountryCodeIsolated("2125551234"),
+        )
+    }
+
+    @Test
+    fun `formatWithCountryCodeIsolated preserves international number order`() {
+        assertEquals(
+            "$fsi+442012345678$pdi",
+            PhoneFormatter.formatWithCountryCodeIsolated("+442012345678"),
+        )
+    }
 }
