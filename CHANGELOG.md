@@ -6,6 +6,12 @@ All notable changes to CallShield will be documented in this file.
 
 ### Added
 
+- **A device-level call-screening deadline gate.** An API 35 instrumentation
+  harness starts the real Hilt service lifecycle, drives the cold Room,
+  DataStore, contact, and checker path, records latency, and reserves a full
+  second beneath Telecom's five-second response deadline. The screening path
+  is also included in baseline and startup profiles for ART compilation and
+  release DEX layout; the acceptance run completed in 592 ms.
 - **Contacts-mode degradation detection.** `CallShieldPermissions`
   `isContactsModeDegraded()` reports when a contacts-dependent screening mode
   (contact-whitelist or contacts-only) is enabled but `READ_CONTACTS` is
