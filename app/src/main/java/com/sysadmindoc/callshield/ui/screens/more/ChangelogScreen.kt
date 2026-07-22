@@ -25,9 +25,24 @@ fun ChangelogScreen() {
         verticalArrangement = Arrangement.spacedBy(0.dp),
     ) {
         VersionEntry(
+            "1.7.19",
+            "Roadmap completion: stronger detection, platform integrations, and release proof",
+            isLatest = true,
+            changes =
+                listOf(
+                    "Added region and carrier-name trust/block rules with explicit priority safeguards",
+                    "Improved on-device GBT recall while retaining the precision guard and legacy-model compatibility",
+                    "Added notification-source controls, Android 16 sync progress, and an optional " +
+                        "Android post-call review",
+                    "Expanded call/SMS entrypoint, screening-deadline, accessibility, RTL, and API 35/37 " +
+                        "device coverage",
+                    "Surfaced ML health, rule conflicts, app language selection, and premium " +
+                        "setup/navigation refinements",
+                ),
+        )
+        VersionEntry(
             "1.7.13",
             "Fully free and keyless: the optional API key entry is gone",
-            isLatest = true,
             changes =
                 listOf(
                     "Removed the optional AbstractAPI key field from Settings — CallShield now needs no API keys at all",
