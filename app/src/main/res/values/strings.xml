@@ -688,7 +688,7 @@
     <string name="more_report_bug_subtitle">Open an issue when something looks broken, confusing, or unfinished.</string>
     <string name="more_star_github_subtitle">Support the project and help more people discover CallShield.</string>
     <string name="more_report_spam_number_subtitle">Send suspicious numbers back to the project with useful context.</string>
-    <string name="more_share_crash_log_subtitle">Export the most recent local crash log for debugging. Nothing is auto-uploaded.</string>
+    <string name="more_share_crash_log_subtitle">Export the latest local crash log. Phone numbers, tokens, and private URL parts are redacted; nothing is auto-uploaded.</string>
     <!-- FTC one-tap report (Feature C) -->
     <string name="ftc_report_action">Report to FTC</string>
     <string name="ftc_report_action_fcc">Report to FCC</string>
