@@ -1138,6 +1138,20 @@
     <string name="feedback_not_spam">Not Spam</string>
     <string name="feedback_blocked">Number blocked and reported</string>
     <string name="feedback_whitelisted">Number marked as safe</string>
+    <string name="settings_post_call_screen">Android post-call screen</string>
+    <string name="settings_post_call_screen_desc">Optionally open CallShield after eligible calls with spam and save-contact actions. Off by default; rating notifications stay enabled.</string>
+    <string name="post_call_title">Review this call</string>
+    <string name="post_call_subtitle">Android shared this completed call with CallShield.</string>
+    <string name="post_call_number_label">Caller</string>
+    <string name="post_call_duration_very_short">Under 3 seconds</string>
+    <string name="post_call_duration_short">3 seconds to 1 minute</string>
+    <string name="post_call_duration_medium">1 to 2 minutes</string>
+    <string name="post_call_duration_long">Over 2 minutes</string>
+    <string name="post_call_duration_unknown">Duration unavailable</string>
+    <string name="post_call_mark_spam">Mark spam &amp; block</string>
+    <string name="post_call_add_contact">Add to contacts</string>
+    <string name="post_call_done">Not now</string>
+    <string name="post_call_contact_unavailable">No contacts app is available</string>
 
     <!-- Accessibility Content Descriptions -->
     <string name="cd_shield">Shield icon</string>

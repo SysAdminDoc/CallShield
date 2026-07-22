@@ -61,6 +61,11 @@ All notable changes to CallShield will be documented in this file.
   readiness matrix flagged only generically. Pure boolean predicate plus a
   `Context` overload; covered by readiness-matrix tests (789 tests total). The
   UI warning surfacing follows separately.
+- **Opt-in Android post-call review.** Android 11+ users can enable a native
+  Telecom post-call surface with clear “Mark spam & block” and “Add to
+  contacts” actions. The spam action reuses CallShield's existing local block
+  and community-report path, contact saving stays in the system editor, and
+  the existing after-call notification remains the default when this is off.
 
 ### Changed
 

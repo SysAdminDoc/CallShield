@@ -23,8 +23,8 @@ class SpamActionReceiver : BroadcastReceiver() {
 
         val work =
             when (intent.action) {
-                "com.sysadmindoc.callshield.FEEDBACK_SPAM" -> {
-                    val number = intent.getStringExtra("number") ?: return
+                ACTION_FEEDBACK_SPAM -> {
+                    val number = intent.getStringExtra(EXTRA_FEEDBACK_NUMBER) ?: return
                     notificationManager.cancel(NotificationHelper.feedbackNotificationId(number))
                     Toast.makeText(appContext, appContext.getString(R.string.feedback_blocked), Toast.LENGTH_SHORT).show()
                     suspend {
@@ -33,8 +33,8 @@ class SpamActionReceiver : BroadcastReceiver() {
                     }
                 }
 
-                "com.sysadmindoc.callshield.FEEDBACK_NOT_SPAM" -> {
-                    val number = intent.getStringExtra("number") ?: return
+                ACTION_FEEDBACK_NOT_SPAM -> {
+                    val number = intent.getStringExtra(EXTRA_FEEDBACK_NUMBER) ?: return
                     notificationManager.cancel(NotificationHelper.feedbackNotificationId(number))
                     Toast.makeText(appContext, appContext.getString(R.string.feedback_whitelisted), Toast.LENGTH_SHORT).show()
                     suspend {
@@ -114,4 +114,10 @@ class SpamActionReceiver : BroadcastReceiver() {
             domains = getStringArrayListExtra(NotificationHelper.EXTRA_SMS_DOMAINS).orEmpty(),
             urlIndicators = getStringArrayListExtra(NotificationHelper.EXTRA_SMS_URL_INDICATORS).orEmpty(),
         )
+
+    companion object {
+        const val ACTION_FEEDBACK_SPAM = "com.sysadmindoc.callshield.FEEDBACK_SPAM"
+        const val ACTION_FEEDBACK_NOT_SPAM = "com.sysadmindoc.callshield.FEEDBACK_NOT_SPAM"
+        const val EXTRA_FEEDBACK_NUMBER = "number"
+    }
 }
