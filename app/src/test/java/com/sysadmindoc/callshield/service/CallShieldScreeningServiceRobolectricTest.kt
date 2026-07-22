@@ -115,6 +115,19 @@ class CallShieldScreeningServiceRobolectricTest {
     }
 
     @Test
+    fun `onScreenCall treats malformed nonempty caller IDs as unknown`() {
+        runBlocking { repository.setBlockUnknown(true) }
+
+        service.onScreenCall(callDetails("PRIVATE"))
+
+        val response = awaitResponse()
+        assertTrue(response.disallowCall)
+        assertTrue(response.rejectCall)
+        assertFalse(response.silenceCall)
+        awaitScopeIdle()
+    }
+
+    @Test
     fun `onScreenCall ignores outgoing calls without responding`() {
         val number = "+12125550184"
         runBlocking { repository.blockNumber(number, type = "test") }

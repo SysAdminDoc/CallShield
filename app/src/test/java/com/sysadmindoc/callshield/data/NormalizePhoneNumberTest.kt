@@ -60,4 +60,13 @@ class NormalizePhoneNumberTest {
         val payload = "\u200E+\u200F1 212\u200B-555\u200E-1234"
         assertEquals("+12125551234", normalizePhoneNumber(payload))
     }
+
+    @Test fun `numbers beyond E164 length are rejected instead of truncated`() {
+        assertEquals("123456789012345", normalizePhoneNumber("123456789012345"))
+        assertEquals("", normalizePhoneNumber("1234567890123456"))
+    }
+
+    @Test fun `oversized raw caller IDs are rejected with bounded work`() {
+        assertEquals("", normalizePhoneNumber("x".repeat(10_000) + "2125551234"))
+    }
 }
