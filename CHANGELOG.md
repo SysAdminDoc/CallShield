@@ -59,6 +59,8 @@ All notable changes to CallShield will be documented in this file.
 - Screening now canonicalizes bounded E.164 caller IDs before applying unknown
   caller rules, so malformed, text-only, and overlong `tel:` handles cannot
   bypass the user's block-unknown setting.
+- The reproducibility gate now verifies both signed and unsigned release APK
+  names instead of failing after a valid unsigned release build.
 
 ## v1.7.19 — 2026-07-21
 

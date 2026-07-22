@@ -101,12 +101,21 @@ tasks.register("verifyReleaseApkReproducibleMetadata") {
     description = "Fails when the release APK contains AGP VCS metadata."
     dependsOn(":app:assembleRelease")
 
-    val apk = layout.projectDirectory.file("app/build/outputs/apk/release/app-release.apk")
-    inputs.file(apk)
+    val releaseOutput = layout.projectDirectory.dir("app/build/outputs/apk/release")
+    inputs.dir(releaseOutput)
 
     doLast {
-        verifyApkDataPrivacy(apk.asFile)
-        ZipFile(apk.asFile).use { zip ->
+        val apks =
+            releaseOutput.asFile
+                .listFiles { file -> file.isFile && file.extension.equals("apk", ignoreCase = true) }
+                .orEmpty()
+                .toList()
+        check(apks.size == 1) {
+            "Expected exactly one release APK, found ${apks.map { it.name }.sorted()}"
+        }
+        val apk = apks.single()
+        verifyApkDataPrivacy(apk)
+        ZipFile(apk).use { zip ->
             check(zip.getEntry("META-INF/version-control-info.textproto") == null) {
                 "Release APK must not contain META-INF/version-control-info.textproto; " +
                     "disable android.vcsInfo.include for reproducible releases."
