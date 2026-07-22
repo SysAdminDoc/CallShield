@@ -1294,4 +1294,17 @@
     <string name="cnap_trust_priority_notice">Exact number, system, prefix, and wildcard blocks still win over caller-name trust.</string>
     <string name="block_reason_out_of_region">Blocked — %1$s is outside allowed regions</string>
     <string name="block_reason_out_of_region_unknown">Blocked — international or unknown region is outside allowed regions</string>
+    <string name="model_health_title">ML model health</string>
+    <string name="model_health_gbt_active">Gradient-boosted model active</string>
+    <string name="model_health_gbt_active_detail">The highest-quality on-device model loaded successfully.</string>
+    <string name="model_health_lr_active">Logistic model active</string>
+    <string name="model_health_lr_active_detail">A compatible logistic model is running normally.</string>
+    <string name="model_health_degraded">Degraded to logistic fallback</string>
+    <string name="model_health_degraded_detail">The GBT payload was incomplete, so CallShield is using its safe logistic fallback.</string>
+    <string name="model_health_parse_failed">Latest model update failed</string>
+    <string name="model_health_parse_failed_detail">The latest payload could not be parsed. CallShield kept the previous working model.</string>
+    <string name="model_health_defaults">Built-in defaults active</string>
+    <string name="model_health_defaults_detail">No saved model was usable, so protection is using built-in weights.</string>
+    <string name="model_health_loading">Model status pending</string>
+    <string name="model_health_loading_detail">No model load has completed yet.</string>
 </resources>
