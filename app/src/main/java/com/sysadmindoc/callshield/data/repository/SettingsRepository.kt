@@ -153,6 +153,12 @@ class SettingsRepository(
     suspend fun resetNotificationScreeningPackages() =
         dataStore.edit { it.remove(SpamRepository.KEY_NOTIFICATION_SCREENING_PACKAGES) }
 
+    suspend fun setNotificationScreeningPackages(packageNames: Set<String>) =
+        dataStore.edit { prefs ->
+            prefs[SpamRepository.KEY_NOTIFICATION_SCREENING_PACKAGES] =
+                packageNames.filterTo(linkedSetOf()) { NotificationScreeningSources.sourceFor(it) != null }
+        }
+
     suspend fun setSilentVoicemail(enabled: Boolean) = dataStore.edit { it[SpamRepository.KEY_SILENT_VOICEMAIL] = enabled }
 
     suspend fun setPushAlert(enabled: Boolean) = dataStore.edit { it[SpamRepository.KEY_PUSH_ALERT] = enabled }
