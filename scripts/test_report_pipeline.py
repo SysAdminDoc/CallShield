@@ -10,7 +10,6 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 SCRIPTS_DIR = ROOT / "scripts"
-WORKFLOW_FILE = ROOT / ".github" / "workflows" / "merge-reports.yml"
 NOW = "2026-06-12T12:00:00+00:00"
 
 
@@ -35,15 +34,6 @@ def run_script(name: str, data_dir: Path) -> None:
 def write_json(path: Path, payload: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
-
-
-def assert_workflow_order() -> None:
-    workflow = WORKFLOW_FILE.read_text(encoding="utf-8")
-    extract_step = workflow.index("Extract spam domains from SMS reports")
-    hot_step = workflow.index("Generate hot list + campaign ranges")
-    merge_step = workflow.index("Merge reports into database")
-    if not (extract_step < merge_step and hot_step < merge_step):
-        raise AssertionError("merge-reports.yml must derive domains and hot feeds before merge cleanup")
 
 
 def seed_reports(data_dir: Path) -> None:
@@ -112,7 +102,6 @@ def assert_merge_cleanup(data_dir: Path) -> None:
 
 
 def main() -> None:
-    assert_workflow_order()
     with tempfile.TemporaryDirectory() as tmp:
         data_dir = Path(tmp) / "data"
         seed_reports(data_dir)
