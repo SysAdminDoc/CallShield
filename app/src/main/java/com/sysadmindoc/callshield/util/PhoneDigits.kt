@@ -47,26 +47,41 @@ fun filterAsciiDigitsLast(
 fun sanitizePhoneNumberInput(
     value: String,
     maxLength: Int = DEFAULT_PHONE_INPUT_LENGTH,
-): String =
-    buildString(value.length) {
+): String {
+    val safeMaxLength = maxLength.coerceAtLeast(0)
+    if (safeMaxLength == 0) return ""
+    return buildString(minOf(value.length, safeMaxLength)) {
         for (ch in value) {
+            if (length >= safeMaxLength) break
             when {
                 ch.isAsciiDigit() -> append(ch)
                 ch == '+' && isEmpty() -> append(ch)
                 ch == ' ' || ch == '-' || ch == '(' || ch == ')' -> append(ch)
             }
         }
-    }.take(maxLength)
+    }
+}
 
 /**
  * Normalize UI-created numbers with the same ASCII-only digit contract used by
  * the screening/data path. Empty means no usable ASCII digit was present.
  */
 fun normalizePhoneNumberInput(value: String): String {
-    val trimmed = stripPhoneFormatControls(value).trim()
-    val digits = filterAsciiDigits(trimmed)
+    val digits = StringBuilder(DEFAULT_PHONE_INPUT_LENGTH)
+    var firstMeaningfulCharacter: Char? = null
+    val scanLength = minOf(value.length, MAX_PHONE_INPUT_SCAN_LENGTH)
+    for (index in 0 until scanLength) {
+        val ch = value[index]
+        if (ch.isPhoneFormatControl()) continue
+        if (firstMeaningfulCharacter == null && !ch.isWhitespace()) {
+            firstMeaningfulCharacter = ch
+        }
+        if (ch.isAsciiDigit() && digits.length < DEFAULT_PHONE_INPUT_LENGTH) {
+            digits.append(ch)
+        }
+    }
     if (digits.isEmpty()) return ""
-    return if (trimmed.startsWith("+")) "+$digits" else digits
+    return if (firstMeaningfulCharacter == '+') "+$digits" else digits.toString()
 }
 
 fun hasMinAsciiDigits(
@@ -74,24 +89,21 @@ fun hasMinAsciiDigits(
     minimum: Int = MIN_CONFIRMABLE_PHONE_DIGITS,
 ): Boolean = filterAsciiDigits(value).length >= minimum
 
-private fun stripPhoneFormatControls(value: String): String =
-    buildString(value.length) {
-        for (ch in value) {
-            when (ch.code) {
-                ZERO_WIDTH_SPACE,
-                ZERO_WIDTH_NON_JOINER,
-                ZERO_WIDTH_JOINER,
-                LEFT_TO_RIGHT_MARK,
-                RIGHT_TO_LEFT_MARK,
-                BYTE_ORDER_MARK,
-                -> Unit
+private fun Char.isPhoneFormatControl(): Boolean =
+    when (code) {
+        ZERO_WIDTH_SPACE,
+        ZERO_WIDTH_NON_JOINER,
+        ZERO_WIDTH_JOINER,
+        LEFT_TO_RIGHT_MARK,
+        RIGHT_TO_LEFT_MARK,
+        BYTE_ORDER_MARK,
+        -> true
 
-                else -> append(ch)
-            }
-        }
+        else -> false
     }
 
 private const val DEFAULT_PHONE_INPUT_LENGTH = 24
+private const val MAX_PHONE_INPUT_SCAN_LENGTH = 256
 private const val MIN_CONFIRMABLE_PHONE_DIGITS = 5
 private const val ZERO_WIDTH_SPACE = 0x200B
 private const val ZERO_WIDTH_NON_JOINER = 0x200C

@@ -34,6 +34,9 @@ All notable changes to CallShield will be documented in this file.
 - Repeated-call urgency now requires attempts separated by at least 15 seconds;
   duplicate call-log rows and machine-speed retry bursts can no longer create
   an automatic allow decision.
+- Exported telephone deep links and post-call handles are now normalized with
+  bounded work before reaching number details, preventing oversized or
+  Unicode-homoglyph input from crossing the UI trust boundary.
 
 ## v1.7.19 — 2026-07-21
 
