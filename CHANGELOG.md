@@ -6,6 +6,10 @@ All notable changes to CallShield will be documented in this file.
 
 ### Added
 
+- **Rule-priority conflict warnings.** Exact blocks, wildcard/range blocks,
+  whitelist entries, and emergency allows are compared while editing. The
+  inline warning names the rule that wins, including representative numbers
+  covered by a broader pattern, before the user saves the overlap.
 - **Persistent per-app language selection.** Settings now includes a language
   picker synchronized with Android's App Languages preference on Android 13+
   and persisted through AppCompat on Android 12 and lower. Release builds list
