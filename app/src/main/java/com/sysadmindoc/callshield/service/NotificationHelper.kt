@@ -290,8 +290,7 @@ object NotificationHelper {
                         PhoneFormatter.formatIsolated(number),
                         displayReason,
                     ),
-                )
-                .setContentIntent(openIntent)
+                ).setContentIntent(openIntent)
                 .setAutoCancel(true)
                 .setGroup(GROUP_BLOCKED)
                 // Android 16 auto-groups same-app notifications and cooldown-mutes

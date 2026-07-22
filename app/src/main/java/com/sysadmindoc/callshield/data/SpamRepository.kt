@@ -220,7 +220,7 @@ class SpamRepository(
         const val SYNC_SOURCE_BUNDLED = "bundled"
 
         @Volatile
-        private var INSTANCE: SpamRepository? = null
+        private var instance: SpamRepository? = null
 
         fun getInstance(
             context: Context,
@@ -228,13 +228,13 @@ class SpamRepository(
             remote: SpamDataSource = GitHubDataSource(),
             checkerDependencies: CheckerDependencies = CheckerDependencies(),
         ): SpamRepository =
-            INSTANCE ?: synchronized(this) {
-                INSTANCE ?: SpamRepository(
+            instance ?: synchronized(this) {
+                instance ?: SpamRepository(
                     context = context.applicationContext,
                     database = database,
                     remote = remote,
                     checkerDependencies = checkerDependencies,
-                ).also { INSTANCE = it }
+                ).also { instance = it }
             }
     }
 
@@ -325,8 +325,7 @@ class SpamRepository(
 
     suspend fun setOnboardingDone() = settingsRepository.setOnboardingDone()
 
-    internal suspend fun setProtectionRoleLossNoticeShown(shown: Boolean) =
-        settingsRepository.setProtectionRoleLossNoticeShown(shown)
+    internal suspend fun setProtectionRoleLossNoticeShown(shown: Boolean) = settingsRepository.setProtectionRoleLossNoticeShown(shown)
 
     suspend fun setAutoCleanup(enabled: Boolean) = settingsRepository.setAutoCleanup(enabled)
 
@@ -358,8 +357,7 @@ class SpamRepository(
 
     suspend fun setContactsOnly(enabled: Boolean) = settingsRepository.setContactsOnly(enabled)
 
-    suspend fun setSelectedContactGroups(groupKeys: Set<String>) =
-        settingsRepository.setSelectedContactGroups(groupKeys)
+    suspend fun setSelectedContactGroups(groupKeys: Set<String>) = settingsRepository.setSelectedContactGroups(groupKeys)
 
     suspend fun setOutgoingRiskWarning(enabled: Boolean) = settingsRepository.setOutgoingRiskWarning(enabled)
 

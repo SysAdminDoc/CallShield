@@ -83,8 +83,8 @@ internal object ContactGroupCatalog {
         context: Context,
         number: String,
         selectedKeys: Set<String>,
-    ): Boolean {
-        return selectedKeys.isNotEmpty() &&
+    ): Boolean =
+        selectedKeys.isNotEmpty() &&
             try {
                 val contactIds = lookupContactIds(context, number)
                 val groupIds = resolveGroupIds(context, selectedKeys)
@@ -92,7 +92,6 @@ internal object ContactGroupCatalog {
             } catch (_: RuntimeException) {
                 false
             }
-    }
 
     internal fun stableKey(
         accountName: String?,
@@ -197,7 +196,7 @@ internal object ContactGroupCatalog {
     private val GROUP_SUMMARY_PROJECTION =
         GROUP_IDENTITY_PROJECTION +
             arrayOf(
-            ContactsContract.Groups.SUMMARY_WITH_PHONES,
+                ContactsContract.Groups.SUMMARY_WITH_PHONES,
             )
 
     private const val MAX_PHONE_LOOKUP_MATCHES = 16

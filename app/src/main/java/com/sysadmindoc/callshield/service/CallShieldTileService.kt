@@ -45,7 +45,7 @@ class CallShieldTileService : TileService() {
     }
 
     private fun updateTile() {
-        val tile = qsTile ?: return
+        if (qsTile == null) return
         scope.launch {
             val repo = SpamRepository.getInstance(applicationContext)
             val active = repo.blockCallsEnabled.first() || repo.blockSmsEnabled.first()

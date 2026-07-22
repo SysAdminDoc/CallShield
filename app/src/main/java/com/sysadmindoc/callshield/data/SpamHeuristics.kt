@@ -107,15 +107,6 @@ class SpamHeuristics
             return digits.substring(0, 3) in tollFreePrefixes
         }
 
-        // ── International Premium Rate ─────────────────────────────────────
-        // These are almost always scam/wangiri callback numbers
-        private val premiumCountryCodes =
-            setOf(
-                "900", // US premium
-                "976", // US premium legacy
-                "1900", // US premium with country code
-            )
-
         // Caribbean NANP area codes that genuinely share the +1 country code and
         // are heavily abused for wangiri/premium callback scams. These are the
         // ONLY codes that may be matched against a +1 NANP number's area code.

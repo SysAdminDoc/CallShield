@@ -75,8 +75,8 @@ internal fun buildDurationTtsText(
     text: String,
     durationText: String,
     durationSeconds: Int,
-): CharSequence {
-    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA) {
+): CharSequence =
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA) {
         val start = text.indexOf(durationText)
         if (text.isNotEmpty() && durationText.isNotEmpty() && start >= 0) {
             buildDurationTtsTextApi36(
@@ -91,7 +91,6 @@ internal fun buildDurationTtsText(
     } else {
         text
     }
-}
 
 @RequiresApi(Build.VERSION_CODES.BAKLAVA)
 private fun buildDurationTtsTextApi36(

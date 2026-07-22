@@ -188,11 +188,11 @@ abstract class AppDatabase : RoomDatabase() {
 
     companion object {
         @Volatile
-        private var INSTANCE: AppDatabase? = null
+        private var instance: AppDatabase? = null
 
         fun getInstance(context: Context): AppDatabase =
-            INSTANCE ?: synchronized(this) {
-                INSTANCE ?: Room
+            instance ?: synchronized(this) {
+                instance ?: Room
                     .databaseBuilder(
                         context.applicationContext,
                         AppDatabase::class.java,
@@ -216,7 +216,7 @@ abstract class AppDatabase : RoomDatabase() {
                             PhoneIdentityCanonicalizer.fromContext(context.applicationContext),
                         ),
                     ).build()
-                    .also { INSTANCE = it }
+                    .also { instance = it }
             }
 
         /** SQLite corruption messages that a rebuild can recover from. */
@@ -258,10 +258,10 @@ abstract class AppDatabase : RoomDatabase() {
         fun recoverFromCorruption(context: Context): Boolean =
             synchronized(this) {
                 try {
-                    INSTANCE?.close()
+                    instance?.close()
                 } catch (_: Exception) {
                 }
-                INSTANCE = null
+                instance = null
                 context.applicationContext.deleteDatabase("callshield.db")
             }
     }

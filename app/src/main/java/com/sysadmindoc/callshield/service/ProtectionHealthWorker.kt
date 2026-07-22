@@ -73,11 +73,15 @@ class ProtectionHealthWorker
                 )
 
             when (action) {
-                ProtectionHealthAction.NONE -> Unit
+                ProtectionHealthAction.NONE -> {
+                    Unit
+                }
+
                 ProtectionHealthAction.CLEAR_ROLE_LOSS_NOTICE -> {
                     repository.setProtectionRoleLossNoticeShown(false)
                     NotificationHelper.dismissCallScreeningRoleLost(applicationContext)
                 }
+
                 ProtectionHealthAction.NOTIFY_ROLE_LOST -> {
                     if (NotificationHelper.notifyCallScreeningRoleLost(applicationContext)) {
                         repository.setProtectionRoleLossNoticeShown(true)
@@ -113,7 +117,6 @@ class ProtectionHealthWorker
                     .setInitialDelay(CHECK_INTERVAL_HOURS, TimeUnit.HOURS)
                     .build()
 
-            internal fun immediateRequest(): OneTimeWorkRequest =
-                OneTimeWorkRequestBuilder<ProtectionHealthWorker>().build()
+            internal fun immediateRequest(): OneTimeWorkRequest = OneTimeWorkRequestBuilder<ProtectionHealthWorker>().build()
         }
     }

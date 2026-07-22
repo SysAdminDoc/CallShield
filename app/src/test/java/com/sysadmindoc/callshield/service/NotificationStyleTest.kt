@@ -69,6 +69,5 @@ class NotificationStyleTest {
         assertTrue(notification.flags and Notification.FLAG_ONGOING_EVENT != 0)
     }
 
-    private fun postedNotification(id: Int): Notification =
-        requireNotNull(shadowOf(notificationManager).getNotification(id))
+    private fun postedNotification(id: Int): Notification = requireNotNull(shadowOf(notificationManager).getNotification(id))
 }

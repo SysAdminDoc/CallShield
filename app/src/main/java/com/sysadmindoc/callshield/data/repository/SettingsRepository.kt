@@ -182,8 +182,7 @@ class SettingsRepository(
             if (enabled) current + packageName else current - packageName
     }
 
-    suspend fun resetNotificationScreeningPackages() =
-        dataStore.edit { it.remove(SpamRepository.KEY_NOTIFICATION_SCREENING_PACKAGES) }
+    suspend fun resetNotificationScreeningPackages() = dataStore.edit { it.remove(SpamRepository.KEY_NOTIFICATION_SCREENING_PACKAGES) }
 
     suspend fun setNotificationScreeningPackages(packageNames: Set<String>) =
         dataStore.edit { prefs ->

@@ -50,8 +50,7 @@ class PhoneIdentityCanonicalizer internal constructor(
         private const val MAX_OPAQUE_SENDER_LENGTH = 64
         private val OPAQUE_SENDER_PATTERN = Regex("[A-Za-z0-9][A-Za-z0-9 ._-]*")
 
-        fun fromContext(context: Context): PhoneIdentityCanonicalizer =
-            PhoneIdentityCanonicalizer(resolveRegion(context))
+        fun fromContext(context: Context): PhoneIdentityCanonicalizer = PhoneIdentityCanonicalizer(resolveRegion(context))
 
         internal fun resolveRegion(context: Context): String? {
             val telephony = context.getSystemService(Context.TELEPHONY_SERVICE) as? TelephonyManager

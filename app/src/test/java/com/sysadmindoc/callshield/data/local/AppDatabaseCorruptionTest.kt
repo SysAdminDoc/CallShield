@@ -10,10 +10,14 @@ import org.junit.Test
  * rebuilding the DB) versus a transient/logic error (must not wipe user data).
  */
 class AppDatabaseCorruptionTest {
-    private class FakeCorruptException(message: String) : RuntimeException(message)
+    private class FakeCorruptException(
+        message: String,
+    ) : RuntimeException(message)
 
     // A stand-in whose simple class name matches the Android type we match on.
-    private class SQLiteDatabaseCorruptException(message: String) : RuntimeException(message)
+    private class SQLiteDatabaseCorruptException(
+        message: String,
+    ) : RuntimeException(message)
 
     @Test
     fun `malformed disk image message is corruption`() {

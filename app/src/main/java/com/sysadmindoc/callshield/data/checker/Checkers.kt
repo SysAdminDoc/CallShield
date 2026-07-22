@@ -747,10 +747,6 @@ internal class HeuristicChecker(
                     putExtra("number", number)
                     putExtra("confidence", confidence)
                     putExtra("reason", reason)
-                    putExtra(
-                        "verification_status",
-                        CallerIdOverlayService.VERIFICATION_STATUS_UNKNOWN,
-                    )
                 }
             ctx.startService(intent)
         } catch (_: Exception) {
@@ -805,11 +801,8 @@ internal class MlScorerChecker(
 // SMS-only extensions — run after the shared chain passes, only for SMS
 // ─────────────────────────────────────────────────────────────────────
 
-/**
- * Named with a trailing `_Checker` to avoid colliding with the top-level
- * `SmsContextChecker` object.
- */
-internal class SmsContextChecker_Checker(
+/** Adapts the SMS context trust evaluator to the shared checker chain. */
+internal class SmsContextTrustChecker(
     private val appContext: Context,
     private val smsContextChecker: SmsContextChecker,
 ) : IChecker {

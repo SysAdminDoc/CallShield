@@ -487,7 +487,8 @@ fun BlockedCallItem(
                     if (call.matchReason.isNotEmpty()) {
                         val categoryPolicy =
                             remember(call.matchReason) {
-                                com.sysadmindoc.callshield.data.CategoryCallPolicy.parseMatchSource(call.matchReason)
+                                com.sysadmindoc.callshield.data.CategoryCallPolicy
+                                    .parseMatchSource(call.matchReason)
                             }
                         val reasonText =
                             if (categoryPolicy == null) {

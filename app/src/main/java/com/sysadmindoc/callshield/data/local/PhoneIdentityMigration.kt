@@ -43,29 +43,30 @@ private fun migrateSpamNumbers(
     canonicalizer: PhoneIdentityCanonicalizer,
 ) {
     val rows =
-        db.query(
-            "SELECT id, number, type, reports, firstSeen, lastSeen, description, source, " +
-                "isUserBlocked, expiresAt FROM spam_numbers",
-        ).use { cursor ->
-            buildList {
-                while (cursor.moveToNext()) {
-                    add(
-                        SpamRow(
-                            id = cursor.getLong(0),
-                            number = cursor.getString(1),
-                            type = cursor.getString(2),
-                            reports = cursor.getInt(3),
-                            firstSeen = cursor.getString(4),
-                            lastSeen = cursor.getString(5),
-                            description = cursor.getString(6),
-                            source = cursor.getString(7),
-                            isUserBlocked = cursor.getInt(8) != 0,
-                            expiresAt = cursor.getNullableLong(9),
-                        ),
-                    )
+        db
+            .query(
+                "SELECT id, number, type, reports, firstSeen, lastSeen, description, source, " +
+                    "isUserBlocked, expiresAt FROM spam_numbers",
+            ).use { cursor ->
+                buildList {
+                    while (cursor.moveToNext()) {
+                        add(
+                            SpamRow(
+                                id = cursor.getLong(0),
+                                number = cursor.getString(1),
+                                type = cursor.getString(2),
+                                reports = cursor.getInt(3),
+                                firstSeen = cursor.getString(4),
+                                lastSeen = cursor.getString(5),
+                                description = cursor.getString(6),
+                                source = cursor.getString(7),
+                                isUserBlocked = cursor.getInt(8) != 0,
+                                expiresAt = cursor.getNullableLong(9),
+                            ),
+                        )
+                    }
                 }
             }
-        }
     rows
         .groupBy { row -> canonicalizer.canonicalizePhone(row.number).ifBlank { row.number } }
         .forEach { (canonicalNumber, matchingRows) ->
@@ -119,8 +120,18 @@ private fun mergeSpamRows(
         number = canonicalNumber,
         type = preferred.type,
         reports = rows.maxOf(SpamRow::reports),
-        firstSeen = rows.map(SpamRow::firstSeen).filter(String::isNotBlank).minOrNull().orEmpty(),
-        lastSeen = rows.map(SpamRow::lastSeen).filter(String::isNotBlank).maxOrNull().orEmpty(),
+        firstSeen =
+            rows
+                .map(SpamRow::firstSeen)
+                .filter(String::isNotBlank)
+                .minOrNull()
+                .orEmpty(),
+        lastSeen =
+            rows
+                .map(SpamRow::lastSeen)
+                .filter(String::isNotBlank)
+                .maxOrNull()
+                .orEmpty(),
         description =
             preferred.description.ifBlank {
                 rows.firstNotNullOfOrNull { it.description.ifBlank { null } }.orEmpty()
@@ -136,24 +147,25 @@ private fun migrateWhitelist(
     canonicalizer: PhoneIdentityCanonicalizer,
 ) {
     val rows =
-        db.query(
-            "SELECT id, number, description, addedTimestamp, isEmergency, expiresAt FROM whitelist",
-        ).use { cursor ->
-            buildList {
-                while (cursor.moveToNext()) {
-                    add(
-                        WhitelistRow(
-                            id = cursor.getLong(0),
-                            number = cursor.getString(1),
-                            description = cursor.getString(2),
-                            addedTimestamp = cursor.getLong(3),
-                            isEmergency = cursor.getInt(4) != 0,
-                            expiresAt = cursor.getNullableLong(5),
-                        ),
-                    )
+        db
+            .query(
+                "SELECT id, number, description, addedTimestamp, isEmergency, expiresAt FROM whitelist",
+            ).use { cursor ->
+                buildList {
+                    while (cursor.moveToNext()) {
+                        add(
+                            WhitelistRow(
+                                id = cursor.getLong(0),
+                                number = cursor.getString(1),
+                                description = cursor.getString(2),
+                                addedTimestamp = cursor.getLong(3),
+                                isEmergency = cursor.getInt(4) != 0,
+                                expiresAt = cursor.getNullableLong(5),
+                            ),
+                        )
+                    }
                 }
             }
-        }
     rows
         .groupBy { row -> canonicalizer.canonicalizePhone(row.number).ifBlank { row.number } }
         .forEach { (canonicalNumber, matchingRows) ->
@@ -214,5 +226,4 @@ private fun canonicalizeLogTable(
     }
 }
 
-private fun android.database.Cursor.getNullableLong(index: Int): Long? =
-    if (isNull(index)) null else getLong(index)
+private fun android.database.Cursor.getNullableLong(index: Int): Long? = if (isNull(index)) null else getLong(index)

@@ -139,7 +139,8 @@ fun NumberDetailScreen(
                 liveResult?.takeIf { it.isSpam }?.let { r ->
                     val categoryPolicy =
                         remember(r.matchSource) {
-                            com.sysadmindoc.callshield.data.CategoryCallPolicy.parseMatchSource(r.matchSource)
+                            com.sysadmindoc.callshield.data.CategoryCallPolicy
+                                .parseMatchSource(r.matchSource)
                         }
                     val category =
                         remember(r.matchSource, r.type, r.description, r.confidence) {
@@ -190,7 +191,8 @@ fun NumberDetailScreen(
                     if (r.isSpam) {
                         val categoryPolicy =
                             remember(r.matchSource) {
-                                com.sysadmindoc.callshield.data.CategoryCallPolicy.parseMatchSource(r.matchSource)
+                                com.sysadmindoc.callshield.data.CategoryCallPolicy
+                                    .parseMatchSource(r.matchSource)
                             }
                         val sourceLabel =
                             if (categoryPolicy == null) {

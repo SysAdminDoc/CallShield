@@ -41,8 +41,7 @@ object RuleConflictAnalyzer {
         number: String,
         whitelist: List<WhitelistEntry>,
         now: Long = System.currentTimeMillis(),
-    ): RuleConflict? =
-        activeWhitelistMatch(number, whitelist, now)?.toConflict(overriddenRule = RuleConflictRule.EXACT_BLOCK)
+    ): RuleConflict? = activeWhitelistMatch(number, whitelist, now)?.toConflict(overriddenRule = RuleConflictRule.EXACT_BLOCK)
 
     fun forWildcardBlock(
         pattern: String,
@@ -92,7 +91,9 @@ object RuleConflictAnalyzer {
                     RuleConflictRule.RANGE_BLOCK
                 }
 
-                else -> return null
+                else -> {
+                    return null
+                }
             }
         return RuleConflict(
             winner = if (emergency) RuleConflictWinner.EMERGENCY_ALLOW else RuleConflictWinner.WHITELIST,
