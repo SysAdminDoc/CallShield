@@ -56,6 +56,9 @@ All notable changes to CallShield will be documented in this file.
 - User-shared crash logs now redact phone-like values, credential fields, and
   URL queries/fragments from exception messages, while bounding individual
   messages and stack-frame output against pathological crash payloads.
+- Screening now canonicalizes bounded E.164 caller IDs before applying unknown
+  caller rules, so malformed, text-only, and overlong `tel:` handles cannot
+  bypass the user's block-unknown setting.
 
 ## v1.7.19 — 2026-07-21
 

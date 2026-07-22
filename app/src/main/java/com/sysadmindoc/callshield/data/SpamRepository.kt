@@ -640,32 +640,29 @@ class SpamRepository(
  * Context it requires).
  */
 internal fun normalizePhoneNumber(number: String): String {
-    // Pre-strip Unicode formatting control marks (ZWSP, ZWJ, ZWNJ, LRM,
-    // RLM, BOM). These can be injected into spoofed caller-ID strings
-    // and bypass naive `trim()` (which only sees ASCII whitespace).
-    // Doing this first means the `startsWith("+")` check below sees the
-    // real leading character.
-    val cleaned =
-        buildString(number.length) {
-            for (ch in number) {
-                when (ch.code) {
-                    0x200B, 0x200C, 0x200D, 0x200E, 0x200F, 0xFEFF -> Unit
-                    else -> append(ch)
-                }
-            }
+    if (number.length > MAX_RAW_PHONE_NUMBER_LENGTH) return ""
+    val digits = StringBuilder(MAX_E164_DIGITS)
+    var firstMeaningfulCharacter: Char? = null
+    for (ch in number) {
+        if (ch.code in PHONE_FORMAT_CONTROL_CODES) continue
+        if (firstMeaningfulCharacter == null && !ch.isWhitespace()) {
+            firstMeaningfulCharacter = ch
         }
-    val trimmed = cleaned.trim()
-    val hasPlus = trimmed.startsWith("+")
-    val digits =
-        buildString(trimmed.length) {
-            for (ch in trimmed) if (ch in '0'..'9') append(ch)
+        if (ch in '0'..'9') {
+            if (digits.length >= MAX_E164_DIGITS) return ""
+            digits.append(ch)
         }
+    }
     return when {
         digits.isEmpty() -> ""
-        hasPlus -> "+$digits"
-        else -> digits
+        firstMeaningfulCharacter == '+' -> "+$digits"
+        else -> digits.toString()
     }
 }
+
+private const val MAX_E164_DIGITS = 15
+private const val MAX_RAW_PHONE_NUMBER_LENGTH = 256
+private val PHONE_FORMAT_CONTROL_CODES = setOf(0x200B, 0x200C, 0x200D, 0x200E, 0x200F, 0xFEFF)
 
 /**
  * Escape the SQL LIKE wildcard characters so user-typed `%` or `_` is

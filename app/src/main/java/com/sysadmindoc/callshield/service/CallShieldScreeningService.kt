@@ -60,7 +60,7 @@ class CallShieldScreeningService : CallScreeningService() {
                 }
 
                 val handle = callDetails.handle
-                val number = handle?.schemeSpecificPart ?: ""
+                val number = repository.normalizeNumber(handle?.schemeSpecificPart.orEmpty())
 
                 if (number.isEmpty()) {
                     if (prefs[SpamRepository.KEY_BLOCK_UNKNOWN] ?: false) {
