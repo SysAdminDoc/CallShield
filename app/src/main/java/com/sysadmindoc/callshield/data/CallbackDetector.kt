@@ -11,7 +11,8 @@ import javax.inject.Inject
 /**
  * Callback detection — stolen from SpamBlocker.
  * 1. Dialed Number Recognition: don't block numbers the user recently called
- * 2. Repeated Call Allow-Through: if same number calls 2x in 5 min, allow (urgent)
+ * 2. Repeated Call Allow-Through: if the same number retries over a meaningful
+ *    interval within 5 minutes, allow (urgent)
  *
  * These two features dramatically reduce false positives.
  *
@@ -73,14 +74,15 @@ class CallbackDetector
 
         /**
          * Check if this number has called multiple times within a short window.
-         * If someone calls 2+ times in 5 minutes, it's likely urgent/legitimate.
-         * Robocallers don't do this — they cycle through numbers.
+         * If someone retries after at least a short pause within 5 minutes,
+         * the repeated attempt is more likely urgent or legitimate.
          */
         suspend fun isRepeatedUrgentCall(
             context: Context,
             number: String,
             windowMinutes: Int = 5,
             threshold: Int = 2,
+            minRetryIntervalMillis: Long = MIN_URGENT_RETRY_INTERVAL_MILLIS,
         ): Boolean =
             withContext(Dispatchers.IO) {
                 val digits = filterAsciiDigitsLast(number, 10)
@@ -92,25 +94,42 @@ class CallbackDetector
                     val cursor =
                         context.contentResolver.query(
                             CallLog.Calls.CONTENT_URI,
-                            arrayOf(CallLog.Calls.NUMBER),
+                            arrayOf(CallLog.Calls.NUMBER, CallLog.Calls.DATE),
                             query.selection,
                             query.selectionArgs,
-                            null,
+                            "${CallLog.Calls.DATE} DESC",
                         )
-                    var count = 0
+                    val matchingTimestamps = mutableListOf<Long>()
                     cursor?.use { c ->
                         val numIdx = c.getColumnIndex(CallLog.Calls.NUMBER)
-                        if (numIdx < 0) return@withContext false
+                        val dateIdx = c.getColumnIndex(CallLog.Calls.DATE)
+                        if (numIdx < 0 || dateIdx < 0) return@withContext false
                         while (c.moveToNext()) {
                             val callDigits = filterAsciiDigitsLast(c.getString(numIdx) ?: "", 10)
-                            if (callDigits == digits) count++
+                            if (callDigits == digits) matchingTimestamps += c.getLong(dateIdx)
                         }
                     }
-                    count >= threshold
+                    hasUrgentRetrySpacing(matchingTimestamps, threshold, minRetryIntervalMillis)
                 } catch (_: SecurityException) {
                     false
                 }
             }
+
+        /**
+         * Repeated-call bypasses must represent distinct attempts, not duplicate
+         * provider rows or a machine-generated burst at the same instant.
+         */
+        internal fun hasUrgentRetrySpacing(
+            timestamps: List<Long>,
+            threshold: Int,
+            minRetryIntervalMillis: Long = MIN_URGENT_RETRY_INTERVAL_MILLIS,
+        ): Boolean {
+            val safeThreshold = threshold.coerceAtLeast(2)
+            if (timestamps.size < safeThreshold) return false
+            val safeInterval = minRetryIntervalMillis.coerceAtLeast(1L)
+            val relevant = timestamps.sortedDescending().take(safeThreshold)
+            return relevant.first() - relevant.last() >= safeInterval
+        }
 
         suspend fun wasAnsweredRepeatedly(
             context: Context,
@@ -287,6 +306,7 @@ class CallbackDetector
             const val DEFAULT_ANSWERED_CALLER_THRESHOLD = 2
             const val DEFAULT_EMERGENCY_CALLBACK_WINDOW_MINUTES = 240
             const val MIN_ANSWERED_CALL_DURATION_SECONDS = 1
+            const val MIN_URGENT_RETRY_INTERVAL_MILLIS = 15_000L
             private const val MILLIS_PER_DAY = 86_400_000L
             private const val MILLIS_PER_MINUTE = 60_000L
             private const val EMERGENCY_COUNTRY_PREFIXED_DIGITS = 4
@@ -306,7 +326,15 @@ class CallbackDetector
                 number: String,
                 windowMinutes: Int = 5,
                 threshold: Int = 2,
-            ): Boolean = shared.isRepeatedUrgentCall(context, number, windowMinutes, threshold)
+                minRetryIntervalMillis: Long = MIN_URGENT_RETRY_INTERVAL_MILLIS,
+            ): Boolean =
+                shared.isRepeatedUrgentCall(
+                    context,
+                    number,
+                    windowMinutes,
+                    threshold,
+                    minRetryIntervalMillis,
+                )
 
             suspend fun wasAnsweredRepeatedly(
                 context: Context,
@@ -332,6 +360,12 @@ class CallbackDetector
                 windowMinutes: Int,
                 last7Digits: String,
             ): CallLogQuery = shared.buildRepeatedUrgentCallQuery(nowMillis, windowMinutes, last7Digits)
+
+            internal fun hasUrgentRetrySpacing(
+                timestamps: List<Long>,
+                threshold: Int,
+                minRetryIntervalMillis: Long = MIN_URGENT_RETRY_INTERVAL_MILLIS,
+            ): Boolean = shared.hasUrgentRetrySpacing(timestamps, threshold, minRetryIntervalMillis)
 
             internal fun buildAnsweredCallerQuery(
                 nowMillis: Long,
