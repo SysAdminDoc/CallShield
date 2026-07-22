@@ -22,6 +22,23 @@
 
 CallShield blocks spam calls and texts using a **15+ layer on-device detection engine** with a gradient-boosted tree ML scorer, campaign burst detection, RCS notification filter, and real-time caller ID overlay. Powered by a 32,933-number database with scheduled hot-list updates. Community-maintained, no accounts, no tracking.
 
+## v1.7.22 Highlights
+
+- **Safer personal trust rules** — contact trust can cover every contact or
+  only selected Android contact groups, with local-only identifiers and clear
+  degraded behavior when contacts permission is unavailable.
+- **More precise call control** — each detected call category can ring, go to
+  voicemail, block, or inherit the global policy; known-risk outgoing calls can
+  optionally show a local-only warning without interrupting the call.
+- **Protected portable backups** — passphrase-encrypted exports use
+  PBKDF2-HMAC-SHA256 and AES-256-GCM, while atomic restore preserves the prior
+  settings and database state if any selected section fails.
+- **Stronger protection recovery** — CallShield detects loss of Android's call
+  screening role and provides a single actionable recovery notification.
+- **Zero-baseline release gates** — ktlint and Detekt now pass without stored
+  suppression baselines, release metadata is synchronized automatically, and
+  signing-secret preflight rejects tracked credentials without echoing them.
+
 ## v1.7.21 Highlights
 
 - **Four professional themes** — choose System, Light, Graphite, or true-black
@@ -203,7 +220,7 @@ CallShield blocks spam calls and texts using a **15+ layer on-device detection e
 5. **Callback-aware** — won't block callbacks from numbers you recently called, answered repeatedly, after a local emergency call, or urgent repeated callers
 6. **Community-driven** — one-tap anonymous contribution via Cloudflare Worker, daily merge into database
 
-## Detection Pipeline (v1.7.21)
+## Detection Pipeline (v1.7.22)
 
 All detection layers implement a shared `IChecker` interface and run in priority order via `CheckerPipeline.run` — first non-null result wins, every layer is testable in isolation. Priorities are stable numbers; the ladder below is the live order.
 

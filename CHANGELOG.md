@@ -4,6 +4,8 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+## v1.7.22 — 2026-07-22
+
 ### Changed
 
 - Detekt and ktlint now run as zero-baseline gates in the standard Android

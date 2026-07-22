@@ -1,0 +1,4 @@
+Choose selected contact groups to trust, set call handling by detected category,
+encrypt portable backups with a passphrase, and optionally warn on known-risk
+outgoing calls. Protection-role recovery, atomic restore rollback, synchronized
+release metadata, and zero-baseline static analysis strengthen reliability.
