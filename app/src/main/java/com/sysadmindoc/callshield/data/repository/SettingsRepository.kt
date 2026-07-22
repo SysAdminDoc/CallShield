@@ -132,9 +132,10 @@ class SettingsRepository(
 
     suspend fun setRcsFilter(enabled: Boolean) = dataStore.edit { it[SpamRepository.KEY_RCS_FILTER] = enabled }
 
-    suspend fun setPostCallScreen(enabled: Boolean) = dataStore.edit {
-        it[SpamRepository.KEY_POST_CALL_SCREEN] = enabled
-    }
+    suspend fun setPostCallScreen(enabled: Boolean) =
+        dataStore.edit {
+            it[SpamRepository.KEY_POST_CALL_SCREEN] = enabled
+        }
 
     suspend fun setNotificationScreeningPackage(
         packageName: String,
