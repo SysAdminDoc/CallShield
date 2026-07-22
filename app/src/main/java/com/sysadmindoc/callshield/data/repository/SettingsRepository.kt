@@ -1,6 +1,7 @@
 package com.sysadmindoc.callshield.data.repository
 
 import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import com.squareup.moshi.Moshi
@@ -304,6 +305,14 @@ class SettingsRepository(
     suspend fun setFreqThreshold(threshold: Int) = dataStore.edit { it[SpamRepository.KEY_FREQ_THRESHOLD] = threshold.coerceIn(1, 25) }
 
     suspend fun readPrefsSnapshot(): Preferences = dataStore.data.first()
+
+    internal suspend fun editPreferences(transform: suspend (MutablePreferences) -> Unit) {
+        dataStore.edit(transform)
+    }
+
+    internal suspend fun replacePrefsSnapshot(snapshot: Preferences) {
+        dataStore.updateData { snapshot }
+    }
 
     suspend fun readLastDataSha(): String? = dataStore.data.first()[SpamRepository.KEY_LAST_SHA]
 

@@ -2,6 +2,14 @@
 
 All notable changes to CallShield will be documented in this file.
 
+## Unreleased
+
+### Fixed
+
+- Portable restore now writes all selected settings in one atomic DataStore
+  update before mutating Room. A settings failure leaves every selected table
+  untouched, and a later Room failure restores the exact prior preferences.
+
 ## v1.7.21 — 2026-07-22
 
 ### Added
