@@ -7,6 +7,7 @@ import android.telecom.TelecomManager
 import android.util.Log
 import com.sysadmindoc.callshield.data.CategoryCallAction
 import com.sysadmindoc.callshield.data.CategoryCallPolicy
+import com.sysadmindoc.callshield.data.ContactGroupCatalog
 import com.sysadmindoc.callshield.data.SpamHeuristics
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup
@@ -78,7 +79,12 @@ class CallShieldScreeningService : CallScreeningService() {
                 // needs any of the 13 downstream checks, and skipping them saves
                 // tens of milliseconds against the 5 s deadline.
                 if ((prefs[SpamRepository.KEY_CONTACT_WHITELIST] ?: true) &&
-                    spamHeuristics.isInContacts(appContext, number)
+                    spamHeuristics.isInContacts(
+                        appContext,
+                        number,
+                        prefs[SpamRepository.KEY_SELECTED_CONTACT_GROUPS]
+                            ?.let(ContactGroupCatalog::preserveScope),
+                    )
                 ) {
                     respondAllow(callDetails)
                     return@launch

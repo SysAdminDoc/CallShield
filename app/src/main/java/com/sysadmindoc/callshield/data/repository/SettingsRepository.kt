@@ -7,10 +7,11 @@ import androidx.datastore.preferences.core.edit
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.Types
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
-import com.sysadmindoc.callshield.data.CallbackDetector
 import com.sysadmindoc.callshield.data.CallCategory
+import com.sysadmindoc.callshield.data.CallbackDetector
 import com.sysadmindoc.callshield.data.CategoryCallAction
 import com.sysadmindoc.callshield.data.CategoryCallPolicy
+import com.sysadmindoc.callshield.data.ContactGroupCatalog
 import com.sysadmindoc.callshield.data.NotificationScreeningSources
 import com.sysadmindoc.callshield.data.RegionRules
 import com.sysadmindoc.callshield.data.SpamRepository
@@ -65,6 +66,12 @@ class SettingsRepository(
         dataStore.data.map { it[SpamRepository.KEY_CONTACT_WHITELIST] ?: true }
     val contactsOnlyEnabled: Flow<Boolean> =
         dataStore.data.map { it[SpamRepository.KEY_CONTACTS_ONLY] ?: false }
+    val selectedContactGroups: Flow<Set<String>> =
+        dataStore.data.map {
+            it[SpamRepository.KEY_SELECTED_CONTACT_GROUPS]
+                ?.let(ContactGroupCatalog::preserveScope)
+                .orEmpty()
+        }
     val regionBlockEnabled: Flow<Boolean> =
         dataStore.data.map { it[SpamRepository.KEY_REGION_BLOCK] ?: false }
     val allowedRegions: Flow<Set<String>> =
@@ -241,6 +248,16 @@ class SettingsRepository(
     suspend fun setContactWhitelist(enabled: Boolean) = dataStore.edit { it[SpamRepository.KEY_CONTACT_WHITELIST] = enabled }
 
     suspend fun setContactsOnly(enabled: Boolean) = dataStore.edit { it[SpamRepository.KEY_CONTACTS_ONLY] = enabled }
+
+    suspend fun setSelectedContactGroups(groupKeys: Set<String>) =
+        dataStore.edit { preferences ->
+            val sanitized = ContactGroupCatalog.sanitizeKeys(groupKeys)
+            if (sanitized.isEmpty()) {
+                preferences.remove(SpamRepository.KEY_SELECTED_CONTACT_GROUPS)
+            } else {
+                preferences[SpamRepository.KEY_SELECTED_CONTACT_GROUPS] = sanitized
+            }
+        }
 
     suspend fun setRegionBlock(enabled: Boolean) = dataStore.edit { it[SpamRepository.KEY_REGION_BLOCK] = enabled }
 

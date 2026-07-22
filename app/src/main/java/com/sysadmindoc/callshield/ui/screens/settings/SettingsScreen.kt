@@ -72,6 +72,7 @@ internal const val SETTINGS_BACKUP_ENCRYPTION_TOGGLE_TAG = "settings_backup_encr
 internal const val SETTINGS_BACKUP_PASSPHRASE_TAG = "settings_backup_passphrase"
 internal const val SETTINGS_BACKUP_CONFIRM_TAG = "settings_backup_confirm"
 internal const val SETTINGS_RESTORE_PASSPHRASE_TAG = "settings_restore_passphrase"
+internal const val SETTINGS_CONTACT_SCOPE_TAG = "settings_contact_scope"
 
 private val backupSectionOrder =
     listOf(
@@ -102,6 +103,9 @@ fun SettingsScreen(viewModel: MainViewModel) {
     val urlhausStripQuery by viewModel.urlhausStripQueryEnabled.collectAsStateWithLifecycle()
     val contactWhitelist by viewModel.contactWhitelistEnabled.collectAsStateWithLifecycle()
     val contactsOnly by viewModel.contactsOnlyEnabled.collectAsStateWithLifecycle()
+    val selectedContactGroups by viewModel.selectedContactGroups.collectAsStateWithLifecycle()
+    val contactGroups by viewModel.contactGroups.collectAsStateWithLifecycle()
+    val contactGroupsLoading by viewModel.contactGroupsLoading.collectAsStateWithLifecycle()
     val regionBlockEnabled by viewModel.regionBlockEnabled.collectAsStateWithLifecycle()
     val allowedRegions by viewModel.allowedRegions.collectAsStateWithLifecycle()
     val cnapTrustPatterns by viewModel.cnapTrustPatterns.collectAsStateWithLifecycle()
@@ -134,6 +138,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
     var showNotificationScreeningSources by remember { mutableStateOf(false) }
     var showRegionCnapRules by remember { mutableStateOf(false) }
     var showCategoryCallActions by remember { mutableStateOf(false) }
+    var showContactGroups by remember { mutableStateOf(false) }
     var showRawSmsExportDialog by remember { mutableStateOf(false) }
     var showThemeDialog by remember { mutableStateOf(false) }
     var showLanguageDialog by remember { mutableStateOf(false) }
@@ -156,6 +161,9 @@ fun SettingsScreen(viewModel: MainViewModel) {
     var notificationsGranted by remember(context) { mutableStateOf(CallShieldPermissions.hasNotificationPermission(context)) }
     var overlayGranted by remember(context) { mutableStateOf(CallShieldPermissions.canDrawOverlays(context)) }
     var screenerGranted by remember(roleManager) { mutableStateOf(CallShieldPermissions.hasCallScreeningRole(roleManager)) }
+    var contactsPermissionGranted by remember(context) {
+        mutableStateOf(CallShieldPermissions.isPermissionGranted(context, Manifest.permission.READ_CONTACTS))
+    }
     val corePermissionsGranted = missingCorePermissions.isEmpty()
     val screenerReadyForCurrentMode = !blockCalls || screenerGranted
     // Overlay and notifications add polish, but they are not required for the
@@ -180,6 +188,16 @@ fun SettingsScreen(viewModel: MainViewModel) {
         rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
             screenerGranted = CallShieldPermissions.hasCallScreeningRole(roleManager)
         }
+    val contactsPermissionLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+            contactsPermissionGranted = granted
+            viewModel.refreshContactGroups()
+            if (granted) showContactGroups = true
+        }
+
+    LaunchedEffect(contactsPermissionGranted) {
+        if (contactsPermissionGranted) viewModel.refreshContactGroups()
+    }
 
     DisposableEffect(lifecycleOwner, context, roleManager, blockCalls, blockSms) {
         val observer =
@@ -194,6 +212,8 @@ fun SettingsScreen(viewModel: MainViewModel) {
                     notificationsGranted = CallShieldPermissions.hasNotificationPermission(context)
                     overlayGranted = CallShieldPermissions.canDrawOverlays(context)
                     screenerGranted = CallShieldPermissions.hasCallScreeningRole(roleManager)
+                    contactsPermissionGranted =
+                        CallShieldPermissions.isPermissionGranted(context, Manifest.permission.READ_CONTACTS)
                 }
             }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -376,6 +396,49 @@ fun SettingsScreen(viewModel: MainViewModel) {
         // Safety
         SettingsCard(stringResource(R.string.settings_safety)) {
             SettingsToggle(stringResource(R.string.settings_contact_whitelist), stringResource(R.string.settings_contact_whitelist_desc), Icons.Default.Contacts, contactWhitelist) { viewModel.setContactWhitelist(it) }
+            if (contactWhitelist) {
+                SettingsLinkRow(
+                    title = stringResource(R.string.settings_contact_scope),
+                    value =
+                        when {
+                            !contactsPermissionGranted -> {
+                                stringResource(R.string.settings_permission_required)
+                            }
+
+                            selectedContactGroups.isEmpty() -> {
+                                stringResource(R.string.settings_all_contacts)
+                            }
+
+                            else -> {
+                                pluralStringResource(
+                                    R.plurals.settings_contact_groups_selected,
+                                    selectedContactGroups.size,
+                                    selectedContactGroups.size,
+                                )
+                            }
+                        },
+                    icon = Icons.Default.Groups,
+                    tintColor = CatGreen,
+                    modifier = Modifier.testTag(SETTINGS_CONTACT_SCOPE_TAG),
+                    onClick = {
+                        if (contactsPermissionGranted) {
+                            viewModel.refreshContactGroups()
+                            showContactGroups = true
+                        } else {
+                            contactsPermissionLauncher.launch(Manifest.permission.READ_CONTACTS)
+                        }
+                    },
+                )
+                if (!contactsPermissionGranted) {
+                    Text(
+                        stringResource(R.string.settings_contact_scope_degraded),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = CatPeach,
+                        modifier = Modifier.padding(start = 44.dp, end = 4.dp, bottom = 4.dp),
+                    )
+                }
+            }
+            GradientDivider()
             SettingsToggle(
                 stringResource(R.string.settings_contacts_only),
                 stringResource(R.string.settings_contacts_only_desc),
@@ -835,6 +898,17 @@ fun SettingsScreen(viewModel: MainViewModel) {
             actions = categoryCallActions,
             onActionChange = viewModel::setCategoryCallAction,
             onDismiss = { showCategoryCallActions = false },
+        )
+    }
+
+    if (showContactGroups) {
+        ContactGroupPickerSheet(
+            groups = contactGroups,
+            selectedKeys = selectedContactGroups,
+            loading = contactGroupsLoading,
+            permissionGranted = contactsPermissionGranted,
+            onSelectionChange = viewModel::setSelectedContactGroups,
+            onDismiss = { showContactGroups = false },
         )
     }
 

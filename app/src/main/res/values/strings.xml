@@ -490,6 +490,27 @@
     <string name="settings_safety">Safety</string>
     <string name="settings_contact_whitelist">Contact whitelist</string>
     <string name="settings_contact_whitelist_desc">Never block numbers in your contacts</string>
+    <string name="settings_contact_scope">Allowed contact scope</string>
+    <string name="settings_permission_required">Permission required</string>
+    <string name="settings_all_contacts">All contacts</string>
+    <string name="settings_all_contacts_desc">Trust every saved contact</string>
+    <string name="settings_contact_scope_degraded">Contact trust is paused until Contacts permission is restored. Calls are never allowed from a selected group without access.</string>
+    <string name="settings_contact_groups_title">Allowed contact groups</string>
+    <string name="settings_contact_groups_desc">Limit automatic trust to selected groups. Contact data stays on this device.</string>
+    <string name="settings_contact_groups_permission">Allow Contacts access to load and match groups.</string>
+    <string name="settings_contact_groups_empty">No contact groups with phone numbers were found.</string>
+    <plurals name="settings_contact_groups_selected">
+        <item quantity="one">%d group</item>
+        <item quantity="other">%d groups</item>
+    </plurals>
+    <plurals name="settings_contact_group_members">
+        <item quantity="one">%d contact</item>
+        <item quantity="other">%d contacts</item>
+    </plurals>
+    <plurals name="settings_contact_groups_unavailable">
+        <item quantity="one">%d selected group is unavailable. Choose All contacts to reset the scope.</item>
+        <item quantity="other">%d selected groups are unavailable. Choose All contacts to reset the scope.</item>
+    </plurals>
     <string name="settings_contacts_only">Contacts-only mode</string>
     <string name="settings_contacts_only_desc">Allow only contacts and explicit allowlist entries</string>
     <string name="settings_db_prefix_expansion">Database prefix expansion</string>

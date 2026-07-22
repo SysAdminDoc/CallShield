@@ -5,6 +5,7 @@ import android.content.Intent
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.CallbackDetector
 import com.sysadmindoc.callshield.data.CampaignDetector
+import com.sysadmindoc.callshield.data.ContactGroupCatalog
 import com.sysadmindoc.callshield.data.HashWildcardMatcher
 import com.sysadmindoc.callshield.data.RegionRules
 import com.sysadmindoc.callshield.data.SmsContentAnalyzer
@@ -46,6 +47,7 @@ internal class WhitelistChecker(
 internal class ContactWhitelistChecker(
     private val appContext: Context,
     private val spamHeuristics: SpamHeuristics,
+    private val contactLookup: (Context, String, Set<String>?) -> Boolean = spamHeuristics::isInContacts,
 ) : IChecker {
     override val priority = CheckerPriority.CONTACT_WHITELIST
     override val name = "contact_whitelist"
@@ -53,7 +55,13 @@ internal class ContactWhitelistChecker(
     override suspend fun isEnabled(ctx: CheckContext): Boolean = ctx.prefs[SpamRepository.KEY_CONTACT_WHITELIST] ?: true
 
     override suspend fun check(ctx: CheckContext): BlockResult? =
-        if (spamHeuristics.isInContacts(appContext, ctx.number)) {
+        if (
+            contactLookup(
+                appContext,
+                ctx.number,
+                ctx.prefs[SpamRepository.KEY_SELECTED_CONTACT_GROUPS]?.let(ContactGroupCatalog::preserveScope),
+            )
+        ) {
             BlockResult.allow("contact_whitelist")
         } else {
             null

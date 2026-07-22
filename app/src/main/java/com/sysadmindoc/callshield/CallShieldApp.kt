@@ -34,6 +34,9 @@ import javax.inject.Inject
 class CallShieldApp :
     Application(),
     Configuration.Provider {
+    @Volatile
+    private var contactsObserverRegistered = false
+
     @Inject
     lateinit var workerFactory: HiltWorkerFactory
 
@@ -103,7 +106,7 @@ class CallShieldApp :
     private fun registerCacheInvalidationObservers() {
         val handler = Handler(Looper.getMainLooper())
 
-        registerContactsObserver(handler)
+        ensureContactsObserver(handler)
 
         try {
             contentResolver.registerContentObserver(
@@ -123,24 +126,31 @@ class CallShieldApp :
         }
     }
 
-    private fun registerContactsObserver(handler: Handler) {
-        if (checkSelfPermission(Manifest.permission.READ_CONTACTS) != PackageManager.PERMISSION_GRANTED) return
-
-        try {
-            contentResolver.registerContentObserver(
-                ContactsContract.Contacts.CONTENT_URI,
-                true,
-                object : ContentObserver(handler) {
-                    override fun onChange(
-                        selfChange: Boolean,
-                        uri: Uri?,
-                    ) {
-                        checkerDependencies.spamHeuristics.clearContactCache()
+    internal fun ensureContactsObserver(handler: Handler = Handler(Looper.getMainLooper())) {
+        if (!contactsObserverRegistered &&
+            checkSelfPermission(Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED
+        ) {
+            synchronized(this) {
+                if (!contactsObserverRegistered) {
+                    try {
+                        contentResolver.registerContentObserver(
+                            ContactsContract.AUTHORITY_URI,
+                            true,
+                            object : ContentObserver(handler) {
+                                override fun onChange(
+                                    selfChange: Boolean,
+                                    uri: Uri?,
+                                ) {
+                                    checkerDependencies.spamHeuristics.clearContactCache()
+                                }
+                            },
+                        )
+                        contactsObserverRegistered = true
+                    } catch (_: SecurityException) {
+                        // Permission can be revoked between the check and registration.
                     }
-                },
-            )
-        } catch (_: SecurityException) {
-            // Permission can be revoked between the check and registration.
+                }
+            }
         }
     }
 

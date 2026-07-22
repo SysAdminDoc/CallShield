@@ -27,10 +27,10 @@ class BackupRestoreTest {
     // ── Backup data class defaults ───────────────────────────────────────
 
     @Test
-    fun `Backup default version is 6`() {
-        // v6 preserves category call actions. Older versions remain accepted.
+    fun `Backup default version is 7`() {
+        // v7 preserves contact-group scope. Older versions remain accepted.
         val backup = Backup()
-        assertEquals(6, backup.version)
+        assertEquals(7, backup.version)
     }
 
     @Test
@@ -343,6 +343,7 @@ class BackupRestoreTest {
                                     "unknown=allow",
                                     "robocall=invalid",
                                 ),
+                            selectedContactGroups = listOf("b".repeat(64), "raw group", "b".repeat(64)),
                             notificationScreeningPackages =
                                 listOf(
                                     " com.google.android.gm ",
@@ -362,6 +363,7 @@ class BackupRestoreTest {
             payload.settings?.notificationScreeningPackages,
         )
         assertEquals(listOf("scam=silence"), payload.settings?.categoryCallActions)
+        assertEquals(listOf("b".repeat(64)), payload.settings?.selectedContactGroups)
     }
 
     @Test
