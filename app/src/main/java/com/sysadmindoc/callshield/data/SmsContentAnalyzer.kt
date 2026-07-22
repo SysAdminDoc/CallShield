@@ -123,7 +123,8 @@ class SmsContentAnalyzer
         private val urlPattern =
             Regex(
                 "https?://[^\\s]{1,2048}|www\\.[^\\s]{1,2048}|" +
-                    "[a-zA-Z0-9][a-zA-Z0-9-]*\\.[a-zA-Z]{2,}/[^\\s]{0,2048}",
+                    "(?<![a-zA-Z0-9-])[a-zA-Z0-9][a-zA-Z0-9-]{0,62}" +
+                    "\\.[a-zA-Z]{2,63}/[^\\s]{0,2048}",
             )
 
         // ── Spam Domain Blocklist ─────────────────────────────────────────
@@ -248,7 +249,12 @@ class SmsContentAnalyzer
                 }
 
             // Check for URL shorteners (high spam signal)
-            val urls = urlPattern.findAll(analysisBody).map { it.value.lowercase() }.toList()
+            val urls =
+                if ('.' in analysisBody || analysisBody.contains("http", ignoreCase = true)) {
+                    urlPattern.findAll(analysisBody).map { it.value.lowercase() }.toList()
+                } else {
+                    emptyList()
+                }
             for (url in urls) {
                 // Community-reported spam domain — highest confidence
                 if (spamDomains.isNotEmpty()) {

@@ -88,6 +88,9 @@ All notable changes to CallShield will be documented in this file.
 
 ### Fixed
 
+- **Oversized SMS analysis remains bounded on adversarial text.** URL matching
+  now observes DNS label limits and skips regex scanning when no URL marker is
+  present, eliminating quadratic backtracking within the existing 16 KB guard.
 - **Phone numbers stay left-to-right inside RTL screens.** Every in-app,
   overlay, and localized-toast display path now wraps formatted numbers in
   Unicode bidi isolation; the UI padding audit found no physical left/right
