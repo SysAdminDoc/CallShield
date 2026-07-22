@@ -25,9 +25,21 @@ fun ChangelogScreen() {
         verticalArrangement = Arrangement.spacedBy(0.dp),
     ) {
         VersionEntry(
+            "1.7.23",
+            "Deep-audit hardening across screening, backups, and accessibility",
+            isLatest = true,
+            changes =
+                listOf(
+                    "Fixed roaming corrupting number matching — identities now canonicalize under the SIM's home region",
+                    "Hardened screening edge cases: unknown-direction calls, duplicate-row urgency, and lettered SMS sender IDs",
+                    "Made exports crash-free, blocklist imports transactional, and passphrase restores reject plaintext files",
+                    "Fixed the caller ID overlay leaking telephony watchers and the role-loss alert lingering after recovery",
+                    "Made settings toggles fully tappable TalkBack nodes and raised caption contrast in every theme",
+                ),
+        )
+        VersionEntry(
             "1.7.22",
             "Safer trust controls, protected backups, and stronger release gates",
-            isLatest = true,
             changes =
                 listOf(
                     "Added selected contact-group trust and category-specific call handling",
@@ -558,7 +570,7 @@ fun VersionEntry(
                     }
                 }
                 if (title.isNotEmpty()) {
-                    Text(title, style = MaterialTheme.typography.bodySmall, color = CatOverlay)
+                    Text(title, style = MaterialTheme.typography.bodySmall, color = CatSubtext)
                 }
                 Spacer(Modifier.height(8.dp))
                 GradientDivider(color = accentColor)

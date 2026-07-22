@@ -4,6 +4,70 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+## v1.7.23 — 2026-07-22
+
+### Fixed
+
+- Phone identity canonicalization now resolves the SIM region before the
+  visited network region, so roaming no longer canonicalizes national numbers
+  (and the one-time schema v12 migration) under the wrong country. The v12
+  migration also skips unchanged rows so the bundled 32k-row database no
+  longer pays ~33k no-op writes inside the first call's 5-second screening
+  window, keeps community reputation visible after a merged temporary user
+  block expires, and preserves the emergency flag when whitelist rows merge.
+- The per-category guard for explicit blocks now matches the system block
+  list's real match source (`system_block_list`); a typo had made that guard
+  dead code. Daily digest source breakdowns now bucket category-policy
+  verdicts by their underlying detection source instead of "other".
+- Outgoing risk warnings are suppressed for numbers on the personal whitelist
+  — the standing false-positive correction no longer re-warns on every dial —
+  and the warning overlay ignores the registration-time IDLE snapshot so it
+  can no longer dismiss itself before it is readable.
+- Repeated-call urgency now recognizes genuinely spaced retries even when a
+  provider double-logs one attempt; machine-speed bursts remain rejected.
+- Unknown-direction calls receive an explicit allow response instead of no
+  response, so OEM stacks that omit the direction no longer hold the call
+  until Android's screening timeout.
+- The caller ID overlay unregisters the previous call-state watcher before
+  registering a new one; back-to-back overlays no longer leak telephony
+  registrations until idle-dismiss silently stops working.
+- The "Call screening is off" alert clears as soon as the app resumes with the
+  role restored, and never fires on installs that finished onboarding without
+  ever granting the role.
+- Lettered SMS sender IDs can no longer opt out of keyword and content
+  screening: non-Latin sender names keep a readable canonical form and
+  unrepresentable ones get a stable hashed identity instead of being skipped.
+- Backups, blocklist exports, and log exports no longer crash the app when the
+  export cannot be written (full storage, oversized encrypted payload); they
+  report a clear failure instead. Blocklist imports now run in a single
+  transaction, so a mid-import failure rolls back instead of leaving thousands
+  of half-imported rows behind a failure message.
+- Restoring with a typed passphrase now rejects plaintext files instead of
+  silently restoring unauthenticated content; encrypted backups honor the
+  authenticated KDF iteration count in their header so future strengthening
+  cannot orphan old backups; repeated merges of legacy backups no longer
+  duplicate log rows; restore counts no longer include entries refused by
+  conflicting permanent decisions; and backup files are timestamped so a new
+  backup cannot clobber one still being shared.
+- The Lookup app shortcut opens the Lookup tab again, and the Lookup tab no
+  longer reads the clipboard on every visit — the paste action reads it only
+  when tapped, so Android's clipboard-access toast fires only on request.
+- Quick Links no longer crash on devices without a browser.
+
+### Changed
+
+- Settings toggle rows are now fully tappable and read as a single switch to
+  TalkBack; the push-alert switch regained its full touch target; informational
+  captions moved to a higher-contrast text color; the push-alert sheet footer
+  stays reachable in landscape; the last selected contact group can be
+  deselected (falling back to All contacts); and the group picker no longer
+  claims groups are unavailable when the real cause is a denied permission.
+- Quiet-hours hour labels follow the device's 12/24-hour preference and
+  locale. The widget's secondary text meets contrast requirements and its
+  daily trend window is DST-safe. Onboarding's Enable Notifications opens the
+  system notification settings on Android 10-12 where the runtime permission
+  does not exist.
+
 ## v1.7.22 — 2026-07-22
 
 ### Changed
