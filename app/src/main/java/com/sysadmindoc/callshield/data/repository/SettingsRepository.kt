@@ -100,6 +100,8 @@ class SettingsRepository(
     val cleanupDays: Flow<Int> = dataStore.data.map { it[SpamRepository.KEY_CLEANUP_DAYS] ?: DEFAULT_CLEANUP_DAYS }
     val mlScorerEnabled: Flow<Boolean> = dataStore.data.map { it[SpamRepository.KEY_ML_SCORER] ?: true }
     val rcsFilterEnabled: Flow<Boolean> = dataStore.data.map { it[SpamRepository.KEY_RCS_FILTER] ?: true }
+    val postCallScreenEnabled: Flow<Boolean> =
+        dataStore.data.map { it[SpamRepository.KEY_POST_CALL_SCREEN] ?: false }
     val notificationScreeningPackages: Flow<Set<String>> =
         dataStore.data.map { prefs ->
             NotificationScreeningSources.enabledPackages(prefs[SpamRepository.KEY_NOTIFICATION_SCREENING_PACKAGES])
@@ -129,6 +131,10 @@ class SettingsRepository(
     suspend fun setMlScorer(enabled: Boolean) = dataStore.edit { it[SpamRepository.KEY_ML_SCORER] = enabled }
 
     suspend fun setRcsFilter(enabled: Boolean) = dataStore.edit { it[SpamRepository.KEY_RCS_FILTER] = enabled }
+
+    suspend fun setPostCallScreen(enabled: Boolean) = dataStore.edit {
+        it[SpamRepository.KEY_POST_CALL_SCREEN] = enabled
+    }
 
     suspend fun setNotificationScreeningPackage(
         packageName: String,

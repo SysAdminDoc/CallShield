@@ -109,6 +109,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
     val freqEscalation by viewModel.freqEscalationEnabled.collectAsStateWithLifecycle()
     val mlScorer by viewModel.mlScorerEnabled.collectAsStateWithLifecycle()
     val rcsFilter by viewModel.rcsFilterEnabled.collectAsStateWithLifecycle()
+    val postCallScreen by viewModel.postCallScreenEnabled.collectAsStateWithLifecycle()
     val notificationScreeningPackages by viewModel.notificationScreeningPackages.collectAsStateWithLifecycle()
     val silentVoicemail by viewModel.silentVoicemailEnabled.collectAsStateWithLifecycle()
     val pushAlertEnabled by viewModel.pushAlertEnabled.collectAsStateWithLifecycle()
@@ -377,6 +378,14 @@ fun SettingsScreen(viewModel: MainViewModel) {
                 style = MaterialTheme.typography.labelSmall,
                 color = CatSubtext,
                 modifier = Modifier.padding(start = 4.dp),
+            )
+            GradientDivider()
+            SettingsToggle(
+                stringResource(R.string.settings_post_call_screen),
+                stringResource(R.string.settings_post_call_screen_desc),
+                Icons.AutoMirrored.Filled.PhoneCallback,
+                postCallScreen,
+                onCheckedChange = viewModel::setPostCallScreen,
             )
         }
 

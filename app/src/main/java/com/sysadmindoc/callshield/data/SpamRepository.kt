@@ -156,6 +156,7 @@ class SpamRepository(
             stringPreferencesKey("external_blocklist_subscriptions")
         val KEY_ML_SCORER = booleanPreferencesKey("ml_scorer_enabled")
         val KEY_RCS_FILTER = booleanPreferencesKey("rcs_filter_enabled")
+        val KEY_POST_CALL_SCREEN = booleanPreferencesKey("post_call_screen_enabled")
         val KEY_NOTIFICATION_SCREENING_PACKAGES = stringSetPreferencesKey("notification_screening_packages")
 
         // Silent voicemail mode: when enabled, blocked calls are silenced (no
@@ -243,6 +244,7 @@ class SpamRepository(
     val cleanupDays: Flow<Int> = settingsRepository.cleanupDays
     val mlScorerEnabled: Flow<Boolean> = settingsRepository.mlScorerEnabled
     val rcsFilterEnabled: Flow<Boolean> = settingsRepository.rcsFilterEnabled
+    val postCallScreenEnabled: Flow<Boolean> = settingsRepository.postCallScreenEnabled
     val notificationScreeningPackages: Flow<Set<String>> = settingsRepository.notificationScreeningPackages
     val silentVoicemailEnabled: Flow<Boolean> = settingsRepository.silentVoicemailEnabled
     val pushAlertEnabled: Flow<Boolean> = settingsRepository.pushAlertEnabled
@@ -259,6 +261,8 @@ class SpamRepository(
     suspend fun setMlScorer(enabled: Boolean) = settingsRepository.setMlScorer(enabled)
 
     suspend fun setRcsFilter(enabled: Boolean) = settingsRepository.setRcsFilter(enabled)
+
+    suspend fun setPostCallScreen(enabled: Boolean) = settingsRepository.setPostCallScreen(enabled)
 
     suspend fun setNotificationScreeningPackage(
         packageName: String,

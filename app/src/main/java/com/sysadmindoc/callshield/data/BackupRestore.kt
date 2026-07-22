@@ -161,6 +161,7 @@ object BackupRestore {
         val cleanupDays: Int = 30,
         val mlScorerEnabled: Boolean = true,
         val rcsFilterEnabled: Boolean = true,
+        val postCallScreenEnabled: Boolean = false,
         val silentVoicemailEnabled: Boolean = false,
         val pushAlertEnabled: Boolean = true,
         val pushAlertDisabledPackages: List<String> = emptyList(),
@@ -847,6 +848,7 @@ object BackupRestore {
             cleanupDays = this[SpamRepository.KEY_CLEANUP_DAYS] ?: 30,
             mlScorerEnabled = this[SpamRepository.KEY_ML_SCORER] ?: true,
             rcsFilterEnabled = this[SpamRepository.KEY_RCS_FILTER] ?: true,
+            postCallScreenEnabled = this[SpamRepository.KEY_POST_CALL_SCREEN] ?: false,
             silentVoicemailEnabled = this[SpamRepository.KEY_SILENT_VOICEMAIL] ?: false,
             pushAlertEnabled = this[SpamRepository.KEY_PUSH_ALERT] ?: true,
             pushAlertDisabledPackages = (this[SpamRepository.KEY_PUSH_ALERT_DISABLED] ?: emptySet()).sorted(),
@@ -913,6 +915,7 @@ object BackupRestore {
         repo.setCleanupDays(sanitized.cleanupDays)
         repo.setMlScorer(sanitized.mlScorerEnabled)
         repo.setRcsFilter(sanitized.rcsFilterEnabled)
+        repo.setPostCallScreen(sanitized.postCallScreenEnabled)
         repo.setSilentVoicemail(sanitized.silentVoicemailEnabled)
         repo.setPushAlert(sanitized.pushAlertEnabled)
         repo.resetPushAlertPackages()

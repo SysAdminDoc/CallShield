@@ -215,6 +215,8 @@ class MainViewModel
 
         val mlScorerEnabled = repo.mlScorerEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
         val rcsFilterEnabled = repo.rcsFilterEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+        val postCallScreenEnabled =
+            repo.postCallScreenEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
         val notificationScreeningPackages =
             repo.notificationScreeningPackages.stateIn(
                 viewModelScope,
@@ -677,6 +679,8 @@ class MainViewModel
         fun setMlScorer(v: Boolean) = viewModelScope.launch { repo.setMlScorer(v) }
 
         fun setRcsFilter(v: Boolean) = viewModelScope.launch { repo.setRcsFilter(v) }
+
+        fun setPostCallScreen(v: Boolean) = viewModelScope.launch { repo.setPostCallScreen(v) }
 
         fun setNotificationScreeningPackage(
             packageName: String,

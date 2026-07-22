@@ -405,13 +405,13 @@ object NotificationHelper {
         // the block path's `stableId(number, 10/20/40)` outputs.
         val spamIntent =
             Intent(context, SpamActionReceiver::class.java).apply {
-                action = "com.sysadmindoc.callshield.FEEDBACK_SPAM"
-                putExtra("number", number)
+                action = SpamActionReceiver.ACTION_FEEDBACK_SPAM
+                putExtra(SpamActionReceiver.EXTRA_FEEDBACK_NUMBER, number)
             }
         val notSpamIntent =
             Intent(context, SpamActionReceiver::class.java).apply {
-                action = "com.sysadmindoc.callshield.FEEDBACK_NOT_SPAM"
-                putExtra("number", number)
+                action = SpamActionReceiver.ACTION_FEEDBACK_NOT_SPAM
+                putExtra(SpamActionReceiver.EXTRA_FEEDBACK_NUMBER, number)
             }
 
         val spamPending =
