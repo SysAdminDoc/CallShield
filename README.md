@@ -143,9 +143,10 @@ CallShield blocks spam calls and texts using a **15+ layer on-device detection e
 - **DataStore privacy hardening** — settings now run on DataStore 1.2.1, and
   the optional AbstractAPI enrichment key is stored in a private no-backup
   DataStore instead of the backed-up public settings file.
-- **Safer backup boundary** — database and public preferences remain
-  restorable for device transfers, while optional local credentials migrate out
-  of Android Auto Backup scope on first read or save.
+- **Safer backup boundary** — Android cloud backup preserves non-secret public
+  preferences but excludes the Room database, which can contain call history,
+  phone numbers, and SMS bodies. Direct device transfer and CallShield's
+  explicit portable backup remain available for user-controlled migration.
 - **Reproducible-build groundwork** — Gradle dependency locking is enabled,
   the resolved dependency graph is checked in, AGP VCS metadata is disabled for
   release APKs, and local release guards block wall-clock build metadata from
@@ -358,7 +359,11 @@ Trained weekly from the CallShield database (50K positive + 50K negative samples
 - **Network security config** — cleartext traffic disabled in production
 - **Signing credentials** — stored in `local.properties`, not hardcoded in build files
 - **Restricted FileProvider paths** — scoped to export directory only
-- **Scoped backup** — database and public settings are backed up for transfer/restore; no credentials are stored anywhere
+- **Scoped backup** — cloud backup includes non-secret settings only; the
+  sensitive database is limited to direct device transfer and explicit
+  user-created portable backups
+- **APK privacy gate** — builds package only the five runtime protection feeds;
+  raw community submissions and maintainer files are rejected by verification
 
 ## Privacy
 

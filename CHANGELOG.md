@@ -2,6 +2,18 @@
 
 All notable changes to CallShield will be documented in this file.
 
+## v1.7.20 — 2026-07-22
+
+### Security
+
+- Android cloud backup no longer uploads the Room database, which may contain
+  phone numbers, call history, and raw SMS bodies. Direct device-to-device
+  transfer and explicit user-created portable backups remain available.
+- APK packaging now stages an explicit five-feed runtime allowlist instead of
+  recursively embedding `data/`; 130 raw community report payloads and the
+  maintainer README are no longer shipped. Debug/release verification fails if
+  repository-only data enters the APK again.
+
 ## v1.7.19 — 2026-07-21
 
 ### Added
