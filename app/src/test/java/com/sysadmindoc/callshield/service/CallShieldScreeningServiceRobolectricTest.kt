@@ -5,6 +5,7 @@ import android.net.Uri
 import android.telecom.Call
 import android.telecom.CallScreeningService
 import androidx.test.core.app.ApplicationProvider
+import com.sysadmindoc.callshield.data.IsolatedRepositoryFixture
 import com.sysadmindoc.callshield.data.SpamHeuristics
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.repository.SpamRepositoryAdapter
@@ -34,13 +35,16 @@ import org.robolectric.util.ReflectionHelpers
 @Config(sdk = [34])
 class CallShieldScreeningServiceRobolectricTest {
     private val context: Context = ApplicationProvider.getApplicationContext()
-    private val repository = SpamRepository.getInstance(context)
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private lateinit var fixture: IsolatedRepositoryFixture
+    private lateinit var repository: SpamRepository
     private lateinit var service: CallShieldScreeningService
     private lateinit var shadowService: ShadowCallScreeningService
 
     @Before
     fun setUp() {
+        fixture = IsolatedRepositoryFixture(context)
+        repository = fixture.repository
         runBlocking {
             repository.setBlockCalls(true)
             repository.setBlockUnknown(false)
@@ -69,6 +73,7 @@ class CallShieldScreeningServiceRobolectricTest {
     @After
     fun tearDown() {
         scope.cancel()
+        fixture.close()
     }
 
     @Test
