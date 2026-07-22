@@ -97,9 +97,11 @@ class SettingsTest {
 
     @Test
     fun hourLabelsCoverMidnightNoonAndAfternoon() {
-        assertEquals("12 AM", formatHourLabel(0))
-        assertEquals("12 PM", formatHourLabel(12))
-        assertEquals("11 PM", formatHourLabel(23))
+        val us = java.util.Locale.US
+        assertEquals("12 AM", formatHourLabel(0, use24Hour = false, locale = us))
+        assertEquals("12 PM", formatHourLabel(12, use24Hour = false, locale = us))
+        assertEquals("11 PM", formatHourLabel(23, use24Hour = false, locale = us))
+        assertEquals("23:00", formatHourLabel(23, use24Hour = true, locale = us))
     }
 
     @Test

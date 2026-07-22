@@ -37,6 +37,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.permissions.CallShieldPermissions
+import com.sysadmindoc.callshield.service.ProtectionHealthWorker
 import com.sysadmindoc.callshield.ui.screens.details.NumberDetailScreen
 import com.sysadmindoc.callshield.ui.screens.lookup.LookupScreen
 import com.sysadmindoc.callshield.ui.screens.main.BlockedLogScreen
@@ -73,6 +74,15 @@ class MainActivity : AppCompatActivity() {
         setIntent(intent)
         launchRequest = intent.toLaunchRequest(nextId = launchRequest.id + 1)
     }
+
+    override fun onResume() {
+        super.onResume()
+        // Re-evaluate protection health whenever the user returns to the app —
+        // this is the moment they come back from the role-request dialog or OS
+        // settings, and it clears the "Call screening is off" alert immediately
+        // instead of leaving it in the shade until the daily periodic check.
+        ProtectionHealthWorker.checkNow(this)
+    }
 }
 
 @Composable
@@ -84,24 +94,20 @@ fun CallShieldRoot(
     val selectedNumber by viewModel.selectedNumber.collectAsStateWithLifecycle()
     val appTheme by viewModel.appTheme.collectAsStateWithLifecycle()
 
-    // Handle deep link and shortcuts
-    var initialTab by remember { mutableIntStateOf(0) }
+    // Handle deep link and shortcuts. The target tab is derived synchronously
+    // from the request — computing it inside the effect raced the child's
+    // LaunchedEffect(tabRequestId), which captured the pre-update startTab and
+    // never re-ran, so the Lookup shortcut landed on Home.
+    val initialTab =
+        when (launchRequest.shortcutAction) {
+            "com.sysadmindoc.callshield.LOOKUP" -> 3
+            else -> 0
+        }
     LaunchedEffect(launchRequest.id) {
         launchRequest.deepLinkNumber?.let { viewModel.openNumberDetail(it) }
         when (launchRequest.shortcutAction) {
-            "com.sysadmindoc.callshield.LOOKUP" -> {
-                initialTab = 3
-            }
-
-            "com.sysadmindoc.callshield.SCAN" -> {
-                initialTab = 0
-                viewModel.scanCallLog()
-            }
-
-            "com.sysadmindoc.callshield.SCAN_SMS" -> {
-                initialTab = 0
-                viewModel.scanSmsInbox()
-            }
+            "com.sysadmindoc.callshield.SCAN" -> viewModel.scanCallLog()
+            "com.sysadmindoc.callshield.SCAN_SMS" -> viewModel.scanSmsInbox()
         }
     }
 
@@ -428,7 +434,7 @@ fun SearchResultsView(
                                 Text(
                                     number.description,
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = CatOverlay,
+                                    color = CatSubtext,
                                     maxLines = 1,
                                     overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                                 )

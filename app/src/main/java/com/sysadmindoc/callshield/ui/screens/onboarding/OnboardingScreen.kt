@@ -115,7 +115,19 @@ fun OnboardingScreen(onComplete: () -> Unit) {
             permLauncher.launch(CallShieldPermissions.corePermissions.toTypedArray())
         },
         onRequestNotifications = {
-            notifPermLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                notifPermLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            } else {
+                // POST_NOTIFICATIONS doesn't exist below API 33 (minSdk 29) —
+                // the launcher would auto-deny and the button would silently do
+                // nothing. Open the OS notification settings instead, matching
+                // the Settings screen's behavior.
+                context.startActivity(
+                    android.content.Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                        putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                    },
+                )
+            }
         },
         onRequestOverlay = {
             val intent =

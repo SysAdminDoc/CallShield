@@ -65,9 +65,11 @@ class CallShieldWidget : AppWidgetProvider() {
                 val dao = AppDatabase.getInstance(appContext).spamDao()
                 val repo = SpamRepository.getInstance(appContext)
 
-                // Calculate start-of-today and start-of-yesterday
+                // Calculate start-of-today and start-of-yesterday. Yesterday
+                // is derived via Calendar so DST-transition days (23/25 h)
+                // don't skew the trend comparison window.
                 val now = System.currentTimeMillis()
-                val todayStart =
+                val todayCalendar =
                     Calendar
                         .getInstance()
                         .apply {
@@ -75,8 +77,9 @@ class CallShieldWidget : AppWidgetProvider() {
                             set(Calendar.MINUTE, 0)
                             set(Calendar.SECOND, 0)
                             set(Calendar.MILLISECOND, 0)
-                        }.timeInMillis
-                val yesterdayStart = todayStart - 86_400_000L
+                        }
+                val todayStart = todayCalendar.timeInMillis
+                val yesterdayStart = todayCalendar.apply { add(Calendar.DAY_OF_YEAR, -1) }.timeInMillis
 
                 val todayCount = dao.getBlockedCountBetweenSync(todayStart, now)
                 val yesterdayCount = dao.getBlockedCountBetweenSync(yesterdayStart, todayStart)

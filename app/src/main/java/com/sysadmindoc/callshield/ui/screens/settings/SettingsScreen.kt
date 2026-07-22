@@ -17,6 +17,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -702,7 +703,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
                 },
                 modifier = Modifier.fillMaxWidth(),
             )
-            Text(stringResource(R.string.settings_export_csv_desc), style = MaterialTheme.typography.labelSmall, color = CatOverlay)
+            Text(stringResource(R.string.settings_export_csv_desc), style = MaterialTheme.typography.labelSmall, color = CatSubtext)
             Spacer(Modifier.height(8.dp))
             PremiumActionButton(
                 label = stringResource(R.string.settings_export_raw_sms_csv),
@@ -718,7 +719,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
             Text(
                 stringResource(R.string.settings_export_raw_sms_csv_desc),
                 style = MaterialTheme.typography.labelSmall,
-                color = CatOverlay,
+                color = CatSubtext,
             )
         }
 
@@ -829,7 +830,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
                 }
             }
             Spacer(Modifier.height(4.dp))
-            Text(stringResource(R.string.settings_backup_includes), style = MaterialTheme.typography.labelSmall, color = CatOverlay)
+            Text(stringResource(R.string.settings_backup_includes), style = MaterialTheme.typography.labelSmall, color = CatSubtext)
             if (
                 BackupRestore.BackupSection.LOGS in backupSections ||
                 BackupRestore.BackupSection.LOGS in restoreSections
@@ -874,7 +875,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
         PremiumCard {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text("${stringResource(R.string.app_name)} v${BuildConfig.VERSION_NAME}", color = CatSubtext, style = MaterialTheme.typography.bodySmall)
-                Text(stringResource(R.string.settings_about_desc), style = MaterialTheme.typography.labelSmall, color = CatOverlay)
+                Text(stringResource(R.string.settings_about_desc), style = MaterialTheme.typography.labelSmall, color = CatSubtext)
             }
         }
     }
@@ -1005,7 +1006,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
                         Text(
                             stringResource(R.string.settings_language_debug_only),
                             style = MaterialTheme.typography.labelSmall,
-                            color = CatOverlay,
+                            color = CatSubtext,
                         )
                     }
                 }
@@ -1308,7 +1309,7 @@ internal fun RestorePreviewPanel(
                 Text(
                     stringResource(R.string.backup_restore_preview_settings_privacy),
                     style = MaterialTheme.typography.labelSmall,
-                    color = CatOverlay,
+                    color = CatSubtext,
                 )
             }
             if (counts.logs > 0) {
@@ -1334,7 +1335,7 @@ internal fun RestorePreviewPanel(
             Text(
                 stringResource(R.string.backup_restore_replace_warning),
                 style = MaterialTheme.typography.labelSmall,
-                color = CatOverlay,
+                color = CatSubtext,
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 PremiumActionButton(
@@ -1533,7 +1534,7 @@ private fun ExternalBlocklistPreviewPanel(
                             preview.blockedByOtherSources,
                         ),
                         style = MaterialTheme.typography.labelSmall,
-                        color = CatOverlay,
+                        color = CatSubtext,
                     )
                 }
             }
@@ -1764,7 +1765,10 @@ fun HourPicker(
     onSelect: (Int) -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
-    val label = formatHourLabel(selected)
+    val use24Hour =
+        android.text.format.DateFormat
+            .is24HourFormat(LocalContext.current)
+    val label = formatHourLabel(selected, use24Hour)
 
     Box {
         OutlinedButton(
@@ -1776,7 +1780,7 @@ fun HourPicker(
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             for (h in 0..23) {
-                val l = formatHourLabel(h)
+                val l = formatHourLabel(h, use24Hour)
                 DropdownMenuItem(text = { Text(l) }, onClick = {
                     onSelect(h)
                     expanded = false
@@ -1786,13 +1790,17 @@ fun HourPicker(
     }
 }
 
-internal fun formatHourLabel(hour: Int): String =
-    when {
-        hour == 0 -> "12 AM"
-        hour < 12 -> "$hour AM"
-        hour == 12 -> "12 PM"
-        else -> "${hour - 12} PM"
-    }
+internal fun formatHourLabel(
+    hour: Int,
+    use24Hour: Boolean = false,
+    locale: java.util.Locale = java.util.Locale.getDefault(),
+): String =
+    java.time.LocalTime
+        .of(hour, 0)
+        .format(
+            java.time.format.DateTimeFormatter
+                .ofPattern(if (use24Hour) "HH:mm" else "h a", locale),
+        )
 
 @Composable
 fun SettingsCard(
@@ -1861,7 +1869,25 @@ fun SettingsToggle(
     onCheckedChange: (Boolean) -> Unit,
 ) {
     val context = LocalContext.current
-    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+    // Row-level toggleable + onCheckedChange = null on the Switch: the whole
+    // row is tappable and TalkBack reads title, subtitle, and switch state as
+    // ONE node instead of inert text plus an unlabeled switch. Same pattern
+    // as ContactGroupPickerSheet / BackupProtectionControls.
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .toggleable(
+                    value = checked,
+                    role = Role.Switch,
+                    onValueChange = {
+                        hapticTick(context)
+                        onCheckedChange(it)
+                    },
+                ).let { if (toggleTag != null) it.testTag(toggleTag) else it }
+                .padding(vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
         PremiumIconTile(icon = icon, color = tintColor, size = 34.dp, iconSize = 18.dp)
         Spacer(Modifier.width(10.dp))
         Column(modifier = Modifier.weight(1f)) {
@@ -1879,11 +1905,7 @@ fun SettingsToggle(
         Spacer(Modifier.width(6.dp))
         Switch(
             checked = checked,
-            onCheckedChange = {
-                hapticTick(context)
-                onCheckedChange(it)
-            },
-            modifier = if (toggleTag != null) Modifier.testTag(toggleTag) else Modifier,
+            onCheckedChange = null,
             colors =
                 SwitchDefaults.colors(
                     checkedTrackColor = CatGreen,

@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -184,7 +185,11 @@ fun PushAlertSourcesSheet(
                 Modifier
                     .fillMaxWidth()
                     .widthIn(max = 640.dp)
-                    .height(420.dp),
+                    // heightIn, not a fixed height: on a landscape phone a fixed
+                    // 420dp list pushes the Done/Restore buttons past the sheet
+                    // edge with no way to reach them (only this inner list
+                    // scrolls). Letting it shrink keeps the footer on screen.
+                    .heightIn(max = 420.dp),
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
@@ -245,7 +250,7 @@ private fun SourceRow(
         }
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(14.dp),
+        shape = RoundedCornerShape(12.dp),
         color = stateColor.copy(alpha = if (source.installed) 0.06f else 0.03f),
         border = BorderStroke(1.dp, stateColor.copy(alpha = if (source.installed) 0.18f else 0.10f)),
     ) {
@@ -289,8 +294,9 @@ private fun SourceRow(
                     textStyle = MaterialTheme.typography.labelSmall,
                 )
             }
+            // No size override: forcing 48x32 shrinks the touch target below
+            // the 48dp minimum height and clips the ripple.
             Switch(
-                modifier = Modifier.size(width = 48.dp, height = 32.dp),
                 checked = allowed,
                 onCheckedChange = onToggle,
                 enabled = source.installed,

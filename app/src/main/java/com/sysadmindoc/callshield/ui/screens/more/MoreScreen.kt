@@ -395,9 +395,17 @@ private fun launchExternalLink(
     context: Context,
     url: String,
 ) {
-    context.startActivity(
-        Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        },
-    )
+    try {
+        context.startActivity(
+            Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            },
+        )
+    } catch (_: android.content.ActivityNotFoundException) {
+        // Browserless devices (managed profiles, minimal AOSP builds) must not
+        // crash on a Quick Link tap — the FTC report path already handles this.
+        android.widget.Toast
+            .makeText(context, context.getString(R.string.link_no_browser), android.widget.Toast.LENGTH_SHORT)
+            .show()
+    }
 }
