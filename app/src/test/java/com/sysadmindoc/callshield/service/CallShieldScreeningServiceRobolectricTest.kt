@@ -8,6 +8,8 @@ import androidx.test.core.app.ApplicationProvider
 import com.sysadmindoc.callshield.data.CallCategory
 import com.sysadmindoc.callshield.data.CategoryCallAction
 import com.sysadmindoc.callshield.data.IsolatedRepositoryFixture
+import com.sysadmindoc.callshield.data.OutgoingRiskPolicy
+import com.sysadmindoc.callshield.data.OutgoingRiskWarning
 import com.sysadmindoc.callshield.data.SpamHeuristics
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.model.SpamNumber
@@ -19,9 +21,11 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -43,6 +47,7 @@ class CallShieldScreeningServiceRobolectricTest {
     private lateinit var repository: SpamRepository
     private lateinit var service: CallShieldScreeningService
     private lateinit var shadowService: ShadowCallScreeningService
+    private val outgoingWarnings = mutableListOf<OutgoingRiskWarning>()
 
     @Before
     fun setUp() {
@@ -55,6 +60,7 @@ class CallShieldScreeningServiceRobolectricTest {
             repository.setAutoMuteLowConfidence(false)
             repository.setContactWhitelist(false)
             repository.setContactsOnly(false)
+            repository.setOutgoingRiskWarning(false)
             repository.setStirShaken(false)
             repository.setNeighborSpoof(false)
             repository.setRegionBlock(false)
@@ -70,6 +76,9 @@ class CallShieldScreeningServiceRobolectricTest {
         service.checkSpam = CheckSpamUseCase(SpamRepositoryAdapter(repository))
         service.spamHeuristics = SpamHeuristics.shared
         service.applicationScope = scope
+        outgoingWarnings.clear()
+        OutgoingRiskPolicy.resetForTests()
+        service.outgoingWarningLauncher = { _, warning -> outgoingWarnings += warning }
         shadowService = Shadow.extract(service)
     }
 
@@ -229,6 +238,81 @@ class CallShieldScreeningServiceRobolectricTest {
 
         awaitScopeIdle()
         assertTrue(shadowService.lastRespondToCallInput.isEmpty)
+        assertTrue(outgoingWarnings.isEmpty())
+        assertTrue(
+            runBlocking {
+                fixture.dao
+                    .getBlockedCalls()
+                    .first()
+                    .isEmpty()
+            },
+        )
+    }
+
+    @Test
+    fun `outgoing warning shows once for an exact known risk without call side effects`() {
+        val number = "+12125550185"
+        runBlocking {
+            fixture.dao.insertNumber(
+                SpamNumber(
+                    number = number,
+                    type = "scam",
+                    reports = 12,
+                    description = "Impersonation scam",
+                ),
+            )
+            repository.setOutgoingRiskWarning(true)
+        }
+
+        service.onScreenCall(callDetails(number, Call.Details.DIRECTION_OUTGOING))
+        awaitScopeIdle()
+        service.onScreenCall(callDetails(number, Call.Details.DIRECTION_OUTGOING))
+        awaitScopeIdle()
+
+        assertTrue(shadowService.lastRespondToCallInput.isEmpty)
+        assertEquals(
+            listOf(OutgoingRiskWarning(number, "Impersonation scam", 90)),
+            outgoingWarnings,
+        )
+        assertTrue(
+            runBlocking {
+                fixture.dao
+                    .getBlockedCalls()
+                    .first()
+                    .isEmpty()
+            },
+        )
+    }
+
+    @Test
+    fun `outgoing warning ignores an unknown number`() {
+        runBlocking { repository.setOutgoingRiskWarning(true) }
+
+        service.onScreenCall(callDetails("+12125550186", Call.Details.DIRECTION_OUTGOING))
+        awaitScopeIdle()
+
+        assertTrue(shadowService.lastRespondToCallInput.isEmpty)
+        assertTrue(outgoingWarnings.isEmpty())
+        assertTrue(
+            runBlocking {
+                fixture.dao
+                    .getBlockedCalls()
+                    .first()
+                    .isEmpty()
+            },
+        )
+    }
+
+    @Test
+    fun `outgoing warning intent is explicitly warning only`() {
+        val warning = OutgoingRiskWarning("+12125550187", "Known scam", 75)
+
+        val intent = CallerIdOverlayService.outgoingRiskIntent(context, warning)
+
+        assertEquals("+12125550187", intent.getStringExtra("number"))
+        assertEquals("Known scam", intent.getStringExtra("reason"))
+        assertEquals(75, intent.getIntExtra("confidence", 0))
+        assertTrue(intent.getBooleanExtra(CallerIdOverlayService.EXTRA_OUTGOING_RISK_WARNING, false))
     }
 
     private fun callDetails(

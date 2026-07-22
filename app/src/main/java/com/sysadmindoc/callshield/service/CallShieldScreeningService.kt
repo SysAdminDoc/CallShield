@@ -8,6 +8,8 @@ import android.util.Log
 import com.sysadmindoc.callshield.data.CategoryCallAction
 import com.sysadmindoc.callshield.data.CategoryCallPolicy
 import com.sysadmindoc.callshield.data.ContactGroupCatalog
+import com.sysadmindoc.callshield.data.OutgoingRiskPolicy
+import com.sysadmindoc.callshield.data.OutgoingRiskWarning
 import com.sysadmindoc.callshield.data.SpamHeuristics
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup
@@ -19,6 +21,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.io.IOException
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -36,12 +39,30 @@ class CallShieldScreeningService : CallScreeningService() {
     @ApplicationScope
     lateinit var applicationScope: CoroutineScope
 
+    internal var outgoingWarningLauncher: (android.content.Context, OutgoingRiskWarning) -> Unit =
+        { context, warning ->
+            context.startService(CallerIdOverlayService.outgoingRiskIntent(context, warning))
+        }
+
     override fun onScreenCall(callDetails: Call.Details) {
         // Android dispatches both incoming and outgoing calls to the active
-        // screening service. CallShield is an inbound blocker: running the
-        // pipeline for outgoing calls can create false blocked-log rows,
-        // overlays, and feedback without a valid response contract.
-        if (callDetails.callDirection != Call.Details.DIRECTION_INCOMING) return
+        // screening service. Outgoing warnings use a separate, local-only
+        // lookup so the inbound blocker can never log, analyze contacts, send
+        // feedback, or respond to an outgoing call.
+        when (callDetails.callDirection) {
+            Call.Details.DIRECTION_OUTGOING -> {
+                handleOutgoingCall(callDetails)
+                return
+            }
+
+            Call.Details.DIRECTION_INCOMING -> {
+                Unit
+            }
+
+            else -> {
+                return
+            }
+        }
 
         // Run on the process-wide appScope instead of a service-scoped one.
         // CallScreeningService is frequently unbound moments after we reply,
@@ -181,6 +202,27 @@ class CallShieldScreeningService : CallScreeningService() {
                     } catch (_: Exception) {
                     }
                 }
+            }
+        }
+    }
+
+    private fun handleOutgoingCall(callDetails: Call.Details) {
+        applicationScope.launch {
+            try {
+                val repository = repo
+                val prefs = repository.readPrefsSnapshot()
+                if (!(prefs[SpamRepository.KEY_OUTGOING_RISK_WARNING] ?: false)) return@launch
+
+                val warning =
+                    OutgoingRiskPolicy.evaluate(
+                        repository = repository,
+                        rawNumber = callDetails.handle?.schemeSpecificPart.orEmpty(),
+                    ) ?: return@launch
+                outgoingWarningLauncher(applicationContext, warning)
+            } catch (_: IOException) {
+                // Optional warning only; outgoing calls must never be delayed or altered.
+            } catch (_: RuntimeException) {
+                // Room and overlay failures are best-effort and never affect the call.
             }
         }
     }

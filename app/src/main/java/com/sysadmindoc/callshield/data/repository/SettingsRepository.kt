@@ -72,6 +72,8 @@ class SettingsRepository(
                 ?.let(ContactGroupCatalog::preserveScope)
                 .orEmpty()
         }
+    val outgoingRiskWarningEnabled: Flow<Boolean> =
+        dataStore.data.map { it[SpamRepository.KEY_OUTGOING_RISK_WARNING] ?: false }
     val regionBlockEnabled: Flow<Boolean> =
         dataStore.data.map { it[SpamRepository.KEY_REGION_BLOCK] ?: false }
     val allowedRegions: Flow<Set<String>> =
@@ -257,6 +259,11 @@ class SettingsRepository(
             } else {
                 preferences[SpamRepository.KEY_SELECTED_CONTACT_GROUPS] = sanitized
             }
+        }
+
+    suspend fun setOutgoingRiskWarning(enabled: Boolean) =
+        dataStore.edit {
+            it[SpamRepository.KEY_OUTGOING_RISK_WARNING] = enabled
         }
 
     suspend fun setRegionBlock(enabled: Boolean) = dataStore.edit { it[SpamRepository.KEY_REGION_BLOCK] = enabled }
