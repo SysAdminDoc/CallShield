@@ -43,23 +43,27 @@ import com.sysadmindoc.callshield.ui.theme.SurfaceBright
 internal const val REGION_RULES_ENABLED_TAG = "region_rules_enabled"
 internal const val REGION_RULES_CODES_TAG = "region_rules_codes"
 internal const val CNAP_TRUST_PATTERNS_TAG = "cnap_trust_patterns"
+internal const val CNAP_BLOCK_PATTERNS_TAG = "cnap_block_patterns"
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-@Suppress("FunctionNaming", "LongMethod", "ktlint:standard:function-naming")
+@Suppress("FunctionNaming", "LongMethod", "LongParameterList", "ktlint:standard:function-naming")
 fun RegionCnapRulesSheet(
     regionBlockEnabled: Boolean,
     allowedRegions: Set<String>,
     cnapTrustPatterns: Set<String>,
-    onSave: (enabled: Boolean, regions: Set<String>, namePatterns: Set<String>) -> Unit,
+    cnapBlockPatterns: Set<String>,
+    onSave: (enabled: Boolean, regions: Set<String>, trustPatterns: Set<String>, blockPatterns: Set<String>) -> Unit,
     onDismiss: () -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var blockOutsideRegions by remember { mutableStateOf(regionBlockEnabled) }
     var regionText by remember { mutableStateOf(allowedRegions.sorted().joinToString(", ")) }
-    var namePatternText by remember { mutableStateOf(cnapTrustPatterns.sorted().joinToString("\n")) }
+    var trustPatternText by remember { mutableStateOf(cnapTrustPatterns.sorted().joinToString("\n")) }
+    var blockPatternText by remember { mutableStateOf(cnapBlockPatterns.sorted().joinToString("\n")) }
     val parsedRegions = RegionRules.parseRegionCodes(regionText)
-    val parsedPatterns = RegionRules.parseNamePatterns(namePatternText)
+    val parsedTrustPatterns = RegionRules.parseNamePatterns(trustPatternText)
+    val parsedBlockPatterns = RegionRules.parseNamePatterns(blockPatternText)
     val canSave = !blockOutsideRegions || parsedRegions.isNotEmpty()
 
     ModalBottomSheet(
@@ -132,8 +136,8 @@ fun RegionCnapRulesSheet(
                 color = CatSubtext,
             )
             OutlinedTextField(
-                value = namePatternText,
-                onValueChange = { namePatternText = it },
+                value = trustPatternText,
+                onValueChange = { trustPatternText = it },
                 modifier =
                     Modifier
                         .fillMaxWidth()
@@ -145,6 +149,35 @@ fun RegionCnapRulesSheet(
             )
             Text(
                 stringResource(R.string.cnap_trust_priority_notice),
+                style = MaterialTheme.typography.labelSmall,
+                color = CatPeach,
+            )
+            HorizontalDivider()
+            Text(
+                stringResource(R.string.cnap_block_title),
+                style = MaterialTheme.typography.titleSmall,
+                color = CatText,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                stringResource(R.string.cnap_block_desc),
+                style = MaterialTheme.typography.bodySmall,
+                color = CatSubtext,
+            )
+            OutlinedTextField(
+                value = blockPatternText,
+                onValueChange = { blockPatternText = it },
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 112.dp)
+                        .testTag(CNAP_BLOCK_PATTERNS_TAG),
+                label = { Text(stringResource(R.string.cnap_block_patterns)) },
+                supportingText = { Text(stringResource(R.string.cnap_block_patterns_hint)) },
+                minLines = 3,
+            )
+            Text(
+                stringResource(R.string.cnap_block_priority_notice),
                 style = MaterialTheme.typography.labelSmall,
                 color = CatPeach,
             )
@@ -165,7 +198,7 @@ fun RegionCnapRulesSheet(
                     icon = Icons.Default.Check,
                     color = CatGreen,
                     onClick = {
-                        onSave(blockOutsideRegions, parsedRegions, parsedPatterns)
+                        onSave(blockOutsideRegions, parsedRegions, parsedTrustPatterns, parsedBlockPatterns)
                         onDismiss()
                     },
                     modifier = Modifier.weight(1f),

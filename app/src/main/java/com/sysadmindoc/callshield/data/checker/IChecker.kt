@@ -202,6 +202,7 @@ object CheckerPriority {
     const val FREQUENCY_ESCALATION = 3_500
     const val HEURISTIC = 3_000
     const val CAMPAIGN_BURST = 2_500
+    const val CALLER_NAME_BLOCK = 2_250 // late CNAP-name block; every explicit and behavioral allow wins
     const val ML_SCORER = 2_000
 
     // ── SMS-only extension chain ─────────────────────────────────────
@@ -341,6 +342,7 @@ object SpamCheckers {
             add(FrequencyEscalationChecker(repo))
             add(HeuristicChecker(repo, appContext, dependencies.spamHeuristics))
             add(CampaignBurstChecker(dependencies.campaignDetector))
+            add(CallerNameBlockChecker())
             add(MlScorerChecker(dependencies.spamMLScorer))
         }.sortedByDescending { it.priority }
 

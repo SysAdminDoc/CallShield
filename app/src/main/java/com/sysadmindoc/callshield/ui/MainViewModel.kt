@@ -171,6 +171,9 @@ class MainViewModel
         val cnapTrustPatterns =
             repo.cnapTrustPatterns
                 .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
+        val cnapBlockPatterns =
+            repo.cnapBlockPatterns
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
         val dbPrefixExpansionEnabled =
             repo.dbPrefixExpansionEnabled
                 .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
@@ -629,10 +632,12 @@ class MainViewModel
             regionBlockEnabled: Boolean,
             allowedRegions: Set<String>,
             cnapTrustPatterns: Set<String>,
+            cnapBlockPatterns: Set<String>,
         ) = viewModelScope.launch {
             repo.setAllowedRegions(allowedRegions)
             repo.setRegionBlock(regionBlockEnabled && allowedRegions.isNotEmpty())
             repo.setCnapTrustPatterns(cnapTrustPatterns)
+            repo.setCnapBlockPatterns(cnapBlockPatterns)
         }
 
         fun setDbPrefixExpansion(v: Boolean) = viewModelScope.launch { repo.setDbPrefixExpansion(v) }

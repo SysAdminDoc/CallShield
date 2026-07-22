@@ -1285,7 +1285,7 @@
         <item quantity="other">Blocked %d spam items recently</item>
     </plurals>
     <string name="settings_region_cnap_rules">Region &amp; caller-name rules</string>
-    <string name="settings_region_cnap_summary">%1$d allowed regions · %2$d trusted name patterns</string>
+    <string name="settings_region_cnap_summary">%1$d allowed regions · %2$d trusted names · %3$d blocked names</string>
     <string name="region_rules_title">Region &amp; caller-name rules</string>
     <string name="region_rules_disclosure">These rules run entirely on your device. Region blocking uses the incoming number’s NANP area code. Caller-name trust uses only a carrier-presented name that Android exposes to the screening service.</string>
     <string name="region_rules_block_outside">Block calls outside allowed regions</string>
@@ -1299,6 +1299,12 @@
     <string name="cnap_trust_patterns">Trusted name patterns</string>
     <string name="cnap_trust_patterns_hint">One pattern per line. Use * for any text and ? for one character, for example SCHOOL DISTRICT*.</string>
     <string name="cnap_trust_priority_notice">Exact number, system, prefix, and wildcard blocks still win over caller-name trust.</string>
+    <string name="cnap_block_title">Block a presented caller name</string>
+    <string name="cnap_block_desc">When the carrier provides a caller name, matching calls are blocked after higher-priority allows and number rules have run.</string>
+    <string name="cnap_block_patterns">Blocked name patterns</string>
+    <string name="cnap_block_patterns_hint">One pattern per line. Use * for any text and ? for one character, for example MEDICARE BENEFITS*.</string>
+    <string name="cnap_block_priority_notice">Contacts, whitelist entries, recent calls, emergency callbacks, and trusted-name rules still ring through.</string>
+    <string name="block_reason_caller_name">Blocked — caller name “%1$s” matched your name rule</string>
     <string name="block_reason_out_of_region">Blocked — %1$s is outside allowed regions</string>
     <string name="block_reason_out_of_region_unknown">Blocked — international or unknown region is outside allowed regions</string>
     <string name="model_health_title">ML model health</string>
