@@ -32,6 +32,72 @@ fun metadataValue(
         ?.groupValues
         ?.get(1)
 
+data class SigningSecretFinding(
+    val path: String,
+    val line: Int,
+    val kind: String,
+)
+
+fun isExternalSecretReference(value: String): Boolean {
+    val normalized = value.trim()
+    return normalized.isBlank() ||
+        '$' in normalized ||
+        listOf("System.getenv", "signingProp", "findProperty", "providers.", "property(")
+            .any(normalized::contains)
+}
+
+fun findSigningSecretFindings(
+    path: String,
+    text: String,
+): List<SigningSecretFinding> {
+    val privateKeyHeader =
+        Regex("""-----BEGIN\s+(?:RSA\s+|EC\s+|OPENSSH\s+)?PRIVATE KEY-----""", RegexOption.IGNORE_CASE)
+    val quotedPasswordAssignment =
+        Regex(
+            """\b(?:storePassword|keyPassword|keystorePassword)\s*=\s*["']([^"']+)["']""",
+            RegexOption.IGNORE_CASE,
+        )
+    val namedPasswordAssignment =
+        Regex(
+            """^\s*["']?(?:RELEASE_(?:STORE|KEY)_PASSWORD|STORE_PASSWORD|KEY_PASSWORD)["']?\s*[=:]\s*(.+?)\s*$""",
+            RegexOption.IGNORE_CASE,
+        )
+
+    return buildList {
+        text.lineSequence().forEachIndexed { index, line ->
+            if (privateKeyHeader.containsMatchIn(line)) {
+                add(SigningSecretFinding(path, index + 1, "private-key material"))
+            }
+            quotedPasswordAssignment.findAll(line).forEach { match ->
+                if (!isExternalSecretReference(match.groupValues[1])) {
+                    add(SigningSecretFinding(path, index + 1, "literal signing password"))
+                }
+            }
+            namedPasswordAssignment.find(line)?.let { match ->
+                val value =
+                    match.groupValues[1]
+                        .trim()
+                        .removeSuffix(",")
+                        .trim()
+                        .removeSurrounding("\"")
+                        .removeSurrounding("'")
+                if (!isExternalSecretReference(value)) {
+                    add(SigningSecretFinding(path, index + 1, "literal credential property"))
+                }
+            }
+        }
+    }.distinct()
+}
+
+fun requireNoTrackedSigningSecrets(findings: List<SigningSecretFinding>) {
+    check(findings.isEmpty()) {
+        "Tracked signing-secret preflight failed:\n" +
+            findings.joinToString("\n") { finding ->
+                "- ${finding.path}:${finding.line}: ${finding.kind}"
+            }
+    }
+}
+
 val appReleaseVersion = parseAppReleaseVersion(file("app/build.gradle.kts"))
 
 val bundledRuntimeAssets =
@@ -161,6 +227,7 @@ tasks.register("verifyReleaseApkReproducibleMetadata") {
 tasks.register("verifyReleaseMetadata") {
     group = "verification"
     description = "Fails when release, store, README, or F-Droid metadata drifts from the app."
+    dependsOn("verifyTrackedSigningSecrets")
 
     val readme = layout.projectDirectory.file("README.md")
     val storeDescription = layout.projectDirectory.file("fastlane/metadata/android/en-US/full_description.txt")
@@ -282,6 +349,76 @@ tasks.register("verifyReleaseMetadata") {
         check(issues.isEmpty()) {
             "Release metadata verification failed:\n${issues.joinToString("\n") { "- $it" }}"
         }
+    }
+}
+
+tasks.register("verifySigningSecretGuardTests") {
+    group = "verification"
+    description = "Proves literal signing secrets fail without appearing in diagnostics."
+
+    doLast {
+        val sentinel = "synthetic-secret-must-not-print"
+        val syntheticSecrets =
+            listOf(
+                "fixture.gradle.kts" to ("store" + "Password = \"$sentinel\""),
+                "fixture.properties" to ("RELEASE_STORE_" + "PASSWORD=$sentinel"),
+                "fixture.pem" to ("-----BEGIN " + "PRIVATE KEY-----\n$sentinel"),
+            )
+        val findings =
+            syntheticSecrets.flatMap { (path, text) ->
+                findSigningSecretFindings(path, text)
+            }
+        val failure = runCatching { requireNoTrackedSigningSecrets(findings) }.exceptionOrNull()
+        check(failure != null) { "Synthetic signing-secret fixture was not rejected." }
+        check(sentinel !in failure.message.orEmpty()) { "Signing-secret diagnostic exposed the matched value." }
+
+        val safeLookups =
+            """
+            storePassword = releaseStorePassword
+            keyPassword = signingProp("RELEASE_KEY_PASSWORD")
+            RELEASE_STORE_PASSWORD: ${'$'}{{ secrets.RELEASE_STORE_PASSWORD }}
+            """.trimIndent()
+        check(findSigningSecretFindings("safe.yml", safeLookups).isEmpty()) {
+            "Environment and property lookups must remain valid."
+        }
+    }
+}
+
+tasks.register("verifyTrackedSigningSecrets") {
+    group = "verification"
+    description = "Rejects signing secrets embedded in tracked source and configuration files."
+    dependsOn("verifySigningSecretGuardTests")
+
+    val scannedExtensions =
+        setOf("bat", "cmd", "conf", "env", "gradle", "ini", "json", "kts", "properties", "ps1", "sh", "toml", "xml", "yaml", "yml")
+    val trackedSourceFiles =
+        providers
+            .exec {
+                commandLine("git", "ls-files", "-z")
+            }.standardOutput
+            .asText
+            .map { output ->
+                output
+                    .split('\u0000')
+                    .filter(String::isNotBlank)
+                    .map(rootProject::file)
+                    .filter { it.extension.lowercase() in scannedExtensions }
+            }
+    inputs.files(trackedSourceFiles)
+
+    doLast {
+        val findings =
+            trackedSourceFiles.get().flatMap { file ->
+                if (!file.isFile) {
+                    emptyList()
+                } else {
+                    findSigningSecretFindings(
+                        path = file.relativeTo(rootDir).invariantSeparatorsPath,
+                        text = file.readText(),
+                    )
+                }
+            }
+        requireNoTrackedSigningSecrets(findings)
     }
 }
 
