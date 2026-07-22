@@ -151,6 +151,7 @@ class SpamRepository(
         val KEY_URLHAUS_STRIP_QUERY = booleanPreferencesKey("urlhaus_strip_query_enabled")
         val KEY_CONTACT_WHITELIST = booleanPreferencesKey("contact_whitelist_enabled")
         val KEY_CONTACTS_ONLY = booleanPreferencesKey("contacts_only_mode_enabled")
+        val KEY_SELECTED_CONTACT_GROUPS = stringSetPreferencesKey("selected_contact_group_keys")
         val KEY_REGION_BLOCK = booleanPreferencesKey("region_block_enabled")
         val KEY_ALLOWED_REGIONS = stringSetPreferencesKey("allowed_call_regions")
         val KEY_CNAP_TRUST_PATTERNS = stringSetPreferencesKey("cnap_trust_patterns")
@@ -250,6 +251,7 @@ class SpamRepository(
     val urlhausStripQueryEnabled: Flow<Boolean> = settingsRepository.urlhausStripQueryEnabled
     val contactWhitelistEnabled: Flow<Boolean> = settingsRepository.contactWhitelistEnabled
     val contactsOnlyEnabled: Flow<Boolean> = settingsRepository.contactsOnlyEnabled
+    val selectedContactGroups: Flow<Set<String>> = settingsRepository.selectedContactGroups
     val regionBlockEnabled: Flow<Boolean> = settingsRepository.regionBlockEnabled
     val allowedRegions: Flow<Set<String>> = settingsRepository.allowedRegions
     val cnapTrustPatterns: Flow<Set<String>> = settingsRepository.cnapTrustPatterns
@@ -353,6 +355,9 @@ class SpamRepository(
     suspend fun setContactWhitelist(enabled: Boolean) = settingsRepository.setContactWhitelist(enabled)
 
     suspend fun setContactsOnly(enabled: Boolean) = settingsRepository.setContactsOnly(enabled)
+
+    suspend fun setSelectedContactGroups(groupKeys: Set<String>) =
+        settingsRepository.setSelectedContactGroups(groupKeys)
 
     suspend fun setRegionBlock(enabled: Boolean) = settingsRepository.setRegionBlock(enabled)
 

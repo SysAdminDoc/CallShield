@@ -18,9 +18,8 @@ class SpamHeuristics
         // ── Contact Whitelist ──────────────────────────────────────────────
         // If the number is in the user's contacts, it's NEVER spam.
         //
-        // A single incoming call triggers isInContacts() up to 4 times
-        // (SpamRepository, SpamHeuristics.analyze, CallShieldScreeningService
-        // pre-check, postDelayed after-call feedback). Each ContactsContract
+        // A single incoming call can trigger isInContacts() in the service
+        // fast path, pipeline, and deferred after-call feedback. Each ContactsContract
         // PhoneLookup takes ~10–50 ms on a device with large contact lists.
         // A short-TTL cache keyed by normalized number eliminates the
         // redundant queries while staying responsive to the user adding or
@@ -34,35 +33,42 @@ class SpamHeuristics
         fun isInContacts(
             context: Context,
             number: String,
+            selectedGroupKeys: Set<String>? = null,
         ): Boolean {
             val normalized = PhoneIdentityCanonicalizer.fromContext(context).canonicalizePhone(number)
+            val groupKeys = selectedGroupKeys?.let(ContactGroupCatalog::preserveScope)
+            val cacheKey = normalized + "|" + (groupKeys?.sorted()?.joinToString(",") ?: "all")
             val now = System.currentTimeMillis()
             synchronized(contactCacheLock) {
-                val cached = contactCache[normalized]
+                val cached = contactCache[cacheKey]
                 if (cached != null && now - cached.first < CONTACT_CACHE_TTL_MS) {
                     return cached.second
                 }
             }
             val found =
-                try {
-                    val uri =
-                        android.net.Uri.withAppendedPath(
-                            ContactsContract.PhoneLookup.CONTENT_FILTER_URI,
-                            android.net.Uri.encode(normalized),
-                        )
-                    context.contentResolver
-                        .query(
-                            uri,
-                            arrayOf(ContactsContract.PhoneLookup._ID),
-                            null,
-                            null,
-                            null,
-                        )?.use { it.count > 0 } ?: false
-                } catch (_: Exception) {
-                    false
+                if (groupKeys == null) {
+                    try {
+                        val uri =
+                            android.net.Uri.withAppendedPath(
+                                ContactsContract.PhoneLookup.CONTENT_FILTER_URI,
+                                android.net.Uri.encode(normalized),
+                            )
+                        context.contentResolver
+                            .query(
+                                uri,
+                                arrayOf(ContactsContract.PhoneLookup._ID),
+                                null,
+                                null,
+                                null,
+                            )?.use { it.count > 0 } ?: false
+                    } catch (_: RuntimeException) {
+                        false
+                    }
+                } else {
+                    ContactGroupCatalog.isNumberInSelectedGroups(context, normalized, groupKeys)
                 }
             synchronized(contactCacheLock) {
-                contactCache[normalized] = now to found
+                contactCache[cacheKey] = now to found
             }
             return found
         }
@@ -392,11 +398,6 @@ class SpamHeuristics
             var score = 0
             val reasons = mutableListOf<String>()
 
-            // Contact whitelist — instant pass
-            if (isInContacts(context, number)) {
-                return HeuristicResult(0, listOf("contact_whitelist"))
-            }
-
             // International premium / wangiri — very high confidence
             if (isInternationalPremium(number)) {
                 score += 90
@@ -474,7 +475,8 @@ class SpamHeuristics
             fun isInContacts(
                 context: Context,
                 number: String,
-            ): Boolean = shared.isInContacts(context, number)
+                selectedGroupKeys: Set<String>? = null,
+            ): Boolean = shared.isInContacts(context, number, selectedGroupKeys)
 
             fun clearContactCache() {
                 shared.clearContactCache()

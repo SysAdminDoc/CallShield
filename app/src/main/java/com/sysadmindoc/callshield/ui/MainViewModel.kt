@@ -6,14 +6,18 @@ import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.sysadmindoc.callshield.CallShieldApp
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.BackupRestore
 import com.sysadmindoc.callshield.data.BlockingProfiles
 import com.sysadmindoc.callshield.data.BlocklistExporter
-import com.sysadmindoc.callshield.data.CallbackDetector
 import com.sysadmindoc.callshield.data.CallCategory
+import com.sysadmindoc.callshield.data.CallbackDetector
 import com.sysadmindoc.callshield.data.CategoryCallAction
 import com.sysadmindoc.callshield.data.CommunityContributor
+import com.sysadmindoc.callshield.data.ContactGroup
+import com.sysadmindoc.callshield.data.ContactGroupCatalog
+import com.sysadmindoc.callshield.data.SpamHeuristics
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.TimeSchedule
 import com.sysadmindoc.callshield.data.model.BlockedCall
@@ -33,10 +37,12 @@ import com.sysadmindoc.callshield.service.SmsInboxScanner
 import com.sysadmindoc.callshield.ui.theme.AppThemeMode
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -170,6 +176,13 @@ class MainViewModel
         val contactsOnlyEnabled =
             repo.contactsOnlyEnabled
                 .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+        val selectedContactGroups =
+            repo.selectedContactGroups
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
+        private val _contactGroups = MutableStateFlow<List<ContactGroup>>(emptyList())
+        val contactGroups: StateFlow<List<ContactGroup>> = _contactGroups
+        private val _contactGroupsLoading = MutableStateFlow(false)
+        val contactGroupsLoading: StateFlow<Boolean> = _contactGroupsLoading
         val regionBlockEnabled =
             repo.regionBlockEnabled
                 .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
@@ -667,6 +680,28 @@ class MainViewModel
         fun setContactWhitelist(v: Boolean) = viewModelScope.launch { repo.setContactWhitelist(v) }
 
         fun setContactsOnly(v: Boolean) = viewModelScope.launch { repo.setContactsOnly(v) }
+
+        fun setSelectedContactGroups(groupKeys: Set<String>) =
+            viewModelScope.launch {
+                repo.setSelectedContactGroups(groupKeys)
+                SpamHeuristics.clearContactCache()
+            }
+
+        fun refreshContactGroups() {
+            viewModelScope.launch {
+                (appContext.applicationContext as? CallShieldApp)?.ensureContactsObserver()
+                SpamHeuristics.clearContactCache()
+                _contactGroupsLoading.value = true
+                try {
+                    _contactGroups.value =
+                        withContext(Dispatchers.IO) {
+                            ContactGroupCatalog.loadGroups(appContext)
+                        }
+                } finally {
+                    _contactGroupsLoading.value = false
+                }
+            }
+        }
 
         fun saveRegionAndCnapRules(
             regionBlockEnabled: Boolean,

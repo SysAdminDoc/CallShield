@@ -6,6 +6,10 @@ All notable changes to CallShield will be documented in this file.
 
 ### Changed
 
+- Contact trust can now cover all saved contacts or only selected Android
+  contact groups. Group identity stays local and privacy-safe, membership
+  changes invalidate the call-path cache, permission loss fails closed with a
+  visible degraded state, and portable backup schema v7 preserves the scope.
 - Portable backups can now be protected with a non-persisted passphrase. The
   versioned binary envelope uses PBKDF2-HMAC-SHA256 and AES-256-GCM with fresh
   salt and nonce values; wrong passphrases, tampering, and oversized plaintext

@@ -261,6 +261,8 @@ class BackupRestoreIntegrationTest {
             repo.setFreqThreshold(3)
             repo.setActiveProfileName(null)
             repo.setCategoryCallAction(CallCategory.Scam, CategoryCallAction.INHERIT)
+            repo.setSelectedContactGroups(emptySet())
+            val contactGroupKey = "a".repeat(64)
 
             val preview =
                 preview(
@@ -273,6 +275,7 @@ class BackupRestoreIntegrationTest {
                                 frequencyThreshold = 8,
                                 activeProfileName = BlockingProfiles.Profile.SLEEP.name,
                                 categoryCallActions = listOf("scam=silence"),
+                                selectedContactGroups = listOf(contactGroupKey),
                             ),
                     ),
                     setOf(BackupSection.SETTINGS),
@@ -297,12 +300,14 @@ class BackupRestoreIntegrationTest {
                 CategoryCallAction.SILENCE,
                 repo.categoryCallActions.first()[CallCategory.Scam],
             )
+            assertEquals(setOf(contactGroupKey), repo.selectedContactGroups.first())
 
             repo.setBlockCalls(true)
             repo.setFreqEscalation(true)
             repo.setFreqThreshold(3)
             repo.setActiveProfileName(null)
             repo.setCategoryCallAction(CallCategory.Scam, CategoryCallAction.INHERIT)
+            repo.setSelectedContactGroups(emptySet())
             Unit
         }
 
