@@ -2,9 +2,9 @@ package com.sysadmindoc.callshield.ui
 
 import android.content.Intent
 import android.os.Bundle
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.*
@@ -53,7 +53,7 @@ data class LaunchRequest(
 )
 
 @AndroidEntryPoint
-class MainActivity : ComponentActivity() {
+class MainActivity : AppCompatActivity() {
     private var launchRequest by mutableStateOf(LaunchRequest(id = 0))
 
     override fun onCreate(savedInstanceState: Bundle?) {

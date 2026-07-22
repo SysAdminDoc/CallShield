@@ -12,7 +12,7 @@
 <p align="center">
   <a href="https://github.com/SysAdminDoc/CallShield/releases/latest"><img src="https://img.shields.io/github/v/release/SysAdminDoc/CallShield?style=flat-square&color=a6e3a1" alt="Release"></a>
   <img src="https://img.shields.io/badge/Spam%20Numbers-32%2C933-f38ba8?style=flat-square" alt="32,933 Numbers">
-  <img src="https://img.shields.io/badge/Tests-789-94e2d5?style=flat-square" alt="789 Tests">
+  <img src="https://img.shields.io/badge/Tests-797-94e2d5?style=flat-square" alt="797 Tests">
   <img src="https://img.shields.io/badge/Android-10%2B-89b4fa?style=flat-square" alt="Android 10+">
   <img src="https://img.shields.io/badge/License-MIT-cba6f7?style=flat-square" alt="MIT License">
   <img src="https://img.shields.io/badge/API%20Keys-None-fab387?style=flat-square" alt="No required API keys">
@@ -24,6 +24,10 @@ CallShield blocks spam calls and texts using a **15+ layer on-device detection e
 
 ## v1.7.18 Highlights
 
+- **Independent app language** — Settings now offers a persistent language
+  picker backed by Android's per-app locale APIs (including the system App
+  Languages surface on Android 13+); debug builds expose both Android
+  pseudolocales for repeatable layout QA.
 - **Contacts-mode safety check** — CallShield now detects when a contacts-based
   screening mode (contact-whitelist or contacts-only) is switched on but the
   Contacts permission has since been denied — a state that silently weakens

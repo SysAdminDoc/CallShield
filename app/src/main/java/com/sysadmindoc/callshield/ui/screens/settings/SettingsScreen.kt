@@ -13,12 +13,14 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.CallSplit
 import androidx.compose.material.icons.automirrored.filled.Label
 import androidx.compose.material.icons.automirrored.filled.PhoneCallback
@@ -51,6 +53,7 @@ import com.sysadmindoc.callshield.data.repository.ANSWERED_CALLER_WINDOW_DAYS_MI
 import com.sysadmindoc.callshield.data.repository.EMERGENCY_CALLBACK_WINDOW_MINUTES_MAX
 import com.sysadmindoc.callshield.data.repository.EMERGENCY_CALLBACK_WINDOW_MINUTES_MIN
 import com.sysadmindoc.callshield.permissions.CallShieldPermissions
+import com.sysadmindoc.callshield.ui.AppLanguage
 import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.theme.*
 
@@ -109,6 +112,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
     val externalBlocklistResult by viewModel.externalBlocklistResult.collectAsStateWithLifecycle()
     var showPushAlertSources by remember { mutableStateOf(false) }
     var showRawSmsExportDialog by remember { mutableStateOf(false) }
+    var showLanguageDialog by remember { mutableStateOf(false) }
     var externalBlocklistUrl by remember { mutableStateOf("") }
     var externalBlocklistLabel by remember { mutableStateOf("") }
 
@@ -297,6 +301,35 @@ fun SettingsScreen(viewModel: MainViewModel) {
                 Text(stringResource(R.string.settings_open_app_settings), color = CatSubtext)
             }
             GradientDivider()
+        }
+
+        // Language
+        val languageOptions = AppLanguage.options()
+        val currentLanguageTag = AppLanguage.currentLanguageTag()
+        val currentLanguage =
+            languageOptions.firstOrNull { it.languageTag == currentLanguageTag }
+                ?: languageOptions.first()
+        SettingsCard(stringResource(R.string.settings_language)) {
+            Row(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .clickable { showLanguageDialog = true }
+                        .padding(vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                PremiumIconTile(icon = Icons.Default.Language, color = CatBlue, size = 38.dp, iconSize = 20.dp)
+                Spacer(Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(stringResource(currentLanguage.labelRes), style = MaterialTheme.typography.bodyLarge)
+                    Text(
+                        stringResource(R.string.settings_language_desc),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = CatSubtext,
+                    )
+                }
+                Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = CatOverlay)
+            }
         }
 
         // Blocking
@@ -670,6 +703,49 @@ fun SettingsScreen(viewModel: MainViewModel) {
             onToggle = { pkg, allowed -> viewModel.setPushAlertPackageAllowed(pkg, allowed) },
             onReset = { viewModel.resetPushAlertPackages() },
             onDismiss = { showPushAlertSources = false },
+        )
+    }
+
+    if (showLanguageDialog) {
+        val languageOptions = AppLanguage.options()
+        val currentLanguageTag = AppLanguage.currentLanguageTag()
+        AlertDialog(
+            onDismissRequest = { showLanguageDialog = false },
+            containerColor = SurfaceBright,
+            icon = { Icon(Icons.Default.Language, contentDescription = null, tint = CatBlue) },
+            title = { Text(stringResource(R.string.settings_language_dialog_title)) },
+            text = {
+                Column {
+                    languageOptions.forEach { option ->
+                        Row(
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        showLanguageDialog = false
+                                        AppLanguage.selectLanguage(option.languageTag)
+                                    }.padding(vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            RadioButton(
+                                selected = option.languageTag == currentLanguageTag,
+                                onClick = null,
+                                colors = RadioButtonDefaults.colors(selectedColor = CatBlue),
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(stringResource(option.labelRes))
+                        }
+                    }
+                    if (BuildConfig.DEBUG) {
+                        Text(
+                            stringResource(R.string.settings_language_debug_only),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = CatOverlay,
+                        )
+                    }
+                }
+            },
+            confirmButton = {},
         )
     }
 

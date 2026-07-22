@@ -6,6 +6,10 @@ All notable changes to CallShield will be documented in this file.
 
 ### Added
 
+- **Persistent per-app language selection.** Settings now includes a language
+  picker synchronized with Android's App Languages preference on Android 13+
+  and persisted through AppCompat on Android 12 and lower. Release builds list
+  only actual shipped locales; debug builds also expose en-XA and ar-XB for QA.
 - **Repeatable pseudolocale screenshot QA.** Debug builds now include Android's
   `en-XA` and `ar-XB` resources, and an emulator script captures onboarding,
   dashboard, blocklist, and Settings in both locales while restoring the app's

@@ -454,6 +454,14 @@
     <string name="settings_access_optional">Optional</string>
     <string name="settings_access_grant">Grant</string>
     <string name="settings_access_enable">Enable</string>
+    <string name="settings_language">App language</string>
+    <string name="settings_language_desc">Choose CallShield’s language independently of the device language.</string>
+    <string name="settings_language_system_default">System default</string>
+    <string name="settings_language_english">English</string>
+    <string name="settings_language_pseudo_accented">Pseudolocale: accented</string>
+    <string name="settings_language_pseudo_rtl">Pseudolocale: right-to-left</string>
+    <string name="settings_language_dialog_title">Choose app language</string>
+    <string name="settings_language_debug_only">Pseudolocales are available in debug builds for layout testing.</string>
     <string name="settings_blocking">Blocking</string>
     <string name="settings_block_spam_calls">Block Spam Calls</string>
     <string name="settings_block_spam_calls_desc">Reject calls from known spam numbers</string>
