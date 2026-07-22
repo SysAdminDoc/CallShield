@@ -15,11 +15,14 @@ import android.service.notification.NotificationListenerService
  *    unbound and nothing re-scheduled, silently degrading protection until
  *    the next reboot.
  *
- * On either event it reschedules all four workers, re-enqueues the pending
+ * On either event it reschedules background work, re-enqueues the pending
  * blocked-call log flush, and asks the framework to rebind the RCS
- * notification listener.
+ * notification listener. It also checks immediately whether Android revoked
+ * the call-screening role.
  */
 class BootReceiver : BroadcastReceiver() {
+    internal var protectionReassertion: (Context) -> Unit = ::reassertProtection
+
     override fun onReceive(
         context: Context,
         intent: Intent,
@@ -27,22 +30,24 @@ class BootReceiver : BroadcastReceiver() {
         when (intent.action) {
             Intent.ACTION_BOOT_COMPLETED,
             Intent.ACTION_MY_PACKAGE_REPLACED,
-            -> reassertProtection(context)
+            -> protectionReassertion(context)
         }
     }
+}
 
-    private fun reassertProtection(context: Context) {
-        SyncWorker.schedule(context)
-        HotListSyncWorker.schedule(context)
-        DigestWorker.schedule(context)
-        PendingBlockedCallLogWorker.schedule(context)
-        try {
-            NotificationListenerService.requestRebind(
-                ComponentName(context, RcsNotificationListener::class.java),
-            )
-        } catch (_: Exception) {
-            // requestRebind throws if notification access was revoked; the
-            // user must re-grant it — nothing to do from here.
-        }
+private fun reassertProtection(context: Context) {
+    SyncWorker.schedule(context)
+    HotListSyncWorker.schedule(context)
+    DigestWorker.schedule(context)
+    PendingBlockedCallLogWorker.schedule(context)
+    ProtectionHealthWorker.schedule(context)
+    ProtectionHealthWorker.checkNow(context)
+    try {
+        NotificationListenerService.requestRebind(
+            ComponentName(context, RcsNotificationListener::class.java),
+        )
+    } catch (_: Exception) {
+        // requestRebind throws if notification access was revoked; the
+        // user must re-grant it — nothing to do from here.
     }
 }

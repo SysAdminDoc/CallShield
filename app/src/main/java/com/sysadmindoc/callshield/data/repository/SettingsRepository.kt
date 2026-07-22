@@ -101,6 +101,8 @@ class SettingsRepository(
     val freqThreshold: Flow<Int> =
         dataStore.data.map { it[SpamRepository.KEY_FREQ_THRESHOLD] ?: DEFAULT_FREQUENCY_THRESHOLD }
     val onboardingDone: Flow<Boolean> = dataStore.data.map { it[SpamRepository.KEY_ONBOARDING_DONE] ?: false }
+    internal val protectionRoleLossNoticeShown: Flow<Boolean> =
+        privateDataStore.data.map { it[SpamRepository.KEY_PROTECTION_ROLE_LOSS_NOTICE_SHOWN] ?: false }
     val autoCleanupEnabled: Flow<Boolean> = dataStore.data.map { it[SpamRepository.KEY_AUTO_CLEANUP] ?: false }
     val cleanupDays: Flow<Int> = dataStore.data.map { it[SpamRepository.KEY_CLEANUP_DAYS] ?: DEFAULT_CLEANUP_DAYS }
     val mlScorerEnabled: Flow<Boolean> = dataStore.data.map { it[SpamRepository.KEY_ML_SCORER] ?: true }
@@ -195,6 +197,15 @@ class SettingsRepository(
     suspend fun resetPushAlertPackages() = dataStore.edit { it.remove(SpamRepository.KEY_PUSH_ALERT_DISABLED) }
 
     suspend fun setOnboardingDone() = dataStore.edit { it[SpamRepository.KEY_ONBOARDING_DONE] = true }
+
+    internal suspend fun setProtectionRoleLossNoticeShown(shown: Boolean) =
+        privateDataStore.edit { preferences ->
+            if (shown) {
+                preferences[SpamRepository.KEY_PROTECTION_ROLE_LOSS_NOTICE_SHOWN] = true
+            } else {
+                preferences.remove(SpamRepository.KEY_PROTECTION_ROLE_LOSS_NOTICE_SHOWN)
+            }
+        }
 
     suspend fun setAutoCleanup(enabled: Boolean) = dataStore.edit { it[SpamRepository.KEY_AUTO_CLEANUP] = enabled }
 
