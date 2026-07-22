@@ -85,4 +85,27 @@ class CrashReporterTest {
         assertTrue(report.contains("Caused by: java.lang.RuntimeException: inner blew up"))
         assertNotNull(report)
     }
+
+    @Test
+    fun `crash message sanitizer removes private values`() {
+        val sanitized =
+            CrashReporter.sanitizeCrashMessage(
+                "lookup +1 (212) 555-0101 failed at " +
+                    "https://example.test/feed.json?token=abc#row with api_key=secret-value",
+            )
+
+        assertTrue(sanitized.contains("[REDACTED_NUMBER]"))
+        assertTrue(sanitized.contains("https://example.test/feed.json?[REDACTED]"))
+        assertTrue(sanitized.contains("api_key=[REDACTED]"))
+        assertTrue(!sanitized.contains("212) 555"))
+        assertTrue(!sanitized.contains("secret-value"))
+        assertTrue(!sanitized.contains("token=abc"))
+    }
+
+    @Test
+    fun `crash message sanitizer bounds output`() {
+        val sanitized = CrashReporter.sanitizeCrashMessage("x".repeat(5_000))
+
+        assertEquals(1_000, sanitized.length)
+    }
 }

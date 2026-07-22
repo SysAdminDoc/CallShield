@@ -53,6 +53,9 @@ All notable changes to CallShield will be documented in this file.
 - The local community-report pipeline regression test no longer depends on a
   GitHub Actions workflow removed in v1.7.12; it once again validates the
   domain, hot-list, campaign-range, merge, and cleanup stages end to end.
+- User-shared crash logs now redact phone-like values, credential fields, and
+  URL queries/fragments from exception messages, while bounding individual
+  messages and stack-frame output against pathological crash payloads.
 
 ## v1.7.19 — 2026-07-21
 

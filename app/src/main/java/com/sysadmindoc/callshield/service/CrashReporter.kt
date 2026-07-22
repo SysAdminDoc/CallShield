@@ -42,6 +42,8 @@ object CrashReporter {
     private const val CRASH_DIR = "crashes"
     private const val KEEP_LATEST = 5
     private const val MAX_STACK_DEPTH = 200 // Guard against pathological chains
+    private const val MAX_FRAMES_PER_CAUSE = 256
+    private const val MAX_MESSAGE_LENGTH = 1_000
 
     @Volatile
     private var installed = false
@@ -132,11 +134,11 @@ object CrashReporter {
             var cause: Throwable? = throwable
             while (cause != null && depth < MAX_STACK_DEPTH) {
                 if (depth == 0) {
-                    pw.println("Exception: ${cause.javaClass.name}: ${cause.message}")
+                    pw.println("Exception: ${cause.javaClass.name}: ${sanitizeCrashMessage(cause.message)}")
                 } else {
-                    pw.println("Caused by: ${cause.javaClass.name}: ${cause.message}")
+                    pw.println("Caused by: ${cause.javaClass.name}: ${sanitizeCrashMessage(cause.message)}")
                 }
-                cause.stackTrace.forEach { pw.println("    at $it") }
+                cause.stackTrace.take(MAX_FRAMES_PER_CAUSE).forEach { pw.println("    at $it") }
                 cause = cause.cause
                 depth++
             }
@@ -170,6 +172,15 @@ object CrashReporter {
         rotate(dir)
     }
 
+    internal fun sanitizeCrashMessage(message: String?): String {
+        if (message.isNullOrEmpty()) return ""
+        val bounded = message.take(MAX_MESSAGE_LENGTH)
+        return CREDENTIAL_VALUE
+            .replace(bounded) { match -> "${match.groupValues[1]}${match.groupValues[2]}[REDACTED]" }
+            .let { URL_WITH_PRIVATE_SUFFIX.replace(it) { match -> match.groupValues[1] + "?[REDACTED]" } }
+            .let { PHONE_LIKE.replace(it, "[REDACTED_NUMBER]") }
+    }
+
     private fun rotate(dir: File) {
         val files =
             dir.listFiles { f -> f.name.startsWith("crash_") && f.name.endsWith(".txt") }
@@ -181,4 +192,10 @@ object CrashReporter {
             .take(files.size - KEEP_LATEST)
             .forEach { runCatching { it.delete() } }
     }
+
+    private val CREDENTIAL_VALUE =
+        Regex("(?i)\\b(api[_-]?key|token|password|secret)(\\s*[=:]\\s*)[^\\s,;]+")
+    private val URL_WITH_PRIVATE_SUFFIX =
+        Regex("(https?://[^\\s?#]+)(?:\\?[^\\s#]*(?:#[^\\s]*)?|#[^\\s]*)")
+    private val PHONE_LIKE = Regex("(?<![A-Za-z0-9])\\+?\\d[\\d ().-]{5,}\\d(?![A-Za-z0-9])")
 }
