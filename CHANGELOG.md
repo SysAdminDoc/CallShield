@@ -2,6 +2,26 @@
 
 All notable changes to CallShield will be documented in this file.
 
+## v1.7.21 — 2026-07-22
+
+### Added
+
+- A persistent appearance selector now offers System, Light, Graphite, and
+  true-black AMOLED themes. Existing installs retain AMOLED as their default,
+  while System follows the device's light/dark setting.
+- Theme palettes have automated WCAG AA contrast coverage for primary text,
+  secondary text, and primary actions.
+
+### Changed
+
+- The visual system now uses a tighter type scale, calmer semantic surfaces,
+  restrained borders, compact section spacing, and consistent control density
+  instead of decorative cards and gradients.
+- Settings, onboarding, dashboard chrome, and the More hub use shorter copy,
+  clearer grouping, and smaller headers while preserving 44 dp action targets.
+- Nested More destinations now share one app header and a predictable Back
+  action instead of stacking a second screen header below the shell.
+
 ## v1.7.20 — 2026-07-22
 
 ### Security

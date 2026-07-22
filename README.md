@@ -12,7 +12,7 @@
 <p align="center">
   <a href="https://github.com/SysAdminDoc/CallShield/releases/latest"><img src="https://img.shields.io/github/v/release/SysAdminDoc/CallShield?style=flat-square&color=a6e3a1" alt="Release"></a>
   <img src="https://img.shields.io/badge/Spam%20Numbers-32%2C933-f38ba8?style=flat-square" alt="32,933 Numbers">
-  <img src="https://img.shields.io/badge/Tests-860-94e2d5?style=flat-square" alt="860 Tests">
+  <img src="https://img.shields.io/badge/Tests-865-94e2d5?style=flat-square" alt="865 Tests">
   <img src="https://img.shields.io/badge/Android-10%2B-89b4fa?style=flat-square" alt="Android 10+">
   <img src="https://img.shields.io/badge/License-MIT-cba6f7?style=flat-square" alt="MIT License">
   <img src="https://img.shields.io/badge/API%20Keys-None-fab387?style=flat-square" alt="No required API keys">
@@ -21,6 +21,20 @@
 ---
 
 CallShield blocks spam calls and texts using a **15+ layer on-device detection engine** with a gradient-boosted tree ML scorer, campaign burst detection, RCS notification filter, and real-time caller ID overlay. Powered by a 32,933-number database with scheduled hot-list updates. Community-maintained, no accounts, no tracking.
+
+## v1.7.21 Highlights
+
+- **Four professional themes** — choose System, Light, Graphite, or true-black
+  AMOLED from Settings. The selection persists across restarts and applies to
+  the main app, onboarding, dialogs, and post-call surfaces.
+- **Calmer visual hierarchy** — a tighter type scale, restrained semantic
+  surfaces, quieter borders, and denser section rhythm replace decorative
+  gradients and excess card framing.
+- **Faster settings and navigation** — shorter descriptions, compact control
+  rows, consolidated appearance options, and one shared header for nested More
+  destinations reduce scrolling and duplicated chrome.
+- **Contrast protected by tests** — text, secondary text, and primary actions
+  meet WCAG AA contrast requirements in every named palette.
 
 ## v1.7.20 Highlights
 
@@ -183,7 +197,7 @@ CallShield blocks spam calls and texts using a **15+ layer on-device detection e
 5. **Callback-aware** — won't block callbacks from numbers you recently called, answered repeatedly, after a local emergency call, or urgent repeated callers
 6. **Community-driven** — one-tap anonymous contribution via Cloudflare Worker, daily merge into database
 
-## Detection Pipeline (v1.7.20)
+## Detection Pipeline (v1.7.21)
 
 All detection layers implement a shared `IChecker` interface and run in priority order via `CheckerPipeline.run` — first non-null result wins, every layer is testable in isolation. Priorities are stable numbers; the ladder below is the live order.
 
@@ -425,7 +439,7 @@ Run tests, lint, release metadata checks, and artifact builds locally before pub
 |-----------|-----------|
 | Language | Kotlin 2.2.21 |
 | UI | Jetpack Compose BOM 2026.05.00 + Material 3 |
-| Theme | Premium AMOLED black + Catppuccin Mocha |
+| Theme | System, Light, Graphite, and true-black AMOLED |
 | Database | Room 2.8.4 (SQLite) — 7 entities |
 | Networking | OkHttp 5.3.2 + certificate pinning |
 | JSON | Moshi |
