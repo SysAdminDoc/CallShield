@@ -285,6 +285,45 @@ class CallShieldScreeningServiceRobolectricTest {
     }
 
     @Test
+    fun `onScreenCall fails open with an explicit allow for unknown direction`() {
+        val number = "+12125550188"
+        runBlocking { repository.blockNumber(number, type = "test") }
+
+        service.onScreenCall(callDetails(number, Call.Details.DIRECTION_UNKNOWN))
+
+        // Unknown-direction calls must get an explicit non-blocking response;
+        // staying silent would make Android hold the call until its timeout.
+        val response = awaitResponse()
+        assertFalse(response.disallowCall)
+        assertFalse(response.rejectCall)
+        assertFalse(response.silenceCall)
+        awaitScopeIdle()
+    }
+
+    @Test
+    fun `outgoing warning suppressed for a whitelisted known risk`() {
+        val number = "+12125550189"
+        runBlocking {
+            fixture.dao.insertNumber(
+                SpamNumber(
+                    number = number,
+                    type = "scam",
+                    reports = 12,
+                    description = "Impersonation scam",
+                ),
+            )
+            repository.addToWhitelist(number, "Verified business")
+            repository.setOutgoingRiskWarning(true)
+        }
+
+        service.onScreenCall(callDetails(number, Call.Details.DIRECTION_OUTGOING))
+        awaitScopeIdle()
+
+        assertTrue(shadowService.lastRespondToCallInput.isEmpty)
+        assertTrue(outgoingWarnings.isEmpty())
+    }
+
+    @Test
     fun `outgoing warning ignores an unknown number`() {
         runBlocking { repository.setOutgoingRiskWarning(true) }
 

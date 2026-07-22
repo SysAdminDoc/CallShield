@@ -36,28 +36,72 @@ class PhoneIdentityCanonicalizer internal constructor(
 
     fun canonicalizeIdentity(raw: String): String {
         val trimmed = raw.trim()
-        if (trimmed.any { it in 'A'..'Z' || it in 'a'..'z' }) {
-            return trimmed
-                .takeIf { it.length <= MAX_OPAQUE_SENDER_LENGTH && OPAQUE_SENDER_PATTERN.matches(it) }
-                ?.uppercase(Locale.ROOT)
-                .orEmpty()
+        if (trimmed.any(Char::isLetter)) {
+            val opaque =
+                trimmed
+                    .takeIf { it.length <= MAX_OPAQUE_SENDER_LENGTH && OPAQUE_SENDER_PATTERN.matches(it) }
+                    ?.uppercase(Locale.ROOT)
+            // Never collapse a lettered sender to "": a blank identity makes
+            // isSpamSms skip keyword/content screening entirely, so a spammer
+            // could opt out of analysis by using a decorated or non-Latin
+            // sender ID. Unrepresentable senders get a stable hashed token
+            // instead — deterministic per sender, so burst detection still
+            // aggregates correctly.
+            return opaque ?: hashedOpaqueIdentity(trimmed)
         }
         return canonicalizePhone(trimmed)
+    }
+
+    private fun hashedOpaqueIdentity(raw: String): String {
+        val digest =
+            java.security.MessageDigest
+                .getInstance("SHA-256")
+                .digest(raw.toByteArray(Charsets.UTF_8))
+        return "OPAQUE:" + digest.take(HASHED_SENDER_BYTES).joinToString("") { "%02x".format(it) }
     }
 
     companion object {
         private const val MAX_SHORT_CODE_DIGITS = 6
         private const val MAX_OPAQUE_SENDER_LENGTH = 64
-        private val OPAQUE_SENDER_PATTERN = Regex("[A-Za-z0-9][A-Za-z0-9 ._-]*")
+        private const val HASHED_SENDER_BYTES = 8
+
+        // Unicode letters/digits, not just ASCII — legitimate sender IDs in
+        // non-Latin scripts must keep a readable canonical form.
+        private val OPAQUE_SENDER_PATTERN = Regex("[\\p{L}\\p{N}][\\p{L}\\p{N} ._-]*")
+
+        private const val REGION_CACHE_TTL_MS = 60_000L
+
+        @Volatile
+        private var cachedInstance: Pair<Long, PhoneIdentityCanonicalizer>? = null
 
         fun fromContext(context: Context): PhoneIdentityCanonicalizer = PhoneIdentityCanonicalizer(resolveRegion(context))
 
+        /**
+         * TTL-cached variant for hot paths: [resolveRegion] costs two
+         * TelephonyManager binder round-trips, which the 5-second screening
+         * budget should not pay on every contact lookup. The short TTL still
+         * picks up SIM swaps and locale changes.
+         */
+        fun cachedFromContext(context: Context): PhoneIdentityCanonicalizer {
+            val now = System.currentTimeMillis()
+            cachedInstance?.let { (createdAt, instance) ->
+                if (now - createdAt < REGION_CACHE_TTL_MS) return instance
+            }
+            return fromContext(context.applicationContext).also { cachedInstance = now to it }
+        }
+
         internal fun resolveRegion(context: Context): String? {
             val telephony = context.getSystemService(Context.TELEPHONY_SERVICE) as? TelephonyManager
+            // SIM region first: it is the user's home region for interpreting
+            // national-format numbers (libphonenumber convention). The network
+            // region is the *visited* network while roaming — preferring it
+            // would canonicalize a roaming user's national numbers under the
+            // wrong country and, worse, bake that into the one-time v12
+            // identity migration.
             val candidates =
                 listOf(
-                    runCatching { telephony?.networkCountryIso }.getOrNull(),
                     runCatching { telephony?.simCountryIso }.getOrNull(),
+                    runCatching { telephony?.networkCountryIso }.getOrNull(),
                     Locale.getDefault().country,
                 )
             return candidates.firstNotNullOfOrNull(::normalizeRegion)

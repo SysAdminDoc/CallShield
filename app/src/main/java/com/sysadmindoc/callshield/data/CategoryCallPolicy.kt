@@ -30,7 +30,7 @@ object CategoryCallPolicy {
         setOf(
             "user_blocklist",
             "temporary_block",
-            "system_blocklist",
+            "system_block_list",
             "wildcard",
             "hash_wildcard",
             "prefix",

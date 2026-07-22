@@ -34,6 +34,10 @@ internal object OutgoingRiskPolicy {
     ): OutgoingRiskWarning? {
         val normalized = repository.normalizeNumber(rawNumber)
         val match = normalized.takeIf(String::isNotBlank)?.let { repository.findExactSpamNumber(it) }
+        // A whitelist entry is the user's standing false-positive correction —
+        // the community DB row usually still exists for exactly those numbers,
+        // and warning on every dial would re-litigate a decision already made.
+        if (match != null && repository.hasActiveWhitelistEntry(normalized)) return null
         val warning = match?.toOutgoingWarning(normalized)
         return warning?.takeIf { shouldShow(normalized, nowElapsed) }
     }

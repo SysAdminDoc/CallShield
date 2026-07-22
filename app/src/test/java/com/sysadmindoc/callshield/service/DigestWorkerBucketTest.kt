@@ -36,6 +36,13 @@ class DigestWorkerBucketTest {
     }
 
     @Test
+    fun `category policy wrapped reasons bucket by the underlying source`() {
+        assertEquals("database", DigestWorker.matchReasonBucket("category_policy:scam:silence:database_exact"))
+        assertEquals("heuristic", DigestWorker.matchReasonBucket("category_policy:telemarketer:block:heuristic_x"))
+        assertEquals("ML", DigestWorker.matchReasonBucket("category_policy:scam:block:ml_scorer_gbt"))
+    }
+
+    @Test
     fun `unknown reasons map to other`() {
         assertEquals("other", DigestWorker.matchReasonBucket("campaign_burst"))
         assertEquals("other", DigestWorker.matchReasonBucket(""))

@@ -177,6 +177,8 @@ class SpamRepository(
         internal val KEY_ONBOARDING_DONE = booleanPreferencesKey("onboarding_done")
         internal val KEY_PROTECTION_ROLE_LOSS_NOTICE_SHOWN =
             booleanPreferencesKey("protection_role_loss_notice_shown")
+        internal val KEY_PROTECTION_ROLE_EVER_HELD =
+            booleanPreferencesKey("protection_role_ever_held")
         internal val KEY_AUTO_CLEANUP = booleanPreferencesKey("auto_cleanup_enabled")
         internal val KEY_CLEANUP_DAYS = intPreferencesKey("cleanup_retention_days")
         internal val KEY_ABSTRACT_API_KEY = stringPreferencesKey("abstract_api_key")
@@ -274,6 +276,8 @@ class SpamRepository(
     val onboardingDone: Flow<Boolean> = settingsRepository.onboardingDone
     internal val protectionRoleLossNoticeShown: Flow<Boolean> =
         settingsRepository.protectionRoleLossNoticeShown
+    internal val protectionRoleEverHeld: Flow<Boolean> =
+        settingsRepository.protectionRoleEverHeld
     val autoCleanupEnabled: Flow<Boolean> = settingsRepository.autoCleanupEnabled
     val cleanupDays: Flow<Int> = settingsRepository.cleanupDays
     val mlScorerEnabled: Flow<Boolean> = settingsRepository.mlScorerEnabled
@@ -326,6 +330,8 @@ class SpamRepository(
     suspend fun setOnboardingDone() = settingsRepository.setOnboardingDone()
 
     internal suspend fun setProtectionRoleLossNoticeShown(shown: Boolean) = settingsRepository.setProtectionRoleLossNoticeShown(shown)
+
+    internal suspend fun setProtectionRoleEverHeld() = settingsRepository.setProtectionRoleEverHeld()
 
     suspend fun setAutoCleanup(enabled: Boolean) = settingsRepository.setAutoCleanup(enabled)
 
@@ -406,6 +412,10 @@ class SpamRepository(
     suspend fun readPrefsSnapshot(): Preferences = settingsRepository.readPrefsSnapshot()
 
     internal suspend fun findExactSpamNumber(normalized: String) = spamRepositoryImpl.findByNumberInternal(normalized)
+
+    internal suspend fun hasActiveWhitelistEntry(normalized: String): Boolean =
+        spamRepositoryImpl.findWhitelistEntryInternal(normalized) != null ||
+            spamRepositoryImpl.findTemporaryWhitelistEntryInternal(normalized) != null
 
     internal suspend fun editPreferences(transform: suspend (MutablePreferences) -> Unit) {
         settingsRepository.editPreferences(transform)

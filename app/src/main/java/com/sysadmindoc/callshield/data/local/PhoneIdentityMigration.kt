@@ -71,6 +71,12 @@ private fun migrateSpamNumbers(
         .groupBy { row -> canonicalizer.canonicalizePhone(row.number).ifBlank { row.number } }
         .forEach { (canonicalNumber, matchingRows) ->
             val merged = mergeSpamRows(canonicalNumber, matchingRows)
+            // Skip untouched rows: the bundled database is already canonical
+            // E.164, so most groups are single unchanged rows. Issuing ~33k
+            // no-op UPDATEs would charge the one-time migration against the
+            // first DB open — which can be an incoming call inside the
+            // 5-second screening deadline.
+            if (matchingRows.size == 1 && merged == matchingRows.single()) return@forEach
             matchingRows.filterNot { it.id == merged.id }.forEach { row ->
                 db.execSQL("DELETE FROM spam_numbers WHERE id = ?", arrayOf(row.id))
             }
@@ -116,6 +122,17 @@ private fun mergeSpamRows(
             blockedRows.any { it.expiresAt == null } -> null
             else -> blockedRows.maxOf { requireNotNull(it.expiresAt) }
         }
+    // A temporary user block must not permanently claim the row's source: once
+    // it expires, activeDecision() hides source=="user" rows entirely, which
+    // would strand any merged community reputation (reports/type) behind an
+    // invisible row. Keep the community source in that case so the reputation
+    // outlives the temporary block.
+    val mergedSource =
+        if (preferred.source == "user" && mergedExpiry != null) {
+            rows.firstOrNull { it.source != "user" }?.source ?: preferred.source
+        } else {
+            preferred.source
+        }
     return survivor.copy(
         number = canonicalNumber,
         type = preferred.type,
@@ -136,7 +153,7 @@ private fun mergeSpamRows(
             preferred.description.ifBlank {
                 rows.firstNotNullOfOrNull { it.description.ifBlank { null } }.orEmpty()
             },
-        source = preferred.source,
+        source = mergedSource,
         isUserBlocked = blockedRows.isNotEmpty(),
         expiresAt = mergedExpiry,
     )
@@ -176,7 +193,10 @@ private fun migrateWhitelist(
                     number = canonicalNumber,
                     description = latest.description.ifBlank { survivor.description },
                     addedTimestamp = matchingRows.maxOf(WhitelistRow::addedTimestamp),
-                    isEmergency = matchingRows.any { it.isEmergency && it.expiresAt == null },
+                    // Emergency is the strongest user allow (rings through quiet
+                    // hours) — never silently drop it during a merge, even when
+                    // it was granted on a temporary entry.
+                    isEmergency = matchingRows.any(WhitelistRow::isEmergency),
                     expiresAt =
                         if (matchingRows.any { it.expiresAt == null }) {
                             null
@@ -184,6 +204,7 @@ private fun migrateWhitelist(
                             matchingRows.maxOf { requireNotNull(it.expiresAt) }
                         },
                 )
+            if (matchingRows.size == 1 && merged == matchingRows.single()) return@forEach
             matchingRows.filterNot { it.id == merged.id }.forEach { row ->
                 db.execSQL("DELETE FROM whitelist WHERE id = ?", arrayOf(row.id))
             }

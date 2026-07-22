@@ -97,6 +97,25 @@ class CallbackDetectorTest {
     }
 
     @Test
+    fun `duplicate provider row does not mask a genuinely spaced retry`() {
+        // Second attempt was double-logged (161s and 160s): the top-2 rows are
+        // only 1s apart, but a real, spaced retry exists in the window.
+        assertTrue(
+            CallbackDetector.hasUrgentRetrySpacing(
+                timestamps = listOf(161_000L, 160_000L, 100_000L),
+                threshold = 2,
+            ),
+        )
+        // A pure machine-speed burst still never qualifies.
+        assertFalse(
+            CallbackDetector.hasUrgentRetrySpacing(
+                timestamps = listOf(103_000L, 102_000L, 101_000L, 100_000L),
+                threshold = 2,
+            ),
+        )
+    }
+
+    @Test
     fun `urgent retry spacing requires at least two attempts`() {
         assertFalse(
             CallbackDetector.hasUrgentRetrySpacing(
