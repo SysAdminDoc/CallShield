@@ -117,6 +117,8 @@ class SettingsRepository(
     val onboardingDone: Flow<Boolean> = dataStore.data.map { it[SpamRepository.KEY_ONBOARDING_DONE] ?: false }
     internal val protectionRoleLossNoticeShown: Flow<Boolean> =
         privateDataStore.data.map { it[SpamRepository.KEY_PROTECTION_ROLE_LOSS_NOTICE_SHOWN] ?: false }
+    internal val protectionRoleEverHeld: Flow<Boolean> =
+        privateDataStore.data.map { it[SpamRepository.KEY_PROTECTION_ROLE_EVER_HELD] ?: false }
     val autoCleanupEnabled: Flow<Boolean> = dataStore.data.map { it[SpamRepository.KEY_AUTO_CLEANUP] ?: false }
     val cleanupDays: Flow<Int> = dataStore.data.map { it[SpamRepository.KEY_CLEANUP_DAYS] ?: DEFAULT_CLEANUP_DAYS }
     val mlScorerEnabled: Flow<Boolean> = dataStore.data.map { it[SpamRepository.KEY_ML_SCORER] ?: true }
@@ -219,6 +221,8 @@ class SettingsRepository(
                 preferences.remove(SpamRepository.KEY_PROTECTION_ROLE_LOSS_NOTICE_SHOWN)
             }
         }
+
+    internal suspend fun setProtectionRoleEverHeld() = privateDataStore.edit { it[SpamRepository.KEY_PROTECTION_ROLE_EVER_HELD] = true }
 
     suspend fun setAutoCleanup(enabled: Boolean) = dataStore.edit { it[SpamRepository.KEY_AUTO_CLEANUP] = enabled }
 
