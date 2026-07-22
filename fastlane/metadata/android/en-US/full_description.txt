@@ -17,7 +17,7 @@ Highlights:
 * User-controlled blocklist, whitelist, wildcard, range, and keyword rules
 * Backup/restore and CSV export for local data portability
 * Optional community spam reports through the project's Cloudflare Worker
-* Optional caller enrichment key stored only on-device outside backup scope
+* Caller lookup sources require no account or API key
 * Android 10+ support with Material 3 and accessibility-focused touch targets
 
 Network access is limited to public spam-data sync, optional caller lookup,

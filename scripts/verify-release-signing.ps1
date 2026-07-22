@@ -20,7 +20,7 @@
     Android SDK root. Defaults to ANDROID_HOME, then sdk.dir in local.properties.
 
 .EXAMPLE
-    pwsh scripts/verify-release-signing.ps1 -ApkPath CallShield-v1.7.20.apk
+    pwsh scripts/verify-release-signing.ps1 -ApkPath app\build\outputs\apk\release\app-release.apk
 #>
 param(
     [string]$ApkPath = "app\build\outputs\apk\release\app-release.apk",

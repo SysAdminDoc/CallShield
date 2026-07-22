@@ -1,0 +1,4 @@
+Choose System, Light, Graphite, or true-black AMOLED themes with a tighter,
+more professional visual system. Category-level call handling, encrypted
+portable backups, contact-group trust scopes, and optional local-only outgoing
+risk warnings add control without accounts, tracking, or API keys.
