@@ -1,0 +1,4 @@
+Roaming-safe number matching, hardened screening edge cases (unknown-direction
+calls, duplicate-row urgency, lettered SMS sender IDs), crash-free exports with
+transactional imports, safer passphrase restores, fully tappable accessible
+settings toggles, and higher-contrast captions across every theme.

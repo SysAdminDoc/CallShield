@@ -543,42 +543,7 @@ Fresh 30+ source sweep (SpamBlocker 2026 releases + issue tracker, SpamBlocker E
 
 ### P1
 
-- [ ] P1 — Android 17 SMS-read strategy: OTP 3-hour read-delay resilience + capability detection
-  Why: Apps targeting API 37 that read SMS directly have OTP-bearing messages withheld 3 hours unless they hold the default-SMS-app role or use SMS Retriever/User Consent. A scam-SMS classifier reading `SMS_RECEIVED` is crippled on API 37; also on Android 16 cross-process ordered-broadcast priority (SmsReceiver priority 999) is no longer honored. Must be settled before the Play API-36→37 cadence forces the target bump.
-  Evidence: https://developer.android.com/about/versions/17/behavior-changes-all ; https://developer.android.com/about/versions/16/behavior-changes-all ; `service/SmsReceiver.kt`; cross-ref `Roadmap_Blocked.md` "SMS Screening Provider mode"
-  Touches: `service/SmsReceiver.kt`, new SMS User Consent path, `CallShieldPermissions.kt` degraded-mode matrix, settings copy, `docs/`
-  Acceptance: build documents the chosen path (default-SMS role vs SMS User Consent); app detects API ≥37 at runtime and surfaces a clear degraded-mode message for OTP SMS instead of silently missing them; SmsReceiver behavior on API 36+ verified by an instrumented smoke test.
-  Complexity: L
-
 ### P2
-
-- [ ] P2 — Generalize notification-layer screening to opt-in OTT sources (Signal/WhatsApp/generic)
-  Why: E2EE RCS and platform-internal Google detection close every other content path; the notification-listener layer is the only durable third-party foothold for OTT spam. `RcsNotificationListener` is hardcoded to Google + Samsung Messages only. SpamBlocker Extended already screens RCS/Signal/WhatsApp/email at the notification layer.
-  Evidence: https://f-droid.org/packages/dev.kerballone.spamblocker/ ; `service/RcsNotificationListener.kt` (only `com.google.android.apps.messaging`, `com.samsung.android.messaging`); reuse `SmsContentAnalyzer.kt`
-  Touches: `service/RcsNotificationListener.kt` (→ per-source taxonomy), settings picker (opt-in per source), privacy disclosure copy, `SmsContentAnalyzer` reuse, tests
-  Acceptance: user can opt each supported messaging app in/out; opted-in apps' notification text runs through the SMS content analyzer and can be flagged with a lightweight alert; default is Google/Samsung only; per-source privacy disclosure shown; nothing read for un-opted apps.
-  Complexity: L
-
-- [ ] P2 — Rule-priority conflict detection UI
-  Why: The pipeline has ~29 priority slots plus user wildcard/range/keyword/temp rules; overlapping allow/block rules silently resolve by priority with no user visibility. SpamBlocker shipped a visual conflict warning (v5.10).
-  Evidence: SpamBlocker v5.10 release notes (https://github.com/aj3423/SpamBlocker/releases); `data/checker/IChecker.kt` (`CheckerPriority`); rules screens
-  Touches: rule-management UI, a conflict-analysis helper over the checker/rule set, `BlockReasoning.kt`
-  Acceptance: when a user adds/edits a rule that a higher-priority rule would override (or that overrides a system/emergency allow), the UI flags the conflict inline with the winning rule named; no false positives on non-overlapping rules; unit tests cover representative conflicts.
-  Complexity: M
-
-- [ ] P2 — Region / CNAP-based rules (block out-of-region; trust by displayed caller name)
-  Why: SpamBlocker's geo-location regex + "Local Number" preset (v5.2) and CNAP name-trust mode (v5.1) are popular parity features; complements the existing area-code tooling with user-facing region gating.
-  Evidence: SpamBlocker v5.1/v5.2 release notes (https://github.com/aj3423/SpamBlocker/releases); existing `PhoneFormatter.kt` area-code data; `data/checker/Checkers.kt`
-  Touches: new region/CNAP checkers in `data/checker/`, `CheckerPriority` slot, rules UI + copy, tests
-  Acceptance: user can block all numbers outside their home region (or an allowlist of regions) and, where the platform exposes CNAP, allow calls whose presented name matches a user pattern; explicit user/system blocks keep priority; tests cover region match + CNAP allow ordering.
-  Complexity: M
-
-- [ ] P2 — CallScreeningService bind-lifecycle + 5s-deadline instrumentation test
-  Why: No instrumented test binds the real `CallShieldScreeningService` and asserts a verdict within Android's 5s deadline; `onScreenCall → classify → respondToCall` cold-start latency is unmeasured on-device. Cross-refs 2.6.2 (perf benchmark, WIP) and 2.6.4 (baseline profile).
-  Evidence: https://developer.android.com/reference/android/telecom/CallScreeningService ; `service/CallShieldScreeningService.kt`; existing `HotPathBenchmarkTest.kt` is JVM-only
-  Touches: `app/src/androidTest/.../service/`, optional Macrobenchmark module, add a DEX-layout startup profile to 2.6.4
-  Acceptance: an instrumented test binds the service (or a faithful harness), drives a screening call cold, and asserts a verdict is produced well under 5s; latency is recorded; a startup profile covering the screening path is generated.
-  Complexity: M
 
 ### P3
 
@@ -590,51 +555,13 @@ Second same-day pass. Adds verified code-correctness bugs (grounded in file:line
 
 ### P2
 
-- [ ] P2 — Per-app language: `localeConfig` + in-app language picker (LocaleManager API 33+)
-  Why: Strings are extracted but the app cannot switch language without changing the system locale; per-app language is table-stakes for F-Droid/IzzyOnDroid quality listings and pairs with the existing (LATER) translation item 4.7.2.
-  Evidence: https://developer.android.com/guide/topics/resources/app-languages ; `res/values/strings.xml` (only base locale exists); cross-ref roadmap 4.7.2/4.7.3
-  Touches: new `res/xml/locales_config.xml`, `AndroidManifest.xml` (`android:localeConfig`), settings language picker (LocaleManager on API 33+, AppCompatDelegate below), tests
-  Acceptance: user can pick app language in-app independent of system locale; selection persists across restart; base locale falls back correctly; `localeConfig` declared. (Actual translations remain 4.7.2.)
-  Complexity: M
-
-- [ ] P2 — RTL correctness: adopt `PhoneFormatter.formatIsolated` across UI screens + logical-padding audit
-  Why: The `isolate()`/`formatIsolated()` bidi helpers now exist and are applied at the notification layer, but the Compose screens (dashboard, blocked log, recent calls, lookup, details) still interpolate numbers via plain `format()`; and any `left/right` padding on number rows must move to logical `start/end`.
-  Evidence: `data/PhoneFormatter.kt` (helpers shipped); notification sites done in `NotificationHelper.kt`; remaining call sites in `ui/screens/**`; cross-ref 4.7.3
-  Touches: `ui/screens/**` number-bearing composables (switch `format`→`formatIsolated` where numbers sit in localized text), padding audit
-  Acceptance: numbers display left-to-right and correctly ordered inside an RTL (or `ar-XB` pseudolocale) UI across all screens; no `left/right` padding remains on number-bearing rows; screenshot under `ar-XB` verifies.
-  Complexity: M
-
 ### P3
 
-- [ ] P3 — Accessibility CI gate + Android 16 semantics
-  Why: Espresso/Compose `AccessibilityChecks` (label presence, 48dp targets, contrast) can be asserted in instrumented tests on Compose 1.8+; Android 16 adds expandable-state/`stateDescription` and duration `TtsSpan` semantics; the AMOLED theme must be verified with system "outline text" ON. EAA/WCAG 2.2 AA is the 2026 bar. Complements roadmap 4.6.1-4.6.4.
-  Evidence: https://developer.android.com/develop/ui/compose/accessibility/testing ; https://developer.android.com/about/versions/16/features ; https://www.levelaccess.com/compliance-overview/european-accessibility-act-eaa/ ; cross-ref 4.6
-  Touches: androidTest a11y harness (`AccessibilityChecks.enable()`), expandable/detail cards + quiet-hours durations (`Modifier.semantics`), theme verification with outline text
-  Acceptance: an instrumented a11y check runs over onboarding/dashboard/blocklist/settings and fails on missing labels/small targets; expandable cards expose expand/collapse state to TalkBack; durations use `TtsSpan`; screens verified with outline-text ON.
-  Complexity: M
-
-- [ ] P3 — Add `en-XA`/`ar-XB` pseudolocale screenshot check for the debug variant
-  Why: Pseudolocales surface truncation, clipped status pills, hardcoded strings, and RTL breaks before real translations exist — cheap coverage while 4.7.2 is still LATER.
-  Evidence: https://developer.android.com/guide/topics/resources/pseudolocales ; cross-ref 4.7.2/4.7.3 and the RTL bidi item above
-  Touches: debug variant pseudolocale enablement, a scripted screenshot capture of key screens
-  Acceptance: debug builds render `en-XA` and `ar-XB`; captured screenshots of onboarding/dashboard/blocklist/settings show no clipping or untranslated-literal leakage regressions.
-  Complexity: S
-
 ## Deep-Audit Findings (2026-07-20 — not fixed this pass)
-
-- [ ] P3 — UI/UX/visual/theme/microcopy/accessibility audit of the Compose screens
-  Why: This deep-audit pass could NOT cover `ui/screens/**`, `MainActivity`, or `res/values/strings.xml` — they had uncommitted in-flight edits from a concurrent agent, so touching them would entangle changes. The visual-quality, theme-token, empty/loading/error-state, microcopy, and accessibility (focus ring, contrast, touch targets, TalkBack, RTL) dimensions of the UI layer remain unaudited by this pass.
-  Where: `ui/screens/**`, `ui/theme/**`, `res/values/strings.xml`, `MainActivity.kt`
-  Acceptance: once the UI files are settled, run a dedicated UI/UX + theme + a11y audit across every screen in AMOLED/light and all nested surfaces.
 
 ## Deep-Audit — Considered and Rejected (do not re-investigate)
 
 - Blocking private/loopback/link-local hosts in `ExternalBlocklistParser.validateHttpUrl` (SSRF-shaping): REJECTED — the URL is user-entered and the body is not reflected; blocking private IPs would break the legitimate use case of subscribing to a LAN-hosted blocklist (e.g. a self-hosted NAS at 192.168.x). Impact on a mobile app is negligible.
-
-- [ ] P3 — Surface `SpamMLScorer.modelHealth` in the diagnostics UI
-  Why: The typed `ModelHealth` state (GBT_ACTIVE / LR_ACTIVE / DEGRADED_TO_LR / PARSE_FAILED / DEFAULTS) and logging now exist, but the value is not yet shown in the in-app diagnostics/protection surface. UI wiring only.
-  Where: a diagnostics/protection composable (currently owned by a concurrent agent) reading `SpamMLScorer.modelHealth()`
-  Acceptance: the diagnostics screen shows the current model health with a clear label; a degraded/parse-failed state is visibly flagged.
 
 ## Research-Driven Additions (2026-07-21 pass — anchored to v1.7.16)
 
@@ -642,37 +569,9 @@ Fresh sweep on under-covered angles: OEM background-execution survival, distribu
 
 ### P1
 
-- [ ] P1 — Google Developer Verification readiness (distribution survival) — operator-gated decision
-  Why: From Sep 2026 (staged) / 2027 (enforced), sideloaded APKs on certified Android devices must come from a Google-verified developer (gov ID + fee + registered signing key). CallShield's GitHub-Releases/Obtainium/F-Droid distribution is directly in the blast radius; F-Droid has stated it cannot comply.
-  Evidence: https://f-droid.org/2026/02/24/open-letter-opposing-developer-verification.html ; https://android.gadgethacks.com/news/how-android-sideloading-verification-rules-affect-f-droid-and-privacy-tools/
-  Touches: signing config (single stable release key), release/distribution docs, IzzyOnDroid listing (partial hedge)
-  Acceptance: a documented decision (register the key under the SysAdminDoc identity when the flow opens, vs accept certified-device breakage); the release key is confirmed single/stable/backed-up so it can be registered if chosen. NOTE: the register-or-not choice is a human/business decision (operator-gated); the signing-key hygiene prep is actionable now.
-  Complexity: M
-
 ### P2
 
-- [ ] P3 — Robolectric end-to-end `onScreenCall`/`SmsReceiver.onReceive` (needs injectable appScope)
-  Why: Robolectric is now adopted (4.16, `isIncludeAndroidResources=true`, `returnDefaultValues` intentionally OFF) with green tests over `SpamActionReceiver` (notification-cancel hot path) and `SmsReceiver.reassembleBody` (multipart 16KB cap). The remaining full end-to-end drive of `CallShieldScreeningService.onScreenCall` (allow/silence/reject) and `SmsReceiver.onReceive` (phishing-when-block-disabled) is blocked on the fire-and-forget `CallShieldApp.appScope`: a test cannot deterministically await the response posted from a process-wide scope. Requires making the screening/SMS scope injectable (e.g. a `@Inject CoroutineScope` or a `TestScope` seam) first.
-  Evidence: `service/CallShieldScreeningService.kt` (launches on `CallShieldApp.appScope`); `service/SmsReceiver.kt` (same); existing `decidePure()`/`isEnabledPure()` seams
-  Touches: `CallShieldApp.appScope` injection seam, `CallShieldScreeningService`, `SmsReceiver`, new Robolectric tests with an awaited `TestScope`
-  Acceptance: with an injectable scope, a Robolectric test drives real `onScreenCall` allow/silence/reject and `SmsReceiver.onReceive` phishing-when-block-disabled to completion, both green.
-  Complexity: M
-
 ### P3
-
-- [ ] P3 — CallerNameChecker: block by resolved caller-ID (CNAM) name pattern
-  Why: Spammers rotate numbers but reuse the display name (SpamBlocker #120, persistent open ask). CallShield already resolves caller names for the overlay, so a name-pattern blocklist is a differentiating, low-cost layer. Inverse of the existing "Region / CNAP-based rules" item (which is name-*trust*/allow).
-  Evidence: https://github.com/aj3423/SpamBlocker/issues/120 ; existing overlay name resolution; `data/checker/` registry
-  Touches: new `CallerNameChecker` in `data/checker/`, a `CheckerPriority` slot, a name-pattern rule store + rules UI (UI owned by concurrent agent), tests
-  Acceptance: a user list of name patterns blocks calls whose resolved CNAM matches; explicit user/system allows keep priority; unit tests cover match + ordering. Enrichment is best-effort (network), so this is a weak/late layer, never gating.
-  Complexity: M
-
-- [ ] P3 — Adopt Notification.CallStyle and Notification.ProgressStyle
-  Why: `CallStyle` (API 31+) is the system-blessed template for call notifications (correct ranking/heads-up, less collapsing) — a fit for the after-call feedback + caller-ID surface; `ProgressStyle` (API 36 Live Updates) suits sync-progress and a persistent "protecting you" notification that also anchors process priority against OEM kills.
-  Evidence: https://developer.android.com/reference/android/app/Notification.CallStyle ; https://developer.android.com/about/versions/16/features/progress-centric-notifications
-  Touches: `service/NotificationHelper.kt`, `service/DigestWorker.kt`/sync notifications
-  Acceptance: after-call/caller-ID notifications render as `CallStyle` on API 31+; sync/persistent-protection notification uses `ProgressStyle` on API 36 with graceful fallback below; no regression on older APIs.
-  Complexity: M
 
 ## Research-Driven Additions (2026-07-21 pass 3 — distribution survival + detection reality-check, anchored to v1.7.18)
 
@@ -682,26 +581,54 @@ Focus areas not covered by prior passes: the Developer-Verification survival pat
 
 ### P2
 
-- [ ] P2 — Improve on-device GBT recall (carry sklearn `init_` or recalibrate threshold)
-  Why: The committed model is now v3 GBT (regenerated — was a dead v2 LR file scoring 0/0), but the on-device inference (`SpamMLScorer.scoreGbt`) drops sklearn's `init_` prior log-odds, so at threshold 0.7 it is high-precision / low-recall: precision≈0.985 but recall≈0.283 (per `evaluate_model.py`). Safe and conservative, but the ML layer catches only ~28% of spam it could. Either export `init_` from `train_spam_model.py` and add it to `scoreGbt`, or recalibrate the threshold to trade a little precision for materially more recall — validate the new FP/FN balance with `evaluate_model.py` before shipping.
-  Evidence: `scripts/evaluate_model.py` on-device GBT metrics (0.985/0.283 @ 0.7); `data/SpamMLScorer.kt:370-381` (`scoreGbt` has no `init_`); `scripts/train_spam_model.py` (`export_tree` omits `init_`); cross-ref 2.2.5
-  Touches: `scripts/train_spam_model.py` (export `init_`), `data/SpamMLScorer.kt` (`scoreGbt` init term / threshold), `data/spam_model_weights.json` (regenerate), `SpamMLScorerGbtTest.kt`
-  Acceptance: `evaluate_model.py` shows on-device GBT recall materially above 0.28 without precision dropping below ~0.90; `SpamMLScorer` tests updated/passing; threshold/`init_` change documented.
-  Complexity: M
-
 ### P3
 
-- [ ] P3 — Validate STIR PASSporT/attestation exposure, else formally close 2.3.1–2.3.5
-  Why: The public `CallScreeningService` API exposes only `getCallerNumberVerificationStatus()` (PASSED/FAILED/NOT_VERIFIED) — not the raw SIP `Identity`/PASSporT token, attestation A/B/C, or `origid`, which go to the terminating carrier/dialer only. So the roadmap's PASSporT-depth items (2.3.1 full parse, 2.3.2 attest A/B/C display, 2.3.3 `iat` replay guard, 2.3.4 `origid` persistence, 2.3.5 attestation-as-ML-feature) are likely infeasible for a third-party app. Validate on one STIR-capable device; if the token isn't reachable, close 2.3.1–2.3.5 so no one implements dead code. `StirShakenTrustChecker` stays the ceiling.
-  Evidence: https://developer.android.com/develop/connectivity/telecom/dialer-app/prevent-spoofing ; AOSP `telecomm/.../CallScreeningService.java`; `data/StirShakenSemantics.kt` (verdict-only today); cross-ref roadmap 2.3.1–2.3.5
-  Touches: a one-off device probe (log `Call.Details`/`getExtras()` on a STIR-capable carrier), roadmap 2.3.x disposition
-  Acceptance: documented evidence of whether attestation level / the SIP `Identity` header is reachable from a `CallScreeningService` on a shipping device; if not, 2.3.1–2.3.5 are marked rejected with this finding.
-  Complexity: S
+## Research-Driven Additions
 
-- [ ] P3 — Complement (not replace) the after-call notification with `ACTION_POST_CALL`
-  Why: `ACTION_POST_CALL` is the platform-blessed post-call screen for marking a call as spam / adding a contact (better system ranking on API 30+). CallShield uses a custom `NotificationHelper.notifyAfterCall`, which gives more control and is less intrusive, so this is an *additive experiment* for users who prefer the native surface — not a replacement. Keep the custom notification as the default.
-  Evidence: https://developer.android.com/develop/connectivity/telecom/dialer-app/screen-calls (ACTION_POST_CALL); `service/CallShieldScreeningService.kt:127` + `service/NotificationHelper.kt:313` (`notifyAfterCall`)
-  Touches: a new post-call `Activity` handling `ACTION_POST_CALL`, `AndroidManifest.xml`, an opt-in setting (UI owned by a concurrent agent — land the Activity + intent handling first)
-  Acceptance: on API 30+, a post-call screen offers mark-spam / add-contact and routes into the existing block/whitelist paths; the custom after-call notification remains the default; no regression when disabled.
-  Complexity: M
+### P0
 
+### P1
+
+### P2
+
+## Deep-Audit Backlog (2026-07-22 pass — anchored to v1.7.23; found, not fixed)
+
+- [ ] P2 — Restore has a partial-state window on process death
+  Why: Settings commit to DataStore before the Room transaction; an in-process failure compensates, but a process kill mid-transaction leaves restored settings with the old database. Needs a restore-in-progress journal marker reconciled at startup, and rollback scoped to only the keys the backup writes (full-snapshot rollback can clobber concurrent sync prefs).
+  Where: data/BackupRestore.kt (restoreSections), data/repository/SettingsRepository.kt (replacePrefsSnapshot)
+- [ ] P3 — Export-side caps missing: a backup can exceed its own restore limits
+  Why: createBackup has no 100k-row/32MB cap while restore enforces both, so a large device exports a backup the app then refuses to restore (the crash half was fixed in v1.7.23; the cap asymmetry remains).
+  Where: data/BackupRestore.kt (createBackup)
+- [ ] P3 — Contact-group identity falls back to the group title
+  Why: Locally created groups often have no SOURCE_ID, so renaming a selected group silently voids contact trust (fail-closed → contacts get screened). Needs a rename-stable key or a visible degradation warning like isContactsModeDegraded.
+  Where: data/ContactGroupCatalog.kt (stableKey, resolveGroupIds)
+- [ ] P3 — PostCallActivity accepts spoofed launches
+  Why: Any app can start it with a crafted tel: handle; opt-in pref + required user tap + bounded input mitigate, but "Mark spam" should verify a matching recent-call record (or Telecom disconnect extras) before offering a community report.
+  Where: ui/PostCallActivity.kt, AndroidManifest.xml
+- [ ] P3 — Blocked-summary counter never resets
+  Why: NotificationHelper.blockedSinceLastNotif only grows per process lifetime, so "N blocked recently" overstates and the count<=0 cancel branch is dead code. Needs a deleteIntent (or shade-dismiss hook) that zeroes the counter.
+  Where: service/NotificationHelper.kt (updateSummary)
+- [ ] P3 — English-prefix success sniffing breaks under non-English locales
+  Why: SettingsScreen decides success vs error styling by startsWith("Restored ") / "Applied|Disabled|Removed", and LookupScreen does substringAfter(": ") string surgery — all break under the shipped pseudolocales. Carry a typed success flag from MainViewModel instead.
+  Where: ui/screens/settings/SettingsScreen.kt, ui/screens/lookup/LookupScreen.kt, ui/MainViewModel.kt
+- [ ] P3 — Hardcoded English in schedule labels and stored descriptions
+  Why: TimeSchedule day labels ("Mon–Fri", "Weekends") render untranslated in ScheduleControls, and MainViewModel/BlockedLogScreen store English descriptions ("Reported as not spam", "Blocked from log swipe") into the DB.
+  Where: data/TimeSchedule.kt, ui/screens/main/ScheduleControls.kt, ui/MainViewModel.kt, ui/screens/main/BlockedLogScreen.kt
+- [ ] P3 — Cold-start theme flash for non-AMOLED users
+  Why: appTheme StateFlow initializes to Amoled until DataStore emits, flashing black + wrong status-bar icons for Light/Graphite users on every cold start. Needs a synchronous cached read or splash-held first frame.
+  Where: ui/MainViewModel.kt (appTheme), ui/MainActivity.kt
+- [ ] P3 — Widget ignores the app theme
+  Why: RemoteViews layout is permanently AMOLED-dark with palette literals in updateWidget; clashes on Light-themed devices. Needs values-night qualifiers or theme-selected literals (contrast of the fixed palette was fixed in v1.7.23).
+  Where: ui/widget/CallShieldWidget.kt, res/layout/widget_callshield.xml
+- [ ] P3 — More screen sync label goes stale
+  Why: "Synced Xm ago" computes once at composition and never ticks while the screen stays open; Dashboard already solved this with a rolling timeAnchor.
+  Where: ui/screens/more/MoreScreen.kt (syncLabel)
+- [ ] P3 — PremiumCard.accentColor is a dead parameter
+  Why: Call sites across MainActivity/Changelog/PostCall pass accents that never render (@Suppress("UnusedParameter")). Wire it or remove it and clean up call sites.
+  Where: ui/theme/Theme.kt (PremiumCard)
+- [ ] P3 — Raw e.message surfaced in restore/import failure strings
+  Why: "Error: %s" leaks unlocalized exception text (content URIs, SQLite constraint names) into the UI; map to localized reasons like the crypto layer does.
+  Where: data/BackupRestore.kt (previewRestoreFromUri/restoreFromPreview catch), data/BlocklistExporter.kt (importFromUri catch)
+- [ ] P3 — BackupNumber.source is exported but not round-tripped
+  Why: Restore recreates rows as source="user" (which protects them from sync's replaceBySource — defensible), leaving the exported field and its sanitizer dead. Decide: pass source through with sync-safety rules, or stop exporting it.
+  Where: data/BackupRestore.kt (createBackup/sanitized), data/repository/BlocklistRepository.kt (blockNumber)
