@@ -25,9 +25,24 @@ fun ChangelogScreen() {
         verticalArrangement = Arrangement.spacedBy(0.dp),
     ) {
         VersionEntry(
+            "1.7.20",
+            "Privacy, recovery, and interaction hardening",
+            isLatest = true,
+            changes =
+                listOf(
+                    "Excluded private call and message history from Android cloud backup and trimmed " +
+                        "repository-only APK assets",
+                    "Hardened caller-ID, deep-link, external-feed, backup-restore, repeated-call, and " +
+                        "crash-log trust boundaries",
+                    "Made temporary decisions and notification-source choices survive portable backup round trips",
+                    "Preserved nested navigation across language changes and refined secondary " +
+                        "settings, log, and statistics states",
+                    "Restored the local report-pipeline regression test and warning-free Kotlin compilation",
+                ),
+        )
+        VersionEntry(
             "1.7.19",
             "Roadmap completion: stronger detection, platform integrations, and release proof",
-            isLatest = true,
             changes =
                 listOf(
                     "Added region and carrier-name trust/block rules with explicit priority safeguards",
