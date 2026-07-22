@@ -40,6 +40,10 @@ All notable changes to CallShield will be documented in this file.
   the real call-screening service through allow, silence, and reject outcomes.
   It also delivers a valid UCS-2 SMS PDU through `SmsReceiver.onReceive()` and
   verifies that local phishing warnings remain active when SMS blocking is off.
+- **Visible ML model health.** Protection Test now shows whether the GBT,
+  compatible logistic model, built-in defaults, or a degraded fallback is
+  active. Parse failures and GBT-to-LR degradation use explicit warning states
+  instead of remaining visible only in local logs.
 - **Contacts-mode degradation detection.** `CallShieldPermissions`
   `isContactsModeDegraded()` reports when a contacts-dependent screening mode
   (contact-whitelist or contacts-only) is enabled but `READ_CONTACTS` is

@@ -5,6 +5,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import androidx.annotation.StringRes
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
@@ -22,12 +23,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sysadmindoc.callshield.R
+import com.sysadmindoc.callshield.data.ModelHealth
+import com.sysadmindoc.callshield.data.SpamMLScorer
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.permissions.CallShieldPermissions
 import com.sysadmindoc.callshield.permissions.PermissionCapabilityPriority
@@ -51,6 +55,65 @@ private data class TestResult(
     val priority: TestPriority = TestPriority.Required,
     val recoveryHint: String? = null,
 )
+
+internal enum class ModelHealthSeverity { Healthy, Info, Warning, Error }
+
+internal data class ModelHealthUiState(
+    @param:StringRes val statusRes: Int,
+    @param:StringRes val detailRes: Int,
+    val severity: ModelHealthSeverity,
+)
+
+internal fun modelHealthUiState(health: ModelHealth): ModelHealthUiState =
+    when (health) {
+        ModelHealth.GBT_ACTIVE -> {
+            ModelHealthUiState(
+                R.string.model_health_gbt_active,
+                R.string.model_health_gbt_active_detail,
+                ModelHealthSeverity.Healthy,
+            )
+        }
+
+        ModelHealth.LR_ACTIVE -> {
+            ModelHealthUiState(
+                R.string.model_health_lr_active,
+                R.string.model_health_lr_active_detail,
+                ModelHealthSeverity.Healthy,
+            )
+        }
+
+        ModelHealth.DEGRADED_TO_LR -> {
+            ModelHealthUiState(
+                R.string.model_health_degraded,
+                R.string.model_health_degraded_detail,
+                ModelHealthSeverity.Warning,
+            )
+        }
+
+        ModelHealth.PARSE_FAILED -> {
+            ModelHealthUiState(
+                R.string.model_health_parse_failed,
+                R.string.model_health_parse_failed_detail,
+                ModelHealthSeverity.Error,
+            )
+        }
+
+        ModelHealth.DEFAULTS -> {
+            ModelHealthUiState(
+                R.string.model_health_defaults,
+                R.string.model_health_defaults_detail,
+                ModelHealthSeverity.Warning,
+            )
+        }
+
+        ModelHealth.UNINITIALIZED -> {
+            ModelHealthUiState(
+                R.string.model_health_loading,
+                R.string.model_health_loading_detail,
+                ModelHealthSeverity.Info,
+            )
+        }
+    }
 
 @Composable
 fun ProtectionTestScreen() {
@@ -91,6 +154,8 @@ fun ProtectionTestScreen() {
                 color = CatSubtext,
             )
         }
+
+        ModelHealthCard(SpamMLScorer.modelHealth())
 
         PremiumActionButton(
             label =
@@ -279,6 +344,62 @@ fun ProtectionTestScreen() {
                 ) {
                     TestResultCard(result = result)
                 }
+            }
+        }
+    }
+}
+
+@Suppress("FunctionNaming", "ktlint:standard:function-naming")
+@Composable
+private fun ModelHealthCard(health: ModelHealth) {
+    val state = modelHealthUiState(health)
+    val accentColor =
+        when (state.severity) {
+            ModelHealthSeverity.Healthy -> CatGreen
+            ModelHealthSeverity.Info -> CatBlue
+            ModelHealthSeverity.Warning -> CatYellow
+            ModelHealthSeverity.Error -> CatRed
+        }
+    val icon =
+        when (state.severity) {
+            ModelHealthSeverity.Healthy -> Icons.Default.CheckCircle
+            ModelHealthSeverity.Info -> Icons.Default.Info
+            ModelHealthSeverity.Warning -> Icons.Default.Warning
+            ModelHealthSeverity.Error -> Icons.Default.Warning
+        }
+
+    PremiumCard(
+        modifier = Modifier.fillMaxWidth().testTag("model_health_status"),
+        accentColor = accentColor,
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            PremiumIconTile(
+                icon = icon,
+                color = accentColor,
+                size = 40.dp,
+                iconSize = 21.dp,
+            )
+            Spacer(Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    stringResource(R.string.model_health_title),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = CatSubtext,
+                )
+                Text(
+                    stringResource(state.statusRes),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = accentColor,
+                )
+                Text(
+                    stringResource(state.detailRes),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = CatSubtext,
+                )
             }
         }
     }
