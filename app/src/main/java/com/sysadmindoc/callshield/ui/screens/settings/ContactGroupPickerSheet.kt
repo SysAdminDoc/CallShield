@@ -151,7 +151,11 @@ fun ContactGroupPickerSheet(
                             onClick = {
                                 val updated = selectedKeys.toMutableSet()
                                 if (selected) {
-                                    if (updated.size > 1) updated.remove(group.key)
+                                    // Removing the last group is fine: an empty
+                                    // selection means "All contacts", which the
+                                    // radio row above then shows as selected.
+                                    // Swallowing the tap left a dead checkbox.
+                                    updated.remove(group.key)
                                 } else {
                                     updated.add(group.key)
                                 }
@@ -162,7 +166,10 @@ fun ContactGroupPickerSheet(
                 }
             }
 
-            if (!loading && unavailableCount > 0) {
+            // Only meaningful when we could actually enumerate groups: with
+            // Contacts denied every selected key counts as "unavailable" and
+            // the warning would misattribute a permission problem to data loss.
+            if (!loading && permissionGranted && unavailableCount > 0) {
                 item(key = "unavailable") {
                     Text(
                         pluralStringResource(

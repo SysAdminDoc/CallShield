@@ -345,7 +345,7 @@
 
     <!-- Lookup Screen -->
     <string name="lookup_title">Number Lookup</string>
-    <string name="lookup_subtitle">Check any phone number against all 15 detection layers + ML</string>
+    <string name="lookup_subtitle">Check any phone number against every detection layer + ML</string>
     <string name="lookup_phone_number">Phone Number</string>
     <string name="lookup_phone_placeholder">+12125551234</string>
     <string name="lookup_paste_clipboard">Paste Clipboard</string>
@@ -380,7 +380,7 @@
     <string name="lookup_open_detail">Open Full Detail</string>
     <string name="lookup_spam">SPAM</string>
     <string name="lookup_safe">SAFE</string>
-    <string name="lookup_badge_layers">15 layers + ML</string>
+    <string name="lookup_badge_layers">All layers + ML</string>
     <string name="lookup_badge_clipboard">Clipboard ready</string>
     <string name="lookup_idle_title">Private lookup, no account needed</string>
     <string name="lookup_idle_body">CallShield checks its local spam data, heuristics, and ML scorer on-device before showing a recommendation.</string>
@@ -515,7 +515,7 @@
         <item quantity="other">%d selected groups are unavailable. Choose All contacts to reset the scope.</item>
     </plurals>
     <string name="settings_contacts_only">Contacts-only mode</string>
-    <string name="settings_contacts_only_desc">Allow only contacts and explicit allowlist entries</string>
+    <string name="settings_contacts_only_desc">Allow only contacts and explicit whitelist entries</string>
     <string name="settings_outgoing_risk_warning">Warn before known-risk outgoing calls</string>
     <string name="settings_outgoing_risk_warning_desc">Show a local warning for exact matches in your spam database</string>
     <string name="settings_outgoing_risk_warning_overlay_required">Allow overlay access to see outgoing warnings.</string>
@@ -742,6 +742,7 @@
     <string name="ftc_report_action_fcc">Report to FCC</string>
     <string name="ftc_report_toast">%1$s copied. Paste it into the form\'s phone-number field.</string>
     <string name="ftc_report_no_browser">No browser available to open the report form.</string>
+    <string name="link_no_browser">No browser available to open this link.</string>
     <!-- Emergency contacts (Feature E) -->
     <string name="emergency_contacts_title">Emergency Contacts</string>
     <string name="emergency_contacts_subtitle">Always ring through — bypasses blocklist, quiet hours, and aggressive mode.</string>
@@ -853,7 +854,7 @@
     <string name="permission_contract_degraded_overlay">Floating caller ID and live enrichment cards stay hidden until overlay access is allowed.</string>
     <string name="permission_contract_degraded_notification_access">RCS filtering and push-alert caller trust cannot read trusted message notifications until listener access is enabled.</string>
     <string name="permission_contract_post_notifications_name">Notification Permission</string>
-    <string name="permission_contract_post_notifications_denied">Denied - alerts and review actions may be hidden</string>
+    <string name="permission_contract_post_notifications_denied">Denied — alerts and review actions may be hidden</string>
     <string name="permission_contract_degraded_post_notifications">Blocked-call/SMS alerts, review actions, and daily summaries may be suppressed until notification permission is granted.</string>
     <string name="permission_contract_post_notifications_not_required">Not required on this Android version</string>
 
@@ -973,7 +974,7 @@
     <string name="detail_recent_activity">Recent Activity</string>
     <string name="detail_online_lookup">Online Lookup</string>
     <string name="detail_check_sources">Check 4 Sources</string>
-    <string name="detail_checking_sources">Checking SkipCalls, PhoneBlock, WhoCalledMe, and OpenCNAM...</string>
+    <string name="detail_checking_sources">Checking SkipCalls, PhoneBlock, WhoCalledMe, and OpenCNAM…</string>
     <string name="detail_reports_across_sources">%1$s across %2$s</string>
     <string name="detail_clean_all_sources">No reports in available sources</string>
     <string name="detail_no_definitive_source_result">No source returned a definitive result</string>
@@ -1193,6 +1194,9 @@
     <string name="feedback_not_spam">Not Spam</string>
     <string name="feedback_blocked">Number blocked and reported</string>
     <string name="feedback_whitelisted">Number marked as safe</string>
+    <string name="notification_action_failed">Action failed — try again from the app</string>
+    <string name="export_share_failed">Couldn\'t create the export file — storage may be full</string>
+    <string name="backup_restore_not_protected">This file isn\'t a passphrase-protected backup. Clear the passphrase field to restore it as-is.</string>
     <string name="settings_post_call_screen">Android post-call screen</string>
     <string name="settings_post_call_screen_desc">Optionally open CallShield after eligible calls with spam and save-contact actions. Off by default; rating notifications stay enabled.</string>
     <string name="post_call_title">Review this call</string>

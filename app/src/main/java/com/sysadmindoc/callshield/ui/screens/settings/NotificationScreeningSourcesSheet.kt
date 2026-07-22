@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
@@ -35,6 +36,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.sysadmindoc.callshield.R
@@ -167,12 +169,20 @@ private fun NotificationScreeningSourceRow(
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(14.dp),
+        shape = RoundedCornerShape(12.dp),
         color = (if (enabled) CatGreen else CatOverlay).copy(alpha = 0.06f),
         border = BorderStroke(1.dp, (if (enabled) CatGreen else CatOverlay).copy(alpha = 0.18f)),
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .toggleable(
+                        value = enabled,
+                        role = Role.Switch,
+                        onValueChange = onToggle,
+                    ).testTag("$NOTIFICATION_SCREENING_SOURCE_TAG_PREFIX${item.source.packageName}")
+                    .padding(horizontal = 14.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
@@ -200,13 +210,15 @@ private fun NotificationScreeningSourceRow(
                         },
                     ),
                     style = MaterialTheme.typography.labelSmall,
-                    color = CatOverlay,
+                    // CatSubtext, not CatOverlay: this informational status sits
+                    // on an elevated sheet surface where CatOverlay drops below
+                    // 4.5:1 in the Light and AMOLED palettes.
+                    color = CatSubtext,
                 )
             }
             Switch(
                 checked = enabled,
-                onCheckedChange = onToggle,
-                modifier = Modifier.testTag("$NOTIFICATION_SCREENING_SOURCE_TAG_PREFIX${item.source.packageName}"),
+                onCheckedChange = null,
                 colors = SwitchDefaults.colors(checkedTrackColor = CatGreen),
             )
         }

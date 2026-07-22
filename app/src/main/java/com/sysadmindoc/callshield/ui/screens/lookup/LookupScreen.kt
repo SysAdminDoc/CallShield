@@ -121,7 +121,11 @@ fun LookupScreen(viewModel: MainViewModel) {
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     var numberInput by remember { mutableStateOf("") }
-    val clipboardNumber = remember(context) { clipboardPhoneNumber(context) }
+    // Only *check for* a text clip here — reading clipboard content fires the
+    // system "app pasted from clipboard" toast on Android 12+, and doing that
+    // as a side effect of merely opening the tab reads as surveillance for a
+    // privacy app. The actual read happens on the explicit Paste tap below.
+    val clipboardHasText = remember(context) { clipboardHasText(context) }
     val normalizedNumber = remember(numberInput) { normalizeLookupNumber(numberInput) }
     val previewLocation = remember(normalizedNumber) { AreaCodeLookup.lookup(normalizedNumber) }
     var result by remember { mutableStateOf<SpamCheckResult?>(null) }
@@ -175,12 +179,6 @@ fun LookupScreen(viewModel: MainViewModel) {
         }
     }
 
-    LaunchedEffect(Unit) {
-        if (!clipboardNumber.isNullOrBlank() && numberInput.isEmpty()) {
-            numberInput = clipboardNumber
-        }
-    }
-
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier =
@@ -217,7 +215,7 @@ fun LookupScreen(viewModel: MainViewModel) {
                             )
                         }
 
-                        !clipboardNumber.isNullOrBlank() && numberInput.isBlank() -> {
+                        clipboardHasText && numberInput.isBlank() -> {
                             StatusPill(
                                 text = stringResource(R.string.lookup_badge_clipboard),
                                 color = CatYellow,
@@ -300,14 +298,16 @@ fun LookupScreen(viewModel: MainViewModel) {
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    if (!clipboardNumber.isNullOrBlank() && clipboardNumber != numberInput) {
+                    if (clipboardHasText) {
                         PremiumActionButton(
                             label = stringResource(R.string.lookup_paste_clipboard),
                             icon = Icons.Default.ContentPaste,
                             color = CatYellow,
                             onClick = {
-                                numberInput = clipboardNumber
-                                errorMessage = null
+                                clipboardPhoneNumber(context)?.let {
+                                    numberInput = it
+                                    errorMessage = null
+                                }
                             },
                             modifier = Modifier.weight(1f),
                             outlined = true,
@@ -881,6 +881,16 @@ private fun PipelineTraceSection(trace: com.sysadmindoc.callshield.data.checker.
         }
     }
 }
+
+/** Toast-free presence check: ClipDescription can be inspected without reading clip data. */
+private fun clipboardHasText(context: android.content.Context): Boolean =
+    try {
+        val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+        clipboard.hasPrimaryClip() &&
+            clipboard.primaryClipDescription?.hasMimeType(android.content.ClipDescription.MIMETYPE_TEXT_PLAIN) == true
+    } catch (_: Exception) {
+        false
+    }
 
 private fun clipboardPhoneNumber(context: android.content.Context): String? {
     return try {
