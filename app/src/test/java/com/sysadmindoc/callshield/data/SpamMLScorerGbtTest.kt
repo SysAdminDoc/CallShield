@@ -15,7 +15,7 @@ import kotlin.math.sin
  * new features 16-20, and backward compatibility.
  */
 class SpamMLScorerGbtTest {
-    /** Reflection handle for private scoreGbt(DoubleArray, List<*>, Double): Double */
+    /** Reflection handle for private scoreGbt(DoubleArray, List<*>, Double, Double): Double */
     private lateinit var scoreGbtMethod: Method
 
     /** Reflection handle for private extractFeatures(String): DoubleArray */
@@ -36,13 +36,14 @@ class SpamMLScorerGbtTest {
         gbtTreeClass = Class.forName("com.sysadmindoc.callshield.data.SpamMLScorer\$GbtTree")
         gbtTreeConstructor = gbtTreeClass.declaredConstructors.first().also { it.isAccessible = true }
 
-        // scoreGbt(features: DoubleArray, trees: List<GbtTree>, learningRate: Double): Double
+        // scoreGbt(features, trees, learningRate, initialScore): Double
         scoreGbtMethod =
             SpamMLScorer::class.java
                 .getDeclaredMethod(
                     "scoreGbt",
                     DoubleArray::class.java,
                     List::class.java,
+                    Double::class.javaPrimitiveType,
                     Double::class.javaPrimitiveType,
                 ).also { it.isAccessible = true }
 
@@ -77,7 +78,8 @@ class SpamMLScorerGbtTest {
         features: DoubleArray,
         trees: List<Any>,
         learningRate: Double,
-    ): Double = scoreGbtMethod.invoke(SpamMLScorer.shared, features, trees, learningRate) as Double
+        initialScore: Double = 0.0,
+    ): Double = scoreGbtMethod.invoke(SpamMLScorer.shared, features, trees, learningRate, initialScore) as Double
 
     private fun callExtractFeatures(number: String): DoubleArray = extractFeaturesMethod.invoke(SpamMLScorer.shared, number) as DoubleArray
 
@@ -125,6 +127,28 @@ class SpamMLScorerGbtTest {
         // rawScore = 2.0 * 1.0 = 2.0; sigmoid(2.0) = 1/(1+exp(-2))
         val expected = 1.0 / (1.0 + exp(-2.0))
         assertEquals(expected, result, 0.0001)
+    }
+
+    @Test
+    fun scoreGbt_initialScore_isIncludedBeforeTreeContributions() {
+        val tree =
+            makeTree(
+                feature = intArrayOf(-2),
+                threshold = doubleArrayOf(0.0),
+                childrenLeft = intArrayOf(-1),
+                childrenRight = intArrayOf(-1),
+                value = doubleArrayOf(1.0),
+            )
+
+        val result =
+            callScoreGbt(
+                features = DoubleArray(20),
+                trees = listOf(tree),
+                learningRate = 0.5,
+                initialScore = -0.25,
+            )
+
+        assertEquals(sigmoid(0.25), result, 0.0001)
     }
 
     // ─── scoreGbt: 2-level tree that branches on a feature ───────────
@@ -376,6 +400,13 @@ class SpamMLScorerGbtTest {
         return weightsField.get(state) as DoubleArray?
     }
 
+    private fun currentInitialScore(): Double {
+        val stateField = SpamMLScorer::class.java.getDeclaredField("state").also { it.isAccessible = true }
+        val state = stateField.get(SpamMLScorer.shared)
+        val initialScoreField = state::class.java.getDeclaredField("gbtInitialScore").also { it.isAccessible = true }
+        return initialScoreField.getDouble(state)
+    }
+
     /** Parse JSON with parseModel and commit the resulting state. */
     private fun parseAndCommit(json: String): Boolean {
         val parseModel =
@@ -386,6 +417,29 @@ class SpamMLScorerGbtTest {
         val stateField = SpamMLScorer::class.java.getDeclaredField("state").also { it.isAccessible = true }
         stateField.set(SpamMLScorer.shared, parsed)
         return true
+    }
+
+    @Test
+    fun parseModel_readsExportedInitialScore() {
+        val json =
+            """
+            {
+                "version": 3,
+                "model_type": "gbt",
+                "learning_rate": 0.1,
+                "initial_score": -0.375,
+                "trees": [{
+                    "feature": [-2],
+                    "threshold": [-2.0],
+                    "children_left": [-1],
+                    "children_right": [-1],
+                    "value": [0.0]
+                }]
+            }
+            """.trimIndent()
+
+        assertTrue(parseAndCommit(json))
+        assertEquals(-0.375, currentInitialScore(), 0.0001)
     }
 
     @Test

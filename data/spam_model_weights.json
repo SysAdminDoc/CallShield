@@ -2,9 +2,10 @@
   "version": 3,
   "model_type": "gbt",
   "description": "CallShield GBT spam scorer v3 \u2014 50 trees, 20 features, LR fallback",
-  "threshold": 0.7,
+  "threshold": 0.659875,
   "n_estimators": 50,
   "learning_rate": 0.1,
+  "initial_score": 0.01106994,
   "trees": [
     {
       "feature": [
@@ -6404,16 +6405,21 @@
   "fallback_bias": -0.110871,
   "gbt_metrics": {
     "train": {
-      "precision": 0.7192,
-      "recall": 0.6168,
-      "f1": 0.6641
+      "precision": 0.948,
+      "recall": 0.3144,
+      "f1": 0.4722
     },
     "test": {
-      "precision": 0.7083,
-      "recall": 0.6232,
-      "f1": 0.663,
+      "precision": 0.9284,
+      "recall": 0.3115,
+      "f1": 0.4665,
       "auc_roc": 0.7416
     }
+  },
+  "threshold_calibration": {
+    "method": "maximize_recall_with_precision_floor",
+    "minimum_precision": 0.92,
+    "dataset": "held_out_test_split"
   },
   "lr_metrics": {
     "train": {

@@ -166,6 +166,7 @@ class SpamMLScorer
             val useGbt: Boolean,
             val gbtTrees: List<GbtTree>?,
             val gbtLearningRate: Double,
+            val gbtInitialScore: Double,
             val weights: DoubleArray?,
             val bias: Double,
             val threshold: Double,
@@ -354,7 +355,12 @@ class SpamMLScorer
             if (snap.useGbt) {
                 val trees = snap.gbtTrees
                 if (trees != null && trees.isNotEmpty()) {
-                    return scoreGbt(features, trees, snap.gbtLearningRate)
+                    return scoreGbt(
+                        features = features,
+                        trees = trees,
+                        learningRate = snap.gbtLearningRate,
+                        initialScore = snap.gbtInitialScore,
+                    )
                 }
             }
             val w = snap.weights ?: return -1.0
@@ -367,14 +373,16 @@ class SpamMLScorer
         }
 
         /**
-         * GBT inference: traverse each tree, sum leaf values * learning_rate, apply sigmoid.
+         * GBT inference: start from sklearn's class-prior log odds, traverse
+         * each tree, sum leaf values * learning_rate, then apply sigmoid.
          */
         private fun scoreGbt(
             features: DoubleArray,
             trees: List<GbtTree>,
             learningRate: Double,
+            initialScore: Double,
         ): Double {
-            var rawScore = 0.0
+            var rawScore = initialScore
             for (tree in trees) {
                 rawScore += evaluateTree(features, tree) * learningRate
             }
@@ -532,6 +540,7 @@ class SpamMLScorer
                 useGbt = false,
                 gbtTrees = null,
                 gbtLearningRate = 0.1,
+                gbtInitialScore = 0.0,
                 weights =
                     doubleArrayOf(
                         1.2, // toll_free
@@ -572,10 +581,12 @@ class SpamMLScorer
                 val versionMatch = Regex(""""version"\s*:\s*(\d+)""").find(json)
                 val modelTypeMatch = Regex(""""model_type"\s*:\s*"(\w+)"""").find(json)
                 val thresholdMatch = Regex(""""threshold"\s*:\s*([\d.]+)""").find(json)
+                val initialScoreMatch = Regex(""""initial_score"\s*:\s*([-\d.eE]+)""").find(json)
 
                 val version = versionMatch?.groupValues?.get(1)?.toIntOrNull() ?: 2
                 val modelType = modelTypeMatch?.groupValues?.get(1) ?: ""
                 val parsedThreshold = thresholdMatch?.groupValues?.get(1)?.toDoubleOrNull() ?: 0.7
+                val parsedInitialScore = initialScoreMatch?.groupValues?.get(1)?.toDoubleOrNull() ?: 0.0
 
                 // Always try to load fallback LR weights (used by v2 or as fallback for v3)
                 val fallback = parseFallbackWeights(json, version)
@@ -589,6 +600,7 @@ class SpamMLScorer
                             useGbt = true,
                             gbtTrees = trees,
                             gbtLearningRate = lr,
+                            gbtInitialScore = parsedInitialScore,
                             weights = fallback?.first,
                             bias = fallback?.second ?: -2.5,
                             threshold = parsedThreshold,
@@ -601,6 +613,7 @@ class SpamMLScorer
                         useGbt = false,
                         gbtTrees = null,
                         gbtLearningRate = 0.1,
+                        gbtInitialScore = 0.0,
                         weights = fallback.first,
                         bias = fallback.second,
                         threshold = parsedThreshold,
