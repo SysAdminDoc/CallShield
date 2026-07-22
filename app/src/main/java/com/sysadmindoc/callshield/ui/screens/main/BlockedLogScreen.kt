@@ -44,6 +44,7 @@ import com.sysadmindoc.callshield.data.model.BlockedCall
 import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.TemporaryDecisionDuration
 import com.sysadmindoc.callshield.ui.TemporaryDecisionMenu
+import com.sysadmindoc.callshield.ui.expandableStateSemantics
 import com.sysadmindoc.callshield.ui.rememberTemporaryDecisionDurations
 import com.sysadmindoc.callshield.ui.theme.*
 import com.sysadmindoc.callshield.util.filterAsciiDigits
@@ -443,6 +444,8 @@ fun BlockedCallItem(
     val copiedShortMessage = stringResource(R.string.blocked_log_copied_short)
     val clipLabelPhone = stringResource(R.string.clip_label_phone)
     val clipLabelPhoneNumber = stringResource(R.string.clip_label_phone_number)
+    val expandedStateDescription = stringResource(R.string.accessibility_state_expanded)
+    val collapsedStateDescription = stringResource(R.string.accessibility_state_collapsed)
 
     PremiumCard(
         cornerRadius = 12.dp,
@@ -520,7 +523,16 @@ fun BlockedCallItem(
                         )
                     }
                 }
-                IconButton(onClick = { expanded = !expanded }) {
+                IconButton(
+                    onClick = { expanded = !expanded },
+                    modifier =
+                        Modifier.expandableStateSemantics(
+                            expanded = expanded,
+                            expandedStateDescription = expandedStateDescription,
+                            collapsedStateDescription = collapsedStateDescription,
+                            onExpandedChange = { expanded = it },
+                        ),
+                ) {
                     Icon(
                         if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
                         contentDescription =

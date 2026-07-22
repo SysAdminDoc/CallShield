@@ -2,11 +2,14 @@ package com.sysadmindoc.callshield.ui.screens.settings
 
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.junit4.accessibility.enableAccessibilityChecks
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.tryPerformAccessibilityChecks
 import com.sysadmindoc.callshield.data.BackupRestore
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -16,6 +19,23 @@ import org.junit.Test
 class SettingsTest {
     @get:Rule
     val composeRule = createComposeRule()
+
+    @Test
+    fun settingsScreenPassesAutomatedAccessibilityChecks() {
+        composeRule.setContent {
+            QuietHoursSettings(
+                enabled = true,
+                startHour = 22,
+                endHour = 7,
+                onEnabledChange = {},
+                onStartChange = {},
+                onEndChange = {},
+            )
+        }
+
+        composeRule.enableAccessibilityChecks()
+        composeRule.onRoot().tryPerformAccessibilityChecks()
+    }
 
     @Test
     fun quietHoursToggleInvokesPersistenceCallback() {
