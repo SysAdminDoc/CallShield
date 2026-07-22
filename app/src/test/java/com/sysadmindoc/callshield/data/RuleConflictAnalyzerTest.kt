@@ -62,9 +62,12 @@ class RuleConflictAnalyzerTest {
             RuleConflictAnalyzer.forWhitelist(
                 number = "+12125550100",
                 emergency = false,
-                exactBlocks = emptyList(),
-                wildcardRules = listOf(WildcardRule(pattern = "+1212*")),
-                hashWildcardRules = emptyList(),
+                rules =
+                    ExistingBlockRules(
+                        exactBlocks = emptyList(),
+                        wildcardRules = listOf(WildcardRule(pattern = "+1212*")),
+                        hashWildcardRules = emptyList(),
+                    ),
             )
 
         assertEquals(RuleConflictWinner.WHITELIST, conflict?.winner)
@@ -85,17 +88,20 @@ class RuleConflictAnalyzerTest {
             RuleConflictAnalyzer.forWhitelist(
                 number = "+12125550100",
                 emergency = false,
-                exactBlocks =
-                    listOf(
-                        SpamNumber(
-                            number = "+13125550100",
-                            type = "manual",
-                            source = "user",
-                            isUserBlocked = true,
-                        ),
+                rules =
+                    ExistingBlockRules(
+                        exactBlocks =
+                            listOf(
+                                SpamNumber(
+                                    number = "+13125550100",
+                                    type = "manual",
+                                    source = "user",
+                                    isUserBlocked = true,
+                                ),
+                            ),
+                        wildcardRules = emptyList(),
+                        hashWildcardRules = listOf(HashWildcardRule(pattern = "+1312555####")),
                     ),
-                wildcardRules = emptyList(),
-                hashWildcardRules = listOf(HashWildcardRule(pattern = "+1312555####")),
                 now = now,
             ),
         )

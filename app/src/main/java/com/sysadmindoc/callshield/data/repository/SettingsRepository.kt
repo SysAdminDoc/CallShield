@@ -7,6 +7,7 @@ import com.squareup.moshi.Moshi
 import com.squareup.moshi.Types
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import com.sysadmindoc.callshield.data.CallbackDetector
+import com.sysadmindoc.callshield.data.NotificationScreeningSources
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.model.ExternalBlocklistSubscription
 import kotlinx.coroutines.flow.Flow
@@ -90,6 +91,10 @@ class SettingsRepository(
     val cleanupDays: Flow<Int> = dataStore.data.map { it[SpamRepository.KEY_CLEANUP_DAYS] ?: DEFAULT_CLEANUP_DAYS }
     val mlScorerEnabled: Flow<Boolean> = dataStore.data.map { it[SpamRepository.KEY_ML_SCORER] ?: true }
     val rcsFilterEnabled: Flow<Boolean> = dataStore.data.map { it[SpamRepository.KEY_RCS_FILTER] ?: true }
+    val notificationScreeningPackages: Flow<Set<String>> =
+        dataStore.data.map { prefs ->
+            NotificationScreeningSources.enabledPackages(prefs[SpamRepository.KEY_NOTIFICATION_SCREENING_PACKAGES])
+        }
     val silentVoicemailEnabled: Flow<Boolean> =
         dataStore.data.map { it[SpamRepository.KEY_SILENT_VOICEMAIL] ?: false }
     val pushAlertEnabled: Flow<Boolean> = dataStore.data.map { it[SpamRepository.KEY_PUSH_ALERT] ?: true }
@@ -115,6 +120,22 @@ class SettingsRepository(
     suspend fun setMlScorer(enabled: Boolean) = dataStore.edit { it[SpamRepository.KEY_ML_SCORER] = enabled }
 
     suspend fun setRcsFilter(enabled: Boolean) = dataStore.edit { it[SpamRepository.KEY_RCS_FILTER] = enabled }
+
+    suspend fun setNotificationScreeningPackage(
+        packageName: String,
+        enabled: Boolean,
+    ) = dataStore.edit { prefs ->
+        if (NotificationScreeningSources.sourceFor(packageName) == null) return@edit
+        val current =
+            NotificationScreeningSources.enabledPackages(
+                prefs[SpamRepository.KEY_NOTIFICATION_SCREENING_PACKAGES],
+            )
+        prefs[SpamRepository.KEY_NOTIFICATION_SCREENING_PACKAGES] =
+            if (enabled) current + packageName else current - packageName
+    }
+
+    suspend fun resetNotificationScreeningPackages() =
+        dataStore.edit { it.remove(SpamRepository.KEY_NOTIFICATION_SCREENING_PACKAGES) }
 
     suspend fun setSilentVoicemail(enabled: Boolean) = dataStore.edit { it[SpamRepository.KEY_SILENT_VOICEMAIL] = enabled }
 

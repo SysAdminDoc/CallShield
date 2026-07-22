@@ -1,5 +1,6 @@
 package com.sysadmindoc.callshield.service
 
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -12,6 +13,41 @@ import org.junit.Test
  * locales without swallowing real short spam.
  */
 class RcsEncryptedPlaceholderTest {
+    @Test
+    fun `notification content verdict flags strong spam locally`() {
+        val verdict =
+            RcsNotificationListener.contentVerdict(
+                body = "Congratulations, you have won. Claim your prize now at bit.ly/example",
+                enabled = true,
+                aggressive = false,
+            )
+
+        assertTrue(verdict.isSpam)
+        assertTrue(verdict.confidence >= 50)
+    }
+
+    @Test
+    fun `notification content verdict honors disabled analysis`() {
+        val verdict =
+            RcsNotificationListener.contentVerdict(
+                body = "Claim your prize now at bit.ly/example",
+                enabled = false,
+                aggressive = true,
+            )
+
+        assertFalse(verdict.isSpam)
+        assertEquals(0, verdict.confidence)
+    }
+
+    @Test
+    fun `aggressive notification screening lowers the local threshold`() {
+        val normal = RcsNotificationListener.contentVerdict("unsubscribe", enabled = true, aggressive = false)
+        val aggressive = RcsNotificationListener.contentVerdict("unsubscribe", enabled = true, aggressive = true)
+
+        assertFalse(normal.isSpam)
+        assertTrue(aggressive.isSpam)
+    }
+
     @Test
     fun `english placeholders are detected`() {
         assertTrue(RcsNotificationListener.isEncryptedPlaceholder("Encrypted message"))

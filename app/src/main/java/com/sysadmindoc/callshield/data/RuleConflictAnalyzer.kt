@@ -22,6 +22,12 @@ data class RuleConflict(
     val overriddenRule: RuleConflictRule,
 )
 
+data class ExistingBlockRules(
+    val exactBlocks: List<SpamNumber>,
+    val wildcardRules: List<WildcardRule>,
+    val hashWildcardRules: List<HashWildcardRule>,
+)
+
 /**
  * Explains deterministic allow/block overlaps before a user saves a rule.
  *
@@ -66,25 +72,23 @@ object RuleConflictAnalyzer {
     fun forWhitelist(
         number: String,
         emergency: Boolean,
-        exactBlocks: List<SpamNumber>,
-        wildcardRules: List<WildcardRule>,
-        hashWildcardRules: List<HashWildcardRule>,
+        rules: ExistingBlockRules,
         now: Long = System.currentTimeMillis(),
     ): RuleConflict? {
         val normalized = normalizePhoneNumber(number)
         val overriddenRule =
             when {
-                exactBlocks.any {
+                rules.exactBlocks.any {
                     it.isUserBlocked && it.activeDecision(now) != null && normalizePhoneNumber(it.number) == normalized
                 } -> {
                     RuleConflictRule.EXACT_BLOCK
                 }
 
-                wildcardRules.any { it.enabled && it.matches(normalized) } -> {
+                rules.wildcardRules.any { it.enabled && it.matches(normalized) } -> {
                     RuleConflictRule.WILDCARD_BLOCK
                 }
 
-                hashWildcardRules.any { it.enabled && it.matches(normalized) } -> {
+                rules.hashWildcardRules.any { it.enabled && it.matches(normalized) } -> {
                     RuleConflictRule.RANGE_BLOCK
                 }
 

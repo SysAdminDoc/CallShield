@@ -202,6 +202,12 @@ class MainViewModel
 
         val mlScorerEnabled = repo.mlScorerEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
         val rcsFilterEnabled = repo.rcsFilterEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+        val notificationScreeningPackages =
+            repo.notificationScreeningPackages.stateIn(
+                viewModelScope,
+                SharingStarted.WhileSubscribed(5000),
+                com.sysadmindoc.callshield.data.NotificationScreeningSources.defaultEnabledPackages,
+            )
         val silentVoicemailEnabled = repo.silentVoicemailEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
         val pushAlertEnabled = repo.pushAlertEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
         val pushAlertDisabledPackages =
@@ -639,6 +645,14 @@ class MainViewModel
         fun setMlScorer(v: Boolean) = viewModelScope.launch { repo.setMlScorer(v) }
 
         fun setRcsFilter(v: Boolean) = viewModelScope.launch { repo.setRcsFilter(v) }
+
+        fun setNotificationScreeningPackage(
+            packageName: String,
+            enabled: Boolean,
+        ) = viewModelScope.launch { repo.setNotificationScreeningPackage(packageName, enabled) }
+
+        fun resetNotificationScreeningPackages() =
+            viewModelScope.launch { repo.resetNotificationScreeningPackages() }
 
         fun setSilentVoicemail(v: Boolean) = viewModelScope.launch { repo.setSilentVoicemail(v) }
 

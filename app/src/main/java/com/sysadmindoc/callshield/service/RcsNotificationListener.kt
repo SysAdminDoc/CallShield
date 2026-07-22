@@ -5,7 +5,11 @@ import android.content.ComponentName
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import androidx.datastore.preferences.core.Preferences
+import com.sysadmindoc.callshield.data.NotificationScreeningCategory
+import com.sysadmindoc.callshield.data.NotificationScreeningSource
+import com.sysadmindoc.callshield.data.NotificationScreeningSources
 import com.sysadmindoc.callshield.data.PushAlertRegistry
+import com.sysadmindoc.callshield.data.SmsContentAnalyzer
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.remote.UrlSafetyChecker
 import com.sysadmindoc.callshield.data.repository.SpamRepositoryAdapter
@@ -21,38 +25,27 @@ import kotlinx.coroutines.launch
 /**
  * RCS Message Spam Filter — NotificationListenerService
  *
- * Intercepts incoming RCS notifications from Google Messages, Samsung
- * Messages, and other RCS apps. Applies CallShield's SMS rules to RCS
- * messages, which bypass the standard SMS_RECEIVED broadcast.
+ * Screens notifications from the explicitly enabled messaging and email
+ * sources. Numeric SMS/RCS senders use CallShield's SMS rules; private
+ * messenger and email sources receive non-destructive content warnings.
  *
  * IMPORTANT LIMITATIONS:
- *  - Cannot prevent RCS delivery to the Messages app (only hides the notification)
+ *  - Cannot prevent message delivery to the source app
  *  - Message content is read from the notification text, which may be truncated
  *  - Requires user to grant Notification Access in Settings → Apps
  *
  * WHAT IT DOES:
- *  - If sender is in CallShield blocklist → cancel the notification silently
- *  - If message content matches keyword/heuristic rules → cancel notification
+ *  - If a numeric SMS/RCS sender matches blocking rules → cancel the notification
+ *  - If private-messenger/email content matches → keep the original and warn
  *  - If SMS blocking is disabled → passes all through
  *  - Fires URLhaus background check for URLs in RCS messages
  *  - Logs blocked RCS to the CallShield blocked log (visible in Blocked tab)
  *
- * SUPPORTED APPS:
- *  - com.google.android.apps.messaging (Google Messages)
- *  - com.samsung.android.messaging (Samsung Messages)
- *  - com.android.mms (AOSP Messages fallback)
+ * Google and Samsung Messages are the only defaults. Every other catalog
+ * source is opt-in, and unselected sources are rejected before extras are read.
  */
 class RcsNotificationListener : NotificationListenerService() {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-
-    // Package names of RCS/SMS messaging apps to monitor
-    private val messagingPackages =
-        setOf(
-            "com.google.android.apps.messaging",
-            "com.samsung.android.messaging",
-            "com.android.mms",
-            "com.microsoft.android.smsorganizer",
-        )
 
     // A3 toggle state, observed off the hot path so onNotificationPosted
     // can read it without suspending. `true` until the DataStore observer
@@ -60,6 +53,9 @@ class RcsNotificationListener : NotificationListenerService() {
     // avoids a race where the first notification after boot arrives before
     // the collector fires.
     @Volatile private var pushAlertEnabled: Boolean = true
+
+    @Volatile
+    private var enabledScreeningPackages: Set<String> = NotificationScreeningSources.defaultEnabledPackages
 
     override fun onCreate() {
         super.onCreate()
@@ -83,10 +79,23 @@ class RcsNotificationListener : NotificationListenerService() {
                 PushAlertRegistry.applyOptOuts(disabled)
             }
         }
+        scope.launch {
+            repo.notificationScreeningPackages.collectLatest { enabled ->
+                enabledScreeningPackages = enabled
+            }
+        }
     }
 
+    @Suppress("ReturnCount")
     override fun onNotificationPosted(sbn: StatusBarNotification) {
         if (sbn.isOngoing) return // skip ongoing (media controls, etc.)
+
+        val screeningSource = NotificationScreeningSources.sourceFor(sbn.packageName)
+        if (screeningSource != null &&
+            !NotificationScreeningSources.shouldReadPackage(sbn.packageName, enabledScreeningPackages)
+        ) {
+            return
+        }
 
         // A3: Feed the push-alert registry for any allowlisted source app
         // that the user hasn't opted out of. Master toggle and per-package
@@ -96,11 +105,11 @@ class RcsNotificationListener : NotificationListenerService() {
             captureAlert(sbn)
         }
 
-        if (sbn.packageName !in messagingPackages) return
+        if (screeningSource == null) return
 
         scope.launch {
             try {
-                processNotification(sbn)
+                processNotification(sbn, screeningSource)
             } catch (_: Exception) {
             }
         }
@@ -127,7 +136,11 @@ class RcsNotificationListener : NotificationListenerService() {
         )
     }
 
-    private suspend fun processNotification(sbn: StatusBarNotification) {
+    @Suppress("CyclomaticComplexMethod", "ReturnCount")
+    private suspend fun processNotification(
+        sbn: StatusBarNotification,
+        source: NotificationScreeningSource,
+    ) {
         val repo = SpamRepository.getInstance(applicationContext)
         val checkSpamSms = CheckSpamSmsUseCase(SpamRepositoryAdapter(repo))
         val prefs = repo.readPrefsSnapshot()
@@ -144,34 +157,50 @@ class RcsNotificationListener : NotificationListenerService() {
         if (sender.isEmpty()) return
 
         val senderDigits = filterAsciiDigits(sender)
-        if (senderDigits.length < 7) {
-            launchUrlSafetyWarning(body, sender, stripUrlhausQuery)
-            return
-        }
-
         // E2EE graceful degradation: when the body is empty or an encrypted
         // placeholder, fall back to sender-number-only analysis (database +
         // heuristics, no content rules). GSMA UP 3.0/4.0 MLS encryption
         // will progressively make RCS notification bodies opaque.
         val effectiveBody = body.takeIf { it.isNotBlank() && !isEncryptedPlaceholder(it) }
         val result =
-            if (effectiveBody != null) {
-                checkSpamSms(senderDigits, effectiveBody, prefsSnapshot = prefs)
-            } else {
-                checkSpamSms(senderDigits, "", prefsSnapshot = prefs)
+            senderDigits
+                .takeIf { it.length >= 7 }
+                ?.let { number -> checkSpamSms(number, effectiveBody.orEmpty(), prefsSnapshot = prefs) }
+        val contentVerdict =
+            effectiveBody?.takeIf { result == null }?.let { bodyText ->
+                contentVerdict(
+                    body = bodyText,
+                    enabled = prefs[SpamRepository.KEY_SMS_CONTENT] ?: true,
+                    aggressive = prefs[SpamRepository.KEY_AGGRESSIVE_MODE] ?: false,
+                )
             }
+        val isSpam = result?.isSpam == true || contentVerdict?.isSpam == true
+        val confidence = maxOf(result?.confidence ?: 0, contentVerdict?.confidence ?: 0)
+        val reason =
+            result
+                ?.takeIf { it.isSpam }
+                ?.matchSource
+                ?: contentVerdict?.reason.orEmpty()
 
-        if (result.isSpam) {
+        if (isSpam && source.category == NotificationScreeningCategory.RCS && result?.isSpam == true) {
             cancelNotification(sbn.key)
             repo.logBlockedCall(
                 number = senderDigits,
                 isCall = false,
                 smsBody = effectiveBody,
                 matchReason = "rcs_${result.matchSource}",
-                confidence = result.confidence,
+                confidence = confidence,
+            )
+        } else if (isSpam) {
+            NotificationHelper.notifyScreenedMessage(
+                context = applicationContext,
+                sourceName = source.stableName,
+                sender = sender,
+                confidence = confidence,
+                reason = reason,
             )
         } else if (effectiveBody != null) {
-            launchUrlSafetyWarning(effectiveBody, senderDigits, stripUrlhausQuery)
+            launchUrlSafetyWarning(effectiveBody, sender, source, stripUrlhausQuery)
         }
     }
 
@@ -182,6 +211,7 @@ class RcsNotificationListener : NotificationListenerService() {
     private fun launchUrlSafetyWarning(
         body: String,
         sender: String,
+        source: NotificationScreeningSource,
         stripQuery: Boolean,
     ) {
         if (body.isBlank()) return
@@ -189,7 +219,17 @@ class RcsNotificationListener : NotificationListenerService() {
             val malicious = UrlSafetyChecker.checkSmsBody(body, stripQuery = stripQuery)
             if (malicious.isNotEmpty()) {
                 val threats = malicious.joinToString(", ") { it.threat.ifEmpty { "malware" } }
-                NotificationHelper.notifyPhishingUrl(applicationContext, sender, threats)
+                if (source.category == NotificationScreeningCategory.RCS && filterAsciiDigits(sender).length >= 7) {
+                    NotificationHelper.notifyPhishingUrl(applicationContext, sender, threats)
+                } else {
+                    NotificationHelper.notifyScreenedMessage(
+                        context = applicationContext,
+                        sourceName = source.stableName,
+                        sender = sender,
+                        confidence = 100,
+                        reason = threats,
+                    )
+                }
             }
         }
     }
@@ -228,8 +268,31 @@ class RcsNotificationListener : NotificationListenerService() {
     }
 
     companion object {
+        internal data class ContentVerdict(
+            val isSpam: Boolean,
+            val confidence: Int,
+            val reason: String,
+        )
+
+        internal fun contentVerdict(
+            body: String,
+            enabled: Boolean,
+            aggressive: Boolean,
+        ): ContentVerdict {
+            if (!enabled) return ContentVerdict(false, 0, "")
+            val analysis = SmsContentAnalyzer.analyze(body)
+            val threshold = if (aggressive) AGGRESSIVE_CONTENT_THRESHOLD else DEFAULT_CONTENT_THRESHOLD
+            return ContentVerdict(
+                isSpam = analysis.score >= threshold,
+                confidence = analysis.score,
+                reason = analysis.reasons.joinToString(", ") { it.replace('_', ' ') },
+            )
+        }
+
         /** Longest body still treated as a possible encryption placeholder. */
         private const val MAX_PLACEHOLDER_LEN = 48
+        private const val AGGRESSIVE_CONTENT_THRESHOLD = 25
+        private const val DEFAULT_CONTENT_THRESHOLD = 50
 
         /**
          * Encryption-keyword roots across the Latin-script locales CallShield
