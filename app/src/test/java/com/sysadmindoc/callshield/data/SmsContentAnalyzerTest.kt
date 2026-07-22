@@ -55,6 +55,23 @@ class SmsContentAnalyzerTest {
     }
 
     @Test
+    fun `analyze bounds URL matching across an oversized domain label`() {
+        val giantLabel =
+            "X".repeat(SmsContentAnalyzer.MAX_ANALYSIS_LENGTH - 9) +
+                ".com/path" +
+                "Z".repeat(1_000_000)
+        SmsContentAnalyzer.analyze("https://example.com/warmup")
+        val start = System.nanoTime()
+        val result = SmsContentAnalyzer.analyze(giantLabel)
+        val elapsedMs = (System.nanoTime() - start) / 1_000_000
+        assertTrue(
+            "analysis took too long: ${elapsedMs}ms — URL label bound regressed",
+            elapsedMs < 3_000,
+        )
+        assertTrue("oversized_body reason should be reported", "oversized_body" in result.reasons)
+    }
+
+    @Test
     fun `analyze keeps detecting spam inside the truncation window`() {
         // Spam keyword appears in the first KB; even with a giant tail,
         // the analyser must still flag it.
