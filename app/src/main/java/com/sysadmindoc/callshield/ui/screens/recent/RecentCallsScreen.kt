@@ -36,6 +36,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -75,6 +76,7 @@ data class RecentCall(
 @Composable
 fun RecentCallsScreen(viewModel: MainViewModel) {
     val context = LocalContext.current
+    val resources = LocalResources.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val scope = rememberCoroutineScope()
     var calls by remember { mutableStateOf<List<RecentCall>>(emptyList()) }
@@ -307,7 +309,7 @@ fun RecentCallsScreen(viewModel: MainViewModel) {
                                 Toast
                                     .makeText(
                                         context,
-                                        context.getString(
+                                        resources.getString(
                                             R.string.temporary_decision_allowed,
                                             PhoneFormatter.format(call.number),
                                             duration.label,
@@ -325,7 +327,7 @@ fun RecentCallsScreen(viewModel: MainViewModel) {
                                 Toast
                                     .makeText(
                                         context,
-                                        context.getString(
+                                        resources.getString(
                                             R.string.temporary_decision_blocked,
                                             PhoneFormatter.format(call.number),
                                             duration.label,
@@ -427,9 +429,28 @@ fun RecentCallItem(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Column(modifier = Modifier.weight(1f)) {
                                 if (call.contactName != null) {
-                                    Text(call.contactName, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium, color = CatGreen)
+                                    Text(
+                                        call.contactName,
+                                        fontWeight = FontWeight.Bold,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = CatGreen,
+                                    )
                                 }
-                                Text(PhoneFormatter.format(call.number), fontWeight = if (call.contactName == null) FontWeight.SemiBold else FontWeight.Normal, style = if (call.contactName == null) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.bodySmall)
+                                Text(
+                                    PhoneFormatter.format(call.number),
+                                    fontWeight =
+                                        if (call.contactName == null) {
+                                            FontWeight.SemiBold
+                                        } else {
+                                            FontWeight.Normal
+                                        },
+                                    style =
+                                        if (call.contactName == null) {
+                                            MaterialTheme.typography.bodyMedium
+                                        } else {
+                                            MaterialTheme.typography.bodySmall
+                                        },
+                                )
                             }
                             if (call.isSpam) {
                                 Icon(Icons.Default.Warning, null, tint = CatRed, modifier = Modifier.size(14.dp))
@@ -545,6 +566,7 @@ fun RecentActionButton(
     PremiumCompactButton(label = label, icon = icon, color = color, onClick = onClick)
 }
 
+@Suppress("LongMethod")
 private suspend fun loadRecentCalls(context: Context): List<RecentCall> =
     withContext(Dispatchers.IO) {
         val repo = SpamRepository.getInstance(context)
@@ -597,8 +619,19 @@ private suspend fun loadRecentCalls(context: Context): List<RecentCall> =
                     if (num in contactCache) continue
                     contactCache[num] =
                         try {
-                            val uri = Uri.withAppendedPath(ContactsContract.PhoneLookup.CONTENT_FILTER_URI, Uri.encode(num))
-                            val cc = context.contentResolver.query(uri, arrayOf(ContactsContract.PhoneLookup.DISPLAY_NAME), null, null, null)
+                            val uri =
+                                Uri.withAppendedPath(
+                                    ContactsContract.PhoneLookup.CONTENT_FILTER_URI,
+                                    Uri.encode(num),
+                                )
+                            val cc =
+                                context.contentResolver.query(
+                                    uri,
+                                    arrayOf(ContactsContract.PhoneLookup.DISPLAY_NAME),
+                                    null,
+                                    null,
+                                    null,
+                                )
                             cc?.use { if (it.moveToFirst()) it.getString(0) else null }
                         } catch (_: Exception) {
                             null
@@ -642,88 +675,66 @@ private fun RecentCallsSummaryCard(
     onRefresh: () -> Unit,
 ) {
     val formatter = remember { NumberFormat.getIntegerInstance() }
-    PremiumCard(
-        accentColor = CatBlue,
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    SectionHeader(stringResource(R.string.recent_summary_title), CatBlue)
-                    Text(
-                        stringResource(R.string.recent_summary_subtitle),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = CatSubtext,
-                    )
-                    StatusPill(
-                        text =
-                            if (refreshing) {
-                                stringResource(R.string.recent_summary_refreshing)
-                            } else {
-                                stringResource(R.string.recent_summary_live)
-                            },
-                        color = if (refreshing) CatPeach else CatBlue,
-                        horizontalPadding = 10.dp,
-                        verticalPadding = 6.dp,
-                        textStyle = MaterialTheme.typography.labelSmall,
-                    )
-                }
-                IconButton(onClick = onRefresh, enabled = !refreshing) {
-                    if (refreshing) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(18.dp),
-                            strokeWidth = 2.dp,
-                            color = CatBlue,
-                        )
-                    } else {
-                        Icon(
-                            Icons.Default.Refresh,
-                            contentDescription = stringResource(R.string.cd_refresh_recent),
-                            tint = CatBlue,
-                        )
-                    }
-                }
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                SectionHeader(stringResource(R.string.recent_summary_title))
+                Text(
+                    stringResource(R.string.recent_summary_subtitle),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = CatSubtext,
+                )
             }
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                RecentSummaryPill(
-                    value = formatter.format(totalCount),
-                    label = stringResource(R.string.recent_summary_total),
-                    color = CatBlue,
-                    modifier = Modifier.weight(1f),
-                )
-                RecentSummaryPill(
-                    value = formatter.format(spamCount),
-                    label = stringResource(R.string.recent_summary_spam),
-                    color = CatRed,
-                    modifier = Modifier.weight(1f),
-                )
-                RecentSummaryPill(
-                    value = formatter.format(missedCount),
-                    label = stringResource(R.string.recent_summary_missed),
-                    color = CatPeach,
-                    modifier = Modifier.weight(1f),
-                )
-                RecentSummaryPill(
-                    value = formatter.format(contactCount),
-                    label = stringResource(R.string.recent_summary_known),
-                    color = CatGreen,
-                    modifier = Modifier.weight(1f),
-                )
+            IconButton(onClick = onRefresh, enabled = !refreshing) {
+                if (refreshing) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(18.dp),
+                        strokeWidth = 2.dp,
+                        color = CatGreen,
+                    )
+                } else {
+                    Icon(
+                        Icons.Default.Refresh,
+                        contentDescription = stringResource(R.string.cd_refresh_recent),
+                        tint = CatGreen,
+                    )
+                }
             }
         }
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            RecentSummaryPill(
+                formatter.format(totalCount),
+                stringResource(R.string.recent_summary_total),
+                CatText,
+                Modifier.weight(1f),
+            )
+            RecentSummaryPill(
+                formatter.format(spamCount),
+                stringResource(R.string.recent_summary_spam),
+                CatRed,
+                Modifier.weight(1f),
+            )
+            RecentSummaryPill(
+                formatter.format(missedCount),
+                stringResource(R.string.recent_summary_missed),
+                CatYellow,
+                Modifier.weight(1f),
+            )
+            RecentSummaryPill(
+                formatter.format(contactCount),
+                stringResource(R.string.recent_summary_known),
+                CatGreen,
+                Modifier.weight(1f),
+            )
+        }
+        GradientDivider()
     }
 }
 
@@ -734,28 +745,13 @@ private fun RecentSummaryPill(
     color: Color,
     modifier: Modifier = Modifier,
 ) {
-    Surface(
+    Column(
         modifier = modifier,
-        color = color.copy(alpha = 0.12f),
-        shape = RoundedCornerShape(12.dp),
-        border = BorderStroke(1.dp, color.copy(alpha = 0.18f)),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(2.dp),
-        ) {
-            Text(
-                value,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = color,
-            )
-            Text(
-                label,
-                style = MaterialTheme.typography.labelSmall,
-                color = CatSubtext,
-            )
-        }
+        Text(value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = color)
+        Text(label, style = MaterialTheme.typography.labelSmall, color = CatSubtext)
     }
 }
 
@@ -763,58 +759,42 @@ private fun RecentSummaryPill(
 private fun RecentCallsPermissionState(
     onOpenSettings: () -> Unit,
 ) {
-    Box(
+    Column(
         modifier =
             Modifier
                 .fillMaxSize()
-                .padding(16.dp),
-        contentAlignment = Alignment.Center,
+                .padding(horizontal = 20.dp, vertical = 28.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        PremiumCard(accentColor = CatPeach, modifier = Modifier.fillMaxWidth()) {
-            Column(
-                modifier = Modifier.padding(20.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                SectionHeader(stringResource(R.string.recent_permission_title), CatPeach)
-                PremiumIconTile(
-                    icon = Icons.Default.LockOpen,
-                    color = CatPeach,
-                    size = 58.dp,
-                    iconSize = 30.dp,
-                )
-                Text(
-                    stringResource(R.string.recent_permission_title),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = CatText,
-                )
-                Text(
-                    stringResource(R.string.recent_permission_body),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = CatSubtext,
-                )
-                GradientDivider(color = CatPeach)
-                RecentGuidanceRow(
-                    icon = Icons.Default.PrivacyTip,
-                    title = stringResource(R.string.recent_permission_hint_private_title),
-                    subtitle = stringResource(R.string.recent_permission_hint_private_body),
-                    accentColor = CatBlue,
-                )
-                RecentGuidanceRow(
-                    icon = Icons.Default.Settings,
-                    title = stringResource(R.string.recent_permission_hint_recovery_title),
-                    subtitle = stringResource(R.string.recent_permission_hint_recovery_body),
-                    accentColor = CatPeach,
-                )
-                PremiumActionButton(
-                    label = stringResource(R.string.recent_permission_cta),
-                    icon = Icons.Default.Settings,
-                    color = CatPeach,
-                    onClick = onOpenSettings,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            PremiumIconTile(icon = Icons.Default.LockOpen, color = CatGreen, size = 42.dp, iconSize = 24.dp)
+            Spacer(Modifier.width(10.dp))
+            SectionHeader(stringResource(R.string.recent_permission_title))
         }
+        Text(
+            stringResource(R.string.recent_permission_body),
+            style = MaterialTheme.typography.bodyMedium,
+            color = CatSubtext,
+        )
+        GradientDivider()
+        RecentGuidanceRow(
+            icon = Icons.Default.PrivacyTip,
+            title = stringResource(R.string.recent_permission_hint_private_title),
+            subtitle = stringResource(R.string.recent_permission_hint_private_body),
+            accentColor = CatGreen,
+        )
+        PremiumActionButton(
+            label = stringResource(R.string.recent_permission_cta),
+            icon = Icons.Default.Settings,
+            color = CatGreen,
+            onClick = onOpenSettings,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Text(
+            stringResource(R.string.recent_permission_hint_recovery_body),
+            style = MaterialTheme.typography.bodySmall,
+            color = CatOverlay,
+        )
     }
 }
 
@@ -833,34 +813,26 @@ private fun RecentEmptyStateCard(
                 .padding(16.dp),
         contentAlignment = Alignment.Center,
     ) {
-        PremiumCard(accentColor = accentColor, modifier = Modifier.fillMaxWidth()) {
-            Column(
-                modifier = Modifier.padding(20.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                PremiumIconTile(
-                    icon = Icons.AutoMirrored.Filled.PhoneMissed,
-                    contentDescription = stringResource(R.string.cd_no_recent_calls),
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 28.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Icon(
+                Icons.AutoMirrored.Filled.PhoneMissed,
+                contentDescription = stringResource(R.string.cd_no_recent_calls),
+                tint = accentColor,
+                modifier = Modifier.size(42.dp),
+            )
+            Text(title, color = CatText, style = MaterialTheme.typography.titleMedium)
+            Text(subtitle, color = CatSubtext, style = MaterialTheme.typography.bodySmall)
+            if (actionLabel != null && onAction != null) {
+                PremiumCompactButton(
+                    label = actionLabel,
+                    icon = Icons.Default.Refresh,
                     color = accentColor,
-                    size = 58.dp,
-                    iconSize = 30.dp,
+                    onClick = onAction,
                 )
-                Text(title, color = CatText, style = MaterialTheme.typography.titleMedium)
-                Text(
-                    subtitle,
-                    color = CatSubtext,
-                    style = MaterialTheme.typography.bodySmall,
-                )
-                if (actionLabel != null && onAction != null) {
-                    PremiumActionButton(
-                        label = actionLabel,
-                        icon = Icons.Default.Refresh,
-                        color = accentColor,
-                        onClick = onAction,
-                        outlined = true,
-                    )
-                }
             }
         }
     }

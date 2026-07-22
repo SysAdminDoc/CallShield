@@ -187,165 +187,153 @@ fun LookupScreen(viewModel: MainViewModel) {
                 Modifier
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
-                    .padding(16.dp),
+                    .padding(horizontal = 20.dp, vertical = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            PremiumCard(accentColor = CatGreen, modifier = Modifier.fillMaxWidth()) {
-                Column(
-                    modifier = Modifier.padding(18.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                SectionHeader(stringResource(R.string.lookup_title))
+                Text(
+                    stringResource(R.string.lookup_subtitle),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = CatSubtext,
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    SectionHeader(stringResource(R.string.lookup_title), CatGreen)
-                    Text(
-                        stringResource(R.string.lookup_subtitle),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = CatSubtext,
+                    StatusPill(
+                        text = stringResource(R.string.lookup_badge_layers),
+                        color = CatGreen,
                     )
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        StatusPill(
-                            text = stringResource(R.string.lookup_badge_layers),
-                            color = CatGreen,
-                        )
-                        when {
-                            previewLocation != null -> {
-                                StatusPill(
-                                    text = previewLocation,
-                                    color = CatYellow,
-                                )
-                            }
+                    when {
+                        previewLocation != null -> {
+                            StatusPill(
+                                text = previewLocation,
+                                color = CatYellow,
+                            )
+                        }
 
-                            !clipboardNumber.isNullOrBlank() && numberInput.isBlank() -> {
-                                StatusPill(
-                                    text = stringResource(R.string.lookup_badge_clipboard),
-                                    color = CatYellow,
-                                )
-                            }
+                        !clipboardNumber.isNullOrBlank() && numberInput.isBlank() -> {
+                            StatusPill(
+                                text = stringResource(R.string.lookup_badge_clipboard),
+                                color = CatYellow,
+                            )
                         }
                     }
                 }
             }
 
-            PremiumCard(
-                accentColor =
-                    when {
-                        errorMessage != null -> CatRed
-                        canLookup -> CatGreen
-                        else -> CatBlue
-                    },
+            Column(
                 modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                Column(
-                    modifier = Modifier.padding(18.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp),
-                ) {
-                    OutlinedTextField(
-                        value = numberInput,
-                        onValueChange = {
-                            numberInput = sanitizeLookupInput(it)
-                            errorMessage = null
-                        },
-                        label = { Text(stringResource(R.string.lookup_phone_number)) },
-                        placeholder = { Text(stringResource(R.string.lookup_phone_placeholder)) },
-                        leadingIcon = {
-                            Icon(
-                                Icons.Default.Phone,
-                                contentDescription = stringResource(R.string.cd_phone_input),
-                                tint = CatSubtext,
-                            )
-                        },
-                        trailingIcon = {
-                            if (numberInput.isNotBlank()) {
-                                IconButton(onClick = { clearLookup() }) {
-                                    Icon(
-                                        Icons.Default.Close,
-                                        contentDescription = stringResource(R.string.cd_close),
-                                        tint = CatOverlay,
-                                    )
-                                }
-                            }
-                        },
-                        keyboardOptions =
-                            KeyboardOptions(
-                                keyboardType = KeyboardType.Phone,
-                                imeAction = ImeAction.Search,
-                            ),
-                        keyboardActions = KeyboardActions(onSearch = { runLookup() }),
-                        singleLine = true,
-                        supportingText = {
-                            if (normalizedNumber.isNotBlank()) {
-                                Text(
-                                    if (previewLocation != null) {
-                                        stringResource(
-                                            R.string.lookup_supporting_location,
-                                            PhoneFormatter.format(normalizedNumber),
-                                            previewLocation,
-                                        )
-                                    } else {
-                                        stringResource(
-                                            R.string.lookup_supporting_number,
-                                            PhoneFormatter.format(normalizedNumber),
-                                        )
-                                    },
-                                    color = CatOverlay,
+                OutlinedTextField(
+                    value = numberInput,
+                    onValueChange = {
+                        numberInput = sanitizeLookupInput(it)
+                        errorMessage = null
+                    },
+                    label = { Text(stringResource(R.string.lookup_phone_number)) },
+                    placeholder = { Text(stringResource(R.string.lookup_phone_placeholder)) },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Default.Phone,
+                            contentDescription = stringResource(R.string.cd_phone_input),
+                            tint = CatSubtext,
+                        )
+                    },
+                    trailingIcon = {
+                        if (numberInput.isNotBlank()) {
+                            IconButton(onClick = { clearLookup() }) {
+                                Icon(
+                                    Icons.Default.Close,
+                                    contentDescription = stringResource(R.string.cd_close),
+                                    tint = CatOverlay,
                                 )
                             }
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        colors =
-                            OutlinedTextFieldDefaults.colors(
-                                focusedContainerColor = SurfaceElevated,
-                                unfocusedContainerColor = SurfaceElevated,
-                                focusedTextColor = CatText,
-                                unfocusedTextColor = CatText,
-                                focusedBorderColor = CatGreen,
-                                cursorColor = CatGreen,
-                            ),
-                    )
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        if (!clipboardNumber.isNullOrBlank() && clipboardNumber != numberInput) {
-                            PremiumActionButton(
-                                label = stringResource(R.string.lookup_paste_clipboard),
-                                icon = Icons.Default.ContentPaste,
-                                color = CatYellow,
-                                onClick = {
-                                    numberInput = clipboardNumber
-                                    errorMessage = null
+                        }
+                    },
+                    keyboardOptions =
+                        KeyboardOptions(
+                            keyboardType = KeyboardType.Phone,
+                            imeAction = ImeAction.Search,
+                        ),
+                    keyboardActions = KeyboardActions(onSearch = { runLookup() }),
+                    singleLine = true,
+                    supportingText = {
+                        if (normalizedNumber.isNotBlank()) {
+                            Text(
+                                if (previewLocation != null) {
+                                    stringResource(
+                                        R.string.lookup_supporting_location,
+                                        PhoneFormatter.format(normalizedNumber),
+                                        previewLocation,
+                                    )
+                                } else {
+                                    stringResource(
+                                        R.string.lookup_supporting_number,
+                                        PhoneFormatter.format(normalizedNumber),
+                                    )
                                 },
-                                modifier = Modifier.weight(1f),
-                                outlined = true,
+                                color = CatOverlay,
                             )
                         }
-                        if (numberInput.isNotBlank()) {
-                            PremiumActionButton(
-                                label = stringResource(R.string.lookup_clear),
-                                icon = Icons.Default.Close,
-                                color = CatSubtext,
-                                onClick = { clearLookup() },
-                                modifier = Modifier.weight(1f),
-                                outlined = true,
-                            )
-                        }
-                    }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors =
+                        OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = SurfaceElevated,
+                            unfocusedContainerColor = SurfaceElevated,
+                            focusedTextColor = CatText,
+                            unfocusedTextColor = CatText,
+                            focusedBorderColor = CatGreen,
+                            cursorColor = CatGreen,
+                        ),
+                )
 
-                    PremiumActionButton(
-                        label = stringResource(R.string.lookup_check_number),
-                        icon = Icons.Default.Search,
-                        color = CatGreen,
-                        onClick = { runLookup() },
-                        enabled = canLookup && !checking,
-                        loading = checking,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    if (!clipboardNumber.isNullOrBlank() && clipboardNumber != numberInput) {
+                        PremiumActionButton(
+                            label = stringResource(R.string.lookup_paste_clipboard),
+                            icon = Icons.Default.ContentPaste,
+                            color = CatYellow,
+                            onClick = {
+                                numberInput = clipboardNumber
+                                errorMessage = null
+                            },
+                            modifier = Modifier.weight(1f),
+                            outlined = true,
+                        )
+                    }
+                    if (numberInput.isNotBlank()) {
+                        PremiumActionButton(
+                            label = stringResource(R.string.lookup_clear),
+                            icon = Icons.Default.Close,
+                            color = CatSubtext,
+                            onClick = { clearLookup() },
+                            modifier = Modifier.weight(1f),
+                            outlined = true,
+                        )
+                    }
                 }
+
+                PremiumActionButton(
+                    label = stringResource(R.string.lookup_check_number),
+                    icon = Icons.Default.Search,
+                    color = CatGreen,
+                    onClick = { runLookup() },
+                    enabled = canLookup && !checking,
+                    loading = checking,
+                    modifier = Modifier.fillMaxWidth(),
+                )
             }
 
             when {
@@ -499,11 +487,15 @@ fun LookupScreen(viewModel: MainViewModel) {
                                             val repo = SpamRepository.getInstance(context)
                                             withContext(Dispatchers.IO) {
                                                 if (lookupResult.isSpam) {
-                                                    CommunityContributor.contribute(normalizedNumber, lookupResult.type.ifEmpty { "spam" })
+                                                    CommunityContributor.contribute(
+                                                        normalizedNumber,
+                                                        lookupResult.type.ifEmpty { "spam" },
+                                                    )
                                                     reportedMessage
                                                 } else {
                                                     repo.addToWhitelist(normalizedNumber, "Marked safe from lookup")
-                                                    val reportResult = CommunityContributor.reportNotSpam(normalizedNumber)
+                                                    val reportResult =
+                                                        CommunityContributor.reportNotSpam(normalizedNumber)
                                                     if (reportResult.success) {
                                                         markedSafeReportedMessage
                                                     } else {
@@ -551,31 +543,25 @@ fun LookupScreen(viewModel: MainViewModel) {
 
 @Composable
 private fun LookupIdleCard() {
-    PremiumCard(accentColor = CatBlue, modifier = Modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier.padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            SectionHeader(stringResource(R.string.lookup_idle_title), CatBlue)
-            Text(
-                stringResource(R.string.lookup_idle_body),
-                style = MaterialTheme.typography.bodySmall,
-                color = CatSubtext,
-            )
-            GradientDivider(color = CatBlue)
-            LookupHintRow(
-                icon = Icons.Default.Psychology,
-                title = stringResource(R.string.lookup_idle_signal_title),
-                subtitle = stringResource(R.string.lookup_idle_signal_body),
-                accentColor = CatPeach,
-            )
-            LookupHintRow(
-                icon = Icons.Default.VerifiedUser,
-                title = stringResource(R.string.lookup_idle_trusted_title),
-                subtitle = stringResource(R.string.lookup_idle_trusted_body),
-                accentColor = CatGreen,
-            )
-        }
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        SectionHeader(stringResource(R.string.lookup_idle_title))
+        Text(stringResource(R.string.lookup_idle_body), style = MaterialTheme.typography.bodySmall, color = CatSubtext)
+        GradientDivider()
+        LookupHintRow(
+            icon = Icons.Default.Psychology,
+            title = stringResource(R.string.lookup_idle_signal_title),
+            subtitle = stringResource(R.string.lookup_idle_signal_body),
+            accentColor = CatSubtext,
+        )
+        LookupHintRow(
+            icon = Icons.Default.VerifiedUser,
+            title = stringResource(R.string.lookup_idle_trusted_title),
+            subtitle = stringResource(R.string.lookup_idle_trusted_body),
+            accentColor = CatGreen,
+        )
     }
 }
 

@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.CallSplit
 import androidx.compose.material.icons.automirrored.filled.Label
 import androidx.compose.material.icons.automirrored.filled.PhoneCallback
 import androidx.compose.material.icons.automirrored.filled.TextSnippet
@@ -129,8 +130,11 @@ fun SettingsScreen(viewModel: MainViewModel) {
     var screenerGranted by remember(roleManager) { mutableStateOf(CallShieldPermissions.hasCallScreeningRole(roleManager)) }
     val corePermissionsGranted = missingCorePermissions.isEmpty()
     val screenerReadyForCurrentMode = !blockCalls || screenerGranted
-    val setupReadyCount = listOf(corePermissionsGranted, screenerReadyForCurrentMode, overlayGranted, notificationsGranted).count { it }
-    val setupTotal = 4
+    // Overlay and notifications add polish, but they are not required for the
+    // protection engine. Keep optional enhancements out of the core setup
+    // score so a configured blocker never looks unfinished.
+    val setupReadyCount = listOf(corePermissionsGranted, screenerReadyForCurrentMode).count { it }
+    val setupTotal = 2
     val permissionLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
             missingCorePermissions =
@@ -172,160 +176,127 @@ fun SettingsScreen(viewModel: MainViewModel) {
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
-        PremiumCard {
-            Column(modifier = Modifier.padding(16.dp)) {
-                SectionHeader(stringResource(R.string.settings_permissions_access), CatBlue)
-                Spacer(Modifier.height(4.dp))
-                Text(stringResource(R.string.settings_permissions_access_desc), style = MaterialTheme.typography.bodySmall, color = CatSubtext)
-                Spacer(Modifier.height(12.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        stringResource(R.string.settings_setup_progress, setupReadyCount, setupTotal),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = CatSubtext,
-                    )
-                    Text(
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                SectionHeader(stringResource(R.string.settings_permissions_access))
+                StatusPill(
+                    text =
                         if (setupReadyCount == setupTotal) {
                             stringResource(R.string.settings_setup_ready_summary)
                         } else {
                             stringResource(R.string.settings_setup_attention_summary)
                         },
-                        style = MaterialTheme.typography.labelMedium,
-                        color = if (setupReadyCount == setupTotal) CatGreen else CatBlue,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                }
-                Spacer(Modifier.height(8.dp))
-                LinearProgressIndicator(
-                    progress = { setupReadyCount / setupTotal.toFloat() },
-                    modifier = Modifier.fillMaxWidth().height(8.dp),
-                    color = if (setupReadyCount == setupTotal) CatGreen else CatBlue,
-                    trackColor = CatMuted.copy(alpha = 0.25f),
+                    color = if (setupReadyCount == setupTotal) CatGreen else CatYellow,
                 )
-                Spacer(Modifier.height(12.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                    PermissionStatusChip(
-                        label = stringResource(if (corePermissionsGranted) R.string.settings_permissions_granted else R.string.settings_permissions_needed),
-                        color = if (corePermissionsGranted) CatGreen else CatPeach,
-                        modifier = Modifier.weight(1f),
-                    )
-                    PermissionStatusChip(
-                        label =
-                            stringResource(
-                                when {
-                                    screenerGranted -> R.string.settings_call_screener_enabled
-                                    blockCalls -> R.string.settings_call_screener_needed
-                                    else -> R.string.settings_call_screener_optional
-                                },
-                            ),
-                        color =
-                            when {
-                                screenerGranted -> CatGreen
-                                blockCalls -> CatMauve
-                                else -> CatOverlay
-                            },
-                        modifier = Modifier.weight(1f),
-                    )
-                }
-                Spacer(Modifier.height(8.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                    PermissionStatusChip(
-                        label = stringResource(if (overlayGranted) R.string.settings_overlay_enabled else R.string.settings_overlay_needed),
-                        color = if (overlayGranted) CatGreen else CatBlue,
-                        modifier = Modifier.weight(1f),
-                    )
-                    PermissionStatusChip(
-                        label =
-                            stringResource(
-                                if (notificationsGranted) {
-                                    R.string.settings_notifications_enabled
-                                } else {
-                                    R.string.settings_notifications_optional
-                                },
-                            ),
-                        color = if (notificationsGranted) CatGreen else CatOverlay,
-                        modifier = Modifier.weight(1f),
-                    )
-                }
-                Spacer(Modifier.height(12.dp))
-                if (!corePermissionsGranted || !screenerReadyForCurrentMode || !overlayGranted || !notificationsGranted) {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        if (!corePermissionsGranted) {
-                            PremiumActionButton(
-                                label = stringResource(R.string.settings_grant_permissions),
-                                icon = Icons.Default.Security,
-                                color = CatBlue,
-                                onClick = {
-                                    permissionLauncher.launch(CallShieldPermissions.corePermissions.toTypedArray())
-                                },
-                                modifier = Modifier.fillMaxWidth(),
-                            )
-                        }
-                        if (blockCalls && !screenerGranted && roleManager != null) {
-                            PremiumActionButton(
-                                label = stringResource(R.string.settings_call_screener),
-                                icon = Icons.AutoMirrored.Filled.PhoneCallback,
-                                color = CatMauve,
-                                onClick = {
-                                    try {
-                                        screeningLauncher.launch(roleManager.createRequestRoleIntent(RoleManager.ROLE_CALL_SCREENING))
-                                    } catch (_: Exception) {
-                                        // Some OEM ROMs remove ROLE_CALL_SCREENING — open app settings instead
-                                        context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}")))
-                                    }
-                                },
-                                modifier = Modifier.fillMaxWidth(),
-                            )
-                        }
-                        if (!overlayGranted) {
-                            PremiumActionButton(
-                                label = stringResource(R.string.settings_overlay),
-                                icon = Icons.Default.Layers,
-                                color = CatBlue,
-                                onClick = {
-                                    val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${context.packageName}"))
-                                    context.startActivity(intent)
-                                },
-                                modifier = Modifier.fillMaxWidth(),
-                                outlined = true,
-                            )
-                        }
-                        if (!notificationsGranted) {
-                            PremiumActionButton(
-                                label = stringResource(R.string.settings_notifications),
-                                icon = Icons.Default.Notifications,
-                                color = CatMauve,
-                                onClick = {
-                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                        notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                                    } else {
-                                        val intent =
-                                            Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
-                                                putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
-                                            }
-                                        context.startActivity(intent)
-                                    }
-                                },
-                                modifier = Modifier.fillMaxWidth(),
-                                outlined = true,
-                            )
-                        }
-                    }
-                    Spacer(Modifier.height(8.dp))
-                }
-                TextButton(
-                    onClick = {
-                        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}"))
-                        context.startActivity(intent)
-                    },
-                ) {
-                    Text(stringResource(R.string.settings_open_app_settings), color = CatSubtext)
-                }
             }
+            Spacer(Modifier.height(4.dp))
+            Text(
+                stringResource(R.string.settings_setup_progress, setupReadyCount, setupTotal),
+                style = MaterialTheme.typography.bodySmall,
+                color = CatSubtext,
+            )
+            Spacer(Modifier.height(8.dp))
+            LinearProgressIndicator(
+                progress = { setupReadyCount / setupTotal.toFloat() },
+                modifier = Modifier.fillMaxWidth().height(4.dp),
+                color = if (setupReadyCount == setupTotal) CatGreen else CatYellow,
+                trackColor = CatMuted.copy(alpha = 0.32f),
+            )
+            Spacer(Modifier.height(10.dp))
+            PermissionAccessRow(
+                title = stringResource(R.string.settings_access_calls_messages),
+                icon = Icons.Default.Security,
+                ready = corePermissionsGranted,
+                readyLabel = stringResource(R.string.settings_access_ready),
+                actionLabel = stringResource(R.string.settings_access_grant),
+                onAction = { permissionLauncher.launch(CallShieldPermissions.corePermissions.toTypedArray()) },
+            )
+            GradientDivider()
+            PermissionAccessRow(
+                title = stringResource(R.string.settings_access_call_screening),
+                icon = Icons.AutoMirrored.Filled.PhoneCallback,
+                ready = screenerReadyForCurrentMode,
+                readyLabel =
+                    stringResource(
+                        if (blockCalls) R.string.settings_access_ready else R.string.settings_access_optional,
+                    ),
+                actionLabel = stringResource(R.string.settings_access_enable),
+                onAction = {
+                    try {
+                        if (roleManager != null) {
+                            screeningLauncher.launch(roleManager.createRequestRoleIntent(RoleManager.ROLE_CALL_SCREENING))
+                        } else {
+                            context.startActivity(
+                                Intent(
+                                    Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                    Uri.parse("package:${context.packageName}"),
+                                ),
+                            )
+                        }
+                    } catch (_: Exception) {
+                        context.startActivity(
+                            Intent(
+                                Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                Uri.parse("package:${context.packageName}"),
+                            ),
+                        )
+                    }
+                },
+            )
+            Spacer(Modifier.height(12.dp))
+            Text(
+                stringResource(R.string.settings_access_optional_title),
+                style = MaterialTheme.typography.labelLarge,
+                color = CatSubtext,
+            )
+            Spacer(Modifier.height(4.dp))
+            PermissionAccessRow(
+                title = stringResource(R.string.settings_access_caller_id),
+                icon = Icons.Default.Layers,
+                ready = overlayGranted,
+                readyLabel = stringResource(R.string.settings_access_ready),
+                actionLabel = stringResource(R.string.settings_access_enable),
+                onAction = {
+                    context.startActivity(
+                        Intent(
+                            Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                            Uri.parse("package:${context.packageName}"),
+                        ),
+                    )
+                },
+            )
+            GradientDivider()
+            PermissionAccessRow(
+                title = stringResource(R.string.settings_notifications),
+                icon = Icons.Default.Notifications,
+                ready = notificationsGranted,
+                readyLabel = stringResource(R.string.settings_access_ready),
+                actionLabel = stringResource(R.string.settings_access_enable),
+                onAction = {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    } else {
+                        context.startActivity(
+                            Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                                putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                            },
+                        )
+                    }
+                },
+            )
+            TextButton(
+                onClick = {
+                    context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}")))
+                },
+                contentPadding = PaddingValues(horizontal = 0.dp),
+            ) {
+                Text(stringResource(R.string.settings_open_app_settings), color = CatSubtext)
+            }
+            GradientDivider()
         }
 
         // Blocking
@@ -420,7 +391,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
             SettingsToggle(
                 stringResource(R.string.settings_db_prefix_expansion),
                 stringResource(R.string.settings_db_prefix_expansion_desc),
-                Icons.Default.CallSplit,
+                Icons.AutoMirrored.Filled.CallSplit,
                 dbPrefixExpansion,
             ) { viewModel.setDbPrefixExpansion(it) }
             GradientDivider()
@@ -1165,43 +1136,45 @@ internal fun AnsweredCallerTrustSettings(
     onThresholdChange: (Int) -> Unit,
     onWindowDaysChange: (Int) -> Unit,
 ) {
-    SettingsToggle(
-        stringResource(R.string.settings_answered_caller_trust),
-        stringResource(R.string.settings_answered_caller_trust_desc),
-        Icons.AutoMirrored.Filled.PhoneCallback,
-        enabled,
-        toggleTag = SETTINGS_ANSWERED_CALLER_TOGGLE_TAG,
-        onCheckedChange = onEnabledChange,
-    )
-    if (enabled) {
-        Spacer(Modifier.height(8.dp))
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            SettingsNumberStepper(
-                label = stringResource(R.string.settings_answered_caller_threshold),
-                valueText =
-                    pluralStringResource(
-                        R.plurals.settings_answered_caller_threshold_value,
-                        threshold,
-                        threshold,
-                    ),
-                value = threshold,
-                minValue = ANSWERED_CALLER_THRESHOLD_MIN,
-                maxValue = ANSWERED_CALLER_THRESHOLD_MAX,
-                onValueChange = onThresholdChange,
-            )
-            SettingsNumberStepper(
-                label = stringResource(R.string.settings_answered_caller_window),
-                valueText =
-                    pluralStringResource(
-                        R.plurals.settings_answered_caller_window_value,
-                        windowDays,
-                        windowDays,
-                    ),
-                value = windowDays,
-                minValue = ANSWERED_CALLER_WINDOW_DAYS_MIN,
-                maxValue = ANSWERED_CALLER_WINDOW_DAYS_MAX,
-                onValueChange = onWindowDaysChange,
-            )
+    Column {
+        SettingsToggle(
+            stringResource(R.string.settings_answered_caller_trust),
+            stringResource(R.string.settings_answered_caller_trust_desc),
+            Icons.AutoMirrored.Filled.PhoneCallback,
+            enabled,
+            toggleTag = SETTINGS_ANSWERED_CALLER_TOGGLE_TAG,
+            onCheckedChange = onEnabledChange,
+        )
+        if (enabled) {
+            Spacer(Modifier.height(8.dp))
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                SettingsNumberStepper(
+                    label = stringResource(R.string.settings_answered_caller_threshold),
+                    valueText =
+                        pluralStringResource(
+                            R.plurals.settings_answered_caller_threshold_value,
+                            threshold,
+                            threshold,
+                        ),
+                    value = threshold,
+                    minValue = ANSWERED_CALLER_THRESHOLD_MIN,
+                    maxValue = ANSWERED_CALLER_THRESHOLD_MAX,
+                    onValueChange = onThresholdChange,
+                )
+                SettingsNumberStepper(
+                    label = stringResource(R.string.settings_answered_caller_window),
+                    valueText =
+                        pluralStringResource(
+                            R.plurals.settings_answered_caller_window_value,
+                            windowDays,
+                            windowDays,
+                        ),
+                    value = windowDays,
+                    minValue = ANSWERED_CALLER_WINDOW_DAYS_MIN,
+                    maxValue = ANSWERED_CALLER_WINDOW_DAYS_MAX,
+                    onValueChange = onWindowDaysChange,
+                )
+            }
         }
     }
 }
@@ -1336,12 +1309,14 @@ fun SettingsCard(
     title: String,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    PremiumCard {
-        Column(modifier = Modifier.padding(18.dp)) {
-            SectionHeader(title)
-            Spacer(Modifier.height(12.dp))
-            content()
-        }
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+    ) {
+        SectionHeader(title)
+        Spacer(Modifier.height(8.dp))
+        content()
+        Spacer(Modifier.height(8.dp))
+        GradientDivider()
     }
 }
 
@@ -1376,23 +1351,48 @@ fun SettingsToggle(
     }
 }
 
+@Suppress("LongParameterList")
 @Composable
-private fun PermissionStatusChip(
-    label: String,
-    color: androidx.compose.ui.graphics.Color,
-    modifier: Modifier = Modifier,
+private fun PermissionAccessRow(
+    title: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    ready: Boolean,
+    readyLabel: String,
+    actionLabel: String,
+    onAction: () -> Unit,
 ) {
-    Surface(
-        modifier = modifier,
-        shape = RoundedCornerShape(10.dp),
-        color = color.copy(alpha = 0.12f),
+    Row(
+        modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(
-            label,
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
-            style = MaterialTheme.typography.labelMedium,
-            color = color,
-            fontWeight = FontWeight.SemiBold,
+        PremiumIconTile(
+            icon = icon,
+            color = if (ready) CatGreen else CatSubtext,
+            size = 36.dp,
+            iconSize = 19.dp,
         )
+        Spacer(Modifier.width(10.dp))
+        Text(
+            title,
+            modifier = Modifier.weight(1f),
+            style = MaterialTheme.typography.bodyLarge,
+            color = CatText,
+        )
+        if (ready) {
+            val badgeColor =
+                if (readyLabel == stringResource(R.string.settings_access_optional)) {
+                    CatOverlay
+                } else {
+                    CatGreen
+                }
+            StatusPill(readyLabel, badgeColor)
+        } else {
+            TextButton(
+                onClick = onAction,
+                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
+            ) {
+                Text(actionLabel, color = CatGreen, style = MaterialTheme.typography.labelLarge)
+            }
+        }
     }
 }

@@ -60,7 +60,6 @@ import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRowDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberSwipeToDismissBoxState
@@ -112,6 +111,7 @@ import com.sysadmindoc.callshield.ui.theme.CatYellow
 import com.sysadmindoc.callshield.ui.theme.GradientDivider
 import com.sysadmindoc.callshield.ui.theme.PremiumActionButton
 import com.sysadmindoc.callshield.ui.theme.PremiumCard
+import com.sysadmindoc.callshield.ui.theme.PremiumCompactButton
 import com.sysadmindoc.callshield.ui.theme.PremiumIconTile
 import com.sysadmindoc.callshield.ui.theme.StatusPill
 import com.sysadmindoc.callshield.ui.theme.SurfaceBright
@@ -294,49 +294,50 @@ fun BlocklistScreen(viewModel: MainViewModel) {
                 contentColor = CatText,
                 edgePadding = 8.dp,
                 divider = {},
-                indicator = {
-                    TabRowDefaults.SecondaryIndicator(color = workspace.accentColor)
-                },
+                // Selection is already communicated by label colour. A custom
+                // full-width indicator rendered as a solid accent slab on
+                // current Material 3, obscuring the content below the tabs.
+                indicator = {},
             ) {
                 Tab(
                     selected = tabIndex == BLOCKLIST_TAB_BLOCKED,
                     onClick = { tabIndex = BLOCKLIST_TAB_BLOCKED },
-                    selectedContentColor = CatText,
+                    selectedContentColor = CatGreen,
                     unselectedContentColor = CatSubtext,
                     text = { Text(stringResource(R.string.blocklist_tab_blocked_short)) },
                 )
                 Tab(
                     selected = tabIndex == BLOCKLIST_TAB_WILDCARDS,
                     onClick = { tabIndex = BLOCKLIST_TAB_WILDCARDS },
-                    selectedContentColor = CatText,
+                    selectedContentColor = CatGreen,
                     unselectedContentColor = CatSubtext,
                     text = { Text(stringResource(R.string.blocklist_tab_wildcards_short)) },
                 )
                 Tab(
                     selected = tabIndex == BLOCKLIST_TAB_RANGES,
                     onClick = { tabIndex = BLOCKLIST_TAB_RANGES },
-                    selectedContentColor = CatText,
+                    selectedContentColor = CatGreen,
                     unselectedContentColor = CatSubtext,
                     text = { Text(stringResource(R.string.blocklist_tab_ranges_short)) },
                 )
                 Tab(
                     selected = tabIndex == BLOCKLIST_TAB_KEYWORDS,
                     onClick = { tabIndex = BLOCKLIST_TAB_KEYWORDS },
-                    selectedContentColor = CatText,
+                    selectedContentColor = CatGreen,
                     unselectedContentColor = CatSubtext,
                     text = { Text(stringResource(R.string.blocklist_tab_keywords_short)) },
                 )
                 Tab(
                     selected = tabIndex == BLOCKLIST_TAB_WHITELIST,
                     onClick = { tabIndex = BLOCKLIST_TAB_WHITELIST },
-                    selectedContentColor = CatText,
+                    selectedContentColor = CatGreen,
                     unselectedContentColor = CatSubtext,
                     text = { Text(stringResource(R.string.blocklist_tab_whitelist_short)) },
                 )
                 Tab(
                     selected = tabIndex == BLOCKLIST_TAB_DATABASE,
                     onClick = { tabIndex = BLOCKLIST_TAB_DATABASE },
-                    selectedContentColor = CatText,
+                    selectedContentColor = CatGreen,
                     unselectedContentColor = CatSubtext,
                     text = { Text(stringResource(R.string.blocklist_tab_database_short)) },
                 )
@@ -600,83 +601,67 @@ private fun BlocklistOverviewCard(
     workspace: BlocklistWorkspaceModel,
     modifier: Modifier = Modifier,
 ) {
-    PremiumCard(
+    Column(
         modifier = modifier,
-        accentColor = workspace.accentColor,
-        cornerRadius = 12.dp,
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Column(
-            modifier = Modifier.padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.Top,
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.Top,
+            PremiumIconTile(
+                icon = workspace.icon,
+                color = workspace.accentColor,
+                size = 42.dp,
+                iconSize = 23.dp,
+            )
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                PremiumIconTile(
-                    icon = workspace.icon,
+                StatusPill(
+                    text =
+                        pluralStringResource(
+                            R.plurals.blocklist_count_saved,
+                            workspace.count,
+                            workspace.count,
+                        ),
                     color = workspace.accentColor,
-                    size = 54.dp,
-                    iconSize = 26.dp,
                 )
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    StatusPill(
-                        text =
-                            pluralStringResource(
-                                R.plurals.blocklist_count_saved,
-                                workspace.count,
-                                workspace.count,
-                            ),
+                Text(text = workspace.title, style = MaterialTheme.typography.titleLarge, color = CatText)
+                Text(
+                    text = workspace.subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = CatSubtext,
+                    maxLines = 2,
+                )
+            }
+        }
+
+        if (workspace.primaryUtilityLabel != null || workspace.secondaryUtilityLabel != null) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                workspace.primaryUtilityLabel?.let { label ->
+                    PremiumCompactButton(
+                        label = label,
+                        icon = Icons.Default.FileOpen,
                         color = workspace.accentColor,
-                        horizontalPadding = 10.dp,
-                        verticalPadding = 6.dp,
-                    )
-                    Text(
-                        text = workspace.title,
-                        style = MaterialTheme.typography.titleLarge,
-                        color = CatText,
-                    )
-                    Text(
-                        text = workspace.subtitle,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = CatSubtext,
+                        onClick = { workspace.onPrimaryUtility?.invoke() },
+                        modifier = Modifier.weight(1f),
                     )
                 }
-            }
-
-            if (workspace.primaryUtilityLabel != null || workspace.secondaryUtilityLabel != null) {
-                GradientDivider(color = workspace.accentColor)
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
-                    workspace.primaryUtilityLabel?.let { label ->
-                        PremiumActionButton(
-                            label = label,
-                            icon = Icons.Default.FileOpen,
-                            color = workspace.accentColor,
-                            onClick = { workspace.onPrimaryUtility?.invoke() },
-                            modifier = Modifier.weight(1f),
-                            outlined = true,
-                        )
-                    }
-                    workspace.secondaryUtilityLabel?.let { label ->
-                        PremiumActionButton(
-                            label = label,
-                            icon = Icons.Default.Share,
-                            color = workspace.accentColor,
-                            onClick = { workspace.onSecondaryUtility?.invoke() },
-                            modifier = Modifier.weight(1f),
-                            outlined = true,
-                        )
-                    }
+                workspace.secondaryUtilityLabel?.let { label ->
+                    PremiumCompactButton(
+                        label = label,
+                        icon = Icons.Default.Share,
+                        color = workspace.accentColor,
+                        onClick = { workspace.onSecondaryUtility?.invoke() },
+                        modifier = Modifier.weight(1f),
+                    )
                 }
             }
         }
+        GradientDivider()
     }
 }
 
@@ -694,43 +679,30 @@ private fun EmptyStateCard(
                 .padding(16.dp),
         contentAlignment = Alignment.Center,
     ) {
-        PremiumCard(
-            modifier = Modifier.fillMaxWidth(),
-            accentColor = accentColor,
-            cornerRadius = 12.dp,
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 28.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Column(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 28.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = accentColor.copy(alpha = 0.12f),
-                ) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = stringResource(R.string.cd_empty_list),
-                        tint = accentColor,
-                        modifier = Modifier.padding(16.dp),
-                    )
-                }
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = CatText,
-                    textAlign = TextAlign.Center,
-                )
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = CatSubtext,
-                    textAlign = TextAlign.Center,
-                )
-            }
+            Icon(
+                imageVector = icon,
+                contentDescription = stringResource(R.string.cd_empty_list),
+                tint = accentColor,
+                modifier = Modifier.size(42.dp),
+            )
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                color = CatText,
+                textAlign = TextAlign.Center,
+            )
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = CatSubtext,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
+            )
         }
     }
 }
@@ -741,17 +713,14 @@ internal fun SwipeToRemoveBlocklistItem(
     number: SpamNumber,
     onRemove: () -> Unit,
 ) {
-    val dismissState =
-        rememberSwipeToDismissBoxState(
-            confirmValueChange = { value ->
-                if (value == SwipeToDismissBoxValue.EndToStart) {
-                    onRemove()
-                    true
-                } else {
-                    false
-                }
-            },
-        )
+    val dismissState = rememberSwipeToDismissBoxState()
+    var removalHandled by remember(number.id) { mutableStateOf(false) }
+    LaunchedEffect(dismissState.currentValue) {
+        if (dismissState.currentValue == SwipeToDismissBoxValue.EndToStart && !removalHandled) {
+            removalHandled = true
+            onRemove()
+        }
+    }
     SwipeToDismissBox(
         state = dismissState,
         modifier = Modifier.testTag(BLOCKLIST_SWIPE_ITEM_TAG),

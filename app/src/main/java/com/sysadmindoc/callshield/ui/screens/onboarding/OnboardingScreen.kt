@@ -155,13 +155,32 @@ internal fun OnboardingScreenContent(
 ) {
     var currentPage by remember { mutableIntStateOf(0) }
     val requiredReady = listOf(permsGranted, screenerGranted).count { it }
-    val optionalReady = listOf(notificationsGranted, overlayGranted).count { it }
     val pages =
         listOf(
-            OnboardingPage(Icons.Default.Shield, stringResource(R.string.onboarding_welcome_title), stringResource(R.string.onboarding_welcome_subtitle), CatGreen),
-            OnboardingPage(Icons.Default.Security, stringResource(R.string.onboarding_permissions_title), stringResource(R.string.onboarding_permissions_subtitle), CatBlue),
-            OnboardingPage(Icons.AutoMirrored.Filled.PhoneCallback, stringResource(R.string.onboarding_screener_title), stringResource(R.string.onboarding_screener_subtitle), CatMauve),
-            OnboardingPage(Icons.Default.Sync, stringResource(R.string.onboarding_sync_title), stringResource(R.string.onboarding_sync_subtitle), CatPeach),
+            OnboardingPage(
+                Icons.Default.Shield,
+                stringResource(R.string.onboarding_welcome_title),
+                stringResource(R.string.onboarding_welcome_subtitle),
+                CatGreen,
+            ),
+            OnboardingPage(
+                Icons.Default.Security,
+                stringResource(R.string.onboarding_permissions_title),
+                stringResource(R.string.onboarding_permissions_subtitle),
+                CatBlue,
+            ),
+            OnboardingPage(
+                Icons.AutoMirrored.Filled.PhoneCallback,
+                stringResource(R.string.onboarding_screener_title),
+                stringResource(R.string.onboarding_screener_subtitle),
+                CatMauve,
+            ),
+            OnboardingPage(
+                Icons.Default.Sync,
+                stringResource(R.string.onboarding_sync_title),
+                stringResource(R.string.onboarding_sync_subtitle),
+                CatPeach,
+            ),
         )
     val pageContentDescription =
         stringResource(
@@ -175,48 +194,37 @@ internal fun OnboardingScreenContent(
             Modifier
                 .fillMaxSize()
                 .background(Black)
-                .padding(start = 24.dp, end = 24.dp, top = 24.dp)
+                .statusBarsPadding()
+                .padding(start = 20.dp, end = 20.dp, top = 12.dp)
                 .navigationBarsPadding()
                 .padding(bottom = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(
-            stringResource(R.string.onboarding_step, currentPage + 1, pages.size),
-            style = MaterialTheme.typography.labelMedium,
-            color = CatOverlay,
-        )
-        Spacer(Modifier.height(12.dp))
-
-        PremiumCard(accentColor = pages[currentPage].color, modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                SectionHeader(stringResource(R.string.onboarding_progress_title), pages[currentPage].color)
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    StatusPill(
-                        text = stringResource(R.string.onboarding_progress_required_badge, requiredReady, 2),
-                        color = pages[currentPage].color,
-                        textStyle = MaterialTheme.typography.labelSmall,
-                        modifier = Modifier.weight(1f),
-                    )
-                    StatusPill(
-                        text = stringResource(R.string.onboarding_progress_optional_badge, optionalReady, 2),
-                        color = if (optionalReady > 0) CatGreen else CatOverlay,
-                        textStyle = MaterialTheme.typography.labelSmall,
-                        modifier = Modifier.weight(1f),
-                    )
-                }
-                LinearProgressIndicator(
-                    progress = { (requiredReady + optionalReady) / 4f },
-                    modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
-                    color = pages[currentPage].color,
-                    trackColor = CatMuted.copy(alpha = 0.2f),
-                )
-            }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                stringResource(R.string.onboarding_step, currentPage + 1, pages.size),
+                style = MaterialTheme.typography.labelMedium,
+                color = CatSubtext,
+            )
+            StatusPill(
+                text = stringResource(R.string.onboarding_progress_required_badge, requiredReady, 2),
+                color = if (requiredReady == 2) CatGreen else pages[currentPage].color,
+                textStyle = MaterialTheme.typography.labelMedium,
+            )
         }
+        Spacer(Modifier.height(8.dp))
+        LinearProgressIndicator(
+            progress = { (currentPage + 1) / pages.size.toFloat() },
+            modifier = Modifier.fillMaxWidth().height(4.dp).clip(RoundedCornerShape(2.dp)),
+            color = pages[currentPage].color,
+            trackColor = CatMuted.copy(alpha = 0.35f),
+        )
 
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(12.dp))
 
         Box(
             modifier =
@@ -226,7 +234,7 @@ internal fun OnboardingScreenContent(
                     .semantics {
                         contentDescription = pageContentDescription
                     },
-            contentAlignment = Alignment.Center,
+            contentAlignment = Alignment.TopCenter,
         ) {
             AnimatedContent(targetState = currentPage, transitionSpec = {
                 slideInHorizontally { it } + fadeIn() togetherWith slideOutHorizontally { -it } + fadeOut()
@@ -243,12 +251,9 @@ internal fun OnboardingScreenContent(
                         p.icon,
                         contentDescription = p.title,
                         tint = p.color,
-                        modifier =
-                            Modifier
-                                .size(96.dp)
-                                .accentGlow(p.color, 300f, 0.10f),
+                        modifier = Modifier.size(64.dp),
                     )
-                    Spacer(Modifier.height(24.dp))
+                    Spacer(Modifier.height(14.dp))
                     Text(
                         p.title,
                         style = MaterialTheme.typography.headlineSmall,
@@ -256,14 +261,14 @@ internal fun OnboardingScreenContent(
                         color = p.color,
                         textAlign = TextAlign.Center,
                     )
-                    Spacer(Modifier.height(12.dp))
+                    Spacer(Modifier.height(8.dp))
                     Text(
                         p.subtitle,
                         style = MaterialTheme.typography.bodyLarge.copy(lineHeight = 26.sp),
                         color = CatSubtext,
                         textAlign = TextAlign.Center,
                     )
-                    Spacer(Modifier.height(24.dp))
+                    Spacer(Modifier.height(16.dp))
 
                     when (page) {
                         0 -> {
@@ -555,50 +560,42 @@ internal fun OnboardingScreenContent(
         SnackbarHost(hostState = snackbarHostState)
         Spacer(Modifier.height(16.dp))
 
-        PremiumCard(
-            accentColor = if (currentPage == pages.lastIndex && requiredReady == 2) CatGreen else pages[currentPage].color,
+        Row(
             modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Row(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                if (currentPage > 0) {
-                    TextButton(onClick = { currentPage-- }) {
-                        Text(stringResource(R.string.onboarding_back), color = CatSubtext)
-                    }
-                } else {
-                    Spacer(Modifier.width(1.dp))
+            if (currentPage > 0) {
+                TextButton(onClick = { currentPage-- }) {
+                    Text(stringResource(R.string.onboarding_back), color = CatSubtext)
                 }
-
-                PremiumActionButton(
-                    label =
-                        when {
-                            currentPage < pages.lastIndex -> stringResource(R.string.onboarding_next)
-                            requiredReady == 2 -> stringResource(R.string.onboarding_finish_setup)
-                            else -> stringResource(R.string.onboarding_continue_anyway)
-                        },
-                    icon =
-                        if (currentPage < pages.lastIndex) {
-                            Icons.AutoMirrored.Filled.ArrowForward
-                        } else {
-                            Icons.Default.Check
-                        },
-                    color = pages[currentPage].color,
-                    onClick = {
-                        if (currentPage < pages.lastIndex) {
-                            currentPage++
-                        } else {
-                            onComplete()
-                        }
-                    },
-                    modifier = Modifier.height(48.dp),
-                )
+            } else {
+                Spacer(Modifier.width(1.dp))
             }
+
+            PremiumActionButton(
+                label =
+                    when {
+                        currentPage < pages.lastIndex -> stringResource(R.string.onboarding_next)
+                        requiredReady == 2 -> stringResource(R.string.onboarding_finish_setup)
+                        else -> stringResource(R.string.onboarding_continue_anyway)
+                    },
+                icon =
+                    if (currentPage < pages.lastIndex) {
+                        Icons.AutoMirrored.Filled.ArrowForward
+                    } else {
+                        Icons.Default.Check
+                    },
+                color = pages[currentPage].color,
+                onClick = {
+                    if (currentPage < pages.lastIndex) {
+                        currentPage++
+                    } else {
+                        onComplete()
+                    }
+                },
+                modifier = Modifier.height(48.dp),
+            )
         }
     }
 }
@@ -609,20 +606,23 @@ private fun OnboardingFeatureCard(
     body: String,
     accentColor: androidx.compose.ui.graphics.Color,
 ) {
-    PremiumCard(accentColor = accentColor, modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(
-                title,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold,
-                color = accentColor,
-            )
-            Text(
-                body,
-                style = MaterialTheme.typography.bodySmall,
-                color = CatSubtext,
-            )
-        }
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Text(
+            title,
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold,
+            color = CatText,
+        )
+        Text(
+            body,
+            style = MaterialTheme.typography.bodySmall,
+            color = CatSubtext,
+            maxLines = 2,
+        )
+        GradientDivider(color = accentColor)
     }
 }
 

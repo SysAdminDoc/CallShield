@@ -7,7 +7,6 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -23,19 +22,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sysadmindoc.callshield.R
+import com.sysadmindoc.callshield.permissions.CallShieldPermissions
 import com.sysadmindoc.callshield.ui.screens.details.NumberDetailScreen
 import com.sysadmindoc.callshield.ui.screens.lookup.LookupScreen
 import com.sysadmindoc.callshield.ui.screens.main.BlockedLogScreen
@@ -121,11 +120,13 @@ fun CallShieldRoot(
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
+@Suppress("CyclomaticComplexMethod", "LongMethod")
 @Composable
 fun CallShieldApp(
     viewModel: MainViewModel,
     startTab: Int = 0,
 ) {
+    val context = LocalContext.current
     var selectedTab by rememberSaveable { mutableIntStateOf(startTab) }
     var showSearch by rememberSaveable { mutableStateOf(false) }
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
@@ -149,40 +150,17 @@ fun CallShieldApp(
     val navBarTopBorder = Color.White.copy(alpha = 0.04f)
     val currentTitle =
         when (selectedTab) {
-            0 -> stringResource(R.string.nav_home)
+            0 -> stringResource(R.string.app_name)
             1 -> stringResource(R.string.nav_recent)
             2 -> stringResource(R.string.nav_log)
             3 -> stringResource(R.string.nav_lookup)
             4 -> stringResource(R.string.nav_blocklist)
             else -> stringResource(R.string.nav_more)
         }
-    val currentSubtitle =
-        when (selectedTab) {
-            0 -> stringResource(R.string.app_shell_subtitle_home)
-            1 -> stringResource(R.string.app_shell_subtitle_recent)
-            2 -> stringResource(R.string.app_shell_subtitle_log)
-            3 -> stringResource(R.string.app_shell_subtitle_lookup)
-            4 -> stringResource(R.string.app_shell_subtitle_blocklist)
-            else -> stringResource(R.string.app_shell_subtitle_more)
-        }
-    val currentAccent =
-        when (selectedTab) {
-            0 -> CatGreen
-            1 -> CatBlue
-            2 -> CatPeach
-            3 -> CatYellow
-            4 -> CatRed
-            else -> CatMauve
-        }
-    val currentModeLabel =
-        when (selectedTab) {
-            0 -> stringResource(R.string.app_shell_mode_home)
-            1 -> stringResource(R.string.app_shell_mode_recent)
-            2 -> stringResource(R.string.app_shell_mode_log)
-            3 -> stringResource(R.string.app_shell_mode_lookup)
-            4 -> stringResource(R.string.app_shell_mode_blocklist)
-            else -> stringResource(R.string.app_shell_mode_more)
-        }
+    // Keep the shell unmistakably CallShield. Screen content can still use
+    // semantic warning/error colours, but navigation should not become a
+    // six-colour rainbow as users move through the app.
+    val currentAccent = CatGreen
     val protectionStatusLabel =
         when {
             blockCallsEnabled && blockSmsEnabled -> stringResource(R.string.app_shell_status_calls_texts)
@@ -190,17 +168,28 @@ fun CallShieldApp(
             blockSmsEnabled -> stringResource(R.string.app_shell_status_texts)
             else -> stringResource(R.string.app_shell_status_paused)
         }
+    val coreSetupNeeded =
+        spamCount <= 0 ||
+            CallShieldPermissions
+                .missingEnabledProtectionPermissions(
+                    context = context,
+                    callsEnabled = blockCallsEnabled,
+                    smsEnabled = blockSmsEnabled,
+                ).isNotEmpty()
+    val shellStatusLabel =
+        if (selectedTab == 0 && coreSetupNeeded) {
+            stringResource(R.string.app_shell_status_setup_needed)
+        } else {
+            protectionStatusLabel
+        }
 
     Scaffold(
         topBar = {
             AppChrome(
                 showSearch = showSearch,
                 title = currentTitle,
-                subtitle = currentSubtitle,
                 accentColor = currentAccent,
-                modeLabel = currentModeLabel,
-                protectionStatusLabel = protectionStatusLabel,
-                spamCount = spamCount,
+                statusLabel = shellStatusLabel,
                 searchQuery = searchQuery,
                 onSearchQueryChange = viewModel::setSearchQuery,
                 onOpenSearch = { showSearch = true },
@@ -223,12 +212,48 @@ fun CallShieldApp(
                         )
                     },
             ) {
-                NavItem(selectedTab == 0, { selectedTab = 0 }, Icons.Default.Shield, stringResource(R.string.nav_home), CatGreen)
-                NavItem(selectedTab == 1, { selectedTab = 1 }, Icons.Default.Phone, stringResource(R.string.nav_recent), CatBlue)
-                NavItem(selectedTab == 2, { selectedTab = 2 }, Icons.Default.History, stringResource(R.string.nav_log), CatPeach)
-                NavItem(selectedTab == 3, { selectedTab = 3 }, Icons.Default.Search, stringResource(R.string.nav_lookup), CatYellow)
-                NavItem(selectedTab == 4, { selectedTab = 4 }, Icons.Default.Block, stringResource(R.string.nav_blocklist), CatRed)
-                NavItem(selectedTab == 5, { selectedTab = 5 }, Icons.Default.Settings, stringResource(R.string.nav_more), CatMauve)
+                NavItem(
+                    selectedTab == 0,
+                    { selectedTab = 0 },
+                    Icons.Default.Shield,
+                    stringResource(R.string.nav_home),
+                    CatGreen,
+                )
+                NavItem(
+                    selectedTab == 1,
+                    { selectedTab = 1 },
+                    Icons.Default.Phone,
+                    stringResource(R.string.nav_recent),
+                    CatGreen,
+                )
+                NavItem(
+                    selectedTab == 2,
+                    { selectedTab = 2 },
+                    Icons.Default.History,
+                    stringResource(R.string.nav_log),
+                    CatGreen,
+                )
+                NavItem(
+                    selectedTab == 3,
+                    { selectedTab = 3 },
+                    Icons.Default.Search,
+                    stringResource(R.string.nav_lookup),
+                    CatGreen,
+                )
+                NavItem(
+                    selectedTab == 4,
+                    { selectedTab = 4 },
+                    Icons.Default.Block,
+                    stringResource(R.string.nav_blocklist),
+                    CatGreen,
+                )
+                NavItem(
+                    selectedTab == 5,
+                    { selectedTab = 5 },
+                    Icons.Default.Settings,
+                    stringResource(R.string.nav_more),
+                    CatGreen,
+                )
             }
         },
         containerColor = Black,
@@ -379,15 +404,13 @@ fun SearchResultsView(
     }
 }
 
+@Suppress("LongMethod", "LongParameterList")
 @Composable
 private fun AppChrome(
     showSearch: Boolean,
     title: String,
-    subtitle: String,
     accentColor: Color,
-    modeLabel: String,
-    protectionStatusLabel: String,
-    spamCount: Int,
+    statusLabel: String,
     searchQuery: String,
     onSearchQueryChange: (String) -> Unit,
     onOpenSearch: () -> Unit,
@@ -397,130 +420,75 @@ private fun AppChrome(
     val keyboard = LocalSoftwareKeyboardController.current
 
     Surface(color = Black) {
-        Box(
+        Column(
             modifier =
                 Modifier
                     .fillMaxWidth()
                     .statusBarsPadding()
-                    .background(
-                        Brush.verticalGradient(
-                            colors =
-                                listOf(
-                                    accentColor.copy(alpha = 0.08f),
-                                    Black,
-                                    Black,
-                                ),
-                        ),
-                    ).padding(horizontal = 16.dp, vertical = 10.dp),
+                    .padding(horizontal = 20.dp, vertical = 6.dp),
         ) {
-            PremiumCard(
-                modifier = Modifier.fillMaxWidth(),
-                accentColor = accentColor,
-                cornerRadius = ShapeXl,
-            ) {
-                Column(
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
+            if (showSearch) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 58.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    if (showSearch) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(10.dp),
-                        ) {
-                            Surface(
-                                shape = RoundedCornerShape(ShapeXl),
-                                color = accentColor.copy(alpha = 0.12f),
-                            ) {
-                                IconButton(onClick = {
-                                    focusManager.clearFocus(force = true)
-                                    keyboard?.hide()
-                                    onCloseSearch()
-                                }) {
-                                    Icon(
-                                        Icons.AutoMirrored.Filled.ArrowBack,
-                                        contentDescription = stringResource(R.string.cd_close_search),
-                                        tint = accentColor,
-                                    )
-                                }
-                            }
-                            SearchField(
-                                query = searchQuery,
-                                accentColor = accentColor,
-                                onValueChange = onSearchQueryChange,
-                            )
-                        }
-                        Text(
-                            stringResource(R.string.search_hint_min_chars),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = CatOverlay,
+                    IconButton(onClick = {
+                        focusManager.clearFocus(force = true)
+                        keyboard?.hide()
+                        onCloseSearch()
+                    }) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.cd_close_search),
+                            tint = CatText,
                         )
-                    } else {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.Top,
-                        ) {
-                            Column(
-                                modifier = Modifier.weight(1f),
-                                verticalArrangement = Arrangement.spacedBy(6.dp),
-                            ) {
-                                StatusPill(
-                                    text = protectionStatusLabel,
-                                    color = accentColor,
-                                    horizontalPadding = 10.dp,
-                                    verticalPadding = 6.dp,
-                                    textStyle = MaterialTheme.typography.labelSmall,
-                                )
-                                Text(
-                                    title,
-                                    color = CatText,
-                                    style = MaterialTheme.typography.headlineSmall,
-                                    letterSpacing = 0.sp,
-                                )
-                                Text(
-                                    subtitle,
-                                    color = CatSubtext,
-                                    style = MaterialTheme.typography.bodySmall,
-                                )
-                            }
-                            Surface(
-                                shape = RoundedCornerShape(ShapeXl),
-                                color = accentColor.copy(alpha = 0.12f),
-                            ) {
-                                IconButton(onClick = onOpenSearch) {
-                                    Icon(
-                                        Icons.Default.Search,
-                                        contentDescription = stringResource(R.string.cd_search),
-                                        tint = accentColor,
-                                    )
-                                }
-                            }
-                        }
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
-                            StatusPill(
-                                text =
-                                    if (spamCount > 0) {
-                                        pluralStringResource(R.plurals.app_shell_status_numbers, spamCount, spamCount)
-                                    } else {
-                                        stringResource(R.string.app_shell_status_setup_needed)
-                                    },
-                                color = if (spamCount > 0) CatBlue else CatPeach,
-                                modifier = Modifier.weight(1f),
-                            )
-                            StatusPill(
-                                text = modeLabel,
-                                color = accentColor,
-                                modifier = Modifier.weight(1f),
-                            )
-                        }
                     }
-                    GradientDivider(color = accentColor)
+                    SearchField(
+                        query = searchQuery,
+                        accentColor = accentColor,
+                        onValueChange = onSearchQueryChange,
+                    )
+                }
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 58.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        Icons.Default.Shield,
+                        contentDescription = null,
+                        tint = accentColor,
+                        modifier = Modifier.size(28.dp),
+                    )
+                    Spacer(Modifier.width(12.dp))
+                    Text(
+                        title,
+                        modifier = Modifier.weight(1f),
+                        color = CatText,
+                        style = MaterialTheme.typography.titleLarge,
+                    )
+                    StatusPill(
+                        text = statusLabel,
+                        color =
+                            if (statusLabel == stringResource(R.string.app_shell_status_setup_needed)) {
+                                CatYellow
+                            } else {
+                                accentColor
+                            },
+                        textStyle = MaterialTheme.typography.labelMedium,
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    IconButton(onClick = onOpenSearch) {
+                        Icon(
+                            Icons.Default.Search,
+                            contentDescription = stringResource(R.string.cd_search),
+                            tint = CatText,
+                        )
+                    }
                 }
             }
+            HorizontalDivider(color = DividerColor)
         }
     }
 }
