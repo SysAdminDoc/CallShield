@@ -14,6 +14,10 @@ All notable changes to CallShield will be documented in this file.
 
 ### Fixed
 
+- Enabled installations now detect a lost Android call-screening role after
+  startup, reboot, app update, and in a daily health check. One recovery alert
+  is shown per loss episode; restoring the role or pausing call protection
+  clears the private notice gate.
 - Portable restore now writes all selected settings in one atomic DataStore
   update before mutating Room. A settings failure leaves every selected table
   untouched, and a later Room failure restores the exact prior preferences.

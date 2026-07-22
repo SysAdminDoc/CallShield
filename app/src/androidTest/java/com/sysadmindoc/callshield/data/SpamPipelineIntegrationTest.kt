@@ -11,8 +11,8 @@ import com.sysadmindoc.callshield.data.model.HashWildcardRule
 import com.sysadmindoc.callshield.data.model.SpamNumber
 import com.sysadmindoc.callshield.data.model.SpamPrefix
 import com.sysadmindoc.callshield.data.model.WhitelistEntry
-import com.sysadmindoc.callshield.domain.model.CallerIdentity
 import com.sysadmindoc.callshield.data.model.WildcardRule
+import com.sysadmindoc.callshield.domain.model.CallerIdentity
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals

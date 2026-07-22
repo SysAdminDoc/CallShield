@@ -172,6 +172,8 @@ class SpamRepository(
         val KEY_FREQ_ESCALATION = booleanPreferencesKey("freq_escalation_enabled")
         val KEY_FREQ_THRESHOLD = intPreferencesKey("freq_threshold")
         internal val KEY_ONBOARDING_DONE = booleanPreferencesKey("onboarding_done")
+        internal val KEY_PROTECTION_ROLE_LOSS_NOTICE_SHOWN =
+            booleanPreferencesKey("protection_role_loss_notice_shown")
         internal val KEY_AUTO_CLEANUP = booleanPreferencesKey("auto_cleanup_enabled")
         internal val KEY_CLEANUP_DAYS = intPreferencesKey("cleanup_retention_days")
         internal val KEY_ABSTRACT_API_KEY = stringPreferencesKey("abstract_api_key")
@@ -264,6 +266,8 @@ class SpamRepository(
     val freqEscalationEnabled: Flow<Boolean> = settingsRepository.freqEscalationEnabled
     val freqThreshold: Flow<Int> = settingsRepository.freqThreshold
     val onboardingDone: Flow<Boolean> = settingsRepository.onboardingDone
+    internal val protectionRoleLossNoticeShown: Flow<Boolean> =
+        settingsRepository.protectionRoleLossNoticeShown
     val autoCleanupEnabled: Flow<Boolean> = settingsRepository.autoCleanupEnabled
     val cleanupDays: Flow<Int> = settingsRepository.cleanupDays
     val mlScorerEnabled: Flow<Boolean> = settingsRepository.mlScorerEnabled
@@ -314,6 +318,9 @@ class SpamRepository(
     suspend fun resetPushAlertPackages() = settingsRepository.resetPushAlertPackages()
 
     suspend fun setOnboardingDone() = settingsRepository.setOnboardingDone()
+
+    internal suspend fun setProtectionRoleLossNoticeShown(shown: Boolean) =
+        settingsRepository.setProtectionRoleLossNoticeShown(shown)
 
     suspend fun setAutoCleanup(enabled: Boolean) = settingsRepository.setAutoCleanup(enabled)
 

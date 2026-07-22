@@ -1097,6 +1097,8 @@
     <string name="notif_channel_digest_desc">Daily summary of blocked calls and messages</string>
     <string name="notif_channel_message_screening">Message screening alerts</string>
     <string name="notif_channel_message_screening_desc">On-device warnings for opted-in messenger and email notifications</string>
+    <string name="notif_channel_protection_health">Protection health</string>
+    <string name="notif_channel_protection_health_desc">Alerts when Android stops routing incoming calls through CallShield</string>
     <string name="notif_message_screening_title">Possible spam in %1$s</string>
     <string name="notif_message_screening_text">From %1$s · %2$d%% confidence</string>
     <string name="notif_message_screening_big_text">CallShield flagged a %1$s notification from %2$s at %3$d%% confidence. Signal: %4$s. The original notification was not removed.</string>
@@ -1117,6 +1119,9 @@
     <string name="notif_phishing_big_text">An SMS from %1$s contains a URL flagged by URLhaus as %2$s. Do not tap any links in this message.</string>
     <string name="notif_status_title">CallShield active</string>
     <string name="notif_status_text">Protecting against spam calls &amp; texts</string>
+    <string name="notif_role_lost_title">Call screening is off</string>
+    <string name="notif_role_lost_text">Android is no longer sending incoming calls to CallShield. Restore the call screener to resume protection.</string>
+    <string name="notif_role_lost_action">Restore protection</string>
     <string name="notif_sync_title">Refreshing protection</string>
     <string name="notif_sync_text">Updating spam numbers and detection data…</string>
     <string name="notif_repeated_urgent_title">Repeated caller allowed</string>

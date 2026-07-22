@@ -52,4 +52,16 @@ class WorkerScheduleTest {
         assertEquals(BackoffPolicy.EXPONENTIAL, spec.backoffPolicy)
         assertEquals(TimeUnit.MINUTES.toMillis(1), spec.backoffDelayDuration)
     }
+
+    @Test
+    fun protectionHealthUsesDailyChecksAndAnImmediateRecoveryRequest() {
+        val periodic = ProtectionHealthWorker.periodicRequest().workSpec
+        val immediate = ProtectionHealthWorker.immediateRequest().workSpec
+
+        assertEquals(TimeUnit.HOURS.toMillis(24), periodic.intervalDuration)
+        assertEquals(TimeUnit.HOURS.toMillis(24), periodic.initialDelay)
+        assertEquals(NetworkType.NOT_REQUIRED, periodic.constraints.requiredNetworkType)
+        assertEquals(0L, immediate.initialDelay)
+        assertEquals(NetworkType.NOT_REQUIRED, immediate.constraints.requiredNetworkType)
+    }
 }

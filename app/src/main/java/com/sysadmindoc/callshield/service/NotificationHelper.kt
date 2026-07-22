@@ -47,6 +47,7 @@ object NotificationHelper {
     const val CHANNEL_DIGEST = "daily_digest"
     const val CHANNEL_MESSAGE_SCREENING = "message_screening"
     const val CHANNEL_SYNC = "database_sync"
+    const val CHANNEL_PROTECTION_HEALTH = "protection_health"
     const val ACTION_BLOCK = "com.sysadmindoc.callshield.ACTION_BLOCK"
     const val ACTION_REPORT = "com.sysadmindoc.callshield.ACTION_REPORT"
     const val ACTION_SAFE = "com.sysadmindoc.callshield.ACTION_SAFE"
@@ -65,6 +66,7 @@ object NotificationHelper {
     private const val AFTER_CALL_OPEN_SALT = 63
     private const val PROGRESS_TOTAL = 100
     internal const val SYNC_NOTIFICATION_ID = 3
+    internal const val PROTECTION_HEALTH_NOTIFICATION_ID = 4
 
     /**
      * Notification ID for the after-call "Was this spam?" feedback notice.
@@ -89,18 +91,20 @@ object NotificationHelper {
         context: Context,
         id: Int,
         builder: NotificationCompat.Builder,
-    ) = safeNotify(context, id, builder.build())
+    ): Boolean = safeNotify(context, id, builder.build())
 
     private fun safeNotify(
         context: Context,
         id: Int,
         notification: Notification,
-    ) {
-        if (!CallShieldPermissions.hasNotificationPermission(context)) return
-        try {
+    ): Boolean {
+        if (!CallShieldPermissions.hasNotificationPermission(context)) return false
+        return try {
             NotificationManagerCompat.from(context).notify(id, notification)
+            true
         } catch (_: SecurityException) {
             // Revoked at runtime between the check and the post — drop silently.
+            false
         }
     }
 
@@ -154,6 +158,55 @@ object NotificationHelper {
                 description = context.getString(R.string.notif_channel_message_screening_desc)
             },
         )
+        createProtectionHealthChannel(context, nm)
+    }
+
+    private fun createProtectionHealthChannel(
+        context: Context,
+        notificationManager: NotificationManager,
+    ) {
+        val channel =
+            NotificationChannel(
+                CHANNEL_PROTECTION_HEALTH,
+                context.getString(R.string.notif_channel_protection_health),
+                NotificationManager.IMPORTANCE_DEFAULT,
+            ).apply {
+                description = context.getString(R.string.notif_channel_protection_health_desc)
+            }
+        notificationManager.createNotificationChannel(channel)
+    }
+
+    fun notifyCallScreeningRoleLost(context: Context): Boolean {
+        val openIntent =
+            PendingIntent.getActivity(
+                context,
+                PROTECTION_HEALTH_NOTIFICATION_ID,
+                Intent(context, MainActivity::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                },
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            )
+        val builder =
+            NotificationCompat
+                .Builder(context, CHANNEL_PROTECTION_HEALTH)
+                .setSmallIcon(android.R.drawable.ic_dialog_alert)
+                .setContentTitle(context.getString(R.string.notif_role_lost_title))
+                .setContentText(context.getString(R.string.notif_role_lost_text))
+                .setStyle(
+                    NotificationCompat.BigTextStyle().bigText(
+                        context.getString(R.string.notif_role_lost_text),
+                    ),
+                ).setContentIntent(openIntent)
+                .addAction(0, context.getString(R.string.notif_role_lost_action), openIntent)
+                .setCategory(NotificationCompat.CATEGORY_ERROR)
+                .setAutoCancel(true)
+                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+        return safeNotify(context, PROTECTION_HEALTH_NOTIFICATION_ID, builder)
+    }
+
+    fun dismissCallScreeningRoleLost(context: Context) {
+        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.cancel(PROTECTION_HEALTH_NOTIFICATION_ID)
     }
 
     fun notifyBlocked(

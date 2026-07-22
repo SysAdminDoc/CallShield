@@ -23,6 +23,7 @@ import com.sysadmindoc.callshield.service.HotDataSync
 import com.sysadmindoc.callshield.service.HotListSyncWorker
 import com.sysadmindoc.callshield.service.NotificationHelper
 import com.sysadmindoc.callshield.service.PendingBlockedCallLogWorker
+import com.sysadmindoc.callshield.service.ProtectionHealthWorker
 import com.sysadmindoc.callshield.service.SyncWorker
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CoroutineScope
@@ -62,6 +63,8 @@ class CallShieldApp :
         HotListSyncWorker.schedule(this)
         DigestWorker.schedule(this)
         PendingBlockedCallLogWorker.schedule(this)
+        ProtectionHealthWorker.schedule(this)
+        ProtectionHealthWorker.checkNow(this)
 
         registerCacheInvalidationObservers()
 
