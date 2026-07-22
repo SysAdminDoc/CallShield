@@ -129,8 +129,8 @@ fun NumberDetailScreen(
                 contactName?.let { name ->
                     Text(name, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = CatGreen)
                 }
-                Text(PhoneFormatter.format(number), style = if (contactName != null) MaterialTheme.typography.bodyLarge else MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                Text(PhoneFormatter.formatWithCountryCode(number), style = MaterialTheme.typography.bodySmall, color = CatSubtext)
+                Text(PhoneFormatter.formatIsolated(number), style = if (contactName != null) MaterialTheme.typography.bodyLarge else MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                Text(PhoneFormatter.formatWithCountryCodeIsolated(number), style = MaterialTheme.typography.bodySmall, color = CatSubtext)
                 if (location != null) Text(location, style = MaterialTheme.typography.bodySmall, color = CatOverlay)
                 // Feature A: smart call label chip under the header — shows
                 // the resolved category (Scam / Debt Collector / Phishing /

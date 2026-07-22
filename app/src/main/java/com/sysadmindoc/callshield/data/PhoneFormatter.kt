@@ -73,4 +73,6 @@ object PhoneFormatter {
         }
         return if (number.startsWith("+")) number else "+$number"
     }
+
+    fun formatWithCountryCodeIsolated(number: String): String = isolate(formatWithCountryCode(number))
 }

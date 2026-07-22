@@ -270,13 +270,13 @@ fun LookupScreen(viewModel: MainViewModel) {
                                 if (previewLocation != null) {
                                     stringResource(
                                         R.string.lookup_supporting_location,
-                                        PhoneFormatter.format(normalizedNumber),
+                                        PhoneFormatter.formatIsolated(normalizedNumber),
                                         previewLocation,
                                     )
                                 } else {
                                     stringResource(
                                         R.string.lookup_supporting_number,
-                                        PhoneFormatter.format(normalizedNumber),
+                                        PhoneFormatter.formatIsolated(normalizedNumber),
                                     )
                                 },
                                 color = CatOverlay,
@@ -390,7 +390,7 @@ fun LookupScreen(viewModel: MainViewModel) {
                                 color = resultAccent,
                             )
                             StatusPill(
-                                text = PhoneFormatter.format(normalizedNumber),
+                                text = PhoneFormatter.formatIsolated(normalizedNumber),
                                 color = if (lookupResult.isSpam) CatPeach else CatBlue,
                             )
                             previewLocation?.let {
@@ -600,7 +600,7 @@ private fun LookupProgressCard(
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (number.isNotBlank()) {
-                    StatusPill(text = PhoneFormatter.format(number), color = CatYellow)
+                    StatusPill(text = PhoneFormatter.formatIsolated(number), color = CatYellow)
                 }
                 if (location != null) {
                     StatusPill(text = location, color = CatBlue)

@@ -311,7 +311,7 @@ fun RecentCallsScreen(viewModel: MainViewModel) {
                                         context,
                                         resources.getString(
                                             R.string.temporary_decision_allowed,
-                                            PhoneFormatter.format(call.number),
+                                            PhoneFormatter.formatIsolated(call.number),
                                             duration.label,
                                         ),
                                         Toast.LENGTH_SHORT,
@@ -329,7 +329,7 @@ fun RecentCallsScreen(viewModel: MainViewModel) {
                                         context,
                                         resources.getString(
                                             R.string.temporary_decision_blocked,
-                                            PhoneFormatter.format(call.number),
+                                            PhoneFormatter.formatIsolated(call.number),
                                             duration.label,
                                         ),
                                         Toast.LENGTH_SHORT,
@@ -437,7 +437,7 @@ fun RecentCallItem(
                                     )
                                 }
                                 Text(
-                                    PhoneFormatter.format(call.number),
+                                    PhoneFormatter.formatIsolated(call.number),
                                     fontWeight =
                                         if (call.contactName == null) {
                                             FontWeight.SemiBold

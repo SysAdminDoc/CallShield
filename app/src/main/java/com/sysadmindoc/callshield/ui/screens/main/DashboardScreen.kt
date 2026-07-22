@@ -453,7 +453,7 @@ fun DashboardScreen(viewModel: MainViewModel) {
                         Text(
                             stringResource(
                                 R.string.dashboard_last_blocked,
-                                PhoneFormatter.format(lastBlocked.number),
+                                PhoneFormatter.formatIsolated(lastBlocked.number),
                             ),
                             style = MaterialTheme.typography.bodySmall,
                             fontWeight = FontWeight.SemiBold,
@@ -709,7 +709,7 @@ fun DashboardScreen(viewModel: MainViewModel) {
                             ) {
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
-                                        PhoneFormatter.format(spam.number),
+                                        PhoneFormatter.formatIsolated(spam.number),
                                         style = MaterialTheme.typography.bodyMedium,
                                         fontWeight = FontWeight.SemiBold,
                                     )
@@ -790,7 +790,7 @@ fun DashboardScreen(viewModel: MainViewModel) {
                             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
-                                        PhoneFormatter.format(sms.number),
+                                        PhoneFormatter.formatIsolated(sms.number),
                                         style = MaterialTheme.typography.bodyMedium,
                                         fontWeight = FontWeight.SemiBold,
                                     )
