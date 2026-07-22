@@ -60,6 +60,11 @@ class CallShieldScreeningService : CallScreeningService() {
             }
 
             else -> {
+                // DIRECTION_UNKNOWN: some OEM stacks deliver screened incoming
+                // calls without a direction. Fail open with an explicit allow —
+                // returning without responding would make Android hold the
+                // screening slot until its timeout and delay ringing.
+                respondAllow(callDetails)
                 return
             }
         }

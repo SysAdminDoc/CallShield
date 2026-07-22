@@ -127,8 +127,22 @@ class CallbackDetector
             val safeThreshold = threshold.coerceAtLeast(2)
             if (timestamps.size < safeThreshold) return false
             val safeInterval = minRetryIntervalMillis.coerceAtLeast(1L)
-            val relevant = timestamps.sortedDescending().take(safeThreshold)
-            return relevant.first() - relevant.last() >= safeInterval
+            // Greedily cluster the window into distinct attempts: rows closer
+            // than the minimum interval to the previously accepted attempt are
+            // duplicates (OEM double-logging) or a machine-speed burst and
+            // collapse into it. Only genuinely spaced attempts count toward
+            // the threshold — a duplicate row must not mask a real retry that
+            // exists elsewhere in the window.
+            var distinctAttempts = 0
+            var lastAccepted = Long.MIN_VALUE
+            for (timestamp in timestamps.sortedDescending()) {
+                if (distinctAttempts == 0 || lastAccepted - timestamp >= safeInterval) {
+                    distinctAttempts++
+                    lastAccepted = timestamp
+                    if (distinctAttempts >= safeThreshold) return true
+                }
+            }
+            return false
         }
 
         suspend fun wasAnsweredRepeatedly(

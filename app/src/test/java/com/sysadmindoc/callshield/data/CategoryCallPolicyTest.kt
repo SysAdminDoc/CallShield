@@ -66,6 +66,27 @@ class CategoryCallPolicyTest {
     }
 
     @Test
+    fun `every explicit block guard matches the checker's real matchSource string`() {
+        // Pins the guard set against the strings the checkers actually emit —
+        // a typo here (e.g. system_blocklist vs system_block_list) silently
+        // turns the guard into dead code.
+        val prefs = mutablePreferencesOf(SpamRepository.KEY_CATEGORY_CALL_ACTIONS to setOf("scam=allow"))
+        val emittedExplicitSources =
+            listOf(
+                "user_blocklist",
+                "temporary_block",
+                "system_block_list",
+                "wildcard",
+                "hash_wildcard",
+                "prefix",
+            )
+        for (source in emittedExplicitSources) {
+            val result = SpamCheckResult(true, matchSource = source, type = "scam")
+            assertSame("category allow must never rewrite $source", result, CategoryCallPolicy.apply(result, prefs))
+        }
+    }
+
+    @Test
     fun `emergency and manual whitelist allows are never changed by category rules`() {
         val prefs = mutablePreferencesOf(SpamRepository.KEY_CATEGORY_CALL_ACTIONS to setOf("scam=block"))
         for (source in listOf("emergency_contact", "manual_whitelist")) {

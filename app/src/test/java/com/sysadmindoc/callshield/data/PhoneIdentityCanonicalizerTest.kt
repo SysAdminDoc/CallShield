@@ -1,6 +1,8 @@
 package com.sysadmindoc.callshield.data
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class PhoneIdentityCanonicalizerTest {
@@ -46,6 +48,20 @@ class PhoneIdentityCanonicalizerTest {
         assertEquals("BANK-ALERT", canonicalizer.canonicalizeIdentity("Bank-Alert"))
         assertEquals("PAYPAL", canonicalizer.canonicalizeIdentity("PayPal"))
         assertEquals("+12125551234", canonicalizer.canonicalizeIdentity("+1 212 555 1234"))
+    }
+
+    @Test
+    fun `lettered sender IDs never canonicalize to blank`() {
+        val canonicalizer = canonicalizer("US", emptyMap())
+
+        // Non-Latin scripts keep a readable canonical form.
+        assertEquals("СПАМ", canonicalizer.canonicalizeIdentity("Спам"))
+        // Decorated senders that no readable form fits fall back to a stable
+        // hashed token — blank would let the sender opt out of SMS screening.
+        val decorated = canonicalizer.canonicalizeIdentity("«Bonus»")
+        assertTrue(decorated.startsWith("OPAQUE:"))
+        assertEquals(decorated, canonicalizer.canonicalizeIdentity("«Bonus»"))
+        assertNotEquals(decorated, canonicalizer.canonicalizeIdentity("«Prize»"))
     }
 
     private fun canonicalizer(

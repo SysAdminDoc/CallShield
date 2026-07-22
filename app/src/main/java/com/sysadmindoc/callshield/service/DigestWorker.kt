@@ -12,6 +12,7 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.sysadmindoc.callshield.R
+import com.sysadmindoc.callshield.data.CategoryCallPolicy
 import com.sysadmindoc.callshield.data.local.SpamDao
 import com.sysadmindoc.callshield.permissions.CallShieldPermissions
 import dagger.assisted.Assisted
@@ -86,7 +87,15 @@ class DigestWorker
              * Map a checker's `matchReason` to a coarse, user-facing source
              * bucket for the digest breakdown. Pure so it is unit-testable.
              */
-            internal fun matchReasonBucket(reason: String): String =
+            internal fun matchReasonBucket(reason: String): String {
+                // Category-policy verdicts wrap the original checker source
+                // (category_policy:<cat>:<action>:<source>) — bucket by the
+                // underlying source, not the wrapper.
+                val effective = CategoryCallPolicy.parseMatchSource(reason)?.originalMatchSource ?: reason
+                return matchReasonBucketRaw(effective)
+            }
+
+            private fun matchReasonBucketRaw(reason: String): String =
                 when {
                     reason.startsWith("database") || reason.startsWith("user_blocklist") -> "database"
                     reason.startsWith("heuristic") -> "heuristic"

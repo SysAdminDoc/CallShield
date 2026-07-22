@@ -35,7 +35,7 @@ class SpamHeuristics
             number: String,
             selectedGroupKeys: Set<String>? = null,
         ): Boolean {
-            val normalized = PhoneIdentityCanonicalizer.fromContext(context).canonicalizePhone(number)
+            val normalized = PhoneIdentityCanonicalizer.cachedFromContext(context).canonicalizePhone(number)
             val groupKeys = selectedGroupKeys?.let(ContactGroupCatalog::preserveScope)
             val cacheKey = normalized + "|" + (groupKeys?.sorted()?.joinToString(",") ?: "all")
             val now = System.currentTimeMillis()
