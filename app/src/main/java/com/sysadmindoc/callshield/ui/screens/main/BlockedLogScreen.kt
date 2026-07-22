@@ -30,6 +30,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -54,6 +55,7 @@ import java.util.*
 @Composable
 fun BlockedLogScreen(viewModel: MainViewModel) {
     val context = LocalContext.current
+    val resources = LocalResources.current
     val blockedCalls by viewModel.blockedCalls.collectAsStateWithLifecycle()
     var filterMode by rememberSaveable { mutableIntStateOf(0) }
     var grouped by rememberSaveable { mutableStateOf(false) }
@@ -98,10 +100,12 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
                     shape = RoundedCornerShape(8.dp),
                     colors =
                         FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = CatGreen.copy(alpha = 0.2f),
+                            selectedContainerColor = SurfaceBright,
                             selectedLabelColor = CatGreen,
+                            containerColor = Color.Transparent,
+                            labelColor = CatSubtext,
                         ),
-                    border = BorderStroke(1.dp, if (filterMode == 0) CatGreen.copy(alpha = 0.3f) else CatMuted.copy(alpha = 0.3f)),
+                    border = null,
                 )
                 FilterChip(
                     selected = filterMode == 1,
@@ -110,10 +114,12 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
                     shape = RoundedCornerShape(8.dp),
                     colors =
                         FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = CatBlue.copy(alpha = 0.2f),
-                            selectedLabelColor = CatBlue,
+                            selectedContainerColor = SurfaceBright,
+                            selectedLabelColor = CatGreen,
+                            containerColor = Color.Transparent,
+                            labelColor = CatSubtext,
                         ),
-                    border = BorderStroke(1.dp, if (filterMode == 1) CatBlue.copy(alpha = 0.3f) else CatMuted.copy(alpha = 0.3f)),
+                    border = null,
                 )
                 FilterChip(
                     selected = filterMode == 2,
@@ -122,10 +128,12 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
                     shape = RoundedCornerShape(8.dp),
                     colors =
                         FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = CatMauve.copy(alpha = 0.2f),
-                            selectedLabelColor = CatMauve,
+                            selectedContainerColor = SurfaceBright,
+                            selectedLabelColor = CatGreen,
+                            containerColor = Color.Transparent,
+                            labelColor = CatSubtext,
                         ),
-                    border = BorderStroke(1.dp, if (filterMode == 2) CatMauve.copy(alpha = 0.3f) else CatMuted.copy(alpha = 0.3f)),
+                    border = null,
                 )
                 Spacer(Modifier.weight(1f))
                 IconButton(onClick = { grouped = !grouped }) {
@@ -167,7 +175,10 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
                 )
             } else if (grouped && groupedList != null) {
                 // Grouped view
-                LazyColumn(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                LazyColumn(
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
                     itemsIndexed(
                         items = groupedList,
                         key = { _, item -> item.first.number },
@@ -182,7 +193,10 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
                 }
             } else {
                 // Swipe-to-dismiss list
-                LazyColumn(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                LazyColumn(
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
                     itemsIndexed(filtered, key = { _, call -> call.id }) { index, call ->
                         val visible = remember { mutableStateOf(false) }
                         val deletedMessage = stringResource(R.string.blocked_log_deleted)
@@ -284,7 +298,7 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
                                         hapticConfirm(context)
                                         scope.launch {
                                             snackbarHost.showSnackbar(
-                                                context.getString(
+                                                resources.getString(
                                                     R.string.temporary_decision_allowed,
                                                     PhoneFormatter.format(call.number),
                                                     duration.label,
@@ -303,7 +317,7 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
                                         hapticConfirm(context)
                                         scope.launch {
                                             snackbarHost.showSnackbar(
-                                                context.getString(
+                                                resources.getString(
                                                     R.string.temporary_decision_blocked,
                                                     PhoneFormatter.format(call.number),
                                                     duration.label,
@@ -381,35 +395,31 @@ private fun BlockedLogEmptyState(
                 .padding(16.dp),
         contentAlignment = Alignment.Center,
     ) {
-        PremiumCard(accentColor = accentColor, modifier = Modifier.fillMaxWidth()) {
-            Column(
-                modifier = Modifier.padding(20.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                PremiumIconTile(
-                    icon = Icons.Default.CheckCircle,
-                    contentDescription = stringResource(R.string.cd_no_items),
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 28.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Icon(
+                Icons.Default.CheckCircle,
+                contentDescription = stringResource(R.string.cd_no_items),
+                tint = accentColor,
+                modifier = Modifier.size(42.dp),
+            )
+            Text(title, color = CatText, style = MaterialTheme.typography.titleMedium)
+            Text(
+                subtitle,
+                color = CatSubtext,
+                style = MaterialTheme.typography.bodySmall,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            )
+            if (actionLabel != null && onAction != null) {
+                PremiumCompactButton(
+                    label = actionLabel,
+                    icon = Icons.Default.Refresh,
                     color = accentColor,
-                    size = 58.dp,
-                    iconSize = 30.dp,
+                    onClick = onAction,
                 )
-                Text(title, color = CatText, style = MaterialTheme.typography.titleMedium)
-                Text(
-                    subtitle,
-                    color = CatSubtext,
-                    style = MaterialTheme.typography.bodySmall,
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                )
-                if (actionLabel != null && onAction != null) {
-                    PremiumActionButton(
-                        label = actionLabel,
-                        icon = Icons.Default.Refresh,
-                        color = accentColor,
-                        onClick = onAction,
-                        outlined = true,
-                    )
-                }
             }
         }
     }
@@ -576,6 +586,7 @@ fun SmallActionButton(
     PremiumCompactButton(label = label, icon = icon, color = color, onClick = onClick)
 }
 
+@Suppress("LongMethod")
 @Composable
 fun GroupedCallItem(
     call: BlockedCall,
@@ -639,7 +650,11 @@ fun GroupedCallItem(
                     )
                 }
                 if (call.matchReason.isNotEmpty()) {
-                    Text(call.matchReason.replace("_", " ").replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.labelSmall, color = CatPeach)
+                    Text(
+                        call.matchReason.replace("_", " ").replaceFirstChar { it.uppercase() },
+                        style = MaterialTheme.typography.labelSmall,
+                        color = CatPeach,
+                    )
                 }
             }
             IconButton(onClick = onBlock) {

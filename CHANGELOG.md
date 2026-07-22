@@ -14,6 +14,18 @@ All notable changes to CallShield will be documented in this file.
   `Context` overload; covered by readiness-matrix tests (789 tests total). The
   UI warning surfacing follows separately.
 
+### Changed
+
+- **Compose navigation and setup surfaces are easier to scan.** The dashboard,
+  onboarding, lookup, blocklist, recent activity, blocked log, More hub, and
+  Settings now share a leaner hierarchy, clearer state and recovery copy, and
+  consistent accessible actions without duplicating status information.
+
+### Fixed
+
+- **Onboarding respects edge-to-edge system insets.** Its progress header no
+  longer renders underneath the Android status bar.
+
 ## v1.7.17 — 2026-07-21
 
 Reliability drain — background-execution survival, corrupt-DB recovery, bounded

@@ -7,7 +7,6 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import com.sysadmindoc.callshield.ui.SyncState
-import com.sysadmindoc.callshield.ui.theme.CatGreen
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -36,15 +35,11 @@ class DashboardTest {
         composeRule.setContent {
             DashboardHeroCard(
                 dashboardStatus = status,
-                shieldActive = true,
                 heroTitle = "Protection Active",
                 heroSubtitle = "Calls and texts are actively protected.",
-                heroAccent = CatGreen,
                 requiredSetupComplete = 3,
                 requiredSetupTotal = 3,
-                setupSummary = "Setup complete",
                 engineCount = 8,
-                aggressiveMode = false,
                 lastSync = now,
                 lastSyncSource = "",
                 syncState = SyncState.Idle,
@@ -59,9 +54,12 @@ class DashboardTest {
 
         composeRule.onNodeWithText("Protection Active").assertIsDisplayed()
         composeRule.onNodeWithText("Calls and texts are actively protected.").assertIsDisplayed()
-        composeRule.onNodeWithText("Core setup ready: 3/3").assertIsDisplayed()
-        composeRule.onNodeWithText("Protection engines active: 8").assertIsDisplayed()
-        composeRule.onNodeWithText("Synced just now").assertIsDisplayed()
+        composeRule.onNodeWithText("Core setup").assertIsDisplayed()
+        composeRule.onNodeWithText("3/3").assertIsDisplayed()
+        composeRule.onNodeWithText("Engines").assertIsDisplayed()
+        composeRule.onNodeWithText("8").assertIsDisplayed()
+        composeRule.onNodeWithText("Database").assertIsDisplayed()
+        composeRule.onNodeWithText("Ready").assertIsDisplayed()
         composeRule.onNodeWithText("Sync Database").performClick()
 
         composeRule.runOnIdle {
@@ -108,9 +106,7 @@ class DashboardTest {
         composeRule.setContent {
             DashboardSetupChecklistCard(
                 dashboardStatus = status,
-                setupSummary = "Complete the core steps below to enable full protection.",
                 corePermissionsReady = true,
-                missingPermissionCount = 0,
                 syncState = SyncState.Idle,
                 spamDatabaseReady = true,
                 spamCount = 1200,
@@ -128,7 +124,7 @@ class DashboardTest {
 
         composeRule.onNodeWithText("Setup Checklist").assertIsDisplayed()
         composeRule.onNodeWithText("Call screener").assertIsDisplayed()
-        composeRule.onNodeWithText("Set CallShield as the default call screener for live call blocking.").assertIsDisplayed()
+        composeRule.onNodeWithText("Required for live call blocking.").assertIsDisplayed()
         composeRule.onNodeWithText("Enable Call Screening").performClick()
 
         composeRule.runOnIdle {

@@ -9,12 +9,8 @@ import android.os.Build
 import android.provider.Settings
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateIntAsState
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -56,7 +52,6 @@ import androidx.compose.material.icons.filled.PhoneDisabled
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Shield
-import androidx.compose.material.icons.filled.ShieldMoon
 import androidx.compose.material.icons.filled.Sms
 import androidx.compose.material.icons.filled.SpeakerNotesOff
 import androidx.compose.material.icons.filled.Sync
@@ -64,7 +59,6 @@ import androidx.compose.material.icons.filled.Today
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
@@ -122,7 +116,6 @@ import com.sysadmindoc.callshield.ui.theme.PremiumCompactButton
 import com.sysadmindoc.callshield.ui.theme.PremiumIconTile
 import com.sysadmindoc.callshield.ui.theme.SectionHeader
 import com.sysadmindoc.callshield.ui.theme.StatusPill
-import com.sysadmindoc.callshield.ui.theme.accentGlow
 import com.sysadmindoc.callshield.ui.theme.hapticConfirm
 import com.sysadmindoc.callshield.ui.theme.hapticTick
 
@@ -134,7 +127,6 @@ fun DashboardScreen(viewModel: MainViewModel) {
     val syncState by viewModel.syncState.collectAsStateWithLifecycle()
     val blockCallsEnabled by viewModel.blockCallsEnabled.collectAsStateWithLifecycle()
     val blockSmsEnabled by viewModel.blockSmsEnabled.collectAsStateWithLifecycle()
-    val aggressiveMode by viewModel.aggressiveModeEnabled.collectAsStateWithLifecycle()
     val heuristics by viewModel.heuristicsEnabled.collectAsStateWithLifecycle()
     val smsContent by viewModel.smsContentEnabled.collectAsStateWithLifecycle()
     val stirShaken by viewModel.stirShakenEnabled.collectAsStateWithLifecycle()
@@ -213,26 +205,7 @@ fun DashboardScreen(viewModel: MainViewModel) {
         remember(context, permissionRefreshTick) {
             CallShieldPermissions.hasNotificationPermission(context)
         }
-    val permissionContractStates =
-        remember(context, roleManager, permissionRefreshTick) {
-            CallShieldPermissions.permissionContractStates(context, roleManager)
-        }
     val corePermissionsReady = missingPerms.isEmpty()
-    val missingPermissionSet = remember(missingPerms) { missingPerms.toSet() }
-    val missingPermissionState =
-        remember(permissionContractStates, missingPermissionSet) {
-            permissionContractStates.firstOrNull { state ->
-                state.contract.manifestPermission in missingPermissionSet && !state.passed
-            }
-        }
-    val missingPermissionDetail =
-        missingPermissionState?.let { state ->
-            stringResource(
-                R.string.dashboard_permissions_degraded_detail,
-                stringResource(state.contract.nameRes),
-                stringResource(state.contract.degradedModeRes),
-            )
-        }
     val dashboardStatus =
         remember(
             blockCallsEnabled,
@@ -263,28 +236,6 @@ fun DashboardScreen(viewModel: MainViewModel) {
     val shieldActive = dashboardStatus.shieldActive
     val requiredSetupComplete = dashboardStatus.requiredSetupComplete
     val requiredSetupTotal = dashboardStatus.requiredSetupTotal
-    val optionalSetupComplete = dashboardStatus.optionalSetupComplete
-    val optionalSetupTotal = dashboardStatus.optionalSetupTotal
-    val setupSummary =
-        when {
-            dashboardStatus.setupComplete && optionalSetupComplete == optionalSetupTotal -> {
-                stringResource(R.string.dashboard_setup_complete)
-            }
-
-            dashboardStatus.setupComplete -> {
-                stringResource(R.string.dashboard_setup_optional_summary)
-            }
-
-            else -> {
-                stringResource(R.string.dashboard_setup_required_summary)
-            }
-        }
-    val heroAccent =
-        when {
-            shieldActive -> CatGreen
-            protectionEnabled -> CatYellow
-            else -> CatBlue
-        }
     val heroTitle =
         when (dashboardStatus.heroMode) {
             DashboardHeroMode.Active -> stringResource(R.string.dashboard_protection_active)
@@ -364,8 +315,8 @@ fun DashboardScreen(viewModel: MainViewModel) {
             Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp),
+                .padding(horizontal = 20.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         var heroVisible by remember { mutableStateOf(false) }
         LaunchedEffect(Unit) { heroVisible = true }
@@ -389,13 +340,10 @@ fun DashboardScreen(viewModel: MainViewModel) {
                         scaleY = heroScale
                     },
             dashboardStatus = dashboardStatus,
-            shieldActive = shieldActive,
             heroTitle = heroTitle,
             heroSubtitle = heroSubtitle,
-            heroAccent = heroAccent,
             requiredSetupComplete = requiredSetupComplete,
             requiredSetupTotal = requiredSetupTotal,
-            setupSummary = setupSummary,
             engineCount =
                 activeEngineCount(
                     stirShaken = stirShaken,
@@ -406,19 +354,19 @@ fun DashboardScreen(viewModel: MainViewModel) {
                     rcsFilter = rcsFilter,
                     freqEscalation = freqEscalation,
                 ),
-            aggressiveMode = aggressiveMode,
             lastSync = lastSync,
             lastSyncSource = lastSyncSource,
             syncState = syncState,
             heroAction = heroAction,
+            onSyncDatabase = {
+                hapticTick(context)
+                viewModel.sync()
+            },
         )
 
         DashboardSetupChecklistCard(
             dashboardStatus = dashboardStatus,
-            setupSummary = setupSummary,
             corePermissionsReady = corePermissionsReady,
-            missingPermissionCount = missingPerms.size,
-            missingPermissionDetail = missingPermissionDetail,
             syncState = syncState,
             spamDatabaseReady = spamDatabaseReady,
             spamCount = spamCount,
@@ -923,181 +871,120 @@ fun DashboardScreen(viewModel: MainViewModel) {
     }
 }
 
+@Suppress("LongMethod", "LongParameterList")
 @Composable
 internal fun DashboardHeroCard(
     modifier: Modifier = Modifier,
     dashboardStatus: DashboardStatusModel,
-    shieldActive: Boolean,
     heroTitle: String,
     heroSubtitle: String,
-    heroAccent: Color,
     requiredSetupComplete: Int,
     requiredSetupTotal: Int,
-    setupSummary: String,
     engineCount: Int,
-    aggressiveMode: Boolean,
     lastSync: Long,
     lastSyncSource: String,
     syncState: SyncState,
     heroAction: HeroAction?,
+    onSyncDatabase: () -> Unit = {},
 ) {
-    PremiumCard(
-        modifier = modifier,
-        accentColor = heroAccent,
+    Column(
+        modifier = modifier.fillMaxWidth().padding(vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        val pulseAnim = rememberInfiniteTransition(label = "shieldPulse")
-        val pulseScale by pulseAnim.animateFloat(
-            initialValue = 1f,
-            targetValue = if (shieldActive) 1.08f else 1f,
-            animationSpec =
-                infiniteRepeatable(
-                    animation = tween(1600, easing = FastOutSlowInEasing),
-                    repeatMode = RepeatMode.Reverse,
-                ),
-            label = "shieldScale",
+        Text(
+            text = heroTitle,
+            style = MaterialTheme.typography.headlineLarge,
+            fontWeight = FontWeight.Bold,
+            color = CatText,
         )
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top,
-            ) {
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    SetupStateBadge(
-                        label =
-                            if (dashboardStatus.setupComplete) {
-                                stringResource(R.string.dashboard_setup_complete)
-                            } else {
-                                stringResource(R.string.dashboard_setup_needs_attention)
-                            },
-                        color = heroAccent,
-                    )
-                    Text(
-                        text = heroTitle,
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = CatText,
-                    )
-                    Text(
-                        text = heroSubtitle,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = CatSubtext,
-                    )
-                }
-                Icon(
-                    imageVector = if (shieldActive) Icons.Default.Shield else Icons.Default.ShieldMoon,
-                    contentDescription = null,
-                    tint = heroAccent,
-                    modifier =
-                        Modifier
-                            .size(62.dp)
-                            .accentGlow(heroAccent, radius = 260f, alpha = 0.1f)
-                            .graphicsLayer {
-                                scaleX = pulseScale
-                                scaleY = pulseScale
-                            },
-                )
-            }
-
-            LinearProgressIndicator(
-                progress = { requiredSetupComplete / requiredSetupTotal.toFloat() },
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .height(8.dp),
-                color = heroAccent,
-                trackColor = CatMuted.copy(alpha = 0.35f),
+        Text(
+            text = heroSubtitle,
+            style = MaterialTheme.typography.bodyLarge,
+            color = CatSubtext,
+        )
+        heroAction?.let { action ->
+            PremiumActionButton(
+                label = action.label,
+                icon = action.icon,
+                color = CatGreen,
+                onClick = action.onClick,
+                enabled = syncState !is SyncState.Syncing || action.icon != Icons.Default.Sync,
+                loading = syncState is SyncState.Syncing && action.icon == Icons.Default.Sync,
+                modifier = Modifier.fillMaxWidth().height(52.dp),
             )
-
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                Text(
-                    text =
-                        stringResource(
-                            R.string.dashboard_setup_progress_required,
-                            requiredSetupComplete,
-                            requiredSetupTotal,
-                        ),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = CatSubtext,
-                )
-                Text(
-                    text = setupSummary,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = heroAccent,
-                    fontWeight = FontWeight.SemiBold,
-                )
-            }
-
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
-                ) {
-                    Text(
-                        text =
-                            if (aggressiveMode) {
-                                pluralStringResource(
-                                    R.plurals.dashboard_engines_active_aggressive,
-                                    engineCount,
-                                    engineCount,
-                                )
-                            } else {
-                                pluralStringResource(
-                                    R.plurals.dashboard_engines_active,
-                                    engineCount,
-                                    engineCount,
-                                )
-                            },
-                        style = MaterialTheme.typography.bodySmall,
-                        color = CatOverlay,
-                    )
-                    Text(
-                        text = syncFreshnessText(lastSync, lastSyncSource),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = syncFreshnessColor(lastSync, lastSyncSource),
-                    )
-                }
-                heroAction?.let { action ->
-                    PremiumActionButton(
-                        label = action.label,
-                        icon = action.icon,
-                        color = heroAccent,
-                        onClick = action.onClick,
-                        enabled = syncState !is SyncState.Syncing || action.icon != Icons.Default.Sync,
-                        loading = syncState is SyncState.Syncing && action.icon == Icons.Default.Sync,
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .height(52.dp),
-                    )
-                }
-            }
         }
+        if (heroAction?.icon != Icons.Default.Sync) {
+            PremiumCompactButton(
+                label = stringResource(R.string.dashboard_sync_database),
+                icon = Icons.Default.Sync,
+                color = CatGreen,
+                onClick = onSyncDatabase,
+                enabled = syncState !is SyncState.Syncing,
+                modifier = Modifier.align(Alignment.CenterHorizontally),
+            )
+        }
+        GradientDivider()
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            DashboardReadinessMetric(
+                value = "$requiredSetupComplete/$requiredSetupTotal",
+                label = stringResource(R.string.dashboard_metric_core_setup),
+                icon = Icons.Default.Shield,
+                color = if (dashboardStatus.setupComplete) CatGreen else CatYellow,
+                modifier = Modifier.weight(1f),
+            )
+            Box(Modifier.width(1.dp).height(68.dp).background(CatMuted))
+            DashboardReadinessMetric(
+                value = engineCount.toString(),
+                label = stringResource(R.string.dashboard_metric_engines),
+                icon = Icons.Default.Security,
+                color = CatGreen,
+                modifier = Modifier.weight(1f),
+            )
+            Box(Modifier.width(1.dp).height(68.dp).background(CatMuted))
+            DashboardReadinessMetric(
+                value =
+                    if (lastSync > 0L || lastSyncSource == SpamRepository.SYNC_SOURCE_BUNDLED) {
+                        stringResource(R.string.dashboard_metric_ready)
+                    } else {
+                        "—"
+                    },
+                label = stringResource(R.string.dashboard_metric_database),
+                icon = Icons.Default.DownloadDone,
+                color = syncFreshnessColor(lastSync, lastSyncSource),
+                modifier = Modifier.weight(1f),
+            )
+        }
+        GradientDivider()
     }
 }
 
 @Composable
+private fun DashboardReadinessMetric(
+    value: String,
+    label: String,
+    icon: ImageVector,
+    color: Color,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(3.dp),
+    ) {
+        Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(22.dp))
+        Text(value, style = MaterialTheme.typography.titleLarge, color = CatText, fontWeight = FontWeight.SemiBold)
+        Text(label, style = MaterialTheme.typography.bodySmall, color = CatSubtext, maxLines = 1)
+    }
+}
+
+@Suppress("CyclomaticComplexMethod", "LongMethod", "LongParameterList")
+@Composable
 internal fun DashboardSetupChecklistCard(
     dashboardStatus: DashboardStatusModel,
-    setupSummary: String,
     corePermissionsReady: Boolean,
-    missingPermissionCount: Int,
-    missingPermissionDetail: String? = null,
     syncState: SyncState,
     spamDatabaseReady: Boolean,
     spamCount: Int,
@@ -1111,17 +998,17 @@ internal fun DashboardSetupChecklistCard(
     onEnableOverlay: () -> Unit,
     onEnableNotifications: () -> Unit,
 ) {
-    PremiumCard(modifier = Modifier.fillMaxWidth(), accentColor = CatYellow) {
-        Column(
-            modifier = Modifier.padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
-        ) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                SectionHeader(stringResource(R.string.dashboard_setup_checklist), CatYellow)
+                SectionHeader(stringResource(R.string.dashboard_setup_checklist))
                 SetupStateBadge(
                     label =
                         if (dashboardStatus.setupComplete) {
@@ -1133,12 +1020,6 @@ internal fun DashboardSetupChecklistCard(
                 )
             }
 
-            Text(
-                text = setupSummary,
-                style = MaterialTheme.typography.bodySmall,
-                color = CatSubtext,
-            )
-
             SetupChecklistRow(
                 icon = Icons.Default.Security,
                 title = stringResource(R.string.dashboard_setup_permissions_title),
@@ -1146,11 +1027,7 @@ internal fun DashboardSetupChecklistCard(
                     if (corePermissionsReady) {
                         stringResource(R.string.dashboard_permissions_ready_detail)
                     } else {
-                        missingPermissionDetail ?: pluralStringResource(
-                            R.plurals.dashboard_permissions_needed_detail,
-                            missingPermissionCount,
-                            missingPermissionCount,
-                        )
+                        stringResource(R.string.dashboard_permissions_required_short)
                     },
                 ready = corePermissionsReady,
                 accentColor = CatBlue,
@@ -1166,7 +1043,7 @@ internal fun DashboardSetupChecklistCard(
                 detail =
                     when {
                         syncState is SyncState.Syncing -> {
-                            stringResource(R.string.dashboard_database_syncing_detail)
+                            stringResource(R.string.dashboard_database_syncing_short)
                         }
 
                         spamDatabaseReady -> {
@@ -1178,7 +1055,7 @@ internal fun DashboardSetupChecklistCard(
                         }
 
                         else -> {
-                            stringResource(R.string.dashboard_database_needed_detail)
+                            stringResource(R.string.dashboard_database_needed_short)
                         }
                     },
                 ready = spamDatabaseReady,
@@ -1194,9 +1071,9 @@ internal fun DashboardSetupChecklistCard(
                 title = stringResource(R.string.dashboard_setup_call_screener_title),
                 detail =
                     when {
-                        !blockCallsEnabled -> stringResource(R.string.dashboard_screener_optional_detail)
-                        callScreenerReady -> stringResource(R.string.dashboard_screener_ready_detail)
-                        else -> stringResource(R.string.dashboard_screener_needed_detail)
+                        !blockCallsEnabled -> stringResource(R.string.dashboard_screener_optional_short)
+                        callScreenerReady -> stringResource(R.string.dashboard_screener_ready_short)
+                        else -> stringResource(R.string.dashboard_screener_needed_short)
                     },
                 ready = !blockCallsEnabled || callScreenerReady,
                 accentColor = CatMauve,
@@ -1223,9 +1100,9 @@ internal fun DashboardSetupChecklistCard(
                 title = stringResource(R.string.dashboard_setup_overlay_title),
                 detail =
                     if (overlayGranted) {
-                        stringResource(R.string.dashboard_overlay_ready_detail)
+                        stringResource(R.string.dashboard_overlay_ready_short)
                     } else {
-                        stringResource(R.string.dashboard_overlay_needed_detail)
+                        stringResource(R.string.dashboard_overlay_needed_short)
                     },
                 ready = overlayGranted,
                 accentColor = CatTeal,
@@ -1240,9 +1117,9 @@ internal fun DashboardSetupChecklistCard(
                 title = stringResource(R.string.dashboard_setup_notifications_title),
                 detail =
                     if (notificationsGranted) {
-                        stringResource(R.string.dashboard_notifications_ready_detail)
+                        stringResource(R.string.dashboard_notifications_ready_short)
                     } else {
-                        stringResource(R.string.dashboard_notifications_needed_detail)
+                        stringResource(R.string.dashboard_notifications_needed_short)
                     },
                 ready = notificationsGranted,
                 accentColor = CatBlue,
@@ -1261,7 +1138,7 @@ internal fun DashboardStatsRow(
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         StatCard(
             modifier = Modifier.weight(1f),
@@ -1270,6 +1147,7 @@ internal fun DashboardStatsRow(
             icon = Icons.Default.Today,
             color = CatBlue,
         )
+        Box(Modifier.width(1.dp).height(72.dp).background(CatMuted))
         StatCard(
             modifier = Modifier.weight(1f),
             title = stringResource(R.string.dashboard_stat_this_week),
@@ -1277,6 +1155,7 @@ internal fun DashboardStatsRow(
             icon = Icons.Default.DateRange,
             color = CatMauve,
         )
+        Box(Modifier.width(1.dp).height(72.dp).background(CatMuted))
         StatCard(
             modifier = Modifier.weight(1f),
             title = stringResource(R.string.dashboard_stat_total),
@@ -1287,6 +1166,7 @@ internal fun DashboardStatsRow(
     }
 }
 
+@Suppress("LongParameterList")
 @Composable
 private fun SetupChecklistRow(
     icon: ImageVector,
@@ -1298,17 +1178,22 @@ private fun SetupChecklistRow(
     onAction: (() -> Unit)? = null,
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        PremiumIconTile(icon = icon, color = accentColor)
+        PremiumIconTile(icon = icon, color = accentColor, size = 34.dp, iconSize = 22.dp)
         Column(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
             Text(title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
-            Text(detail, style = MaterialTheme.typography.bodySmall, color = CatSubtext)
+            Text(
+                detail,
+                style = MaterialTheme.typography.bodySmall,
+                color = CatSubtext,
+                maxLines = 2,
+            )
         }
         when {
             ready -> {
@@ -1316,12 +1201,11 @@ private fun SetupChecklistRow(
             }
 
             actionLabel != null && onAction != null -> {
-                PremiumActionButton(
+                PremiumCompactButton(
                     label = actionLabel,
                     icon = Icons.Default.ChevronRight,
                     color = accentColor,
                     onClick = onAction,
-                    outlined = true,
                 )
             }
 
@@ -1389,25 +1273,6 @@ private fun relativeTimeText(timestamp: Long): String {
         ago < 3_600_000 -> stringResource(R.string.dashboard_time_minutes_ago, (ago / 60_000).toInt())
         ago < 86_400_000 -> stringResource(R.string.dashboard_time_hours_ago, (ago / 3_600_000).toInt())
         else -> stringResource(R.string.dashboard_time_days_ago, (ago / 86_400_000).toInt())
-    }
-}
-
-@Composable
-private fun syncFreshnessText(
-    lastSync: Long,
-    lastSyncSource: String,
-): String {
-    if (lastSyncSource == SpamRepository.SYNC_SOURCE_BUNDLED) {
-        return stringResource(R.string.dashboard_bundled_snapshot_ready)
-    }
-    if (lastSync <= 0L) {
-        return stringResource(R.string.dashboard_database_needed_detail)
-    }
-    val ago = System.currentTimeMillis() - lastSync
-    return when {
-        ago < 3_600_000 -> stringResource(R.string.dashboard_synced_just_now)
-        ago < 86_400_000 -> stringResource(R.string.dashboard_synced_hours_ago, (ago / 3_600_000).toInt())
-        else -> stringResource(R.string.dashboard_synced_days_ago, (ago / 86_400_000).toInt())
     }
 }
 
@@ -1568,17 +1433,18 @@ fun StatCard(
         label = "counter",
     )
 
-    PremiumCard(modifier = modifier, accentColor = color.copy(alpha = 0.5f)) {
-        Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            PremiumIconTile(icon = icon, color = color, size = 44.dp, iconSize = 22.dp)
-            Spacer(Modifier.height(8.dp))
-            Text(
-                animatedValue.toString(),
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                color = color,
-            )
-            Text(title, style = MaterialTheme.typography.bodySmall.copy(letterSpacing = 0.sp), color = CatSubtext)
-        }
+    Column(
+        modifier = modifier.padding(horizontal = 8.dp, vertical = 10.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(3.dp),
+    ) {
+        Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(21.dp))
+        Text(
+            animatedValue.toString(),
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.SemiBold,
+            color = CatText,
+        )
+        Text(title, style = MaterialTheme.typography.bodySmall, color = CatSubtext, maxLines = 1)
     }
 }
