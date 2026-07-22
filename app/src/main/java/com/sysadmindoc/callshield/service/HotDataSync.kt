@@ -10,7 +10,6 @@ import com.sysadmindoc.callshield.data.model.HotNumber
 import com.sysadmindoc.callshield.data.model.SpamNumber
 import com.sysadmindoc.callshield.data.remote.GitHubDataSource
 import com.sysadmindoc.callshield.data.remote.HotFeedDataSource
-import com.sysadmindoc.callshield.util.filterAsciiDigits
 import com.sysadmindoc.callshield.util.isAsciiDigit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -210,8 +209,5 @@ internal object HotDataSync {
             .distinct()
             .toList()
 
-    private fun canonicalNumberKey(number: String): String {
-        val digits = filterAsciiDigits(number)
-        return if (digits.length == 11 && digits.startsWith("1")) digits.drop(1) else digits
-    }
+    private fun canonicalNumberKey(number: String): String = number.trim()
 }

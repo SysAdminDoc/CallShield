@@ -6,12 +6,14 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
+import com.sysadmindoc.callshield.data.PhoneIdentityCanonicalizer
 import com.sysadmindoc.callshield.data.model.*
 
 /** Single source of truth for the Room database version. */
-const val DB_VERSION = 11
+const val DB_VERSION = 12
 private const val DB_VERSION_9 = 9
 private const val DB_VERSION_10 = 10
+private const val DB_VERSION_11 = 11
 
 /**
  * v5 → v6: Add `isEmergency INTEGER NOT NULL DEFAULT 0` to the whitelist
@@ -152,7 +154,7 @@ val MIGRATION_9_10 =
  * NULL keeps existing permanent block/allow semantics.
  */
 val MIGRATION_10_11 =
-    object : Migration(DB_VERSION_10, DB_VERSION) {
+    object : Migration(DB_VERSION_10, DB_VERSION_11) {
         override fun migrate(db: SupportSQLiteDatabase) {
             db.execSQL("ALTER TABLE spam_numbers ADD COLUMN expiresAt INTEGER")
             db.execSQL("ALTER TABLE whitelist ADD COLUMN expiresAt INTEGER")
@@ -210,6 +212,9 @@ abstract class AppDatabase : RoomDatabase() {
                         MIGRATION_8_9,
                         MIGRATION_9_10,
                         MIGRATION_10_11,
+                        phoneIdentityMigration(
+                            PhoneIdentityCanonicalizer.fromContext(context.applicationContext),
+                        ),
                     ).build()
                     .also { INSTANCE = it }
             }

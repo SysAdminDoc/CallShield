@@ -743,7 +743,7 @@ class MainViewModel
             type: String = "spam",
         ) {
             viewModelScope.launch {
-                val result = CommunityContributor.contribute(number, type)
+                val result = CommunityContributor.contribute(repo.normalizeNumber(number), type)
                 _contributeResult.value = result.message
             }
         }
@@ -752,7 +752,7 @@ class MainViewModel
             viewModelScope.launch {
                 // Whitelist locally AND report as false positive to community
                 manageBlocklist.addToWhitelist(number, "Reported as not spam")
-                val result = CommunityContributor.reportNotSpam(number)
+                val result = CommunityContributor.reportNotSpam(repo.normalizeNumber(number))
                 _contributeResult.value = result.message
             }
         }

@@ -4,6 +4,14 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+### Changed
+
+- Phone identity now uses the device's injected ISO region to canonicalize
+  valid national numbers to E.164 across matching, storage, imports, backups,
+  and community reports. Short codes and opaque SMS sender IDs remain distinct.
+- Room schema v12 migrates safe phone keys and merges national/E.164
+  collisions without weakening permanent manual block or allow decisions.
+
 ### Fixed
 
 - Portable restore now writes all selected settings in one atomic DataStore

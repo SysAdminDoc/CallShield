@@ -74,6 +74,8 @@ class SpamRepository(
     checkerDependencies: CheckerDependencies = CheckerDependencies(),
     settingsDataStore: DataStore<Preferences>? = null,
     privateSettingsDataStore: DataStore<Preferences>? = null,
+    private val phoneIdentityCanonicalizer: PhoneIdentityCanonicalizer =
+        PhoneIdentityCanonicalizer.fromContext(context.applicationContext),
 ) {
     private val appContext: Context = context.applicationContext
     private val db: AppDatabase = database
@@ -90,6 +92,8 @@ class SpamRepository(
             dao = dao,
             settingsRepository = settingsRepository,
             checkerDependencies = checkerDependencies,
+            normalizePhone = phoneIdentityCanonicalizer::canonicalizePhone,
+            normalizeSenderIdentity = phoneIdentityCanonicalizer::canonicalizeIdentity,
         )
     private val syncRepository =
         SyncRepository(
@@ -97,7 +101,7 @@ class SpamRepository(
             dao = dao,
             remote = remote,
             settingsRepository = settingsRepository,
-            normalizeNumber = ::normalizeNumber,
+            normalizeNumber = phoneIdentityCanonicalizer::canonicalizePhone,
             invalidateAllCaches = spamRepositoryImpl::invalidateAllCaches,
         )
     private val blocklistRepository =
@@ -105,7 +109,8 @@ class SpamRepository(
             context = appContext,
             dao = dao,
             settingsRepository = settingsRepository,
-            normalizeNumber = ::normalizeNumber,
+            normalizeNumber = phoneIdentityCanonicalizer::canonicalizePhone,
+            normalizeLogIdentity = phoneIdentityCanonicalizer::canonicalizeIdentity,
             invalidateWildcardCache = spamRepositoryImpl::invalidateWildcardCache,
             invalidateKeywordCache = spamRepositoryImpl::invalidateKeywordCache,
             invalidateHashWildcardCache = spamRepositoryImpl::invalidateHashWildcardCache,
@@ -641,7 +646,9 @@ class SpamRepository(
     // ── Search log ───────────────────────────────────────────────────
     fun searchLog(query: String): Flow<List<BlockedCall>> = blocklistRepository.searchLog(query)
 
-    fun normalizeNumber(number: String): String = normalizePhoneNumber(number)
+    fun normalizeNumber(number: String): String = phoneIdentityCanonicalizer.canonicalizePhone(number)
+
+    fun normalizeSenderIdentity(sender: String): String = phoneIdentityCanonicalizer.canonicalizeIdentity(sender)
 }
 
 /**

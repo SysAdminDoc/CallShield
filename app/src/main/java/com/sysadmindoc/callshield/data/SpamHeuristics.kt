@@ -35,7 +35,7 @@ class SpamHeuristics
             context: Context,
             number: String,
         ): Boolean {
-            val normalized = normalizeForLookup(number)
+            val normalized = PhoneIdentityCanonicalizer.fromContext(context).canonicalizePhone(number)
             val now = System.currentTimeMillis()
             synchronized(contactCacheLock) {
                 val cached = contactCache[normalized]
@@ -451,17 +451,6 @@ class SpamHeuristics
             }
 
             return HeuristicResult(score.coerceAtMost(100), reasons)
-        }
-
-        private fun normalizeForLookup(number: String): String {
-            val digits = filterAsciiDigits(number)
-            return if (digits.length == 11 && digits.startsWith("1")) {
-                "+$digits"
-            } else if (digits.length == 10) {
-                "+1$digits"
-            } else {
-                number
-            }
         }
 
         @Suppress("DEPRECATION")

@@ -502,7 +502,13 @@ object BackupRestore {
             }
         }
 
-    @Suppress("LongMethod", "LongParameterList")
+    @Suppress(
+        "CyclomaticComplexMethod",
+        "LongMethod",
+        "LongParameterList",
+        "NestedBlockDepth",
+        "TooGenericExceptionCaught",
+    )
     internal suspend fun restorePayload(
         context: Context,
         payload: RestorePayload,

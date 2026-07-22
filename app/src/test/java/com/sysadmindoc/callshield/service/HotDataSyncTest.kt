@@ -20,6 +20,7 @@ class HotDataSyncTest {
                         when {
                             digits.isBlank() -> ""
                             digits.length == 11 && digits.startsWith("1") -> "+$digits"
+                            digits.length == 10 -> "+1$digits"
                             else -> digits
                         }
                     }
@@ -27,7 +28,7 @@ class HotDataSyncTest {
             )
 
         assertEquals(1, sanitized.size)
-        assertEquals("2125551234", sanitized.first().number)
+        assertEquals("+12125551234", sanitized.first().number)
         assertEquals("robocall", sanitized.first().type)
         assertEquals("First", sanitized.first().description)
     }

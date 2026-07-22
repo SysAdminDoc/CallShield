@@ -78,7 +78,7 @@ class HotListSyncIntegrationTest {
             assertTrue(outcome.hasAnyHotProtection)
 
             assertEquals(1, dao.getCountBySource("hot_list"))
-            val freshHot = dao.findByNumber("5085550102")
+            val freshHot = dao.findByNumber(repo.normalizeNumber("508-555-0102"))
             assertEquals("hot_list", freshHot?.source)
             assertEquals("Fresh hot row", freshHot?.description)
 

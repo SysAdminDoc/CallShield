@@ -84,7 +84,7 @@ class SyncIntegrationTest {
             assertEquals(1, remote.updateCheckCount)
 
             val dao = db.spamDao()
-            val syncedNumber = dao.findByNumber("2125550101")
+            val syncedNumber = dao.findByNumber(repo.normalizeNumber("(212) 555-0101"))
             assertEquals("robocall", syncedNumber?.type)
             assertEquals("github", syncedNumber?.source)
             assertEquals(4, syncedNumber?.reports)

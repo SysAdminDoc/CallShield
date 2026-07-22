@@ -8,6 +8,7 @@ import androidx.sqlite.db.framework.FrameworkSQLiteOpenHelperFactory
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import com.sysadmindoc.callshield.data.PhoneIdentityCanonicalizer
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -26,6 +27,7 @@ class AppDatabaseMigrationTest {
         )
 
     private val context: Context = ApplicationProvider.getApplicationContext()
+    private val migration11To12 = phoneIdentityMigration(PhoneIdentityCanonicalizer("US"))
 
     @Before
     fun setUp() {
@@ -56,6 +58,7 @@ class AppDatabaseMigrationTest {
                 MIGRATION_8_9,
                 MIGRATION_9_10,
                 MIGRATION_10_11,
+                migration11To12,
             )
 
         db.assertSingleInt("SELECT COUNT(*) FROM spam_numbers", 1)
@@ -88,6 +91,7 @@ class AppDatabaseMigrationTest {
                 MIGRATION_8_9,
                 MIGRATION_9_10,
                 MIGRATION_10_11,
+                migration11To12,
             )
 
         db.assertSingleInt("SELECT isEmergency FROM whitelist WHERE number = '+15550000003'", 1)
@@ -112,6 +116,7 @@ class AppDatabaseMigrationTest {
                 MIGRATION_8_9,
                 MIGRATION_9_10,
                 MIGRATION_10_11,
+                migration11To12,
             )
 
         db.assertSingleInt(
@@ -141,6 +146,7 @@ class AppDatabaseMigrationTest {
                 MIGRATION_8_9,
                 MIGRATION_9_10,
                 MIGRATION_10_11,
+                migration11To12,
             )
 
         db.assertSingleInt("SELECT scheduleDays FROM wildcard_rules WHERE pattern = '+1666*'", 0)
@@ -168,6 +174,7 @@ class AppDatabaseMigrationTest {
                 true,
                 MIGRATION_9_10,
                 MIGRATION_10_11,
+                migration11To12,
             )
 
         db.assertSingleInt("SELECT COUNT(*) FROM call_log WHERE number = '+17770000001'", 1)
@@ -176,6 +183,59 @@ class AppDatabaseMigrationTest {
         db.assertHasColumn("pending_blocked_call_logs", "nextAttemptAt")
         db.assertHasColumn("spam_numbers", "expiresAt")
         db.assertHasColumn("whitelist", "expiresAt")
+        db.close()
+    }
+
+    @Test
+    fun migrateFromVersion11CanonicalizesIdentityKeysAndMergesManualDecisions() {
+        helper.createDatabase(TEST_DB, 11).apply {
+            execSQL(
+                """
+                INSERT INTO spam_numbers
+                    (number, type, reports, firstSeen, lastSeen, description, source, isUserBlocked, expiresAt)
+                VALUES ('+12125551234', 'robocall', 8, '2026-01-01', '2026-01-02', 'feed', 'github', 0, NULL)
+                """.trimIndent(),
+            )
+            execSQL(
+                """
+                INSERT INTO spam_numbers
+                    (number, type, reports, firstSeen, lastSeen, description, source, isUserBlocked, expiresAt)
+                VALUES ('2125551234', 'spam', 1, '', '', 'manual', 'user', 1, NULL)
+                """.trimIndent(),
+            )
+            execSQL(
+                """
+                INSERT INTO whitelist (number, description, addedTimestamp, isEmergency, expiresAt)
+                VALUES ('+14155550100', 'existing', 100, 0, NULL),
+                       ('4155550100', 'doctor', 200, 1, NULL)
+                """.trimIndent(),
+            )
+            execSQL(
+                """
+                INSERT INTO call_log
+                    (number, timestamp, type, wasBlocked, isCall, smsBody, matchReason, confidence, logKey)
+                VALUES ('6505550100', 100, 'spam', 1, 1, NULL, 'manual', 100, 'phone-log'),
+                       ('Bank-Alert', 200, 'sms_spam', 1, 0, NULL, 'content', 90, 'sender-log')
+                """.trimIndent(),
+            )
+            close()
+        }
+
+        val db =
+            helper.runMigrationsAndValidate(
+                TEST_DB,
+                DB_VERSION,
+                true,
+                migration11To12,
+            )
+
+        db.assertSingleInt("SELECT COUNT(*) FROM spam_numbers WHERE number = '+12125551234'", 1)
+        db.assertSingleInt("SELECT isUserBlocked FROM spam_numbers WHERE number = '+12125551234'", 1)
+        db.assertSingleText("SELECT source FROM spam_numbers WHERE number = '+12125551234'", "user")
+        db.assertSingleInt("SELECT COUNT(*) FROM whitelist WHERE number = '+14155550100'", 1)
+        db.assertSingleInt("SELECT isEmergency FROM whitelist WHERE number = '+14155550100'", 1)
+        db.assertSingleText("SELECT number FROM call_log WHERE logKey = 'phone-log'", "+16505550100")
+        db.assertSingleText("SELECT number FROM call_log WHERE logKey = 'sender-log'", "BANK-ALERT")
         db.close()
     }
 
@@ -499,6 +559,17 @@ class AppDatabaseMigrationTest {
                 }
             }
             assertTrue("$tableName must include $columnName", found)
+        }
+    }
+
+    private fun SupportSQLiteDatabase.assertSingleText(
+        sql: String,
+        expected: String,
+    ) {
+        val cursor = query(sql)
+        cursor.use {
+            assertTrue(it.moveToFirst())
+            assertEquals(expected, it.getString(0))
         }
     }
 
