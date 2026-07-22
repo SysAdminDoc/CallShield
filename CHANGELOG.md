@@ -50,6 +50,9 @@ All notable changes to CallShield will be documented in this file.
 - Deprecated Compose tab and swipe APIs were replaced, and the required API
   29–30 phone-state compatibility path is explicitly isolated, restoring a
   warning-free Kotlin build.
+- The local community-report pipeline regression test no longer depends on a
+  GitHub Actions workflow removed in v1.7.12; it once again validates the
+  domain, hot-list, campaign-range, merge, and cleanup stages end to end.
 
 ## v1.7.19 — 2026-07-21
 
