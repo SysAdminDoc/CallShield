@@ -25,6 +25,20 @@ val localProperties =
 
 fun signingProp(key: String): String? = localProperties.getProperty(key) ?: System.getenv(key)
 
+val stageBundledAssets =
+    tasks.register<Sync>("stageBundledAssets") {
+        from(rootProject.file("data")) {
+            include(
+                "spam_numbers.json",
+                "hot_numbers.json",
+                "hot_ranges.json",
+                "spam_domains.json",
+                "spam_model_weights.json",
+            )
+        }
+        into(layout.buildDirectory.dir("generated/callshieldAssets"))
+    }
+
 android {
     namespace = "com.sysadmindoc.callshield"
     compileSdk = 36
@@ -89,7 +103,10 @@ android {
 
     sourceSets {
         getByName("main") {
-            assets.srcDir("../data")
+            // The repository data directory also contains raw community
+            // submissions and maintainer notes. Stage an explicit runtime
+            // allowlist instead of recursively packaging that directory.
+            assets.srcDir(layout.buildDirectory.dir("generated/callshieldAssets"))
         }
     }
 
@@ -174,6 +191,15 @@ tasks.withType<Detekt>().configureEach {
         sarif.required.set(true)
         md.required.set(false)
     }
+}
+
+tasks.named("check") {
+    dependsOn(rootProject.tasks.named("verifyDebugApkPrivacy"))
+    dependsOn(rootProject.tasks.named("verifyBackupPrivacyRules"))
+}
+
+tasks.named("preBuild") {
+    dependsOn(stageBundledAssets)
 }
 
 dependencies {

@@ -1,12 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- API 23-30 backup rules (android:fullBackupContent).
-     Include database (blocklist, whitelist, rules, log) and the public
-     DataStore preferences (user settings). Any private no-backup DataStore
-     files are stored under noBackupFilesDir and are intentionally not included
-     here. Everything else (cached exports,
-     synced model weights, OkHttp cache) is automatically excluded because only
-     explicitly included paths are backed up. -->
+     Cloud backup preserves non-secret user settings only. The Room database
+     can contain call history, phone numbers, and raw SMS bodies, so users must
+     opt in explicitly through CallShield's portable backup flow instead of
+     having that data uploaded automatically. Private preferences live under
+     noBackupFilesDir and are never included. -->
 <full-backup-content>
-    <include domain="database" path="." />
     <include domain="file" path="datastore/" />
 </full-backup-content>

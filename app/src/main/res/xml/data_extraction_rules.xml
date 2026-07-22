@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- API 31+ backup/transfer rules (android:dataExtractionRules).
-     Mirrors backup_rules.xml: preserve user data (database + public
-     DataStore) without transferring operational files, downloaded model/feed
-     artifacts, or no-backup private DataStore secrets. -->
+     Cloud backup preserves settings but excludes the sensitive Room database.
+     Direct device-to-device transfer keeps both because data stays in the
+     user's local migration flow. Operational files and private no-backup
+     preferences remain excluded from both paths. -->
 <data-extraction-rules>
     <cloud-backup>
-        <include domain="database" path="." />
         <include domain="file" path="datastore/" />
     </cloud-backup>
     <device-transfer>
