@@ -16,6 +16,12 @@ All notable changes to CallShield will be documented in this file.
 
 ### Changed
 
+- **The on-device GBT catches more spam without abandoning its precision
+  guard.** Training now exports sklearn's initial class-prior log odds and
+  calibrates the shipped threshold for maximum held-out recall at a 0.92
+  minimum precision. Exact on-device evaluation improved from 0.283 to 0.314
+  recall while retaining 0.944 precision; legacy v3 models remain compatible
+  with a zero initial score.
 - **Compose navigation and setup surfaces are easier to scan.** The dashboard,
   onboarding, lookup, blocklist, recent activity, blocked log, More hub, and
   Settings now share a leaner hierarchy, clearer state and recovery copy, and

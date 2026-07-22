@@ -6,8 +6,8 @@ Reports precision / recall / F1 / accuracy for `data/spam_model_weights.json`
 as part of local verification (roadmap 2.6.3). Two views are produced:
 
   1. On-device metrics — scores the SHIPPED weights with the exact inference the
-     Android app runs (`SpamMLScorer.scoreGbt`: sigmoid over Σ leaf·learning_rate,
-     NO sklearn `init_` term), at the model's own decision threshold. This is the
+     Android app runs (`SpamMLScorer.scoreGbt`: sigmoid over initial_score plus
+     Σ leaf·learning_rate), at the model's own decision threshold. This is the
      honest picture of what users actually get, and it catches export/inference
      drift that the trainer's sklearn-side test metrics would hide.
   2. Cross-validated metrics — stratified k-fold on the same GBT config, giving
@@ -63,9 +63,14 @@ def evaluate_tree(features: list[float], tree: dict) -> float:
     return float(val[node])
 
 
-def score_gbt(features: list[float], trees: list[dict], learning_rate: float) -> float:
+def score_gbt(
+    features: list[float],
+    trees: list[dict],
+    learning_rate: float,
+    initial_score: float = 0.0,
+) -> float:
     """On-device GBT score — matches SpamMLScorer.scoreGbt exactly."""
-    raw = 0.0
+    raw = initial_score
     for tree in trees:
         raw += evaluate_tree(features, tree) * learning_rate
     return sigmoid(raw)
@@ -125,6 +130,7 @@ def main() -> int:
 
     threshold = float(model.get("threshold", 0.7))
     learning_rate = float(model.get("learning_rate", 0.1))
+    initial_score = float(model.get("initial_score", 0.0))
     trees = model.get("trees", [])
     fallback_weights = model.get("fallback_weights", {})
     fallback_bias = float(model.get("fallback_bias", 0.0))
@@ -132,7 +138,8 @@ def main() -> int:
     print("=== CallShield Spam Model Evaluation ===\n")
     print(f"Model: {model_path}")
     print(f"  version={model.get('version')}  type={model.get('model_type')}  "
-          f"trees={len(trees)}  threshold={threshold}  learning_rate={learning_rate}\n")
+          f"trees={len(trees)}  threshold={threshold}  learning_rate={learning_rate}  "
+          f"initial_score={initial_score:+.6f}\n")
 
     print("Building labeled dataset (spam positives + synthetic legit negatives)...")
     X, y, spam_numbers, negative_numbers = build_dataset()
@@ -141,7 +148,10 @@ def main() -> int:
 
     # ── 1. On-device inference metrics (shipped weights, full dataset) ──
     if trees:
-        preds = [1 if score_gbt(f, trees, learning_rate) >= threshold else 0 for f in X]
+        preds = [
+            1 if score_gbt(f, trees, learning_rate, initial_score) >= threshold else 0
+            for f in X
+        ]
         print_metrics(f"[on-device GBT @ threshold {threshold}] (shipped weights, full set — optimistic)",
                       metrics(y, preds))
     else:

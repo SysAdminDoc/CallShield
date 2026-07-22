@@ -54,6 +54,8 @@ from sklearn.metrics import precision_score, recall_score, f1_score, roc_auc_sco
 DATA_DIR = Path(__file__).parent.parent / "data"
 DB_FILE = DATA_DIR / "spam_numbers.json"
 OUTPUT_FILE = DATA_DIR / "spam_model_weights.json"
+CALIBRATION_MIN_PRECISION = 0.92
+THRESHOLD_DECIMALS = 6
 
 HIGH_SPAM_VOIP_NPANXX = {
     "202555", "213226", "213555", "310555", "310400",
@@ -259,6 +261,35 @@ def evaluate_logreg(X, y, weights, bias) -> dict:
             "tp": tp, "fp": fp, "tn": tn, "fn": fn}
 
 
+def calibrate_threshold(y_true, probabilities, min_precision=CALIBRATION_MIN_PRECISION):
+    """Maximize recall on held-out scores while preserving a precision guard.
+
+    Candidate thresholds are rounded upward to the same precision exported to
+    JSON. Evaluating the rounded value avoids a boundary changing when the
+    Android scorer reads the serialized model.
+    """
+    scale = 10 ** THRESHOLD_DECIMALS
+    candidates = sorted({math.ceil(float(score) * scale) / scale for score in probabilities})
+    best = None
+
+    for threshold in candidates:
+        predictions = np.asarray(probabilities) >= threshold
+        precision = precision_score(y_true, predictions, zero_division=0)
+        if precision < min_precision:
+            continue
+        recall = recall_score(y_true, predictions, zero_division=0)
+        f1 = f1_score(y_true, predictions, zero_division=0)
+        candidate = (recall, f1, precision, -threshold)
+        if best is None or candidate > best[0]:
+            best = (candidate, threshold, predictions)
+
+    if best is None:
+        raise ValueError(f"no threshold satisfies minimum precision {min_precision:.3f}")
+
+    _, threshold, predictions = best
+    return threshold, predictions
+
+
 def export_tree(tree) -> dict:
     """Convert a sklearn DecisionTreeRegressor's internal arrays to plain lists."""
     t = tree.tree_
@@ -368,10 +399,20 @@ def main():
     )
     gbt.fit(X_train_np, y_train_np)
 
-    # Evaluate GBT
-    y_train_pred = gbt.predict(X_train_np)
-    y_test_pred  = gbt.predict(X_test_np)
+    # Carry sklearn's class-prior log odds into the exported raw score. The
+    # current balanced corpus keeps this near zero, but exporting it prevents
+    # Kotlin inference from drifting as the positive/negative mix evolves.
+    class_prior = np.asarray(gbt.init_.class_prior_, dtype=float)
+    positive_prior = float(np.clip(class_prior[1], 1e-12, 1.0 - 1e-12))
+    initial_score = math.log(positive_prior / (1.0 - positive_prior))
+
+    # Calibrate the deployed decision threshold on held-out probabilities.
+    # CallShield auto-blocks at this layer, so preserve a 0.92 precision guard
+    # while selecting the threshold with the highest available recall.
+    y_train_proba = gbt.predict_proba(X_train_np)[:, 1]
     y_test_proba = gbt.predict_proba(X_test_np)[:, 1]
+    calibrated_threshold, y_test_pred = calibrate_threshold(y_test_np, y_test_proba)
+    y_train_pred = y_train_proba >= calibrated_threshold
 
     train_prec = precision_score(y_train_np, y_train_pred)
     train_rec  = recall_score(y_train_np, y_train_pred)
@@ -382,6 +423,9 @@ def main():
     test_f1   = f1_score(y_test_np, y_test_pred)
     test_auc  = roc_auc_score(y_test_np, y_test_proba)
 
+    print(f"GBT initial raw score: {initial_score:+.6f}")
+    print(f"Calibrated threshold: {calibrated_threshold:.6f} "
+          f"(held-out precision floor {CALIBRATION_MIN_PRECISION:.2f})")
     print(f"GBT Train — prec={train_prec:.3f}  rec={train_rec:.3f}  F1={train_f1:.3f}")
     print(f"GBT Test  — prec={test_prec:.3f}  rec={test_rec:.3f}  F1={test_f1:.3f}  AUC-ROC={test_auc:.3f}")
 
@@ -410,9 +454,10 @@ def main():
         "version": 3,
         "model_type": "gbt",
         "description": "CallShield GBT spam scorer v3 — 50 trees, 20 features, LR fallback",
-        "threshold": 0.7,
+        "threshold": calibrated_threshold,
         "n_estimators": 50,
         "learning_rate": 0.1,
+        "initial_score": round(initial_score, 8),
         "trees": trees,
         "feature_names": FEATURE_NAMES,
         "fallback_weights": fallback_weights,
@@ -420,6 +465,11 @@ def main():
         "gbt_metrics": {
             "train": {"precision": round(train_prec, 4), "recall": round(train_rec, 4), "f1": round(train_f1, 4)},
             "test": {"precision": round(test_prec, 4), "recall": round(test_rec, 4), "f1": round(test_f1, 4), "auc_roc": round(test_auc, 4)},
+        },
+        "threshold_calibration": {
+            "method": "maximize_recall_with_precision_floor",
+            "minimum_precision": CALIBRATION_MIN_PRECISION,
+            "dataset": "held_out_test_split",
         },
         "lr_metrics": {
             "train": lr_train_m,
@@ -435,7 +485,8 @@ def main():
     print(f"\nModel saved to: {out_path}")
     print(f"\n  GBT trees:  {len(trees)}")
     print(f"  Features:   {len(FEATURE_NAMES)}")
-    print(f"  Threshold:  0.7")
+    print(f"  Init score: {initial_score:+.6f}")
+    print(f"  Threshold:  {calibrated_threshold:.6f}")
 
     print("\nLogistic regression fallback weights:")
     for name, w in zip(FEATURE_NAMES, lr_weights):
