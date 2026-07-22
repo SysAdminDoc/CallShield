@@ -44,14 +44,38 @@ function Clear-AppData {
 function Wait-ForAppContent {
     $deadline = (Get-Date).AddSeconds(30)
     do {
-        & $adb shell uiautomator dump /sdcard/callshield-window.xml 2>$null | Out-Null
-        $windowXml = (& $adb shell cat /sdcard/callshield-window.xml 2>$null) -join ""
+        $windowXml = ""
+        try {
+            & $adb shell uiautomator dump /sdcard/callshield-window.xml 2>$null | Out-Null
+            $windowXml = (& $adb shell cat /sdcard/callshield-window.xml 2>$null) -join ""
+        } catch {
+            # UIAutomator can briefly report a null root while the activity
+            # attaches after a locale restart. Retry until the deadline.
+        }
         if ($windowXml.Contains("package=`"$packageName`"") -and $windowXml -match 'text="[^"]+"') {
             return
         }
         Start-Sleep -Seconds 1
     } while ((Get-Date) -lt $deadline)
     throw "CallShield did not render interactive content within 30 seconds"
+}
+
+function Wait-ForWindowText {
+    param([string]$ExpectedPattern)
+    $deadline = (Get-Date).AddSeconds(15)
+    do {
+        try {
+            & $adb shell uiautomator dump /sdcard/callshield-window.xml 2>$null | Out-Null
+            $windowXml = (& $adb shell cat /sdcard/callshield-window.xml 2>$null) -join ""
+            if ($windowXml -match $ExpectedPattern) {
+                return
+            }
+        } catch {
+            # Retry while Compose settles after navigation.
+        }
+        Start-Sleep -Seconds 1
+    } while ((Get-Date) -lt $deadline)
+    throw "Expected screen text was not rendered: $ExpectedPattern"
 }
 
 function Save-Screenshot {
@@ -95,7 +119,8 @@ try {
         $nextX = if ($isRtl) { [int]($width * 0.10) } else { [int]($width * 0.90) }
         $blocklistX = if ($isRtl) { [int]($width * 0.25) } else { [int]($width * 0.75) }
         $moreX = if ($isRtl) { [int]($width * 0.075) } else { [int]($width * 0.925) }
-        $settingsY = if ($isRtl) { [int]($height * 0.55) } else { [int]($height * 0.60) }
+        $settingsY = if ($isRtl) { [int]($height * 0.55) } else { [int]($height * 0.61) }
+        $settingsScreenPattern = "0[^0-9]*/[^0-9]*2"
         Save-Screenshot "$slug-onboarding"
 
         foreach ($page in 1..4) {
@@ -118,7 +143,7 @@ try {
             [int]($width * 0.50),
             $settingsY
         )
-        Start-Sleep -Seconds 2
+        Wait-ForWindowText $settingsScreenPattern
         Save-Screenshot "$slug-settings"
     }
 } finally {
