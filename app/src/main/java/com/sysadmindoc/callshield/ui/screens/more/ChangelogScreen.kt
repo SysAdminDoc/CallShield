@@ -21,13 +21,25 @@ import com.sysadmindoc.callshield.ui.theme.*
 @Composable
 fun ChangelogScreen() {
     Column(
-        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(0.dp),
     ) {
         VersionEntry(
+            "1.7.21",
+            "Professional themes and a calmer, denser interface",
+            isLatest = true,
+            changes =
+                listOf(
+                    "Added persistent System, Light, Graphite, and true-black AMOLED themes",
+                    "Tightened typography, spacing, borders, and control density across shared components",
+                    "Shortened onboarding and settings copy while preserving accessible action targets",
+                    "Consolidated nested More destinations under one compact app header",
+                    "Added automated contrast and theme-preference regression coverage",
+                ),
+        )
+        VersionEntry(
             "1.7.20",
             "Privacy, recovery, and interaction hardening",
-            isLatest = true,
             changes =
                 listOf(
                     "Excluded private call and message history from Android cloud backup and trimmed " +
@@ -499,11 +511,11 @@ fun VersionEntry(
 
         // Content card
         PremiumCard(
-            modifier = Modifier.weight(1f).padding(bottom = 16.dp),
+            modifier = Modifier.weight(1f).padding(bottom = 12.dp),
             accentColor = if (isLatest) CatGreen else null,
-            cornerRadius = 12.dp,
+            cornerRadius = ShapeLg,
         ) {
-            Column(modifier = Modifier.padding(16.dp)) {
+            Column(modifier = Modifier.padding(14.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         "v$version",
@@ -536,9 +548,9 @@ fun VersionEntry(
                 if (title.isNotEmpty()) {
                     Text(title, style = MaterialTheme.typography.bodySmall, color = CatOverlay)
                 }
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(8.dp))
                 GradientDivider(color = accentColor)
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(8.dp))
                 changes.forEach { change ->
                     Row(modifier = Modifier.padding(vertical = 2.dp)) {
                         Box(
