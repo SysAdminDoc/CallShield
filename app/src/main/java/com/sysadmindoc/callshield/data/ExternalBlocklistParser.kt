@@ -112,12 +112,12 @@ internal object ExternalBlocklistParser {
             rawUrl.trim().toHttpUrlOrNull()
                 ?: throw ExternalBlocklistValidationException(
                     ExternalBlocklistFailureReason.UNSUPPORTED_URL,
-                    "External blocklist URL must be a valid HTTP or HTTPS URL",
+                    "External blocklist URL must be a valid HTTPS URL",
                 )
-        if (url.scheme != "http" && url.scheme != "https") {
+        if (url.scheme != "https") {
             throw ExternalBlocklistValidationException(
                 ExternalBlocklistFailureReason.UNSUPPORTED_URL,
-                "External blocklist URL must use HTTP or HTTPS",
+                "External blocklist URL must use HTTPS",
             )
         }
         if (url.username.isNotBlank() || url.password.isNotBlank()) {

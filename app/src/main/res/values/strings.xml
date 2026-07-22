@@ -574,7 +574,7 @@
     <string name="backup_section_logs">Logs</string>
     <string name="backup_section_logs_desc">Blocked call/SMS history, may include SMS text</string>
     <string name="settings_external_blocklists">External blocklists</string>
-    <string name="settings_external_blocklists_desc">Subscribe to CSV, TXT, or JSON number lists. CallShield previews changes, caps imports, and stores each feed under its own removable source.</string>
+    <string name="settings_external_blocklists_desc">Subscribe to HTTPS CSV, TXT, or JSON number lists. CallShield previews changes, caps imports, and stores each feed under its own removable source.</string>
     <string name="settings_external_blocklist_url">Blocklist URL</string>
     <string name="settings_external_blocklist_label">Label (optional)</string>
     <string name="settings_external_blocklist_preview">Preview</string>

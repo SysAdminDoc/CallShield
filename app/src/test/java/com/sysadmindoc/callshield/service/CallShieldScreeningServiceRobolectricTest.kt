@@ -114,10 +114,25 @@ class CallShieldScreeningServiceRobolectricTest {
         awaitScopeIdle()
     }
 
-    private fun callDetails(number: String): Call.Details =
+    @Test
+    fun `onScreenCall ignores outgoing calls without responding`() {
+        val number = "+12125550184"
+        runBlocking { repository.blockNumber(number, type = "test") }
+
+        service.onScreenCall(callDetails(number, Call.Details.DIRECTION_OUTGOING))
+
+        awaitScopeIdle()
+        assertTrue(shadowService.lastRespondToCallInput.isEmpty)
+    }
+
+    private fun callDetails(
+        number: String,
+        direction: Int = Call.Details.DIRECTION_INCOMING,
+    ): Call.Details =
         ReflectionHelpers.callConstructor(Call.Details::class.java).also { details ->
             ReflectionHelpers.setField(details, "mHandle", Uri.parse("tel:$number"))
             ReflectionHelpers.setField(details, "mCreationTimeMillis", 1_753_094_800_000L)
+            ReflectionHelpers.setField(details, "mCallDirection", direction)
         }
 
     private fun awaitResponse(): CallScreeningService.CallResponse =

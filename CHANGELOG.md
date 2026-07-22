@@ -13,6 +13,16 @@ All notable changes to CallShield will be documented in this file.
   recursively embedding `data/`; 130 raw community report payloads and the
   maintainer README are no longer shipped. Debug/release verification fails if
   repository-only data enters the APK again.
+- Outgoing calls are now rejected at the screening-service boundary before any
+  inbound checker, response, overlay, log, or after-call feedback can run.
+- External blocklist subscriptions now require HTTPS up front, matching the
+  app-wide cleartext-deny policy instead of accepting feeds that can never load.
+
+### Fixed
+
+- RCS and notification-screening URL warnings remain active when SMS spam
+  blocking is paused, matching direct-SMS phishing protection; the notification
+  screening toggle still fully controls whether message content may be read.
 
 ## v1.7.19 — 2026-07-21
 

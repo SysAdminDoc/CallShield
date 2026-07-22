@@ -34,6 +34,12 @@ class CallShieldScreeningService : CallScreeningService() {
     lateinit var applicationScope: CoroutineScope
 
     override fun onScreenCall(callDetails: Call.Details) {
+        // Android dispatches both incoming and outgoing calls to the active
+        // screening service. CallShield is an inbound blocker: running the
+        // pipeline for outgoing calls can create false blocked-log rows,
+        // overlays, and feedback without a valid response contract.
+        if (callDetails.callDirection != Call.Details.DIRECTION_INCOMING) return
+
         // Run on the process-wide appScope instead of a service-scoped one.
         // CallScreeningService is frequently unbound moments after we reply,
         // and a service-scoped coroutine could be cancelled mid-decision —
