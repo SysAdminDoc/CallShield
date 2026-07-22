@@ -46,6 +46,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sysadmindoc.callshield.BuildConfig
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.BackupRestore
+import com.sysadmindoc.callshield.data.CallCategory
+import com.sysadmindoc.callshield.data.CategoryCallAction
 import com.sysadmindoc.callshield.data.model.ExternalBlocklistPreview
 import com.sysadmindoc.callshield.data.model.ExternalBlocklistSubscription
 import com.sysadmindoc.callshield.data.repository.ANSWERED_CALLER_THRESHOLD_MAX
@@ -98,6 +100,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
     val allowedRegions by viewModel.allowedRegions.collectAsStateWithLifecycle()
     val cnapTrustPatterns by viewModel.cnapTrustPatterns.collectAsStateWithLifecycle()
     val cnapBlockPatterns by viewModel.cnapBlockPatterns.collectAsStateWithLifecycle()
+    val categoryCallActions by viewModel.categoryCallActions.collectAsStateWithLifecycle()
     val dbPrefixExpansion by viewModel.dbPrefixExpansionEnabled.collectAsStateWithLifecycle()
     val aggressiveMode by viewModel.aggressiveModeEnabled.collectAsStateWithLifecycle()
     val answeredCallerTrust by viewModel.answeredCallerTrustEnabled.collectAsStateWithLifecycle()
@@ -124,6 +127,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
     var showPushAlertSources by remember { mutableStateOf(false) }
     var showNotificationScreeningSources by remember { mutableStateOf(false) }
     var showRegionCnapRules by remember { mutableStateOf(false) }
+    var showCategoryCallActions by remember { mutableStateOf(false) }
     var showRawSmsExportDialog by remember { mutableStateOf(false) }
     var showThemeDialog by remember { mutableStateOf(false) }
     var showLanguageDialog by remember { mutableStateOf(false) }
@@ -353,6 +357,14 @@ fun SettingsScreen(viewModel: MainViewModel) {
             SettingsToggle(stringResource(R.string.settings_block_spam_sms), stringResource(R.string.settings_block_spam_sms_desc), Icons.Default.SpeakerNotesOff, blockSms) { viewModel.setBlockSms(it) }
             GradientDivider()
             SettingsToggle(stringResource(R.string.settings_block_unknown), stringResource(R.string.settings_block_unknown_desc), Icons.Default.QuestionMark, blockUnknown) { viewModel.setBlockUnknown(it) }
+            GradientDivider()
+            SettingsLinkRow(
+                title = stringResource(R.string.settings_category_actions),
+                value = stringResource(R.string.settings_category_actions_summary, categoryCallActions.size),
+                icon = Icons.AutoMirrored.Filled.CallSplit,
+                tintColor = CatBlue,
+                onClick = { showCategoryCallActions = true },
+            )
         }
 
         // Safety
@@ -783,6 +795,14 @@ fun SettingsScreen(viewModel: MainViewModel) {
             cnapBlockPatterns = cnapBlockPatterns,
             onSave = viewModel::saveRegionAndCnapRules,
             onDismiss = { showRegionCnapRules = false },
+        )
+    }
+
+    if (showCategoryCallActions) {
+        CategoryCallActionsSheet(
+            actions = categoryCallActions,
+            onActionChange = viewModel::setCategoryCallAction,
+            onDismiss = { showCategoryCallActions = false },
         )
     }
 

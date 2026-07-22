@@ -476,6 +476,11 @@
     <string name="settings_language_dialog_title">Choose app language</string>
     <string name="settings_language_debug_only">Pseudolocales are available in debug builds for layout testing.</string>
     <string name="settings_blocking">Blocking</string>
+    <string name="settings_category_actions">Call handling by category</string>
+    <string name="settings_category_actions_summary">%1$d customized · others inherit global blocking</string>
+    <string name="settings_category_actions_title">Category call actions</string>
+    <string name="settings_category_actions_desc">Choose how confidently categorized calls are handled. Inherit keeps your global blocking and voicemail settings.</string>
+    <string name="settings_category_actions_precedence">Emergency and manual whitelists always ring. Explicit personal block rules always block.</string>
     <string name="settings_block_spam_calls">Block spam calls</string>
     <string name="settings_block_spam_calls_desc">Reject calls from known spam numbers</string>
     <string name="settings_block_spam_sms">Block spam SMS</string>
@@ -714,6 +719,7 @@
     <string name="emergency_contacts_badge">EMERGENCY</string>
     <!-- Block reasoning (Feature D) -->
     <string name="block_reasoning_title">Why was this blocked?</string>
+    <string name="detail_category_action_source">%1$s rule · %2$s</string>
     <string name="block_reasoning_empty">This number was allowed through — no block reasoning to show.</string>
     <!-- Smart call labels (Feature A) -->
     <string name="call_category_debt_collector">Debt Collector</string>
@@ -726,6 +732,10 @@
     <string name="call_category_unknown">Unknown</string>
     <string name="call_category_wangiri">Wangiri Scam</string>
     <string name="call_category_survey">Survey</string>
+    <string name="category_action_inherit">Inherit</string>
+    <string name="category_action_allow">Allow</string>
+    <string name="category_action_silence">Voicemail</string>
+    <string name="category_action_block">Block</string>
     <string name="more_license">MIT License</string>
 
     <!-- Protection Test Screen -->
@@ -1103,6 +1113,7 @@
     <string name="notif_message_screening_text">From %1$s · %2$d%% confidence</string>
     <string name="notif_message_screening_big_text">CallShield flagged a %1$s notification from %2$s at %3$d%% confidence. Signal: %4$s. The original notification was not removed.</string>
     <string name="notif_message_screening_generic_reason">suspicious message content</string>
+    <string name="notif_category_policy_reason">%1$s · %2$s rule</string>
     <string name="notif_blocked_title">Blocked spam %s</string>
     <string name="notif_blocked_text">%1$s (%2$s)</string>
     <string name="notif_type_call">call</string>

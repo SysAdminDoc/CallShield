@@ -38,6 +38,9 @@ object BlockReasoning {
         description: String,
         confidence: Int,
     ): Reasoning {
+        CategoryCallPolicy.parseMatchSource(matchReason)?.let { policy ->
+            return explainCategoryPolicy(policy, description, confidence)
+        }
         val bullets = mutableListOf<String>()
         val headline: String
 
@@ -212,4 +215,42 @@ object BlockReasoning {
 
         return Reasoning(headline = headline, bullets = bullets)
     }
+
+    private fun explainCategoryPolicy(
+        policy: CategoryPolicyMatch,
+        description: String,
+        confidence: Int,
+    ): Reasoning {
+        val category = policy.category.policyDisplayName()
+        val headline =
+            when (policy.action) {
+                CategoryCallAction.ALLOW -> "$category calls are allowed by your category rule."
+                CategoryCallAction.SILENCE -> "$category calls are sent silently to voicemail by your category rule."
+                CategoryCallAction.BLOCK -> "$category calls are blocked by your category rule."
+                CategoryCallAction.INHERIT -> error("Inherited actions are never encoded as policy decisions")
+            }
+        val underlying = explain(policy.originalMatchSource, description, confidence)
+        return Reasoning(
+            headline = headline,
+            bullets =
+                listOf(
+                    "Underlying detection: ${underlying.headline}",
+                    "Emergency and manual whitelists, plus explicit personal block rules, take precedence.",
+                ) + underlying.bullets,
+        )
+    }
+
+    private fun CallCategory.policyDisplayName(): String =
+        when (this) {
+            CallCategory.DebtCollector -> "Debt collector"
+            CallCategory.Political -> "Political"
+            CallCategory.Robocall -> "Robocall"
+            CallCategory.Scam -> "Scam"
+            CallCategory.Phishing -> "Phishing"
+            CallCategory.Telemarketer -> "Telemarketer"
+            CallCategory.Wangiri -> "Wangiri"
+            CallCategory.Survey -> "Survey"
+            CallCategory.Business -> "Business"
+            CallCategory.Unknown -> "Unknown"
+        }
 }

@@ -137,6 +137,10 @@ fun NumberDetailScreen(
                 // etc.) once the live spam check completes. Only shown for
                 // spam matches; allow-through results don't need a label.
                 liveResult?.takeIf { it.isSpam }?.let { r ->
+                    val categoryPolicy =
+                        remember(r.matchSource) {
+                            com.sysadmindoc.callshield.data.CategoryCallPolicy.parseMatchSource(r.matchSource)
+                        }
                     val category =
                         remember(r.matchSource, r.type, r.description, r.confidence) {
                             com.sysadmindoc.callshield.data.CallCategoryResolver
@@ -144,7 +148,13 @@ fun NumberDetailScreen(
                         }
                     Spacer(Modifier.height(6.dp))
                     StatusPill(
-                        text = "${category.emoji} ${stringResource(category.stringResId)}",
+                        text =
+                            if (categoryPolicy == null) {
+                                "${category.emoji} ${stringResource(category.stringResId)}"
+                            } else {
+                                "${category.emoji} ${stringResource(category.stringResId)} · " +
+                                    stringResource(categoryPolicy.action.labelResId)
+                            },
                         color = CatRed,
                         horizontalPadding = 10.dp,
                         verticalPadding = 6.dp,
@@ -178,10 +188,29 @@ fun NumberDetailScreen(
                     Spacer(Modifier.height(8.dp))
                     SpamScoreGauge(score = if (r.isSpam) r.confidence else 0, isSpam = r.isSpam)
                     if (r.isSpam) {
+                        val categoryPolicy =
+                            remember(r.matchSource) {
+                                com.sysadmindoc.callshield.data.CategoryCallPolicy.parseMatchSource(r.matchSource)
+                            }
+                        val sourceLabel =
+                            if (categoryPolicy == null) {
+                                r.matchSource.replace("_", " ").replaceFirstChar { it.uppercase() }
+                            } else {
+                                stringResource(
+                                    R.string.detail_category_action_source,
+                                    stringResource(categoryPolicy.category.stringResId),
+                                    stringResource(categoryPolicy.action.labelResId),
+                                )
+                            }
                         Spacer(Modifier.height(8.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Icon(detectionIcon(r.matchSource), null, tint = CatPeach, modifier = Modifier.size(16.dp))
-                            Text(r.matchSource.replace("_", " ").replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.bodySmall, color = CatPeach)
+                            Icon(
+                                detectionIcon(categoryPolicy?.originalMatchSource ?: r.matchSource),
+                                null,
+                                tint = CatPeach,
+                                modifier = Modifier.size(16.dp),
+                            )
+                            Text(sourceLabel, style = MaterialTheme.typography.bodySmall, color = CatPeach)
                         }
                     }
                 }

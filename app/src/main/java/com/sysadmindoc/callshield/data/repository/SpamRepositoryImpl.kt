@@ -2,6 +2,7 @@ package com.sysadmindoc.callshield.data.repository
 
 import android.content.Context
 import androidx.datastore.preferences.core.Preferences
+import com.sysadmindoc.callshield.data.CategoryCallPolicy
 import com.sysadmindoc.callshield.data.checker.CheckContext
 import com.sysadmindoc.callshield.data.checker.CheckerDependencies
 import com.sysadmindoc.callshield.data.checker.CheckerPipeline
@@ -123,7 +124,8 @@ class SpamRepositoryImpl(
             CheckerPipeline.run(callChain, ctx)
                 ?: return SpamCheckResult(false)
 
-        return verdict.toSpamCheckResult()
+        val result = verdict.toSpamCheckResult()
+        return if (smsBody == null) CategoryCallPolicy.apply(result, prefs) else result
     }
 
     suspend fun isSpamSms(

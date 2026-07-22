@@ -5,6 +5,8 @@ import android.telecom.Call
 import android.telecom.CallScreeningService
 import android.telecom.TelecomManager
 import android.util.Log
+import com.sysadmindoc.callshield.data.CategoryCallAction
+import com.sysadmindoc.callshield.data.CategoryCallPolicy
 import com.sysadmindoc.callshield.data.SpamHeuristics
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup
@@ -105,13 +107,20 @@ class CallShieldScreeningService : CallScreeningService() {
                         callerIdentity = CallerIdentity(verificationStatus, callerName),
                     )
                 if (result.isSpam) {
-                    respondBlock(
-                        callDetails = callDetails,
-                        number = number,
-                        reason = result.matchSource,
-                        confidence = result.confidence,
-                        prefs = prefs,
-                    )
+                    val categoryAction =
+                        CategoryCallPolicy.parseMatchSource(result.matchSource)?.action
+                            ?: CategoryCallAction.INHERIT
+                    if (categoryAction == CategoryCallAction.ALLOW) {
+                        respondAllow(callDetails)
+                    } else {
+                        respondBlock(
+                            callDetails = callDetails,
+                            number = number,
+                            reason = result.matchSource,
+                            confidence = result.confidence,
+                            prefs = prefs,
+                        )
+                    }
                 } else {
                     val repeatedUrgentAllow = result.matchSource == "repeated_urgent"
                     val suppressFeedback = shouldSuppressAfterCallFeedback(result.matchSource)
@@ -196,7 +205,10 @@ class CallShieldScreeningService : CallScreeningService() {
             // queue write failed, the async fallback below makes a best effort.
         }
 
-        val response = buildBlockResponse(prefs, confidence)
+        val categoryAction =
+            CategoryCallPolicy.parseMatchSource(reason)?.action
+                ?: CategoryCallAction.INHERIT
+        val response = buildBlockResponse(prefs, confidence, categoryAction)
         respondToCall(callDetails, response)
 
         applicationScope.launch {
@@ -225,17 +237,21 @@ class CallShieldScreeningService : CallScreeningService() {
     /**
      * Decision table for how a block is delivered to the telecom stack.
      *
-     * Three shapes, priority descending:
-     *   1. `KEY_SILENT_VOICEMAIL` on → user asked for every block to be
+     * Delivery priority, descending:
+     *   1. A per-category BLOCK or SILENCE action overrides global delivery.
+     *      ALLOW is handled before this response is built. Manual/emergency
+     *      whitelists and explicit personal blocks are resolved before the
+     *      category policy, so category choices cannot weaken those rules.
+     *   2. `KEY_SILENT_VOICEMAIL` on → user asked for every inherited block to be
      *      silenced (no ring, lands in voicemail). Wins outright — the
      *      user preference is unambiguous.
-     *   2. `KEY_AUTOMUTE_LOW_CONFIDENCE` on AND confidence < 60 → the
+     *   3. `KEY_AUTOMUTE_LOW_CONFIDENCE` on AND confidence < 60 → the
      *      detection layer isn't fully certain (heuristic at the
      *      threshold, ML below 60%, campaign-burst hit), so silence
      *      instead of hard-reject. Lets the user inspect the log entry
      *      later without the interruption. Numbers v1.7.0-onward lifted
      *      from adamff-dev/spam-call-blocker-app's "auto-mute" mode.
-     *   3. Default → hard reject with setDisallowCall + setRejectCall.
+     *   4. Default → hard reject with setDisallowCall + setRejectCall.
      *      Both flags set for maximum compatibility across OEMs — some
      *      carriers ignore one but not the other.
      *
@@ -245,10 +261,11 @@ class CallShieldScreeningService : CallScreeningService() {
     private fun buildBlockResponse(
         prefs: androidx.datastore.preferences.core.Preferences,
         confidence: Int,
+        categoryAction: CategoryCallAction,
     ): CallResponse {
         val silentVoicemail = prefs[SpamRepository.KEY_SILENT_VOICEMAIL] ?: false
         val autoMuteLowConf = prefs[SpamRepository.KEY_AUTOMUTE_LOW_CONFIDENCE] ?: false
-        return if (shouldSilence(silentVoicemail, autoMuteLowConf, confidence)) {
+        return if (shouldSilence(silentVoicemail, autoMuteLowConf, confidence, categoryAction)) {
             CallResponse
                 .Builder()
                 .setSilenceCall(true)
@@ -280,6 +297,8 @@ class CallShieldScreeningService : CallScreeningService() {
          * drop (true) or as a hard reject (false)?
          *
          * - `silentVoicemailEnabled` wins unconditionally when on.
+         * - A category SILENCE or BLOCK action overrides the global delivery
+         *   mode. Category ALLOW is handled before a block response is built.
          * - Otherwise, `autoMuteLowConfidenceEnabled` silences only blocks
          *   with `confidence < AUTO_MUTE_CONFIDENCE_THRESHOLD`.
          * - Default is hard reject.
@@ -292,9 +311,16 @@ class CallShieldScreeningService : CallScreeningService() {
             silentVoicemailEnabled: Boolean,
             autoMuteLowConfidenceEnabled: Boolean,
             confidence: Int,
+            categoryAction: CategoryCallAction = CategoryCallAction.INHERIT,
         ): Boolean =
-            silentVoicemailEnabled ||
-                (autoMuteLowConfidenceEnabled && confidence < AUTO_MUTE_CONFIDENCE_THRESHOLD)
+            when (categoryAction) {
+                CategoryCallAction.SILENCE -> true
+                CategoryCallAction.BLOCK -> false
+                CategoryCallAction.INHERIT,
+                CategoryCallAction.ALLOW,
+                -> silentVoicemailEnabled ||
+                    (autoMuteLowConfidenceEnabled && confidence < AUTO_MUTE_CONFIDENCE_THRESHOLD)
+            }
 
         fun shouldSuppressAfterCallFeedback(matchSource: String): Boolean = matchSource == "emergency_callback"
     }

@@ -24,6 +24,7 @@ internal class IsolatedRepositoryFixture(
             .inMemoryDatabaseBuilder(context, AppDatabase::class.java)
             .allowMainThreadQueries()
             .build()
+    val dao = database.spamDao()
 
     val repository =
         SpamRepository(

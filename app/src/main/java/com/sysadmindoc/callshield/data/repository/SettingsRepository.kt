@@ -8,6 +8,9 @@ import com.squareup.moshi.Moshi
 import com.squareup.moshi.Types
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import com.sysadmindoc.callshield.data.CallbackDetector
+import com.sysadmindoc.callshield.data.CallCategory
+import com.sysadmindoc.callshield.data.CategoryCallAction
+import com.sysadmindoc.callshield.data.CategoryCallPolicy
 import com.sysadmindoc.callshield.data.NotificationScreeningSources
 import com.sysadmindoc.callshield.data.RegionRules
 import com.sysadmindoc.callshield.data.SpamRepository
@@ -70,6 +73,8 @@ class SettingsRepository(
         dataStore.data.map { RegionRules.normalizeNamePatterns(it[SpamRepository.KEY_CNAP_TRUST_PATTERNS].orEmpty()) }
     val cnapBlockPatterns: Flow<Set<String>> =
         dataStore.data.map { RegionRules.normalizeNamePatterns(it[SpamRepository.KEY_CNAP_BLOCK_PATTERNS].orEmpty()) }
+    val categoryCallActions: Flow<Map<CallCategory, CategoryCallAction>> =
+        dataStore.data.map { CategoryCallPolicy.decode(it[SpamRepository.KEY_CATEGORY_CALL_ACTIONS].orEmpty()) }
     val dbPrefixExpansionEnabled: Flow<Boolean> =
         dataStore.data.map { it[SpamRepository.KEY_DB_PREFIX_EXPANSION] ?: false }
     val aggressiveModeEnabled: Flow<Boolean> = dataStore.data.map { it[SpamRepository.KEY_AGGRESSIVE_MODE] ?: false }
@@ -269,6 +274,23 @@ class SettingsRepository(
                 prefs[SpamRepository.KEY_CNAP_BLOCK_PATTERNS] = normalized
             }
         }
+
+    suspend fun setCategoryCallAction(
+        category: CallCategory,
+        action: CategoryCallAction,
+    ) = dataStore.edit { preferences ->
+        val updated =
+            CategoryCallPolicy.update(
+                serialized = preferences[SpamRepository.KEY_CATEGORY_CALL_ACTIONS].orEmpty(),
+                category = category,
+                action = action,
+            )
+        if (updated.isEmpty()) {
+            preferences.remove(SpamRepository.KEY_CATEGORY_CALL_ACTIONS)
+        } else {
+            preferences[SpamRepository.KEY_CATEGORY_CALL_ACTIONS] = updated
+        }
+    }
 
     suspend fun setDbPrefixExpansion(enabled: Boolean) = dataStore.edit { it[SpamRepository.KEY_DB_PREFIX_EXPANSION] = enabled }
 

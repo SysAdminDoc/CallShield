@@ -37,7 +37,9 @@ import java.io.File
  * - **v4**: added selective sections, range rules, non-secret settings,
  *   and blocked-call/SMS logs.
  * - **v5**: preserves temporary block/allow expiry and the selected
- *   notification-screening apps. The reader accepts v1-v5; the writer emits v5.
+ *   notification-screening apps.
+ * - **v6**: preserves per-category call actions. The reader accepts v1-v6;
+ *   the writer emits v6.
  *   Older backups that don't carry schedule fields are restored with
  *   all-zeros — the Kotlin defaults on [WildcardRule] and
  *   [SmsKeywordRule] treat that as "always active", preserving
@@ -46,7 +48,7 @@ import java.io.File
 @Suppress("TooManyFunctions")
 object BackupRestore {
     private const val MIN_IMPORTED_DIGITS = 5
-    private const val CURRENT_BACKUP_VERSION = 5
+    private const val CURRENT_BACKUP_VERSION = 6
     private const val OLDEST_SUPPORTED_VERSION = 1
     internal const val MAX_BACKUP_RESTORE_ROWS = MAX_IMPORT_ROWS
 
@@ -175,6 +177,7 @@ object BackupRestore {
         val allowedRegions: List<String> = emptyList(),
         val cnapTrustPatterns: List<String> = emptyList(),
         val cnapBlockPatterns: List<String> = emptyList(),
+        val categoryCallActions: List<String> = emptyList(),
         val activeProfileName: String? = null,
         val notificationScreeningPackages: List<String>? = null,
     )
@@ -934,6 +937,8 @@ object BackupRestore {
                 RegionRules.normalizeNamePatterns(this[SpamRepository.KEY_CNAP_TRUST_PATTERNS].orEmpty()).sorted(),
             cnapBlockPatterns =
                 RegionRules.normalizeNamePatterns(this[SpamRepository.KEY_CNAP_BLOCK_PATTERNS].orEmpty()).sorted(),
+            categoryCallActions =
+                CategoryCallPolicy.sanitize(this[SpamRepository.KEY_CATEGORY_CALL_ACTIONS].orEmpty()).sorted(),
             activeProfileName = this[SpamRepository.KEY_ACTIVE_PROFILE],
             notificationScreeningPackages =
                 NotificationScreeningSources
@@ -959,6 +964,7 @@ object BackupRestore {
             allowedRegions = RegionRules.normalizeRegionCodes(allowedRegions).sorted(),
             cnapTrustPatterns = RegionRules.normalizeNamePatterns(cnapTrustPatterns).sorted(),
             cnapBlockPatterns = RegionRules.normalizeNamePatterns(cnapBlockPatterns).sorted(),
+            categoryCallActions = CategoryCallPolicy.sanitize(categoryCallActions).sorted(),
             activeProfileName = activeProfileName?.trim()?.ifBlank { null },
             notificationScreeningPackages =
                 notificationScreeningPackages
@@ -1030,6 +1036,11 @@ object BackupRestore {
             preferences.remove(SpamRepository.KEY_CNAP_BLOCK_PATTERNS)
         } else {
             preferences[SpamRepository.KEY_CNAP_BLOCK_PATTERNS] = cnapBlockPatterns.toSet()
+        }
+        if (categoryCallActions.isEmpty()) {
+            preferences.remove(SpamRepository.KEY_CATEGORY_CALL_ACTIONS)
+        } else {
+            preferences[SpamRepository.KEY_CATEGORY_CALL_ACTIONS] = categoryCallActions.toSet()
         }
         if (activeProfileName == null) {
             preferences.remove(SpamRepository.KEY_ACTIVE_PROFILE)

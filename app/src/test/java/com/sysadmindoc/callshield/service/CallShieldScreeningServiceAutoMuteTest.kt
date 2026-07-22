@@ -1,5 +1,6 @@
 package com.sysadmindoc.callshield.service
 
+import com.sysadmindoc.callshield.data.CategoryCallAction
 import com.sysadmindoc.callshield.service.CallShieldScreeningService.Companion.AUTO_MUTE_CONFIDENCE_THRESHOLD
 import com.sysadmindoc.callshield.service.CallShieldScreeningService.Companion.shouldSilence
 import com.sysadmindoc.callshield.service.CallShieldScreeningService.Companion.shouldSuppressAfterCallFeedback
@@ -82,6 +83,25 @@ class CallShieldScreeningServiceAutoMuteTest {
                 ),
             )
         }
+    }
+
+    @Test fun `category delivery overrides global voicemail behavior`() {
+        assertTrue(
+            shouldSilence(
+                silentVoicemailEnabled = false,
+                autoMuteLowConfidenceEnabled = false,
+                confidence = 100,
+                categoryAction = CategoryCallAction.SILENCE,
+            ),
+        )
+        assertFalse(
+            shouldSilence(
+                silentVoicemailEnabled = true,
+                autoMuteLowConfidenceEnabled = true,
+                confidence = 0,
+                categoryAction = CategoryCallAction.BLOCK,
+            ),
+        )
     }
 
     // ── Threshold sanity ─────────────────────────────────────────────────
