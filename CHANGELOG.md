@@ -36,6 +36,10 @@ All notable changes to CallShield will be documented in this file.
 
 ### Fixed
 
+- Release preflight now scans tracked build, script, and configuration sources
+  for literal signing passwords and private-key material. Environment/property
+  lookups remain valid, and synthetic guard tests prove failures never echo the
+  matched secret value.
 - Enabled installations now detect a lost Android call-screening role after
   startup, reboot, app update, and in a daily health check. One recovery alert
   is shown per loss episode; restoring the role or pausing call protection
