@@ -37,7 +37,8 @@ import kotlinx.coroutines.launch
  * WHAT IT DOES:
  *  - If a numeric SMS/RCS sender matches blocking rules → cancel the notification
  *  - If private-messenger/email content matches → keep the original and warn
- *  - If SMS blocking is disabled → passes all through
+ *  - If SMS blocking is disabled → skips spam classification/removal while
+ *    retaining malicious-URL warnings
  *  - Fires URLhaus background check for URLs in RCS messages
  *  - Logs blocked RCS to the CallShield blocked log (visible in Blocked tab)
  *
@@ -146,8 +147,11 @@ class RcsNotificationListener : NotificationListenerService() {
         val prefs = repo.readPrefsSnapshot()
         val stripUrlhausQuery = prefs[SpamRepository.KEY_URLHAUS_STRIP_QUERY] ?: true
 
-        // Respect the "Block SMS" and "RCS Filter" toggles
-        if (!shouldProcessRcs(prefs)) return
+        // Notification screening owns content access; the Block SMS toggle
+        // controls only spam classification/removal. URL warnings intentionally
+        // remain active, matching the direct-SMS receiver's safety contract.
+        if (!isNotificationScreeningEnabled(prefs)) return
+        val spamBlockingEnabled = isSpamBlockingEnabled(prefs)
 
         val extras = sbn.notification.extras ?: return
 
@@ -164,10 +168,10 @@ class RcsNotificationListener : NotificationListenerService() {
         val effectiveBody = body.takeIf { it.isNotBlank() && !isEncryptedPlaceholder(it) }
         val result =
             senderDigits
-                .takeIf { it.length >= 7 }
+                .takeIf { spamBlockingEnabled && it.length >= 7 }
                 ?.let { number -> checkSpamSms(number, effectiveBody.orEmpty(), prefsSnapshot = prefs) }
         val contentVerdict =
-            effectiveBody?.takeIf { result == null }?.let { bodyText ->
+            effectiveBody?.takeIf { spamBlockingEnabled && result == null }?.let { bodyText ->
                 contentVerdict(
                     body = bodyText,
                     enabled = prefs[SpamRepository.KEY_SMS_CONTENT] ?: true,
@@ -203,10 +207,6 @@ class RcsNotificationListener : NotificationListenerService() {
             launchUrlSafetyWarning(effectiveBody, sender, source, stripUrlhausQuery)
         }
     }
-
-    private fun shouldProcessRcs(prefs: Preferences): Boolean =
-        (prefs[SpamRepository.KEY_BLOCK_SMS] ?: true) &&
-            (prefs[SpamRepository.KEY_RCS_FILTER] ?: true)
 
     private fun launchUrlSafetyWarning(
         body: String,
@@ -268,6 +268,12 @@ class RcsNotificationListener : NotificationListenerService() {
     }
 
     companion object {
+        internal fun isNotificationScreeningEnabled(prefs: Preferences): Boolean =
+            prefs[SpamRepository.KEY_RCS_FILTER] ?: true
+
+        internal fun isSpamBlockingEnabled(prefs: Preferences): Boolean =
+            prefs[SpamRepository.KEY_BLOCK_SMS] ?: true
+
         internal data class ContentVerdict(
             val isSpam: Boolean,
             val confidence: Int,

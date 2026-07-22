@@ -1,5 +1,7 @@
 package com.sysadmindoc.callshield.service
 
+import androidx.datastore.preferences.core.mutablePreferencesOf
+import com.sysadmindoc.callshield.data.SpamRepository
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -13,6 +15,25 @@ import org.junit.Test
  * locales without swallowing real short spam.
  */
 class RcsEncryptedPlaceholderTest {
+    @Test
+    fun `URL warning access stays enabled when SMS blocking is disabled`() {
+        val prefs =
+            mutablePreferencesOf(
+                SpamRepository.KEY_RCS_FILTER to true,
+                SpamRepository.KEY_BLOCK_SMS to false,
+            )
+
+        assertTrue(RcsNotificationListener.isNotificationScreeningEnabled(prefs))
+        assertFalse(RcsNotificationListener.isSpamBlockingEnabled(prefs))
+    }
+
+    @Test
+    fun `notification screening toggle disables content access`() {
+        val prefs = mutablePreferencesOf(SpamRepository.KEY_RCS_FILTER to false)
+
+        assertFalse(RcsNotificationListener.isNotificationScreeningEnabled(prefs))
+    }
+
     @Test
     fun `notification content verdict flags strong spam locally`() {
         val verdict =

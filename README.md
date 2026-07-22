@@ -123,7 +123,7 @@ CallShield blocks spam calls and texts using a **15+ layer on-device detection e
 - **ASCII-only digit utility** - security-sensitive phone-number extraction
   and UI entry/review paths now share named ASCII-only helpers instead of
   Unicode digit matching.
-- **External blocklist subscription guardrails** - custom HTTP(S) CSV/TXT/JSON
+- **External blocklist subscription guardrails** - custom HTTPS CSV/TXT/JSON
   feeds validate byte and row limits, preview add/remove/source impact before
   commit, and can be disabled or removed with feed-owned rows rolled back.
 

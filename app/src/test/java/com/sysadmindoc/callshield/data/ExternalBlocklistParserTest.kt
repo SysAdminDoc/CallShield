@@ -92,6 +92,16 @@ class ExternalBlocklistParserTest {
             (badScheme as ExternalBlocklistValidationException).reason,
         )
 
+        val cleartext =
+            runCatching { ExternalBlocklistParser.validateHttpUrl("http://lists.example.test/block.txt") }
+                .exceptionOrNull()
+        assertTrue(cleartext is ExternalBlocklistValidationException)
+        assertEquals(
+            ExternalBlocklistFailureReason.UNSUPPORTED_URL,
+            (cleartext as ExternalBlocklistValidationException).reason,
+        )
+        assertTrue(cleartext.message.orEmpty().contains("HTTPS"))
+
         val oversized =
             runCatching {
                 ExternalBlocklistParser.parse(
