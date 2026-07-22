@@ -19,13 +19,13 @@ class ExternalBlocklistParserTest {
                     not a phone number
                     508-555-0102
                     """.trimIndent(),
-                normalizeNumber = ::digitsOnly,
+                normalizeNumber = ::canonicalizeUs,
             )
 
         assertEquals("https://lists.example.test/block.txt", parsed.url)
         assertEquals("txt", parsed.format)
         assertEquals("subscription:c09effef4063e625", parsed.source)
-        assertEquals(listOf("2125550101", "5085550102"), parsed.numbers.map { it.number })
+        assertEquals(listOf("+12125550101", "+15085550102"), parsed.numbers.map { it.number })
         assertEquals(2, parsed.skippedRows)
     }
 
@@ -41,7 +41,7 @@ class ExternalBlocklistParserTest {
                     "212,555,0101",robocall,"Known campaign"
                     508-555-0102,scam,
                     """.trimIndent(),
-                normalizeNumber = ::digitsOnly,
+                normalizeNumber = ::canonicalizeUs,
             )
 
         assertEquals("csv", parsed.format)
@@ -66,11 +66,11 @@ class ExternalBlocklistParserTest {
                       ]
                     }
                     """.trimIndent(),
-                normalizeNumber = ::digitsOnly,
+                normalizeNumber = ::canonicalizeUs,
             )
 
         assertEquals("json", parsed.format)
-        assertEquals(listOf("12125550101", "5085550102"), parsed.numbers.map { it.number })
+        assertEquals(listOf("+12125550101", "+15085550102"), parsed.numbers.map { it.number })
         assertEquals("fraud", parsed.numbers.first().type)
         assertEquals("IRS spoof", parsed.numbers.first().description)
     }
@@ -83,7 +83,7 @@ class ExternalBlocklistParserTest {
                     rawUrl = "file:///sdcard/block.txt",
                     rawLabel = "",
                     body = "2125550101",
-                    normalizeNumber = ::digitsOnly,
+                    normalizeNumber = ::canonicalizeUs,
                 )
             }.exceptionOrNull()
         assertTrue(badScheme is ExternalBlocklistValidationException)
@@ -108,7 +108,7 @@ class ExternalBlocklistParserTest {
                     rawUrl = "https://lists.example.test/block.txt",
                     rawLabel = "",
                     body = "1".repeat(ExternalBlocklistParser.MAX_SUBSCRIPTION_BYTES.toInt() + 1),
-                    normalizeNumber = ::digitsOnly,
+                    normalizeNumber = ::canonicalizeUs,
                 )
             }.exceptionOrNull()
         assertTrue(oversized is ExternalBlocklistValidationException)
@@ -133,7 +133,7 @@ class ExternalBlocklistParserTest {
                     rawUrl = "https://lists.example.test/block.txt",
                     rawLabel = "",
                     body = body,
-                    normalizeNumber = ::digitsOnly,
+                    normalizeNumber = ::canonicalizeUs,
                 )
             }.exceptionOrNull()
 
@@ -144,5 +144,12 @@ class ExternalBlocklistParserTest {
         )
     }
 
-    private fun digitsOnly(raw: String): String = raw.filter { it in '0'..'9' }
+    private fun canonicalizeUs(raw: String): String {
+        val digits = raw.filter { it in '0'..'9' }
+        return when {
+            digits.length == 10 -> "+1$digits"
+            digits.length == 11 && digits.startsWith("1") -> "+$digits"
+            else -> digits
+        }
+    }
 }

@@ -138,10 +138,7 @@ internal object ExternalBlocklistParser {
         return digest.take(8).joinToString(separator = "") { byte -> "%02x".format(byte) }
     }
 
-    fun canonicalNumberKey(number: String): String {
-        val digits = number.filter { it in '0'..'9' }
-        return if (digits.length == 11 && digits.startsWith("1")) digits.drop(1) else digits
-    }
+    fun canonicalNumberKey(number: String): String = number.trim()
 
     private fun requireBodyWithinCap(body: String) {
         val bytes = body.toByteArray(Charsets.UTF_8).size.toLong()

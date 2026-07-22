@@ -488,14 +488,16 @@ fun LookupScreen(viewModel: MainViewModel) {
                                             withContext(Dispatchers.IO) {
                                                 if (lookupResult.isSpam) {
                                                     CommunityContributor.contribute(
-                                                        normalizedNumber,
+                                                        repo.normalizeNumber(normalizedNumber),
                                                         lookupResult.type.ifEmpty { "spam" },
                                                     )
                                                     reportedMessage
                                                 } else {
                                                     repo.addToWhitelist(normalizedNumber, "Marked safe from lookup")
                                                     val reportResult =
-                                                        CommunityContributor.reportNotSpam(normalizedNumber)
+                                                        CommunityContributor.reportNotSpam(
+                                                            repo.normalizeNumber(normalizedNumber),
+                                                        )
                                                     if (reportResult.success) {
                                                         markedSafeReportedMessage
                                                     } else {

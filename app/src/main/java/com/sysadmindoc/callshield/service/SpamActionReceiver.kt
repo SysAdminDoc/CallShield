@@ -29,7 +29,7 @@ class SpamActionReceiver : BroadcastReceiver() {
                     Toast.makeText(appContext, appContext.getString(R.string.feedback_blocked), Toast.LENGTH_SHORT).show()
                     suspend {
                         repo.blockNumber(number, "spam", "Blocked from after-call feedback")
-                        CommunityContributor.contribute(number, "spam")
+                        CommunityContributor.contribute(repo.normalizeNumber(number), "spam")
                     }
                 }
 
@@ -39,7 +39,7 @@ class SpamActionReceiver : BroadcastReceiver() {
                     Toast.makeText(appContext, appContext.getString(R.string.feedback_whitelisted), Toast.LENGTH_SHORT).show()
                     suspend {
                         repo.addToWhitelist(number, "Marked safe from after-call feedback")
-                        CommunityContributor.reportNotSpam(number)
+                        CommunityContributor.reportNotSpam(repo.normalizeNumber(number))
                     }
                 }
 
@@ -53,7 +53,7 @@ class SpamActionReceiver : BroadcastReceiver() {
                     }
                     suspend {
                         repo.blockNumber(number, reportType, "Blocked from notification")
-                        CommunityContributor.contribute(number, reportType, smsIndicators)
+                        CommunityContributor.contribute(repo.normalizeNumber(number), reportType, smsIndicators)
                     }
                 }
 
@@ -66,7 +66,7 @@ class SpamActionReceiver : BroadcastReceiver() {
                         notificationManager.cancel(notifId)
                     }
                     suspend {
-                        CommunityContributor.contribute(number, reportType, smsIndicators)
+                        CommunityContributor.contribute(repo.normalizeNumber(number), reportType, smsIndicators)
                     }
                 }
 
@@ -78,7 +78,7 @@ class SpamActionReceiver : BroadcastReceiver() {
                     }
                     suspend {
                         repo.addToWhitelist(number, "Reported as not spam from notification")
-                        CommunityContributor.reportNotSpam(number)
+                        CommunityContributor.reportNotSpam(repo.normalizeNumber(number))
                     }
                 }
 

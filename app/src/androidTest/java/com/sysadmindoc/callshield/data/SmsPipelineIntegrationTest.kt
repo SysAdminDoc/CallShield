@@ -86,6 +86,20 @@ class SmsPipelineIntegrationTest {
             assertEquals("sms_content", result.matchSource)
         }
 
+    @Test
+    fun smsContentAnalysisPreservesOpaqueSenderIdentity() =
+        runBlocking {
+            val result =
+                repo.isSpamSms(
+                    "Bank-Alert",
+                    "Congratulations, you have won a free gift. Claim your prize now at https://bit.ly/prize",
+                )
+
+            assertTrue(result.isSpam)
+            assertEquals("sms_content", result.matchSource)
+            assertEquals("BANK-ALERT", repo.normalizeSenderIdentity("Bank-Alert"))
+        }
+
     private suspend fun resetHotPathSettings() {
         repo.setContactWhitelist(false)
         repo.setTimeBlock(false)

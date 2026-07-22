@@ -11,8 +11,8 @@ class CommunityContributorNormalizationTest {
         assertEquals("+12125551234", CommunityContributor.normalizeForReport("+1 (212) 555-1234"))
     }
 
-    @Test fun `report normalization adds US country code for ten digit numbers`() {
-        assertEquals("+12125551234", CommunityContributor.normalizeForReport("212-555-1234"))
+    @Test fun `report normalization rejects ambiguous national numbers`() {
+        assertNull(CommunityContributor.normalizeForReport("212-555-1234"))
     }
 
     @Test fun `report normalization strips direction and zero-width marks`() {

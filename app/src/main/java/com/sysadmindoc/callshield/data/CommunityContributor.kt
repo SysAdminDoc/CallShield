@@ -183,10 +183,6 @@ object CommunityContributor {
     internal fun normalizeForReport(number: String): String? {
         val normalized = normalizePhoneNumber(number)
         val digits = normalized.filter { it in '0'..'9' }
-        return when {
-            digits.length == 10 -> "+1$digits"
-            digits.length in 7..15 -> "+$digits"
-            else -> null
-        }
+        return normalized.takeIf { it.startsWith("+") && digits.length in 7..15 }
     }
 }

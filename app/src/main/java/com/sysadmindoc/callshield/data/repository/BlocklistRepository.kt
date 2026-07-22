@@ -25,6 +25,7 @@ class BlocklistRepository(
     private val dao: SpamDao,
     private val settingsRepository: SettingsRepository,
     private val normalizeNumber: (String) -> String,
+    private val normalizeLogIdentity: (String) -> String,
     private val invalidateWildcardCache: () -> Unit,
     private val invalidateKeywordCache: () -> Unit,
     private val invalidateHashWildcardCache: () -> Unit,
@@ -183,7 +184,7 @@ class BlocklistRepository(
         timestamp: Long = System.currentTimeMillis(),
         logKey: String? = null,
     ) {
-        val normalizedNumber = normalizeNumber(number)
+        val normalizedNumber = normalizeLogIdentity(number)
         val inserted =
             dao.insertBlockedCallIgnoringDuplicate(
                 BlockedCall(
@@ -213,7 +214,7 @@ class BlocklistRepository(
         dao.insertPendingBlockedCallLog(
             PendingBlockedCallLog(
                 idempotencyKey = idempotencyKey,
-                number = normalizeNumber(number),
+                number = normalizeLogIdentity(number),
                 timestamp = timestamp,
                 isCall = isCall,
                 smsBody = smsBody,
@@ -259,7 +260,7 @@ class BlocklistRepository(
         dao.insertBlockedCall(
             BlockedCall(
                 id = call.id,
-                number = normalizeNumber(call.number),
+                number = normalizeLogIdentity(call.number),
                 timestamp = call.timestamp,
                 type = call.type,
                 wasBlocked = call.wasBlocked,

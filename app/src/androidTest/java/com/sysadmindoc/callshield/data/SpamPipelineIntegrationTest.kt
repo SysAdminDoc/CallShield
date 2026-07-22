@@ -130,6 +130,28 @@ class SpamPipelineIntegrationTest {
         }
 
     @Test
+    fun nationalAndE164FormsShareOneInjectedRegionalIdentity() =
+        runBlocking {
+            val canonicalizer =
+                PhoneIdentityCanonicalizer("GB") { number, _ ->
+                    if (number == "02079460018") "+442079460018" else null
+                }
+            val regionalRepo =
+                SpamRepository(
+                    context = context,
+                    database = db,
+                    phoneIdentityCanonicalizer = canonicalizer,
+                )
+            regionalRepo.blockNumber("020 7946 0018", type = "test")
+
+            val result = regionalRepo.isSpam("+44 20 7946 0018")
+
+            assertTrue(result.isSpam)
+            assertEquals("user_blocklist", result.matchSource)
+            assertEquals(1, dao.getSpamCount())
+        }
+
+    @Test
     fun prefixRulesBeatWildcardAndHashWildcardRules() =
         runBlocking {
             val number = "+15085550123"

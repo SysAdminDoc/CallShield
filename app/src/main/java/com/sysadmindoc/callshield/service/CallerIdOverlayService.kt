@@ -270,11 +270,12 @@ class CallerIdOverlayService : Service() {
                                 setPadding(20, 8, 20, 8)
                                 setOnClickListener {
                                     CallShieldApp.appScope.launch {
-                                        com.sysadmindoc.callshield.data.SpamRepository
-                                            .getInstance(context)
-                                            .blockNumber(number, "spam", "Blocked from overlay")
+                                        val repository =
+                                            com.sysadmindoc.callshield.data.SpamRepository
+                                                .getInstance(context)
+                                        repository.blockNumber(number, "spam", "Blocked from overlay")
                                         com.sysadmindoc.callshield.data.CommunityContributor
-                                            .contribute(number, "spam")
+                                            .contribute(repository.normalizeNumber(number), "spam")
                                     }
                                     dismiss(sessionId)
                                 }

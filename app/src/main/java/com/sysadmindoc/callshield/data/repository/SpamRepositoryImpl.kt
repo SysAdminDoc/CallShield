@@ -16,7 +16,6 @@ import com.sysadmindoc.callshield.data.model.SpamNumber
 import com.sysadmindoc.callshield.data.model.SpamPrefix
 import com.sysadmindoc.callshield.data.model.WhitelistEntry
 import com.sysadmindoc.callshield.data.model.WildcardRule
-import com.sysadmindoc.callshield.data.normalizePhoneNumber
 import com.sysadmindoc.callshield.data.toSpamCheckResult
 import com.sysadmindoc.callshield.domain.model.SpamCheckResult
 import com.sysadmindoc.callshield.domain.model.CallerIdentity
@@ -27,6 +26,8 @@ class SpamRepositoryImpl(
     private val dao: SpamDao,
     private val settingsRepository: SettingsRepository,
     private val checkerDependencies: CheckerDependencies = CheckerDependencies(),
+    private val normalizePhone: (String) -> String,
+    private val normalizeSenderIdentity: (String) -> String,
 ) {
     // isSpam() is the critical real-time path. Loading all prefixes,
     // wildcard rules, and keyword rules from Room on every call adds
@@ -103,7 +104,7 @@ class SpamRepositoryImpl(
         prefsSnapshot: Preferences? = null,
         callerIdentity: CallerIdentity? = null,
     ): SpamCheckResult {
-        val normalized = normalizeNumber(number)
+        val normalized = normalizePhone(number)
         if (normalized.isBlank()) return SpamCheckResult(false)
 
         val prefs = prefsSnapshot ?: settingsRepository.readPrefsSnapshot()
@@ -132,10 +133,14 @@ class SpamRepositoryImpl(
         prefsSnapshot: Preferences? = null,
     ): SpamCheckResult {
         val prefs = prefsSnapshot ?: settingsRepository.readPrefsSnapshot()
-        val numberResult = isSpam(number, smsBody = body, realtimeCall = realtimeCall, prefsSnapshot = prefs)
-        if (numberResult.isSpam) return numberResult
+        val canonicalPhone = normalizePhone(number)
+        if (canonicalPhone.isNotBlank()) {
+            val numberResult =
+                isSpam(canonicalPhone, smsBody = body, realtimeCall = realtimeCall, prefsSnapshot = prefs)
+            if (numberResult.isSpam) return numberResult
+        }
 
-        val normalized = normalizeNumber(number)
+        val normalized = normalizeSenderIdentity(number)
         if (normalized.isBlank()) return SpamCheckResult(false)
         val ctx =
             CheckContext(
@@ -152,7 +157,7 @@ class SpamRepositoryImpl(
         return verdict.toSpamCheckResult()
     }
 
-    fun normalizeNumber(number: String): String = normalizePhoneNumber(number)
+    fun normalizeNumber(number: String): String = normalizePhone(number)
 
     suspend fun traceRules(number: String): PipelineTrace {
         val normalized = normalizeNumber(number)
