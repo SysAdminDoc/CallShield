@@ -26,6 +26,7 @@ import com.sysadmindoc.callshield.domain.usecase.ExportLogsUseCase
 import com.sysadmindoc.callshield.domain.usecase.ManageBlocklistUseCase
 import com.sysadmindoc.callshield.domain.usecase.SyncDatabaseUseCase
 import com.sysadmindoc.callshield.service.CallLogScanner
+import com.sysadmindoc.callshield.service.NotificationHelper
 import com.sysadmindoc.callshield.service.SmsInboxScanner
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -287,7 +288,7 @@ class MainViewModel
             viewModelScope.launch {
                 _spamCount.value = repo.getSpamCount()
                 val onboardingAlreadyDone = repo.onboardingDone.first()
-                if (_spamCount.value == 0 && onboardingAlreadyDone) sync()
+                if (_spamCount.value == 0 && onboardingAlreadyDone) sync(showProgress = false)
             }
         }
 
@@ -299,21 +300,28 @@ class MainViewModel
             }
         }
 
-        fun sync() {
+        fun sync() = sync(showProgress = true)
+
+        private fun sync(showProgress: Boolean) {
             viewModelScope.launch {
                 _syncState.value = SyncState.Syncing
-                val result = syncDatabase(force = true)
-                _syncState.value =
-                    if (result.success) {
-                        _spamCount.value = repo.getSpamCount()
-                        if (result.warning) {
-                            SyncState.Warning(result.message)
+                if (showProgress) NotificationHelper.showSyncProgress(appContext)
+                try {
+                    val result = syncDatabase(force = true)
+                    _syncState.value =
+                        if (result.success) {
+                            _spamCount.value = repo.getSpamCount()
+                            if (result.warning) {
+                                SyncState.Warning(result.message)
+                            } else {
+                                SyncState.Success(result.message)
+                            }
                         } else {
-                            SyncState.Success(result.message)
+                            SyncState.Error(result.message)
                         }
-                    } else {
-                        SyncState.Error(result.message)
-                    }
+                } finally {
+                    if (showProgress) NotificationHelper.hideSyncProgress(appContext)
+                }
             }
         }
 

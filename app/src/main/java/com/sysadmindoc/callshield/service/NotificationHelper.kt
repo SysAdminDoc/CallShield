@@ -1,10 +1,14 @@
 package com.sysadmindoc.callshield.service
 
+import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.graphics.drawable.Icon
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.sysadmindoc.callshield.R
@@ -42,6 +46,7 @@ object NotificationHelper {
     const val CHANNEL_ALLOWED = "allowed_call_decisions"
     const val CHANNEL_DIGEST = "daily_digest"
     const val CHANNEL_MESSAGE_SCREENING = "message_screening"
+    const val CHANNEL_SYNC = "database_sync"
     const val ACTION_BLOCK = "com.sysadmindoc.callshield.ACTION_BLOCK"
     const val ACTION_REPORT = "com.sysadmindoc.callshield.ACTION_REPORT"
     const val ACTION_SAFE = "com.sysadmindoc.callshield.ACTION_SAFE"
@@ -57,6 +62,9 @@ object NotificationHelper {
     private const val RATE_LIMIT_MS = 5_000L // Min 5s between block notifications
     private const val SMS_SAFE_ACTION_SALT = 30
     private const val FEEDBACK_ID_SALT = 62
+    private const val AFTER_CALL_OPEN_SALT = 63
+    private const val PROGRESS_TOTAL = 100
+    internal const val SYNC_NOTIFICATION_ID = 3
 
     /**
      * Notification ID for the after-call "Was this spam?" feedback notice.
@@ -81,10 +89,16 @@ object NotificationHelper {
         context: Context,
         id: Int,
         builder: NotificationCompat.Builder,
+    ) = safeNotify(context, id, builder.build())
+
+    private fun safeNotify(
+        context: Context,
+        id: Int,
+        notification: Notification,
     ) {
         if (!CallShieldPermissions.hasNotificationPermission(context)) return
         try {
-            NotificationManagerCompat.from(context).notify(id, builder.build())
+            NotificationManagerCompat.from(context).notify(id, notification)
         } catch (_: SecurityException) {
             // Revoked at runtime between the check and the post — drop silently.
         }
@@ -120,6 +134,15 @@ object NotificationHelper {
         nm.createNotificationChannel(
             NotificationChannel(CHANNEL_DIGEST, context.getString(R.string.notif_channel_digest), NotificationManager.IMPORTANCE_LOW).apply {
                 description = context.getString(R.string.notif_channel_digest_desc)
+            },
+        )
+        nm.createNotificationChannel(
+            NotificationChannel(
+                CHANNEL_SYNC,
+                context.getString(R.string.notif_channel_sync),
+                NotificationManager.IMPORTANCE_LOW,
+            ).apply {
+                description = context.getString(R.string.notif_channel_sync_desc)
             },
         )
         nm.createNotificationChannel(
@@ -407,6 +430,16 @@ object NotificationHelper {
             )
 
         val formatted = PhoneFormatter.formatIsolated(number)
+        val openIntent =
+            PendingIntent.getActivity(
+                context,
+                stableId(number, AFTER_CALL_OPEN_SALT),
+                Intent(context, MainActivity::class.java).apply {
+                    putExtra("open_number", number)
+                    flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
+                },
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
 
         val builder =
             NotificationCompat
@@ -414,6 +447,7 @@ object NotificationHelper {
                 .setSmallIcon(android.R.drawable.ic_menu_call)
                 .setContentTitle(context.getString(R.string.feedback_title))
                 .setContentText(context.getString(R.string.feedback_text, formatted))
+                .setContentIntent(openIntent)
                 .addAction(0, context.getString(R.string.feedback_spam), spamPending)
                 .addAction(0, context.getString(R.string.feedback_not_spam), notSpamPending)
                 .setAutoCancel(true)
@@ -425,6 +459,57 @@ object NotificationHelper {
         // different number whose `hashCode()` differed by ~10 000. The action
         // receiver cancels this same ID when the user taps Spam/Not-Spam.
         safeNotify(context, feedbackNotificationId(number), builder)
+    }
+
+    fun showSyncProgress(context: Context) {
+        val openIntent =
+            PendingIntent.getActivity(
+                context,
+                SYNC_NOTIFICATION_ID,
+                Intent(context, MainActivity::class.java),
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            )
+        val fallback =
+            NotificationCompat
+                .Builder(context, CHANNEL_SYNC)
+                .setSmallIcon(android.R.drawable.stat_sys_download)
+                .setContentTitle(context.getString(R.string.notif_sync_title))
+                .setContentText(context.getString(R.string.notif_sync_text))
+                .setContentIntent(openIntent)
+                .setProgress(0, 0, true)
+                .setOngoing(true)
+                .setOnlyAlertOnce(true)
+                .setSilent(true)
+                .build()
+        val notification =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA) {
+                applyProgressStyle(context, fallback)
+            } else {
+                fallback
+            }
+        safeNotify(context, SYNC_NOTIFICATION_ID, notification)
+    }
+
+    fun hideSyncProgress(context: Context) {
+        val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        nm.cancel(SYNC_NOTIFICATION_ID)
+    }
+
+    @RequiresApi(Build.VERSION_CODES.BAKLAVA)
+    private fun applyProgressStyle(
+        context: Context,
+        fallback: Notification,
+    ): Notification {
+        val segment =
+            Notification.ProgressStyle
+                .Segment(PROGRESS_TOTAL)
+                .setColor(context.getColor(android.R.color.holo_blue_light))
+        val style =
+            Notification.ProgressStyle()
+                .setProgressIndeterminate(true)
+                .setProgressSegments(listOf(segment))
+                .setProgressTrackerIcon(Icon.createWithResource(context, android.R.drawable.stat_sys_download))
+        return Notification.Builder.recoverBuilder(context, fallback).setStyle(style).build()
     }
 
     fun notifyRepeatedUrgentAllowed(

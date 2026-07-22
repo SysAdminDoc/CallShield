@@ -64,6 +64,12 @@ All notable changes to CallShield will be documented in this file.
 
 ### Changed
 
+- **Manual refresh uses Android 16 progress notifications.** User-triggered
+  database sync now shows a native `ProgressStyle` journey on API 36+ and an
+  indeterminate progress notification on older releases, then removes it when
+  the refresh finishes. After-call feedback intentionally retains its custom
+  “Spam / Not spam” actions: API 35 and API 37 both reject `CallStyle` outside
+  a foreground call service, user-initiated job, or full-screen call flow.
 - **The on-device GBT catches more spam without abandoning its precision
   guard.** Training now exports sklearn's initial class-prior log odds and
   calibrates the shipped threshold for maximum held-out recall at a 0.92
