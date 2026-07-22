@@ -6,6 +6,12 @@ All notable changes to CallShield will be documented in this file.
 
 ### Added
 
+- **Opt-in notification screening for RCS, private messengers, and email.**
+  Google and Samsung Messages remain the only defaults; users can separately
+  enable AOSP Messages, SMS Organizer, Signal, WhatsApp, WhatsApp Business,
+  Gmail, Outlook, or Thunderbird. Unselected sources are rejected before
+  notification extras are read, and private-message/email detections produce
+  non-destructive alerts.
 - **Rule-priority conflict warnings.** Exact blocks, wildcard/range blocks,
   whitelist entries, and emergency allows are compared while editing. The
   inline warning names the rule that wins, including representative numbers

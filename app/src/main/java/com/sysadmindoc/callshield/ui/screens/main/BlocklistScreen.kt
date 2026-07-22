@@ -89,6 +89,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sysadmindoc.callshield.R
+import com.sysadmindoc.callshield.data.ExistingBlockRules
 import com.sysadmindoc.callshield.data.HashWildcardMatcher
 import com.sysadmindoc.callshield.data.PhoneFormatter
 import com.sysadmindoc.callshield.data.RuleConflict
@@ -1233,9 +1234,12 @@ fun AddWhitelistDialog(
                 RuleConflictAnalyzer.forWhitelist(
                     number = normalizedNumber,
                     emergency = emergency,
-                    exactBlocks = existingBlocks,
-                    wildcardRules = existingWildcardRules,
-                    hashWildcardRules = existingHashWildcardRules,
+                    rules =
+                        ExistingBlockRules(
+                            exactBlocks = existingBlocks,
+                            wildcardRules = existingWildcardRules,
+                            hashWildcardRules = existingHashWildcardRules,
+                        ),
                 )
             } else {
                 null

@@ -33,6 +33,7 @@ private fun reportableSmsIndicators(
         SmsContentAnalyzer.SmsReportIndicators()
     }
 
+@Suppress("TooManyFunctions")
 object NotificationHelper {
     const val CHANNEL_BLOCKED = "blocked_calls"
     const val CHANNEL_RATING = "spam_rating"
@@ -40,6 +41,7 @@ object NotificationHelper {
     const val CHANNEL_PHISHING = "phishing_warning"
     const val CHANNEL_ALLOWED = "allowed_call_decisions"
     const val CHANNEL_DIGEST = "daily_digest"
+    const val CHANNEL_MESSAGE_SCREENING = "message_screening"
     const val ACTION_BLOCK = "com.sysadmindoc.callshield.ACTION_BLOCK"
     const val ACTION_REPORT = "com.sysadmindoc.callshield.ACTION_REPORT"
     const val ACTION_SAFE = "com.sysadmindoc.callshield.ACTION_SAFE"
@@ -118,6 +120,15 @@ object NotificationHelper {
         nm.createNotificationChannel(
             NotificationChannel(CHANNEL_DIGEST, context.getString(R.string.notif_channel_digest), NotificationManager.IMPORTANCE_LOW).apply {
                 description = context.getString(R.string.notif_channel_digest_desc)
+            },
+        )
+        nm.createNotificationChannel(
+            NotificationChannel(
+                CHANNEL_MESSAGE_SCREENING,
+                context.getString(R.string.notif_channel_message_screening),
+                NotificationManager.IMPORTANCE_DEFAULT,
+            ).apply {
+                description = context.getString(R.string.notif_channel_message_screening_desc)
             },
         )
     }
@@ -308,6 +319,52 @@ object NotificationHelper {
                 .setAutoCancel(true)
 
         safeNotify(context, nid, builder)
+    }
+
+    /**
+     * Non-destructive warning for opted-in private messenger and email
+     * notifications. The original app notification remains visible and its
+     * message text is never copied into CallShield's notification.
+     */
+    fun notifyScreenedMessage(
+        context: Context,
+        sourceName: String,
+        sender: String,
+        confidence: Int,
+        reason: String,
+    ) {
+        val identity = "$sourceName|$sender"
+        val openIntent =
+            PendingIntent.getActivity(
+                context,
+                stableId(identity, 71),
+                Intent(context, MainActivity::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
+                },
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            )
+        val detail = reason.ifBlank { context.getString(R.string.notif_message_screening_generic_reason) }
+        val builder =
+            NotificationCompat
+                .Builder(context, CHANNEL_MESSAGE_SCREENING)
+                .setSmallIcon(android.R.drawable.ic_dialog_alert)
+                .setContentTitle(context.getString(R.string.notif_message_screening_title, sourceName))
+                .setContentText(context.getString(R.string.notif_message_screening_text, sender, confidence))
+                .setStyle(
+                    NotificationCompat.BigTextStyle().bigText(
+                        context.getString(
+                            R.string.notif_message_screening_big_text,
+                            sourceName,
+                            sender,
+                            confidence,
+                            detail,
+                        ),
+                    ),
+                ).setContentIntent(openIntent)
+                .setAutoCancel(true)
+                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+
+        safeNotify(context, stableId(identity, 70), builder)
     }
 
     fun notifyAfterCall(

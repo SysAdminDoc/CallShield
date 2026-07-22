@@ -104,6 +104,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
     val freqEscalation by viewModel.freqEscalationEnabled.collectAsStateWithLifecycle()
     val mlScorer by viewModel.mlScorerEnabled.collectAsStateWithLifecycle()
     val rcsFilter by viewModel.rcsFilterEnabled.collectAsStateWithLifecycle()
+    val notificationScreeningPackages by viewModel.notificationScreeningPackages.collectAsStateWithLifecycle()
     val silentVoicemail by viewModel.silentVoicemailEnabled.collectAsStateWithLifecycle()
     val pushAlertEnabled by viewModel.pushAlertEnabled.collectAsStateWithLifecycle()
     val pushAlertDisabledPackages by viewModel.pushAlertDisabledPackages.collectAsStateWithLifecycle()
@@ -111,6 +112,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
     val externalBlocklistPreview by viewModel.externalBlocklistPreview.collectAsStateWithLifecycle()
     val externalBlocklistResult by viewModel.externalBlocklistResult.collectAsStateWithLifecycle()
     var showPushAlertSources by remember { mutableStateOf(false) }
+    var showNotificationScreeningSources by remember { mutableStateOf(false) }
     var showRawSmsExportDialog by remember { mutableStateOf(false) }
     var showLanguageDialog by remember { mutableStateOf(false) }
     var externalBlocklistUrl by remember { mutableStateOf("") }
@@ -432,6 +434,24 @@ fun SettingsScreen(viewModel: MainViewModel) {
             if (rcsFilter) {
                 Spacer(Modifier.height(4.dp))
                 PremiumActionButton(
+                    label = stringResource(R.string.settings_notification_screening_sources),
+                    icon = Icons.Default.Tune,
+                    color = CatMauve,
+                    onClick = { showNotificationScreeningSources = true },
+                    modifier = Modifier.fillMaxWidth(),
+                    outlined = true,
+                )
+                Text(
+                    stringResource(
+                        R.string.settings_notification_screening_sources_count,
+                        notificationScreeningPackages.size,
+                        com.sysadmindoc.callshield.data.NotificationScreeningSources.catalog.size,
+                    ),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = CatSubtext,
+                    modifier = Modifier.padding(start = 4.dp),
+                )
+                PremiumActionButton(
                     label = stringResource(R.string.settings_grant_notification_access),
                     icon = Icons.Default.NotificationsActive,
                     color = CatMauve,
@@ -703,6 +723,15 @@ fun SettingsScreen(viewModel: MainViewModel) {
             onToggle = { pkg, allowed -> viewModel.setPushAlertPackageAllowed(pkg, allowed) },
             onReset = { viewModel.resetPushAlertPackages() },
             onDismiss = { showPushAlertSources = false },
+        )
+    }
+
+    if (showNotificationScreeningSources) {
+        NotificationScreeningSourcesSheet(
+            enabledPackages = notificationScreeningPackages,
+            onToggle = viewModel::setNotificationScreeningPackage,
+            onReset = viewModel::resetNotificationScreeningPackages,
+            onDismiss = { showNotificationScreeningSources = false },
         )
     }
 
