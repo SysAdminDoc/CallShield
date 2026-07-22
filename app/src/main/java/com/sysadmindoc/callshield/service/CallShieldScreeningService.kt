@@ -5,15 +5,15 @@ import android.telecom.Call
 import android.telecom.CallScreeningService
 import android.telecom.TelecomManager
 import android.util.Log
-import com.sysadmindoc.callshield.CallShieldApp
 import com.sysadmindoc.callshield.data.SpamHeuristics
 import com.sysadmindoc.callshield.data.SpamRepository
-import com.sysadmindoc.callshield.data.local.AppDatabase
 import com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup
-import com.sysadmindoc.callshield.domain.usecase.CheckSpamUseCase
+import com.sysadmindoc.callshield.data.local.AppDatabase
+import com.sysadmindoc.callshield.di.ApplicationScope
 import com.sysadmindoc.callshield.domain.model.CallerIdentity
+import com.sysadmindoc.callshield.domain.usecase.CheckSpamUseCase
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -29,6 +29,10 @@ class CallShieldScreeningService : CallScreeningService() {
     @Inject
     lateinit var spamHeuristics: SpamHeuristics
 
+    @Inject
+    @ApplicationScope
+    lateinit var applicationScope: CoroutineScope
+
     override fun onScreenCall(callDetails: Call.Details) {
         // Run on the process-wide appScope instead of a service-scoped one.
         // CallScreeningService is frequently unbound moments after we reply,
@@ -36,7 +40,7 @@ class CallShieldScreeningService : CallScreeningService() {
         // leaving Android to auto-allow the call once the 5-second window
         // elapses. appScope survives the unbind so the response and the
         // subsequent logging/notification always run to completion.
-        CallShieldApp.appScope.launch(Dispatchers.IO) {
+        applicationScope.launch {
             val appContext = applicationContext
             val repository = repo
             try {
@@ -128,7 +132,7 @@ class CallShieldScreeningService : CallScreeningService() {
                         // appScope since the service is typically unbound by the
                         // time 10 s has passed. Contact status is re-checked at
                         // post-time in case the user just added the caller.
-                        CallShieldApp.appScope.launch {
+                        applicationScope.launch {
                             delay(10_000L)
                             if (!spamHeuristics.isInContacts(appContext, number)) {
                                 NotificationHelper.notifyAfterCall(appContext, number)
@@ -189,7 +193,7 @@ class CallShieldScreeningService : CallScreeningService() {
         val response = buildBlockResponse(prefs, confidence)
         respondToCall(callDetails, response)
 
-        CallShieldApp.appScope.launch {
+        applicationScope.launch {
             try {
                 if (pendingLogQueued) {
                     repository.flushPendingBlockedCallLogs()

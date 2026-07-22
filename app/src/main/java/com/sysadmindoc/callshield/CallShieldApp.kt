@@ -16,6 +16,7 @@ import com.sysadmindoc.callshield.data.SpamHeuristics
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.SystemBlockList
 import com.sysadmindoc.callshield.data.checker.CheckerDependencies
+import com.sysadmindoc.callshield.di.ApplicationScope
 import com.sysadmindoc.callshield.service.CrashReporter
 import com.sysadmindoc.callshield.service.DigestWorker
 import com.sysadmindoc.callshield.service.HotDataSync
@@ -25,8 +26,6 @@ import com.sysadmindoc.callshield.service.PendingBlockedCallLogWorker
 import com.sysadmindoc.callshield.service.SyncWorker
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -39,6 +38,10 @@ class CallShieldApp :
 
     @Inject
     lateinit var checkerDependencies: CheckerDependencies
+
+    @Inject
+    @ApplicationScope
+    lateinit var applicationScope: CoroutineScope
 
     override val workManagerConfiguration: Configuration
         get() {
@@ -53,7 +56,7 @@ class CallShieldApp :
         // Install the uncaught-exception handler BEFORE anything else so we
         // capture crashes even during app-startup init.
         CrashReporter.install(this)
-        appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        appScope = applicationScope
         NotificationHelper.createChannels(this)
         SyncWorker.schedule(this)
         HotListSyncWorker.schedule(this)

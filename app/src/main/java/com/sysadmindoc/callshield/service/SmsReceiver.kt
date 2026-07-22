@@ -4,14 +4,25 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.provider.Telephony
-import com.sysadmindoc.callshield.CallShieldApp
 import com.sysadmindoc.callshield.data.SpamRepository
+import com.sysadmindoc.callshield.di.ApplicationScope
 import com.sysadmindoc.callshield.data.remote.UrlSafetyChecker
 import com.sysadmindoc.callshield.data.repository.SpamRepositoryAdapter
 import com.sysadmindoc.callshield.domain.usecase.CheckSpamSmsUseCase
+import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
+@AndroidEntryPoint
 class SmsReceiver : BroadcastReceiver() {
+    @Inject
+    lateinit var repo: SpamRepository
+
+    @Inject
+    @ApplicationScope
+    lateinit var applicationScope: CoroutineScope
+
     companion object {
         /** Hard cap on reassembled multipart body length (16 KB). */
         internal const val MAX_REASSEMBLED_BODY = 16_384
@@ -43,7 +54,6 @@ class SmsReceiver : BroadcastReceiver() {
         if (intent.action != Telephony.Sms.Intents.SMS_RECEIVED_ACTION) return
 
         val appContext = context.applicationContext
-        val repo = SpamRepository.getInstance(appContext)
         val checkSpamSms = CheckSpamSmsUseCase(SpamRepositoryAdapter(repo))
         val pendingResult = goAsync()
 
@@ -51,7 +61,7 @@ class SmsReceiver : BroadcastReceiver() {
         // goAsync() keeps the broadcast alive until pendingResult.finish() is
         // called. We use appScope rather than a short-lived one so the URLhaus
         // phishing check can continue after we've finished with the broadcast.
-        CallShieldApp.appScope.launch {
+        applicationScope.launch {
             var sender = ""
             var body = ""
             var stripUrlhausQuery = true

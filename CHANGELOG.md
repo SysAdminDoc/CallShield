@@ -35,6 +35,11 @@ All notable changes to CallShield will be documented in this file.
   second beneath Telecom's five-second response deadline. The screening path
   is also included in baseline and startup profiles for ART compilation and
   release DEX layout; the acceptance run completed in 592 ms.
+- **Deterministic off-device screening entrypoint coverage.** A Hilt-provided
+  process coroutine scope can now be replaced by tests, and Robolectric drives
+  the real call-screening service through allow, silence, and reject outcomes.
+  It also delivers a valid UCS-2 SMS PDU through `SmsReceiver.onReceive()` and
+  verifies that local phishing warnings remain active when SMS blocking is off.
 - **Contacts-mode degradation detection.** `CallShieldPermissions`
   `isContactsModeDegraded()` reports when a contacts-dependent screening mode
   (contact-whitelist or contacts-only) is enabled but `READ_CONTACTS` is
