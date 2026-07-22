@@ -188,6 +188,18 @@ interface SpamDao {
     @Query("SELECT COUNT(*) FROM call_log WHERE wasBlocked = 1 AND timestamp > :since")
     suspend fun getBlockedCountSinceSync(since: Long): Int
 
+    /**
+     * Restore-dedupe identity per row: the logKey when present, otherwise the
+     * same `number|timestamp|isCall` fallback the restore preview uses. Kept
+     * as a projection so restore never materializes full rows (SMS bodies).
+     */
+    @Query(
+        "SELECT CASE WHEN logKey IS NOT NULL AND logKey != '' THEN logKey " +
+            "ELSE number || '|' || timestamp || '|' || CASE WHEN isCall THEN 'true' ELSE 'false' END END " +
+            "FROM call_log",
+    )
+    suspend fun getBlockedCallConflictKeysSync(): List<String>
+
     @Query("SELECT COUNT(*) FROM call_log WHERE wasBlocked = 1 AND timestamp > :start AND timestamp <= :end")
     fun getBlockedCountBetween(
         start: Long,

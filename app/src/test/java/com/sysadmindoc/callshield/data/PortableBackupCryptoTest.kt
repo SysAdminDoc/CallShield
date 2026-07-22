@@ -79,6 +79,23 @@ class PortableBackupCryptoTest {
     }
 
     @Test
+    fun `in-range iteration tampering fails authentication via the AAD tag`() {
+        val envelope = PortableBackupCrypto.encrypt(plaintext, passphrase).copyOf()
+        val iterationsOffset = "CALLSHIELD-BACKUP".length + 1
+        // 600_000 -> 600_001: still inside the accepted KDF range, so decrypt
+        // derives with the header value — the authenticated header must make
+        // the tag check fail rather than silently deriving a wrong key class.
+        envelope[iterationsOffset + 3] = (envelope[iterationsOffset + 3].toInt() xor 1).toByte()
+
+        val result = PortableBackupCrypto.decrypt(envelope, passphrase)
+
+        assertEquals(
+            PortableBackupCrypto.InvalidReason.AUTHENTICATION_FAILED,
+            (result as PortableBackupCrypto.DecryptionResult.Invalid).reason,
+        )
+    }
+
+    @Test
     fun `plaintext legacy backup is not treated as an envelope`() {
         assertEquals(
             PortableBackupCrypto.DecryptionResult.NotEncrypted,
