@@ -6,6 +6,10 @@ All notable changes to CallShield will be documented in this file.
 
 ### Changed
 
+- Release verification now rejects app-version drift across Gradle, README
+  highlights and badges, Fastlane changelogs and store copy, signing examples,
+  and the F-Droid handoff. The F-Droid draft now labels v1.7.12 as the last
+  externally prepared build instead of implying it is current app metadata.
 - Outgoing risk warnings are now available as an opt-in, local-only safety
   check. Exact known-risk matches show one non-blocking overlay without remote
   lookups, contact analysis, call responses, blocked-log entries, or after-call

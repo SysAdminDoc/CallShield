@@ -50,5 +50,7 @@ AllowedAPKSigningKeys: d179d0daa9eac6b52fc19d3a7126fd6ccb911923a43a3cf0bef9f74b1
 
 AutoUpdateMode: Version
 UpdateCheckMode: Tags ^v[0-9]+\.[0-9]+\.[0-9]+$
+# Last externally prepared build: 1.7.12 (40).
+# Current app source: 1.7.21 (49); no matching F-Droid build has been prepared.
 CurrentVersion: 1.7.12
 CurrentVersionCode: 40
