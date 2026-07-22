@@ -25,9 +25,21 @@ fun ChangelogScreen() {
         verticalArrangement = Arrangement.spacedBy(0.dp),
     ) {
         VersionEntry(
+            "1.7.22",
+            "Safer trust controls, protected backups, and stronger release gates",
+            isLatest = true,
+            changes =
+                listOf(
+                    "Added selected contact-group trust and category-specific call handling",
+                    "Added passphrase-protected portable backups with atomic restore rollback",
+                    "Added optional local-only warnings for known-risk outgoing calls",
+                    "Added call-screening role-loss detection with actionable recovery guidance",
+                    "Removed static-analysis baselines and hardened release metadata and signing preflight",
+                ),
+        )
+        VersionEntry(
             "1.7.21",
             "Professional themes and a calmer, denser interface",
-            isLatest = true,
             changes =
                 listOf(
                     "Added persistent System, Light, Graphite, and true-black AMOLED themes",
