@@ -7,13 +7,13 @@ import org.junit.Test
 class PushAlertRegistryTest {
     @Test
     fun `supported sources have stable human-readable labels`() {
-        assertEquals("Uber Driver", PushAlertRegistry.displayNameFor("com.ubercab.driver"))
-        assertEquals("Google Calendar", PushAlertRegistry.displayNameFor("com.google.android.calendar"))
-        assertEquals("Amazon Shopping", PushAlertRegistry.displayNameFor("com.amazon.mShop.android.shopping"))
-        assertEquals("USPS", PushAlertRegistry.displayNameFor("gov.usps.mobile"))
+        assertEquals("Uber Driver", pushAlertSourceDisplayName("com.ubercab.driver"))
+        assertEquals("Google Calendar", pushAlertSourceDisplayName("com.google.android.calendar"))
+        assertEquals("Amazon Shopping", pushAlertSourceDisplayName("com.amazon.mShop.android.shopping"))
+        assertEquals("USPS", pushAlertSourceDisplayName("gov.usps.mobile"))
         assertTrue(
             PushAlertRegistry.ALERT_SOURCE_PACKAGES.all {
-                PushAlertRegistry.displayNameFor(it).isNotBlank()
+                pushAlertSourceDisplayName(it).isNotBlank()
             },
         )
     }

@@ -43,6 +43,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.PushAlertRegistry
+import com.sysadmindoc.callshield.data.pushAlertSourceDisplayName
 import com.sysadmindoc.callshield.ui.theme.CatBlue
 import com.sysadmindoc.callshield.ui.theme.CatGreen
 import com.sysadmindoc.callshield.ui.theme.CatOverlay
@@ -100,7 +101,7 @@ fun PushAlertSourcesSheet(
                             val info = pm.getApplicationInfo(pkg, 0)
                             pm.getApplicationLabel(info).toString() to true
                         } catch (_: PackageManager.NameNotFoundException) {
-                            PushAlertRegistry.displayNameFor(pkg) to false
+                            pushAlertSourceDisplayName(pkg) to false
                         }
                     PushAlertSource(pkg, label, installed)
                 }.sortedWith(
