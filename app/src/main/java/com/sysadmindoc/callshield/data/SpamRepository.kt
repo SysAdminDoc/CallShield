@@ -155,6 +155,7 @@ class SpamRepository(
         val KEY_ALLOWED_REGIONS = stringSetPreferencesKey("allowed_call_regions")
         val KEY_CNAP_TRUST_PATTERNS = stringSetPreferencesKey("cnap_trust_patterns")
         val KEY_CNAP_BLOCK_PATTERNS = stringSetPreferencesKey("cnap_block_patterns")
+        val KEY_CATEGORY_CALL_ACTIONS = stringSetPreferencesKey("category_call_actions")
         val KEY_DB_PREFIX_EXPANSION = booleanPreferencesKey("db_prefix_expansion_enabled")
         val KEY_AGGRESSIVE_MODE = booleanPreferencesKey("aggressive_mode_enabled")
         val KEY_ANSWERED_CALLER_TRUST = booleanPreferencesKey("answered_caller_trust_enabled")
@@ -253,6 +254,7 @@ class SpamRepository(
     val allowedRegions: Flow<Set<String>> = settingsRepository.allowedRegions
     val cnapTrustPatterns: Flow<Set<String>> = settingsRepository.cnapTrustPatterns
     val cnapBlockPatterns: Flow<Set<String>> = settingsRepository.cnapBlockPatterns
+    val categoryCallActions: Flow<Map<CallCategory, CategoryCallAction>> = settingsRepository.categoryCallActions
     val dbPrefixExpansionEnabled: Flow<Boolean> = settingsRepository.dbPrefixExpansionEnabled
     val aggressiveModeEnabled: Flow<Boolean> = settingsRepository.aggressiveModeEnabled
     val answeredCallerTrustEnabled: Flow<Boolean> = settingsRepository.answeredCallerTrustEnabled
@@ -359,6 +361,11 @@ class SpamRepository(
     suspend fun setCnapTrustPatterns(patterns: Set<String>) = settingsRepository.setCnapTrustPatterns(patterns)
 
     suspend fun setCnapBlockPatterns(patterns: Set<String>) = settingsRepository.setCnapBlockPatterns(patterns)
+
+    suspend fun setCategoryCallAction(
+        category: CallCategory,
+        action: CategoryCallAction,
+    ) = settingsRepository.setCategoryCallAction(category, action)
 
     suspend fun setDbPrefixExpansion(enabled: Boolean) = settingsRepository.setDbPrefixExpansion(enabled)
 

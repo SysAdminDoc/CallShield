@@ -5,9 +5,12 @@ import android.net.Uri
 import android.telecom.Call
 import android.telecom.CallScreeningService
 import androidx.test.core.app.ApplicationProvider
+import com.sysadmindoc.callshield.data.CallCategory
+import com.sysadmindoc.callshield.data.CategoryCallAction
 import com.sysadmindoc.callshield.data.IsolatedRepositoryFixture
 import com.sysadmindoc.callshield.data.SpamHeuristics
 import com.sysadmindoc.callshield.data.SpamRepository
+import com.sysadmindoc.callshield.data.model.SpamNumber
 import com.sysadmindoc.callshield.data.repository.SpamRepositoryAdapter
 import com.sysadmindoc.callshield.domain.usecase.CheckSpamUseCase
 import kotlinx.coroutines.CoroutineScope
@@ -117,6 +120,91 @@ class CallShieldScreeningServiceRobolectricTest {
         assertTrue(response.rejectCall)
         assertFalse(response.silenceCall)
         awaitScopeIdle()
+    }
+
+    @Test
+    fun `category allow lets a categorized database hit ring`() {
+        val number = "+12125550190"
+        runBlocking {
+            fixture.dao.insertNumber(SpamNumber(number = number, type = "scam"))
+            repository.setCategoryCallAction(CallCategory.Scam, CategoryCallAction.ALLOW)
+        }
+
+        service.onScreenCall(callDetails(number))
+
+        val response = awaitResponse()
+        assertFalse(response.disallowCall)
+        assertFalse(response.rejectCall)
+        assertFalse(response.silenceCall)
+    }
+
+    @Test
+    fun `category voicemail silences a categorized database hit`() {
+        val number = "+12125550191"
+        runBlocking {
+            fixture.dao.insertNumber(SpamNumber(number = number, type = "telemarketer"))
+            repository.setCategoryCallAction(CallCategory.Telemarketer, CategoryCallAction.SILENCE)
+        }
+
+        service.onScreenCall(callDetails(number))
+
+        val response = awaitResponse()
+        assertTrue(response.silenceCall)
+        assertFalse(response.disallowCall)
+        assertFalse(response.rejectCall)
+        awaitScopeIdle()
+    }
+
+    @Test
+    fun `category block overrides global silent voicemail`() {
+        val number = "+12125550192"
+        runBlocking {
+            fixture.dao.insertNumber(SpamNumber(number = number, type = "political"))
+            repository.setCategoryCallAction(CallCategory.Political, CategoryCallAction.BLOCK)
+            repository.setSilentVoicemail(true)
+        }
+
+        service.onScreenCall(callDetails(number))
+
+        val response = awaitResponse()
+        assertTrue(response.disallowCall)
+        assertTrue(response.rejectCall)
+        assertFalse(response.silenceCall)
+        awaitScopeIdle()
+    }
+
+    @Test
+    fun `category allow never overrides an explicit personal block`() {
+        val number = "+12125550193"
+        runBlocking {
+            repository.blockNumber(number, type = "scam")
+            repository.setCategoryCallAction(CallCategory.Scam, CategoryCallAction.ALLOW)
+        }
+
+        service.onScreenCall(callDetails(number))
+
+        val response = awaitResponse()
+        assertTrue(response.disallowCall)
+        assertTrue(response.rejectCall)
+        assertFalse(response.silenceCall)
+        awaitScopeIdle()
+    }
+
+    @Test
+    fun `category block never overrides a manual emergency whitelist`() {
+        val number = "+12125550194"
+        runBlocking {
+            fixture.dao.insertNumber(SpamNumber(number = number, type = "robocall"))
+            repository.addToWhitelist(number, description = "Family", isEmergency = true)
+            repository.setCategoryCallAction(CallCategory.Robocall, CategoryCallAction.BLOCK)
+        }
+
+        service.onScreenCall(callDetails(number))
+
+        val response = awaitResponse()
+        assertFalse(response.disallowCall)
+        assertFalse(response.rejectCall)
+        assertFalse(response.silenceCall)
     }
 
     @Test

@@ -6,6 +6,11 @@ All notable changes to CallShield will be documented in this file.
 
 ### Changed
 
+- Call handling can now be set per detected category to inherit the global
+  policy, allow, send to voicemail, or block. Emergency and personal allow
+  rules still win over category actions, while explicit personal blocks remain
+  authoritative; the policy is explained in blocked activity and portable
+  backup schema v6 preserves every selection.
 - Phone identity now uses the device's injected ISO region to canonicalize
   valid national numbers to E.164 across matching, storage, imports, backups,
   and community reports. Short codes and opaque SMS sender IDs remain distinct.

@@ -485,7 +485,20 @@ fun BlockedCallItem(
                         if (location != null) Text(location, style = MaterialTheme.typography.labelSmall, color = CatOverlay)
                     }
                     if (call.matchReason.isNotEmpty()) {
-                        val reasonText = call.matchReason.replace("_", " ").replaceFirstChar { it.uppercase() }
+                        val categoryPolicy =
+                            remember(call.matchReason) {
+                                com.sysadmindoc.callshield.data.CategoryCallPolicy.parseMatchSource(call.matchReason)
+                            }
+                        val reasonText =
+                            if (categoryPolicy == null) {
+                                call.matchReason.replace("_", " ").replaceFirstChar { it.uppercase() }
+                            } else {
+                                stringResource(
+                                    R.string.detail_category_action_source,
+                                    stringResource(categoryPolicy.category.stringResId),
+                                    stringResource(categoryPolicy.action.labelResId),
+                                )
+                            }
                         val confidenceText =
                             if (call.confidence < 100) {
                                 stringResource(R.string.confidence_suffix, call.confidence)

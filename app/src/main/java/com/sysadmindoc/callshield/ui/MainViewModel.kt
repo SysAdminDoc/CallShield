@@ -11,6 +11,8 @@ import com.sysadmindoc.callshield.data.BackupRestore
 import com.sysadmindoc.callshield.data.BlockingProfiles
 import com.sysadmindoc.callshield.data.BlocklistExporter
 import com.sysadmindoc.callshield.data.CallbackDetector
+import com.sysadmindoc.callshield.data.CallCategory
+import com.sysadmindoc.callshield.data.CategoryCallAction
 import com.sysadmindoc.callshield.data.CommunityContributor
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.TimeSchedule
@@ -38,7 +40,7 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @OptIn(ExperimentalCoroutinesApi::class)
-@Suppress("TooManyFunctions")
+@Suppress("LargeClass", "TooManyFunctions")
 @HiltViewModel
 class MainViewModel
     @Inject
@@ -180,6 +182,9 @@ class MainViewModel
         val cnapBlockPatterns =
             repo.cnapBlockPatterns
                 .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
+        val categoryCallActions =
+            repo.categoryCallActions
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
         val dbPrefixExpansionEnabled =
             repo.dbPrefixExpansionEnabled
                 .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
@@ -656,6 +661,11 @@ class MainViewModel
             repo.setCnapTrustPatterns(cnapTrustPatterns)
             repo.setCnapBlockPatterns(cnapBlockPatterns)
         }
+
+        fun setCategoryCallAction(
+            category: CallCategory,
+            action: CategoryCallAction,
+        ) = viewModelScope.launch { repo.setCategoryCallAction(category, action) }
 
         fun setDbPrefixExpansion(v: Boolean) = viewModelScope.launch { repo.setDbPrefixExpansion(v) }
 

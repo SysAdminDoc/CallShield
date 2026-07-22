@@ -12,7 +12,7 @@
 <p align="center">
   <a href="https://github.com/SysAdminDoc/CallShield/releases/latest"><img src="https://img.shields.io/github/v/release/SysAdminDoc/CallShield?style=flat-square&color=a6e3a1" alt="Release"></a>
   <img src="https://img.shields.io/badge/Spam%20Numbers-32%2C933-f38ba8?style=flat-square" alt="32,933 Numbers">
-  <img src="https://img.shields.io/badge/Tests-878-94e2d5?style=flat-square" alt="878 Tests">
+  <img src="https://img.shields.io/badge/Tests-891-94e2d5?style=flat-square" alt="891 Tests">
   <img src="https://img.shields.io/badge/Android-10%2B-89b4fa?style=flat-square" alt="Android 10+">
   <img src="https://img.shields.io/badge/License-MIT-cba6f7?style=flat-square" alt="MIT License">
   <img src="https://img.shields.io/badge/API%20Keys-None-fab387?style=flat-square" alt="No required API keys">
@@ -35,6 +35,9 @@ CallShield blocks spam calls and texts using a **15+ layer on-device detection e
   destinations reduce scrolling and duplicated chrome.
 - **Contrast protected by tests** — text, secondary text, and primary actions
   meet WCAG AA contrast requirements in every named palette.
+- **Category-level call control** — debt collection, political, robocall, scam,
+  phishing, telemarketing, survey, and nonprofit calls can independently
+  inherit the global policy, ring, go to voicemail, or be blocked.
 
 ## v1.7.20 Highlights
 
@@ -183,7 +186,7 @@ CallShield blocks spam calls and texts using a **15+ layer on-device detection e
 - **Answered-caller trust** — numbers answered repeatedly inside the configured lookback window can ring through lower-confidence heuristic/ML suspicion while explicit block rules still win first.
 - **Emergency callback grace** — unknown callbacks can ring through after a local emergency call for a configurable window while explicit block rules still win first.
 - **SMS burst protection** - repeated unknown SMS senders or same-prefix floods can be blocked as `sms_burst`, with blocked-SMS notification actions to mark safe or report.
-- **878 total JVM unit tests** - the local unit suite covers detection, workers, utilities, repository contracts, and permission readiness before release.
+- **891 total JVM unit tests** - the local unit suite covers detection, workers, utilities, repository contracts, and permission readiness before release.
 - **Gradient-Boosted Tree ML model** — 20 features, pure Kotlin, no TFLite dependency.
 - **Campaign burst detection** — NPA-NXX prefix clustering identifies coordinated spam waves.
 - **Full accessibility** — content descriptions across Compose UI, 48dp minimum touch targets.
@@ -427,7 +430,7 @@ RELEASE_KEY_PASSWORD=...
 ## Testing
 
 ```bash
-./gradlew testDebugUnitTest   # 878 tests
+./gradlew testDebugUnitTest   # 891 tests
 ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.sysadmindoc.callshield.platform.TargetSdkBehaviorSmokeTest
 ```
 
@@ -449,7 +452,7 @@ Run tests, lint, release metadata checks, and artifact builds locally before pub
 | Community API | Cloudflare Workers |
 | URL Safety | URLhaus (abuse.ch) |
 | Verification | Local Gradle, lint, and release-artifact checks |
-| Tests | 878 JVM unit tests (JUnit) |
+| Tests | 891 JVM unit tests (JUnit) |
 | Strings | 1160 string resources and 29 plural groups (translation-ready) |
 | Accessibility | 100+ content descriptions, 48dp touch targets |
 | Min SDK | 29 (Android 10) |

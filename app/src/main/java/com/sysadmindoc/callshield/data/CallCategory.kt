@@ -19,17 +19,22 @@ import com.sysadmindoc.callshield.domain.model.SpamCheckResult
 enum class CallCategory(
     val stringResId: Int,
     val emoji: String,
+    val storageKey: String,
 ) {
-    DebtCollector(com.sysadmindoc.callshield.R.string.call_category_debt_collector, "\uD83D\uDCB3"), // 💳
-    Political(com.sysadmindoc.callshield.R.string.call_category_political, "\uD83D\uDDF3"), // 🗳
-    Robocall(com.sysadmindoc.callshield.R.string.call_category_robocall, "\uD83E\uDD16"), // 🤖
-    Scam(com.sysadmindoc.callshield.R.string.call_category_scam, "\u26A0\uFE0F"), // ⚠
-    Phishing(com.sysadmindoc.callshield.R.string.call_category_phishing, "\uD83C\uDFA3"), // 🎣
-    Telemarketer(com.sysadmindoc.callshield.R.string.call_category_telemarketer, "\uD83D\uDCE2"), // 📢
-    Wangiri(com.sysadmindoc.callshield.R.string.call_category_wangiri, "\uD83C\uDF0D"), // 🌍
-    Survey(com.sysadmindoc.callshield.R.string.call_category_survey, "\uD83D\uDCCB"), // 📋
-    Business(com.sysadmindoc.callshield.R.string.call_category_business, "\uD83C\uDFE2"), // 🏢
-    Unknown(com.sysadmindoc.callshield.R.string.call_category_unknown, "\u2753"), // ❓
+    DebtCollector(
+        com.sysadmindoc.callshield.R.string.call_category_debt_collector,
+        "\uD83D\uDCB3",
+        "debt_collector",
+    ), // 💳
+    Political(com.sysadmindoc.callshield.R.string.call_category_political, "\uD83D\uDDF3", "political"), // 🗳
+    Robocall(com.sysadmindoc.callshield.R.string.call_category_robocall, "\uD83E\uDD16", "robocall"), // 🤖
+    Scam(com.sysadmindoc.callshield.R.string.call_category_scam, "\u26A0\uFE0F", "scam"), // ⚠
+    Phishing(com.sysadmindoc.callshield.R.string.call_category_phishing, "\uD83C\uDFA3", "phishing"), // 🎣
+    Telemarketer(com.sysadmindoc.callshield.R.string.call_category_telemarketer, "\uD83D\uDCE2", "telemarketer"), // 📢
+    Wangiri(com.sysadmindoc.callshield.R.string.call_category_wangiri, "\uD83C\uDF0D", "wangiri"), // 🌍
+    Survey(com.sysadmindoc.callshield.R.string.call_category_survey, "\uD83D\uDCCB", "survey"), // 📋
+    Business(com.sysadmindoc.callshield.R.string.call_category_business, "\uD83C\uDFE2", "business"), // 🏢
+    Unknown(com.sysadmindoc.callshield.R.string.call_category_unknown, "\u2753", "unknown"), // ❓
 }
 
 object CallCategoryResolver {
@@ -69,6 +74,7 @@ object CallCategoryResolver {
      */
     fun resolve(result: SpamCheckResult): CallCategory {
         if (!result.isSpam) return CallCategory.Unknown
+        CategoryCallPolicy.parseMatchSource(result.matchSource)?.let { return it.category }
 
         // (1) Database type tags are authoritative — they came from
         //     labeled community/FCC/FTC data, not heuristics.

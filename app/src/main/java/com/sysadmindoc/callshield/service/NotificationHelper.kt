@@ -12,6 +12,7 @@ import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.sysadmindoc.callshield.R
+import com.sysadmindoc.callshield.data.CategoryCallPolicy
 import com.sysadmindoc.callshield.data.PhoneFormatter
 import com.sysadmindoc.callshield.data.SmsContentAnalyzer
 import com.sysadmindoc.callshield.permissions.CallShieldPermissions
@@ -232,6 +233,14 @@ object NotificationHelper {
         }
 
         val typeText = context.getString(if (isCall) R.string.notif_type_call else R.string.notif_type_sms)
+        val displayReason =
+            CategoryCallPolicy.parseMatchSource(reason)?.let { policy ->
+                context.getString(
+                    R.string.notif_category_policy_reason,
+                    context.getString(policy.category.stringResId),
+                    context.getString(policy.action.labelResId),
+                )
+            } ?: reason
 
         val openIntent =
             PendingIntent.getActivity(
@@ -275,7 +284,13 @@ object NotificationHelper {
                 .Builder(context, CHANNEL_BLOCKED)
                 .setSmallIcon(android.R.drawable.ic_menu_close_clear_cancel)
                 .setContentTitle(context.getString(R.string.notif_blocked_title, typeText))
-                .setContentText(context.getString(R.string.notif_blocked_text, PhoneFormatter.formatIsolated(number), reason))
+                .setContentText(
+                    context.getString(
+                        R.string.notif_blocked_text,
+                        PhoneFormatter.formatIsolated(number),
+                        displayReason,
+                    ),
+                )
                 .setContentIntent(openIntent)
                 .setAutoCancel(true)
                 .setGroup(GROUP_BLOCKED)

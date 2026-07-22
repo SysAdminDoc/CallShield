@@ -27,11 +27,10 @@ class BackupRestoreTest {
     // ── Backup data class defaults ───────────────────────────────────────
 
     @Test
-    fun `Backup default version is 5`() {
-        // v5 preserves temporary decision expiry and notification-screening
-        // sources. Older versions remain accepted by the restore path.
+    fun `Backup default version is 6`() {
+        // v6 preserves category call actions. Older versions remain accepted.
         val backup = Backup()
-        assertEquals(5, backup.version)
+        assertEquals(6, backup.version)
     }
 
     @Test
@@ -337,6 +336,13 @@ class BackupRestoreTest {
                         ),
                     settings =
                         BackupSettings(
+                            categoryCallActions =
+                                listOf(
+                                    "scam=silence",
+                                    "scam=silence",
+                                    "unknown=allow",
+                                    "robocall=invalid",
+                                ),
                             notificationScreeningPackages =
                                 listOf(
                                     " com.google.android.gm ",
@@ -355,6 +361,7 @@ class BackupRestoreTest {
             listOf("com.google.android.gm"),
             payload.settings?.notificationScreeningPackages,
         )
+        assertEquals(listOf("scam=silence"), payload.settings?.categoryCallActions)
     }
 
     @Test

@@ -85,4 +85,18 @@ class BlockReasoningTest {
         assertTrue(r.headline.contains("allowed"))
         assertEquals(1, r.bullets.size)
     }
+
+    @Test
+    fun `category policy explains the selected action and precedence`() {
+        val result =
+            BlockReasoning.explain(
+                "category_policy:scam:silence:database",
+                "Reported fraud",
+                100,
+            )
+
+        assertEquals("Scam calls are sent silently to voicemail by your category rule.", result.headline)
+        assertTrue(result.bullets.any { "Underlying detection" in it })
+        assertTrue(result.bullets.any { "whitelists" in it && "block rules" in it })
+    }
 }

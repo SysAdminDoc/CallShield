@@ -216,6 +216,7 @@ class BackupRestoreIntegrationTest {
             repo.setFreqEscalation(true)
             repo.setFreqThreshold(3)
             repo.setActiveProfileName(null)
+            repo.setCategoryCallAction(CallCategory.Scam, CategoryCallAction.INHERIT)
 
             val preview =
                 preview(
@@ -227,6 +228,7 @@ class BackupRestoreIntegrationTest {
                                 frequencyEscalationEnabled = false,
                                 frequencyThreshold = 8,
                                 activeProfileName = BlockingProfiles.Profile.SLEEP.name,
+                                categoryCallActions = listOf("scam=silence"),
                             ),
                     ),
                     setOf(BackupSection.SETTINGS),
@@ -247,11 +249,16 @@ class BackupRestoreIntegrationTest {
             assertFalse(repo.freqEscalationEnabled.first())
             assertEquals(8, repo.freqThreshold.first())
             assertEquals(BlockingProfiles.Profile.SLEEP.name, repo.activeProfileName.first())
+            assertEquals(
+                CategoryCallAction.SILENCE,
+                repo.categoryCallActions.first()[CallCategory.Scam],
+            )
 
             repo.setBlockCalls(true)
             repo.setFreqEscalation(true)
             repo.setFreqThreshold(3)
             repo.setActiveProfileName(null)
+            repo.setCategoryCallAction(CallCategory.Scam, CategoryCallAction.INHERIT)
             Unit
         }
 
