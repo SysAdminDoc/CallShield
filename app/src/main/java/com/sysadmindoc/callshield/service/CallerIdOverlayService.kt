@@ -20,6 +20,7 @@ import android.widget.ProgressBar
 import android.widget.TextView
 import com.sysadmindoc.callshield.CallShieldApp
 import com.sysadmindoc.callshield.R
+import com.sysadmindoc.callshield.data.OutgoingRiskWarning
 import com.sysadmindoc.callshield.data.PhoneFormatter
 import com.sysadmindoc.callshield.data.remote.ExternalLookup
 import com.sysadmindoc.callshield.data.remote.RemoteLookupStatus
@@ -38,11 +39,28 @@ import java.text.NumberFormat
 @Suppress("DEPRECATION")
 class CallerIdOverlayService : Service() {
     companion object {
+        internal const val EXTRA_OUTGOING_RISK_WARNING = "outgoing_risk_warning"
+        private const val EXTRA_NUMBER = "number"
+        private const val EXTRA_CONFIDENCE = "confidence"
+        private const val EXTRA_REASON = "reason"
+        private const val EXTRA_VERIFICATION_STATUS = "verification_status"
+
         // Sentinel for "no data" — used when we haven't collected a STIR/SHAKEN
         // verdict yet (e.g. heuristic-triggered overlays on pre-Android-11 devices,
         // or call-screening paths that don't expose verification status).
         const val VERIFICATION_STATUS_UNKNOWN = -1
         private const val FAST_SPAM_HIT_TIMEOUT_MS = 1_500L
+
+        internal fun outgoingRiskIntent(
+            context: Context,
+            warning: OutgoingRiskWarning,
+        ): Intent =
+            Intent(context, CallerIdOverlayService::class.java).apply {
+                putExtra(EXTRA_NUMBER, warning.number)
+                putExtra(EXTRA_CONFIDENCE, warning.confidence)
+                putExtra(EXTRA_REASON, warning.reason)
+                putExtra(EXTRA_OUTGOING_RISK_WARNING, true)
+            }
     }
 
     private var windowManager: WindowManager? = null
@@ -77,12 +95,13 @@ class CallerIdOverlayService : Service() {
         flags: Int,
         startId: Int,
     ): Int {
-        val number = intent?.getStringExtra("number") ?: ""
-        val confidence = intent?.getIntExtra("confidence", 0) ?: 0
-        val reason = intent?.getStringExtra("reason") ?: ""
+        val number = intent?.getStringExtra(EXTRA_NUMBER) ?: ""
+        val confidence = intent?.getIntExtra(EXTRA_CONFIDENCE, 0) ?: 0
+        val reason = intent?.getStringExtra(EXTRA_REASON) ?: ""
         val verificationStatus =
-            intent?.getIntExtra("verification_status", VERIFICATION_STATUS_UNKNOWN)
+            intent?.getIntExtra(EXTRA_VERIFICATION_STATUS, VERIFICATION_STATUS_UNKNOWN)
                 ?: VERIFICATION_STATUS_UNKNOWN
+        val outgoingRiskWarning = intent?.getBooleanExtra(EXTRA_OUTGOING_RISK_WARNING, false) ?: false
 
         if (number.isEmpty()) {
             stopSelf()
@@ -90,18 +109,23 @@ class CallerIdOverlayService : Service() {
         }
 
         val sessionId =
-            showOverlay(number, confidence, reason, verificationStatus)
+            showOverlay(number, confidence, reason, verificationStatus, outgoingRiskWarning)
                 ?: return START_NOT_STICKY
-        // Launch parallel lookups
-        runLiveLookups(number, sessionId)
+        if (!outgoingRiskWarning) {
+            // Incoming caller ID may be enriched live. Outgoing warnings stay
+            // local-only and display the exact database decision unchanged.
+            runLiveLookups(number, sessionId)
+        }
         return START_NOT_STICKY
     }
 
+    @Suppress("LongParameterList")
     private fun showOverlay(
         number: String,
         confidence: Int,
         reason: String,
         verificationStatus: Int,
+        outgoingRiskWarning: Boolean,
     ): Long? {
         if (!android.provider.Settings.canDrawOverlays(this)) {
             stopSelf()
@@ -145,7 +169,9 @@ class CallerIdOverlayService : Service() {
                 headerText =
                     TextView(context).apply {
                         text =
-                            if (confidence > 0) {
+                            if (outgoingRiskWarning) {
+                                context.getString(R.string.overlay_header_outgoing_risk)
+                            } else if (confidence > 0) {
                                 context.getString(R.string.overlay_header_possible_spam)
                             } else {
                                 context.getString(R.string.overlay_header_incoming_call)
@@ -182,7 +208,9 @@ class CallerIdOverlayService : Service() {
                 scoreText =
                     TextView(context).apply {
                         text =
-                            if (confidence > 0) {
+                            if (outgoingRiskWarning) {
+                                context.getString(R.string.overlay_outgoing_risk_score, confidence)
+                            } else if (confidence > 0) {
                                 context.getString(R.string.overlay_initial_score, confidence)
                             } else {
                                 context.getString(R.string.overlay_score_loading)
@@ -198,6 +226,12 @@ class CallerIdOverlayService : Service() {
                 progressBar =
                     ProgressBar(context, null, android.R.attr.progressBarStyleSmall).apply {
                         setPadding(0, 10, 0, 0)
+                        visibility =
+                            if (outgoingRiskWarning) {
+                                android.view.View.GONE
+                            } else {
+                                android.view.View.VISIBLE
+                            }
                     }
                 addView(progressBar)
 
@@ -224,7 +258,14 @@ class CallerIdOverlayService : Service() {
                 // Status text
                 statusText =
                     TextView(context).apply {
-                        text = context.getString(R.string.overlay_status_querying)
+                        text =
+                            context.getString(
+                                if (outgoingRiskWarning) {
+                                    R.string.overlay_outgoing_risk_status
+                                } else {
+                                    R.string.overlay_status_querying
+                                },
+                            )
                         setTextColor(Color.parseColor("#FF585B70"))
                         textSize = 10f
                         letterSpacing = 0.02f
@@ -268,6 +309,12 @@ class CallerIdOverlayService : Service() {
                                 textSize = 11f
                                 isAllCaps = false
                                 setPadding(20, 8, 20, 8)
+                                visibility =
+                                    if (outgoingRiskWarning) {
+                                        android.view.View.GONE
+                                    } else {
+                                        android.view.View.VISIBLE
+                                    }
                                 setOnClickListener {
                                     CallShieldApp.appScope.launch {
                                         val repository =
@@ -308,6 +355,12 @@ class CallerIdOverlayService : Service() {
                         textSize = 10f
                         isAllCaps = false
                         setPadding(20, 6, 20, 6)
+                        visibility =
+                            if (outgoingRiskWarning) {
+                                android.view.View.GONE
+                            } else {
+                                android.view.View.VISIBLE
+                            }
                         layoutParams =
                             LinearLayout
                                 .LayoutParams(

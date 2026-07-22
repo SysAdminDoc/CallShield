@@ -6,6 +6,10 @@ All notable changes to CallShield will be documented in this file.
 
 ### Changed
 
+- Outgoing risk warnings are now available as an opt-in, local-only safety
+  check. Exact known-risk matches show one non-blocking overlay without remote
+  lookups, contact analysis, call responses, blocked-log entries, or after-call
+  feedback; unknown numbers remain silent.
 - Contact trust can now cover all saved contacts or only selected Android
   contact groups. Group identity stays local and privacy-safe, membership
   changes invalidate the call-path cache, permission loss fails closed with a

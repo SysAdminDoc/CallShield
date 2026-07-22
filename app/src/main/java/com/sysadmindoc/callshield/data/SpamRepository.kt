@@ -152,6 +152,7 @@ class SpamRepository(
         val KEY_CONTACT_WHITELIST = booleanPreferencesKey("contact_whitelist_enabled")
         val KEY_CONTACTS_ONLY = booleanPreferencesKey("contacts_only_mode_enabled")
         val KEY_SELECTED_CONTACT_GROUPS = stringSetPreferencesKey("selected_contact_group_keys")
+        val KEY_OUTGOING_RISK_WARNING = booleanPreferencesKey("outgoing_risk_warning_enabled")
         val KEY_REGION_BLOCK = booleanPreferencesKey("region_block_enabled")
         val KEY_ALLOWED_REGIONS = stringSetPreferencesKey("allowed_call_regions")
         val KEY_CNAP_TRUST_PATTERNS = stringSetPreferencesKey("cnap_trust_patterns")
@@ -252,6 +253,7 @@ class SpamRepository(
     val contactWhitelistEnabled: Flow<Boolean> = settingsRepository.contactWhitelistEnabled
     val contactsOnlyEnabled: Flow<Boolean> = settingsRepository.contactsOnlyEnabled
     val selectedContactGroups: Flow<Set<String>> = settingsRepository.selectedContactGroups
+    val outgoingRiskWarningEnabled: Flow<Boolean> = settingsRepository.outgoingRiskWarningEnabled
     val regionBlockEnabled: Flow<Boolean> = settingsRepository.regionBlockEnabled
     val allowedRegions: Flow<Set<String>> = settingsRepository.allowedRegions
     val cnapTrustPatterns: Flow<Set<String>> = settingsRepository.cnapTrustPatterns
@@ -359,6 +361,8 @@ class SpamRepository(
     suspend fun setSelectedContactGroups(groupKeys: Set<String>) =
         settingsRepository.setSelectedContactGroups(groupKeys)
 
+    suspend fun setOutgoingRiskWarning(enabled: Boolean) = settingsRepository.setOutgoingRiskWarning(enabled)
+
     suspend fun setRegionBlock(enabled: Boolean) = settingsRepository.setRegionBlock(enabled)
 
     suspend fun setAllowedRegions(regions: Set<String>) = settingsRepository.setAllowedRegions(regions)
@@ -402,6 +406,8 @@ class SpamRepository(
      * once — calling [Flow.first] per key regresses the 5-second deadline.
      */
     suspend fun readPrefsSnapshot(): Preferences = settingsRepository.readPrefsSnapshot()
+
+    internal suspend fun findExactSpamNumber(normalized: String) = spamRepositoryImpl.findByNumberInternal(normalized)
 
     internal suspend fun editPreferences(transform: suspend (MutablePreferences) -> Unit) {
         settingsRepository.editPreferences(transform)

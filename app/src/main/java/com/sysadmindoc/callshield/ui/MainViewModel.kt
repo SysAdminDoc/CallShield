@@ -179,6 +179,9 @@ class MainViewModel
         val selectedContactGroups =
             repo.selectedContactGroups
                 .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
+        val outgoingRiskWarningEnabled =
+            repo.outgoingRiskWarningEnabled
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
         private val _contactGroups = MutableStateFlow<List<ContactGroup>>(emptyList())
         val contactGroups: StateFlow<List<ContactGroup>> = _contactGroups
         private val _contactGroupsLoading = MutableStateFlow(false)
@@ -685,6 +688,11 @@ class MainViewModel
             viewModelScope.launch {
                 repo.setSelectedContactGroups(groupKeys)
                 SpamHeuristics.clearContactCache()
+            }
+
+        fun setOutgoingRiskWarning(enabled: Boolean) =
+            viewModelScope.launch {
+                repo.setOutgoingRiskWarning(enabled)
             }
 
         fun refreshContactGroups() {

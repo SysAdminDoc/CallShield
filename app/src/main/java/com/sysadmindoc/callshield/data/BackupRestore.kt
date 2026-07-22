@@ -180,6 +180,7 @@ object BackupRestore {
         val cnapBlockPatterns: List<String> = emptyList(),
         val categoryCallActions: List<String> = emptyList(),
         val selectedContactGroups: List<String> = emptyList(),
+        val outgoingRiskWarningEnabled: Boolean = false,
         val activeProfileName: String? = null,
         val notificationScreeningPackages: List<String>? = null,
     )
@@ -959,6 +960,7 @@ object BackupRestore {
         if (BackupSection.LOGS in sections) dao.clearCallLog()
     }
 
+    @Suppress("LongMethod")
     private fun Preferences.toBackupSettings(): BackupSettings =
         BackupSettings(
             blockCallsEnabled = this[SpamRepository.KEY_BLOCK_CALLS] ?: true,
@@ -1013,6 +1015,7 @@ object BackupRestore {
                 ContactGroupCatalog
                     .preserveScope(this[SpamRepository.KEY_SELECTED_CONTACT_GROUPS].orEmpty())
                     .sorted(),
+            outgoingRiskWarningEnabled = this[SpamRepository.KEY_OUTGOING_RISK_WARNING] ?: false,
             activeProfileName = this[SpamRepository.KEY_ACTIVE_PROFILE],
             notificationScreeningPackages =
                 NotificationScreeningSources
@@ -1072,6 +1075,7 @@ object BackupRestore {
         preferences[SpamRepository.KEY_URLHAUS_STRIP_QUERY] = urlhausStripQueryEnabled
         preferences[SpamRepository.KEY_CONTACT_WHITELIST] = contactWhitelistEnabled
         preferences[SpamRepository.KEY_CONTACTS_ONLY] = contactsOnlyEnabled
+        preferences[SpamRepository.KEY_OUTGOING_RISK_WARNING] = outgoingRiskWarningEnabled
         preferences[SpamRepository.KEY_DB_PREFIX_EXPANSION] = dbPrefixExpansionEnabled
         preferences[SpamRepository.KEY_AGGRESSIVE_MODE] = aggressiveModeEnabled
         preferences[SpamRepository.KEY_ANSWERED_CALLER_TRUST] = answeredCallerTrustEnabled

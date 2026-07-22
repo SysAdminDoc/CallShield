@@ -398,16 +398,19 @@
     <!-- Caller ID Overlay -->
     <string name="overlay_header_possible_spam">Possible Spam</string>
     <string name="overlay_header_incoming_call">Incoming Call</string>
+    <string name="overlay_header_outgoing_risk">Known-risk outgoing call</string>
     <string name="overlay_header_likely_spam">Likely Spam</string>
     <string name="overlay_header_suspicious">Suspicious</string>
     <string name="overlay_header_safe">Looks Safe</string>
     <string name="overlay_initial_score">Score: %1$d%%</string>
+    <string name="overlay_outgoing_risk_score">Local risk confidence: %1$d%%</string>
     <string name="overlay_score_loading">Checking databases…</string>
     <string name="overlay_spam_score">Spam score: %1$d%% (%2$s)</string>
     <string name="overlay_status_querying">Querying SkipCalls, PhoneBlock, WhoCalledMe, OpenCNAM…</string>
     <string name="overlay_status_fast_hit">Fast hit from %1$s; checking remaining sources…</string>
     <string name="overlay_status_complete">All sources checked</string>
     <string name="overlay_status_failed">Lookup failed</string>
+    <string name="overlay_outgoing_risk_status">CallShield did not block this call. End it in Phone if you do not recognize the number.</string>
     <string name="overlay_action_search">Search</string>
     <string name="overlay_action_block">Block</string>
     <string name="overlay_action_dismiss">Dismiss</string>
@@ -513,6 +516,9 @@
     </plurals>
     <string name="settings_contacts_only">Contacts-only mode</string>
     <string name="settings_contacts_only_desc">Allow only contacts and explicit allowlist entries</string>
+    <string name="settings_outgoing_risk_warning">Warn before known-risk outgoing calls</string>
+    <string name="settings_outgoing_risk_warning_desc">Show a local warning for exact matches in your spam database</string>
+    <string name="settings_outgoing_risk_warning_overlay_required">Allow overlay access to see outgoing warnings.</string>
     <string name="settings_db_prefix_expansion">Database prefix expansion</string>
     <string name="settings_db_prefix_expansion_desc">Block campaign numbers sharing a known spam prefix</string>
     <string name="settings_detection_engines">Detection engines</string>

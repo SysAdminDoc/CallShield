@@ -104,6 +104,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
     val contactWhitelist by viewModel.contactWhitelistEnabled.collectAsStateWithLifecycle()
     val contactsOnly by viewModel.contactsOnlyEnabled.collectAsStateWithLifecycle()
     val selectedContactGroups by viewModel.selectedContactGroups.collectAsStateWithLifecycle()
+    val outgoingRiskWarning by viewModel.outgoingRiskWarningEnabled.collectAsStateWithLifecycle()
     val contactGroups by viewModel.contactGroups.collectAsStateWithLifecycle()
     val contactGroupsLoading by viewModel.contactGroupsLoading.collectAsStateWithLifecycle()
     val regionBlockEnabled by viewModel.regionBlockEnabled.collectAsStateWithLifecycle()
@@ -445,6 +446,22 @@ fun SettingsScreen(viewModel: MainViewModel) {
                 Icons.Default.PhoneLocked,
                 contactsOnly,
             ) { viewModel.setContactsOnly(it) }
+            GradientDivider()
+            SettingsToggle(
+                stringResource(R.string.settings_outgoing_risk_warning),
+                stringResource(R.string.settings_outgoing_risk_warning_desc),
+                Icons.Default.WarningAmber,
+                outgoingRiskWarning,
+                onCheckedChange = viewModel::setOutgoingRiskWarning,
+            )
+            if (outgoingRiskWarning && !overlayGranted) {
+                Text(
+                    stringResource(R.string.settings_outgoing_risk_warning_overlay_required),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = CatPeach,
+                    modifier = Modifier.padding(start = 44.dp, end = 4.dp, bottom = 4.dp),
+                )
+            }
             GradientDivider()
             PremiumActionButton(
                 label = stringResource(R.string.settings_region_cnap_rules),
