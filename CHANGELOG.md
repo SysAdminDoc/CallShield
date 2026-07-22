@@ -61,6 +61,9 @@ All notable changes to CallShield will be documented in this file.
   bypass the user's block-unknown setting.
 - The reproducibility gate now verifies both signed and unsigned release APK
   names instead of failing after a valid unsigned release build.
+- Pseudolocale screenshot QA now taps the actual Settings row in both layout
+  directions and retries transient null UI roots after locale restarts instead
+  of mislabeling or aborting captures.
 
 ## v1.7.19 — 2026-07-21
 
