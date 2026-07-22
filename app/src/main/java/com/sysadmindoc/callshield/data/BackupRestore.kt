@@ -692,8 +692,9 @@ object BackupRestore {
             logs.size +
             if (settings != null) 1 else 0
 
-    private fun Backup.toRestorePayload(sections: Set<BackupSection>): RestorePayload =
-        toRestorePayload(sections, System.currentTimeMillis())
+    private fun Backup.toRestorePayload(
+        sections: Set<BackupSection>,
+    ): RestorePayload = toRestorePayload(sections, System.currentTimeMillis())
 
     private fun Backup.toRestorePayload(
         sections: Set<BackupSection>,
@@ -702,32 +703,13 @@ object BackupRestore {
         RestorePayload(
             blockedNumbers =
                 if (BackupSection.BLOCKED_NUMBERS in sections) {
-                    blockedNumbers.mapNotNull { number ->
-                        if (number.expiresAt != null && number.expiresAt <= nowMillis) return@mapNotNull null
-                        val normalizedNumber = normalizeImportedNumber(number.number) ?: return@mapNotNull null
-                        BackupNumber(
-                            number = normalizedNumber,
-                            type = number.type.trim().ifBlank { "unknown" },
-                            description = number.description.trim(),
-                            source = number.source.trim().ifBlank { "user" },
-                            expiresAt = number.expiresAt,
-                        )
-                    }
+                    blockedNumbers.mapNotNull { it.sanitized(nowMillis) }
                 } else {
                     emptyList()
                 },
             whitelistNumbers =
                 if (BackupSection.WHITELIST in sections) {
-                    whitelistNumbers.mapNotNull { whitelist ->
-                        if (whitelist.expiresAt != null && whitelist.expiresAt <= nowMillis) return@mapNotNull null
-                        val normalizedNumber = normalizeImportedNumber(whitelist.number) ?: return@mapNotNull null
-                        BackupWhitelist(
-                            number = normalizedNumber,
-                            description = whitelist.description.trim(),
-                            isEmergency = whitelist.isEmergency,
-                            expiresAt = whitelist.expiresAt,
-                        )
-                    }
+                    whitelistNumbers.mapNotNull { it.sanitized(nowMillis) }
                 } else {
                     emptyList()
                 },
@@ -805,6 +787,30 @@ object BackupRestore {
                     emptyList()
                 },
         )
+
+    private fun BackupNumber.sanitized(nowMillis: Long): BackupNumber? {
+        val normalizedNumber =
+            if (expiresAt == null || expiresAt > nowMillis) normalizeImportedNumber(number) else null
+        return normalizedNumber?.let {
+            copy(
+                number = it,
+                type = type.trim().ifBlank { "unknown" },
+                description = description.trim(),
+                source = source.trim().ifBlank { "user" },
+            )
+        }
+    }
+
+    private fun BackupWhitelist.sanitized(nowMillis: Long): BackupWhitelist? {
+        val normalizedNumber =
+            if (expiresAt == null || expiresAt > nowMillis) normalizeImportedNumber(number) else null
+        return normalizedNumber?.let {
+            copy(
+                number = it,
+                description = description.trim(),
+            )
+        }
+    }
 
     private suspend fun countConflicts(
         dao: SpamDao,

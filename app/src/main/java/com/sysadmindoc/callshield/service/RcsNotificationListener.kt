@@ -268,11 +268,13 @@ class RcsNotificationListener : NotificationListenerService() {
     }
 
     companion object {
-        internal fun isNotificationScreeningEnabled(prefs: Preferences): Boolean =
-            prefs[SpamRepository.KEY_RCS_FILTER] ?: true
+        internal fun isNotificationScreeningEnabled(
+            prefs: Preferences,
+        ): Boolean = prefs[SpamRepository.KEY_RCS_FILTER] ?: true
 
-        internal fun isSpamBlockingEnabled(prefs: Preferences): Boolean =
-            prefs[SpamRepository.KEY_BLOCK_SMS] ?: true
+        internal fun isSpamBlockingEnabled(
+            prefs: Preferences,
+        ): Boolean = prefs[SpamRepository.KEY_BLOCK_SMS] ?: true
 
         internal data class ContentVerdict(
             val isSpam: Boolean,

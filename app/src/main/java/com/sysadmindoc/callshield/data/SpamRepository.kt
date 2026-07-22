@@ -3,7 +3,14 @@ package com.sysadmindoc.callshield.data
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
-import androidx.datastore.preferences.core.*
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.emptyPreferences
+import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.room.withTransaction
 import com.sysadmindoc.callshield.data.checker.BlockResult
@@ -17,8 +24,8 @@ import com.sysadmindoc.callshield.data.repository.BlocklistRepository
 import com.sysadmindoc.callshield.data.repository.SettingsRepository
 import com.sysadmindoc.callshield.data.repository.SpamRepositoryImpl
 import com.sysadmindoc.callshield.data.repository.SyncRepository
-import com.sysadmindoc.callshield.domain.model.SpamCheckResult
 import com.sysadmindoc.callshield.domain.model.CallerIdentity
+import com.sysadmindoc.callshield.domain.model.SpamCheckResult
 import com.sysadmindoc.callshield.domain.model.SyncResult
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -27,8 +34,7 @@ import kotlinx.coroutines.flow.Flow
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 
-internal fun replaceCorruptPreferences(): ReplaceFileCorruptionHandler<Preferences> =
-    ReplaceFileCorruptionHandler { emptyPreferences() }
+internal fun replaceCorruptPreferences() = ReplaceFileCorruptionHandler<Preferences> { emptyPreferences() }
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(
     name = "callshield_prefs",
@@ -279,8 +285,9 @@ class SpamRepository(
 
     suspend fun resetNotificationScreeningPackages() = settingsRepository.resetNotificationScreeningPackages()
 
-    suspend fun setNotificationScreeningPackages(packageNames: Set<String>) =
+    suspend fun setNotificationScreeningPackages(packageNames: Set<String>) {
         settingsRepository.setNotificationScreeningPackages(packageNames)
+    }
 
     suspend fun setSilentVoicemail(enabled: Boolean) = settingsRepository.setSilentVoicemail(enabled)
 
@@ -643,18 +650,24 @@ internal fun normalizePhoneNumber(number: String): String {
     if (number.length > MAX_RAW_PHONE_NUMBER_LENGTH) return ""
     val digits = StringBuilder(MAX_E164_DIGITS)
     var firstMeaningfulCharacter: Char? = null
+    var hasTooManyDigits = false
     for (ch in number) {
-        if (ch.code in PHONE_FORMAT_CONTROL_CODES) continue
-        if (firstMeaningfulCharacter == null && !ch.isWhitespace()) {
+        if (ch.code !in PHONE_FORMAT_CONTROL_CODES && !ch.isWhitespace()) {
             firstMeaningfulCharacter = ch
+            break
         }
+    }
+    for (ch in number) {
         if (ch in '0'..'9') {
-            if (digits.length >= MAX_E164_DIGITS) return ""
+            if (digits.length >= MAX_E164_DIGITS) {
+                hasTooManyDigits = true
+                break
+            }
             digits.append(ch)
         }
     }
     return when {
-        digits.isEmpty() -> ""
+        hasTooManyDigits || digits.isEmpty() -> ""
         firstMeaningfulCharacter == '+' -> "+$digits"
         else -> digits.toString()
     }
