@@ -23,6 +23,11 @@ All notable changes to CallShield will be documented in this file.
 - RCS and notification-screening URL warnings remain active when SMS spam
   blocking is paused, matching direct-SMS phishing protection; the notification
   screening toggle still fully controls whether message content may be read.
+- Corrupt public or private DataStore files now recover to safe defaults instead
+  of repeatedly breaking settings reads, onboarding, and the screening hot path.
+- Portable backup restore rejects more than 100,000 aggregate rows before
+  normalization, conflict analysis, or database mutation, closing a CPU/memory
+  exhaustion path that remained despite the existing 32 MiB byte cap.
 
 ## v1.7.19 — 2026-07-21
 

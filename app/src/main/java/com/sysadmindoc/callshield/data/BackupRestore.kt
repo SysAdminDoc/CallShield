@@ -45,6 +45,7 @@ object BackupRestore {
     private const val MIN_IMPORTED_DIGITS = 5
     private const val CURRENT_BACKUP_VERSION = 4
     private const val OLDEST_SUPPORTED_VERSION = 1
+    internal const val MAX_BACKUP_RESTORE_ROWS = MAX_IMPORT_ROWS
 
     private val moshi = Moshi.Builder().addLast(KotlinJsonAdapterFactory()).build()
 
@@ -246,6 +247,7 @@ object BackupRestore {
         WRONG_APP,
         UNSUPPORTED_VERSION,
         EMPTY,
+        TOO_MANY_ITEMS,
         NO_VALID_ITEMS,
     }
 
@@ -654,6 +656,9 @@ object BackupRestore {
         ) {
             return RestoreValidation.Invalid(RestoreFailure.EMPTY)
         }
+        if (backup.rawItemCount() > MAX_BACKUP_RESTORE_ROWS.toLong()) {
+            return RestoreValidation.Invalid(RestoreFailure.TOO_MANY_ITEMS)
+        }
 
         val payload = backup.toRestorePayload(sections)
         if (payload.counts.total == 0) {
@@ -663,6 +668,15 @@ object BackupRestore {
     }
 
     internal fun backupToJson(backup: Backup): String = moshi.adapter(Backup::class.java).toJson(backup)
+
+    private fun Backup.rawItemCount(): Long =
+        blockedNumbers.size.toLong() +
+            whitelistNumbers.size +
+            wildcardRules.size +
+            keywordRules.size +
+            rangeRules.size +
+            logs.size +
+            if (settings != null) 1 else 0
 
     private fun Backup.toRestorePayload(sections: Set<BackupSection>): RestorePayload =
         RestorePayload(
@@ -949,6 +963,10 @@ object BackupRestore {
 
             RestoreFailure.EMPTY -> {
                 context.getString(R.string.backup_restore_no_data)
+            }
+
+            RestoreFailure.TOO_MANY_ITEMS -> {
+                context.getString(R.string.backup_restore_too_many_items, MAX_BACKUP_RESTORE_ROWS)
             }
 
             RestoreFailure.NO_VALID_ITEMS -> {

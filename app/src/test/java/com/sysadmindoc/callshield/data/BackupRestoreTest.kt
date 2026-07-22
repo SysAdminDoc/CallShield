@@ -192,6 +192,23 @@ class BackupRestoreTest {
     }
 
     @Test
+    fun `restore validation rejects aggregate rows past the import cap`() {
+        val repeatedNumber = validBackupNumber()
+        val validation =
+            BackupRestore.validateBackupForRestore(
+                Backup(
+                    blockedNumbers = List(BackupRestore.MAX_BACKUP_RESTORE_ROWS / 2 + 1) { repeatedNumber },
+                    logs =
+                        List(BackupRestore.MAX_BACKUP_RESTORE_ROWS / 2) {
+                            BackupLogEntry("2125551234", timestamp = it.toLong())
+                        },
+                ),
+            )
+
+        assertInvalidRestore(validation, BackupRestore.RestoreFailure.TOO_MANY_ITEMS)
+    }
+
+    @Test
     fun `restore validation rejects backups with no valid items`() {
         val validation =
             BackupRestore.validateBackupForRestore(

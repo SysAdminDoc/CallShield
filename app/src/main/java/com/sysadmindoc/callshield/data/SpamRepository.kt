@@ -2,6 +2,7 @@ package com.sysadmindoc.callshield.data
 
 import android.content.Context
 import androidx.datastore.core.DataStore
+import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
 import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.room.withTransaction
@@ -26,7 +27,13 @@ import kotlinx.coroutines.flow.Flow
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 
-private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "callshield_prefs")
+internal fun replaceCorruptPreferences(): ReplaceFileCorruptionHandler<Preferences> =
+    ReplaceFileCorruptionHandler { emptyPreferences() }
+
+private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(
+    name = "callshield_prefs",
+    corruptionHandler = replaceCorruptPreferences(),
+)
 
 private object NoBackupPreferenceStores {
     private val stores = ConcurrentHashMap<String, DataStore<Preferences>>()
@@ -39,6 +46,7 @@ private object NoBackupPreferenceStores {
         val key = "${appContext.noBackupFilesDir.absolutePath}/$name"
         return stores.computeIfAbsent(key) {
             PreferenceDataStoreFactory.create(
+                corruptionHandler = replaceCorruptPreferences(),
                 scope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
                 produceFile = {
                     File(appContext.noBackupFilesDir, "datastore").apply { mkdirs() }
