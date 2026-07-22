@@ -12,7 +12,7 @@
 <p align="center">
   <a href="https://github.com/SysAdminDoc/CallShield/releases/latest"><img src="https://img.shields.io/github/v/release/SysAdminDoc/CallShield?style=flat-square&color=a6e3a1" alt="Release"></a>
   <img src="https://img.shields.io/badge/Spam%20Numbers-32%2C933-f38ba8?style=flat-square" alt="32,933 Numbers">
-  <img src="https://img.shields.io/badge/Tests-797-94e2d5?style=flat-square" alt="797 Tests">
+  <img src="https://img.shields.io/badge/Tests-803-94e2d5?style=flat-square" alt="803 Tests">
   <img src="https://img.shields.io/badge/Android-10%2B-89b4fa?style=flat-square" alt="Android 10+">
   <img src="https://img.shields.io/badge/License-MIT-cba6f7?style=flat-square" alt="MIT License">
   <img src="https://img.shields.io/badge/API%20Keys-None-fab387?style=flat-square" alt="No required API keys">
@@ -273,6 +273,7 @@ Trained weekly from the CallShield database (50K positive + 50K negative samples
 - Blocklist, Wildcards, Keywords, Whitelist, Database
 - Export/import blocklists as JSON, per-rule enable/disable toggles
 - Regex validation before adding wildcard rules
+- Inline priority-conflict warnings name the whitelist, emergency allow, or block rule that wins before an overlapping rule is saved
 
 ### Statistics
 - Weekly bar chart with daily breakdown

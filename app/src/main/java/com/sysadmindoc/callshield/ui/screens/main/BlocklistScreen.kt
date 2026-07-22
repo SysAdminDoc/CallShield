@@ -91,6 +91,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.HashWildcardMatcher
 import com.sysadmindoc.callshield.data.PhoneFormatter
+import com.sysadmindoc.callshield.data.RuleConflict
+import com.sysadmindoc.callshield.data.RuleConflictAnalyzer
+import com.sysadmindoc.callshield.data.RuleConflictRule
+import com.sysadmindoc.callshield.data.RuleConflictWinner
 import com.sysadmindoc.callshield.data.TimeSchedule
 import com.sysadmindoc.callshield.data.model.HashWildcardRule
 import com.sysadmindoc.callshield.data.model.SmsKeywordRule
@@ -526,7 +530,10 @@ fun BlocklistScreen(viewModel: MainViewModel) {
     val keywordRuleAddedMessage = stringResource(R.string.blocklist_keyword_rule_added)
 
     if (showAddDialog) {
-        AddNumberDialog(onDismiss = { showAddDialog = false }) { number, description ->
+        AddNumberDialog(
+            existingWhitelist = whitelistEntries,
+            onDismiss = { showAddDialog = false },
+        ) { number, description ->
             viewModel.blockNumber(number, description = description)
             showAddDialog = false
             hapticConfirm(context)
@@ -539,7 +546,10 @@ fun BlocklistScreen(viewModel: MainViewModel) {
         }
     }
     if (showWildcardDialog) {
-        AddWildcardDialog(onDismiss = { showWildcardDialog = false }) { pattern, isRegex, description, schedule ->
+        AddWildcardDialog(
+            existingWhitelist = whitelistEntries,
+            onDismiss = { showWildcardDialog = false },
+        ) { pattern, isRegex, description, schedule ->
             viewModel.addWildcardRule(pattern, isRegex, description, schedule)
             showWildcardDialog = false
             hapticTick(context)
@@ -554,6 +564,7 @@ fun BlocklistScreen(viewModel: MainViewModel) {
     if (showRangeDialog) {
         AddHashWildcardDialog(
             existing = hashWildcardRules,
+            existingWhitelist = whitelistEntries,
             onDismiss = { showRangeDialog = false },
         ) { pattern, description, schedule ->
             viewModel.addHashWildcardRule(pattern, description, schedule)
@@ -568,7 +579,12 @@ fun BlocklistScreen(viewModel: MainViewModel) {
         }
     }
     if (showWhitelistDialog) {
-        AddWhitelistDialog(onDismiss = { showWhitelistDialog = false }) { number, description, emergency ->
+        AddWhitelistDialog(
+            existingBlocks = userBlocked,
+            existingWildcardRules = wildcardRules,
+            existingHashWildcardRules = hashWildcardRules,
+            onDismiss = { showWhitelistDialog = false },
+        ) { number, description, emergency ->
             viewModel.addToWhitelist(number, description, isEmergency = emergency)
             showWhitelistDialog = false
             hapticTick(context)
@@ -1002,6 +1018,7 @@ fun DatabaseItem(number: SpamNumber) {
 
 @Composable
 fun AddNumberDialog(
+    existingWhitelist: List<WhitelistEntry> = emptyList(),
     onDismiss: () -> Unit,
     onAdd: (String, String) -> Unit,
 ) {
@@ -1009,6 +1026,10 @@ fun AddNumberDialog(
     var description by remember { mutableStateOf("") }
     val normalizedNumber = remember(number) { normalizePhoneInput(number) }
     val canConfirm = hasMinAsciiDigits(normalizedNumber)
+    val conflict =
+        remember(normalizedNumber, existingWhitelist) {
+            if (canConfirm) RuleConflictAnalyzer.forExactBlock(normalizedNumber, existingWhitelist) else null
+        }
 
     androidx.compose.material3.AlertDialog(
         onDismissRequest = onDismiss,
@@ -1039,6 +1060,7 @@ fun AddNumberDialog(
                             cursorColor = CatGreen,
                         ),
                 )
+                conflict?.let { RuleConflictWarning(it) }
                 androidx.compose.material3.OutlinedTextField(
                     value = description,
                     onValueChange = { description = it },
@@ -1081,6 +1103,7 @@ fun AddNumberDialog(
 
 @Composable
 fun AddWildcardDialog(
+    existingWhitelist: List<WhitelistEntry> = emptyList(),
     onDismiss: () -> Unit,
     onAdd: (String, Boolean, String, TimeSchedule) -> Unit,
 ) {
@@ -1090,6 +1113,14 @@ fun AddWildcardDialog(
     var regexErrorDetail by remember { mutableStateOf<String?>(null) }
     var scheduleState by remember { mutableStateOf(ScheduleUiState()) }
     val trimmedPattern = pattern.trim()
+    val conflict =
+        remember(trimmedPattern, isRegex, existingWhitelist) {
+            if (trimmedPattern.isBlank()) {
+                null
+            } else {
+                RuleConflictAnalyzer.forWildcardBlock(trimmedPattern, isRegex, existingWhitelist)
+            }
+        }
 
     androidx.compose.material3.AlertDialog(
         onDismissRequest = onDismiss,
@@ -1117,6 +1148,7 @@ fun AddWildcardDialog(
                             cursorColor = CatYellow,
                         ),
                 )
+                conflict?.let { RuleConflictWarning(it) }
                 androidx.compose.material3.OutlinedTextField(
                     value = description,
                     onValueChange = { description = it },
@@ -1178,6 +1210,9 @@ fun AddWildcardDialog(
 
 @Composable
 fun AddWhitelistDialog(
+    existingBlocks: List<SpamNumber> = emptyList(),
+    existingWildcardRules: List<WildcardRule> = emptyList(),
+    existingHashWildcardRules: List<HashWildcardRule> = emptyList(),
     onDismiss: () -> Unit,
     onAdd: (String, String, Boolean) -> Unit,
 ) {
@@ -1186,6 +1221,26 @@ fun AddWhitelistDialog(
     var emergency by remember { mutableStateOf(false) }
     val normalizedNumber = remember(number) { normalizePhoneInput(number) }
     val canConfirm = hasMinAsciiDigits(normalizedNumber)
+    val conflict =
+        remember(
+            normalizedNumber,
+            emergency,
+            existingBlocks,
+            existingWildcardRules,
+            existingHashWildcardRules,
+        ) {
+            if (canConfirm) {
+                RuleConflictAnalyzer.forWhitelist(
+                    number = normalizedNumber,
+                    emergency = emergency,
+                    exactBlocks = existingBlocks,
+                    wildcardRules = existingWildcardRules,
+                    hashWildcardRules = existingHashWildcardRules,
+                )
+            } else {
+                null
+            }
+        }
 
     androidx.compose.material3.AlertDialog(
         onDismissRequest = onDismiss,
@@ -1215,6 +1270,7 @@ fun AddWhitelistDialog(
                             cursorColor = CatGreen,
                         ),
                 )
+                conflict?.let { RuleConflictWarning(it) }
                 androidx.compose.material3.OutlinedTextField(
                     value = description,
                     onValueChange = { description = it },
@@ -1352,6 +1408,43 @@ fun AddKeywordDialog(
     )
 }
 
+@Composable
+private fun RuleConflictWarning(conflict: RuleConflict) {
+    val winner =
+        stringResource(
+            when (conflict.winner) {
+                RuleConflictWinner.EMERGENCY_ALLOW -> R.string.rule_conflict_emergency_allow
+                RuleConflictWinner.WHITELIST -> R.string.rule_conflict_whitelist
+            },
+        )
+    val overridden =
+        stringResource(
+            when (conflict.overriddenRule) {
+                RuleConflictRule.EXACT_BLOCK -> R.string.rule_conflict_exact_block
+                RuleConflictRule.WILDCARD_BLOCK -> R.string.rule_conflict_wildcard_block
+                RuleConflictRule.RANGE_BLOCK -> R.string.rule_conflict_range_block
+            },
+        )
+    Surface(
+        color = CatYellow.copy(alpha = 0.12f),
+        shape = RoundedCornerShape(10.dp),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Text(
+            text =
+                stringResource(
+                    R.string.rule_conflict_warning,
+                    winner,
+                    overridden,
+                    PhoneFormatter.formatIsolated(conflict.sampleNumber),
+                ),
+            style = MaterialTheme.typography.labelMedium,
+            color = CatYellow,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+        )
+    }
+}
+
 private fun sanitizePhoneInput(input: String): String = sanitizePhoneNumberInput(input)
 
 private fun normalizePhoneInput(input: String): String = normalizePhoneNumberInput(input)
@@ -1443,6 +1536,7 @@ fun HashWildcardRuleItem(
 @Composable
 fun AddHashWildcardDialog(
     existing: List<HashWildcardRule>,
+    existingWhitelist: List<WhitelistEntry> = emptyList(),
     onDismiss: () -> Unit,
     onAdd: (String, String, TimeSchedule) -> Unit,
 ) {
@@ -1453,6 +1547,10 @@ fun AddHashWildcardDialog(
     // the whole section untouched produces the pre-A7 behaviour.
     var scheduleState by remember { mutableStateOf(ScheduleUiState()) }
     val trimmed = pattern.trim()
+    val conflict =
+        remember(trimmed, existingWhitelist) {
+            if (trimmed.isBlank()) null else RuleConflictAnalyzer.forHashWildcardBlock(trimmed, existingWhitelist)
+        }
 
     val hashCount = remember(trimmed) { trimmed.count { it == '#' } }
     val coverage =
@@ -1539,6 +1637,7 @@ fun AddHashWildcardDialog(
                             cursorColor = CatPeach,
                         ),
                 )
+                conflict?.let { RuleConflictWarning(it) }
                 androidx.compose.material3.OutlinedTextField(
                     value = description,
                     onValueChange = { description = it },

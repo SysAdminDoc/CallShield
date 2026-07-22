@@ -309,6 +309,12 @@
 
     <!-- Add Number Dialog -->
     <string name="dialog_block_number">Block Number</string>
+    <string name="rule_conflict_warning">Conflict: %1$s wins over %2$s for %3$s. The lower-priority rule will not decide this number.</string>
+    <string name="rule_conflict_emergency_allow">Emergency allow</string>
+    <string name="rule_conflict_whitelist">Whitelist</string>
+    <string name="rule_conflict_exact_block">Exact block</string>
+    <string name="rule_conflict_wildcard_block">Wildcard block</string>
+    <string name="rule_conflict_range_block">Range block</string>
     <string name="dialog_phone_number">Phone Number</string>
     <string name="dialog_phone_placeholder">+1234567890</string>
     <string name="dialog_description_optional">Description (optional)</string>

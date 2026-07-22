@@ -12,6 +12,7 @@ import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeLeft
 import com.sysadmindoc.callshield.data.TimeSchedule
 import com.sysadmindoc.callshield.data.model.SpamNumber
+import com.sysadmindoc.callshield.data.model.WhitelistEntry
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -58,6 +59,30 @@ class BlocklistTest {
         composeRule.runOnIdle {
             assertEquals(0, addCount)
         }
+    }
+
+    @Test
+    fun blockDialogNamesHigherPriorityEmergencyAllowInline() {
+        composeRule.setContent {
+            AddNumberDialog(
+                existingWhitelist =
+                    listOf(
+                        WhitelistEntry(
+                            number = "+12125550101",
+                            description = "Doctor",
+                            isEmergency = true,
+                        ),
+                    ),
+                onDismiss = {},
+                onAdd = { _, _ -> },
+            )
+        }
+
+        composeRule.onNodeWithText("Phone Number").performTextInput("+1 (212) 555-0101")
+
+        composeRule
+            .onNodeWithText("Emergency allow wins over Exact block", substring = true)
+            .assertIsDisplayed()
     }
 
     @Test
