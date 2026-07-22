@@ -34,7 +34,9 @@ import java.io.File
  *   so a time-gated rule round-tripped through a v2 backup would fire
  *   24/7 after restore.
  * - **v4**: added selective sections, range rules, non-secret settings,
- *   and blocked-call/SMS logs. The reader accepts v1-v4; the writer emits v4.
+ *   and blocked-call/SMS logs.
+ * - **v5**: preserves temporary block/allow expiry and the selected
+ *   notification-screening apps. The reader accepts v1-v5; the writer emits v5.
  *   Older backups that don't carry schedule fields are restored with
  *   all-zeros — the Kotlin defaults on [WildcardRule] and
  *   [SmsKeywordRule] treat that as "always active", preserving
@@ -43,7 +45,7 @@ import java.io.File
 @Suppress("TooManyFunctions")
 object BackupRestore {
     private const val MIN_IMPORTED_DIGITS = 5
-    private const val CURRENT_BACKUP_VERSION = 4
+    private const val CURRENT_BACKUP_VERSION = 5
     private const val OLDEST_SUPPORTED_VERSION = 1
     internal const val MAX_BACKUP_RESTORE_ROWS = MAX_IMPORT_ROWS
 
@@ -89,12 +91,14 @@ object BackupRestore {
         val type: String,
         val description: String,
         val source: String,
+        val expiresAt: Long? = null,
     )
 
     data class BackupWhitelist(
         val number: String,
         val description: String,
         val isEmergency: Boolean = false,
+        val expiresAt: Long? = null,
     )
 
     data class BackupWildcard(
@@ -171,6 +175,7 @@ object BackupRestore {
         val cnapTrustPatterns: List<String> = emptyList(),
         val cnapBlockPatterns: List<String> = emptyList(),
         val activeProfileName: String? = null,
+        val notificationScreeningPackages: List<String>? = null,
     )
 
     @Suppress("LongParameterList")
@@ -275,7 +280,7 @@ object BackupRestore {
             val numbers =
                 if (BackupSection.BLOCKED_NUMBERS in sections) {
                     dao.getUserBlockedNumbers().first().map {
-                        BackupNumber(it.number, it.type, it.description, it.source)
+                        BackupNumber(it.number, it.type, it.description, it.source, it.expiresAt)
                     }
                 } else {
                     emptyList()
@@ -283,7 +288,7 @@ object BackupRestore {
             val whitelist =
                 if (BackupSection.WHITELIST in sections) {
                     dao.getAllWhitelist().first().map {
-                        BackupWhitelist(it.number, it.description, it.isEmergency)
+                        BackupWhitelist(it.number, it.description, it.isEmergency, it.expiresAt)
                     }
                 } else {
                     emptyList()
@@ -524,12 +529,21 @@ object BackupRestore {
                 }
 
                 for (n in payload.blockedNumbers) {
-                    repo.blockNumber(n.number, n.type, n.description)
+                    if (n.expiresAt != null) {
+                        repo.temporaryBlockNumber(n.number, n.expiresAt, n.type, n.description)
+                    } else {
+                        repo.blockNumber(n.number, n.type, n.description)
+                    }
                     numbersRestored++
                 }
 
                 for (w in payload.whitelistNumbers) {
-                    repo.addToWhitelist(w.number, w.description, isEmergency = w.isEmergency)
+                    repo.addToWhitelist(
+                        number = w.number,
+                        description = w.description,
+                        isEmergency = w.isEmergency,
+                        expiresAt = w.expiresAt,
+                    )
                     whitelistRestored++
                 }
 
@@ -679,16 +693,24 @@ object BackupRestore {
             if (settings != null) 1 else 0
 
     private fun Backup.toRestorePayload(sections: Set<BackupSection>): RestorePayload =
+        toRestorePayload(sections, System.currentTimeMillis())
+
+    private fun Backup.toRestorePayload(
+        sections: Set<BackupSection>,
+        nowMillis: Long,
+    ): RestorePayload =
         RestorePayload(
             blockedNumbers =
                 if (BackupSection.BLOCKED_NUMBERS in sections) {
                     blockedNumbers.mapNotNull { number ->
+                        if (number.expiresAt != null && number.expiresAt <= nowMillis) return@mapNotNull null
                         val normalizedNumber = normalizeImportedNumber(number.number) ?: return@mapNotNull null
                         BackupNumber(
                             number = normalizedNumber,
                             type = number.type.trim().ifBlank { "unknown" },
                             description = number.description.trim(),
                             source = number.source.trim().ifBlank { "user" },
+                            expiresAt = number.expiresAt,
                         )
                     }
                 } else {
@@ -697,11 +719,13 @@ object BackupRestore {
             whitelistNumbers =
                 if (BackupSection.WHITELIST in sections) {
                     whitelistNumbers.mapNotNull { whitelist ->
+                        if (whitelist.expiresAt != null && whitelist.expiresAt <= nowMillis) return@mapNotNull null
                         val normalizedNumber = normalizeImportedNumber(whitelist.number) ?: return@mapNotNull null
                         BackupWhitelist(
                             number = normalizedNumber,
                             description = whitelist.description.trim(),
                             isEmergency = whitelist.isEmergency,
+                            expiresAt = whitelist.expiresAt,
                         )
                     }
                 } else {
@@ -874,6 +898,10 @@ object BackupRestore {
             cnapBlockPatterns =
                 RegionRules.normalizeNamePatterns(this[SpamRepository.KEY_CNAP_BLOCK_PATTERNS].orEmpty()).sorted(),
             activeProfileName = this[SpamRepository.KEY_ACTIVE_PROFILE],
+            notificationScreeningPackages =
+                NotificationScreeningSources
+                    .enabledPackages(this[SpamRepository.KEY_NOTIFICATION_SCREENING_PACKAGES])
+                    .sorted(),
         )
 
     private fun BackupSettings.sanitized(): BackupSettings =
@@ -895,6 +923,12 @@ object BackupRestore {
             cnapTrustPatterns = RegionRules.normalizeNamePatterns(cnapTrustPatterns).sorted(),
             cnapBlockPatterns = RegionRules.normalizeNamePatterns(cnapBlockPatterns).sorted(),
             activeProfileName = activeProfileName?.trim()?.ifBlank { null },
+            notificationScreeningPackages =
+                notificationScreeningPackages
+                    ?.map { it.trim() }
+                    ?.filter { NotificationScreeningSources.sourceFor(it) != null }
+                    ?.distinct()
+                    ?.sorted(),
         )
 
     @Suppress("LongMethod")
@@ -939,6 +973,9 @@ object BackupRestore {
         repo.setCnapTrustPatterns(sanitized.cnapTrustPatterns.toSet())
         repo.setCnapBlockPatterns(sanitized.cnapBlockPatterns.toSet())
         repo.setActiveProfileName(sanitized.activeProfileName)
+        sanitized.notificationScreeningPackages?.let {
+            repo.setNotificationScreeningPackages(it.toSet())
+        }
     }
 
     private val BackupLogEntry.conflictKey: String

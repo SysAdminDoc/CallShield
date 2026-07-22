@@ -279,6 +279,9 @@ class SpamRepository(
 
     suspend fun resetNotificationScreeningPackages() = settingsRepository.resetNotificationScreeningPackages()
 
+    suspend fun setNotificationScreeningPackages(packageNames: Set<String>) =
+        settingsRepository.setNotificationScreeningPackages(packageNames)
+
     suspend fun setSilentVoicemail(enabled: Boolean) = settingsRepository.setSilentVoicemail(enabled)
 
     suspend fun setPushAlert(enabled: Boolean) = settingsRepository.setPushAlert(enabled)
@@ -564,7 +567,8 @@ class SpamRepository(
         number: String,
         description: String = "",
         isEmergency: Boolean = false,
-    ) = blocklistRepository.addToWhitelist(number, description, isEmergency)
+        expiresAt: Long? = null,
+    ) = blocklistRepository.addToWhitelist(number, description, isEmergency, expiresAt)
 
     suspend fun removeFromWhitelist(entry: WhitelistEntry) = blocklistRepository.removeFromWhitelist(entry)
 

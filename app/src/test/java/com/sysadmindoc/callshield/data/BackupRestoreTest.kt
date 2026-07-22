@@ -27,12 +27,11 @@ class BackupRestoreTest {
     // ── Backup data class defaults ───────────────────────────────────────
 
     @Test
-    fun `Backup default version is 4`() {
-        // v4 adds selective range-rule, settings, and log sections. Older
-        // versions (v1-v3) are still accepted by the restore path, but
-        // writers always emit v4.
+    fun `Backup default version is 5`() {
+        // v5 preserves temporary decision expiry and notification-screening
+        // sources. Older versions remain accepted by the restore path.
         val backup = Backup()
-        assertEquals(4, backup.version)
+        assertEquals(5, backup.version)
     }
 
     @Test
@@ -272,13 +271,13 @@ class BackupRestoreTest {
         assertFalse(payload.keywordRules.single().enabled)
     }
 
-    // ── Backup v2 format with populated data ─────────────────────────────
+    // ── Backup format with populated data ─────────────────────────────────
 
     @Test
-    fun `Backup v4 with all sections populated`() {
+    fun `Backup v5 with all sections populated`() {
         val backup =
             Backup(
-                version = 4,
+                version = 5,
                 blockedNumbers =
                     listOf(
                         BackupNumber("2125551234", "robocall", "Test", "user"),
@@ -300,7 +299,7 @@ class BackupRestoreTest {
                 settings = BackupSettings(blockCallsEnabled = false),
                 logs = listOf(BackupLogEntry("+15551234567", timestamp = 1000L, matchReason = "test")),
             )
-        assertEquals(4, backup.version)
+        assertEquals(5, backup.version)
         assertEquals(2, backup.blockedNumbers.size)
         assertEquals(1, backup.whitelistNumbers.size)
         assertTrue(backup.whitelistNumbers.single().isEmergency)
@@ -320,6 +319,75 @@ class BackupRestoreTest {
         val v1 = current.copy(version = 1)
         assertEquals(1, v1.version)
         assertEquals(current.blockedNumbers, v1.blockedNumbers)
+    }
+
+    @Test
+    fun `restore validation preserves active temporary decisions and supported screening sources`() {
+        val futureExpiry = System.currentTimeMillis() + 60_000L
+        val validation =
+            BackupRestore.validateBackupForRestore(
+                Backup(
+                    blockedNumbers =
+                        listOf(
+                            BackupNumber("2125551234", "spam", "Temporary block", "user", futureExpiry),
+                        ),
+                    whitelistNumbers =
+                        listOf(
+                            BackupWhitelist("3035550100", "Temporary allow", expiresAt = futureExpiry),
+                        ),
+                    settings =
+                        BackupSettings(
+                            notificationScreeningPackages =
+                                listOf(
+                                    " com.google.android.gm ",
+                                    "unsupported.package",
+                                    "com.google.android.gm",
+                                ),
+                        ),
+                ),
+            )
+
+        assertTrue(validation is BackupRestore.RestoreValidation.Valid)
+        val payload = (validation as BackupRestore.RestoreValidation.Valid).payload
+        assertEquals(futureExpiry, payload.blockedNumbers.single().expiresAt)
+        assertEquals(futureExpiry, payload.whitelistNumbers.single().expiresAt)
+        assertEquals(
+            listOf("com.google.android.gm"),
+            payload.settings?.notificationScreeningPackages,
+        )
+    }
+
+    @Test
+    fun `restore validation drops expired temporary decisions`() {
+        val validation =
+            BackupRestore.validateBackupForRestore(
+                Backup(
+                    blockedNumbers =
+                        listOf(
+                            BackupNumber("2125551234", "spam", "Expired block", "user", expiresAt = 1L),
+                        ),
+                    whitelistNumbers =
+                        listOf(
+                            BackupWhitelist("3035550100", "Expired allow", expiresAt = 1L),
+                        ),
+                ),
+            )
+
+        assertInvalidRestore(validation, BackupRestore.RestoreFailure.NO_VALID_ITEMS)
+    }
+
+    @Test
+    fun `restore validation preserves an explicit empty screening source selection`() {
+        val validation =
+            BackupRestore.validateBackupForRestore(
+                Backup(
+                    settings = BackupSettings(notificationScreeningPackages = emptyList()),
+                ),
+            )
+
+        assertTrue(validation is BackupRestore.RestoreValidation.Valid)
+        val payload = (validation as BackupRestore.RestoreValidation.Valid).payload
+        assertEquals(emptyList<String>(), payload.settings?.notificationScreeningPackages)
     }
 
     // ── v1.6.3: schedule fields on wildcard/keyword rules ──────────

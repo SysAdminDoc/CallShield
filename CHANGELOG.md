@@ -28,6 +28,9 @@ All notable changes to CallShield will be documented in this file.
 - Portable backup restore rejects more than 100,000 aggregate rows before
   normalization, conflict analysis, or database mutation, closing a CPU/memory
   exhaustion path that remained despite the existing 32 MiB byte cap.
+- Portable backups now preserve active temporary block/allow expiries and the
+  user's selected notification-screening apps. Expired temporary decisions are
+  discarded during validation instead of returning as permanent rules.
 
 ## v1.7.19 — 2026-07-21
 
