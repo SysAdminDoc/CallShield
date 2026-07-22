@@ -2,6 +2,7 @@ package com.sysadmindoc.callshield.domain.repository
 
 import androidx.datastore.preferences.core.Preferences
 import com.sysadmindoc.callshield.domain.model.SpamCheckResult
+import com.sysadmindoc.callshield.domain.model.CallerIdentity
 
 interface SpamCheckRepository {
     suspend fun checkSpam(
@@ -9,7 +10,7 @@ interface SpamCheckRepository {
         smsBody: String?,
         realtimeCall: Boolean,
         prefsSnapshot: Preferences?,
-        verificationStatus: Int?,
+        callerIdentity: CallerIdentity?,
     ): SpamCheckResult
 
     suspend fun checkSpamSms(

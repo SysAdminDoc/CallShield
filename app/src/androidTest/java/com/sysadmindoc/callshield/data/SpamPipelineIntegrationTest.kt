@@ -11,6 +11,7 @@ import com.sysadmindoc.callshield.data.model.HashWildcardRule
 import com.sysadmindoc.callshield.data.model.SpamNumber
 import com.sysadmindoc.callshield.data.model.SpamPrefix
 import com.sysadmindoc.callshield.data.model.WhitelistEntry
+import com.sysadmindoc.callshield.domain.model.CallerIdentity
 import com.sysadmindoc.callshield.data.model.WildcardRule
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -71,7 +72,8 @@ class SpamPipelineIntegrationTest {
             val result =
                 repo.isSpam(
                     number = number,
-                    verificationStatus = android.telecom.Connection.VERIFICATION_STATUS_FAILED,
+                    callerIdentity =
+                        CallerIdentity(android.telecom.Connection.VERIFICATION_STATUS_FAILED),
                 )
 
             assertFalse(result.isSpam)
@@ -95,7 +97,8 @@ class SpamPipelineIntegrationTest {
             val result =
                 repo.isSpam(
                     number = number,
-                    verificationStatus = android.telecom.Connection.VERIFICATION_STATUS_FAILED,
+                    callerIdentity =
+                        CallerIdentity(android.telecom.Connection.VERIFICATION_STATUS_FAILED),
                 )
 
             assertTrue(result.isSpam)
@@ -119,7 +122,7 @@ class SpamPipelineIntegrationTest {
             val result =
                 repo.isSpam(
                     number = number,
-                    verificationStatus = 1, // android.telecom.Connection.VERIFICATION_STATUS_PASSED
+                    callerIdentity = CallerIdentity(verificationStatus = 1),
                 )
 
             assertTrue(result.isSpam)

@@ -89,6 +89,9 @@ fun SettingsScreen(viewModel: MainViewModel) {
     val urlhausStripQuery by viewModel.urlhausStripQueryEnabled.collectAsStateWithLifecycle()
     val contactWhitelist by viewModel.contactWhitelistEnabled.collectAsStateWithLifecycle()
     val contactsOnly by viewModel.contactsOnlyEnabled.collectAsStateWithLifecycle()
+    val regionBlockEnabled by viewModel.regionBlockEnabled.collectAsStateWithLifecycle()
+    val allowedRegions by viewModel.allowedRegions.collectAsStateWithLifecycle()
+    val cnapTrustPatterns by viewModel.cnapTrustPatterns.collectAsStateWithLifecycle()
     val dbPrefixExpansion by viewModel.dbPrefixExpansionEnabled.collectAsStateWithLifecycle()
     val aggressiveMode by viewModel.aggressiveModeEnabled.collectAsStateWithLifecycle()
     val answeredCallerTrust by viewModel.answeredCallerTrustEnabled.collectAsStateWithLifecycle()
@@ -113,6 +116,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
     val externalBlocklistResult by viewModel.externalBlocklistResult.collectAsStateWithLifecycle()
     var showPushAlertSources by remember { mutableStateOf(false) }
     var showNotificationScreeningSources by remember { mutableStateOf(false) }
+    var showRegionCnapRules by remember { mutableStateOf(false) }
     var showRawSmsExportDialog by remember { mutableStateOf(false) }
     var showLanguageDialog by remember { mutableStateOf(false) }
     var externalBlocklistUrl by remember { mutableStateOf("") }
@@ -352,6 +356,25 @@ fun SettingsScreen(viewModel: MainViewModel) {
                 Icons.Default.PhoneLocked,
                 contactsOnly,
             ) { viewModel.setContactsOnly(it) }
+            GradientDivider()
+            PremiumActionButton(
+                label = stringResource(R.string.settings_region_cnap_rules),
+                icon = Icons.Default.Public,
+                color = CatBlue,
+                onClick = { showRegionCnapRules = true },
+                modifier = Modifier.fillMaxWidth(),
+                outlined = true,
+            )
+            Text(
+                stringResource(
+                    R.string.settings_region_cnap_summary,
+                    if (regionBlockEnabled) allowedRegions.size else 0,
+                    cnapTrustPatterns.size,
+                ),
+                style = MaterialTheme.typography.labelSmall,
+                color = CatSubtext,
+                modifier = Modifier.padding(start = 4.dp),
+            )
         }
 
         // Detection engines
@@ -732,6 +755,16 @@ fun SettingsScreen(viewModel: MainViewModel) {
             onToggle = viewModel::setNotificationScreeningPackage,
             onReset = viewModel::resetNotificationScreeningPackages,
             onDismiss = { showNotificationScreeningSources = false },
+        )
+    }
+
+    if (showRegionCnapRules) {
+        RegionCnapRulesSheet(
+            regionBlockEnabled = regionBlockEnabled,
+            allowedRegions = allowedRegions,
+            cnapTrustPatterns = cnapTrustPatterns,
+            onSave = viewModel::saveRegionAndCnapRules,
+            onDismiss = { showRegionCnapRules = false },
         )
     }
 

@@ -19,6 +19,7 @@ import com.sysadmindoc.callshield.data.model.WildcardRule
 import com.sysadmindoc.callshield.data.normalizePhoneNumber
 import com.sysadmindoc.callshield.data.toSpamCheckResult
 import com.sysadmindoc.callshield.domain.model.SpamCheckResult
+import com.sysadmindoc.callshield.domain.model.CallerIdentity
 
 @Suppress("TooManyFunctions", "ReturnCount")
 class SpamRepositoryImpl(
@@ -100,7 +101,7 @@ class SpamRepositoryImpl(
         smsBody: String? = null,
         realtimeCall: Boolean = true,
         prefsSnapshot: Preferences? = null,
-        verificationStatus: Int? = null,
+        callerIdentity: CallerIdentity? = null,
     ): SpamCheckResult {
         val normalized = normalizeNumber(number)
         if (normalized.isBlank()) return SpamCheckResult(false)
@@ -113,7 +114,8 @@ class SpamRepositoryImpl(
                 smsBody = smsBody,
                 realtimeCall = realtimeCall,
                 prefs = prefs,
-                verificationStatus = verificationStatus,
+                verificationStatus = callerIdentity?.verificationStatus,
+                callerName = callerIdentity?.presentedName,
             )
 
         val verdict =

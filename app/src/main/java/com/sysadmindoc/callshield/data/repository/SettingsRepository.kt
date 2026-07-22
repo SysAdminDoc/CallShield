@@ -8,6 +8,7 @@ import com.squareup.moshi.Types
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import com.sysadmindoc.callshield.data.CallbackDetector
 import com.sysadmindoc.callshield.data.NotificationScreeningSources
+import com.sysadmindoc.callshield.data.RegionRules
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.model.ExternalBlocklistSubscription
 import kotlinx.coroutines.flow.Flow
@@ -56,6 +57,12 @@ class SettingsRepository(
         dataStore.data.map { it[SpamRepository.KEY_CONTACT_WHITELIST] ?: true }
     val contactsOnlyEnabled: Flow<Boolean> =
         dataStore.data.map { it[SpamRepository.KEY_CONTACTS_ONLY] ?: false }
+    val regionBlockEnabled: Flow<Boolean> =
+        dataStore.data.map { it[SpamRepository.KEY_REGION_BLOCK] ?: false }
+    val allowedRegions: Flow<Set<String>> =
+        dataStore.data.map { RegionRules.normalizeRegionCodes(it[SpamRepository.KEY_ALLOWED_REGIONS].orEmpty()) }
+    val cnapTrustPatterns: Flow<Set<String>> =
+        dataStore.data.map { RegionRules.normalizeNamePatterns(it[SpamRepository.KEY_CNAP_TRUST_PATTERNS].orEmpty()) }
     val dbPrefixExpansionEnabled: Flow<Boolean> =
         dataStore.data.map { it[SpamRepository.KEY_DB_PREFIX_EXPANSION] ?: false }
     val aggressiveModeEnabled: Flow<Boolean> = dataStore.data.map { it[SpamRepository.KEY_AGGRESSIVE_MODE] ?: false }
@@ -187,6 +194,29 @@ class SettingsRepository(
     suspend fun setContactWhitelist(enabled: Boolean) = dataStore.edit { it[SpamRepository.KEY_CONTACT_WHITELIST] = enabled }
 
     suspend fun setContactsOnly(enabled: Boolean) = dataStore.edit { it[SpamRepository.KEY_CONTACTS_ONLY] = enabled }
+
+    suspend fun setRegionBlock(enabled: Boolean) = dataStore.edit { it[SpamRepository.KEY_REGION_BLOCK] = enabled }
+
+    suspend fun setAllowedRegions(regions: Set<String>) =
+        dataStore.edit { prefs ->
+            val normalized = RegionRules.normalizeRegionCodes(regions)
+            if (normalized.isEmpty()) {
+                prefs.remove(SpamRepository.KEY_ALLOWED_REGIONS)
+                prefs[SpamRepository.KEY_REGION_BLOCK] = false
+            } else {
+                prefs[SpamRepository.KEY_ALLOWED_REGIONS] = normalized
+            }
+        }
+
+    suspend fun setCnapTrustPatterns(patterns: Set<String>) =
+        dataStore.edit { prefs ->
+            val normalized = RegionRules.normalizeNamePatterns(patterns)
+            if (normalized.isEmpty()) {
+                prefs.remove(SpamRepository.KEY_CNAP_TRUST_PATTERNS)
+            } else {
+                prefs[SpamRepository.KEY_CNAP_TRUST_PATTERNS] = normalized
+            }
+        }
 
     suspend fun setDbPrefixExpansion(enabled: Boolean) = dataStore.edit { it[SpamRepository.KEY_DB_PREFIX_EXPANSION] = enabled }
 

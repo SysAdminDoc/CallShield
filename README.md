@@ -12,7 +12,7 @@
 <p align="center">
   <a href="https://github.com/SysAdminDoc/CallShield/releases/latest"><img src="https://img.shields.io/github/v/release/SysAdminDoc/CallShield?style=flat-square&color=a6e3a1" alt="Release"></a>
   <img src="https://img.shields.io/badge/Spam%20Numbers-32%2C933-f38ba8?style=flat-square" alt="32,933 Numbers">
-  <img src="https://img.shields.io/badge/Tests-810-94e2d5?style=flat-square" alt="810 Tests">
+  <img src="https://img.shields.io/badge/Tests-820-94e2d5?style=flat-square" alt="820 Tests">
   <img src="https://img.shields.io/badge/Android-10%2B-89b4fa?style=flat-square" alt="Android 10+">
   <img src="https://img.shields.io/badge/License-MIT-cba6f7?style=flat-square" alt="MIT License">
   <img src="https://img.shields.io/badge/API%20Keys-None-fab387?style=flat-square" alt="No required API keys">
@@ -200,6 +200,7 @@ SMS-specific layers (append after the shared chain): **SMS Context Trust** → *
 
 ### Additional Layers
 - **Caller ID Overlay** — suspicious calls (heuristic score 30-59) trigger a live multi-source lookup overlay with SkipCalls, PhoneBlock, WhoCalledMe + OpenCNAM caller name
+- **Region & caller-name rules** — opt-in offline blocking outside selected US/Canadian regions, plus bounded `*`/`?` trust patterns for carrier-presented caller names; explicit number/system/prefix/wildcard blocks still win
 - **Opt-in message notification screening** — Google/Samsung Messages are enabled by default; AOSP Messages, SMS Organizer, Signal, WhatsApp, WhatsApp Business, Gmail, Outlook, and Thunderbird can be enabled individually. Private-messenger/email matches show a separate warning without removing the original notification.
 - **URL Safety** — local spam-domain checks run before URLhaus (abuse.ch), with query-string stripping enabled by default for remote SMS/RCS URL checks
 - **STIR/SHAKEN** — blocks calls failing carrier caller ID verification (Android 11+)

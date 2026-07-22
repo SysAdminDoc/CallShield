@@ -162,6 +162,15 @@ class MainViewModel
         val contactsOnlyEnabled =
             repo.contactsOnlyEnabled
                 .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+        val regionBlockEnabled =
+            repo.regionBlockEnabled
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+        val allowedRegions =
+            repo.allowedRegions
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
+        val cnapTrustPatterns =
+            repo.cnapTrustPatterns
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
         val dbPrefixExpansionEnabled =
             repo.dbPrefixExpansionEnabled
                 .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
@@ -615,6 +624,16 @@ class MainViewModel
         fun setContactWhitelist(v: Boolean) = viewModelScope.launch { repo.setContactWhitelist(v) }
 
         fun setContactsOnly(v: Boolean) = viewModelScope.launch { repo.setContactsOnly(v) }
+
+        fun saveRegionAndCnapRules(
+            regionBlockEnabled: Boolean,
+            allowedRegions: Set<String>,
+            cnapTrustPatterns: Set<String>,
+        ) = viewModelScope.launch {
+            repo.setAllowedRegions(allowedRegions)
+            repo.setRegionBlock(regionBlockEnabled && allowedRegions.isNotEmpty())
+            repo.setCnapTrustPatterns(cnapTrustPatterns)
+        }
 
         fun setDbPrefixExpansion(v: Boolean) = viewModelScope.launch { repo.setDbPrefixExpansion(v) }
 

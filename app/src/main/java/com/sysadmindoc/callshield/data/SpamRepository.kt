@@ -17,6 +17,7 @@ import com.sysadmindoc.callshield.data.repository.SettingsRepository
 import com.sysadmindoc.callshield.data.repository.SpamRepositoryImpl
 import com.sysadmindoc.callshield.data.repository.SyncRepository
 import com.sysadmindoc.callshield.domain.model.SpamCheckResult
+import com.sysadmindoc.callshield.domain.model.CallerIdentity
 import com.sysadmindoc.callshield.domain.model.SyncResult
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -127,6 +128,9 @@ class SpamRepository(
         val KEY_URLHAUS_STRIP_QUERY = booleanPreferencesKey("urlhaus_strip_query_enabled")
         val KEY_CONTACT_WHITELIST = booleanPreferencesKey("contact_whitelist_enabled")
         val KEY_CONTACTS_ONLY = booleanPreferencesKey("contacts_only_mode_enabled")
+        val KEY_REGION_BLOCK = booleanPreferencesKey("region_block_enabled")
+        val KEY_ALLOWED_REGIONS = stringSetPreferencesKey("allowed_call_regions")
+        val KEY_CNAP_TRUST_PATTERNS = stringSetPreferencesKey("cnap_trust_patterns")
         val KEY_DB_PREFIX_EXPANSION = booleanPreferencesKey("db_prefix_expansion_enabled")
         val KEY_AGGRESSIVE_MODE = booleanPreferencesKey("aggressive_mode_enabled")
         val KEY_ANSWERED_CALLER_TRUST = booleanPreferencesKey("answered_caller_trust_enabled")
@@ -217,6 +221,9 @@ class SpamRepository(
     val urlhausStripQueryEnabled: Flow<Boolean> = settingsRepository.urlhausStripQueryEnabled
     val contactWhitelistEnabled: Flow<Boolean> = settingsRepository.contactWhitelistEnabled
     val contactsOnlyEnabled: Flow<Boolean> = settingsRepository.contactsOnlyEnabled
+    val regionBlockEnabled: Flow<Boolean> = settingsRepository.regionBlockEnabled
+    val allowedRegions: Flow<Set<String>> = settingsRepository.allowedRegions
+    val cnapTrustPatterns: Flow<Set<String>> = settingsRepository.cnapTrustPatterns
     val dbPrefixExpansionEnabled: Flow<Boolean> = settingsRepository.dbPrefixExpansionEnabled
     val aggressiveModeEnabled: Flow<Boolean> = settingsRepository.aggressiveModeEnabled
     val answeredCallerTrustEnabled: Flow<Boolean> = settingsRepository.answeredCallerTrustEnabled
@@ -301,6 +308,12 @@ class SpamRepository(
 
     suspend fun setContactsOnly(enabled: Boolean) = settingsRepository.setContactsOnly(enabled)
 
+    suspend fun setRegionBlock(enabled: Boolean) = settingsRepository.setRegionBlock(enabled)
+
+    suspend fun setAllowedRegions(regions: Set<String>) = settingsRepository.setAllowedRegions(regions)
+
+    suspend fun setCnapTrustPatterns(patterns: Set<String>) = settingsRepository.setCnapTrustPatterns(patterns)
+
     suspend fun setDbPrefixExpansion(enabled: Boolean) = settingsRepository.setDbPrefixExpansion(enabled)
 
     suspend fun setAggressiveMode(enabled: Boolean) = settingsRepository.setAggressiveMode(enabled)
@@ -351,14 +364,14 @@ class SpamRepository(
         smsBody: String? = null,
         realtimeCall: Boolean = true,
         prefsSnapshot: Preferences? = null,
-        verificationStatus: Int? = null,
+        callerIdentity: CallerIdentity? = null,
     ): SpamCheckResult =
         spamRepositoryImpl.isSpam(
             number = number,
             smsBody = smsBody,
             realtimeCall = realtimeCall,
             prefsSnapshot = prefsSnapshot,
-            verificationStatus = verificationStatus,
+            callerIdentity = callerIdentity,
         )
 
     // ── SMS-specific check ─────────────────────────────────────────────

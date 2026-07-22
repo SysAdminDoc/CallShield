@@ -6,6 +6,11 @@ All notable changes to CallShield will be documented in this file.
 
 ### Added
 
+- **Offline region blocking and carrier-name trust rules.** Users can allow
+  selected US states, Canadian provinces, territories, and toll-free numbers,
+  then block calls outside that set. Optional case-insensitive CNAP glob
+  patterns allow carrier-presented names through weaker region/statistical
+  layers, while exact, system, prefix, and wildcard blocks remain authoritative.
 - **Opt-in notification screening for RCS, private messengers, and email.**
   Google and Samsung Messages remain the only defaults; users can separately
   enable AOSP Messages, SMS Organizer, Signal, WhatsApp, WhatsApp Business,
