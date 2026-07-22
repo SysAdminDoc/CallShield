@@ -212,45 +212,47 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
                             visible.value = true
                         }
                         AnimatedVisibility(visible = visible.value, enter = slideInVertically { 40 } + fadeIn()) {
-                            val dismissState =
-                                rememberSwipeToDismissBoxState(
-                                    confirmValueChange = { value ->
-                                        when (value) {
-                                            SwipeToDismissBoxValue.EndToStart -> {
-                                                viewModel.deleteLogEntry(call)
-                                                hapticTick(context)
-                                                scope.launch {
-                                                    val result =
-                                                        snackbarHost.showSnackbar(
-                                                            message = deletedMessage,
-                                                            actionLabel = undoLabel,
-                                                            duration = SnackbarDuration.Short,
-                                                        )
-                                                    if (result == SnackbarResult.ActionPerformed) {
-                                                        viewModel.restoreLogEntry(call)
-                                                    }
-                                                }
-                                                true
-                                            }
-
-                                            SwipeToDismissBoxValue.StartToEnd -> {
-                                                viewModel.blockNumber(call.number, "spam", "Blocked from log swipe")
-                                                hapticConfirm(context)
-                                                scope.launch {
-                                                    snackbarHost.showSnackbar(
-                                                        blockedMessage,
-                                                        duration = SnackbarDuration.Short,
-                                                    )
-                                                }
-                                                true
-                                            }
-
-                                            else -> {
-                                                false
+                            val dismissState = rememberSwipeToDismissBoxState()
+                            var actionHandled by remember(call.id) { mutableStateOf(false) }
+                            LaunchedEffect(dismissState.currentValue) {
+                                when (dismissState.currentValue) {
+                                    SwipeToDismissBoxValue.EndToStart -> {
+                                        if (actionHandled) return@LaunchedEffect
+                                        actionHandled = true
+                                        viewModel.deleteLogEntry(call)
+                                        hapticTick(context)
+                                        scope.launch {
+                                            val result =
+                                                snackbarHost.showSnackbar(
+                                                    message = deletedMessage,
+                                                    actionLabel = undoLabel,
+                                                    duration = SnackbarDuration.Short,
+                                                )
+                                            if (result == SnackbarResult.ActionPerformed) {
+                                                viewModel.restoreLogEntry(call)
                                             }
                                         }
-                                    },
-                                )
+                                    }
+
+                                    SwipeToDismissBoxValue.StartToEnd -> {
+                                        if (actionHandled) return@LaunchedEffect
+                                        actionHandled = true
+                                        viewModel.blockNumber(call.number, "spam", "Blocked from log swipe")
+                                        hapticConfirm(context)
+                                        scope.launch {
+                                            snackbarHost.showSnackbar(
+                                                blockedMessage,
+                                                duration = SnackbarDuration.Short,
+                                            )
+                                        }
+                                        dismissState.reset()
+                                    }
+
+                                    SwipeToDismissBoxValue.Settled -> {
+                                        actionHandled = false
+                                    }
+                                }
+                            }
                             SwipeToDismissBox(
                                 state = dismissState,
                                 backgroundContent = {

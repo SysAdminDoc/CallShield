@@ -49,6 +49,7 @@ import com.sysadmindoc.callshield.ui.theme.CatOverlay
 import com.sysadmindoc.callshield.ui.theme.CatRed
 import com.sysadmindoc.callshield.ui.theme.CatSubtext
 import com.sysadmindoc.callshield.ui.theme.CatText
+import com.sysadmindoc.callshield.ui.theme.CatYellow
 import com.sysadmindoc.callshield.ui.theme.PremiumActionButton
 import com.sysadmindoc.callshield.ui.theme.PremiumIconTile
 import com.sysadmindoc.callshield.ui.theme.SkeletonListItem
@@ -99,7 +100,7 @@ fun PushAlertSourcesSheet(
                             val info = pm.getApplicationInfo(pkg, 0)
                             pm.getApplicationLabel(info).toString() to true
                         } catch (_: PackageManager.NameNotFoundException) {
-                            prettyFallbackLabel(pkg) to false
+                            PushAlertRegistry.displayNameFor(pkg) to false
                         }
                     PushAlertSource(pkg, label, installed)
                 }.sortedWith(
@@ -149,7 +150,12 @@ fun PushAlertSourcesSheet(
                                 installedCount,
                             )
                         },
-                    color = if (sources.isEmpty()) CatOverlay else CatGreen,
+                    color =
+                        when {
+                            sources.isEmpty() || installedCount == 0 -> CatOverlay
+                            activeInstalledCount == installedCount -> CatGreen
+                            else -> CatYellow
+                        },
                     modifier = Modifier.weight(1f),
                     horizontalPadding = 10.dp,
                     verticalPadding = 6.dp,
@@ -292,14 +298,3 @@ private fun SourceRow(
         }
     }
 }
-
-/**
- * Fallback label for packages the device doesn't have installed. Turns
- * "com.ubercab.driver" into "ubercab driver" — ugly but readable. Users
- * see this for apps they haven't installed yet but may install later.
- */
-private fun prettyFallbackLabel(pkg: String): String =
-    pkg
-        .substringAfterLast('.')
-        .replace('_', ' ')
-        .replace('-', ' ')

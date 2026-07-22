@@ -516,7 +516,7 @@ internal fun OnboardingScreenContent(
                                             if (overlayGranted) {
                                                 stringResource(R.string.settings_overlay_enabled)
                                             } else {
-                                                stringResource(R.string.settings_overlay_needed)
+                                                stringResource(R.string.settings_overlay_optional)
                                             },
                                         granted = overlayGranted,
                                         color = if (overlayGranted) CatGreen else CatOverlay,

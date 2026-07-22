@@ -118,7 +118,11 @@ fun CallShieldRoot(
         }
 
         else -> {
-            CallShieldApp(viewModel, initialTab)
+            CallShieldApp(
+                viewModel = viewModel,
+                startTab = initialTab,
+                tabRequestId = launchRequest.id.takeIf { launchRequest.shortcutAction != null },
+            )
         }
     }
 }
@@ -129,6 +133,7 @@ fun CallShieldRoot(
 fun CallShieldApp(
     viewModel: MainViewModel,
     startTab: Int = 0,
+    tabRequestId: Int? = null,
 ) {
     val context = LocalContext.current
     var selectedTab by rememberSaveable { mutableIntStateOf(startTab) }
@@ -139,8 +144,8 @@ fun CallShieldApp(
     val blockCallsEnabled by viewModel.blockCallsEnabled.collectAsStateWithLifecycle()
     val blockSmsEnabled by viewModel.blockSmsEnabled.collectAsStateWithLifecycle()
 
-    LaunchedEffect(startTab) {
-        selectedTab = startTab
+    LaunchedEffect(tabRequestId) {
+        if (tabRequestId != null) selectedTab = startTab
     }
 
     // Close search when switching tabs
