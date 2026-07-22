@@ -586,22 +586,40 @@ class MainViewModel
         }
 
         // Backup/restore
-        fun backup(sections: Set<BackupRestore.BackupSection> = BackupRestore.defaultExportSections) {
-            viewModelScope.launch { BackupRestore.shareBackup(appContext, sections) }
+        fun backup(
+            sections: Set<BackupRestore.BackupSection> = BackupRestore.defaultExportSections,
+            passphrase: CharArray? = null,
+        ) {
+            val ownedPassphrase = passphrase?.copyOf()
+            passphrase?.fill('\u0000')
+            viewModelScope.launch {
+                try {
+                    BackupRestore.shareBackup(appContext, sections, ownedPassphrase)
+                } finally {
+                    ownedPassphrase?.fill('\u0000')
+                }
+            }
         }
 
         fun restore(
             uri: Uri,
             sections: Set<BackupRestore.BackupSection> = BackupRestore.defaultRestoreSections,
+            passphrase: CharArray? = null,
         ) {
+            val ownedPassphrase = passphrase?.copyOf()
+            passphrase?.fill('\u0000')
             viewModelScope.launch {
-                val result = BackupRestore.previewRestoreFromUri(appContext, uri, sections)
-                if (result.success) {
-                    _restorePreview.value = result.preview
-                    _restoreResult.value = null
-                } else {
-                    _restorePreview.value = null
-                    _restoreResult.value = result.message
+                try {
+                    val result = BackupRestore.previewRestoreFromUri(appContext, uri, sections, ownedPassphrase)
+                    if (result.success) {
+                        _restorePreview.value = result.preview
+                        _restoreResult.value = null
+                    } else {
+                        _restorePreview.value = null
+                        _restoreResult.value = result.message
+                    }
+                } finally {
+                    ownedPassphrase?.fill('\u0000')
                 }
             }
         }

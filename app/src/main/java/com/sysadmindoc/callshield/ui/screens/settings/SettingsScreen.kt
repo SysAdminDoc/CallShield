@@ -38,6 +38,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -48,6 +49,7 @@ import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.BackupRestore
 import com.sysadmindoc.callshield.data.CallCategory
 import com.sysadmindoc.callshield.data.CategoryCallAction
+import com.sysadmindoc.callshield.data.PortableBackupCrypto
 import com.sysadmindoc.callshield.data.model.ExternalBlocklistPreview
 import com.sysadmindoc.callshield.data.model.ExternalBlocklistSubscription
 import com.sysadmindoc.callshield.data.repository.ANSWERED_CALLER_THRESHOLD_MAX
@@ -66,6 +68,10 @@ internal const val SETTINGS_QUIET_HOURS_TOGGLE_TAG = "settings_quiet_hours_toggl
 internal const val SETTINGS_ANSWERED_CALLER_TOGGLE_TAG = "settings_answered_caller_toggle"
 internal const val SETTINGS_RESTORE_PREVIEW_TAG = "settings_restore_preview"
 internal const val SETTINGS_THEME_ROW_TAG = "settings_theme_row"
+internal const val SETTINGS_BACKUP_ENCRYPTION_TOGGLE_TAG = "settings_backup_encryption_toggle"
+internal const val SETTINGS_BACKUP_PASSPHRASE_TAG = "settings_backup_passphrase"
+internal const val SETTINGS_BACKUP_CONFIRM_TAG = "settings_backup_confirm"
+internal const val SETTINGS_RESTORE_PASSPHRASE_TAG = "settings_restore_passphrase"
 
 private val backupSectionOrder =
     listOf(
@@ -640,9 +646,18 @@ fun SettingsScreen(viewModel: MainViewModel) {
         SettingsCard(stringResource(R.string.settings_backup_restore)) {
             var backupSections by remember { mutableStateOf(BackupRestore.defaultExportSections) }
             var restoreSections by remember { mutableStateOf(BackupRestore.defaultRestoreSections) }
+            var backupProtection by remember { mutableStateOf(BackupProtectionForm()) }
+            var restorePassphrase by remember { mutableStateOf("") }
             val restoreLauncher =
                 rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-                    uri?.let { viewModel.restore(it, restoreSections) }
+                    uri?.let {
+                        viewModel.restore(
+                            it,
+                            restoreSections,
+                            restorePassphrase.toCharArray().takeIf(CharArray::isNotEmpty),
+                        )
+                        restorePassphrase = ""
+                    }
                 }
             val restoreResult by viewModel.restoreResult.collectAsStateWithLifecycle()
             val restorePreview by viewModel.restorePreview.collectAsStateWithLifecycle()
@@ -651,6 +666,11 @@ fun SettingsScreen(viewModel: MainViewModel) {
                 title = stringResource(R.string.settings_backup_sections_title),
                 selectedSections = backupSections,
                 onSelectedSectionsChange = { backupSections = it },
+            )
+            Spacer(Modifier.height(8.dp))
+            BackupProtectionControls(
+                form = backupProtection,
+                onFormChange = { backupProtection = it },
             )
             Spacer(Modifier.height(8.dp))
             BackupSectionPicker(
@@ -662,6 +682,14 @@ fun SettingsScreen(viewModel: MainViewModel) {
                 },
             )
             Spacer(Modifier.height(8.dp))
+            RestorePassphraseField(
+                passphrase = restorePassphrase,
+                onPassphraseChange = {
+                    restorePassphrase = it.take(PortableBackupCrypto.MAX_PASSPHRASE_LENGTH)
+                    viewModel.clearRestorePreview()
+                },
+            )
+            Spacer(Modifier.height(8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 PremiumActionButton(
                     label = stringResource(R.string.settings_backup),
@@ -669,9 +697,13 @@ fun SettingsScreen(viewModel: MainViewModel) {
                     color = CatGreen,
                     onClick = {
                         hapticTick(context)
-                        viewModel.backup(backupSections)
+                        viewModel.backup(
+                            backupSections,
+                            backupProtection.passphrase.toCharArray().takeIf { backupProtection.enabled },
+                        )
+                        backupProtection = backupProtection.copy(passphrase = "", confirmation = "")
                     },
-                    enabled = backupSections.isNotEmpty(),
+                    enabled = backupSections.isNotEmpty() && backupProtection.isValid,
                     modifier = Modifier.weight(1f),
                 )
                 PremiumActionButton(
@@ -680,7 +712,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
                     color = CatBlue,
                     onClick = {
                         hapticTick(context)
-                        restoreLauncher.launch(arrayOf("application/json", "text/plain"))
+                        restoreLauncher.launch(arrayOf("application/json", "text/plain", "application/octet-stream"))
                     },
                     enabled = restoreSections.isNotEmpty(),
                     modifier = Modifier.weight(1f),
@@ -925,6 +957,133 @@ fun SettingsScreen(viewModel: MainViewModel) {
             },
         )
     }
+}
+
+internal data class BackupProtectionForm(
+    val enabled: Boolean = false,
+    val passphrase: String = "",
+    val confirmation: String = "",
+) {
+    val isValid: Boolean
+        get() =
+            !enabled ||
+                (
+                    passphrase.length in
+                        PortableBackupCrypto.MIN_PASSPHRASE_LENGTH..PortableBackupCrypto.MAX_PASSPHRASE_LENGTH &&
+                        passphrase == confirmation
+                )
+}
+
+@Composable
+@Suppress("FunctionNaming", "ktlint:standard:function-naming")
+internal fun BackupProtectionControls(
+    form: BackupProtectionForm,
+    onFormChange: (BackupProtectionForm) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .testTag(SETTINGS_BACKUP_ENCRYPTION_TOGGLE_TAG)
+                    .padding(vertical = 4.dp)
+                    .clickable(role = Role.Switch) {
+                        onFormChange(
+                            if (form.enabled) BackupProtectionForm() else form.copy(enabled = true),
+                        )
+                    },
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Icon(Icons.Default.Lock, contentDescription = null, tint = if (form.enabled) CatGreen else CatOverlay)
+            Column(Modifier.weight(1f)) {
+                Text(
+                    stringResource(R.string.settings_backup_encrypt),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = CatText,
+                )
+                Text(
+                    stringResource(R.string.settings_backup_encrypt_desc),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = CatSubtext,
+                )
+            }
+            Switch(
+                checked = form.enabled,
+                onCheckedChange = null,
+                colors = SwitchDefaults.colors(checkedTrackColor = CatGreen),
+            )
+        }
+        if (form.enabled) {
+            BackupPassphraseFields(form, onFormChange)
+        }
+    }
+}
+
+@Composable
+@Suppress("FunctionNaming", "ktlint:standard:function-naming")
+private fun BackupPassphraseFields(
+    form: BackupProtectionForm,
+    onFormChange: (BackupProtectionForm) -> Unit,
+) {
+    val tooShort = form.passphrase.isNotEmpty() && form.passphrase.length < PortableBackupCrypto.MIN_PASSPHRASE_LENGTH
+    val mismatch = form.confirmation.isNotEmpty() && form.confirmation != form.passphrase
+    OutlinedTextField(
+        value = form.passphrase,
+        onValueChange = {
+            onFormChange(form.copy(passphrase = it.take(PortableBackupCrypto.MAX_PASSPHRASE_LENGTH)))
+        },
+        modifier = Modifier.fillMaxWidth().testTag(SETTINGS_BACKUP_PASSPHRASE_TAG),
+        label = { Text(stringResource(R.string.settings_backup_passphrase)) },
+        supportingText = {
+            Text(
+                stringResource(
+                    R.string.settings_backup_passphrase_hint,
+                    PortableBackupCrypto.MIN_PASSPHRASE_LENGTH,
+                ),
+            )
+        },
+        leadingIcon = { Icon(Icons.Default.Password, contentDescription = null) },
+        visualTransformation = PasswordVisualTransformation(),
+        singleLine = true,
+        isError = tooShort,
+    )
+    OutlinedTextField(
+        value = form.confirmation,
+        onValueChange = {
+            onFormChange(form.copy(confirmation = it.take(PortableBackupCrypto.MAX_PASSPHRASE_LENGTH)))
+        },
+        modifier = Modifier.fillMaxWidth().testTag(SETTINGS_BACKUP_CONFIRM_TAG),
+        label = { Text(stringResource(R.string.settings_backup_passphrase_confirm)) },
+        supportingText = { if (mismatch) Text(stringResource(R.string.settings_backup_passphrase_mismatch)) },
+        leadingIcon = { Icon(Icons.Default.Password, contentDescription = null) },
+        visualTransformation = PasswordVisualTransformation(),
+        singleLine = true,
+        isError = mismatch,
+    )
+    Text(
+        stringResource(R.string.settings_backup_passphrase_not_saved),
+        style = MaterialTheme.typography.labelSmall,
+        color = CatPeach,
+    )
+}
+
+@Composable
+@Suppress("FunctionNaming", "ktlint:standard:function-naming")
+private fun RestorePassphraseField(
+    passphrase: String,
+    onPassphraseChange: (String) -> Unit,
+) {
+    OutlinedTextField(
+        value = passphrase,
+        onValueChange = onPassphraseChange,
+        modifier = Modifier.fillMaxWidth().testTag(SETTINGS_RESTORE_PASSPHRASE_TAG),
+        label = { Text(stringResource(R.string.settings_restore_passphrase)) },
+        supportingText = { Text(stringResource(R.string.settings_restore_passphrase_hint)) },
+        leadingIcon = { Icon(Icons.Default.Key, contentDescription = null) },
+        visualTransformation = PasswordVisualTransformation(),
+        singleLine = true,
+    )
 }
 
 @Composable

@@ -6,6 +6,11 @@ All notable changes to CallShield will be documented in this file.
 
 ### Changed
 
+- Portable backups can now be protected with a non-persisted passphrase. The
+  versioned binary envelope uses PBKDF2-HMAC-SHA256 and AES-256-GCM with fresh
+  salt and nonce values; wrong passphrases, tampering, and oversized plaintext
+  fail before restore parsing or database mutation, while legacy JSON remains
+  importable.
 - Call handling can now be set per detected category to inherit the global
   policy, allow, send to voicemail, or block. Emergency and personal allow
   rules still win over category actions, while explicit personal blocks remain
