@@ -1,0 +1,12 @@
+Lcom/sysadmindoc/callshield/CallShieldApp;
+Lcom/sysadmindoc/callshield/service/CallShieldScreeningService;
+Lcom/sysadmindoc/callshield/domain/usecase/CheckSpamUseCase;
+Lcom/sysadmindoc/callshield/data/SpamRepository;
+Lcom/sysadmindoc/callshield/data/repository/SpamRepositoryAdapter;
+Lcom/sysadmindoc/callshield/data/repository/SpamRepositoryImpl;
+Lcom/sysadmindoc/callshield/data/checker/CheckerPipeline;
+Lcom/sysadmindoc/callshield/data/checker/SpamCheckers;
+Lcom/sysadmindoc/callshield/data/SpamHeuristics;
+Lcom/sysadmindoc/callshield/data/SpamMLScorer;
+Lcom/sysadmindoc/callshield/data/local/AppDatabase;
+Lcom/sysadmindoc/callshield/data/local/SpamDao;
