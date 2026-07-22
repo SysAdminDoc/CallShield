@@ -124,6 +124,12 @@ class CallerIdOverlayService : Service() {
         cancelLookup()
         clearDismissCallback()
         deactivateOverlaySession()
+        // Unregister the previous session's call-state watcher before the new
+        // registration overwrites the field references. Otherwise every
+        // back-to-back overlay leaks one TelephonyRegistry registration until
+        // Android's per-process cap makes future registrations fail — which
+        // would silently kill idle-dismiss for the rest of the process.
+        unregisterCallStateWatcher()
         removeOverlay()
         windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
         val formatted = PhoneFormatter.formatIsolated(number)
@@ -397,7 +403,7 @@ class CallerIdOverlayService : Service() {
         // call's overlay doesn't hover over unrelated UI for the full 20 s.
         dismissRunnable = Runnable { dismiss(sessionId) }
         handler.postDelayed(dismissRunnable!!, 20_000)
-        registerCallStateWatcher(sessionId)
+        registerCallStateWatcher(sessionId, outgoingRiskWarning)
         return sessionId
     }
 
@@ -407,7 +413,10 @@ class CallerIdOverlayService : Service() {
      * registration fails, the 20 s handler backstop still dismisses the overlay,
      * so current behavior is never regressed.
      */
-    private fun registerCallStateWatcher(sessionId: Long) {
+    private fun registerCallStateWatcher(
+        sessionId: Long,
+        outgoingRiskWarning: Boolean,
+    ) {
         try {
             if (checkSelfPermission(android.Manifest.permission.READ_PHONE_STATE) !=
                 android.content.pm.PackageManager.PERMISSION_GRANTED
@@ -415,8 +424,15 @@ class CallerIdOverlayService : Service() {
                 return
             }
             val tm = getSystemService(android.telephony.TelephonyManager::class.java) ?: return
+            // Both registration APIs deliver the *current* state immediately.
+            // Incoming overlays register while the phone is RINGING, but an
+            // outgoing warning registers during call setup where the radio can
+            // still report IDLE — acting on that snapshot would dismiss the
+            // warning before the user can read it. Outgoing sessions therefore
+            // ignore IDLE until a non-idle state has been observed.
+            val shouldDismissOnIdle = idleDismissGate(outgoingRiskWarning)
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
-                registerModernCallStateWatcher(tm, sessionId)
+                registerModernCallStateWatcher(tm, sessionId, shouldDismissOnIdle)
             } else {
                 @Suppress("DEPRECATION")
                 val listener =
@@ -427,7 +443,7 @@ class CallerIdOverlayService : Service() {
                             state: Int,
                             phoneNumber: String?,
                         ) {
-                            if (state == android.telephony.TelephonyManager.CALL_STATE_IDLE) {
+                            if (shouldDismissOnIdle(state)) {
                                 dismiss(sessionId)
                             }
                         }
@@ -445,19 +461,37 @@ class CallerIdOverlayService : Service() {
     private fun registerModernCallStateWatcher(
         tm: android.telephony.TelephonyManager,
         sessionId: Long,
+        shouldDismissOnIdle: (Int) -> Boolean,
     ) {
         val callback =
             object :
                 android.telephony.TelephonyCallback(),
                 android.telephony.TelephonyCallback.CallStateListener {
                 override fun onCallStateChanged(state: Int) {
-                    if (state == android.telephony.TelephonyManager.CALL_STATE_IDLE) {
+                    if (shouldDismissOnIdle(state)) {
                         dismiss(sessionId)
                     }
                 }
             }
         callStateCallback = callback
         tm.registerTelephonyCallback(mainExecutor, callback)
+    }
+
+    /**
+     * Stateful predicate: for outgoing warnings, IDLE only dismisses after a
+     * non-idle state has been seen (the registration snapshot may be IDLE).
+     * Incoming overlays keep the original dismiss-on-any-IDLE behavior.
+     */
+    private fun idleDismissGate(outgoingRiskWarning: Boolean): (Int) -> Boolean {
+        var sawNonIdle = !outgoingRiskWarning
+        return { state ->
+            if (state != android.telephony.TelephonyManager.CALL_STATE_IDLE) {
+                sawNonIdle = true
+                false
+            } else {
+                sawNonIdle
+            }
+        }
     }
 
     private fun unregisterCallStateWatcher() {

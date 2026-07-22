@@ -58,6 +58,19 @@ class ProtectionHealthWorkerTest {
     }
 
     @Test
+    fun `an install that never held the role is not told the role was lost`() {
+        // "Continue anyway" onboarding path: the loss alert's copy claims
+        // Android *stopped* routing calls through CallShield, which would be
+        // false for a never-granted install.
+        assertEquals(
+            ProtectionHealthAction.NONE,
+            evaluateProtectionHealth(
+                configuredSnapshot(roleHeld = false).copy(callScreeningRoleEverHeld = false),
+            ),
+        )
+    }
+
+    @Test
     fun `never-onboarded and unsupported devices do not nag`() {
         assertEquals(
             ProtectionHealthAction.NONE,

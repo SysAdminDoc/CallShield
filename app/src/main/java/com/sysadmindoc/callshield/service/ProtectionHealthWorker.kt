@@ -24,6 +24,7 @@ internal data class ProtectionHealthSnapshot(
     val callBlockingEnabled: Boolean,
     val callScreeningRoleAvailable: Boolean,
     val callScreeningRoleHeld: Boolean,
+    val callScreeningRoleEverHeld: Boolean = true,
     val lossNoticeShown: Boolean,
 )
 
@@ -41,10 +42,20 @@ internal fun evaluateProtectionHealth(snapshot: ProtectionHealthSnapshot): Prote
 
     return when {
         !shouldProtectCalls && snapshot.lossNoticeShown -> ProtectionHealthAction.CLEAR_ROLE_LOSS_NOTICE
+
         !shouldProtectCalls -> ProtectionHealthAction.NONE
+
         snapshot.callScreeningRoleHeld && snapshot.lossNoticeShown -> ProtectionHealthAction.CLEAR_ROLE_LOSS_NOTICE
+
         snapshot.callScreeningRoleHeld -> ProtectionHealthAction.NONE
+
         snapshot.lossNoticeShown -> ProtectionHealthAction.NONE
+
+        // Never notify an install that never held the role ("Continue anyway"
+        // onboarding path) — the alert's copy claims Android *stopped* routing
+        // calls through CallShield, which would be false and reads as a nag.
+        !snapshot.callScreeningRoleEverHeld -> ProtectionHealthAction.NONE
+
         else -> ProtectionHealthAction.NOTIFY_ROLE_LOST
     }
 }
@@ -61,13 +72,18 @@ class ProtectionHealthWorker
         override suspend fun doWork(): Result {
             val roleManager = applicationContext.getSystemService(Context.ROLE_SERVICE) as? RoleManager
             val noticeShown = repository.protectionRoleLossNoticeShown.first()
+            val roleHeld = CallShieldPermissions.hasCallScreeningRole(roleManager)
+            val everHeldStored = repository.protectionRoleEverHeld.first()
+            val everHeld = everHeldStored || roleHeld
+            if (roleHeld && !everHeldStored) repository.setProtectionRoleEverHeld()
             val action =
                 evaluateProtectionHealth(
                     ProtectionHealthSnapshot(
                         onboardingDone = repository.onboardingDone.first(),
                         callBlockingEnabled = repository.blockCallsEnabled.first(),
                         callScreeningRoleAvailable = CallShieldPermissions.isCallScreeningRoleAvailable(roleManager),
-                        callScreeningRoleHeld = CallShieldPermissions.hasCallScreeningRole(roleManager),
+                        callScreeningRoleHeld = roleHeld,
+                        callScreeningRoleEverHeld = everHeld,
                         lossNoticeShown = noticeShown,
                     ),
                 )

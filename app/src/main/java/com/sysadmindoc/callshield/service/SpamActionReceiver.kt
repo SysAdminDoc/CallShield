@@ -4,13 +4,16 @@ import android.app.NotificationManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.util.Log
 import android.widget.Toast
 import com.sysadmindoc.callshield.CallShieldApp
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.CommunityContributor
 import com.sysadmindoc.callshield.data.SmsContentAnalyzer
 import com.sysadmindoc.callshield.data.SpamRepository
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class SpamActionReceiver : BroadcastReceiver() {
     override fun onReceive(
@@ -96,6 +99,16 @@ class SpamActionReceiver : BroadcastReceiver() {
         CallShieldApp.appScope.launch {
             try {
                 work.invoke()
+            } catch (e: Exception) {
+                // The confirmation toast already fired for responsiveness; a
+                // failed DB write must not stay silent (and an uncaught throw
+                // here would take down the process via appScope).
+                Log.w("SpamActionReceiver", "Notification action failed", e)
+                withContext(Dispatchers.Main) {
+                    Toast
+                        .makeText(appContext, appContext.getString(R.string.notification_action_failed), Toast.LENGTH_SHORT)
+                        .show()
+                }
             } finally {
                 pendingResult.finish()
             }
