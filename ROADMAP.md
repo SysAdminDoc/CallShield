@@ -625,15 +625,6 @@ Baseline at audit time: `testDebugUnitTest`, `ktlintCheck`, `detekt`, `lintDebug
 
 ### P3 — performance / UX / visual
 
-- [ ] P3 — Staggered entrance animation re-runs for every row on scroll and refresh: blank 0-height rows and scroll jumps
-  Category: perf
-  Where: ui/screens/main/BlockedLogScreen.kt:201-214; ui/screens/recent/RecentCallsScreen.kt:291-303
-  Problem: Each LazyColumn item holds remember{false} + LaunchedEffect{delay(index*30, cap ~450ms)} + AnimatedVisibility. Item state is disposed off-screen, so every re-entry replays the delay: rows compose at 0 height then expand, causing gaps and scroll-position shifts on any fast scroll. Aggravator in RecentCalls: keys include $index, so one new call at the top shifts every key → all rows replay on each ON_RESUME refresh.
-  Fix: Animate only on first appearance (screen-level "already animated" ids in rememberSaveable, or only initial composition); disambiguate RecentCalls duplicate keys with a per-triple occurrence counter instead of raw index.
-  Acceptance: Fast-scrolling a 200-entry log shows fully laid-out rows immediately; a new call does not re-animate existing rows.
-  Confidence: Likely (visual severity needs device repro)
-  Effort: M
-
 - [ ] P3 — Forward chevrons don't mirror in RTL (More hub + Dashboard)
   Category: visual
   Where: ui/screens/more/MoreScreen.kt:351; ui/screens/main/DashboardScreen.kt:466, 1205, 1258

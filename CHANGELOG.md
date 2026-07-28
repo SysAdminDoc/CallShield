@@ -57,6 +57,10 @@ All notable changes to CallShield will be documented in this file.
 
 ### Performance
 
+- Blocked-log and recent-calls rows no longer replay their entrance animation
+  every time they scroll off-screen and back (state now survives via the list's
+  saveable registry), and recent-calls rows use stable per-entry keys so one new
+  call at the top no longer re-animates the whole list.
 - Wildcard/regex blocking rules now compile their pattern once and reuse it across
   screening calls (process-lifetime compiled-`Regex` cache) instead of re-escaping
   and recompiling per rule per incoming call on the 5-second hot path.
