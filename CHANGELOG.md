@@ -22,6 +22,13 @@ All notable changes to CallShield will be documented in this file.
   are now density-scaled instead of raw pixels, so it renders with consistent
   proportions across mdpi–xxxhdpi devices (was oversized on low-density, cramped
   on high-density screens).
+- Settings toggle titles (Power mode, Aggressive blocking, Quiet hours, Silent
+  voicemail mode, Log cleanup) and the export/restore-defaults buttons now use
+  sentence case, matching the screen's section headers.
+- The More screen's "Synced Xm ago" label now advances while the screen stays
+  open instead of freezing at the value it had when the screen opened.
+- `PremiumCard`'s accent color now renders as a subtle hairline border for cards
+  that opt into one (it was previously an ignored parameter).
 
 ### Performance
 

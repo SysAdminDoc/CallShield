@@ -620,12 +620,6 @@ Focus areas not covered by prior passes: the Developer-Verification survival pat
 - [ ] P3 — Widget ignores the app theme
   Why: RemoteViews layout is permanently AMOLED-dark with palette literals in updateWidget; clashes on Light-themed devices. Needs values-night qualifiers or theme-selected literals (contrast of the fixed palette was fixed in v1.7.23).
   Where: ui/widget/CallShieldWidget.kt, res/layout/widget_callshield.xml
-- [ ] P3 — More screen sync label goes stale
-  Why: "Synced Xm ago" computes once at composition and never ticks while the screen stays open; Dashboard already solved this with a rolling timeAnchor.
-  Where: ui/screens/more/MoreScreen.kt (syncLabel)
-- [ ] P3 — PremiumCard.accentColor is a dead parameter
-  Why: Call sites across MainActivity/Changelog/PostCall pass accents that never render (@Suppress("UnusedParameter")). Wire it or remove it and clean up call sites.
-  Where: ui/theme/Theme.kt (PremiumCard)
 - [ ] P3 — Raw e.message surfaced in restore/import failure strings
   Why: "Error: %s" leaks unlocalized exception text (content URIs, SQLite constraint names) into the UI; map to localized reasons like the crypto layer does.
   Where: data/BackupRestore.kt (previewRestoreFromUri/restoreFromPreview catch), data/BlocklistExporter.kt (importFromUri catch)
@@ -663,15 +657,6 @@ Baseline at audit time: `testDebugUnitTest`, `ktlintCheck`, `detekt`, `lintDebug
   Acceptance: Fast-scrolling a 200-entry log shows fully laid-out rows immediately; a new call does not re-animate existing rows.
   Confidence: Likely (visual severity needs device repro)
   Effort: M
-
-- [ ] P3 — Settings section/toggle capitalization inconsistent within a single scroll
-  Category: ux
-  Where: res/values/strings.xml — "Detection engines"/"External blocklists" (sentence case) vs "Power Mode" (:577), "Log Cleanup" (:580), "Quiet Hours" (:571), "Silent Voicemail Mode" (:569), "Aggressive Blocking" (:578); buttons mix "Export Blocked Log as CSV" vs "Commit preview"
-  Problem: Adjacent headers and toggle titles mix Title Case and sentence case — reads unpolished, complicates translation review.
-  Fix: Normalize the ~8 Title Case outliers to sentence case (majority + M3 guidance).
-  Acceptance: All settings section headers and toggle titles share one capitalization scheme.
-  Confidence: Verified
-  Effort: S
 
 - [ ] P3 — Forward chevrons don't mirror in RTL (More hub + Dashboard)
   Category: visual
