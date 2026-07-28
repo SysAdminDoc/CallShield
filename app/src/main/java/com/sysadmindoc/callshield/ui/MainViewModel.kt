@@ -173,7 +173,14 @@ class MainViewModel
         val appTheme =
             repo.appTheme
                 .map(AppThemeMode::fromStorage)
-                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), AppThemeMode.Amoled)
+                // Seed from the synchronous SharedPreferences mirror so cold starts
+                // paint the user's real theme on the first frame instead of flashing
+                // the Amoled default until DataStore emits.
+                .stateIn(
+                    viewModelScope,
+                    SharingStarted.WhileSubscribed(5000),
+                    AppThemeMode.fromStorage(repo.cachedAppTheme()),
+                )
         val blockCallsEnabled = repo.blockCallsEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
         val blockSmsEnabled = repo.blockSmsEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
         val blockUnknownEnabled = repo.blockUnknownEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
@@ -339,6 +346,9 @@ class MainViewModel
                 val onboardingAlreadyDone = repo.onboardingDone.first()
                 if (initialCount == 0 && onboardingAlreadyDone) sync(showProgress = false)
             }
+            // Backfill the synchronous theme mirror so the next cold start reflects
+            // the current theme even for users who set it before this cache existed.
+            viewModelScope.launch { repo.cacheAppTheme(repo.appTheme.first()) }
         }
 
         fun completeOnboarding() {

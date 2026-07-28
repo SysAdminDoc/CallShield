@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Dark-mode widget palette (Catppuccin Mocha / AMOLED). See values/colors.xml. -->
+    <color name="widget_background">#FF080808</color>
+    <color name="widget_text_muted">#FF9399B2</color>
+    <color name="widget_count">#FF89B4FA</color>
+    <color name="widget_status_active">#FFA6E3A1</color>
+    <color name="widget_status_off">#FFF38BA8</color>
+</resources>

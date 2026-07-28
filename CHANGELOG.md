@@ -48,6 +48,12 @@ All notable changes to CallShield will be documented in this file.
 - Removed the redundant `source` field from the backup format: exports only ever
   contained user-sourced blocked numbers and restore always recreates them as
   user rows, so the field was dead weight (older backups still restore fine).
+- Cold starts now paint the user's real theme on the first frame (via a
+  synchronous theme mirror) instead of flashing the AMOLED-dark default and wrong
+  status-bar icons for Light/Graphite users until settings loaded.
+- The home-screen widget now follows the system light/dark theme (color resources
+  with a values-night variant) instead of being locked to the AMOLED-dark palette,
+  so it no longer clashes on light-themed devices.
 
 ### Performance
 

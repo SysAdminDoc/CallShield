@@ -205,6 +205,7 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
                         val visible = remember { mutableStateOf(false) }
                         val deletedMessage = stringResource(R.string.blocked_log_deleted)
                         val undoLabel = stringResource(R.string.blocked_log_undo)
+                        val blockedFromSwipeDescription = stringResource(R.string.desc_blocked_from_log_swipe)
                         val blockedMessage =
                             stringResource(
                                 R.string.blocked_log_number_blocked,
@@ -240,7 +241,7 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
                                     SwipeToDismissBoxValue.StartToEnd -> {
                                         if (actionHandled) return@LaunchedEffect
                                         actionHandled = true
-                                        viewModel.blockNumber(call.number, "spam", context.getString(R.string.desc_blocked_from_log_swipe))
+                                        viewModel.blockNumber(call.number, "spam", blockedFromSwipeDescription)
                                         hapticConfirm(context)
                                         scope.launch {
                                             // Offer Undo — a permanent block is the more consequential
@@ -313,7 +314,7 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
                                                         true
                                                     },
                                                     CustomAccessibilityAction(blockActionLabel) {
-                                                        viewModel.blockNumber(call.number, "spam", context.getString(R.string.desc_blocked_from_log_swipe))
+                                                        viewModel.blockNumber(call.number, "spam", blockedFromSwipeDescription)
                                                         true
                                                     },
                                                 )

@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="#FF080808"
+    android:background="@color/widget_background"
     android:padding="16dp"
     android:gravity="center"
     tools:ignore="Overdraw">
@@ -15,7 +15,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/app_name"
-        android:textColor="#FFA6E3A1"
+        android:textColor="@color/widget_status_active"
         android:textSize="14sp"
         android:textStyle="bold"
         android:letterSpacing="-0.02" />
@@ -25,7 +25,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/widget_protection_active"
-        android:textColor="#FF9399B2"
+        android:textColor="@color/widget_text_muted"
         android:textSize="11sp"
         android:letterSpacing="0.1"
         android:textAllCaps="true"
@@ -37,7 +37,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/widget_placeholder_zero"
-        android:textColor="#FF89B4FA"
+        android:textColor="@color/widget_count"
         android:textSize="40sp"
         android:textStyle="bold"
         android:letterSpacing="-0.04"
@@ -48,7 +48,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/widget_placeholder_trend"
-        android:textColor="#FF9399B2"
+        android:textColor="@color/widget_text_muted"
         android:textSize="11sp"
         android:letterSpacing="0.02" />
 
@@ -57,7 +57,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/widget_placeholder_total"
-        android:textColor="#FF9399B2"
+        android:textColor="@color/widget_text_muted"
         android:textSize="11sp"
         android:layout_marginTop="4dp" />
 
@@ -66,7 +66,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/widget_last_never"
-        android:textColor="#FF9399B2"
+        android:textColor="@color/widget_text_muted"
         android:textSize="11sp"
         android:layout_marginTop="2dp" />
 

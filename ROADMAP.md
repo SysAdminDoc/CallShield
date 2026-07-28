@@ -602,12 +602,6 @@ Focus areas not covered by prior passes: the Developer-Verification survival pat
 - [ ] P3 — PostCallActivity accepts spoofed launches
   Why: Any app can start it with a crafted tel: handle; opt-in pref + required user tap + bounded input mitigate, but "Mark spam" should verify a matching recent-call record (or Telecom disconnect extras) before offering a community report.
   Where: ui/PostCallActivity.kt, AndroidManifest.xml
-- [ ] P3 — Cold-start theme flash for non-AMOLED users
-  Why: appTheme StateFlow initializes to Amoled until DataStore emits, flashing black + wrong status-bar icons for Light/Graphite users on every cold start. Needs a synchronous cached read or splash-held first frame.
-  Where: ui/MainViewModel.kt (appTheme), ui/MainActivity.kt
-- [ ] P3 — Widget ignores the app theme
-  Why: RemoteViews layout is permanently AMOLED-dark with palette literals in updateWidget; clashes on Light-themed devices. Needs values-night qualifiers or theme-selected literals (contrast of the fixed palette was fixed in v1.7.23).
-  Where: ui/widget/CallShieldWidget.kt, res/layout/widget_callshield.xml
 
 ## Audit Findings — 2026-07-28 (anchored to v1.7.23, versionCode 51; found, not fixed)
 

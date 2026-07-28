@@ -113,16 +113,23 @@ class CallShieldWidget : AppWidgetProvider() {
                 )
                 views.setTextViewText(R.id.widget_last_blocked, lastBlockedText)
 
-                // Update status text and title color based on protection state
-                if (isActive) {
-                    views.setTextViewText(R.id.widget_status, appContext.getString(R.string.widget_protection_active))
-                    views.setTextColor(R.id.widget_title, 0xFFA6E3A1.toInt()) // CatGreen
-                    views.setTextColor(R.id.widget_status, 0xFFA6E3A1.toInt())
-                } else {
-                    views.setTextViewText(R.id.widget_status, appContext.getString(R.string.widget_protection_off))
-                    views.setTextColor(R.id.widget_title, 0xFFF38BA8.toInt()) // CatRed
-                    views.setTextColor(R.id.widget_status, 0xFFF38BA8.toInt())
-                }
+                // Update status text and title color based on protection state.
+                // Resolve the accent via getColor so it picks the light/dark variant
+                // (values / values-night) that matches the launcher configuration.
+                val accent =
+                    if (isActive) {
+                        appContext.getColor(R.color.widget_status_active)
+                    } else {
+                        appContext.getColor(R.color.widget_status_off)
+                    }
+                views.setTextViewText(
+                    R.id.widget_status,
+                    appContext.getString(
+                        if (isActive) R.string.widget_protection_active else R.string.widget_protection_off,
+                    ),
+                )
+                views.setTextColor(R.id.widget_title, accent)
+                views.setTextColor(R.id.widget_status, accent)
 
                 manager.updateAppWidget(widgetId, views)
             } catch (_: Exception) {

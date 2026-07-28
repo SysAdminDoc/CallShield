@@ -880,23 +880,18 @@ fun DashboardScreen(viewModel: MainViewModel) {
     }
 
     pendingAreaBlock?.let { (ac, loc) ->
+        val areaRuleDescription = stringResource(R.string.dashboard_block_area_description, ac, loc)
+        val areaAddedToast = stringResource(R.string.dashboard_block_area_added, ac)
         AlertDialog(
             onDismissRequest = { pendingAreaBlock = null },
             title = { Text(stringResource(R.string.dashboard_block_area_confirm_title, ac)) },
             text = { Text(stringResource(R.string.dashboard_block_area_confirm_body, ac, loc)) },
             confirmButton = {
                 TextButton(onClick = {
-                    viewModel.addWildcardRule(
-                        "+1$ac*",
-                        false,
-                        context.getString(R.string.dashboard_block_area_description, ac, loc),
-                    )
+                    viewModel.addWildcardRule("+1$ac*", false, areaRuleDescription)
                     android.widget.Toast
-                        .makeText(
-                            context,
-                            context.getString(R.string.dashboard_block_area_added, ac),
-                            android.widget.Toast.LENGTH_SHORT,
-                        ).show()
+                        .makeText(context, areaAddedToast, android.widget.Toast.LENGTH_SHORT)
+                        .show()
                     pendingAreaBlock = null
                 }) {
                     Text(stringResource(R.string.dashboard_block_area_confirm_action))
