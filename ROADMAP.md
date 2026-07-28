@@ -599,9 +599,6 @@ Focus areas not covered by prior passes: the Developer-Verification survival pat
 - [ ] P3 — Contact-group identity falls back to the group title
   Why: Locally created groups often have no SOURCE_ID, so renaming a selected group silently voids contact trust (fail-closed → contacts get screened). Needs a rename-stable key or a visible degradation warning like isContactsModeDegraded.
   Where: data/ContactGroupCatalog.kt (stableKey, resolveGroupIds)
-- [ ] P3 — PostCallActivity accepts spoofed launches
-  Why: Any app can start it with a crafted tel: handle; opt-in pref + required user tap + bounded input mitigate, but "Mark spam" should verify a matching recent-call record (or Telecom disconnect extras) before offering a community report.
-  Where: ui/PostCallActivity.kt, AndroidManifest.xml
 
 ## Audit Findings — 2026-07-28 (anchored to v1.7.23, versionCode 51; found, not fixed)
 

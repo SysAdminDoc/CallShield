@@ -286,6 +286,7 @@
     <string name="schedule_days_hours">%1$s · %2$s</string>
     <string name="desc_reported_not_spam">Reported as not spam</string>
     <string name="desc_blocked_from_log_swipe">Blocked from log swipe</string>
+    <string name="desc_blocked_post_call_local">Blocked from post-call review</string>
     <string name="blocklist_empty_keywords">No keyword rules</string>
     <string name="blocklist_empty_keywords_sub">Add phrases like bank alert or claim prize when spam texts reuse the same wording.</string>
     <string name="blocklist_empty_whitelist">No trusted numbers</string>
