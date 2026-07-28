@@ -40,10 +40,10 @@ import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.screens.lookup.SpamScoreGauge
 import com.sysadmindoc.callshield.ui.screens.lookup.detectionIcon
 import com.sysadmindoc.callshield.ui.theme.*
+import com.sysadmindoc.callshield.util.localizedDateTimeFormat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.text.SimpleDateFormat
 import java.util.*
 
 @Composable
@@ -65,7 +65,7 @@ fun NumberDetailScreen(
     val smsCount = numberCalls.count { !it.isCall }
     val firstSeen = numberCalls.minByOrNull { it.timestamp }?.timestamp
     val lastSeen = numberCalls.maxByOrNull { it.timestamp }?.timestamp
-    val dateFormat = remember { SimpleDateFormat("MMM d, yyyy h:mm a", Locale.getDefault()) }
+    val dateFormat = remember(context) { localizedDateTimeFormat(context, withYear = true) }
     val location = remember(number) { AreaCodeLookup.lookup(number) }
     val areaCode = remember(number) { AreaCodeLookup.getAreaCode(number) }
     val copiedMessage = stringResource(R.string.detail_copied)

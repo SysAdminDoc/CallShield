@@ -57,12 +57,12 @@ import com.sysadmindoc.callshield.ui.rememberTemporaryDecisionDurations
 import com.sysadmindoc.callshield.ui.theme.*
 import com.sysadmindoc.callshield.util.filterAsciiDigits
 import com.sysadmindoc.callshield.util.hasMinAsciiDigits
+import com.sysadmindoc.callshield.util.localizedDateTimeFormat
 import com.sysadmindoc.callshield.util.normalizePhoneNumberInput
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.text.NumberFormat
-import java.text.SimpleDateFormat
 import java.util.*
 
 data class RecentCall(
@@ -379,7 +379,8 @@ fun RecentCallItem(
     onTemporaryAllow: (TemporaryDecisionDuration) -> Unit,
     onTemporaryBlock: (TemporaryDecisionDuration) -> Unit,
 ) {
-    val dateFormat = remember { SimpleDateFormat("MMM d, h:mm a", Locale.getDefault()) }
+    val context = LocalContext.current
+    val dateFormat = remember(context) { localizedDateTimeFormat(context) }
     val location = remember(call.number) { AreaCodeLookup.lookup(call.number) }
 
     val typeIcon =
@@ -414,7 +415,6 @@ fun RecentCallItem(
             else -> CatBlue
         }
 
-    val context = LocalContext.current
     var expanded by remember { mutableStateOf(false) }
     val temporaryDurations = rememberTemporaryDecisionDurations()
     val copiedMessage = stringResource(R.string.recent_copied)

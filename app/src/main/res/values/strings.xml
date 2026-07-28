@@ -376,7 +376,6 @@
     <string name="lookup_reported">Reported to community</string>
     <string name="lookup_report_failed">Report failed: %s</string>
     <string name="lookup_report">Report</string>
-    <string name="lookup_not_spam">Not Spam</string>
     <string name="lookup_marked_safe_local">Marked as not spam</string>
     <string name="lookup_marked_safe_reported">Marked safe and reported</string>
     <string name="lookup_open_detail">Open Full Detail</string>
@@ -436,10 +435,7 @@
     <string name="remote_lookup_status_unavailable">Unavailable</string>
 
     <!-- Settings Screen -->
-    <string name="settings_call_screening">Call screening</string>
-    <string name="settings_call_screening_desc">Set CallShield as your default call screening app.</string>
     <string name="settings_permissions_access">Permissions &amp; access</string>
-    <string name="settings_permissions_access_desc">Grant the access CallShield needs for spam detection, notifications, overlay caller ID, and call screening.</string>
     <string name="settings_setup_progress">Access checks ready: %1$d/%2$d</string>
     <string name="settings_setup_ready_summary">Everything connected</string>
     <string name="settings_setup_attention_summary">Finish setup</string>
@@ -473,7 +469,6 @@
     <string name="settings_theme_graphite">Graphite</string>
     <string name="settings_theme_amoled">AMOLED black</string>
     <string name="settings_language">Language</string>
-    <string name="settings_language_desc">Choose CallShield’s language independently of the device language.</string>
     <string name="settings_language_system_default">System default</string>
     <string name="settings_language_english">English</string>
     <string name="settings_language_pseudo_accented">Pseudolocale: accented</string>
@@ -596,7 +591,7 @@
     <string name="settings_backup_restore">Backup &amp; Restore</string>
     <string name="settings_backup">Backup</string>
     <string name="settings_restore">Restore</string>
-    <string name="settings_backup_includes">Choose only the sections needed for this transfer. API keys and external feed URLs are not included.</string>
+    <string name="settings_backup_includes">Choose only the sections needed for this transfer. External feed URLs are not included.</string>
     <string name="settings_backup_sections_title">Backup sections</string>
     <string name="settings_restore_sections_title">Restore sections</string>
     <string name="settings_backup_encrypt">Protect backup with a passphrase</string>
@@ -634,7 +629,6 @@
     <string name="settings_external_blocklist_preview_skips">%1$d skipped rows, %2$d already owned by stronger sources</string>
     <string name="settings_external_blocklist_commit_preview">Commit preview</string>
     <string name="settings_external_blocklist_subscription_stats">%1$d active, +%2$d / -%3$d last sync</string>
-    <string name="settings_advanced">Advanced</string>
     <string name="settings_save">Save</string>
     <string name="settings_about_desc">Open-source spam blocker. No subscriptions, no tracking, no API keys.</string>
 
@@ -642,7 +636,6 @@
     <string name="stats_calls">Calls</string>
     <string name="stats_sms">SMS</string>
     <string name="stats_db_size">DB Entries</string>
-    <string name="stats_last_7_days">Last 7 Days</string>
     <string name="stats_by_detection_method">By Detection Method</string>
     <string name="stats_top_offenders">Top Offenders</string>
     <string name="stats_spam_by_area_code">Spam by Area Code</string>
@@ -720,7 +713,6 @@
     <string name="more_settings_subtitle">Detection engines, quiet hours, backup, cleanup</string>
     <string name="more_protection_test_subtitle">Verify all detection layers and permissions work</string>
     <string name="more_whats_new_subtitle">Changelog and version history</string>
-    <string name="more_quick_links">Quick Links</string>
     <string name="more_github_repo">GitHub Repository</string>
     <string name="more_report_bug">Report a Bug</string>
     <string name="more_star_github">Star on GitHub</string>
@@ -733,7 +725,6 @@
     <string name="more_trust_on_device">On-device</string>
     <string name="more_trust_open_source">Open source</string>
     <string name="more_trust_no_account">No account</string>
-    <string name="more_trust_summary">Private on-device protection · Open source · No account</string>
     <string name="more_github_repo_subtitle">Read the source, roadmap, and release history directly on GitHub.</string>
     <string name="more_report_bug_subtitle">Open an issue when something looks broken, confusing, or unfinished.</string>
     <string name="more_star_github_subtitle">Support the project and help more people discover CallShield.</string>
@@ -879,11 +870,7 @@
     <string name="onboarding_screening_enabled">Call screening enabled</string>
     <string name="onboarding_set_screener">Set as Call Screener</string>
     <string name="onboarding_step">Step %1$d of %2$d</string>
-    <string name="onboarding_progress_title">Setup progress</string>
-    <string name="onboarding_progress_core">%1$d/%2$d required checks ready</string>
-    <string name="onboarding_progress_optional">%1$d/%2$d optional extras ready</string>
     <string name="onboarding_progress_required_badge">%1$d/%2$d required</string>
-    <string name="onboarding_progress_optional_badge">%1$d/%2$d optional</string>
     <string name="onboarding_trust_no_account">No account</string>
     <string name="onboarding_trust_on_device">On-device</string>
     <string name="onboarding_trust_open_source">Open source</string>
@@ -915,7 +902,6 @@
     <string name="onboarding_finish_setup">Finish Setup</string>
     <string name="onboarding_back">Back</string>
     <string name="onboarding_next">Next</string>
-    <string name="onboarding_get_started">Get Started</string>
 
     <!-- Recent Calls Screen -->
     <string name="recent_filter_all">All (%d)</string>
@@ -1113,7 +1099,7 @@
         <item quantity="other">%1$d minutes</item>
     </plurals>
     <string name="backup_restore_preview_no_conflicts">No matching local items found.</string>
-    <string name="backup_restore_preview_settings_privacy">Settings restore excludes API keys and external subscription URLs.</string>
+    <string name="backup_restore_preview_settings_privacy">Settings restore excludes external subscription URLs.</string>
     <string name="backup_restore_preview_logs_privacy">Log restore can import blocked SMS text from this backup.</string>
     <string name="backup_restore_replace_warning">Replace clears only the selected local sections before restore. Synced feeds stay installed.</string>
     <string name="backup_restore_merge">Merge</string>

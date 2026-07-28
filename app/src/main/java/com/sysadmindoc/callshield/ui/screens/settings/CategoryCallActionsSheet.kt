@@ -28,7 +28,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.CallCategory
@@ -137,10 +136,10 @@ private fun CategoryActionRow(
                         selected = selectedAction == action,
                         onClick = { onActionChange(action) },
                         label = {
+                            // Allow wrapping instead of clipping — at large font
+                            // scales "Voicemail"/"Inherit" truncated to "Voicem…".
                             Text(
                                 stringResource(action.labelResId),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
                                 style = MaterialTheme.typography.labelSmall,
                             )
                         },

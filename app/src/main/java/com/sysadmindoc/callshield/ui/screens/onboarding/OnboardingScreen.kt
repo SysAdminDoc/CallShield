@@ -643,7 +643,6 @@ private fun OnboardingFeatureCard(
             body,
             style = MaterialTheme.typography.bodySmall,
             color = CatSubtext,
-            maxLines = 2,
         )
         GradientDivider()
     }
