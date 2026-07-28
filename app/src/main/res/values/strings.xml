@@ -1128,7 +1128,7 @@
     <string name="backup_restore_success">Restored %1$d numbers, %2$d whitelist entries, %3$d wildcard rules, %4$d keyword rules, %5$d range rules, %6$d settings sections, %7$d log entries</string>
     <string name="backup_restore_success_merge">Restored by merge: %1$d numbers, %2$d whitelist entries, %3$d wildcard rules, %4$d keyword rules, %5$d range rules, %6$d settings sections, %7$d log entries</string>
     <string name="backup_restore_success_replace">Restored by replace: %1$d numbers, %2$d whitelist entries, %3$d wildcard rules, %4$d keyword rules, %5$d range rules, %6$d settings sections, %7$d log entries</string>
-    <string name="backup_restore_error">Error: %s</string>
+    <string name="backup_restore_error_generic">Couldn\'t read this backup. The file may be corrupt, encrypted with a different passphrase, or from a newer app version.</string>
     <string name="clip_label_phone">Phone</string>
     <string name="clip_label_phone_number">Phone Number</string>
     <string name="clip_label_spam_number">CallShield spam number</string>

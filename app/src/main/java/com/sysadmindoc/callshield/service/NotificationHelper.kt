@@ -52,6 +52,7 @@ object NotificationHelper {
     const val ACTION_BLOCK = "com.sysadmindoc.callshield.ACTION_BLOCK"
     const val ACTION_REPORT = "com.sysadmindoc.callshield.ACTION_REPORT"
     const val ACTION_SAFE = "com.sysadmindoc.callshield.ACTION_SAFE"
+    const val ACTION_CLEAR_SUMMARY = "com.sysadmindoc.callshield.ACTION_CLEAR_SUMMARY"
     const val EXTRA_NUMBER = "extra_number"
     const val EXTRA_NOTIF_ID = "extra_notif_id"
     const val EXTRA_IS_CALL = "extra_is_call"
@@ -379,7 +380,24 @@ object NotificationHelper {
                 .setGroupSummary(true)
                 .setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_SUMMARY)
                 .setAutoCancel(true)
+                // Zero the per-process counter when the user dismisses the group,
+                // so the next block starts counting from that block instead of
+                // carrying a stale "N blocked recently" total forward all session.
+                .setDeleteIntent(summaryDeleteIntent(context))
         safeNotify(context, SUMMARY_ID, summary)
+    }
+
+    private fun summaryDeleteIntent(context: Context): PendingIntent =
+        PendingIntent.getBroadcast(
+            context,
+            SUMMARY_ID,
+            Intent(context, SpamActionReceiver::class.java).setAction(ACTION_CLEAR_SUMMARY),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
+
+    /** Reset the "blocked recently" summary counter (see [ACTION_CLEAR_SUMMARY]). */
+    internal fun clearBlockedSummaryCount() {
+        synchronized(lock) { blockedSinceLastNotif = 0 }
     }
 
     fun notifyPhishingUrl(

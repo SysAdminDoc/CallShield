@@ -3,6 +3,7 @@ package com.sysadmindoc.callshield.data
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.util.Log
 import androidx.core.content.FileProvider
 import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
@@ -375,6 +376,22 @@ object BackupRestore {
                     emptyList()
                 }
 
+            // Keep the export within the same row cap that restore enforces, so a
+            // large device never produces a backup the app then refuses to import.
+            // The user-authored sections (numbers/whitelist/rules/settings) are
+            // preserved in full; the blocked-call log — unbounded and re-generable
+            // — absorbs the trim, keeping the most recent entries.
+            val nonLogRows =
+                numbers.size + whitelist.size + wildcards.size + keywords.size + ranges.size +
+                    if (settings != null) 1 else 0
+            val logBudget = (MAX_BACKUP_RESTORE_ROWS - nonLogRows).coerceAtLeast(0)
+            val cappedLogs =
+                if (logs.size > logBudget) {
+                    logs.sortedByDescending { it.timestamp }.take(logBudget)
+                } else {
+                    logs
+                }
+
             val backup =
                 Backup(
                     blockedNumbers = numbers,
@@ -383,7 +400,7 @@ object BackupRestore {
                     keywordRules = keywords,
                     rangeRules = ranges,
                     settings = settings,
-                    logs = logs,
+                    logs = cappedLogs,
                 )
 
             val adapter = moshi.adapter(Backup::class.java).indent("  ")
@@ -520,7 +537,10 @@ object BackupRestore {
 
                 previewRestoreJson(context, json, AppDatabase.getInstance(context).spamDao(), sections)
             } catch (e: Exception) {
-                RestorePreviewResult(false, context.getString(R.string.backup_restore_error, e.message ?: ""))
+                // Don't surface the raw exception text (content URIs, SQLite
+                // constraint names) to the UI — log it, show a localized reason.
+                Log.w("BackupRestore", "Restore preview failed", e)
+                RestorePreviewResult(false, context.getString(R.string.backup_restore_error_generic))
             }
         }
 
@@ -778,7 +798,8 @@ object BackupRestore {
                 ),
             )
         } catch (e: Exception) {
-            RestoreResult(false, context.getString(R.string.backup_restore_error, e.message ?: ""))
+            Log.w("BackupRestore", "Restore failed", e)
+            RestoreResult(false, context.getString(R.string.backup_restore_error_generic))
         }
 
     internal fun validateBackupJson(
