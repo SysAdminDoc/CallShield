@@ -22,7 +22,7 @@
 
 CallShield blocks spam calls and texts using a **15+ layer on-device detection engine** with a gradient-boosted tree ML scorer, campaign burst detection, RCS notification filter, and real-time caller ID overlay. Powered by a 32,613-number database with scheduled hot-list updates. Community-maintained, no accounts, no tracking.
 
-## v1.7.24 Highlights
+## v1.7.25 Highlights
 
 - **Roaming-safe number matching** — phone identities canonicalize under the
   SIM's home region instead of the visited network, so blocks and whitelists
@@ -242,7 +242,7 @@ CallShield blocks spam calls and texts using a **15+ layer on-device detection e
 5. **Callback-aware** — won't block callbacks from numbers you recently called, answered repeatedly, after a local emergency call, or urgent repeated callers
 6. **Community-driven** — one-tap anonymous contribution via Cloudflare Worker, daily merge into database
 
-## Detection Pipeline (v1.7.24)
+## Detection Pipeline (v1.7.25)
 
 All detection layers implement a shared `IChecker` interface and run in priority order via `CheckerPipeline.run` — first non-null result wins, every layer is testable in isolation. Priorities are stable numbers; the ladder below is the live order.
 

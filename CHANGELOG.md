@@ -2,7 +2,7 @@
 
 All notable changes to CallShield will be documented in this file.
 
-## Unreleased
+## v1.7.25 — 2026-07-28
 
 ### Added
 

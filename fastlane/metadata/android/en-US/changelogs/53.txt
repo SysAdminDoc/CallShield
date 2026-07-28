@@ -1,0 +1,5 @@
+Follow-up polish (verified on-device):
+- The repeat-caller auto-block threshold is now adjustable in Settings.
+- Unified "Trusted" wording across the trusted-numbers add flow.
+- Lookup, block, and report errors show clear localized messages instead of raw technical text.
+- Detection-trace verdict labels are now translatable.
