@@ -25,9 +25,21 @@ fun ChangelogScreen() {
         verticalArrangement = Arrangement.spacedBy(0.dp),
     ) {
         VersionEntry(
+            "1.7.26",
+            "Deep-audit drain: crash guards, theming, localization, and post-call security",
+            isLatest = true,
+            changes =
+                listOf(
+                    "Crash-guarded every external, dial, and settings intent on browserless devices",
+                    "\"Block area code\" now confirms first; cold starts and the widget follow the real theme",
+                    "Density-scaled the caller ID overlay and stopped list rows re-animating on scroll",
+                    "Localized schedule labels and rule descriptions; unified Settings capitalization",
+                    "Verified a real recent call before post-call community reports; capped backup exports",
+                ),
+        )
+        VersionEntry(
             "1.7.25",
             "Follow-up polish, verified on-device",
-            isLatest = true,
             changes =
                 listOf(
                     "Made the repeat-caller auto-block threshold adjustable in Settings",
