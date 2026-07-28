@@ -17,11 +17,12 @@
 # BlocklistExporter data classes used by Moshi reflection
 -keep class com.sysadmindoc.callshield.data.BlocklistExporter$ExportData { *; }
 -keep class com.sysadmindoc.callshield.data.BlocklistExporter$ExportNumber { *; }
--keep class com.sysadmindoc.callshield.data.BackupRestore$Backup { *; }
--keep class com.sysadmindoc.callshield.data.BackupRestore$BackupNumber { *; }
--keep class com.sysadmindoc.callshield.data.BackupRestore$BackupWhitelist { *; }
--keep class com.sysadmindoc.callshield.data.BackupRestore$BackupWildcard { *; }
--keep class com.sysadmindoc.callshield.data.BackupRestore$BackupKeyword { *; }
+# Backup payload data classes are all serialized via KotlinJsonAdapterFactory
+# (pure reflection, no @Json annotations). Keep the whole family — enumerating
+# them individually already dropped BackupSettings/BackupRangeRule/BackupLogEntry
+# once, which strips Kotlin metadata and either crashes the adapter or writes
+# obfuscated keys that restore silently loses.
+-keep class com.sysadmindoc.callshield.data.BackupRestore$* { *; }
 
 # GitHubDataSource JSON models parsed by Moshi
 -keep class com.sysadmindoc.callshield.data.model.SpamDatabase { *; }
