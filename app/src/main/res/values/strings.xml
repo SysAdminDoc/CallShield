@@ -157,6 +157,11 @@
     <string name="dashboard_smart_suggestions">Smart Suggestions</string>
     <string name="dashboard_spam_from_area">Spam count: %1$d | %2$s (%3$s)</string>
     <string name="dashboard_block_area">Block %s</string>
+    <string name="dashboard_block_area_confirm_title">Block area code %s?</string>
+    <string name="dashboard_block_area_confirm_body">This adds a rule that blocks every call and text from a +1 %1$s number (%2$s) — roughly 7.9 million numbers. You can remove it later from the blocklist.</string>
+    <string name="dashboard_block_area_confirm_action">Block area code</string>
+    <string name="dashboard_block_area_description">Area code %1$s (%2$s)</string>
+    <string name="dashboard_block_area_added">Blocked area code %s</string>
 
     <!-- Blocked Log Screen -->
     <string name="blocked_log_action_delete">Delete entry</string>

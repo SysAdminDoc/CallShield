@@ -58,6 +58,7 @@ import androidx.compose.material.icons.filled.SpeakerNotesOff
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.Today
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -157,6 +158,8 @@ fun DashboardScreen(viewModel: MainViewModel) {
             context.getSystemService(Context.ROLE_SERVICE) as? RoleManager
         }
     var permissionRefreshTick by remember { mutableIntStateOf(0) }
+    // Pending "Block area code" confirmation: (areaCode, locationLabel).
+    var pendingAreaBlock by remember { mutableStateOf<Pair<String, String>?>(null) }
 
     DisposableEffect(lifecycleOwner) {
         val observer =
@@ -867,13 +870,44 @@ fun DashboardScreen(viewModel: MainViewModel) {
                                 label = stringResource(R.string.dashboard_block_area, ac),
                                 icon = Icons.Default.FilterAlt,
                                 color = CatYellow,
-                                onClick = { viewModel.addWildcardRule("+1$ac*", false, "Block $ac ($loc)") },
+                                onClick = { pendingAreaBlock = ac to loc },
                             )
                         }
                     }
                 }
             }
         }
+    }
+
+    pendingAreaBlock?.let { (ac, loc) ->
+        AlertDialog(
+            onDismissRequest = { pendingAreaBlock = null },
+            title = { Text(stringResource(R.string.dashboard_block_area_confirm_title, ac)) },
+            text = { Text(stringResource(R.string.dashboard_block_area_confirm_body, ac, loc)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.addWildcardRule(
+                        "+1$ac*",
+                        false,
+                        context.getString(R.string.dashboard_block_area_description, ac, loc),
+                    )
+                    android.widget.Toast
+                        .makeText(
+                            context,
+                            context.getString(R.string.dashboard_block_area_added, ac),
+                            android.widget.Toast.LENGTH_SHORT,
+                        ).show()
+                    pendingAreaBlock = null
+                }) {
+                    Text(stringResource(R.string.dashboard_block_area_confirm_action))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingAreaBlock = null }) {
+                    Text(stringResource(R.string.dialog_cancel))
+                }
+            },
+        )
     }
 }
 

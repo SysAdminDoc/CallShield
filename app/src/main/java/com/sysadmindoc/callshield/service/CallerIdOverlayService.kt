@@ -28,6 +28,21 @@ import com.sysadmindoc.callshield.util.filterAsciiDigits
 import com.sysadmindoc.callshield.util.race
 import kotlinx.coroutines.*
 import java.text.NumberFormat
+import kotlin.math.roundToInt
+
+/**
+ * The caller-ID overlay is built with the View API, whose padding/margin/corner
+ * setters take physical pixels. The literals below were eyeballed on a ~xxhdpi
+ * device (density 3), so treat that as the design baseline: convert each literal
+ * to pixels for the *current* density. Result is proportionally identical across
+ * mdpi..xxxhdpi (previously oversized on mdpi, shrunken on xxxhdpi) and unchanged
+ * on xxhdpi.
+ */
+private const val OVERLAY_DESIGN_DENSITY = 3f
+
+private fun Context.overlayDp(designPx: Float): Int = overlayDpF(designPx).roundToInt()
+
+private fun Context.overlayDpF(designPx: Float): Float = designPx * resources.displayMetrics.density / OVERLAY_DESIGN_DENSITY
 
 /**
  * Real-time caller ID overlay with live multi-source spam lookup.
@@ -143,9 +158,10 @@ class CallerIdOverlayService : Service() {
                 background =
                     GradientDrawable().apply {
                         setColor(Color.parseColor("#F5080808"))
-                        cornerRadii = floatArrayOf(0f, 0f, 0f, 0f, 48f, 48f, 48f, 48f) // bottom-left, bottom-right
+                        val r = context.overlayDpF(48f)
+                        cornerRadii = floatArrayOf(0f, 0f, 0f, 0f, r, r, r, r) // bottom-left, bottom-right
                     }
-                setPadding(52, 40, 52, 32)
+                setPadding(context.overlayDp(52f), context.overlayDp(40f), context.overlayDp(52f), context.overlayDp(32f))
 
                 // Subtle accent line at top
                 addView(
@@ -154,8 +170,8 @@ class CallerIdOverlayService : Service() {
                             LinearLayout
                                 .LayoutParams(
                                     LinearLayout.LayoutParams.MATCH_PARENT,
-                                    2,
-                                ).apply { bottomMargin = 16 }
+                                    context.overlayDp(2f),
+                                ).apply { bottomMargin = context.overlayDp(16f) }
                         setBackgroundColor(Color.parseColor("#18A6E3A1"))
                     },
                 )
@@ -186,7 +202,7 @@ class CallerIdOverlayService : Service() {
                         textSize = 24f
                         typeface = Typeface.DEFAULT_BOLD
                         letterSpacing = -0.02f
-                        setPadding(0, 8, 0, 2)
+                        setPadding(0, context.overlayDp(8f), 0, context.overlayDp(2f))
                     },
                 )
                 if (reason.isNotEmpty()) {
@@ -213,14 +229,14 @@ class CallerIdOverlayService : Service() {
                         setTextColor(Color.parseColor("#FFFAB387"))
                         textSize = 13f
                         typeface = Typeface.DEFAULT_BOLD
-                        setPadding(0, 10, 0, 0)
+                        setPadding(0, context.overlayDp(10f), 0, 0)
                     }
                 addView(scoreText)
 
                 // Loading indicator
                 progressBar =
                     ProgressBar(context, null, android.R.attr.progressBarStyleSmall).apply {
-                        setPadding(0, 10, 0, 0)
+                        setPadding(0, context.overlayDp(10f), 0, 0)
                         visibility =
                             if (outgoingRiskWarning) {
                                 android.view.View.GONE
@@ -234,7 +250,7 @@ class CallerIdOverlayService : Service() {
                 sourcesContainer =
                     LinearLayout(context).apply {
                         orientation = LinearLayout.VERTICAL
-                        setPadding(0, 6, 0, 0)
+                        setPadding(0, context.overlayDp(6f), 0, 0)
                     }
                 addView(sourcesContainer)
 
@@ -246,7 +262,7 @@ class CallerIdOverlayService : Service() {
                         textSize = 13f
                         typeface = Typeface.DEFAULT_BOLD
                         visibility = android.view.View.GONE
-                        setPadding(0, 6, 0, 0)
+                        setPadding(0, context.overlayDp(6f), 0, 0)
                     }
                 addView(callerNameText)
 
@@ -264,7 +280,7 @@ class CallerIdOverlayService : Service() {
                         setTextColor(Color.parseColor("#FF585B70"))
                         textSize = 10f
                         letterSpacing = 0.02f
-                        setPadding(0, 6, 0, 0)
+                        setPadding(0, context.overlayDp(6f), 0, 0)
                     }
                 addView(statusText)
 
@@ -272,7 +288,7 @@ class CallerIdOverlayService : Service() {
                 addView(
                     LinearLayout(context).apply {
                         orientation = LinearLayout.HORIZONTAL
-                        setPadding(0, 16, 0, 0)
+                        setPadding(0, context.overlayDp(16f), 0, 0)
 
                         // Google search
                         addView(
@@ -282,7 +298,7 @@ class CallerIdOverlayService : Service() {
                                 setBackgroundColor(Color.parseColor("#14FFFFFF"))
                                 textSize = 11f
                                 isAllCaps = false
-                                setPadding(20, 8, 20, 8)
+                                setPadding(context.overlayDp(20f), context.overlayDp(8f), context.overlayDp(20f), context.overlayDp(8f))
                                 setOnClickListener {
                                     try {
                                         context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/search?q=${Uri.encode("$digits phone number spam")}")).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) })
@@ -303,7 +319,7 @@ class CallerIdOverlayService : Service() {
                                 setBackgroundColor(Color.parseColor("#14FFFFFF"))
                                 textSize = 11f
                                 isAllCaps = false
-                                setPadding(20, 8, 20, 8)
+                                setPadding(context.overlayDp(20f), context.overlayDp(8f), context.overlayDp(20f), context.overlayDp(8f))
                                 visibility =
                                     if (outgoingRiskWarning) {
                                         android.view.View.GONE
@@ -334,7 +350,7 @@ class CallerIdOverlayService : Service() {
                                 setBackgroundColor(Color.TRANSPARENT)
                                 textSize = 11f
                                 isAllCaps = false
-                                setPadding(20, 8, 20, 8)
+                                setPadding(context.overlayDp(20f), context.overlayDp(8f), context.overlayDp(20f), context.overlayDp(8f))
                                 setOnClickListener { dismiss(sessionId) }
                             },
                         )
@@ -349,7 +365,7 @@ class CallerIdOverlayService : Service() {
                         setBackgroundColor(Color.parseColor("#0AFFFFFF"))
                         textSize = 10f
                         isAllCaps = false
-                        setPadding(20, 6, 20, 6)
+                        setPadding(context.overlayDp(20f), context.overlayDp(6f), context.overlayDp(20f), context.overlayDp(6f))
                         visibility =
                             if (outgoingRiskWarning) {
                                 android.view.View.GONE
@@ -361,7 +377,7 @@ class CallerIdOverlayService : Service() {
                                 .LayoutParams(
                                     LinearLayout.LayoutParams.MATCH_PARENT,
                                     LinearLayout.LayoutParams.WRAP_CONTENT,
-                                ).apply { topMargin = 8 }
+                                ).apply { topMargin = context.overlayDp(8f) }
                         setOnClickListener {
                             if (!SitTonePlayer.isPlaying()) {
                                 CallShieldApp.appScope.launch {
@@ -625,7 +641,7 @@ class CallerIdOverlayService : Service() {
                             ),
                         )
                         textSize = 11f
-                        setPadding(0, 3, 0, 3)
+                        setPadding(0, context.overlayDp(3f), 0, context.overlayDp(3f))
                     },
                 )
                 renderScore(snapshot)

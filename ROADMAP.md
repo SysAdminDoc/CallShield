@@ -664,15 +664,6 @@ Baseline at audit time: `testDebugUnitTest`, `ktlintCheck`, `detekt`, `lintDebug
   Confidence: Likely (visual severity needs device repro)
   Effort: M
 
-- [ ] P3 — "Block area code" smart suggestion fires a ~7.9M-number rule with no confirmation, no feedback, no undo (plus a new stored-English site)
-  Category: ux
-  Where: ui/screens/main/DashboardScreen.kt:859-864
-  Problem: One tap on "Block 832" adds wildcard rule `+1$ac*` with no confirm, no snackbar/undo, and no visible state change (the suggestion row persists), so users tap again assuming failure (silently deduped by the pattern unique index + REPLACE). The stored description is the untranslatable English literal "Block $ac ($loc)" — a new site of the logged stored-English-descriptions class (that entry names only MainViewModel/BlockedLogScreen).
-  Fix: Confirmation-with-coverage (reuse the AddHashWildcardDialog coverage-pill pattern) or at minimum a snackbar with Undo (deleteWildcardRule); resolve the description at render time from a locale-independent marker.
-  Acceptance: Tapping "Block 832" produces visible confirmation and an undo path; the stored description survives locale switch.
-  Confidence: Verified
-  Effort: M
-
 - [ ] P3 — Settings section/toggle capitalization inconsistent within a single scroll
   Category: ux
   Where: res/values/strings.xml — "Detection engines"/"External blocklists" (sentence case) vs "Power Mode" (:577), "Log Cleanup" (:580), "Quiet Hours" (:571), "Silent Voicemail Mode" (:569), "Aggressive Blocking" (:578); buttons mix "Export Blocked Log as CSV" vs "Commit preview"
@@ -680,15 +671,6 @@ Baseline at audit time: `testDebugUnitTest`, `ktlintCheck`, `detekt`, `lintDebug
   Fix: Normalize the ~8 Title Case outliers to sentence case (majority + M3 guidance).
   Acceptance: All settings section headers and toggle titles share one capitalization scheme.
   Confidence: Verified
-  Effort: S
-
-- [ ] P3 — Caller-ID overlay uses raw pixel paddings, line heights, and corner radii
-  Category: visual
-  Where: service/CallerIdOverlayService.kt:146-158, 189, 216, 285, 306, 337, 352 (setPadding(52,40,52,32), 2px accent line, cornerRadii 48f, button setPadding(20,8,20,8))
-  Problem: All View-API dimensions are physical pixels, not dp: mdpi devices get ~2-3x oversized paddings; xxxhdpi gets ~25-40% of intended size — cramped buttons, near-invisible accent line, inconsistent rounding. (textSize values are sp and fine.)
-  Fix: Convert via resources.displayMetrics.density (Int.dp(ctx) helper) or inflate an XML layout with dp units.
-  Acceptance: Overlay renders with identical proportions on mdpi and xxxhdpi emulators.
-  Confidence: Verified (px-vs-dp semantics); visual impact Needs-repro
   Effort: S
 
 - [ ] P3 — Forward chevrons don't mirror in RTL (More hub + Dashboard)
