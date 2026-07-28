@@ -1079,11 +1079,13 @@ internal fun BackupProtectionControls(
                     .fillMaxWidth()
                     .testTag(SETTINGS_BACKUP_ENCRYPTION_TOGGLE_TAG)
                     .padding(vertical = 4.dp)
-                    .clickable(role = Role.Switch) {
-                        onFormChange(
-                            if (form.enabled) BackupProtectionForm() else form.copy(enabled = true),
-                        )
-                    },
+                    .toggleable(
+                        value = form.enabled,
+                        role = Role.Switch,
+                        onValueChange = { enabled ->
+                            onFormChange(if (enabled) form.copy(enabled = true) else BackupProtectionForm())
+                        },
+                    ),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {

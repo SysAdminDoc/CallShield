@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
 import android.provider.Settings
+import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.sysadmindoc.callshield.R
 
@@ -247,8 +248,15 @@ object CallShieldPermissions {
     fun canReadSmsInbox(context: Context): Boolean = isPermissionGranted(context, Manifest.permission.READ_SMS)
 
     fun hasNotificationPermission(context: Context): Boolean =
-        Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             isPermissionGranted(context, Manifest.permission.POST_NOTIFICATIONS)
+        } else {
+            // Below API 33 there is no runtime POST_NOTIFICATIONS grant, but the
+            // user can still disable notifications in OS settings — in which case
+            // blocked-call alerts silently never appear. Reflect that state so the
+            // UI can surface it (and its enable-in-settings fallback stays live).
+            NotificationManagerCompat.from(context).areNotificationsEnabled()
+        }
 
     fun canDrawOverlays(context: Context): Boolean = Settings.canDrawOverlays(context)
 

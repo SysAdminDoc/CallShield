@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -19,6 +20,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.TimeSchedule
@@ -73,7 +75,14 @@ fun ScheduleSection(
     onChange: (ScheduleUiState) -> Unit,
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .toggleable(
+                    value = state.enabled,
+                    role = Role.Switch,
+                    onValueChange = { onChange(state.copy(enabled = it)) },
+                ),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
@@ -84,7 +93,7 @@ fun ScheduleSection(
         )
         Switch(
             checked = state.enabled,
-            onCheckedChange = { onChange(state.copy(enabled = it)) },
+            onCheckedChange = null,
             colors =
                 SwitchDefaults.colors(
                     checkedTrackColor = CatBlue,

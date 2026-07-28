@@ -159,6 +159,8 @@
     <string name="dashboard_block_area">Block %s</string>
 
     <!-- Blocked Log Screen -->
+    <string name="blocked_log_action_delete">Delete entry</string>
+    <string name="blocked_log_action_block">Block number</string>
     <string name="blocked_log_filter_all">All (%d)</string>
     <string name="blocked_log_filter_calls">Calls</string>
     <string name="blocked_log_filter_sms">SMS</string>

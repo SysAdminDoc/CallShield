@@ -613,7 +613,9 @@ fun PremiumCompactButton(
                 disabledContentColor = CatOverlay,
             ),
     ) {
-        Icon(icon, contentDescription = label, tint = foregroundColor, modifier = Modifier.size(14.dp))
+        // Decorative — the visible label already names the action, so a matching
+        // icon contentDescription makes TalkBack read it twice.
+        Icon(icon, contentDescription = null, tint = foregroundColor, modifier = Modifier.size(14.dp))
         Spacer(Modifier.width(5.dp))
         Text(
             label,

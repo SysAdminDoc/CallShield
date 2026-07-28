@@ -33,6 +33,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -240,10 +243,17 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
                                         viewModel.blockNumber(call.number, "spam", "Blocked from log swipe")
                                         hapticConfirm(context)
                                         scope.launch {
-                                            snackbarHost.showSnackbar(
-                                                blockedMessage,
-                                                duration = SnackbarDuration.Short,
-                                            )
+                                            // Offer Undo — a permanent block is the more consequential
+                                            // swipe and one accidental right-swipe otherwise sticks.
+                                            val result =
+                                                snackbarHost.showSnackbar(
+                                                    message = blockedMessage,
+                                                    actionLabel = undoLabel,
+                                                    duration = SnackbarDuration.Short,
+                                                )
+                                            if (result == SnackbarResult.ActionPerformed) {
+                                                viewModel.unblockByNumber(call.number)
+                                            }
                                         }
                                         dismissState.reset()
                                     }
@@ -289,7 +299,25 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
                             ) {
                                 val allowReason = stringResource(R.string.blocked_log_temporary_allow_reason)
                                 val blockReason = stringResource(R.string.blocked_log_temporary_block_reason)
+                                // Swipe-only Delete/Block are unreachable for switch-access
+                                // and TalkBack users — expose them as custom actions.
+                                val deleteActionLabel = stringResource(R.string.blocked_log_action_delete)
+                                val blockActionLabel = stringResource(R.string.blocked_log_action_block)
                                 BlockedCallItem(
+                                    modifier =
+                                        Modifier.semantics {
+                                            customActions =
+                                                listOf(
+                                                    CustomAccessibilityAction(deleteActionLabel) {
+                                                        viewModel.deleteLogEntry(call)
+                                                        true
+                                                    },
+                                                    CustomAccessibilityAction(blockActionLabel) {
+                                                        viewModel.blockNumber(call.number, "spam", "Blocked from log swipe")
+                                                        true
+                                                    },
+                                                )
+                                        },
                                     call = call,
                                     onTap = { viewModel.openNumberDetail(call.number) },
                                     onTemporaryAllow = { duration ->
@@ -436,6 +464,7 @@ fun BlockedCallItem(
     onTap: () -> Unit,
     onTemporaryAllow: (TemporaryDecisionDuration) -> Unit,
     onTemporaryBlock: (TemporaryDecisionDuration) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
     val dateFormat = remember { SimpleDateFormat("MMM d, h:mm a", Locale.getDefault()) }
@@ -452,7 +481,7 @@ fun BlockedCallItem(
     PremiumCard(
         cornerRadius = 12.dp,
         modifier =
-            Modifier.combinedClickable(
+            modifier.combinedClickable(
                 onClick = onTap,
                 onLongClick = {
                     val clip = ClipData.newPlainText(clipLabelPhoneNumber, call.number)

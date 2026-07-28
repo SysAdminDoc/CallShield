@@ -120,6 +120,12 @@ class BlocklistRepository(
     /** Re-insert a previously-removed block row verbatim (undo). */
     suspend fun restoreBlockedNumber(number: SpamNumber) = dao.insertNumber(number)
 
+    /** Undo a block by number string (e.g. an accidental blocked-log swipe). */
+    suspend fun unblockByNumber(number: String) {
+        val normalized = normalizeNumber(number)
+        dao.findByNumber(normalized)?.let { unblockNumber(it) }
+    }
+
     fun getAllWildcardRules(): Flow<List<WildcardRule>> = dao.getAllWildcardRules()
 
     suspend fun addWildcardRule(

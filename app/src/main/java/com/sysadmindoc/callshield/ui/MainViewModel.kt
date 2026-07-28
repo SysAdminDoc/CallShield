@@ -498,6 +498,11 @@ class MainViewModel
             viewModelScope.launch { repo.restoreBlockedNumber(entity) }
         }
 
+        /** Undo a block created by number string (e.g. an accidental log swipe). */
+        fun unblockByNumber(number: String) {
+            viewModelScope.launch { repo.unblockByNumber(number) }
+        }
+
         fun deleteLogEntry(call: BlockedCall) {
             viewModelScope.launch { repo.deleteBlockedCall(call) }
         }

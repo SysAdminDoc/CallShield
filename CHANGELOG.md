@@ -14,6 +14,19 @@ All notable changes to CallShield will be documented in this file.
   entries — they may only weaken community-reported rows. This closes a
   path that let an attacker remove real spammers from the shared database.
 
+### Accessibility
+
+- The Dashboard "Block calls"/"Block SMS" toggles, blocklist rule switches,
+  schedule toggle, push-alert source rows, and backup-encryption toggle now
+  announce their name and state to TalkBack as a single node.
+- Blocked-log rows expose Delete and Block as TalkBack custom actions (no
+  longer swipe-only), and the block swipe now offers Undo.
+- Below Android 13, the app now detects when notifications are disabled in OS
+  settings instead of always reporting them ready, and the enable-in-settings
+  action is reachable.
+- Bottom-nav items and compact buttons no longer announce their label twice;
+  the active blocking profile is exposed as a selection state.
+
 ### Fixed
 
 - SMS content analysis matches URL shorteners and suspicious TLDs against the

@@ -641,16 +641,6 @@ Baseline at audit time: `testDebugUnitTest`, `ktlintCheck`, `detekt`, `lintDebug
 
 ### P2
 
-- [ ] P2 — Notifications reported "Ready" below API 33 even when disabled; the sub-33 settings-deeplink fallbacks are dead code
-  Category: correctness
-  Where: permissions/CallShieldPermissions.kt:249-251 (`hasNotificationPermission`); ui/screens/onboarding/OnboardingScreen.kt:118-130, 380; ui/screens/settings/SettingsScreen.kt:327-344
-  Problem: `hasNotificationPermission` returns true unconditionally below TIRAMISU (never checks NotificationManagerCompat.areNotificationsEnabled()). On Android 10-12 with app notifications disabled in OS settings, Settings and Onboarding show "Ready", blocked-call alerts silently never appear, and the API<33 ACTION_APP_NOTIFICATION_SETTINGS fallbacks added in 3bb393f are unreachable (enable button gated on `!notificationsGranted`, Onboarding additionally on SDK ≥ 33 at line 380).
-  Evidence: Verified this session — the function is exactly `SDK < TIRAMISU || isPermissionGranted(POST_NOTIFICATIONS)`.
-  Fix: Use `NotificationManagerCompat.from(context).areNotificationsEnabled()` (covers all API levels); drop the extra SDK gate on the onboarding button so the fallback becomes reachable.
-  Acceptance: On an API 29-32 emulator with notifications disabled, Settings and Onboarding show the row as not ready with a working Enable action.
-  Confidence: Verified (code trace; device repro pending)
-  Effort: S
-
 - [ ] P2 — Cloudflare account identity file tracked in the public repo (worker/.wrangler/cache/wrangler-account.json)
   Category: security
   Where: worker/.wrangler/cache/wrangler-account.json:1-6
@@ -670,26 +660,6 @@ Baseline at audit time: `testDebugUnitTest`, `ktlintCheck`, `detekt`, `lintDebug
   Acceptance: With a 100k-row subscription, opening the Blocklist tab does not allocate the full table; blocking a number does not re-run the full-table query.
   Confidence: Verified
   Effort: L
-
-- [ ] P2 — Primary-surface toggles are unlabeled for TalkBack and not row-toggleable (class fixed in Settings in 3bb393f, missed here)
-  Category: a11y
-  Where: ui/screens/main/DashboardScreen.kt:1358-1390 (QuickToggle); ui/screens/main/BlocklistScreen.kt:838-846, 887-895, 1508-1516 (rule-item switches); ui/screens/main/ScheduleControls.kt:85-93
-  Problem: Each Switch is a bare sibling of the label Text — no merged semantics, no Modifier.toggleable on the row, no stateDescription. TalkBack announces only "On/Off, switch" with no name: the Dashboard "Block calls"/"Block SMS" (the app's two most important controls) are unlabeled, and every Blocklist rule switch is indistinguishable. 3bb393f fixed exactly this pattern for ~25 Settings toggles but didn't touch these primary screens.
-  Evidence: `git show 3bb393f --stat` shows no changes to these files; no toggleable/mergeDescendants in the cited composables.
-  Fix: Apply the post-3bb393f Settings pattern: row-level `Modifier.toggleable(value, role = Role.Switch, onValueChange)` with the Switch as a merged child (`onCheckedChange = null`).
-  Acceptance: TalkBack announces "Block calls, switch, on" as one node; whole row toggles; each rule switch announces its pattern/keyword.
-  Confidence: Verified
-  Effort: M
-
-- [ ] P2 — Blocked-log swipe actions (delete, permanent block) have no accessible alternative; the block swipe has no undo
-  Category: a11y
-  Where: ui/screens/main/BlockedLogScreen.kt:215-333 (SwipeToDismissBox + expanded FlowRow actions)
-  Problem: Delete-entry exists only as EndToStart swipe; permanent block only as StartToEnd swipe. The expanded action row offers Google/Databases/Copy/Detail/temp Allow/temp Block — no Delete, no permanent Block, and no `semantics { customActions }` — so switch-access and TalkBack users cannot delete an entry at all. The delete swipe gets an Undo snackbar (L226-233) but the block swipe — the more consequential action — gets a plain snackbar (L242-247): one accidental right-swipe permanently blocklists a number.
-  Evidence: Full file trace; only expandableStateSemantics present, no custom accessibility actions in the file.
-  Fix: Add `Modifier.semantics { customActions = listOf(delete, blockNumber) }` on the item (or Delete/Block buttons in the expanded FlowRow); give the block snackbar an Undo action calling unblockNumber.
-  Acceptance: TalkBack actions menu on a log row exposes Delete and Block; block swipe snackbar offers Undo which removes the blocklist entry.
-  Confidence: Verified
-  Effort: M
 
 - [ ] P2 — verifyReleaseMetadata gate does not cover CHANGELOG.md or the in-app ChangelogScreen
   Category: maintainability
@@ -888,42 +858,6 @@ Baseline at audit time: `testDebugUnitTest`, `ktlintCheck`, `detekt`, `lintDebug
   Effort: S
 
 ### P3 — accessibility
-
-- [ ] P3 — Icon contentDescription duplicates the visible label: TalkBack announces buttons and nav items twice
-  Category: a11y
-  Where: ui/theme/Theme.kt:616 (PremiumCompactButton: Icon(contentDescription = label) + Text(label)); ui/MainActivity.kt:725 (NavItem)
-  Problem: Inside a merged node, an icon description equal to the visible text makes TalkBack read "Sync, Sync, button" / "Home, Home, tab". PremiumCompactButton is used by every compact action across Dashboard/BlockedLog/Recent/Blocklist. PremiumActionButton gets it right (null default, Theme.kt:525).
-  Fix: contentDescription = null when a text label is present (keep an override for icon-only usage).
-  Acceptance: TalkBack announces each compact button and bottom-nav item exactly once.
-  Confidence: Likely (announcement behavior; duplication Verified)
-  Effort: S
-
-- [ ] P3 — ProfileChip selection state is visual-only: not exposed to accessibility
-  Category: a11y
-  Where: ui/screens/main/DashboardScreen.kt:1392-1422 (ProfileChip — OutlinedButton, check icon contentDescription null, no semantics)
-  Problem: The active profile (Work/Personal/Sleep/Maximum/Off) is conveyed only by border alpha/tint/bold/decorative check. No `semantics { selected }` / Role.RadioButton — TalkBack users can't tell which profile is active on the surface whose purpose is showing the active mode.
-  Fix: `Modifier.semantics { selected = isActive; role = Role.RadioButton }` (or M3 FilterChip with 8dp shape, within the ≤12dp radius rule).
-  Acceptance: TalkBack announces "Maximum, selected" on the active chip, "not selected" on others.
-  Confidence: Verified
-  Effort: S
-
-- [ ] P3 — Push-alert source switches are unlabeled stateless TalkBack targets (sibling sheet was fixed in 3bb393f)
-  Category: a11y
-  Where: ui/screens/settings/PushAlertSourcesSheet.kt:240-307 (SourceRow)
-  Problem: Each of ~24 source rows keeps a standalone Switch(onCheckedChange = onToggle) with no row-level toggleable and no label association — TalkBack announces only "On/Off, Switch" with no app name. NotificationScreeningSourcesSheet (:176-223) got the merged-row conversion in 3bb393f; this sheet only got the touch-target fix.
-  Fix: Same pattern: Modifier.toggleable(value = allowed, enabled = source.installed, role = Role.Switch, onValueChange = onToggle) on the row, Switch(onCheckedChange = null).
-  Acceptance: TalkBack reads one node per row ("<App label>, <package>, Active, Switch, On"); double-tap toggles the row.
-  Confidence: Verified (code trace)
-  Effort: S
-
-- [ ] P3 — Backup encryption toggle row announces no on/off state to TalkBack
-  Category: a11y
-  Where: ui/screens/settings/SettingsScreen.kt:1076-1108 (BackupProtectionControls)
-  Problem: The row uses .clickable(role = Role.Switch) instead of .toggleable(value = form.enabled, ...), and the child Switch has onCheckedChange = null (stripping its own semantics) — TalkBack announces "Encrypt backup … Switch" with no checked state and no change announcement. The SettingsToggle comment at :1872-1875 claims this row follows the merged pattern; it doesn't.
-  Fix: Replace clickable(role = Role.Switch) with toggleable(value = form.enabled, role = Role.Switch, onValueChange = …).
-  Acceptance: TalkBack reads "Encrypt backup, <desc>, Switch, Off/On" and announces the new state on activation.
-  Confidence: Verified (code trace)
-  Effort: S
 
 ### P3 — maintainability / testing / docs
 
