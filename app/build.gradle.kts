@@ -143,6 +143,8 @@ kover {
                     classes(
                         "com.sysadmindoc.callshield.data.*",
                         "com.sysadmindoc.callshield.util.*",
+                        "com.sysadmindoc.callshield.permissions.*",
+                        "com.sysadmindoc.callshield.service.*",
                     )
                 }
                 excludes {
