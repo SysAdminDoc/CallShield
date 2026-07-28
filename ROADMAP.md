@@ -644,19 +644,10 @@ Baseline at audit time: `testDebugUnitTest`, `ktlintCheck`, `detekt`, `lintDebug
   Confidence: Verified
   Effort: M
 
-- [ ] P3 — CLAUDE.md working notes five releases stale (claims v1.7.18/vc46; app is v1.7.23/vc51)
-  Category: docs
-  Where: CLAUDE.md:6-7 (Version), :81 ("migrations v5-9" vs current schema v12)
-  Problem: The living notes every session reads describe v1.7.18 as current and omit the v1.7.19-v1.7.23 passes (identity canonicalization/schema v12, zero-baseline gates, passphrase backups, verifyReleaseMetadata) — actively misleading for the parallel-agent workflow this repo depends on. Untracked file, so no gate can cover it.
-  Fix: Rewrite the Version section to v1.7.23 summarizing 1.7.19-1.7.23 from CHANGELOG.md; correct the migration range and gate list.
-  Acceptance: CLAUDE.md version header matches app/build.gradle.kts.
-  Confidence: Verified
-  Effort: S
-
 ### Unaudited — needs a pass
 
-- [ ] P3 — Emulator/device verification pass for the UI findings above marked Likely/Needs-repro
-  Why: No emulator was available this session; all UI/visual/a11y findings were traced from code. A device pass should confirm: TalkBack announcements (toggle semantics items), entrance-animation jank, overlay px scaling on mdpi/xxxhdpi, font-scale 2.0 clipping, first-frame flashes, and the sub-33 notification row on an API 29-32 image.
+- [ ] P3 — Remaining device-verification for UI findings not yet confirmed on-device
+  Why: A device pass (Galaxy S22 Ultra, 2026-07-28) confirmed no cold-start theme flash, sentence-case Settings, the live More sync label, and clean navigation on the debug build. Still unverified: TalkBack announcements for the toggle-semantics items, overlay px→dp proportions on mdpi/xxxhdpi (single high-density test device), font-scale 2.0 clipping, and the sub-33 notification summary row on an API 29-32 image.
 - [ ] P3 — Live Cloudflare Worker behavior vs repo source
   Why: worker/community-reports-worker.js was audited as source; the deployed Worker (callshield-reports.workers.dev) was not probed. Confirm the deployed version matches the repo (especially once the P1/P2 validation fixes land) and that KV rate-limit config matches wrangler.toml.
 - [ ] P3 — Release-build (minified) backup round-trip and screening smoke test
