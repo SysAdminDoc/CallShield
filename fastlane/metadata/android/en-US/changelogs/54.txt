@@ -1,0 +1,7 @@
+Deep-audit drain (~20 fixes):
+- External, dial, and settings buttons no longer crash on browserless devices.
+- "Block area code" now confirms before adding a huge rule.
+- Cold starts and the widget now follow your real theme (no black flash).
+- Caller ID overlay scales correctly across screen densities; list rows stop re-animating on scroll.
+- Schedule labels, rule descriptions, and status messages are localized.
+- Post-call spam reports now require a real recent call before contributing.
