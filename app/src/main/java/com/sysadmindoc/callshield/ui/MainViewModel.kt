@@ -870,7 +870,7 @@ class MainViewModel
         fun reportNotSpam(number: String) {
             viewModelScope.launch {
                 // Whitelist locally AND report as false positive to community
-                manageBlocklist.addToWhitelist(number, "Reported as not spam")
+                manageBlocklist.addToWhitelist(number, appContext.getString(R.string.desc_reported_not_spam))
                 val result = CommunityContributor.reportNotSpam(repo.normalizeNumber(number))
                 _contributeResult.value = result.message
             }

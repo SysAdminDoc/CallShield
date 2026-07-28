@@ -280,6 +280,12 @@
     <string name="hash_wildcard_dialog_schedule_start">Start</string>
     <string name="hash_wildcard_dialog_schedule_end">End</string>
     <string name="hash_wildcard_item_schedule">Active %1$s</string>
+    <string name="schedule_every_day">Every day</string>
+    <string name="schedule_weekdays">Mon–Fri</string>
+    <string name="schedule_weekends">Weekends</string>
+    <string name="schedule_days_hours">%1$s · %2$s</string>
+    <string name="desc_reported_not_spam">Reported as not spam</string>
+    <string name="desc_blocked_from_log_swipe">Blocked from log swipe</string>
     <string name="blocklist_empty_keywords">No keyword rules</string>
     <string name="blocklist_empty_keywords_sub">Add phrases like bank alert or claim prize when spam texts reuse the same wording.</string>
     <string name="blocklist_empty_whitelist">No trusted numbers</string>
