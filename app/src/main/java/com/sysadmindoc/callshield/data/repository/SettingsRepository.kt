@@ -426,6 +426,8 @@ class SettingsRepository(
 
 internal const val ANSWERED_CALLER_THRESHOLD_MIN = 1
 internal const val ANSWERED_CALLER_THRESHOLD_MAX = 10
+internal const val FREQ_THRESHOLD_MIN = 1
+internal const val FREQ_THRESHOLD_MAX = 25
 internal const val ANSWERED_CALLER_WINDOW_DAYS_MIN = 1
 internal const val ANSWERED_CALLER_WINDOW_DAYS_MAX = 365
 internal const val EMERGENCY_CALLBACK_WINDOW_MINUTES_MIN = 15

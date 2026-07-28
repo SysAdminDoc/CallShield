@@ -2,6 +2,18 @@
 
 All notable changes to CallShield will be documented in this file.
 
+## Unreleased
+
+### Added
+
+- The repeat-caller auto-block threshold is now adjustable in Settings, and its
+  description reflects the configured count (it was engine-consumed but had no UI).
+
+### Fixed
+
+- Unified the "Trusted" terminology across the trusted-numbers add flow (the tab,
+  dialog, button, and confirmation no longer switch between "Trusted"/"Whitelist").
+
 ## v1.7.24 — 2026-07-28
 
 ### Security

@@ -59,6 +59,8 @@ import com.sysadmindoc.callshield.data.repository.ANSWERED_CALLER_WINDOW_DAYS_MA
 import com.sysadmindoc.callshield.data.repository.ANSWERED_CALLER_WINDOW_DAYS_MIN
 import com.sysadmindoc.callshield.data.repository.EMERGENCY_CALLBACK_WINDOW_MINUTES_MAX
 import com.sysadmindoc.callshield.data.repository.EMERGENCY_CALLBACK_WINDOW_MINUTES_MIN
+import com.sysadmindoc.callshield.data.repository.FREQ_THRESHOLD_MAX
+import com.sysadmindoc.callshield.data.repository.FREQ_THRESHOLD_MIN
 import com.sysadmindoc.callshield.permissions.CallShieldPermissions
 import com.sysadmindoc.callshield.ui.AppLanguage
 import com.sysadmindoc.callshield.ui.DurationTtsText
@@ -126,6 +128,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
     val timeStart by viewModel.timeBlockStart.collectAsStateWithLifecycle()
     val timeEnd by viewModel.timeBlockEnd.collectAsStateWithLifecycle()
     val freqEscalation by viewModel.freqEscalationEnabled.collectAsStateWithLifecycle()
+    val freqThreshold by viewModel.freqThreshold.collectAsStateWithLifecycle()
     val mlScorer by viewModel.mlScorerEnabled.collectAsStateWithLifecycle()
     val rcsFilter by viewModel.rcsFilterEnabled.collectAsStateWithLifecycle()
     val postCallScreen by viewModel.postCallScreenEnabled.collectAsStateWithLifecycle()
@@ -558,7 +561,28 @@ fun SettingsScreen(viewModel: MainViewModel) {
                 smsBurst,
             ) { viewModel.setSmsBurst(it) }
             GradientDivider()
-            SettingsToggle(stringResource(R.string.settings_repeat_caller), stringResource(R.string.settings_repeat_caller_desc), Icons.Default.Repeat, freqEscalation) { viewModel.setFreqEscalation(it) }
+            SettingsToggle(
+                stringResource(R.string.settings_repeat_caller),
+                stringResource(R.string.settings_repeat_caller_desc, freqThreshold),
+                Icons.Default.Repeat,
+                freqEscalation,
+            ) { viewModel.setFreqEscalation(it) }
+            if (freqEscalation) {
+                Spacer(Modifier.height(8.dp))
+                SettingsNumberStepper(
+                    label = stringResource(R.string.settings_repeat_caller_threshold),
+                    valueText =
+                        pluralStringResource(
+                            R.plurals.settings_repeat_caller_threshold_value,
+                            freqThreshold,
+                            freqThreshold,
+                        ),
+                    value = freqThreshold,
+                    minValue = FREQ_THRESHOLD_MIN,
+                    maxValue = FREQ_THRESHOLD_MAX,
+                    onValueChange = { viewModel.setFreqThreshold(it) },
+                )
+            }
             GradientDivider()
             SettingsToggle(stringResource(R.string.settings_ml_scorer), stringResource(R.string.settings_ml_scorer_desc), Icons.Default.SmartToy, mlScorer) { viewModel.setMlScorer(it) }
             GradientDivider()

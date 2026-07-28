@@ -198,7 +198,7 @@
     <string name="blocklist_tab_blocklist">Blocklist (%d)</string>
     <string name="blocklist_tab_wildcards">Wildcards (%d)</string>
     <string name="blocklist_tab_keywords">Keywords (%d)</string>
-    <string name="blocklist_tab_whitelist">Whitelist (%d)</string>
+    <string name="blocklist_tab_whitelist">Trusted (%d)</string>
     <string name="blocklist_tab_database">Database (%d)</string>
     <string name="blocklist_tab_blocked_short">Blocked</string>
     <string name="blocklist_tab_wildcards_short">Wildcards</string>
@@ -277,7 +277,7 @@
     <string name="hash_wildcard_item_schedule">Active %1$s</string>
     <string name="blocklist_empty_keywords">No keyword rules</string>
     <string name="blocklist_empty_keywords_sub">Add phrases like bank alert or claim prize when spam texts reuse the same wording.</string>
-    <string name="blocklist_empty_whitelist">No whitelisted numbers</string>
+    <string name="blocklist_empty_whitelist">No trusted numbers</string>
     <string name="blocklist_empty_whitelist_sub">Trusted numbers always pass through screening, even when aggressive protection is active.</string>
     <string name="blocklist_empty_database">No spam database loaded</string>
     <string name="blocklist_empty_database_sub">Run a sync from Home to download the current spam feed before reviewing local database entries here.</string>
@@ -285,7 +285,7 @@
     <string name="blocklist_number_removed">Removed from blocklist</string>
     <string name="blocklist_undo">Undo</string>
     <string name="blocklist_rule_added">Rule added</string>
-    <string name="blocklist_number_whitelisted">Number whitelisted</string>
+    <string name="blocklist_number_whitelisted">Number added to trusted</string>
     <string name="blocklist_keyword_rule_added">Keyword rule added</string>
     <string name="blocklist_regex">Regex</string>
     <string name="blocklist_wildcard">Wildcard</string>
@@ -335,9 +335,9 @@
     <string name="dialog_add">Add</string>
 
     <!-- Add Whitelist Dialog -->
-    <string name="dialog_add_to_whitelist">Add to Whitelist</string>
-    <string name="dialog_whitelist_note">Whitelisted numbers will never be blocked, even if they match spam rules.</string>
-    <string name="dialog_whitelist">Whitelist</string>
+    <string name="dialog_add_to_whitelist">Add trusted number</string>
+    <string name="dialog_whitelist_note">Trusted numbers will never be blocked, even if they match spam rules.</string>
+    <string name="dialog_whitelist">Trust</string>
 
     <!-- Add Keyword Dialog -->
     <string name="dialog_block_sms_keyword">Block SMS Keyword</string>
@@ -545,7 +545,8 @@
     <string name="settings_sms_burst">SMS burst protection</string>
     <string name="settings_sms_burst_desc">Detect repeated unknown senders and message floods</string>
     <string name="settings_repeat_caller">Repeat caller auto-block</string>
-    <string name="settings_repeat_caller_desc">Auto-block numbers that call 3+ times</string>
+    <string name="settings_repeat_caller_desc">Auto-block numbers that call %1$d+ times</string>
+    <string name="settings_repeat_caller_threshold">Call count</string>
     <string name="settings_ml_scorer">ML spam scorer</string>
     <string name="settings_ml_scorer_desc">On-device gradient-boosted scorer. No internet required.</string>
     <string name="settings_rcs_filter">Message notification screening</string>
@@ -982,7 +983,7 @@
     <string name="detail_report_spam">Report Spam</string>
     <string name="detail_not_spam">Not Spam</string>
     <string name="detail_ftc_complaint">File FTC Do Not Call Complaint</string>
-    <string name="detail_whitelist">Whitelist</string>
+    <string name="detail_whitelist">Trust</string>
     <string name="detail_call">Call</string>
     <string name="detail_share">Share</string>
     <string name="detail_block_area_code_description">Block area code %s</string>
@@ -1089,6 +1090,10 @@
     <plurals name="settings_answered_caller_threshold_value">
         <item quantity="one">%1$d answered call</item>
         <item quantity="other">%1$d answered calls</item>
+    </plurals>
+    <plurals name="settings_repeat_caller_threshold_value">
+        <item quantity="one">%1$d call</item>
+        <item quantity="other">%1$d calls</item>
     </plurals>
     <plurals name="settings_answered_caller_window_value">
         <item quantity="one">%1$d day</item>
