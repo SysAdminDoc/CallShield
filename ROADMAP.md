@@ -691,24 +691,6 @@ Baseline at audit time: `testDebugUnitTest`, `ktlintCheck`, `detekt`, `lintDebug
   Confidence: Verified
   Effort: M
 
-- [ ] P3 — Repeat-caller threshold is a real, engine-consumed, backed-up setting with no UI — and the toggle copy hardcodes "3+"
-  Category: ux
-  Where: data/repository/SettingsRepository.kt:115-116, 365 (KEY_FREQ_THRESHOLD, clamped setter, zero UI callers); data/checker/Checkers.kt:671; res/values/strings.xml:551
-  Problem: The threshold round-trips through backup/restore, so a restore from another device can silently set it to e.g. 8 while the Settings subtitle still claims "Auto-block numbers that call 3+ times" — visible copy wrong, actual behavior un-inspectable. Comparable knobs got SettingsNumberStepper rows in v1.7.22.
-  Fix: Add a SettingsNumberStepper under the Repeat-caller toggle bound to freqThreshold; parameterize the description ("call %d+ times").
-  Acceptance: Threshold visible/editable in Settings; description reflects the stored value, including after a restore.
-  Confidence: Verified
-  Effort: S
-
-- [ ] P3 — "Trusted" vs "Whitelist" terminology mixed within a single flow (3bb393f unification incomplete)
-  Category: ux
-  Where: res/values/strings.xml:204, 212, 223 ("Trusted"/"Add trusted number") vs :286 ("Number whitelisted"), :336-338 ("Add to Whitelist"/"Whitelist"/"Whitelisted numbers…"); consumed in BlocklistScreen.kt:263-272, 529, 1248-1338
-  Problem: User taps a tab named "Trusted" and a FAB "Add trusted number", then gets a dialog titled "Add to Whitelist" with a "Whitelist" confirm button and a "Number whitelisted" snackbar — vocabulary switches mid-interaction.
-  Fix: Rename the dialog/snackbar strings to the "trusted" vocabulary; sweep remaining user-facing `*whitelist*` strings on these screens (keep internal identifiers).
-  Acceptance: The Trusted tab flow uses one term end-to-end.
-  Confidence: Verified
-  Effort: S
-
 - [ ] P3 — Settings section/toggle capitalization inconsistent within a single scroll
   Category: ux
   Where: res/values/strings.xml — "Detection engines"/"External blocklists" (sentence case) vs "Power Mode" (:577), "Log Cleanup" (:580), "Quiet Hours" (:571), "Silent Voicemail Mode" (:569), "Aggressive Blocking" (:578); buttons mix "Export Blocked Log as CSV" vs "Commit preview"
