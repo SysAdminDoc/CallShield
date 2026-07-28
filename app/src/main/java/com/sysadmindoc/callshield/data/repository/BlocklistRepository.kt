@@ -15,6 +15,7 @@ import com.sysadmindoc.callshield.data.model.WildcardRule
 import com.sysadmindoc.callshield.data.resolveSpamNumberForWhitelist
 import com.sysadmindoc.callshield.service.NotificationHelper
 import com.sysadmindoc.callshield.ui.widget.CallShieldWidget
+import com.sysadmindoc.callshield.util.filterAsciiDigits
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -38,6 +39,7 @@ class BlocklistRepository(
         const val MILLIS_PER_DAY = 86_400_000L
         const val PENDING_LOG_BATCH_LIMIT = 50
         const val PENDING_LOG_RETRY_DELAY_MS = 60_000L
+        const val MIN_SEARCH_DIGITS = 4
     }
 
     /** @return true when the number is blocked afterwards; false when refused (invalid input or a permanent allow wins). */
@@ -114,6 +116,9 @@ class BlocklistRepository(
             dao.insertNumber(number.copy(isUserBlocked = false, expiresAt = null))
         }
     }
+
+    /** Re-insert a previously-removed block row verbatim (undo). */
+    suspend fun restoreBlockedNumber(number: SpamNumber) = dao.insertNumber(number)
 
     fun getAllWildcardRules(): Flow<List<WildcardRule>> = dao.getAllWildcardRules()
 
@@ -308,11 +313,21 @@ class BlocklistRepository(
 
     suspend fun getSpamCount(): Int = dao.getSpamCount()
 
+    fun observeSpamCount(): Flow<Int> = dao.observeSpamCount()
+
     suspend fun clearCallLog() = dao.clearCallLog()
 
     suspend fun deleteBlockedCall(call: BlockedCall) = dao.deleteBlockedCall(call)
 
-    fun searchNumbers(query: String): Flow<List<SpamNumber>> = dao.searchNumbers(escapeLikeQuery(query))
+    fun searchNumbers(query: String): Flow<List<SpamNumber>> {
+        // Numbers are stored canonical (+E.164). Also search the digit-stripped
+        // form so a user-typed "555-123-4567" / "(555) 123-4567" matches the
+        // stored "+15551234567". Only when the query is meaningfully phone-like,
+        // to avoid a stray digit in a text query widening results.
+        val digits = filterAsciiDigits(query)
+        val digitsQuery = if (digits.length >= MIN_SEARCH_DIGITS) digits else ""
+        return dao.searchNumbers(escapeLikeQuery(query), digitsQuery)
+    }
 
     fun getAllWhitelist(): Flow<List<WhitelistEntry>> =
         dao.getAllWhitelist().map { rows ->

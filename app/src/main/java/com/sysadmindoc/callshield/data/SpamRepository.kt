@@ -521,6 +521,8 @@ class SpamRepository(
 
     suspend fun unblockNumber(number: SpamNumber) = blocklistRepository.unblockNumber(number)
 
+    suspend fun restoreBlockedNumber(number: SpamNumber) = blocklistRepository.restoreBlockedNumber(number)
+
     // ── Wildcard rules (Feature 8) ─────────────────────────────────────
     fun getAllWildcardRules(): Flow<List<WildcardRule>> = blocklistRepository.getAllWildcardRules()
 
@@ -609,6 +611,8 @@ class SpamRepository(
     fun getUserBlockedNumbers(): Flow<List<SpamNumber>> = blocklistRepository.getUserBlockedNumbers()
 
     suspend fun getSpamCount(): Int = blocklistRepository.getSpamCount()
+
+    fun observeSpamCount(): Flow<Int> = blocklistRepository.observeSpamCount()
 
     suspend fun clearCallLog() = blocklistRepository.clearCallLog()
 

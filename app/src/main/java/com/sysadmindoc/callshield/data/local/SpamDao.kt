@@ -27,6 +27,9 @@ interface SpamDao {
     @Query("SELECT COUNT(*) FROM spam_numbers")
     suspend fun getSpamCount(): Int
 
+    @Query("SELECT COUNT(*) FROM spam_numbers")
+    fun observeSpamCount(): Flow<Int>
+
     @Query("SELECT COUNT(*) FROM spam_numbers WHERE number LIKE :prefix || '%' AND isUserBlocked = 0 LIMIT 1")
     suspend fun countByPrefix(prefix: String): Int
 
@@ -297,9 +300,13 @@ interface SpamDao {
         """SELECT * FROM spam_numbers
               WHERE number LIKE '%' || :query || '%' ESCAPE '\'
                  OR description LIKE '%' || :query || '%' ESCAPE '\'
+                 OR (:digitsQuery != '' AND number LIKE '%' || :digitsQuery || '%' ESCAPE '\')
               ORDER BY reports DESC LIMIT 100""",
     )
-    fun searchNumbers(query: String): Flow<List<SpamNumber>>
+    fun searchNumbers(
+        query: String,
+        digitsQuery: String,
+    ): Flow<List<SpamNumber>>
 
     // Whitelist
     @Query("SELECT * FROM whitelist ORDER BY isEmergency DESC, addedTimestamp DESC")

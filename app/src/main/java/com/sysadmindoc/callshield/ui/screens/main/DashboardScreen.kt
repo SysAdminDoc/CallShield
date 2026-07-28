@@ -71,6 +71,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -117,6 +118,7 @@ import com.sysadmindoc.callshield.ui.theme.SectionHeader
 import com.sysadmindoc.callshield.ui.theme.StatusPill
 import com.sysadmindoc.callshield.ui.theme.hapticConfirm
 import com.sysadmindoc.callshield.ui.theme.hapticTick
+import kotlinx.coroutines.delay
 
 @Composable
 fun DashboardScreen(viewModel: MainViewModel) {
@@ -1264,9 +1266,26 @@ private fun DashboardActionRow(
     }
 }
 
+/**
+ * A wall clock that re-emits every minute so relative-time labels and the
+ * sync-freshness color advance while the dashboard stays open, instead of
+ * freezing at composition time.
+ */
+@Composable
+private fun rememberNowTick(): Long {
+    var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(60_000)
+            now = System.currentTimeMillis()
+        }
+    }
+    return now
+}
+
 @Composable
 private fun relativeTimeText(timestamp: Long): String {
-    val ago = System.currentTimeMillis() - timestamp
+    val ago = rememberNowTick() - timestamp
     return when {
         ago < 60_000 -> stringResource(R.string.dashboard_time_just_now)
         ago < 3_600_000 -> stringResource(R.string.dashboard_time_minutes_ago, (ago / 60_000).toInt())
@@ -1280,9 +1299,10 @@ private fun syncFreshnessColor(
     lastSync: Long,
     lastSyncSource: String,
 ): Color {
+    val now = rememberNowTick()
     if (lastSyncSource == SpamRepository.SYNC_SOURCE_BUNDLED) return CatBlue
     if (lastSync <= 0L) return CatYellow
-    val ago = System.currentTimeMillis() - lastSync
+    val ago = now - lastSync
     return when {
         ago < 86_400_000 -> CatGreen
         ago < 172_800_000 -> CatYellow

@@ -155,16 +155,36 @@ fun RecentCallsScreen(viewModel: MainViewModel) {
 
     val filtered =
         when (filterMode) {
-            1 -> calls.filter { it.type == CallLog.Calls.INCOMING_TYPE }
-            2 -> calls.filter { it.type == CallLog.Calls.OUTGOING_TYPE }
-            3 -> calls.filter { it.type == CallLog.Calls.MISSED_TYPE || it.type == CallLog.Calls.REJECTED_TYPE }
-            4 -> calls.filter { it.isSpam }
-            else -> calls
+            1 -> {
+                calls.filter { it.type == CallLog.Calls.INCOMING_TYPE }
+            }
+
+            2 -> {
+                calls.filter { it.type == CallLog.Calls.OUTGOING_TYPE }
+            }
+
+            3 -> {
+                calls.filter {
+                    it.type == CallLog.Calls.MISSED_TYPE ||
+                        it.type == CallLog.Calls.REJECTED_TYPE ||
+                        it.type == CallLog.Calls.BLOCKED_TYPE
+                }
+            }
+
+            4 -> {
+                calls.filter { it.isSpam }
+            }
+
+            else -> {
+                calls
+            }
         }
     val spamCount = calls.count { it.isSpam }
     val missedCount =
         calls.count {
-            it.type == CallLog.Calls.MISSED_TYPE || it.type == CallLog.Calls.REJECTED_TYPE
+            it.type == CallLog.Calls.MISSED_TYPE ||
+                it.type == CallLog.Calls.REJECTED_TYPE ||
+                it.type == CallLog.Calls.BLOCKED_TYPE
         }
     val incomingCount = calls.count { it.type == CallLog.Calls.INCOMING_TYPE }
     val outgoingCount = calls.count { it.type == CallLog.Calls.OUTGOING_TYPE }
@@ -368,6 +388,8 @@ fun RecentCallItem(
             CallLog.Calls.OUTGOING_TYPE -> Icons.AutoMirrored.Filled.CallMade
             CallLog.Calls.MISSED_TYPE -> Icons.AutoMirrored.Filled.PhoneMissed
             CallLog.Calls.REJECTED_TYPE -> Icons.Default.CallEnd
+            CallLog.Calls.BLOCKED_TYPE -> Icons.Default.Block
+            CallLog.Calls.VOICEMAIL_TYPE -> Icons.Default.Voicemail
             else -> Icons.Default.Phone
         }
     val typeColor =
@@ -376,6 +398,8 @@ fun RecentCallItem(
             CallLog.Calls.OUTGOING_TYPE -> CatBlue
             CallLog.Calls.MISSED_TYPE -> CatRed
             CallLog.Calls.REJECTED_TYPE -> CatPeach
+            CallLog.Calls.BLOCKED_TYPE -> CatRed
+            CallLog.Calls.VOICEMAIL_TYPE -> CatSubtext
             else -> CatSubtext
         }
 

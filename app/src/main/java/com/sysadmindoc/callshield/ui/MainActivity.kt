@@ -33,6 +33,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sysadmindoc.callshield.R
@@ -65,6 +68,7 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         launchRequest = intent.toLaunchRequest(nextId = 1)
+        consumeLaunchIntent()
 
         setContent { CallShieldRoot(launchRequest = launchRequest) }
     }
@@ -73,6 +77,18 @@ class MainActivity : AppCompatActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         launchRequest = intent.toLaunchRequest(nextId = launchRequest.id + 1)
+        consumeLaunchIntent()
+    }
+
+    /**
+     * Strip the consumed launch payload (deep-link number, shortcut action)
+     * after it has been folded into [launchRequest]. Without this, an activity
+     * recreation (rotation, split-screen, theme change) rebuilds the request
+     * from the original intent and replays it — re-running a scan, re-opening a
+     * closed detail deep link, or snapping back to the shortcut's tab.
+     */
+    private fun consumeLaunchIntent() {
+        intent = Intent(this, MainActivity::class.java)
     }
 
     override fun onResume() {
@@ -113,7 +129,13 @@ fun CallShieldRoot(
 
     CallShieldTheme(themeMode = appTheme) {
         when {
-            !onboardingDone -> {
+            onboardingDone == null -> {
+                // First DataStore emission not yet resolved — neutral surface,
+                // no wrong-content flash in either direction.
+                Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {}
+            }
+
+            onboardingDone == false -> {
                 OnboardingScreen(onComplete = { viewModel.completeOnboarding() })
             }
 
@@ -145,6 +167,7 @@ fun CallShieldApp(
     tabRequestId: Int? = null,
 ) {
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
     var selectedTab by rememberSaveable { mutableIntStateOf(startTab) }
     var showSearch by rememberSaveable { mutableStateOf(false) }
     var moreView by rememberSaveable { mutableIntStateOf(0) }
@@ -153,6 +176,18 @@ fun CallShieldApp(
     val spamCount by viewModel.spamCount.collectAsStateWithLifecycle()
     val blockCallsEnabled by viewModel.blockCallsEnabled.collectAsStateWithLifecycle()
     val blockSmsEnabled by viewModel.blockSmsEnabled.collectAsStateWithLifecycle()
+
+    // Re-check protection permissions when the user returns from OS settings so
+    // the top-bar "Setup needed" pill flips to "Protected" without a tab switch.
+    var permissionRefreshTick by remember { mutableIntStateOf(0) }
+    DisposableEffect(lifecycleOwner) {
+        val observer =
+            LifecycleEventObserver { _, event ->
+                if (event == Lifecycle.Event.ON_RESUME) permissionRefreshTick++
+            }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     LaunchedEffect(tabRequestId) {
         if (tabRequestId != null) selectedTab = startTab
@@ -210,14 +245,15 @@ fun CallShieldApp(
             blockSmsEnabled -> stringResource(R.string.app_shell_status_texts)
             else -> stringResource(R.string.app_shell_status_paused)
         }
-    val coreSetupNeeded =
-        spamCount <= 0 ||
-            CallShieldPermissions
-                .missingEnabledProtectionPermissions(
-                    context = context,
-                    callsEnabled = blockCallsEnabled,
-                    smsEnabled = blockSmsEnabled,
-                ).isNotEmpty()
+    val missingCorePerms =
+        remember(context, permissionRefreshTick, blockCallsEnabled, blockSmsEnabled) {
+            CallShieldPermissions.missingEnabledProtectionPermissions(
+                context = context,
+                callsEnabled = blockCallsEnabled,
+                smsEnabled = blockSmsEnabled,
+            )
+        }
+    val coreSetupNeeded = spamCount <= 0 || missingCorePerms.isNotEmpty()
     val shellStatusLabel =
         if (selectedTab == 0 && coreSetupNeeded) {
             stringResource(R.string.app_shell_status_setup_needed)
