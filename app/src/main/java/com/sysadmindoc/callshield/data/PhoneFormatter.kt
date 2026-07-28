@@ -30,15 +30,29 @@ object PhoneFormatter {
      */
     fun formatIsolated(number: String): String = isolate(format(number))
 
+    /**
+     * A number that explicitly carries a non-NANP country code (`+CC`, CC != 1).
+     * Such a number must never be run through the NANP formatter — a 10-digit
+     * `+45########` (Denmark) would otherwise render as `(451) 234-5678`.
+     */
+    private fun isExplicitNonNanp(
+        number: String,
+        digits: String,
+    ): Boolean = number.startsWith("+") && !digits.startsWith("1")
+
     fun format(number: String): String {
         val digits = filterAsciiDigits(number)
 
-        // US/CA: 10 digits or 11 starting with 1
+        // US/CA: 10 digits or 11 starting with 1 (never an explicit +CC number)
         val usDigits =
-            when {
-                digits.length == 11 && digits.startsWith("1") -> digits.substring(1)
-                digits.length == 10 -> digits
-                else -> null
+            if (isExplicitNonNanp(number, digits)) {
+                null
+            } else {
+                when {
+                    digits.length == 11 && digits.startsWith("1") -> digits.substring(1)
+                    digits.length == 10 -> digits
+                    else -> null
+                }
             }
 
         if (usDigits != null) {
@@ -62,10 +76,14 @@ object PhoneFormatter {
     fun formatWithCountryCode(number: String): String {
         val digits = filterAsciiDigits(number)
         val usDigits =
-            when {
-                digits.length == 11 && digits.startsWith("1") -> digits.substring(1)
-                digits.length == 10 -> digits
-                else -> null
+            if (isExplicitNonNanp(number, digits)) {
+                null
+            } else {
+                when {
+                    digits.length == 11 && digits.startsWith("1") -> digits.substring(1)
+                    digits.length == 10 -> digits
+                    else -> null
+                }
             }
         if (usDigits != null) {
             return "+1 (${usDigits.substring(0, 3)}) ${usDigits.substring(3, 6)}-${usDigits.substring(6)}"

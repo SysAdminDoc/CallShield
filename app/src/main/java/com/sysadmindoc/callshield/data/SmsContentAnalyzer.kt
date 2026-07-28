@@ -166,6 +166,21 @@ class SmsContentAnalyzer
             return domain.isNotEmpty() && isKnownSpamDomain(domain)
         }
 
+        /**
+         * Score a single extracted host. Returns the added score and the reason
+         * tag, or `(0, null)` for a benign / empty host. Comparisons are on the
+         * host, never the raw URL, so a shortener/TLD name appearing as a
+         * substring of a legitimate domain or path does not false-positive.
+         */
+        private fun scoreUrlDomain(domain: String): Pair<Int, String?> =
+            when {
+                domain.isEmpty() -> 0 to null
+                spamDomains.isNotEmpty() && isKnownSpamDomain(domain) -> 50 to "spam_domain"
+                shortenerDomains.any { domain == it || domain.endsWith(".$it") } -> 35 to "shortened_url"
+                suspiciousTlds.any { domain.endsWith(it) } -> 30 to "suspicious_tld"
+                else -> 0 to null
+            }
+
         private fun isKnownSpamDomain(domain: String): Boolean {
             var matched = false
             var candidate = if (spamDomains.isEmpty()) null else normalizeDomainCandidate(domain)
@@ -256,24 +271,14 @@ class SmsContentAnalyzer
                     emptyList()
                 }
             for (url in urls) {
-                // Community-reported spam domain — highest confidence
-                if (spamDomains.isNotEmpty()) {
-                    val domain = extractDomain(url)
-                    if (domain.isNotEmpty() && isKnownSpamDomain(domain)) {
-                        score += 50
-                        reasons.add("spam_domain")
-                        continue
-                    }
-                }
-                if (shortenerDomains.any { url.contains(it) }) {
-                    score += 35
-                    reasons.add("shortened_url")
-                    continue
-                }
-                if (suspiciousTlds.any { url.endsWith(it) || url.contains("$it/") }) {
-                    score += 30
-                    reasons.add("suspicious_tld")
-                    continue
+                // Match against the extracted host, not the raw URL — a substring
+                // check flags "t.co" inside microsoft.com / reddit.com / target.com
+                // and ".info" inside any /file.info path. Mirror the correct logic
+                // in extractReportableIndicators.
+                val (urlScore, urlReason) = scoreUrlDomain(extractDomain(url))
+                if (urlReason != null) {
+                    score += urlScore
+                    reasons.add(urlReason)
                 }
             }
 

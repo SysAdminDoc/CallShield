@@ -101,6 +101,15 @@ data class CheckContext(
     val callerName: String? = null,
     /** Entry epoch for budget accounting. */
     val startTimeMillis: Long = System.currentTimeMillis(),
+    /**
+     * When an SMS sender was explicitly allowed by the user (manual whitelist,
+     * emergency contact, contact whitelist, temporary allow) in the shared
+     * chain, that allow's matchSource is carried into the SMS extension chain
+     * so behavioral SMS checkers (burst, content) yield to the user's intent.
+     * `null` for calls and for SMS with no user-intent allow. Explicit keyword
+     * rules still inspect these senders — only statistical checks yield.
+     */
+    val trustedAllowSource: String? = null,
 ) {
     /**
      * Milliseconds remaining before the 5-second Android CallScreeningService

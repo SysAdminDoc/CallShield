@@ -125,6 +125,19 @@ class SpamHeuristicsTest {
     }
 
     @Test
+    fun `isWangiriCountryCode does not flag plus-less local-format numbers`() {
+        // Regression: a 7-9 digit plus-less number (legacy CallLog/SMS-inbox row
+        // or a user lookup) is not NANP-shaped, so it must NOT be matched against
+        // the international wangiri code list. "252…" (Somalia code, also a real
+        // US area code) as a bare 7-digit local number was hard-blocked.
+        assertFalse(SpamHeuristics.isWangiriCountryCode("2521234")) // 7-digit local
+        assertFalse(SpamHeuristics.isWangiriCountryCode("2321234")) // Sierra Leone 232 prefix, local
+        assertFalse(SpamHeuristics.isWangiriCountryCode("232123456")) // 9-digit
+        // A genuinely international +cc number is unaffected.
+        assertTrue(SpamHeuristics.isWangiriCountryCode("+2521234567"))
+    }
+
+    @Test
     fun `isWangiriCountryCode still detects Caribbean numbers via plus-one`() {
         assertTrue(SpamHeuristics.isWangiriCountryCode("+18091234567")) // Dominican Republic 809
         assertTrue(SpamHeuristics.isWangiriCountryCode("+12681234567")) // Antigua 268

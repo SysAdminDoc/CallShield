@@ -214,7 +214,12 @@ class SpamHeuristics
             return if (npa != null) {
                 npa in caribbeanWangiriNpas
             } else {
-                internationalWangiriCountryCodes.any { clean.startsWith(it) }
+                // Plus-less and not NANP-shaped (7-9 digit local format, short
+                // codes). Genuine international wangiri callers arrive with a
+                // `+cc` prefix (handled above); never match a local-format
+                // number against the international code list — 224/248/267/…
+                // collide with real US metro area codes.
+                false
             }
         }
 
@@ -385,6 +390,7 @@ class SpamHeuristics
             number: String,
             smsBody: String? = null,
             recentBlockedNumbers: List<Pair<String, Long>> = emptyList(),
+            enableNeighborSpoof: Boolean = true,
         ): HeuristicResult {
             var score = 0
             val reasons = mutableListOf<String>()
@@ -423,8 +429,8 @@ class SpamHeuristics
                 reasons.add("toll_free")
             }
 
-            // Neighbor spoofing
-            if (isNeighborSpoof(context, number)) {
+            // Neighbor spoofing (gated by the Settings toggle)
+            if (enableNeighborSpoof && isNeighborSpoof(context, number)) {
                 score += 50
                 reasons.add("neighbor_spoof")
             }

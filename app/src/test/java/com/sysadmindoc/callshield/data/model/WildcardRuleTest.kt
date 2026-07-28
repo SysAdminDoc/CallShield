@@ -125,6 +125,27 @@ class WildcardRuleTest {
         assertFalse(rule.matches(arabicIndic))
     }
 
+    // ── ReDoS resistance ────────────────────────────────────────────
+
+    @Test(timeout = 1_000)
+    fun `glob with many consecutive stars returns fast`() {
+        // ~20 sequential glob stars compile to \d*\d*…\d* which backtracks for
+        // 60+ seconds against a non-matching input. Collapsing consecutive stars
+        // must make this return effectively instantly.
+        val rule = wildcard(pattern = "*".repeat(20) + "5", isRegex = false)
+        assertFalse(rule.matches("+12125551234"))
+    }
+
+    @Test fun `isSafeRegexPattern rejects a long chain of unbounded quantifiers`() {
+        assertFalse(WildcardRule.isSafeRegexPattern("\\d*".repeat(20) + "a"))
+    }
+
+    @Test(timeout = 1_000)
+    fun `regex with a long unbounded-quantifier chain does not hang`() {
+        val rule = wildcard(pattern = "\\d*".repeat(20) + "a", isRegex = true)
+        assertFalse(rule.matches("123456789012345"))
+    }
+
     // ── Empty/blank handling ────────────────────────────────────────
 
     @Test fun `blank pattern matches nothing`() {
