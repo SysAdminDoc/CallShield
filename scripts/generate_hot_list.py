@@ -7,14 +7,15 @@ reported by the community in the last 24 hours. The Android app syncs
 this every 30 minutes so users get protection against trending spam numbers
 hours before the nightly full-database merge.
 
-Called by the merge-reports GitHub Action workflow after each merge run.
+Run locally BEFORE merge_community_reports.py — the merge deletes the pending
+report files this generator reads. See data/README.md for the regen sequence.
 """
 
 import json
 import os
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
-from phone_normalization import normalize_report_number
+from phone_normalization import validated_report_number
 
 DATA_DIR = Path(os.environ.get("CALLSHIELD_DATA_DIR", Path(__file__).parent.parent / "data"))
 REPORTS_DIR = Path(os.environ.get("CALLSHIELD_REPORTS_DIR", DATA_DIR / "reports"))
@@ -58,7 +59,7 @@ def main():
                 with open(report_file) as f:
                     report = json.load(f)
 
-                number = normalize_report_number(report.get("number", ""))
+                number = validated_report_number(report.get("number", ""))
                 spam_type = report.get("type", "unknown")
                 if not number or spam_type == "not_spam":
                     continue
@@ -98,9 +99,19 @@ def main():
 
         for entry in db.get("numbers", []):
             last_seen = entry.get("last_seen", "")
-            # Include DB numbers updated today or yesterday with 5+ total reports
-            if last_seen >= yesterday and entry.get("reports", 0) >= 5:
-                num = normalize_report_number(entry.get("number", ""))
+            # Include DB numbers updated today or yesterday with 5+ total reports.
+            # A plain string compare (`last_seen >= yesterday`) also passes
+            # corrupt future dates like "2915-10-15", which would permanently
+            # pin garbage rows to the hot list — bound both ends and require a
+            # real calendar date.
+            if not (yesterday <= last_seen <= today):
+                continue
+            try:
+                datetime.strptime(last_seen[:10], "%Y-%m-%d")
+            except ValueError:
+                continue
+            if entry.get("reports", 0) >= 5:
+                num = validated_report_number(entry.get("number", ""))
                 if not num:
                     continue
                 if num in velocity:
@@ -143,7 +154,7 @@ def main():
     # ── Velocity spike alert (print for CI log visibility) ───────────
     spikes = [v for v in hot if v.get("reports", 0) >= 10]
     if spikes:
-        print(f"\n⚠ VELOCITY SPIKES ({len(spikes)} numbers with 10+ reports in 24h):")
+        print(f"\nWARNING: VELOCITY SPIKES ({len(spikes)} numbers with 10+ reports in 24h):")
         for s in spikes[:10]:
             print(f"  {s['number']} — {s['reports']} reports")
 

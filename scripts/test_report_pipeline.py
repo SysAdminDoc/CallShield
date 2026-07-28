@@ -49,13 +49,15 @@ def seed_reports(data_dir: Path) -> None:
         },
     )
 
+    # Plausible NANP numbers (area 212, exchange 234) — the report pipeline
+    # now rejects fictional 555-exchange / area-code-555 numbers as junk.
     reports = [
-        ("r1.json", "+12125550101", ["Bad.Example"]),
-        ("r2.json", "+12125550101", []),
-        ("r3.json", "+12125550102", ["bad.example."]),
-        ("r4.json", "+12125550102", []),
-        ("r5.json", "+12125550103", ["www.bad.example/c"]),
-        ("r6.json", "+12125550103", []),
+        ("r1.json", "+12122340101", ["Bad.Example"]),
+        ("r2.json", "+12122340101", []),
+        ("r3.json", "+12122340102", ["bad.example."]),
+        ("r4.json", "+12122340102", []),
+        ("r5.json", "+12122340103", ["www.bad.example/c"]),
+        ("r6.json", "+12122340103", []),
     ]
     for filename, number, domains in reports:
         report = {
@@ -75,16 +77,16 @@ def assert_derived_outputs(data_dir: Path) -> None:
 
     numbers = {entry["number"]: entry["reports"] for entry in hot_numbers["numbers"]}
     expected_numbers = {
-        "+12125550101": 2,
-        "+12125550102": 2,
-        "+12125550103": 2,
+        "+12122340101": 2,
+        "+12122340102": 2,
+        "+12122340103": 2,
     }
     if numbers != expected_numbers:
         raise AssertionError(f"unexpected hot numbers: {numbers}")
 
     ranges = {entry["npanxx"]: entry["count"] for entry in hot_ranges["ranges"]}
-    if ranges.get("212555") != 3:
-        raise AssertionError(f"expected 212555 campaign range, got {ranges}")
+    if ranges.get("212234") != 3:
+        raise AssertionError(f"expected 212234 campaign range, got {ranges}")
 
     if "bad.example" not in spam_domains["domains"]:
         raise AssertionError(f"expected bad.example spam domain, got {spam_domains['domains']}")
@@ -97,7 +99,7 @@ def assert_merge_cleanup(data_dir: Path) -> None:
 
     merged = json.loads((data_dir / "spam_numbers.json").read_text(encoding="utf-8"))
     merged_numbers = {entry["number"]: entry["reports"] for entry in merged["numbers"]}
-    if merged_numbers.get("+12125550101") != 2:
+    if merged_numbers.get("+12122340101") != 2:
         raise AssertionError(f"expected merged report counts, got {merged_numbers}")
 
 

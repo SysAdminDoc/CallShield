@@ -4,6 +4,30 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+### Security
+
+- The community-report pipeline now validates every reported number for
+  plausibility (Cloudflare Worker and merge script): fictional NANP numbers
+  (area/exchange 555, N11 service codes), leading-zero "country codes", and
+  implausibly short numbers are rejected instead of shipping to all users.
+- Anonymous `not_spam` votes can no longer de-list authoritative FCC/FTC
+  entries — they may only weaken community-reported rows. This closes a
+  path that let an attacker remove real spammers from the shared database.
+
+### Fixed
+
+- Portable backups keep the full BackupRestore payload family (settings,
+  range rules, logs) from R8 stripping, so a minified release build no longer
+  risks silently losing restored data.
+- The hot-list generator selects trending numbers by a real calendar date
+  instead of a string compare, so corrupt future-dated rows (e.g. year 2915)
+  can no longer pin themselves to the top of the bundled hot list.
+- The merge script writes the database atomically (temp file + replace),
+  quarantines unreadable/malformed reports instead of retrying them forever,
+  self-heals implausible legacy rows, and repairs impossible first/last-seen
+  dates. Drained the two-month report backlog and purged 426 fictional
+  numbers left over from bulk imports.
+
 ## v1.7.23 — 2026-07-22
 
 ### Fixed
