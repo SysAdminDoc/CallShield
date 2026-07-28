@@ -4,6 +4,13 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+### Added
+
+- Tapping a "Block area code" smart suggestion now asks for confirmation (showing
+  the coverage — roughly 7.9 million numbers) before adding the rule, and shows a
+  toast when it's applied. The auto-generated rule description is now a localized
+  string instead of a hardcoded English literal.
+
 ### Fixed
 
 - External-link, dial, and settings intents (blocked-log/recent-calls web search,
@@ -11,6 +18,10 @@ All notable changes to CallShield will be documented in this file.
   across Dashboard, Settings, Onboarding, and Protection Test) no longer crash on
   browserless devices or ROMs missing the target activity — they fall back to the
   app-details screen or a toast, via a shared `startActivitySafely` helper.
+- The caller-ID overlay's paddings, accent line, corner radii, and button spacing
+  are now density-scaled instead of raw pixels, so it renders with consistent
+  proportions across mdpi–xxxhdpi devices (was oversized on low-density, cramped
+  on high-density screens).
 
 ### Performance
 
