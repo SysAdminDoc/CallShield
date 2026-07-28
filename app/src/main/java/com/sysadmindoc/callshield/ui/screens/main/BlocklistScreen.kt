@@ -153,7 +153,10 @@ private data class BlocklistWorkspaceModel(
 fun BlocklistScreen(viewModel: MainViewModel) {
     val context = LocalContext.current
     val userBlocked by viewModel.userBlockedNumbers.collectAsStateWithLifecycle()
-    val allSpam by viewModel.allSpamNumbers.collectAsStateWithLifecycle()
+    // Header count only — cheap Room COUNT, always observed. The full spam table
+    // is collected lazily inside the Database tab (see DatabaseTabContent) so
+    // opening Blocklist never materializes a ~100k-row list.
+    val spamCount by viewModel.spamCount.collectAsStateWithLifecycle()
     val wildcardRules by viewModel.wildcardRules.collectAsStateWithLifecycle()
     val hashWildcardRules by viewModel.hashWildcardRules.collectAsStateWithLifecycle()
     val whitelistEntries by viewModel.whitelistEntries.collectAsStateWithLifecycle()
@@ -273,7 +276,7 @@ fun BlocklistScreen(viewModel: MainViewModel) {
                 BlocklistWorkspaceModel(
                     title = stringResource(R.string.blocklist_overview_database_title),
                     subtitle = stringResource(R.string.blocklist_overview_database_subtitle),
-                    count = allSpam.size,
+                    count = spamCount,
                     accentColor = CatBlue,
                     icon = Icons.Default.Storage,
                 )
@@ -467,23 +470,9 @@ fun BlocklistScreen(viewModel: MainViewModel) {
                     }
 
                     else -> {
-                        if (allSpam.isEmpty()) {
-                            EmptyStateCard(
-                                title = stringResource(R.string.blocklist_empty_database),
-                                subtitle = stringResource(R.string.blocklist_empty_database_sub),
-                                icon = Icons.Default.Storage,
-                                accentColor = CatBlue,
-                            )
-                        } else {
-                            LazyColumn(
-                                contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 32.dp),
-                                verticalArrangement = Arrangement.spacedBy(8.dp),
-                            ) {
-                                items(allSpam, key = { it.id }) { number ->
-                                    DatabaseItem(number)
-                                }
-                            }
-                        }
+                        // Only composed when the Database tab is active, so the
+                        // full-table query is subscribed only while it's shown.
+                        DatabaseTabContent(viewModel)
                     }
                 }
 
@@ -964,6 +953,28 @@ fun WhitelistItem(
             }
             IconButton(onClick = onRemove) {
                 Icon(Icons.Default.RemoveCircleOutline, stringResource(R.string.cd_remove), tint = CatOverlay)
+            }
+        }
+    }
+}
+
+@Composable
+private fun DatabaseTabContent(viewModel: MainViewModel) {
+    val allSpam by viewModel.allSpamNumbers.collectAsStateWithLifecycle()
+    if (allSpam.isEmpty()) {
+        EmptyStateCard(
+            title = stringResource(R.string.blocklist_empty_database),
+            subtitle = stringResource(R.string.blocklist_empty_database_sub),
+            icon = Icons.Default.Storage,
+            accentColor = CatBlue,
+        )
+    } else {
+        LazyColumn(
+            contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 32.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            items(allSpam, key = { it.id }) { number ->
+                DatabaseItem(number)
             }
         }
     }

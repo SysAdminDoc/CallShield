@@ -29,6 +29,14 @@ All notable changes to CallShield will be documented in this file.
 
 ### Fixed
 
+- Blocked-call and blocked-SMS notifications from the same number now use
+  distinct action intents, so tapping Block/Report affects the right one and
+  reports the correct spam type.
+- The Quick Settings tile toggle no longer risks leaving call and SMS blocking
+  split if the shade is dismissed mid-toggle.
+- Orphaned crash-log temp files are swept so they can't accumulate.
+- Opening the Blocklist no longer loads the entire spam database into memory —
+  the full list is fetched only when the Database tab is viewed.
 - SMS content analysis matches URL shorteners and suspicious TLDs against the
   extracted host, not the raw URL — legitimate links like microsoft.com,
   reddit.com, and target.com are no longer flagged as shortened links, and a

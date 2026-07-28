@@ -2,6 +2,7 @@ package com.sysadmindoc.callshield.service
 
 import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
+import com.sysadmindoc.callshield.CallShieldApp
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.SpamRepository
 import kotlinx.coroutines.*
@@ -31,7 +32,11 @@ class CallShieldTileService : TileService() {
 
     override fun onClick() {
         super.onClick()
-        scope.launch {
+        // Run the read-modify-write on the process-wide scope, not the service
+        // scope: if the shade is dismissed and the TileService is destroyed
+        // mid-toggle, onDestroy cancels `scope` and could persist only one of the
+        // two flags, leaving call/SMS blocking split.
+        CallShieldApp.appScope.launch {
             toggleMutex.withLock {
                 val repo = SpamRepository.getInstance(applicationContext)
                 val callsEnabled = repo.blockCallsEnabled.first()
