@@ -700,24 +700,6 @@ Baseline at audit time: `testDebugUnitTest`, `ktlintCheck`, `detekt`, `lintDebug
   Confidence: Verified
   Effort: S
 
-- [ ] P3 — Pipeline Trace verdict labels are hardcoded English literals
-  Category: ux
-  Where: ui/screens/lookup/LookupScreen.kt:838-877 (PipelineTraceSection — "BLOCK"/"ALLOW"/"OFF"/"PASS" as Text and icon contentDescription); also checkerName.replace("_"," ") token surgery at :867 and raw match-source tokens in DetailRow at :414
-  Problem: User-facing verdict copy renders untranslated under the shipped pseudolocales/app-language selector. This surface post-dates the 2026-05-17 hardcoded-string audit, so it isn't in its documented remaining buckets. StatsScreen already has resource-backed labels (friendlyMatchReasonLabel) to reuse for checker names.
-  Fix: Four string resources (lookup_trace_block/allow/off/pass); reuse friendlyMatchReasonLabel for checker names.
-  Acceptance: Trace verdicts pseudolocalize; no bare English literals in PipelineTraceSection.
-  Confidence: Verified
-  Effort: S
-
-- [ ] P3 — Raw e.message surfaced in Lookup snackbars/error card (three sites beyond the logged restore/import finding)
-  Category: ux
-  Where: ui/screens/lookup/LookupScreen.kt:170-175 (lookup_failed %s), :466 (lookup_block_failed), :509 (lookup_report_failed)
-  Problem: Same class as the logged "raw e.message in restore/import strings" backlog item but at three un-logged sites: unlocalized exception text (SQLite constraint names, OkHttp messages) surfaces verbatim.
-  Fix: Map to typed localized failure reasons as the crypto layer does; keep e in logs only.
-  Acceptance: Forced DB/network failures show localized reasons, never exception fragments.
-  Confidence: Verified
-  Effort: S
-
 - [ ] P3 — Caller-ID overlay uses raw pixel paddings, line heights, and corner radii
   Category: visual
   Where: service/CallerIdOverlayService.kt:146-158, 189, 216, 285, 306, 337, 352 (setPadding(52,40,52,32), 2px accent line, cornerRadii 48f, button setPadding(20,8,20,8))

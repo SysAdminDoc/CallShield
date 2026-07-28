@@ -13,6 +13,9 @@ All notable changes to CallShield will be documented in this file.
 
 - Unified the "Trusted" terminology across the trusted-numbers add flow (the tab,
   dialog, button, and confirmation no longer switch between "Trusted"/"Whitelist").
+- Lookup, block, and report error messages are now localized generic messages
+  instead of leaking raw exception text; the pipeline-trace verdict labels are
+  localizable resources.
 
 ## v1.7.24 — 2026-07-28
 

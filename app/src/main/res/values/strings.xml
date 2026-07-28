@@ -355,8 +355,11 @@
     <string name="lookup_supporting_location">Checking %1$s • %2$s</string>
     <string name="lookup_supporting_number">Checking %s</string>
     <string name="lookup_check_number">Check Number</string>
-    <string name="lookup_failed">Lookup failed: %s</string>
-    <string name="lookup_failed_unknown">Lookup failed: unknown error</string>
+    <string name="lookup_failed">Lookup failed. Please try again.</string>
+    <string name="lookup_trace_block">BLOCK</string>
+    <string name="lookup_trace_allow">ALLOW</string>
+    <string name="lookup_trace_off">OFF</string>
+    <string name="lookup_trace_pass">PASS</string>
     <string name="lookup_spam_detected">SPAM DETECTED</string>
     <string name="lookup_clean">CLEAN</string>
     <string name="lookup_result_spam_summary">High-risk match. CallShield is %d%% confident this number should be blocked.</string>
@@ -372,9 +375,9 @@
     <string name="lookup_trace_hide">Hide</string>
     <string name="lookup_block">Block</string>
     <string name="lookup_number_blocked">Number blocked</string>
-    <string name="lookup_block_failed">Block failed: %s</string>
+    <string name="lookup_block_failed">Couldn\'t block this number.</string>
     <string name="lookup_reported">Reported to community</string>
-    <string name="lookup_report_failed">Report failed: %s</string>
+    <string name="lookup_report_failed">Couldn\'t submit the report.</string>
     <string name="lookup_report">Report</string>
     <string name="lookup_marked_safe_local">Marked as not spam</string>
     <string name="lookup_marked_safe_reported">Marked safe and reported</string>
