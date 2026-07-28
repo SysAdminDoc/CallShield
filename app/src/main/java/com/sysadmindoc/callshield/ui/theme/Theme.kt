@@ -762,9 +762,19 @@ fun SkeletonListItem(modifier: Modifier = Modifier) {
 }
 
 // ─── Haptic Feedback ───────────────────────────────────────────────
-// Unified haptic feedback for key interactions
+// Unified haptic feedback for key interactions. Honors the user's system
+// "Touch feedback" setting — driving the vibrator directly (as before) buzzed
+// even for users who disabled haptics system-wide.
+private fun systemHapticsEnabled(context: Context): Boolean =
+    android.provider.Settings.System.getInt(
+        context.contentResolver,
+        android.provider.Settings.System.HAPTIC_FEEDBACK_ENABLED,
+        1,
+    ) != 0
+
 @Suppress("DEPRECATION")
 fun hapticTick(context: Context) {
+    if (!systemHapticsEnabled(context)) return
     try {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             val vm = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? VibratorManager
@@ -779,6 +789,7 @@ fun hapticTick(context: Context) {
 
 @Suppress("DEPRECATION")
 fun hapticConfirm(context: Context) {
+    if (!systemHapticsEnabled(context)) return
     try {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             val vm = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? VibratorManager

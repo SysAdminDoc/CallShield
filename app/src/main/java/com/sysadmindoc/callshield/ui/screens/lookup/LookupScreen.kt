@@ -767,6 +767,15 @@ private fun haptic(
     context: android.content.Context,
     isSpam: Boolean,
 ) {
+    // Honor the system "Touch feedback" setting.
+    if (android.provider.Settings.System.getInt(
+            context.contentResolver,
+            android.provider.Settings.System.HAPTIC_FEEDBACK_ENABLED,
+            1,
+        ) == 0
+    ) {
+        return
+    }
     try {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             val vm = context.getSystemService(android.content.Context.VIBRATOR_MANAGER_SERVICE) as? VibratorManager

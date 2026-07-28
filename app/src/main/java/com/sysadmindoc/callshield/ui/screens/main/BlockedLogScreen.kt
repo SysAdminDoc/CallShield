@@ -51,8 +51,8 @@ import com.sysadmindoc.callshield.ui.expandableStateSemantics
 import com.sysadmindoc.callshield.ui.rememberTemporaryDecisionDurations
 import com.sysadmindoc.callshield.ui.theme.*
 import com.sysadmindoc.callshield.util.filterAsciiDigits
+import com.sysadmindoc.callshield.util.localizedDateTimeFormat
 import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
 import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
@@ -467,7 +467,7 @@ fun BlockedCallItem(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
-    val dateFormat = remember { SimpleDateFormat("MMM d, h:mm a", Locale.getDefault()) }
+    val dateFormat = remember(context) { localizedDateTimeFormat(context) }
     val location = remember(call.number) { AreaCodeLookup.lookup(call.number) }
     var expanded by remember { mutableStateOf(false) }
     val temporaryDurations = rememberTemporaryDecisionDurations()

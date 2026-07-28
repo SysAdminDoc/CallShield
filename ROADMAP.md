@@ -682,24 +682,6 @@ Baseline at audit time: `testDebugUnitTest`, `ktlintCheck`, `detekt`, `lintDebug
   Confidence: Verified (inconsistency); Likely (crash reachability)
   Effort: S
 
-- [ ] P3 — Hardcoded 12-hour date format ignores the 24-hour preference (widget fixed in v1.7.23; app screens missed)
-  Category: ux
-  Where: ui/screens/main/BlockedLogScreen.kt:441 (SimpleDateFormat("MMM d, h:mm a")); ui/screens/recent/RecentCallsScreen.kt:362; ui/screens/details/NumberDetailScreen.kt:68
-  Problem: "h:mm a" forces AM/PM regardless of device setting/locale — European users see "3:41 PM" instead of "15:41". 3bb393f fixed this for the widget; the three in-app sites still hardcode it.
-  Fix: DateFormat.getBestDateTimePattern(locale, if (is24HourFormat) "MMMd Hm" else "MMMd hm a") (or DateUtils.formatDateTime), as the widget now does.
-  Acceptance: With system 24-hour on, all three timestamps render 24-hour.
-  Confidence: Verified
-  Effort: S
-
-- [ ] P3 — Haptics bypass the system touch-feedback setting on every settings toggle and lookup result
-  Category: ux
-  Where: ui/theme/Theme.kt:765-790 (hapticTick/hapticConfirm); ui/screens/lookup/LookupScreen.kt:766-781 (100 ms buzz on spam result)
-  Problem: All three helpers drive the Vibrator directly with VibrationEffect.createOneShot, ignoring the user's "Touch feedback" preference (unlike performHapticFeedback). ~30 toggles, backup buttons, and lookup results vibrate even for users who disabled haptics system-wide.
-  Fix: Route through LocalHapticFeedback.current.performHapticFeedback (or gate on Settings.System.HAPTIC_FEEDBACK_ENABLED).
-  Acceptance: With system touch feedback off, toggling settings produces no vibration.
-  Confidence: Verified (API semantics)
-  Effort: S
-
 - [ ] P3 — "Block area code" smart suggestion fires a ~7.9M-number rule with no confirmation, no feedback, no undo (plus a new stored-English site)
   Category: ux
   Where: ui/screens/main/DashboardScreen.kt:859-864
@@ -724,15 +706,6 @@ Baseline at audit time: `testDebugUnitTest`, `ktlintCheck`, `detekt`, `lintDebug
   Problem: User taps a tab named "Trusted" and a FAB "Add trusted number", then gets a dialog titled "Add to Whitelist" with a "Whitelist" confirm button and a "Number whitelisted" snackbar — vocabulary switches mid-interaction.
   Fix: Rename the dialog/snackbar strings to the "trusted" vocabulary; sweep remaining user-facing `*whitelist*` strings on these screens (keep internal identifiers).
   Acceptance: The Trusted tab flow uses one term end-to-end.
-  Confidence: Verified
-  Effort: S
-
-- [ ] P3 — Stale "API keys" copy in backup UI though the app has been keyless since v1.7.13
-  Category: ux
-  Where: res/values/strings.xml:597 (settings_backup_includes), :1114 (backup_restore_preview_settings_privacy)
-  Problem: Both warn "API keys … are not included" although no keys exist anywhere — confusing copy implying keys exist somewhere. Same stale-claim class as the "15 layers" strings 3bb393f removed.
-  Fix: Reword to "External feed URLs are not included." / "Settings restore excludes external subscription URLs."
-  Acceptance: No user-facing string references API keys except the "no API keys" trust copy.
   Confidence: Verified
   Effort: S
 
@@ -772,24 +745,6 @@ Baseline at audit time: `testDebugUnitTest`, `ktlintCheck`, `detekt`, `lintDebug
   Confidence: Verified (px-vs-dp semantics); visual impact Needs-repro
   Effort: S
 
-- [ ] P3 — Onboarding feature-card body hard-clips at 2 lines with no ellipsis
-  Category: visual
-  Where: ui/screens/onboarding/OnboardingScreen.kt:636-641 (maxLines = 2, default overflow Clip)
-  Problem: Longer text (pseudolocale expansion, 200% font scale) cuts mid-glyph with no truncation cue. The parent column scrolls, so the cap isn't needed for layout.
-  Fix: Drop maxLines (preferred) or add TextOverflow.Ellipsis.
-  Acceptance: At font scale 2.0 in en-XA, the welcome-page feature bodies are fully readable or cleanly ellipsized.
-  Confidence: Verified (clip behavior); Needs-repro (whether current strings exceed 2 lines)
-  Effort: S
-
-- [ ] P3 — Category call-action chips ellipsize labels at large font scale
-  Category: visual
-  Where: ui/screens/settings/CategoryCallActionsSheet.kt:131-157 (four FilterChips, weight(1f), maxLines=1 + Ellipsis)
-  Problem: At ~78dp per chip on a 360dp screen, "Voicemail"/"Inherit" truncate to "Voicem…" at font scale ≥ ~1.5 — users can't distinguish the actions for all 10 categories.
-  Fix: FlowRow wrap or stack full-width segmented options at large font scales; at minimum drop maxLines=1.
-  Acceptance: All four labels fully legible at 200% font scale on a 360dp-wide device.
-  Confidence: Likely (arithmetic trace; no emulator)
-  Effort: S
-
 - [ ] P3 — Forward chevrons don't mirror in RTL (More hub + Dashboard)
   Category: visual
   Where: ui/screens/more/MoreScreen.kt:351; ui/screens/main/DashboardScreen.kt:466, 1205, 1258
@@ -802,15 +757,6 @@ Baseline at audit time: `testDebugUnitTest`, `ktlintCheck`, `detekt`, `lintDebug
 ### P3 — accessibility
 
 ### P3 — maintainability / testing / docs
-
-- [ ] P3 — 14+ orphan string resources (dead microcopy translators would still translate)
-  Category: maintainability
-  Where: res/values/strings.xml — onboarding_get_started (:916), lookup_not_spam (:377), settings_advanced (:635), more_quick_links (:721), more_trust_summary (:734), onboarding_progress_title/_core/_optional/_optional_badge (:880-884), settings_call_screening/_desc (:437-438), settings_language_desc (:474), settings_permissions_access_desc (:440), stats_last_7_days (:643)
-  Problem: Grep across java/test/res finds no consumers for any of these. Once Weblate lands (blocked item), each dead string multiplies across every locale.
-  Fix: Delete them and run a full lint UnusedResources pass (this sample was not exhaustive).
-  Acceptance: lint UnusedResources (or scripted grep) reports no orphan strings in values/strings.xml.
-  Confidence: Verified for the listed IDs
-  Effort: S
 
 - [ ] P3 — Fastlane metadata ships zero screenshots; F-Droid listing will be imageless
   Category: docs

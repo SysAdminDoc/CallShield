@@ -29,6 +29,11 @@ All notable changes to CallShield will be documented in this file.
 
 ### Fixed
 
+- Timestamps in the blocked log, recent calls, and number detail now follow
+  the device 12/24-hour and locale conventions instead of forcing AM/PM.
+- Haptic feedback honors the system "Touch feedback" setting.
+- Backup copy no longer references non-existent API keys; onboarding feature
+  text and category action chips no longer clip at large font scales.
 - Blocked-call and blocked-SMS notifications from the same number now use
   distinct action intents, so tapping Block/Report affects the right one and
   reports the correct spam type.
