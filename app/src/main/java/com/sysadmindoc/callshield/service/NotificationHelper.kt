@@ -253,10 +253,15 @@ object NotificationHelper {
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
             )
 
+        // Fold isCall into the action request-code salts so a blocked-call and a
+        // blocked-SMS from the same number get DISTINCT Block/Report PendingIntents.
+        // Otherwise FLAG_UPDATE_CURRENT lets the second post overwrite the first's
+        // extras (notif id, isCall, indicators), so tapping the older notification
+        // cancels the wrong one and reports the wrong spam type.
         val blockIntent =
             PendingIntent.getBroadcast(
                 context,
-                stableId(number, 10),
+                stableId(number, if (isCall) 10 else 11),
                 Intent(context, SpamActionReceiver::class.java).apply {
                     action = ACTION_BLOCK
                     putExtra(EXTRA_NUMBER, number)
@@ -269,7 +274,7 @@ object NotificationHelper {
         val reportIntent =
             PendingIntent.getBroadcast(
                 context,
-                stableId(number, 20),
+                stableId(number, if (isCall) 20 else 21),
                 Intent(context, SpamActionReceiver::class.java).apply {
                     action = ACTION_REPORT
                     putExtra(EXTRA_NUMBER, number)

@@ -641,36 +641,7 @@ Baseline at audit time: `testDebugUnitTest`, `ktlintCheck`, `detekt`, `lintDebug
 
 ### P2
 
-- [ ] P2 — Database tab materializes the entire spam table (SELECT *, unbounded) into a StateFlow list
-  Category: perf
-  Where: ui/MainViewModel.kt:105-108 (allSpamNumbers); data/local/SpamDao.kt:21-22 (getAllSpamNumbers); ui/screens/main/BlocklistScreen.kt:156, 471-489
-  Problem: `SELECT * FROM spam_numbers ORDER BY reports DESC` with no LIMIT/paging, collected unconditionally at screen top (line 156) even when the Database sub-tab is never opened. With external subscriptions the table can reach ~100k rows: the full table deserializes into memory on opening Blocklist, and Room re-runs the full query on every spam_numbers invalidation (each block/unblock re-materializes everything). `workspace.count` uses allSpam.size where `getSpamCount` (COUNT(*)) exists.
-  Evidence: DAO query + unconditional collectAsStateWithLifecycle traced; no Paging anywhere in ui/.
-  Fix: Paging 3 (Room PagingSource) for the Database tab, or at minimum collect lazily only when tabIndex == BLOCKLIST_TAB_DATABASE and use dao.getSpamCount() for the header count.
-  Acceptance: With a 100k-row subscription, opening the Blocklist tab does not allocate the full table; blocking a number does not re-run the full-table query.
-  Confidence: Verified
-  Effort: L
-
 ### P3 — correctness / reliability
-
-- [ ] P3 — Blocked-call and blocked-SMS notifications for the same number share Block/Report PendingIntents, cross-canceling and misreporting the type
-  Category: correctness
-  Where: service/NotificationHelper.kt:256-280 (notifyBlocked — blockIntent salt 10, reportIntent salt 20; nid correctly salted 1 vs 2 at :221)
-  Problem: Call and SMS blocks post distinct notifications (stableId salts 1/2) but both build Block/Report actions with the same request codes (10/20) and filterEquals-identical intents. With FLAG_UPDATE_CURRENT the second post overwrites the shared PendingIntent's extras (EXTRA_NOTIF_ID, EXTRA_IS_CALL, SMS indicators). When a spammer both calls and texts, tapping Block/Report on the older notification cancels the other notification's ID (SpamActionReceiver.kt:54-56) so the tapped one lingers, and reportType() submits the wrong category ("spam" vs "sms_spam") with wrong indicators to CommunityContributor.
-  Evidence: Verified this session — nid salts isCall but the action request codes do not.
-  Fix: Fold isCall into the action request-code salts (e.g. 10/11 and 20/21), mirroring the nid split.
-  Acceptance: With both notifications visible for one number, tapping Block on either cancels that exact notification and CommunityContributor receives the matching type/indicators; Robolectric test asserts two distinct PendingIntents.
-  Confidence: Verified
-  Effort: S
-
-- [ ] P3 — Quick Settings tile toggle can be cancelled mid-write, leaving call/SMS blocking flags split
-  Category: reliability
-  Where: service/CallShieldTileService.kt:24, 32-45, 65-68
-  Problem: onClick performs two independent cancellable DataStore writes (setBlockCalls then setBlockSms) on a service-scoped CoroutineScope that onDestroy cancels. Tap + immediately closing the shade can cancel between the two edits → KEY_BLOCK_CALLS=new but KEY_BLOCK_SMS=old (tile state is calls||sms, so it reads ACTIVE after toggling off), or drop the whole toggle after the tile flashed. Other fire-and-forget paths deliberately use appScope; the tile was missed.
-  Fix: Run the read-modify-write on CallShieldApp.appScope (keep the mutex), or collapse both flags into one dataStore.edit; keep only updateTile() on the service scope.
-  Acceptance: Killing the TileService immediately after onClick never yields KEY_BLOCK_CALLS != KEY_BLOCK_SMS when equal before; the toggle always lands.
-  Confidence: Likely
-  Effort: S
 
 - [ ] P3 — No component is direct-boot aware: between reboot and first unlock, call/SMS screening is inert
   Category: reliability
@@ -681,15 +652,6 @@ Baseline at audit time: `testDebugUnitTest`, `ktlintCheck`, `detekt`, `lintDebug
   Acceptance: FBE emulator — a blocklisted call after reboot-before-unlock is rejected (or the limitation is documented as accepted).
   Confidence: Likely (config verified; e2e needs emulator)
   Effort: L
-
-- [ ] P3 — CrashReporter rotation never cleans orphaned .tmp files
-  Category: reliability
-  Where: service/CrashReporter.kt:152-165 (persistCrash), 184-194 (rotate filters .txt only)
-  Problem: If the process dies between tmp.writeText and the rename (exactly the situations a crash handler runs in), the crash_*.txt.tmp orphan is invisible to rotation (endsWith(".txt")) and accumulates forever; only user-facing "Clear crash logs" removes them. Slow but unbounded growth defeating the KEEP_LATEST=5 cap.
-  Fix: In rotate() (or install()), delete crash_*.txt.tmp older than a few minutes.
-  Acceptance: After a simulated mid-write kill, next app start leaves no stale .tmp files.
-  Confidence: Verified
-  Effort: S
 
 ### P3 — performance / UX / visual
 

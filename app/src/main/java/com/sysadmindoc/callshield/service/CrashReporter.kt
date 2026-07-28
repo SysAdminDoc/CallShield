@@ -41,6 +41,9 @@ import java.util.Locale
 object CrashReporter {
     private const val CRASH_DIR = "crashes"
     private const val KEEP_LATEST = 5
+
+    /** Age past which a leftover crash `.txt.tmp` is considered orphaned. */
+    private const val TMP_ORPHAN_MAX_AGE_MS = 5 * 60 * 1000L
     private const val MAX_STACK_DEPTH = 200 // Guard against pathological chains
     private const val MAX_FRAMES_PER_CAUSE = 256
     private const val MAX_MESSAGE_LENGTH = 1_000
@@ -182,6 +185,16 @@ object CrashReporter {
     }
 
     private fun rotate(dir: File) {
+        // Sweep orphaned temp files first: if the process died between the
+        // temp write and the rename (exactly when a crash handler runs), the
+        // `.txt.tmp` is invisible to the `.txt` rotation and would accumulate
+        // forever, defeating the KEEP_LATEST cap.
+        val now = System.currentTimeMillis()
+        dir
+            .listFiles { f -> f.name.startsWith("crash_") && f.name.endsWith(".txt.tmp") }
+            ?.filter { now - it.lastModified() > TMP_ORPHAN_MAX_AGE_MS }
+            ?.forEach { runCatching { it.delete() } }
+
         val files =
             dir.listFiles { f -> f.name.startsWith("crash_") && f.name.endsWith(".txt") }
                 ?: return
