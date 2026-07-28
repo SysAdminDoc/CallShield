@@ -49,6 +49,9 @@ import java.io.File
 @Suppress("TooManyFunctions")
 object BackupRestore {
     private const val MIN_IMPORTED_DIGITS = 5
+
+    /** Length cap for a non-numeric log sender identity kept verbatim on restore. */
+    private const val MAX_LOG_IDENTITY_LEN = 64
     private const val CURRENT_BACKUP_VERSION = 7
     private const val OLDEST_SUPPORTED_VERSION = 1
     internal const val MAX_BACKUP_RESTORE_ROWS = MAX_IMPORT_ROWS
@@ -910,7 +913,7 @@ object BackupRestore {
             logs =
                 if (BackupSection.LOGS in sections) {
                     logs.mapNotNull { log ->
-                        val normalizedNumber = normalizeImportedNumber(log.number) ?: return@mapNotNull null
+                        val normalizedNumber = normalizeImportedLogIdentity(log.number) ?: return@mapNotNull null
                         BackupLogEntry(
                             number = normalizedNumber,
                             timestamp = log.timestamp.coerceAtLeast(0L),
@@ -956,18 +959,54 @@ object BackupRestore {
         dao: SpamDao,
         payload: RestorePayload,
     ): RestoreCounts {
-        val existingBlockRows = dao.getUserBlockedNumbersSync()
-        val existingWhitelistRows = dao.getAllWhitelist().first()
-        val existingWildcardRows = dao.getAllWildcardRules().first()
-        val existingKeywordRows = dao.getAllKeywordRules().first()
-        val existingRangeRows = dao.getAllHashWildcardRules().first()
-        val existingLogRows = dao.getBlockedCalls().first()
-        val existingBlocks = existingBlockRows.map { it.number }.toSet()
-        val existingWhitelist = existingWhitelistRows.map { it.number }.toSet()
-        val existingWildcards = existingWildcardRows.map { it.pattern to it.isRegex }.toSet()
-        val existingKeywords = existingKeywordRows.map { it.keyword to it.caseSensitive }.toSet()
-        val existingRanges = existingRangeRows.map { it.pattern }.toSet()
-        val existingLogs = existingLogRows.map { it.conflictKey }.toSet()
+        // Only read each existing table when the payload actually has rows for
+        // it — a settings-only restore preview must not query anything. Logs use
+        // the conflict-key projection so restore never materializes full rows
+        // (which carry SMS bodies) on a heavy-spam device.
+        val existingBlocks =
+            if (payload.blockedNumbers.isEmpty()) emptySet() else dao.getUserBlockedNumbersSync().map { it.number }.toSet()
+        val existingWhitelist =
+            if (payload.whitelistNumbers.isEmpty()) {
+                emptySet()
+            } else {
+                dao
+                    .getAllWhitelist()
+                    .first()
+                    .map { it.number }
+                    .toSet()
+            }
+        val existingWildcards =
+            if (payload.wildcardRules.isEmpty()) {
+                emptySet()
+            } else {
+                dao
+                    .getAllWildcardRules()
+                    .first()
+                    .map { it.pattern to it.isRegex }
+                    .toSet()
+            }
+        val existingKeywords =
+            if (payload.keywordRules.isEmpty()) {
+                emptySet()
+            } else {
+                dao
+                    .getAllKeywordRules()
+                    .first()
+                    .map { it.keyword to it.caseSensitive }
+                    .toSet()
+            }
+        val existingRanges =
+            if (payload.rangeRules.isEmpty()) {
+                emptySet()
+            } else {
+                dao
+                    .getAllHashWildcardRules()
+                    .first()
+                    .map { it.pattern }
+                    .toSet()
+            }
+        val existingLogs =
+            if (payload.logs.isEmpty()) emptySet() else dao.getBlockedCallConflictKeysSync().toSet()
 
         return RestoreCounts(
             blockedNumbers = payload.blockedNumbers.count { it.number in existingBlocks },
@@ -1211,6 +1250,21 @@ object BackupRestore {
             return null
         }
         return if (trimmed.startsWith("+")) "+$digits" else digits
+    }
+
+    /**
+     * Log-row sender identity. Unlike [normalizeImportedNumber], accepts a
+     * non-numeric alphanumeric sender ID (e.g. "BANK-ALERT") or a hashed opaque
+     * sender — these are legitimate `call_log.number` values that a phone-number
+     * normalizer would drop, silently losing SMS history on a backup round-trip.
+     * Length-capped so a hostile backup can't inject an oversized string;
+     * malformed pure-digit strings still fall through to null.
+     */
+    private fun normalizeImportedLogIdentity(rawNumber: String): String? {
+        normalizeImportedNumber(rawNumber)?.let { return it }
+        val trimmed = rawNumber.trim()
+        val hasNonDigit = trimmed.any { it !in '0'..'9' && it != '+' }
+        return if (trimmed.isNotBlank() && hasNonDigit) trimmed.take(MAX_LOG_IDENTITY_LEN) else null
     }
 
     /**

@@ -376,13 +376,4 @@ interface SpamDao {
               ORDER BY timestamp DESC LIMIT 100""",
     )
     fun searchLog(query: String): Flow<List<BlockedCall>>
-
-    @Transaction
-    suspend fun clearBackupRestorableData() {
-        clearUserBlockFlagsOnSyncedNumbers()
-        deleteUserOwnedBlockedNumbers()
-        clearWhitelist()
-        clearWildcardRules()
-        clearKeywordRules()
-    }
 }

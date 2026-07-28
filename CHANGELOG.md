@@ -38,6 +38,16 @@ All notable changes to CallShield will be documented in this file.
 - Explicit international numbers (`+45…`, `+47…`, `+212…`) are no longer
   mis-formatted as North American, and formatWithCountryCode no longer
   fabricates a `+1` prefix on them.
+- Restoring a backup now refreshes the range-rule (hash-wildcard) cache, so
+  restored range rules take effect immediately without an app restart.
+- Re-applying an external blocklist subscription preserves an active
+  temporary block's expiry instead of silently making it permanent.
+- Backup restore keeps blocked-SMS log rows from alphanumeric senders
+  (e.g. "BANK-ALERT") instead of dropping them on the round-trip.
+- Block and whitelist edits are now atomic, so a process death mid-edit can
+  no longer strip a trust entry without applying the block.
+- The restore preview no longer loads the entire call log (including SMS
+  bodies) into memory when logs aren't part of the restore.
 - Portable backups keep the full BackupRestore payload family (settings,
   range rules, logs) from R8 stripping, so a minified release build no longer
   risks silently losing restored data.

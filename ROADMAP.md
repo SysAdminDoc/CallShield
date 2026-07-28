@@ -641,26 +641,6 @@ Baseline at audit time: `testDebugUnitTest`, `ktlintCheck`, `detekt`, `lintDebug
 
 ### P2
 
-- [ ] P2 — Backup restore never invalidates the hash-wildcard (range-rule) cache
-  Category: correctness
-  Where: data/SpamRepository.kt:665-668 (`invalidateRestoredRuleCaches`); data/BackupRestore.kt restorePayload (hash rules written via dao.insertHashWildcardRule / cleared via clearHashWildcardRules)
-  Problem: `invalidateRestoredRuleCaches()` nulls only cachedWildcardRules and cachedKeywordRules — never cachedHashWildcardRules (SpamRepositoryImpl.kt:42, 56-58). RANGE_RULES is in defaultRestoreSections, so after a restore HashWildcardChecker keeps screening with the stale list: restored `#` rules don't block, and in REPLACE mode deleted rules keep blocking, until process restart or an unrelated hash-rule edit.
-  Evidence: Checkers.kt:368 reads getActiveHashWildcardsCachedInternal() (SpamRepositoryImpl.kt:85 returns the stale cache). Only invalidation sites are BlocklistRepository.kt:163/169/177 (CRUD) and SyncRepository's invalidateAllCaches (never runs on restore). Wildcard and keyword rules on the same restore path ARE invalidated.
-  Fix: Add `spamRepositoryImpl.invalidateHashWildcardCache()` to `invalidateRestoredRuleCaches()` (or call `invalidateAllCaches()`).
-  Acceptance: Test — populate hash cache via a screening check, restore a backup containing a range rule (and a REPLACE restore removing one), assert the next isSpam reflects the restored rule set without restart.
-  Confidence: Verified
-  Effort: S
-
-- [ ] P2 — Re-applying an external blocklist silently converts a temporary user block to permanent (drops expiresAt)
-  Category: correctness
-  Where: data/repository/SyncRepository.kt:395-399 (`resolveExternalBlocklistCandidates`, same-source branch)
-  Problem: `candidate.copy(id = existing.id, isUserBlocked = existing.isUserBlocked)` does not carry `expiresAt` → null. A feed-owned row can carry `isUserBlocked=true, expiresAt=X` (BlocklistRepository.blockNumber:71-83 keeps the feed's source when the user temp-blocks). replaceBySource keeps the row, then the REPLACE insert overwrites it with expiresAt=null → the user's "block for N hours" becomes a permanent block that clearExpiredSyncedUserBlockFlags never clears.
-  Evidence: Both sibling paths preserve expiry explicitly — GitHub sync via preservedUserBlockedNumbers (SpamRepository.kt:776-777, tested SpamRepositorySyncTest.kt:41) and hot-list via mergeHotListNumbers (SpamRepository.kt:799-803, tested :107/:127). No test covers the external-candidate path's expiry. Reachable on subscription refresh/re-enable (MainViewModel.kt:374; SyncRepository:209-211).
-  Fix: Copy `expiresAt = existing.expiresAt` alongside isUserBlocked, mirroring mergeHotListNumbers.
-  Acceptance: Test — temp-block a number owned by an external feed, re-apply the feed, assert the row still expires on schedule.
-  Confidence: Verified
-  Effort: S
-
 - [ ] P2 — NumberDetailScreen matches by raw string while all stores hold canonicalized numbers — empty/wrong data when opened from Recent
   Category: correctness
   Where: ui/screens/details/NumberDetailScreen.kt:61-63, 526; ui/screens/recent/RecentCallsScreen.kt:614; ui/MainViewModel.kt:452-454 (openNumberDetail)
@@ -854,34 +834,6 @@ Baseline at audit time: `testDebugUnitTest`, `ktlintCheck`, `detekt`, `lintDebug
   Acceptance: Entering during model load shows "pending" then updates without user interaction.
   Confidence: Likely
   Effort: S
-
-- [ ] P3 — Restore silently drops blocked-SMS log rows from alphanumeric senders (round-trip data loss)
-  Category: correctness
-  Where: data/BackupRestore.kt:911-925 (toRestorePayload LOGS branch), 1207-1214 (normalizeImportedNumber)
-  Problem: call_log.number stores canonical sender identities that aren't phone numbers (e.g. "BANK-ALERT", asserted by AppDatabaseMigrationTest.kt:238, and v1.7.23 hashed identities). Export copies them verbatim, but restore funnels every log number through normalizeImportedNumber (requires 5-15 ASCII digits → null) → mapNotNull drops the row. All lettered/hashed-sender log entries vanish from any round-trip, and the preview count silently under-reports.
-  Evidence: Export at :356-373 raw; import filter at :913; filterAsciiDigits("BANK-ALERT") empty → null.
-  Fix: In the LOGS branch, accept non-numeric identities: if digit-normalization fails, keep the trimmed original (re-run through canonicalizeIdentity on insert, as logBlockedCall does) with a length cap.
-  Acceptance: Round-trip test — export logs with a lettered-sender SMS row, restore into a clean DB, row exists with original identity.
-  Confidence: Verified
-  Effort: S
-
-- [ ] P3 — Restore preview materializes the entire call_log (including SMS bodies) even when logs aren't selected
-  Category: perf
-  Where: data/BackupRestore.kt:955-981 (countConflicts); data/local/SpamDao.kt:191-201
-  Problem: countConflicts runs on every preview and calls dao.getBlockedCalls().first() — full rows with smsBody — just to compute conflict keys, unconditionally even when payload.logs is empty. The DAO already ships getBlockedCallConflictKeysSync() whose doc claims "restore never materializes full rows"; the apply path honors it (:725-727), the preview path contradicts it. Same pattern for the other five .first() full-table reads when sections are unselected.
-  Fix: Use getBlockedCallConflictKeysSync() in countConflicts; skip each table read when its section is unselected/payload empty.
-  Acceptance: Preview of a settings-only backup issues no call_log row query (recording DAO fake); conflict counts unchanged.
-  Confidence: Verified
-  Effort: S
-
-- [ ] P3 — blockNumber / addToWhitelist compound writes are non-atomic outside restore
-  Category: reliability
-  Where: data/repository/BlocklistRepository.kt:43-86 (blockNumber), 321-349 (addToWhitelist)
-  Problem: Each is a check-then-act sequence of independent DAO transactions (cleanup → findWhitelistEntry → deleteWhitelistEntry → findByNumber → insertNumber). Only restore wraps these in runInTransaction (v1.7.22). Process death between deleteWhitelistEntry and insertNumber silently loses the user's whitelist entry without adding the block; concurrent block+allow on one number can interleave and commit both rows.
-  Fix: Wrap each body in db.withTransaction (inject the runner like SpamRepository.runInTransaction), which also serializes check-then-act on Room's single write transaction.
-  Acceptance: Injected-DAO test throwing after the whitelist delete → whitelist entry survives rollback; parallel block+allow never ends with both an active block flag and a whitelist row.
-  Confidence: Verified (path); Likely (window)
-  Effort: M
 
 - [ ] P3 — Quick Settings tile toggle can be cancelled mid-write, leaving call/SMS blocking flags split
   Category: reliability
@@ -1096,15 +1048,6 @@ Baseline at audit time: `testDebugUnitTest`, `ktlintCheck`, `detekt`, `lintDebug
   Effort: S
 
 ### P3 — maintainability / testing / docs
-
-- [ ] P3 — SpamDao.clearBackupRestorableData is dead and stale (misses hash_wildcard_rules)
-  Category: maintainability
-  Where: data/local/SpamDao.kt:380-387
-  Problem: Zero callers (restore uses clearSelectedBackupSections). It also predates range rules — any future caller reviving it gets a partial clear diverging from real restore semantics.
-  Fix: Delete it (or unify clearSelectedBackupSections through it and add clearHashWildcardRules()).
-  Acceptance: Symbol removed with no references, or unified and covered by a REPLACE-mode restore test.
-  Confidence: Verified
-  Effort: S
 
 - [ ] P3 — 14+ orphan string resources (dead microcopy translators would still translate)
   Category: maintainability

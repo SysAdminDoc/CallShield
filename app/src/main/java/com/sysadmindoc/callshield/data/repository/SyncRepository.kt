@@ -396,6 +396,11 @@ class SyncRepository(
                         candidate.copy(
                             id = existing.id,
                             isUserBlocked = existing.isUserBlocked,
+                            // Preserve an active temporary-block expiry (mirrors
+                            // the GitHub-sync and hot-list merge paths). Dropping
+                            // it would silently convert a "block for N hours" into
+                            // a permanent block on the next feed refresh.
+                            expiresAt = existing.expiresAt,
                         )
                     }
 
