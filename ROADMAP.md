@@ -596,27 +596,18 @@ Focus areas not covered by prior passes: the Developer-Verification survival pat
 - [ ] P2 — Restore has a partial-state window on process death
   Why: Settings commit to DataStore before the Room transaction; an in-process failure compensates, but a process kill mid-transaction leaves restored settings with the old database. Needs a restore-in-progress journal marker reconciled at startup, and rollback scoped to only the keys the backup writes (full-snapshot rollback can clobber concurrent sync prefs).
   Where: data/BackupRestore.kt (restoreSections), data/repository/SettingsRepository.kt (replacePrefsSnapshot)
-- [ ] P3 — Export-side caps missing: a backup can exceed its own restore limits
-  Why: createBackup has no 100k-row/32MB cap while restore enforces both, so a large device exports a backup the app then refuses to restore (the crash half was fixed in v1.7.23; the cap asymmetry remains).
-  Where: data/BackupRestore.kt (createBackup)
 - [ ] P3 — Contact-group identity falls back to the group title
   Why: Locally created groups often have no SOURCE_ID, so renaming a selected group silently voids contact trust (fail-closed → contacts get screened). Needs a rename-stable key or a visible degradation warning like isContactsModeDegraded.
   Where: data/ContactGroupCatalog.kt (stableKey, resolveGroupIds)
 - [ ] P3 — PostCallActivity accepts spoofed launches
   Why: Any app can start it with a crafted tel: handle; opt-in pref + required user tap + bounded input mitigate, but "Mark spam" should verify a matching recent-call record (or Telecom disconnect extras) before offering a community report.
   Where: ui/PostCallActivity.kt, AndroidManifest.xml
-- [ ] P3 — Blocked-summary counter never resets
-  Why: NotificationHelper.blockedSinceLastNotif only grows per process lifetime, so "N blocked recently" overstates and the count<=0 cancel branch is dead code. Needs a deleteIntent (or shade-dismiss hook) that zeroes the counter.
-  Where: service/NotificationHelper.kt (updateSummary)
 - [ ] P3 — Cold-start theme flash for non-AMOLED users
   Why: appTheme StateFlow initializes to Amoled until DataStore emits, flashing black + wrong status-bar icons for Light/Graphite users on every cold start. Needs a synchronous cached read or splash-held first frame.
   Where: ui/MainViewModel.kt (appTheme), ui/MainActivity.kt
 - [ ] P3 — Widget ignores the app theme
   Why: RemoteViews layout is permanently AMOLED-dark with palette literals in updateWidget; clashes on Light-themed devices. Needs values-night qualifiers or theme-selected literals (contrast of the fixed palette was fixed in v1.7.23).
   Where: ui/widget/CallShieldWidget.kt, res/layout/widget_callshield.xml
-- [ ] P3 — Raw e.message surfaced in restore/import failure strings
-  Why: "Error: %s" leaks unlocalized exception text (content URIs, SQLite constraint names) into the UI; map to localized reasons like the crypto layer does.
-  Where: data/BackupRestore.kt (previewRestoreFromUri/restoreFromPreview catch), data/BlocklistExporter.kt (importFromUri catch)
 - [ ] P3 — BackupNumber.source is exported but not round-tripped
   Why: Restore recreates rows as source="user" (which protects them from sync's replaceBySource — defensible), leaving the exported field and its sanitizer dead. Decide: pass source through with sync-safety rules, or stop exporting it.
   Where: data/BackupRestore.kt (createBackup/sanitized), data/repository/BlocklistRepository.kt (blockNumber)

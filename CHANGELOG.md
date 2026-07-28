@@ -37,6 +37,14 @@ All notable changes to CallShield will be documented in this file.
   day"/"Mon–Fri"/"Weekends" strings, and the auto-generated rule descriptions
   written on "not spam" reports and blocked-log swipe-to-block are now localized
   string resources instead of hardcoded English.
+- The "N blocked recently" summary notification now zeroes its counter when you
+  dismiss the group, so it no longer over-reports across a process lifetime.
+- Backups are now capped to the same row limit the restore path enforces (the
+  blocked-call log absorbs the trim, keeping the most recent entries), so a large
+  device can no longer export a backup the app then refuses to restore.
+- Restore/import failures now show a localized generic reason instead of leaking
+  raw exception text (content URIs, SQLite constraint names) into the UI; the
+  underlying cause is logged for diagnostics.
 
 ### Performance
 

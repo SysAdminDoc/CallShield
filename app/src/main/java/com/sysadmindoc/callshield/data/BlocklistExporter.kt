@@ -3,6 +3,7 @@ package com.sysadmindoc.callshield.data
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.util.Log
 import androidx.core.content.FileProvider
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.Types
@@ -170,12 +171,15 @@ object BlocklistExporter {
                     success = false,
                 )
             } catch (e: Exception) {
+                // Log the raw cause; show a localized generic reason rather than
+                // leaking exception text (content URIs, parser internals) to the UI.
+                Log.w("BlocklistExporter", "Blocklist import failed", e)
                 ImportResult(
                     importedCount = 0,
                     message =
                         context.getString(
                             R.string.blocklist_import_failed,
-                            e.message ?: context.getString(R.string.blocklist_import_fallback_read_error),
+                            context.getString(R.string.blocklist_import_fallback_read_error),
                         ),
                     success = false,
                 )
