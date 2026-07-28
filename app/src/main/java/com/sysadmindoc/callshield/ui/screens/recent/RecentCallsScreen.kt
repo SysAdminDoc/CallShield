@@ -57,8 +57,10 @@ import com.sysadmindoc.callshield.ui.rememberTemporaryDecisionDurations
 import com.sysadmindoc.callshield.ui.theme.*
 import com.sysadmindoc.callshield.util.filterAsciiDigits
 import com.sysadmindoc.callshield.util.hasMinAsciiDigits
+import com.sysadmindoc.callshield.util.launchViewUrlSafely
 import com.sysadmindoc.callshield.util.localizedDateTimeFormat
 import com.sysadmindoc.callshield.util.normalizePhoneNumberInput
+import com.sysadmindoc.callshield.util.startActivitySafely
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -222,7 +224,7 @@ fun RecentCallsScreen(viewModel: MainViewModel) {
         if (!hasCallLogPermission) {
             RecentCallsPermissionState(
                 onOpenSettings = {
-                    context.startActivity(
+                    context.startActivitySafely(
                         Intent(
                             Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
                             Uri.parse("package:${context.packageName}"),
@@ -541,17 +543,10 @@ fun RecentCallItem(
                             label = stringResource(R.string.recent_google),
                             color = CatBlue,
                         ) {
-                            context.startActivity(
-                                Intent(
-                                    Intent.ACTION_VIEW,
-                                    android.net.Uri.parse(
-                                        "https://www.google.com/search?q=${
-                                            android.net.Uri.encode("$digits phone number spam")
-                                        }",
-                                    ),
-                                ).apply {
-                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                },
+                            context.launchViewUrlSafely(
+                                "https://www.google.com/search?q=${
+                                    android.net.Uri.encode("$digits phone number spam")
+                                }",
                             )
                         }
                         RecentActionButton(

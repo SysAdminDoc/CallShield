@@ -655,15 +655,6 @@ Baseline at audit time: `testDebugUnitTest`, `ktlintCheck`, `detekt`, `lintDebug
 
 ### P3 — performance / UX / visual
 
-- [ ] P3 — Wildcard rules recompile their Regex per rule per screening call (no compiled-pattern cache on the hot path)
-  Category: perf
-  Where: data/model/WildcardRule.kt:46-101 (Regex() constructed at :52, :93 on every matches()); invoked from data/checker/Checkers.kt:338-348 per call/SMS
-  Problem: SpamRepositoryImpl caches the rule entities precisely to keep the 5-second path fast, but each matchesNow re-escapes the glob, rebuilds the pattern string, and calls Pattern.compile — per rule, per incoming call, compounded by the numberVariants fan-out. SmsKeywordRule.matchesNow shares the shape. Ms-scale repeated work with a few dozen rules.
-  Fix: Memoize the compiled Regex per entity (@Ignore lazy val, or a pattern→Regex map alongside the rule cache), invalidated with the existing rule-cache invalidation.
-  Acceptance: HotPathBenchmarkTest-style micro-benchmark shows single compile per rule per cache generation.
-  Confidence: Verified
-  Effort: S
-
 - [ ] P3 — Staggered entrance animation re-runs for every row on scroll and refresh: blank 0-height rows and scroll jumps
   Category: perf
   Where: ui/screens/main/BlockedLogScreen.kt:201-214; ui/screens/recent/RecentCallsScreen.kt:291-303
@@ -672,15 +663,6 @@ Baseline at audit time: `testDebugUnitTest`, `ktlintCheck`, `detekt`, `lintDebug
   Acceptance: Fast-scrolling a 200-entry log shows fully laid-out rows immediately; a new call does not re-animate existing rows.
   Confidence: Likely (visual severity needs device repro)
   Effort: M
-
-- [ ] P3 — Uncaught ActivityNotFoundException on several primary-surface intents (class 3bb393f fixed only for More-screen Quick Links)
-  Category: reliability
-  Where: ui/screens/main/BlockedLogScreen.kt:573-576 (Google search); ui/screens/recent/RecentCallsScreen.kt:515-532; ui/screens/details/NumberDetailScreen.kt:540 (GitHub report); ui/screens/main/DashboardScreen.kt:1328-1343 (openOverlaySettings/openNotificationSettings); ui/screens/onboarding/OnboardingScreen.kt:132-139
-  Problem: startActivity with ACTION_VIEW https or ACTION_MANAGE_OVERLAY_PERMISSION is uncaught — crashes on browserless devices (the exact scenario 3bb393f fixed for MoreScreen) or ROMs lacking the overlay-settings activity. requestCallScreening already has catch+fallback; the pattern is applied inconsistently.
-  Fix: Same try/catch + snackbar fallback as MoreScreen Quick Links; overlay settings fall back to openAppSettings.
-  Acceptance: Tapping "Google" on a browserless device shows a toast instead of crashing.
-  Confidence: Verified (inconsistency); Likely (crash reachability)
-  Effort: S
 
 - [ ] P3 — "Block area code" smart suggestion fires a ~7.9M-number rule with no confirmation, no feedback, no undo (plus a new stored-English site)
   Category: ux
