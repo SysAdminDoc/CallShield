@@ -92,6 +92,27 @@ fun ChangelogScreen() {
                 ),
         )
         VersionEntry(
+            "1.7.17",
+            "Reliability: self-healing sync, recovery, and boot survival",
+            changes =
+                listOf(
+                    "RCS listener re-binds itself after the system disconnects it",
+                    "Detects and rebuilds a corrupt on-disk database, then re-syncs the spam data",
+                    "Reschedules work and re-binds the listener after a reboot or app update",
+                    "Daily digest counts use bounded aggregate queries instead of full-window scans",
+                ),
+        )
+        VersionEntry(
+            "1.7.16",
+            "Bounded imports and clearer model health",
+            changes =
+                listOf(
+                    "Capped import/restore size and row counts to keep large files responsive",
+                    "Aligned Android 16 grouped-notification alert behavior",
+                    "Exposed typed ML model-health states for diagnostics",
+                ),
+        )
+        VersionEntry(
             "1.7.13",
             "Fully free and keyless: the optional API key entry is gone",
             changes =

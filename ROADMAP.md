@@ -641,16 +641,6 @@ Baseline at audit time: `testDebugUnitTest`, `ktlintCheck`, `detekt`, `lintDebug
 
 ### P2
 
-- [ ] P2 — Cloudflare account identity file tracked in the public repo (worker/.wrangler/cache/wrangler-account.json)
-  Category: security
-  Where: worker/.wrangler/cache/wrangler-account.json:1-6
-  Problem: The tracked wrangler cache file exposes the Cloudflare account ID and the personal identity "Snafumatthew@gmail.com's Account" — a private Gmail identity linked to the public SysAdminDoc repo, aiding targeted phishing/takeover of the account hosting the community-report worker. `.gitignore`'s `.wrangler/` rule was added in the same commit that introduced the file (98a2a5c), so git kept tracking it.
-  Evidence: `git ls-files worker/.wrangler` → file tracked (verified this session).
-  Fix: `git rm --cached worker/.wrangler/cache/wrangler-account.json`; purge from history with git-filter-repo + force push (no secret material to rotate, but the email exposure should be scrubbed).
-  Acceptance: File absent from `git ls-files` and from all reachable history on GitHub.
-  Confidence: Verified
-  Effort: S
-
 - [ ] P2 — Database tab materializes the entire spam table (SELECT *, unbounded) into a StateFlow list
   Category: perf
   Where: ui/MainViewModel.kt:105-108 (allSpamNumbers); data/local/SpamDao.kt:21-22 (getAllSpamNumbers); ui/screens/main/BlocklistScreen.kt:156, 471-489
@@ -660,16 +650,6 @@ Baseline at audit time: `testDebugUnitTest`, `ktlintCheck`, `detekt`, `lintDebug
   Acceptance: With a 100k-row subscription, opening the Blocklist tab does not allocate the full table; blocking a number does not re-run the full-table query.
   Confidence: Verified
   Effort: L
-
-- [ ] P2 — verifyReleaseMetadata gate does not cover CHANGELOG.md or the in-app ChangelogScreen
-  Category: maintainability
-  Where: build.gradle.kts:227-353 (verifyReleaseMetadata) vs CHANGELOG.md and ui/screens/more/ChangelogScreen.kt:27-30
-  Problem: The gate checks README highlights/badge/test-count, fastlane changelog for the current versionCode, F-Droid yml/runbook, and retired-claim strings — but never asserts CHANGELOG.md contains `## v${versionName}` or that ChangelogScreen's first VersionEntry (isLatest=true) matches versionName. Both are in sync today only by discipline; a future bump can ship a silently lagging in-app changelog while the gate passes. (Repo memory claims the gate "forces ChangelogScreen sync" — it does not, which makes silent drift more likely. The gaps this already caused are the two P3 changelog-drift items below.)
-  Evidence: Full read of build.gradle.kts:227-353 — no reference to CHANGELOG.md or ChangelogScreen; no test enforces it either.
-  Fix: Add to verifyReleaseMetadata: `## v${name} — ` must appear in CHANGELOG.md, and `VersionEntry("${name}"` with isLatest=true must appear first in ChangelogScreen.kt.
-  Acceptance: Bumping versionName without touching CHANGELOG.md or ChangelogScreen.kt fails verifyReleaseMetadata with a named issue.
-  Confidence: Verified
-  Effort: S
 
 ### P3 — correctness / reliability
 
@@ -868,60 +848,6 @@ Baseline at audit time: `testDebugUnitTest`, `ktlintCheck`, `detekt`, `lintDebug
   Fix: Delete them and run a full lint UnusedResources pass (this sample was not exhaustive).
   Acceptance: lint UnusedResources (or scripted grep) reports no orphan strings in values/strings.xml.
   Confidence: Verified for the listed IDs
-  Effort: S
-
-- [ ] P3 — Kover coverage gate measures only data.*/util.* at a 35% floor; service/UI/permissions surfaces are unmeasured
-  Category: testing
-  Where: app/build.gradle.kts:138-159
-  Problem: The only rule applies to a filter including just data.* and util.* (excluding data.local.*). service/ (the 5-second hot path, NotificationHelper, workers, receivers), permissions/, and ui/ are outside the measured set — deleting every service test would still pass koverVerify. 35% is also far below actual for the measured slice, so the gate protects almost nothing.
-  Fix: Add service.*/permissions.* to the include set (excluding pure-Android glue with a comment); ratchet the bound to a few points under measured reality (run koverHtmlReportDebug once).
-  Acceptance: Deleting a service-layer test file causes koverVerifyDebug to fail.
-  Confidence: Verified
-  Effort: S
-
-- [ ] P3 — build-accrescent-apks.ps1 passes keystore/key passwords on the java command line
-  Category: security
-  Where: scripts/build-accrescent-apks.ps1:123-125
-  Problem: `--ks-pass="pass:$KeystorePassword"` puts secrets into the bundletool process command line, visible to any local process (Win32_Process) for the duration of the long build-apks run, and into transcripts. bundletool supports pass:file: indirection.
-  Fix: Write passwords to a restrictive-ACL temp file, pass --ks-pass=file:/--key-pass=file:, delete in finally.
-  Acceptance: Process command line shows no password material during a build.
-  Confidence: Verified
-  Effort: S
-
-- [ ] P3 — compare-apk-contents.ps1 is O(n²) over ZIP entries
-  Category: maintainability
-  Where: scripts/compare-apk-contents.ps1:45-47
-  Problem: For each union entry name it re-scans both full entry arrays with Where-Object — millions of pipeline comparisons for a typical APK, making the documented reproducibility check needlessly slow for independent verifiers.
-  Fix: Build hashtables keyed by Name once; look up per name.
-  Acceptance: Comparison of two 8 MB APKs completes in seconds.
-  Confidence: Verified
-  Effort: S
-
-- [ ] P3 — README spam-number stat drifted (32,933 claimed vs 32,973 actual) and is outside every gate
-  Category: docs
-  Where: README.md:9, 14, 23, 238, 254, 387 (six hardcoded "32,933" claims)
-  Problem: The count changes on every community merge and verifyReleaseMetadata has no rule for it — it will keep decaying (and jump further once the 163 pending reports merge).
-  Fix: Gate rule deriving the count from data/spam_numbers.json and asserting all README occurrences match, or replace point-precision claims with "32,900+" prose plus one gate-checked exact stat.
-  Acceptance: README count matches the JSON row count (or a gate-checked floor) after the next data merge.
-  Confidence: Verified
-  Effort: S
-
-- [ ] P3 — In-app ChangelogScreen silently skips documented releases v1.7.17, v1.7.16, v1.7.7, v1.7.6
-  Category: docs
-  Where: ui/screens/more/ChangelogScreen.kt:80-104 (1.7.19 → 1.7.13), 152-162 (1.7.8 → 1.7.5); CHANGELOG.md:310, 357, 777, 801
-  Problem: CHANGELOG.md documents substantial v1.7.17/v1.7.16 sections (and 1.7.7/1.7.6) that the in-app "What's New" timeline never shows — users see a version hole. Root-cause gate gap is the P2 verifyReleaseMetadata item above.
-  Fix: Add VersionEntry blocks for the missing versions, or generate the screen's list from CHANGELOG.md at build time so it cannot drift.
-  Acceptance: Every ## v1.7.x in CHANGELOG.md at or above the screen's oldest displayed version appears in ChangelogScreen.
-  Confidence: Verified
-  Effort: S
-
-- [ ] P3 — CHANGELOG.md contains a second "[Unreleased]" section mid-file holding ~180 lines of shipped work
-  Category: docs
-  Where: CHANGELOG.md:5 (## Unreleased) and :535-715 (## [Unreleased], between v1.7.11 and v1.7.10)
-  Problem: The mid-file block ("Distribution prep after the v1.7.10 release": premium component rollout, ASCII-digit routing, feed guardrails, …) shipped in v1.7.11+ but reads as pending; the reverse-chronological contract is broken and Unreleased-parsing tooling mis-attributes it.
-  Fix: Re-head the :535 block as the release(s) it shipped in; keep a single Unreleased section at the top.
-  Acceptance: Exactly one Unreleased header, at the top; all other sections carry version + date.
-  Confidence: Verified
   Effort: S
 
 - [ ] P3 — Fastlane metadata ships zero screenshots; F-Droid listing will be imageless

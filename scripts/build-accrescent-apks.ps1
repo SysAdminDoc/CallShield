@@ -115,15 +115,26 @@ if ($LASTEXITCODE -ne 0) { Write-Error "bundleRelease failed."; exit 1 }
 $aab = "app\build\outputs\bundle\release\app-release.aab"
 if (-not (Test-Path $aab)) { Write-Error "AAB not found at $aab"; exit 1 }
 
-# 2. Generate the signed .apks split set
+# 2. Generate the signed .apks split set.
+# Pass keystore/key passwords via temp files (bundletool `pass:file:`) rather than
+# on the command line, where they would be visible to any local process (Win32_Process)
+# for the duration of the long build-apks run and captured in transcripts.
 $outDir = Split-Path -Parent $OutputApks
 if ($outDir -and -not (Test-Path $outDir)) { New-Item -ItemType Directory -Force $outDir | Out-Null }
 if (Test-Path $OutputApks) { Remove-Item $OutputApks -Force }
 Write-Output "Generating signed .apks split set..."
-& $java -jar $bundletool build-apks `
-    --bundle=$aab --output=$OutputApks --overwrite `
-    --ks=$ks --ks-pass="pass:$KeystorePassword" --ks-key-alias=$KeyAlias --key-pass="pass:$KeyPassword"
-if ($LASTEXITCODE -ne 0) { Write-Error "bundletool build-apks failed."; exit 1 }
+$ksPassFile = New-TemporaryFile
+$keyPassFile = New-TemporaryFile
+try {
+    Set-Content -Path $ksPassFile -Value $KeystorePassword -NoNewline -Encoding ascii
+    Set-Content -Path $keyPassFile -Value $KeyPassword -NoNewline -Encoding ascii
+    & $java -jar $bundletool build-apks `
+        --bundle=$aab --output=$OutputApks --overwrite `
+        --ks=$ks --ks-pass="file:$ksPassFile" --ks-key-alias=$KeyAlias --key-pass="file:$keyPassFile"
+    if ($LASTEXITCODE -ne 0) { Write-Error "bundletool build-apks failed."; exit 1 }
+} finally {
+    Remove-Item $ksPassFile, $keyPassFile -Force -ErrorAction SilentlyContinue
+}
 
 # 3a. Size gate
 $size = (Get-Item $OutputApks).Length

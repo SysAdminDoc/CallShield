@@ -6,12 +6,12 @@
 
 <p align="center">
   <strong>Open-source spam call and text blocker for Android</strong><br>
-  15+ layer detection + Gradient-Boosted Tree ML | 32,933 spam numbers | Real-time caller ID | RCS filter | No required API keys
+  15+ layer detection + Gradient-Boosted Tree ML | 32,613 spam numbers | Real-time caller ID | RCS filter | No required API keys
 </p>
 
 <p align="center">
   <a href="https://github.com/SysAdminDoc/CallShield/releases/latest"><img src="https://img.shields.io/github/v/release/SysAdminDoc/CallShield?style=flat-square&color=a6e3a1" alt="Release"></a>
-  <img src="https://img.shields.io/badge/Spam%20Numbers-32%2C933-f38ba8?style=flat-square" alt="32,933 Numbers">
+  <img src="https://img.shields.io/badge/Spam%20Numbers-32%2C613-f38ba8?style=flat-square" alt="32,613 Numbers">
   <img src="https://img.shields.io/badge/Tests-919-94e2d5?style=flat-square" alt="919 Tests">
   <img src="https://img.shields.io/badge/Android-10%2B-89b4fa?style=flat-square" alt="Android 10+">
   <img src="https://img.shields.io/badge/License-MIT-cba6f7?style=flat-square" alt="MIT License">
@@ -20,7 +20,7 @@
 
 ---
 
-CallShield blocks spam calls and texts using a **15+ layer on-device detection engine** with a gradient-boosted tree ML scorer, campaign burst detection, RCS notification filter, and real-time caller ID overlay. Powered by a 32,933-number database with scheduled hot-list updates. Community-maintained, no accounts, no tracking.
+CallShield blocks spam calls and texts using a **15+ layer on-device detection engine** with a gradient-boosted tree ML scorer, campaign burst detection, RCS notification filter, and real-time caller ID overlay. Powered by a 32,613-number database with scheduled hot-list updates. Community-maintained, no accounts, no tracking.
 
 ## v1.7.23 Highlights
 
@@ -235,7 +235,7 @@ CallShield blocks spam calls and texts using a **15+ layer on-device detection e
 
 ## How It Works
 
-1. **32,933 confirmed spam numbers** — sourced from 1.75M FCC consumer complaints (2+ reports each), FTC Do Not Call, ToastedSpam, and community reports
+1. **32,613 confirmed spam numbers** — sourced from 1.75M FCC consumer complaints (2+ reports each), FTC Do Not Call, ToastedSpam, and community reports
 2. **15+ layer detection + ML** — database, heuristics, campaign burst detection, on-device gradient-boosted tree, SMS content/burst analysis, RCS filter, STIR/SHAKEN, and more
 3. **Real-time caller ID overlay** — parallel lookups against SkipCalls, PhoneBlock, WhoCalledMe + OpenCNAM caller name, with SIT tone anti-autodialer
 4. **Scheduled hot list** — trending spam numbers and campaign ranges refresh through the repository data pipeline
@@ -251,7 +251,7 @@ All detection layers implement a shared `IChecker` interface and run in priority
 | 10000 | **Manual Whitelist** | Allow | Numbers you've explicitly marked as always-allow |
 |  9000 | **Contact Whitelist** | Allow | Numbers in your phone's contacts always pass through |
 |  8500 | **STIR/SHAKEN Failed** | Block | Carrier-authenticated caller ID failure gets blocked before heuristic layers |
-|  7000 | **User Blocklist + Database** | Block | Personal blocklist + 32,933 confirmed spam numbers + scheduled hot-list data |
+|  7000 | **User Blocklist + Database** | Block | Personal blocklist + 32,613 confirmed spam numbers + scheduled hot-list data |
 |  6900 | **System Block List** (A4) | Block | Read-only bridge to Android's `BlockedNumberContract` — respects stock Phone/Messages blocks |
 |  6000 | **Prefix Rules** | Block | Wangiri country codes, US premium rate (+1900), international premium |
 |  5500 | **Wildcard / Regex** | Block | Custom patterns like `+1832555*` or full regex, now with optional schedule |
@@ -384,7 +384,7 @@ Trained weekly from the CallShield database (50K positive + 50K negative samples
 
 ## Data Sources
 
-### Database (32,933 numbers, locally maintained)
+### Database (32,613 numbers, locally maintained)
 | Source | Method |
 |--------|--------|
 | **FCC Consumer Complaints** | Socrata API, 500K records, min 2 reports |

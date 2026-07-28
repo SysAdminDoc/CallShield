@@ -42,9 +42,16 @@ $referenceEntries = Get-ZipEntryFingerprint -Path $ReferenceApk
 $candidateEntries = Get-ZipEntryFingerprint -Path $CandidateApk
 $entryNames = @($referenceEntries.Name + $candidateEntries.Name | Sort-Object -Unique)
 
+# Index by entry name once (O(n)) instead of re-scanning both full arrays per
+# name with Where-Object (O(n^2) — millions of comparisons for a real APK).
+$referenceByName = @{}
+foreach ($entry in $referenceEntries) { $referenceByName[$entry.Name] = $entry }
+$candidateByName = @{}
+foreach ($entry in $candidateEntries) { $candidateByName[$entry.Name] = $entry }
+
 $diffs = foreach ($name in $entryNames) {
-    $reference = $referenceEntries | Where-Object Name -eq $name
-    $candidate = $candidateEntries | Where-Object Name -eq $name
+    $reference = $referenceByName[$name]
+    $candidate = $candidateByName[$name]
 
     if (
         -not $reference -or

@@ -239,6 +239,11 @@ tasks.register("verifyReleaseMetadata") {
     val fdroidMetadata = layout.projectDirectory.file("docs/fdroid/com.sysadmindoc.callshield.yml")
     val fdroidRunbook = layout.projectDirectory.file("docs/fdroid-submission.md")
     val signingPreflight = layout.projectDirectory.file("scripts/verify-release-signing.ps1")
+    val changelog = layout.projectDirectory.file("CHANGELOG.md")
+    val changelogScreen =
+        layout.projectDirectory.file(
+            "app/src/main/java/com/sysadmindoc/callshield/ui/screens/more/ChangelogScreen.kt",
+        )
     inputs.files(
         "app/build.gradle.kts",
         readme,
@@ -248,6 +253,8 @@ tasks.register("verifyReleaseMetadata") {
         fdroidMetadata,
         fdroidRunbook,
         signingPreflight,
+        changelog,
+        changelogScreen,
     )
 
     doLast {
@@ -258,6 +265,21 @@ tasks.register("verifyReleaseMetadata") {
         val fdroidText = fdroidMetadata.asFile.readText()
         val runbookText = fdroidRunbook.asFile.readText()
         val signingPreflightText = signingPreflight.asFile.readText()
+        val changelogText = changelog.asFile.readText()
+        val changelogScreenText = changelogScreen.asFile.readText()
+
+        if ("## v${appReleaseVersion.name}" !in changelogText) {
+            issues += "CHANGELOG.md has no section for v${appReleaseVersion.name}."
+        }
+        if (Regex("""## \[?Unreleased""").findAll(changelogText).count() > 1) {
+            issues += "CHANGELOG.md has more than one Unreleased section."
+        }
+        if ("\"${appReleaseVersion.name}\"" !in changelogScreenText) {
+            issues += "In-app ChangelogScreen has no entry for v${appReleaseVersion.name}."
+        }
+        if ("isLatest = true" !in changelogScreenText) {
+            issues += "In-app ChangelogScreen must flag a latest version entry."
+        }
 
         if ("## v${appReleaseVersion.name} Highlights" !in readmeText) {
             issues += "README highlights do not match app version ${appReleaseVersion.name}."

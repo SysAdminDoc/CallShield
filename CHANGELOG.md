@@ -619,11 +619,7 @@ data/persistence/network layers.
 
 - **Profile selection auto-reset** ([#2](https://github.com/SysAdminDoc/CallShield/issues/2)) — Selecting a blocking profile (Work / Personal / Sleep / Maximum / Off) appeared to "reset" on the Dashboard chip row after process death or ViewModel recreation. The profile's underlying flag changes (block calls, aggressive mode, time block, etc.) were correctly applied and persisted, but the active-profile *indicator* itself was held in an in-memory `MutableStateFlow` and lost on every VM init. Now persisted to DataStore under `KEY_ACTIVE_PROFILE`; the dashboard chip stays selected across restarts.
 
-## [Unreleased]
-
-Distribution prep after the v1.7.10 release.
-
-### UX and visual polish
+### Distribution prep (post-v1.7.10) — UX and visual polish
 
 - Extended the premium Compose component system across the major user-facing
   flows, including dashboard scan actions, number details, recent-call recovery,
