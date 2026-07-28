@@ -133,7 +133,6 @@ fun LookupScreen(viewModel: MainViewModel) {
     var checking by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     val canLookup = hasMinAsciiDigits(normalizedNumber)
-    val lookupFailedUnknown = stringResource(R.string.lookup_failed_unknown).substringAfter(": ")
     val numberBlockedMessage = stringResource(R.string.lookup_number_blocked)
     val reportedMessage = stringResource(R.string.lookup_reported)
     val markedSafeReportedMessage = stringResource(R.string.lookup_marked_safe_reported)
@@ -167,12 +166,10 @@ fun LookupScreen(viewModel: MainViewModel) {
                 result = lookupResult
                 trace = traceResult
                 haptic(context, lookupResult.isSpam)
-            } catch (e: Exception) {
-                errorMessage =
-                    resources.getString(
-                        R.string.lookup_failed,
-                        e.message ?: lookupFailedUnknown,
-                    )
+            } catch (_: Exception) {
+                // Show a localized generic message — never the raw exception text
+                // (SQLite constraint names, OkHttp internals) which isn't localized.
+                errorMessage = resources.getString(R.string.lookup_failed)
             } finally {
                 checking = false
             }
@@ -462,8 +459,8 @@ fun LookupScreen(viewModel: MainViewModel) {
                                                 }
                                                 hapticConfirm(context)
                                                 numberBlockedMessage
-                                            } catch (e: Exception) {
-                                                resources.getString(R.string.lookup_block_failed, e.message ?: "")
+                                            } catch (_: Exception) {
+                                                resources.getString(R.string.lookup_block_failed)
                                             }
                                         snackbarHostState.showSnackbar(message)
                                     }
@@ -505,8 +502,8 @@ fun LookupScreen(viewModel: MainViewModel) {
                                                     }
                                                 }
                                             }
-                                        } catch (e: Exception) {
-                                            resources.getString(R.string.lookup_report_failed, e.message ?: "")
+                                        } catch (_: Exception) {
+                                            resources.getString(R.string.lookup_report_failed)
                                         }
                                     hapticTick(context)
                                     snackbarHostState.showSnackbar(message)
@@ -848,19 +845,19 @@ private fun PipelineTraceSection(trace: com.sysadmindoc.callshield.data.checker.
                     val (icon, tint, label) =
                         when (entry.verdict) {
                             com.sysadmindoc.callshield.data.checker.PipelineTraceVerdict.BLOCK -> {
-                                Triple(Icons.Default.Block, CatRed, "BLOCK")
+                                Triple(Icons.Default.Block, CatRed, stringResource(R.string.lookup_trace_block))
                             }
 
                             com.sysadmindoc.callshield.data.checker.PipelineTraceVerdict.ALLOW -> {
-                                Triple(Icons.Default.CheckCircle, CatGreen, "ALLOW")
+                                Triple(Icons.Default.CheckCircle, CatGreen, stringResource(R.string.lookup_trace_allow))
                             }
 
                             com.sysadmindoc.callshield.data.checker.PipelineTraceVerdict.DISABLED -> {
-                                Triple(Icons.Default.Close, CatOverlay, "OFF")
+                                Triple(Icons.Default.Close, CatOverlay, stringResource(R.string.lookup_trace_off))
                             }
 
                             com.sysadmindoc.callshield.data.checker.PipelineTraceVerdict.PASS -> {
-                                Triple(Icons.Default.Remove, CatSubtext, "PASS")
+                                Triple(Icons.Default.Remove, CatSubtext, stringResource(R.string.lookup_trace_pass))
                             }
                         }
                     Row(
