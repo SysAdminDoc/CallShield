@@ -63,24 +63,23 @@ class BackupRestoreTest {
 
     @Test
     fun `BackupNumber stores all fields`() {
-        val bn = BackupNumber("2125551234", "robocall", "Spam caller", "user")
+        val bn = BackupNumber("2125551234", "robocall", "Spam caller")
         assertEquals("2125551234", bn.number)
         assertEquals("robocall", bn.type)
         assertEquals("Spam caller", bn.description)
-        assertEquals("user", bn.source)
     }
 
     @Test
     fun `BackupNumber equality`() {
-        val a = BackupNumber("2125551234", "robocall", "Spam", "user")
-        val b = BackupNumber("2125551234", "robocall", "Spam", "user")
+        val a = BackupNumber("2125551234", "robocall", "Spam")
+        val b = BackupNumber("2125551234", "robocall", "Spam")
         assertEquals(a, b)
     }
 
     @Test
     fun `BackupNumber inequality on different number`() {
-        val a = BackupNumber("2125551234", "robocall", "Spam", "user")
-        val b = BackupNumber("3105551234", "robocall", "Spam", "user")
+        val a = BackupNumber("2125551234", "robocall", "Spam")
+        val b = BackupNumber("3105551234", "robocall", "Spam")
         assertNotEquals(a, b)
     }
 
@@ -211,7 +210,7 @@ class BackupRestoreTest {
         val validation =
             BackupRestore.validateBackupForRestore(
                 Backup(
-                    blockedNumbers = listOf(BackupNumber("12", "spam", "too short", "user")),
+                    blockedNumbers = listOf(BackupNumber("12", "spam", "too short")),
                     whitelistNumbers = listOf(BackupWhitelist("abc", "not a number")),
                     wildcardRules = listOf(BackupWildcard(" ", isRegex = false, description = "", enabled = true)),
                     keywordRules = listOf(BackupKeyword(" ", caseSensitive = false, description = "", enabled = true)),
@@ -226,7 +225,7 @@ class BackupRestoreTest {
         val validation =
             BackupRestore.validateBackupForRestore(
                 Backup(
-                    blockedNumbers = listOf(BackupNumber(" (212) 555-1234 ", "", "  Sales  ", "")),
+                    blockedNumbers = listOf(BackupNumber(" (212) 555-1234 ", "", "  Sales  ")),
                     whitelistNumbers = listOf(BackupWhitelist("+1 303 555 0100", "  Clinic  ", isEmergency = true)),
                     wildcardRules =
                         listOf(
@@ -279,8 +278,8 @@ class BackupRestoreTest {
                 version = 5,
                 blockedNumbers =
                     listOf(
-                        BackupNumber("2125551234", "robocall", "Test", "user"),
-                        BackupNumber("3105559876", "telemarketer", "Sales", "community"),
+                        BackupNumber("2125551234", "robocall", "Test"),
+                        BackupNumber("3105559876", "telemarketer", "Sales"),
                     ),
                 whitelistNumbers =
                     listOf(
@@ -313,7 +312,7 @@ class BackupRestoreTest {
     fun `Backup copy with modified version simulates v1`() {
         val current =
             Backup(
-                blockedNumbers = listOf(BackupNumber("2125551234", "spam", "Test", "user")),
+                blockedNumbers = listOf(BackupNumber("2125551234", "spam", "Test")),
             )
         val v1 = current.copy(version = 1)
         assertEquals(1, v1.version)
@@ -328,7 +327,7 @@ class BackupRestoreTest {
                 Backup(
                     blockedNumbers =
                         listOf(
-                            BackupNumber("2125551234", "spam", "Temporary block", "user", futureExpiry),
+                            BackupNumber("2125551234", "spam", "Temporary block", futureExpiry),
                         ),
                     whitelistNumbers =
                         listOf(
@@ -373,7 +372,7 @@ class BackupRestoreTest {
                 Backup(
                     blockedNumbers =
                         listOf(
-                            BackupNumber("2125551234", "spam", "Expired block", "user", expiresAt = 1L),
+                            BackupNumber("2125551234", "spam", "Expired block", expiresAt = 1L),
                         ),
                     whitelistNumbers =
                         listOf(
@@ -475,7 +474,7 @@ class BackupRestoreTest {
 
     @Test
     fun `BackupNumber with empty strings`() {
-        val bn = BackupNumber("", "", "", "")
+        val bn = BackupNumber("", "", "")
         assertEquals("", bn.number)
         assertEquals("", bn.type)
     }
@@ -484,7 +483,7 @@ class BackupRestoreTest {
     fun `Backup with large blocked list`() {
         val numbers =
             (1..100).map {
-                BackupNumber("212555${it.toString().padStart(4, '0')}", "spam", "Entry $it", "user")
+                BackupNumber("212555${it.toString().padStart(4, '0')}", "spam", "Entry $it")
             }
         val backup = Backup(blockedNumbers = numbers)
         assertEquals(100, backup.blockedNumbers.size)
@@ -514,7 +513,7 @@ class BackupRestoreTest {
         assertEquals(100, payload.logs.single().confidence)
     }
 
-    private fun validBackupNumber(): BackupNumber = BackupNumber("2125551234", "spam", "Test", "user")
+    private fun validBackupNumber(): BackupNumber = BackupNumber("2125551234", "spam", "Test")
 
     private fun assertInvalidRestore(
         validation: BackupRestore.RestoreValidation,

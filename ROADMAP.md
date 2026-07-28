@@ -608,9 +608,6 @@ Focus areas not covered by prior passes: the Developer-Verification survival pat
 - [ ] P3 — Widget ignores the app theme
   Why: RemoteViews layout is permanently AMOLED-dark with palette literals in updateWidget; clashes on Light-themed devices. Needs values-night qualifiers or theme-selected literals (contrast of the fixed palette was fixed in v1.7.23).
   Where: ui/widget/CallShieldWidget.kt, res/layout/widget_callshield.xml
-- [ ] P3 — BackupNumber.source is exported but not round-tripped
-  Why: Restore recreates rows as source="user" (which protects them from sync's replaceBySource — defensible), leaving the exported field and its sanitizer dead. Decide: pass source through with sync-safety rules, or stop exporting it.
-  Where: data/BackupRestore.kt (createBackup/sanitized), data/repository/BlocklistRepository.kt (blockNumber)
 
 ## Audit Findings — 2026-07-28 (anchored to v1.7.23, versionCode 51; found, not fixed)
 

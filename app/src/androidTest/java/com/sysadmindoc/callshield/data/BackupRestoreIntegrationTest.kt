@@ -63,7 +63,7 @@ class BackupRestoreIntegrationTest {
             val passphrase = "correct horse battery staple".toCharArray()
             val backup =
                 Backup(
-                    blockedNumbers = listOf(BackupNumber("+15551234567", "scam", "Test", "user")),
+                    blockedNumbers = listOf(BackupNumber("+15551234567", "scam", "Test")),
                 )
             val plaintext = BackupRestore.backupToJson(backup).toByteArray()
             val encrypted = PortableBackupCrypto.encrypt(plaintext, passphrase)
@@ -113,8 +113,8 @@ class BackupRestoreIntegrationTest {
                 Backup(
                     blockedNumbers =
                         listOf(
-                            BackupNumber("+15550000001", "spam", "Existing", "user"),
-                            BackupNumber("+15550000003", "spam", "New", "user"),
+                            BackupNumber("+15550000001", "spam", "Existing"),
+                            BackupNumber("+15550000003", "spam", "New"),
                         ),
                     whitelistNumbers = listOf(BackupWhitelist("+15550000002", "Existing")),
                     wildcardRules =
@@ -217,7 +217,7 @@ class BackupRestoreIntegrationTest {
 
             val backup =
                 Backup(
-                    blockedNumbers = listOf(BackupNumber("+15559990000", "spam", "Ignored", "user")),
+                    blockedNumbers = listOf(BackupNumber("+15559990000", "spam", "Ignored")),
                     whitelistNumbers = listOf(BackupWhitelist("+15559990001", "Ignored")),
                     wildcardRules = listOf(BackupWildcard("900*", isRegex = false, description = "Ignored", enabled = true)),
                     keywordRules = listOf(BackupKeyword("verify", caseSensitive = false, description = "Ignored", enabled = true)),
@@ -268,7 +268,7 @@ class BackupRestoreIntegrationTest {
             val preview =
                 preview(
                     Backup(
-                        blockedNumbers = listOf(BackupNumber("+15559990000", "spam", "Ignored", "user")),
+                        blockedNumbers = listOf(BackupNumber("+15559990000", "spam", "Ignored")),
                         settings =
                             BackupSettings(
                                 blockCallsEnabled = false,
@@ -349,7 +349,7 @@ class BackupRestoreIntegrationTest {
         val preview =
             preview(
                 Backup(
-                    blockedNumbers = listOf(BackupNumber("+15559990000", "spam", "New", "user")),
+                    blockedNumbers = listOf(BackupNumber("+15559990000", "spam", "New")),
                     whitelistNumbers = listOf(BackupWhitelist("+15559990001", "New")),
                     wildcardRules = listOf(BackupWildcard("900*", false, "New", true)),
                     keywordRules = listOf(BackupKeyword("verify", false, "New", true)),
@@ -414,7 +414,7 @@ class BackupRestoreIntegrationTest {
 
     private fun completeBackup(): Backup =
         Backup(
-            blockedNumbers = listOf(BackupNumber("+15559990000", "spam", "Restored", "user")),
+            blockedNumbers = listOf(BackupNumber("+15559990000", "spam", "Restored")),
             whitelistNumbers = listOf(BackupWhitelist("+15559990001", "Restored", isEmergency = true)),
             wildcardRules = listOf(BackupWildcard("900*", isRegex = false, description = "Restored", enabled = true)),
             keywordRules =
