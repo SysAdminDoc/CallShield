@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   normalizePhoneNumberForReport,
+  isPlausibleReportNumber,
   normalizeSmsDomain,
   sanitizeSmsDomains,
   sanitizeSmsReportFields,
@@ -24,6 +25,16 @@ test("rejects Unicode digit spoofing and overlong report numbers", () => {
   assert.equal(normalizePhoneNumberForReport("\u0661\u0662\u0663\u0664\u0665\u0666\u0667\u0668\u0669\u0660"), null);
   assert.equal(normalizePhoneNumberForReport("\uFF11\uFF12\uFF13\uFF14\uFF15\uFF16\uFF17\uFF18\uFF19\uFF10"), null);
   assert.equal(normalizePhoneNumberForReport("+1234567890123456"), null);
+});
+
+test("plausibility gate rejects fictional and malformed report numbers", () => {
+  assert.equal(isPlausibleReportNumber("+12122345678"), true); // valid NANP
+  assert.equal(isPlausibleReportNumber("+442071234567"), true); // valid UK
+  assert.equal(isPlausibleReportNumber("+15551234567"), false); // NANP area code 555
+  assert.equal(isPlausibleReportNumber("+12125550101"), false); // 555 exchange (fiction)
+  assert.equal(isPlausibleReportNumber("+12119345678"), false); // N11 area code (211)
+  assert.equal(isPlausibleReportNumber("+01145884697"), false); // leading-zero country code
+  assert.equal(isPlausibleReportNumber("+1234567"), false); // too short
 });
 
 test("sanitizes SMS domain indicators without URL paths", () => {

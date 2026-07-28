@@ -22,6 +22,31 @@ export function normalizePhoneNumberForReport(number) {
   return `+${digits}`;
 }
 
+/**
+ * Reject fictional, malformed, and structurally invalid report numbers before
+ * they are committed to the shared database. Mirrors is_plausible_number in
+ * scripts/phone_normalization.py. Expects the E.164 output of
+ * normalizePhoneNumberForReport ("+digits").
+ */
+export function isPlausibleReportNumber(e164) {
+  if (typeof e164 !== "string" || !e164.startsWith("+")) return false;
+  const digits = e164.slice(1);
+  if (!/^[0-9]+$/.test(digits)) return false;
+  if (digits.length < 8 || digits.length > 15) return false;
+  if (digits[0] === "0") return false; // no country calling code starts with 0
+  if (digits[0] === "1") {
+    // NANP
+    if (digits.length !== 11) return false;
+    const npa = digits.slice(1, 4);
+    const nxx = digits.slice(4, 7);
+    // Area code: N[0-9][0-9]; not an N11 service code, not the 555 pseudo-code.
+    if (npa[0] < "2" || npa.slice(1) === "11" || npa === "555") return false;
+    // Exchange: N[0-9][0-9]; 555 is reserved for fiction/directory assistance.
+    if (nxx[0] < "2" || nxx === "555") return false;
+  }
+  return true;
+}
+
 export function normalizeSmsDomain(value) {
   if (typeof value !== "string") return null;
 
@@ -243,7 +268,7 @@ code{background:#252525;padding:2px 6px;border-radius:4px;font-size:12px;color:#
       const smsReportFields = sanitizeSmsReportFields(body);
 
       const normalized = normalizePhoneNumberForReport(number);
-      if (!normalized) {
+      if (!normalized || !isPlausibleReportNumber(normalized)) {
         return new Response(JSON.stringify({ error: "Invalid phone number" }), {
           status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" }
         });

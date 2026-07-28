@@ -639,16 +639,6 @@ Baseline at audit time: `testDebugUnitTest`, `ktlintCheck`, `detekt`, `lintDebug
 
 ### P1
 
-- [ ] P1 — Anonymous `not_spam` reports can delete authoritative FCC/FTC entries from the shared blocklist (de-listing attack)
-  Category: security
-  Where: scripts/merge_community_reports.py:64-72 (`not_spam` branch); reachable because worker/community-reports-worker.js:241 accepts `not_spam` in VALID_TYPES
-  Problem: A `not_spam` report decrements `existing[number]["reports"]` and deletes the row entirely at 0, with no auth, no source check, and no protection for authoritative data. An anonymous attacker can drive any number's count down and remove real spammers from every user's shipped database.
-  Evidence: Verified against current data: ~40 community entries have reports==1 (one report deletes them); 11,740 FCC/FTC-sourced entries have reports<=3 (deleted by ≤3 reports each). Worker rate limiting is per-IP burst (5/60s) + per-IP+number 5-min dedup only — mass de-listing across IPs/time is feasible. Distinct from the blocked "threshold-based reputation weighting" item (that weights positive votes; this is unguarded destructive removal).
-  Fix: In the merge, never let `not_spam` delete non-community rows (gate on source/description); require a minimum opposing-vote threshold before any removal; floor authoritative entries. Alternatively route `not_spam` to a review queue instead of mutating the shipped DB.
-  Acceptance: A stream of `not_spam` reports for an FCC-sourced number cannot remove it from spam_numbers.json; a unit test asserts authoritative rows survive N `not_spam` merges.
-  Confidence: Verified
-  Effort: M
-
 ### P2
 
 - [ ] P2 — SMS shortener/TLD detection uses substring matching, flagging every `*t.com` URL as a shortened link
@@ -690,26 +680,6 @@ Baseline at audit time: `testDebugUnitTest`, `ktlintCheck`, `detekt`, `lintDebug
   Acceptance: Test — temp-block a number owned by an external feed, re-apply the feed, assert the row still expires on schedule.
   Confidence: Verified
   Effort: S
-
-- [ ] P2 — ~300 corrupt-dated DB entries; the bundled hot list consists entirely of future-dated garbage rows
-  Category: correctness
-  Where: data/spam_numbers.json (~304 entries with first_seen year < 2000, 7 with last_seen year 2104-2915); data/hot_numbers.json; scripts/generate_hot_list.py:100-102
-  Problem: generate_hot_list.py selects "recent" numbers with a lexicographic string compare `last_seen >= yesterday`, so future-dated corrupt entries ("2915-10-15") always qualify. The 5 entries of the shipped hot_numbers.json ("trending in last 24h") are exactly the 5 future-dated rows with reports ≥ 5 (+13042635785/2105, +12054090895/2104, +18442409758/2915, +12107149755/2106, +17862985682/2105). HotDataSync.primeBundled seeds these on first launch as active campaigns, and genuinely trending numbers can never displace them. Distinct from the stalled-pipeline item — a fresh run reproduces this selection.
-  Evidence: Verified by JSON analysis this session (counts above reproduce with a 3-line python check). Import scripts perform no date validation.
-  Fix: Validate/clamp dates in the import scripts (reject years outside 2000..today); in generate_hot_list.py parse last_seen to a real date and reject future values before the recency filter; regenerate the bundled JSONs.
-  Acceptance: Regenerated spam_numbers.json has 0 entries with year < 2000 or > current year; hot_numbers.json contains only entries whose last_seen falls inside the stated window.
-  Confidence: Verified
-  Effort: M
-
-- [ ] P2 — No plausibility/NANP validation lets fictional, malformed, and junk numbers into the shipped database
-  Category: correctness
-  Where: worker/community-reports-worker.js:20-22 (`normalizePhoneNumberForReport`); scripts/phone_normalization.py:18-25 (`normalize_report_number`)
-  Problem: Both stages accept any 7-15 digit string. Fictional 555-01xx test numbers, leading-zero strings, and invalid-NANP-area-code numbers pass and merge into spam_numbers.json shipped to all users (GitHubDataSource.validateSpamDatabase checks only version/row caps, no per-number plausibility).
-  Evidence: Git history: repeated "Community report: +15551234567"/"+15559876543" commits (fictional numbers), "+10275461108" (invalid NANP area code 027). data/reports/ holds junk pending files: 10275461108_*.json, 02489919806_*.json (leading zero), 07001235746_*.json. Worker tests assert only length/Unicode handling — no plausibility test exists.
-  Fix: Shared NANP/E.164 plausibility validator (reject 555-01xx, enforce `[2-9]XX[2-9]XX` NANP shape for +1, reject "+1 0…" forms) at the Worker (400) and again in normalize_report_number before merge.
-  Acceptance: Posting +15551234567 or +10275461108 returns 400 at the Worker and is skipped by the merge; regression tests cover each class.
-  Confidence: Verified
-  Effort: M
 
 - [ ] P2 — NumberDetailScreen matches by raw string while all stores hold canonicalized numbers — empty/wrong data when opened from Recent
   Category: correctness
@@ -780,16 +750,6 @@ Baseline at audit time: `testDebugUnitTest`, `ktlintCheck`, `detekt`, `lintDebug
   Acceptance: File absent from `git ls-files` and from all reachable history on GitHub.
   Confidence: Verified
   Effort: S
-
-- [ ] P2 — Community-report/hot-list pipeline stalled since 2026-05-25; 163 pending reports unmerged, hot feeds two months stale
-  Category: reliability
-  Where: data/hot_numbers.json (generated 2026-05-25T09:24:59Z), data/reports/ (163 tracked *.json), scripts/generate_hot_list.py:8 docstring
-  Problem: Weekly "Update hot list + merge community reports" commits stopped 2026-05-25 (3e26a56) when the scheduled job was removed (no .github/workflows/, by policy) with no local replacement cadence. The worker keeps auto-committing reports (through July); 163 pending report files sit unmerged; hot_numbers.json/hot_ranges.json served to every install's 30-minute HotListSyncWorker are two months stale; spam_numbers.json (v26, 32,973 rows) hasn't absorbed the reports. generate_hot_list.py's docstring still claims it is "Called by the merge-reports GitHub Action workflow", which no longer exists.
-  Evidence: `git log -- data/hot_numbers.json` → last touch 2026-05-25; `git ls-files data/reports | measure` → 163 (verified this session).
-  Fix: Run the documented data/README.md regen sequence (merge → hot list → domains → retrain → evaluate) AFTER landing the P1 not_spam guard and the P2 validation/date fixes above; establish a local scheduled task (Windows Task Scheduler) or release-checklist step for the cadence; fix the stale docstring (generate_hot_list.py:8, 143).
-  Acceptance: data/reports/ drained, hot_numbers.json current, spam DB version bumped; docstring no longer references GitHub Actions.
-  Confidence: Verified
-  Effort: S (run) / M (scheduling)
 
 - [ ] P2 — Database tab materializes the entire spam table (SELECT *, unbounded) into a StateFlow list
   Category: perf
@@ -1029,33 +989,6 @@ Baseline at audit time: `testDebugUnitTest`, `ktlintCheck`, `detekt`, `lintDebug
   Fix: In rotate() (or install()), delete crash_*.txt.tmp older than a few minutes.
   Acceptance: After a simulated mid-write kill, next app start leaves no stale .tmp files.
   Confidence: Verified
-  Effort: S
-
-- [ ] P3 — Merge script: non-atomic 6.6 MB DB rewrite and poison-pill reports retried forever
-  Category: reliability
-  Where: scripts/merge_community_reports.py:99-100 (truncate-write), :62 (reported_at[:10] on unvalidated type), :91-92 (blanket handler leaves file in place)
-  Problem: (a) `open(DB_FILE, "w")` truncates in place; a mid-dump kill leaves truncated JSON that an auto-commit can publish to the raw URL all clients sync (app-side schema/byte caps fail safe, but the feed is broken until manually fixed). (b) A report whose reported_at is a non-string raises TypeError at :62, caught without adding the file to processed_files — it re-errors on every future run, silently and forever.
-  Fix: Write to a temp file + os.replace (validate re-parse before swap); validate field types up front and quarantine unparseable reports to reports/rejected/ (counted in the summary).
-  Acceptance: Kill mid-merge leaves the original spam_numbers.json intact; a report with `"reported_at": 123` is quarantined on first run.
-  Confidence: Verified
-  Effort: S
-
-- [ ] P3 — generate_hot_list.py can crash mid-publish on Windows (U+26A0 print between the two JSON writes)
-  Category: reliability
-  Where: scripts/generate_hot_list.py:146 (⚠ print), writes at :132 and :167
-  Problem: The velocity-spike banner prints "⚠", not encodable in cp1252. With redirected stdout on Windows (the rtk tee wrapper this machine uses), print raises UnicodeEncodeError after hot_numbers.json is written but before hot_ranges.json — a fresh hot list committed alongside a stale ranges file. The spike branch triggers on any number with ≥10 reports/24h (real bursts exist in data/reports).
-  Fix: Replace "⚠" with ASCII "WARNING:" per the repo ASCII convention, and/or move all prints after both writes; note PYTHONUTF8=1 in the runbook.
-  Acceptance: `python scripts/generate_hot_list.py > out.txt` succeeds on Windows with a spike present; both JSONs share the same generated timestamp.
-  Confidence: Verified (code path)
-  Effort: S
-
-- [ ] P3 — Hot-list velocity signal likely never fires from fresh reports because the merge deletes them first
-  Category: correctness
-  Where: scripts/generate_hot_list.py:55-89 (reads REPORTS_DIR) vs scripts/merge_community_reports.py:103-111 (deletes all report files)
-  Problem: The docstring says the hot list is generated "after each merge run", but the merge deletes every report file first — run in that order the pending-report velocity tally is always empty, so the hot list only reflects DB rows with reports≥5 updated today/yesterday, defeating the "hours before the nightly merge" purpose. No workflow file exists to confirm actual ordering (see also the stalled-pipeline P2).
-  Fix: When re-establishing the pipeline cadence, run generate_hot_list.py BEFORE merge_community_reports.py (or archive rather than delete reports, or drive the hot list off a persistent rolling window); document the order in data/README.md.
-  Acceptance: A fresh in-window report appears in hot_numbers.json even when merge runs in the same job.
-  Confidence: Needs-repro (depends on the re-established orchestration order)
   Effort: S
 
 ### P3 — performance / UX / visual

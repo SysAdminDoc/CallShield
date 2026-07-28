@@ -1,7 +1,13 @@
 #!/usr/bin/env python3
 """Regression tests for Python report/import phone normalization."""
 
-from phone_normalization import normalize_nanp_number, normalize_phone_number, normalize_report_number
+from phone_normalization import (
+    is_plausible_number,
+    normalize_nanp_number,
+    normalize_phone_number,
+    normalize_report_number,
+    validated_report_number,
+)
 
 
 def main() -> None:
@@ -17,6 +23,20 @@ def main() -> None:
 
     assert normalize_nanp_number("212-555-1234") == "+12125551234"
     assert normalize_nanp_number("+442071234567") is None
+
+    # Plausibility gating at the report trust boundary.
+    assert is_plausible_number("+12122345678") is True          # valid NANP
+    assert is_plausible_number("+442071234567") is True          # valid UK
+    assert is_plausible_number("+15551234567") is False          # NANP area code 555
+    assert is_plausible_number("+12125550101") is False          # 555 exchange (fiction)
+    assert is_plausible_number("+12119345678") is False          # N11 area code (211)
+    assert is_plausible_number("+01145884697") is False          # leading-zero country code
+    assert is_plausible_number("+1234567") is False              # too short
+
+    assert validated_report_number("212-234-5678") == "+12122345678"
+    assert validated_report_number("+15559876543") is None       # fictional test number
+    assert validated_report_number("01145884697") is None        # junk international prefix
+    assert validated_report_number("+442071234567") == "+442071234567"
 
 
 if __name__ == "__main__":

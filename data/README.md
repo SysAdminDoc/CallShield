@@ -49,12 +49,14 @@ pip install -r scripts/requirements.txt   # scikit-learn, numpy
 python scripts/import_all_sources.py                       # writes data/spam_numbers.json
 python scripts/update_ftc.py --days 365                    # merge recent FTC complaints
 
-# 2. Fold in anonymous community reports (consumes data/reports/*.json)
-python scripts/merge_community_reports.py
+# 2. Regenerate the hot lists FIRST — they read data/reports/*.json, which the
+#    merge step deletes. Running merge first would leave the hot lists empty.
+python scripts/generate_hot_list.py                        # trending numbers / NPA-NXX ranges
+python scripts/extract_spam_domains.py                     # trending spam domains
 
-# 3. Regenerate the hot lists (trending numbers / NPA-NXX ranges / domains)
-python scripts/generate_hot_list.py
-python scripts/extract_spam_domains.py
+# 3. Fold anonymous community reports into the main DB (consumes + clears data/reports/*.json;
+#    junk/fictional numbers are dropped, unreadable reports quarantined to data/reports/rejected/)
+python scripts/merge_community_reports.py
 
 # 4. Retrain the on-device GBT scorer and emit versioned weights
 python scripts/train_spam_model.py --output data/spam_model_weights.json
