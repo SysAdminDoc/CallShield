@@ -641,26 +641,6 @@ Baseline at audit time: `testDebugUnitTest`, `ktlintCheck`, `detekt`, `lintDebug
 
 ### P2
 
-- [ ] P2 — SMS shortener/TLD detection uses substring matching, flagging every `*t.com` URL as a shortened link
-  Category: correctness
-  Where: data/SmsContentAnalyzer.kt:268 (`analyze`), sibling bug at :273; correct logic exists at :207 (`extractReportableIndicators`)
-  Problem: `shortenerDomains.any { url.contains(it) }` matches "t.co" inside microsoft.com, reddit.com, walmart.com, target.com, comcast.com → +35 `shortened_url`. A short message (<50 chars) with such a link adds +20 `short_msg_with_url` → 55 ≥ 50 normal threshold → legit SMS blocked. In aggressive mode (25) the +35 alone blocks. :273 runs the TLD check against the whole URL, so a path like `example.com/file.info` triggers `suspicious_tld` (+30).
-  Evidence: isSpamSms → SmsContentChecker (Checkers.kt:864-888, default-enabled) → analyze; "microsof**t.co**m" contains "t.co". `extractReportableIndicators` already does it right: `domain == it || domain.endsWith(".$it")` on the extracted domain. SmsContentAnalyzerTest has no negative test for `*t.com` domains.
-  Fix: In `analyze`, extract the domain (`extractDomain`) and compare exactly as :207 does; apply the TLD check to the extracted domain (`domain.endsWith(it)`), not the raw URL.
-  Acceptance: `analyze("check https://microsoft.com/x")` produces no `shortened_url` reason; `analyze("https://t.co/abc")` still does; regression tests lock both.
-  Confidence: Verified
-  Effort: S
-
-- [ ] P2 — isSpamSms discards ALLOW verdicts from the shared chain: whitelist/contact allows don't protect senders from sms_burst/sms_content blocks
-  Category: correctness
-  Where: data/repository/SpamRepositoryImpl.kt:139-159 (`isSpamSms`); data/checker/Checkers.kt:820-842 (SmsBurstChecker), :864-888 (SmsContentChecker)
-  Problem: `isSpamSms` keeps the shared-chain result only `if (numberResult.isSpam)` — an ALLOW verdict (manual_whitelist priority 10 000, contact_whitelist, temporary_allow) is thrown away, then the SMS extension chain runs with full blocking power. A manually whitelisted sender with no prior SMS history who sends 3 messages in 30 min is blocked by sms_burst (confidence 85); their content can be blocked by sms_content. Contradicts BlockReasoning's "Always allowed — matched layer 1". SmsContextTrustChecker trusts SMS history only, not the whitelist. (The keyword-rule override of whitelists is intentional and test-locked by SmsPipelineIntegrationTest.smsKeywordRulesStillInspectWhitelistedSenders — preserve it.)
-  Evidence: SpamRepositoryImpl.kt:141-142 (`if (numberResult.isSpam) return` — allow falls through to CheckerPipeline.run(smsExtensions) at :156). SmsContextChecker.isTrustedSender (SmsContextChecker.kt:112-115) queries only Telephony history. Note: SmsBurstCheckerTest compares SMS_BURST against call-ladder constants from a different pipeline, so it proves nothing about runtime yielding.
-  Fix: When the shared chain returns an explicit user-intent allow (manual_whitelist / emergency_contact / contact_whitelist / temporary_allow), skip the burst/content extension checkers (keep the keyword-rule exception). Simplest: propagate the allow's matchSource into the extension CheckContext and have SmsBurstChecker/SmsContentChecker yield to it.
-  Acceptance: Integration test: whitelisted sender + 3 rapid messages → not spam; whitelisted sender + spammy content (no keyword rule) → not spam; existing keyword test still passes.
-  Confidence: Verified
-  Effort: M
-
 - [ ] P2 — Backup restore never invalidates the hash-wildcard (range-rule) cache
   Category: correctness
   Where: data/SpamRepository.kt:665-668 (`invalidateRestoredRuleCaches`); data/BackupRestore.kt restorePayload (hash rules written via dao.insertHashWildcardRule / cleared via clearHashWildcardRules)
@@ -688,16 +668,6 @@ Baseline at audit time: `testDebugUnitTest`, `ktlintCheck`, `detekt`, `lintDebug
   Evidence: canonicalizePhone (PhoneIdentityCanonicalizer.kt:17-35) verified E.164-formatting; BlocklistRepository.kt:49/189/219 normalize all writes; exact-== comparisons confirmed at NumberDetailScreen:61-63,526.
   Fix: Canonicalize in MainViewModel.openNumberDetail (route through SpamRepository.normalizeNumber before setting _selectedNumber), or compare canonical forms inside the screen.
   Acceptance: Opening detail from Recent for a national-format entry that was previously blocked shows its blocked history, DB reputation, and "Unblock".
-  Confidence: Verified
-  Effort: S
-
-- [ ] P2 — "Neighbor spoofing" settings toggle is a dead switch: no detection code reads it
-  Category: correctness
-  Where: ui/screens/settings/SettingsScreen.kt:541; data/repository/SettingsRepository.kt:59,243; data/SpamHeuristics.kt:427 (isNeighborSpoof called unconditionally); data/checker/Checkers.kt:688-699
-  Problem: The toggle writes KEY_NEIGHBOR_SPOOF but no engine reads it — HeuristicChecker gates only on KEY_HEURISTICS and SpamHeuristics.analyze runs isNeighborSpoof unconditionally. Turning it off changes nothing; the switch (and the Dashboard "engines active" count that includes it) is cosmetic.
-  Evidence: Repo-wide grep for KEY_NEIGHBOR_SPOOF/neighborSpoof matches only settings plumbing, backup round-trip, and UI display — zero checker/heuristics consumers (verified this session).
-  Fix: Pass the pref through CheckContext (`ctx.prefs[KEY_NEIGHBOR_SPOOF] ?: true`) and gate the isNeighborSpoof branch in analyze (add an enableNeighborSpoof parameter), mirroring how KEY_SMS_CONTENT gates smsBody at Checkers.kt:692.
-  Acceptance: With Heuristics on and Neighbor spoofing off, a same-NPA-NXX number no longer accrues the neighbor_spoof score; unit test asserts the flag path.
   Confidence: Verified
   Effort: S
 
@@ -730,16 +700,6 @@ Baseline at audit time: `testDebugUnitTest`, `ktlintCheck`, `detekt`, `lintDebug
   Acceptance: Temp-block a number, remove from Blocked tab, tap Undo — row still temporary and expires on schedule.
   Confidence: Verified
   Effort: S
-
-- [ ] P2 — Wildcard-rule ReDoS guard bypassed by sequential quantifiers; glob path has no cap at all (measured 64 s single match)
-  Category: security
-  Where: data/model/WildcardRule.kt:46-101 (matches), :125-136 (isSafeRegexPattern only guards the isRegex branch); data/repository/BlocklistRepository.kt:111-130 (addWildcardRule only trims); data/BackupRestore.kt:675-682 (restore inserts patterns unvalidated)
-  Problem: The glob branch converts each `*` to `\d*` and compiles `^\d*\d*…\d*<literal>$` with no length or star-count limit — sequential unbounded quantifiers backtrack combinatorially without nested groups. Measured (JBR 21): 18 `*` + trailing literal = 6.4 s against a 15-digit non-match; 22 `*` = 64 s — and matches() tries up to ~5 numberVariants, multiplying cost. The regex branch has the same hole: `\d*\d*…\d*a` has no groups so both heuristics pass it (≈60 sequential `\d*` fit in 200 chars). One such rule (user-typed or planted via restored backup) makes every screening blow the 5 s CallScreeningService deadline (CheckerPipeline checks timeLeftMillis only between checkers, IChecker.kt:239) → screening fails open, spam rings through, and each call/SMS burns a CPU core for minutes. RuleConflictAnalyzer.matches hangs the UI path too.
-  Evidence: Verified this session — isSafeRegexPattern referenced only inside the isRegex branch; glob branch compiles unbounded (WildcardRule.kt:67-93). Insertion path unvalidated end-to-end.
-  Fix: Apply a pattern-length cap (e.g. 32) to globs; collapse consecutive `*` runs to one before conversion (semantically identical); extend isSafeRegexPattern to reject >N total unbounded quantifiers regardless of grouping; validate at addWildcardRule and on restore, not just at match time. Optionally reuse the linear glob matcher from RegionRules.globMatches.
-  Acceptance: `WildcardRule(pattern = "*".repeat(20) + "5").matches("+12125551234")` returns <10 ms; `isSafeRegexPattern("\\d*".repeat(20) + "a")` is false; regression test with a wall-clock assertion.
-  Confidence: Verified (empirical)
-  Effort: M
 
 - [ ] P2 — Cloudflare account identity file tracked in the public repo (worker/.wrangler/cache/wrangler-account.json)
   Category: security
@@ -792,46 +752,6 @@ Baseline at audit time: `testDebugUnitTest`, `ktlintCheck`, `detekt`, `lintDebug
   Effort: S
 
 ### P3 — correctness / reliability
-
-- [ ] P3 — HeuristicChecker's caller-ID overlay side effect fires for realtime SMS (missing the isSms guard CampaignRecorder got in v1.7.14)
-  Category: correctness
-  Where: data/checker/Checkers.kt:714-723 (overlay trigger), :738-755 (showCallerIdOverlay); contrast CampaignRecorderChecker.shouldRecord :622-626
-  Problem: The suspicious-but-not-blocked overlay path checks only `ctx.realtimeCall && score in 30 until threshold` — no `ctx.smsBody == null` guard. SmsReceiver → CheckSpamSmsUseCase (realtimeCall defaults true) → shared chain, so an SMS scoring 30..59 starts CallerIdOverlayService (an incoming-call overlay) and kicks off runLiveLookups (network reputation + OpenCNAM) for the sender. With READ_PHONE_STATE the overlay is a brief flash (IDLE state dismisses it, CallerIdOverlayService.kt:427-433); without it, it hovers the full 20 s backstop. Remote lookups fire per suspicious SMS either way.
-  Evidence: Traced SmsReceiver.kt:87 → isSpamSms:141 (realtimeCall=true) → HeuristicChecker with smsBody set; no smsBody condition in the overlay branch.
-  Fix: Add `ctx.smsBody == null` to the overlay condition (mirror CampaignRecorderChecker.shouldRecord).
-  Acceptance: Unit test — HeuristicChecker with smsBody set and score 30..59 does not invoke the overlay launcher (inject the launcher as a lambda like contactLookup).
-  Confidence: Verified
-  Effort: S
-
-- [ ] P3 — ContactsOnlyChecker applies to SMS despite its calls-only contract, logging every non-contact SMS (OTP shortcodes, banks) as blocked spam
-  Category: correctness
-  Where: data/checker/Checkers.kt:79-94
-  Problem: KDoc says "blocks all calls … only contacts ring through", but isEnabled checks only the pref — unlike RegionBlockChecker (:549-552) and both CNAP checkers which explicitly gate on `ctx.smsBody == null`. With contacts-only enabled, every SMS from a non-contact — including 5-6-digit OTP shortcodes — is marked spam `contacts_only` at priority 8 800 (above SmsContextTrustChecker), polluting the log, inflating counts/notifications, and misleading the user (the SMS is still delivered since CallShield isn't the default SMS app).
-  Evidence: isSpamSms routes SMS through the shared chain; isEnabled = `ctx.prefs[KEY_CONTACTS_ONLY] ?: false` only; shortcode "12345" canonicalizes non-blank → chain runs → block.
-  Fix: Gate isEnabled on `ctx.smsBody == null` (match the documented semantics), or if SMS coverage is intended, update KDoc/description and yield to SMS-history trust.
-  Acceptance: With contacts-only enabled, `isSpamSms("12345", "Your code is 123456")` is not spam; regression test added.
-  Confidence: Verified (behavior); Likely (unintended)
-  Effort: S
-
-- [ ] P3 — Wangiri international-CC fallback still fires on 7-9-digit local-format numbers (sibling of the v1.7.15 NPA fix)
-  Category: correctness
-  Where: data/SpamHeuristics.kt:203-219 (isWangiriCountryCode, fallback at :217)
-  Problem: A plus-less number that is neither 10 nor 11 digits (nanpAreaCode → null) falls into `internationalWangiriCountryCodes.any { clean.startsWith(it) }`. A 7-digit local-format number starting with 224/248/252/267/269/385/386/672/678 (e.g. legacy CallLog rows scanned by the historical scanners, or user-typed lookups) scores wangiri_country +80 plus invalid_format +40 (7-9 digits, :347-352) = 100 ≥ 60 → hard heuristic block labeled wangiri_scam. E.g. local "248-9876" stored as "2489876" flags as a Seychelles wangiri scam.
-  Evidence: Traced: normalizePhoneNumber keeps "2489876"; hasPlus=false; nanpAreaCode null (length 7); :217 startsWith("248") true; analyze totals 120 ≥ threshold 60 (Checkers.kt:702-705).
-  Fix: Restrict the plus-less fallback to lengths that plausibly include a country code (≥11 digits), or drop it — international callers on Android telecom arrive with `+`.
-  Acceptance: `isWangiriCountryCode("2489876")` false; `("+2489876543")` still true; unit tests next to the v1.7.15 NPA tests.
-  Confidence: Verified (logic); Likely (real-device frequency)
-  Effort: S
-
-- [ ] P3 — PhoneFormatter NANP-formats 10-digit international numbers; formatWithCountryCode fabricates "+1" on them
-  Category: correctness
-  Where: data/PhoneFormatter.kt:36-49 (format), :62-74 (formatWithCountryCode)
-  Problem: The US/CA branch keys purely on digit count, ignoring a non-+1 country prefix. Any +CC number with exactly 10 total digits (Denmark +45########, Norway +47) renders as "(451) 234-5678", and formatWithCountryCode returns "+1 (451) 234-5678" — mislabeling a Danish number as North American in log rows, notifications, and overlays. PhoneFormatterTest only exercises 12-13-digit international inputs.
-  Evidence: format: digits="4512345678" (len 10) → NANP branch; the international pass-through at :55 is unreachable for this shape; same at :64-71.
-  Fix: Skip the NANP branch when input starts with `+` but not `+1` (both functions); add 10-digit +45-style regression tests.
-  Acceptance: `format("+4512345678")` == "+4512345678"; `formatWithCountryCode("+4512345678")` == "+4512345678"; US tests unchanged.
-  Confidence: Verified
-  Effort: S
 
 - [ ] P3 — Blocked-call and blocked-SMS notifications for the same number share Block/Report PendingIntents, cross-canceling and misreporting the type
   Category: correctness

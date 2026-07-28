@@ -85,9 +85,22 @@ class PhoneFormatterTest {
     }
 
     @Test
-    fun `format number with plus and 10 digits`() {
-        // "+2125551234" — digits = "2125551234" (10), formatted as US
-        assertEquals("(212) 555-1234", PhoneFormatter.format("+2125551234"))
+    fun `format explicit international number with 10 digits is not treated as US`() {
+        // "+2125551234" carries a non-NANP country code (+212 Morocco) — it must
+        // NOT be formatted as US "(212) 555-1234". A bare "2125551234" (no +)
+        // stays US, but an explicit +CC does not.
+        assertEquals("+2125551234", PhoneFormatter.format("+2125551234"))
+    }
+
+    @Test
+    fun `format 10-digit Danish number preserves plus and does not NANP-format`() {
+        assertEquals("+4512345678", PhoneFormatter.format("+4512345678"))
+    }
+
+    @Test
+    fun `formatWithCountryCode does not fabricate plus-1 on a 10-digit international number`() {
+        assertEquals("+4512345678", PhoneFormatter.formatWithCountryCode("+4512345678"))
+        assertEquals("+4712345678", PhoneFormatter.formatWithCountryCode("+4712345678"))
     }
 
     @Test

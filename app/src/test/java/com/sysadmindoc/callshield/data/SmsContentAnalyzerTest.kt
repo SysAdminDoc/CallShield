@@ -131,6 +131,23 @@ class SmsContentAnalyzerTest {
         assertTrue(result.reasons.contains("shortened_url"))
     }
 
+    @Test
+    fun `analyze does not flag legitimate domains containing shortener substrings`() {
+        // "microsoft.com" / "reddit.com" / "target.com" all CONTAIN "t.co" but
+        // are not the t.co shortener — a substring match was flagging them.
+        for (url in listOf("https://microsoft.com/deal", "https://reddit.com/r/x", "https://target.com/p")) {
+            val result = SmsContentAnalyzer.analyze("Check $url")
+            assertFalse("$url must not be a shortened_url", result.reasons.contains("shortened_url"))
+        }
+    }
+
+    @Test
+    fun `analyze does not flag suspicious TLD for a path segment`() {
+        // ".info" appears in the path, not the host — must not trip suspicious_tld.
+        val result = SmsContentAnalyzer.analyze("Open https://example.com/file.info please")
+        assertFalse(result.reasons.contains("suspicious_tld"))
+    }
+
     // ── Suspicious TLDs ──────────────────────────────────────────────────
 
     @Test

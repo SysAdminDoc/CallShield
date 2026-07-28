@@ -83,7 +83,9 @@ internal class ContactsOnlyChecker(
     override val priority = CheckerPriority.CONTACTS_ONLY
     override val name = "contacts_only"
 
-    override suspend fun isEnabled(ctx: CheckContext): Boolean = ctx.prefs[SpamRepository.KEY_CONTACTS_ONLY] ?: false
+    // Calls-only, per the documented contract — an SMS from a non-contact
+    // (OTP shortcode, bank, delivery) must not be logged as a blocked call.
+    override suspend fun isEnabled(ctx: CheckContext): Boolean = ctx.smsBody == null && (ctx.prefs[SpamRepository.KEY_CONTACTS_ONLY] ?: false)
 
     override suspend fun check(ctx: CheckContext): BlockResult? =
         if (!spamHeuristics.isInContacts(appContext, ctx.number)) {
@@ -697,6 +699,7 @@ internal class HeuristicChecker(
                 number = ctx.number,
                 smsBody = sms,
                 recentBlockedNumbers = recentBlocked.map { it.number to it.timestamp },
+                enableNeighborSpoof = ctx.prefs[SpamRepository.KEY_NEIGHBOR_SPOOF] ?: true,
             )
 
         val aggressive = ctx.prefs[SpamRepository.KEY_AGGRESSIVE_MODE] ?: false
@@ -711,8 +714,10 @@ internal class HeuristicChecker(
             )
         }
 
-        // Suspicious-but-not-blocked overlay (realtime only, score 30..threshold)
-        if (ctx.realtimeCall && hResult.score in 30 until threshold) {
+        // Suspicious-but-not-blocked overlay (realtime CALLS only, score 30..threshold).
+        // Guard on smsBody == null so a suspicious SMS re-scored through the shared
+        // chain never pops an incoming-call overlay or fires live caller lookups.
+        if (ctx.realtimeCall && ctx.smsBody == null && hResult.score in 30 until threshold) {
             showCallerIdOverlay(
                 appContext,
                 ctx.number,
@@ -824,7 +829,9 @@ internal class SmsBurstChecker(
     override val priority = CheckerPriority.SMS_BURST
     override val name = "sms_burst"
 
-    override suspend fun isEnabled(ctx: CheckContext): Boolean = ctx.prefs[SpamRepository.KEY_SMS_BURST] ?: true
+    // Yield to an explicit user-intent allow (whitelist/contact/temp-allow) —
+    // a trusted sender must not be blocked as a burst.
+    override suspend fun isEnabled(ctx: CheckContext): Boolean = ctx.trustedAllowSource == null && (ctx.prefs[SpamRepository.KEY_SMS_BURST] ?: true)
 
     override suspend fun check(ctx: CheckContext): BlockResult? {
         val signal = smsContextChecker.findRecentBurst(appContext, ctx.number) ?: return null
@@ -867,7 +874,9 @@ internal class SmsContentChecker(
     override val priority = CheckerPriority.SMS_CONTENT
     override val name = "sms_content"
 
-    override suspend fun isEnabled(ctx: CheckContext): Boolean = ctx.prefs[SpamRepository.KEY_SMS_CONTENT] ?: true
+    // Yield to an explicit user-intent allow — a trusted sender's message must
+    // not be blocked by content heuristics.
+    override suspend fun isEnabled(ctx: CheckContext): Boolean = ctx.trustedAllowSource == null && (ctx.prefs[SpamRepository.KEY_SMS_CONTENT] ?: true)
 
     override suspend fun check(ctx: CheckContext): BlockResult? {
         val body = ctx.smsBody ?: return null

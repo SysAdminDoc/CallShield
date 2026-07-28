@@ -136,10 +136,18 @@ class SpamRepositoryImpl(
     ): SpamCheckResult {
         val prefs = prefsSnapshot ?: settingsRepository.readPrefsSnapshot()
         val canonicalPhone = normalizePhone(number)
+        var trustedAllowSource: String? = null
         if (canonicalPhone.isNotBlank()) {
             val numberResult =
                 isSpam(canonicalPhone, smsBody = body, realtimeCall = realtimeCall, prefsSnapshot = prefs)
             if (numberResult.isSpam) return numberResult
+            // Carry a user-intent allow into the SMS extension chain so the
+            // behavioral burst/content checkers yield to it (whitelisted /
+            // contact / temporarily-allowed senders must not be blocked by
+            // sms_burst or sms_content). Keyword rules still inspect them.
+            if (numberResult.matchSource in USER_TRUSTED_ALLOW_SOURCES) {
+                trustedAllowSource = numberResult.matchSource
+            }
         }
 
         val normalized = normalizeSenderIdentity(number)
@@ -151,6 +159,7 @@ class SpamRepositoryImpl(
                 smsBody = body,
                 realtimeCall = realtimeCall,
                 prefs = prefs,
+                trustedAllowSource = trustedAllowSource,
             )
         val verdict =
             CheckerPipeline.run(smsExtensions, ctx)
@@ -173,5 +182,15 @@ class SpamRepositoryImpl(
                 prefs = prefs,
             )
         return CheckerPipeline.traceAll(callChain, ctx)
+    }
+
+    companion object {
+        /**
+         * Allow matchSources that represent an explicit user-intent trust and
+         * so must suppress the behavioral SMS burst/content checkers. Keyword
+         * rules (SMS_KEYWORD) deliberately still inspect these senders.
+         */
+        private val USER_TRUSTED_ALLOW_SOURCES =
+            setOf("manual_whitelist", "emergency_contact", "contact_whitelist", "temporary_allow")
     }
 }

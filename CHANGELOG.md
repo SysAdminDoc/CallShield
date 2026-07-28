@@ -16,6 +16,28 @@ All notable changes to CallShield will be documented in this file.
 
 ### Fixed
 
+- SMS content analysis matches URL shorteners and suspicious TLDs against the
+  extracted host, not the raw URL — legitimate links like microsoft.com,
+  reddit.com, and target.com are no longer flagged as shortened links, and a
+  `.info` path segment no longer trips the suspicious-TLD signal.
+- Whitelisted, contact, and temporarily-allowed SMS senders are no longer
+  blocked by the burst or content heuristics; an explicit user allow now
+  carries through to the SMS extension chain (keyword rules still apply).
+- The "Neighbor spoofing" detection toggle is now actually honored — turning
+  it off stops the neighbor-spoof heuristic from scoring.
+- Wildcard rules can no longer be used to stall call screening: runs of glob
+  `*` collapse before compilation and regex patterns with long chains of
+  open-ended quantifiers are rejected, so a pathological rule can't blow the
+  5-second screening deadline.
+- Contacts-only mode is calls-only again — an SMS from a non-contact (OTP
+  shortcode, bank, delivery) is no longer logged as a blocked call.
+- A suspicious SMS re-scored through the shared chain no longer pops the
+  incoming-call overlay or fires live caller lookups.
+- Wangiri detection no longer flags plus-less local-format numbers whose
+  leading digits collide with international country codes.
+- Explicit international numbers (`+45…`, `+47…`, `+212…`) are no longer
+  mis-formatted as North American, and formatWithCountryCode no longer
+  fabricates a `+1` prefix on them.
 - Portable backups keep the full BackupRestore payload family (settings,
   range rules, logs) from R8 stripping, so a minified release build no longer
   risks silently losing restored data.

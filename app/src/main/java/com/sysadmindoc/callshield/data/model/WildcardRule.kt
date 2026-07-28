@@ -61,12 +61,18 @@ data class WildcardRule(
             }
         } else {
             // Glob-style: * matches any digits, ? matches one digit.
+            if (normalizedPattern.length > MAX_REGEX_LENGTH) return false
+            // Collapse runs of consecutive '*' to a single '*'. It's semantically
+            // identical (\d*\d* == \d*) but avoids the catastrophic sequential-
+            // quantifier backtracking that a pattern like "**********5" would
+            // otherwise compile to (measured 60+ s for ~20 stars).
+            val collapsedPattern = normalizedPattern.replace(consecutiveStars, "*")
             // Escape ALL regex metacharacters first, then convert our globs.
             // Without this, a pattern like "212.555*" would treat '.' as
             // regex any-char and match "2120555..." unexpectedly.
             val escaped =
                 buildString {
-                    for (ch in normalizedPattern) {
+                    for (ch in collapsedPattern) {
                         when (ch) {
                             '*' -> {
                                 append("\\d*")
@@ -107,6 +113,16 @@ data class WildcardRule(
          *  or a deliberate ReDoS attempt. */
         internal const val MAX_REGEX_LENGTH = 200
 
+        /** A real phone-number regex never needs many open-ended repeats;
+         *  more than this is a ReDoS shape, not an expressive pattern. */
+        internal const val MAX_UNBOUNDED_QUANTIFIERS = 8
+
+        /** Runs of consecutive glob `*`, collapsed to one before compilation. */
+        private val consecutiveStars = Regex("""\*+""")
+
+        /** Open-ended repeats: `*`, `+`, and `{n,}` (but not bounded `{n,m}`). */
+        private val unboundedQuantifier = Regex("""[*+]|\{\d*,}""")
+
         /**
          * Reject regex patterns that are known catastrophic-backtracking
          * shapes. This is a coarse-grained heuristic — not a full ReDoS
@@ -132,6 +148,10 @@ data class WildcardRule(
             // Alternation inside a repeated group: `(...|...)+`
             val ambiguousAlternation = Regex("""\([^()]*\|[^()]*\)\s*[+*]""")
             if (ambiguousAlternation.containsMatchIn(pattern)) return false
+            // Too many unbounded quantifiers. A chain of `\d*\d*…\d*a` has no
+            // groups (so the two heuristics above miss it) but still backtracks
+            // combinatorially. A real phone regex needs at most one or two.
+            if (unboundedQuantifier.findAll(pattern).count() > MAX_UNBOUNDED_QUANTIFIERS) return false
             return true
         }
 
