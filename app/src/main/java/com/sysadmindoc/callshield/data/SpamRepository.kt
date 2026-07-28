@@ -114,6 +114,7 @@ class SpamRepository(
             invalidateWildcardCache = spamRepositoryImpl::invalidateWildcardCache,
             invalidateKeywordCache = spamRepositoryImpl::invalidateKeywordCache,
             invalidateHashWildcardCache = spamRepositoryImpl::invalidateHashWildcardCache,
+            runInTransaction = { block -> db.withTransaction { block() } },
         )
 
     companion object {
@@ -665,6 +666,10 @@ class SpamRepository(
     fun invalidateRestoredRuleCaches() {
         spamRepositoryImpl.invalidateWildcardCache()
         spamRepositoryImpl.invalidateKeywordCache()
+        // Range (hash-wildcard) rules are also restored, and RANGE_RULES is a
+        // default restore section — without this the HashWildcardChecker keeps
+        // screening with the pre-restore rule set until the process restarts.
+        spamRepositoryImpl.invalidateHashWildcardCache()
     }
 
     /**

@@ -29,6 +29,7 @@ class BlocklistRepository(
     private val invalidateWildcardCache: () -> Unit,
     private val invalidateKeywordCache: () -> Unit,
     private val invalidateHashWildcardCache: () -> Unit,
+    private val runInTransaction: suspend (suspend () -> Unit) -> Unit,
 ) {
     private companion object {
         const val MAX_SCHEDULE_HOUR = 23
@@ -48,41 +49,49 @@ class BlocklistRepository(
     ): Boolean {
         val normalized = normalizeNumber(number)
         if (normalized.isBlank()) return false
-        cleanupExpiredTemporaryDecisions()
-        val existingWhitelist = dao.findWhitelistEntry(normalized)
-        val permanentAllowExists = expiresAt != null && existingWhitelist != null && existingWhitelist.expiresAt == null
-        if (permanentAllowExists) return false
+        // Atomic check-then-act: without the transaction a process death between
+        // the whitelist delete and the block insert would strip the user's allow
+        // without adding the block, and a concurrent addToWhitelist could
+        // interleave to leave both rows present.
+        var blocked = false
+        runInTransaction {
+            cleanupExpiredTemporaryDecisions()
+            val existingWhitelist = dao.findWhitelistEntry(normalized)
+            val permanentAllowExists = expiresAt != null && existingWhitelist != null && existingWhitelist.expiresAt == null
+            if (!permanentAllowExists) {
+                existingWhitelist?.let { dao.deleteWhitelistEntry(it) }
+                when (val existing = dao.findByNumber(normalized)) {
+                    null -> {
+                        dao.insertNumber(
+                            SpamNumber(
+                                number = normalized,
+                                type = type.trim().ifBlank { "unknown" },
+                                description = description.trim(),
+                                source = "user",
+                                isUserBlocked = true,
+                                expiresAt = expiresAt,
+                            ),
+                        )
+                    }
 
-        existingWhitelist?.let { dao.deleteWhitelistEntry(it) }
-        when (val existing = dao.findByNumber(normalized)) {
-            null -> {
-                dao.insertNumber(
-                    SpamNumber(
-                        number = normalized,
-                        type = type.trim().ifBlank { "unknown" },
-                        description = description.trim(),
-                        source = "user",
-                        isUserBlocked = true,
-                        expiresAt = expiresAt,
-                    ),
-                )
-            }
-
-            else -> {
-                val permanentBlockExists = expiresAt != null && existing.isUserBlocked && existing.expiresAt == null
-                if (!permanentBlockExists) {
-                    dao.insertNumber(
-                        existing.copy(
-                            type = type.trim().ifBlank { existing.type },
-                            description = description.trim().ifBlank { existing.description },
-                            isUserBlocked = true,
-                            expiresAt = expiresAt,
-                        ),
-                    )
+                    else -> {
+                        val permanentBlockExists = expiresAt != null && existing.isUserBlocked && existing.expiresAt == null
+                        if (!permanentBlockExists) {
+                            dao.insertNumber(
+                                existing.copy(
+                                    type = type.trim().ifBlank { existing.type },
+                                    description = description.trim().ifBlank { existing.description },
+                                    isUserBlocked = true,
+                                    expiresAt = expiresAt,
+                                ),
+                            )
+                        }
+                    }
                 }
+                blocked = true
             }
         }
-        return true
+        return blocked
     }
 
     suspend fun temporaryBlockNumber(
@@ -326,26 +335,33 @@ class BlocklistRepository(
     ): Boolean {
         val normalized = normalizeNumber(number)
         if (normalized.isBlank()) return false
-        cleanupExpiredTemporaryDecisions()
-        val existingSpam = dao.findByNumber(normalized)
-        val permanentUserBlock = existingSpam?.isUserBlocked == true && existingSpam.expiresAt == null
-        if (expiresAt != null && permanentUserBlock) return false
-        if (expiresAt == null || existingSpam?.expiresAt != null) {
-            when (val resolution = resolveSpamNumberForWhitelist(existingSpam)) {
-                SpamNumberWhitelistResolution.None -> Unit
-                is SpamNumberWhitelistResolution.Update -> dao.insertNumber(resolution.number)
-                is SpamNumberWhitelistResolution.Delete -> dao.deleteNumber(resolution.number)
+        // Atomic check-then-act — see blockNumber. Prevents a half-applied trust
+        // change on process death and interleaving with a concurrent block.
+        var whitelisted = false
+        runInTransaction {
+            cleanupExpiredTemporaryDecisions()
+            val existingSpam = dao.findByNumber(normalized)
+            val permanentUserBlock = existingSpam?.isUserBlocked == true && existingSpam.expiresAt == null
+            if (!(expiresAt != null && permanentUserBlock)) {
+                if (expiresAt == null || existingSpam?.expiresAt != null) {
+                    when (val resolution = resolveSpamNumberForWhitelist(existingSpam)) {
+                        SpamNumberWhitelistResolution.None -> Unit
+                        is SpamNumberWhitelistResolution.Update -> dao.insertNumber(resolution.number)
+                        is SpamNumberWhitelistResolution.Delete -> dao.deleteNumber(resolution.number)
+                    }
+                }
+                dao.insertWhitelistEntry(
+                    WhitelistEntry(
+                        number = normalized,
+                        description = description.trim(),
+                        isEmergency = isEmergency && expiresAt == null,
+                        expiresAt = expiresAt,
+                    ),
+                )
+                whitelisted = true
             }
         }
-        dao.insertWhitelistEntry(
-            WhitelistEntry(
-                number = normalized,
-                description = description.trim(),
-                isEmergency = isEmergency && expiresAt == null,
-                expiresAt = expiresAt,
-            ),
-        )
-        return true
+        return whitelisted
     }
 
     suspend fun removeFromWhitelist(entry: WhitelistEntry) = dao.deleteWhitelistEntry(entry)
