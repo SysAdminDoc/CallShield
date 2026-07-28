@@ -48,6 +48,24 @@ All notable changes to CallShield will be documented in this file.
   no longer strip a trust entry without applying the block.
 - The restore preview no longer loads the entire call log (including SMS
   bodies) into memory when logs aren't part of the restore.
+- Opening a number's detail from Recent now canonicalizes the number, so a
+  national-format call-log entry shows its blocked history, reputation, and
+  the correct Block/Unblock state.
+- Rotating or otherwise recreating the activity no longer replays a shortcut
+  scan, re-opens a closed deep link, or snaps back to the shortcut's tab.
+- Undo after removing a temporary block restores it as temporary (keeping its
+  expiry) instead of as a permanent block.
+- The database-count subtitle and "Setup needed" pill now update immediately
+  after import/restore/block and after granting permissions in OS settings.
+- The Dashboard "Just now" / sync-freshness labels advance while the screen
+  stays open; number-detail lookups reset when the number changes in place.
+- Recent Calls now shows system-blocked and voicemail call-log entries with
+  their own icons and includes blocked calls in the Missed filter.
+- Global search matches formatted phone queries (e.g. "555-123-4567") against
+  canonically-stored numbers.
+- Onboarding survives rotation, counts the call-screening step as required
+  only on devices that have it, and no longer flashes the main UI first-run;
+  the model-health card updates once the model finishes loading.
 - Portable backups keep the full BackupRestore payload family (settings,
   range rules, logs) from R8 stripping, so a minified release build no longer
   risks silently losing restored data.

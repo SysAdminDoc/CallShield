@@ -641,16 +641,6 @@ Baseline at audit time: `testDebugUnitTest`, `ktlintCheck`, `detekt`, `lintDebug
 
 ### P2
 
-- [ ] P2 — NumberDetailScreen matches by raw string while all stores hold canonicalized numbers — empty/wrong data when opened from Recent
-  Category: correctness
-  Where: ui/screens/details/NumberDetailScreen.kt:61-63, 526; ui/screens/recent/RecentCallsScreen.kt:614; ui/MainViewModel.kt:452-454 (openNumberDetail)
-  Problem: Detail computes numberCalls/dbEntry/isBlocked via exact `it.number == number`, but blocked-log, blocklist, and spam-DB rows are stored canonicalized (PhoneIdentityCanonicalizer E.164-formats non-`+` national numbers). RecentCallsScreen passes normalizePhoneNumberInput (bare digits, never adds country code): a call-log entry "555-123-4567" opens detail as "5551234567" while stores hold "+15551234567" → statistics show 0 calls, timeline empty, reputation missing, and Block/Unblock shows the wrong state (unblock unreachable). LookupScreen:524 passes the same non-canonical form.
-  Evidence: canonicalizePhone (PhoneIdentityCanonicalizer.kt:17-35) verified E.164-formatting; BlocklistRepository.kt:49/189/219 normalize all writes; exact-== comparisons confirmed at NumberDetailScreen:61-63,526.
-  Fix: Canonicalize in MainViewModel.openNumberDetail (route through SpamRepository.normalizeNumber before setting _selectedNumber), or compare canonical forms inside the screen.
-  Acceptance: Opening detail from Recent for a national-format entry that was previously blocked shows its blocked history, DB reputation, and "Unblock".
-  Confidence: Verified
-  Effort: S
-
 - [ ] P2 — Notifications reported "Ready" below API 33 even when disabled; the sub-33 settings-deeplink fallbacks are dead code
   Category: correctness
   Where: permissions/CallShieldPermissions.kt:249-251 (`hasNotificationPermission`); ui/screens/onboarding/OnboardingScreen.kt:118-130, 380; ui/screens/settings/SettingsScreen.kt:327-344
@@ -659,26 +649,6 @@ Baseline at audit time: `testDebugUnitTest`, `ktlintCheck`, `detekt`, `lintDebug
   Fix: Use `NotificationManagerCompat.from(context).areNotificationsEnabled()` (covers all API levels); drop the extra SDK gate on the onboarding button so the fallback becomes reachable.
   Acceptance: On an API 29-32 emulator with notifications disabled, Settings and Onboarding show the row as not ready with a working Enable action.
   Confidence: Verified (code trace; device repro pending)
-  Effort: S
-
-- [ ] P2 — Launch-request (deep link / shortcut) replays on every activity recreation
-  Category: correctness
-  Where: ui/MainActivity.kt:62-76 (onCreate/onNewIntent), 106-112 (LaunchedEffect(launchRequest.id)), 157-159 (LaunchedEffect(tabRequestId))
-  Problem: MainActivity declares no configChanges, so rotation/split-screen recreates it. onCreate rebuilds launchRequest from the original getIntent() and the fresh composition re-runs both LaunchedEffects: (a) SCAN/SCAN_SMS shortcut re-runs a full call-log/SMS scan on every rotation; (b) a tel:/open_number deep link reopens NumberDetailScreen after the user pressed Back; (c) LOOKUP shortcut snaps back to the Lookup tab, discarding the tab the user navigated to. (3bb393f fixed the stale-capture direction, not replay-on-recreation.)
-  Evidence: Verified this session at the cited lines — `launchRequest = intent.toLaunchRequest(nextId = 1)` in onCreate; LaunchedEffect keyed on an id that resets to 1 in a fresh composition.
-  Fix: Make consumption one-shot and recreation-safe: track the last-handled request id in rememberSaveable (or consume in the ViewModel) and skip when `launchRequest.id <= lastHandledId`; or clear acted-on extras via setIntent after first handling.
-  Acceptance: Launch via SCAN shortcut, rotate — no second scan. Open via tel: link, press Back, rotate — detail stays closed. Launch via LOOKUP, switch tab, rotate — tab preserved.
-  Confidence: Verified
-  Effort: S
-
-- [ ] P2 — Undo after removing a temporary block silently restores it as a permanent block
-  Category: correctness
-  Where: ui/screens/main/BlocklistScreen.kt:186-205 (removeBlockedNumberWithUndo); ui/MainViewModel.kt:461-467 (blockNumber has no expiresAt)
-  Problem: The Blocked tab lists temporary blocks (SpamNumber.expiresAt). Undo re-adds via `viewModel.blockNumber(number.number, number.type, number.description)` → BlocklistRepository.blockNumber defaults expiresAt=null. A "Block for 1 hour" entry swiped away and undone comes back blocked forever with zero indication; reports/firstSeen metadata also reset.
-  Evidence: Verified this session — undo call chain never carries expiresAt.
-  Fix: Restore the original entity: add a `restoreBlockedNumber(entity: SpamNumber)` VM/use-case path re-inserting the captured row (same pattern as restoreLogEntry, which correctly re-inserts the full BlockedCall).
-  Acceptance: Temp-block a number, remove from Blocked tab, tap Undo — row still temporary and expires on schedule.
-  Confidence: Verified
   Effort: S
 
 - [ ] P2 — Cloudflare account identity file tracked in the public repo (worker/.wrangler/cache/wrangler-account.json)
@@ -741,98 +711,6 @@ Baseline at audit time: `testDebugUnitTest`, `ktlintCheck`, `detekt`, `lintDebug
   Fix: Fold isCall into the action request-code salts (e.g. 10/11 and 20/21), mirroring the nid split.
   Acceptance: With both notifications visible for one number, tapping Block on either cancels that exact notification and CommunityContributor receives the matching type/indicators; Robolectric test asserts two distinct PendingIntents.
   Confidence: Verified
-  Effort: S
-
-- [ ] P3 — NumberDetailScreen shows the previous number's online-lookup and spam-score state when the number changes in place
-  Category: correctness
-  Where: ui/screens/details/NumberDetailScreen.kt:104, 114-115 (liveResult/webResult/webLoading unkeyed remember; contrast contactName remember(number) at :95)
-  Problem: Deep-linking to number B (e.g. tapping a blocked-call notification) while number A's detail is open recomposes the same composable instance: webResult keeps A's multi-source reputation (hiding the "Check sources" button since webResult != null) and liveResult shows A's spam gauge until B's fetch lands — misattributed reputation on a trust-critical screen.
-  Evidence: MainActivity:120-126 keeps the selectedNumber branch across openNumberDetail calls; the three states are unkeyed.
-  Fix: `remember(number) { mutableStateOf(...) }` for all three (or hoist per-number state into the ViewModel).
-  Acceptance: Deep-linking to B while A is open shows no gauge/lookup data until B's own results load; "Check sources" available for B.
-  Confidence: Verified
-  Effort: S
-
-- [ ] P3 — Recent Calls ignores CallLog BLOCKED_TYPE and VOICEMAIL_TYPE
-  Category: correctness
-  Where: ui/screens/recent/RecentCallsScreen.kt:156-168 (filter), 365-380 (type mapping); query at :592-596 applies no type filter
-  Problem: The mapping handles types 1,2,3,5 only; BLOCKED_TYPE (6, written by the system block list) and VOICEMAIL_TYPE (4) fall to the else branch — generic Phone icon, muted color, counted in no filter but "All". For a spam blocker, system-blocked entries render as anonymous rows and are invisible in the Missed filter.
-  Fix: Map BLOCKED_TYPE to a Block glyph/CatRed and include it in Missed (or a dedicated Blocked chip); map VOICEMAIL_TYPE to a voicemail icon.
-  Acceptance: A call blocked via the system block list appears with a blocked glyph and is discoverable via a filter chip.
-  Confidence: Verified
-  Effort: S
-
-- [ ] P3 — Global search does not digit-normalize phone queries: "555-123-4567" matches nothing against E.164-stored numbers
-  Category: correctness
-  Where: ui/MainViewModel.kt:148-153; data/local/SpamDao.kt:296-302 (LIKE query); ui/MainActivity.kt:560-562
-  Problem: The search field passes raw text to `number LIKE '%'||:query||'%'` while DB numbers are stored canonical (+15551234567). Typing/pasting a number with separators — the primary use of this search — returns zero results.
-  Evidence: No filterAsciiDigits/normalizePhoneNumberInput anywhere in the search path; stores canonicalize on write (BlocklistRepository.kt:49/189).
-  Fix: When the query contains ≥N ASCII digits, additionally match the digit-stripped form (second LIKE clause against digits, keeping raw text for the description LIKE).
-  Acceptance: Searching "555-123-4567" finds the entry stored as "+15551234567".
-  Confidence: Verified
-  Effort: S
-
-- [ ] P3 — Dashboard wall-clock reads frozen at composition: "Just now" and sync-freshness color go stale
-  Category: correctness
-  Where: ui/screens/main/DashboardScreen.kt:1267-1276 (relativeTimeText), 1278-1291 (syncFreshnessColor), consumed at :461, :955
-  Problem: Both compute from System.currentTimeMillis() once and only recompute when inputs change. With the dashboard open, "Just now" never advances and the freshness metric stays green after crossing 24h/48h thresholds. MainViewModel's minute-ticking timeAnchor (MainViewModel.kt:72-82) was built for exactly this class but these consumers don't use it — two additional sites of the class already logged for MoreScreen's sync label.
-  Fix: Expose the VM timeAnchor (or a rememberTicker(60s) composable) and pass `now` into both helpers.
-  Acceptance: Dashboard open 10 minutes shows "10m ago" without any DB change.
-  Confidence: Verified
-  Effort: S
-
-- [ ] P3 — App-shell "Setup needed" status pill doesn't refresh after permissions change
-  Category: correctness
-  Where: ui/MainActivity.kt:213-226 (coreSetupNeeded/shellStatusLabel)
-  Problem: coreSetupNeeded calls CallShieldPermissions.missingEnabledProtectionPermissions inline in composition with no ON_RESUME refresh trigger (DashboardScreen has permissionRefreshTick at :152-163; the shell does not). After granting permissions in OS settings and returning, the top-bar pill keeps saying "Setup needed" while the Dashboard checklist below it updates — the two contradict on-screen.
-  Fix: Hoist the ON_RESUME permissionRefreshTick pattern into CallShieldApp (or a shared VM StateFlow) and key coreSetupNeeded on it.
-  Acceptance: Grant permissions via OS settings, return on Home tab — pill flips to "Protected" without switching tabs.
-  Confidence: Verified
-  Effort: S
-
-- [ ] P3 — spamCount is a manually-refreshed snapshot: stale after blocklist import, restore, and manual block/unblock
-  Category: correctness
-  Where: ui/MainViewModel.kt:266-267, 317-323 (init), 618-623 (importBlocklist), 664-677 (applyRestore)
-  Problem: _spamCount is set only at init, after sync, and after external-blocklist ops. importBlocklist and applyRestore insert spam_numbers rows but never refresh it, so after importing 5,000 numbers the Dashboard "N numbers" subtitle and the shell coreSetupNeeded (spamCount <= 0) keep the old value — on a fresh install "Setup needed" persists right after a successful restore.
-  Fix: Replace the snapshot with a Room-observed flow (`SELECT COUNT(*)` as Flow<Int>) stated into the VM — eliminates the whole manual-refresh class.
-  Acceptance: Import a blocklist file; Dashboard count and shell status update immediately.
-  Confidence: Verified
-  Effort: S
-
-- [ ] P3 — Onboarding progress resets to step 1 on rotation
-  Category: ux
-  Where: ui/screens/onboarding/OnboardingScreen.kt:169
-  Problem: `var currentPage by remember { mutableIntStateOf(0) }` — not rememberSaveable. Rotation on step 3 lands back on the welcome page. Every other nav state in the app correctly uses rememberSaveable.
-  Fix: `rememberSaveable { mutableIntStateOf(0) }`.
-  Acceptance: Rotate on onboarding step 3 — still on step 3.
-  Confidence: Verified
-  Effort: S
-
-- [ ] P3 — Onboarding "required 2/2" counter counts the call-screening role on devices where the role doesn't exist
-  Category: correctness
-  Where: ui/screens/onboarding/OnboardingScreen.kt:170 (requiredReady), 227-228, 466-521, 594-616
-  Problem: `requiredReady = listOf(permsGranted, screenerGranted).count { it }` ignores screenerSupported. On ROMs without ROLE_CALL_SCREENING the badge permanently reads "1/2 required", the finish page warns "Call screener needed" for something the device cannot do, and the CTA stays "Continue anyway" instead of "Finish setup". DashboardStatusModel.screenerReadyForCurrentMode (:39-44) already handles the analogous case.
-  Fix: `listOf(permsGranted, !screenerSupported || screenerGranted)` and mirror in the finish-page row ("unavailable on this device" instead of a warning).
-  Acceptance: On a device without the role, granting core permissions yields "2/2" and "Finish setup".
-  Confidence: Verified
-  Effort: S
-
-- [ ] P3 — First-launch flash of the main dashboard before onboarding appears (sibling of the logged theme-flash item)
-  Category: ux
-  Where: ui/MainViewModel.kt:141-143 (onboardingDone initial true); ui/MainActivity.kt:115-118
-  Problem: onboardingDone initializes to true "to avoid flash" for returning users — inverting the problem for new installs: the first frame(s) render the full main shell (empty dashboard, "Setup needed") before DataStore emits false and onboarding slides in. The logged cold-start theme-flash backlog item names only appTheme; this is the same first-emission race on a different flow.
-  Fix: Same remedy as the theme-flash item — synchronous cached read or splash-screen setKeepOnScreenCondition covering both appTheme and onboardingDone, or a tri-state Boolean? that renders nothing until the first real emission.
-  Acceptance: Fresh install shows onboarding as the first visible frame.
-  Confidence: Likely (code path certain; race window needs device repro)
-  Effort: S
-
-- [ ] P3 — Protection Test's ML health card can show a stale "Model status pending" snapshot
-  Category: correctness
-  Where: ui/screens/more/ProtectionTestScreen.kt:147 (ModelHealthCard(SpamMLScorer.modelHealth()))
-  Problem: modelHealth() is a plain snapshot read once at composition. Opening the screen before the model finishes loading shows "pending" and nothing invalidates the composable when state flips to GBT_ACTIVE.
-  Fix: produceState re-reading modelHealth() on a short interval (or expose health as a StateFlow).
-  Acceptance: Entering during model load shows "pending" then updates without user interaction.
-  Confidence: Likely
   Effort: S
 
 - [ ] P3 — Quick Settings tile toggle can be cancelled mid-write, leaving call/SMS blocking flags split

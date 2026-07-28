@@ -195,11 +195,9 @@ fun BlocklistScreen(viewModel: MainViewModel) {
                     duration = SnackbarDuration.Short,
                 )
             if (result == SnackbarResult.ActionPerformed) {
-                viewModel.blockNumber(
-                    number = number.number,
-                    type = number.type,
-                    description = number.description,
-                )
+                // Re-insert the exact row so a temporary block keeps its expiry
+                // instead of coming back as a permanent block.
+                viewModel.restoreBlockedNumber(number)
             }
         }
     }

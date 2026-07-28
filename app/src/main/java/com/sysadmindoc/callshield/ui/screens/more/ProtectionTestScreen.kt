@@ -144,7 +144,16 @@ fun ProtectionTestScreen() {
             color = CatSubtext,
         )
 
-        ModelHealthCard(SpamMLScorer.modelHealth())
+        // Poll until the model resolves so entering this screen during model
+        // load shows "pending" then updates to the real status without needing
+        // an unrelated recomposition.
+        val modelHealth by produceState(initialValue = SpamMLScorer.modelHealth()) {
+            while (value == ModelHealth.UNINITIALIZED) {
+                delay(500)
+                value = SpamMLScorer.modelHealth()
+            }
+        }
+        ModelHealthCard(modelHealth)
 
         PremiumActionButton(
             label =

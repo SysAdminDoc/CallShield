@@ -100,8 +100,10 @@ fun NumberDetailScreen(
             }
     }
 
-    // Live spam check result
-    var liveResult by remember { mutableStateOf<SpamCheckResult?>(null) }
+    // Live spam check result — keyed on number so a deep link that changes the
+    // number in place (tapping a notification while another detail is open)
+    // doesn't show the previous number's gauge/reputation.
+    var liveResult by remember(number) { mutableStateOf<SpamCheckResult?>(null) }
     LaunchedEffect(number) {
         try {
             liveResult = withContext(Dispatchers.IO) { SpamRepository.getInstance(context).isSpam(number, realtimeCall = false) }
@@ -111,8 +113,8 @@ fun NumberDetailScreen(
     }
 
     // Multi-source lookup
-    var webResult by remember { mutableStateOf<ExternalLookup.MultiLookupResult?>(null) }
-    var webLoading by remember { mutableStateOf(false) }
+    var webResult by remember(number) { mutableStateOf<ExternalLookup.MultiLookupResult?>(null) }
+    var webLoading by remember(number) { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
 
     Column(

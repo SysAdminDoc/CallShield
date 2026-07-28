@@ -137,10 +137,12 @@ class MainViewModel
                 .getAllKeywordRules()
                 .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-        // Onboarding
-        val onboardingDone: StateFlow<Boolean> =
+        // Onboarding — tri-state: null until DataStore first emits, so the shell
+        // renders a neutral surface for one frame instead of flashing the main
+        // UI before onboarding (new install) or onboarding before the main UI.
+        val onboardingDone: StateFlow<Boolean?> =
             repo.onboardingDone
-                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true) // default true to avoid flash
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
         // Search
         private val _searchQuery = MutableStateFlow("")
@@ -263,8 +265,13 @@ class MainViewModel
         private val _syncState = MutableStateFlow<SyncState>(SyncState.Idle)
         val syncState: StateFlow<SyncState> = _syncState
 
-        private val _spamCount = MutableStateFlow(0)
-        val spamCount: StateFlow<Int> = _spamCount
+        // Observe the row count directly from Room so it stays correct after any
+        // mutation (sync, import, restore, manual block/unblock) without manual
+        // refresh calls that were easy to forget on new write paths.
+        val spamCount: StateFlow<Int> =
+            repo
+                .observeSpamCount()
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
         private val _scanResult = MutableStateFlow<CallLogScanner.ScanResult?>(null)
         val scanResult: StateFlow<CallLogScanner.ScanResult?> = _scanResult
@@ -316,9 +323,9 @@ class MainViewModel
 
         init {
             viewModelScope.launch {
-                _spamCount.value = repo.getSpamCount()
+                val initialCount = repo.getSpamCount()
                 val onboardingAlreadyDone = repo.onboardingDone.first()
-                if (_spamCount.value == 0 && onboardingAlreadyDone) sync(showProgress = false)
+                if (initialCount == 0 && onboardingAlreadyDone) sync(showProgress = false)
             }
         }
 
@@ -340,7 +347,6 @@ class MainViewModel
                     val result = syncDatabase(force = true)
                     _syncState.value =
                         if (result.success) {
-                            _spamCount.value = repo.getSpamCount()
                             if (result.warning) {
                                 SyncState.Warning(result.message)
                             } else {
@@ -374,9 +380,6 @@ class MainViewModel
                 val result = repo.applyExternalBlocklistSubscription(url, label)
                 _externalBlocklistPreview.value = if (result.success) null else result.preview
                 _externalBlocklistResult.value = result.message
-                if (result.success) {
-                    _spamCount.value = repo.getSpamCount()
-                }
             }
         }
 
@@ -387,9 +390,6 @@ class MainViewModel
             viewModelScope.launch {
                 val result = repo.setExternalBlocklistSubscriptionEnabled(subscription.id, enabled)
                 _externalBlocklistResult.value = result.message
-                if (result.success) {
-                    _spamCount.value = repo.getSpamCount()
-                }
             }
         }
 
@@ -397,9 +397,6 @@ class MainViewModel
             viewModelScope.launch {
                 val result = repo.removeExternalBlocklistSubscription(subscription.id)
                 _externalBlocklistResult.value = result.message
-                if (result.success) {
-                    _spamCount.value = repo.getSpamCount()
-                }
             }
         }
 
@@ -450,7 +447,10 @@ class MainViewModel
 
         // Detail navigation
         fun openNumberDetail(number: String) {
-            _selectedNumber.value = number
+            // Canonicalize before matching — the detail screen compares against
+            // canonicalized store rows, so a national-format call-log number
+            // ("555-123-4567") must be normalized or it finds nothing.
+            _selectedNumber.value = repo.normalizeNumber(number)
         }
 
         fun closeNumberDetail() {
@@ -487,6 +487,15 @@ class MainViewModel
 
         fun unblockNumber(number: SpamNumber) {
             viewModelScope.launch { manageBlocklist.unblockNumber(number) }
+        }
+
+        /**
+         * Restore a removed block by re-inserting the exact captured row, so an
+         * undo preserves a temporary block's expiry (and reports/firstSeen)
+         * instead of re-deriving it as a permanent block.
+         */
+        fun restoreBlockedNumber(entity: SpamNumber) {
+            viewModelScope.launch { repo.restoreBlockedNumber(entity) }
         }
 
         fun deleteLogEntry(call: BlockedCall) {

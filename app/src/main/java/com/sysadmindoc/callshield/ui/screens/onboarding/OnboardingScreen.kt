@@ -24,6 +24,7 @@ import androidx.compose.material.icons.automirrored.filled.PhoneCallback
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -166,8 +167,11 @@ internal fun OnboardingScreenContent(
     onComplete: () -> Unit,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
 ) {
-    var currentPage by remember { mutableIntStateOf(0) }
-    val requiredReady = listOf(permsGranted, screenerGranted).count { it }
+    var currentPage by rememberSaveable { mutableIntStateOf(0) }
+    // The call-screening role only counts toward "required" on devices that
+    // actually have it — otherwise the badge is permanently stuck at 1/2 and the
+    // finish CTA never becomes "Finish setup" on ROMs without ROLE_CALL_SCREENING.
+    val requiredReady = listOf(permsGranted, !screenerSupported || screenerGranted).count { it }
     val pages =
         listOf(
             OnboardingPage(
