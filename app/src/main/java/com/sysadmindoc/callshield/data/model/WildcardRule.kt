@@ -47,63 +47,29 @@ data class WildcardRule(
         val normalizedPattern = pattern.trim()
         if (normalizedPattern.isBlank()) return false
         return if (isRegex) {
-            try {
-                if (!isSafeRegexPattern(normalizedPattern)) return false
-                val regex = Regex(normalizedPattern)
-                // Try the input as-is first, then normalized forms so that
-                // patterns like `^\+1832555\d{4}$` also match SMS senders that
-                // arrive without the `+1` prefix. This matches the glob path
-                // below; prior to v1.6.3 the two paths diverged silently —
-                // users hit "why does my glob match but my regex doesn't?"
-                numberVariants(number).any { regex.containsMatchIn(it) }
-            } catch (_: Exception) {
-                false
-            }
+            if (!isSafeRegexPattern(normalizedPattern)) return false
+            // Compile once per distinct pattern and reuse across screening
+            // calls (see [compiledRegexFor]). Prior to this cache the hot path
+            // re-ran Pattern.compile per rule per incoming call.
+            val regex =
+                compiledRegexFor("R", normalizedPattern) { Regex(normalizedPattern) }
+                    ?: return false
+            // Try the input as-is first, then normalized forms so that
+            // patterns like `^\+1832555\d{4}$` also match SMS senders that
+            // arrive without the `+1` prefix. This matches the glob path
+            // below; prior to v1.6.3 the two paths diverged silently —
+            // users hit "why does my glob match but my regex doesn't?"
+            numberVariants(number).any { regex.containsMatchIn(it) }
         } else {
             // Glob-style: * matches any digits, ? matches one digit.
             if (normalizedPattern.length > MAX_REGEX_LENGTH) return false
-            // Collapse runs of consecutive '*' to a single '*'. It's semantically
-            // identical (\d*\d* == \d*) but avoids the catastrophic sequential-
-            // quantifier backtracking that a pattern like "**********5" would
-            // otherwise compile to (measured 60+ s for ~20 stars).
-            val collapsedPattern = normalizedPattern.replace(consecutiveStars, "*")
-            // Escape ALL regex metacharacters first, then convert our globs.
-            // Without this, a pattern like "212.555*" would treat '.' as
-            // regex any-char and match "2120555..." unexpectedly.
-            val escaped =
-                buildString {
-                    for (ch in collapsedPattern) {
-                        when (ch) {
-                            '*' -> {
-                                append("\\d*")
-                            }
-
-                            '?' -> {
-                                append("\\d")
-                            }
-
-                            '+', '.', '(', ')', '[', ']', '{', '}',
-                            '|', '^', '$', '\\',
-                            -> {
-                                append('\\')
-                                append(ch)
-                            }
-
-                            else -> {
-                                append(ch)
-                            }
-                        }
-                    }
-                }
-            try {
-                val regex = Regex("^$escaped$")
-                // Try the input as-is first, then normalized forms so that
-                // patterns like "+1212*" also match SMS senders that arrive
-                // without the +1 prefix (e.g. "2125551234").
-                numberVariants(number).any { regex.matches(it) }
-            } catch (_: Exception) {
-                false
-            }
+            val regex =
+                compiledRegexFor("G", normalizedPattern) { Regex("^${globToRegex(normalizedPattern)}$") }
+                    ?: return false
+            // Try the input as-is first, then normalized forms so that
+            // patterns like "+1212*" also match SMS senders that arrive
+            // without the +1 prefix (e.g. "2125551234").
+            numberVariants(number).any { regex.matches(it) }
         }
     }
 
@@ -119,6 +85,68 @@ data class WildcardRule(
 
         /** Runs of consecutive glob `*`, collapsed to one before compilation. */
         private val consecutiveStars = Regex("""\*+""")
+
+        /**
+         * Compiled-pattern cache shared across all rule instances. Keyed by
+         * `"$kind:$pattern"` so glob and regex forms of the same literal never
+         * collide. Rule entities are recreated on every rule-cache reload, so a
+         * per-entity `lazy` would recompile on each invalidation anyway; a
+         * process-lifetime map keyed by the pattern text is both simpler and
+         * strictly better — a given pattern compiles exactly once. Bounded by
+         * the number of distinct patterns (dozens), so no eviction is needed.
+         */
+        private val compiledRegexCache = java.util.concurrent.ConcurrentHashMap<String, Regex>()
+
+        /** Memoized compile. Returns null (and does not cache) if [build] throws. */
+        private inline fun compiledRegexFor(
+            kind: String,
+            pattern: String,
+            build: () -> Regex,
+        ): Regex? {
+            val key = "$kind:$pattern"
+            compiledRegexCache[key]?.let { return it }
+            return try {
+                build().also { compiledRegexCache[key] = it }
+            } catch (_: Exception) {
+                null
+            }
+        }
+
+        /**
+         * Convert a glob pattern (`*` = any digits, `?` = one digit) to a regex
+         * body, escaping all other regex metacharacters. Runs of consecutive
+         * `*` are collapsed first: `\d*\d*` is semantically identical to `\d*`
+         * but compiles to a catastrophic-backtracking shape (a `**********5`
+         * pattern measured 60+ s). Escaping metacharacters first stops
+         * `212.555*` from treating `.` as regex any-char.
+         */
+        internal fun globToRegex(pattern: String): String {
+            val collapsed = pattern.replace(consecutiveStars, "*")
+            return buildString {
+                for (ch in collapsed) {
+                    when (ch) {
+                        '*' -> {
+                            append("\\d*")
+                        }
+
+                        '?' -> {
+                            append("\\d")
+                        }
+
+                        '+', '.', '(', ')', '[', ']', '{', '}',
+                        '|', '^', '$', '\\',
+                        -> {
+                            append('\\')
+                            append(ch)
+                        }
+
+                        else -> {
+                            append(ch)
+                        }
+                    }
+                }
+            }
+        }
 
         /** Open-ended repeats: `*`, `+`, and `{n,}` (but not bounded `{n,m}`). */
         private val unboundedQuantifier = Regex("""[*+]|\{\d*,}""")

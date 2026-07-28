@@ -66,6 +66,7 @@ import com.sysadmindoc.callshield.ui.AppLanguage
 import com.sysadmindoc.callshield.ui.DurationTtsText
 import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.theme.*
+import com.sysadmindoc.callshield.util.startActivitySafely
 
 internal const val SETTINGS_QUIET_HOURS_TOGGLE_TAG = "settings_quiet_hours_toggle"
 internal const val SETTINGS_ANSWERED_CALLER_TOGGLE_TAG = "settings_answered_caller_toggle"
@@ -287,7 +288,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
                         if (roleManager != null) {
                             screeningLauncher.launch(roleManager.createRequestRoleIntent(RoleManager.ROLE_CALL_SCREENING))
                         } else {
-                            context.startActivity(
+                            context.startActivitySafely(
                                 Intent(
                                     Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
                                     Uri.parse("package:${context.packageName}"),
@@ -295,7 +296,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
                             )
                         }
                     } catch (_: Exception) {
-                        context.startActivity(
+                        context.startActivitySafely(
                             Intent(
                                 Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
                                 Uri.parse("package:${context.packageName}"),
@@ -318,11 +319,19 @@ fun SettingsScreen(viewModel: MainViewModel) {
                 readyLabel = stringResource(R.string.settings_access_ready),
                 actionLabel = stringResource(R.string.settings_access_enable),
                 onAction = {
-                    context.startActivity(
+                    context.startActivitySafely(
                         Intent(
                             Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
                             Uri.parse("package:${context.packageName}"),
                         ),
+                        onFailure = {
+                            context.startActivitySafely(
+                                Intent(
+                                    Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                    Uri.parse("package:${context.packageName}"),
+                                ),
+                            )
+                        },
                     )
                 },
             )
@@ -337,7 +346,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                         notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                     } else {
-                        context.startActivity(
+                        context.startActivitySafely(
                             Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
                                 putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
                             },
@@ -347,7 +356,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
             )
             TextButton(
                 onClick = {
-                    context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}")))
+                    context.startActivitySafely(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}")))
                 },
                 contentPadding = PaddingValues(horizontal = 0.dp),
             ) {
@@ -618,7 +627,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
                     label = stringResource(R.string.settings_grant_notification_access),
                     icon = Icons.Default.NotificationsActive,
                     color = CatMauve,
-                    onClick = { context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) },
+                    onClick = { context.startActivitySafely(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) },
                     modifier = Modifier.fillMaxWidth(),
                     outlined = true,
                 )

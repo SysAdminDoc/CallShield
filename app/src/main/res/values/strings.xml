@@ -740,6 +740,7 @@
     <string name="ftc_report_toast">%1$s copied. Paste it into the form\'s phone-number field.</string>
     <string name="ftc_report_no_browser">No browser available to open the report form.</string>
     <string name="link_no_browser">No browser available to open this link.</string>
+    <string name="link_no_activity">This device can\'t open that screen.</string>
     <!-- Emergency contacts (Feature E) -->
     <string name="emergency_contacts_title">Emergency Contacts</string>
     <string name="emergency_contacts_subtitle">Always ring through — bypasses blocklist, quiet hours, and aggressive mode.</string>

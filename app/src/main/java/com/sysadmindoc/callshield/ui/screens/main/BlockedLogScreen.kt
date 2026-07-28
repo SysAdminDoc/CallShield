@@ -3,7 +3,6 @@ package com.sysadmindoc.callshield.ui.screens.main
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
-import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
 import androidx.compose.animation.*
@@ -51,6 +50,7 @@ import com.sysadmindoc.callshield.ui.expandableStateSemantics
 import com.sysadmindoc.callshield.ui.rememberTemporaryDecisionDurations
 import com.sysadmindoc.callshield.ui.theme.*
 import com.sysadmindoc.callshield.util.filterAsciiDigits
+import com.sysadmindoc.callshield.util.launchViewUrlSafely
 import com.sysadmindoc.callshield.util.localizedDateTimeFormat
 import kotlinx.coroutines.launch
 import java.util.*
@@ -601,7 +601,7 @@ fun BlockedCallItem(
                     // Search Google
                     SmallActionButton(Icons.Default.Search, stringResource(R.string.blocked_log_google), CatBlue) {
                         val url = "https://www.google.com/search?q=${Uri.encode("$digits phone number spam")}"
-                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) })
+                        context.launchViewUrlSafely(url)
                     }
                     // Check databases (open number detail)
                     SmallActionButton(Icons.Default.Storage, stringResource(R.string.blocked_log_databases), CatGreen) { onTap() }

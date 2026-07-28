@@ -2,6 +2,22 @@
 
 All notable changes to CallShield will be documented in this file.
 
+## Unreleased
+
+### Fixed
+
+- External-link, dial, and settings intents (blocked-log/recent-calls web search,
+  number-detail GitHub report and dial, overlay/notification/app-settings launches
+  across Dashboard, Settings, Onboarding, and Protection Test) no longer crash on
+  browserless devices or ROMs missing the target activity — they fall back to the
+  app-details screen or a toast, via a shared `startActivitySafely` helper.
+
+### Performance
+
+- Wildcard/regex blocking rules now compile their pattern once and reuse it across
+  screening calls (process-lifetime compiled-`Regex` cache) instead of re-escaping
+  and recompiling per rule per incoming call on the 5-second hot path.
+
 ## v1.7.25 — 2026-07-28
 
 ### Added

@@ -35,6 +35,7 @@ import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.permissions.CallShieldPermissions
 import com.sysadmindoc.callshield.permissions.PermissionCapabilityPriority
 import com.sysadmindoc.callshield.ui.theme.*
+import com.sysadmindoc.callshield.util.startActivitySafely
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -281,7 +282,7 @@ fun ProtectionTestScreen() {
                             icon = Icons.Default.Settings,
                             color = CatBlue,
                             onClick = {
-                                context.startActivity(
+                                context.startActivitySafely(
                                     Intent(
                                         Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
                                         Uri.fromParts("package", context.packageName, null),

@@ -122,6 +122,7 @@ import com.sysadmindoc.callshield.ui.theme.SectionHeader
 import com.sysadmindoc.callshield.ui.theme.StatusPill
 import com.sysadmindoc.callshield.ui.theme.hapticConfirm
 import com.sysadmindoc.callshield.ui.theme.hapticTick
+import com.sysadmindoc.callshield.util.startActivitySafely
 import kotlinx.coroutines.delay
 
 @Composable
@@ -1341,7 +1342,7 @@ private fun activeEngineCount(
     ).count { it }
 
 private fun openAppSettings(context: Context) {
-    context.startActivity(
+    context.startActivitySafely(
         Intent(
             Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
             Uri.parse("package:${context.packageName}"),
@@ -1350,20 +1351,24 @@ private fun openAppSettings(context: Context) {
 }
 
 private fun openOverlaySettings(context: Context) {
-    context.startActivity(
+    // Some ROMs lack the overlay-permission activity entirely — fall back to the
+    // app-details screen rather than crashing.
+    context.startActivitySafely(
         Intent(
             Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
             Uri.parse("package:${context.packageName}"),
         ),
+        onFailure = { openAppSettings(context) },
     )
 }
 
 private fun openNotificationSettings(context: Context) {
-    val intent =
+    context.startActivitySafely(
         Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
             putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
-        }
-    context.startActivity(intent)
+        },
+        onFailure = { openAppSettings(context) },
+    )
 }
 
 private fun requestCallScreening(

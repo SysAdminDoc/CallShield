@@ -43,6 +43,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.permissions.CallShieldPermissions
 import com.sysadmindoc.callshield.ui.theme.*
+import com.sysadmindoc.callshield.util.startActivitySafely
 import kotlinx.coroutines.launch
 
 data class OnboardingPage(
@@ -123,7 +124,7 @@ fun OnboardingScreen(onComplete: () -> Unit) {
                 // the launcher would auto-deny and the button would silently do
                 // nothing. Open the OS notification settings instead, matching
                 // the Settings screen's behavior.
-                context.startActivity(
+                context.startActivitySafely(
                     android.content.Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
                         putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
                     },
@@ -131,12 +132,12 @@ fun OnboardingScreen(onComplete: () -> Unit) {
             }
         },
         onRequestOverlay = {
-            val intent =
+            context.startActivitySafely(
                 android.content.Intent(
                     Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
                     Uri.parse("package:${context.packageName}"),
-                )
-            context.startActivity(intent)
+                ),
+            )
         },
         onRequestScreener = {
             if (roleManager != null) {

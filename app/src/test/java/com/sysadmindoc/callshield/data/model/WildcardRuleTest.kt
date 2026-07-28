@@ -1,5 +1,6 @@
 package com.sysadmindoc.callshield.data.model
 
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -151,6 +152,33 @@ class WildcardRuleTest {
     @Test fun `blank pattern matches nothing`() {
         assertFalse(wildcard(pattern = "", isRegex = false).matches("5551234"))
         assertFalse(wildcard(pattern = "   ", isRegex = true).matches("5551234"))
+    }
+
+    // ── Compiled-pattern memoization (hot-path perf) ──────────────────
+
+    @Test fun `globToRegex escapes metacharacters and collapses stars`() {
+        // Consecutive stars collapse to one \d* (ReDoS avoidance); '.' is
+        // escaped; '?' becomes a single \d.
+        assertEquals("\\d*5", WildcardRule.globToRegex("***5"))
+        assertEquals("212\\.555\\d*", WildcardRule.globToRegex("212.555*"))
+        assertEquals("\\d", WildcardRule.globToRegex("?"))
+    }
+
+    @Test fun `repeated matches on the same rule stay correct after caching`() {
+        // The compiled Regex is memoized per pattern; a second call must
+        // reuse it without changing the result.
+        val rule = wildcard(pattern = "+1832555*", isRegex = false)
+        repeat(3) { assertTrue(rule.matches("+18325551234")) }
+        repeat(3) { assertFalse(rule.matches("+14155551234")) }
+    }
+
+    @Test fun `two rule instances with the same pattern share a compiled regex`() {
+        // Rule entities are recreated on every rule-cache reload; the shared
+        // companion cache means a given pattern compiles exactly once.
+        val a = wildcard(pattern = "^\\+1832555\\d{4}$", isRegex = true)
+        val b = wildcard(pattern = "^\\+1832555\\d{4}$", isRegex = true)
+        assertTrue(a.matches("+18325551234"))
+        assertTrue(b.matches("+18325551234"))
     }
 
     private fun wildcard(

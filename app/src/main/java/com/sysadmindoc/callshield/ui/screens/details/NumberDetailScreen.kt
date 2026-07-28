@@ -40,7 +40,9 @@ import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.screens.lookup.SpamScoreGauge
 import com.sysadmindoc.callshield.ui.screens.lookup.detectionIcon
 import com.sysadmindoc.callshield.ui.theme.*
+import com.sysadmindoc.callshield.util.launchViewUrlSafely
 import com.sysadmindoc.callshield.util.localizedDateTimeFormat
+import com.sysadmindoc.callshield.util.startActivitySafely
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -539,7 +541,7 @@ fun NumberDetailScreen(
                 onClick = {
                     val title = Uri.encode(reportIssueTitle)
                     val body = Uri.encode(reportIssueBody)
-                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/SysAdminDoc/CallShield/issues/new?title=$title&body=$body&labels=spam-report")).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) })
+                    context.launchViewUrlSafely("https://github.com/SysAdminDoc/CallShield/issues/new?title=$title&body=$body&labels=spam-report")
                 },
                 modifier = Modifier.weight(1f),
                 outlined = true,
@@ -610,7 +612,9 @@ fun NumberDetailScreen(
                 icon = Icons.Default.Phone,
                 color = CatBlue,
                 onClick = {
-                    context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:$number")).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) })
+                    context.startActivitySafely(
+                        Intent(Intent.ACTION_DIAL, Uri.parse("tel:$number")).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) },
+                    )
                 },
                 modifier = Modifier.weight(1f),
                 outlined = true,
