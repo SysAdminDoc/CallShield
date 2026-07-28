@@ -17,6 +17,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -177,7 +178,7 @@ private fun DayOfWeekChips(
             FilterChip(
                 selected = selected,
                 onClick = { onChange(daysMask xor (1 shl dayBit)) },
-                label = { Text(TimeSchedule.DAY_LABELS[dayBit]) },
+                label = { Text(localizedDayLabel(dayBit)) },
                 shape = RoundedCornerShape(8.dp),
                 colors =
                     FilterChipDefaults.filterChipColors(
@@ -198,10 +199,73 @@ private fun DayOfWeekChips(
 fun SchedulePill(schedule: TimeSchedule) {
     if (!schedule.isGating) return
     StatusPill(
-        text = stringResource(R.string.hash_wildcard_item_schedule, schedule.describe()),
+        text = stringResource(R.string.hash_wildcard_item_schedule, localizedScheduleDescription(schedule)),
         color = CatBlue,
         horizontalPadding = 8.dp,
         verticalPadding = 4.dp,
         textStyle = MaterialTheme.typography.labelSmall,
     )
+}
+
+/**
+ * Locale-aware short weekday label. Uses the platform's localized short weekday
+ * names (Sun/Mon/… in en, dim./lun./… in fr, etc.), falling back to the ASCII
+ * [TimeSchedule.DAY_LABELS] only if the platform returns a blank entry.
+ * `dayBit` is 0 = Sunday … 6 = Saturday; DateFormatSymbols indexes 1 = Sunday.
+ */
+@Composable
+private fun localizedDayLabel(dayBit: Int): String {
+    val shortWeekdays =
+        remember {
+            java.text.DateFormatSymbols
+                .getInstance()
+                .shortWeekdays
+        }
+    return shortWeekdays.getOrNull(dayBit + 1)?.takeIf { it.isNotBlank() }
+        ?: TimeSchedule.DAY_LABELS[dayBit]
+}
+
+/**
+ * Localized equivalent of [TimeSchedule.describe] for the UI. The non-composable
+ * `describe()` stays as the canonical/logging form; this renders translated
+ * "Every day / Mon–Fri / Weekends" and locale-aware weekday names for display.
+ */
+@Composable
+private fun localizedScheduleDescription(schedule: TimeSchedule): String {
+    if (!schedule.isGating) return ""
+    val set = (0..6).filter { (schedule.daysMask shr it) and 1 == 1 }
+    val shortWeekdays =
+        remember {
+            java.text.DateFormatSymbols
+                .getInstance()
+                .shortWeekdays
+        }
+    val days =
+        when {
+            set.size == 7 -> {
+                stringResource(R.string.schedule_every_day)
+            }
+
+            set == listOf(1, 2, 3, 4, 5) -> {
+                stringResource(R.string.schedule_weekdays)
+            }
+
+            set == listOf(0, 6) -> {
+                stringResource(R.string.schedule_weekends)
+            }
+
+            else -> {
+                set.joinToString(", ") { dayBit ->
+                    shortWeekdays.getOrNull(dayBit + 1)?.takeIf { it.isNotBlank() }
+                        ?: TimeSchedule.DAY_LABELS[dayBit]
+                }
+            }
+        }
+    val hours =
+        if (schedule.startHour == schedule.endHour) {
+            ""
+        } else {
+            "%02d:00–%02d:00".format(schedule.startHour, schedule.endHour)
+        }
+    return if (hours.isEmpty()) days else stringResource(R.string.schedule_days_hours, days, hours)
 }

@@ -33,6 +33,10 @@ All notable changes to CallShield will be documented in this file.
   success/failure flag from the view model instead of the UI guessing from the
   (localized) message text with `startsWith("Restored ")` / `"Applied"` — success
   vs error coloring stays correct under non-English locales and pseudolocales.
+- Rule schedule labels now use localized day names and translatable "Every
+  day"/"Mon–Fri"/"Weekends" strings, and the auto-generated rule descriptions
+  written on "not spam" reports and blocked-log swipe-to-block are now localized
+  string resources instead of hardcoded English.
 
 ### Performance
 

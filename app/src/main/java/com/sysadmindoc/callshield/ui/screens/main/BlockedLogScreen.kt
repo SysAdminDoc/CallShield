@@ -240,7 +240,7 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
                                     SwipeToDismissBoxValue.StartToEnd -> {
                                         if (actionHandled) return@LaunchedEffect
                                         actionHandled = true
-                                        viewModel.blockNumber(call.number, "spam", "Blocked from log swipe")
+                                        viewModel.blockNumber(call.number, "spam", context.getString(R.string.desc_blocked_from_log_swipe))
                                         hapticConfirm(context)
                                         scope.launch {
                                             // Offer Undo — a permanent block is the more consequential
@@ -313,7 +313,7 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
                                                         true
                                                     },
                                                     CustomAccessibilityAction(blockActionLabel) {
-                                                        viewModel.blockNumber(call.number, "spam", "Blocked from log swipe")
+                                                        viewModel.blockNumber(call.number, "spam", context.getString(R.string.desc_blocked_from_log_swipe))
                                                         true
                                                     },
                                                 )
