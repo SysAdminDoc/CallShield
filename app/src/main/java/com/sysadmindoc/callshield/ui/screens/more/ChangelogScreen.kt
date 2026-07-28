@@ -25,9 +25,20 @@ fun ChangelogScreen() {
         verticalArrangement = Arrangement.spacedBy(0.dp),
     ) {
         VersionEntry(
+            "1.7.25",
+            "Follow-up polish, verified on-device",
+            isLatest = true,
+            changes =
+                listOf(
+                    "Made the repeat-caller auto-block threshold adjustable in Settings",
+                    "Unified the trusted-numbers wording across the add flow",
+                    "Replaced raw error text in lookup/block/report with clear localized messages",
+                    "Made the detection-trace verdict labels translatable",
+                ),
+        )
+        VersionEntry(
             "1.7.24",
             "Deep-audit fixes across detection, data, backups, and accessibility",
-            isLatest = true,
             changes =
                 listOf(
                     "Community reports validate every number and can't be used to remove trusted database entries",

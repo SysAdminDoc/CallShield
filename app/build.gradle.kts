@@ -47,8 +47,8 @@ android {
         applicationId = "com.sysadmindoc.callshield"
         minSdk = 29
         targetSdk = 36
-        versionCode = 52
-        versionName = "1.7.24"
+        versionCode = 53
+        versionName = "1.7.25"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
