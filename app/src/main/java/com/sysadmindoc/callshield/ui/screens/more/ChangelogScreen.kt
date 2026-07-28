@@ -25,9 +25,21 @@ fun ChangelogScreen() {
         verticalArrangement = Arrangement.spacedBy(0.dp),
     ) {
         VersionEntry(
+            "1.7.24",
+            "Deep-audit fixes across detection, data, backups, and accessibility",
+            isLatest = true,
+            changes =
+                listOf(
+                    "Community reports validate every number and can't be used to remove trusted database entries",
+                    "Backups keep all data under release optimization; restore refreshes range rules and keeps temporary blocks",
+                    "Fixed SMS URL matching, whitelisted-sender protection, a wildcard slowdown, and international number formatting",
+                    "Corrected the spam count, onboarding, Recent call types, search, and locale-aware timestamps",
+                    "Labeled toggles for TalkBack, blocked-log actions, and honest notification state below Android 13",
+                ),
+        )
+        VersionEntry(
             "1.7.23",
             "Deep-audit hardening across screening, backups, and accessibility",
-            isLatest = true,
             changes =
                 listOf(
                     "Fixed roaming corrupting number matching — identities now canonicalize under the SIM's home region",

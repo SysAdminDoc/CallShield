@@ -1,0 +1,6 @@
+Deep-audit fix pass:
+- Community reports validate every number; anonymous not-spam votes can't remove authoritative entries.
+- Backups keep all data under R8; restore refreshes range rules and keeps temporary-block expiry.
+- Detection fixes: SMS URL matching, whitelisted-sender protection, wildcard ReDoS guard, neighbor-spoof toggle, intl number formatting.
+- UI: accurate spam count, onboarding, Recent call types, locale-aware times.
+- Accessibility: labeled toggles, blocked-log actions.
