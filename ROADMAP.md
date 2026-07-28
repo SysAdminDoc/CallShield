@@ -608,9 +608,6 @@ Focus areas not covered by prior passes: the Developer-Verification survival pat
 - [ ] P3 — Blocked-summary counter never resets
   Why: NotificationHelper.blockedSinceLastNotif only grows per process lifetime, so "N blocked recently" overstates and the count<=0 cancel branch is dead code. Needs a deleteIntent (or shade-dismiss hook) that zeroes the counter.
   Where: service/NotificationHelper.kt (updateSummary)
-- [ ] P3 — English-prefix success sniffing breaks under non-English locales
-  Why: SettingsScreen decides success vs error styling by startsWith("Restored ") / "Applied|Disabled|Removed", and LookupScreen does substringAfter(": ") string surgery — all break under the shipped pseudolocales. Carry a typed success flag from MainViewModel instead.
-  Where: ui/screens/settings/SettingsScreen.kt, ui/screens/lookup/LookupScreen.kt, ui/MainViewModel.kt
 - [ ] P3 — Hardcoded English in schedule labels and stored descriptions
   Why: TimeSchedule day labels ("Mon–Fri", "Weekends") render untranslated in ScheduleControls, and MainViewModel/BlockedLogScreen store English descriptions ("Reported as not spam", "Blocked from log swipe") into the DB.
   Where: data/TimeSchedule.kt, ui/screens/main/ScheduleControls.kt, ui/MainViewModel.kt, ui/screens/main/BlockedLogScreen.kt

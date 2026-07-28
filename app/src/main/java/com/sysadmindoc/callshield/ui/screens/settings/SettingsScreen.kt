@@ -65,6 +65,7 @@ import com.sysadmindoc.callshield.permissions.CallShieldPermissions
 import com.sysadmindoc.callshield.ui.AppLanguage
 import com.sysadmindoc.callshield.ui.DurationTtsText
 import com.sysadmindoc.callshield.ui.MainViewModel
+import com.sysadmindoc.callshield.ui.StatusMessage
 import com.sysadmindoc.callshield.ui.theme.*
 import com.sysadmindoc.callshield.util.startActivitySafely
 
@@ -850,14 +851,14 @@ fun SettingsScreen(viewModel: MainViewModel) {
                     },
                 )
             }
-            restoreResult?.let {
+            restoreResult?.let { status ->
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    it,
+                    status.text,
                     style = MaterialTheme.typography.bodySmall,
-                    color = if (it.startsWith("Restored ")) CatGreen else CatPeach,
+                    color = if (status.success) CatGreen else CatPeach,
                 )
-                LaunchedEffect(it) {
+                LaunchedEffect(status) {
                     kotlinx.coroutines.delay(4000)
                     viewModel.clearRestoreResult()
                 }
@@ -1408,7 +1409,7 @@ private fun ExternalBlocklistSettings(
     label: String,
     subscriptions: List<ExternalBlocklistSubscription>,
     preview: ExternalBlocklistPreview?,
-    result: String?,
+    result: StatusMessage?,
     onUrlChange: (String) -> Unit,
     onLabelChange: (String) -> Unit,
     onPreview: () -> Unit,
@@ -1481,10 +1482,7 @@ private fun ExternalBlocklistSettings(
         preview?.let {
             ExternalBlocklistPreviewPanel(preview = it, onApply = onApply)
         }
-        result?.let {
-            val successfulResult =
-                preview != null ||
-                    listOf("Applied", "Disabled", "Removed").any { prefix -> it.startsWith(prefix) }
+        result?.let { status ->
             Spacer(Modifier.height(8.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -1492,10 +1490,10 @@ private fun ExternalBlocklistSettings(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    it,
+                    status.text,
                     style = MaterialTheme.typography.bodySmall,
                     color =
-                        if (successfulResult) {
+                        if (status.success) {
                             CatGreen
                         } else {
                             CatPeach
