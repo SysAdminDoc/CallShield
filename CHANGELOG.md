@@ -11,6 +11,14 @@ All notable changes to CallShield will be documented in this file.
   toast when it's applied. The auto-generated rule description is now a localized
   string instead of a hardcoded English literal.
 
+### Security
+
+- The optional post-call review screen now verifies a matching recent call in the
+  device call log before submitting a community spam report. A spoofed launch (any
+  app can craft an `ACTION_POST_CALL` intent for an arbitrary number) with no
+  matching call is blocked locally only and never contributes to the shared
+  database; the legitimate flow is unaffected.
+
 ### Fixed
 
 - External-link, dial, and settings intents (blocked-log/recent-calls web search,

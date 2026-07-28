@@ -3,10 +3,12 @@
 package com.sysadmindoc.callshield.ui
 
 import android.content.ActivityNotFoundException
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.provider.CallLog
 import android.provider.ContactsContract
 import android.telecom.TelecomManager
 import android.util.Log
@@ -39,6 +41,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
+import com.sysadmindoc.callshield.CallShieldApp
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.PhoneFormatter
 import com.sysadmindoc.callshield.data.SpamRepository
@@ -55,9 +58,12 @@ import com.sysadmindoc.callshield.ui.theme.GradientDivider
 import com.sysadmindoc.callshield.ui.theme.PremiumActionButton
 import com.sysadmindoc.callshield.ui.theme.PremiumCard
 import com.sysadmindoc.callshield.ui.theme.PremiumIconTile
+import com.sysadmindoc.callshield.util.filterAsciiDigits
 import com.sysadmindoc.callshield.util.normalizePhoneNumberInput
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /** Optional Android 11+ review surface launched by Telecom after an eligible completed call. */
 class PostCallActivity : AppCompatActivity() {
@@ -108,11 +114,31 @@ class PostCallActivity : AppCompatActivity() {
     }
 
     private fun markSpam() {
-        sendBroadcast(
-            Intent(this, SpamActionReceiver::class.java)
-                .setAction(SpamActionReceiver.ACTION_FEEDBACK_SPAM)
-                .putExtra(SpamActionReceiver.EXTRA_FEEDBACK_NUMBER, details.number),
-        )
+        // Guard against spoofed launches: any app can start this activity with a
+        // crafted ACTION_POST_CALL + tel: handle for an arbitrary number. Before
+        // submitting a community spam report (which is broadcast to all users), we
+        // require a matching recent call in the device call log. If the number has
+        // no recent call, the launch is unverified — block it locally only and skip
+        // the community contribution so the shared DB can't be weaponized. If we
+        // can't check (READ_CALL_LOG not granted, query error), fall back to the
+        // normal path so the legitimate flow is never suppressed.
+        val number = details.number
+        val app = applicationContext
+        CallShieldApp.appScope.launch {
+            if (PostCallCallLogVerifier.hasRecentCall(app, number) == false) {
+                runCatching {
+                    SpamRepository
+                        .getInstance(app)
+                        .blockNumber(number, "spam", app.getString(R.string.desc_blocked_post_call_local))
+                }.onFailure { Log.w(TAG, "Local post-call block failed", it) }
+            } else {
+                app.sendBroadcast(
+                    Intent(app, SpamActionReceiver::class.java)
+                        .setAction(SpamActionReceiver.ACTION_FEEDBACK_SPAM)
+                        .putExtra(SpamActionReceiver.EXTRA_FEEDBACK_NUMBER, number),
+                )
+            }
+        }
         finishAndRemoveTask()
     }
 
@@ -143,6 +169,67 @@ internal data class PostCallDetails(
     val durationBucket: Int,
     val disconnectCause: Int,
 )
+
+/**
+ * Verifies that a post-call review actually corresponds to a real recent call in
+ * the device call log, so a spoofed ACTION_POST_CALL launch can't drive community
+ * spam reports for arbitrary numbers.
+ */
+internal object PostCallCallLogVerifier {
+    /** Only treat calls within this window as matching a "just completed" call. */
+    private const val RECENT_WINDOW_MS = 15L * 60L * 1000L
+
+    /**
+     * @return true if a call to/from [number] exists in the log within the recent
+     *   window, false if the log was readable but has no such entry, or null if we
+     *   couldn't determine it (permission missing, query error) — callers should
+     *   treat null as "don't block the legitimate flow".
+     */
+    suspend fun hasRecentCall(
+        context: Context,
+        number: String,
+    ): Boolean? =
+        withContext(Dispatchers.IO) {
+            val targetDigits = filterAsciiDigits(number)
+            if (targetDigits.isEmpty()) return@withContext null
+            try {
+                val sinceStamp = System.currentTimeMillis() - RECENT_WINDOW_MS
+                val cursor =
+                    context.contentResolver.query(
+                        CallLog.Calls.CONTENT_URI,
+                        arrayOf(CallLog.Calls.NUMBER),
+                        "${CallLog.Calls.DATE} >= ?",
+                        arrayOf(sinceStamp.toString()),
+                        "${CallLog.Calls.DATE} DESC",
+                    ) ?: return@withContext null
+                cursor.use { c ->
+                    val col = c.getColumnIndex(CallLog.Calls.NUMBER)
+                    if (col < 0) return@withContext null
+                    while (c.moveToNext()) {
+                        val logged = filterAsciiDigits(c.getString(col).orEmpty())
+                        if (logged.isNotEmpty() && digitsMatch(logged, targetDigits)) {
+                            return@withContext true
+                        }
+                    }
+                }
+                false
+            } catch (_: SecurityException) {
+                null
+            } catch (_: Exception) {
+                null
+            }
+        }
+
+    /** Match on the last-10-digit tail so +1 / country-code variants still line up. */
+    private fun digitsMatch(
+        a: String,
+        b: String,
+    ): Boolean {
+        val tailA = a.takeLast(10)
+        val tailB = b.takeLast(10)
+        return tailA == tailB || a == b
+    }
+}
 
 internal object PostCallIntentParser {
     @Suppress("DEPRECATION")
