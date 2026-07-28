@@ -836,6 +836,10 @@ fun WildcardRuleItem(
             androidx.compose.material3.Switch(
                 checked = rule.enabled,
                 onCheckedChange = onToggle,
+                // Name the switch so TalkBack announces the rule it toggles
+                // instead of an anonymous "on/off, switch" (the row also has a
+                // delete action, so it can't be a single toggleable node).
+                modifier = Modifier.semantics { contentDescription = rule.pattern },
                 colors =
                     androidx.compose.material3.SwitchDefaults.colors(
                         checkedTrackColor = CatGreen,
@@ -885,6 +889,10 @@ fun KeywordRuleItem(
             androidx.compose.material3.Switch(
                 checked = rule.enabled,
                 onCheckedChange = onToggle,
+                // Name the switch so TalkBack announces the rule it toggles
+                // instead of an anonymous "on/off, switch" (the row also has a
+                // delete action, so it can't be a single toggleable node).
+                modifier = Modifier.semantics { contentDescription = rule.keyword },
                 colors =
                     androidx.compose.material3.SwitchDefaults.colors(
                         checkedTrackColor = CatGreen,

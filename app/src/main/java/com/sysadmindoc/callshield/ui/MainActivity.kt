@@ -758,7 +758,9 @@ fun RowScope.NavItem(
     NavigationBarItem(
         selected = selected,
         onClick = onClick,
-        icon = { Icon(icon, contentDescription = label, tint = if (selected) iconTint else LocalContentColor.current) },
+        // Icon is decorative — the always-visible label names the tab, so a
+        // matching icon contentDescription makes TalkBack announce it twice.
+        icon = { Icon(icon, contentDescription = null, tint = if (selected) iconTint else LocalContentColor.current) },
         label = {
             Text(
                 label,

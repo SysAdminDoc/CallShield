@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
@@ -40,6 +41,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.sysadmindoc.callshield.R
@@ -258,7 +260,14 @@ private fun SourceRow(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                    // Row-level toggleable so TalkBack reads the app label + state
+                    // as one node; the row height already meets the 48dp minimum.
+                    .toggleable(
+                        value = allowed,
+                        enabled = source.installed,
+                        role = Role.Switch,
+                        onValueChange = onToggle,
+                    ).padding(horizontal = 12.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
@@ -298,7 +307,7 @@ private fun SourceRow(
             // the 48dp minimum height and clips the ripple.
             Switch(
                 checked = allowed,
-                onCheckedChange = onToggle,
+                onCheckedChange = null,
                 enabled = source.installed,
                 colors = SwitchDefaults.colors(checkedTrackColor = CatBlue),
             )

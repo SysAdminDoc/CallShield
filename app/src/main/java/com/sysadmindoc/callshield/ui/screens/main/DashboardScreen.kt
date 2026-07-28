@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -83,6 +84,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -1384,11 +1388,20 @@ fun QuickToggle(
 ) {
     val context = LocalContext.current
     val tintColor = if (checked) CatGreen else CatSubtext
+    // Row-level toggleable so TalkBack reads "Block calls, switch, on" as one
+    // node (the app's two most important controls were previously unlabeled).
     Row(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .padding(vertical = 4.dp),
+                .toggleable(
+                    value = checked,
+                    role = Role.Switch,
+                    onValueChange = {
+                        hapticTick(context)
+                        onChanged(it)
+                    },
+                ).padding(vertical = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -1396,10 +1409,7 @@ fun QuickToggle(
         Text(label, modifier = Modifier.weight(1f), fontWeight = FontWeight.Medium)
         Switch(
             checked = checked,
-            onCheckedChange = {
-                hapticTick(context)
-                onChanged(it)
-            },
+            onCheckedChange = null,
             colors =
                 SwitchDefaults.colors(
                     checkedTrackColor = CatGreen,
@@ -1423,7 +1433,12 @@ fun ProfileChip(
             hapticConfirm(context)
             onClick()
         },
-        modifier = modifier.height(36.dp),
+        // Expose the active profile as a selection state — it was conveyed only
+        // by border/tint/check, invisible to TalkBack on the mode-selection row.
+        modifier =
+            modifier
+                .height(36.dp)
+                .semantics { selected = isActive },
         shape = RoundedCornerShape(10.dp),
         border = BorderStroke(1.dp, if (isActive) color.copy(alpha = 0.6f) else color.copy(alpha = 0.2f)),
         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),

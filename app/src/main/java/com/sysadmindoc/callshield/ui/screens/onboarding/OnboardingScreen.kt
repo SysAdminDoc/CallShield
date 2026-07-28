@@ -381,7 +381,9 @@ internal fun OnboardingScreenContent(
                                 )
                             }
 
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !notificationsGranted) {
+                            // Show whenever notifications are off, on all API levels —
+                            // below 33, onRequestNotifications() opens OS settings.
+                            if (!notificationsGranted) {
                                 Spacer(Modifier.height(10.dp))
                                 PremiumActionButton(
                                     label = stringResource(R.string.onboarding_enable_notifications),
