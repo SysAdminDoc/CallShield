@@ -202,7 +202,10 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     itemsIndexed(filtered, key = { _, call -> call.id }) { index, call ->
-                        val visible = remember { mutableStateOf(false) }
+                        // rememberSaveable (keyed by the item's stable id via the
+                        // LazyColumn saveable registry) keeps the entrance animation
+                        // from replaying every time a row scrolls off-screen and back.
+                        var visible by rememberSaveable(call.id) { mutableStateOf(false) }
                         val deletedMessage = stringResource(R.string.blocked_log_deleted)
                         val undoLabel = stringResource(R.string.blocked_log_undo)
                         val blockedFromSwipeDescription = stringResource(R.string.desc_blocked_from_log_swipe)
@@ -211,11 +214,11 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
                                 R.string.blocked_log_number_blocked,
                                 PhoneFormatter.formatIsolated(call.number),
                             )
-                        LaunchedEffect(Unit) {
+                        LaunchedEffect(call.id) {
                             kotlinx.coroutines.delay(index.toLong().coerceAtMost(15) * 30)
-                            visible.value = true
+                            visible = true
                         }
-                        AnimatedVisibility(visible = visible.value, enter = slideInVertically { 40 } + fadeIn()) {
+                        AnimatedVisibility(visible = visible, enter = slideInVertically { 40 } + fadeIn()) {
                             val dismissState = rememberSwipeToDismissBoxState()
                             var actionHandled by remember(call.id) { mutableStateOf(false) }
                             LaunchedEffect(dismissState.currentValue) {

@@ -306,23 +306,38 @@ fun RecentCallsScreen(viewModel: MainViewModel) {
                     },
             )
         } else if (hasCallLogPermission) {
+            // Stable keys: the (number,date,type) triple is not guaranteed unique
+            // (dual-SIM duplicates, MMS group rows, sync re-inserts), so disambiguate
+            // collisions with a per-triple occurrence counter rather than the raw
+            // index. A raw index shifts every key when one new call arrives at the
+            // top, which re-keys — and so re-animates — every row on each refresh.
+            val itemKeys =
+                remember(filtered) {
+                    val seen = HashMap<String, Int>()
+                    filtered.map { call ->
+                        val base = "${call.number}|${call.date}|${call.type}"
+                        val occurrence = seen.getOrDefault(base, 0)
+                        seen[base] = occurrence + 1
+                        if (occurrence == 0) base else "$base#$occurrence"
+                    }
+                }
             LazyColumn(
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 itemsIndexed(
                     items = filtered,
-                    // Include index — the (number,date,type) triple is not guaranteed
-                    // unique (dual-SIM duplicates, MMS group rows, sync re-inserts), and
-                    // collisions crash LazyColumn with "Key was already used".
-                    key = { index, call -> "${call.number}|${call.date}|${call.type}|$index" },
+                    key = { index, _ -> itemKeys[index] },
                 ) { index, call ->
-                    val visible = remember(call.number, call.date) { mutableStateOf(false) }
-                    LaunchedEffect(call.number, call.date) {
+                    // rememberSaveable persists across LazyColumn disposal (via the
+                    // item's saveable registry) so a row that scrolls off and back does
+                    // not replay its entrance animation.
+                    var visible by rememberSaveable(itemKeys[index]) { mutableStateOf(false) }
+                    LaunchedEffect(itemKeys[index]) {
                         kotlinx.coroutines.delay(index.toLong().coerceAtMost(20) * 25)
-                        visible.value = true
+                        visible = true
                     }
-                    AnimatedVisibility(visible = visible.value, enter = slideInVertically { 30 } + fadeIn()) {
+                    AnimatedVisibility(visible = visible, enter = slideInVertically { 30 } + fadeIn()) {
                         val allowReason = stringResource(R.string.recent_temporary_allow_reason)
                         val blockReason = stringResource(R.string.recent_temporary_block_reason)
                         RecentCallItem(
