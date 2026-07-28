@@ -29,6 +29,10 @@ All notable changes to CallShield will be documented in this file.
   open instead of freezing at the value it had when the screen opened.
 - `PremiumCard`'s accent color now renders as a subtle hairline border for cards
   that opt into one (it was previously an ignored parameter).
+- Backup-restore and external-blocklist status lines now carry a typed
+  success/failure flag from the view model instead of the UI guessing from the
+  (localized) message text with `startsWith("Restored ")` / `"Applied"` — success
+  vs error coloring stays correct under non-English locales and pseudolocales.
 
 ### Performance
 

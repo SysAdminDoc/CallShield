@@ -47,6 +47,17 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
+/**
+ * A user-facing status line plus whether it represents success. Carrying the
+ * boolean means the UI never has to sniff the (localized) message text with
+ * `startsWith("Restored ")` / `startsWith("Applied")` to pick success vs error
+ * styling — that broke under non-English locales and the shipped pseudolocales.
+ */
+data class StatusMessage(
+    val text: String,
+    val success: Boolean,
+)
+
 @OptIn(ExperimentalCoroutinesApi::class)
 @Suppress("LargeClass", "TooManyFunctions")
 @HiltViewModel
@@ -289,8 +300,8 @@ class MainViewModel
         private val _importResult = MutableStateFlow<String?>(null)
         val importResult: StateFlow<String?> = _importResult
 
-        private val _restoreResult = MutableStateFlow<String?>(null)
-        val restoreResult: StateFlow<String?> = _restoreResult
+        private val _restoreResult = MutableStateFlow<StatusMessage?>(null)
+        val restoreResult: StateFlow<StatusMessage?> = _restoreResult
 
         private val _restorePreview = MutableStateFlow<BackupRestore.RestorePreview?>(null)
         val restorePreview: StateFlow<BackupRestore.RestorePreview?> = _restorePreview
@@ -298,8 +309,8 @@ class MainViewModel
         private val _externalBlocklistPreview = MutableStateFlow<ExternalBlocklistPreview?>(null)
         val externalBlocklistPreview: StateFlow<ExternalBlocklistPreview?> = _externalBlocklistPreview
 
-        private val _externalBlocklistResult = MutableStateFlow<String?>(null)
-        val externalBlocklistResult: StateFlow<String?> = _externalBlocklistResult
+        private val _externalBlocklistResult = MutableStateFlow<StatusMessage?>(null)
+        val externalBlocklistResult: StateFlow<StatusMessage?> = _externalBlocklistResult
 
         fun clearImportResult() {
             _importResult.value = null
@@ -369,7 +380,7 @@ class MainViewModel
             viewModelScope.launch {
                 val result = repo.previewExternalBlocklistSubscription(url, label)
                 _externalBlocklistPreview.value = result.preview
-                _externalBlocklistResult.value = result.message
+                _externalBlocklistResult.value = StatusMessage(result.message, result.success)
             }
         }
 
@@ -380,7 +391,7 @@ class MainViewModel
             viewModelScope.launch {
                 val result = repo.applyExternalBlocklistSubscription(url, label)
                 _externalBlocklistPreview.value = if (result.success) null else result.preview
-                _externalBlocklistResult.value = result.message
+                _externalBlocklistResult.value = StatusMessage(result.message, result.success)
             }
         }
 
@@ -390,14 +401,14 @@ class MainViewModel
         ) {
             viewModelScope.launch {
                 val result = repo.setExternalBlocklistSubscriptionEnabled(subscription.id, enabled)
-                _externalBlocklistResult.value = result.message
+                _externalBlocklistResult.value = StatusMessage(result.message, result.success)
             }
         }
 
         fun removeExternalBlocklist(subscription: ExternalBlocklistSubscription) {
             viewModelScope.launch {
                 val result = repo.removeExternalBlocklistSubscription(subscription.id)
-                _externalBlocklistResult.value = result.message
+                _externalBlocklistResult.value = StatusMessage(result.message, result.success)
             }
         }
 
@@ -668,7 +679,7 @@ class MainViewModel
                         _restoreResult.value = null
                     } else {
                         _restorePreview.value = null
-                        _restoreResult.value = result.message
+                        _restoreResult.value = StatusMessage(result.message, success = false)
                     }
                 } finally {
                     ownedPassphrase?.fill('\u0000')
@@ -679,12 +690,13 @@ class MainViewModel
         fun applyRestore(mode: BackupRestore.RestoreMode) {
             val preview =
                 _restorePreview.value ?: run {
-                    _restoreResult.value = appContext.getString(R.string.backup_restore_no_preview)
+                    _restoreResult.value =
+                        StatusMessage(appContext.getString(R.string.backup_restore_no_preview), success = false)
                     return
                 }
             viewModelScope.launch {
                 val result = BackupRestore.restoreFromPreview(appContext, preview, mode)
-                _restoreResult.value = result.message
+                _restoreResult.value = StatusMessage(result.message, result.success)
                 if (result.success) {
                     _restorePreview.value = null
                 }
