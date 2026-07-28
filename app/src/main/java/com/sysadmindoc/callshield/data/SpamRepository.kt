@@ -219,6 +219,9 @@ class SpamRepository(
         val KEY_ACTIVE_PROFILE = stringPreferencesKey("active_profile_name")
         internal val KEY_APP_THEME = stringPreferencesKey("app_theme")
 
+        /** SharedPreferences key for the synchronous theme mirror (cold-start flash fix). */
+        private const val KEY_THEME_CACHE = "app_theme"
+
         const val SYNC_SOURCE_REMOTE = "remote"
         const val SYNC_SOURCE_BUNDLED = "bundled"
 
@@ -296,7 +299,27 @@ class SpamRepository(
 
     suspend fun setActiveProfileName(name: String?) = settingsRepository.setActiveProfileName(name)
 
-    suspend fun setAppTheme(theme: String) = settingsRepository.setAppTheme(theme)
+    // Synchronous mirror of the persisted theme. DataStore is async-only, so its
+    // first emission arrives a frame or two after the Activity starts, flashing the
+    // Amoled default (black + wrong status-bar icons) for Light/Graphite users on
+    // every cold start. A tiny SharedPreferences mirror lets the ViewModel seed the
+    // theme StateFlow synchronously at construction and eliminate that flash.
+    private val themeCache: android.content.SharedPreferences by lazy {
+        appContext.getSharedPreferences("theme_cache", Context.MODE_PRIVATE)
+    }
+
+    /** Last-known theme, read synchronously. Defaults to the app default (amoled). */
+    fun cachedAppTheme(): String = themeCache.getString(KEY_THEME_CACHE, "amoled") ?: "amoled"
+
+    /** Update the synchronous theme mirror (called on writes and backfilled at start). */
+    fun cacheAppTheme(theme: String) {
+        themeCache.edit().putString(KEY_THEME_CACHE, theme).apply()
+    }
+
+    suspend fun setAppTheme(theme: String) {
+        settingsRepository.setAppTheme(theme)
+        cacheAppTheme(theme)
+    }
 
     suspend fun purgeLegacyAbstractApiKey() = settingsRepository.purgeLegacyAbstractApiKey()
 

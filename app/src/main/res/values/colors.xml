@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      Home-screen widget palette. The default (light) values live here; the
+      dark equivalents in values-night/colors.xml let the RemoteViews widget
+      follow the launcher's light/dark configuration instead of being locked
+      to the AMOLED-dark palette. Accents are darkened here for contrast on a
+      light background.
+    -->
+    <color name="widget_background">#FFF4F4F6</color>
+    <color name="widget_text_muted">#FF5C5F77</color>
+    <color name="widget_count">#FF2952CC</color>
+    <color name="widget_status_active">#FF2E7D32</color>
+    <color name="widget_status_off">#FFC62828</color>
+</resources>
