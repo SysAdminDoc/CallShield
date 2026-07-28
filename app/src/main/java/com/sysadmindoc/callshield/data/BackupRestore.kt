@@ -98,7 +98,6 @@ object BackupRestore {
         val number: String,
         val type: String,
         val description: String,
-        val source: String,
         val expiresAt: Long? = null,
     )
 
@@ -291,7 +290,10 @@ object BackupRestore {
             val numbers =
                 if (BackupSection.BLOCKED_NUMBERS in sections) {
                     dao.getUserBlockedNumbers().first().map {
-                        BackupNumber(it.number, it.type, it.description, it.source, it.expiresAt)
+                        // Export pulls only user-sourced rows, and restore always
+                        // recreates them as source="user" (so sync's replaceBySource
+                        // can't wipe them), so provenance isn't part of the schema.
+                        BackupNumber(it.number, it.type, it.description, it.expiresAt)
                     }
                 } else {
                     emptyList()
@@ -960,7 +962,6 @@ object BackupRestore {
                 number = it,
                 type = type.trim().ifBlank { "unknown" },
                 description = description.trim(),
-                source = source.trim().ifBlank { "user" },
             )
         }
     }

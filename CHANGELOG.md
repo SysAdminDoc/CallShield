@@ -45,6 +45,9 @@ All notable changes to CallShield will be documented in this file.
 - Restore/import failures now show a localized generic reason instead of leaking
   raw exception text (content URIs, SQLite constraint names) into the UI; the
   underlying cause is logged for diagnostics.
+- Removed the redundant `source` field from the backup format: exports only ever
+  contained user-sourced blocked numbers and restore always recreates them as
+  user rows, so the field was dead weight (older backups still restore fine).
 
 ### Performance
 
