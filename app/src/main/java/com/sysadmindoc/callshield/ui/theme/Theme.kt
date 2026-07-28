@@ -11,6 +11,7 @@ import android.os.VibratorManager
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -404,7 +405,6 @@ fun CallShieldTheme(
 // Shared quiet surface. Hierarchy comes from tone and spacing, not stacked
 // outlines, gradients, or decorative elevation.
 @Composable
-@Suppress("UnusedParameter")
 fun PremiumCard(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
@@ -415,11 +415,20 @@ fun PremiumCard(
     val shape = RoundedCornerShape(cornerRadius)
     val colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
     val elevation = CardDefaults.cardElevation(defaultElevation = 0.dp, pressedElevation = 0.dp)
+    // When a caller opts into an accent, render a subtle hairline border in that
+    // hue (not a pill/backdrop — banned by the design rules). Cards without an
+    // accent are unchanged.
+    val cardModifier =
+        if (accentColor != null) {
+            modifier.border(1.dp, accentColor.copy(alpha = 0.22f), shape)
+        } else {
+            modifier
+        }
 
     if (onClick != null) {
         Card(
             onClick = onClick,
-            modifier = modifier,
+            modifier = cardModifier,
             colors = colors,
             shape = shape,
             elevation = elevation,
@@ -427,7 +436,7 @@ fun PremiumCard(
         )
     } else {
         Card(
-            modifier = modifier,
+            modifier = cardModifier,
             colors = colors,
             shape = shape,
             elevation = elevation,

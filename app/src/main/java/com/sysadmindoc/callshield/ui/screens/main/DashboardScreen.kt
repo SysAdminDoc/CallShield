@@ -1311,7 +1311,7 @@ private fun DashboardActionRow(
  * freezing at composition time.
  */
 @Composable
-private fun rememberNowTick(): Long {
+internal fun rememberNowTick(): Long {
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
     LaunchedEffect(Unit) {
         while (true) {
