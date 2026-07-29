@@ -1,5 +1,5 @@
 {
-  "version": 29,
+  "version": 30,
   "updated": "2026-07-29",
   "description": "CallShield community spam number database",
   "sources": [
@@ -260298,6 +260298,14 @@
       "description": "Community reported"
     },
     {
+      "number": "+12385316009",
+      "type": "spam",
+      "reports": 2,
+      "first_seen": "2026-07-28",
+      "last_seen": "2026-07-28",
+      "description": "Community reported"
+    },
+    {
       "number": "+908502700595",
       "type": "spam",
       "reports": 1,
@@ -260927,6 +260935,14 @@
       "reports": 1,
       "first_seen": "2026-07-28",
       "last_seen": "2026-07-28",
+      "description": "Community reported"
+    },
+    {
+      "number": "+33169946604",
+      "type": "spam",
+      "reports": 1,
+      "first_seen": "2026-07-29",
+      "last_seen": "2026-07-29",
       "description": "Community reported"
     }
   ],
