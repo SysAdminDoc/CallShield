@@ -2,6 +2,62 @@
 
 FORMAT_CONTROL_CODES = {0x200B, 0x200C, 0x200D, 0x200E, 0x200F, 0xFEFF}
 
+# Every assigned two-digit country calling code (ITU-T E.164). Calling codes are
+# prefix-free by design, so "1 or 7 -> one digit, else in this set -> two digits,
+# else three digits" splits any E.164 string exactly.
+TWO_DIGIT_COUNTRY_CODES = frozenset(
+    {
+        "20", "27",
+        "30", "31", "32", "33", "34", "36", "39",
+        "40", "41", "43", "44", "45", "46", "47", "48", "49",
+        "51", "52", "53", "54", "55", "56", "57", "58",
+        "60", "61", "62", "63", "64", "65", "66",
+        "81", "82", "84", "86",
+        "90", "91", "92", "93", "94", "95", "98",
+    }
+)
+ONE_DIGIT_COUNTRY_CODES = frozenset({"1", "7"})
+
+# Italy (and Vatican City, which E.164-splits under 39) is the one country whose
+# national significant numbers genuinely retain a leading 0 — +39 06 ... is
+# correct E.164 for Rome. Everywhere else a 0 straight after the country code is
+# a national trunk prefix that does not belong in E.164.
+TRUNK_ZERO_SIGNIFICANT_COUNTRY_CODES = frozenset({"39"})
+
+
+def split_country_code(digits: str) -> tuple[str, str] | None:
+    """Split an E.164 digit string into (country_code, national_number)."""
+    if not digits:
+        return None
+    if digits[0] in ONE_DIGIT_COUNTRY_CODES:
+        return digits[0], digits[1:]
+    if digits[:2] in TWO_DIGIT_COUNTRY_CODES:
+        return digits[:2], digits[2:]
+    if len(digits) >= 3:
+        return digits[:3], digits[3:]
+    return None
+
+
+def strip_national_trunk_prefix(digits: str) -> str:
+    """Drop the national trunk prefix a human transcribed into an international
+    number, e.g. "+86 0558 646 8536" (Fuyang, China) -> "+86 558 646 8536".
+
+    Reports typed by hand into the issue tracker routinely carry the domestic
+    dialling form, but the app canonicalizes incoming calls with
+    PhoneNumberUtils.formatNumberToE164, which never emits the trunk digit. An
+    un-stripped row is dead weight: it can never match a real call.
+    """
+    split = split_country_code(digits)
+    if split is None:
+        return digits
+    country_code, national = split
+    if country_code in TRUNK_ZERO_SIGNIFICANT_COUNTRY_CODES:
+        return digits
+    stripped = national.lstrip("0")
+    if not stripped:  # all-zero national part: leave the input alone, let validation reject it
+        return digits
+    return country_code + stripped
+
 
 def normalize_phone_number(raw: str | None) -> str:
     if not raw:
@@ -20,7 +76,13 @@ def normalize_report_number(raw: str | None) -> str | None:
     digits = "".join(ch for ch in normalized if "0" <= ch <= "9")
     if len(digits) < 7 or len(digits) > 15:
         return None
-    if len(digits) == 10:
+    if normalized.startswith("+"):
+        # Only an explicitly international number tells us where the country
+        # code ends, which is what trunk-prefix stripping needs.
+        digits = strip_national_trunk_prefix(digits)
+        if len(digits) < 7 or len(digits) > 15:
+            return None
+    elif len(digits) == 10:
         digits = f"1{digits}"
     return f"+{digits}"
 

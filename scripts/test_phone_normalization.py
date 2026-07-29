@@ -6,6 +6,8 @@ from phone_normalization import (
     normalize_nanp_number,
     normalize_phone_number,
     normalize_report_number,
+    split_country_code,
+    strip_national_trunk_prefix,
     validated_report_number,
 )
 
@@ -32,6 +34,29 @@ def main() -> None:
     assert is_plausible_number("+12119345678") is False          # N11 area code (211)
     assert is_plausible_number("+01145884697") is False          # leading-zero country code
     assert is_plausible_number("+1234567") is False              # too short
+
+    # Country-code splitting (calling codes are prefix-free).
+    assert split_country_code("12122345678") == ("1", "2122345678")
+    assert split_country_code("8605586468536") == ("86", "05586468536")
+    assert split_country_code("442071234567") == ("44", "2071234567")
+    assert split_country_code("35315551234") == ("353", "15551234")   # 3-digit fallback
+    assert split_country_code("") is None
+
+    # National trunk prefixes typed into international numbers by hand. The app
+    # canonicalizes real calls with PhoneNumberUtils.formatNumberToE164, which
+    # never emits the trunk digit, so an un-stripped row could never match.
+    assert strip_national_trunk_prefix("8605586468536") == "865586468536"   # China
+    assert strip_national_trunk_prefix("4402071234567") == "442071234567"   # UK
+    assert strip_national_trunk_prefix("49030123456") == "4930123456"       # Germany
+    assert strip_national_trunk_prefix("390612345678") == "390612345678"    # Italy keeps its 0
+    assert strip_national_trunk_prefix("865586468536") == "865586468536"    # already E.164
+    assert strip_national_trunk_prefix("12122345678") == "12122345678"      # NANP untouched
+
+    assert normalize_report_number("+86 0558 646 8536") == "+865586468536"
+    assert normalize_report_number("+44 (0)20 7123 4567") == "+442071234567"
+    assert normalize_report_number("+39 06 1234 5678") == "+390612345678"
+    # Without a leading "+" the country code is unknowable, so leave it alone.
+    assert normalize_report_number("2125551234") == "+12125551234"
 
     assert validated_report_number("212-234-5678") == "+12122345678"
     assert validated_report_number("+15559876543") is None       # fictional test number

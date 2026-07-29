@@ -34,6 +34,29 @@ class CommunityContributorNormalizationTest {
         assertNull(CommunityContributor.normalizeForReport("+1234567890123456"))
     }
 
+    @Test fun `report normalization strips national trunk prefixes`() {
+        // Reported via GitHub issue #6 in the domestic dialling form. Calls arrive
+        // canonicalized as +865586468536, so the trunk 0 must not reach the database.
+        assertEquals("+865586468536", CommunityContributor.normalizeForReport("+86 0558 646 8536"))
+        assertEquals("+442071234567", CommunityContributor.normalizeForReport("+44 (0)20 7123 4567"))
+        assertEquals("+4930123456", CommunityContributor.normalizeForReport("+49 030 123456"))
+    }
+
+    @Test fun `report normalization keeps the leading zero Italy actually uses`() {
+        assertEquals("+390612345678", CommunityContributor.normalizeForReport("+39 06 1234 5678"))
+    }
+
+    @Test fun `report normalization leaves E164 numbers untouched`() {
+        assertEquals("+865586468536", CommunityContributor.normalizeForReport("+865586468536"))
+        assertEquals("+12122345678", CommunityContributor.normalizeForReport("+1 212 234 5678"))
+    }
+
+    @Test fun `trunk prefix stripping tolerates degenerate input`() {
+        assertEquals("", CommunityContributor.stripNationalTrunkPrefix(""))
+        assertEquals("86", CommunityContributor.stripNationalTrunkPrefix("86"))
+        assertEquals("86000", CommunityContributor.stripNationalTrunkPrefix("86000"))
+    }
+
     @Test fun `SMS report JSON includes only body-free indicators`() {
         val json =
             CommunityContributor.buildReportJson(

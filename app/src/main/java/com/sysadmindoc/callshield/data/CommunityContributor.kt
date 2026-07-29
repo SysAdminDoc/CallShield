@@ -182,7 +182,52 @@ object CommunityContributor {
 
     internal fun normalizeForReport(number: String): String? {
         val normalized = normalizePhoneNumber(number)
-        val digits = normalized.filter { it in '0'..'9' }
-        return normalized.takeIf { it.startsWith("+") && digits.length in 7..15 }
+        if (!normalized.startsWith("+")) return null
+        val digits = stripNationalTrunkPrefix(normalized.filter { it in '0'..'9' })
+        return "+$digits".takeIf { digits.length in 7..15 }
     }
+
+    /**
+     * Drop the national trunk prefix from a hand-entered international number,
+     * e.g. "+86 0558 646 8536" -> "+86 558 646 8536".
+     *
+     * Incoming calls are canonicalized with `PhoneNumberUtils.formatNumberToE164`,
+     * which never emits the trunk digit. Reporting the domestic dialling form
+     * would publish a row that can never match a real call. Mirrors
+     * `scripts/phone_normalization.py:strip_national_trunk_prefix` — keep both
+     * in step so app reports and issue-filed reports land on the same key.
+     */
+    internal fun stripNationalTrunkPrefix(digits: String): String {
+        val countryCode =
+            when {
+                digits.isEmpty() -> return digits
+                digits.take(1) in ONE_DIGIT_COUNTRY_CODES -> digits.take(1)
+                digits.take(2) in TWO_DIGIT_COUNTRY_CODES -> digits.take(2)
+                digits.length >= 3 -> digits.take(3)
+                else -> return digits
+            }
+        if (countryCode in TRUNK_ZERO_SIGNIFICANT_COUNTRY_CODES) return digits
+        val national = digits.drop(countryCode.length).trimStart('0')
+        // An all-zero national part is junk; leave it for the length check to reject.
+        return if (national.isEmpty()) digits else countryCode + national
+    }
+
+    /** Every assigned one/two-digit ITU-T E.164 country calling code. Calling codes are
+     *  prefix-free, so anything not matching these is a three-digit code. */
+    private val ONE_DIGIT_COUNTRY_CODES = setOf("1", "7")
+
+    private val TWO_DIGIT_COUNTRY_CODES =
+        (
+            "20 27 " +
+                "30 31 32 33 34 36 39 " +
+                "40 41 43 44 45 46 47 48 49 " +
+                "51 52 53 54 55 56 57 58 " +
+                "60 61 62 63 64 65 66 " +
+                "81 82 84 86 " +
+                "90 91 92 93 94 95 98"
+        ).split(" ").toSet()
+
+    /** Italy (and Vatican City, which splits under 39) genuinely keeps a leading 0 in
+     *  its national significant numbers — +39 06 … is correct E.164 for Rome. */
+    private val TRUNK_ZERO_SIGNIFICANT_COUNTRY_CODES = setOf("39")
 }
