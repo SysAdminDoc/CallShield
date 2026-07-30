@@ -132,4 +132,59 @@ class RuleConflictAnalyzerTest {
             ),
         )
     }
+
+    @Test
+    fun `whitelisting a hand-typed number sees the stored E164 user block`() {
+        // The user types "2125550100"; the block is stored as "+12125550100".
+        // Without the comparableKey bridge the advisory silently disappears.
+        val conflict =
+            RuleConflictAnalyzer.forWhitelist(
+                number = "2125550100",
+                emergency = false,
+                rules =
+                    ExistingBlockRules(
+                        exactBlocks =
+                            listOf(
+                                SpamNumber(
+                                    number = "+12125550100",
+                                    type = "manual",
+                                    source = "user",
+                                    isUserBlocked = true,
+                                ),
+                            ),
+                        wildcardRules = emptyList(),
+                        hashWildcardRules = emptyList(),
+                    ),
+            )
+
+        assertEquals(RuleConflictRule.EXACT_BLOCK, conflict?.overriddenRule)
+    }
+
+    @Test
+    fun `an expired temporary block is not reported as a whitelist conflict`() {
+        val now = 10_000_000L
+        val conflict =
+            RuleConflictAnalyzer.forWhitelist(
+                number = "+12125550100",
+                emergency = false,
+                rules =
+                    ExistingBlockRules(
+                        exactBlocks =
+                            listOf(
+                                SpamNumber(
+                                    number = "+12125550100",
+                                    type = "manual",
+                                    source = "user",
+                                    isUserBlocked = true,
+                                    expiresAt = now - 1,
+                                ),
+                            ),
+                        wildcardRules = emptyList(),
+                        hashWildcardRules = emptyList(),
+                    ),
+                now = now,
+            )
+
+        assertNull(conflict)
+    }
 }

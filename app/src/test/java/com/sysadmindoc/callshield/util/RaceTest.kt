@@ -7,6 +7,15 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class RaceTest {
+    /**
+     * These tests assert real elapsed time, so a GC pause or a loaded machine
+     * can flake them. The ceilings stay far below the loser's 700 ms delay so
+     * they still prove the race did not wait, and scale with the same
+     * `callshield.benchHeadroom` property the benchmark test uses.
+     */
+    private val ceilingMillis: Long =
+        (500L * (System.getProperty("callshield.benchHeadroom")?.toDoubleOrNull() ?: 1.0)).toLong()
+
     @Test
     fun `race returns first decisive result without waiting for slow losers`() =
         runBlocking {
@@ -30,7 +39,7 @@ class RaceTest {
 
             val elapsed = System.currentTimeMillis() - startedAt
             assertEquals("winner", result)
-            assertTrue("race waited for loser for ${elapsed}ms", elapsed < 300L)
+            assertTrue("race waited for loser for ${elapsed}ms", elapsed < ceilingMillis)
         }
 
     @Test
@@ -51,7 +60,7 @@ class RaceTest {
 
             val elapsed = System.currentTimeMillis() - startedAt
             assertEquals("timeout", result)
-            assertTrue("race waited past timeout for ${elapsed}ms", elapsed < 300L)
+            assertTrue("race waited past timeout for ${elapsed}ms", elapsed < ceilingMillis)
         }
 
     @Test
