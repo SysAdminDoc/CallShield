@@ -48,6 +48,10 @@ class BlocklistRepository(
         type: String = "unknown",
         description: String = "",
         expiresAt: Long? = null,
+        // Bulk importers run their own single upfront cleanup — repeating the
+        // 3 UPDATE/DELETE sweeps per row turns a 100k-row import into ~300k
+        // extra statements inside the write lock.
+        cleanupExpired: Boolean = true,
     ): Boolean {
         val normalized = normalizeNumber(number)
         if (normalized.isBlank()) return false
@@ -57,7 +61,7 @@ class BlocklistRepository(
         // interleave to leave both rows present.
         var blocked = false
         runInTransaction {
-            cleanupExpiredTemporaryDecisions()
+            if (cleanupExpired) cleanupExpiredTemporaryDecisions()
             val existingWhitelist = dao.findWhitelistEntry(normalized)
             val permanentAllowExists = expiresAt != null && existingWhitelist != null && existingWhitelist.expiresAt == null
             if (!permanentAllowExists) {

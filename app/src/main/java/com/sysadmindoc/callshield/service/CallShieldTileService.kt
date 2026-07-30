@@ -37,32 +37,45 @@ class CallShieldTileService : TileService() {
         // mid-toggle, onDestroy cancels `scope` and could persist only one of the
         // two flags, leaving call/SMS blocking split.
         CallShieldApp.appScope.launch {
-            toggleMutex.withLock {
-                val repo = SpamRepository.getInstance(applicationContext)
-                val callsEnabled = repo.blockCallsEnabled.first()
-                val smsEnabled = repo.blockSmsEnabled.first()
-                val newState = !(callsEnabled || smsEnabled)
-                repo.setBlockCalls(newState)
-                repo.setBlockSms(newState)
+            // appScope has no CoroutineExceptionHandler, and DataStore
+            // surfaces an unreadable prefs file as an IOException from the
+            // flow — without the guard a tile tap on a corrupted file would
+            // kill the whole process (and there is no DataStore self-heal
+            // like the Room corruption recovery).
+            try {
+                toggleMutex.withLock {
+                    val repo = SpamRepository.getInstance(applicationContext)
+                    val callsEnabled = repo.blockCallsEnabled.first()
+                    val smsEnabled = repo.blockSmsEnabled.first()
+                    val newState = !(callsEnabled || smsEnabled)
+                    repo.setBlockCalls(newState)
+                    repo.setBlockSms(newState)
+                }
+                withContext(Dispatchers.Main) { updateTile() }
+            } catch (e: Exception) {
+                android.util.Log.w("CallShieldTile", "Tile toggle failed", e)
             }
-            withContext(Dispatchers.Main) { updateTile() }
         }
     }
 
     private fun updateTile() {
         if (qsTile == null) return
         scope.launch {
-            val repo = SpamRepository.getInstance(applicationContext)
-            val active = repo.blockCallsEnabled.first() || repo.blockSmsEnabled.first()
-            withContext(Dispatchers.Main) {
-                val currentTile = qsTile ?: return@withContext
-                currentTile.state = if (active) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
-                currentTile.label = getString(R.string.app_name)
-                currentTile.subtitle =
-                    getString(
-                        if (active) R.string.tile_protection_on else R.string.tile_protection_off,
-                    )
-                currentTile.updateTile()
+            try {
+                val repo = SpamRepository.getInstance(applicationContext)
+                val active = repo.blockCallsEnabled.first() || repo.blockSmsEnabled.first()
+                withContext(Dispatchers.Main) {
+                    val currentTile = qsTile ?: return@withContext
+                    currentTile.state = if (active) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
+                    currentTile.label = getString(R.string.app_name)
+                    currentTile.subtitle =
+                        getString(
+                            if (active) R.string.tile_protection_on else R.string.tile_protection_off,
+                        )
+                    currentTile.updateTile()
+                }
+            } catch (e: Exception) {
+                android.util.Log.w("CallShieldTile", "Tile refresh failed", e)
             }
         }
     }

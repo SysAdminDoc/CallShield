@@ -385,6 +385,21 @@ class BackupRestoreTest {
     }
 
     @Test
+    fun `restore validation preserves the follow-defaults screening sentinel`() {
+        // null means "user never customized — follow future catalog defaults".
+        // It must survive validation as null, NOT be resolved into a concrete
+        // list, or restored users would have the default set pinned forever.
+        val validation =
+            BackupRestore.validateBackupForRestore(
+                Backup(settings = BackupSettings()),
+            )
+
+        assertTrue(validation is BackupRestore.RestoreValidation.Valid)
+        val payload = (validation as BackupRestore.RestoreValidation.Valid).payload
+        assertNull(payload.settings?.notificationScreeningPackages)
+    }
+
+    @Test
     fun `restore validation preserves an explicit empty screening source selection`() {
         val validation =
             BackupRestore.validateBackupForRestore(

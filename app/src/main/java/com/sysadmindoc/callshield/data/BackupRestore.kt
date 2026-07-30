@@ -1113,10 +1113,14 @@ object BackupRestore {
                     .sorted(),
             outgoingRiskWarningEnabled = this[SpamRepository.KEY_OUTGOING_RISK_WARNING] ?: false,
             activeProfileName = this[SpamRepository.KEY_ACTIVE_PROFILE],
+            // Preserve "never customized" as null: resolving the default
+            // set into a concrete list here (and writing it back on
+            // restore) permanently pinned the defaults, so sources added
+            // to the catalog later never auto-enabled for restored users.
+            // Mirrors the pushAlertDisabledPackages empty->remove pattern.
             notificationScreeningPackages =
-                NotificationScreeningSources
-                    .enabledPackages(this[SpamRepository.KEY_NOTIFICATION_SCREENING_PACKAGES])
-                    .sorted(),
+                this[SpamRepository.KEY_NOTIFICATION_SCREENING_PACKAGES]
+                    ?.let { NotificationScreeningSources.enabledPackages(it).sorted() },
         )
 
     private fun BackupSettings.sanitized(): BackupSettings =
@@ -1227,8 +1231,14 @@ object BackupRestore {
         } else {
             preferences[SpamRepository.KEY_ACTIVE_PROFILE] = activeProfileName
         }
-        notificationScreeningPackages?.let {
-            preferences[SpamRepository.KEY_NOTIFICATION_SCREENING_PACKAGES] = it.toSet()
+        if (notificationScreeningPackages == null) {
+            // Backup was taken with the follow-the-defaults sentinel (or is a
+            // pre-v7 backup without the field): restore that state rather
+            // than leaving whatever customization the device currently has.
+            preferences.remove(SpamRepository.KEY_NOTIFICATION_SCREENING_PACKAGES)
+        } else {
+            preferences[SpamRepository.KEY_NOTIFICATION_SCREENING_PACKAGES] =
+                notificationScreeningPackages.toSet()
         }
     }
 

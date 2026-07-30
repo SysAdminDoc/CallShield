@@ -222,6 +222,16 @@ class SpamRepository(
         /** SharedPreferences key for the synchronous theme mirror (cold-start flash fix). */
         private const val KEY_THEME_CACHE = "app_theme"
 
+        /**
+         * Static variant of [cachedAppTheme] for Activities that must resolve
+         * the theme BEFORE super.onCreate (window-background selection) without
+         * constructing the full repository singleton on the main thread.
+         */
+        fun cachedAppTheme(context: Context): String =
+            context.applicationContext
+                .getSharedPreferences("theme_cache", Context.MODE_PRIVATE)
+                .getString(KEY_THEME_CACHE, "amoled") ?: "amoled"
+
         const val SYNC_SOURCE_REMOTE = "remote"
         const val SYNC_SOURCE_BUNDLED = "bundled"
 
@@ -527,7 +537,8 @@ class SpamRepository(
         number: String,
         type: String = "unknown",
         description: String = "",
-    ) = blocklistRepository.blockNumber(number, type, description)
+        cleanupExpired: Boolean = true,
+    ) = blocklistRepository.blockNumber(number, type, description, cleanupExpired = cleanupExpired)
 
     suspend fun temporaryBlockNumber(
         number: String,
@@ -535,6 +546,8 @@ class SpamRepository(
         type: String = "unknown",
         description: String = "",
     ) = blocklistRepository.temporaryBlockNumber(number, expiresAt, type, description)
+
+    suspend fun cleanupExpiredTemporaryDecisions() = blocklistRepository.cleanupExpiredTemporaryDecisions()
 
     suspend fun temporaryAllowNumber(
         number: String,

@@ -47,12 +47,17 @@ class SyncRepository(
             syncMutex.withLock {
                 try {
                     val currentCount = dao.getSpamCount()
+                    // Resolve the remote SHA BEFORE downloading. Resolving it
+                    // after meant a data commit landing mid-sync recorded a SHA
+                    // the download never contained — every later non-forced
+                    // sync then compared equal and reported "up to date" while
+                    // local data stayed one update stale. Recording the
+                    // pre-fetch SHA fails the other way: at worst the next
+                    // check sees a mismatch and re-downloads, which self-heals.
+                    val preFetchSha = remote.checkForUpdate().getOrNull()
                     if (!force) {
                         val currentSha = settingsRepository.readLastDataSha()
-                        val remoteResult = remote.checkForUpdate()
-                        val newSha = remoteResult.getOrNull()
-
-                        if (newSha != null && newSha == currentSha) {
+                        if (preFetchSha != null && preFetchSha == currentSha) {
                             return@withContext SyncResult(
                                 success = true,
                                 message = context.getString(R.string.sync_database_up_to_date),
@@ -63,7 +68,7 @@ class SyncRepository(
                     val result = remote.fetchSpamDatabase()
                     if (result.isSuccess) {
                         val database = result.getOrThrow()
-                        val newSha = remote.checkForUpdate().getOrNull()
+                        val newSha = preFetchSha
                         val (numberCount, prefixCount) =
                             persistSpamDatabase(
                                 database = database,
@@ -204,7 +209,7 @@ class SyncRepository(
                         subscriptions.firstOrNull { it.id == id }
                             ?: return@runExternalBlocklistOperation ExternalBlocklistImportResult(
                                 success = false,
-                                message = "External blocklist subscription was not found",
+                                message = context.getString(R.string.external_blocklist_not_found),
                             )
                     if (enabled) {
                         val parsed = fetchAndParseExternalBlocklist(subscription.url, subscription.label)
@@ -213,7 +218,7 @@ class SyncRepository(
                         val removed = disableExternalBlocklist(subscription, subscriptions)
                         ExternalBlocklistImportResult(
                             success = true,
-                            message = "Disabled ${subscription.label}: removed $removed feed-owned numbers",
+                            message = context.getString(R.string.external_blocklist_disabled, subscription.label, removed),
                             subscription =
                                 subscription.copy(
                                     enabled = false,
@@ -235,7 +240,7 @@ class SyncRepository(
                         subscriptions.firstOrNull { it.id == id }
                             ?: return@runExternalBlocklistOperation ExternalBlocklistImportResult(
                                 success = false,
-                                message = "External blocklist subscription was not found",
+                                message = context.getString(R.string.external_blocklist_not_found),
                             )
                     val before = dao.getCountBySource(subscription.source)
                     dao.deleteBySource(subscription.source)
@@ -244,7 +249,7 @@ class SyncRepository(
                     CallShieldWidget.refreshAll(context)
                     ExternalBlocklistImportResult(
                         success = true,
-                        message = "Removed ${subscription.label}: rolled back $before feed-owned numbers",
+                        message = context.getString(R.string.external_blocklist_removed, subscription.label, before),
                         subscription = subscription.copy(enabled = false, lastRemoved = before),
                     )
                 }
@@ -286,7 +291,11 @@ class SyncRepository(
         val prefixes =
             database.prefixes.mapNotNull { json ->
                 val trimmedPrefix = json.prefix.trim()
-                if (trimmedPrefix.isBlank()) {
+                // PrefixChecker is a startsWith hard block at priority 6000,
+                // so a malformed feed row like "+" or "+1" would block every
+                // (NANP) caller. Require "+" plus at least 3 digits — the
+                // shortest legitimate rows are whole country codes ("+232").
+                if (!VALID_PREFIX_REGEX.matches(trimmedPrefix)) {
                     null
                 } else {
                     SpamPrefix(
@@ -448,12 +457,23 @@ class SyncRepository(
     }
 
     private fun externalPreviewMessage(preview: ExternalBlocklistPreview): String =
-        "Previewed ${preview.label}: ${preview.numberCount} numbers, " +
-            "+${preview.added}/-${preview.removed}, ${preview.blockedByOtherSources} already owned by stronger sources"
+        context.getString(
+            R.string.external_blocklist_previewed,
+            preview.label,
+            preview.numberCount,
+            preview.added,
+            preview.removed,
+            preview.blockedByOtherSources,
+        )
 
     private fun externalAppliedMessage(preview: ExternalBlocklistPreview): String =
-        "Applied ${preview.label}: ${preview.numberCount} numbers, " +
-            "+${preview.added}/-${preview.removed}"
+        context.getString(
+            R.string.external_blocklist_applied,
+            preview.label,
+            preview.numberCount,
+            preview.added,
+            preview.removed,
+        )
 
     @Suppress("TooGenericExceptionCaught")
     private inline fun runExternalBlocklistOperation(
@@ -462,9 +482,13 @@ class SyncRepository(
         try {
             block()
         } catch (e: Exception) {
+            // Same hygiene as the v1.7.26 restore/import pass: raw e.message
+            // embeds the full user URL (OkHttp) or SQLite constraint names —
+            // log the cause for diagnostics, show a localized generic reason.
+            android.util.Log.w("SyncRepository", "External blocklist operation failed", e)
             ExternalBlocklistImportResult(
                 success = false,
-                message = e.message ?: context.getString(R.string.sync_unknown_error),
+                message = context.getString(R.string.external_blocklist_failed_generic),
             )
         }
 
@@ -480,3 +504,6 @@ class SyncRepository(
 }
 
 private const val EXTERNAL_BLOCKLIST_LOOKUP_CHUNK_SIZE = 500
+
+/** "+", then 3-15 digits: whole-country-code rows are the shortest legitimate prefixes. */
+private val VALID_PREFIX_REGEX = Regex("""\+[0-9]{3,15}""")

@@ -115,15 +115,23 @@ object BlocklistExporter {
             )
         }
 
-        // One transaction for the whole import: a mid-loop failure must not
-        // leave thousands of rows committed behind a "Import failed" message
-        // (the user would retry and re-import), and per-row autocommit fsyncs
-        // make a 100k-row import pathologically slow.
+        // Chunked transactions instead of one giant one: SQLite is
+        // single-writer, so a 100k-row import inside one transaction holds
+        // the write lock for its whole duration — and the call-screening
+        // path's pre-response pending-log insert would stall behind it,
+        // blowing the 5-second deadline (call rings through). Chunks bound
+        // that stall to one chunk. A mid-import failure leaves earlier
+        // chunks committed, which is safe: blockNumber dedupes by number, so
+        // a retry converges instead of duplicating. Expired-decision cleanup
+        // runs once up front instead of ~5 statements per row.
         var count = 0
-        repo.runInTransaction {
-            for (n in numbers) {
-                repo.blockNumber(n.number, n.type, n.description)
-                count++
+        repo.cleanupExpiredTemporaryDecisions()
+        for (chunk in numbers.chunked(IMPORT_TRANSACTION_CHUNK)) {
+            repo.runInTransaction {
+                for (n in chunk) {
+                    repo.blockNumber(n.number, n.type, n.description, cleanupExpired = false)
+                    count++
+                }
             }
         }
         return ImportResult(

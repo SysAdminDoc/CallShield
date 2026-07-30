@@ -36,9 +36,26 @@ object CommunityContributor {
             .readTimeout(10, TimeUnit.SECONDS)
             .build()
 
+    /**
+     * Typed outcome so the UI can localize and color-code without sniffing
+     * English substrings out of [ContributeResult.message] (which is
+     * diagnostics-only).
+     */
+    enum class ContributeOutcome {
+        REPORTED_SPAM,
+        REPORTED_NOT_SPAM,
+        INVALID_NUMBER,
+        RATE_LIMITED,
+        SERVER_ERROR,
+        NETWORK_ERROR,
+    }
+
     data class ContributeResult(
         val success: Boolean,
         val message: String,
+        val outcome: ContributeOutcome,
+        /** Only meaningful for [ContributeOutcome.RATE_LIMITED]. */
+        val retryAfterSeconds: Int = 0,
     )
 
     /**
@@ -71,7 +88,13 @@ object CommunityContributor {
     ): ContributeResult =
         withContext(Dispatchers.IO) {
             try {
-                val normalized = normalizeForReport(number) ?: return@withContext ContributeResult(false, "Invalid number")
+                val normalized =
+                    normalizeForReport(number)
+                        ?: return@withContext ContributeResult(
+                            success = false,
+                            message = "Invalid number",
+                            outcome = ContributeOutcome.INVALID_NUMBER,
+                        )
                 val json = buildReportJson(normalized, type, smsIndicators)
                 val body = json.toRequestBody("application/json".toMediaType())
 
@@ -84,17 +107,33 @@ object CommunityContributor {
 
                 client.newCall(request).execute().use { response ->
                     if (response.isSuccessful) {
-                        val msg = if (type == "not_spam") "Reported as not spam" else "Contributed anonymously"
-                        ContributeResult(true, msg)
+                        if (type == "not_spam") {
+                            ContributeResult(true, "Reported as not spam", ContributeOutcome.REPORTED_NOT_SPAM)
+                        } else {
+                            ContributeResult(true, "Contributed anonymously", ContributeOutcome.REPORTED_SPAM)
+                        }
                     } else if (response.code == HTTP_TOO_MANY_REQUESTS) {
                         val retryAfter = response.header("Retry-After")?.toIntOrNull() ?: DEFAULT_RETRY_AFTER_SECONDS
-                        ContributeResult(false, "Too many reports. Please wait ${retryAfter}s and try again.")
+                        ContributeResult(
+                            success = false,
+                            message = "Too many reports. Please wait ${retryAfter}s and try again.",
+                            outcome = ContributeOutcome.RATE_LIMITED,
+                            retryAfterSeconds = retryAfter,
+                        )
                     } else {
-                        ContributeResult(false, "Server error (${response.code})")
+                        ContributeResult(
+                            success = false,
+                            message = "Server error (${response.code})",
+                            outcome = ContributeOutcome.SERVER_ERROR,
+                        )
                     }
                 }
             } catch (e: Exception) {
-                ContributeResult(false, "Network error: ${e.message}")
+                ContributeResult(
+                    success = false,
+                    message = "Network error: ${e.message}",
+                    outcome = ContributeOutcome.NETWORK_ERROR,
+                )
             }
         }
 
@@ -227,7 +266,11 @@ object CommunityContributor {
                 "90 91 92 93 94 95 98"
         ).split(" ").toSet()
 
-    /** Italy (and Vatican City, which splits under 39) genuinely keeps a leading 0 in
-     *  its national significant numbers — +39 06 … is correct E.164 for Rome. */
-    private val TRUNK_ZERO_SIGNIFICANT_COUNTRY_CODES = setOf("39")
+    /** Countries whose national significant numbers genuinely keep a leading 0 in
+     *  E.164 — stripping it there would corrupt the number, not repair it:
+     *  +39 Italy (and Vatican City, which splits under 39): +39 06 … is correct
+     *  E.164 for Rome. +225 Côte d'Ivoire: the 2021 ARTCI renumbering moved to
+     *  10-digit national numbers beginning with 0 (01/05/07 mobile, 21/25/27
+     *  fixed), so formatNumberToE164 legitimately emits +2250x…. */
+    private val TRUNK_ZERO_SIGNIFICANT_COUNTRY_CODES = setOf("39", "225")
 }
