@@ -689,3 +689,106 @@ Baseline at audit time: full JVM suite green at HEAD 2f250f1 (949 tests, exit 0)
 - [ ] P3 — Instrumented (androidTest) suite was statically read but not executed (no device/emulator this session); the 2026-07-28 device-verification and release-build round-trip items still stand
 - [ ] P3 — CallShieldScreeningService / CallerIdOverlayService / checker-chain internals were deliberately not re-audited (fixed and separately audited earlier the same day); next fresh pass should re-cover them
 - [ ] P3 — Live Cloudflare Worker behavior still unprobed (existing item), now with corroborating evidence of stale-deploy damage: data/reports accepted +15551234567 twice and +12385233476 twice ~10 s apart on 2026-07-30 — both rejected by current repo worker code
+
+## Security Scan — 2026-07-30 (anchored to v1.7.29, rev 4bbe71d; found, NOT fixed)
+
+Whole-repository security scan, production code prioritized over tests/fixtures. **The scan was halted before its verification stage ran, so every item below is an unverified researcher candidate — confirm each against the code before acting.** 30 raw candidates deduplicated to 18. One item (the Cloudflare account blob) was independently confirmed against git history during triage and is marked Verified. Items that restate an already-tracked entry are cross-referenced rather than duplicated.
+
+### P1
+
+- [ ] P1 — Worker fails **open** when the `RATE_LIMIT` KV binding is absent: zero anti-abuse control on the public endpoint
+  Why: `checkRateLimit` and `checkDedup` both early-return permissive (`{allowed:true}` / `isDuplicate:false`) when `env.RATE_LIMIT` is undefined. `wrangler.toml` still carries `REPLACE_WITH_KV_NAMESPACE_ID`, so this is the live state, not a hypothetical — the 22-of-28 fictional-report incident in v1.7.29 is the observed consequence. Fix is a code change, not just an operator deploy: reject with 503 when the binding is missing, and put the permissive branch behind an explicit `env.ALLOW_UNLIMITED_REPORTS` dev flag that production never sets. Add a deploy-time assertion that the binding resolves.
+  Where: worker/community-reports-worker.js (checkRateLimit ~189, checkDedup ~364), worker/wrangler.toml
+  Cross-ref: extends "P2 — Worker rate limit and dedup are non-atomic" (2026-07-30 section) — that item covers the race; this one covers the fail-open default and is independently exploitable.
+
+- [ ] P1 — Two anonymous reports put an arbitrary number on the hot list, hard-blocking it on every device within 30 min
+  Why: `MIN_REPORTS_HOT` is met by two report files, and `report_dedup.py`'s window is 60 s — an attacker posts the same target number twice five minutes apart, and the next pipeline run publishes it to `hot_numbers.json`, which every install syncs at high checker priority. Nothing in the chain counts *distinct reporters*, because reports carry no reporter identity by design. Fix: count server-side distinct report sources (the HMAC reporter-bucket already designed for the spam-domain quorum), require the reports to be spread over hours, and/or route newly-hot numbers through a review file.
+  Where: scripts/generate_hot_list.py:186, scripts/report_dedup.py, worker/community-reports-worker.js
+  Note: victim-selectable — a competitor's or a hospital's real support line is as promotable as a robocaller's.
+
+- [ ] P1 — `PostCallActivity` is exported with no permission guard; a spoofed `ACTION_POST_CALL` can block a number and file a community report
+  Why: any installed app can `startActivity` with `ACTION_POST_CALL` + `EXTRA_HANDLE=tel:+1<victim>`. The v1.7.26 `hasRecentCall` spoof guard only refuses on `== false`; when it returns **null** (READ_CALL_LOG denied, or the provider query throws) the else branch still broadcasts `ACTION_FEEDBACK_SPAM`. Fix: fold `null` into the local-block-only branch (undecidable ≠ verified), and add `android:permission="android.permission.MODIFY_PHONE_STATE"` on the activity plus a `getLaunchedFromUid`/`callingPackage` check against the telecom package.
+  Where: AndroidManifest.xml:74, ui/PostCallActivity.kt:136 (hasRecentCall null path)
+
+- [ ] P1 — Cloudflare account ID and owner email are in the public repo's git history — **Verified**
+  Why: `worker/.wrangler/cache/wrangler-account.json` was committed in `98a2a5c` ("Set live Cloudflare Worker URL for community contributions"). v1.7.24 untracked the file but never purged the blob, so `git log --all --diff-filter=A -- worker/.wrangler/...` still serves it on a public repo. Exposes the exact account ID and a real email — a credible phishing lure against the account that holds the Worker's `GITHUB_TOKEN` secret.
+  Fix: rotate the `GITHUB_TOKEN` Worker secret and re-scope the PAT, then `git-filter-repo --path worker/.wrangler/cache/wrangler-account.json --invert-paths` + force push (the repo already documents this procedure), then confirm the path 404s on GitHub. Add `.wrangler/` to `.gitignore`.
+  Where: worker/.wrangler/cache/wrangler-account.json (history only), commit 98a2a5c
+
+### P2
+
+- [ ] P2 — Wildcard CORS and no Origin check on the state-changing report endpoint
+  Why: `Access-Control-Allow-Origin: *` plus a body read via raw `JSON.parse` means any web page can fire a `mode:'no-cors'`, `Content-Type: text/plain` POST that skips preflight entirely. Each visitor submits from their own IP, so per-IP rate limiting is defeated by traffic rather than by a proxy pool. The client is a native Android app and needs no CORS at all.
+  Fix: drop the wildcard, require `Content-Type: application/json` (so the request stops qualifying as a CORS simple request), and reject requests carrying a browser `Origin` / `Sec-Fetch-Site: cross-site`.
+  Where: worker/community-reports-worker.js:274 (CORS headers), :394 (handler)
+
+- [ ] P2 — Anonymous `not_spam` reports delete rows from the shipped database; "authoritative immunity" is inferred from a mutable description string
+  Why: the merge decrements `entry["reports"]` and deletes at zero, and the guard that protects authoritative (FTC-sourced) rows reads the human-readable `description` field rather than a provenance field. A robocall operator watching `data/reports/` de-lists their own number one vote at a time.
+  Fix: record provenance in a dedicated immutable field (`sources: ["community"|"ftc"]`) instead of sniffing the description; require a quorum of `not_spam` votes from distinct reporter buckets strictly greater than the spam count; cap decrements per run; never fully delete a row that has any non-community source — park de-listing candidates in a maintainer-reviewed file.
+  Where: scripts/merge_community_reports.py:165
+
+- [ ] P2 — Six reports flag an entire NPA-NXX exchange (10,000 subscriber numbers) as a campaign range
+  Why: range promotion needs only the minimum-threshold hot entries beneath it, so 2 reports each on 3 numbers in a target organization's exchange publishes `{"npanxx":"..."}` to `hot_ranges.json` and every device then scores all 10,000 numbers in that block as suspicious. Same single-actor forgeability as the hot-list item, with 10,000× the blast radius.
+  Fix: require range promotion to be backed by distinct numbers each carrying substantially more independent reports, a minimum time spread, and a per-run cap on new ranges; exclude ranges whose reports all trace to one reporter bucket.
+  Where: scripts/generate_hot_list.py:220
+
+- [ ] P2 — Registrable/public-suffix domains are not rejected before entering `spam_domains.json`
+  Why: distinct from the already-tracked quorum-forgeability item — even with a correct quorum, nothing rejects a *registry suffix* (`co.uk`) or a major legitimate host (`chase.com`) as the reported domain. A suffix entry would match every SMS URL under it, auto-blocking a whole TLD's worth of messages on every device.
+  Fix: reject public-suffix entries via a PSL check, reject domains on a curated high-traffic allowlist, and require manual approval for newly-seen domains.
+  Where: scripts/extract_spam_domains.py:148
+  Cross-ref: "P3 — Spam-domain quorum still forgeable by a single reporter" (2026-07-30 section) covers the reporter-identity half; this is the value-validation half.
+
+- [ ] P2 — Push-alert trust bridge is unbound to the alert's sender: a remote attacker whitelists their own incoming call by first sending an SMS
+  Why: `PushAlertChecker` matches digits found in *notification body text* against the incoming caller, so an attacker sends an SMS containing a run of their own number's digits, and the resulting notification grants their subsequent call a trusted allow. Notification Access is already required for the advertised RCS filter and the bridge defaults ON (`SettingsRepository.kt:134 ?: true`), so the precondition is the normal install state.
+  Fix: bind trust to the alert's own sender identity — only accept a digit match when the notification's sender (EXTRA_TITLE / conversation address) is itself already trusted (contact, or prior outbound SMS). Never derive caller trust from digits the remote party wrote.
+  Where: data/checker/PushAlertChecker.kt:143
+
+- [ ] P2 — An SMS spammer self-grants "trusted sender" by sending two messages on different calendar days
+  Why: `hasRecurringConversation` counts inbound-only rows and keys on `Calendar.DAY_OF_MONTH`, so messages at 23:58 and 00:02 are "two days". From then on `SmsContextTrustChecker` returns allow ahead of content analysis and every later message from that number bypasses the SMS content/keyword layers.
+  Fix: require reciprocity — keep `hasSentMessageTo` (outbound = real user intent), drop or heavily bound the inbound-only recurrence signal, and require elapsed time rather than a midnight boundary.
+  Where: data/checker/Checkers.kt:846
+  Cross-ref: related to the tracked "SMS-context-trusted senders are not protected from shared-chain heuristic content scoring" item, but that one is about ordering; this is about how trust is *earned*.
+
+- [ ] P2 — `verifyTrackedSigningSecrets` has two blind spots that make it a non-gate
+  Why: (a) `scannedExtensions` excludes `pem`/`p12`/`pfx`/`key`/`der`/`asc` and extension-less files, so the private-key detector cannot fire on the file types that actually carry private keys — a `callshield-release.pem` dropped in the tree is staged by `git add -A` and passes the gate; (b) any value containing a `$` is treated as an external reference, so a literal signing password containing `$` is silently whitelisted.
+  Fix: scan every tracked file (skip by content sniffing, not by extension); match interpolation syntactically (`Regex("\\$\\{[^}]*}")`) instead of by character presence; anchor the identifier-lookup substrings to the start of the trimmed value; add `*.pem`/`*.p12`/`*.pfx`/`*.jks` to `.gitignore`; extend `verifySigningSecretGuardTests` to drive fixtures through the same filter the task uses.
+  Where: build.gradle.kts:44 (`$` whitelist), build.gradle.kts:415 (`scannedExtensions`)
+
+- [ ] P2 — `build-accrescent-apks.ps1` takes keystore/key passwords as `[string]` and writes them to disk in cleartext
+  Why: plain `[string]` parameters land in PowerShell transcripts and module logs, and the script materializes both passwords into temp files for the multi-minute `bundletool build-apks` step, readable by any process running as that user.
+  Fix: declare both as `[SecureString]`, feed bundletool via `pass:stdin`/a pipe or `pass:env:` (unset afterward), and if a file is truly unavoidable create it with a restrictive ACL and delete it in a `finally`.
+  Where: scripts/build-accrescent-apks.ps1:129
+
+### P3
+
+- [ ] P3 — External-blocklist fetch follows redirects without re-validating the target
+  Why: `validateHttpUrl` runs once on the user-entered subscription URL; OkHttp then follows a `302` to anywhere (including RFC1918 hosts) because no interceptor re-runs validation on the redirect target. The publisher of a subscribed list controls where the device's next request goes.
+  Fix: give the external-blocklist client an interceptor (or `followRedirects(false)`) that re-runs `ExternalBlocklistParser.validateHttpUrl` on every `Location`, caps hop count, and prefers staying on the originally-subscribed host.
+  Where: data/remote/ExternalBlocklistDataSource.kt:31
+  Note: this is *not* the rejected private-IP-blocking item in "Deep-Audit — Considered and Rejected" — that covered the user-entered URL; this covers a third party redirecting the device after the fact.
+
+- [ ] P3 — Every URL in every received SMS/RCS message is sent to URLhaus, including single-use login/2FA magic links
+  Why: full scheme+host+path is POSTed to abuse.ch before the user taps it, so a bank magic link in an SMS becomes a third-party log entry. **Verify first** — a "URLhaus privacy mode" is recorded as shipped in the 2026-07-20 pass; confirm whether it gates this path or only the logging of results.
+  Fix (if unmitigated): match locally first (spam-domain list, then a host-only or hash-prefix lookup in the Safe Browsing v4 style); if a remote lookup stays, send only the registrable domain, and gate it behind explicit opt-in.
+  Where: data/remote/UrlSafetyChecker.kt:96
+
+- [ ] P3 — Inbound caller numbers are disclosed to four third-party enrichment services on every unknown call, with no opt-out
+  Why: an operator of (or subpoena against) any one endpoint can reconstruct who calls the user and when, from a single device IP — including calls the pipeline classified as clean. Other detection engines already have per-engine toggles; enrichment has none.
+  Fix: gate remote enrichment behind an explicit default-off privacy setting, restrict live lookups to callers the local pipeline already flagged, and document in-app which hosts receive a number.
+  Where: data/remote/ExternalLookup.kt:130
+  Cross-ref: roadmap 3.3.4 (strict offline mode) would cover this as a side effect; this asks for the narrower per-feature control.
+
+- [ ] P3 — Quadratic-backtracking email regex in `SmsBodyRedactor` runs on the composition thread over an attacker-controlled body
+  Why: `redactForPreview` runs its regexes against the full `trimmed` body while `SmsContentAnalyzer.analyze` already truncates to `MAX_ANALYSIS_LENGTH`. A ~16 KB body with an `@` and no following `.` makes opening the blocked-log entry hang the UI.
+  Fix: `val scanBody = trimmed.take(SmsContentAnalyzer.MAX_ANALYSIS_LENGTH)` once, and run all three redaction regexes against it.
+  Where: data/SmsBodyRedactor.kt:39
+
+- [ ] P3 — `check_translations.py` is DoS-able by a community-contributed strings file (two ways)
+  Why: (a) `FORMAT_RE` backtracks quadratically on a long `%000…0` run with no conversion character, hanging the translation gate; (b) `ET.parse` expands internal entities, so a DTD-carrying `strings.xml` is a billion-laughs against the maintainer's machine. Both arrive through the newly opened translation contribution path (issue #7), which is exactly the untrusted-input channel this script sits on.
+  Fix: cap input length before `FORMAT_RE` (translations are short) and remove the flags/width ambiguity; parse with `defusedxml.ElementTree` or an `XMLParser` that rejects DOCTYPE outright — Android resource files never need one — and bound file size before parsing.
+  Where: scripts/check_translations.py:78 (regex), :108 (ElementTree)
+
+- [ ] P3 — `verify-release-signing.ps1` identifies the signer by subject-DN text instead of the pinned signer SHA-256 the repo already documents
+  Why: the release gate rejects `CN=Android Debug` and multi-cert APKs, but a throwaway key generated with `-dname "CN=CallShield, O=SysAdminDoc"` passes — and `docs/reproducible-builds.md` explicitly tells operators to generate a throwaway key for dry runs, with this script as the only thing keeping that artifact out of a release.
+  Fix: parse the `Signer #1 certificate SHA-256 digest:` line `apksigner verify --print-certs` already emits and assert it equals the documented pin (or an `-ExpectedSignerSha256` parameter defaulting to it).
+  Where: scripts/verify-release-signing.ps1:99
