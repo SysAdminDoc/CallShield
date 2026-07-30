@@ -4,6 +4,60 @@ const MAX_SMS_URL_INDICATORS = 10;
 const DOMAIN_RE = /^[a-z0-9](?:[a-z0-9.-]{0,251}[a-z0-9])?$/;
 const URL_INDICATOR_RE = /^[a-z_]{3,40}$/;
 
+// Every assigned one/two-digit ITU-T E.164 country calling code. Calling codes
+// are prefix-free by design, so "1 or 7 -> one digit, else in this set -> two
+// digits, else three digits" splits any E.164 string exactly.
+const ONE_DIGIT_COUNTRY_CODES = new Set(["1", "7"]);
+const TWO_DIGIT_COUNTRY_CODES = new Set([
+  "20", "27",
+  "30", "31", "32", "33", "34", "36", "39",
+  "40", "41", "43", "44", "45", "46", "47", "48", "49",
+  "51", "52", "53", "54", "55", "56", "57", "58",
+  "60", "61", "62", "63", "64", "65", "66",
+  "81", "82", "84", "86",
+  "90", "91", "92", "93", "94", "95", "98",
+]);
+
+// Countries whose national significant numbers genuinely retain a leading 0 in
+// E.164 - stripping it there would corrupt the number, not repair it:
+//   +39  Italy (and Vatican City, which E.164-splits under 39): +39 06 ... is
+//        correct E.164 for Rome.
+//   +225 Cote d'Ivoire: the 2021 ARTCI renumbering moved to 10-digit national
+//        numbers that begin with 0 (01/05/07 mobile, 21/25/27 fixed).
+// Everywhere else a 0 straight after the country code is a national trunk
+// prefix that does not belong in E.164.
+const TRUNK_ZERO_SIGNIFICANT_COUNTRY_CODES = new Set(["39", "225"]);
+
+/** Split an E.164 digit string into [countryCode, nationalNumber], or null. */
+function splitCountryCode(digits) {
+  if (!digits) return null;
+  if (ONE_DIGIT_COUNTRY_CODES.has(digits.slice(0, 1))) return [digits.slice(0, 1), digits.slice(1)];
+  if (TWO_DIGIT_COUNTRY_CODES.has(digits.slice(0, 2))) return [digits.slice(0, 2), digits.slice(2)];
+  if (digits.length >= 3) return [digits.slice(0, 3), digits.slice(3)];
+  return null;
+}
+
+/**
+ * Drop the national trunk prefix a human transcribed into an international
+ * number, e.g. "+86 0558 646 8536" (Fuyang, China) -> "+86 558 646 8536".
+ *
+ * The app canonicalizes incoming calls with PhoneNumberUtils.formatNumberToE164,
+ * which never emits the trunk digit, so an un-stripped row is dead weight: it
+ * can never match a real call. Mirrors strip_national_trunk_prefix in
+ * scripts/phone_normalization.py and CommunityContributor.stripNationalTrunkPrefix
+ * in the app - scripts/normalizer_fixtures.json gates all three against drift.
+ */
+export function stripNationalTrunkPrefix(digits) {
+  const split = splitCountryCode(digits);
+  if (split === null) return digits;
+  const [countryCode, national] = split;
+  if (TRUNK_ZERO_SIGNIFICANT_COUNTRY_CODES.has(countryCode)) return digits;
+  const stripped = national.replace(/^0+/, "");
+  // All-zero national part: leave the input alone and let validation reject it.
+  if (stripped === "") return digits;
+  return countryCode + stripped;
+}
+
 export function normalizePhoneNumberForReport(number) {
   if (typeof number !== "string") return null;
 
@@ -28,6 +82,12 @@ export function normalizePhoneNumberForReport(number) {
 
   if (digits.length < 7 || digits.length > 15) return null;
   if (!explicitInternational && digits.length === 10) return `+1${digits}`;
+  if (explicitInternational) {
+    // Only an explicitly international number tells us where the country code
+    // ends, which is what trunk-prefix stripping needs.
+    digits = stripNationalTrunkPrefix(digits);
+    if (digits.length < 7 || digits.length > 15) return null;
+  }
   return `+${digits}`;
 }
 

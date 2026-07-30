@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """Regression tests for Python report/import phone normalization."""
 
+import json
+from pathlib import Path
+
 from phone_normalization import (
     is_plausible_number,
     normalize_nanp_number,
@@ -69,6 +72,23 @@ def main() -> None:
     assert validated_report_number("+15559876543") is None       # fictional test number
     assert validated_report_number("01145884697") is None        # junk international prefix
     assert validated_report_number("+442071234567") == "+442071234567"
+
+    check_shared_fixtures()
+
+
+def check_shared_fixtures() -> None:
+    """Assert the Python column of the cross-language normalizer truth table.
+
+    normalizer_fixtures.json is loaded by the Kotlin, JavaScript, and Python
+    test suites alike, so a fix applied to one implementation and not the
+    others fails the build instead of shipping a report key the other two can
+    never produce (issue #6).
+    """
+    fixtures = json.loads((Path(__file__).parent / "normalizer_fixtures.json").read_text(encoding="utf-8"))
+    for case in fixtures["cases"]:
+        actual = normalize_report_number(case["input"])
+        expected = case["expected"]["python"]
+        assert actual == expected, f"{case['input']!r}: expected {expected!r}, got {actual!r} - {case['why']}"
 
 
 if __name__ == "__main__":

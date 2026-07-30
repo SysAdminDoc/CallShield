@@ -1,0 +1,107 @@
+{
+  "_comment": [
+    "Shared truth table for the community-report phone normalizer, which is implemented",
+    "three times: Kotlin (app/src/main/java/.../data/CommunityContributor.kt, in-app",
+    "reporter), JavaScript (worker/community-reports-worker.js, the public HTTP trust",
+    "boundary), and Python (scripts/phone_normalization.py, issue-filed reports and bulk",
+    "imports). All three must land a given report on the SAME database key or the row can",
+    "never match a real call.",
+    "",
+    "Every implementation's test suite loads this file and asserts its own column, so a fix",
+    "applied to one language and not the others fails the build. This exists because the",
+    "national-trunk-prefix fix (issue #6, c4cf98f) landed in Kotlin and Python but not in",
+    "the worker, leaving the public endpoint able to store unmatchable rows for months.",
+    "",
+    "A null expectation means the implementation must REJECT the input. The Kotlin column",
+    "is null for bare national numbers by design: the app always has an E.164 number from",
+    "PhoneNumberUtils, so a missing '+' there means the input is untrustworthy. The other",
+    "two accept hand-typed reports and apply the 10-digit -> NANP heuristic."
+  ],
+  "functions": {
+    "kotlin": "CommunityContributor.normalizeForReport",
+    "worker": "normalizePhoneNumberForReport",
+    "python": "normalize_report_number"
+  },
+  "cases": [
+    {
+      "input": "+86 0558 646 8536",
+      "why": "China: national trunk 0 typed into the international form. Issue #6 - the reported number.",
+      "expected": { "kotlin": "+865586468536", "worker": "+865586468536", "python": "+865586468536" }
+    },
+    {
+      "input": "+86 558 646 8536",
+      "why": "Same number already in E.164 - normalization must be idempotent.",
+      "expected": { "kotlin": "+865586468536", "worker": "+865586468536", "python": "+865586468536" }
+    },
+    {
+      "input": "+44 (0)20 7123 4567",
+      "why": "UK: the (0) notation is the trunk prefix and is not part of the E.164 number.",
+      "expected": { "kotlin": "+442071234567", "worker": "+442071234567", "python": "+442071234567" }
+    },
+    {
+      "input": "+49 030 12345678",
+      "why": "Germany: trunk 0 before the Berlin area code.",
+      "expected": { "kotlin": "+493012345678", "worker": "+493012345678", "python": "+493012345678" }
+    },
+    {
+      "input": "+61 02 1234 5678",
+      "why": "Australia: trunk 0 before the area code.",
+      "expected": { "kotlin": "+61212345678", "worker": "+61212345678", "python": "+61212345678" }
+    },
+    {
+      "input": "+39 06 1234 5678",
+      "why": "Italy KEEPS its leading 0 - it is part of the national significant number, not a trunk prefix. Stripping it would corrupt a valid Rome number.",
+      "expected": { "kotlin": "+390612345678", "worker": "+390612345678", "python": "+390612345678" }
+    },
+    {
+      "input": "+225 07 07 12 34 56",
+      "why": "Cote d'Ivoire KEEPS its leading 0 after the 2021 ARTCI renumbering (01/05/07 mobile, 21/25/27 fixed).",
+      "expected": { "kotlin": "+2250707123456", "worker": "+2250707123456", "python": "+2250707123456" }
+    },
+    {
+      "input": "+1 (212) 234-5678",
+      "why": "NANP has no trunk prefix; the one-digit country code must split correctly.",
+      "expected": { "kotlin": "+12122345678", "worker": "+12122345678", "python": "+12122345678" }
+    },
+    {
+      "input": "+7 495 123 45 67",
+      "why": "Russia: the other one-digit country code.",
+      "expected": { "kotlin": "+74951234567", "worker": "+74951234567", "python": "+74951234567" }
+    },
+    {
+      "input": "+65 6123 4567",
+      "why": "Singapore: two-digit code, no trunk prefix, total length 10 - must not be NANP-ified.",
+      "expected": { "kotlin": "+6561234567", "worker": "+6561234567", "python": "+6561234567" }
+    },
+    {
+      "input": "+45 36 96 30 10",
+      "why": "Denmark: explicit international 10-digit total. The bare-10-digit NANP heuristic must never apply to a +-prefixed number (v1.7.27 fix).",
+      "expected": { "kotlin": "+4536963010", "worker": "+4536963010", "python": "+4536963010" }
+    },
+    {
+      "input": "2122345678",
+      "why": "Bare national. Kotlin rejects (the app always holds E.164); the hand-typed report paths apply the NANP heuristic. Intentional divergence.",
+      "expected": { "kotlin": null, "worker": "+12122345678", "python": "+12122345678" }
+    },
+    {
+      "input": "‎+‏86 0558​ 646‎ 8536",
+      "why": "Bidi/zero-width marks pasted from a chat client, wrapping a trunk-prefixed number.",
+      "expected": { "kotlin": "+865586468536", "worker": "+865586468536", "python": "+865586468536" }
+    },
+    {
+      "input": "+86 0000000",
+      "why": "All-zero national part: leave the digits alone rather than strip to nothing, and let the length/plausibility gates reject it.",
+      "expected": { "kotlin": "+860000000", "worker": "+860000000", "python": "+860000000" }
+    },
+    {
+      "input": "١٢٣٤٥٦٧٨٩٠",
+      "why": "Arabic-Indic digits are not ASCII digits - all three must reject rather than silently drop them.",
+      "expected": { "kotlin": null, "worker": null, "python": null }
+    },
+    {
+      "input": "+1234567890123456",
+      "why": "16 digits exceeds the E.164 maximum of 15.",
+      "expected": { "kotlin": null, "worker": null, "python": null }
+    }
+  ]
+}

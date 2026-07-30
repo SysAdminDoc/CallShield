@@ -1,10 +1,12 @@
 package com.sysadmindoc.callshield.data
 
+import com.squareup.moshi.Moshi
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.File
 
 class CommunityContributorNormalizationTest {
     @Test fun `report normalization uses ASCII-only phone digits`() {
@@ -88,6 +90,51 @@ class CommunityContributorNormalizationTest {
         assertEquals(CommunityContributorTestConstants.MAX_SMS_REPORT_DOMAINS, sanitized.domains.size)
         assertEquals(listOf("url_present"), sanitized.urlIndicators)
         assertFalse(sanitized.domains.any { "/" in it })
+    }
+
+    @Test fun `report normalization agrees with the worker and pipeline normalizers`() {
+        // scripts/normalizer_fixtures.json is the single truth table for all
+        // three implementations of this normalizer (Kotlin here, JavaScript in
+        // worker/community-reports-worker.js, Python in
+        // scripts/phone_normalization.py). Each suite asserts its own column, so
+        // a fix landed in one language and not the others fails the build rather
+        // than silently storing a key the other two can never produce.
+        for (case in NormalizerFixtures.load()) {
+            val actual = CommunityContributor.normalizeForReport(case.input)
+            assertEquals("${case.input}: ${case.why}", case.expectedKotlin, actual)
+        }
+    }
+}
+
+private data class NormalizerFixtureCase(val input: String, val why: String, val expectedKotlin: String?)
+
+private object NormalizerFixtures {
+    private const val RELATIVE_PATH = "scripts/normalizer_fixtures.json"
+
+    fun load(): List<NormalizerFixtureCase> {
+        val file = locate()
+        val root = Moshi.Builder().build().adapter(Any::class.java).fromJson(file.readText())
+        val cases = (root as Map<*, *>)["cases"] as List<*>
+        return cases.map { entry ->
+            val case = entry as Map<*, *>
+            val expected = case["expected"] as Map<*, *>
+            NormalizerFixtureCase(
+                input = case["input"] as String,
+                why = case["why"] as String,
+                expectedKotlin = expected["kotlin"] as String?,
+            )
+        }
+    }
+
+    /** Walks up from the Gradle module dir so the test works from any working directory. */
+    private fun locate(): File {
+        var dir: File? = File("").absoluteFile
+        while (dir != null) {
+            val candidate = File(dir, RELATIVE_PATH)
+            if (candidate.isFile) return candidate
+            dir = dir.parentFile
+        }
+        error("Could not find $RELATIVE_PATH walking up from ${File("").absolutePath}")
     }
 }
 

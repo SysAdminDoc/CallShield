@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import {
   normalizePhoneNumberForReport,
+  stripNationalTrunkPrefix,
   isPlausibleReportNumber,
   normalizeSmsDomain,
   sanitizeSmsDomains,
@@ -11,6 +14,31 @@ import {
   checkDedup,
   recordDedup,
 } from "./community-reports-worker.js";
+
+const FIXTURES = JSON.parse(
+  readFileSync(fileURLToPath(new URL("../scripts/normalizer_fixtures.json", import.meta.url)), "utf8"),
+);
+
+test("agrees with the Kotlin and Python normalizers on the shared fixture table", () => {
+  // scripts/normalizer_fixtures.json is the single truth table for all three
+  // implementations. If this fails, the worker has drifted from the app and/or
+  // the merge pipeline and reports will land on a different database key.
+  for (const { input, why, expected } of FIXTURES.cases) {
+    assert.equal(normalizePhoneNumberForReport(input), expected.worker, `${JSON.stringify(input)}: ${why}`);
+  }
+});
+
+test("strips national trunk prefixes typed into international numbers", () => {
+  // Issue #6: "+86 0558 646 8536" was stored as +8605586468536, which
+  // formatNumberToE164 never produces, so the row could never match a call.
+  assert.equal(stripNationalTrunkPrefix("8605586468536"), "865586468536"); // China
+  assert.equal(stripNationalTrunkPrefix("4402071234567"), "442071234567"); // UK
+  assert.equal(stripNationalTrunkPrefix("49030123456"), "4930123456"); // Germany
+  assert.equal(stripNationalTrunkPrefix("390612345678"), "390612345678"); // Italy keeps its 0
+  assert.equal(stripNationalTrunkPrefix("2250707123456"), "2250707123456"); // Cote d'Ivoire keeps its 0
+  assert.equal(stripNationalTrunkPrefix("865586468536"), "865586468536"); // already E.164
+  assert.equal(stripNationalTrunkPrefix("12122345678"), "12122345678"); // NANP untouched
+});
 
 test("normalizes ASCII phone numbers for reports", () => {
   assert.equal(normalizePhoneNumberForReport("+1 (212) 555-1234"), "+12125551234");
