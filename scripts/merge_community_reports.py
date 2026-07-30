@@ -11,6 +11,7 @@ from pathlib import Path
 from phone_normalization import is_plausible_number, validated_report_number
 
 from pipeline_io import atomic_write_json
+from report_dedup import find_burst_duplicates, parse_reported_at
 
 DATA_DIR = Path(os.environ.get("CALLSHIELD_DATA_DIR", Path(__file__).parent.parent / "data"))
 DB_FILE = DATA_DIR / "spam_numbers.json"
@@ -87,10 +88,36 @@ def main():
     if purged:
         print(f"Purged {purged} implausible existing rows")
 
+    # Repeat submissions of the same number+verdict seconds apart are one
+    # reporter, not corroboration. Counting them inflates the shipped `reports`
+    # value and, for not_spam, lets a single voter de-list a genuine community
+    # row one vote at a time. See report_dedup for why the Worker's own dedup
+    # cannot be relied on. Unreadable files are ignored here and quarantined by
+    # the main loop below.
+    burst_candidates = []
+    for report_file in report_files:
+        try:
+            with open(report_file) as f:
+                peek = json.load(f)
+        except (OSError, ValueError):
+            continue
+        peeked_number = validated_report_number(peek.get("number", ""))
+        if not peeked_number:
+            continue
+        burst_candidates.append(
+            (
+                (peeked_number, peek.get("type", "unknown")),
+                parse_reported_at(peek.get("reported_at")),
+                report_file.name,
+            )
+        )
+    burst_duplicates = find_burst_duplicates(burst_candidates)
+
     existing = {n["number"]: n for n in db["numbers"]}
     added = 0
     updated = 0
     skipped = 0
+    collapsed = 0
     rejected = 0
     processed_files = []
     rejected_dir = REPORTS_DIR / "rejected"
@@ -111,6 +138,13 @@ def main():
                 # Junk / fictional / malformed number — drop the noise report.
                 processed_files.append(report_file)
                 skipped += 1
+                continue
+
+            if report_file.name in burst_duplicates:
+                # Same number and verdict as a report already counted seconds
+                # earlier. Consume the file so it does not linger in the queue.
+                processed_files.append(report_file)
+                collapsed += 1
                 continue
 
             spam_type = report.get("type", "unknown")
