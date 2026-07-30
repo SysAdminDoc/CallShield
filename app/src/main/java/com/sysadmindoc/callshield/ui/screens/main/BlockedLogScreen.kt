@@ -227,6 +227,14 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
                                     SwipeToDismissBoxValue.EndToStart -> {
                                         if (actionHandled) return@LaunchedEffect
                                         actionHandled = true
+                                        // Clear the dismissed value before the row
+                                        // leaves the list. The state is saveable and
+                                        // keyed by call.id, so Undo — which re-inserts
+                                        // the same id — would otherwise restore an
+                                        // already-dismissed state and delete the entry
+                                        // again. snapTo (not reset) because disposal
+                                        // cancels an in-flight animation.
+                                        dismissState.snapTo(SwipeToDismissBoxValue.Settled)
                                         viewModel.deleteLogEntry(call)
                                         hapticTick(context)
                                         scope.launch {
