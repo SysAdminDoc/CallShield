@@ -3,6 +3,7 @@ package com.sysadmindoc.callshield.data
 import android.content.Context
 import android.content.Intent
 import com.sysadmindoc.callshield.R
+import com.sysadmindoc.callshield.ui.localizedSpamType
 
 /**
  * Share a spam number to other apps as a warning.
@@ -20,7 +21,9 @@ object SpamSharer {
         val locationText = location?.let { context.getString(R.string.share_spam_warning_location, it) }.orEmpty()
         val typeText =
             if (reason.isNotEmpty()) {
-                context.getString(R.string.share_spam_warning_type, reason.replace("_", " "))
+                // This text leaves the device — it must not carry raw internal
+                // tokens ("debt_collector" → "debt collector").
+                context.getString(R.string.share_spam_warning_type, localizedSpamType(context, reason))
             } else {
                 ""
             }

@@ -1,6 +1,8 @@
 package com.sysadmindoc.callshield.service
 
+import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -15,6 +17,7 @@ import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.CategoryCallPolicy
 import com.sysadmindoc.callshield.data.local.SpamDao
 import com.sysadmindoc.callshield.permissions.CallShieldPermissions
+import com.sysadmindoc.callshield.ui.MainActivity
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import java.util.concurrent.TimeUnit
@@ -55,6 +58,18 @@ class DigestWorker
                     // User has not granted POST_NOTIFICATIONS on API 33+; skip quietly.
                     return Result.success()
                 }
+                // Without a content intent the digest is inert: tapping it does
+                // nothing, and setAutoCancel only takes effect on a content-intent
+                // tap, so it cannot even be dismissed by tapping.
+                val openIntent =
+                    PendingIntent.getActivity(
+                        applicationContext,
+                        DIGEST_NOTIFICATION_ID,
+                        Intent(applicationContext, MainActivity::class.java).apply {
+                            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                        },
+                        PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+                    )
                 val notif =
                     NotificationCompat
                         .Builder(applicationContext, NotificationHelper.CHANNEL_DIGEST)
@@ -65,11 +80,12 @@ class DigestWorker
                             NotificationCompat
                                 .BigTextStyle()
                                 .bigText(applicationContext.getString(R.string.digest_big_text, blocked, calls, sms, breakdown)),
-                        ).setAutoCancel(true)
+                        ).setContentIntent(openIntent)
+                        .setAutoCancel(true)
                         .build()
 
                 try {
-                    NotificationManagerCompat.from(applicationContext).notify(9999, notif)
+                    NotificationManagerCompat.from(applicationContext).notify(DIGEST_NOTIFICATION_ID, notif)
                 } catch (_: SecurityException) {
                     // Revoked between check and post — drop silently.
                 }
@@ -81,6 +97,7 @@ class DigestWorker
         }
 
         companion object {
+            private const val DIGEST_NOTIFICATION_ID = 9999
             private const val WORK_NAME = "callshield_digest"
 
             /**

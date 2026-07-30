@@ -269,11 +269,15 @@ object CallShieldPermissions {
     ): Boolean = roleManager?.isRoleAvailable(RoleManager.ROLE_CALL_SCREENING) == true
 
     fun hasNotificationListenerAccess(context: Context): Boolean =
-        Settings.Secure
-            .getString(
-                context.contentResolver,
-                "enabled_notification_listeners",
-            )?.contains(context.packageName) == true
+        // Compare unflattened package names, not a substring of the whole
+        // setting. The value is a ':'-separated list of flattened
+        // ComponentNames, so `contains(packageName)` also matched any other
+        // enabled listener whose package merely contains ours as a substring
+        // (a fork, a debug variant) — reporting access as granted while
+        // RcsNotificationListener was never bound.
+        NotificationManagerCompat
+            .getEnabledListenerPackages(context)
+            .contains(context.packageName)
 
     fun permissionContractStates(
         context: Context,

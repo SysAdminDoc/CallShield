@@ -1304,6 +1304,17 @@
     <string name="cd_incoming_call">Incoming call</string>
     <string name="cd_outgoing_call">Outgoing call</string>
     <string name="cd_missed_call">Missed call</string>
+    <string name="spam_type_spam">Spam</string>
+    <string name="spam_type_robocall">Robocall</string>
+    <string name="spam_type_scam">Scam</string>
+    <string name="spam_type_telemarketer">Telemarketer</string>
+    <string name="spam_type_debt_collector">Debt collector</string>
+    <string name="spam_type_sms_spam">Spam text</string>
+    <string name="spam_type_ai_voice">AI voice</string>
+    <string name="spam_type_survey">Survey</string>
+    <string name="spam_type_political">Political</string>
+    <string name="spam_type_phishing">Phishing</string>
+    <string name="spam_type_unknown">Unknown</string>
     <string name="cd_rejected_call">Rejected call</string>
     <string name="cd_blocked_call">Blocked call</string>
     <string name="cd_voicemail_call">Voicemail</string>
