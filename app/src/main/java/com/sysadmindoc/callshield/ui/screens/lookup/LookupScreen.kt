@@ -63,6 +63,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -81,6 +82,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.CommunityContributor
 import com.sysadmindoc.callshield.data.PhoneFormatter
@@ -121,7 +123,7 @@ fun LookupScreen(viewModel: MainViewModel) {
     val resources = LocalResources.current
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
-    var numberInput by remember { mutableStateOf("") }
+    var numberInput by rememberSaveable { mutableStateOf("") }
     // Only *check for* a text clip here — reading clipboard content fires the
     // system "app pasted from clipboard" toast on Android 12+, and doing that
     // as a side effect of merely opening the tab reads as surveillance for a
@@ -129,8 +131,13 @@ fun LookupScreen(viewModel: MainViewModel) {
     val clipboardHasText = remember(context) { clipboardHasText(context) }
     val normalizedNumber = remember(numberInput) { normalizeLookupNumber(numberInput) }
     val previewLocation = remember(normalizedNumber) { AreaCodeLookup.lookup(normalizedNumber) }
-    var result by remember { mutableStateOf<SpamCheckResult?>(null) }
-    var trace by remember { mutableStateOf<com.sysadmindoc.callshield.data.checker.PipelineTrace?>(null) }
+    // Lookup outcomes live in the ViewModel so they survive tab switches and
+    // rotation, and so the verdict stays bound to the number that was actually
+    // checked rather than to whatever is currently typed in the field.
+    val outcome by viewModel.lookupOutcome.collectAsStateWithLifecycle()
+    val result = outcome?.result
+    val trace = outcome?.trace
+    val checkedNumber = outcome?.number
     var checking by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     val canLookup = hasMinAsciiDigits(normalizedNumber)
@@ -142,8 +149,7 @@ fun LookupScreen(viewModel: MainViewModel) {
 
     fun clearLookup() {
         numberInput = ""
-        result = null
-        trace = null
+        viewModel.clearLookupOutcome()
         errorMessage = null
     }
 
@@ -151,22 +157,21 @@ fun LookupScreen(viewModel: MainViewModel) {
         if (!canLookup || checking) return
 
         checking = true
-        result = null
-        trace = null
+        viewModel.clearLookupOutcome()
         errorMessage = null
+        val requestedNumber = normalizedNumber
         scope.launch {
             try {
                 val repo = SpamRepository.getInstance(context)
                 val lookupResult =
                     withContext(Dispatchers.IO) {
-                        repo.isSpam(normalizedNumber, realtimeCall = false)
+                        repo.isSpam(requestedNumber, realtimeCall = false)
                     }
                 val traceResult =
                     withContext(Dispatchers.IO) {
-                        repo.traceRules(normalizedNumber)
+                        repo.traceRules(requestedNumber)
                     }
-                result = lookupResult
-                trace = traceResult
+                viewModel.recordLookupOutcome(requestedNumber, lookupResult, traceResult)
                 haptic(context, lookupResult.isSpam)
             } catch (_: Exception) {
                 // Show a localized generic message — never the raw exception text
@@ -351,6 +356,9 @@ fun LookupScreen(viewModel: MainViewModel) {
 
                 result != null -> {
                     val lookupResult = result!!
+                    // This branch describes the number that was checked,
+                    // which is not necessarily what is typed in the field now.
+                    val resultNumber = checkedNumber ?: normalizedNumber
                     val resultAccent = if (lookupResult.isSpam) CatRed else CatGreen
                     val score = if (lookupResult.isSpam) lookupResult.confidence else 0
 
@@ -389,10 +397,10 @@ fun LookupScreen(viewModel: MainViewModel) {
                                 color = resultAccent,
                             )
                             StatusPill(
-                                text = PhoneFormatter.formatIsolated(normalizedNumber),
+                                text = PhoneFormatter.formatIsolated(resultNumber),
                                 color = if (lookupResult.isSpam) CatPeach else CatBlue,
                             )
-                            previewLocation?.let {
+                            AreaCodeLookup.lookup(resultNumber)?.let {
                                 Text(it, style = MaterialTheme.typography.bodySmall, color = CatOverlay)
                             }
                             Text(
@@ -457,7 +465,7 @@ fun LookupScreen(viewModel: MainViewModel) {
                                         val message =
                                             try {
                                                 withContext(Dispatchers.IO) {
-                                                    repo.blockNumber(normalizedNumber, lookupResult.type, lookupResult.matchSource)
+                                                    repo.blockNumber(resultNumber, lookupResult.type, lookupResult.matchSource)
                                                 }
                                                 hapticConfirm(context)
                                                 numberBlockedMessage
@@ -487,15 +495,15 @@ fun LookupScreen(viewModel: MainViewModel) {
                                             withContext(Dispatchers.IO) {
                                                 if (lookupResult.isSpam) {
                                                     CommunityContributor.contribute(
-                                                        repo.normalizeNumber(normalizedNumber),
+                                                        repo.normalizeNumber(resultNumber),
                                                         lookupResult.type.ifEmpty { "spam" },
                                                     )
                                                     reportedMessage
                                                 } else {
-                                                    repo.addToWhitelist(normalizedNumber, markedSafeDescription)
+                                                    repo.addToWhitelist(resultNumber, markedSafeDescription)
                                                     val reportResult =
                                                         CommunityContributor.reportNotSpam(
-                                                            repo.normalizeNumber(normalizedNumber),
+                                                            repo.normalizeNumber(resultNumber),
                                                         )
                                                     if (reportResult.success) {
                                                         markedSafeReportedMessage
@@ -520,7 +528,7 @@ fun LookupScreen(viewModel: MainViewModel) {
                         label = stringResource(R.string.lookup_open_detail),
                         icon = Icons.AutoMirrored.Filled.OpenInNew,
                         color = CatYellow,
-                        onClick = { viewModel.openNumberDetail(normalizedNumber) },
+                        onClick = { viewModel.openNumberDetail(resultNumber) },
                         modifier = Modifier.fillMaxWidth(),
                         outlined = true,
                     )

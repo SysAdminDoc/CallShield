@@ -29,6 +29,14 @@ All notable changes to CallShield will be documented in this file.
   device that has no data yet, and a failed refresh retries with backoff.
 - The same downgrade applied to the spam-detection model: a failed sync
   overwrote a newer downloaded model with the one bundled at build time.
+- Lookup results now stay attached to the number that was actually checked.
+  Editing the field after a check left the previous verdict on screen labelled
+  with the new number, and Block, Report, and Mark trusted acted on it — so you
+  could block or report a number that was never checked.
+- The typed Lookup number and its result now survive switching tabs and
+  rotating, as the v1.7.27 notes claimed.
+- Running Protection Test can no longer crash the app if the database is
+  unhealthy; it shows a failure card instead.
 
 - The documented database regeneration command silently deleted every
   single-report community row (80 of them). `--min-reports` defaults to 2 and
