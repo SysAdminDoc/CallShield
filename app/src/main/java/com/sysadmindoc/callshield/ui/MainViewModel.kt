@@ -940,7 +940,11 @@ class MainViewModel
                     }
 
                     CommunityContributor.ContributeOutcome.RATE_LIMITED -> {
-                        appContext.getString(R.string.contribute_rate_limited, retryAfterSeconds)
+                        appContext.resources.getQuantityString(
+                            R.plurals.contribute_rate_limited,
+                            retryAfterSeconds,
+                            retryAfterSeconds,
+                        )
                     }
 
                     CommunityContributor.ContributeOutcome.SERVER_ERROR -> {
