@@ -274,6 +274,10 @@ def merge_into_database(all_numbers: list[dict], min_reports: int = 1):
         }
 
     existing = {n["number"]: n for n in db["numbers"]}
+    # Snapshot the pre-merge keys so the min_reports filter below can be
+    # scoped to newly-added entries only. Rows already in the shipped
+    # database (community reports land at reports=1) must survive a rerun.
+    pre_existing = set(existing)
 
     added = 0
     updated = 0
@@ -293,13 +297,19 @@ def merge_into_database(all_numbers: list[dict], min_reports: int = 1):
             existing[num] = entry
             added += 1
 
-    # Apply min_reports filter — keep existing DB entries that already passed
-    # but filter newly-added single-report entries if min_reports > 1
+    # Apply min_reports filter to NEWLY-ADDED entries only. Applying it to the
+    # whole merged dict deleted every community-reported row (they are written
+    # at reports=1 by merge_community_reports.py) on the documented no-flag
+    # regen, because --min-reports defaults to 2.
     if min_reports > 1:
         before = len(existing)
-        existing = {k: v for k, v in existing.items() if v.get("reports", 0) >= min_reports}
+        existing = {
+            k: v
+            for k, v in existing.items()
+            if k in pre_existing or v.get("reports", 0) >= min_reports
+        }
         filtered = before - len(existing)
-        print(f"  Filtered {filtered:,} entries below min_reports={min_reports}")
+        print(f"  Filtered {filtered:,} new entries below min_reports={min_reports}")
 
     db["numbers"] = list(existing.values())
     db["version"] = db.get("version", 0) + 1
