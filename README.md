@@ -6,12 +6,12 @@
 
 <p align="center">
   <strong>Open-source spam call and text blocker for Android</strong><br>
-  15+ layer detection + Gradient-Boosted Tree ML | 32,622 spam numbers | Real-time caller ID | RCS filter | No required API keys
+  15+ layer detection + Gradient-Boosted Tree ML | 32,623 spam numbers | Real-time caller ID | RCS filter | No required API keys
 </p>
 
 <p align="center">
   <a href="https://github.com/SysAdminDoc/CallShield/releases/latest"><img src="https://img.shields.io/github/v/release/SysAdminDoc/CallShield?style=flat-square&color=a6e3a1" alt="Release"></a>
-  <img src="https://img.shields.io/badge/Spam%20Numbers-32%2C622-f38ba8?style=flat-square" alt="32,622 Numbers">
+  <img src="https://img.shields.io/badge/Spam%20Numbers-32%2C623-f38ba8?style=flat-square" alt="32,623 Numbers">
   <img src="https://img.shields.io/badge/Tests-948-94e2d5?style=flat-square" alt="948 Tests">
   <img src="https://img.shields.io/badge/Android-10%2B-89b4fa?style=flat-square" alt="Android 10+">
   <img src="https://img.shields.io/badge/License-MIT-cba6f7?style=flat-square" alt="MIT License">
@@ -20,7 +20,7 @@
 
 ---
 
-CallShield blocks spam calls and texts using a **15+ layer on-device detection engine** with a gradient-boosted tree ML scorer, campaign burst detection, RCS notification filter, and real-time caller ID overlay. Powered by a 32,622-number database with scheduled hot-list updates. Community-maintained, no accounts, no tracking.
+CallShield blocks spam calls and texts using a **15+ layer on-device detection engine** with a gradient-boosted tree ML scorer, campaign burst detection, RCS notification filter, and real-time caller ID overlay. Powered by a 32,623-number database with scheduled hot-list updates. Community-maintained, no accounts, no tracking.
 
 ## v1.7.29 Highlights
 
