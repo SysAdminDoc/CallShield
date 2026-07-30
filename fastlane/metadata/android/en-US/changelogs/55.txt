@@ -1,0 +1,7 @@
+Cross-boundary audit release:
+• International reports no longer republished as fabricated US numbers
+• Fixed prefix rows that hard-blocked Auckland, Norwegian, and Eswatini callers
+• Quiet hours no longer cancels night-time SMS/RCS; start = end blocks all day
+• "Allow temporarily" now recovers prefix-blocked callers; 23 area codes added
+• Rotation keeps your tab, dialogs, and typed input
+• Localized block reasons and report feedback; light-theme window fix

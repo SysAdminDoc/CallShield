@@ -6,13 +6,13 @@
 
 <p align="center">
   <strong>Open-source spam call and text blocker for Android</strong><br>
-  15+ layer detection + Gradient-Boosted Tree ML | 32,613 spam numbers | Real-time caller ID | RCS filter | No required API keys
+  15+ layer detection + Gradient-Boosted Tree ML | 32,617 spam numbers | Real-time caller ID | RCS filter | No required API keys
 </p>
 
 <p align="center">
   <a href="https://github.com/SysAdminDoc/CallShield/releases/latest"><img src="https://img.shields.io/github/v/release/SysAdminDoc/CallShield?style=flat-square&color=a6e3a1" alt="Release"></a>
-  <img src="https://img.shields.io/badge/Spam%20Numbers-32%2C613-f38ba8?style=flat-square" alt="32,613 Numbers">
-  <img src="https://img.shields.io/badge/Tests-930-94e2d5?style=flat-square" alt="930 Tests">
+  <img src="https://img.shields.io/badge/Spam%20Numbers-32%2C617-f38ba8?style=flat-square" alt="32,617 Numbers">
+  <img src="https://img.shields.io/badge/Tests-949-94e2d5?style=flat-square" alt="949 Tests">
   <img src="https://img.shields.io/badge/Android-10%2B-89b4fa?style=flat-square" alt="Android 10+">
   <img src="https://img.shields.io/badge/License-MIT-cba6f7?style=flat-square" alt="MIT License">
   <img src="https://img.shields.io/badge/API%20Keys-None-fab387?style=flat-square" alt="No required API keys">
@@ -20,7 +20,26 @@
 
 ---
 
-CallShield blocks spam calls and texts using a **15+ layer on-device detection engine** with a gradient-boosted tree ML scorer, campaign burst detection, RCS notification filter, and real-time caller ID overlay. Powered by a 32,613-number database with scheduled hot-list updates. Community-maintained, no accounts, no tracking.
+CallShield blocks spam calls and texts using a **15+ layer on-device detection engine** with a gradient-boosted tree ML scorer, campaign burst detection, RCS notification filter, and real-time caller ID overlay. Powered by a 32,617-number database with scheduled hot-list updates. Community-maintained, no accounts, no tracking.
+
+## v1.7.27 Highlights
+
+- **Report-pipeline integrity** — the community-report worker no longer
+  fabricates US numbers out of ten-digit international reports, nine scam-prefix
+  rows that collided with real country codes (blocking Auckland, Norwegian, and
+  Eswatini callers) are fixed, spam-domain flagging needs three distinct
+  reported numbers, and the HTTP-only import source is gated behind an explicit
+  opt-in.
+- **Detection correctness** — quiet hours is calls-only again (no more cancelled
+  night-time OTP notifications) and start = end blocks all day as documented,
+  "Allow temporarily" now beats downloaded prefix data, 23 missing in-service
+  area codes no longer trip region blocking, midnight-wrapping schedules cover
+  their after-midnight tail, and the screening budget uses the monotonic clock.
+- **UI state that survives** — rotation keeps your tab, open dialogs, filters,
+  and typed input; tab switches preserve every screen's scroll and state; the
+  suspicion overlay is no longer replaced by the generic caller-ID panel; block
+  reasons and report feedback are localized everywhere; and Light/Graphite users
+  get a matching window with no black flashes.
 
 ## v1.7.26 Highlights
 
@@ -243,21 +262,21 @@ CallShield blocks spam calls and texts using a **15+ layer on-device detection e
 - **Answered-caller trust** — numbers answered repeatedly inside the configured lookback window can ring through lower-confidence heuristic/ML suspicion while explicit block rules still win first.
 - **Emergency callback grace** — unknown callbacks can ring through after a local emergency call for a configurable window while explicit block rules still win first.
 - **SMS burst protection** - repeated unknown SMS senders or same-prefix floods can be blocked as `sms_burst`, with blocked-SMS notification actions to mark safe or report.
-- **930 total JVM unit tests** - the local unit suite covers detection, workers, utilities, repository contracts, and permission readiness before release.
+- **949 total JVM unit tests** - the local unit suite covers detection, workers, utilities, repository contracts, and permission readiness before release.
 - **Gradient-Boosted Tree ML model** — 20 features, pure Kotlin, no TFLite dependency.
 - **Campaign burst detection** — NPA-NXX prefix clustering identifies coordinated spam waves.
 - **Full accessibility** — content descriptions across Compose UI, 48dp minimum touch targets.
 
 ## How It Works
 
-1. **32,613 confirmed spam numbers** — sourced from 1.75M FCC consumer complaints (2+ reports each), FTC Do Not Call, ToastedSpam, and community reports
+1. **32,617 confirmed spam numbers** — sourced from 1.75M FCC consumer complaints (2+ reports each), FTC Do Not Call, ToastedSpam, and community reports
 2. **15+ layer detection + ML** — database, heuristics, campaign burst detection, on-device gradient-boosted tree, SMS content/burst analysis, RCS filter, STIR/SHAKEN, and more
 3. **Real-time caller ID overlay** — parallel lookups against SkipCalls, PhoneBlock, WhoCalledMe + OpenCNAM caller name, with SIT tone anti-autodialer
 4. **Scheduled hot list** — trending spam numbers and campaign ranges refresh through the repository data pipeline
 5. **Callback-aware** — won't block callbacks from numbers you recently called, answered repeatedly, after a local emergency call, or urgent repeated callers
 6. **Community-driven** — one-tap anonymous contribution via Cloudflare Worker, daily merge into database
 
-## Detection Pipeline (v1.7.26)
+## Detection Pipeline (v1.7.27)
 
 All detection layers implement a shared `IChecker` interface and run in priority order via `CheckerPipeline.run` — first non-null result wins, every layer is testable in isolation. Priorities are stable numbers; the ladder below is the live order.
 
@@ -266,11 +285,12 @@ All detection layers implement a shared `IChecker` interface and run in priority
 | 10000 | **Manual Whitelist** | Allow | Numbers you've explicitly marked as always-allow |
 |  9000 | **Contact Whitelist** | Allow | Numbers in your phone's contacts always pass through |
 |  8500 | **STIR/SHAKEN Failed** | Block | Carrier-authenticated caller ID failure gets blocked before heuristic layers |
-|  7000 | **User Blocklist + Database** | Block | Personal blocklist + 32,613 confirmed spam numbers + scheduled hot-list data |
+|  7000 | **User Blocklist + Database** | Block | Personal blocklist + 32,617 confirmed spam numbers + scheduled hot-list data |
 |  6900 | **System Block List** (A4) | Block | Read-only bridge to Android's `BlockedNumberContract` — respects stock Phone/Messages blocks |
-|  6000 | **Prefix Rules** | Block | Wangiri country codes, US premium rate (+1900), international premium |
 |  5500 | **Wildcard / Regex** | Block | Custom patterns like `+1832555*` or full regex, now with optional schedule |
 |  5400 | **Range Patterns** (A5) | Block | Length-locked `#` patterns like `+33162######`, with schedule + coverage safety rail |
+|  5350 | **Temporary Allow** | Allow | One-off false-positive recovery from the Blocked Log — beats all downloaded data, never your own rules |
+|  5320 | **Prefix Rules** | Block | Downloaded wangiri country codes, US premium rate (+1900), international premium |
 |  5300 | **STIR/SHAKEN Authenticated** | Allow | Carrier-authenticated caller ID can allow through lower-confidence heuristic/ML suspicion while explicit blocks still win first |
 |  5000 | **Recently Dialed** | Allow | Numbers you called in the last 24h — they're probably calling back |
 |  4980 | **Emergency Callback** | Allow | Unknown callbacks can ring through after a local emergency call during the configured grace window |
@@ -399,7 +419,7 @@ Trained weekly from the CallShield database (50K positive + 50K negative samples
 
 ## Data Sources
 
-### Database (32,613 numbers, locally maintained)
+### Database (32,617 numbers, locally maintained)
 | Source | Method |
 |--------|--------|
 | **FCC Consumer Complaints** | Socrata API, 500K records, min 2 reports |
@@ -487,7 +507,7 @@ RELEASE_KEY_PASSWORD=...
 ## Testing
 
 ```bash
-./gradlew testDebugUnitTest   # 930 tests
+./gradlew testDebugUnitTest   # 949 tests
 ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.sysadmindoc.callshield.platform.TargetSdkBehaviorSmokeTest
 ```
 
@@ -509,7 +529,7 @@ Run tests, lint, release metadata checks, and artifact builds locally before pub
 | Community API | Cloudflare Workers |
 | URL Safety | URLhaus (abuse.ch) |
 | Verification | Local Gradle, lint, and release-artifact checks |
-| Tests | 930 JVM unit tests (JUnit) |
+| Tests | 949 JVM unit tests (JUnit) |
 | Strings | 1160 string resources and 29 plural groups (translation-ready) |
 | Accessibility | 100+ content descriptions, 48dp touch targets |
 | Min SDK | 29 (Android 10) |

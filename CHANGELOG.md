@@ -2,6 +2,122 @@
 
 All notable changes to CallShield will be documented in this file.
 
+## v1.7.27 — 2026-07-30
+
+### Security
+
+- The community-report worker no longer converts explicitly international
+  numbers that total ten digits (Denmark +45, Norway +47, 8-digit +32/+43
+  numbers…) into fabricated `+1` US numbers. A Danish user's report used to
+  publish a random US subscriber's number to the shared database as spam.
+- Nine "Caribbean scam" prefix rows in the shipped database used bare NANP
+  area codes as country codes. Three collided with real country codes and
+  hard-blocked legitimate callers — `+649` matched every Auckland, New
+  Zealand number (+64 9…), `+473` matched Norwegian numbers (+47 3x…), and
+  `+268` is Eswatini's actual country code. All nine now use their correct
+  `+1` forms, and synced prefix rows are validated (`+` and 3–15 digits) so a
+  malformed feed row can never hard-block every caller.
+- The ToastedSpam import source is HTTP-only (no TLS on the host); an
+  on-path attacker could inject numbers that would hard-block on every
+  device. The pipeline now skips it unless run with
+  `--allow-insecure-sources` on a trusted network.
+- Spam-domain extraction now requires reports tied to three DISTINCT
+  phone numbers before flagging a domain, so a single reporter re-submitting
+  one number can no longer get an arbitrary domain marked malicious for all
+  users. Bulk importers apply the same fictional-number plausibility gate as
+  community reports, and the FCC row scraper no longer extracts "phone
+  numbers" embedded in longer digit runs (timestamps, row IDs).
+
+### Fixed
+
+- Quiet hours no longer applies to SMS and RCS: an OTP or bank text arriving
+  at night was cancelled from the notification shade and logged as "blocked
+  during quiet hours" — quiet hours is a calls feature, and now also ignores
+  historical scans (which classified old entries by whatever hour the scan
+  ran). Setting start = end now blocks all day, exactly as the Settings
+  screen has always described it, instead of silently disabling the feature.
+- "Allow temporarily" now actually recovers callers blocked by downloaded
+  prefix rules (whole-country wangiri prefixes included). The prefix layer
+  sat above temporary allows in the priority ladder, so the recovery action
+  silently did nothing; downloaded data now ranks below every user decision
+  while user wildcard/exact rules still beat everything.
+- Rotating the phone no longer yanks you back to the Home tab, replays a
+  scan shortcut, or re-opens a closed deep-linked detail screen — the launch
+  intent is now consumed through saved state, which survives activity
+  recreation (the old in-memory consumption could not).
+- Switching bottom tabs no longer wipes each tab's state: scroll positions,
+  Blocked Log filters, the typed Lookup number, and Protection Test results
+  all survive tab round-trips (tab content now lives in a saveable state
+  holder), and add/edit dialogs keep their typed input across rotation.
+- The suspicious-caller overlay ("Possible spam N%") is no longer instantly
+  replaced by the generic area-code overlay for US/CA callers — the generic
+  panel destroyed the warning before it could be read and restarted the live
+  lookups from scratch.
+- Twenty-three in-service NANP area codes (989 Mid-Michigan since 2001, 279
+  Sacramento, 771 DC, 943 Atlanta, Canadian overlays 368/584/683/742/753/879,
+  and more) were missing from the offline area-code map, so region blocking
+  treated those callers as "international or unknown" and blocked them even
+  in their own allowed region.
+- A midnight-wrapping rule schedule with specific days selected (say,
+  "Fri 22:00–06:00") now covers the after-midnight tail: Saturday 01:00
+  counts as Friday night, and Friday 01:00 (Thursday night) no longer fires.
+- The screening-pipeline time budget now uses the monotonic clock, so an NTP
+  step or manual clock change mid-call can neither abort detection early nor
+  overrun Android's 5-second deadline.
+- Sync no longer records a database SHA newer than the data it downloaded (a
+  data commit landing mid-sync made every later check report "up to date"
+  while local data stayed one update stale). Push-alert capture no longer
+  depends on the unrelated notification-screening opt-in (Outlook alerts
+  were never captured by default), and the notification listener waits for
+  the user's real screening allowlist before acting destructively.
+- The overlay's Block and SIT-tone buttons, the Quick Settings tile, and the
+  notification listener's settings observers no longer crash the whole
+  process on a database write failure, an uninitializable audio track, or a
+  corrupt preferences file (same guard the notification actions already had).
+- Historical inbox scans no longer double-count the scanned message in SMS
+  burst detection, flagging senders at one real message below the threshold.
+- Restoring a backup no longer permanently pins the notification-screening
+  defaults: "never customized" now survives the round trip, so sources added
+  in future updates keep auto-enabling after a restore.
+- Bulk blocklist imports now commit in chunks with a single up-front cleanup
+  pass instead of one giant transaction that could stall call screening past
+  its 5-second deadline mid-import.
+- The rule-conflict advisory now recognizes conflicts between hand-typed
+  numbers and stored E.164 entries (typing 2125550100 vs stored
+  +12125550100), so "your trusted number overrides this block" warnings
+  appear when the live pipeline would actually behave that way.
+- "Commit preview" for external blocklists applies the feed that was
+  previewed, not whatever URL is currently in the text field.
+- The community-report worker only marks a report as "already submitted"
+  after it is durably stored — a failed store no longer turned every retry
+  into a five-minute "Duplicate report" rejection — and enforces its payload
+  cap on the actual body, not the forgeable Content-Length header.
+- Côte d'Ivoire numbers keep their leading zero (the 2021 renumbering made
+  it significant, like Italy's) instead of being corrupted by trunk-prefix
+  stripping. Bulk-import reruns no longer inflate report counts without
+  bound — counts now use snapshot semantics, which also keeps community
+  "not spam" de-listing effective.
+- The post-call review screen's content no longer sits a status-bar height
+  too low with its button floating above the navigation bar (doubled edge
+  insets), and opening the Recent tab can no longer crash the app when the
+  call-log provider or a corrupt database throws mid-load.
+
+### Changed
+
+- Community report feedback ("Contributed anonymously", rate-limit waits,
+  server errors) is now localized and typed — the Number Detail screen
+  stops sniffing English substrings to pick the success color.
+- Block reasons shown on Dashboard, Blocked Log, Recent, Lookup, and Number
+  Detail now use the same localized labels as Statistics instead of
+  de-underscored internal tokens ("hot list", "db match").
+- Statistics peak-hour labels honor the device's 12/24-hour setting and
+  locale; remaining "Whitelist" wording in backups, restore summaries, and
+  accessibility labels now says "Trusted" to match the rest of the app;
+  blocking a whole area code from Number Detail asks for confirmation first
+  (same dialog as the Dashboard flow); and the window behind the UI follows
+  the Light/Graphite theme, removing black flashes during keyboard resizes
+  and transitions for non-AMOLED users.
+
 ## v1.7.26 — 2026-07-28
 
 ### Added

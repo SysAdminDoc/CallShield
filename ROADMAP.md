@@ -652,3 +652,35 @@ Baseline at audit time: `testDebugUnitTest`, `ktlintCheck`, `detekt`, `lintDebug
   Why: worker/community-reports-worker.js was audited as source; the deployed Worker (callshield-reports.workers.dev) was not probed. Confirm the deployed version matches the repo (especially once the P1/P2 validation fixes land) and that KV rate-limit config matches wrangler.toml.
 - [ ] P3 — Release-build (minified) backup round-trip and screening smoke test
   Why: The R8 keep-rule P1 was traced statically. Build assembleRelease, create + restore a backup containing settings/range rules/logs on the minified APK, and run a screening smoke test to confirm no other reflection-dependent path regressed.
+
+## Audit Findings — 2026-07-30 (anchored to v1.7.27, versionCode 55; found, not fixed)
+
+Baseline at audit time: all gates green. This session fixed ~40 findings across the worker, data pipeline, detection core, services, and UI (see CHANGELOG v1.7.27). The items below were verified real but deferred — each needs an operator action, a design decision, or a disproportionate refactor.
+
+- [ ] P2 — Deployed Cloudflare Worker must be redeployed to pick up this session's fixes
+  Why: worker/community-reports-worker.js now fixes international-number NANP-ification (P1), dedup-marker-before-store report loss, and the Content-Length cap bypass — but the live callshield-reports.workers.dev still runs the old code until `wrangler deploy`.
+  Where: worker/community-reports-worker.js (operator: wrangler deploy)
+- [ ] P2 — Worker rate limit and dedup are non-atomic read-modify-write on eventually-consistent KV
+  Why: N concurrent POSTs (same or different PoPs; KV propagation up to ~60 s) each read a stale counter and all pass, so the 5/60s cap and per-(IP,number) dedup are bypassable with parallel requests. Durable fix: Durable Objects (atomic counter) or Workers rate-limiting bindings.
+  Where: worker/community-reports-worker.js (checkRateLimit, checkDedup)
+- [ ] P3 — Spam-domain quorum still forgeable by a single reporter
+  Why: three distinct plausible numbers now required (fixed this session) but one attacker can still supply them. Durable fix: worker attaches a privacy-preserving reporter bucket (HMAC(day-rotating key, IP), 8 hex chars — anonymous, unlinkable across days) and extract_spam_domains.py requires ≥2 distinct buckets.
+  Where: worker/community-reports-worker.js, scripts/extract_spam_domains.py
+- [ ] P3 — SMS-context-trusted senders are not protected from shared-chain heuristic content scoring
+  Why: SmsContextChecker's docstring says conversation-trust runs before content analysis, but HeuristicChecker scores smsBody in the shared chain (priority 3000) before the SMS extension chain where the trust checker lives — a sender the user has texted can still be blocked as `heuristic` on a "track your package: bit.ly/x" message. Design decision: either pass trust into ctx so HeuristicChecker skips content scoring for trusted senders, or fix the docstring and accept the ordering.
+  Where: data/checker/Checkers.kt (HeuristicChecker), data/SmsContextChecker.kt, data/repository/SpamRepositoryImpl.kt (isSpamSms)
+- [ ] P3 — ML `short_number` feature (index 19) can never fire on-device (train/inference drift)
+  Why: shortNumber=1.0 requires 1-6 digits, but any such number fails the digits.length != 10 gate three lines later and exits with an empty feature vector. If the Python training pipeline emits short_number=1 rows, the model learns a feature inference never produces. Align build_dataset() to drop <7-digit rows (or drop the feature) at the next model regen.
+  Where: data/SpamMLScorer.kt:427-435, scripts/train_spam_model.py (build_dataset)
+- [ ] P3 — Caller-ID overlay is locked to the dark Catppuccin palette
+  Why: ~15 Color.parseColor literals bypass the theme system; Light-theme users get a dark on-call card. Arguably intentional (dark = readable over any in-call UI) — decide, then either theme it or document the choice here as accepted.
+  Where: service/CallerIdOverlayService.kt
+- [ ] P3 — Splash and PostCall first frame stay black for Light-theme users
+  Why: v1.7.27 fixed the window background for both activities, but the splash theme is static (manifest) and PostCallActivity still waits on DataStore before setting content (brief blank window, now correctly themed). Full fix: theme-variant splash + cached-theme first frame in PostCallActivity like MainActivity.
+  Where: res/values/splash.xml, ui/PostCallActivity.kt:86-113
+- [ ] P3 — ~140 orphaned string resources (including ~75 dead cd_* accessibility labels)
+  Why: dead weight for translators and a misleading signal that a11y coverage exists where it doesn't. Verify each against dynamic lookups, then trim (lint UnusedResources can drive the sweep; check the lint baseline doesn't mask them).
+  Where: app/src/main/res/values/strings.xml
+- [ ] P3 — Lookup pipeline-trace rows and spam-type labels still show raw internal tokens
+  Why: v1.7.27 unified matchReason display via friendlyMatchReasonLabel, but LookupScreen's pipeline trace (checkerName) and the spam `type` field still render de-underscored tokens. Needs a type-label map plus trace i18n strings (existing ROADMAP note on pipeline-trace i18n covers part of this).
+  Where: ui/screens/lookup/LookupScreen.kt
