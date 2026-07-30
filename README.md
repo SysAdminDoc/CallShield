@@ -512,11 +512,20 @@ RELEASE_KEY_PASSWORD=...
 ## Testing
 
 ```bash
-./gradlew testDebugUnitTest   # 947 tests
+./gradlew testDebugUnitTest   # 948 tests
 ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.sysadmindoc.callshield.platform.TargetSdkBehaviorSmokeTest
+./gradlew verifyPipelineTests # Cloudflare Worker (node) + data-pipeline and translation checks (python)
 ```
 
 Run tests, lint, release metadata checks, and artifact builds locally before publishing.
+
+## Translations
+
+CallShield ships English only. Translations are welcome — see
+[docs/TRANSLATING.md](docs/TRANSLATING.md) for the resource layout, the priority
+order for partial translations, and `scripts/check_translations.py`, which
+verifies format specifiers and plural coverage before a PR lands. Claim a
+language in [issue #7](https://github.com/SysAdminDoc/CallShield/issues/7).
 
 ## Tech Stack
 
