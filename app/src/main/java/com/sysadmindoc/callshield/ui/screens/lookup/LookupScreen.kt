@@ -91,6 +91,7 @@ import com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup
 import com.sysadmindoc.callshield.domain.model.SpamCheckResult
 import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.friendlyMatchReasonLabel
+import com.sysadmindoc.callshield.ui.friendlySpamTypeLabel
 import com.sysadmindoc.callshield.ui.theme.CatBlue
 import com.sysadmindoc.callshield.ui.theme.CatGreen
 import com.sysadmindoc.callshield.ui.theme.CatOverlay
@@ -423,7 +424,7 @@ fun LookupScreen(viewModel: MainViewModel) {
                                 )
                                 DetailRow(
                                     label = stringResource(R.string.lookup_type),
-                                    value = lookupResult.type.replace("_", " ").replaceFirstChar { it.uppercase() },
+                                    value = friendlySpamTypeLabel(lookupResult.type),
                                 )
                                 if (lookupResult.description.isNotEmpty()) {
                                     DetailRow(

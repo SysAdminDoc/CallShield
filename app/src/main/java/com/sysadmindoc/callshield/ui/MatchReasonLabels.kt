@@ -5,6 +5,44 @@ import androidx.compose.ui.res.stringResource
 import com.sysadmindoc.callshield.R
 
 /**
+ * Resource id for a spam `type` token, or null when it is not one we know.
+ *
+ * Non-composable so non-UI callers (share text, notifications) can localize
+ * the same way the screens do instead of falling back to `replace("_", " ")`,
+ * which leaks internal tokens like "debt collector" / "ai voice" verbatim.
+ */
+fun spamTypeLabelRes(type: String): Int? =
+    when (type.trim().lowercase()) {
+        "spam" -> R.string.spam_type_spam
+        "robocall" -> R.string.spam_type_robocall
+        "scam" -> R.string.spam_type_scam
+        "telemarketer" -> R.string.spam_type_telemarketer
+        "debt_collector" -> R.string.spam_type_debt_collector
+        "sms_spam" -> R.string.spam_type_sms_spam
+        "ai_voice" -> R.string.spam_type_ai_voice
+        "survey" -> R.string.spam_type_survey
+        "political" -> R.string.spam_type_political
+        "phishing" -> R.string.spam_type_phishing
+        "unknown" -> R.string.spam_type_unknown
+        else -> null
+    }
+
+/** Localized display label for a spam `type` token. */
+fun localizedSpamType(
+    context: android.content.Context,
+    type: String,
+): String =
+    spamTypeLabelRes(type)
+        ?.let(context::getString)
+        ?: type.replace("_", " ").replaceFirstChar { it.uppercase() }
+
+@Composable
+fun friendlySpamTypeLabel(type: String): String =
+    spamTypeLabelRes(type)
+        ?.let { stringResource(it) }
+        ?: type.replace("_", " ").replaceFirstChar { it.uppercase() }
+
+/**
  * Localized display label for an internal matchReason/matchSource token.
  *
  * Every screen that shows a block reason must use this instead of the old
