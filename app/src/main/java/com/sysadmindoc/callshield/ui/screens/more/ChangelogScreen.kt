@@ -280,7 +280,7 @@ fun ChangelogScreen() {
                     "Smart call labels — Debt Collector / Political / Robocall / Scam / Phishing / Telemarketer / Wangiri / Survey / Business / Unknown, shown on the Number Detail hero and in the blocked log",
                     "Silent voicemail mode — blocked calls reach voicemail silently instead of hard-rejecting, so your phone doesn't ring. Off by default; opt-in from Settings → Detection",
                     "One-tap FTC fraud report — any Number Detail screen now has a \"Report to FTC\" button that copies the number and opens reportfraud.ftc.gov",
-                    "Emergency contacts — whitelist entries can be flagged as emergency, bypassing blocklist, quiet hours, and aggressive mode with a distinct red badge in the Whitelist tab",
+                    "Emergency contacts — whitelist entries can be flagged as emergency, bypassing blocklist, quiet hours, and aggressive mode with a distinct red badge in the Trusted tab (formerly Whitelist)",
                     "\"Why was this blocked?\" — Number Detail now shows a plain-English narrative of which detection layer fired, what heuristic reasons contributed, and the model's confidence",
                 ),
         )
@@ -376,7 +376,7 @@ fun ChangelogScreen() {
                 listOf(
                     "Gradient-boosted tree ML model (20 features, pure Kotlin inference)",
                     "Campaign burst detection: auto-blocks NPA-NXX prefixes with 5+ calls in 1 hour",
-                    "After-call feedback: \"Was this spam?\" notification with one-tap Block/Whitelist",
+                    "After-call feedback: \"Was this spam?\" notification with one-tap Block/Trust",
                     "378 strings extracted to strings.xml for localization support",
                     "150 unit tests + GitHub Actions CI pipeline",
                     "Full accessibility pass: 100 content descriptions, semantic grouping, 48dp touch targets",

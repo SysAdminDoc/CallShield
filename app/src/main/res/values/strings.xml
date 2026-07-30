@@ -292,7 +292,10 @@
     <string name="contribute_reported_spam">Contributed anonymously</string>
     <string name="contribute_reported_not_spam">Reported as not spam</string>
     <string name="contribute_invalid_number">This number can\'t be reported</string>
-    <string name="contribute_rate_limited">Too many reports. Wait %1$d seconds and try again.</string>
+    <plurals name="contribute_rate_limited">
+        <item quantity="one">Too many reports. Wait %1$d second and try again.</item>
+        <item quantity="other">Too many reports. Wait %1$d seconds and try again.</item>
+    </plurals>
     <string name="contribute_server_error">The report server is having trouble. Try again later.</string>
     <string name="contribute_network_error">No connection. The report wasn\'t sent.</string>
     <string name="blocklist_empty_keywords">No keyword rules</string>
@@ -330,7 +333,7 @@
     </plurals>
 
     <!-- Add Number Dialog -->
-    <string name="dialog_block_number">Block Number</string>
+    <string name="dialog_block_number">Block number</string>
     <string name="rule_conflict_warning">Conflict: %1$s wins over %2$s for %3$s. The lower-priority rule will not decide this number.</string>
     <string name="rule_conflict_emergency_allow">Emergency allow</string>
     <string name="rule_conflict_whitelist">Trusted list</string>
@@ -344,7 +347,7 @@
     <string name="dialog_cancel">Cancel</string>
 
     <!-- Add Wildcard Dialog -->
-    <string name="dialog_add_wildcard_rule">Add Wildcard Rule</string>
+    <string name="dialog_add_wildcard_rule">Add wildcard rule</string>
     <string name="dialog_regex_label">Regex</string>
     <string name="dialog_pattern_label">Pattern</string>
     <string name="dialog_regex_placeholder">^\\+1832\\d{7}$</string>
@@ -360,7 +363,7 @@
     <string name="dialog_whitelist">Trust</string>
 
     <!-- Add Keyword Dialog -->
-    <string name="dialog_block_sms_keyword">Block SMS Keyword</string>
+    <string name="dialog_block_sms_keyword">Block SMS keyword</string>
     <string name="dialog_keyword">Keyword</string>
     <string name="dialog_keyword_placeholder">e.g., free gift card</string>
     <string name="dialog_keyword_note">Any SMS containing this keyword will be blocked.</string>
@@ -665,7 +668,7 @@
     <!-- Stats Screen -->
     <string name="stats_calls">Calls</string>
     <string name="stats_sms">SMS</string>
-    <string name="stats_db_size">DB Entries</string>
+    <string name="stats_db_size">Database</string>
     <string name="stats_by_detection_method">By Detection Method</string>
     <string name="stats_top_offenders">Top Offenders</string>
     <string name="stats_spam_by_area_code">Spam by Area Code</string>
@@ -822,7 +825,7 @@
     <string name="protection_test_action_needed">Action Needed</string>
     <string name="protection_test_working">Working As Expected</string>
     <string name="protection_test_next_steps">Recommended next steps</string>
-    <string name="protection_test_open_settings">Open App Settings</string>
+    <string name="protection_test_open_settings">Open app settings</string>
     <string name="protection_test_fix_permissions">Grant the missing permissions in Android app settings, then rerun the diagnostic.</string>
     <string name="protection_test_fix_screener">Set CallShield as the default call screener so spam calls can be intercepted live.</string>
     <string name="protection_test_fix_database">Run a database sync from the dashboard or More screen so local protection data is available.</string>
@@ -842,7 +845,7 @@
     <string name="protection_test_wangiri_fail">Wangiri detection may be disabled</string>
     <string name="protection_test_sms_pass">Correctly detected spam SMS (%s)</string>
     <string name="protection_test_sms_fail">SMS analysis may be disabled</string>
-    <string name="protection_test_ml_pass">Correctly flagged 555–0000 pattern</string>
+    <string name="protection_test_ml_pass">Correctly flagged 555-0000 pattern</string>
     <string name="protection_test_ml_fail">ML scorer may be disabled or weights not loaded</string>
     <string name="protection_test_ml_fp_pass">Normal number correctly passed</string>
     <string name="protection_test_ml_fp_fail">False positive — threshold may be too low</string>
@@ -956,7 +959,7 @@
     <string name="recent_permission_hint_private_body">CallShield reads call history on-device so you can understand spam matches without leaving your recent-call view.</string>
     <string name="recent_permission_hint_recovery_title">Easy to enable later</string>
     <string name="recent_permission_hint_recovery_body">If you skip this for now, the app still works. You can turn on recent-call review from system settings whenever you need it.</string>
-    <string name="recent_permission_cta">Open App Settings</string>
+    <string name="recent_permission_cta">Open app settings</string>
     <string name="recent_no_calls">No recent calls</string>
     <string name="recent_no_calls_desc">Call log is empty or permission denied</string>
     <string name="recent_no_matching">No matching calls</string>
@@ -1089,7 +1092,7 @@
 
     <!-- Sync results -->
     <string name="sync_database_up_to_date">Database is up to date</string>
-    <string name="sync_success_counts">Synced %1$d numbers, %2$d prefixes</string>
+    <string name="sync_success_counts">Sync complete — numbers: %1$d, prefixes: %2$d</string>
     <string name="sync_unknown_error">Unknown sync error</string>
     <string name="sync_remote_unavailable_existing">GitHub sync unavailable (%s). Your existing spam database is still active.</string>
     <string name="sync_bundled_snapshot_loaded">Loaded bundled protection snapshot with %1$d numbers and %2$d prefixes while GitHub was unavailable.</string>
@@ -1401,15 +1404,18 @@
         <item quantity="other">Blocked %d spam items recently</item>
     </plurals>
     <string name="settings_region_cnap_rules">Region &amp; caller-name rules</string>
-    <string name="settings_region_cnap_summary">%1$d allowed regions · %2$d trusted names · %3$d blocked names</string>
+    <string name="settings_region_cnap_summary">Allowed regions: %1$d · Trusted names: %2$d · Blocked names: %3$d</string>
     <string name="region_rules_title">Region &amp; caller-name rules</string>
-    <string name="region_rules_disclosure">These rules run entirely on your device. Region blocking uses the incoming number’s NANP area code. Caller-name trust uses only a carrier-presented name that Android exposes to the screening service.</string>
+    <string name="region_rules_disclosure">These rules run entirely on your device. Region blocking uses the incoming number\'s NANP area code. Caller-name trust uses only a carrier-presented name that Android exposes to the screening service.</string>
     <string name="region_rules_block_outside">Block calls outside allowed regions</string>
     <string name="region_rules_block_outside_desc">Allow selected US states, Canadian provinces, and territories; block other and international numbers.</string>
     <string name="region_rules_allowed_regions">Allowed region codes</string>
     <string name="region_rules_regions_hint">Comma-separated two-letter codes, for example NY, NJ, ON. Use TF for toll-free.</string>
     <string name="region_rules_regions_required">Add at least one valid two-letter region code.</string>
-    <string name="region_rules_regions_count">%1$d valid region codes</string>
+    <plurals name="region_rules_regions_count">
+        <item quantity="one">%1$d valid region code</item>
+        <item quantity="other">%1$d valid region codes</item>
+    </plurals>
     <string name="cnap_trust_title">Trust a presented caller name</string>
     <string name="cnap_trust_desc">When the carrier provides a caller name, matching calls can bypass region and statistical blocks.</string>
     <string name="cnap_trust_patterns">Trusted name patterns</string>
