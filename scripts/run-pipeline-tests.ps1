@@ -68,6 +68,19 @@ if ($python) {
     Write-Warning 'python not found on PATH - skipping Python pipeline tests.'
 }
 
+# Translation resources are contributed by people who cannot run the Android
+# build, and a format-specifier mismatch only throws when the string is shown.
+# Checked here so it is gated by `check` rather than by review attention.
+if ($python) {
+    $translationChecker = Join-Path $PSScriptRoot 'check_translations.py'
+    if (Test-Path $translationChecker) {
+        Write-Host 'Running check_translations.py...'
+        & $python $translationChecker
+        if ($LASTEXITCODE -ne 0) { $failures += 'check_translations.py' }
+        $ran++
+    }
+}
+
 if ($ran -eq 0) {
     Write-Warning 'No pipeline tests were run (neither node nor python available).'
     exit 0
