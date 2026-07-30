@@ -2,7 +2,7 @@
 
 All notable changes to CallShield will be documented in this file.
 
-## Unreleased
+## v1.7.28 — 2026-07-30
 
 ### Fixed
 
@@ -37,6 +37,33 @@ All notable changes to CallShield will be documented in this file.
   rotating, as the v1.7.27 notes claimed.
 - Running Protection Test can no longer crash the app if the database is
   unhealthy; it shows a failure card instead.
+- The documented database regeneration command silently deleted every
+  single-report community row (80 of them). `--min-reports` defaults to 2 but
+  was applied to the whole merged database rather than only to newly-imported
+  entries, so each regen erased the community contributions it claimed to
+  preserve.
+- Deleting a wildcard, range, or keyword rule, or a trusted number, can now be
+  undone. It was instant and unrecoverable, with the delete button beside each
+  row's enable switch — and removing an emergency contact silently re-exposed
+  you to blocking.
+- Add-rule dialogs keep their configured schedule when the screen rotates
+  instead of silently reverting the rule to always-active.
+- The daily digest notification opens the app when tapped; it previously did
+  nothing at all.
+- "Check spam sources" reports a failure instead of silently resetting, log
+  export works when Settings is reached without visiting the dashboard, the
+  blocklist import picker accepts the same file types as backup restore, and
+  onboarding's permission button opens app settings once the system dialog
+  will no longer appear.
+- Notification-listener access is verified by exact package match, so a
+  look-alike package can no longer make RCS screening report itself as active
+  while unbound.
+- Spam types are shown as readable labels everywhere, including in shared
+  warning text that leaves the device.
+- Data-pipeline writes are atomic, so a crash mid-write cannot publish a
+  truncated database; runs that change nothing no longer cost every device a
+  re-download; and the hot list ranks by reports inside its window instead of
+  lifetime totals.
 
 ### Accessibility
 
@@ -52,12 +79,13 @@ All notable changes to CallShield will be documented in this file.
   long enough to be read.
 - Forward chevrons mirror correctly in right-to-left layouts and no longer
   append "View details" to every row on the More screen.
+- Secondary text now meets the WCAG AA 4.5:1 contrast minimum on every
+  surface in all three themes; it previously fell to 3.6:1 on elevated cards.
 
-- The documented database regeneration command silently deleted every
-  single-report community row (80 of them). `--min-reports` defaults to 2 and
-  was applied to the whole merged database rather than only to newly-imported
-  entries, so each regen erased the community contributions it claimed to
-  preserve.
+### Performance
+
+- The Stats screen no longer re-aggregates the entire blocked-call log on
+  every recomposition, and builds its hour histogram once instead of twice.
 
 ## v1.7.27 — 2026-07-30
 
