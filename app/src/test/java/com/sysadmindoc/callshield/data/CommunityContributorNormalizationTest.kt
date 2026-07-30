@@ -106,14 +106,19 @@ class CommunityContributorNormalizationTest {
     }
 }
 
-private data class NormalizerFixtureCase(val input: String, val why: String, val expectedKotlin: String?)
+private data class NormalizerFixtureCase(
+    val input: String,
+    val why: String,
+    val expectedKotlin: String?,
+)
 
 private object NormalizerFixtures {
     private const val RELATIVE_PATH = "scripts/normalizer_fixtures.json"
 
     fun load(): List<NormalizerFixtureCase> {
         val file = locate()
-        val root = Moshi.Builder().build().adapter(Any::class.java).fromJson(file.readText())
+        val moshi = Moshi.Builder().build()
+        val root = moshi.adapter(Any::class.java).fromJson(file.readText())
         val cases = (root as Map<*, *>)["cases"] as List<*>
         return cases.map { entry ->
             val case = entry as Map<*, *>
