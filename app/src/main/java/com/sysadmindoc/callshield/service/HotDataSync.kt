@@ -36,14 +36,22 @@ internal object HotDataSync {
     ) = withContext(Dispatchers.IO) {
         val appContext = context.applicationContext
 
-        val bundledRanges = loadBundledHotRanges(appContext, source)
-        if (bundledRanges.resolved) {
-            dependencies.spamHeuristics.updateHotRanges(sanitizeHotRanges(bundledRanges.data))
+        // Gate every store on emptiness, not just the hot list below. WorkManager
+        // can run an overdue HotListSyncWorker in-process right after startup, so
+        // an ungated write here can land after its fresh data and replace it with
+        // the build-time snapshot until the next 30-minute cycle.
+        if (!dependencies.spamHeuristics.hasHotRanges()) {
+            val bundledRanges = loadBundledHotRanges(appContext, source)
+            if (bundledRanges.resolved) {
+                dependencies.spamHeuristics.updateHotRanges(sanitizeHotRanges(bundledRanges.data))
+            }
         }
 
-        val bundledDomains = loadBundledSpamDomains(appContext, source)
-        if (bundledDomains.resolved) {
-            dependencies.smsContentAnalyzer.updateSpamDomains(sanitizeSpamDomains(bundledDomains.data))
+        if (!dependencies.smsContentAnalyzer.hasSpamDomains()) {
+            val bundledDomains = loadBundledSpamDomains(appContext, source)
+            if (bundledDomains.resolved) {
+                dependencies.smsContentAnalyzer.updateSpamDomains(sanitizeSpamDomains(bundledDomains.data))
+            }
         }
 
         if (dao.getCountBySource(HOT_LIST_SOURCE) == 0) {
@@ -78,17 +86,22 @@ internal object HotDataSync {
         withContext(Dispatchers.IO) {
             val appContext = context.applicationContext
 
-            val hotList = loadHotList(appContext, source)
+            // The bundled snapshot is a bootstrap source, never a repair source.
+            // replaceHotList is delete-then-insert, so falling back to the
+            // build-time asset after a transient fetch failure would delete the
+            // freshly synced trending rows and reinstate weeks-old data. Only
+            // use it where the corresponding store is still empty.
+            val hotList = loadHotList(appContext, source, dao.getCountBySource(HOT_LIST_SOURCE) > 0)
             if (hotList.resolved) {
                 repo.replaceHotList(sanitizeHotNumbers(hotList.data, repo::normalizeNumber))
             }
 
-            val hotRanges = loadHotRanges(appContext, source)
+            val hotRanges = loadHotRanges(appContext, source, dependencies.spamHeuristics.hasHotRanges())
             if (hotRanges.resolved) {
                 dependencies.spamHeuristics.updateHotRanges(sanitizeHotRanges(hotRanges.data))
             }
 
-            val spamDomains = loadSpamDomains(appContext, source)
+            val spamDomains = loadSpamDomains(appContext, source, dependencies.smsContentAnalyzer.hasSpamDomains())
             if (spamDomains.resolved) {
                 dependencies.smsContentAnalyzer.updateSpamDomains(sanitizeSpamDomains(spamDomains.data))
             }
@@ -102,13 +115,31 @@ internal object HotDataSync {
             )
         }
 
+    /**
+     * The bundled snapshot is a bootstrap source, not a repair source.
+     *
+     * Applying a feed marks it `resolved`, and resolving triggers a destructive
+     * replace (`replaceHotList` is delete-then-insert). So after a transient
+     * fetch failure the build-time asset would delete the freshly synced
+     * trending rows and reinstate weeks-old data. It may only be used to
+     * populate a store that is still empty.
+     */
+    internal fun shouldUseBundledFallback(
+        remoteSucceeded: Boolean,
+        hasExistingData: Boolean,
+    ): Boolean = !remoteSucceeded && !hasExistingData
+
     private suspend fun loadHotList(
         context: Context,
         source: HotFeedDataSource,
+        hasExistingData: Boolean,
     ): FeedLoadResult<List<HotNumber>> {
         val remote = source.fetchHotList()
         if (remote.isSuccess) {
             return FeedLoadResult(remote.getOrDefault(emptyList()), resolved = true)
+        }
+        if (!shouldUseBundledFallback(false, hasExistingData)) {
+            return FeedLoadResult(emptyList(), resolved = false)
         }
         return loadBundledHotList(context, source)
     }
@@ -116,10 +147,14 @@ internal object HotDataSync {
     private suspend fun loadHotRanges(
         context: Context,
         source: HotFeedDataSource,
+        hasExistingData: Boolean,
     ): FeedLoadResult<List<String>> {
         val remote = source.fetchHotRanges()
         if (remote.isSuccess) {
             return FeedLoadResult(remote.getOrDefault(emptyList()), resolved = true)
+        }
+        if (!shouldUseBundledFallback(false, hasExistingData)) {
+            return FeedLoadResult(emptyList(), resolved = false)
         }
         return loadBundledHotRanges(context, source)
     }
@@ -127,10 +162,14 @@ internal object HotDataSync {
     private suspend fun loadSpamDomains(
         context: Context,
         source: HotFeedDataSource,
+        hasExistingData: Boolean,
     ): FeedLoadResult<List<String>> {
         val remote = source.fetchSpamDomains()
         if (remote.isSuccess) {
             return FeedLoadResult(remote.getOrDefault(emptyList()), resolved = true)
+        }
+        if (!shouldUseBundledFallback(false, hasExistingData)) {
+            return FeedLoadResult(emptyList(), resolved = false)
         }
         return loadBundledSpamDomains(context, source)
     }

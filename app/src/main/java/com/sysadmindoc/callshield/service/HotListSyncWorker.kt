@@ -54,7 +54,12 @@ class HotListSyncWorker
                         dao = dao,
                         dependencies = checkerDependencies,
                     )
-                if (outcome.refreshedAnyFeed || outcome.hasAnyHotProtection) {
+                // Retry whenever nothing was actually refreshed from the remote
+                // feeds. Existing on-device protection no longer counts as
+                // success: the bundled snapshot is not used to repair a stale
+                // store any more, so a failed fetch leaves genuinely stale data
+                // that a backed-off retry should replace.
+                if (outcome.refreshedAnyFeed) {
                     Result.success()
                 } else {
                     Result.retry()
