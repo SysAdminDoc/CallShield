@@ -55,25 +55,45 @@ fun StatsScreen(viewModel: MainViewModel) {
     val spamCount by viewModel.spamCount.collectAsStateWithLifecycle()
     val numberFormatter = remember { NumberFormat.getIntegerInstance() }
 
-    val callsOnly = blockedCalls.filter { it.isCall }
-    val smsOnly = blockedCalls.filter { !it.isCall }
+    // The log is unbounded (auto-cleanup is off by default), and these are
+    // O(n) groupings over the whole thing. Without remember they re-ran on
+    // every recomposition of the screen.
+    val callsOnly = remember(blockedCalls) { blockedCalls.filter { it.isCall } }
+    val smsOnly = remember(blockedCalls) { blockedCalls.filter { !it.isCall } }
 
     // Type breakdown
     val typeBreakdown =
-        blockedCalls
-            .groupBy { it.matchReason.ifEmpty { "unknown" } }
-            .mapValues { it.value.size }
-            .entries
-            .sortedByDescending { it.value }
+        remember(blockedCalls) {
+            blockedCalls
+                .groupBy { it.matchReason.ifEmpty { "unknown" } }
+                .mapValues { it.value.size }
+                .entries
+                .sortedByDescending { it.value }
+        }
+
+    // One shared hour histogram: it was built inline at the overview card and
+    // again for the heatmap, walking the whole log twice per recomposition.
+    val hourCounts =
+        remember(blockedCalls) {
+            IntArray(24).also { hours ->
+                val calendar = Calendar.getInstance()
+                blockedCalls.forEach { call ->
+                    calendar.timeInMillis = call.timestamp
+                    hours[calendar.get(Calendar.HOUR_OF_DAY)]++
+                }
+            }
+        }
 
     // Top offenders
     val topOffenders =
-        blockedCalls
-            .groupBy { it.number }
-            .mapValues { it.value.size }
-            .entries
-            .sortedByDescending { it.value }
-            .take(10)
+        remember(blockedCalls) {
+            blockedCalls
+                .groupBy { it.number }
+                .mapValues { it.value.size }
+                .entries
+                .sortedByDescending { it.value }
+                .take(10)
+        }
 
     val dayBucket = rememberDayBucket()
 
@@ -142,13 +162,6 @@ fun StatsScreen(viewModel: MainViewModel) {
             topSource = typeBreakdown.firstOrNull()?.key,
             peakHour =
                 blockedCalls.takeIf { it.isNotEmpty() }?.let {
-                    val hourCounts =
-                        IntArray(24).also { hours ->
-                            blockedCalls.forEach { call ->
-                                val hour = Calendar.getInstance().apply { timeInMillis = call.timestamp }.get(Calendar.HOUR_OF_DAY)
-                                hours[hour]++
-                            }
-                        }
                     val peakHourIndex = hourCounts.indices.maxByOrNull { index -> hourCounts[index] } ?: 0
                     if (hourCounts[peakHourIndex] > 0) formatHourRange(peakHourIndex) else null
                 },
@@ -432,15 +445,6 @@ fun StatsScreen(viewModel: MainViewModel) {
 
             // Time-of-day heatmap
             if (blockedCalls.size >= 5) {
-                val hourCounts =
-                    remember(blockedCalls) {
-                        IntArray(24).also { hours ->
-                            blockedCalls.forEach { call ->
-                                val hour = Calendar.getInstance().apply { timeInMillis = call.timestamp }.get(Calendar.HOUR_OF_DAY)
-                                hours[hour]++
-                            }
-                        }
-                    }
                 val maxHour = hourCounts.max().coerceAtLeast(1)
                 PremiumCard {
                     Column(modifier = Modifier.padding(16.dp)) {

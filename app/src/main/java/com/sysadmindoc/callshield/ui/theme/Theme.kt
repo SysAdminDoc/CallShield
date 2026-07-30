@@ -100,7 +100,10 @@ private val AmoledPalette =
         lavender = Color(0xFFB4BEFE),
         text = Color(0xFFF2F3F0),
         subtext = Color(0xFFA8ADA8),
-        overlay = Color(0xFF747A75),
+        // Secondary body text. Chosen so it clears WCAG AA (4.5:1) against
+        // every surface in this palette, including surfaceElevated — the
+        // previous value only reached 3.90:1 there.
+        overlay = Color(0xFF828882),
         muted = Color(0xFF2B2F2C),
         isLight = false,
     )
@@ -123,7 +126,8 @@ private val GraphitePalette =
         lavender = Color(0xFFABB9FF),
         text = Color(0xFFF3F6F8),
         subtext = Color(0xFFB1BBC5),
-        overlay = Color(0xFF7E8995),
+        // AA against surfaceElevated too (was 3.60:1).
+        overlay = Color(0xFF939FAC),
         muted = Color(0xFF333D48),
         isLight = false,
     )
@@ -146,7 +150,8 @@ private val LightPalette =
         lavender = Color(0xFF4E5F9E),
         text = Color(0xFF171B1F),
         subtext = Color(0xFF4E5963),
-        overlay = Color(0xFF68737D),
+        // AA against surfaceBright too (was 3.97:1).
+        overlay = Color(0xFF5A646E),
         muted = Color(0xFFD6DDE2),
         isLight = true,
     )
