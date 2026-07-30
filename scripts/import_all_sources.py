@@ -178,8 +178,16 @@ def fetch_phoneblock() -> list[dict]:
 
 
 # ── Source 4: ToastedSpam (US/Canada curated plain-text blocklist) ────
-def fetch_toastedspam() -> list[dict]:
+def fetch_toastedspam(allow_insecure: bool = False) -> list[dict]:
     print("\n[ToastedSpam US/Canada Blocklist]")
+    # toastedspam.com serves no TLS (verified 2026-07-30: https -> connection
+    # failure). A cleartext fetch feeding elevated-confidence rows into the
+    # shipped database is an on-path poisoning vector — every line an
+    # attacker injects becomes a hard-blocked number on every device. Only
+    # fetch when the operator explicitly opts in on a trusted network.
+    if not allow_insecure:
+        print("  Skipped: HTTP-only source (no TLS). Re-run with --allow-insecure-sources on a trusted network to include it.")
+        return []
     try:
         resp = requests.get("http://www.toastedspam.com/deny", timeout=30)
         if resp.status_code != 200:
@@ -272,7 +280,10 @@ def merge_into_database(all_numbers: list[dict], min_reports: int = 1):
     for entry in all_numbers:
         num = entry["number"]
         if num in existing:
-            existing[num]["reports"] += entry["reports"]
+            # Snapshot semantics (max, not +=): reruns re-fetch overlapping
+            # source windows, and accumulation inflates counts without bound —
+            # see update_ftc.py merge_into_database for the full rationale.
+            existing[num]["reports"] = max(existing[num].get("reports", 0), entry["reports"])
             if entry.get("last_seen", "") > existing[num].get("last_seen", ""):
                 existing[num]["last_seen"] = entry["last_seen"]
             if entry.get("first_seen", "9999") < existing[num].get("first_seen", "9999"):
@@ -321,6 +332,11 @@ def main():
     parser = argparse.ArgumentParser(description="Import spam numbers from all sources")
     parser.add_argument("--max", type=int, default=500000, help="Max records to fetch from FCC")
     parser.add_argument("--min-reports", type=int, default=2, help="Minimum reports to include a number (default: 2)")
+    parser.add_argument(
+        "--allow-insecure-sources",
+        action="store_true",
+        help="Include HTTP-only sources (ToastedSpam). Only use on a trusted network.",
+    )
     args = parser.parse_args()
 
     print("=" * 50)
@@ -342,7 +358,7 @@ def main():
     all_numbers.extend(pb)
 
     # Source 4: ToastedSpam
-    ts = fetch_toastedspam()
+    ts = fetch_toastedspam(allow_insecure=args.allow_insecure_sources)
     all_numbers.extend(ts)
 
     # Source 5: Community text lists

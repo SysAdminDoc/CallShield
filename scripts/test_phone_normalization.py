@@ -23,8 +23,14 @@ def main() -> None:
     assert normalize_report_number("+1234567890123456") is None
     assert normalize_report_number("\u0661\u0662\u0663\u0664\u0665\u0666\u0667\u0668\u0669\u0660") is None
 
-    assert normalize_nanp_number("212-555-1234") == "+12125551234"
+    assert normalize_nanp_number("212-234-5678") == "+12122345678"
     assert normalize_nanp_number("+442071234567") is None
+    # Bulk importers now share the plausibility gate: fictional NANP rows
+    # (555 exchange, 555/N11 area codes) are rejected at import time instead
+    # of shipping and being purged by the next merge run.
+    assert normalize_nanp_number("212-555-1234") is None
+    assert normalize_nanp_number("555-234-5678") is None
+    assert normalize_nanp_number("211-934-5678") is None
 
     # Plausibility gating at the report trust boundary.
     assert is_plausible_number("+12122345678") is True          # valid NANP
@@ -49,6 +55,7 @@ def main() -> None:
     assert strip_national_trunk_prefix("4402071234567") == "442071234567"   # UK
     assert strip_national_trunk_prefix("49030123456") == "4930123456"       # Germany
     assert strip_national_trunk_prefix("390612345678") == "390612345678"    # Italy keeps its 0
+    assert strip_national_trunk_prefix("2250707123456") == "2250707123456"  # Côte d'Ivoire keeps its 0 (2021 renumbering)
     assert strip_national_trunk_prefix("865586468536") == "865586468536"    # already E.164
     assert strip_national_trunk_prefix("12122345678") == "12122345678"      # NANP untouched
 

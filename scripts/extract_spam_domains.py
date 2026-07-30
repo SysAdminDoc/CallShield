@@ -17,12 +17,13 @@ import re
 from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
+from phone_normalization import validated_report_number
 
 DATA_DIR = Path(os.environ.get("CALLSHIELD_DATA_DIR", Path(__file__).parent.parent / "data"))
 REPORTS_DIR = Path(os.environ.get("CALLSHIELD_REPORTS_DIR", DATA_DIR / "reports"))
 OUTPUT_FILE = DATA_DIR / "spam_domains.json"
 
-MIN_REPORTS = 3    # Domain must appear in 3+ distinct reports to be included
+MIN_REPORTS = 3    # Domain must be tied to 3+ DISTINCT reported numbers
 MAX_DOMAINS = 500  # Top N domains
 
 URL_RE = re.compile(r'https?://([^/\s\'"<>]+)|www\.([^\s/\'"<>]+)', re.IGNORECASE)
@@ -94,7 +95,11 @@ def report_domains(report: dict) -> set[str]:
 def main():
     print("=== CallShield Spam Domain Extractor ===\n")
 
-    domain_counts: Counter = Counter()
+    # Count DISTINCT reported numbers per domain, not report files. The worker
+    # dedups per (IP, number) for only 5 minutes, so one reporter re-submitting
+    # the same number could otherwise manufacture the MIN_REPORTS quorum for an
+    # arbitrary domain and have it flagged malicious on every device.
+    domain_numbers: dict[str, set[str]] = {}
     reports_scanned = 0
 
     if REPORTS_DIR.exists():
@@ -110,16 +115,22 @@ def main():
                 if not domains:
                     continue
 
+                number = validated_report_number(report.get("number", ""))
+                if not number:
+                    continue
+
                 reports_scanned += 1
                 for domain in domains:
-                    domain_counts[domain] += 1
+                    domain_numbers.setdefault(domain, set()).add(number)
 
             except Exception as e:
                 print(f"  Skipping {report_file.name}: {e}")
 
     print(f"Scanned {reports_scanned} SMS spam reports")
 
-    # Filter to domains with enough independent reports, rank by frequency
+    domain_counts: Counter = Counter({d: len(nums) for d, nums in domain_numbers.items()})
+
+    # Filter to domains reported alongside enough distinct numbers
     spam_domains = [
         d for d, c in domain_counts.most_common()
         if c >= MIN_REPORTS
