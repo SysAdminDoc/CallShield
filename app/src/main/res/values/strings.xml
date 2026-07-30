@@ -810,6 +810,8 @@
         <item quantity="one">Issue needing attention: %d</item>
         <item quantity="other">Issues needing attention: %d</item>
     </plurals>
+    <string name="protection_test_run_failed_title">Couldn\'t finish the tests</string>
+    <string name="protection_test_run_failed_body">Something went wrong while running the checks. Try again — if it keeps failing, restart CallShield.</string>
     <string name="protection_test_intro_title">What this checks</string>
     <string name="protection_test_intro_body">Runs locally without sending call or message data.</string>
     <string name="protection_test_intro_permissions">Required permissions and Android roles.</string>

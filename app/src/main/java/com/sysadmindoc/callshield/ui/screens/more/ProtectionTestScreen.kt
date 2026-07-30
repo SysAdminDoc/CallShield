@@ -19,6 +19,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -120,6 +121,7 @@ fun ProtectionTestScreen() {
     val context = LocalContext.current
     var results by remember { mutableStateOf<List<TestResult>>(emptyList()) }
     var testing by remember { mutableStateOf(false) }
+    var runFailed by rememberSaveable { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val failures = remember(results) { results.filterNot { it.passed } }
     val requiredFailures = remember(failures) { failures.count { it.priority == TestPriority.Required } }
@@ -168,15 +170,43 @@ fun ProtectionTestScreen() {
             onClick = {
                 testing = true
                 results = emptyList()
+                runFailed = false
                 scope.launch {
-                    results = runTests(context)
-                    testing = false
+                    try {
+                        results = runTests(context)
+                    } catch (_: Exception) {
+                        // A repository or database failure here would otherwise
+                        // escape this coroutine and kill the process — and this
+                        // is the screen users open precisely when something is
+                        // wrong. Surface it instead.
+                        runFailed = true
+                    } finally {
+                        testing = false
+                    }
                 }
             },
             enabled = !testing,
             loading = testing,
             modifier = Modifier.fillMaxWidth().height(48.dp),
         )
+
+        if (runFailed) {
+            PremiumCard(accentColor = CatRed) {
+                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        stringResource(R.string.protection_test_run_failed_title),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = CatRed,
+                    )
+                    Text(
+                        stringResource(R.string.protection_test_run_failed_body),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = CatSubtext,
+                    )
+                }
+            }
+        }
 
         if (results.isEmpty()) {
             PremiumCard(accentColor = CatBlue) {

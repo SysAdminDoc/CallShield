@@ -22,6 +22,7 @@ import com.sysadmindoc.callshield.data.ContactGroupCatalog
 import com.sysadmindoc.callshield.data.SpamHeuristics
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.TimeSchedule
+import com.sysadmindoc.callshield.data.checker.PipelineTrace
 import com.sysadmindoc.callshield.data.model.BlockedCall
 import com.sysadmindoc.callshield.data.model.ExternalBlocklistPreview
 import com.sysadmindoc.callshield.data.model.ExternalBlocklistSubscription
@@ -30,6 +31,7 @@ import com.sysadmindoc.callshield.data.model.SmsKeywordRule
 import com.sysadmindoc.callshield.data.model.SpamNumber
 import com.sysadmindoc.callshield.data.model.WhitelistEntry
 import com.sysadmindoc.callshield.data.model.WildcardRule
+import com.sysadmindoc.callshield.domain.model.SpamCheckResult
 import com.sysadmindoc.callshield.domain.usecase.ExportLogsUseCase
 import com.sysadmindoc.callshield.domain.usecase.ManageBlocklistUseCase
 import com.sysadmindoc.callshield.domain.usecase.SyncDatabaseUseCase
@@ -168,6 +170,37 @@ class MainViewModel
         // Detail navigation
         private val _selectedNumber = MutableStateFlow<String?>(null)
         val selectedNumber: StateFlow<String?> = _selectedNumber
+
+        /**
+         * Result of the Lookup tab's last check, held here so it survives tab
+         * switches and rotation.
+         *
+         * [LookupOutcome.number] is the number that was actually checked. The
+         * screen must render and act on that rather than on the live text
+         * field, otherwise editing the input after a check leaves the previous
+         * verdict on screen attached to a number that was never checked — and
+         * Block/Report would act on it.
+         */
+        data class LookupOutcome(
+            val number: String,
+            val result: SpamCheckResult,
+            val trace: PipelineTrace?,
+        )
+
+        private val _lookupOutcome = MutableStateFlow<LookupOutcome?>(null)
+        val lookupOutcome: StateFlow<LookupOutcome?> = _lookupOutcome
+
+        fun clearLookupOutcome() {
+            _lookupOutcome.value = null
+        }
+
+        fun recordLookupOutcome(
+            number: String,
+            result: SpamCheckResult,
+            trace: PipelineTrace?,
+        ) {
+            _lookupOutcome.value = LookupOutcome(number, result, trace)
+        }
 
         // Settings
         val appTheme =
