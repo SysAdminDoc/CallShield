@@ -53,6 +53,7 @@ import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.TemporaryDecisionDuration
 import com.sysadmindoc.callshield.ui.TemporaryDecisionMenu
 import com.sysadmindoc.callshield.ui.expandableStateSemantics
+import com.sysadmindoc.callshield.ui.friendlyMatchReasonLabel
 import com.sysadmindoc.callshield.ui.rememberTemporaryDecisionDurations
 import com.sysadmindoc.callshield.ui.theme.*
 import com.sysadmindoc.callshield.util.filterAsciiDigits
@@ -116,6 +117,15 @@ fun RecentCallsScreen(viewModel: MainViewModel) {
 
             try {
                 calls = loadRecentCalls(context.applicationContext)
+                initialLoadCompleted = true
+            } catch (e: Exception) {
+                // loadRecentCalls swallows SecurityException itself, but a
+                // provider IllegalStateException or an SQLiteException out of
+                // repo.isSpam (corrupt DB is a handled failure class
+                // elsewhere) would otherwise escape this coroutine and kill
+                // the process just for opening the Recent tab. Show what we
+                // have (empty list ≡ the screen's empty state).
+                android.util.Log.w("RecentCalls", "Recent-calls load failed", e)
                 initialLoadCompleted = true
             } finally {
                 loading = false
@@ -515,7 +525,7 @@ fun RecentCallItem(
                         if (location != null) Text(location, style = MaterialTheme.typography.labelSmall, color = CatOverlay)
                         if (call.isSpam) {
                             Text(
-                                call.spamReason.replace("_", " "),
+                                friendlyMatchReasonLabel(call.spamReason),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = CatRed,
                             )

@@ -47,6 +47,7 @@ import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.TemporaryDecisionDuration
 import com.sysadmindoc.callshield.ui.TemporaryDecisionMenu
 import com.sysadmindoc.callshield.ui.expandableStateSemantics
+import com.sysadmindoc.callshield.ui.friendlyMatchReasonLabel
 import com.sysadmindoc.callshield.ui.rememberTemporaryDecisionDurations
 import com.sysadmindoc.callshield.ui.theme.*
 import com.sysadmindoc.callshield.util.filterAsciiDigits
@@ -65,7 +66,7 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
     var grouped by rememberSaveable { mutableStateOf(false) }
     val snackbarHost = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
-    var showClearDialog by remember { mutableStateOf(false) }
+    var showClearDialog by rememberSaveable { mutableStateOf(false) }
 
     val filtered =
         when (filterMode) {
@@ -525,7 +526,7 @@ fun BlockedCallItem(
                             }
                         val reasonText =
                             if (categoryPolicy == null) {
-                                call.matchReason.replace("_", " ").replaceFirstChar { it.uppercase() }
+                                friendlyMatchReasonLabel(call.matchReason)
                             } else {
                                 stringResource(
                                     R.string.detail_category_action_source,
@@ -712,7 +713,7 @@ fun GroupedCallItem(
                 }
                 if (call.matchReason.isNotEmpty()) {
                     Text(
-                        call.matchReason.replace("_", " ").replaceFirstChar { it.uppercase() },
+                        friendlyMatchReasonLabel(call.matchReason),
                         style = MaterialTheme.typography.labelSmall,
                         color = CatPeach,
                     )

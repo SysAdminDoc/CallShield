@@ -6,4 +6,26 @@
         <item name="android:navigationBarColor">#000000</item>
         <item name="android:windowBackground">@android:color/black</item>
     </style>
+
+    <!-- Window-level variants selected in MainActivity/PostCallActivity from
+         the synchronous theme mirror (SpamRepository.cachedAppTheme). Compose
+         paints the right palette on the first frame since v1.7.26, but the
+         WINDOW behind it stayed black for Light/Graphite users — visible as
+         black flashes during IME resize, transitions, and overscroll. Colors
+         mirror ui/theme/Theme.kt LightPalette / GraphitePalette backgrounds. -->
+    <style name="Theme.CallShield.Light">
+        <item name="android:colorBackground">#F5F6F7</item>
+        <item name="android:statusBarColor">#F5F6F7</item>
+        <item name="android:navigationBarColor">#F5F6F7</item>
+        <item name="android:windowBackground">#F5F6F7</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
+    </style>
+
+    <style name="Theme.CallShield.Graphite">
+        <item name="android:colorBackground">#0F1216</item>
+        <item name="android:statusBarColor">#0F1216</item>
+        <item name="android:navigationBarColor">#0F1216</item>
+        <item name="android:windowBackground">#0F1216</item>
+    </style>
 </resources>

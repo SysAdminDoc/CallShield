@@ -864,8 +864,8 @@ class MainViewModel
         }
 
         // Anonymous community contribution
-        private val _contributeResult = MutableStateFlow<String?>(null)
-        val contributeResult: StateFlow<String?> = _contributeResult
+        private val _contributeResult = MutableStateFlow<StatusMessage?>(null)
+        val contributeResult: StateFlow<StatusMessage?> = _contributeResult
 
         fun contributeToDatabase(
             number: String,
@@ -873,7 +873,7 @@ class MainViewModel
         ) {
             viewModelScope.launch {
                 val result = CommunityContributor.contribute(repo.normalizeNumber(number), type)
-                _contributeResult.value = result.message
+                _contributeResult.value = result.toStatusMessage()
             }
         }
 
@@ -882,8 +882,43 @@ class MainViewModel
                 // Whitelist locally AND report as false positive to community
                 manageBlocklist.addToWhitelist(number, appContext.getString(R.string.desc_reported_not_spam))
                 val result = CommunityContributor.reportNotSpam(repo.normalizeNumber(number))
-                _contributeResult.value = result.message
+                _contributeResult.value = result.toStatusMessage()
             }
+        }
+
+        /**
+         * Localize the typed outcome. The network layer's `message` field is
+         * hardcoded-English diagnostics — showing it verbatim regressed the
+         * v1.7.26 StatusMessage i18n contract on the Number Detail screen.
+         */
+        private fun CommunityContributor.ContributeResult.toStatusMessage(): StatusMessage {
+            val text =
+                when (outcome) {
+                    CommunityContributor.ContributeOutcome.REPORTED_SPAM -> {
+                        appContext.getString(R.string.contribute_reported_spam)
+                    }
+
+                    CommunityContributor.ContributeOutcome.REPORTED_NOT_SPAM -> {
+                        appContext.getString(R.string.contribute_reported_not_spam)
+                    }
+
+                    CommunityContributor.ContributeOutcome.INVALID_NUMBER -> {
+                        appContext.getString(R.string.contribute_invalid_number)
+                    }
+
+                    CommunityContributor.ContributeOutcome.RATE_LIMITED -> {
+                        appContext.getString(R.string.contribute_rate_limited, retryAfterSeconds)
+                    }
+
+                    CommunityContributor.ContributeOutcome.SERVER_ERROR -> {
+                        appContext.getString(R.string.contribute_server_error)
+                    }
+
+                    CommunityContributor.ContributeOutcome.NETWORK_ERROR -> {
+                        appContext.getString(R.string.contribute_network_error)
+                    }
+                }
+            return StatusMessage(text, success)
         }
 
         // Share spam warning

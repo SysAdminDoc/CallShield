@@ -76,6 +76,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -103,6 +104,7 @@ import com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup
 import com.sysadmindoc.callshield.permissions.CallShieldPermissions
 import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.SyncState
+import com.sysadmindoc.callshield.ui.friendlyMatchReasonLabel
 import com.sysadmindoc.callshield.ui.theme.CatBlue
 import com.sysadmindoc.callshield.ui.theme.CatGreen
 import com.sysadmindoc.callshield.ui.theme.CatMauve
@@ -159,7 +161,15 @@ fun DashboardScreen(viewModel: MainViewModel) {
         }
     var permissionRefreshTick by remember { mutableIntStateOf(0) }
     // Pending "Block area code" confirmation: (areaCode, locationLabel).
-    var pendingAreaBlock by remember { mutableStateOf<Pair<String, String>?>(null) }
+    // Saved as a two-element list so the confirm dialog survives rotation
+    // (Pair itself has no Bundle saver).
+    var pendingAreaBlock by rememberSaveable(
+        stateSaver =
+            androidx.compose.runtime.saveable.listSaver<Pair<String, String>?, String>(
+                save = { it?.let { pair -> listOf(pair.first, pair.second) } ?: emptyList() },
+                restore = { if (it.size == 2) it[0] to it[1] else null },
+            ),
+    ) { mutableStateOf<Pair<String, String>?>(null) }
 
     DisposableEffect(lifecycleOwner) {
         val observer =
@@ -468,7 +478,7 @@ fun DashboardScreen(viewModel: MainViewModel) {
                             fontWeight = FontWeight.SemiBold,
                         )
                         Text(
-                            "${relativeTimeText(lastBlocked.timestamp)} · ${lastBlocked.matchReason.replace("_", " ")}",
+                            "${relativeTimeText(lastBlocked.timestamp)} · ${friendlyMatchReasonLabel(lastBlocked.matchReason)}",
                             style = MaterialTheme.typography.labelSmall,
                             color = CatOverlay,
                         )
@@ -723,7 +733,7 @@ fun DashboardScreen(viewModel: MainViewModel) {
                                         fontWeight = FontWeight.SemiBold,
                                     )
                                     Text(
-                                        "${spam.callCount}x | ${spam.matchReason.replace("_", " ")}",
+                                        "${spam.callCount}x | ${friendlyMatchReasonLabel(spam.matchReason)}",
                                         style = MaterialTheme.typography.bodySmall,
                                         color = CatSubtext,
                                     )
@@ -804,7 +814,7 @@ fun DashboardScreen(viewModel: MainViewModel) {
                                         fontWeight = FontWeight.SemiBold,
                                     )
                                     Text(sms.body, style = MaterialTheme.typography.bodySmall, color = CatSubtext, maxLines = 1)
-                                    Text(sms.matchReason.replace("_", " "), style = MaterialTheme.typography.labelSmall, color = CatPeach)
+                                    Text(friendlyMatchReasonLabel(sms.matchReason), style = MaterialTheme.typography.labelSmall, color = CatPeach)
                                 }
                                 PremiumCompactButton(
                                     label = stringResource(R.string.dashboard_block),

@@ -19,6 +19,7 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -37,6 +38,7 @@ import com.sysadmindoc.callshield.data.remote.ExternalLookup
 import com.sysadmindoc.callshield.data.remote.RemoteLookupStatus
 import com.sysadmindoc.callshield.domain.model.SpamCheckResult
 import com.sysadmindoc.callshield.ui.MainViewModel
+import com.sysadmindoc.callshield.ui.friendlyMatchReasonLabel
 import com.sysadmindoc.callshield.ui.screens.lookup.SpamScoreGauge
 import com.sysadmindoc.callshield.ui.screens.lookup.detectionIcon
 import com.sysadmindoc.callshield.ui.theme.*
@@ -200,7 +202,7 @@ fun NumberDetailScreen(
                             }
                         val sourceLabel =
                             if (categoryPolicy == null) {
-                                r.matchSource.replace("_", " ").replaceFirstChar { it.uppercase() }
+                                friendlyMatchReasonLabel(r.matchSource)
                             } else {
                                 stringResource(
                                     R.string.detail_category_action_source,
@@ -255,15 +257,50 @@ fun NumberDetailScreen(
             }
         }
 
-        // Block area code
+        // Block area code — confirmed first: a ~7.9M-number rule from a stray
+        // tap with zero feedback is exactly what the Dashboard flow fixed in
+        // v1.7.26. Same dialog + toast here.
+        var showAreaBlockConfirm by rememberSaveable { mutableStateOf(false) }
         if (areaCode != null) {
             PremiumActionButton(
                 label = stringResource(R.string.detail_block_area_code, areaCode),
                 icon = Icons.Default.FilterAlt,
                 color = CatYellow,
-                onClick = { viewModel.addWildcardRule("+1$areaCode*", false, blockAreaCodeDescription.orEmpty()) },
+                onClick = { showAreaBlockConfirm = true },
                 modifier = Modifier.fillMaxWidth(),
                 outlined = true,
+            )
+        }
+        if (showAreaBlockConfirm && areaCode != null) {
+            val areaAddedToast = stringResource(R.string.dashboard_block_area_added, areaCode)
+            AlertDialog(
+                onDismissRequest = { showAreaBlockConfirm = false },
+                title = { Text(stringResource(R.string.dashboard_block_area_confirm_title, areaCode)) },
+                text = {
+                    Text(
+                        stringResource(
+                            R.string.dashboard_block_area_confirm_body,
+                            areaCode,
+                            location ?: stringResource(R.string.detail_unknown_location),
+                        ),
+                    )
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        viewModel.addWildcardRule("+1$areaCode*", false, blockAreaCodeDescription.orEmpty())
+                        android.widget.Toast
+                            .makeText(context, areaAddedToast, android.widget.Toast.LENGTH_SHORT)
+                            .show()
+                        showAreaBlockConfirm = false
+                    }) {
+                        Text(stringResource(R.string.dashboard_block_area_confirm_action))
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showAreaBlockConfirm = false }) {
+                        Text(stringResource(R.string.dialog_cancel))
+                    }
+                },
             )
         }
 
@@ -330,7 +367,7 @@ fun NumberDetailScreen(
                             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 1.dp)) {
                                 Icon(detectionIcon(reason), null, tint = CatPeach, modifier = Modifier.size(14.dp))
                                 Spacer(Modifier.width(6.dp))
-                                Text(reason.replace("_", " "), style = MaterialTheme.typography.bodySmall, color = CatPeach)
+                                Text(friendlyMatchReasonLabel(reason), style = MaterialTheme.typography.bodySmall, color = CatPeach)
                             }
                         }
                     }
@@ -574,7 +611,7 @@ fun NumberDetailScreen(
             )
         }
         contributeResult?.let {
-            Text(it, style = MaterialTheme.typography.bodySmall, color = if ("not spam" in it.lowercase() || "contributed" in it.lowercase()) CatGreen else CatRed)
+            Text(it.text, style = MaterialTheme.typography.bodySmall, color = if (it.success) CatGreen else CatRed)
             LaunchedEffect(it) {
                 kotlinx.coroutines.delay(4000)
                 viewModel.clearContributeResult()

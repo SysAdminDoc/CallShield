@@ -30,6 +30,7 @@ import androidx.compose.material.icons.automirrored.filled.TextSnippet
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -141,16 +142,16 @@ fun SettingsScreen(viewModel: MainViewModel) {
     val externalBlocklists by viewModel.externalBlocklistSubscriptions.collectAsStateWithLifecycle()
     val externalBlocklistPreview by viewModel.externalBlocklistPreview.collectAsStateWithLifecycle()
     val externalBlocklistResult by viewModel.externalBlocklistResult.collectAsStateWithLifecycle()
-    var showPushAlertSources by remember { mutableStateOf(false) }
-    var showNotificationScreeningSources by remember { mutableStateOf(false) }
-    var showRegionCnapRules by remember { mutableStateOf(false) }
-    var showCategoryCallActions by remember { mutableStateOf(false) }
-    var showContactGroups by remember { mutableStateOf(false) }
-    var showRawSmsExportDialog by remember { mutableStateOf(false) }
-    var showThemeDialog by remember { mutableStateOf(false) }
-    var showLanguageDialog by remember { mutableStateOf(false) }
-    var externalBlocklistUrl by remember { mutableStateOf("") }
-    var externalBlocklistLabel by remember { mutableStateOf("") }
+    var showPushAlertSources by rememberSaveable { mutableStateOf(false) }
+    var showNotificationScreeningSources by rememberSaveable { mutableStateOf(false) }
+    var showRegionCnapRules by rememberSaveable { mutableStateOf(false) }
+    var showCategoryCallActions by rememberSaveable { mutableStateOf(false) }
+    var showContactGroups by rememberSaveable { mutableStateOf(false) }
+    var showRawSmsExportDialog by rememberSaveable { mutableStateOf(false) }
+    var showThemeDialog by rememberSaveable { mutableStateOf(false) }
+    var showLanguageDialog by rememberSaveable { mutableStateOf(false) }
+    var externalBlocklistUrl by rememberSaveable { mutableStateOf("") }
+    var externalBlocklistLabel by rememberSaveable { mutableStateOf("") }
 
     val roleManager =
         remember(context) {
@@ -894,6 +895,10 @@ fun SettingsScreen(viewModel: MainViewModel) {
                 hapticTick(context)
                 viewModel.applyExternalBlocklist(externalBlocklistUrl, externalBlocklistLabel)
             },
+            onApplyPreview = { preview ->
+                hapticTick(context)
+                viewModel.applyExternalBlocklist(preview.url, preview.label)
+            },
             onToggle = { subscription, enabled ->
                 hapticTick(context)
                 viewModel.setExternalBlocklistEnabled(subscription, enabled)
@@ -1414,6 +1419,7 @@ private fun ExternalBlocklistSettings(
     onLabelChange: (String) -> Unit,
     onPreview: () -> Unit,
     onApply: () -> Unit,
+    onApplyPreview: (ExternalBlocklistPreview) -> Unit,
     onToggle: (ExternalBlocklistSubscription, Boolean) -> Unit,
     onRemove: (ExternalBlocklistSubscription) -> Unit,
     onClearResult: () -> Unit,
@@ -1480,7 +1486,10 @@ private fun ExternalBlocklistSettings(
             )
         }
         preview?.let {
-            ExternalBlocklistPreviewPanel(preview = it, onApply = onApply)
+            // The panel commits the feed it PREVIEWED (url/label captured in
+            // the preview object) — not whatever is currently typed in the
+            // URL field, which the user may have edited since previewing.
+            ExternalBlocklistPreviewPanel(preview = it, onApply = { onApplyPreview(it) })
         }
         result?.let { status ->
             Spacer(Modifier.height(8.dp))

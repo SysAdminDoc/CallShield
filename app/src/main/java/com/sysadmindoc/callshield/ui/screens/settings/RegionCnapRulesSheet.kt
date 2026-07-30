@@ -23,6 +23,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -57,10 +58,10 @@ fun RegionCnapRulesSheet(
     onDismiss: () -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    var blockOutsideRegions by remember { mutableStateOf(regionBlockEnabled) }
-    var regionText by remember { mutableStateOf(allowedRegions.sorted().joinToString(", ")) }
-    var trustPatternText by remember { mutableStateOf(cnapTrustPatterns.sorted().joinToString("\n")) }
-    var blockPatternText by remember { mutableStateOf(cnapBlockPatterns.sorted().joinToString("\n")) }
+    var blockOutsideRegions by rememberSaveable { mutableStateOf(regionBlockEnabled) }
+    var regionText by rememberSaveable { mutableStateOf(allowedRegions.sorted().joinToString(", ")) }
+    var trustPatternText by rememberSaveable { mutableStateOf(cnapTrustPatterns.sorted().joinToString("\n")) }
+    var blockPatternText by rememberSaveable { mutableStateOf(cnapBlockPatterns.sorted().joinToString("\n")) }
     val parsedRegions = RegionRules.parseRegionCodes(regionText)
     val parsedTrustPatterns = RegionRules.parseNamePatterns(trustPatternText)
     val parsedBlockPatterns = RegionRules.parseNamePatterns(blockPatternText)

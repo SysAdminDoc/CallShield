@@ -88,6 +88,7 @@ import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup
 import com.sysadmindoc.callshield.domain.model.SpamCheckResult
 import com.sysadmindoc.callshield.ui.MainViewModel
+import com.sysadmindoc.callshield.ui.friendlyMatchReasonLabel
 import com.sysadmindoc.callshield.ui.theme.CatBlue
 import com.sysadmindoc.callshield.ui.theme.CatGreen
 import com.sysadmindoc.callshield.ui.theme.CatOverlay
@@ -137,6 +138,7 @@ fun LookupScreen(viewModel: MainViewModel) {
     val reportedMessage = stringResource(R.string.lookup_reported)
     val markedSafeReportedMessage = stringResource(R.string.lookup_marked_safe_reported)
     val markedSafeLocalMessage = stringResource(R.string.lookup_marked_safe_local)
+    val markedSafeDescription = stringResource(R.string.desc_marked_safe_from_lookup)
 
     fun clearLookup() {
         numberInput = ""
@@ -408,7 +410,7 @@ fun LookupScreen(viewModel: MainViewModel) {
                             if (lookupResult.isSpam) {
                                 DetailRow(
                                     label = stringResource(R.string.lookup_detection),
-                                    value = lookupResult.matchSource.replace("_", " ").replaceFirstChar { it.uppercase() },
+                                    value = friendlyMatchReasonLabel(lookupResult.matchSource),
                                     icon = detectionIcon(lookupResult.matchSource),
                                 )
                                 DetailRow(
@@ -490,7 +492,7 @@ fun LookupScreen(viewModel: MainViewModel) {
                                                     )
                                                     reportedMessage
                                                 } else {
-                                                    repo.addToWhitelist(normalizedNumber, "Marked safe from lookup")
+                                                    repo.addToWhitelist(normalizedNumber, markedSafeDescription)
                                                     val reportResult =
                                                         CommunityContributor.reportNotSpam(
                                                             repo.normalizeNumber(normalizedNumber),
