@@ -30,6 +30,7 @@ import androidx.compose.material.icons.automirrored.filled.TextSnippet
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -760,8 +761,21 @@ fun SettingsScreen(viewModel: MainViewModel) {
 
         // Backup/restore
         SettingsCard(stringResource(R.string.settings_backup_restore)) {
-            var backupSections by remember { mutableStateOf(BackupRestore.defaultExportSections) }
-            var restoreSections by remember { mutableStateOf(BackupRestore.defaultRestoreSections) }
+            // Section choices must survive recreation: the document picker is a
+            // separate activity, so rotating (or being killed in the background)
+            // while it is open otherwise silently reverts these to the defaults
+            // and restores sections the user had explicitly deselected.
+            var backupSections by
+                rememberSaveable(stateSaver = BackupSectionSetSaver) {
+                    mutableStateOf(BackupRestore.defaultExportSections)
+                }
+            var restoreSections by
+                rememberSaveable(stateSaver = BackupSectionSetSaver) {
+                    mutableStateOf(BackupRestore.defaultRestoreSections)
+                }
+            // Passphrases are deliberately NOT saved: saved instance state is
+            // persisted to disk. If recreation drops one, the restore reports
+            // "passphrase required" and the user re-enters it.
             var backupProtection by remember { mutableStateOf(BackupProtectionForm()) }
             var restorePassphrase by remember { mutableStateOf("") }
             val restoreLauncher =
@@ -1089,6 +1103,20 @@ fun SettingsScreen(viewModel: MainViewModel) {
         )
     }
 }
+
+/**
+ * Persists a backup section selection across activity recreation by name.
+ * Unknown names are dropped so a downgrade can't crash the restore form.
+ */
+private val BackupSectionSetSaver: Saver<Set<BackupRestore.BackupSection>, ArrayList<String>> =
+    Saver(
+        save = { sections -> ArrayList(sections.map(BackupRestore.BackupSection::name)) },
+        restore = { names ->
+            names.mapNotNullTo(linkedSetOf()) { name ->
+                BackupRestore.BackupSection.entries.firstOrNull { it.name == name }
+            }
+        },
+    )
 
 internal data class BackupProtectionForm(
     val enabled: Boolean = false,
