@@ -1,5 +1,7 @@
 package com.sysadmindoc.callshield.data
 
+import com.squareup.moshi.Moshi
+import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import com.sysadmindoc.callshield.data.BackupRestore.Backup
 import com.sysadmindoc.callshield.data.BackupRestore.BackupKeyword
 import com.sysadmindoc.callshield.data.BackupRestore.BackupLogEntry
@@ -59,84 +61,12 @@ class BackupRestoreTest {
         assertTrue(backup.timestamp in before..after)
     }
 
-    // ── BackupNumber data class ──────────────────────────────────────────
-
-    @Test
-    fun `BackupNumber stores all fields`() {
-        val bn = BackupNumber("2125551234", "robocall", "Spam caller")
-        assertEquals("2125551234", bn.number)
-        assertEquals("robocall", bn.type)
-        assertEquals("Spam caller", bn.description)
-    }
-
-    @Test
-    fun `BackupNumber equality`() {
-        val a = BackupNumber("2125551234", "robocall", "Spam")
-        val b = BackupNumber("2125551234", "robocall", "Spam")
-        assertEquals(a, b)
-    }
-
-    @Test
-    fun `BackupNumber inequality on different number`() {
-        val a = BackupNumber("2125551234", "robocall", "Spam")
-        val b = BackupNumber("3105551234", "robocall", "Spam")
-        assertNotEquals(a, b)
-    }
-
     // ── BackupWhitelist data class ───────────────────────────────────────
-
-    @Test
-    fun `BackupWhitelist stores fields`() {
-        val bw = BackupWhitelist("2125551234", "Doctor's office", isEmergency = true)
-        assertEquals("2125551234", bw.number)
-        assertEquals("Doctor's office", bw.description)
-        assertTrue(bw.isEmergency)
-    }
 
     @Test
     fun `BackupWhitelist default emergency flag is false for older backups`() {
         val bw = BackupWhitelist("2125551234", "Doctor's office")
         assertFalse(bw.isEmergency)
-    }
-
-    // ── BackupWildcard data class ────────────────────────────────────────
-
-    @Test
-    fun `BackupWildcard stores all fields`() {
-        val rule = BackupWildcard("800*", false, "Block all toll-free", true)
-        assertEquals("800*", rule.pattern)
-        assertFalse(rule.isRegex)
-        assertEquals("Block all toll-free", rule.description)
-        assertTrue(rule.enabled)
-    }
-
-    @Test
-    fun `BackupWildcard regex rule`() {
-        val rule = BackupWildcard("^800\\d{7}$", true, "Toll-free regex", true)
-        assertTrue(rule.isRegex)
-    }
-
-    @Test
-    fun `BackupWildcard disabled rule`() {
-        val rule = BackupWildcard("555*", false, "Test", false)
-        assertFalse(rule.enabled)
-    }
-
-    // ── BackupKeyword data class ─────────────────────────────────────────
-
-    @Test
-    fun `BackupKeyword stores all fields`() {
-        val kw = BackupKeyword("free money", false, "Common spam", true)
-        assertEquals("free money", kw.keyword)
-        assertFalse(kw.caseSensitive)
-        assertEquals("Common spam", kw.description)
-        assertTrue(kw.enabled)
-    }
-
-    @Test
-    fun `BackupKeyword case sensitive`() {
-        val kw = BackupKeyword("FREE", true, "Case-sensitive test", true)
-        assertTrue(kw.caseSensitive)
     }
 
     // ── RestoreResult data class ─────────────────────────────────────────
@@ -536,5 +466,35 @@ class BackupRestoreTest {
     ) {
         assertTrue(validation is BackupRestore.RestoreValidation.Invalid)
         assertEquals(failure, (validation as BackupRestore.RestoreValidation.Invalid).failure)
+    }
+
+    // ── Moshi round-trip ─────────────────────────────────────────────────
+
+    @Test
+    fun `backup payload survives a Moshi round-trip with every section populated`() {
+        // Replaces a set of tests that only asserted compiler-generated
+        // constructor/equals behaviour. This exercises what a restore actually
+        // depends on: that every payload class serializes and reads back
+        // identically through the same reflective adapter the app uses (the
+        // path R8 can silently break — see proguard-rules.pro).
+        val moshi = Moshi.Builder().addLast(KotlinJsonAdapterFactory()).build()
+        val adapter = moshi.adapter(Backup::class.java)
+
+        val original =
+            Backup(
+                timestamp = 1_720_000_000_000L,
+                blockedNumbers = listOf(BackupNumber("+12125551234", "robocall", "Spam caller")),
+                whitelistNumbers = listOf(BackupWhitelist("+13105550100", "Doctor", isEmergency = true)),
+                wildcardRules = listOf(BackupWildcard("800*", false, "Block toll-free", true)),
+                keywordRules = listOf(BackupKeyword("free money", false, "Common spam", true)),
+                rangeRules = listOf(BackupRangeRule("+1312555####", "Range", true)),
+                settings = BackupSettings(),
+                logs = listOf(BackupLogEntry("+14155550111", 1_720_000_000_000L, "database", true)),
+            )
+
+        val restored = adapter.fromJson(adapter.toJson(original))
+
+        assertNotNull("round-trip must not produce null", restored)
+        assertEquals(original, restored)
     }
 }
