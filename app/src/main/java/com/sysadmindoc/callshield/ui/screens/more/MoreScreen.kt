@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -352,8 +353,11 @@ fun MoreNavCard(
             )
         }
         Icon(
-            Icons.Default.ChevronRight,
-            contentDescription = stringResource(R.string.cd_chevron_right),
+            Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            // Decorative: the row's title and subtitle already name the target,
+            // and TalkBack merges descendants — a description here just appends
+            // "View details" to every row.
+            contentDescription = null,
             tint = CatOverlay,
         )
     }
@@ -387,8 +391,10 @@ fun QuickLink(
             )
         }
         Icon(
-            if (external) Icons.AutoMirrored.Filled.OpenInNew else Icons.Default.ChevronRight,
-            contentDescription = if (external) stringResource(R.string.cd_open_external) else stringResource(R.string.cd_chevron_right),
+            if (external) Icons.AutoMirrored.Filled.OpenInNew else Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            // Only the external-link variant carries information; the plain
+            // forward chevron is decorative next to the visible label.
+            contentDescription = if (external) stringResource(R.string.cd_open_external) else null,
             tint = CatOverlay,
             modifier = Modifier.size(16.dp),
         )

@@ -38,7 +38,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -870,11 +874,16 @@ fun SettingsScreen(viewModel: MainViewModel) {
                 Spacer(Modifier.height(4.dp))
                 Text(
                     status.text,
+                    // Announce the restore outcome: it is the only feedback for
+                    // a destructive, data-replacing operation, and it used to
+                    // appear and disappear silently.
+                    modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
                     style = MaterialTheme.typography.bodySmall,
                     color = if (status.success) CatGreen else CatPeach,
                 )
                 LaunchedEffect(status) {
-                    kotlinx.coroutines.delay(4000)
+                    // Long enough for a screen reader to reach and read it.
+                    kotlinx.coroutines.delay(12_000)
                     viewModel.clearRestoreResult()
                 }
             }
@@ -1040,10 +1049,18 @@ fun SettingsScreen(viewModel: MainViewModel) {
                             modifier =
                                 Modifier
                                     .fillMaxWidth()
-                                    .clickable {
-                                        showLanguageDialog = false
-                                        AppLanguage.selectLanguage(option.languageTag)
-                                    }.padding(vertical = 8.dp),
+                                    // selectable (not clickable) so TalkBack
+                                    // announces the radio role and which
+                                    // language is currently active — matching
+                                    // the theme dialog above.
+                                    .selectable(
+                                        selected = option.languageTag == currentLanguageTag,
+                                        role = Role.RadioButton,
+                                        onClick = {
+                                            showLanguageDialog = false
+                                            AppLanguage.selectLanguage(option.languageTag)
+                                        },
+                                    ).padding(vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             RadioButton(
@@ -1657,6 +1674,9 @@ private fun ExternalBlocklistSubscriptionRow(
         Switch(
             checked = subscription.enabled,
             onCheckedChange = onToggle,
+            // Associate the switch with its feed — enabling or disabling a whole
+            // blocklist subscription should never be announced without a target.
+            modifier = Modifier.semantics { contentDescription = subscription.label },
             colors =
                 SwitchDefaults.colors(
                     checkedTrackColor = CatGreen,

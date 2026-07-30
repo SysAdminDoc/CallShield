@@ -32,6 +32,7 @@ import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.PhoneCallback
 import androidx.compose.material.icons.automirrored.filled.TextSnippet
 import androidx.compose.material.icons.automirrored.filled.TrendingDown
@@ -483,7 +484,7 @@ fun DashboardScreen(viewModel: MainViewModel) {
                             color = CatOverlay,
                         )
                     }
-                    Icon(Icons.Default.ChevronRight, null, tint = CatOverlay, modifier = Modifier.size(16.dp))
+                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = CatOverlay, modifier = Modifier.size(16.dp))
                 }
             }
         }
@@ -1248,7 +1249,7 @@ private fun SetupChecklistRow(
             actionLabel != null && onAction != null -> {
                 PremiumCompactButton(
                     label = actionLabel,
-                    icon = Icons.Default.ChevronRight,
+                    icon = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                     color = accentColor,
                     onClick = onAction,
                 )
@@ -1301,7 +1302,7 @@ private fun DashboardActionRow(
         }
         PremiumActionButton(
             label = actionLabel,
-            icon = Icons.Default.ChevronRight,
+            icon = Icons.AutoMirrored.Filled.KeyboardArrowRight,
             color = accentColor,
             onClick = onClick,
             enabled = enabled,

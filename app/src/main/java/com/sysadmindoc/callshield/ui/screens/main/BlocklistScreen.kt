@@ -1532,6 +1532,10 @@ fun HashWildcardRuleItem(
             androidx.compose.material3.Switch(
                 checked = rule.enabled,
                 onCheckedChange = onToggle,
+                // Name the switch so TalkBack announces the rule it toggles —
+                // a list of range rules is otherwise a row of identical
+                // unnamed switches.
+                modifier = Modifier.semantics { contentDescription = rule.pattern },
                 colors =
                     androidx.compose.material3.SwitchDefaults.colors(
                         checkedTrackColor = CatGreen,
