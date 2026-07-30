@@ -6,6 +6,16 @@ All notable changes to CallShield will be documented in this file.
 
 ### Fixed
 
+- Spam scores no longer change with the time of day. The model was trained on
+  a fixed reference hour, and 45 international rows the on-device scorer can
+  never score were included as all-zero examples — the only rows where the
+  time and `+1` columns differed. The trees learned "not the reference hour ⇒
+  spam", so a caller scored materially higher in the evening than at noon,
+  and legitimate-format numbers could be auto-blocked at night but allowed
+  during the day. Unscoreable rows are now excluded from training,
+  constant-feature weights can no longer leak into the fallback scorer, and
+  the evaluation gate fails if a score varies across the 24 inference hours.
+
 - The documented database regeneration command silently deleted every
   single-report community row (80 of them). `--min-reports` defaults to 2 and
   was applied to the whole merged database rather than only to newly-imported
