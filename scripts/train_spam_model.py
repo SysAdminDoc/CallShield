@@ -113,6 +113,30 @@ FEATURE_NAMES = [
 REFERENCE_NPA = 312
 
 
+def is_scoreable(number: str) -> bool:
+    """Mirror the on-device gate in SpamMLScorer.extractFeatures.
+
+    The app returns an empty feature vector (score -1.0 → pass) for anything
+    that is not a 10-digit NANP number, so such rows can never be scored at
+    inference time. Training on them is actively harmful: extract_features
+    returns an all-zero vector, and because every real row carries the fixed
+    reference-hour time_of_day_cos = -1.0 and plus_one_prefix = 1.0, those
+    zero vectors become the model's only counterexamples. The trees then
+    learn "not the reference hour ⇒ spam", which fires on-device against the
+    real device hour and inflates every NANP caller's score at night.
+    """
+    digits = (
+        number.replace("-", "")
+        .replace(" ", "")
+        .replace("(", "")
+        .replace(")", "")
+        .replace("+", "")
+    )
+    if digits.startswith("1") and len(digits) == 11:
+        digits = digits[1:]
+    return len(digits) == 10
+
+
 def extract_features(number: str) -> list[float]:
     """Extract 20-feature vector from a phone number string."""
     raw = number.replace("-", "").replace(" ", "").replace("(", "").replace(")", "")
@@ -326,7 +350,17 @@ def build_dataset() -> tuple[list[list[float]], list[int], list[str], list[str]]
     with open(DB_FILE) as f:
         db = json.load(f)
 
-    spam_numbers = [n["number"] for n in db["numbers"] if n.get("number")]
+    all_spam_numbers = [n["number"] for n in db["numbers"] if n.get("number")]
+    # Drop rows the app can never score (non-10-digit / international). Keeping
+    # them injects all-zero feature vectors whose only distinguishing features
+    # are the otherwise-constant time and +1 columns — see is_scoreable.
+    spam_numbers = [n for n in all_spam_numbers if is_scoreable(n)]
+    unscoreable = len(all_spam_numbers) - len(spam_numbers)
+    if unscoreable:
+        print(
+            f"  Skipped {unscoreable:,} rows the on-device scorer cannot score "
+            f"(not 10-digit NANP)"
+        )
 
     random.seed(42)
     negative_numbers: list[str] = []
@@ -445,6 +479,22 @@ def main():
 
     print(f"\nLR Train — acc={lr_train_m['accuracy']:.3f}  prec={lr_train_m['precision']:.3f}  rec={lr_train_m['recall']:.3f}  F1={lr_train_m['f1']:.3f}")
     print(f"LR Test  — acc={lr_test_m['accuracy']:.3f}  prec={lr_test_m['precision']:.3f}  rec={lr_test_m['recall']:.3f}  F1={lr_test_m['f1']:.3f}")
+
+    # ── Neutralize constant-feature coefficients ──────────────────────
+    # A feature with zero variance across the training set has an
+    # unidentifiable coefficient — it is indistinguishable from the bias, so
+    # whatever value the optimizer lands on is noise. That noise becomes live
+    # at inference, where the app supplies the real device hour instead of the
+    # fixed reference hour. Fold each constant column's contribution into the
+    # bias (training predictions are unchanged) and zero the weight, so the
+    # fallback cannot drift with the clock.
+    for idx, name in enumerate(FEATURE_NAMES):
+        column = {row[idx] for row in X_train}
+        if len(column) == 1 and lr_weights[idx] != 0.0:
+            constant = next(iter(column))
+            lr_bias += lr_weights[idx] * constant
+            lr_weights[idx] = 0.0
+            print(f"  Zeroed constant-feature weight: {name} (always {constant:+.1f})")
 
     # ── Build output JSON ─────────────────────────────────────────────
     # Build fallback_weights dict: feature_name -> weight

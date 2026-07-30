@@ -192,6 +192,50 @@ def main() -> int:
         return 1
 
     print(f"OK: cross-validated F1 {mean_f1:.4f} >= required {args.min_f1:.4f}")
+
+    # ── 3. Inference-hour invariance ────────────────────────────────────
+    # build_dataset pins the time features to a single reference hour, but the
+    # app feeds the real device hour (SpamMLScorer: Calendar HOUR_OF_DAY). If
+    # the trees ever split on time_of_day_*, a caller's verdict changes with
+    # the clock. Sweep all 24 hours over the shipped weights and require the
+    # score to be constant.
+    sin_idx = FEATURE_NAMES.index("time_of_day_sin")
+    cos_idx = FEATURE_NAMES.index("time_of_day_cos")
+    sample_numbers = (spam_numbers[:50000] + negative_numbers)[:200]
+
+    def hour_spread(scorer) -> tuple[float, str]:
+        worst, worst_number = 0.0, ""
+        for features, number in zip(X[:200], sample_numbers):
+            scores = []
+            for hour in range(24):
+                angle = 2.0 * math.pi * hour / 24.0
+                probe = list(features)
+                probe[sin_idx] = math.sin(angle)
+                probe[cos_idx] = math.cos(angle)
+                scores.append(scorer(probe))
+            spread = max(scores) - min(scores)
+            if spread > worst:
+                worst, worst_number = spread, number
+        return worst, worst_number
+
+    checks = [("LR fallback", lambda f: score_lr(f, fallback_weights, fallback_bias))]
+    if trees:
+        checks.insert(
+            0,
+            ("GBT", lambda f: score_gbt(f, trees, learning_rate, initial_score)),
+        )
+
+    for label, scorer in checks:
+        spread, number = hour_spread(scorer)
+        if spread > 1e-9:
+            print(
+                f"\nFAIL: {label} score varies by {spread:.4f} across inference hours "
+                f"(worst: {number}). The model learned a time-of-day dependence from "
+                f"fixed-hour training data; drop unscoreable rows and retrain."
+            )
+            return 1
+        print(f"OK: {label} score is invariant across all 24 inference hours")
+
     return 0
 
 
