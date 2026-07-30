@@ -1,5 +1,5 @@
 {
-  "version": 30,
+  "version": 31,
   "updated": "2026-07-29",
   "description": "CallShield community spam number database",
   "sources": [
@@ -260978,47 +260978,47 @@
       "description": "Belarus - wangiri/callback scam hotspot"
     },
     {
-      "prefix": "+876",
+      "prefix": "+1876",
       "type": "scam",
       "description": "Jamaica - heavily abused for lottery/romance scams"
     },
     {
-      "prefix": "+809",
+      "prefix": "+1809",
       "type": "wangiri",
       "description": "Dominican Republic - wangiri/callback scam hotspot"
     },
     {
-      "prefix": "+829",
+      "prefix": "+1829",
       "type": "wangiri",
       "description": "Dominican Republic - wangiri/callback scam hotspot"
     },
     {
-      "prefix": "+849",
+      "prefix": "+1849",
       "type": "wangiri",
       "description": "Dominican Republic - wangiri/callback scam hotspot"
     },
     {
-      "prefix": "+284",
+      "prefix": "+1284",
       "type": "wangiri",
       "description": "British Virgin Islands - premium rate scam"
     },
     {
-      "prefix": "+649",
+      "prefix": "+1649",
       "type": "wangiri",
       "description": "Turks and Caicos - premium rate scam"
     },
     {
-      "prefix": "+473",
+      "prefix": "+1473",
       "type": "wangiri",
       "description": "Grenada - wangiri/callback scam hotspot"
     },
     {
-      "prefix": "+268",
+      "prefix": "+1268",
       "type": "wangiri",
       "description": "Antigua and Barbuda - premium rate scam"
     },
     {
-      "prefix": "+767",
+      "prefix": "+1767",
       "type": "wangiri",
       "description": "Dominica - premium rate scam"
     },

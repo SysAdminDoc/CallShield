@@ -48,6 +48,9 @@ pip install -r scripts/requirements.txt   # scikit-learn, numpy
 # 1. Rebuild the number database from all free public sources
 python scripts/import_all_sources.py                       # writes data/spam_numbers.json
 python scripts/update_ftc.py --days 365                    # merge recent FTC complaints
+# ToastedSpam serves plain HTTP only (no TLS) — it is skipped by default so a
+# poisoned response can't ship hard-blocked numbers. Include it only from a
+# trusted network: python scripts/import_all_sources.py --allow-insecure-sources
 
 # 2. Regenerate the hot lists FIRST — they read data/reports/*.json, which the
 #    merge step deletes. Running merge first would leave the hot lists empty.

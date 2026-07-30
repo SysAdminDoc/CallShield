@@ -37,10 +37,19 @@ def current_time_utc() -> datetime:
 
 
 def npanxx_of(number: str) -> str:
-    """Return first 6 digits of a US phone number, or '' if invalid."""
+    """Return the NPA-NXX of a NANP number, or '' for non-NANP input.
+
+    Only +1 numbers have an NPA-NXX. Taking "the first 6 digits" of an
+    international number would key the range on its country-code digits —
+    inert against the actual foreign campaign (the app matches on
+    last-10-digits-first-6) AND colliding with a real US exchange, so three
+    hot +44 303 1xx numbers would have flagged every legit caller in
+    443-031 (Maryland)."""
     digits = "".join(ch for ch in number if "0" <= ch <= "9")
     if digits.startswith('1') and len(digits) == 11:
         digits = digits[1:]
+    elif len(digits) != 10:
+        return ""
     return digits[:6] if len(digits) >= 6 else ""
 
 

@@ -184,7 +184,13 @@ def merge_into_database(new_numbers: list[dict]):
     for entry in new_numbers:
         num = entry["number"]
         if num in existing:
-            existing[num]["reports"] += entry["reports"]
+            # Snapshot semantics, not accumulation: consecutive runs re-fetch
+            # overlapping "newest N" complaint sets, so += would re-add the
+            # same complaints every run — inflating counts without bound,
+            # pinning stale rows to the hot list (reports >= 5 gate), and
+            # making community not_spam de-listing (one decrement per vote)
+            # effectively impossible. max() keeps reruns idempotent.
+            existing[num]["reports"] = max(existing[num].get("reports", 0), entry["reports"])
             if entry["last_seen"] > existing[num].get("last_seen", ""):
                 existing[num]["last_seen"] = entry["last_seen"]
             if entry["first_seen"] < existing[num].get("first_seen", "9999"):

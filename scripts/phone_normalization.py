@@ -18,11 +18,16 @@ TWO_DIGIT_COUNTRY_CODES = frozenset(
 )
 ONE_DIGIT_COUNTRY_CODES = frozenset({"1", "7"})
 
-# Italy (and Vatican City, which E.164-splits under 39) is the one country whose
-# national significant numbers genuinely retain a leading 0 — +39 06 ... is
-# correct E.164 for Rome. Everywhere else a 0 straight after the country code is
-# a national trunk prefix that does not belong in E.164.
-TRUNK_ZERO_SIGNIFICANT_COUNTRY_CODES = frozenset({"39"})
+# Countries whose national significant numbers genuinely retain a leading 0 in
+# E.164 — stripping it there would corrupt the number, not repair it:
+#   +39  Italy (and Vatican City, which E.164-splits under 39): +39 06 ... is
+#        correct E.164 for Rome.
+#   +225 Côte d'Ivoire: the 2021 ARTCI renumbering moved to 10-digit national
+#        numbers that begin with 0 (01/05/07 mobile, 21/25/27 fixed), so
+#        formatNumberToE164 legitimately emits +2250x....
+# Everywhere else a 0 straight after the country code is a national trunk
+# prefix that does not belong in E.164.
+TRUNK_ZERO_SIGNIFICANT_COUNTRY_CODES = frozenset({"39", "225"})
 
 
 def split_country_code(digits: str) -> tuple[str, str] | None:
@@ -88,11 +93,17 @@ def normalize_report_number(raw: str | None) -> str | None:
 
 
 def normalize_nanp_number(raw: str | None) -> str | None:
+    """Normalize to +1XXXXXXXXXX, or None for non-NANP/implausible input.
+
+    Applies the same plausibility gate as the community-report path so bulk
+    importers can't ship fictional NANP rows (555 area/exchange, N11 service
+    codes) that the merge script would only purge on its next run.
+    """
     normalized = normalize_report_number(raw)
     if not normalized:
         return None
     digits = normalized[1:]
-    if len(digits) == 11 and digits.startswith("1"):
+    if len(digits) == 11 and digits.startswith("1") and is_plausible_number(normalized):
         return normalized
     return None
 

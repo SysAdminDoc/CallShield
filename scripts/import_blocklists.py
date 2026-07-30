@@ -67,9 +67,18 @@ def fetch_fcc_json(url: str) -> list[dict]:
         for field in row:
             if isinstance(field, str):
                 match = PHONE_RE.search(field)
-                if match:
-                    phone = f"{match.group(1)}{match.group(2)}{match.group(3)}"
-                    break
+                if not match:
+                    continue
+                # Reject matches embedded in a longer digit run (Socrata rows
+                # carry UNIX timestamps, meta JSON, and row IDs whose digit
+                # sequences would otherwise "contain" a 10-digit phone).
+                start, end = match.span()
+                if start > 0 and field[start - 1].isdigit():
+                    continue
+                if end < len(field) and field[end].isdigit():
+                    continue
+                phone = f"{match.group(1)}{match.group(2)}{match.group(3)}"
+                break
 
         if not phone:
             continue
@@ -145,7 +154,10 @@ def merge_into_database(all_numbers: list[dict]):
     for entry in all_numbers:
         num = entry["number"]
         if num in existing:
-            existing[num]["reports"] += entry["reports"]
+            # Snapshot semantics (max, not +=): reruns re-fetch overlapping
+            # source windows, and accumulation inflates counts without bound —
+            # see update_ftc.py merge_into_database for the full rationale.
+            existing[num]["reports"] = max(existing[num].get("reports", 0), entry["reports"])
             if entry["last_seen"] > existing[num].get("last_seen", ""):
                 existing[num]["last_seen"] = entry["last_seen"]
             updated += 1
