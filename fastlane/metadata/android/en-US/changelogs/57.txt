@@ -1,0 +1,7 @@
+Numbers reported in a local dialling format are now stored so they actually match the caller that was reported.
+
+One person can no longer push a number onto the trending list, or remove a genuine entry from it, by reporting it over and over.
+
+Removed 145 unused text resources, including 70 stray accessibility labels.
+
+CallShield is now open to translation - see docs/TRANSLATING.md.

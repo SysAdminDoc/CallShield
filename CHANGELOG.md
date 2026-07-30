@@ -2,6 +2,49 @@
 
 All notable changes to CallShield will be documented in this file.
 
+## v1.7.29 — 2026-07-30
+
+### Fixed
+
+- Community reports written in the domestic dialling form are now stored on the
+  key a real call actually matches. The national trunk prefix — the `0` in
+  "+86 **0**558 646 8536" — was already dropped by the in-app reporter and the
+  merge pipeline, but not by the report endpoint every client posts to, so a
+  report filed that way was accepted, stored, and could never match the caller
+  it was meant to block. Italy and Côte d'Ivoire are exempt: their national
+  numbers genuinely keep a leading zero.
+- One person can no longer promote a number to the trending hot list on their
+  own. The report endpoint's duplicate check is deliberately permissive when
+  its rate-limit storage is unavailable, and repeat submissions seconds apart
+  were counted as independent corroboration — so a number could reach every
+  device's high-priority trending list, and shipped report counts could be
+  inflated, from a single reporter. Repeats filed within a minute of each other
+  now count once, in both the hot list and the database merge. Genuine reports
+  minutes apart still count separately, because that is the signal the trending
+  list exists to carry.
+- Repeated `not spam` votes from one reporter can no longer whittle a genuine
+  community entry off the list one vote at a time.
+
+### Changed
+
+- Removed 145 unused text resources, 70 of them accessibility labels that were
+  never attached to anything. They were dead weight for anyone translating the
+  app, and the orphaned accessibility labels wrongly suggested screen-reader
+  coverage that did not exist.
+- The three implementations of report-number normalization — in the app, the
+  report endpoint, and the data pipeline — are now checked against one shared
+  set of cases, so a fix applied to one and not the others fails the build.
+  This is exactly how the trunk-prefix bug above survived.
+
+### Added
+
+- `docs/TRANSLATING.md` and `scripts/check_translations.py`: CallShield ships
+  English only, and translation contributions are now welcome and mechanically
+  checked. The checker reports per-language coverage and fails on the mistakes
+  that only surface at runtime — format placeholders whose count or type drifted
+  from the English, plurals missing the categories their language needs, and
+  languages that would never appear in Android's per-app language picker.
+
 ## v1.7.28 — 2026-07-30
 
 ### Fixed
