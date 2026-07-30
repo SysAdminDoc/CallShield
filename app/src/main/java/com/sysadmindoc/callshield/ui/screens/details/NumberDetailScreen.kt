@@ -119,6 +119,7 @@ fun NumberDetailScreen(
     // Multi-source lookup
     var webResult by remember(number) { mutableStateOf<ExternalLookup.MultiLookupResult?>(null) }
     var webLoading by remember(number) { mutableStateOf(false) }
+    var webFailed by remember(number) { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
 
     Column(
@@ -424,10 +425,14 @@ fun NumberDetailScreen(
                             color = CatBlue,
                             onClick = {
                                 webLoading = true
+                                webFailed = false
                                 coroutineScope.launch {
                                     try {
                                         webResult = ExternalLookup.lookupAll(number)
                                     } catch (_: Exception) {
+                                        // Offline / DNS failure used to leave the
+                                        // card looking like it had never run.
+                                        webFailed = true
                                     }
                                     webLoading = false
                                 }
@@ -437,6 +442,14 @@ fun NumberDetailScreen(
                             outlined = true,
                         )
                     }
+                }
+                if (webFailed) {
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        stringResource(R.string.detail_check_sources_failed),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = CatPeach,
+                    )
                 }
                 if (webLoading) {
                     Spacer(Modifier.height(8.dp))

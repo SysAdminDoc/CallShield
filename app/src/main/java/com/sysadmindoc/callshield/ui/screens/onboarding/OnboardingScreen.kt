@@ -74,9 +74,21 @@ fun OnboardingScreen(onComplete: () -> Unit) {
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
+    // Once the user has permanently denied ("Don't allow"), launch() returns
+    // instantly denied with no system UI, so the Grant button visibly does
+    // nothing. Detect that and route to app settings, matching the fallback
+    // the notifications path already has.
+    var corePermissionsBlocked by rememberSaveable { mutableStateOf(false) }
     val permLauncher =
-        rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
+        rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
             permsGranted = CallShieldPermissions.hasCorePermissions(context)
+            val activity = context as? android.app.Activity
+            corePermissionsBlocked =
+                !permsGranted &&
+                result.isNotEmpty() &&
+                result.none { it.value } &&
+                activity != null &&
+                result.keys.none(activity::shouldShowRequestPermissionRationale)
         }
 
     // Notification permission (Android 13+) — separate launcher since it's a single permission
@@ -114,7 +126,18 @@ fun OnboardingScreen(onComplete: () -> Unit) {
         screenerSupported = screenerSupported,
         snackbarHostState = snackbarHostState,
         onRequestCorePermissions = {
-            permLauncher.launch(CallShieldPermissions.corePermissions.toTypedArray())
+            if (corePermissionsBlocked) {
+                // The system dialog will never appear again — send the user
+                // where they can actually grant it.
+                context.startActivitySafely(
+                    android.content.Intent(
+                        Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                        android.net.Uri.fromParts("package", context.packageName, null),
+                    ),
+                )
+            } else {
+                permLauncher.launch(CallShieldPermissions.corePermissions.toTypedArray())
+            }
         },
         onRequestNotifications = {
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {

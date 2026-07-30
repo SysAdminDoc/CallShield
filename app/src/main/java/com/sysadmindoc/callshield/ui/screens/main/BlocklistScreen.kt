@@ -184,7 +184,33 @@ fun BlocklistScreen(viewModel: MainViewModel) {
     }
 
     val numberRemovedMessage = stringResource(R.string.blocklist_number_removed)
+    val ruleRemovedMessage = stringResource(R.string.blocklist_rule_removed)
     val undoLabel = stringResource(R.string.blocklist_undo)
+
+    /**
+     * Delete-with-undo for rules. Deleting a wildcard, range, keyword, or
+     * trusted entry was instant and unrecoverable, with the delete button
+     * sitting right beside each row's enable switch — one misclick silently
+     * dropped a rule (or re-exposed the user to blocking, for an emergency
+     * contact) with no feedback at all.
+     */
+    fun deleteWithUndo(
+        delete: () -> Unit,
+        restore: () -> Unit,
+    ) {
+        delete()
+        hapticTick(context)
+        scope.launch {
+            snackbarHost.currentSnackbarData?.dismiss()
+            val result =
+                snackbarHost.showSnackbar(
+                    message = ruleRemovedMessage,
+                    actionLabel = undoLabel,
+                    duration = SnackbarDuration.Short,
+                )
+            if (result == SnackbarResult.ActionPerformed) restore()
+        }
+    }
 
     fun removeBlockedNumberWithUndo(number: SpamNumber) {
         viewModel.unblockNumber(number)
@@ -216,7 +242,12 @@ fun BlocklistScreen(viewModel: MainViewModel) {
                     icon = Icons.Default.Block,
                     addActionLabel = stringResource(R.string.blocklist_action_add_number),
                     primaryUtilityLabel = stringResource(R.string.blocklist_action_import),
-                    onPrimaryUtility = { importLauncher.launch(arrayOf("application/json", "text/plain")) },
+                    onPrimaryUtility = {
+                        // Match the backup restore picker: many providers report
+                        // .json downloads as application/octet-stream, which made
+                        // those files unselectable here but selectable there.
+                        importLauncher.launch(arrayOf("application/json", "text/plain", "application/octet-stream"))
+                    },
                     secondaryUtilityLabel =
                         userBlocked.takeIf { it.isNotEmpty() }?.let {
                             stringResource(R.string.blocklist_action_export)
@@ -390,7 +421,12 @@ fun BlocklistScreen(viewModel: MainViewModel) {
                                     WildcardRuleItem(
                                         rule = rule,
                                         onToggle = { viewModel.toggleWildcardRule(rule.id, it) },
-                                        onDelete = { viewModel.deleteWildcardRule(rule) },
+                                        onDelete = {
+                                            deleteWithUndo(
+                                                delete = { viewModel.deleteWildcardRule(rule) },
+                                                restore = { viewModel.restoreWildcardRule(rule) },
+                                            )
+                                        },
                                     )
                                 }
                             }
@@ -414,7 +450,12 @@ fun BlocklistScreen(viewModel: MainViewModel) {
                                     HashWildcardRuleItem(
                                         rule = rule,
                                         onToggle = { viewModel.toggleHashWildcardRule(rule.id, it) },
-                                        onDelete = { viewModel.deleteHashWildcardRule(rule) },
+                                        onDelete = {
+                                            deleteWithUndo(
+                                                delete = { viewModel.deleteHashWildcardRule(rule) },
+                                                restore = { viewModel.restoreHashWildcardRule(rule) },
+                                            )
+                                        },
                                     )
                                 }
                             }
@@ -438,7 +479,12 @@ fun BlocklistScreen(viewModel: MainViewModel) {
                                     KeywordRuleItem(
                                         rule = rule,
                                         onToggle = { viewModel.toggleKeywordRule(rule.id, it) },
-                                        onDelete = { viewModel.deleteKeywordRule(rule) },
+                                        onDelete = {
+                                            deleteWithUndo(
+                                                delete = { viewModel.deleteKeywordRule(rule) },
+                                                restore = { viewModel.restoreKeywordRule(rule) },
+                                            )
+                                        },
                                     )
                                 }
                             }
@@ -461,7 +507,12 @@ fun BlocklistScreen(viewModel: MainViewModel) {
                                 items(whitelistEntries, key = { it.id }) { entry ->
                                     WhitelistItem(
                                         entry = entry,
-                                        onRemove = { viewModel.removeFromWhitelist(entry) },
+                                        onRemove = {
+                                            deleteWithUndo(
+                                                delete = { viewModel.removeFromWhitelist(entry) },
+                                                restore = { viewModel.restoreWhitelistEntry(entry) },
+                                            )
+                                        },
                                         onToggleEmergency = { viewModel.toggleWhitelistEmergency(entry.id, !entry.isEmergency) },
                                     )
                                 }
@@ -1135,7 +1186,7 @@ fun AddWildcardDialog(
     var description by rememberSaveable { mutableStateOf("") }
     var isRegex by rememberSaveable { mutableStateOf(false) }
     var regexErrorDetail by remember { mutableStateOf<String?>(null) }
-    var scheduleState by remember { mutableStateOf(ScheduleUiState()) }
+    var scheduleState by rememberSaveable(stateSaver = ScheduleUiState.Saver) { mutableStateOf(ScheduleUiState()) }
     val trimmedPattern = pattern.trim()
     val conflict =
         remember(trimmedPattern, isRegex, existingWhitelist) {
@@ -1369,7 +1420,7 @@ fun AddKeywordDialog(
     var keyword by rememberSaveable { mutableStateOf("") }
     var description by rememberSaveable { mutableStateOf("") }
     var caseSensitive by rememberSaveable { mutableStateOf(false) }
-    var scheduleState by remember { mutableStateOf(ScheduleUiState()) }
+    var scheduleState by rememberSaveable(stateSaver = ScheduleUiState.Saver) { mutableStateOf(ScheduleUiState()) }
     val trimmedKeyword = keyword.trim()
 
     androidx.compose.material3.AlertDialog(
@@ -1576,7 +1627,7 @@ fun AddHashWildcardDialog(
     // A7 schedule state — kept local to the dialog; committed to the rule
     // only when the user presses "Add range". Default: disabled, so leaving
     // the whole section untouched produces the pre-A7 behaviour.
-    var scheduleState by remember { mutableStateOf(ScheduleUiState()) }
+    var scheduleState by rememberSaveable(stateSaver = ScheduleUiState.Saver) { mutableStateOf(ScheduleUiState()) }
     val trimmed = pattern.trim()
     val conflict =
         remember(trimmed, existingWhitelist) {

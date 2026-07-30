@@ -482,7 +482,7 @@ fun BlockedCallItem(
     val context = LocalContext.current
     val dateFormat = remember(context) { localizedDateTimeFormat(context) }
     val location = remember(call.number) { AreaCodeLookup.lookup(call.number) }
-    var expanded by remember { mutableStateOf(false) }
+    var expanded by rememberSaveable(call.id) { mutableStateOf(false) }
     val temporaryDurations = rememberTemporaryDecisionDurations()
     val copiedMessage = stringResource(R.string.blocked_log_copied, PhoneFormatter.formatIsolated(call.number))
     val copiedShortMessage = stringResource(R.string.blocked_log_copied_short)

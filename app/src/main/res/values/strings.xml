@@ -306,6 +306,7 @@
     <string name="blocklist_empty_database_sub">Run a sync from Home to download the current spam feed before reviewing local database entries here.</string>
     <string name="blocklist_number_blocked">Number blocked</string>
     <string name="blocklist_number_removed">Removed from blocklist</string>
+    <string name="blocklist_rule_removed">Rule removed</string>
     <string name="blocklist_undo">Undo</string>
     <string name="blocklist_rule_added">Rule added</string>
     <string name="blocklist_number_whitelisted">Number added to trusted</string>
@@ -999,6 +1000,7 @@
     <string name="detail_online_lookup">Online Lookup</string>
     <string name="detail_check_sources">Check spam sources</string>
     <string name="detail_checking_sources">Checking SkipCalls, PhoneBlock, WhoCalledMe, and OpenCNAM…</string>
+    <string name="detail_check_sources_failed">Couldn\'t reach the lookup sources. Check your connection and try again.</string>
     <string name="detail_reports_across_sources">%1$s across %2$s</string>
     <string name="detail_clean_all_sources">No reports in available sources</string>
     <string name="detail_no_definitive_source_result">No source returned a definitive result</string>
@@ -1225,6 +1227,7 @@
     <string name="feedback_whitelisted">Number marked as safe</string>
     <string name="notification_action_failed">Action failed — try again from the app</string>
     <string name="export_share_failed">Couldn\'t create the export file — storage may be full</string>
+    <string name="export_log_empty">Nothing to export yet — no blocked calls or messages</string>
     <string name="backup_restore_not_protected">This file isn\'t a passphrase-protected backup. Clear the passphrase field to restore it as-is.</string>
     <string name="settings_post_call_screen">Android post-call screen</string>
     <string name="settings_post_call_screen_desc">Optionally open CallShield after eligible calls with spam and save-contact actions. Off by default; rating notifications stay enabled.</string>
