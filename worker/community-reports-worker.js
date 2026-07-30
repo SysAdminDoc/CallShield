@@ -11,14 +11,23 @@ export function normalizePhoneNumberForReport(number) {
   for (const ch of number) {
     if (!FORMAT_CONTROL_CODES.has(ch.charCodeAt(0))) cleaned += ch;
   }
+  cleaned = cleaned.trim();
+
+  // An explicit "+" means the digits already start with a country calling
+  // code. The bare-10-digit -> NANP heuristic must never apply then: many
+  // countries total exactly 10 digits with their code (+45 Denmark, +47
+  // Norway, 8-digit +32/+43 numbers...), and prefixing "1" would fabricate a
+  // valid-looking US number owned by an unrelated subscriber. Mirrors
+  // scripts/phone_normalization.py normalize_report_number.
+  const explicitInternational = cleaned.startsWith("+");
 
   let digits = "";
-  for (const ch of cleaned.trim()) {
+  for (const ch of cleaned) {
     if (ch >= "0" && ch <= "9") digits += ch;
   }
 
   if (digits.length < 7 || digits.length > 15) return null;
-  if (digits.length === 10) return `+1${digits}`;
+  if (!explicitInternational && digits.length === 10) return `+1${digits}`;
   return `+${digits}`;
 }
 
@@ -153,18 +162,25 @@ export async function checkRateLimit(ip, env) {
 }
 
 /**
- * Check per-IP + per-number dedup against KV.
+ * Check per-IP + per-number dedup against KV (read-only).
  * Returns true if this (IP, number) pair was already reported recently.
+ * The marker is written by recordDedup ONLY after the report is durably
+ * stored — writing it up front turned any failed GitHub PUT into a 5-minute
+ * "Duplicate report" lockout that silently dropped the report on retry.
  */
 export async function checkDedup(ip, normalizedNumber, env) {
   if (!env?.RATE_LIMIT) return false;
 
   const key = `dedup:${ip}:${normalizedNumber}`;
   const existing = await env.RATE_LIMIT.get(key);
-  if (existing !== null) return true;
+  return existing !== null;
+}
 
+/** Mark this (IP, number) pair as reported. Call after a successful store. */
+export async function recordDedup(ip, normalizedNumber, env) {
+  if (!env?.RATE_LIMIT) return;
+  const key = `dedup:${ip}:${normalizedNumber}`;
   await env.RATE_LIMIT.put(key, "1", { expirationTtl: DEDUP_WINDOW_S });
-  return false;
 }
 
 /**
@@ -237,7 +253,9 @@ code{background:#252525;padding:2px 6px;border-radius:4px;font-size:12px;color:#
     }
 
     try {
-      // Reject oversized payloads (10KB limit)
+      // Reject oversized payloads (10KB limit). The header check is a cheap
+      // fast path; the authoritative check is on the actual body below,
+      // because a chunked request carries no Content-Length at all.
       const contentLength = parseInt(request.headers.get("content-length") || "0", 10);
       if (contentLength > 10000) {
         return new Response(JSON.stringify({ error: "Payload too large" }), {
@@ -259,7 +277,13 @@ code{background:#252525;padding:2px 6px;border-radius:4px;font-size:12px;color:#
         });
       }
 
-      const body = await request.json();
+      const bodyText = await request.text();
+      if (bodyText.length > 10000) {
+        return new Response(JSON.stringify({ error: "Payload too large" }), {
+          status: 413, headers: { ...corsHeaders, "Content-Type": "application/json" }
+        });
+      }
+      const body = JSON.parse(bodyText);
       const number = body.number;
 
       // Validate type against allowed values
@@ -335,6 +359,11 @@ code{background:#252525;padding:2px 6px;border-radius:4px;font-size:12px;color:#
           status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" }
         });
       }
+
+      // Only now that the report is durably stored does the dedup marker go
+      // in — a failed PUT above leaves the pair unmarked so the client's
+      // retry actually retries instead of eating a 5-minute duplicate 429.
+      await recordDedup(clientIp, normalized, env);
 
       return new Response(JSON.stringify({ success: true, number: normalized }), {
         status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" }

@@ -9,12 +9,24 @@ import {
   sanitizeSmsUrlIndicators,
   checkRateLimit,
   checkDedup,
+  recordDedup,
 } from "./community-reports-worker.js";
 
 test("normalizes ASCII phone numbers for reports", () => {
   assert.equal(normalizePhoneNumberForReport("+1 (212) 555-1234"), "+12125551234");
   assert.equal(normalizePhoneNumberForReport("212-555-1234"), "+12125551234");
   assert.equal(normalizePhoneNumberForReport("+442071234567"), "+442071234567");
+});
+
+test("never NANP-ifies an explicitly international number totalling 10 digits", () => {
+  // +45 Denmark and +47 Norway are 8-digit national numbers: cc + national =
+  // exactly 10 digits. The bare-10-digit -> "+1" heuristic must not apply,
+  // or the worker fabricates a valid-looking US number owned by a stranger.
+  assert.equal(normalizePhoneNumberForReport("+4536963010"), "+4536963010");
+  assert.equal(normalizePhoneNumberForReport("+47 21 93 01 00"), "+4721930100");
+  assert.equal(normalizePhoneNumberForReport("‎" + "+45 36 96 30 10"), "+4536963010");
+  // Bare 10-digit input (no "+") is still assumed NANP-local.
+  assert.equal(normalizePhoneNumberForReport("2125551234"), "+12125551234");
 });
 
 test("strips formatting control marks before report normalization", () => {
@@ -140,22 +152,28 @@ test("rate limiter is permissive when KV is not bound", async () => {
   assert.equal(rl2.allowed, true);
 });
 
-test("dedup rejects same IP + number within window", async () => {
+test("dedup rejects same IP + number only after the report is recorded", async () => {
   const kv = createMockKV();
   const env = { RATE_LIMIT: kv };
 
   const first = await checkDedup("1.2.3.4", "+12125551234", env);
   assert.equal(first, false, "first report should not be a duplicate");
 
+  // checkDedup is read-only: until recordDedup runs (i.e. the GitHub PUT
+  // succeeded), a retry after a failed store must NOT be treated as a dupe.
+  const retryAfterFailedStore = await checkDedup("1.2.3.4", "+12125551234", env);
+  assert.equal(retryAfterFailedStore, false, "unrecorded report must be retryable");
+
+  await recordDedup("1.2.3.4", "+12125551234", env);
   const second = await checkDedup("1.2.3.4", "+12125551234", env);
-  assert.equal(second, true, "same IP + number should be a duplicate");
+  assert.equal(second, true, "same IP + number should be a duplicate once recorded");
 });
 
 test("dedup allows same number from different IP", async () => {
   const kv = createMockKV();
   const env = { RATE_LIMIT: kv };
 
-  await checkDedup("1.2.3.4", "+12125551234", env);
+  await recordDedup("1.2.3.4", "+12125551234", env);
   const result = await checkDedup("5.6.7.8", "+12125551234", env);
   assert.equal(result, false, "different IP should not be a duplicate");
 });
@@ -164,9 +182,15 @@ test("dedup allows same IP for different numbers", async () => {
   const kv = createMockKV();
   const env = { RATE_LIMIT: kv };
 
-  await checkDedup("1.2.3.4", "+12125551234", env);
+  await recordDedup("1.2.3.4", "+12125551234", env);
   const result = await checkDedup("1.2.3.4", "+14155551234", env);
   assert.equal(result, false, "different number should not be a duplicate");
+});
+
+test("recordDedup is a no-op when KV is not bound", async () => {
+  await recordDedup("1.2.3.4", "+12125551234", {});
+  const result = await checkDedup("1.2.3.4", "+12125551234", {});
+  assert.equal(result, false);
 });
 
 test("dedup is permissive when KV is not bound", async () => {
