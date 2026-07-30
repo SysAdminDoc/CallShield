@@ -127,6 +127,7 @@ class SmsContextChecker
             number: String,
             nowMillis: Long = System.currentTimeMillis(),
             config: SmsBurstConfig = SmsBurstConfig(),
+            countCurrentMessage: Boolean = true,
         ): SmsBurstSignal? {
             val query = buildRecentIncomingSmsQuery(nowMillis, config.windowMinutes)
             val observations = mutableListOf<SmsBurstObservation>()
@@ -158,6 +159,7 @@ class SmsContextChecker
                     sender = number,
                     nowMillis = nowMillis,
                     config = config,
+                    countCurrentMessage = countCurrentMessage,
                 )
             } catch (_: Exception) {
                 null
@@ -181,6 +183,7 @@ class SmsContextChecker
             sender: String,
             nowMillis: Long,
             config: SmsBurstConfig = SmsBurstConfig(),
+            countCurrentMessage: Boolean = true,
         ): SmsBurstSignal? {
             val normalizedSender = normalize(sender)
             if (normalizedSender.isEmpty()) return null
@@ -202,9 +205,15 @@ class SmsContextChecker
                     normalized == normalizedSender &&
                         kotlin.math.abs(nowMillis - timestamp) <= CURRENT_SMS_DUPLICATE_GRACE_MS
                 }
+            // The "+1 for the current message" only applies on the realtime
+            // path, where the just-received SMS may not be in the provider
+            // yet. On a historical inbox scan the scanned message IS a
+            // provider row (with an old timestamp, outside the near-now
+            // grace), so adding one would double-count it — flagging a
+            // sender at threshold-minus-one real messages.
             val senderCount =
                 recent.count { (normalized, _) -> normalized == normalizedSender } +
-                    if (providerAlreadyContainsCurrent) 0 else 1
+                    if (countCurrentMessage && !providerAlreadyContainsCurrent) 1 else 0
             val senderSignal =
                 if (senderCount >= config.senderThreshold.coerceAtLeast(2)) {
                     SmsBurstSignal(
@@ -305,12 +314,14 @@ class SmsContextChecker
                 number: String,
                 nowMillis: Long = System.currentTimeMillis(),
                 config: SmsBurstConfig = SmsBurstConfig(),
+                countCurrentMessage: Boolean = true,
             ): SmsBurstSignal? =
                 shared.findRecentBurst(
                     context = context,
                     number = number,
                     nowMillis = nowMillis,
                     config = config,
+                    countCurrentMessage = countCurrentMessage,
                 )
 
             internal fun buildRecentIncomingSmsQuery(
@@ -323,12 +334,14 @@ class SmsContextChecker
                 sender: String,
                 nowMillis: Long,
                 config: SmsBurstConfig = SmsBurstConfig(),
+                countCurrentMessage: Boolean = true,
             ): SmsBurstSignal? =
                 shared.evaluateSmsBurst(
                     observations = observations,
                     sender = sender,
                     nowMillis = nowMillis,
                     config = config,
+                    countCurrentMessage = countCurrentMessage,
                 )
         }
     }

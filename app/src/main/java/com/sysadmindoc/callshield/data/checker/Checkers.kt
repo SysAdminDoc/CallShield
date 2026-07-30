@@ -636,19 +636,32 @@ internal class TimeBlockChecker : IChecker {
     override val priority = CheckerPriority.TIME_BLOCK
     override val name = "time_block"
 
-    override suspend fun isEnabled(ctx: CheckContext): Boolean = ctx.prefs[SpamRepository.KEY_TIME_BLOCK] ?: false
+    // Quiet hours is a CALLS feature ("Block all non-contact calls during set
+    // hours") and a REALTIME one: an SMS/RCS re-scored through the shared
+    // chain must not have its OTP/bank/delivery notification cancelled and
+    // logged as "blocked during quiet hours", and a historical scan must not
+    // flag old entries based on the wall-clock hour the scan happens to run.
+    // Same contract ContactsOnlyChecker documents for its smsBody gate.
+    override suspend fun isEnabled(ctx: CheckContext): Boolean =
+        (ctx.prefs[SpamRepository.KEY_TIME_BLOCK] ?: false) &&
+            ctx.realtimeCall &&
+            ctx.smsBody == null
 
     override suspend fun check(ctx: CheckContext): BlockResult? {
         val start = (ctx.prefs[SpamRepository.KEY_TIME_BLOCK_START] ?: 22).coerceIn(0, 23)
         val end = (ctx.prefs[SpamRepository.KEY_TIME_BLOCK_END] ?: 7).coerceIn(0, 23)
-        if (start == end) return null // same hour = feature disabled
 
         val now = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
         val inWindow =
-            if (start < end) {
-                now in start until end
-            } else {
-                now >= start || now < end // overnight wrap
+            when {
+                // Matching start/end means a 24-hour window — the Settings
+                // screen promises exactly that ("quiet-hours blocking runs
+                // all day"), and TimeSchedule uses the same convention.
+                start == end -> true
+
+                start < end -> now in start until end
+
+                else -> now >= start || now < end // overnight wrap
             }
 
         return if (inWindow) {
@@ -834,7 +847,15 @@ internal class SmsBurstChecker(
     override suspend fun isEnabled(ctx: CheckContext): Boolean = ctx.trustedAllowSource == null && (ctx.prefs[SpamRepository.KEY_SMS_BURST] ?: true)
 
     override suspend fun check(ctx: CheckContext): BlockResult? {
-        val signal = smsContextChecker.findRecentBurst(appContext, ctx.number) ?: return null
+        val signal =
+            smsContextChecker.findRecentBurst(
+                appContext,
+                ctx.number,
+                // Historical scans re-score messages that already sit in the
+                // provider — counting a phantom "current" message on top
+                // double-counts the scanned row.
+                countCurrentMessage = ctx.realtimeCall,
+            ) ?: return null
         return BlockResult.block(
             matchSource = "sms_burst",
             type = "sms_spam",

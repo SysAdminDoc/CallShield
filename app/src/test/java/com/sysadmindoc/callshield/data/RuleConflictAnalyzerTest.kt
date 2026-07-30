@@ -33,6 +33,32 @@ class RuleConflictAnalyzerTest {
     }
 
     @Test
+    fun `hand-typed national number matches the stored E164 whitelist row`() {
+        // Whitelist rows are stored canonicalized (+1...); the editor passes
+        // whatever the user typed. "2125550100" must still surface the
+        // conflict — the live ladder WILL let the whitelist override.
+        val conflict =
+            RuleConflictAnalyzer.forExactBlock(
+                number = "2125550100",
+                whitelist = listOf(WhitelistEntry(number = "+12125550100")),
+            )
+
+        assertEquals(RuleConflictWinner.WHITELIST, conflict?.winner)
+    }
+
+    @Test
+    fun `bare-digit wildcard pattern still flags a stored E164 whitelist entry`() {
+        val conflict =
+            RuleConflictAnalyzer.forWildcardBlock(
+                pattern = "212555*",
+                isRegex = false,
+                whitelist = listOf(WhitelistEntry(number = "+12125550100")),
+            )
+
+        assertEquals(RuleConflictRule.WILDCARD_BLOCK, conflict?.overriddenRule)
+    }
+
+    @Test
     fun `wildcard block reports the whitelisted number it cannot override`() {
         val conflict =
             RuleConflictAnalyzer.forWildcardBlock(

@@ -100,6 +100,41 @@ class TimeScheduleTest {
         assertFalse(sched.isActiveAt(wednesdayAt(21)))
     }
 
+    // ── isActiveAt: midnight wrap + day mask (the after-midnight tail
+    //    belongs to the PREVIOUS day's window) ─────────────────────────
+
+    @Test fun `friday-night rule covers the saturday early-morning tail`() {
+        // Friday 22:00–06:00: Sat 01:00 is inside Friday night.
+        val fridayOnly = TimeSchedule(0b0100000, 22, 6)
+        assertTrue(fridayOnly.isActiveAt(saturdayAt(1)))
+        assertTrue(fridayOnly.isActiveAt(saturdayAt(5)))
+        assertFalse(fridayOnly.isActiveAt(saturdayAt(6)))
+    }
+
+    @Test fun `friday-night rule does not fire friday early morning`() {
+        // Fri 01:00 belongs to THURSDAY night, which is not selected.
+        val fridayOnly = TimeSchedule(0b0100000, 22, 6)
+        assertFalse(fridayOnly.isActiveAt(GregorianCalendar(2026, Calendar.APRIL, 17, 1, 0)))
+        // The pre-midnight part still fires on Friday itself.
+        assertTrue(fridayOnly.isActiveAt(GregorianCalendar(2026, Calendar.APRIL, 17, 23, 0)))
+    }
+
+    @Test fun `saturday-night rule is inactive saturday early morning`() {
+        // Sat 22:00–06:00 runs Sat night into Sunday. Sat 01:00 is Friday
+        // night, not selected; Sun 01:00 is the selected Saturday tail.
+        val saturdayOnly = TimeSchedule(0b1000000, 22, 6)
+        assertFalse(saturdayOnly.isActiveAt(saturdayAt(1)))
+        assertTrue(saturdayOnly.isActiveAt(sundayAt(1)))
+    }
+
+    @Test fun `sunday-night rule wraps into monday using the week boundary`() {
+        // Sunday (bit 0) 22:00–06:00 → Monday 01:00 active: the (day+6)%7
+        // previous-day arithmetic must wrap Monday back to Sunday.
+        val sundayOnly = TimeSchedule(0b0000001, 22, 6)
+        assertTrue(sundayOnly.isActiveAt(GregorianCalendar(2026, Calendar.APRIL, 20, 1, 0)))
+        assertFalse(sundayOnly.isActiveAt(GregorianCalendar(2026, Calendar.APRIL, 20, 23, 0)))
+    }
+
     // ── isActiveAt: day + hour intersection ─────────────────────────
 
     @Test fun `weekday business hours active on Wednesday at noon`() {

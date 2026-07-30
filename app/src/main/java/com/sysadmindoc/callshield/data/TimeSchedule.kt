@@ -53,17 +53,26 @@ data class TimeSchedule(
         // Calendar.SUNDAY == 1, …, Calendar.SATURDAY == 7. Convert to 0..6.
         val dayBit = calendar.get(Calendar.DAY_OF_WEEK) - Calendar.SUNDAY
         if (dayBit !in 0..6) return true // defensive — should never happen
-        if ((daysMask shr dayBit) and 1 == 0) return false
+        val dayEnabled = (daysMask shr dayBit) and 1 == 1
 
         // Hours: equal endpoints disable hour filter on selected days.
-        if (startHour == endHour) return true
+        if (startHour == endHour) return dayEnabled
         val s = startHour.coerceIn(0, 23)
         val e = endHour.coerceIn(0, 23)
         val h = calendar.get(Calendar.HOUR_OF_DAY)
         return if (s < e) {
-            h in s until e
+            dayEnabled && h in s until e
         } else {
-            h >= s || h < e // wraps midnight
+            // Midnight wrap: the pre-midnight part belongs to the current
+            // day, but the after-midnight tail belongs to the PREVIOUS day's
+            // window — "Fri 22–06" must still be active Sat 01:00 (that
+            // instant is inside Friday night), and must NOT be active
+            // Fri 01:00 (that was Thursday night).
+            when {
+                h >= s -> dayEnabled
+                h < e -> (daysMask shr ((dayBit + DAYS_IN_WEEK - 1) % DAYS_IN_WEEK)) and 1 == 1
+                else -> false
+            }
         }
     }
 
@@ -94,6 +103,8 @@ data class TimeSchedule(
     }
 
     companion object {
+        private const val DAYS_IN_WEEK = 7
+
         /** 0 = Sunday, 6 = Saturday — matches the bit positions in [daysMask]. */
         val DAY_LABELS = listOf("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
 

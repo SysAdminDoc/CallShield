@@ -61,6 +61,30 @@ class SmsContextCheckerTest {
     }
 
     @Test
+    fun `historical scan does not phantom-count the scanned message`() {
+        // The message being re-scored by an inbox scan is already a provider
+        // row with an OLD timestamp (outside the near-now grace). With only
+        // two real messages, threshold 3 must NOT fire on the scan path.
+        val signal =
+            SmsContextChecker.evaluateSmsBurst(
+                observations =
+                    listOf(
+                        SmsBurstObservation("55555", timestamp = 1_700_000L),
+                        SmsBurstObservation("55555", timestamp = 1_200_000L),
+                    ),
+                sender = "55555",
+                nowMillis = 1_800_000L,
+                config =
+                    SmsBurstConfig(
+                        windowMinutes = 30,
+                    ),
+                countCurrentMessage = false,
+            )
+
+        assertNull(signal)
+    }
+
+    @Test
     fun `distinct same-prefix senders trigger prefix burst`() {
         val signal =
             SmsContextChecker.evaluateSmsBurst(

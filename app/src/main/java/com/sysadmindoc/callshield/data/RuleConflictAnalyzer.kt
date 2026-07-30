@@ -53,7 +53,7 @@ object RuleConflictAnalyzer {
         return whitelist
             .asSequence()
             .filter { !it.isExpired(now) }
-            .firstOrNull { candidate.matches(it.number) }
+            .firstOrNull { entry -> phoneVariants(entry.number).any { candidate.matches(it) } }
             ?.toConflict(overriddenRule = RuleConflictRule.WILDCARD_BLOCK)
     }
 
@@ -75,19 +75,20 @@ object RuleConflictAnalyzer {
         now: Long = System.currentTimeMillis(),
     ): RuleConflict? {
         val normalized = normalizePhoneNumber(number)
+        val variants = phoneVariants(number)
         val overriddenRule =
             when {
                 rules.exactBlocks.any {
-                    it.isUserBlocked && it.activeDecision(now) != null && normalizePhoneNumber(it.number) == normalized
+                    it.isUserBlocked && it.activeDecision(now) != null && comparableKey(it.number) == comparableKey(number)
                 } -> {
                     RuleConflictRule.EXACT_BLOCK
                 }
 
-                rules.wildcardRules.any { it.enabled && it.matches(normalized) } -> {
+                rules.wildcardRules.any { rule -> rule.enabled && variants.any { rule.matches(it) } } -> {
                     RuleConflictRule.WILDCARD_BLOCK
                 }
 
-                rules.hashWildcardRules.any { it.enabled && it.matches(normalized) } -> {
+                rules.hashWildcardRules.any { rule -> rule.enabled && variants.any { rule.matches(it) } } -> {
                     RuleConflictRule.RANGE_BLOCK
                 }
 
@@ -106,11 +107,34 @@ object RuleConflictAnalyzer {
         number: String,
         whitelist: List<WhitelistEntry>,
         now: Long,
-    ): WhitelistEntry? {
-        val normalized = normalizePhoneNumber(number)
-        return whitelist.firstOrNull {
-            !it.isExpired(now) && normalizePhoneNumber(it.number) == normalized
+    ): WhitelistEntry? =
+        whitelist.firstOrNull {
+            !it.isExpired(now) && comparableKey(it.number) == comparableKey(number)
         }
+
+    /**
+     * Comparison key that bridges the stored E.164 form and hand-typed input.
+     * Whitelist/block rows are persisted canonicalized (`+12125551234`), but
+     * the editor hands this analyzer whatever the user typed (`2125551234`) —
+     * a plain string compare between the two silently hid real conflicts, so
+     * the advisory stayed quiet while the live ladder overrode the rule.
+     */
+    private fun comparableKey(raw: String): String {
+        val digits = raw.filter { it in '0'..'9' }
+        return if (digits.length == 11 && digits.startsWith("1")) digits.substring(1) else digits
+    }
+
+    /** The forms an entry might be stored or typed in, for pattern matching. */
+    private fun phoneVariants(raw: String): List<String> {
+        val normalized = normalizePhoneNumber(raw)
+        val digits = normalized.filter { it in '0'..'9' }
+        val variants = mutableListOf(normalized)
+        if (digits.isNotEmpty()) {
+            variants += digits
+            if (digits.length == 11 && digits.startsWith("1")) variants += digits.substring(1)
+            if (digits.length == 10) variants += "+1$digits"
+        }
+        return variants.distinct()
     }
 
     private fun WhitelistEntry.toConflict(overriddenRule: RuleConflictRule): RuleConflict =
