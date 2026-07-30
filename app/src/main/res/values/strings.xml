@@ -9,10 +9,7 @@
     <string name="shortcut_scan_sms_long">Scan SMS inbox</string>
 
     <!-- Dashboard Screen -->
-    <string name="dashboard_call_blocking_disabled">Call blocking is disabled</string>
-    <string name="dashboard_call_screening_needed">CallShield needs to be set as your call screening app to block spam calls.</string>
     <string name="dashboard_enable_call_screening">Enable Call Screening</string>
-    <string name="dashboard_permissions_missing">Permissions missing: %d. Open Settings to grant.</string>
     <string name="dashboard_review_permissions">Review permissions</string>
     <string name="dashboard_protection_active">Protection Active</string>
     <string name="dashboard_protection_disabled">Protection Paused</string>
@@ -24,30 +21,12 @@
     <string name="dashboard_finish_permissions_hint">Finish required permissions to activate protection.</string>
     <string name="dashboard_finish_setup_hint">Finish setup to activate the spam shield.</string>
     <string name="dashboard_call_screener_missing_hint">Enable the call screener so spam calls can be blocked.</string>
-    <string name="dashboard_no_spam_db">No spam database loaded</string>
-    <string name="dashboard_tap_sync">Tap Sync below to download</string>
-    <string name="dashboard_sync_inline_hint">Download the latest spam database to activate full protection.</string>
     <string name="dashboard_sync_database">Sync Database</string>
-    <plurals name="dashboard_numbers_in_db">
-        <item quantity="one">Number in database: %d</item>
-        <item quantity="other">Numbers in database: %d</item>
-    </plurals>
-    <plurals name="dashboard_engines_active">
-        <item quantity="one">Protection engine active: %d</item>
-        <item quantity="other">Protection engines active: %d</item>
-    </plurals>
-    <plurals name="dashboard_engines_active_aggressive">
-        <item quantity="one">Protection engine active: %d | AGGRESSIVE</item>
-        <item quantity="other">Protection engines active: %d | AGGRESSIVE</item>
-    </plurals>
-    <string name="dashboard_setup_progress_required">Core setup ready: %1$d/%2$d</string>
     <string name="dashboard_metric_core_setup">Core setup</string>
     <string name="dashboard_metric_engines">Engines</string>
     <string name="dashboard_metric_database">Database</string>
     <string name="dashboard_metric_ready">Ready</string>
     <string name="dashboard_setup_checklist">Setup Checklist</string>
-    <string name="dashboard_setup_required_summary">Complete the core steps below to enable full protection.</string>
-    <string name="dashboard_setup_optional_summary">Core protection is ready. Optional extras below add polish and visibility.</string>
     <string name="dashboard_setup_complete">Setup complete</string>
     <string name="dashboard_setup_needs_attention">Needs attention</string>
     <string name="dashboard_setup_permissions_title">Permissions</string>
@@ -57,29 +36,15 @@
     <string name="dashboard_setup_notifications_title">Notifications</string>
     <string name="dashboard_permissions_ready_detail">Core permissions are granted.</string>
     <string name="dashboard_permissions_required_short">Grant required call and text access.</string>
-    <string name="dashboard_permissions_degraded_detail">%1$s: %2$s</string>
-    <plurals name="dashboard_permissions_needed_detail">
-        <item quantity="one">Permission still missing: %d</item>
-        <item quantity="other">Permissions still missing: %d</item>
-    </plurals>
     <plurals name="dashboard_database_ready_detail">
         <item quantity="one">Spam number loaded: %d</item>
         <item quantity="other">Spam numbers loaded: %d</item>
     </plurals>
-    <string name="dashboard_database_needed_detail">Download the latest spam database to activate blocking.</string>
-    <string name="dashboard_database_syncing_detail">Refreshing the spam database now.</string>
     <string name="dashboard_database_needed_short">Download current protection data.</string>
     <string name="dashboard_database_syncing_short">Refreshing protection data.</string>
-    <string name="dashboard_screener_ready_detail">CallShield is set as the device call screener.</string>
-    <string name="dashboard_screener_needed_detail">Set CallShield as the default call screener for live call blocking.</string>
-    <string name="dashboard_screener_optional_detail">Call screening becomes required when call blocking is enabled.</string>
     <string name="dashboard_screener_ready_short">Ready for live call blocking.</string>
     <string name="dashboard_screener_needed_short">Required for live call blocking.</string>
     <string name="dashboard_screener_optional_short">Off while call blocking is disabled.</string>
-    <string name="dashboard_overlay_ready_detail">Overlay permission is ready for caller ID popups.</string>
-    <string name="dashboard_overlay_needed_detail">Allow overlay access for floating caller ID alerts.</string>
-    <string name="dashboard_notifications_ready_detail">Notifications are enabled for alerts and recovery prompts.</string>
-    <string name="dashboard_notifications_needed_detail">Enable notifications for alerts, reminders, and recovery prompts.</string>
     <string name="dashboard_overlay_ready_short">Floating caller ID is ready.</string>
     <string name="dashboard_overlay_needed_short">Floating caller ID alerts.</string>
     <string name="dashboard_notifications_ready_short">Alerts and reminders are ready.</string>
@@ -91,7 +56,6 @@
     <string name="dashboard_synced_minutes_ago">Synced %dm ago</string>
     <string name="dashboard_synced_hours_ago">Synced %dh ago</string>
     <string name="dashboard_synced_days_ago">Synced %dd ago</string>
-    <string name="dashboard_bundled_snapshot_ready">Bundled protection snapshot ready</string>
     <string name="dashboard_stat_today">Today</string>
     <string name="dashboard_stat_this_week">This Week</string>
     <string name="dashboard_stat_total">Total</string>
@@ -169,7 +133,6 @@
     <string name="blocked_log_filter_all">All (%d)</string>
     <string name="blocked_log_filter_calls">Calls</string>
     <string name="blocked_log_filter_sms">SMS</string>
-    <string name="blocked_log_no_items">No blocked items yet</string>
     <string name="blocked_log_empty_all_title">No blocked activity yet</string>
     <string name="blocked_log_empty_all_body">When CallShield stops a call or text, the full reason and recovery actions will appear here.</string>
     <string name="blocked_log_empty_filter_title">Nothing matches this filter</string>
@@ -200,11 +163,6 @@
     <string name="blocked_log_sms">SMS</string>
 
     <!-- Blocklist Screen -->
-    <string name="blocklist_tab_blocklist">Blocklist (%d)</string>
-    <string name="blocklist_tab_wildcards">Wildcards (%d)</string>
-    <string name="blocklist_tab_keywords">Keywords (%d)</string>
-    <string name="blocklist_tab_whitelist">Trusted (%d)</string>
-    <string name="blocklist_tab_database">Database (%d)</string>
     <string name="blocklist_tab_blocked_short">Blocked</string>
     <string name="blocklist_tab_wildcards_short">Wildcards</string>
     <string name="blocklist_tab_keywords_short">Keywords</string>
@@ -254,7 +212,6 @@
     <string name="hash_wildcard_dialog_overlap_covers">This would also replace existing rule %1$s.</string>
     <string name="hash_wildcard_dialog_add">Add range</string>
     <string name="hash_wildcard_dialog_cancel">Cancel</string>
-    <string name="hash_wildcard_item_disabled">Disabled</string>
     <string name="hash_wildcard_item_covers">Covers %1$s numbers</string>
     <!-- A3: Push-alert bridge settings -->
     <string name="settings_push_alert">Push-alert bridge</string>
@@ -444,8 +401,6 @@
     <string name="overlay_action_dismiss">Dismiss</string>
     <string name="overlay_action_sit_tone">Play SIT Tone</string>
     <string name="overlay_source_flagged">Flagged</string>
-    <string name="overlay_source_clean">Clean</string>
-    <string name="overlay_source_unavailable">Unavailable</string>
     <string name="overlay_source_result">%1$s %2$s: %3$s</string>
     <string name="remote_lookup_status_found">Found</string>
     <string name="remote_lookup_status_caller_id_found">Caller ID found</string>
@@ -466,19 +421,14 @@
     <string name="settings_setup_progress">Access checks ready: %1$d/%2$d</string>
     <string name="settings_setup_ready_summary">Everything connected</string>
     <string name="settings_setup_attention_summary">Finish setup</string>
-    <string name="settings_grant_permissions">Grant Permissions</string>
-    <string name="settings_permissions_granted">Permissions ready</string>
     <string name="settings_permissions_needed">Permissions needed</string>
-    <string name="settings_call_screener_enabled">Call screener ready</string>
     <string name="settings_call_screener_needed">Call screener needed</string>
-    <string name="settings_call_screener_optional">Call screener optional</string>
     <string name="settings_overlay_enabled">Overlay ready</string>
     <string name="settings_overlay_optional">Overlay optional</string>
     <string name="settings_notifications">Notifications</string>
     <string name="settings_notifications_enabled">Notifications ready</string>
     <string name="settings_notifications_optional">Notifications optional</string>
     <string name="settings_open_app_settings">Open app settings</string>
-    <string name="settings_call_screener">Call Screener</string>
     <string name="settings_overlay">Overlay</string>
     <string name="settings_access_calls_messages">Calls &amp; messages</string>
     <string name="settings_access_call_screening">Call screening</string>
@@ -756,36 +706,26 @@
     <string name="more_section_tools">Protection Tools</string>
     <string name="more_section_release">Release &amp; Diagnostics</string>
     <string name="more_section_support">Project &amp; Support</string>
-    <string name="more_trust_on_device">On-device</string>
-    <string name="more_trust_open_source">Open source</string>
-    <string name="more_trust_no_account">No account</string>
     <string name="more_github_repo_subtitle">Read the source, roadmap, and release history directly on GitHub.</string>
     <string name="more_report_bug_subtitle">Open an issue when something looks broken, confusing, or unfinished.</string>
     <string name="more_star_github_subtitle">Support the project and help more people discover CallShield.</string>
     <string name="more_report_spam_number_subtitle">Send suspicious numbers back to the project with useful context.</string>
     <string name="more_share_crash_log_subtitle">Export the latest local crash log. Phone numbers, tokens, and private URL parts are redacted; nothing is auto-uploaded.</string>
     <!-- FTC one-tap report (Feature C) -->
-    <string name="ftc_report_action">Report to FTC</string>
-    <string name="ftc_report_action_fcc">Report to FCC</string>
     <string name="ftc_report_toast">%1$s copied. Paste it into the form\'s phone-number field.</string>
     <string name="ftc_report_no_browser">No browser available to open the report form.</string>
     <string name="link_no_browser">No browser available to open this link.</string>
     <string name="link_no_activity">This device can\'t open that screen.</string>
     <!-- Emergency contacts (Feature E) -->
-    <string name="emergency_contacts_title">Emergency Contacts</string>
     <string name="emergency_contacts_subtitle">Always ring through — bypasses blocklist, quiet hours, and aggressive mode.</string>
-    <string name="emergency_contacts_empty_title">No emergency contacts yet</string>
-    <string name="emergency_contacts_empty_body">Add your kid\'s school, your doctor, a family emergency line — any number that must ring through even when CallShield would otherwise block it.</string>
     <string name="emergency_contacts_add">Add Emergency Contact</string>
     <string name="emergency_contacts_added">Emergency contact added</string>
     <string name="emergency_contacts_mark_as">Mark as Emergency</string>
     <string name="emergency_contacts_unmark">Remove Emergency Status</string>
-    <string name="emergency_contacts_tab">Emergency</string>
     <string name="emergency_contacts_badge">EMERGENCY</string>
     <!-- Block reasoning (Feature D) -->
     <string name="block_reasoning_title">Why was this blocked?</string>
     <string name="detail_category_action_source">%1$s rule · %2$s</string>
-    <string name="block_reasoning_empty">This number was allowed through — no block reasoning to show.</string>
     <!-- Smart call labels (Feature A) -->
     <string name="call_category_debt_collector">Debt Collector</string>
     <string name="call_category_political">Political</string>
@@ -804,7 +744,6 @@
     <string name="more_license">MIT License</string>
 
     <!-- Protection Test Screen -->
-    <string name="protection_test_title">Protection Test</string>
     <string name="protection_test_subtitle">Check permissions, detection, and integrations.</string>
     <string name="protection_test_testing">Testing…</string>
     <string name="protection_test_run_all">Run All Tests</string>
@@ -948,8 +887,6 @@
     <string name="recent_filter_spam">Spam (%d)</string>
     <string name="recent_summary_title">Recent call health</string>
     <string name="recent_summary_subtitle">Review your latest calls, refresh quickly, and drill straight into suspicious numbers.</string>
-    <string name="recent_summary_live">Live view</string>
-    <string name="recent_summary_refreshing">Refreshing</string>
     <string name="recent_summary_total">Total</string>
     <string name="recent_summary_spam">Spam</string>
     <string name="recent_summary_missed">Missed</string>
@@ -958,7 +895,6 @@
     <string name="recent_permission_body">Grant call log permission so CallShield can audit recent calls, surface spam matches, and open detail views from your history.</string>
     <string name="recent_permission_hint_private_title">Private recent-call review</string>
     <string name="recent_permission_hint_private_body">CallShield reads call history on-device so you can understand spam matches without leaving your recent-call view.</string>
-    <string name="recent_permission_hint_recovery_title">Easy to enable later</string>
     <string name="recent_permission_hint_recovery_body">If you skip this for now, the app still works. You can turn on recent-call review from system settings whenever you need it.</string>
     <string name="recent_permission_cta">Open app settings</string>
     <string name="recent_no_calls">No recent calls</string>
@@ -968,7 +904,6 @@
     <string name="recent_show_all">Show all calls</string>
     <string name="recent_duration">%ds</string>
     <string name="recent_google">Google</string>
-    <string name="recent_databases">Databases</string>
     <string name="recent_copy">Copy</string>
     <string name="recent_copied">Copied</string>
     <string name="recent_detail">Detail</string>
@@ -1010,8 +945,6 @@
         <item quantity="other">Reports: %d</item>
     </plurals>
     <string name="detail_flagged">Flagged</string>
-    <string name="detail_clean">Clean</string>
-    <string name="detail_unavailable">Unavailable</string>
     <string name="detail_block">Block</string>
     <string name="detail_number_blocked">Number blocked</string>
     <string name="detail_unblock">Unblock</string>
@@ -1050,29 +983,12 @@
     <string name="nav_lookup">Lookup</string>
     <string name="nav_blocklist">Blocklist</string>
     <string name="nav_more">More</string>
-    <string name="app_shell_subtitle_home">Protection status, setup progress, and quick actions.</string>
-    <string name="app_shell_subtitle_recent">Review call history and investigate suspicious numbers.</string>
-    <string name="app_shell_subtitle_log">See what CallShield blocked and why.</string>
-    <string name="app_shell_subtitle_lookup">Run a live check on any number before you answer or call back.</string>
-    <string name="app_shell_subtitle_blocklist">Manage rules, trusted contacts, and the local spam database.</string>
-    <string name="app_shell_subtitle_more">Settings, diagnostics, release notes, and app health.</string>
     <string name="app_shell_status_calls_texts">Calls + SMS on</string>
     <string name="app_shell_status_calls">Calls on</string>
     <string name="app_shell_status_texts">SMS on</string>
     <string name="app_shell_status_paused">Protection paused</string>
-    <plurals name="app_shell_status_numbers">
-        <item quantity="one">%1$,d number</item>
-        <item quantity="other">%1$,d numbers</item>
-    </plurals>
     <string name="app_shell_status_setup_needed">Setup needed</string>
-    <string name="app_shell_mode_home">Dashboard</string>
-    <string name="app_shell_mode_recent">Live review</string>
-    <string name="app_shell_mode_log">History</string>
-    <string name="app_shell_mode_lookup">Manual check</string>
-    <string name="app_shell_mode_blocklist">Rule manager</string>
-    <string name="app_shell_mode_more">System</string>
     <string name="search_placeholder">Search numbers, reasons…</string>
-    <string name="search_hint_min_chars">Type at least 2 characters to search known spam numbers and match reasons.</string>
     <string name="search_idle_title">Search the protection database</string>
     <string name="search_idle_subtitle">Use search to jump directly into known spam entries without leaving the current tab.</string>
     <string name="search_idle_hint_exact_title">Search exact numbers</string>
@@ -1148,7 +1064,6 @@
     <string name="backup_restore_merge">Merge</string>
     <string name="backup_restore_replace">Replace</string>
     <string name="backup_restore_cancel">Cancel</string>
-    <string name="backup_restore_success">Restored %1$d numbers, %2$d trusted numbers, %3$d wildcard rules, %4$d keyword rules, %5$d range rules, %6$d settings sections, %7$d log entries</string>
     <string name="backup_restore_success_merge">Restored by merge: %1$d numbers, %2$d trusted numbers, %3$d wildcard rules, %4$d keyword rules, %5$d range rules, %6$d settings sections, %7$d log entries</string>
     <string name="backup_restore_success_replace">Restored by replace: %1$d numbers, %2$d trusted numbers, %3$d wildcard rules, %4$d keyword rules, %5$d range rules, %6$d settings sections, %7$d log entries</string>
     <string name="backup_restore_error_generic">Couldn\'t read this backup. The file may be corrupt, encrypted with a different passphrase, or from a newer app version.</string>
@@ -1193,11 +1108,6 @@
     <string name="notif_type_sms">SMS</string>
     <string name="notif_action_block_forever">Block forever</string>
     <string name="notif_action_report">Report</string>
-    <string name="notif_summary_text">Blocking spam calls &amp; texts</string>
-    <string name="notif_summary_text_more">Blocking spam calls &amp; texts (+%d)</string>
-    <string name="notif_rating_title">Was this call spam?</string>
-    <string name="notif_action_spam_block">Spam - Block it</string>
-    <string name="notif_action_safe">Safe</string>
     <string name="notif_phishing_title">Phishing URL detected</string>
     <string name="notif_phishing_text">SMS from %1$s contains a %2$s link</string>
     <string name="notif_phishing_big_text">An SMS from %1$s contains a URL flagged by URLhaus as %2$s. Do not tap any links in this message.</string>
@@ -1245,16 +1155,10 @@
     <string name="post_call_contact_unavailable">No contacts app is available</string>
 
     <!-- Accessibility Content Descriptions -->
-    <string name="cd_shield">Shield icon</string>
-    <string name="cd_shield_protection_active">Protection active shield</string>
-    <string name="cd_shield_protection_disabled">Protection disabled</string>
-    <string name="cd_warning">Warning</string>
     <string name="cd_search">Search</string>
     <string name="cd_close">Close</string>
     <string name="cd_close_search">Close search</string>
     <string name="cd_refresh_recent">Refresh recent calls</string>
-    <string name="cd_sync">Sync database</string>
-    <string name="cd_filter">Filter</string>
     <string name="cd_group">Group by number</string>
     <string name="cd_ungroup">Show list view</string>
     <string name="cd_clear_log">Clear log</string>
@@ -1273,40 +1177,13 @@
     <string name="cd_delete_rule">Delete rule</string>
     <string name="cd_remove">Remove from trusted</string>
     <string name="cd_back">Go back</string>
-    <string name="cd_phone_disabled">Phone blocked</string>
-    <string name="cd_sms_blocked">SMS blocked</string>
-    <string name="cd_check_circle">Success</string>
-    <string name="cd_error">Error</string>
     <string name="cd_no_items">No blocked items</string>
     <string name="cd_empty_list">Empty list</string>
-    <string name="cd_blocked_number">Blocked number</string>
-    <string name="cd_wildcard_rule">Wildcard rule</string>
-    <string name="cd_regex_rule">Regex rule</string>
-    <string name="cd_keyword_rule">Keyword rule</string>
-    <string name="cd_whitelisted_number">Trusted number</string>
-    <string name="cd_spam_warning">Spam warning</string>
-    <string name="cd_export">Export blocklist</string>
-    <string name="cd_import">Import blocklist</string>
     <string name="cd_add">Add new entry</string>
     <string name="cd_phone_input">Phone number input</string>
     <string name="cd_spam_detected">Spam detected</string>
     <string name="cd_number_clean">Number is clean</string>
-    <string name="cd_report">Report number</string>
-    <string name="cd_trend_up">Spam trending up</string>
-    <string name="cd_trend_down">Spam trending down</string>
-    <string name="cd_trend_flat">Spam trend unchanged</string>
-    <string name="cd_chevron_right">View details</string>
-    <string name="cd_lightbulb">Smart suggestion</string>
-    <string name="cd_today">Today statistics</string>
-    <string name="cd_this_week">This week statistics</string>
-    <string name="cd_total">Total statistics</string>
-    <string name="cd_last_blocked_call">Last blocked call</string>
-    <string name="cd_last_blocked_sms">Last blocked SMS</string>
-    <string name="cd_swipe_block">Swipe to block</string>
-    <string name="cd_swipe_delete">Swipe to delete</string>
-    <string name="cd_bar_chart">Statistics chart</string>
     <string name="cd_no_recent_calls">No recent calls</string>
-    <string name="cd_spam_indicator">Spam indicator</string>
     <string name="cd_incoming_call">Incoming call</string>
     <string name="cd_outgoing_call">Outgoing call</string>
     <string name="cd_missed_call">Missed call</string>
@@ -1326,46 +1203,9 @@
     <string name="cd_voicemail_call">Voicemail</string>
     <string name="cd_call_type">Call type</string>
     <string name="cd_copy">Copy number</string>
-    <string name="cd_test_passed">Test passed</string>
-    <string name="cd_test_failed">Test failed</string>
-    <string name="cd_test_summary_passed">All tests passed</string>
-    <string name="cd_test_summary_warning">Some tests have issues</string>
-    <string name="cd_play">Run tests</string>
-    <string name="cd_nav_statistics">Statistics</string>
-    <string name="cd_nav_settings">Settings</string>
-    <string name="cd_nav_protection_test">Protection test</string>
-    <string name="cd_nav_whats_new">What\'s new</string>
     <string name="cd_open_external">Open external link</string>
-    <string name="cd_privacy">Privacy: on-device processing</string>
-    <string name="cd_detection_method">Detection method</string>
-    <string name="cd_filter_alt">Filter rule</string>
-    <string name="cd_block_area_code">Block area code</string>
-    <string name="cd_ftc_complaint">File FTC complaint</string>
-    <string name="cd_whitelist">Add to trusted</string>
-    <string name="cd_call_number">Call this number</string>
-    <string name="cd_share">Share number</string>
-    <string name="cd_report_spam">Report as spam</string>
-    <string name="cd_not_spam">Mark as not spam</string>
-    <string name="cd_activity_call">Call activity</string>
-    <string name="cd_activity_sms">SMS activity</string>
     <string name="cd_onboarding_page">Onboarding page %1$d of %2$d</string>
-    <string name="cd_permissions_granted">Permissions granted</string>
-    <string name="cd_screening_enabled">Call screening enabled</string>
-    <string name="cd_nav_home">Home</string>
-    <string name="cd_nav_recent">Recent calls</string>
-    <string name="cd_nav_log">Blocked log</string>
-    <string name="cd_nav_lookup">Number lookup</string>
-    <string name="cd_nav_blocklist">Blocklist</string>
-    <string name="cd_nav_more">More options</string>
-    <string name="cd_search_no_results">No search results</string>
     <string name="cd_search_result_spam">Spam number</string>
-    <string name="cd_file_download">Download file</string>
-    <string name="cd_backup">Backup data</string>
-    <string name="cd_restore">Restore data</string>
-    <string name="cd_notifications">Notifications</string>
-    <string name="cd_overlay">Overlay permission</string>
-    <string name="cd_layers">Caller ID overlay</string>
-    <string name="cd_next_page">Next page</string>
 
     <!-- Protection Test: v1.2.8 additions -->
     <string name="test_campaign_detection">Campaign Detection</string>

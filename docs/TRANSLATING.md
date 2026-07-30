@@ -6,12 +6,12 @@ that covers the screens people actually look at is better than none.
 
 The general translation thread is
 [issue #7](https://github.com/SysAdminDoc/CallShield/issues/7). Comment there to
-claim a language so two people don't translate the same 1,243 strings.
+claim a language so two people don't translate the same 1,103 strings.
 
 ## What to translate
 
-The source of truth is `app/src/main/res/values/strings.xml` (1,243 strings and
-35 `<plurals>`). Create `app/src/main/res/values-<locale>/` and put your
+The source of truth is `app/src/main/res/values/strings.xml` (1,103 strings and
+30 `<plurals>`). Create `app/src/main/res/values-<locale>/` and put your
 translated `<string>` and `<plurals>` elements there. Either layout works —
 everything in one `strings.xml`, or split into `strings.xml` + `plurals.xml`;
 resource filenames carry no meaning to the Android build.
