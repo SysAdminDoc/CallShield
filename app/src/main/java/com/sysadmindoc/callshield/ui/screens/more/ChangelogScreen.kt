@@ -25,9 +25,21 @@ fun ChangelogScreen() {
         verticalArrangement = Arrangement.spacedBy(0.dp),
     ) {
         VersionEntry(
+            "1.7.27",
+            "Cross-boundary audit: report-pipeline integrity, quiet-hours SMS fix, and state that survives rotation",
+            isLatest = true,
+            changes =
+                listOf(
+                    "Stopped international community reports being republished as fabricated US numbers",
+                    "Fixed prefix rows that hard-blocked Auckland, Norwegian, and Eswatini callers",
+                    "Quiet hours no longer cancels legitimate night-time SMS/RCS notifications",
+                    "\"Allow temporarily\" now recovers prefix-blocked callers; added 23 missing area codes",
+                    "Rotation keeps your tab, dialogs, filters, and typed input; overlay warnings stay visible",
+                ),
+        )
+        VersionEntry(
             "1.7.26",
             "Deep-audit drain: crash guards, theming, localization, and post-call security",
-            isLatest = true,
             changes =
                 listOf(
                     "Crash-guarded every external, dial, and settings intent on browserless devices",

@@ -162,11 +162,11 @@ fun BlocklistScreen(viewModel: MainViewModel) {
     val whitelistEntries by viewModel.whitelistEntries.collectAsStateWithLifecycle()
     val keywordRules by viewModel.keywordRules.collectAsStateWithLifecycle()
     val importResult by viewModel.importResult.collectAsStateWithLifecycle()
-    var showAddDialog by remember { mutableStateOf(false) }
-    var showWildcardDialog by remember { mutableStateOf(false) }
-    var showRangeDialog by remember { mutableStateOf(false) }
-    var showWhitelistDialog by remember { mutableStateOf(false) }
-    var showKeywordDialog by remember { mutableStateOf(false) }
+    var showAddDialog by rememberSaveable { mutableStateOf(false) }
+    var showWildcardDialog by rememberSaveable { mutableStateOf(false) }
+    var showRangeDialog by rememberSaveable { mutableStateOf(false) }
+    var showWhitelistDialog by rememberSaveable { mutableStateOf(false) }
+    var showKeywordDialog by rememberSaveable { mutableStateOf(false) }
     var tabIndex by rememberSaveable { mutableStateOf(BLOCKLIST_TAB_BLOCKED) }
     val snackbarHost = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -1039,8 +1039,8 @@ fun AddNumberDialog(
     onDismiss: () -> Unit,
     onAdd: (String, String) -> Unit,
 ) {
-    var number by remember { mutableStateOf("") }
-    var description by remember { mutableStateOf("") }
+    var number by rememberSaveable { mutableStateOf("") }
+    var description by rememberSaveable { mutableStateOf("") }
     val normalizedNumber = remember(number) { normalizePhoneInput(number) }
     val canConfirm = hasMinAsciiDigits(normalizedNumber)
     val conflict =
@@ -1124,9 +1124,9 @@ fun AddWildcardDialog(
     onDismiss: () -> Unit,
     onAdd: (String, Boolean, String, TimeSchedule) -> Unit,
 ) {
-    var pattern by remember { mutableStateOf("") }
-    var description by remember { mutableStateOf("") }
-    var isRegex by remember { mutableStateOf(false) }
+    var pattern by rememberSaveable { mutableStateOf("") }
+    var description by rememberSaveable { mutableStateOf("") }
+    var isRegex by rememberSaveable { mutableStateOf(false) }
     var regexErrorDetail by remember { mutableStateOf<String?>(null) }
     var scheduleState by remember { mutableStateOf(ScheduleUiState()) }
     val trimmedPattern = pattern.trim()
@@ -1233,9 +1233,9 @@ fun AddWhitelistDialog(
     onDismiss: () -> Unit,
     onAdd: (String, String, Boolean) -> Unit,
 ) {
-    var number by remember { mutableStateOf("") }
-    var description by remember { mutableStateOf("") }
-    var emergency by remember { mutableStateOf(false) }
+    var number by rememberSaveable { mutableStateOf("") }
+    var description by rememberSaveable { mutableStateOf("") }
+    var emergency by rememberSaveable { mutableStateOf(false) }
     val normalizedNumber = remember(number) { normalizePhoneInput(number) }
     val canConfirm = hasMinAsciiDigits(normalizedNumber)
     val conflict =
@@ -1359,9 +1359,9 @@ fun AddKeywordDialog(
     onDismiss: () -> Unit,
     onAdd: (String, Boolean, String, TimeSchedule) -> Unit,
 ) {
-    var keyword by remember { mutableStateOf("") }
-    var description by remember { mutableStateOf("") }
-    var caseSensitive by remember { mutableStateOf(false) }
+    var keyword by rememberSaveable { mutableStateOf("") }
+    var description by rememberSaveable { mutableStateOf("") }
+    var caseSensitive by rememberSaveable { mutableStateOf(false) }
     var scheduleState by remember { mutableStateOf(ScheduleUiState()) }
     val trimmedKeyword = keyword.trim()
 
@@ -1560,8 +1560,8 @@ fun AddHashWildcardDialog(
     onDismiss: () -> Unit,
     onAdd: (String, String, TimeSchedule) -> Unit,
 ) {
-    var pattern by remember { mutableStateOf("") }
-    var description by remember { mutableStateOf("") }
+    var pattern by rememberSaveable { mutableStateOf("") }
+    var description by rememberSaveable { mutableStateOf("") }
     // A7 schedule state — kept local to the dialog; committed to the rule
     // only when the user presses "Add range". Default: disabled, so leaving
     // the whole section untouched produces the pre-A7 behaviour.

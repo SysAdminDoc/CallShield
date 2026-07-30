@@ -23,6 +23,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -33,6 +34,7 @@ import com.sysadmindoc.callshield.data.PhoneFormatter
 import com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup
 import com.sysadmindoc.callshield.data.model.BlockedCall
 import com.sysadmindoc.callshield.ui.MainViewModel
+import com.sysadmindoc.callshield.ui.friendlyMatchReasonLabel
 import com.sysadmindoc.callshield.ui.theme.*
 import kotlinx.coroutines.delay
 import java.text.DateFormatSymbols
@@ -695,41 +697,21 @@ private fun previousWeekCount(
     return blockedCalls.count { it.timestamp in previousWeekStart until currentWeekStart }
 }
 
+// friendlyMatchReasonLabel moved to ui/MatchReasonLabels.kt so every screen
+// that shows a block reason shares the same localized labels.
+
 @Composable
-private fun friendlyMatchReasonLabel(reason: String): String =
-    when {
-        reason.contains("database", ignoreCase = true) -> stringResource(R.string.stats_reason_spam_database)
-        reason.contains("hot_list", ignoreCase = true) -> stringResource(R.string.stats_reason_hot_list)
-        reason.contains("hot_campaign", ignoreCase = true) -> stringResource(R.string.stats_reason_live_campaign)
-        reason.contains("heuristic", ignoreCase = true) -> stringResource(R.string.stats_reason_heuristic)
-        reason.contains("sms_content", ignoreCase = true) -> stringResource(R.string.stats_reason_sms_content)
-        reason.contains("spam_domain", ignoreCase = true) -> stringResource(R.string.stats_reason_spam_domain)
-        reason.contains("ml_scorer", ignoreCase = true) -> stringResource(R.string.stats_reason_ml_scorer)
-        reason.contains("rcs_", ignoreCase = true) -> stringResource(R.string.stats_reason_rcs_filter)
-        reason.contains("stir", ignoreCase = true) -> stringResource(R.string.stats_reason_stir_shaken)
-        reason.contains("prefix", ignoreCase = true) -> stringResource(R.string.stats_reason_prefix_match)
-        reason.contains("wildcard", ignoreCase = true) -> stringResource(R.string.stats_reason_wildcard_rule)
-        reason.contains("keyword", ignoreCase = true) -> stringResource(R.string.stats_reason_keyword_rule)
-        reason.contains("frequency", ignoreCase = true) -> stringResource(R.string.stats_reason_repeat_caller)
-        reason.contains("time", ignoreCase = true) -> stringResource(R.string.stats_reason_quiet_hours)
-        reason.contains("user", ignoreCase = true) -> stringResource(R.string.stats_reason_manual_block)
-        reason.isBlank() || reason == "unknown" -> stringResource(R.string.stats_reason_unknown)
-        else -> reason.replace("_", " ").replaceFirstChar { it.uppercase() }
-    }
-
 private fun formatHourRange(hour: Int): String {
-    fun formatSingleHour(value: Int): String {
-        val normalized = value % 24
-        val suffix = if (normalized < 12) "AM" else "PM"
-        val displayHour =
-            when (normalized % 12) {
-                0 -> 12
-                else -> normalized % 12
-            }
-        return "$displayHour $suffix"
-    }
-
-    return "${formatSingleHour(hour)}-${formatSingleHour(hour + 1)}"
+    // Honor the device's 12/24-hour preference and locale — hardcoded
+    // "2 PM-3 PM" is wrong for every 24-hour user. Reuses the Settings
+    // screen's formatter so both surfaces render hours identically.
+    val use24Hour =
+        android.text.format.DateFormat
+            .is24HourFormat(LocalContext.current)
+    val locale = androidx.compose.ui.platform.LocalConfiguration.current.locales[0]
+    return "${com.sysadmindoc.callshield.ui.screens.settings.formatHourLabel(hour % 24, use24Hour, locale)}–" +
+        com.sysadmindoc.callshield.ui.screens.settings
+            .formatHourLabel((hour + 1) % 24, use24Hour, locale)
 }
 
 // ─── Weekly Bar Chart (Canvas) ──────────────────────────────────────

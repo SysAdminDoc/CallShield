@@ -19,6 +19,7 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
@@ -65,12 +66,36 @@ class MainActivity : AppCompatActivity() {
     private var launchRequest by mutableStateOf(LaunchRequest(id = 0))
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // The manifest theme pins a black WINDOW background; Compose's cached-
+        // theme first frame (v1.7.26) doesn't cover the window itself, so
+        // Light/Graphite users still saw black flashes on IME resize and
+        // transitions. Swap the window theme from the synchronous mirror
+        // before any view is created.
+        applyCachedWindowTheme(this)
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        launchRequest = intent.toLaunchRequest(nextId = 1)
+        // The framework re-attaches the ORIGINAL launch intent on every
+        // recreation (rotation, theme change, split-screen) — replacing
+        // `intent` via setIntent cannot prevent the replay, because
+        // ActivityThread re-attaches from its own record. A saved-state flag
+        // is the only reliable "already consumed" signal: when present, the
+        // deep link / shortcut was handled in a previous incarnation and must
+        // not re-run a scan, re-open a closed detail screen, or yank the
+        // user's tab back to the shortcut target.
+        launchRequest =
+            if (savedInstanceState?.getBoolean(KEY_LAUNCH_CONSUMED) == true) {
+                LaunchRequest(id = 0)
+            } else {
+                intent.toLaunchRequest(nextId = 1)
+            }
         consumeLaunchIntent()
 
         setContent { CallShieldRoot(launchRequest = launchRequest) }
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putBoolean(KEY_LAUNCH_CONSUMED, true)
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -82,13 +107,16 @@ class MainActivity : AppCompatActivity() {
 
     /**
      * Strip the consumed launch payload (deep-link number, shortcut action)
-     * after it has been folded into [launchRequest]. Without this, an activity
-     * recreation (rotation, split-screen, theme change) rebuilds the request
-     * from the original intent and replays it — re-running a scan, re-opening a
-     * closed detail deep link, or snapping back to the shortcut's tab.
+     * after it has been folded into [launchRequest]. Defense-in-depth next to
+     * the [KEY_LAUNCH_CONSUMED] saved-state flag (which is what actually
+     * survives recreation — see onCreate).
      */
     private fun consumeLaunchIntent() {
         intent = Intent(this, MainActivity::class.java)
+    }
+
+    private companion object {
+        const val KEY_LAUNCH_CONSUMED = "callshield_launch_consumed"
     }
 
     override fun onResume() {
@@ -352,18 +380,28 @@ fun CallShieldApp(
                     SearchIdleView()
                 }
             } else {
+                // Each tab's composition state (scroll positions, filter
+                // toggles, typed lookup input, rememberSaveable values) lives
+                // in the SaveableStateHolder keyed by tab index. Without it,
+                // AnimatedContent discards a tab's whole saveable registry
+                // the moment it animates out — so switching Home → Recent →
+                // Home reset scroll, replayed entrance animations, and wiped
+                // filters/typed input on every revisit.
+                val tabStateHolder = rememberSaveableStateHolder()
                 AnimatedContent(targetState = selectedTab, transitionSpec = {
                     val direction = if (targetState > initialState) 1 else -1
                     (slideInHorizontally { direction * it / 6 } + fadeIn(tween(200)))
                         .togetherWith(slideOutHorizontally { -direction * it / 6 } + fadeOut(tween(150)))
                 }, label = "tabs") { tab ->
-                    when (tab) {
-                        0 -> DashboardScreen(viewModel)
-                        1 -> RecentCallsScreen(viewModel)
-                        2 -> BlockedLogScreen(viewModel)
-                        3 -> LookupScreen(viewModel)
-                        4 -> BlocklistScreen(viewModel)
-                        5 -> MoreScreen(viewModel, currentView = moreView, onViewChange = { moreView = it })
+                    tabStateHolder.SaveableStateProvider(tab) {
+                        when (tab) {
+                            0 -> DashboardScreen(viewModel)
+                            1 -> RecentCallsScreen(viewModel)
+                            2 -> BlockedLogScreen(viewModel)
+                            3 -> LookupScreen(viewModel)
+                            4 -> BlocklistScreen(viewModel)
+                            5 -> MoreScreen(viewModel, currentView = moreView, onViewChange = { moreView = it })
+                        }
                     }
                 }
             }
@@ -777,6 +815,44 @@ fun RowScope.NavItem(
     )
 }
 
+/**
+ * Swap the window theme to match the user's cached app theme so the window
+ * behind Compose (visible during IME resize, transitions, overscroll) isn't
+ * hard-black for Light/Graphite users. Must run before super.onCreate.
+ */
+internal fun applyCachedWindowTheme(activity: android.app.Activity) {
+    val mode =
+        com.sysadmindoc.callshield.ui.theme.AppThemeMode
+            .fromStorage(
+                com.sysadmindoc.callshield.data.SpamRepository
+                    .cachedAppTheme(activity),
+            )
+    val systemDark =
+        (
+            activity.resources.configuration.uiMode and
+                android.content.res.Configuration.UI_MODE_NIGHT_MASK
+        ) == android.content.res.Configuration.UI_MODE_NIGHT_YES
+    when (mode) {
+        com.sysadmindoc.callshield.ui.theme.AppThemeMode.Light -> {
+            activity.setTheme(R.style.Theme_CallShield_Light)
+        }
+
+        com.sysadmindoc.callshield.ui.theme.AppThemeMode.Graphite -> {
+            activity.setTheme(R.style.Theme_CallShield_Graphite)
+        }
+
+        com.sysadmindoc.callshield.ui.theme.AppThemeMode.System -> {
+            activity.setTheme(
+                if (systemDark) R.style.Theme_CallShield_Graphite else R.style.Theme_CallShield_Light,
+            )
+        }
+
+        com.sysadmindoc.callshield.ui.theme.AppThemeMode.Amoled -> {
+            Unit
+        } // manifest default is already AMOLED black
+    }
+}
+
 internal fun Intent?.toLaunchRequest(nextId: Int): LaunchRequest {
     if (this == null) {
         return LaunchRequest(id = nextId)
@@ -795,6 +871,18 @@ internal fun Intent?.toLaunchRequest(nextId: Int): LaunchRequest {
     return LaunchRequest(
         id = nextId,
         deepLinkNumber = deepLinkNumber,
-        shortcutAction = action,
+        // Only CallShield's own shortcut actions are launch requests. Carrying
+        // the raw action meant a plain launcher start (ACTION_MAIN) produced a
+        // non-null shortcutAction — so every recreation force-reset the
+        // selected tab to the "shortcut target" (Home), defeating the tab's
+        // rememberSaveable.
+        shortcutAction = action?.takeIf { it in KNOWN_SHORTCUT_ACTIONS },
     )
 }
+
+private val KNOWN_SHORTCUT_ACTIONS =
+    setOf(
+        "com.sysadmindoc.callshield.LOOKUP",
+        "com.sysadmindoc.callshield.SCAN",
+        "com.sysadmindoc.callshield.SCAN_SMS",
+    )

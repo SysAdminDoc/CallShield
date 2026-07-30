@@ -70,6 +70,7 @@ class PostCallActivity : AppCompatActivity() {
     private lateinit var details: PostCallDetails
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        applyCachedWindowTheme(this)
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
@@ -265,13 +266,15 @@ private fun PostCallScreen(
     onDismiss: () -> Unit,
 ) {
     Scaffold(containerColor = Black) { padding ->
+        // Scaffold's content padding already carries the system-bar insets —
+        // adding statusBarsPadding/navigationBarsPadding on top doubled them,
+        // sinking the content a status-bar height too low and floating the
+        // bottom button above the nav bar.
         Column(
             modifier =
                 Modifier
                     .fillMaxSize()
                     .padding(padding)
-                    .statusBarsPadding()
-                    .navigationBarsPadding()
                     .padding(horizontal = 16.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {

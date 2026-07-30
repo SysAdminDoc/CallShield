@@ -50,4 +50,21 @@ class MainActivityIntentTest {
 
         assertNull(request.deepLinkNumber)
     }
+
+    @Test
+    fun `plain launcher start carries no shortcut action`() {
+        // ACTION_MAIN must not become a "shortcut request": a non-null
+        // shortcutAction makes tabRequestId non-null, and every activity
+        // recreation would then force the selected tab back to Home.
+        val request = Intent(Intent.ACTION_MAIN).toLaunchRequest(nextId = 1)
+
+        assertNull(request.shortcutAction)
+    }
+
+    @Test
+    fun `known shortcut actions are preserved`() {
+        val request = Intent("com.sysadmindoc.callshield.LOOKUP").toLaunchRequest(nextId = 1)
+
+        assertEquals("com.sysadmindoc.callshield.LOOKUP", request.shortcutAction)
+    }
 }
