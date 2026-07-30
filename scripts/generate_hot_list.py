@@ -18,6 +18,7 @@ from pathlib import Path
 from phone_normalization import validated_report_number
 
 from pipeline_io import atomic_write_json
+from report_dedup import BURST_DUPLICATE_SECONDS, find_burst_duplicates, parse_reported_at
 
 DATA_DIR = Path(os.environ.get("CALLSHIELD_DATA_DIR", Path(__file__).parent.parent / "data"))
 REPORTS_DIR = Path(os.environ.get("CALLSHIELD_REPORTS_DIR", DATA_DIR / "reports"))
@@ -29,6 +30,7 @@ HOT_LIST_SIZE = 500         # Max numbers to include
 HOT_WINDOW_HOURS = 24       # Look back this many hours
 MIN_REPORTS_HOT = 2         # Minimum community reports to appear in hot list
 CAMPAIGN_THRESHOLD = 3      # Distinct numbers from same NPA-NXX to flag the range
+
 
 
 def current_time_utc() -> datetime:
@@ -62,7 +64,10 @@ def main():
     cutoff = now - timedelta(hours=HOT_WINDOW_HOURS)
 
     # ── Tally reports from pending report files ────────────────────────
-    velocity: dict[str, dict] = {}
+    # Collected first, then collapsed, because near-simultaneous duplicates have
+    # to be recognised against the other reports for the same number rather than
+    # in file-glob order.
+    pending: list[tuple[str, datetime | None, str, str, str]] = []
 
     if REPORTS_DIR.exists():
         for report_file in REPORTS_DIR.glob("*.json"):
@@ -76,32 +81,49 @@ def main():
                     continue
 
                 reported_at_str = report.get("reported_at", "")
-                try:
-                    reported_at = datetime.fromisoformat(
-                        reported_at_str.replace("Z", "+00:00")
-                    )
-                    if reported_at < cutoff:
-                        continue  # Too old for hot list
-                except (ValueError, AttributeError):
-                    pass  # Include if timestamp is unparseable
+                reported_at = parse_reported_at(reported_at_str)
+                if reported_at is not None and reported_at < cutoff:
+                    continue  # Too old for hot list
 
-                if number in velocity:
-                    velocity[number]["reports"] += 1
-                    velocity[number]["last_seen"] = reported_at_str
-                else:
-                    velocity[number] = {
-                        "number": number,
-                        "type": spam_type,
-                        # `reports` is the count WITHIN the window — that is what
-                        # "hot" means. Lifetime totals live in total_reports.
-                        "reports": 1,
-                        "total_reports": 0,
-                        "first_seen": reported_at_str,
-                        "last_seen": reported_at_str,
-                        "description": "Trending community report",
-                    }
+                pending.append((number, reported_at, reported_at_str, spam_type, report_file.name))
             except Exception as e:
                 print(f"  Skipping {report_file.name}: {e}")
+
+    # Repeat submissions for the same number seconds apart are one reporter, not
+    # velocity — see report_dedup for why the Worker cannot be relied on here.
+    burst_duplicates = find_burst_duplicates(
+        (number, reported_at, token) for number, reported_at, _, _, token in pending
+    )
+
+    velocity: dict[str, dict] = {}
+    for number, _reported_at, reported_at_str, spam_type, token in sorted(pending, key=lambda e: e[4]):
+        if token in burst_duplicates:
+            continue
+        entry = velocity.get(number)
+        if entry is None:
+            velocity[number] = {
+                "number": number,
+                "type": spam_type,
+                # `reports` is the count WITHIN the window — that is what
+                # "hot" means. Lifetime totals live in total_reports.
+                "reports": 1,
+                "total_reports": 0,
+                "first_seen": reported_at_str,
+                "last_seen": reported_at_str,
+                "description": "Trending community report",
+            }
+        else:
+            entry["reports"] += 1
+            if reported_at_str > entry["last_seen"]:
+                entry["last_seen"] = reported_at_str
+            if reported_at_str and reported_at_str < entry["first_seen"]:
+                entry["first_seen"] = reported_at_str
+
+    if burst_duplicates:
+        print(
+            f"  Collapsed {len(burst_duplicates)} burst-duplicate report(s) filed within "
+            f"{BURST_DUPLICATE_SECONDS}s of a counted report for the same number"
+        )
 
     # ── Also include high-velocity numbers from main DB with recent last_seen ──
     if DB_FILE.exists():

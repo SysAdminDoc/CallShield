@@ -11,6 +11,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 SCRIPTS_DIR = ROOT / "scripts"
 NOW = "2026-06-12T12:00:00+00:00"
+# Second independent report, well outside the burst-duplicate window.
+LATER = "2026-06-12T12:30:00+00:00"
+# Repeat submission 10 seconds after NOW — the shape the stale Worker deploy let
+# through on 2026-07-30 (+12385233476 twice, 10s apart, straight onto the hot list).
+BURST_DUPLICATE_OF_NOW = "2026-06-12T12:00:10+00:00"
 
 
 def run_script(name: str, data_dir: Path) -> None:
@@ -51,19 +56,27 @@ def seed_reports(data_dir: Path) -> None:
 
     # Plausible NANP numbers (area 212, exchange 234) — the report pipeline
     # now rejects fictional 555-exchange / area-code-555 numbers as junk.
+    #
+    # Timestamps matter: the hot list collapses reports for the same number
+    # filed within BURST_DUPLICATE_SECONDS of each other, because a stale Worker
+    # deployment lets one reporter submit repeatedly. Each pair here is spaced
+    # well beyond that window so it still reads as genuine velocity.
     reports = [
-        ("r1.json", "+12122340101", ["Bad.Example"]),
-        ("r2.json", "+12122340101", []),
-        ("r3.json", "+12122340102", ["bad.example."]),
-        ("r4.json", "+12122340102", []),
-        ("r5.json", "+12122340103", ["www.bad.example/c"]),
-        ("r6.json", "+12122340103", []),
+        ("r1.json", "+12122340101", ["Bad.Example"], NOW),
+        ("r2.json", "+12122340101", [], LATER),
+        ("r3.json", "+12122340102", ["bad.example."], NOW),
+        ("r4.json", "+12122340102", [], LATER),
+        ("r5.json", "+12122340103", ["www.bad.example/c"], NOW),
+        ("r6.json", "+12122340103", [], LATER),
+        # Burst duplicate: same number, 10 seconds after r1. Must NOT add
+        # velocity, so +12122340101 stays at 2 rather than climbing to 3.
+        ("r7.json", "+12122340101", [], BURST_DUPLICATE_OF_NOW),
     ]
-    for filename, number, domains in reports:
+    for filename, number, domains, reported_at in reports:
         report = {
             "number": number,
             "type": "phishing",
-            "reported_at": NOW,
+            "reported_at": reported_at,
         }
         if domains:
             report["sms_domains"] = domains

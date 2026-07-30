@@ -1,6 +1,6 @@
 {
-  "version": 31,
-  "updated": "2026-07-29",
+  "version": 32,
+  "updated": "2026-07-30",
   "description": "CallShield community spam number database",
   "sources": [
     "ftc_complaints",
@@ -260306,6 +260306,14 @@
       "description": "Community reported"
     },
     {
+      "number": "+12385233476",
+      "type": "spam",
+      "reports": 1,
+      "first_seen": "2026-07-30",
+      "last_seen": "2026-07-30",
+      "description": "Community reported"
+    },
+    {
       "number": "+908502700595",
       "type": "spam",
       "reports": 1,
@@ -260943,6 +260951,38 @@
       "reports": 1,
       "first_seen": "2026-07-29",
       "last_seen": "2026-07-29",
+      "description": "Community reported"
+    },
+    {
+      "number": "+12385208082",
+      "type": "spam",
+      "reports": 1,
+      "first_seen": "2026-07-29",
+      "last_seen": "2026-07-29",
+      "description": "Community reported"
+    },
+    {
+      "number": "+34656287392",
+      "type": "spam",
+      "reports": 1,
+      "first_seen": "2026-07-30",
+      "last_seen": "2026-07-30",
+      "description": "Community reported"
+    },
+    {
+      "number": "+3903321845428",
+      "type": "spam",
+      "reports": 1,
+      "first_seen": "2026-07-29",
+      "last_seen": "2026-07-29",
+      "description": "Community reported"
+    },
+    {
+      "number": "+3904611718105",
+      "type": "spam",
+      "reports": 1,
+      "first_seen": "2026-07-30",
+      "last_seen": "2026-07-30",
       "description": "Community reported"
     }
   ],
