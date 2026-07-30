@@ -25,9 +25,23 @@ fun ChangelogScreen() {
         verticalArrangement = Arrangement.spacedBy(0.dp),
     ) {
         VersionEntry(
+            "1.7.28",
+            "Roadmap drain: model and data-feed integrity, recoverable deletions, and screen-reader support",
+            isLatest = true,
+            changes =
+                listOf(
+                    "Spam scores no longer change with the time of day (the shipped model was clock-sensitive)",
+                    "A failed hot-list refresh keeps your current protection instead of reverting to the bundled snapshot",
+                    "Undo actually restores a swiped-away log entry or blocked number",
+                    "Opening a number's details no longer resets the app back to Home",
+                    "Lookup results stay attached to the number you checked, so you can't block the wrong one",
+                    "Deleting a rule or trusted number can be undone; add-rule schedules survive rotation",
+                    "Recent calls announce their direction, and secondary text meets AA contrast in every theme",
+                ),
+        )
+        VersionEntry(
             "1.7.27",
             "Cross-boundary audit: report-pipeline integrity, quiet-hours SMS fix, and state that survives rotation",
-            isLatest = true,
             changes =
                 listOf(
                     "Stopped international community reports being republished as fabricated US numbers",

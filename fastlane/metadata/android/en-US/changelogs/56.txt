@@ -1,0 +1,8 @@
+Roadmap drain:
+• Spam scores no longer vary by time of day (the model was clock-sensitive)
+• A failed hot-list refresh keeps current protection instead of reverting
+• Undo now really restores a swiped log entry or blocked number
+• Opening number details no longer resets the app to Home
+• Lookup results stay bound to the number you checked
+• Rule deletion is undoable; add-rule schedules survive rotation
+• Recent calls announce direction; secondary text meets AA contrast
