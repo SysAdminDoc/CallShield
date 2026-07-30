@@ -28,12 +28,15 @@ from pathlib import Path
 from collections import Counter
 from phone_normalization import normalize_nanp_number
 
+from pipeline_io import atomic_write_json
+
 try:
     import requests
-except ImportError:
-    import subprocess
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "requests"])
-    import requests
+except ImportError as exc:  # pragma: no cover - environment guard
+    raise SystemExit(
+        "requests is required. Install the pipeline dependencies: "
+        "pip install -r scripts/requirements.txt"
+    ) from exc
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 DB_FILE = DATA_DIR / "spam_numbers.json"
@@ -301,6 +304,7 @@ def merge_into_database(all_numbers: list[dict], min_reports: int = 1):
     # whole merged dict deleted every community-reported row (they are written
     # at reports=1 by merge_community_reports.py) on the documented no-flag
     # regen, because --min-reports defaults to 2.
+    filtered = 0
     if min_reports > 1:
         before = len(existing)
         existing = {
@@ -312,13 +316,17 @@ def merge_into_database(all_numbers: list[dict], min_reports: int = 1):
         print(f"  Filtered {filtered:,} new entries below min_reports={min_reports}")
 
     db["numbers"] = list(existing.values())
+    # Bump the published version only on a real change: the app re-downloads
+    # the whole database whenever it moves.
+    if added == 0 and updated == 0 and filtered == 0:
+        print("No changes — database version left at", db.get("version", 0))
+        return
     db["version"] = db.get("version", 0) + 1
     db["updated"] = datetime.now().strftime("%Y-%m-%d")
     db["sources"] = ["ftc_complaints", "fcc_complaints", "phoneblock", "toastedspam", "community_reports"]
     db["numbers"].sort(key=lambda x: x.get("reports", 0), reverse=True)
 
-    with open(DB_FILE, "w") as f:
-        json.dump(db, f, indent=2)
+    atomic_write_json(DB_FILE, db)
 
     print(f"\n{'='*50}")
     print(f"Database updated:")

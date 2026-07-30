@@ -17,6 +17,8 @@ from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from phone_normalization import validated_report_number
 
+from pipeline_io import atomic_write_json
+
 DATA_DIR = Path(os.environ.get("CALLSHIELD_DATA_DIR", Path(__file__).parent.parent / "data"))
 REPORTS_DIR = Path(os.environ.get("CALLSHIELD_REPORTS_DIR", DATA_DIR / "reports"))
 DB_FILE = DATA_DIR / "spam_numbers.json"
@@ -90,7 +92,10 @@ def main():
                     velocity[number] = {
                         "number": number,
                         "type": spam_type,
+                        # `reports` is the count WITHIN the window — that is what
+                        # "hot" means. Lifetime totals live in total_reports.
                         "reports": 1,
+                        "total_reports": 0,
                         "first_seen": reported_at_str,
                         "last_seen": reported_at_str,
                         "description": "Trending community report",
@@ -123,14 +128,20 @@ def main():
                 num = validated_report_number(entry.get("number", ""))
                 if not num:
                     continue
+                # Record the lifetime total separately. Adding it to `reports`
+                # made an old high-count row that happened to be touched
+                # yesterday outrank a genuine burst, and could crowd real
+                # trending numbers out of the top-N entirely.
                 if num in velocity:
-                    # Already in community reports — merge
-                    velocity[num]["reports"] += entry["reports"]
+                    velocity[num]["total_reports"] = entry.get("reports", 0)
                 else:
                     velocity[num] = {
                         "number": num,
                         "type": entry.get("type", "robocall"),
-                        "reports": entry.get("reports", 1),
+                        # Seen inside the window, but we cannot know how many of
+                        # its lifetime reports landed there — credit it one.
+                        "reports": 1,
+                        "total_reports": entry.get("reports", 0),
                         "first_seen": entry.get("first_seen", last_seen),
                         "last_seen": last_seen,
                         "description": entry.get("description", "Community reported"),
@@ -138,7 +149,8 @@ def main():
 
     # ── Filter and rank ───────────────────────────────────────────────
     hot = [v for v in velocity.values() if v.get("reports", 0) >= MIN_REPORTS_HOT]
-    hot.sort(key=lambda x: x.get("reports", 0), reverse=True)
+    # Rank by in-window velocity first; lifetime total only breaks ties.
+    hot.sort(key=lambda x: (x.get("reports", 0), x.get("total_reports", 0)), reverse=True)
     hot = hot[:HOT_LIST_SIZE]
 
     # ── Write hot_numbers.json ────────────────────────────────────────
@@ -149,8 +161,7 @@ def main():
         "numbers": hot,
     }
 
-    with open(HOT_LIST_FILE, "w") as f:
-        json.dump(output, f, indent=2)
+    atomic_write_json(HOT_LIST_FILE, output)
 
     print(f"Hot list: {len(hot)} numbers in last {HOT_WINDOW_HOURS}h")
     print(f"Written to: {HOT_LIST_FILE}")
@@ -184,13 +195,15 @@ def main():
         if count >= CAMPAIGN_THRESHOLD
     ]
 
-    with open(HOT_RANGES_FILE, "w") as f:
-        json.dump({
+    atomic_write_json(
+        HOT_RANGES_FILE,
+        {
             "generated": now.isoformat(),
             "threshold": CAMPAIGN_THRESHOLD,
             "count": len(hot_ranges),
             "ranges": hot_ranges,
-        }, f, indent=2)
+        },
+    )
 
     print(f"\nHot campaign ranges: {len(hot_ranges)} NPA-NXX prefixes with {CAMPAIGN_THRESHOLD}+ distinct numbers")
 
