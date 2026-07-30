@@ -30,111 +30,116 @@ class CallShieldWidget : AppWidgetProvider() {
         appWidgetManager: AppWidgetManager,
         appWidgetIds: IntArray,
     ) {
-        for (id in appWidgetIds) {
-            updateWidget(context, appWidgetManager, id)
+        // Hold the broadcast open for the duration of the async data load.
+        // Without this the process drops to cached priority as soon as
+        // onUpdate returns and can be killed mid-query, leaving the widget on
+        // layout placeholders until the next 30-minute cycle.
+        val pendingResult = goAsync()
+        val appContext = context.applicationContext
+        CallShieldApp.appScope.launch {
+            try {
+                val manager = AppWidgetManager.getInstance(appContext)
+                for (id in appWidgetIds) {
+                    updateWidget(appContext, manager, id)
+                }
+            } finally {
+                pendingResult.finish()
+            }
         }
     }
 
-    private fun updateWidget(
-        context: Context,
+    private suspend fun updateWidget(
+        appContext: Context,
         manager: AppWidgetManager,
         widgetId: Int,
     ) {
-        val views = RemoteViews(context.packageName, R.layout.widget_callshield)
+        val views = RemoteViews(appContext.packageName, R.layout.widget_callshield)
 
         // Entire widget opens the app
         val intent =
             PendingIntent.getActivity(
-                context,
+                appContext,
                 0,
-                Intent(context, MainActivity::class.java),
+                Intent(appContext, MainActivity::class.java),
                 PendingIntent.FLAG_IMMUTABLE,
             )
         views.setOnClickPendingIntent(R.id.widget_root, intent)
 
-        // Set click listeners immediately, data updates async
-        manager.updateAppWidget(widgetId, views)
+        try {
+            val dao = AppDatabase.getInstance(appContext).spamDao()
+            val repo = SpamRepository.getInstance(appContext)
 
-        // Use the process-wide appScope instead of minting a fresh
-        // CoroutineScope per update — the previous pattern leaked a Job
-        // every time the widget refreshed. Capture a stable app-context
-        // reference so we don't hold onto the incoming broadcast context.
-        val appContext = context.applicationContext
-        CallShieldApp.appScope.launch {
-            try {
-                val dao = AppDatabase.getInstance(appContext).spamDao()
-                val repo = SpamRepository.getInstance(appContext)
-
-                // Calculate start-of-today and start-of-yesterday. Yesterday
-                // is derived via Calendar so DST-transition days (23/25 h)
-                // don't skew the trend comparison window.
-                val now = System.currentTimeMillis()
-                val todayCalendar =
-                    Calendar
-                        .getInstance()
-                        .apply {
-                            set(Calendar.HOUR_OF_DAY, 0)
-                            set(Calendar.MINUTE, 0)
-                            set(Calendar.SECOND, 0)
-                            set(Calendar.MILLISECOND, 0)
-                        }
-                val todayStart = todayCalendar.timeInMillis
-                val yesterdayStart = todayCalendar.apply { add(Calendar.DAY_OF_YEAR, -1) }.timeInMillis
-
-                val todayCount = dao.getBlockedCountBetweenSync(todayStart, now)
-                val yesterdayCount = dao.getBlockedCountBetweenSync(yesterdayStart, todayStart)
-                val totalCount = dao.getBlockedCountSinceSync(0)
-                val numberFormatter = NumberFormat.getIntegerInstance()
-                val localizedTodayCount = numberFormatter.format(todayCount)
-                val localizedTotalCount = numberFormatter.format(totalCount)
-
-                // Trend arrow: compare today vs yesterday
-                val trendText =
-                    when {
-                        todayCount > yesterdayCount -> appContext.getString(R.string.widget_today_trend_up, localizedTodayCount)
-                        todayCount < yesterdayCount -> appContext.getString(R.string.widget_today_trend_down, localizedTodayCount)
-                        else -> appContext.getString(R.string.widget_today_trend_same, localizedTodayCount)
+            // Calculate start-of-today and start-of-yesterday. Yesterday
+            // is derived via Calendar so DST-transition days (23/25 h)
+            // don't skew the trend comparison window.
+            val now = System.currentTimeMillis()
+            val todayCalendar =
+                Calendar
+                    .getInstance()
+                    .apply {
+                        set(Calendar.HOUR_OF_DAY, 0)
+                        set(Calendar.MINUTE, 0)
+                        set(Calendar.SECOND, 0)
+                        set(Calendar.MILLISECOND, 0)
                     }
+            val todayStart = todayCalendar.timeInMillis
+            val yesterdayStart = todayCalendar.apply { add(Calendar.DAY_OF_YEAR, -1) }.timeInMillis
 
-                // Last blocked time
-                val lastTimestamp = dao.getLastBlockedTimestamp()
-                val lastBlockedText = formatLastBlocked(appContext, lastTimestamp, now)
+            val todayCount = dao.getBlockedCountBetweenSync(todayStart, now)
+            val yesterdayCount = dao.getBlockedCountBetweenSync(yesterdayStart, todayStart)
+            val totalCount = dao.getBlockedCountSinceSync(0)
+            val numberFormatter = NumberFormat.getIntegerInstance()
+            val localizedTodayCount = numberFormatter.format(todayCount)
+            val localizedTotalCount = numberFormatter.format(totalCount)
 
-                // Protection status
-                val callsEnabled = repo.blockCallsEnabled.first()
-                val smsEnabled = repo.blockSmsEnabled.first()
-                val isActive = callsEnabled || smsEnabled
+            // Trend arrow: compare today vs yesterday
+            val trendText =
+                when {
+                    todayCount > yesterdayCount -> appContext.getString(R.string.widget_today_trend_up, localizedTodayCount)
+                    todayCount < yesterdayCount -> appContext.getString(R.string.widget_today_trend_down, localizedTodayCount)
+                    else -> appContext.getString(R.string.widget_today_trend_same, localizedTodayCount)
+                }
 
-                views.setTextViewText(R.id.widget_blocked_today, localizedTodayCount)
-                views.setTextViewText(R.id.widget_trend, trendText)
-                views.setTextViewText(
-                    R.id.widget_total,
-                    appContext.getString(R.string.widget_total_blocked, localizedTotalCount),
-                )
-                views.setTextViewText(R.id.widget_last_blocked, lastBlockedText)
+            // Last blocked time
+            val lastTimestamp = dao.getLastBlockedTimestamp()
+            val lastBlockedText = formatLastBlocked(appContext, lastTimestamp, now)
 
-                // Update status text and title color based on protection state.
-                // Resolve the accent via getColor so it picks the light/dark variant
-                // (values / values-night) that matches the launcher configuration.
-                val accent =
-                    if (isActive) {
-                        appContext.getColor(R.color.widget_status_active)
-                    } else {
-                        appContext.getColor(R.color.widget_status_off)
-                    }
-                views.setTextViewText(
-                    R.id.widget_status,
-                    appContext.getString(
-                        if (isActive) R.string.widget_protection_active else R.string.widget_protection_off,
-                    ),
-                )
-                views.setTextColor(R.id.widget_title, accent)
-                views.setTextColor(R.id.widget_status, accent)
+            // Protection status
+            val callsEnabled = repo.blockCallsEnabled.first()
+            val smsEnabled = repo.blockSmsEnabled.first()
+            val isActive = callsEnabled || smsEnabled
 
-                manager.updateAppWidget(widgetId, views)
-            } catch (_: Exception) {
-                // Widget will show stale data — acceptable
-            }
+            views.setTextViewText(R.id.widget_blocked_today, localizedTodayCount)
+            views.setTextViewText(R.id.widget_trend, trendText)
+            views.setTextViewText(
+                R.id.widget_total,
+                appContext.getString(R.string.widget_total_blocked, localizedTotalCount),
+            )
+            views.setTextViewText(R.id.widget_last_blocked, lastBlockedText)
+
+            // Update status text and title color based on protection state.
+            // Resolve the accent via getColor so it picks the light/dark variant
+            // (values / values-night) that matches the launcher configuration.
+            val accent =
+                if (isActive) {
+                    appContext.getColor(R.color.widget_status_active)
+                } else {
+                    appContext.getColor(R.color.widget_status_off)
+                }
+            views.setTextViewText(
+                R.id.widget_status,
+                appContext.getString(
+                    if (isActive) R.string.widget_protection_active else R.string.widget_protection_off,
+                ),
+            )
+            views.setTextColor(R.id.widget_title, accent)
+            views.setTextColor(R.id.widget_status, accent)
+
+            manager.updateAppWidget(widgetId, views)
+        } catch (_: Exception) {
+            // Leave whatever the widget is currently showing. Pushing the
+            // freshly-inflated RemoteViews here would replace real counts with
+            // the layout's "0 blocked / never" placeholders.
         }
     }
 
