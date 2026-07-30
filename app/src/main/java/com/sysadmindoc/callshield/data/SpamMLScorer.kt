@@ -285,13 +285,24 @@ class SpamMLScorer
         suspend fun syncWeights(context: Context) =
             withContext(Dispatchers.IO) {
                 try {
+                    val remote = GitHubDataSource().fetchModelWeightsJson().getOrNull()
+                    // The bundled asset may only bootstrap a device with no model
+                    // yet. Using it as a fetch-failure fallback overwrote a newer
+                    // synced model — in memory and on disk — every time a sync ran
+                    // while GitHub was unreachable, silently regressing detection
+                    // quality until the next successful fetch.
                     val body =
-                        GitHubDataSource()
-                            .fetchModelWeightsJson()
-                            .getOrNull()
-                            ?: GitHubDataSource
+                        remote ?: run {
+                            val hasModel =
+                                File(context.filesDir, "spam_model_weights.json").exists() ||
+                                    _modelHealth != ModelHealth.DEFAULTS
+                            if (hasModel) {
+                                return@withContext
+                            }
+                            GitHubDataSource
                                 .readBundledAsset(context, GitHubDataSource.BUNDLED_MODEL_WEIGHTS_ASSET)
                                 .getOrNull()
+                        }
 
                     val json = body ?: return@withContext
 

@@ -44,6 +44,30 @@ class HotDataSyncTest {
     }
 
     @Test
+    fun bundledFallback_onlyBootstrapsAnEmptyStore() {
+        // A successful fetch never needs the bundled snapshot.
+        assertEquals(
+            false,
+            HotDataSync.shouldUseBundledFallback(remoteSucceeded = true, hasExistingData = false),
+        )
+        assertEquals(
+            false,
+            HotDataSync.shouldUseBundledFallback(remoteSucceeded = true, hasExistingData = true),
+        )
+        // Transient fetch failure with data on device: keep what we have.
+        // Resolving the bundled snapshot here would delete the fresher rows.
+        assertEquals(
+            false,
+            HotDataSync.shouldUseBundledFallback(remoteSucceeded = false, hasExistingData = true),
+        )
+        // Fetch failure on a device with nothing yet: bootstrap is correct.
+        assertEquals(
+            true,
+            HotDataSync.shouldUseBundledFallback(remoteSucceeded = false, hasExistingData = false),
+        )
+    }
+
+    @Test
     fun sanitizeSpamDomains_normalizesSchemesAndDuplicates() {
         val sanitized =
             HotDataSync.sanitizeSpamDomains(

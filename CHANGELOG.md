@@ -21,6 +21,14 @@ All notable changes to CallShield will be documented in this file.
 - Undo after swiping a log entry or blocked number away now actually restores
   it. The row came back and was immediately deleted again, so the entry could
   never be recovered.
+- A failed hot-list refresh no longer throws away fresher protection. When a
+  fetch failed (GitHub outage, captive portal, rate limit), the app replaced
+  the up-to-date trending numbers, campaign ranges, and spam domains with the
+  weeks-old snapshot built into the APK — and reported the sync as successful,
+  so it never retried. The bundled snapshot is now only used to bootstrap a
+  device that has no data yet, and a failed refresh retries with backoff.
+- The same downgrade applied to the spam-detection model: a failed sync
+  overwrote a newer downloaded model with the one bundled at build time.
 
 - The documented database regeneration command silently deleted every
   single-report community row (80 of them). `--min-reports` defaults to 2 and
