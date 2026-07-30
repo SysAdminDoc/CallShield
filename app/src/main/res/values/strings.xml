@@ -1305,6 +1305,8 @@
     <string name="cd_outgoing_call">Outgoing call</string>
     <string name="cd_missed_call">Missed call</string>
     <string name="cd_rejected_call">Rejected call</string>
+    <string name="cd_blocked_call">Blocked call</string>
+    <string name="cd_voicemail_call">Voicemail</string>
     <string name="cd_call_type">Call type</string>
     <string name="cd_copy">Copy number</string>
     <string name="cd_test_passed">Test passed</string>

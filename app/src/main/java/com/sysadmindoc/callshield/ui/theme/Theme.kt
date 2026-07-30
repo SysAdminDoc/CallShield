@@ -34,6 +34,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -453,7 +455,10 @@ fun SectionHeader(
 ) {
     Text(
         title,
-        modifier = Modifier.padding(vertical = 1.dp),
+        // Mark as a heading so TalkBack's heading navigation can jump between
+        // sections — every screen routes its section titles through here, so
+        // this single semantic makes the whole app navigable by headings.
+        modifier = Modifier.padding(vertical = 1.dp).semantics { heading() },
         style = MaterialTheme.typography.labelLarge,
         color = if (color == CatOverlay) CatSubtext else color,
         fontWeight = FontWeight.SemiBold,

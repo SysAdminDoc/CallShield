@@ -420,6 +420,21 @@ fun RecentCallItem(
             CallLog.Calls.VOICEMAIL_TYPE -> Icons.Default.Voicemail
             else -> Icons.Default.Phone
         }
+    // The direction icon and its tint are the only carriers of incoming vs
+    // outgoing vs missed in this row — nothing textual repeats it — so it needs
+    // a real description rather than being treated as decorative.
+    val typeDescription =
+        stringResource(
+            when (call.type) {
+                CallLog.Calls.INCOMING_TYPE -> R.string.cd_incoming_call
+                CallLog.Calls.OUTGOING_TYPE -> R.string.cd_outgoing_call
+                CallLog.Calls.MISSED_TYPE -> R.string.cd_missed_call
+                CallLog.Calls.REJECTED_TYPE -> R.string.cd_rejected_call
+                CallLog.Calls.BLOCKED_TYPE -> R.string.cd_blocked_call
+                CallLog.Calls.VOICEMAIL_TYPE -> R.string.cd_voicemail_call
+                else -> R.string.cd_call_type
+            },
+        )
     val typeColor =
         when (call.type) {
             CallLog.Calls.INCOMING_TYPE -> CatGreen
@@ -478,7 +493,7 @@ fun RecentCallItem(
                         }
                     Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(riskColor))
                     Spacer(Modifier.width(8.dp))
-                    Icon(typeIcon, null, tint = typeColor, modifier = Modifier.size(24.dp))
+                    Icon(typeIcon, typeDescription, tint = typeColor, modifier = Modifier.size(24.dp))
                     Spacer(Modifier.width(8.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {

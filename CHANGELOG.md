@@ -38,6 +38,21 @@ All notable changes to CallShield will be documented in this file.
 - Running Protection Test can no longer crash the app if the database is
   unhealthy; it shows a failure card instead.
 
+### Accessibility
+
+- Recent calls now announce their direction. Incoming, outgoing, missed,
+  rejected, blocked, and voicemail were conveyed only by an icon and its
+  colour, so a screen-reader user could not tell them apart.
+- Range-rule and blocklist-subscription switches announce which rule or feed
+  they belong to instead of an anonymous "switch, on".
+- The language picker announces which language is currently selected.
+- Section titles are exposed as headings, so screen readers can jump between
+  sections on every screen.
+- Backup restore results are announced when they appear, and stay on screen
+  long enough to be read.
+- Forward chevrons mirror correctly in right-to-left layouts and no longer
+  append "View details" to every row on the More screen.
+
 - The documented database regeneration command silently deleted every
   single-report community row (80 of them). `--min-reports` defaults to 2 and
   was applied to the whole merged database rather than only to newly-imported
