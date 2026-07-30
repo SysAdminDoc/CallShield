@@ -25,9 +25,21 @@ fun ChangelogScreen() {
         verticalArrangement = Arrangement.spacedBy(0.dp),
     ) {
         VersionEntry(
+            "1.7.29",
+            "Report-pipeline integrity, and CallShield is now open to translation",
+            isLatest = true,
+            changes =
+                listOf(
+                    "Numbers reported in local dialling format are stored so they actually match the caller",
+                    "One person can no longer push a number onto the trending list by reporting it repeatedly",
+                    "Repeated \"not spam\" votes from one reporter can't remove a genuine entry",
+                    "Removed 145 unused text resources, including 70 stray accessibility labels",
+                    "Translations are now welcome and checked automatically — see docs/TRANSLATING.md",
+                ),
+        )
+        VersionEntry(
             "1.7.28",
             "Roadmap drain: model and data-feed integrity, recoverable deletions, and screen-reader support",
-            isLatest = true,
             changes =
                 listOf(
                     "Spam scores no longer change with the time of day (the shipped model was clock-sensitive)",

@@ -659,6 +659,7 @@ Baseline at audit time: all gates green. This session fixed ~40 findings across 
   Why: worker/community-reports-worker.js now fixes international-number NANP-ification (P1), dedup-marker-before-store report loss, and the Content-Length cap bypass — but the live callshield-reports.workers.dev still runs the old code until `wrangler deploy`.
   Where: worker/community-reports-worker.js (operator: wrangler deploy)
 - [ ] P2 — Worker rate limit and dedup are non-atomic read-modify-write on eventually-consistent KV
+  NOTE (v1.7.29): compounded by the placeholder KV namespace id — with RATE_LIMIT unbound both checks are permissive, not merely racy. Confirmed live: 22 of 28 queued reports were fictional and 3 numbers were accepted repeatedly. The pipeline-side backstop shipped in v1.7.29 (scripts/report_dedup.py) limits the damage but is not a substitute; this still needs the operator's Cloudflare account.
   Why: N concurrent POSTs (same or different PoPs; KV propagation up to ~60 s) each read a stale counter and all pass, so the 5/60s cap and per-(IP,number) dedup are bypassable with parallel requests. Durable fix: Durable Objects (atomic counter) or Workers rate-limiting bindings.
   Where: worker/community-reports-worker.js (checkRateLimit, checkDedup)
 - [ ] P3 — Spam-domain quorum still forgeable by a single reporter
@@ -673,9 +674,8 @@ Baseline at audit time: all gates green. This session fixed ~40 findings across 
 - [ ] P3 — Splash and PostCall first frame stay black for Light-theme users
   Why: v1.7.27 fixed the window background for both activities, but the splash theme is static (manifest) and PostCallActivity still waits on DataStore before setting content (brief blank window, now correctly themed). Full fix: theme-variant splash + cached-theme first frame in PostCallActivity like MainActivity.
   Where: res/values/splash.xml, ui/PostCallActivity.kt:86-113
-- [ ] P3 — ~140 orphaned string resources (including ~75 dead cd_* accessibility labels)
-  Why: dead weight for translators and a misleading signal that a11y coverage exists where it doesn't. Verify each against dynamic lookups, then trim (lint UnusedResources can drive the sweep; check the lint baseline doesn't mask them).
-  Where: app/src/main/res/values/strings.xml
+- [x] P3 — ~140 orphaned string resources (including ~75 dead cd_* accessibility labels) — DONE v1.7.29
+  Removed 145 (70 cd_*). Cross-validated two ways: a static scan of every R.string/@string reference and lint UnusedResources (146 -> 1, zero string/plural). No getIdentifier call exists, so nothing resolves resources dynamically. 1,243 -> 1,103 strings, 35 -> 30 plurals. There is no lint baseline in this repo, so nothing was masking them.
 - [ ] P3 — Lookup pipeline-trace rows and spam-type labels still show raw internal tokens
   Why: v1.7.27 unified matchReason display via friendlyMatchReasonLabel, but LookupScreen's pipeline trace (checkerName) and the spam `type` field still render de-underscored tokens. Needs a type-label map plus trace i18n strings (existing ROADMAP note on pipeline-trace i18n covers part of this).
   Where: ui/screens/lookup/LookupScreen.kt
