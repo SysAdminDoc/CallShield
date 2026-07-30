@@ -18,6 +18,13 @@ internal const val MAX_IMPORT_FILE_BYTES: Long = 32L * 1024L * 1024L // 32 MB
 internal const val MAX_IMPORT_ROWS: Int = 100_000
 
 /**
+ * Rows per write transaction during bulk imports. SQLite is single-writer:
+ * one giant transaction would stall the call-screening path's pre-response
+ * log insert for the whole import, risking the 5-second deadline.
+ */
+internal const val IMPORT_TRANSACTION_CHUNK: Int = 250
+
+/**
  * Read this stream as UTF-8 text, returning null if it exceeds [maxBytes]
  * instead of allocating an unbounded String. The stream is always closed.
  *

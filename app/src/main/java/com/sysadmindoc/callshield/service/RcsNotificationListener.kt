@@ -42,8 +42,10 @@ import kotlinx.coroutines.launch
  *  - Fires URLhaus background check for URLs in RCS messages
  *  - Logs blocked RCS to the CallShield blocked log (visible in Blocked tab)
  *
- * Google and Samsung Messages are the only defaults. Every other catalog
- * source is opt-in, and unselected sources are rejected before extras are read.
+ * Google and Samsung Messages are the only screening defaults. Every other
+ * screening source is opt-in, and unselected screening sources are rejected
+ * before classification. Push-alert capture is governed by its own
+ * allowlist/opt-out (PushAlertRegistry), independent of screening opt-ins.
  */
 class RcsNotificationListener : NotificationListenerService() {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -58,13 +60,25 @@ class RcsNotificationListener : NotificationListenerService() {
     @Volatile
     private var enabledScreeningPackages: Set<String> = NotificationScreeningSources.defaultEnabledPackages
 
+    // Screening acts destructively (cancelNotification), so unlike the
+    // push-alert defaults above it must NOT run on the default package set
+    // while the user's real allowlist is still loading — a source the user
+    // disabled would be classified and its notification cancelled in that
+    // window. False until the DataStore collector first delivers.
+    @Volatile
+    private var screeningPackagesLoaded: Boolean = false
+
     override fun onCreate() {
         super.onCreate()
         val repo = SpamRepository.getInstance(applicationContext)
         // Also clear the registry when the feature is turned off so stale
         // alerts captured under the previous setting don't inform the
         // pipeline after a toggle flip.
-        scope.launch {
+        // Every collector is guarded: DataStore surfaces file corruption as
+        // an IOException out of the flow, and an uncaught throw here would
+        // crash-loop the listener process on every rebind. Degrading to the
+        // defaults (and retrying on the next service creation) is safer.
+        collectSafely {
             repo.pushAlertEnabled.collectLatest { enabled ->
                 pushAlertEnabled = enabled
                 if (!enabled) PushAlertRegistry.clear()
@@ -75,14 +89,26 @@ class RcsNotificationListener : NotificationListenerService() {
         // newly-disabled packages BEFORE publishing the new set — calling
         // applyOptOuts ensures a concurrent screening verdict can't
         // consume stale alerts from a just-disabled source.
-        scope.launch {
+        collectSafely {
             repo.pushAlertDisabledPackages.collectLatest { disabled ->
                 PushAlertRegistry.applyOptOuts(disabled)
             }
         }
-        scope.launch {
+        collectSafely {
             repo.notificationScreeningPackages.collectLatest { enabled ->
                 enabledScreeningPackages = enabled
+                screeningPackagesLoaded = true
+            }
+        }
+    }
+
+    private fun collectSafely(block: suspend () -> Unit) {
+        scope.launch {
+            try {
+                block()
+            } catch (_: Exception) {
+                // Keep the in-memory defaults; a fresh collector runs on the
+                // next listener creation/rebind.
             }
         }
     }
@@ -91,22 +117,25 @@ class RcsNotificationListener : NotificationListenerService() {
     override fun onNotificationPosted(sbn: StatusBarNotification) {
         if (sbn.isOngoing) return // skip ongoing (media controls, etc.)
 
-        val screeningSource = NotificationScreeningSources.sourceFor(sbn.packageName)
-        if (screeningSource != null &&
-            !NotificationScreeningSources.shouldReadPackage(sbn.packageName, enabledScreeningPackages)
-        ) {
-            return
-        }
-
-        // A3: Feed the push-alert registry for any allowlisted source app
-        // that the user hasn't opted out of. Master toggle and per-package
-        // opt-out are both checked here — if either is off, the
-        // notification content never enters the buffer.
+        // A3: Feed the push-alert registry for any allowlisted source app the
+        // user hasn't opted out of — BEFORE the screening allowlist check.
+        // Four packages (Google/Samsung Messages, AOSP MMS, Outlook) sit in
+        // both catalogs; gating capture on the screening opt-in silently
+        // killed documented push-alert sources (Outlook is screening-opt-in
+        // but a push-alert default). A capture racing an opt-out still being
+        // loaded is pruned when applyOptOuts fires.
         if (pushAlertEnabled && PushAlertRegistry.isAllowedSource(sbn.packageName)) {
             captureAlert(sbn)
         }
 
-        if (screeningSource == null) return
+        val screeningSource = NotificationScreeningSources.sourceFor(sbn.packageName) ?: return
+        // Fail-safe until the user's screening allowlist first loads: skip
+        // classification (the notification simply stays) rather than act on
+        // the default set and possibly cancel a disabled source's message.
+        if (!screeningPackagesLoaded) return
+        if (!NotificationScreeningSources.shouldReadPackage(sbn.packageName, enabledScreeningPackages)) {
+            return
+        }
 
         scope.launch {
             try {

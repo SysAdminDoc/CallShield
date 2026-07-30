@@ -89,6 +89,18 @@ class CallerIdOverlayService : Service() {
 
     @Volatile private var activeSessionId = 0L
 
+    // What the active session is showing, so a later start for the SAME
+    // caller with LESS information can be ignored instead of tearing the
+    // session down. Concretely: HeuristicChecker shows a "Possible spam N%"
+    // overlay for mid-band scores during checkSpam(), then the screening
+    // service's not-spam path fires the generic area-code overlay
+    // (confidence 0) for every NANP caller — without this guard the second
+    // start destroyed the suspicion warning before the user could read it
+    // and restarted the live lookups from scratch.
+    @Volatile private var activeNumber: String = ""
+
+    @Volatile private var activeConfidence = 0
+
     // UI elements we need to update
     private var headerText: TextView? = null
     private var scoreText: TextView? = null
@@ -111,6 +123,17 @@ class CallerIdOverlayService : Service() {
 
         if (number.isEmpty()) {
             stopSelf()
+            return START_NOT_STICKY
+        }
+
+        // Keep a higher-information session alive: never let a lower- or
+        // equal-confidence restart for the same caller replace an active
+        // suspicion overlay (its lookups keep running, its warning stays
+        // readable). Outgoing-risk warnings are a different surface and
+        // always take over.
+        if (!outgoingRiskWarning && isOverlayActive && number == activeNumber &&
+            activeConfidence > 0 && confidence <= activeConfidence
+        ) {
             return START_NOT_STICKY
         }
 
@@ -327,14 +350,7 @@ class CallerIdOverlayService : Service() {
                                         android.view.View.VISIBLE
                                     }
                                 setOnClickListener {
-                                    CallShieldApp.appScope.launch {
-                                        val repository =
-                                            com.sysadmindoc.callshield.data.SpamRepository
-                                                .getInstance(context)
-                                        repository.blockNumber(number, "spam", "Blocked from overlay")
-                                        com.sysadmindoc.callshield.data.CommunityContributor
-                                            .contribute(repository.normalizeNumber(number), "spam")
-                                    }
+                                    blockFromOverlay(number)
                                     dismiss(sessionId)
                                 }
                             },
@@ -378,13 +394,7 @@ class CallerIdOverlayService : Service() {
                                     LinearLayout.LayoutParams.MATCH_PARENT,
                                     LinearLayout.LayoutParams.WRAP_CONTENT,
                                 ).apply { topMargin = context.overlayDp(8f) }
-                        setOnClickListener {
-                            if (!SitTonePlayer.isPlaying()) {
-                                CallShieldApp.appScope.launch {
-                                    SitTonePlayer.play(context)
-                                }
-                            }
-                        }
+                        setOnClickListener { playSitToneFromOverlay() }
                     },
                 )
             }
@@ -404,6 +414,8 @@ class CallerIdOverlayService : Service() {
         // the handler) can correctly compare against activeSessionId. If
         // addView fails, we roll the session id back in the catch block.
         activeSessionId = sessionId
+        activeNumber = number
+        activeConfidence = confidence
         try {
             windowManager?.addView(overlayView, params)
             isOverlayActive = true
@@ -825,6 +837,47 @@ class CallerIdOverlayService : Service() {
         return getString(statusRes)
     }
 
+    /**
+     * Block + community-report the overlay's caller off the main thread.
+     * appScope has no CoroutineExceptionHandler: an uncaught SQLiteException
+     * (disk full, corruption — a failure class this app explicitly self-heals
+     * elsewhere) would kill the whole process mid-call. Same guard pattern as
+     * SpamActionReceiver.
+     */
+    private fun blockFromOverlay(number: String) {
+        val description = getString(R.string.desc_blocked_from_overlay)
+        val appContext = applicationContext
+        CallShieldApp.appScope.launch {
+            try {
+                val repository =
+                    com.sysadmindoc.callshield.data.SpamRepository
+                        .getInstance(appContext)
+                repository.blockNumber(number, "spam", description)
+                com.sysadmindoc.callshield.data.CommunityContributor
+                    .contribute(repository.normalizeNumber(number), "spam")
+            } catch (e: Exception) {
+                android.util.Log.w("CallerIdOverlay", "Overlay block failed", e)
+            }
+        }
+    }
+
+    /**
+     * AudioTrack.Builder.build() throws on devices that can't initialize a
+     * voice-call track; appScope has no exception handler, so an uncaught
+     * throw would kill the process mid-call.
+     */
+    private fun playSitToneFromOverlay() {
+        if (SitTonePlayer.isPlaying()) return
+        val appContext = applicationContext
+        CallShieldApp.appScope.launch {
+            try {
+                SitTonePlayer.play(appContext)
+            } catch (e: Exception) {
+                android.util.Log.w("CallerIdOverlay", "SIT tone failed", e)
+            }
+        }
+    }
+
     private fun dismiss(expectedSessionId: Long? = null) {
         if (expectedSessionId != null && activeSessionId != expectedSessionId) {
             return
@@ -853,6 +906,8 @@ class CallerIdOverlayService : Service() {
     private fun deactivateOverlaySession() {
         activeSessionId = 0L
         isOverlayActive = false
+        activeNumber = ""
+        activeConfidence = 0
     }
 
     private fun removeOverlay() {

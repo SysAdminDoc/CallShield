@@ -287,6 +287,14 @@
     <string name="desc_reported_not_spam">Reported as not spam</string>
     <string name="desc_blocked_from_log_swipe">Blocked from log swipe</string>
     <string name="desc_blocked_post_call_local">Blocked from post-call review</string>
+    <string name="desc_blocked_from_overlay">Blocked from caller ID overlay</string>
+    <string name="desc_marked_safe_from_lookup">Marked safe from lookup</string>
+    <string name="contribute_reported_spam">Contributed anonymously</string>
+    <string name="contribute_reported_not_spam">Reported as not spam</string>
+    <string name="contribute_invalid_number">This number can\'t be reported</string>
+    <string name="contribute_rate_limited">Too many reports. Wait %1$d seconds and try again.</string>
+    <string name="contribute_server_error">The report server is having trouble. Try again later.</string>
+    <string name="contribute_network_error">No connection. The report wasn\'t sent.</string>
     <string name="blocklist_empty_keywords">No keyword rules</string>
     <string name="blocklist_empty_keywords_sub">Add phrases like bank alert or claim prize when spam texts reuse the same wording.</string>
     <string name="blocklist_empty_whitelist">No trusted numbers</string>
@@ -325,7 +333,7 @@
     <string name="dialog_block_number">Block Number</string>
     <string name="rule_conflict_warning">Conflict: %1$s wins over %2$s for %3$s. The lower-priority rule will not decide this number.</string>
     <string name="rule_conflict_emergency_allow">Emergency allow</string>
-    <string name="rule_conflict_whitelist">Whitelist</string>
+    <string name="rule_conflict_whitelist">Trusted list</string>
     <string name="rule_conflict_exact_block">Exact block</string>
     <string name="rule_conflict_wildcard_block">Wildcard block</string>
     <string name="rule_conflict_range_block">Range block</string>
@@ -495,7 +503,7 @@
     <string name="settings_category_actions_summary">%1$d customized · others inherit global blocking</string>
     <string name="settings_category_actions_title">Category call actions</string>
     <string name="settings_category_actions_desc">Choose how confidently categorized calls are handled. Inherit keeps your global blocking and voicemail settings.</string>
-    <string name="settings_category_actions_precedence">Emergency and manual whitelists always ring. Explicit personal block rules always block.</string>
+    <string name="settings_category_actions_precedence">Emergency contacts and manually trusted numbers always ring. Explicit personal block rules always block.</string>
     <string name="settings_block_spam_calls">Block spam calls</string>
     <string name="settings_block_spam_calls_desc">Reject calls from known spam numbers</string>
     <string name="settings_block_spam_sms">Block spam SMS</string>
@@ -503,7 +511,7 @@
     <string name="settings_block_unknown">Block unknown numbers</string>
     <string name="settings_block_unknown_desc">Reject calls with hidden/no caller ID</string>
     <string name="settings_safety">Safety</string>
-    <string name="settings_contact_whitelist">Contact whitelist</string>
+    <string name="settings_contact_whitelist">Trust contacts</string>
     <string name="settings_contact_whitelist_desc">Never block numbers in your contacts</string>
     <string name="settings_contact_scope">Allowed contact scope</string>
     <string name="settings_permission_required">Permission required</string>
@@ -527,7 +535,7 @@
         <item quantity="other">%d selected groups are unavailable. Choose All contacts to reset the scope.</item>
     </plurals>
     <string name="settings_contacts_only">Contacts-only mode</string>
-    <string name="settings_contacts_only_desc">Allow only contacts and explicit whitelist entries</string>
+    <string name="settings_contacts_only_desc">Allow only contacts and explicit trusted numbers</string>
     <string name="settings_outgoing_risk_warning">Warn before known-risk outgoing calls</string>
     <string name="settings_outgoing_risk_warning_desc">Show a local warning for exact matches in your spam database</string>
     <string name="settings_outgoing_risk_warning_overlay_required">Allow overlay access to see outgoing warnings.</string>
@@ -622,7 +630,7 @@
     <string name="settings_backup_logs_privacy">Logs can include blocked SMS text; leave them off for a rules-only transfer.</string>
     <string name="backup_section_blocked">Blocklist</string>
     <string name="backup_section_blocked_desc">User-added blocked numbers only</string>
-    <string name="backup_section_whitelist">Whitelist</string>
+    <string name="backup_section_whitelist">Trusted numbers</string>
     <string name="backup_section_whitelist_desc">Allowed and emergency numbers</string>
     <string name="backup_section_wildcards">Wildcard rules</string>
     <string name="backup_section_wildcards_desc">Glob and regex number rules</string>
@@ -645,6 +653,12 @@
     <string name="settings_external_blocklist_preview_skips">%1$d skipped rows, %2$d already owned by stronger sources</string>
     <string name="settings_external_blocklist_commit_preview">Commit preview</string>
     <string name="settings_external_blocklist_subscription_stats">%1$d active, +%2$d / -%3$d last sync</string>
+    <string name="external_blocklist_not_found">External blocklist subscription was not found</string>
+    <string name="external_blocklist_disabled">Disabled %1$s: removed %2$d feed-owned numbers</string>
+    <string name="external_blocklist_removed">Removed %1$s: rolled back %2$d feed-owned numbers</string>
+    <string name="external_blocklist_previewed">Previewed %1$s: %2$d numbers, +%3$d / -%4$d, %5$d already owned by stronger sources</string>
+    <string name="external_blocklist_applied">Applied %1$s: %2$d numbers, +%3$d / -%4$d</string>
+    <string name="external_blocklist_failed_generic">Blocklist operation failed. Check the URL and your connection, then try again.</string>
     <string name="settings_save">Save</string>
     <string name="settings_about_desc">Open-source spam blocker. No subscriptions, no tracking, no API keys.</string>
 
@@ -853,7 +867,7 @@
     <string name="protection_test_overlay_permission">Overlay Permission</string>
     <string name="protection_test_notification_access">Notification Access (RCS)</string>
     <string name="permission_contract_degraded_call_log">Recent-call scans, callback trust, frequency checks, and blocked-call history are limited without call log access.</string>
-    <string name="permission_contract_degraded_contacts">Contact whitelist and local caller trust cannot protect known callers without contacts access.</string>
+    <string name="permission_contract_degraded_contacts">Contact trust and local caller trust cannot protect known callers without contacts access.</string>
     <string name="permission_contract_degraded_read_sms">SMS inbox scans and blocked-message review cannot read existing texts without SMS inbox access.</string>
     <string name="permission_contract_degraded_receive_sms">Incoming SMS spam filtering cannot inspect new texts until incoming-SMS access is granted.</string>
     <string name="permission_contract_degraded_call_screening">Live call blocking is unavailable until CallShield is the active call screening app.</string>
@@ -978,7 +992,7 @@
     <string name="detail_match_reasons">Match reasons:</string>
     <string name="detail_recent_activity">Recent Activity</string>
     <string name="detail_online_lookup">Online Lookup</string>
-    <string name="detail_check_sources">Check 4 Sources</string>
+    <string name="detail_check_sources">Check spam sources</string>
     <string name="detail_checking_sources">Checking SkipCalls, PhoneBlock, WhoCalledMe, and OpenCNAM…</string>
     <string name="detail_reports_across_sources">%1$s across %2$s</string>
     <string name="detail_clean_all_sources">No reports in available sources</string>
@@ -1004,8 +1018,9 @@
     <string name="detail_share">Share</string>
     <string name="detail_block_area_code_description">Block area code %s</string>
     <string name="detail_block_area_code_description_location">Block area code %1$s (%2$s)</string>
+    <string name="detail_unknown_location">Unknown region</string>
     <string name="detail_blocked_from_detail">Blocked from detail</string>
-    <string name="detail_whitelisted_from_detail">Whitelisted from detail</string>
+    <string name="detail_whitelisted_from_detail">Trusted from detail screen</string>
     <string name="detail_report_issue_title">[SPAM] %s</string>
     <plurals name="detail_report_issue_body">
         <item quantity="one">## Phone Number\n%1$s\n\n## Type\nReported from CallShield\n\n## Description\nSeen %2$d time</item>
@@ -1097,8 +1112,8 @@
     <string name="backup_restore_no_valid_items">Backup file contained no valid items</string>
     <string name="backup_restore_no_preview">Choose a backup file before restoring</string>
     <string name="backup_restore_preview_title">Restore preview</string>
-    <string name="backup_restore_preview_ready">Backup ready: %1$d numbers, %2$d whitelist entries, %3$d wildcard rules, %4$d keyword rules, %5$d range rules, %6$d settings sections, %7$d log entries</string>
-    <string name="backup_restore_preview_summary">Blocked: %1$d; Whitelist: %2$d; Wildcards: %3$d; Keywords: %4$d; Ranges: %5$d; Settings: %6$d; Logs: %7$d</string>
+    <string name="backup_restore_preview_ready">Backup ready: %1$d numbers, %2$d trusted numbers, %3$d wildcard rules, %4$d keyword rules, %5$d range rules, %6$d settings sections, %7$d log entries</string>
+    <string name="backup_restore_preview_summary">Blocked: %1$d; Trusted: %2$d; Wildcards: %3$d; Keywords: %4$d; Ranges: %5$d; Settings: %6$d; Logs: %7$d</string>
     <plurals name="backup_restore_preview_conflicts">
         <item quantity="one">%1$d existing item has a matching key and may be updated during merge.</item>
         <item quantity="other">%1$d existing items have matching keys and may be updated during merge.</item>
@@ -1126,9 +1141,9 @@
     <string name="backup_restore_merge">Merge</string>
     <string name="backup_restore_replace">Replace</string>
     <string name="backup_restore_cancel">Cancel</string>
-    <string name="backup_restore_success">Restored %1$d numbers, %2$d whitelist entries, %3$d wildcard rules, %4$d keyword rules, %5$d range rules, %6$d settings sections, %7$d log entries</string>
-    <string name="backup_restore_success_merge">Restored by merge: %1$d numbers, %2$d whitelist entries, %3$d wildcard rules, %4$d keyword rules, %5$d range rules, %6$d settings sections, %7$d log entries</string>
-    <string name="backup_restore_success_replace">Restored by replace: %1$d numbers, %2$d whitelist entries, %3$d wildcard rules, %4$d keyword rules, %5$d range rules, %6$d settings sections, %7$d log entries</string>
+    <string name="backup_restore_success">Restored %1$d numbers, %2$d trusted numbers, %3$d wildcard rules, %4$d keyword rules, %5$d range rules, %6$d settings sections, %7$d log entries</string>
+    <string name="backup_restore_success_merge">Restored by merge: %1$d numbers, %2$d trusted numbers, %3$d wildcard rules, %4$d keyword rules, %5$d range rules, %6$d settings sections, %7$d log entries</string>
+    <string name="backup_restore_success_replace">Restored by replace: %1$d numbers, %2$d trusted numbers, %3$d wildcard rules, %4$d keyword rules, %5$d range rules, %6$d settings sections, %7$d log entries</string>
     <string name="backup_restore_error_generic">Couldn\'t read this backup. The file may be corrupt, encrypted with a different passphrase, or from a newer app version.</string>
     <string name="clip_label_phone">Phone</string>
     <string name="clip_label_phone_number">Phone Number</string>
@@ -1248,7 +1263,7 @@
     <string name="cd_unblock">Unblock number</string>
     <string name="cd_delete">Delete</string>
     <string name="cd_delete_rule">Delete rule</string>
-    <string name="cd_remove">Remove from whitelist</string>
+    <string name="cd_remove">Remove from trusted</string>
     <string name="cd_back">Go back</string>
     <string name="cd_phone_disabled">Phone blocked</string>
     <string name="cd_sms_blocked">SMS blocked</string>
@@ -1260,7 +1275,7 @@
     <string name="cd_wildcard_rule">Wildcard rule</string>
     <string name="cd_regex_rule">Regex rule</string>
     <string name="cd_keyword_rule">Keyword rule</string>
-    <string name="cd_whitelisted_number">Whitelisted number</string>
+    <string name="cd_whitelisted_number">Trusted number</string>
     <string name="cd_spam_warning">Spam warning</string>
     <string name="cd_export">Export blocklist</string>
     <string name="cd_import">Import blocklist</string>
@@ -1305,7 +1320,7 @@
     <string name="cd_filter_alt">Filter rule</string>
     <string name="cd_block_area_code">Block area code</string>
     <string name="cd_ftc_complaint">File FTC complaint</string>
-    <string name="cd_whitelist">Add to whitelist</string>
+    <string name="cd_whitelist">Add to trusted</string>
     <string name="cd_call_number">Call this number</string>
     <string name="cd_share">Share number</string>
     <string name="cd_report_spam">Report as spam</string>
@@ -1389,7 +1404,7 @@
     <string name="cnap_block_desc">When the carrier provides a caller name, matching calls are blocked after higher-priority allows and number rules have run.</string>
     <string name="cnap_block_patterns">Blocked name patterns</string>
     <string name="cnap_block_patterns_hint">One pattern per line. Use * for any text and ? for one character, for example MEDICARE BENEFITS*.</string>
-    <string name="cnap_block_priority_notice">Contacts, whitelist entries, recent calls, emergency callbacks, and trusted-name rules still ring through.</string>
+    <string name="cnap_block_priority_notice">Contacts, trusted numbers, recent calls, emergency callbacks, and trusted-name rules still ring through.</string>
     <string name="block_reason_caller_name">Blocked — caller name “%1$s” matched your name rule</string>
     <string name="block_reason_out_of_region">Blocked — %1$s is outside allowed regions</string>
     <string name="block_reason_out_of_region_unknown">Blocked — international or unknown region is outside allowed regions</string>
