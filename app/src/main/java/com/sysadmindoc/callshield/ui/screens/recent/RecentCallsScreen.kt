@@ -457,7 +457,7 @@ fun RecentCallItem(
             else -> CatBlue
         }
 
-    var expanded by remember { mutableStateOf(false) }
+    var expanded by rememberSaveable(call.number, call.date) { mutableStateOf(false) }
     val temporaryDurations = rememberTemporaryDecisionDurations()
     val copiedMessage = stringResource(R.string.recent_copied)
     val clipLabelPhone = stringResource(R.string.clip_label_phone)

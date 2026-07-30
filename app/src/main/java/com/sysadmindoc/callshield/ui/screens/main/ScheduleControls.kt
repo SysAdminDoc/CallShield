@@ -18,6 +18,8 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -48,6 +50,28 @@ data class ScheduleUiState(
     val startHour: Int = 0,
     val endHour: Int = 0,
 ) {
+    companion object {
+        /**
+         * Persists the configured schedule across activity recreation. The
+         * add-rule dialogs keep their pattern and flags in saveable state, so
+         * without this a rotation mid-dialog silently reverted a carefully
+         * configured "weeknights only" rule to always-active — with the rest
+         * of the dialog still filled in, so nothing looked lost.
+         */
+        val Saver: Saver<ScheduleUiState, Any> =
+            listSaver(
+                save = { listOf(it.enabled, it.daysMask, it.startHour, it.endHour) },
+                restore = {
+                    ScheduleUiState(
+                        enabled = it[0] as Boolean,
+                        daysMask = it[1] as Int,
+                        startHour = it[2] as Int,
+                        endHour = it[3] as Int,
+                    )
+                },
+            )
+    }
+
     /**
      * Build a persistable [TimeSchedule]. When [enabled] is `false` or no
      * days are selected, returns the zero-mask sentinel (rule is always
