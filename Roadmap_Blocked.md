@@ -4,10 +4,10 @@ Items moved here from ROADMAP.md because they require external action, dedicated
 
 ## Blocked on Dedicated Session (too large for autonomous batch)
 
-- [ ] P1 — AGP 9 + Kotlin 2.3 + Hilt 2.59 + Moshi→kotlinx.serialization migration tranche
-  Why: AGP 8.x is on a deprecation path; Hilt 2.59+ drops AGP 8 support; Moshi 1.x codegen requires KSP1 while KSP2 is now default; AGP 10 removes all escape hatches mid-2026. All four must move together.
+- [ ] P1 — AGP 9 + Kotlin 2.3+ (≥ 2.4.20) + Hilt 2.59 + Moshi→kotlinx.serialization migration tranche
+  Why: AGP 8.x is on a deprecation path; Hilt 2.59+ drops AGP 8 support; Moshi 1.x codegen requires KSP1 while KSP2 is now default; AGP 10 removes all escape hatches mid-2026. All four must move together. Also carries the **CVE-2026-53914** fix — Kotlin must reach ≥ 2.4.20 (the current 2.2.21 pin is below the fix). Interim mitigation (no remote/shared Gradle build cache) is already documented in `gradle.properties`, so the vector is not reachable until then.
   Blocker: XL complexity — touches every build file, all lockfiles, all JSON parsing sites. Requires a dedicated session with build validation.
-  Evidence: AGP 9 release notes; Dagger 2.59 release; Kotlin 2.3.0/2.3.20 changelogs; Moshi KSP2 compatibility issues.
+  Evidence: AGP 9 release notes; Dagger 2.59 release; Kotlin 2.3.0/2.3.20 changelogs; Moshi KSP2 compatibility issues; CVE-2026-53914 (GHSA-r937-wjx7-w2jp).
   Touches: `build.gradle.kts`, `app/build.gradle.kts`, `gradle/libs.versions.toml`, all Gradle lockfiles, `proguard-rules.pro`, all JSON parsing sites, Hilt module files.
   Complexity: XL
 
@@ -34,6 +34,12 @@ Items moved here from ROADMAP.md because they require external action, dedicated
 
 ## Blocked on External Action
 
+- [ ] P3 — Validate STIR PASSporT/attestation exposure, else formally close 2.3.1–2.3.5
+  Why: Android's current public documentation says carrier SIP headers are not shared directly with apps because they contain PII; a default caller-ID/spam app receives only the `getCallerNumberVerificationStatus()` verdict. The API 35 and API 37 emulators available in this session have no cellular carrier or STIR/SHAKEN call path, so they cannot satisfy the roadmap's shipping-device validation requirement.
+  Blocker: Requires a physical, shipping Android 11+ device on a STIR-capable carrier plus an authenticated incoming call. Capture the `Call.Details` surface and extras there before formally rejecting 2.3.1–2.3.5.
+  Evidence: https://developer.android.com/develop/connectivity/telecom/dialer-app/prevent-spoofing ; AOSP `CallScreeningService`; `data/StirShakenSemantics.kt`.
+  Complexity: S
+
 - [ ] P1 — F-Droid submission and signature-copy verification
   Why: Metadata, Fastlane listing, release signer handoff, and local runbook exist, but the actual publication requires an fdroiddata fork/MR plus fdroidserver/apksigcopier verification in that environment.
   Blocker: Requires external GitLab/fdroiddata workflow and F-Droid review.
@@ -52,7 +58,19 @@ Items moved here from ROADMAP.md because they require external action, dedicated
   Evidence: Accrescent publishing requirements; existing Fastlane metadata and GitHub release artifacts.
   Complexity: S
 
+- [ ] P2 — wrangler.toml carries a placeholder KV namespace id; the pending worker security redeploy cannot run from repo state
+  Why: worker/wrangler.toml:14 has `id = "REPLACE_WITH_KV_NAMESPACE_ID"`. `wrangler deploy` fails on the invalid binding — or, forced without it, deploys with rate-limiting/dedup silently disabled (checkRateLimit/checkDedup are permissive when env.RATE_LIMIT is unbound, worker:129/172). This operationally blocks the already-logged "deployed Worker is stale" redeploy. Live damage corroborated 2026-07-30: data/reports accepted +15551234567 twice (555-NPA, rejected by current repo worker code) and +12385233476 twice ~10 s apart.
+  Blocker: Requires the operator's Cloudflare account (`wrangler kv namespace list` / dashboard) to recover the real namespace id; keep it in untracked config or an env-specific override, then run `wrangler deploy`.
+  Evidence: worker/wrangler.toml:14; worker/community-reports-worker.js:129/172; data/reports/ 2026-07-30 files; git log community-report commits.
+  Complexity: S (operator minutes)
+
 ## Blocked on Permission Decision
+
+- [ ] P1 — Android 17 SMS-read strategy: OTP 3-hour read-delay resilience + capability detection
+  Why: API 37 withholds OTP-bearing SMS for three hours unless the app is the default SMS handler or uses the User Consent/Retriever APIs.
+  Blocker: Choosing default-SMS ownership versus a consent-based partial-content path is a product and permission-surface decision. It also overlaps the separately blocked SMS Screening Provider migration and must be settled before implementation can define honest degraded-mode behavior.
+  Evidence: Android 17 and Android 16 behavior-change documentation; `service/SmsReceiver.kt`.
+  Complexity: L
 
 - [ ] P2 — Active calendar-event blocking ("meeting mode")
   Why: SpamBlocker's most-requested feature. Block non-contacts during active calendar events.
@@ -60,6 +78,20 @@ Items moved here from ROADMAP.md because they require external action, dedicated
   Evidence: SpamBlocker wiki templates; `CalendarContract.Events` API.
   Touches: new `CalendarEventChecker`, `AndroidManifest.xml` (READ_CALENDAR), Settings toggle, tests.
   Complexity: M
+
+## Blocked on Device Verification
+
+- [ ] P3 — Narrow the ProGuard keeps to the actual reflective surface
+  Why: `proguard-rules.pro` keeps `com.squareup.moshi.**`, all of `kotlin.reflect.jvm.internal.**`, and the entire `com.sysadmindoc.callshield.service.**` package (manifest components are kept by AGP automatically). That locks dead weight into the APK and disables shrinking across three trees.
+  Blocker: The failure mode is silent and runtime-only — the file's own comments record a previous attempt where enumerating the Backup payload classes individually stripped Kotlin metadata, so Moshi either threw or wrote obfuscated keys that restore silently lost. `assembleRelease` succeeding proves nothing; this needs the minified APK installed on a device with a full backup/restore round-trip plus a screening smoke test (the already-logged release-build verification item).
+  Evidence: `app/proguard-rules.pro:8,15,55`; the KotlinJsonAdapterFactory reflection comments in the same file.
+  Complexity: M
+
+- [ ] P3 — Ratchet the detekt complexity gates
+  Why: `CyclomaticComplexMethod: 45` (default 15) and `LongMethod: 250` (default 60) are set where nothing can hit them, so new code inherits the exemption.
+  Blocker: Measured this session — the codebase sits AT the ceiling, so ratcheting requires refactoring first, not just a config change. At CCM 30 / LongMethod 150 exactly six violations appear, all in code that must not be churned without on-device verification: `BlockReasoning.explain` (150 lines, complexity 44), `CallerIdOverlayService.showOverlay` (235 lines, complexity 36) and `runLiveLookups` (complexity 38), and `BackupRestore.toBackupSettings` (complexity 37). CCM 45 is already the tightest value that passes today. Refactor those four functions with device smoke tests, then tighten the thresholds in the same change.
+  Evidence: `app/config/detekt/detekt.yml:8-20`; trial run at CCM 30 / LongMethod 150 on 2026-07-30.
+  Complexity: L
 
 ## Blocked on Lockfile Regeneration
 
@@ -74,6 +106,11 @@ Items moved here from ROADMAP.md because they require external action, dedicated
   Complexity: M
 
 ## Blocked on External Registration
+
+- [ ] P1 — Google Developer Verification readiness
+  Blocker: Registration requires an operator identity/business decision, Google account action, fee, and release-key registration. The project rule prohibiting software signing also prevents autonomous creation or validation of a stable release signing key.
+  Evidence: Google Developer Verification rollout requirements; F-Droid's published objection.
+  Complexity: M
 
 - [ ] P2 — Weblate translation setup
   Blocker: Requires registration at hosted.weblate.org (manual web action) and GitHub webhook configuration.

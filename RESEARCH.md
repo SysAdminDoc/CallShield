@@ -1,6 +1,20 @@
 # Research — CallShield
 Date: 2026-07-21 — replaces all prior research. Anchored to **v1.7.18 (versionCode 46)**. The reliability + platform-risk backlog this file used to headline is now **shipped** (v1.7.14–v1.7.18); this pass repositions around distribution survival, detection-quality reality-checks, and testability.
 
+> **Staleness note (2026-07-30, v1.7.28 / versionCode 56).** This document has not
+> been re-run since v1.7.18. Ten releases have shipped since, including two full
+> audit passes (v1.7.24, v1.7.26–v1.7.28) that drained ~150 findings. Treat the
+> *strategic* sections (distribution survival, the STIR/SHAKEN feasibility
+> ceiling, the competitive landscape) as current, and the *codebase* claims —
+> test counts, "not yet wired", "already tracked" — as needing verification
+> against `ROADMAP.md` and `CHANGELOG.md` before you act on them. Known drift:
+> the JVM suite is 948 tests, not 789; `scripts/evaluate_model.py` now exists and
+> gates the model; the shipped GBT was retrained in v1.7.28 after a time-of-day
+> poisoning bug. A stranded 2026-07-22 draft of this file was discarded on
+> 2026-07-30 because every P0 it raised (outgoing-call direction, raw reports in
+> APK assets, Room in cloud backup, DataStore corruption handlers) had already
+> shipped.
+
 ## Executive Summary
 
 CallShield is a privacy-first, fully on-device Android call/SMS/RCS spam blocker with an unusually mature, heavily-audited codebase (priority-sorted `IChecker` pipeline, pure-Kotlin GBT scorer with an observable `ModelHealth` signal, Hilt, Room 2.8.4, WorkManager, pinned OkHttp 5.4, reproducible-build groundwork, a Robolectric harness, **789 JVM tests**). Between 2026-07-14 and 2026-07-21, v1.7.14–v1.7.18 drained essentially the entire correctness **and** background-reliability backlog: after-call/phishing/campaign fixes, the wangiri/premium false-positive fix, atomic backup restore, bounded imports, Android-16 notification grouping, observable model health, **RCS listener `requestRebind` self-heal**, **corrupt-DB recovery (ends silent fail-open)**, **BootReceiver `MY_PACKAGE_REPLACED`**, **bounded DigestWorker**, **OEM background-kill detection**, **sync-staleness predicate**, and **contacts-mode degradation detection**. Correctness and background-execution survival are both in strong shape.

@@ -631,8 +631,6 @@ Baseline at audit time: `testDebugUnitTest`, `ktlintCheck`, `detekt`, `lintDebug
   Confidence: Verified
   Effort: S
 
-### P3 — accessibility
-
 ### P3 — maintainability / testing / docs
 
 - [ ] P3 — Fastlane metadata ships zero screenshots; F-Droid listing will be imageless
@@ -669,9 +667,6 @@ Baseline at audit time: all gates green. This session fixed ~40 findings across 
 - [ ] P3 — SMS-context-trusted senders are not protected from shared-chain heuristic content scoring
   Why: SmsContextChecker's docstring says conversation-trust runs before content analysis, but HeuristicChecker scores smsBody in the shared chain (priority 3000) before the SMS extension chain where the trust checker lives — a sender the user has texted can still be blocked as `heuristic` on a "track your package: bit.ly/x" message. Design decision: either pass trust into ctx so HeuristicChecker skips content scoring for trusted senders, or fix the docstring and accept the ordering.
   Where: data/checker/Checkers.kt (HeuristicChecker), data/SmsContextChecker.kt, data/repository/SpamRepositoryImpl.kt (isSpamSms)
-- [ ] P3 — ML `short_number` feature (index 19) can never fire on-device (train/inference drift)
-  Why: shortNumber=1.0 requires 1-6 digits, but any such number fails the digits.length != 10 gate three lines later and exits with an empty feature vector. If the Python training pipeline emits short_number=1 rows, the model learns a feature inference never produces. Align build_dataset() to drop <7-digit rows (or drop the feature) at the next model regen.
-  Where: data/SpamMLScorer.kt:427-435, scripts/train_spam_model.py (build_dataset)
 - [ ] P3 — Caller-ID overlay is locked to the dark Catppuccin palette
   Why: ~15 Color.parseColor literals bypass the theme system; Light-theme users get a dark on-call card. Arguably intentional (dark = readable over any in-call UI) — decide, then either theme it or document the choice here as accepted.
   Where: service/CallerIdOverlayService.kt
@@ -684,3 +679,13 @@ Baseline at audit time: all gates green. This session fixed ~40 findings across 
 - [ ] P3 — Lookup pipeline-trace rows and spam-type labels still show raw internal tokens
   Why: v1.7.27 unified matchReason display via friendlyMatchReasonLabel, but LookupScreen's pipeline trace (checkerName) and the spam `type` field still render de-underscored tokens. Needs a type-label map plus trace i18n strings (existing ROADMAP note on pipeline-trace i18n covers part of this).
   Where: ui/screens/lookup/LookupScreen.kt
+
+## Audit Findings — 2026-07-30 second pass (audit-only; anchored to v1.7.27, versionCode 55; found, NOT fixed)
+
+Baseline at audit time: full JVM suite green at HEAD 2f250f1 (949 tests, exit 0); all static gates were green at this same commit earlier today. No pre-existing failures. Every item below was traced to reachable code (or measured against shipped data) during this pass and cross-checked against all prior audit sections, Roadmap_Blocked.md, CHANGELOG v1.7.27, and git history to avoid duplicates. No device/emulator was available: items needing on-device confirmation are marked Needs-repro or Likely.
+
+### Unaudited this pass — needs a later pass
+
+- [ ] P3 — Instrumented (androidTest) suite was statically read but not executed (no device/emulator this session); the 2026-07-28 device-verification and release-build round-trip items still stand
+- [ ] P3 — CallShieldScreeningService / CallerIdOverlayService / checker-chain internals were deliberately not re-audited (fixed and separately audited earlier the same day); next fresh pass should re-cover them
+- [ ] P3 — Live Cloudflare Worker behavior still unprobed (existing item), now with corroborating evidence of stale-deploy damage: data/reports accepted +15551234567 twice and +12385233476 twice ~10 s apart on 2026-07-30 — both rejected by current repo worker code
