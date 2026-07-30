@@ -51,6 +51,8 @@ import numpy as np
 from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.metrics import precision_score, recall_score, f1_score, roc_auc_score
 
+from pipeline_io import atomic_write_json
+
 DATA_DIR = Path(__file__).parent.parent / "data"
 DB_FILE = DATA_DIR / "spam_numbers.json"
 OUTPUT_FILE = DATA_DIR / "spam_model_weights.json"
@@ -529,8 +531,7 @@ def main():
 
     out_path = Path(args.output)
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(out_path, "w") as f:
-        json.dump(output, f, indent=2)
+    atomic_write_json(out_path, output)
 
     print(f"\nModel saved to: {out_path}")
     print(f"\n  GBT trees:  {len(trees)}")

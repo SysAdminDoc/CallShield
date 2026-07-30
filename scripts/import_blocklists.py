@@ -16,12 +16,15 @@ from pathlib import Path
 from collections import Counter
 from phone_normalization import normalize_nanp_number
 
+from pipeline_io import atomic_write_json
+
 try:
     import requests
-except ImportError:
-    import subprocess
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "requests"])
-    import requests
+except ImportError as exc:  # pragma: no cover - environment guard
+    raise SystemExit(
+        "requests is required. Install the pipeline dependencies: "
+        "pip install -r scripts/requirements.txt"
+    ) from exc
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 DB_FILE = DATA_DIR / "spam_numbers.json"
@@ -170,8 +173,7 @@ def merge_into_database(all_numbers: list[dict]):
     db["updated"] = datetime.now().strftime("%Y-%m-%d")
     db["numbers"].sort(key=lambda x: x.get("reports", 0), reverse=True)
 
-    with open(DB_FILE, "w") as f:
-        json.dump(db, f, indent=2)
+    atomic_write_json(DB_FILE, db)
 
     print(f"\nDatabase updated:")
     print(f"  Added: {added:,}")

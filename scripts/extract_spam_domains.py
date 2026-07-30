@@ -19,6 +19,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from phone_normalization import validated_report_number
 
+from pipeline_io import atomic_write_json
+
 DATA_DIR = Path(os.environ.get("CALLSHIELD_DATA_DIR", Path(__file__).parent.parent / "data"))
 REPORTS_DIR = Path(os.environ.get("CALLSHIELD_REPORTS_DIR", DATA_DIR / "reports"))
 OUTPUT_FILE = DATA_DIR / "spam_domains.json"
@@ -143,8 +145,7 @@ def main():
         "domains": spam_domains,
     }
 
-    with open(OUTPUT_FILE, "w") as f:
-        json.dump(output, f, indent=2)
+    atomic_write_json(OUTPUT_FILE, output)
 
     print(f"Spam domains: {len(spam_domains)} (min {MIN_REPORTS} reports)")
     print(f"Written to: {OUTPUT_FILE}")

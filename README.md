@@ -274,7 +274,7 @@ CallShield blocks spam calls and texts using a **15+ layer on-device detection e
 3. **Real-time caller ID overlay** — parallel lookups against SkipCalls, PhoneBlock, WhoCalledMe + OpenCNAM caller name, with SIT tone anti-autodialer
 4. **Scheduled hot list** — trending spam numbers and campaign ranges refresh through the repository data pipeline
 5. **Callback-aware** — won't block callbacks from numbers you recently called, answered repeatedly, after a local emergency call, or urgent repeated callers
-6. **Community-driven** — one-tap anonymous contribution via Cloudflare Worker, daily merge into database
+6. **Community-driven** — one-tap anonymous contribution via Cloudflare Worker, merged into the database by the maintainer
 
 ## Detection Pipeline (v1.7.27)
 
@@ -284,28 +284,33 @@ All detection layers implement a shared `IChecker` interface and run in priority
 |---------:|-------|---------|-------------|
 | 10000 | **Manual Whitelist** | Allow | Numbers you've explicitly marked as always-allow |
 |  9000 | **Contact Whitelist** | Allow | Numbers in your phone's contacts always pass through |
+|  8800 | **Contacts-Only Mode** | Block | Optional strict mode — everything not in your contacts is blocked |
 |  8500 | **STIR/SHAKEN Failed** | Block | Carrier-authenticated caller ID failure gets blocked before heuristic layers |
-|  7000 | **User Blocklist + Database** | Block | Personal blocklist + 32,617 confirmed spam numbers + scheduled hot-list data |
+|  7000 | **User Blocklist** | Block | Your own exact blocks, permanent or temporary |
 |  6900 | **System Block List** (A4) | Block | Read-only bridge to Android's `BlockedNumberContract` — respects stock Phone/Messages blocks |
 |  5500 | **Wildcard / Regex** | Block | Custom patterns like `+1832555*` or full regex, now with optional schedule |
 |  5400 | **Range Patterns** (A5) | Block | Length-locked `#` patterns like `+33162######`, with schedule + coverage safety rail |
 |  5350 | **Temporary Allow** | Allow | One-off false-positive recovery from the Blocked Log — beats all downloaded data, never your own rules |
 |  5320 | **Prefix Rules** | Block | Downloaded wangiri country codes, US premium rate (+1900), international premium |
 |  5300 | **STIR/SHAKEN Authenticated** | Allow | Carrier-authenticated caller ID can allow through lower-confidence heuristic/ML suspicion while explicit blocks still win first |
+|  5200 | **Spam Database** | Block | 32,617 confirmed spam numbers plus scheduled hot-list data |
+|  5150 | **Database Prefix Expansion** | Block | Auto-blocks last-two-digit siblings of confirmed database entries |
 |  5000 | **Recently Dialed** | Allow | Numbers you called in the last 24h — they're probably calling back |
 |  4980 | **Emergency Callback** | Allow | Unknown callbacks can ring through after a local emergency call during the configured grace window |
 |  4950 | **Answered Caller** | Allow | Numbers answered repeatedly inside the configured lookback window |
 |  4900 | **Repeated Urgent** | Allow | Same number calls 2x in 5 min → allowed through |
+|  4850 | **Caller Name Trust** | Allow | Carrier-presented name matches one of your trust patterns |
 |  4700 | **Push-Alert Bridge** (A3) | Allow | Uber/DoorDash/Amazon/Gmail notification about an arriving call? Let it through |
 |  4500 | *Campaign Recorder* | — | Side-effect only; feeds burst detection below |
-|  4000 | **Quiet Hours** | Block | Block all non-contact calls during configurable hours |
+|  4300 | **Region Rules** | Block | Opt-in offline blocking outside your selected US/Canadian regions |
+|  4000 | **Quiet Hours** | Block | Block all non-contact calls during configurable hours (calls only) |
 |  3500 | **Frequency Auto-Block** | Block | Numbers that call 3+ times in 7 days get auto-blocked |
 |  3000 | **Heuristic Engine** | Block | VoIP ranges, neighbor spoofing, rapid-fire detection, 30+ rules |
 |  2500 | **Campaign Burst** | Block | NPA-NXX prefix clustering detects coordinated spam waves |
 |  2250 | **Caller Name Rules** | Block | Carrier-presented names can match bounded, user-defined `*`/`?` patterns after every allow layer |
 |  2000 | **ML Spam Scorer** | Block | 20-feature on-device gradient-boosted tree model |
 
-SMS-specific layers (append after the shared chain): **SMS Context Trust** → **SMS Keyword Rules** (with schedule) → **SMS Burst Protection** → **SMS Content Analysis** (30+ regex patterns, URL shorteners, suspicious TLDs, spam domain blocklist).
+SMS-specific layers (append after the shared chain, in their own priority order): **SMS Keyword Rules** (5400, with schedule) → **SMS Context Trust** (4700, trusted-sender allow) → **SMS Burst Protection** (4650) → **SMS Content Analysis** (1900 — 30+ regex patterns, URL shorteners, suspicious TLDs, spam domain blocklist).
 
 ### Additional Layers
 - **Caller ID Overlay** — suspicious calls (heuristic score 30-59) trigger a live multi-source lookup overlay with SkipCalls, PhoneBlock, WhoCalledMe + OpenCNAM caller name

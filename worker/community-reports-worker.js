@@ -198,7 +198,9 @@ export async function recordDedup(ip, normalizedNumber, env) {
  *   8. wrangler deploy
  *
  * The worker receives anonymous spam reports and creates files in data/reports/
- * via the GitHub API. A GitHub Action merges them into the main database daily.
+ * via the GitHub API. The maintainer merges them into the main database
+ * periodically by running scripts/merge_community_reports.py locally (this
+ * project builds and publishes from a workstation, not CI).
  *
  * Rate limiting: per-IP burst limit (5 reports/60 s) and per-IP+number
  * dedup (same number cannot be re-reported from same IP within 5 min).

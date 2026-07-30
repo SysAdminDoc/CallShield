@@ -10,22 +10,13 @@ from datetime import datetime
 from pathlib import Path
 from phone_normalization import is_plausible_number, validated_report_number
 
+from pipeline_io import atomic_write_json
+
 DATA_DIR = Path(os.environ.get("CALLSHIELD_DATA_DIR", Path(__file__).parent.parent / "data"))
 DB_FILE = DATA_DIR / "spam_numbers.json"
 REPORTS_DIR = Path(os.environ.get("CALLSHIELD_REPORTS_DIR", DATA_DIR / "reports"))
 
 COMMUNITY_DESCRIPTION = "Community reported"
-
-
-def atomic_write_json(path: Path, payload: dict) -> None:
-    """Write JSON via a temp file + os.replace so a crash mid-write can never
-    leave a truncated database that a later auto-commit would publish."""
-    tmp = path.with_suffix(path.suffix + ".tmp")
-    with open(tmp, "w") as f:
-        json.dump(payload, f, indent=2)
-    with open(tmp) as f:  # validate it re-parses before swapping into place
-        json.load(f)
-    os.replace(tmp, path)
 
 
 def quarantine(report_file: Path, rejected_dir: Path) -> None:
@@ -164,11 +155,17 @@ def main():
             rejected += 1
 
     db["numbers"] = list(existing.values())
-    db["version"] += 1
-    db["updated"] = today
-    db["numbers"].sort(key=lambda x: x.get("reports", 0), reverse=True)
-
-    atomic_write_json(DB_FILE, db)
+    # Only publish a new version when the contents actually changed. The app
+    # re-syncs the whole 6.5 MB database whenever `version` moves, so bumping
+    # it on a no-op run costs every device a pointless download.
+    changed = added > 0 or updated > 0 or purged > 0
+    if changed:
+        db["version"] += 1
+        db["updated"] = today
+        db["numbers"].sort(key=lambda x: x.get("reports", 0), reverse=True)
+        atomic_write_json(DB_FILE, db)
+    else:
+        print("No changes — database version left at", db["version"])
 
     # Delete processed report files only after DB is safely persisted
     for report_file in processed_files:

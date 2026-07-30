@@ -6,8 +6,7 @@ Pulls Do Not Call complaint data from the FTC public API and merges it
 into the CallShield spam_numbers.json database.
 
 Usage:
-    python update_ftc.py              # Default: last 90 days, up to 10,000 records
-    python update_ftc.py --days 365   # Last 365 days
+    python update_ftc.py              # Default: up to 10,000 newest records
     python update_ftc.py --max 50000  # Up to 50,000 records
 
 API docs: https://www.ftc.gov/developer/api/v0/endpoints/do-not-call-dnc-reported-calls-data-api
@@ -23,12 +22,15 @@ from pathlib import Path
 from phone_normalization import normalize_nanp_number
 from collections import Counter
 
+from pipeline_io import atomic_write_json
+
 try:
     import requests
-except ImportError:
-    import subprocess
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "requests"])
-    import requests
+except ImportError as exc:  # pragma: no cover - environment guard
+    raise SystemExit(
+        "requests is required. Install the pipeline dependencies: "
+        "pip install -r scripts/requirements.txt"
+    ) from exc
 
 API_BASE = "https://api.ftc.gov/v0/dnc-complaints"
 API_KEY = "DEMO_KEY"
@@ -201,14 +203,17 @@ def merge_into_database(new_numbers: list[dict]):
             added += 1
 
     db["numbers"] = list(existing.values())
+    if added == 0 and updated == 0:
+        # Publishing a new version costs every device a full re-download.
+        print("No changes — database version left at", db.get("version", 0))
+        return
     db["version"] += 1
     db["updated"] = datetime.now().strftime("%Y-%m-%d")
 
     # Sort by reports descending
     db["numbers"].sort(key=lambda x: x.get("reports", 0), reverse=True)
 
-    with open(DB_FILE, "w") as f:
-        json.dump(db, f, indent=2)
+    atomic_write_json(DB_FILE, db)
 
     print(f"\nDatabase updated:")
     print(f"  Added: {added:,} new numbers")
