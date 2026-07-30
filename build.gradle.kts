@@ -482,3 +482,26 @@ tasks.register("verifyBackupPrivacyRules") {
         }
     }
 }
+
+tasks.register<Exec>("verifyPipelineTests") {
+    group = "verification"
+    description =
+        "Runs the Cloudflare Worker (node) and Python data-pipeline tests. " +
+            "The phone-number normalizer is implemented three times — Kotlin, JS, Python — " +
+            "and only the Kotlin side is covered by the Gradle suite."
+
+    val script = layout.projectDirectory.file("scripts/run-pipeline-tests.ps1")
+    inputs.file(script)
+    inputs.dir(layout.projectDirectory.dir("worker"))
+    inputs.dir(layout.projectDirectory.dir("scripts"))
+
+    // Skips (with a warning) when node/python are absent, so a machine without
+    // them can still run `check`.
+    commandLine(
+        "pwsh",
+        "-NoProfile",
+        "-NonInteractive",
+        "-File",
+        script.asFile.absolutePath,
+    )
+}

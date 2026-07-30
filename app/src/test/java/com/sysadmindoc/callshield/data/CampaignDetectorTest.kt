@@ -223,6 +223,10 @@ class CampaignDetectorTest {
 
     @Test
     fun threadSafety_rapidConcurrentCalls_doNotCrash() {
+        // Exceptions on a spawned thread (ConcurrentModificationException is
+        // the whole point of this test) only print to stderr — collect them so
+        // the test can actually fail.
+        val errors = java.util.concurrent.ConcurrentLinkedQueue<Throwable>()
         val threads =
             (1..10).map { threadNum ->
                 Thread {
@@ -231,11 +235,13 @@ class CampaignDetectorTest {
                         CampaignDetector.isActiveCampaign("${200 + threadNum}5551234")
                         CampaignDetector.getActiveCampaigns()
                     }
-                }
+                }.apply { setUncaughtExceptionHandler { _, error -> errors.add(error) } }
             }
         threads.forEach { it.start() }
         threads.forEach { it.join(5000) }
-        // If we get here without exceptions, the smoke test passes
+
+        assertTrue("threads still running after 5s", threads.none(Thread::isAlive))
+        assertTrue("concurrent access threw: ${errors.toList()}", errors.isEmpty())
     }
 
     // ─── Prefix extraction from various formats ──────────────────────

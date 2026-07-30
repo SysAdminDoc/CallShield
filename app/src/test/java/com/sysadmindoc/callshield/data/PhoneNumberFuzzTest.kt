@@ -1,6 +1,8 @@
 package com.sysadmindoc.callshield.data
 
+import org.junit.After
 import org.junit.Assert.*
+import org.junit.Before
 import org.junit.Test
 
 /**
@@ -12,6 +14,28 @@ import org.junit.Test
  * gracefully regardless of input.
  */
 class PhoneNumberFuzzTest {
+    /**
+     * The fuzz inputs are fed through CampaignDetector.recordCall, which
+     * mutates a process-wide singleton. ~20 of them share the 212555 NPA-NXX,
+     * so without this reset an "active campaign" leaks into every later test
+     * in the same JVM fork and any future assertion that a prefix is NOT an
+     * active campaign becomes order-dependent.
+     */
+    @Before
+    fun resetCampaignState() = clearCampaignState()
+
+    @After
+    fun clearCampaignStateAfter() = clearCampaignState()
+
+    @Suppress("UNCHECKED_CAST")
+    private fun clearCampaignState() {
+        val field =
+            CampaignDetector::class.java.getDeclaredField("recentPrefixes").also {
+                it.isAccessible = true
+            }
+        (field.get(CampaignDetector.shared) as MutableMap<*, *>).clear()
+    }
+
     // ── Helper: exercise every parsing path for one input ──────────────
 
     private fun fuzzAllParsers(input: String) {

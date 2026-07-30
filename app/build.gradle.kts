@@ -117,6 +117,17 @@ android {
             // OFF intentionally — it masks real bugs; Robolectric shadows
             // provide genuine framework behavior instead.
             isIncludeAndroidResources = true
+
+            all {
+                // The wall-clock ceilings in HotPathBenchmarkTest and RaceTest
+                // were read from this property but nothing ever set it, so a
+                // loaded machine (parallel builds are routine here) could flake
+                // them. Raise it with -PbenchHeadroom=3 on a slow or busy host.
+                it.systemProperty(
+                    "callshield.benchHeadroom",
+                    (project.findProperty("benchHeadroom") as String?) ?: "1.0",
+                )
+            }
         }
     }
 }
@@ -148,7 +159,16 @@ kover {
                     )
                 }
                 excludes {
-                    classes("com.sysadmindoc.callshield.data.local.*")
+                    // Exclude Room-generated artifacts and DAOs (no JVM-test
+                    // coverage by design), but NOT the whole package: it also
+                    // holds AppDatabase's corruption detection and recovery,
+                    // which sits on the screening path and does have JVM tests
+                    // (AppDatabaseCorruptionTest). Excluding it wholesale let
+                    // that logic lose its tests without the gate noticing.
+                    classes(
+                        "com.sysadmindoc.callshield.data.local.*_Impl",
+                        "com.sysadmindoc.callshield.data.local.*Dao*",
+                    )
                 }
             }
             verify {
@@ -198,6 +218,7 @@ tasks.withType<Detekt>().configureEach {
 tasks.named("check") {
     dependsOn(rootProject.tasks.named("verifyDebugApkPrivacy"))
     dependsOn(rootProject.tasks.named("verifyBackupPrivacyRules"))
+    dependsOn(rootProject.tasks.named("verifyPipelineTests"))
 }
 
 tasks.named("preBuild") {

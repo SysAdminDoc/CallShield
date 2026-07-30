@@ -652,23 +652,37 @@ internal class TimeBlockChecker : IChecker {
         val end = (ctx.prefs[SpamRepository.KEY_TIME_BLOCK_END] ?: 7).coerceIn(0, 23)
 
         val now = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
-        val inWindow =
+        return if (isInQuietWindow(now, start, end)) {
+            BlockResult.block("time_block", "unknown", "Blocked during quiet hours")
+        } else {
+            null
+        }
+    }
+
+    companion object {
+        /**
+         * Whether [nowHour] falls inside the quiet-hours window.
+         *
+         * Pure so the window arithmetic is testable: [check] reads the wall
+         * clock directly, which left the only branches that actually block or
+         * pass a real call without direct coverage.
+         */
+        internal fun isInQuietWindow(
+            nowHour: Int,
+            start: Int,
+            end: Int,
+        ): Boolean =
             when {
                 // Matching start/end means a 24-hour window — the Settings
                 // screen promises exactly that ("quiet-hours blocking runs
                 // all day"), and TimeSchedule uses the same convention.
                 start == end -> true
 
-                start < end -> now in start until end
+                // End-exclusive: a 9→17 window stops blocking at 17:00.
+                start < end -> nowHour in start until end
 
-                else -> now >= start || now < end // overnight wrap
+                else -> nowHour >= start || nowHour < end // overnight wrap
             }
-
-        return if (inWindow) {
-            BlockResult.block("time_block", "unknown", "Blocked during quiet hours")
-        } else {
-            null
-        }
     }
 }
 
