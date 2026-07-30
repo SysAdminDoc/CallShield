@@ -721,6 +721,13 @@ internal fun SwipeToRemoveBlocklistItem(
     LaunchedEffect(dismissState.currentValue) {
         if (dismissState.currentValue == SwipeToDismissBoxValue.EndToStart && !removalHandled) {
             removalHandled = true
+            // Clear the dismissed value before the row leaves the list. The
+            // state is saveable and keyed by the item id, so Undo — which
+            // re-inserts the same id — would otherwise restore an
+            // already-dismissed state, immediately re-firing this effect and
+            // removing the row again. snapTo (not reset) because the animation
+            // would be cancelled by disposal mid-flight.
+            dismissState.snapTo(SwipeToDismissBoxValue.Settled)
             onRemove()
         }
     }

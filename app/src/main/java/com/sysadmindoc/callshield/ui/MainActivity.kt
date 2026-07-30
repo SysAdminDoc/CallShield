@@ -155,6 +155,14 @@ fun CallShieldRoot(
         }
     }
 
+    // Opening a number detail replaces the tab shell rather than stacking on
+    // top of it, so CallShieldApp leaves composition entirely. rememberSaveable
+    // only survives host recreation, not leaving composition, which meant every
+    // detail visit reset the selected tab, search state, and all per-tab state.
+    // Holding both branches in a SaveableStateHolder preserves each subtree's
+    // saveable state across the switch (the same mechanism the tab row uses).
+    val rootStateHolder = rememberSaveableStateHolder()
+
     CallShieldTheme(themeMode = appTheme) {
         when {
             onboardingDone == null -> {
@@ -168,19 +176,23 @@ fun CallShieldRoot(
             }
 
             selectedNumber != null -> {
-                NumberDetailScreen(
-                    number = selectedNumber!!,
-                    viewModel = viewModel,
-                    onBack = { viewModel.closeNumberDetail() },
-                )
+                rootStateHolder.SaveableStateProvider(ROOT_STATE_DETAIL) {
+                    NumberDetailScreen(
+                        number = selectedNumber!!,
+                        viewModel = viewModel,
+                        onBack = { viewModel.closeNumberDetail() },
+                    )
+                }
             }
 
             else -> {
-                CallShieldApp(
-                    viewModel = viewModel,
-                    startTab = initialTab,
-                    tabRequestId = launchRequest.id.takeIf { launchRequest.shortcutAction != null },
-                )
+                rootStateHolder.SaveableStateProvider(ROOT_STATE_APP) {
+                    CallShieldApp(
+                        viewModel = viewModel,
+                        startTab = initialTab,
+                        tabRequestId = launchRequest.id.takeIf { launchRequest.shortcutAction != null },
+                    )
+                }
             }
         }
     }
@@ -217,8 +229,16 @@ fun CallShieldApp(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
+    // Apply a shortcut's target tab once per request. Without the handled-id
+    // guard this re-fires whenever CallShieldApp re-enters composition (e.g.
+    // returning from a number detail) and drags the user back to the shortcut's
+    // tab after they had navigated away.
+    var handledTabRequest by rememberSaveable { mutableStateOf<Int?>(null) }
     LaunchedEffect(tabRequestId) {
-        if (tabRequestId != null) selectedTab = startTab
+        if (tabRequestId != null && tabRequestId != handledTabRequest) {
+            handledTabRequest = tabRequestId
+            selectedTab = startTab
+        }
     }
 
     // Close search when switching tabs
@@ -886,3 +906,8 @@ private val KNOWN_SHORTCUT_ACTIONS =
         "com.sysadmindoc.callshield.SCAN",
         "com.sysadmindoc.callshield.SCAN_SMS",
     )
+
+// Stable SaveableStateHolder keys for the two top-level branches. They must not
+// change: the holder maps saved subtree state by these strings.
+private const val ROOT_STATE_APP = "root_tabs"
+private const val ROOT_STATE_DETAIL = "root_number_detail"

@@ -15,6 +15,12 @@ All notable changes to CallShield will be documented in this file.
   during the day. Unscoreable rows are now excluded from training,
   constant-feature weights can no longer leak into the fallback scorer, and
   the evaluation gate fails if a score varies across the 24 inference hours.
+- Opening a number's details no longer resets the app. Returning from a detail
+  screen used to drop you on Home with every tab's state cleared — filters,
+  the typed Lookup number, scroll positions, and the selected tab itself.
+- Undo after swiping a log entry or blocked number away now actually restores
+  it. The row came back and was immediately deleted again, so the entry could
+  never be recovered.
 
 - The documented database regeneration command silently deleted every
   single-report community row (80 of them). `--min-reports` defaults to 2 and
