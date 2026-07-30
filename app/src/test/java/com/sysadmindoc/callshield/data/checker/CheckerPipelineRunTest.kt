@@ -44,13 +44,15 @@ class CheckerPipelineRunTest {
         }
     }
 
-    private fun ctx(startTimeMillis: Long = System.currentTimeMillis()) =
+    /** Deterministic monotonic clock: "now" is fixed at [elapsedMs] past entry. */
+    private fun ctx(elapsedMs: Long = 0L) =
         CheckContext(
             appContext = context,
             number = "+15551230000",
             realtimeCall = true,
             prefs = emptyPreferences(),
-            startTimeMillis = startTimeMillis,
+            clock = { elapsedMs },
+            startTimeMillis = 0L,
         )
 
     @Test
@@ -70,8 +72,8 @@ class CheckerPipelineRunTest {
     fun `deadline short-circuit returns null and never invokes checkers`() =
         runBlocking {
             val wouldBlock = FakeChecker(9_000, "would_block", result = BlockResult.block("would_block"))
-            // startTimeMillis 10s in the past → timeLeftMillis() <= 0.
-            val expired = ctx(startTimeMillis = System.currentTimeMillis() - 10_000)
+            // Clock fixed 10s past entry → timeLeftMillis() <= 0.
+            val expired = ctx(elapsedMs = 10_000)
 
             val result = CheckerPipeline.run(listOf(wouldBlock), expired)
 

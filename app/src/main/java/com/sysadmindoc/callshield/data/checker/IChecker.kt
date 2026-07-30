@@ -99,8 +99,16 @@ data class CheckContext(
      * allowed presentation. This is deliberately not a contacts-derived name.
      */
     val callerName: String? = null,
-    /** Entry epoch for budget accounting. */
-    val startTimeMillis: Long = System.currentTimeMillis(),
+    /**
+     * Millisecond clock for budget accounting. Production uses the monotonic
+     * [android.os.SystemClock.elapsedRealtime]: the wall clock can step (NTP
+     * correction, manual/carrier time change) mid-call, which would either
+     * abort the pipeline early (fail-open, weaker layers skipped) or overrun
+     * the real Android 5-second deadline. Injectable for deterministic tests.
+     */
+    val clock: () -> Long = android.os.SystemClock::elapsedRealtime,
+    /** Entry timestamp (from [clock]) for budget accounting. */
+    val startTimeMillis: Long = clock(),
     /**
      * When an SMS sender was explicitly allowed by the user (manual whitelist,
      * emergency contact, contact whitelist, temporary allow) in the shared
@@ -120,7 +128,7 @@ data class CheckContext(
      * `timeLeftMillis() <= 0`.
      */
     fun timeLeftMillis(budgetMs: Long = 4500L): Long {
-        val elapsed = System.currentTimeMillis() - startTimeMillis
+        val elapsed = clock() - startTimeMillis
         return (budgetMs - elapsed).coerceAtLeast(0)
     }
 }
@@ -180,21 +188,29 @@ object CheckerPriority {
     // this number, that intent is authoritative.
     const val USER_BLOCKLIST = 7_000 // personal exact blocks, permanent or active temporary
     const val SYSTEM_BLOCK_LIST = 6_900 // reserved for A4 — BlockedNumberContract
-    const val PREFIX_MATCH = 6_000
     const val WILDCARD_RULE = 5_500
     const val HASH_WILDCARD_RULE = 5_400 // reserved for A5 — length-locked # patterns
 
     // ── Conditional allows — trust signals that sit UNDER explicit
     // user blocks but ABOVE weaker detection layers.
     //
-    // STIR_SHAKEN_TRUSTED belongs in this tier: a carrier-signed PASSED
-    // attestation is a strong trust signal, but the user's explicit
-    // blocklist / wildcard / prefix rules are authoritative and MUST win
-    // against it. Placed at the top of the conditional-allow block so it
-    // still beats statistical heuristics / ML / campaign-burst below.
+    // TEMPORARY_ALLOW sits above PREFIX_MATCH because spam_prefixes has no
+    // user-facing creation path — it is purely downloaded reputation data
+    // ("Block area code" creates a WildcardRule instead), and the shipped
+    // feed includes whole country codes. "Allow temporarily" from the
+    // Blocked Log is exactly the recovery action for a relative calling
+    // from a prefix-blocked country; below PREFIX it silently did nothing.
+    // User wildcard/hash rules still beat it (explicit user intent wins).
+    //
+    // STIR_SHAKEN_TRUSTED: a carrier-signed PASSED attestation is a strong
+    // trust signal, but the user's explicit blocklist / wildcard rules AND
+    // the categorical prefix feed are authoritative and MUST win against it
+    // (SIM-box fraud can carry A-attestation — see CLAUDE.md). It still
+    // beats exact downloaded rows and every statistical layer below.
     // Paired with STIR_SHAKEN (block side) above.
+    const val TEMPORARY_ALLOW = 5_350 // one-off false-positive recovery
+    const val PREFIX_MATCH = 5_320 // downloaded prefix reputation rows (country/NPA ranges)
     const val STIR_SHAKEN_TRUSTED = 5_300
-    const val TEMPORARY_ALLOW = 5_250 // one-off false-positive recovery
     const val GITHUB_DATABASE = 5_200 // downloaded exact reputation rows
     const val DB_PREFIX_EXPANSION = 5_150 // auto-block last-2-digit siblings of DB entries
     const val RECENTLY_DIALED = 5_000 // user just called this number

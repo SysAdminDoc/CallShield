@@ -77,6 +77,24 @@ class PipelineTraceTest {
     }
 
     @Test
+    fun `temporary allow recovers prefix-blocked callers but never overrides user rules`() {
+        // spam_prefixes has no user-facing creation path — it is downloaded
+        // reputation data (whole country codes included). "Allow temporarily"
+        // from the Blocked Log must therefore beat it, or the recovery action
+        // silently does nothing for a prefix-blocked relative abroad.
+        assertTrue(CheckerPriority.TEMPORARY_ALLOW > CheckerPriority.PREFIX_MATCH)
+        // Explicit user rules stay authoritative over a temporary allow.
+        assertTrue(CheckerPriority.WILDCARD_RULE > CheckerPriority.TEMPORARY_ALLOW)
+        assertTrue(CheckerPriority.HASH_WILDCARD_RULE > CheckerPriority.TEMPORARY_ALLOW)
+        assertTrue(CheckerPriority.USER_BLOCKLIST > CheckerPriority.TEMPORARY_ALLOW)
+        // SIM-box hardening: carrier attestation must not bypass the
+        // categorical prefix feed (see StirShakenTrustCheckerTest).
+        assertTrue(CheckerPriority.PREFIX_MATCH > CheckerPriority.STIR_SHAKEN_TRUSTED)
+        // Downloaded data stays below every explicit-allow recovery path.
+        assertTrue(CheckerPriority.PREFIX_MATCH > CheckerPriority.GITHUB_DATABASE)
+    }
+
+    @Test
     fun `traceEntry preserves BlockResult details`() {
         val result = BlockResult.block("database", "robocall", "Known spam number", 95)
         val entry = PipelineTraceEntry("database", 7_000, PipelineTraceVerdict.BLOCK, result)
