@@ -103,6 +103,73 @@ def assert_merge_cleanup(data_dir: Path) -> None:
         raise AssertionError(f"expected merged report counts, got {merged_numbers}")
 
 
+def assert_min_reports_spares_existing_rows(data_dir: Path) -> None:
+    """--min-reports must filter only newly-added entries.
+
+    Community reports are written at reports=1, and the documented regen
+    command runs with the default --min-reports 2. Applying that filter to
+    the whole merged database deleted every community row on each rerun.
+    """
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "import_all_sources", SCRIPTS_DIR / "import_all_sources.py"
+    )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    db_path = data_dir / "min_reports_db.json"
+    db_path.parent.mkdir(parents=True, exist_ok=True)
+    write_json(
+        db_path,
+        {
+            "version": 3,
+            "updated": "2026-06-01",
+            "description": "test",
+            "sources": [],
+            "numbers": [
+                {
+                    "number": "+12122340101",
+                    "reports": 1,
+                    "type": "robocall",
+                    "description": "Community reported",
+                    "first_seen": "2026-06-01",
+                    "last_seen": "2026-06-01",
+                },
+            ],
+            "prefixes": [],
+        },
+    )
+
+    module.DB_FILE = db_path
+    # One brand-new single-report entry (must be filtered) alongside an
+    # untouched pre-existing community row (must survive).
+    module.merge_into_database(
+        [
+            {
+                "number": "+15305550123",
+                "reports": 1,
+                "type": "robocall",
+                "description": "New low-confidence import",
+                "first_seen": "2026-06-12",
+                "last_seen": "2026-06-12",
+            },
+        ],
+        min_reports=2,
+    )
+
+    result = json.loads(db_path.read_text(encoding="utf-8"))
+    numbers = {entry["number"] for entry in result["numbers"]}
+    if "+12122340101" not in numbers:
+        raise AssertionError(
+            "min_reports filter deleted a pre-existing community-reported row"
+        )
+    if "+15305550123" in numbers:
+        raise AssertionError(
+            "min_reports filter failed to drop a new single-report entry"
+        )
+
+
 def main() -> None:
     with tempfile.TemporaryDirectory() as tmp:
         data_dir = Path(tmp) / "data"
@@ -113,6 +180,7 @@ def main() -> None:
         run_script("merge_community_reports.py", data_dir)
         assert_merge_cleanup(data_dir)
         assert_derived_outputs(data_dir)
+        assert_min_reports_spares_existing_rows(data_dir)
 
 
 if __name__ == "__main__":

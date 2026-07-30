@@ -2,6 +2,16 @@
 
 All notable changes to CallShield will be documented in this file.
 
+## Unreleased
+
+### Fixed
+
+- The documented database regeneration command silently deleted every
+  single-report community row (80 of them). `--min-reports` defaults to 2 and
+  was applied to the whole merged database rather than only to newly-imported
+  entries, so each regen erased the community contributions it claimed to
+  preserve.
+
 ## v1.7.27 — 2026-07-30
 
 ### Security
