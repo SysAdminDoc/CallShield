@@ -54,6 +54,12 @@ All notable changes to CallShield will be documented in this file.
   A minimal device-encrypted mirror carries only the blocking essentials;
   checks that need credential-encrypted data fail open until unlock.
 
+### Added
+
+- Current-version Fastlane/F-Droid artwork now includes six verified phone
+  screenshots, the production launcher icon, and a branded feature graphic.
+  Release metadata checks enforce the required asset count and dimensions.
+
 ### Fixed
 
 - External blocklist redirects are now handled manually, revalidated on every
