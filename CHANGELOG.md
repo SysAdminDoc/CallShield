@@ -62,6 +62,11 @@ All notable changes to CallShield will be documented in this file.
 
 ### Fixed
 
+- Dashboard readiness, setup status, Settings summaries, and bottom navigation
+  now adapt cleanly at 200% font scale without clipped or overlapping text.
+- Android device coverage now verifies TalkBack toggle state, caller-ID overlay
+  proportions across display densities, and grouped block notifications on
+  pre-Android-13 devices.
 - The minified release build now has a verified replace-mode backup round-trip
   for blocklist, range-rule, settings, and activity-log data. Live Android
   Telecom smoke tests also confirm restored blocked callers are rejected while

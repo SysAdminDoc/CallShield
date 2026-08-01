@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
@@ -84,12 +85,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
@@ -977,38 +980,67 @@ internal fun DashboardHeroCard(
             )
         }
         GradientDivider()
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            DashboardReadinessMetric(
-                value = "$requiredSetupComplete/$requiredSetupTotal",
-                label = stringResource(R.string.dashboard_metric_core_setup),
-                icon = Icons.Default.Shield,
-                color = if (dashboardStatus.setupComplete) CatGreen else CatYellow,
-                modifier = Modifier.weight(1f),
-            )
-            Box(Modifier.width(1.dp).height(60.dp).background(CatMuted))
-            DashboardReadinessMetric(
-                value = engineCount.toString(),
-                label = stringResource(R.string.dashboard_metric_engines),
-                icon = Icons.Default.Security,
-                color = CatGreen,
-                modifier = Modifier.weight(1f),
-            )
-            Box(Modifier.width(1.dp).height(60.dp).background(CatMuted))
-            DashboardReadinessMetric(
-                value =
-                    if (lastSync > 0L || lastSyncSource == SpamRepository.SYNC_SOURCE_BUNDLED) {
-                        stringResource(R.string.dashboard_metric_ready)
-                    } else {
-                        "—"
-                    },
-                label = stringResource(R.string.dashboard_metric_database),
-                icon = Icons.Default.DownloadDone,
-                color = syncFreshnessColor(lastSync, lastSyncSource),
-                modifier = Modifier.weight(1f),
-            )
+        val databaseReadinessValue =
+            if (lastSync > 0L || lastSyncSource == SpamRepository.SYNC_SOURCE_BUNDLED) {
+                stringResource(R.string.dashboard_metric_ready)
+            } else {
+                "—"
+            }
+        if (LocalDensity.current.fontScale >= 1.5f) {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                DashboardReadinessMetric(
+                    value = "$requiredSetupComplete/$requiredSetupTotal",
+                    label = stringResource(R.string.dashboard_metric_core_setup),
+                    icon = Icons.Default.Shield,
+                    color = if (dashboardStatus.setupComplete) CatGreen else CatYellow,
+                    horizontal = true,
+                )
+                GradientDivider()
+                DashboardReadinessMetric(
+                    value = engineCount.toString(),
+                    label = stringResource(R.string.dashboard_metric_engines),
+                    icon = Icons.Default.Security,
+                    color = CatGreen,
+                    horizontal = true,
+                )
+                GradientDivider()
+                DashboardReadinessMetric(
+                    value = databaseReadinessValue,
+                    label = stringResource(R.string.dashboard_metric_database),
+                    icon = Icons.Default.DownloadDone,
+                    color = syncFreshnessColor(lastSync, lastSyncSource),
+                    horizontal = true,
+                )
+            }
+        } else {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                DashboardReadinessMetric(
+                    value = "$requiredSetupComplete/$requiredSetupTotal",
+                    label = stringResource(R.string.dashboard_metric_core_setup),
+                    icon = Icons.Default.Shield,
+                    color = if (dashboardStatus.setupComplete) CatGreen else CatYellow,
+                    modifier = Modifier.weight(1f),
+                )
+                Box(Modifier.width(1.dp).height(60.dp).background(CatMuted))
+                DashboardReadinessMetric(
+                    value = engineCount.toString(),
+                    label = stringResource(R.string.dashboard_metric_engines),
+                    icon = Icons.Default.Security,
+                    color = CatGreen,
+                    modifier = Modifier.weight(1f),
+                )
+                Box(Modifier.width(1.dp).height(60.dp).background(CatMuted))
+                DashboardReadinessMetric(
+                    value = databaseReadinessValue,
+                    label = stringResource(R.string.dashboard_metric_database),
+                    icon = Icons.Default.DownloadDone,
+                    color = syncFreshnessColor(lastSync, lastSyncSource),
+                    modifier = Modifier.weight(1f),
+                )
+            }
         }
         GradientDivider()
     }
@@ -1021,15 +1053,48 @@ private fun DashboardReadinessMetric(
     icon: ImageVector,
     color: Color,
     modifier: Modifier = Modifier,
+    horizontal: Boolean = false,
 ) {
-    Column(
-        modifier = modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(3.dp),
-    ) {
-        Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(22.dp))
-        Text(value, style = MaterialTheme.typography.titleLarge, color = CatText, fontWeight = FontWeight.SemiBold)
-        Text(label, style = MaterialTheme.typography.bodySmall, color = CatSubtext, maxLines = 1)
+    if (horizontal) {
+        Row(
+            modifier = modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(22.dp))
+            Text(
+                value,
+                modifier = Modifier.widthIn(min = 72.dp),
+                style = MaterialTheme.typography.titleLarge,
+                color = CatText,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+            )
+            Text(
+                label,
+                modifier = Modifier.weight(1f),
+                style = MaterialTheme.typography.bodySmall,
+                color = CatSubtext,
+                maxLines = 2,
+            )
+        }
+    } else {
+        Column(
+            modifier = modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(3.dp),
+        ) {
+            Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(22.dp))
+            Text(value, style = MaterialTheme.typography.titleLarge, color = CatText, fontWeight = FontWeight.SemiBold)
+            Text(
+                label,
+                modifier = Modifier.fillMaxWidth(),
+                style = MaterialTheme.typography.bodySmall,
+                color = CatSubtext,
+                maxLines = 2,
+                textAlign = TextAlign.Center,
+            )
+        }
     }
 }
 
@@ -1056,21 +1121,30 @@ internal fun DashboardSetupChecklistCard(
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
+            val setupStateLabel =
+                if (dashboardStatus.setupComplete) {
+                    stringResource(R.string.dashboard_setup_complete)
+                } else {
+                    stringResource(R.string.dashboard_setup_needs_attention)
+                }
+            if (LocalDensity.current.fontScale >= 1.5f) {
                 SectionHeader(stringResource(R.string.dashboard_setup_checklist))
                 SetupStateBadge(
-                    label =
-                        if (dashboardStatus.setupComplete) {
-                            stringResource(R.string.dashboard_setup_complete)
-                        } else {
-                            stringResource(R.string.dashboard_setup_needs_attention)
-                        },
+                    label = setupStateLabel,
                     color = if (dashboardStatus.setupComplete) CatGreen else CatYellow,
                 )
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    SectionHeader(stringResource(R.string.dashboard_setup_checklist))
+                    SetupStateBadge(
+                        label = setupStateLabel,
+                        color = if (dashboardStatus.setupComplete) CatGreen else CatYellow,
+                    )
+                }
             }
 
             SetupChecklistRow(

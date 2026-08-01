@@ -35,6 +35,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -243,21 +244,30 @@ fun SettingsScreen(viewModel: MainViewModel) {
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
+            val setupSummary =
+                if (setupReadyCount == setupTotal) {
+                    stringResource(R.string.settings_setup_ready_summary)
+                } else {
+                    stringResource(R.string.settings_setup_attention_summary)
+                }
+            if (LocalDensity.current.fontScale >= 1.5f) {
                 SectionHeader(stringResource(R.string.settings_permissions_access))
                 StatusPill(
-                    text =
-                        if (setupReadyCount == setupTotal) {
-                            stringResource(R.string.settings_setup_ready_summary)
-                        } else {
-                            stringResource(R.string.settings_setup_attention_summary)
-                        },
+                    text = setupSummary,
                     color = if (setupReadyCount == setupTotal) CatGreen else CatYellow,
                 )
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    SectionHeader(stringResource(R.string.settings_permissions_access))
+                    StatusPill(
+                        text = setupSummary,
+                        color = if (setupReadyCount == setupTotal) CatGreen else CatYellow,
+                    )
+                }
             }
             Spacer(Modifier.height(4.dp))
             Text(
@@ -1944,8 +1954,15 @@ private fun SettingsLinkRow(
     ) {
         PremiumIconTile(icon = icon, color = tintColor, size = 34.dp, iconSize = 18.dp)
         Spacer(Modifier.width(10.dp))
-        Text(title, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-        Text(value, style = MaterialTheme.typography.bodySmall, color = CatSubtext)
+        if (LocalDensity.current.fontScale >= 1.5f) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(title, style = MaterialTheme.typography.bodyLarge)
+                Text(value, style = MaterialTheme.typography.bodySmall, color = CatSubtext)
+            }
+        } else {
+            Text(title, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+            Text(value, style = MaterialTheme.typography.bodySmall, color = CatSubtext)
+        }
         Spacer(Modifier.width(8.dp))
         Icon(
             Icons.AutoMirrored.Filled.ArrowForward,

@@ -25,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
@@ -743,8 +744,8 @@ fun RowScope.NavItem(
     NavigationBarItem(
         selected = selected,
         onClick = onClick,
-        // Icon is decorative — the always-visible label names the tab, so a
-        // matching icon contentDescription makes TalkBack announce it twice.
+        // Icon is decorative — the label names the tab for accessibility, so
+        // a matching icon contentDescription makes TalkBack announce it twice.
         icon = { Icon(icon, contentDescription = null, tint = if (selected) iconTint else LocalContentColor.current) },
         label = {
             Text(
@@ -759,6 +760,10 @@ fun RowScope.NavItem(
                 selectedTextColor = color,
                 indicatorColor = Color.Transparent,
             ),
+        // Five 200%-scaled labels cannot fit a compact phone navigation bar.
+        // Material still exposes every label to accessibility services while
+        // showing only the selected label at large font scales.
+        alwaysShowLabel = LocalDensity.current.fontScale < 1.5f,
     )
 }
 
