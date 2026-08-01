@@ -56,6 +56,7 @@ object UrlSafetyChecker {
     suspend fun checkSmsBody(
         body: String,
         stripQuery: Boolean = true,
+        allowRemoteLookup: Boolean = false,
     ): List<UrlCheckResult> {
         val urls = extractCandidateUrls(body)
 
@@ -63,7 +64,7 @@ object UrlSafetyChecker {
 
         return urls.mapNotNull { url ->
             localSpamDomainResult(url, stripQuery)
-                ?: checkUrl(url, stripQuery).takeIf { it.isMalicious }
+                ?: if (allowRemoteLookup) checkUrl(url).takeIf { it.isMalicious } else null
         }
     }
 
@@ -72,10 +73,10 @@ object UrlSafetyChecker {
      */
     suspend fun checkUrl(
         url: String,
-        stripQuery: Boolean = true,
     ): UrlCheckResult =
         withContext(Dispatchers.IO) {
-            val lookupUrl = normalizeRemoteLookupUrl(url, stripQuery)
+            val lookupUrl = normalizeRemoteLookupUrl(url)
+            if (lookupUrl.isBlank()) return@withContext UrlCheckResult("", false)
             try {
                 val escapedUrl =
                     lookupUrl
@@ -149,7 +150,7 @@ object UrlSafetyChecker {
     ): UrlCheckResult? {
         if (!SmsContentAnalyzer.isKnownSpamDomainUrl(url)) return null
         return UrlCheckResult(
-            url = normalizeRemoteLookupUrl(url, stripQuery),
+            url = normalizeLocalResultUrl(url, stripQuery),
             isMalicious = true,
             threat = "known_spam_domain",
             tags = listOf("local_spam_domain"),
@@ -178,6 +179,41 @@ object UrlSafetyChecker {
     }
 
     internal fun normalizeRemoteLookupUrl(
+        rawUrl: String,
+        registrableDomain: (okhttp3.HttpUrl) -> String? = { it.topPrivateDomain() },
+    ): String {
+        val normalizedUrl = normalizeCandidateUrl(rawUrl)
+        val parsedUrl =
+            normalizedUrl.toHttpUrlOrNull()
+                ?: return ""
+
+        // Never disclose an SMS/RCS path, query, or subdomain to URLhaus.
+        // A remote lookup is explicit opt-in and receives only the
+        // registrable domain (or literal IP host) as an origin URL.
+        val resolvedDomain = runCatching { registrableDomain(parsedUrl) }
+        if (resolvedDomain.isFailure) return ""
+        val lookupHost =
+            resolvedDomain.getOrNull()
+                ?: parsedUrl.host.takeIf(::isIpLiteral)
+                ?: return ""
+        return parsedUrl
+            .newBuilder()
+            .host(lookupHost)
+            .encodedPath("/")
+            .query(null)
+            .fragment(null)
+            .build()
+            .toString()
+    }
+
+    private fun isIpLiteral(host: String): Boolean =
+        ':' in host ||
+            host.split('.').let { labels ->
+                labels.size == 4 &&
+                    labels.all { label -> label.toIntOrNull()?.let { it in 0..255 } == true }
+            }
+
+    internal fun normalizeLocalResultUrl(
         rawUrl: String,
         stripQuery: Boolean = true,
     ): String {

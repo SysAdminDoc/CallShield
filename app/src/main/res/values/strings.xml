@@ -520,6 +520,8 @@
     <string name="settings_sms_content_desc">Spam keywords, phishing links, scam patterns</string>
     <string name="settings_urlhaus_privacy">URLhaus privacy mode</string>
     <string name="settings_urlhaus_privacy_desc">Remove URL queries before remote checks</string>
+    <string name="settings_urlhaus_remote_lookup">Share link domains with URLhaus</string>
+    <string name="settings_urlhaus_remote_lookup_desc">Optional. Send only the registrable domain to abuse.ch for malware checks</string>
     <string name="settings_sms_burst">SMS burst protection</string>
     <string name="settings_sms_burst_desc">Detect repeated unknown senders and message floods</string>
     <string name="settings_repeat_caller">Repeat caller auto-block</string>

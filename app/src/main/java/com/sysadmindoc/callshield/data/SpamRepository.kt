@@ -150,6 +150,7 @@ class SpamRepository(
         val KEY_SMS_CONTENT = booleanPreferencesKey("sms_content_analysis_enabled")
         val KEY_SMS_BURST = booleanPreferencesKey("sms_burst_detection_enabled")
         val KEY_URLHAUS_STRIP_QUERY = booleanPreferencesKey("urlhaus_strip_query_enabled")
+        val KEY_URLHAUS_REMOTE_LOOKUP = booleanPreferencesKey("urlhaus_remote_lookup_enabled")
         val KEY_CONTACT_WHITELIST = booleanPreferencesKey("contact_whitelist_enabled")
         val KEY_CONTACTS_ONLY = booleanPreferencesKey("contacts_only_mode_enabled")
         val KEY_SELECTED_CONTACT_GROUPS = stringSetPreferencesKey("selected_contact_group_keys")
@@ -278,6 +279,7 @@ class SpamRepository(
     val smsContentEnabled: Flow<Boolean> = settingsRepository.smsContentEnabled
     val smsBurstEnabled: Flow<Boolean> = settingsRepository.smsBurstEnabled
     val urlhausStripQueryEnabled: Flow<Boolean> = settingsRepository.urlhausStripQueryEnabled
+    val urlhausRemoteLookupEnabled: Flow<Boolean> = settingsRepository.urlhausRemoteLookupEnabled
     val contactWhitelistEnabled: Flow<Boolean> = settingsRepository.contactWhitelistEnabled
     val contactsOnlyEnabled: Flow<Boolean> = settingsRepository.contactsOnlyEnabled
     val selectedContactGroups: Flow<Set<String>> = settingsRepository.selectedContactGroups
@@ -415,6 +417,8 @@ class SpamRepository(
     suspend fun setSmsBurst(enabled: Boolean) = settingsRepository.setSmsBurst(enabled)
 
     suspend fun setUrlhausStripQuery(enabled: Boolean) = settingsRepository.setUrlhausStripQuery(enabled)
+
+    suspend fun setUrlhausRemoteLookup(enabled: Boolean) = settingsRepository.setUrlhausRemoteLookup(enabled)
 
     suspend fun setContactWhitelist(enabled: Boolean) = settingsRepository.setContactWhitelist(enabled)
 
