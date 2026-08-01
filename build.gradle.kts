@@ -1,4 +1,5 @@
 import java.util.zip.ZipFile
+import javax.imageio.ImageIO
 
 data class AppReleaseVersion(
     val name: String,
@@ -288,6 +289,7 @@ tasks.register("verifyReleaseMetadata") {
         layout.projectDirectory.file(
             "fastlane/metadata/android/en-US/changelogs/${appReleaseVersion.code}.txt",
         )
+    val storeImages = layout.projectDirectory.dir("fastlane/metadata/android/en-US/images")
     val fdroidMetadata = layout.projectDirectory.file("docs/fdroid/com.sysadmindoc.callshield.yml")
     val fdroidRunbook = layout.projectDirectory.file("docs/fdroid-submission.md")
     val signingPreflight = layout.projectDirectory.file("scripts/verify-release-signing.ps1")
@@ -308,6 +310,7 @@ tasks.register("verifyReleaseMetadata") {
         changelog,
         changelogScreen,
     )
+    inputs.dir(storeImages)
 
     doLast {
         val issues = mutableListOf<String>()
@@ -367,6 +370,45 @@ tasks.register("verifyReleaseMetadata") {
             issues += "Fastlane changelog ${appReleaseVersion.code}.txt is missing or empty."
         } else if (storeChangelog.asFile.readText().length > 500) {
             issues += "Fastlane changelog ${appReleaseVersion.code}.txt exceeds 500 characters."
+        }
+
+        fun imageDimensions(file: File): Pair<Int, Int>? =
+            runCatching {
+                ImageIO.read(file)?.let { image -> image.width to image.height }
+            }.getOrNull()
+
+        val iconFile = storeImages.file("icon.png").asFile
+        if (imageDimensions(iconFile) != (512 to 512)) {
+            issues += "Fastlane icon.png must be a readable 512x512 PNG."
+        }
+        val featureGraphicFile = storeImages.file("featureGraphic.png").asFile
+        if (imageDimensions(featureGraphicFile) != (1024 to 500)) {
+            issues += "Fastlane featureGraphic.png must be a readable 1024x500 PNG."
+        }
+        val phoneScreenshots =
+            storeImages
+                .dir("phoneScreenshots")
+                .asFile
+                .listFiles { file -> file.isFile && file.extension.equals("png", ignoreCase = true) }
+                .orEmpty()
+                .sortedBy(File::getName)
+        if (phoneScreenshots.size !in 4..8) {
+            issues += "Fastlane metadata must include 4-8 phone screenshots; found ${phoneScreenshots.size}."
+        }
+        phoneScreenshots.forEach { screenshot ->
+            val dimensions = imageDimensions(screenshot)
+            if (dimensions == null) {
+                issues += "Fastlane screenshot ${screenshot.name} is not a readable PNG."
+            } else {
+                val (width, height) = dimensions
+                val shorter = minOf(width, height)
+                val longer = maxOf(width, height)
+                if (shorter < 320 || longer > 3_840 || longer > shorter * 2) {
+                    issues +=
+                        "Fastlane screenshot ${screenshot.name} has unsupported dimensions " +
+                            "${width}x$height (expected 320-3840 px and at most 2:1)."
+                }
+            }
         }
 
         val currentStoreCopy = "$fullDescription\n$shortDescription\n$fdroidText".lowercase()

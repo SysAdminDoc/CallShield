@@ -22,6 +22,19 @@
 
 CallShield blocks spam calls and texts using a **15+ layer on-device detection engine** with a gradient-boosted tree ML scorer, campaign burst detection, RCS notification filter, and real-time caller ID overlay. Powered by a 32,623-number database with scheduled hot-list updates. Community-maintained, no accounts, no tracking.
 
+## Screenshots
+
+<p align="center">
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/01-home.png" width="30%" alt="CallShield protection dashboard">
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/02-blocked.png" width="30%" alt="Blocked call activity">
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/03-lookup.png" width="30%" alt="Explainable number lookup">
+</p>
+<p align="center">
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/04-overlay.png" width="30%" alt="Live call risk overlay">
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/05-settings.png" width="30%" alt="Privacy and blocking settings">
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/06-more.png" width="30%" alt="Protection tools and release information">
+</p>
+
 ## v1.7.32 Highlights
 
 - **Guided first-run setup** — CallShield walks through phone and message
