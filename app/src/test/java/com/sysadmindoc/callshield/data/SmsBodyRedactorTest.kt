@@ -34,4 +34,16 @@ class SmsBodyRedactorTest {
         assertFalse(preview.contains("bob@example.com"))
         assertFalse(preview.contains("555"))
     }
+
+    @Test
+    fun `redactForPreview bounds all pattern scans while retaining the original length`() {
+        val prefix = "a".repeat(SmsContentAnalyzer.MAX_ANALYSIS_LENGTH)
+        val rawBody = "$prefix bob@example.com 5551234567"
+
+        val preview = SmsBodyRedactor.redactForPreview(rawBody).orEmpty()
+
+        assertTrue(preview.contains("${rawBody.length} chars"))
+        assertFalse(preview.contains("email-like text hidden"))
+        assertFalse(preview.contains("numbers hidden"))
+    }
 }

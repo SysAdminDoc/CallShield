@@ -38,6 +38,12 @@ All notable changes to CallShield will be documented in this file.
 - Live caller enrichment is now explicit opt-in and limited to calls the local
   heuristic pipeline already marked suspicious. The setting identifies all four
   recipient hosts; clean callers stay entirely on-device.
+- SMS preview and export redaction now bounds every regular-expression scan to
+  the analyzer's maximum input size, preventing crafted long bodies from
+  stalling the activity UI.
+- The community translation gate now scans format tokens in linear time and
+  rejects DTD/entity declarations before XML parsing, preventing malicious
+  resource submissions from exhausting maintainer or CI machines.
 
 ### Fixed
 

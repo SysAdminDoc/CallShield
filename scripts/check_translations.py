@@ -38,9 +38,6 @@ ROOT = Path(__file__).resolve().parent.parent
 RES_DIR = ROOT / "app" / "src" / "main" / "res"
 BASE_DIR = RES_DIR / "values"
 
-# %[argument_index$][flags][width][.precision]conversion
-FORMAT_RE = re.compile(r"%(?:(\d+)\$)?([-#+ 0,(]*)(\d+)?(?:\.\d+)?([a-zA-Z%])")
-
 # CLDR plural categories that must be present per language. Languages absent
 # here are only required to provide "other"; listing every language would be
 # noise, and an extra category is never an error.
@@ -65,6 +62,24 @@ DEFAULT_PLURAL_QUANTITIES = {"other"}
 # translations and must not be reported as untranslated locales.
 LOCALE_DIR_RE = re.compile(r"^values-(?:b\+[A-Za-z0-9+]+|[a-z]{2,3}(?:-r[A-Z]{2})?)$")
 
+FORMAT_FLAGS = frozenset("-#+ 0,(<")
+FORBIDDEN_XML_DECLARATIONS = (b"<!DOCTYPE", b"<!ENTITY")
+MAX_RESOURCE_XML_BYTES = 1024 * 1024
+
+
+def parse_resource_root(path: Path) -> ET.Element:
+    """Parse Android resource XML without allowing attacker-defined entities."""
+    xml_bytes = path.read_bytes()
+    if len(xml_bytes) > MAX_RESOURCE_XML_BYTES:
+        raise ET.ParseError(f"resource XML exceeds {MAX_RESOURCE_XML_BYTES} bytes")
+    # XML declarations cannot contain whitespace between '<!' and their name.
+    # Removing NULs also detects the same declarations in UTF-16/UTF-32 files
+    # before ElementTree gets a chance to expand an internal entity graph.
+    declaration_probe = xml_bytes.replace(b"\x00", b"").upper()
+    if any(declaration in declaration_probe for declaration in FORBIDDEN_XML_DECLARATIONS):
+        raise ET.ParseError("DTD and entity declarations are not allowed")
+    return ET.fromstring(xml_bytes)
+
 
 def specifiers(text: str) -> list[str]:
     """Return the normalized format specifiers in a string, in argument order.
@@ -75,15 +90,49 @@ def specifiers(text: str) -> list[str]:
     """
     found = []
     implicit = 0
-    for match in FORMAT_RE.finditer(text):
-        index, _flags, _width, conversion = match.groups()
+    cursor = 0
+    while (percent := text.find("%", cursor)) != -1:
+        token_start = percent + 1
+        token_cursor = token_start
+
+        index_end = token_cursor
+        while index_end < len(text) and text[index_end].isascii() and text[index_end].isdigit():
+            index_end += 1
+        if index_end > token_cursor and index_end < len(text) and text[index_end] == "$":
+            index = text[token_cursor:index_end].lstrip("0") or "0"
+            token_cursor = index_end + 1
+        else:
+            index = None
+
+        while token_cursor < len(text) and text[token_cursor] in FORMAT_FLAGS:
+            token_cursor += 1
+        while token_cursor < len(text) and text[token_cursor].isascii() and text[token_cursor].isdigit():
+            token_cursor += 1
+        if token_cursor < len(text) and text[token_cursor] == ".":
+            precision_start = token_cursor + 1
+            token_cursor = precision_start
+            while token_cursor < len(text) and text[token_cursor].isascii() and text[token_cursor].isdigit():
+                token_cursor += 1
+            if token_cursor == precision_start:
+                cursor = token_start
+                continue
+
+        if token_cursor >= len(text) or not (
+            text[token_cursor].isascii()
+            and (text[token_cursor].isalpha() or text[token_cursor] == "%")
+        ):
+            cursor = token_start
+            continue
+
+        conversion = text[token_cursor]
+        cursor = token_cursor + 1
         if conversion == "%":  # literal %% - not an argument
             continue
         if index is None:
             implicit += 1
             position = implicit
         else:
-            position = int(index)
+            position = index
         found.append(f"{position}:{conversion.lower()}")
     return sorted(set(found))
 
@@ -105,7 +154,7 @@ def load_strings(values_dir: Path) -> tuple[dict[str, str], set[str]]:
     values: dict[str, str] = {}
     untranslatable: set[str] = set()
     for path in resource_files(values_dir):
-        root = ET.parse(path).getroot()
+        root = parse_resource_root(path)
         if root.tag != "resources":
             continue
         for node in root.findall("string"):
@@ -121,7 +170,7 @@ def load_strings(values_dir: Path) -> tuple[dict[str, str], set[str]]:
 def load_plurals(values_dir: Path) -> dict[str, dict[str, str]]:
     plurals: dict[str, dict[str, str]] = {}
     for path in resource_files(values_dir):
-        root = ET.parse(path).getroot()
+        root = parse_resource_root(path)
         if root.tag != "resources":
             continue
         for node in root.findall("plurals"):
@@ -164,7 +213,7 @@ def check_locales_config(locale_dirs: list[Path]) -> list[str]:
 
     declared = {
         node.get("{http://schemas.android.com/apk/res/android}name")
-        for node in ET.parse(config_path).getroot().findall("locale")
+        for node in parse_resource_root(config_path).findall("locale")
     }
     declared.discard(None)
 
