@@ -62,6 +62,10 @@ All notable changes to CallShield will be documented in this file.
 
 ### Fixed
 
+- The minified release build now has a verified replace-mode backup round-trip
+  for blocklist, range-rule, settings, and activity-log data. Live Android
+  Telecom smoke tests also confirm restored blocked callers are rejected while
+  unlisted callers continue ringing.
 - The complete 88-test Android device suite now passes against current behavior.
   Swipe-to-unblock fires exactly once without preserving a dismissed state for
   Undo, and stale integration/UI assertions now reflect current rule priority,
