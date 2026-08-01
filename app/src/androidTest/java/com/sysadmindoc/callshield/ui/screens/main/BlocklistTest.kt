@@ -129,12 +129,16 @@ class BlocklistTest {
         }
 
         composeRule.onNodeWithTag(BLOCKLIST_SWIPE_ITEM_TAG).performTouchInput {
-            swipeLeft()
+            swipeLeft(
+                // Start in the row body rather than the trailing IconButton,
+                // which consumes the initial pointer event as a click target.
+                startX = centerX + (width * 0.2f),
+                endX = left + 1f,
+                durationMillis = 1_000,
+            )
         }
 
-        composeRule.runOnIdle {
-            assertEquals(1, removed)
-        }
+        composeRule.waitUntil(timeoutMillis = 3_000) { removed == 1 }
     }
 
     private fun manualSpamNumber(): SpamNumber =

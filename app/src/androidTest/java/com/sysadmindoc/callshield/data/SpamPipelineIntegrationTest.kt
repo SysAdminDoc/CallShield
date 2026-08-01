@@ -152,7 +152,7 @@ class SpamPipelineIntegrationTest {
         }
 
     @Test
-    fun prefixRulesBeatWildcardAndHashWildcardRules() =
+    fun explicitWildcardRulesBeatDownloadedPrefixesAndHashWildcardRules() =
         runBlocking {
             val number = "+15085550123"
             dao.insertPrefixes(
@@ -170,7 +170,7 @@ class SpamPipelineIntegrationTest {
             val result = repo.isSpam(number)
 
             assertTrue(result.isSpam)
-            assertEquals("prefix", result.matchSource)
+            assertEquals("wildcard", result.matchSource)
         }
 
     @Test

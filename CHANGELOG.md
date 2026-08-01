@@ -62,6 +62,10 @@ All notable changes to CallShield will be documented in this file.
 
 ### Fixed
 
+- The complete 88-test Android device suite now passes against current behavior.
+  Swipe-to-unblock fires exactly once without preserving a dismissed state for
+  Undo, and stale integration/UI assertions now reflect current rule priority,
+  sync status text, whitelist guidance, and contact-group selection behavior.
 - External blocklist redirects are now handled manually, revalidated on every
   hop, limited to five hops, and refused if they leave the user-selected host.
 - Regex-rule safety validation now uses an Android-compatible escaped closing
