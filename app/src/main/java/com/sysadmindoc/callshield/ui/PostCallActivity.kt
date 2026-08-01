@@ -115,18 +115,14 @@ class PostCallActivity : AppCompatActivity() {
     }
 
     private fun markSpam() {
-        // Guard against spoofed launches: any app can start this activity with a
-        // crafted ACTION_POST_CALL + tel: handle for an arbitrary number. Before
-        // submitting a community spam report (which is broadcast to all users), we
-        // require a matching recent call in the device call log. If the number has
-        // no recent call, the launch is unverified — block it locally only and skip
-        // the community contribution so the shared DB can't be weaponized. If we
-        // can't check (READ_CALL_LOG not granted, query error), fall back to the
-        // normal path so the legitimate flow is never suppressed.
+        // The manifest limits launches to Telecom callers with MODIFY_PHONE_STATE,
+        // and this second boundary verifies the supplied number against the recent
+        // call log before it can affect the shared report feed. An unreadable call
+        // log is unverified, so it is deliberately local-only as well.
         val number = details.number
         val app = applicationContext
         CallShieldApp.appScope.launch {
-            if (PostCallCallLogVerifier.hasRecentCall(app, number) == false) {
+            if (!PostCallReportPolicy.canContribute(PostCallCallLogVerifier.hasRecentCall(app, number))) {
                 runCatching {
                     SpamRepository
                         .getInstance(app)
@@ -171,6 +167,11 @@ internal data class PostCallDetails(
     val disconnectCause: Int,
 )
 
+internal object PostCallReportPolicy {
+    /** Only a positively verified call-log match may reach the community feed. */
+    fun canContribute(hasRecentCall: Boolean?): Boolean = hasRecentCall == true
+}
+
 /**
  * Verifies that a post-call review actually corresponds to a real recent call in
  * the device call log, so a spoofed ACTION_POST_CALL launch can't drive community
@@ -183,8 +184,8 @@ internal object PostCallCallLogVerifier {
     /**
      * @return true if a call to/from [number] exists in the log within the recent
      *   window, false if the log was readable but has no such entry, or null if we
-     *   couldn't determine it (permission missing, query error) — callers should
-     *   treat null as "don't block the legitimate flow".
+     *   couldn't determine it (permission missing or query error). Callers must
+     *   treat null as unverified and keep any action local-only.
      */
     suspend fun hasRecentCall(
         context: Context,

@@ -2,6 +2,15 @@
 
 All notable changes to CallShield will be documented in this file.
 
+## Unreleased
+
+### Security
+
+- Post-call review can now be launched only by privileged Telecom callers, and
+  community reports require a positively verified recent call-log match. Missing
+  permission or a provider failure falls back to a local-only block instead of
+  treating an unverifiable launch as authentic.
+
 ## v1.7.32 — 2026-08-01
 
 ### Changed

@@ -7,6 +7,7 @@ import android.telecom.DisconnectCause
 import android.telecom.TelecomManager
 import androidx.test.core.app.ApplicationProvider
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -73,5 +74,13 @@ class PostCallActivityTest {
 
         val activity = handlers.single { it.activityInfo.name == PostCallActivity::class.java.name }
         assertTrue(activity.activityInfo.exported)
+        assertEquals(android.Manifest.permission.MODIFY_PHONE_STATE, activity.activityInfo.permission)
+    }
+
+    @Test
+    fun `community contribution requires a positive call-log match`() {
+        assertTrue(PostCallReportPolicy.canContribute(true))
+        assertFalse(PostCallReportPolicy.canContribute(false))
+        assertFalse(PostCallReportPolicy.canContribute(null))
     }
 }
