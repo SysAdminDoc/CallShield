@@ -10,6 +10,17 @@ All notable changes to CallShield will be documented in this file.
   community reports require a positively verified recent call-log match. Missing
   permission or a provider failure falls back to a local-only block instead of
   treating an unverifiable launch as authentic.
+- The report Worker now fails closed when anti-abuse bindings are absent, rejects
+  browser-originated submissions, and attaches a daily HMAC reporter bucket
+  without storing client IP addresses.
+- Hot-number and campaign-range promotion now requires several independent
+  reporters over a meaningful time span. Range promotion also has a stricter
+  per-number evidence floor and a per-run cap.
+- Anonymous `not_spam` votes no longer mutate the shipped database. Explicit
+  source provenance protects authoritative entries, while sufficiently strong
+  community-only challenges are parked for maintainer review.
+- Spam domains now require independent reporters, pass public-suffix and
+  legitimate-domain checks, and remain in a review queue until approved.
 
 ## v1.7.32 — 2026-08-01
 

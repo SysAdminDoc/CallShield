@@ -3,7 +3,13 @@
 
 from datetime import datetime, timedelta, timezone
 
-from report_dedup import BURST_DUPLICATE_SECONDS, find_burst_duplicates, parse_reported_at
+from report_dedup import (
+    BURST_DUPLICATE_SECONDS,
+    find_burst_duplicates,
+    parse_reported_at,
+    reporter_day_key,
+    validated_reporter_bucket,
+)
 
 BASE = datetime(2026, 7, 30, 12, 0, 0, tzinfo=timezone.utc)
 
@@ -13,6 +19,17 @@ def at(seconds: int) -> datetime:
 
 
 def main() -> None:
+    assert validated_reporter_bucket("0123456789abcdef") == "0123456789abcdef"
+    assert validated_reporter_bucket("ABCDEF0123456789") == "abcdef0123456789"
+    assert validated_reporter_bucket("short") == ""
+    assert validated_reporter_bucket(None) == ""
+    assert reporter_day_key("0123456789abcdef", BASE) == (
+        "0123456789abcdef",
+        "2026-07-30",
+    )
+    assert reporter_day_key("", BASE) is None
+    assert reporter_day_key("0123456789abcdef", None) is None
+
     # ── parse_reported_at ────────────────────────────────────────────────
     assert parse_reported_at("2026-07-30T12:00:00Z") == BASE
     assert parse_reported_at("2026-07-30T12:00:00+00:00") == BASE

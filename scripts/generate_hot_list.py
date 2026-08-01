@@ -18,7 +18,13 @@ from pathlib import Path
 from phone_normalization import validated_report_number
 
 from pipeline_io import atomic_write_json
-from report_dedup import BURST_DUPLICATE_SECONDS, find_burst_duplicates, parse_reported_at
+from report_dedup import (
+    BURST_DUPLICATE_SECONDS,
+    find_burst_duplicates,
+    parse_reported_at,
+    reporter_day_key,
+    validated_reporter_bucket,
+)
 
 DATA_DIR = Path(os.environ.get("CALLSHIELD_DATA_DIR", Path(__file__).parent.parent / "data"))
 REPORTS_DIR = Path(os.environ.get("CALLSHIELD_REPORTS_DIR", DATA_DIR / "reports"))
@@ -26,10 +32,17 @@ DB_FILE = DATA_DIR / "spam_numbers.json"
 HOT_LIST_FILE = DATA_DIR / "hot_numbers.json"
 HOT_RANGES_FILE = DATA_DIR / "hot_ranges.json"
 
-HOT_LIST_SIZE = 500         # Max numbers to include
-HOT_WINDOW_HOURS = 24       # Look back this many hours
-MIN_REPORTS_HOT = 2         # Minimum community reports to appear in hot list
-CAMPAIGN_THRESHOLD = 3      # Distinct numbers from same NPA-NXX to flag the range
+HOT_LIST_SIZE = 500
+HOT_WINDOW_HOURS = 24
+MIN_REPORTS_HOT = 4
+MIN_REPORTERS_HOT = 3
+MIN_REPORT_SPAN_MINUTES = 120
+CAMPAIGN_THRESHOLD = 4
+CAMPAIGN_REPORTS_PER_NUMBER = 5
+CAMPAIGN_REPORTERS_PER_NUMBER = 4
+CAMPAIGN_MIN_UNION_REPORTERS = 6
+CAMPAIGN_MIN_SPAN_MINUTES = 240
+MAX_NEW_CAMPAIGN_RANGES = 5
 
 
 
@@ -67,7 +80,7 @@ def main():
     # Collected first, then collapsed, because near-simultaneous duplicates have
     # to be recognised against the other reports for the same number rather than
     # in file-glob order.
-    pending: list[tuple[str, datetime | None, str, str, str]] = []
+    pending: list[tuple[str, datetime, str, str, str, str]] = []
 
     if REPORTS_DIR.exists():
         for report_file in REPORTS_DIR.glob("*.json"):
@@ -82,23 +95,38 @@ def main():
 
                 reported_at_str = report.get("reported_at", "")
                 reported_at = parse_reported_at(reported_at_str)
-                if reported_at is not None and reported_at < cutoff:
-                    continue  # Too old for hot list
+                reporter_bucket = validated_reporter_bucket(report.get("reporter_bucket"))
+                if not reporter_bucket:
+                    continue
+                if reported_at is None or reported_at < cutoff or reported_at > now + timedelta(minutes=5):
+                    continue
 
-                pending.append((number, reported_at, reported_at_str, spam_type, report_file.name))
+                pending.append(
+                    (number, reported_at, reported_at_str, spam_type, report_file.name, reporter_bucket)
+                )
             except Exception as e:
                 print(f"  Skipping {report_file.name}: {e}")
 
     # Repeat submissions for the same number seconds apart are one reporter, not
     # velocity — see report_dedup for why the Worker cannot be relied on here.
     burst_duplicates = find_burst_duplicates(
-        (number, reported_at, token) for number, reported_at, _, _, token in pending
+        (number, reported_at, token) for number, reported_at, _, _, token, _ in pending
     )
 
     velocity: dict[str, dict] = {}
-    for number, _reported_at, reported_at_str, spam_type, token in sorted(pending, key=lambda e: e[4]):
+    seen_reporter_days: set[tuple[str, str, str]] = set()
+    collapsed_identity = 0
+    for number, reported_at, reported_at_str, spam_type, token, reporter_bucket in sorted(
+        pending, key=lambda entry: (entry[1], entry[4])
+    ):
         if token in burst_duplicates:
             continue
+        day_key = reporter_day_key(reporter_bucket, reported_at)
+        identity_key = (number, *day_key) if day_key is not None else None
+        if identity_key is None or identity_key in seen_reporter_days:
+            collapsed_identity += 1
+            continue
+        seen_reporter_days.add(identity_key)
         entry = velocity.get(number)
         if entry is None:
             velocity[number] = {
@@ -111,9 +139,13 @@ def main():
                 "first_seen": reported_at_str,
                 "last_seen": reported_at_str,
                 "description": "Trending community report",
+                "_reporters": {reporter_bucket},
+                "_times": [reported_at],
             }
         else:
             entry["reports"] += 1
+            entry["_reporters"].add(reporter_bucket)
+            entry["_times"].append(reported_at)
             if reported_at_str > entry["last_seen"]:
                 entry["last_seen"] = reported_at_str
             if reported_at_str and reported_at_str < entry["first_seen"]:
@@ -124,6 +156,8 @@ def main():
             f"  Collapsed {len(burst_duplicates)} burst-duplicate report(s) filed within "
             f"{BURST_DUPLICATE_SECONDS}s of a counted report for the same number"
         )
+    if collapsed_identity:
+        print(f"  Collapsed {collapsed_identity} same-reporter daily duplicate(s)")
 
     # ── Also include high-velocity numbers from main DB with recent last_seen ──
     if DB_FILE.exists():
@@ -170,15 +204,36 @@ def main():
                     }
 
     # ── Filter and rank ───────────────────────────────────────────────
-    hot = [v for v in velocity.values() if v.get("reports", 0) >= MIN_REPORTS_HOT]
+    hot_internal = []
+    for entry in velocity.values():
+        times = entry.get("_times", [])
+        reporters = entry.get("_reporters", set())
+        if not times:
+            continue
+        span_minutes = int((max(times) - min(times)).total_seconds() // 60)
+        entry["distinct_reporters"] = len(reporters)
+        entry["report_span_minutes"] = span_minutes
+        if (
+            entry["reports"] >= MIN_REPORTS_HOT
+            and entry["distinct_reporters"] >= MIN_REPORTERS_HOT
+            and span_minutes >= MIN_REPORT_SPAN_MINUTES
+        ):
+            hot_internal.append(entry)
     # Rank by in-window velocity first; lifetime total only breaks ties.
-    hot.sort(key=lambda x: (x.get("reports", 0), x.get("total_reports", 0)), reverse=True)
-    hot = hot[:HOT_LIST_SIZE]
+    hot_internal.sort(key=lambda x: (x.get("reports", 0), x.get("total_reports", 0)), reverse=True)
+    hot_internal = hot_internal[:HOT_LIST_SIZE]
+    hot = [
+        {key: value for key, value in entry.items() if not key.startswith("_")}
+        for entry in hot_internal
+    ]
 
     # ── Write hot_numbers.json ────────────────────────────────────────
     output = {
         "generated": now.isoformat(),
         "window_hours": HOT_WINDOW_HOURS,
+        "min_reports": MIN_REPORTS_HOT,
+        "min_distinct_reporters": MIN_REPORTERS_HOT,
+        "min_report_span_minutes": MIN_REPORT_SPAN_MINUTES,
         "count": len(hot),
         "numbers": hot,
     }
@@ -205,23 +260,41 @@ def main():
     # a robocaller is likely running a campaign across that exchange. Flag the
     # entire range so the Android app can score calls from it even if the
     # specific number hasn't been reported yet.
-    npanxx_counts: dict[str, int] = {}
-    for entry in hot:
+    npanxx_entries: dict[str, list[dict]] = {}
+    for entry in hot_internal:
+        if (
+            entry["reports"] < CAMPAIGN_REPORTS_PER_NUMBER
+            or len(entry["_reporters"]) < CAMPAIGN_REPORTERS_PER_NUMBER
+            or entry["report_span_minutes"] < CAMPAIGN_MIN_SPAN_MINUTES
+        ):
+            continue
         npanxx = npanxx_of(entry.get("number", ""))
         if npanxx:
-            npanxx_counts[npanxx] = npanxx_counts.get(npanxx, 0) + 1
+            npanxx_entries.setdefault(npanxx, []).append(entry)
 
-    hot_ranges = [
-        {"npanxx": npanxx, "count": count}
-        for npanxx, count in sorted(npanxx_counts.items(), key=lambda x: -x[1])
-        if count >= CAMPAIGN_THRESHOLD
-    ]
+    hot_ranges = []
+    for npanxx, entries in sorted(npanxx_entries.items(), key=lambda item: -len(item[1])):
+        union_reporters = set().union(*(entry["_reporters"] for entry in entries))
+        if len(entries) < CAMPAIGN_THRESHOLD or len(union_reporters) < CAMPAIGN_MIN_UNION_REPORTERS:
+            continue
+        hot_ranges.append(
+            {
+                "npanxx": npanxx,
+                "count": len(entries),
+                "distinct_reporters": len(union_reporters),
+            }
+        )
+        if len(hot_ranges) >= MAX_NEW_CAMPAIGN_RANGES:
+            break
 
     atomic_write_json(
         HOT_RANGES_FILE,
         {
             "generated": now.isoformat(),
             "threshold": CAMPAIGN_THRESHOLD,
+            "min_reports_per_number": CAMPAIGN_REPORTS_PER_NUMBER,
+            "min_distinct_reporters_per_number": CAMPAIGN_REPORTERS_PER_NUMBER,
+            "min_union_reporters": CAMPAIGN_MIN_UNION_REPORTERS,
             "count": len(hot_ranges),
             "ranges": hot_ranges,
         },

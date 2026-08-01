@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import {
+import worker, {
   normalizePhoneNumberForReport,
   stripNationalTrunkPrefix,
   isPlausibleReportNumber,
@@ -12,7 +12,9 @@ import {
   sanitizeSmsUrlIndicators,
   checkRateLimit,
   checkDedup,
+  deriveReporterBucket,
   recordDedup,
+  validateReportEnvironment,
 } from "./community-reports-worker.js";
 
 const FIXTURES = JSON.parse(
@@ -172,12 +174,17 @@ test("rate limiter isolates different IPs", async () => {
   assert.equal(allowed.allowed, true);
 });
 
-test("rate limiter is permissive when KV is not bound", async () => {
+test("rate limiter fails closed when KV is not bound", async () => {
   const rl = await checkRateLimit("1.2.3.4", {});
-  assert.equal(rl.allowed, true);
+  assert.equal(rl.allowed, false);
+  assert.equal(rl.configurationError, true);
 
   const rl2 = await checkRateLimit("1.2.3.4", null);
-  assert.equal(rl2.allowed, true);
+  assert.equal(rl2.allowed, false);
+  assert.equal(rl2.configurationError, true);
+
+  const localOnly = await checkRateLimit("1.2.3.4", { ALLOW_UNLIMITED_REPORTS: "true" });
+  assert.equal(localOnly.allowed, true);
 });
 
 test("dedup rejects same IP + number only after the report is recorded", async () => {
@@ -215,13 +222,112 @@ test("dedup allows same IP for different numbers", async () => {
   assert.equal(result, false, "different number should not be a duplicate");
 });
 
-test("recordDedup is a no-op when KV is not bound", async () => {
-  await recordDedup("1.2.3.4", "+12125551234", {});
-  const result = await checkDedup("1.2.3.4", "+12125551234", {});
+test("dedup only permits missing KV behind the explicit local flag", async () => {
+  const localEnv = { ALLOW_UNLIMITED_REPORTS: "true" };
+  await recordDedup("1.2.3.4", "+12125551234", localEnv);
+  const result = await checkDedup("1.2.3.4", "+12125551234", localEnv);
   assert.equal(result, false);
 });
 
-test("dedup is permissive when KV is not bound", async () => {
-  const result = await checkDedup("1.2.3.4", "+12125551234", {});
-  assert.equal(result, false);
+test("dedup fails closed when KV is not bound", async () => {
+  await assert.rejects(checkDedup("1.2.3.4", "+12125551234", {}), /RATE_LIMIT/);
+  await assert.rejects(recordDedup("1.2.3.4", "+12125551234", {}), /RATE_LIMIT/);
+});
+
+test("report environment requires every production abuse-control binding", () => {
+  const missing = validateReportEnvironment({});
+  assert.equal(missing.ready, false);
+  assert.deepEqual(missing.missing, ["RATE_LIMIT", "GITHUB_TOKEN", "REPORTER_BUCKET_SECRET"]);
+
+  const ready = validateReportEnvironment({
+    RATE_LIMIT: createMockKV(),
+    GITHUB_TOKEN: "test-token",
+    REPORTER_BUCKET_SECRET: "s".repeat(32),
+  });
+  assert.deepEqual(ready, { ready: true, missing: [] });
+});
+
+test("reporter buckets are stable within a day and rotate across days", async () => {
+  const secret = "s".repeat(32);
+  const morning = await deriveReporterBucket("203.0.113.7", "2026-08-01T08:00:00Z", secret);
+  const evening = await deriveReporterBucket("203.0.113.7", "2026-08-01T22:00:00Z", secret);
+  const nextDay = await deriveReporterBucket("203.0.113.7", "2026-08-02T08:00:00Z", secret);
+  const otherReporter = await deriveReporterBucket("203.0.113.8", "2026-08-01T08:00:00Z", secret);
+
+  assert.match(morning, /^[a-f0-9]{16}$/);
+  assert.equal(morning, evening);
+  assert.notEqual(morning, nextDay);
+  assert.notEqual(morning, otherReporter);
+});
+
+test("POST rejects browser and non-JSON submissions before touching storage", async () => {
+  const env = {
+    RATE_LIMIT: createMockKV(),
+    GITHUB_TOKEN: "test-token",
+    REPORTER_BUCKET_SECRET: "s".repeat(32),
+  };
+  const browserResponse = await worker.fetch(
+    new Request("https://reports.example", {
+      method: "POST",
+      headers: { "content-type": "application/json", origin: "https://attacker.example" },
+      body: JSON.stringify({ number: "+12122340101", type: "spam" }),
+    }),
+    env,
+  );
+  assert.equal(browserResponse.status, 403);
+  assert.equal(browserResponse.headers.get("access-control-allow-origin"), null);
+
+  const textResponse = await worker.fetch(
+    new Request("https://reports.example", {
+      method: "POST",
+      headers: { "content-type": "text/plain" },
+      body: JSON.stringify({ number: "+12122340101", type: "spam" }),
+    }),
+    env,
+  );
+  assert.equal(textResponse.status, 415);
+});
+
+test("POST fails closed when production bindings are missing", async () => {
+  const response = await worker.fetch(
+    new Request("https://reports.example", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ number: "+12122340101", type: "spam" }),
+    }),
+    {},
+  );
+  assert.equal(response.status, 503);
+});
+
+test("stored reports carry only a daily reporter bucket, never an IP", async () => {
+  const originalFetch = globalThis.fetch;
+  let githubPayload;
+  globalThis.fetch = async (_url, options) => {
+    githubPayload = JSON.parse(options.body);
+    return new Response("{}", { status: 201 });
+  };
+  try {
+    const response = await worker.fetch(
+      new Request("https://reports.example", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "cf-connecting-ip": "203.0.113.7",
+        },
+        body: JSON.stringify({ number: "+12122340101", type: "spam" }),
+      }),
+      {
+        RATE_LIMIT: createMockKV(),
+        GITHUB_TOKEN: "test-token",
+        REPORTER_BUCKET_SECRET: "s".repeat(32),
+      },
+    );
+    assert.equal(response.status, 200);
+    const report = JSON.parse(atob(githubPayload.content));
+    assert.match(report.reporter_bucket, /^[a-f0-9]{16}$/);
+    assert.equal(JSON.stringify(report).includes("203.0.113.7"), false);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });

@@ -11,13 +11,21 @@ from pathlib import Path
 from phone_normalization import is_plausible_number, validated_report_number
 
 from pipeline_io import atomic_write_json
-from report_dedup import find_burst_duplicates, parse_reported_at
+from report_dedup import (
+    find_burst_duplicates,
+    parse_reported_at,
+    reporter_day_key,
+    validated_reporter_bucket,
+)
 
 DATA_DIR = Path(os.environ.get("CALLSHIELD_DATA_DIR", Path(__file__).parent.parent / "data"))
 DB_FILE = DATA_DIR / "spam_numbers.json"
 REPORTS_DIR = Path(os.environ.get("CALLSHIELD_REPORTS_DIR", DATA_DIR / "reports"))
+NOT_SPAM_REVIEW_FILE = DATA_DIR / "not_spam_review.json"
 
 COMMUNITY_DESCRIPTION = "Community reported"
+COMMUNITY_SOURCE = "community"
+LEGACY_SOURCE = "legacy_import"
 
 
 def quarantine(report_file: Path, rejected_dir: Path) -> None:
@@ -88,6 +96,19 @@ def main():
     if purged:
         print(f"Purged {purged} implausible existing rows")
 
+    # Migrate legacy rows to an explicit provenance field once. Human-readable
+    # descriptions are presentation text and must never decide whether an
+    # anonymous vote can weaken an authoritative entry.
+    provenance_migrated = 0
+    for entry in db["numbers"]:
+        sources = entry.get("sources")
+        if isinstance(sources, list) and all(isinstance(source, str) for source in sources):
+            continue
+        entry["sources"] = [
+            COMMUNITY_SOURCE if entry.get("description") == COMMUNITY_DESCRIPTION else LEGACY_SOURCE
+        ]
+        provenance_migrated += 1
+
     # Repeat submissions of the same number+verdict seconds apart are one
     # reporter, not corroboration. Counting them inflates the shipped `reports`
     # value and, for not_spam, lets a single voter de-list a genuine community
@@ -95,6 +116,8 @@ def main():
     # cannot be relied on. Unreadable files are ignored here and quarantined by
     # the main loop below.
     burst_candidates = []
+    identity_duplicates = set()
+    seen_reporter_days = set()
     for report_file in report_files:
         try:
             with open(report_file) as f:
@@ -104,13 +127,18 @@ def main():
         peeked_number = validated_report_number(peek.get("number", ""))
         if not peeked_number:
             continue
-        burst_candidates.append(
-            (
-                (peeked_number, peek.get("type", "unknown")),
-                parse_reported_at(peek.get("reported_at")),
-                report_file.name,
-            )
-        )
+        spam_type = peek.get("type", "unknown")
+        reported_at = parse_reported_at(peek.get("reported_at"))
+        reporter_bucket = validated_reporter_bucket(peek.get("reporter_bucket"))
+        day_key = reporter_day_key(reporter_bucket, reported_at)
+        if day_key is None:
+            burst_candidates.append(((peeked_number, spam_type), reported_at, report_file.name))
+        else:
+            identity_key = (peeked_number, spam_type, *day_key)
+            if identity_key in seen_reporter_days:
+                identity_duplicates.add(report_file.name)
+            else:
+                seen_reporter_days.add(identity_key)
     burst_duplicates = find_burst_duplicates(burst_candidates)
 
     existing = {n["number"]: n for n in db["numbers"]}
@@ -120,6 +148,7 @@ def main():
     collapsed = 0
     rejected = 0
     processed_files = []
+    not_spam_votes: dict[str, set[str]] = {}
     rejected_dir = REPORTS_DIR / "rejected"
 
     for report_file in report_files:
@@ -140,7 +169,7 @@ def main():
                 skipped += 1
                 continue
 
-            if report_file.name in burst_duplicates:
+            if report_file.name in burst_duplicates or report_file.name in identity_duplicates:
                 # Same number and verdict as a report already counted seconds
                 # earlier. Consume the file so it does not linger in the queue.
                 processed_files.append(report_file)
@@ -158,15 +187,16 @@ def main():
             # Authoritative FCC/FTC entries are immune to anonymous removal,
             # otherwise a stream of not_spam reports could de-list real spammers.
             if spam_type == "not_spam":
-                entry = existing.get(number)
-                if entry is not None and entry.get("description") == COMMUNITY_DESCRIPTION:
-                    entry["reports"] = max(0, entry["reports"] - 1)
-                    if entry["reports"] <= 0:
-                        del existing[number]
-                        print(f"  Removed {number} (community false positive)")
-                updated += 1
+                reporter_bucket = validated_reporter_bucket(report.get("reporter_bucket"))
+                if reporter_bucket:
+                    not_spam_votes.setdefault(number, set()).add(reporter_bucket)
+                else:
+                    skipped += 1
             elif number in existing:
                 existing[number]["reports"] += 1
+                sources = set(existing[number].get("sources", []))
+                sources.add(COMMUNITY_SOURCE)
+                existing[number]["sources"] = sorted(sources)
                 if reported_at > existing[number].get("last_seen", ""):
                     existing[number]["last_seen"] = reported_at
                 updated += 1
@@ -178,6 +208,7 @@ def main():
                     "first_seen": reported_at,
                     "last_seen": reported_at,
                     "description": COMMUNITY_DESCRIPTION,
+                    "sources": [COMMUNITY_SOURCE],
                 }
                 added += 1
 
@@ -188,11 +219,54 @@ def main():
             quarantine(report_file, rejected_dir)
             rejected += 1
 
+    # Anonymous false-positive votes never mutate the shipped database. A
+    # distinct-source quorum strictly larger than the spam count can only park
+    # a community-only row for maintainer review; rows with any authoritative
+    # provenance are not candidates at all.
+    review_candidates = []
+    for number, reporters in sorted(not_spam_votes.items()):
+        entry = existing.get(number)
+        if entry is None or set(entry.get("sources", [])) != {COMMUNITY_SOURCE}:
+            continue
+        report_count = max(0, int(entry.get("reports", 0)))
+        if len(reporters) > report_count:
+            review_candidates.append(
+                {
+                    "number": number,
+                    "not_spam_votes": len(reporters),
+                    "spam_reports": report_count,
+                    "reported_at": today,
+                }
+            )
+
+    if review_candidates:
+        prior_candidates = []
+        if NOT_SPAM_REVIEW_FILE.exists():
+            try:
+                prior = json.loads(NOT_SPAM_REVIEW_FILE.read_text(encoding="utf-8"))
+                if isinstance(prior, dict) and isinstance(prior.get("candidates"), list):
+                    prior_candidates = prior["candidates"]
+            except (OSError, ValueError):
+                prior_candidates = []
+        by_number = {
+            candidate["number"]: candidate
+            for candidate in prior_candidates + review_candidates
+            if isinstance(candidate, dict) and isinstance(candidate.get("number"), str)
+        }
+        atomic_write_json(
+            NOT_SPAM_REVIEW_FILE,
+            {
+                "updated": today,
+                "count": len(by_number),
+                "candidates": list(by_number.values()),
+            },
+        )
+
     db["numbers"] = list(existing.values())
     # Only publish a new version when the contents actually changed. The app
     # re-syncs the whole 6.5 MB database whenever `version` moves, so bumping
     # it on a no-op run costs every device a pointless download.
-    changed = added > 0 or updated > 0 or purged > 0
+    changed = added > 0 or updated > 0 or purged > 0 or provenance_migrated > 0
     if changed:
         db["version"] += 1
         db["updated"] = today
