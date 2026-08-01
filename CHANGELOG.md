@@ -32,6 +32,9 @@ All notable changes to CallShield will be documented in this file.
 - The Accrescent helper now accepts passwords as `SecureString` values and uses
   ACL-restricted, short-lived handoff files because bundletool supports only
   inline or file-based password sources.
+- SMS and RCS links are now checked against the local spam-domain list without
+  disclosure. Optional URLhaus checks default off and send only a registrable
+  domain, never a path, query, fragment, subdomain, or one-time token.
 
 ### Fixed
 

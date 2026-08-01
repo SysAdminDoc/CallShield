@@ -362,7 +362,7 @@ SMS-specific layers (append after the shared chain, in their own priority order)
 - **Caller ID Overlay** — suspicious calls (heuristic score 30-59) trigger a live multi-source lookup overlay with SkipCalls, PhoneBlock, WhoCalledMe + OpenCNAM caller name
 - **Region & caller-name rules** — opt-in offline blocking outside selected US/Canadian regions, plus bounded `*`/`?` trust and block patterns for carrier-presented caller names; explicit number/system/prefix/wildcard blocks and all allow layers keep priority
 - **Opt-in message notification screening** — Google/Samsung Messages are enabled by default; AOSP Messages, SMS Organizer, Signal, WhatsApp, WhatsApp Business, Gmail, Outlook, and Thunderbird can be enabled individually. Private-messenger/email matches show a separate warning without removing the original notification.
-- **URL Safety** — local spam-domain checks run before URLhaus (abuse.ch), with query-string stripping enabled by default for remote SMS/RCS URL checks
+- **URL Safety** — local spam-domain checks stay on-device; optional URLhaus (abuse.ch) checks default off and disclose only the registrable domain
 - **STIR/SHAKEN** — blocks calls failing carrier caller ID verification (Android 11+)
 - **After-Call Feedback** — "Was this spam?" notification after suspicious calls, plus an optional Android 11+ post-call screen for block/report and save-contact actions
 
@@ -496,7 +496,7 @@ Trained weekly from the CallShield database (50K positive + 50K negative samples
 ### URL Safety (post-decision)
 | Source | What It Checks |
 |--------|---------------|
-| **URLhaus** (abuse.ch) | Phishing/malware URLs in SMS/RCS bodies after local spam-domain matching |
+| **URLhaus** (abuse.ch) | Optional, default-off malware-domain checks after local spam-domain matching; only the registrable domain is shared |
 
 ## Security
 
@@ -515,7 +515,7 @@ All detection runs on-device. No personal data is collected. Network requests:
 - Syncing spam database from GitHub (public)
 - Real-time lookups against free public APIs (number queried, not stored)
 - Community reports to Cloudflare Worker (phone number only, no identity)
-- URLhaus checks for SMS URL safety after local spam-domain matching; fragments and query strings are stripped by default
+- Local spam-domain checks do not disclose SMS/RCS links; optional URLhaus checks are explicit opt-in and send only the registrable domain
 
 No API keys — none required, none optional, no credential entry anywhere in the app. No accounts. No analytics. No ads.
 
@@ -587,7 +587,7 @@ language in [issue #7](https://github.com/SysAdminDoc/CallShield/issues/7).
 | Settings | DataStore Preferences 1.2.1 |
 | Background | WorkManager 2.11.2 |
 | Community API | Cloudflare Workers |
-| URL Safety | URLhaus (abuse.ch) |
+| URL Safety | Local spam-domain data; optional URLhaus (abuse.ch) |
 | Verification | Local Gradle, lint, and release-artifact checks |
 | Tests | 952 JVM unit tests (JUnit) |
 | Strings | 1160 string resources and 29 plural groups (translation-ready) |

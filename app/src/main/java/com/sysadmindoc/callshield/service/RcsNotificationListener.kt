@@ -179,6 +179,7 @@ class RcsNotificationListener : NotificationListenerService() {
         val checkSpamSms = CheckSpamSmsUseCase(SpamRepositoryAdapter(repo))
         val prefs = repo.readPrefsSnapshot()
         val stripUrlhausQuery = prefs[SpamRepository.KEY_URLHAUS_STRIP_QUERY] ?: true
+        val remoteUrlLookupEnabled = prefs[SpamRepository.KEY_URLHAUS_REMOTE_LOOKUP] ?: false
 
         // Notification screening owns content access; the Block SMS toggle
         // controls only spam classification/removal. URL warnings intentionally
@@ -237,7 +238,13 @@ class RcsNotificationListener : NotificationListenerService() {
                 reason = reason,
             )
         } else if (effectiveBody != null) {
-            launchUrlSafetyWarning(effectiveBody, sender, source, stripUrlhausQuery)
+            launchUrlSafetyWarning(
+                effectiveBody,
+                sender,
+                source,
+                stripUrlhausQuery,
+                remoteUrlLookupEnabled,
+            )
         }
     }
 
@@ -246,10 +253,16 @@ class RcsNotificationListener : NotificationListenerService() {
         sender: String,
         source: NotificationScreeningSource,
         stripQuery: Boolean,
+        allowRemoteLookup: Boolean,
     ) {
         if (body.isBlank()) return
         scope.launch {
-            val malicious = UrlSafetyChecker.checkSmsBody(body, stripQuery = stripQuery)
+            val malicious =
+                UrlSafetyChecker.checkSmsBody(
+                    body,
+                    stripQuery = stripQuery,
+                    allowRemoteLookup = allowRemoteLookup,
+                )
             if (malicious.isNotEmpty()) {
                 val threats = malicious.joinToString(", ") { it.threat.ifEmpty { "malware" } }
                 if (source.category == NotificationScreeningCategory.RCS && filterAsciiDigits(sender).length >= 7) {

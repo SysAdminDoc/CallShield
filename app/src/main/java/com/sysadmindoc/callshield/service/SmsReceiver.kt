@@ -59,15 +59,17 @@ class SmsReceiver : BroadcastReceiver() {
 
         // Keep work off the main thread without spinning a raw thread per SMS.
         // goAsync() keeps the broadcast alive until pendingResult.finish() is
-        // called. We use appScope rather than a short-lived one so the URLhaus
-        // phishing check can continue after we've finished with the broadcast.
+        // called. We use appScope rather than a short-lived one so local URL
+        // checks and the optional URLhaus lookup can continue afterward.
         applicationScope.launch {
             var sender = ""
             var body = ""
             var stripUrlhausQuery = true
+            var remoteUrlLookupEnabled = false
             try {
                 val prefs = repo.readPrefsSnapshot()
                 stripUrlhausQuery = prefs[SpamRepository.KEY_URLHAUS_STRIP_QUERY] ?: true
+                remoteUrlLookupEnabled = prefs[SpamRepository.KEY_URLHAUS_REMOTE_LOOKUP] ?: false
                 val blockSmsEnabled = prefs[SpamRepository.KEY_BLOCK_SMS] ?: true
 
                 val messages = Telephony.Sms.Intents.getMessagesFromIntent(intent)
@@ -79,10 +81,8 @@ class SmsReceiver : BroadcastReceiver() {
                 body = reassembleBody(messages.map { it.messageBody })
 
                 // Spam classification + block logging is gated behind the
-                // Block-SMS toggle. The URLhaus phishing-URL check below runs
-                // regardless — a user who turns off SMS spam blocking still
-                // expects malware-URL warnings, and gating both behind one
-                // toggle silently disabled phishing protection.
+                // Block-SMS toggle. Local phishing-URL checks below run
+                // regardless; remote URLhaus checks require their own opt-in.
                 if (blockSmsEnabled) {
                     val result = checkSpamSms(sender, body, prefsSnapshot = prefs)
                     if (result.isSpam) {
@@ -115,14 +115,17 @@ class SmsReceiver : BroadcastReceiver() {
                 pendingResult.finish()
             }
 
-            // Background URLhaus phishing URL check — runs after the broadcast
-            // decision so it never adds latency to SMS delivery. Fires a
-            // warning notification if the message contains a URL listed in
-            // URLhaus. Wrapped in its own try/catch so a network hiccup can't
-            // propagate out of the receiver.
+            // Background local domain check plus optional URLhaus domain-only
+            // lookup. This runs after the broadcast decision so it never adds
+            // latency to SMS delivery.
             if (body.isNotEmpty()) {
                 try {
-                    val maliciousUrls = UrlSafetyChecker.checkSmsBody(body, stripQuery = stripUrlhausQuery)
+                    val maliciousUrls =
+                        UrlSafetyChecker.checkSmsBody(
+                            body,
+                            stripQuery = stripUrlhausQuery,
+                            allowRemoteLookup = remoteUrlLookupEnabled,
+                        )
                     if (maliciousUrls.isNotEmpty()) {
                         val threats = maliciousUrls.joinToString(", ") { it.threat.ifEmpty { "malware" } }
                         NotificationHelper.notifyPhishingUrl(appContext, sender, threats)

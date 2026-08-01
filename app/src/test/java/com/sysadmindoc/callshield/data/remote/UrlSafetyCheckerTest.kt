@@ -5,6 +5,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class UrlSafetyCheckerTest {
@@ -64,23 +65,45 @@ class UrlSafetyCheckerTest {
     }
 
     @Test
-    fun `normalizeRemoteLookupUrl strips query strings and fragments by default`() {
-        val normalized =
-            UrlSafetyChecker.normalizeRemoteLookupUrl("https://bad.test/pay?recipient=5551234&token=secret#frag")
-
-        assertEquals("https://bad.test/pay", normalized)
-    }
-
-    @Test
-    fun `normalizeRemoteLookupUrl keeps query when privacy mode is disabled but strips fragment`() {
+    fun `remote lookup strips path query and fragment`() {
         val normalized =
             UrlSafetyChecker.normalizeRemoteLookupUrl(
                 "https://bad.test/pay?recipient=5551234&token=secret#frag",
-                stripQuery = false,
+                registrableDomain = { "bad.test" },
             )
 
-        assertEquals("https://bad.test/pay?recipient=5551234&token=secret", normalized)
+        assertEquals("https://bad.test/", normalized)
     }
+
+    @Test
+    fun `remote lookup sends only the registrable domain`() {
+        val normalized =
+            UrlSafetyChecker.normalizeRemoteLookupUrl(
+                "https://login.accounts.example.co.uk/pay?recipient=5551234&token=secret#frag",
+                registrableDomain = { "example.co.uk" },
+            )
+
+        assertEquals("https://example.co.uk/", normalized)
+    }
+
+    @Test
+    fun `remote lookup fails closed when registrable domain cannot be resolved`() {
+        val normalized =
+            UrlSafetyChecker.normalizeRemoteLookupUrl(
+                "https://one-time-token.unknown/path",
+                registrableDomain = { null },
+            )
+
+        assertEquals("", normalized)
+    }
+
+    @Test
+    fun `remote lookup is disabled by default for unknown domains`() =
+        runBlocking {
+            val results = UrlSafetyChecker.checkSmsBody("Sign in at https://accounts.example.com/magic?token=secret")
+
+            assertTrue(results.isEmpty())
+        }
 
     @Test
     fun `local spam-domain URLs are flagged before remote lookup with sanitized URL`() =

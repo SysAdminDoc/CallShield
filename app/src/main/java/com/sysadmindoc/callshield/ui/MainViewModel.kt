@@ -227,6 +227,9 @@ class MainViewModel
         val urlhausStripQueryEnabled =
             repo.urlhausStripQueryEnabled
                 .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+        val urlhausRemoteLookupEnabled =
+            repo.urlhausRemoteLookupEnabled
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
         val contactWhitelistEnabled = repo.contactWhitelistEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
         val contactsOnlyEnabled =
             repo.contactsOnlyEnabled
@@ -791,6 +794,8 @@ class MainViewModel
         fun setSmsBurst(v: Boolean) = viewModelScope.launch { repo.setSmsBurst(v) }
 
         fun setUrlhausStripQuery(v: Boolean) = viewModelScope.launch { repo.setUrlhausStripQuery(v) }
+
+        fun setUrlhausRemoteLookup(v: Boolean) = viewModelScope.launch { repo.setUrlhausRemoteLookup(v) }
 
         fun setContactWhitelist(v: Boolean) = viewModelScope.launch { repo.setContactWhitelist(v) }
 
