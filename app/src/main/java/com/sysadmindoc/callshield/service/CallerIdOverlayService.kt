@@ -3,6 +3,7 @@ package com.sysadmindoc.callshield.service
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.content.res.Configuration
 import android.graphics.Color
 import android.graphics.PixelFormat
 import android.graphics.Typeface
@@ -18,12 +19,16 @@ import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
+import androidx.compose.ui.graphics.toArgb
 import com.sysadmindoc.callshield.CallShieldApp
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.OutgoingRiskWarning
 import com.sysadmindoc.callshield.data.PhoneFormatter
+import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.remote.ExternalLookup
 import com.sysadmindoc.callshield.data.remote.RemoteLookupStatus
+import com.sysadmindoc.callshield.ui.theme.AppThemeMode
+import com.sysadmindoc.callshield.ui.theme.paletteFor
 import com.sysadmindoc.callshield.util.filterAsciiDigits
 import com.sysadmindoc.callshield.util.race
 import kotlinx.coroutines.*
@@ -48,6 +53,55 @@ internal fun shouldRunLiveCallerEnrichment(
     confidence: Int,
     optedIn: Boolean,
 ): Boolean = optedIn && confidence > 0
+
+internal data class CallerIdOverlayPalette(
+    val background: Int,
+    val surfaceVariant: Int,
+    val primary: Int,
+    val error: Int,
+    val blue: Int,
+    val warning: Int,
+    val peach: Int,
+    val lavender: Int,
+    val text: Int,
+    val subtext: Int,
+    val overlay: Int,
+    val isLight: Boolean,
+)
+
+private fun withAlpha(
+    color: Int,
+    alpha: Int,
+): Int = (color and 0x00FFFFFF) or (alpha shl 24)
+
+internal fun overlayPaletteFor(
+    themeMode: AppThemeMode,
+    systemDark: Boolean,
+): CallerIdOverlayPalette {
+    val palette = paletteFor(themeMode, systemDark)
+    return CallerIdOverlayPalette(
+        background = withAlpha(palette.surface.toArgb(), 0xF5),
+        surfaceVariant = palette.surfaceVariant.toArgb(),
+        primary = palette.primary.toArgb(),
+        error = palette.error.toArgb(),
+        blue = palette.blue.toArgb(),
+        warning = palette.warning.toArgb(),
+        peach = palette.peach.toArgb(),
+        lavender = palette.lavender.toArgb(),
+        text = palette.text.toArgb(),
+        subtext = palette.subtext.toArgb(),
+        overlay = palette.overlay.toArgb(),
+        isLight = palette.isLight,
+    )
+}
+
+private fun Context.currentOverlayPalette(): CallerIdOverlayPalette {
+    val themeMode = AppThemeMode.fromStorage(SpamRepository.cachedAppTheme(this))
+    val systemDark =
+        resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK ==
+            Configuration.UI_MODE_NIGHT_YES
+    return overlayPaletteFor(themeMode, systemDark)
+}
 
 /**
  * Real-time caller ID overlay with live multi-source spam lookup.
@@ -132,6 +186,7 @@ class CallerIdOverlayService : Service() {
                     confidence,
                     intent?.getBooleanExtra(EXTRA_LIVE_ENRICHMENT, false) ?: false,
                 )
+        val palette = currentOverlayPalette()
 
         if (number.isEmpty()) {
             stopSelf()
@@ -150,12 +205,12 @@ class CallerIdOverlayService : Service() {
         }
 
         val sessionId =
-            showOverlay(number, confidence, reason, outgoingRiskWarning, liveEnrichmentEnabled)
+            showOverlay(number, confidence, reason, outgoingRiskWarning, liveEnrichmentEnabled, palette)
                 ?: return START_NOT_STICKY
         if (liveEnrichmentEnabled) {
             // Remote enrichment is explicit opt-in and only starts when the
             // local heuristic pipeline has already identified suspicion.
-            runLiveLookups(number, sessionId)
+            runLiveLookups(number, sessionId, palette)
         }
         return START_NOT_STICKY
     }
@@ -166,6 +221,7 @@ class CallerIdOverlayService : Service() {
         reason: String,
         outgoingRiskWarning: Boolean,
         liveEnrichmentEnabled: Boolean,
+        palette: CallerIdOverlayPalette,
     ): Long? {
         if (!android.provider.Settings.canDrawOverlays(this)) {
             stopSelf()
@@ -193,7 +249,7 @@ class CallerIdOverlayService : Service() {
                 // Rounded bottom corners with premium surface
                 background =
                     GradientDrawable().apply {
-                        setColor(Color.parseColor("#F5080808"))
+                        setColor(palette.background)
                         val r = context.overlayDpF(48f)
                         cornerRadii = floatArrayOf(0f, 0f, 0f, 0f, r, r, r, r) // bottom-left, bottom-right
                     }
@@ -208,7 +264,7 @@ class CallerIdOverlayService : Service() {
                                     LinearLayout.LayoutParams.MATCH_PARENT,
                                     context.overlayDp(2f),
                                 ).apply { bottomMargin = context.overlayDp(16f) }
-                        setBackgroundColor(Color.parseColor("#18A6E3A1"))
+                        setBackgroundColor(withAlpha(palette.primary, 0x38))
                     },
                 )
 
@@ -223,7 +279,7 @@ class CallerIdOverlayService : Service() {
                             } else {
                                 context.getString(R.string.overlay_header_incoming_call)
                             }
-                        setTextColor(if (confidence > 0) Color.parseColor("#FFF38BA8") else Color.parseColor("#FFA6E3A1"))
+                        setTextColor(if (confidence > 0) palette.error else palette.primary)
                         textSize = 11f
                         typeface = Typeface.DEFAULT_BOLD
                         letterSpacing = 0.12f
@@ -234,7 +290,7 @@ class CallerIdOverlayService : Service() {
                 addView(
                     TextView(context).apply {
                         text = formatted
-                        setTextColor(Color.parseColor("#FFCDD6F4"))
+                        setTextColor(palette.text)
                         textSize = 24f
                         typeface = Typeface.DEFAULT_BOLD
                         letterSpacing = -0.02f
@@ -245,7 +301,7 @@ class CallerIdOverlayService : Service() {
                     addView(
                         TextView(context).apply {
                             text = reason
-                            setTextColor(Color.parseColor("#FF9399B2"))
+                            setTextColor(palette.subtext)
                             textSize = 12f
                         },
                     )
@@ -264,7 +320,7 @@ class CallerIdOverlayService : Service() {
                             } else {
                                 context.getString(R.string.overlay_score_local_clear)
                             }
-                        setTextColor(Color.parseColor("#FFFAB387"))
+                        setTextColor(palette.peach)
                         textSize = 13f
                         typeface = Typeface.DEFAULT_BOLD
                         setPadding(0, context.overlayDp(10f), 0, 0)
@@ -296,7 +352,7 @@ class CallerIdOverlayService : Service() {
                 callerNameText =
                     TextView(context).apply {
                         text = ""
-                        setTextColor(Color.parseColor("#FFB4BEFE"))
+                        setTextColor(palette.lavender)
                         textSize = 13f
                         typeface = Typeface.DEFAULT_BOLD
                         visibility = android.view.View.GONE
@@ -317,7 +373,7 @@ class CallerIdOverlayService : Service() {
                                     R.string.overlay_status_local_only
                                 },
                             )
-                        setTextColor(Color.parseColor("#FF585B70"))
+                        setTextColor(palette.overlay)
                         textSize = 10f
                         letterSpacing = 0.02f
                         setPadding(0, context.overlayDp(6f), 0, 0)
@@ -334,8 +390,8 @@ class CallerIdOverlayService : Service() {
                         addView(
                             Button(context).apply {
                                 text = context.getString(R.string.overlay_action_search)
-                                setTextColor(Color.parseColor("#FF89B4FA"))
-                                setBackgroundColor(Color.parseColor("#14FFFFFF"))
+                                setTextColor(palette.blue)
+                                setBackgroundColor(palette.surfaceVariant)
                                 textSize = 11f
                                 isAllCaps = false
                                 setPadding(context.overlayDp(20f), context.overlayDp(8f), context.overlayDp(20f), context.overlayDp(8f))
@@ -355,8 +411,8 @@ class CallerIdOverlayService : Service() {
                         addView(
                             Button(context).apply {
                                 text = context.getString(R.string.overlay_action_block)
-                                setTextColor(Color.parseColor("#FFF38BA8"))
-                                setBackgroundColor(Color.parseColor("#14FFFFFF"))
+                                setTextColor(palette.error)
+                                setBackgroundColor(palette.surfaceVariant)
                                 textSize = 11f
                                 isAllCaps = false
                                 setPadding(context.overlayDp(20f), context.overlayDp(8f), context.overlayDp(20f), context.overlayDp(8f))
@@ -379,7 +435,7 @@ class CallerIdOverlayService : Service() {
                         addView(
                             Button(context).apply {
                                 text = context.getString(R.string.overlay_action_dismiss)
-                                setTextColor(Color.parseColor("#FF585B70"))
+                                setTextColor(palette.overlay)
                                 setBackgroundColor(Color.TRANSPARENT)
                                 textSize = 11f
                                 isAllCaps = false
@@ -394,8 +450,8 @@ class CallerIdOverlayService : Service() {
                 addView(
                     Button(context).apply {
                         text = context.getString(R.string.overlay_action_sit_tone)
-                        setTextColor(Color.parseColor("#FF9399B2"))
-                        setBackgroundColor(Color.parseColor("#0AFFFFFF"))
+                        setTextColor(palette.subtext)
+                        setBackgroundColor(palette.surfaceVariant)
                         textSize = 10f
                         isAllCaps = false
                         setPadding(context.overlayDp(20f), context.overlayDp(6f), context.overlayDp(20f), context.overlayDp(6f))
@@ -565,6 +621,7 @@ class CallerIdOverlayService : Service() {
     private fun runLiveLookups(
         number: String,
         sessionId: Long,
+        palette: CallerIdOverlayPalette,
     ) {
         data class LookupSnapshot(
             val completed: Int,
@@ -591,18 +648,18 @@ class CallerIdOverlayService : Service() {
                 else -> -1 // still loading
             }
 
-        fun colorFor(score: Int): String =
+        fun colorFor(score: Int): Int =
             when {
-                score >= 70 -> "#FFF38BA8"
+                score >= 70 -> palette.error
 
                 // Red
-                score >= 40 -> "#FFFAB387"
+                score >= 40 -> palette.peach
 
                 // Orange
-                score > 0 -> "#FFF9E2AF"
+                score > 0 -> palette.warning
 
                 // Yellow
-                else -> "#FFA6E3A1" // Green
+                else -> palette.primary // Green
             }
 
         fun renderScore(snapshot: LookupSnapshot) {
@@ -615,14 +672,14 @@ class CallerIdOverlayService : Service() {
                         score,
                         formatReports(snapshot.totalReports),
                     )
-                scoreText?.setTextColor(Color.parseColor(color))
+                scoreText?.setTextColor(color)
                 headerText?.text =
                     when {
                         score >= 50 -> this@CallerIdOverlayService.getString(R.string.overlay_header_likely_spam)
                         score > 0 -> this@CallerIdOverlayService.getString(R.string.overlay_header_suspicious)
                         else -> this@CallerIdOverlayService.getString(R.string.overlay_header_safe)
                     }
-                headerText?.setTextColor(Color.parseColor(color))
+                headerText?.setTextColor(color)
             }
             if (snapshot.completed >= totalSources) {
                 progressBar?.visibility = android.view.View.GONE
@@ -661,13 +718,11 @@ class CallerIdOverlayService : Service() {
                             }
                         text = this@CallerIdOverlayService.getString(R.string.overlay_source_result, icon, result.source, info)
                         setTextColor(
-                            Color.parseColor(
-                                when {
-                                    result.isSpam -> "#FFF38BA8"
-                                    isFallback -> "#FFA6ADC8"
-                                    else -> "#FFA6E3A1"
-                                },
-                            ),
+                            when {
+                                result.isSpam -> palette.error
+                                isFallback -> palette.overlay
+                                else -> palette.primary
+                            },
                         )
                         textSize = 11f
                         setPadding(0, context.overlayDp(3f), 0, context.overlayDp(3f))
@@ -715,9 +770,9 @@ class CallerIdOverlayService : Service() {
                         this@CallerIdOverlayService.getString(R.string.overlay_source_flagged)
                     }
                 headerText?.text = this@CallerIdOverlayService.getString(R.string.overlay_header_likely_spam)
-                headerText?.setTextColor(Color.parseColor(color))
+                headerText?.setTextColor(color)
                 scoreText?.text = this@CallerIdOverlayService.getString(R.string.overlay_spam_score, score, reportText)
-                scoreText?.setTextColor(Color.parseColor(color))
+                scoreText?.setTextColor(color)
                 statusText?.text =
                     this@CallerIdOverlayService.getString(
                         R.string.overlay_status_fast_hit,
