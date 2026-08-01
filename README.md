@@ -508,6 +508,9 @@ Trained weekly from the CallShield database (50K positive + 50K negative samples
   user-created portable backups
 - **APK privacy gate** — builds package only the five runtime protection feeds;
   raw community submissions and maintainer files are rejected by verification
+- **Direct-boot boundary** — a minimal device-encrypted mirror keeps explicit
+  user blocks active before first unlock; the full database and settings remain
+  credential-encrypted
 
 ## Privacy
 

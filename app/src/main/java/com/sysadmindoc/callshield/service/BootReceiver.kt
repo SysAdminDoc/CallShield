@@ -22,12 +22,17 @@ import android.service.notification.NotificationListenerService
  */
 class BootReceiver : BroadcastReceiver() {
     internal var protectionReassertion: (Context) -> Unit = ::reassertProtection
+    internal var lockedBootPreparation: (Context) -> Unit = { context ->
+        DirectBootScreeningStore.read(context)
+    }
 
     override fun onReceive(
         context: Context,
         intent: Intent,
     ) {
         when (intent.action) {
+            Intent.ACTION_LOCKED_BOOT_COMPLETED -> lockedBootPreparation(context)
+
             Intent.ACTION_BOOT_COMPLETED,
             Intent.ACTION_MY_PACKAGE_REPLACED,
             -> protectionReassertion(context)
@@ -36,6 +41,7 @@ class BootReceiver : BroadcastReceiver() {
 }
 
 private fun reassertProtection(context: Context) {
+    (context.applicationContext as? com.sysadmindoc.callshield.CallShieldApp)?.initializeAfterUserUnlock()
     SyncWorker.schedule(context)
     HotListSyncWorker.schedule(context)
     DigestWorker.schedule(context)
