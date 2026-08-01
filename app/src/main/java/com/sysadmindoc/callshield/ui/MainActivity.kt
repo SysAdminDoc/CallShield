@@ -779,11 +779,11 @@ internal fun applyCachedWindowTheme(activity: android.app.Activity) {
                 com.sysadmindoc.callshield.data.SpamRepository
                     .cachedAppTheme(activity),
             )
-    val systemDark =
-        (
-            activity.resources.configuration.uiMode and
-                android.content.res.Configuration.UI_MODE_NIGHT_MASK
-        ) == android.content.res.Configuration.UI_MODE_NIGHT_YES
+    val useDark =
+        com.sysadmindoc.callshield.ui.theme.syncApplicationNightMode(
+            activity,
+            mode,
+        )
     when (mode) {
         com.sysadmindoc.callshield.ui.theme.AppThemeMode.Light -> {
             activity.setTheme(R.style.Theme_CallShield_Light)
@@ -795,13 +795,13 @@ internal fun applyCachedWindowTheme(activity: android.app.Activity) {
 
         com.sysadmindoc.callshield.ui.theme.AppThemeMode.System -> {
             activity.setTheme(
-                if (systemDark) R.style.Theme_CallShield_Graphite else R.style.Theme_CallShield_Light,
+                if (useDark) R.style.Theme_CallShield_Graphite else R.style.Theme_CallShield_Light,
             )
         }
 
         com.sysadmindoc.callshield.ui.theme.AppThemeMode.Amoled -> {
-            Unit
-        } // manifest default is already AMOLED black
+            activity.setTheme(R.style.Theme_CallShield_Amoled)
+        }
     }
 }
 

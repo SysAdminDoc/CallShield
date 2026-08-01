@@ -6,6 +6,7 @@ import android.net.Uri
 import android.telecom.DisconnectCause
 import android.telecom.TelecomManager
 import androidx.test.core.app.ApplicationProvider
+import com.sysadmindoc.callshield.data.SpamRepository
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -82,5 +83,16 @@ class PostCallActivityTest {
         assertTrue(PostCallReportPolicy.canContribute(true))
         assertFalse(PostCallReportPolicy.canContribute(false))
         assertFalse(PostCallReportPolicy.canContribute(null))
+    }
+
+    @Test
+    fun `post-call preference mirror is available synchronously`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+
+        SpamRepository.cachePostCallScreenEnabled(context, true)
+        assertEquals(true, SpamRepository.cachedPostCallScreenEnabled(context))
+
+        SpamRepository.cachePostCallScreenEnabled(context, false)
+        assertEquals(false, SpamRepository.cachedPostCallScreenEnabled(context))
     }
 }

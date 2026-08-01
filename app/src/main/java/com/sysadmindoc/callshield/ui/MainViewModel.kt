@@ -39,6 +39,7 @@ import com.sysadmindoc.callshield.service.CallLogScanner
 import com.sysadmindoc.callshield.service.NotificationHelper
 import com.sysadmindoc.callshield.service.SmsInboxScanner
 import com.sysadmindoc.callshield.ui.theme.AppThemeMode
+import com.sysadmindoc.callshield.ui.theme.syncApplicationNightMode
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -387,7 +388,12 @@ class MainViewModel
             }
             // Backfill the synchronous theme mirror so the next cold start reflects
             // the current theme even for users who set it before this cache existed.
-            viewModelScope.launch { repo.cacheAppTheme(repo.appTheme.first()) }
+            viewModelScope.launch {
+                val persistedTheme = AppThemeMode.fromStorage(repo.appTheme.first())
+                repo.cacheAppTheme(persistedTheme.storageValue)
+                repo.cachePostCallScreenEnabled(repo.postCallScreenEnabled.first())
+                syncApplicationNightMode(appContext, persistedTheme)
+            }
             if (appContext.checkSelfPermission(android.Manifest.permission.READ_CONTACTS) ==
                 android.content.pm.PackageManager.PERMISSION_GRANTED
             ) {
@@ -779,7 +785,11 @@ class MainViewModel
         }
 
         // Settings
-        fun setAppTheme(theme: AppThemeMode) = viewModelScope.launch { repo.setAppTheme(theme.storageValue) }
+        fun setAppTheme(theme: AppThemeMode) =
+            viewModelScope.launch {
+                repo.setAppTheme(theme.storageValue)
+                syncApplicationNightMode(appContext, theme)
+            }
 
         fun setBlockCalls(v: Boolean) = viewModelScope.launch { repo.setBlockCalls(v) }
 
