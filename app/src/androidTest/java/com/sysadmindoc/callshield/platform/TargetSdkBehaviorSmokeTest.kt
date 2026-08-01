@@ -95,6 +95,7 @@ class TargetSdkBehaviorSmokeTest {
         val screening = services["com.sysadmindoc.callshield.service.CallShieldScreeningService"]
         assertNotNull(screening)
         assertTrue(screening!!.exported)
+        assertTrue(screening.directBootAware)
         assertEquals(Manifest.permission.BIND_SCREENING_SERVICE, screening.permission)
 
         val rcs = services["com.sysadmindoc.callshield.service.RcsNotificationListener"]

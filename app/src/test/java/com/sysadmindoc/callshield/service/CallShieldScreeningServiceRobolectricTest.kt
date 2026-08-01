@@ -2,6 +2,7 @@ package com.sysadmindoc.callshield.service
 
 import android.content.Context
 import android.net.Uri
+import android.os.UserManager
 import android.telecom.Call
 import android.telecom.CallScreeningService
 import androidx.test.core.app.ApplicationProvider
@@ -36,6 +37,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.shadow.api.Shadow
 import org.robolectric.shadows.ShadowCallScreeningService
+import org.robolectric.shadows.ShadowUserManager
 import org.robolectric.util.ReflectionHelpers
 
 @RunWith(RobolectricTestRunner::class)
@@ -84,8 +86,45 @@ class CallShieldScreeningServiceRobolectricTest {
 
     @After
     fun tearDown() {
+        Shadow.extract<ShadowUserManager>(context.getSystemService(UserManager::class.java)).setUserUnlocked(true)
+        DirectBootScreeningStore.clearForTest(context)
         scope.cancel()
         fixture.close()
+    }
+
+    @Test
+    fun `direct boot rejects an explicitly blocked mirrored number without credential storage`() {
+        val number = "+12125550179"
+        runBlocking {
+            DirectBootScreeningStore.write(
+                context = context,
+                blockedNumbers = listOf(SpamNumber(number = number, type = "test", isUserBlocked = true)),
+                blockCallsEnabled = true,
+                blockUnknownEnabled = false,
+                silentVoicemailEnabled = false,
+            )
+        }
+        Shadow.extract<ShadowUserManager>(context.getSystemService(UserManager::class.java)).setUserUnlocked(false)
+
+        service.onScreenCall(callDetails(number))
+
+        val response = awaitResponse()
+        assertTrue(response.disallowCall)
+        assertTrue(response.rejectCall)
+        assertFalse(response.silenceCall)
+    }
+
+    @Test
+    fun `direct boot fails open when no mirror has been initialized`() {
+        DirectBootScreeningStore.clearForTest(context)
+        Shadow.extract<ShadowUserManager>(context.getSystemService(UserManager::class.java)).setUserUnlocked(false)
+
+        service.onScreenCall(callDetails("+12125550178"))
+
+        val response = awaitResponse()
+        assertFalse(response.disallowCall)
+        assertFalse(response.rejectCall)
+        assertFalse(response.silenceCall)
     }
 
     @Test

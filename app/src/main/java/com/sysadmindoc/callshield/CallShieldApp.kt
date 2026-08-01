@@ -7,6 +7,7 @@ import android.database.ContentObserver
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
+import android.os.UserManager
 import android.provider.BlockedNumberContract
 import android.provider.ContactsContract
 import android.util.Log
@@ -20,6 +21,7 @@ import com.sysadmindoc.callshield.data.checker.CheckerDependencies
 import com.sysadmindoc.callshield.di.ApplicationScope
 import com.sysadmindoc.callshield.service.CrashReporter
 import com.sysadmindoc.callshield.service.DigestWorker
+import com.sysadmindoc.callshield.service.DirectBootScreeningStore
 import com.sysadmindoc.callshield.service.HotDataSync
 import com.sysadmindoc.callshield.service.HotListSyncWorker
 import com.sysadmindoc.callshield.service.NotificationHelper
@@ -38,6 +40,9 @@ class CallShieldApp :
     Configuration.Provider {
     @Volatile
     private var contactsObserverRegistered = false
+
+    @Volatile
+    private var unlockedInitializationComplete = false
 
     @Inject
     lateinit var workerFactory: HiltWorkerFactory
@@ -59,57 +64,76 @@ class CallShieldApp :
 
     override fun onCreate() {
         super.onCreate()
-        // Install the uncaught-exception handler BEFORE anything else so we
-        // capture crashes even during app-startup init.
-        CrashReporter.install(this)
-        try {
-            // A restore journal is normally absent, so this is one indexed
-            // Room read. When present it must reconcile before workers or
-            // screening components can observe cross-store partial state.
-            runBlocking { BackupRestore.reconcilePendingRestore(this@CallShieldApp) }
-        } catch (e: Exception) {
-            Log.e("CallShieldApp", "Failed to reconcile an interrupted restore", e)
-        }
         appScope = applicationScope
-        NotificationHelper.createChannels(this)
-        SyncWorker.schedule(this)
-        HotListSyncWorker.schedule(this)
-        DigestWorker.schedule(this)
-        PendingBlockedCallLogWorker.schedule(this)
-        ProtectionHealthWorker.schedule(this)
-        ProtectionHealthWorker.checkNow(this)
+        initializeAfterUserUnlock()
+    }
 
-        registerCacheInvalidationObservers()
-
-        appScope.launch {
-            checkerDependencies.spamMLScorer.loadWeights(this@CallShieldApp)
-        }
-
-        appScope.launch {
+    internal fun initializeAfterUserUnlock() {
+        if (getSystemService(UserManager::class.java)?.isUserUnlocked == false || unlockedInitializationComplete) return
+        synchronized(this) {
+            if (unlockedInitializationComplete) return
+            // Install the uncaught-exception handler BEFORE anything else so we
+            // capture crashes even during app-startup init.
+            CrashReporter.install(this)
             try {
-                HotDataSync.primeBundled(
-                    context = this@CallShieldApp,
-                    dependencies = checkerDependencies,
-                )
+                // A restore journal is normally absent, so this is one indexed
+                // Room read. When present it must reconcile before workers or
+                // screening components can observe cross-store partial state.
+                runBlocking { BackupRestore.reconcilePendingRestore(this@CallShieldApp) }
             } catch (e: Exception) {
-                Log.w("CallShieldApp", "Failed to prime bundled hot data", e)
+                Log.e("CallShieldApp", "Failed to reconcile an interrupted restore", e)
             }
-        }
+            NotificationHelper.createChannels(this)
+            SyncWorker.schedule(this)
+            HotListSyncWorker.schedule(this)
+            DigestWorker.schedule(this)
+            PendingBlockedCallLogWorker.schedule(this)
+            ProtectionHealthWorker.schedule(this)
+            ProtectionHealthWorker.checkNow(this)
 
-        appScope.launch {
-            try {
-                SpamRepository.getInstance(this@CallShieldApp).cleanupOldLogs()
-            } catch (e: Exception) {
-                Log.w("CallShieldApp", "Failed to clean up old logs", e)
-            }
-        }
+            registerCacheInvalidationObservers()
 
-        appScope.launch {
-            try {
-                SpamRepository.getInstance(this@CallShieldApp).purgeLegacyAbstractApiKey()
-            } catch (e: Exception) {
-                Log.w("CallShieldApp", "Failed to purge legacy API key", e)
+            appScope.launch {
+                checkerDependencies.spamMLScorer.loadWeights(this@CallShieldApp)
             }
+
+            appScope.launch {
+                try {
+                    HotDataSync.primeBundled(
+                        context = this@CallShieldApp,
+                        dependencies = checkerDependencies,
+                    )
+                } catch (e: Exception) {
+                    Log.w("CallShieldApp", "Failed to prime bundled hot data", e)
+                }
+            }
+
+            appScope.launch {
+                try {
+                    SpamRepository.getInstance(this@CallShieldApp).cleanupOldLogs()
+                } catch (e: Exception) {
+                    Log.w("CallShieldApp", "Failed to clean up old logs", e)
+                }
+            }
+
+            appScope.launch {
+                try {
+                    SpamRepository.getInstance(this@CallShieldApp).purgeLegacyAbstractApiKey()
+                } catch (e: Exception) {
+                    Log.w("CallShieldApp", "Failed to purge legacy API key", e)
+                }
+            }
+            appScope.launch {
+                try {
+                    DirectBootScreeningStore.observeAndMirror(
+                        context = this@CallShieldApp,
+                        repository = SpamRepository.getInstance(this@CallShieldApp),
+                    )
+                } catch (e: Exception) {
+                    Log.w("CallShieldApp", "Failed to refresh direct-boot screening mirror", e)
+                }
+            }
+            unlockedInitializationComplete = true
         }
     }
 

@@ -1,6 +1,7 @@
 package com.sysadmindoc.callshield.service
 
 import android.os.Build
+import android.os.UserManager
 import android.telecom.Call
 import android.telecom.CallScreeningService
 import android.telecom.TelecomManager
@@ -10,6 +11,7 @@ import com.sysadmindoc.callshield.data.CategoryCallPolicy
 import com.sysadmindoc.callshield.data.ContactGroupCatalog
 import com.sysadmindoc.callshield.data.OutgoingRiskPolicy
 import com.sysadmindoc.callshield.data.OutgoingRiskWarning
+import com.sysadmindoc.callshield.data.PhoneIdentityCanonicalizer
 import com.sysadmindoc.callshield.data.SpamHeuristics
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup
@@ -23,17 +25,27 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.io.IOException
 import javax.inject.Inject
+import javax.inject.Provider
 
 @AndroidEntryPoint
 class CallShieldScreeningService : CallScreeningService() {
-    @Inject
+    // Tests can assign these overrides directly. Production resolves the Hilt
+    // providers only after unlock so Room/DataStore are never constructed from
+    // a direct-boot callback.
     lateinit var repo: SpamRepository
 
-    @Inject
     lateinit var checkSpam: CheckSpamUseCase
 
-    @Inject
     lateinit var spamHeuristics: SpamHeuristics
+
+    @Inject
+    lateinit var repoProvider: Provider<SpamRepository>
+
+    @Inject
+    lateinit var checkSpamProvider: Provider<CheckSpamUseCase>
+
+    @Inject
+    lateinit var spamHeuristicsProvider: Provider<SpamHeuristics>
 
     @Inject
     @ApplicationScope
@@ -45,6 +57,12 @@ class CallShieldScreeningService : CallScreeningService() {
         }
 
     override fun onScreenCall(callDetails: Call.Details) {
+        val userManager = getSystemService(UserManager::class.java)
+        if (userManager?.isUserUnlocked == false) {
+            handleDirectBootCall(callDetails)
+            return
+        }
+
         // Android dispatches both incoming and outgoing calls to the active
         // screening service. Outgoing warnings use a separate, local-only
         // lookup so the inbound blocker can never log, analyze contacts, send
@@ -77,7 +95,8 @@ class CallShieldScreeningService : CallScreeningService() {
         // subsequent logging/notification always run to completion.
         applicationScope.launch {
             val appContext = applicationContext
-            val repository = repo
+            val repository = repository()
+            val heuristics = heuristics()
             try {
                 // One snapshot of all prefs — the 5-second deadline is tight
                 // and individual Flow.first() calls each spin up a collector.
@@ -105,7 +124,7 @@ class CallShieldScreeningService : CallScreeningService() {
                 // needs any of the 13 downstream checks, and skipping them saves
                 // tens of milliseconds against the 5 s deadline.
                 if ((prefs[SpamRepository.KEY_CONTACT_WHITELIST] ?: true) &&
-                    spamHeuristics.isInContacts(
+                    heuristics.isInContacts(
                         appContext,
                         number,
                         prefs[SpamRepository.KEY_SELECTED_CONTACT_GROUPS]
@@ -133,7 +152,7 @@ class CallShieldScreeningService : CallScreeningService() {
 
                 // Full spam check — reuses the snapshot so we don't re-read DataStore.
                 val result =
-                    checkSpam(
+                    spamChecker()(
                         number = number,
                         prefsSnapshot = prefs,
                         callerIdentity = CallerIdentity(verificationStatus, callerName),
@@ -181,7 +200,7 @@ class CallShieldScreeningService : CallScreeningService() {
                         // post-time in case the user just added the caller.
                         applicationScope.launch {
                             delay(10_000L)
-                            if (!spamHeuristics.isInContacts(appContext, number)) {
+                            if (!heuristics.isInContacts(appContext, number)) {
                                 NotificationHelper.notifyAfterCall(appContext, number)
                             }
                         }
@@ -214,7 +233,7 @@ class CallShieldScreeningService : CallScreeningService() {
     private fun handleOutgoingCall(callDetails: Call.Details) {
         applicationScope.launch {
             try {
-                val repository = repo
+                val repository = repository()
                 val prefs = repository.readPrefsSnapshot()
                 if (!(prefs[SpamRepository.KEY_OUTGOING_RISK_WARNING] ?: false)) return@launch
 
@@ -239,7 +258,7 @@ class CallShieldScreeningService : CallScreeningService() {
         confidence: Int = 100,
         prefs: androidx.datastore.preferences.core.Preferences,
     ) {
-        val repository = repo
+        val repository = repository()
         val logTimestamp = System.currentTimeMillis()
         val logKey = blockedCallLogKey(callDetails, number, reason, confidence, logTimestamp)
         var pendingLogQueued = false
@@ -335,6 +354,73 @@ class CallShieldScreeningService : CallScreeningService() {
                 .build()
         }
     }
+
+    private fun handleDirectBootCall(callDetails: Call.Details) {
+        when (callDetails.callDirection) {
+            Call.Details.DIRECTION_OUTGOING -> {
+                return
+            }
+
+            Call.Details.DIRECTION_INCOMING -> {
+                Unit
+            }
+
+            else -> {
+                respondAllow(callDetails)
+                return
+            }
+        }
+        try {
+            val snapshot = DirectBootScreeningStore.read(applicationContext)
+            if (!snapshot.ready || !snapshot.blockCallsEnabled) {
+                respondAllow(callDetails)
+                return
+            }
+
+            val number =
+                PhoneIdentityCanonicalizer
+                    .cachedFromContext(applicationContext)
+                    .canonicalizePhone(callDetails.handle?.schemeSpecificPart.orEmpty())
+            val shouldBlock =
+                if (number.isBlank()) {
+                    snapshot.blockUnknownEnabled
+                } else {
+                    snapshot.isBlocked(number)
+                }
+            if (!shouldBlock) {
+                respondAllow(callDetails)
+                return
+            }
+
+            val response =
+                if (snapshot.silentVoicemailEnabled) {
+                    CallResponse
+                        .Builder()
+                        .setSilenceCall(true)
+                        .setSkipCallLog(false)
+                        .setSkipNotification(false)
+                        .build()
+                } else {
+                    CallResponse
+                        .Builder()
+                        .setDisallowCall(true)
+                        .setRejectCall(true)
+                        .setSkipCallLog(false)
+                        .setSkipNotification(false)
+                        .build()
+                }
+            respondToCall(callDetails, response)
+        } catch (exception: RuntimeException) {
+            Log.w(TAG, "Direct-boot screening failed open", exception)
+            respondAllow(callDetails)
+        }
+    }
+
+    private fun repository(): SpamRepository = if (::repo.isInitialized) repo else repoProvider.get()
+
+    private fun spamChecker(): CheckSpamUseCase = if (::checkSpam.isInitialized) checkSpam else checkSpamProvider.get()
+
+    private fun heuristics(): SpamHeuristics = if (::spamHeuristics.isInitialized) spamHeuristics else spamHeuristicsProvider.get()
 
     companion object {
         private const val TAG = "CallShieldScreening"

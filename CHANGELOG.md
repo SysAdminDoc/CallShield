@@ -50,6 +50,9 @@ All notable changes to CallShield will be documented in this file.
 - Local contact-group scopes now use provider row identities that survive group
   renames. Existing title-based selections migrate automatically, with legacy
   matching retained until migration completes.
+- Explicit user blocks now remain enforceable between reboot and first unlock.
+  A minimal device-encrypted mirror carries only the blocking essentials;
+  checks that need credential-encrypted data fail open until unlock.
 
 ### Fixed
 
