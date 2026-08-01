@@ -62,7 +62,7 @@ fun ContactGroupPickerSheet(
     onDismiss: () -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val knownKeys = groups.asSequence().map(ContactGroup::key).toSet()
+    val knownKeys = groups.asSequence().flatMap { listOfNotNull(it.key, it.legacyKey).asSequence() }.toSet()
     val unavailableCount = selectedKeys.count { it !in knownKeys }
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -132,7 +132,9 @@ fun ContactGroupPickerSheet(
 
                 else -> {
                     items(groups, key = ContactGroup::key) { group ->
-                        val selected = group.key in selectedKeys
+                        val selected =
+                            group.key in selectedKeys ||
+                                group.legacyKey?.let(selectedKeys::contains) == true
                         ContactScopeRow(
                             title = group.title,
                             subtitle =
@@ -156,7 +158,9 @@ fun ContactGroupPickerSheet(
                                     // radio row above then shows as selected.
                                     // Swallowing the tap left a dead checkbox.
                                     updated.remove(group.key)
+                                    group.legacyKey?.let(updated::remove)
                                 } else {
+                                    group.legacyKey?.let(updated::remove)
                                     updated.add(group.key)
                                 }
                                 onSelectionChange(updated)

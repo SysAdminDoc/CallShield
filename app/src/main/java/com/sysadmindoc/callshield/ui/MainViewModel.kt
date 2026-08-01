@@ -388,6 +388,11 @@ class MainViewModel
             // Backfill the synchronous theme mirror so the next cold start reflects
             // the current theme even for users who set it before this cache existed.
             viewModelScope.launch { repo.cacheAppTheme(repo.appTheme.first()) }
+            if (appContext.checkSelfPermission(android.Manifest.permission.READ_CONTACTS) ==
+                android.content.pm.PackageManager.PERMISSION_GRANTED
+            ) {
+                refreshContactGroups()
+            }
         }
 
         fun completeOnboarding() {
@@ -823,10 +828,17 @@ class MainViewModel
                 SpamHeuristics.clearContactCache()
                 _contactGroupsLoading.value = true
                 try {
-                    _contactGroups.value =
+                    val groups =
                         withContext(Dispatchers.IO) {
                             ContactGroupCatalog.loadGroups(appContext)
                         }
+                    val selectedKeys = repo.selectedContactGroups.first()
+                    val migratedKeys = ContactGroupCatalog.migrateSelectedKeys(groups, selectedKeys)
+                    if (migratedKeys != selectedKeys) {
+                        repo.setSelectedContactGroups(migratedKeys)
+                        SpamHeuristics.clearContactCache()
+                    }
+                    _contactGroups.value = groups
                 } finally {
                     _contactGroupsLoading.value = false
                 }

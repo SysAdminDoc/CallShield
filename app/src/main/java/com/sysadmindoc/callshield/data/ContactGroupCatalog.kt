@@ -11,6 +11,7 @@ data class ContactGroup(
     val title: String,
     val accountName: String?,
     val memberCount: Int,
+    val legacyKey: String? = null,
 )
 
 /** Local-only discovery and matching for Android contact groups. */
@@ -51,6 +52,7 @@ internal object ContactGroupCatalog {
                     "${ContactsContract.Groups.TITLE} COLLATE NOCASE ASC",
                 )?.use { cursor ->
                     val titleIndex = cursor.getColumnIndexOrThrow(ContactsContract.Groups.TITLE)
+                    val idIndex = cursor.getColumnIndexOrThrow(ContactsContract.Groups._ID)
                     val accountNameIndex = cursor.getColumnIndexOrThrow(ContactsContract.Groups.ACCOUNT_NAME)
                     val accountTypeIndex = cursor.getColumnIndexOrThrow(ContactsContract.Groups.ACCOUNT_TYPE)
                     val sourceIdIndex = cursor.getColumnIndexOrThrow(ContactsContract.Groups.SOURCE_ID)
@@ -63,12 +65,19 @@ internal object ContactGroupCatalog {
                                 val accountName = cursor.getString(accountNameIndex)?.trim()?.takeIf(String::isNotEmpty)
                                 val accountType = cursor.getString(accountTypeIndex)?.trim().orEmpty()
                                 val sourceId = cursor.getString(sourceIdIndex)?.trim()?.takeIf(String::isNotEmpty)
+                                val groupId = cursor.getLong(idIndex)
                                 add(
                                     ContactGroup(
-                                        key = stableKey(accountName, accountType, sourceId, title),
+                                        key = stableKey(accountName, accountType, sourceId, title, groupId),
                                         title = title,
                                         accountName = accountName,
                                         memberCount = memberCount,
+                                        legacyKey =
+                                            if (sourceId == null) {
+                                                stableKey(accountName, accountType, null, title)
+                                            } else {
+                                                null
+                                            },
                                     ),
                                 )
                             }
@@ -98,13 +107,32 @@ internal object ContactGroupCatalog {
         accountType: String?,
         sourceId: String?,
         title: String,
+        localGroupId: Long? = null,
     ): String {
-        val stableIdentity = sourceId?.trim()?.takeIf(String::isNotEmpty) ?: title.trim()
+        val stableIdentity =
+            sourceId?.trim()?.takeIf(String::isNotEmpty)
+                ?: localGroupId?.let { "local-group-id:$it" }
+                ?: title.trim()
         val material = listOf(accountType.orEmpty(), accountName.orEmpty(), stableIdentity).joinToString("\u0000")
         return MessageDigest
             .getInstance("SHA-256")
             .digest(material.toByteArray(StandardCharsets.UTF_8))
             .joinToString("") { byte -> "%02x".format(Locale.ROOT, byte.toInt() and BYTE_MASK) }
+    }
+
+    internal fun migrateSelectedKeys(
+        groups: List<ContactGroup>,
+        selectedKeys: Set<String>,
+    ): Set<String> {
+        if (selectedKeys.isEmpty() || groups.isEmpty()) return selectedKeys
+        val uniqueLegacyReplacements =
+            groups
+                .mapNotNull { group -> group.legacyKey?.let { it to group.key } }
+                .groupBy({ it.first }, { it.second })
+                .mapNotNull { (legacyKey, currentKeys) ->
+                    currentKeys.distinct().singleOrNull()?.let { legacyKey to it }
+                }.toMap()
+        return preserveScope(selectedKeys.map { uniqueLegacyReplacements[it] ?: it })
     }
 
     private fun lookupContactIds(
@@ -145,14 +173,26 @@ internal object ContactGroupCatalog {
                 val sourceIdIndex = cursor.getColumnIndexOrThrow(ContactsContract.Groups.SOURCE_ID)
                 buildSet {
                     while (cursor.moveToNext()) {
+                        val groupId = cursor.getLong(idIndex)
+                        val title = cursor.getString(titleIndex).orEmpty()
+                        val accountName = cursor.getString(accountNameIndex)
+                        val accountType = cursor.getString(accountTypeIndex)
+                        val sourceId = cursor.getString(sourceIdIndex)?.trim()?.takeIf(String::isNotEmpty)
                         val key =
                             stableKey(
-                                cursor.getString(accountNameIndex),
-                                cursor.getString(accountTypeIndex),
-                                cursor.getString(sourceIdIndex),
-                                cursor.getString(titleIndex).orEmpty(),
+                                accountName,
+                                accountType,
+                                sourceId,
+                                title,
+                                groupId,
                             )
-                        if (key in selectedKeys) add(cursor.getLong(idIndex))
+                        val legacyKey =
+                            if (sourceId == null) {
+                                stableKey(accountName, accountType, null, title)
+                            } else {
+                                null
+                            }
+                        if (key in selectedKeys || legacyKey?.let(selectedKeys::contains) == true) add(groupId)
                     }
                 }
             }.orEmpty()
