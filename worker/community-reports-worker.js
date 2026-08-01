@@ -3,6 +3,7 @@ const MAX_SMS_DOMAINS = 10;
 const MAX_SMS_URL_INDICATORS = 10;
 const DOMAIN_RE = /^[a-z0-9](?:[a-z0-9.-]{0,251}[a-z0-9])?$/;
 const URL_INDICATOR_RE = /^[a-z_]{3,40}$/;
+const MIN_REPORTER_SECRET_LENGTH = 32;
 
 // Every assigned one/two-digit ITU-T E.164 country calling code. Calling codes
 // are prefix-free by design, so "1 or 7 -> one digit, else in this set -> two
@@ -178,15 +179,64 @@ const RATE_LIMIT_MAX_REQUESTS = 5;
 // normalized number within this window. Prevents replay flooding.
 const DEDUP_WINDOW_S = 300;
 
+function allowsUnlimitedReports(env) {
+  return env?.ALLOW_UNLIMITED_REPORTS === "true";
+}
+
+/** Validate the bindings required to accept a state-changing report. */
+export function validateReportEnvironment(env) {
+  const missing = [];
+  if (!env?.RATE_LIMIT && !allowsUnlimitedReports(env)) missing.push("RATE_LIMIT");
+  if (typeof env?.GITHUB_TOKEN !== "string" || env.GITHUB_TOKEN.length === 0) {
+    missing.push("GITHUB_TOKEN");
+  }
+  if (
+    typeof env?.REPORTER_BUCKET_SECRET !== "string" ||
+    env.REPORTER_BUCKET_SECRET.length < MIN_REPORTER_SECRET_LENGTH
+  ) {
+    missing.push("REPORTER_BUCKET_SECRET");
+  }
+  return { ready: missing.length === 0, missing };
+}
+
+/**
+ * Produce a daily-rotating, non-reversible reporter bucket. The public report
+ * queue can count independent sources without storing an IP address or a
+ * stable cross-day identity.
+ */
+export async function deriveReporterBucket(ip, reportedAt, secret) {
+  if (typeof secret !== "string" || secret.length < MIN_REPORTER_SECRET_LENGTH) {
+    throw new Error("REPORTER_BUCKET_SECRET is missing or too short");
+  }
+  const day = new Date(reportedAt).toISOString().slice(0, 10);
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    "raw",
+    encoder.encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(`v1:${day}:${ip}`));
+  return Array.from(new Uint8Array(signature).slice(0, 8), (byte) =>
+    byte.toString(16).padStart(2, "0"),
+  ).join("");
+}
+
 /**
  * Check the per-IP rate limit against KV.
  * Returns { allowed: boolean, remaining: number, retryAfter: number }.
  *
- * When `env.RATE_LIMIT` is not bound (local dev / test), the limiter is
- * permissive so the worker still functions without KV provisioned.
+ * Missing KV fails closed unless a local test explicitly sets
+ * ALLOW_UNLIMITED_REPORTS=true. Production must never set that flag.
  */
 export async function checkRateLimit(ip, env) {
-  if (!env?.RATE_LIMIT) return { allowed: true, remaining: RATE_LIMIT_MAX_REQUESTS, retryAfter: 0 };
+  if (!env?.RATE_LIMIT) {
+    if (allowsUnlimitedReports(env)) {
+      return { allowed: true, remaining: RATE_LIMIT_MAX_REQUESTS, retryAfter: 0 };
+    }
+    return { allowed: false, remaining: 0, retryAfter: 0, configurationError: true };
+  }
 
   const key = `rl:${ip}`;
   const raw = await env.RATE_LIMIT.get(key);
@@ -229,7 +279,10 @@ export async function checkRateLimit(ip, env) {
  * "Duplicate report" lockout that silently dropped the report on retry.
  */
 export async function checkDedup(ip, normalizedNumber, env) {
-  if (!env?.RATE_LIMIT) return false;
+  if (!env?.RATE_LIMIT) {
+    if (allowsUnlimitedReports(env)) return false;
+    throw new Error("RATE_LIMIT binding is required");
+  }
 
   const key = `dedup:${ip}:${normalizedNumber}`;
   const existing = await env.RATE_LIMIT.get(key);
@@ -238,7 +291,10 @@ export async function checkDedup(ip, normalizedNumber, env) {
 
 /** Mark this (IP, number) pair as reported. Call after a successful store. */
 export async function recordDedup(ip, normalizedNumber, env) {
-  if (!env?.RATE_LIMIT) return;
+  if (!env?.RATE_LIMIT) {
+    if (allowsUnlimitedReports(env)) return;
+    throw new Error("RATE_LIMIT binding is required");
+  }
   const key = `dedup:${ip}:${normalizedNumber}`;
   await env.RATE_LIMIT.put(key, "1", { expirationTtl: DEDUP_WINDOW_S });
 }
@@ -253,9 +309,10 @@ export async function recordDedup(ip, normalizedNumber, env) {
  *   3. wrangler login
  *   4. Create a fine-grained GitHub PAT with ONLY "Contents: Read and write" on this repo
  *   5. wrangler secret put GITHUB_TOKEN (paste the PAT)
- *   6. Create a KV namespace: wrangler kv namespace create RATE_LIMIT
- *   7. Update wrangler.toml with the returned namespace ID
- *   8. wrangler deploy
+ *   6. wrangler secret put REPORTER_BUCKET_SECRET (32+ random characters)
+ *   7. Create a KV namespace: wrangler kv namespace create RATE_LIMIT
+ *   8. Update wrangler.toml with the returned namespace ID
+ *   9. wrangler deploy
  *
  * The worker receives anonymous spam reports and creates files in data/reports/
  * via the GitHub API. The maintainer merges them into the main database
@@ -269,15 +326,13 @@ export async function recordDedup(ip, normalizedNumber, env) {
 
 export default {
   async fetch(request, env) {
-    // CORS headers
-    const corsHeaders = {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type",
+    const responseHeaders = {
+      "Cache-Control": "no-store",
+      "X-Content-Type-Options": "nosniff",
     };
 
     if (request.method === "OPTIONS") {
-      return new Response(null, { headers: corsHeaders });
+      return new Response(null, { status: 405, headers: { ...responseHeaders, "Allow": "GET, POST" } });
     }
 
     if (request.method === "GET") {
@@ -304,35 +359,66 @@ code{background:#252525;padding:2px 6px;border-radius:4px;font-size:12px;color:#
 <p><a href="https://github.com/SysAdminDoc/CallShield">View on GitHub</a> &middot; <a href="https://github.com/SysAdminDoc/CallShield/releases">Download APK</a></p>
 <p style="color:#6c7086;font-size:11px;margin-top:16px">No accounts are used. SMS message text is not stored.</p>
 </div></body></html>`, {
-        status: 200, headers: { ...corsHeaders, "Content-Type": "text/html;charset=UTF-8" }
+        status: 200, headers: { ...responseHeaders, "Content-Type": "text/html;charset=UTF-8" }
       });
     }
 
     if (request.method !== "POST") {
       return new Response(JSON.stringify({ error: "POST only" }), {
-        status: 405, headers: { ...corsHeaders, "Content-Type": "application/json" }
+        status: 405, headers: { ...responseHeaders, "Allow": "GET, POST", "Content-Type": "application/json" }
       });
     }
 
     try {
+      // The client is a native Android app and needs no CORS. Requiring JSON
+      // and refusing browser-originated requests prevents cross-site pages
+      // from turning their visitors into a distributed report flood.
+      const contentType = request.headers.get("content-type") || "";
+      const origin = request.headers.get("origin");
+      const fetchSite = request.headers.get("sec-fetch-site");
+      if (origin || fetchSite === "cross-site") {
+        return new Response(JSON.stringify({ error: "Browser-originated reports are not accepted" }), {
+          status: 403, headers: { ...responseHeaders, "Content-Type": "application/json" }
+        });
+      }
+      if (!/^application\/json(?:\s*;|$)/i.test(contentType)) {
+        return new Response(JSON.stringify({ error: "Content-Type must be application/json" }), {
+          status: 415, headers: { ...responseHeaders, "Content-Type": "application/json" }
+        });
+      }
+
+      const configuration = validateReportEnvironment(env);
+      if (!configuration.ready) {
+        console.error("Community report worker is missing required bindings:", configuration.missing.join(", "));
+        return new Response(JSON.stringify({ error: "Reporting service is temporarily unavailable" }), {
+          status: 503, headers: { ...responseHeaders, "Retry-After": "300", "Content-Type": "application/json" }
+        });
+      }
+
       // Reject oversized payloads (10KB limit). The header check is a cheap
       // fast path; the authoritative check is on the actual body below,
       // because a chunked request carries no Content-Length at all.
       const contentLength = parseInt(request.headers.get("content-length") || "0", 10);
       if (contentLength > 10000) {
         return new Response(JSON.stringify({ error: "Payload too large" }), {
-          status: 413, headers: { ...corsHeaders, "Content-Type": "application/json" }
+          status: 413, headers: { ...responseHeaders, "Content-Type": "application/json" }
         });
       }
 
       // Per-IP burst rate limit (KV-backed, persists across isolates)
       const clientIp = request.headers.get("cf-connecting-ip") || "unknown";
       const rl = await checkRateLimit(clientIp, env);
+      if (rl.configurationError) {
+        return new Response(JSON.stringify({ error: "Reporting service is temporarily unavailable" }), {
+          status: 503,
+          headers: { ...responseHeaders, "Retry-After": "300", "Content-Type": "application/json" },
+        });
+      }
       if (!rl.allowed) {
         return new Response(JSON.stringify({ error: "Rate limited, please retry later" }), {
           status: 429,
           headers: {
-            ...corsHeaders,
+            ...responseHeaders,
             "Content-Type": "application/json",
             "Retry-After": String(rl.retryAfter),
           },
@@ -342,7 +428,7 @@ code{background:#252525;padding:2px 6px;border-radius:4px;font-size:12px;color:#
       const bodyText = await request.text();
       if (bodyText.length > 10000) {
         return new Response(JSON.stringify({ error: "Payload too large" }), {
-          status: 413, headers: { ...corsHeaders, "Content-Type": "application/json" }
+          status: 413, headers: { ...responseHeaders, "Content-Type": "application/json" }
         });
       }
       const body = JSON.parse(bodyText);
@@ -356,7 +442,7 @@ code{background:#252525;padding:2px 6px;border-radius:4px;font-size:12px;color:#
       const normalized = normalizePhoneNumberForReport(number);
       if (!normalized || !isPlausibleReportNumber(normalized)) {
         return new Response(JSON.stringify({ error: "Invalid phone number" }), {
-          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" }
+          status: 400, headers: { ...responseHeaders, "Content-Type": "application/json" }
         });
       }
 
@@ -366,7 +452,7 @@ code{background:#252525;padding:2px 6px;border-radius:4px;font-size:12px;color:#
         return new Response(JSON.stringify({ error: "Duplicate report, already submitted" }), {
           status: 429,
           headers: {
-            ...corsHeaders,
+            ...responseHeaders,
             "Content-Type": "application/json",
             "Retry-After": String(DEDUP_WINDOW_S),
           },
@@ -375,6 +461,11 @@ code{background:#252525;padding:2px 6px;border-radius:4px;font-size:12px;color:#
 
       // Create report file via GitHub API
       const timestamp = new Date().toISOString();
+      const reporterBucket = await deriveReporterBucket(
+        clientIp,
+        timestamp,
+        env.REPORTER_BUCKET_SECRET,
+      );
       const rand = crypto.randomUUID().substring(0, 8);
       const filename = `${normalized.replace("+", "")}_${Date.now()}_${rand}.json`;
       const report = {
@@ -382,6 +473,7 @@ code{background:#252525;padding:2px 6px;border-radius:4px;font-size:12px;color:#
         type: type,
         reported_at: timestamp,
         source: "community_app",
+        reporter_bucket: reporterBucket,
       };
       if (smsReportFields.sms_domains.length > 0) {
         report.sms_domains = smsReportFields.sms_domains;
@@ -414,11 +506,11 @@ code{background:#252525;padding:2px 6px;border-radius:4px;font-size:12px;color:#
         // Surface rate limiting to the client so it can back off
         if (githubResponse.status === 403 || githubResponse.status === 429) {
           return new Response(JSON.stringify({ error: "Rate limited, please retry later" }), {
-            status: 429, headers: { ...corsHeaders, "Content-Type": "application/json", "Retry-After": "60" }
+            status: 429, headers: { ...responseHeaders, "Content-Type": "application/json", "Retry-After": "60" }
           });
         }
         return new Response(JSON.stringify({ error: "Failed to submit report" }), {
-          status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" }
+          status: 500, headers: { ...responseHeaders, "Content-Type": "application/json" }
         });
       }
 
@@ -428,12 +520,12 @@ code{background:#252525;padding:2px 6px;border-radius:4px;font-size:12px;color:#
       await recordDedup(clientIp, normalized, env);
 
       return new Response(JSON.stringify({ success: true, number: normalized }), {
-        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" }
+        status: 200, headers: { ...responseHeaders, "Content-Type": "application/json" }
       });
 
     } catch (e) {
       return new Response(JSON.stringify({ error: "Bad request" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" }
+        status: 400, headers: { ...responseHeaders, "Content-Type": "application/json" }
       });
     }
   }

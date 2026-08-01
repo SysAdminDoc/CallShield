@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Regression test for the community-report derived-feed pipeline."""
+"""Regression tests for the community-report derived-feed pipeline."""
 
 import json
 import os
@@ -11,11 +11,14 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 SCRIPTS_DIR = ROOT / "scripts"
 NOW = "2026-06-12T12:00:00+00:00"
-# Second independent report, well outside the burst-duplicate window.
-LATER = "2026-06-12T12:30:00+00:00"
-# Repeat submission 10 seconds after NOW — the shape the stale Worker deploy let
-# through on 2026-07-30 (+12385233476 twice, 10s apart, straight onto the hot list).
-BURST_DUPLICATE_OF_NOW = "2026-06-12T12:00:10+00:00"
+TIMES = [
+    "2026-06-12T04:00:00+00:00",
+    "2026-06-12T06:00:00+00:00",
+    "2026-06-12T08:00:00+00:00",
+    "2026-06-12T10:00:00+00:00",
+    NOW,
+]
+BUCKETS = [f"{index:016x}" for index in range(1, 7)]
 
 
 def run_script(name: str, data_dir: Path) -> None:
@@ -41,6 +44,23 @@ def write_json(path: Path, payload: dict) -> None:
     path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
 
+def write_report(
+    data_dir: Path,
+    filename: str,
+    number: str,
+    bucket: str | None,
+    reported_at: str,
+    report_type: str = "phishing",
+    domains: list[str] | None = None,
+) -> None:
+    report = {"number": number, "type": report_type, "reported_at": reported_at}
+    if bucket is not None:
+        report["reporter_bucket"] = bucket
+    if domains:
+        report["sms_domains"] = domains
+    write_json(data_dir / "reports" / filename, report)
+
+
 def seed_reports(data_dir: Path) -> None:
     write_json(
         data_dir / "spam_numbers.json",
@@ -53,56 +73,65 @@ def seed_reports(data_dir: Path) -> None:
             "prefixes": [],
         },
     )
+    write_json(data_dir / "spam_domains_approved.json", {"domains": ["bad.example"]})
 
-    # Plausible NANP numbers (area 212, exchange 234) — the report pipeline
-    # now rejects fictional 555-exchange / area-code-555 numbers as junk.
-    #
-    # Timestamps matter: the hot list collapses reports for the same number
-    # filed within BURST_DUPLICATE_SECONDS of each other, because a stale Worker
-    # deployment lets one reporter submit repeatedly. Each pair here is spaced
-    # well beyond that window so it still reads as genuine velocity.
-    reports = [
-        ("r1.json", "+12122340101", ["Bad.Example"], NOW),
-        ("r2.json", "+12122340101", [], LATER),
-        ("r3.json", "+12122340102", ["bad.example."], NOW),
-        ("r4.json", "+12122340102", [], LATER),
-        ("r5.json", "+12122340103", ["www.bad.example/c"], NOW),
-        ("r6.json", "+12122340103", [], LATER),
-        # Burst duplicate: same number, 10 seconds after r1. Must NOT add
-        # velocity, so +12122340101 stays at 2 rather than climbing to 3.
-        ("r7.json", "+12122340101", [], BURST_DUPLICATE_OF_NOW),
+    campaign_buckets = [
+        BUCKETS[:5],
+        [BUCKETS[0], BUCKETS[1], BUCKETS[2], BUCKETS[3], BUCKETS[5]],
+        [BUCKETS[0], BUCKETS[1], BUCKETS[2], BUCKETS[4], BUCKETS[5]],
+        [BUCKETS[0], BUCKETS[1], BUCKETS[3], BUCKETS[4], BUCKETS[5]],
     ]
-    for filename, number, domains, reported_at in reports:
-        report = {
-            "number": number,
-            "type": "phishing",
-            "reported_at": reported_at,
-        }
-        if domains:
-            report["sms_domains"] = domains
-        write_json(data_dir / "reports" / filename, report)
+    for number_index, buckets in enumerate(campaign_buckets, start=1):
+        number = f"+1212234010{number_index}"
+        for report_index, (bucket, reported_at) in enumerate(zip(buckets, TIMES), start=1):
+            domains = None
+            if report_index <= 2:
+                domains = ["bad.example", "co.uk", "login.chase.com", "unreviewed.example"]
+            write_report(
+                data_dir,
+                f"campaign_{number_index}_{report_index}.json",
+                number,
+                bucket,
+                reported_at,
+                domains=domains,
+            )
+
+    # Many files from only two reporters cannot promote an arbitrary victim.
+    for index in range(8):
+        write_report(
+            data_dir,
+            f"attack_{index}.json",
+            "+12122340999",
+            BUCKETS[index % 2],
+            TIMES[index % len(TIMES)],
+        )
+
+    # Legacy files remain mergeable but are not independent promotion evidence.
+    write_report(data_dir, "legacy.json", "+12122340888", None, TIMES[0])
 
 
 def assert_derived_outputs(data_dir: Path) -> None:
     hot_numbers = json.loads((data_dir / "hot_numbers.json").read_text(encoding="utf-8"))
     hot_ranges = json.loads((data_dir / "hot_ranges.json").read_text(encoding="utf-8"))
     spam_domains = json.loads((data_dir / "spam_domains.json").read_text(encoding="utf-8"))
+    domain_review = json.loads((data_dir / "spam_domains_review.json").read_text(encoding="utf-8"))
 
-    numbers = {entry["number"]: entry["reports"] for entry in hot_numbers["numbers"]}
-    expected_numbers = {
-        "+12122340101": 2,
-        "+12122340102": 2,
-        "+12122340103": 2,
-    }
-    if numbers != expected_numbers:
+    numbers = {entry["number"]: entry for entry in hot_numbers["numbers"]}
+    expected = {f"+1212234010{index}" for index in range(1, 5)}
+    if set(numbers) != expected:
         raise AssertionError(f"unexpected hot numbers: {numbers}")
+    if any(entry["reports"] != 5 or entry["distinct_reporters"] != 5 for entry in numbers.values()):
+        raise AssertionError(f"hot evidence metadata is wrong: {numbers}")
 
-    ranges = {entry["npanxx"]: entry["count"] for entry in hot_ranges["ranges"]}
-    if ranges.get("212234") != 3:
-        raise AssertionError(f"expected 212234 campaign range, got {ranges}")
+    ranges = {entry["npanxx"]: entry for entry in hot_ranges["ranges"]}
+    if ranges.get("212234", {}).get("count") != 4:
+        raise AssertionError(f"expected robust 212234 campaign range, got {ranges}")
 
-    if "bad.example" not in spam_domains["domains"]:
-        raise AssertionError(f"expected bad.example spam domain, got {spam_domains['domains']}")
+    if spam_domains["domains"] != ["bad.example"]:
+        raise AssertionError(f"unexpected approved spam domains: {spam_domains['domains']}")
+    review_domains = {candidate["domain"] for candidate in domain_review["candidates"]}
+    if review_domains != {"unreviewed.example"}:
+        raise AssertionError(f"unexpected domain review candidates: {review_domains}")
 
 
 def assert_merge_cleanup(data_dir: Path) -> None:
@@ -111,18 +140,99 @@ def assert_merge_cleanup(data_dir: Path) -> None:
         raise AssertionError("merge script did not remove processed report files")
 
     merged = json.loads((data_dir / "spam_numbers.json").read_text(encoding="utf-8"))
-    merged_numbers = {entry["number"]: entry["reports"] for entry in merged["numbers"]}
-    if merged_numbers.get("+12122340101") != 2:
-        raise AssertionError(f"expected merged report counts, got {merged_numbers}")
+    merged_numbers = {entry["number"]: entry for entry in merged["numbers"]}
+    if merged_numbers["+12122340101"]["reports"] != 5:
+        raise AssertionError(f"expected identity-deduped report counts, got {merged_numbers}")
+    if merged_numbers["+12122340999"]["reports"] != 2:
+        raise AssertionError(f"same-reporter daily reports were not collapsed: {merged_numbers}")
+    if merged_numbers["+12122340888"]["reports"] != 1:
+        raise AssertionError(f"legacy report was not preserved: {merged_numbers}")
+    if any(entry.get("sources") != ["community"] for entry in merged_numbers.values()):
+        raise AssertionError(f"community provenance missing: {merged_numbers}")
+
+
+def assert_not_spam_requires_review(data_dir: Path) -> None:
+    community = "+14152340101"
+    authoritative = "+14152340102"
+    legacy_authoritative = "+14152340103"
+    write_json(
+        data_dir / "spam_numbers.json",
+        {
+            "version": 7,
+            "updated": "2026-06-11",
+            "numbers": [
+                {
+                    "number": community,
+                    "reports": 2,
+                    "type": "spam",
+                    "description": "Community reported",
+                    "sources": ["community"],
+                    "first_seen": "2026-06-01",
+                    "last_seen": "2026-06-11",
+                },
+                {
+                    "number": authoritative,
+                    "reports": 1,
+                    "type": "spam",
+                    "description": "Community reported",
+                    "sources": ["ftc"],
+                    "first_seen": "2026-06-01",
+                    "last_seen": "2026-06-11",
+                },
+                {
+                    "number": legacy_authoritative,
+                    "reports": 1,
+                    "type": "spam",
+                    "description": "Imported complaint",
+                    "first_seen": "2026-06-01",
+                    "last_seen": "2026-06-11",
+                },
+            ],
+            "prefixes": [],
+        },
+    )
+    for index, bucket in enumerate(BUCKETS[:4]):
+        write_report(
+            data_dir,
+            f"community_vote_{index}.json",
+            community,
+            bucket,
+            TIMES[index],
+            report_type="not_spam",
+        )
+        write_report(
+            data_dir,
+            f"authoritative_vote_{index}.json",
+            authoritative,
+            bucket,
+            TIMES[index],
+            report_type="not_spam",
+        )
+        write_report(
+            data_dir,
+            f"legacy_vote_{index}.json",
+            legacy_authoritative,
+            bucket,
+            TIMES[index],
+            report_type="not_spam",
+        )
+    write_report(data_dir, "anonymous_vote.json", community, None, NOW, report_type="not_spam")
+
+    run_script("merge_community_reports.py", data_dir)
+    merged = json.loads((data_dir / "spam_numbers.json").read_text(encoding="utf-8"))
+    by_number = {entry["number"]: entry for entry in merged["numbers"]}
+    if by_number[community]["reports"] != 2 or by_number[authoritative]["reports"] != 1:
+        raise AssertionError(f"not_spam votes mutated the database: {by_number}")
+    if by_number[legacy_authoritative].get("sources") != ["legacy_import"]:
+        raise AssertionError(f"legacy provenance was not migrated safely: {by_number}")
+
+    review = json.loads((data_dir / "not_spam_review.json").read_text(encoding="utf-8"))
+    candidates = {entry["number"] for entry in review["candidates"]}
+    if candidates != {community}:
+        raise AssertionError(f"unexpected not-spam review candidates: {candidates}")
 
 
 def assert_min_reports_spares_existing_rows(data_dir: Path) -> None:
-    """--min-reports must filter only newly-added entries.
-
-    Community reports are written at reports=1, and the documented regen
-    command runs with the default --min-reports 2. Applying that filter to
-    the whole merged database deleted every community row on each rerun.
-    """
     import importlib.util
 
     spec = importlib.util.spec_from_file_location(
@@ -155,12 +265,10 @@ def assert_min_reports_spares_existing_rows(data_dir: Path) -> None:
     )
 
     module.DB_FILE = db_path
-    # One brand-new single-report entry (must be filtered) alongside an
-    # untouched pre-existing community row (must survive).
     module.merge_into_database(
         [
             {
-                "number": "+15305550123",
+                "number": "+15302340123",
                 "reports": 1,
                 "type": "robocall",
                 "description": "New low-confidence import",
@@ -173,14 +281,8 @@ def assert_min_reports_spares_existing_rows(data_dir: Path) -> None:
 
     result = json.loads(db_path.read_text(encoding="utf-8"))
     numbers = {entry["number"] for entry in result["numbers"]}
-    if "+12122340101" not in numbers:
-        raise AssertionError(
-            "min_reports filter deleted a pre-existing community-reported row"
-        )
-    if "+15305550123" in numbers:
-        raise AssertionError(
-            "min_reports filter failed to drop a new single-report entry"
-        )
+    if "+12122340101" not in numbers or "+15302340123" in numbers:
+        raise AssertionError(f"min_reports filtering regressed: {numbers}")
 
 
 def main() -> None:
@@ -194,6 +296,9 @@ def main() -> None:
         assert_merge_cleanup(data_dir)
         assert_derived_outputs(data_dir)
         assert_min_reports_spares_existing_rows(data_dir)
+
+    with tempfile.TemporaryDirectory() as tmp:
+        assert_not_spam_requires_review(Path(tmp) / "data")
 
 
 if __name__ == "__main__":

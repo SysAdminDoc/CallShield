@@ -17,19 +17,25 @@ import re
 from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
+from publicsuffixlist import PublicSuffixList
 from phone_normalization import validated_report_number
 
 from pipeline_io import atomic_write_json
+from report_dedup import validated_reporter_bucket
 
 DATA_DIR = Path(os.environ.get("CALLSHIELD_DATA_DIR", Path(__file__).parent.parent / "data"))
 REPORTS_DIR = Path(os.environ.get("CALLSHIELD_REPORTS_DIR", DATA_DIR / "reports"))
 OUTPUT_FILE = DATA_DIR / "spam_domains.json"
+APPROVED_FILE = DATA_DIR / "spam_domains_approved.json"
+REVIEW_FILE = DATA_DIR / "spam_domains_review.json"
 
 MIN_REPORTS = 3    # Domain must be tied to 3+ DISTINCT reported numbers
+MIN_REPORTERS = 2  # And at least two privacy-preserving reporter buckets
 MAX_DOMAINS = 500  # Top N domains
 
 URL_RE = re.compile(r'https?://([^/\s\'"<>]+)|www\.([^\s/\'"<>]+)', re.IGNORECASE)
 DOMAIN_RE = re.compile(r"^[a-z0-9](?:[a-z0-9.-]{0,251}[a-z0-9])?$")
+PUBLIC_SUFFIX_LIST = PublicSuffixList()
 
 # Established legitimate domains — never flag these regardless of report count
 DOMAIN_WHITELIST = {
@@ -38,6 +44,9 @@ DOMAIN_WHITELIST = {
     "youtube.com", "gmail.com", "icloud.com", "paypal.com",
     "github.com", "cloudflare.com", "amazonaws.com", "azure.com",
     "outlook.com", "yahoo.com", "usps.com", "fedex.com", "ups.com",
+    "chase.com", "bankofamerica.com", "wellsfargo.com", "citi.com",
+    "capitalone.com", "americanexpress.com", "visa.com", "mastercard.com",
+    "irs.gov", "ssa.gov", "medicare.gov", "healthcare.gov",
 }
 
 
@@ -63,9 +72,30 @@ def normalize_domain(raw: str) -> str:
         return ""
     if any(label.startswith("-") or label.endswith("-") for label in labels):
         return ""
-    if domain in DOMAIN_WHITELIST:
+    registrable = PUBLIC_SUFFIX_LIST.privatesuffix(domain)
+    if registrable is None:  # `co.uk`, `com`, etc. are registries, not hosts.
+        return ""
+    if registrable in DOMAIN_WHITELIST:
         return ""
     return domain
+
+
+def approved_domains() -> set[str]:
+    """Load the maintainer-approved set; newly observed domains stay in review."""
+    if not APPROVED_FILE.exists():
+        return set()
+    try:
+        payload = json.loads(APPROVED_FILE.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return set()
+    raw_domains = payload.get("domains", []) if isinstance(payload, dict) else payload
+    if not isinstance(raw_domains, list):
+        return set()
+    return {
+        domain
+        for raw in raw_domains
+        if isinstance(raw, str) and (domain := normalize_domain(raw))
+    }
 
 
 def report_domains(report: dict) -> set[str]:
@@ -102,6 +132,7 @@ def main():
     # the same number could otherwise manufacture the MIN_REPORTS quorum for an
     # arbitrary domain and have it flagged malicious on every device.
     domain_numbers: dict[str, set[str]] = {}
+    domain_reporters: dict[str, set[str]] = {}
     reports_scanned = 0
 
     if REPORTS_DIR.exists():
@@ -118,12 +149,14 @@ def main():
                     continue
 
                 number = validated_report_number(report.get("number", ""))
-                if not number:
+                reporter_bucket = validated_reporter_bucket(report.get("reporter_bucket"))
+                if not number or not reporter_bucket:
                     continue
 
                 reports_scanned += 1
                 for domain in domains:
                     domain_numbers.setdefault(domain, set()).add(number)
+                    domain_reporters.setdefault(domain, set()).add(reporter_bucket)
 
             except Exception as e:
                 print(f"  Skipping {report_file.name}: {e}")
@@ -132,22 +165,45 @@ def main():
 
     domain_counts: Counter = Counter({d: len(nums) for d, nums in domain_numbers.items()})
 
-    # Filter to domains reported alongside enough distinct numbers
-    spam_domains = [
-        d for d, c in domain_counts.most_common()
-        if c >= MIN_REPORTS
-    ][:MAX_DOMAINS]
+    candidates = [
+        domain
+        for domain, count in domain_counts.most_common()
+        if count >= MIN_REPORTS and len(domain_reporters.get(domain, set())) >= MIN_REPORTERS
+    ]
+    approved = approved_domains()
+    spam_domains = [domain for domain in candidates if domain in approved][:MAX_DOMAINS]
+
+    atomic_write_json(
+        REVIEW_FILE,
+        {
+            "generated": datetime.now(timezone.utc).isoformat(),
+            "count": len([domain for domain in candidates if domain not in approved]),
+            "candidates": [
+                {
+                    "domain": domain,
+                    "distinct_numbers": domain_counts[domain],
+                    "distinct_reporters": len(domain_reporters[domain]),
+                }
+                for domain in candidates
+                if domain not in approved
+            ],
+        },
+    )
 
     output = {
         "generated": datetime.now(timezone.utc).isoformat(),
         "count": len(spam_domains),
         "min_reports": MIN_REPORTS,
+        "min_distinct_reporters": MIN_REPORTERS,
         "domains": spam_domains,
     }
 
     atomic_write_json(OUTPUT_FILE, output)
 
-    print(f"Spam domains: {len(spam_domains)} (min {MIN_REPORTS} reports)")
+    print(
+        f"Spam domains: {len(spam_domains)} approved "
+        f"(min {MIN_REPORTS} numbers / {MIN_REPORTERS} reporters)"
+    )
     print(f"Written to: {OUTPUT_FILE}")
 
     if spam_domains[:5]:
