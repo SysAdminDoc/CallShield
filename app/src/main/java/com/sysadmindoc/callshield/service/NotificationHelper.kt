@@ -191,7 +191,7 @@ object NotificationHelper {
         val builder =
             NotificationCompat
                 .Builder(context, CHANNEL_PROTECTION_HEALTH)
-                .setSmallIcon(android.R.drawable.ic_dialog_alert)
+                .setSmallIcon(R.drawable.ic_launcher_monochrome)
                 .setContentTitle(context.getString(R.string.notif_role_lost_title))
                 .setContentText(context.getString(R.string.notif_role_lost_text))
                 .setStyle(
@@ -288,7 +288,7 @@ object NotificationHelper {
         val builder =
             NotificationCompat
                 .Builder(context, CHANNEL_BLOCKED)
-                .setSmallIcon(android.R.drawable.ic_menu_close_clear_cancel)
+                .setSmallIcon(R.drawable.ic_launcher_monochrome)
                 .setContentTitle(context.getString(R.string.notif_blocked_title, typeText))
                 .setContentText(
                     context.getString(
@@ -373,7 +373,7 @@ object NotificationHelper {
         val summary =
             NotificationCompat
                 .Builder(context, CHANNEL_BLOCKED)
-                .setSmallIcon(android.R.drawable.ic_menu_close_clear_cancel)
+                .setSmallIcon(R.drawable.ic_launcher_monochrome)
                 .setContentTitle(context.getString(R.string.app_name))
                 .setContentText(summaryText)
                 .setGroup(GROUP_BLOCKED)
@@ -421,7 +421,7 @@ object NotificationHelper {
         val builder =
             NotificationCompat
                 .Builder(context, CHANNEL_PHISHING)
-                .setSmallIcon(android.R.drawable.ic_dialog_alert)
+                .setSmallIcon(R.drawable.ic_launcher_monochrome)
                 .setContentTitle(context.getString(R.string.notif_phishing_title))
                 .setContentText(context.getString(R.string.notif_phishing_text, PhoneFormatter.formatIsolated(sender), threats))
                 .setStyle(
@@ -460,7 +460,7 @@ object NotificationHelper {
         val builder =
             NotificationCompat
                 .Builder(context, CHANNEL_MESSAGE_SCREENING)
-                .setSmallIcon(android.R.drawable.ic_dialog_alert)
+                .setSmallIcon(R.drawable.ic_launcher_monochrome)
                 .setContentTitle(context.getString(R.string.notif_message_screening_title, sourceName))
                 .setContentText(context.getString(R.string.notif_message_screening_text, sender, confidence))
                 .setStyle(
@@ -534,7 +534,7 @@ object NotificationHelper {
         val builder =
             NotificationCompat
                 .Builder(context, CHANNEL_RATING)
-                .setSmallIcon(android.R.drawable.ic_menu_call)
+                .setSmallIcon(R.drawable.ic_launcher_monochrome)
                 .setContentTitle(context.getString(R.string.feedback_title))
                 .setContentText(context.getString(R.string.feedback_text, formatted))
                 .setContentIntent(openIntent)
@@ -562,7 +562,7 @@ object NotificationHelper {
         val fallback =
             NotificationCompat
                 .Builder(context, CHANNEL_SYNC)
-                .setSmallIcon(android.R.drawable.stat_sys_download)
+                .setSmallIcon(R.drawable.ic_launcher_monochrome)
                 .setContentTitle(context.getString(R.string.notif_sync_title))
                 .setContentText(context.getString(R.string.notif_sync_text))
                 .setContentIntent(openIntent)
@@ -652,7 +652,7 @@ object NotificationHelper {
         val builder =
             NotificationCompat
                 .Builder(context, CHANNEL_ALLOWED)
-                .setSmallIcon(android.R.drawable.ic_menu_call)
+                .setSmallIcon(R.drawable.ic_launcher_monochrome)
                 .setContentTitle(context.getString(R.string.notif_repeated_urgent_title))
                 .setContentText(context.getString(R.string.notif_repeated_urgent_text, formatted))
                 .setStyle(
@@ -687,7 +687,7 @@ object NotificationHelper {
         val builder =
             NotificationCompat
                 .Builder(context, CHANNEL_STATUS)
-                .setSmallIcon(android.R.drawable.ic_menu_view)
+                .setSmallIcon(R.drawable.ic_launcher_monochrome)
                 .setContentTitle(context.getString(R.string.notif_status_title))
                 .setContentText(context.getString(R.string.notif_status_text))
                 .setContentIntent(openIntent)

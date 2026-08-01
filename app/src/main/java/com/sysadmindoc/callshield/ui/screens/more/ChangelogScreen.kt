@@ -25,9 +25,43 @@ fun ChangelogScreen() {
         verticalArrangement = Arrangement.spacedBy(0.dp),
     ) {
         VersionEntry(
+            "1.7.32",
+            "Guided first-run setup with verified Android permission handoffs",
+            isLatest = true,
+            changes =
+                listOf(
+                    "First launch now guides every permission and special-access step separately",
+                    "Each action opens the exact Android control and explains how to return",
+                    "CallShield automatically verifies a grant before moving to the next step",
+                    "All supported capabilities must be ready before setup can finish",
+                ),
+        )
+        VersionEntry(
+            "1.7.31",
+            "A cleaner CallShield identity across every app and distribution surface",
+            changes =
+                listOf(
+                    "A luminous cyan shield, white handset, and coral block badge form the new mark",
+                    "Launcher, themed, splash, shortcut, in-app, Play Store, and README art now match",
+                    "Notifications use the CallShield silhouette as their small app icon",
+                    "The deep-navy tile fills launcher masks while the compact mark stays legible",
+                ),
+        )
+        VersionEntry(
+            "1.7.30",
+            "Light-first themes and a calmer five-destination visual system",
+            changes =
+                listOf(
+                    "Light is now the default; System, Graphite, and AMOLED remain available",
+                    "Recent calls and blocked activity now share persistent Activity tabs",
+                    "Manual protection tools are grouped under the clearer Rules destination",
+                    "Larger type, filled controls, shorter copy, and fewer borders improve readability",
+                    "More includes a compact Appearance shortcut with theme previews",
+                ),
+        )
+        VersionEntry(
             "1.7.29",
             "Report-pipeline integrity, and CallShield is now open to translation",
-            isLatest = true,
             changes =
                 listOf(
                     "Numbers reported in local dialling format are stored so they actually match the caller",

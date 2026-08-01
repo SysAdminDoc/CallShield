@@ -1,0 +1,5 @@
+First launch now guides phone and message access, call screening, alerts, caller ID, and notification access one step at a time.
+
+Each action opens the exact Android control, explains how to return, and verifies the result automatically.
+
+Setup can finish only after every supported protection capability is ready.

@@ -1,0 +1,5 @@
+CallShield now has a premium deep-navy tile with a luminous cyan shield, white handset, and coral block badge.
+
+The new logo replaces the old artwork across launcher and themed icons, splash, shortcuts, in-app headers, onboarding, notifications, and store assets.
+
+The full-bleed tile fills launcher masks while compact and monochrome marks remain recognizable at small sizes.

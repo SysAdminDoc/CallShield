@@ -5,7 +5,7 @@
         android:enabled="true"
         android:shortcutShortLabel="@string/shortcut_lookup"
         android:shortcutLongLabel="@string/shortcut_lookup_long"
-        android:icon="@drawable/ic_launcher_foreground">
+        android:icon="@drawable/ic_callshield_brand">
         <intent
             android:action="com.sysadmindoc.callshield.LOOKUP"
             android:targetPackage="com.sysadmindoc.callshield"
@@ -16,7 +16,7 @@
         android:enabled="true"
         android:shortcutShortLabel="@string/shortcut_scan"
         android:shortcutLongLabel="@string/shortcut_scan_long"
-        android:icon="@drawable/ic_launcher_foreground">
+        android:icon="@drawable/ic_callshield_brand">
         <intent
             android:action="com.sysadmindoc.callshield.SCAN"
             android:targetPackage="com.sysadmindoc.callshield"
@@ -27,7 +27,7 @@
         android:enabled="true"
         android:shortcutShortLabel="@string/shortcut_scan_sms"
         android:shortcutLongLabel="@string/shortcut_scan_sms_long"
-        android:icon="@drawable/ic_launcher_foreground">
+        android:icon="@drawable/ic_callshield_brand">
         <intent
             android:action="com.sysadmindoc.callshield.SCAN_SMS"
             android:targetPackage="com.sysadmindoc.callshield"

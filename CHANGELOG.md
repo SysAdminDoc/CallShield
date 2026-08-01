@@ -2,6 +2,71 @@
 
 All notable changes to CallShield will be documented in this file.
 
+## v1.7.32 — 2026-08-01
+
+### Changed
+
+- First launch is now a focused seven-screen guided setup instead of a broad
+  permission checklist. Each step explains the exact Android control that will
+  open and how to return to CallShield.
+- Runtime phone, contacts, call-log, and SMS grants; the call-screening role;
+  alerts; caller-ID overlay; and notification access are verified separately.
+- Setup advances automatically after Android confirms a grant, skips an
+  unavailable call-screening role safely, and sends permanently denied runtime
+  permissions to App info for recovery.
+- The final action is gated on every supported capability. If a permission is
+  revoked during setup, the review sends the user back to the first missing
+  step instead of offering a misleading continue-anyway path.
+
+### Added
+
+- Pure setup-state coverage pins the all-capabilities completion contract and
+  unsupported-device behavior. Compose coverage exercises the full walkthrough,
+  return-state auto-advance, recovery routing, and completion gate.
+
+## v1.7.31 — 2026-08-01
+
+### Changed
+
+- CallShield now has a premium deep-navy tile with a luminous cyan shield,
+  pearl-white handset, and coral block badge. The reference-inspired materials
+  stay balanced and substantial at launcher sizes without decorative clutter.
+- Dedicated adaptive, in-app, and monochrome variants replace the previous
+  artwork in legacy and round icons, the splash screen, shortcuts, headers,
+  onboarding, More, the Play Store asset, notifications, and the README.
+- Notifications now use the CallShield silhouette as their small app icon while
+  retaining their semantic action icons.
+- The Android launch screen now uses the light product canvas and keeps the
+  adaptive mark inside the platform safe zone instead of clipping its point.
+
+### Added
+
+- The selected ImageGen source, transparent extraction, and production SVG
+  master are preserved under `docs/design/logo/`.
+
+## v1.7.30 — 2026-08-01
+
+### Changed
+
+- CallShield now opens in a warm, high-contrast light theme. Existing installs
+  that were still using the old implicit AMOLED default migrate to Light;
+  explicit System, Graphite, and AMOLED choices remain available.
+- The six-item navigation bar is now a clearer five-destination shell. Recent
+  calls and blocked activity live together under persistent Activity tabs, and
+  manual blocking tools are grouped under Rules.
+- Typography is larger and more consistent, headers and section spacing are
+  tighter, explanatory copy is shorter, and filled controls replace many of
+  the outlined fields, chips, cards, and status badges.
+- Home, Activity, Lookup, Rules, and More now use the same border-light visual
+  hierarchy, restrained green accent, and denser list grouping.
+
+### Added
+
+- More includes a compact Appearance shortcut with visible previews for
+  System, Light, Graphite, and AMOLED themes.
+- Six ImageGen reference screens are kept in `docs/design/premium-system/` to
+  make the implemented visual direction auditable.
+
 ## v1.7.29 — 2026-07-30
 
 ### Fixed

@@ -99,7 +99,7 @@ class PostCallActivity : AppCompatActivity() {
             val appTheme =
                 runCatching { AppThemeMode.fromStorage(repository.appTheme.first()) }
                     .onFailure { Log.w(TAG, "Unable to read app theme", it) }
-                    .getOrDefault(AppThemeMode.Amoled)
+                    .getOrDefault(AppThemeMode.Light)
 
             setContent {
                 CallShieldTheme(themeMode = appTheme) {

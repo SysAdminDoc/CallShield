@@ -12,7 +12,7 @@
 <p align="center">
   <a href="https://github.com/SysAdminDoc/CallShield/releases/latest"><img src="https://img.shields.io/github/v/release/SysAdminDoc/CallShield?style=flat-square&color=a6e3a1" alt="Release"></a>
   <img src="https://img.shields.io/badge/Spam%20Numbers-32%2C623-f38ba8?style=flat-square" alt="32,623 Numbers">
-  <img src="https://img.shields.io/badge/Tests-948-94e2d5?style=flat-square" alt="948 Tests">
+  <img src="https://img.shields.io/badge/Tests-952-94e2d5?style=flat-square" alt="952 Tests">
   <img src="https://img.shields.io/badge/Android-10%2B-89b4fa?style=flat-square" alt="Android 10+">
   <img src="https://img.shields.io/badge/License-MIT-cba6f7?style=flat-square" alt="MIT License">
   <img src="https://img.shields.io/badge/API%20Keys-None-fab387?style=flat-square" alt="No required API keys">
@@ -21,6 +21,37 @@
 ---
 
 CallShield blocks spam calls and texts using a **15+ layer on-device detection engine** with a gradient-boosted tree ML scorer, campaign burst detection, RCS notification filter, and real-time caller ID overlay. Powered by a 32,623-number database with scheduled hot-list updates. Community-maintained, no accounts, no tracking.
+
+## v1.7.32 Highlights
+
+- **Guided first-run setup** — CallShield walks through phone and message
+  access, call screening, alerts, caller ID, and notification access one step
+  at a time.
+- **Direct Android handoffs** — every action opens the relevant system prompt
+  or settings screen, explains how to return, and rechecks the result.
+- **Verified before finish** — setup cannot be dismissed with missing supported
+  access; revoked permissions route back to the exact incomplete step.
+
+## v1.7.31 Highlights
+
+- **One recognizable CallShield mark** — a luminous cyan shield, white handset,
+  and coral block badge sit on a deep navy full-bleed tile.
+- **Consistent branding everywhere** — adaptive, legacy, round, monochrome,
+  splash, shortcut, notification, in-app, Play Store, and README surfaces now
+  share the same logo system.
+- **Built to own the icon** — the navy field fills every Android launcher
+  mask while dedicated compact and monochrome marks stay clear at small sizes.
+
+## v1.7.30 Highlights
+
+- **Light-first themes** — new and legacy-default installs open in the warm
+  light palette, while System, Graphite, and AMOLED remain one tap away from
+  the new Appearance row in More.
+- **A simpler five-destination shell** — Recent and Blocked are now persistent
+  Activity tabs, and manual protection tools have a single Rules home.
+- **Premium visual system** — larger type, compact headers, shorter copy,
+  filled controls, fewer borders and pills, and a more consistent spacing
+  rhythm across every primary destination.
 
 ## v1.7.29 Highlights
 
@@ -277,7 +308,7 @@ CallShield blocks spam calls and texts using a **15+ layer on-device detection e
 - **Answered-caller trust** — numbers answered repeatedly inside the configured lookback window can ring through lower-confidence heuristic/ML suspicion while explicit block rules still win first.
 - **Emergency callback grace** — unknown callbacks can ring through after a local emergency call for a configurable window while explicit block rules still win first.
 - **SMS burst protection** - repeated unknown SMS senders or same-prefix floods can be blocked as `sms_burst`, with blocked-SMS notification actions to mark safe or report.
-- **948 total JVM unit tests** - the local unit suite covers detection, workers, utilities, repository contracts, and permission readiness before release.
+- **952 total JVM unit tests** - the local unit suite covers detection, workers, utilities, repository contracts, and permission readiness before release.
 - **Gradient-Boosted Tree ML model** — 20 features, pure Kotlin, no TFLite dependency.
 - **Campaign burst detection** — NPA-NXX prefix clustering identifies coordinated spam waves.
 - **Full accessibility** — content descriptions across Compose UI, 48dp minimum touch targets.
@@ -291,7 +322,7 @@ CallShield blocks spam calls and texts using a **15+ layer on-device detection e
 5. **Callback-aware** — won't block callbacks from numbers you recently called, answered repeatedly, after a local emergency call, or urgent repeated callers
 6. **Community-driven** — one-tap anonymous contribution via Cloudflare Worker, merged into the database by the maintainer
 
-## Detection Pipeline (v1.7.29)
+## Detection Pipeline (v1.7.32)
 
 All detection layers implement a shared `IChecker` interface and run in priority order via `CheckerPipeline.run` — first non-null result wins, every layer is testable in isolation. Priorities are stable numbers; the ladder below is the live order.
 
@@ -527,7 +558,7 @@ RELEASE_KEY_PASSWORD=...
 ## Testing
 
 ```bash
-./gradlew testDebugUnitTest   # 948 tests
+./gradlew testDebugUnitTest   # 952 tests
 ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.sysadmindoc.callshield.platform.TargetSdkBehaviorSmokeTest
 ./gradlew verifyPipelineTests # Cloudflare Worker (node) + data-pipeline and translation checks (python)
 ```
@@ -558,7 +589,7 @@ language in [issue #7](https://github.com/SysAdminDoc/CallShield/issues/7).
 | Community API | Cloudflare Workers |
 | URL Safety | URLhaus (abuse.ch) |
 | Verification | Local Gradle, lint, and release-artifact checks |
-| Tests | 948 JVM unit tests (JUnit) |
+| Tests | 952 JVM unit tests (JUnit) |
 | Strings | 1160 string resources and 29 plural groups (translation-ready) |
 | Accessibility | 100+ content descriptions, 48dp touch targets |
 | Min SDK | 29 (Android 10) |

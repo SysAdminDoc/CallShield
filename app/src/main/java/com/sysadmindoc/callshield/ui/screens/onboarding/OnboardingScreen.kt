@@ -1,33 +1,73 @@
 package com.sysadmindoc.callshield.ui.screens.onboarding
 
 import android.Manifest
+import android.app.Activity
 import android.app.role.RoleManager
+import android.content.ComponentName
 import android.content.Context
+import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.*
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.spring
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.automirrored.filled.PhoneCallback
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Layers
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.NotificationsActive
+import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.VerifiedUser
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
@@ -42,136 +82,170 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.permissions.CallShieldPermissions
-import com.sysadmindoc.callshield.ui.theme.*
+import com.sysadmindoc.callshield.service.RcsNotificationListener
+import com.sysadmindoc.callshield.ui.theme.CatBlue
+import com.sysadmindoc.callshield.ui.theme.CatGreen
+import com.sysadmindoc.callshield.ui.theme.CatMauve
+import com.sysadmindoc.callshield.ui.theme.CatOverlay
+import com.sysadmindoc.callshield.ui.theme.CatPeach
+import com.sysadmindoc.callshield.ui.theme.CatSubtext
+import com.sysadmindoc.callshield.ui.theme.CatTeal
+import com.sysadmindoc.callshield.ui.theme.CatText
+import com.sysadmindoc.callshield.ui.theme.CatYellow
+import com.sysadmindoc.callshield.ui.theme.PremiumActionButton
 import com.sysadmindoc.callshield.util.startActivitySafely
 import kotlinx.coroutines.launch
 
-data class OnboardingPage(
-    val icon: androidx.compose.ui.graphics.vector.ImageVector,
-    val title: String,
-    val subtitle: String,
-    val color: androidx.compose.ui.graphics.Color,
-)
-
+internal const val ONBOARDING_PRIMARY_ACTION_TAG = "onboarding_primary_action"
+internal const val ONBOARDING_FINISH_BUTTON_TAG = "onboarding_finish_button"
 internal const val ONBOARDING_CORE_PERMISSIONS_BUTTON_TAG = "onboarding_core_permissions_button"
 internal const val ONBOARDING_NOTIFICATIONS_BUTTON_TAG = "onboarding_notifications_button"
 internal const val ONBOARDING_OVERLAY_BUTTON_TAG = "onboarding_overlay_button"
 internal const val ONBOARDING_SCREENER_BUTTON_TAG = "onboarding_screener_button"
+internal const val ONBOARDING_NOTIFICATION_ACCESS_BUTTON_TAG = "onboarding_notification_access_button"
 
 @Composable
 fun OnboardingScreen(onComplete: () -> Unit) {
     val context = LocalContext.current
-    val roleManager =
-        remember {
-            context.getSystemService(Context.ROLE_SERVICE) as? RoleManager
-        }
-    var permsGranted by remember(context) { mutableStateOf(CallShieldPermissions.hasCorePermissions(context)) }
-    var notificationsGranted by remember(context) { mutableStateOf(CallShieldPermissions.hasNotificationPermission(context)) }
+    val roleManager = remember { context.getSystemService(Context.ROLE_SERVICE) as? RoleManager }
+    val screenerSupported = remember(roleManager) { CallShieldPermissions.isCallScreeningRoleAvailable(roleManager) }
+    var runtimePermissionsGranted by remember(context) {
+        mutableStateOf(CallShieldPermissions.hasOnboardingRuntimePermissions(context))
+    }
+    var notificationsGranted by remember(context) {
+        mutableStateOf(CallShieldPermissions.hasNotificationPermission(context))
+    }
     var overlayGranted by remember(context) { mutableStateOf(CallShieldPermissions.canDrawOverlays(context)) }
-    var screenerGranted by remember(roleManager) { mutableStateOf(CallShieldPermissions.hasCallScreeningRole(roleManager)) }
-    val screenerSupported = remember(roleManager) { roleManager?.isRoleAvailable(RoleManager.ROLE_CALL_SCREENING) == true }
+    var notificationAccessGranted by remember(context) {
+        mutableStateOf(CallShieldPermissions.hasNotificationListenerAccess(context))
+    }
+    var screenerGranted by remember(roleManager) {
+        mutableStateOf(CallShieldPermissions.hasCallScreeningRole(roleManager))
+    }
+    var runtimePermissionsBlocked by rememberSaveable { mutableStateOf(false) }
+    var runtimePermissionRequestAttempts by rememberSaveable { mutableIntStateOf(0) }
     val lifecycleOwner = LocalLifecycleOwner.current
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
-    // Once the user has permanently denied ("Don't allow"), launch() returns
-    // instantly denied with no system UI, so the Grant button visibly does
-    // nothing. Detect that and route to app settings, matching the fallback
-    // the notifications path already has.
-    var corePermissionsBlocked by rememberSaveable { mutableStateOf(false) }
-    val permLauncher =
-        rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
-            permsGranted = CallShieldPermissions.hasCorePermissions(context)
-            val activity = context as? android.app.Activity
-            corePermissionsBlocked =
-                !permsGranted &&
-                result.isNotEmpty() &&
-                result.none { it.value } &&
+    fun refreshReadiness() {
+        runtimePermissionsGranted = CallShieldPermissions.hasOnboardingRuntimePermissions(context)
+        notificationsGranted = CallShieldPermissions.hasNotificationPermission(context)
+        overlayGranted = CallShieldPermissions.canDrawOverlays(context)
+        notificationAccessGranted = CallShieldPermissions.hasNotificationListenerAccess(context)
+        screenerGranted = CallShieldPermissions.hasCallScreeningRole(roleManager)
+    }
+
+    val runtimePermissionsLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
+            refreshReadiness()
+            val activity = context as? Activity
+            val missing = CallShieldPermissions.missingOnboardingRuntimePermissions(context)
+            runtimePermissionsBlocked =
+                missing.isNotEmpty() &&
+                runtimePermissionRequestAttempts >= 2 &&
                 activity != null &&
-                result.keys.none(activity::shouldShowRequestPermissionRationale)
+                missing.none(activity::shouldShowRequestPermissionRationale)
         }
-
-    // Notification permission (Android 13+) — separate launcher since it's a single permission
-    val notifPermLauncher =
+    val notificationPermissionLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
-            notificationsGranted = CallShieldPermissions.hasNotificationPermission(context)
+            refreshReadiness()
         }
-
-    val screenerErrorMessage = stringResource(R.string.onboarding_screener_error)
-
     val screeningLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-            screenerGranted = CallShieldPermissions.hasCallScreeningRole(roleManager)
+            refreshReadiness()
         }
 
     DisposableEffect(lifecycleOwner, context, roleManager) {
         val observer =
             LifecycleEventObserver { _, event ->
-                if (event == Lifecycle.Event.ON_RESUME) {
-                    permsGranted = CallShieldPermissions.hasCorePermissions(context)
-                    notificationsGranted = CallShieldPermissions.hasNotificationPermission(context)
-                    overlayGranted = CallShieldPermissions.canDrawOverlays(context)
-                    screenerGranted = CallShieldPermissions.hasCallScreeningRole(roleManager)
-                }
+                if (event == Lifecycle.Event.ON_RESUME) refreshReadiness()
             }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
+    val couldNotOpenMessage = stringResource(R.string.onboarding_could_not_open_settings)
+
+    fun reportLaunchFailure() {
+        scope.launch { snackbarHostState.showSnackbar(couldNotOpenMessage) }
+    }
+
     OnboardingScreenContent(
-        permsGranted = permsGranted,
-        notificationsGranted = notificationsGranted,
-        overlayGranted = overlayGranted,
-        screenerGranted = screenerGranted,
-        screenerSupported = screenerSupported,
+        setupState =
+            OnboardingSetupState(
+                runtimePermissionsGranted = runtimePermissionsGranted,
+                notificationsGranted = notificationsGranted,
+                overlayGranted = overlayGranted,
+                notificationAccessGranted = notificationAccessGranted,
+                screenerGranted = screenerGranted,
+                screenerSupported = screenerSupported,
+            ),
+        runtimePermissionsBlocked = runtimePermissionsBlocked,
         snackbarHostState = snackbarHostState,
-        onRequestCorePermissions = {
-            if (corePermissionsBlocked) {
-                // The system dialog will never appear again — send the user
-                // where they can actually grant it.
+        onRequestRuntimePermissions = {
+            if (runtimePermissionsBlocked) {
                 context.startActivitySafely(
-                    android.content.Intent(
+                    Intent(
                         Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                        android.net.Uri.fromParts("package", context.packageName, null),
+                        Uri.fromParts("package", context.packageName, null),
                     ),
+                    onFailure = ::reportLaunchFailure,
                 )
             } else {
-                permLauncher.launch(CallShieldPermissions.corePermissions.toTypedArray())
+                runtimePermissionRequestAttempts++
+                runtimePermissionsLauncher.launch(CallShieldPermissions.onboardingRuntimePermissions.toTypedArray())
+            }
+        },
+        onRequestScreener = {
+            val intent = roleManager?.createRequestRoleIntent(RoleManager.ROLE_CALL_SCREENING)
+            if (intent == null) {
+                reportLaunchFailure()
+            } else {
+                try {
+                    screeningLauncher.launch(intent)
+                } catch (_: Exception) {
+                    reportLaunchFailure()
+                }
             }
         },
         onRequestNotifications = {
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-                notifPermLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             } else {
-                // POST_NOTIFICATIONS doesn't exist below API 33 (minSdk 29) —
-                // the launcher would auto-deny and the button would silently do
-                // nothing. Open the OS notification settings instead, matching
-                // the Settings screen's behavior.
                 context.startActivitySafely(
-                    android.content.Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                    Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
                         putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
                     },
+                    onFailure = ::reportLaunchFailure,
                 )
             }
         },
         onRequestOverlay = {
             context.startActivitySafely(
-                android.content.Intent(
+                Intent(
                     Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
                     Uri.parse("package:${context.packageName}"),
                 ),
+                onFailure = ::reportLaunchFailure,
             )
         },
-        onRequestScreener = {
-            if (roleManager != null) {
-                try {
-                    screeningLauncher.launch(roleManager.createRequestRoleIntent(RoleManager.ROLE_CALL_SCREENING))
-                } catch (_: Exception) {
-                    scope.launch {
-                        snackbarHostState.showSnackbar(screenerErrorMessage)
+        onRequestNotificationAccess = {
+            val notificationAccessIntent =
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    Intent(Settings.ACTION_NOTIFICATION_LISTENER_DETAIL_SETTINGS).apply {
+                        putExtra(
+                            Settings.EXTRA_NOTIFICATION_LISTENER_COMPONENT_NAME,
+                            ComponentName(context, RcsNotificationListener::class.java).flattenToString(),
+                        )
                     }
+                } else {
+                    Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
                 }
-            }
+            context.startActivitySafely(
+                notificationAccessIntent,
+                onFailure = ::reportLaunchFailure,
+            )
         },
         onComplete = onComplete,
     )
@@ -179,67 +253,79 @@ fun OnboardingScreen(onComplete: () -> Unit) {
 
 @Composable
 internal fun OnboardingScreenContent(
-    permsGranted: Boolean,
-    notificationsGranted: Boolean,
-    overlayGranted: Boolean,
-    screenerGranted: Boolean,
-    screenerSupported: Boolean,
-    onRequestCorePermissions: () -> Unit,
+    setupState: OnboardingSetupState,
+    onRequestRuntimePermissions: () -> Unit,
+    onRequestScreener: () -> Unit,
     onRequestNotifications: () -> Unit,
     onRequestOverlay: () -> Unit,
-    onRequestScreener: () -> Unit,
+    onRequestNotificationAccess: () -> Unit,
     onComplete: () -> Unit,
+    runtimePermissionsBlocked: Boolean = false,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
 ) {
     var currentPage by rememberSaveable { mutableIntStateOf(0) }
-    // The call-screening role only counts toward "required" on devices that
-    // actually have it — otherwise the badge is permanently stuck at 1/2 and the
-    // finish CTA never becomes "Finish setup" on ROMs without ROLE_CALL_SCREENING.
-    val requiredReady = listOf(permsGranted, !screenerSupported || screenerGranted).count { it }
-    val pages =
-        listOf(
-            OnboardingPage(
-                Icons.Default.Shield,
-                stringResource(R.string.onboarding_welcome_title),
-                stringResource(R.string.onboarding_welcome_subtitle),
-                CatGreen,
-            ),
-            OnboardingPage(
-                Icons.Default.Security,
-                stringResource(R.string.onboarding_permissions_title),
-                stringResource(R.string.onboarding_permissions_subtitle),
-                CatBlue,
-            ),
-            OnboardingPage(
-                Icons.AutoMirrored.Filled.PhoneCallback,
-                stringResource(R.string.onboarding_screener_title),
-                stringResource(R.string.onboarding_screener_subtitle),
-                CatMauve,
-            ),
-            OnboardingPage(
-                Icons.Default.Sync,
-                stringResource(R.string.onboarding_sync_title),
-                stringResource(R.string.onboarding_sync_subtitle),
-                CatPeach,
-            ),
-        )
+    var awaitingStep by rememberSaveable { mutableStateOf<OnboardingSetupStep?>(null) }
+    val currentStep = onboardingSteps[currentPage]
+    val presentation = onboardingPresentation(currentStep, setupState, runtimePermissionsBlocked)
     val pageContentDescription =
-        stringResource(
-            R.string.cd_onboarding_page,
-            currentPage + 1,
-            pages.size,
-        )
+        stringResource(R.string.cd_onboarding_page, currentPage + 1, onboardingSteps.size)
+
+    LaunchedEffect(awaitingStep, setupState) {
+        val requestedStep = awaitingStep
+        if (requestedStep != null && setupState.isComplete(requestedStep)) {
+            awaitingStep = null
+            if (currentStep == requestedStep && currentPage < onboardingSteps.lastIndex) currentPage++
+        }
+    }
+
+    fun runPrimaryAction() {
+        when (currentStep) {
+            OnboardingSetupStep.Intro -> {
+                currentPage++
+            }
+
+            OnboardingSetupStep.Review -> {
+                if (setupState.isReady) {
+                    onComplete()
+                } else {
+                    val missingStep = setupSteps.firstOrNull { !setupState.isComplete(it) }
+                    currentPage = onboardingSteps.indexOf(missingStep).coerceAtLeast(1)
+                }
+            }
+
+            else -> {
+                if (setupState.isComplete(currentStep)) {
+                    currentPage++
+                } else {
+                    awaitingStep = currentStep
+                    when (currentStep) {
+                        OnboardingSetupStep.RuntimePermissions -> onRequestRuntimePermissions()
+
+                        OnboardingSetupStep.CallScreening -> onRequestScreener()
+
+                        OnboardingSetupStep.Notifications -> onRequestNotifications()
+
+                        OnboardingSetupStep.Overlay -> onRequestOverlay()
+
+                        OnboardingSetupStep.NotificationAccess -> onRequestNotificationAccess()
+
+                        OnboardingSetupStep.Intro,
+                        OnboardingSetupStep.Review,
+                        -> Unit
+                    }
+                }
+            }
+        }
+    }
 
     Column(
         modifier =
             Modifier
                 .fillMaxSize()
-                .background(Black)
+                .background(MaterialTheme.colorScheme.background)
                 .statusBarsPadding()
-                .padding(start = 16.dp, end = 16.dp, top = 8.dp)
                 .navigationBarsPadding()
-                .padding(bottom = 12.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
+                .padding(horizontal = 20.dp, vertical = 12.dp),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -247,496 +333,464 @@ internal fun OnboardingScreenContent(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                stringResource(R.string.onboarding_step, currentPage + 1, pages.size),
-                style = MaterialTheme.typography.labelMedium,
+                text = stringResource(R.string.onboarding_setup_label),
+                style = MaterialTheme.typography.labelLarge,
                 color = CatSubtext,
+                fontWeight = FontWeight.SemiBold,
             )
-            StatusPill(
-                text = stringResource(R.string.onboarding_progress_required_badge, requiredReady, 2),
-                color = if (requiredReady == 2) CatGreen else pages[currentPage].color,
-                textStyle = MaterialTheme.typography.labelMedium,
+            Text(
+                text = stringResource(R.string.onboarding_ready_count, setupState.completedSetupCount, setupSteps.size),
+                style = MaterialTheme.typography.labelMedium,
+                color = if (setupState.isReady) CatGreen else CatSubtext,
             )
         }
         Spacer(Modifier.height(8.dp))
         LinearProgressIndicator(
-            progress = { (currentPage + 1) / pages.size.toFloat() },
-            modifier = Modifier.fillMaxWidth().height(4.dp).clip(RoundedCornerShape(2.dp)),
-            color = pages[currentPage].color,
-            trackColor = CatMuted.copy(alpha = 0.35f),
+            progress = { (currentPage + 1) / onboardingSteps.size.toFloat() },
+            modifier = Modifier.fillMaxWidth().height(4.dp),
+            color = presentation.accent,
+            trackColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+        )
+        Text(
+            text = stringResource(R.string.onboarding_step, currentPage + 1, onboardingSteps.size),
+            modifier = Modifier.padding(top = 8.dp),
+            style = MaterialTheme.typography.labelSmall,
+            color = CatOverlay,
         )
 
-        Spacer(Modifier.height(8.dp))
-
-        Box(
+        AnimatedContent(
+            targetState = currentStep,
+            transitionSpec = { fadeIn() togetherWith fadeOut() },
+            label = "onboarding_step",
             modifier =
                 Modifier
                     .weight(1f)
                     .fillMaxWidth()
-                    .semantics {
-                        contentDescription = pageContentDescription
-                    },
-            contentAlignment = Alignment.TopCenter,
-        ) {
-            AnimatedContent(targetState = currentPage, transitionSpec = {
-                slideInHorizontally { it } + fadeIn() togetherWith slideOutHorizontally { -it } + fadeOut()
-            }, label = "onboarding") { page ->
-                val p = pages[page]
-                Column(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .verticalScroll(rememberScrollState()),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    if (page == 0) {
-                        Image(
-                            painter = painterResource(R.drawable.ic_launcher_foreground),
-                            contentDescription = p.title,
-                            modifier = Modifier.size(48.dp),
-                        )
-                    } else {
-                        Icon(
-                            p.icon,
-                            contentDescription = p.title,
-                            tint = p.color,
-                            modifier = Modifier.size(48.dp),
-                        )
-                    }
-                    Spacer(Modifier.height(10.dp))
-                    Text(
-                        p.title,
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        color = p.color,
-                        textAlign = TextAlign.Center,
-                    )
-                    Spacer(Modifier.height(6.dp))
-                    Text(
-                        p.subtitle,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = CatSubtext,
-                        textAlign = TextAlign.Center,
-                    )
-                    Spacer(Modifier.height(12.dp))
-
-                    when (page) {
-                        0 -> {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            ) {
-                                StatusPill(
-                                    text = stringResource(R.string.onboarding_trust_no_account),
-                                    color = CatSubtext,
-                                    textStyle = MaterialTheme.typography.labelSmall,
-                                    modifier = Modifier.weight(1f),
-                                )
-                                StatusPill(
-                                    text = stringResource(R.string.onboarding_trust_on_device),
-                                    color = CatSubtext,
-                                    textStyle = MaterialTheme.typography.labelSmall,
-                                    modifier = Modifier.weight(1f),
-                                )
-                                StatusPill(
-                                    text = stringResource(R.string.onboarding_trust_open_source),
-                                    color = CatSubtext,
-                                    textStyle = MaterialTheme.typography.labelSmall,
-                                    modifier = Modifier.weight(1f),
-                                )
-                            }
-                            Spacer(Modifier.height(8.dp))
-                            OnboardingFeatureCard(
-                                title = stringResource(R.string.onboarding_feature_private_title),
-                                body = stringResource(R.string.onboarding_feature_private_body),
-                            )
-                            Spacer(Modifier.height(4.dp))
-                            OnboardingFeatureCard(
-                                title = stringResource(R.string.onboarding_feature_local_title),
-                                body = stringResource(R.string.onboarding_feature_local_body),
-                            )
-                            Spacer(Modifier.height(4.dp))
-                            OnboardingFeatureCard(
-                                title = stringResource(R.string.onboarding_feature_updates_title),
-                                body = stringResource(R.string.onboarding_feature_updates_body),
-                            )
-                        }
-
-                        1 -> {
-                            PremiumCard(accentColor = CatBlue, modifier = Modifier.fillMaxWidth()) {
-                                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                                    OnboardingChecklistItem(
-                                        title = stringResource(R.string.onboarding_grant_permissions),
-                                        detail = stringResource(R.string.onboarding_core_permissions_detail),
-                                        granted = permsGranted,
-                                        accentColor = CatBlue,
-                                        badge = stringResource(R.string.onboarding_permissions_required),
-                                    )
-                                    OnboardingChecklistItem(
-                                        title = stringResource(R.string.settings_notifications),
-                                        detail = stringResource(R.string.onboarding_notification_detail),
-                                        granted = notificationsGranted,
-                                        accentColor = CatBlue,
-                                        badge = stringResource(R.string.onboarding_permissions_optional),
-                                    )
-                                    OnboardingChecklistItem(
-                                        title = stringResource(R.string.settings_overlay),
-                                        detail = stringResource(R.string.onboarding_overlay_detail),
-                                        granted = overlayGranted,
-                                        accentColor = CatBlue,
-                                        badge = stringResource(R.string.onboarding_permissions_optional),
-                                    )
-                                }
-                            }
-
-                            Spacer(Modifier.height(12.dp))
-
-                            if (!permsGranted) {
-                                PremiumActionButton(
-                                    label = stringResource(R.string.onboarding_grant_permissions),
-                                    icon = Icons.Default.Security,
-                                    color = CatBlue,
-                                    onClick = {
-                                        onRequestCorePermissions()
-                                    },
-                                    modifier =
-                                        Modifier
-                                            .fillMaxWidth()
-                                            .testTag(ONBOARDING_CORE_PERMISSIONS_BUTTON_TAG),
-                                )
-                            }
-
-                            // Show whenever notifications are off, on all API levels —
-                            // below 33, onRequestNotifications() opens OS settings.
-                            if (!notificationsGranted) {
-                                Spacer(Modifier.height(10.dp))
-                                PremiumActionButton(
-                                    label = stringResource(R.string.onboarding_enable_notifications),
-                                    icon = Icons.Default.Notifications,
-                                    color = CatBlue,
-                                    onClick = {
-                                        onRequestNotifications()
-                                    },
-                                    modifier =
-                                        Modifier
-                                            .fillMaxWidth()
-                                            .testTag(ONBOARDING_NOTIFICATIONS_BUTTON_TAG),
-                                    outlined = true,
-                                )
-                            }
-
-                            if (!overlayGranted) {
-                                Spacer(Modifier.height(10.dp))
-                                PremiumActionButton(
-                                    label = stringResource(R.string.onboarding_enable_overlay),
-                                    icon = Icons.Default.Layers,
-                                    color = CatBlue,
-                                    onClick = {
-                                        onRequestOverlay()
-                                    },
-                                    modifier =
-                                        Modifier
-                                            .fillMaxWidth()
-                                            .testTag(ONBOARDING_OVERLAY_BUTTON_TAG),
-                                    outlined = true,
-                                )
-                            }
-                        }
-
-                        2 -> {
-                            PremiumCard(accentColor = CatMauve, modifier = Modifier.fillMaxWidth()) {
-                                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                                    OnboardingChecklistItem(
-                                        title =
-                                            if (screenerSupported) {
-                                                stringResource(R.string.onboarding_set_screener)
-                                            } else {
-                                                stringResource(R.string.onboarding_screener_unavailable)
-                                            },
-                                        detail =
-                                            if (screenerSupported) {
-                                                if (screenerGranted) {
-                                                    stringResource(R.string.onboarding_screener_ready_detail)
-                                                } else {
-                                                    stringResource(R.string.onboarding_screener_pending_detail)
-                                                }
-                                            } else {
-                                                stringResource(R.string.onboarding_screener_unavailable_detail)
-                                            },
-                                        granted = screenerGranted,
-                                        accentColor = CatMauve,
-                                        badge = stringResource(R.string.onboarding_permissions_required),
-                                    )
-                                }
-                            }
-
-                            Spacer(Modifier.height(12.dp))
-
-                            if (screenerSupported && !screenerGranted) {
-                                PremiumActionButton(
-                                    label = stringResource(R.string.onboarding_set_screener),
-                                    icon = Icons.AutoMirrored.Filled.PhoneCallback,
-                                    color = CatMauve,
-                                    onClick = {
-                                        onRequestScreener()
-                                    },
-                                    modifier =
-                                        Modifier
-                                            .fillMaxWidth()
-                                            .testTag(ONBOARDING_SCREENER_BUTTON_TAG),
-                                )
-                            } else if (screenerGranted) {
-                                OnboardingStatusRow(
-                                    label = stringResource(R.string.onboarding_screening_enabled),
-                                    granted = true,
-                                    color = CatGreen,
-                                )
-                            }
-                        }
-
-                        else -> {
-                            PremiumCard(
-                                accentColor = if (requiredReady == 2) CatGreen else CatYellow,
-                                modifier = Modifier.fillMaxWidth(),
-                            ) {
-                                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                                    Text(
-                                        if (requiredReady == 2) {
-                                            stringResource(R.string.onboarding_finish_ready_title)
-                                        } else {
-                                            stringResource(R.string.onboarding_finish_later_title)
-                                        },
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        color = if (requiredReady == 2) CatGreen else CatYellow,
-                                    )
-                                    Text(
-                                        if (requiredReady == 2) {
-                                            stringResource(R.string.onboarding_finish_ready_subtitle)
-                                        } else {
-                                            stringResource(R.string.onboarding_finish_later_subtitle)
-                                        },
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = CatSubtext,
-                                    )
-
-                                    OnboardingStatusRow(
-                                        label =
-                                            if (permsGranted) {
-                                                stringResource(R.string.onboarding_permissions_granted)
-                                            } else {
-                                                stringResource(R.string.settings_permissions_needed)
-                                            },
-                                        granted = permsGranted,
-                                        color = if (permsGranted) CatGreen else CatYellow,
-                                    )
-                                    OnboardingStatusRow(
-                                        label =
-                                            if (screenerGranted) {
-                                                stringResource(R.string.onboarding_screening_enabled)
-                                            } else {
-                                                stringResource(R.string.settings_call_screener_needed)
-                                            },
-                                        granted = screenerGranted,
-                                        color = if (screenerGranted) CatGreen else CatYellow,
-                                    )
-                                    OnboardingStatusRow(
-                                        label =
-                                            if (notificationsGranted) {
-                                                stringResource(R.string.settings_notifications_enabled)
-                                            } else {
-                                                stringResource(R.string.settings_notifications_optional)
-                                            },
-                                        granted = notificationsGranted,
-                                        color = if (notificationsGranted) CatGreen else CatOverlay,
-                                    )
-                                    OnboardingStatusRow(
-                                        label =
-                                            if (overlayGranted) {
-                                                stringResource(R.string.settings_overlay_enabled)
-                                            } else {
-                                                stringResource(R.string.settings_overlay_optional)
-                                            },
-                                        granted = overlayGranted,
-                                        color = if (overlayGranted) CatGreen else CatOverlay,
-                                    )
-                                }
-                            }
-
-                            Spacer(Modifier.height(12.dp))
-
-                            PremiumCard(accentColor = CatPeach, modifier = Modifier.fillMaxWidth()) {
-                                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                                    Text(
-                                        stringResource(R.string.onboarding_sync_card_title),
-                                        style = MaterialTheme.typography.titleSmall,
-                                        fontWeight = FontWeight.Bold,
-                                        color = CatPeach,
-                                    )
-                                    OnboardingBulletPoint(stringResource(R.string.onboarding_sync_bundled), CatPeach)
-                                    OnboardingBulletPoint(stringResource(R.string.onboarding_sync_refresh), CatPeach)
-                                    OnboardingBulletPoint(stringResource(R.string.onboarding_sync_hot), CatPeach)
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+                    .semantics { contentDescription = pageContentDescription },
+        ) { step ->
+            val stepPresentation = onboardingPresentation(step, setupState, runtimePermissionsBlocked)
+            OnboardingStepBody(
+                step = step,
+                presentation = stepPresentation,
+                setupState = setupState,
+            )
         }
 
-        Spacer(Modifier.height(12.dp))
-
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            pages.forEachIndexed { i, p ->
-                val isSelected = i == currentPage
-                val indicatorWidth by animateDpAsState(
-                    targetValue = if (isSelected) 24.dp else 8.dp,
-                    animationSpec = spring(dampingRatio = 0.7f),
-                    label = "indicator",
-                )
-                Box(
-                    modifier =
-                        Modifier
-                            .width(indicatorWidth)
-                            .height(8.dp)
-                            .clip(RoundedCornerShape(3.dp))
-                            .background(if (isSelected) p.color else CatOverlay),
-                )
-            }
-        }
-
-        Spacer(Modifier.height(10.dp))
-        SnackbarHost(hostState = snackbarHostState)
+        SnackbarHost(snackbarHostState)
         Spacer(Modifier.height(8.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            if (currentPage > 0) {
-                TextButton(onClick = { currentPage-- }) {
-                    Text(stringResource(R.string.onboarding_back), color = CatSubtext)
-                }
-            } else {
-                Spacer(Modifier.width(1.dp))
-            }
-
-            PremiumActionButton(
-                label =
-                    when {
-                        currentPage < pages.lastIndex -> stringResource(R.string.onboarding_next)
-                        requiredReady == 2 -> stringResource(R.string.onboarding_finish_setup)
-                        else -> stringResource(R.string.onboarding_continue_anyway)
-                    },
-                icon =
-                    if (currentPage < pages.lastIndex) {
-                        Icons.AutoMirrored.Filled.ArrowForward
-                    } else {
-                        Icons.Default.Check
-                    },
-                color = pages[currentPage].color,
+        if (currentPage > 0) {
+            TextButton(
                 onClick = {
-                    if (currentPage < pages.lastIndex) {
-                        currentPage++
-                    } else {
-                        onComplete()
-                    }
+                    awaitingStep = null
+                    currentPage--
                 },
-                modifier = Modifier.height(44.dp),
-            )
-        }
-    }
-}
-
-@Composable
-private fun OnboardingFeatureCard(
-    title: String,
-    body: String,
-) {
-    Column(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 7.dp),
-        verticalArrangement = Arrangement.spacedBy(2.dp),
-    ) {
-        Text(
-            title,
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.SemiBold,
-            color = CatText,
-        )
-        Text(
-            body,
-            style = MaterialTheme.typography.bodySmall,
-            color = CatSubtext,
-        )
-        GradientDivider()
-    }
-}
-
-@Composable
-private fun OnboardingChecklistItem(
-    title: String,
-    detail: String,
-    granted: Boolean,
-    accentColor: androidx.compose.ui.graphics.Color,
-    badge: String,
-) {
-    Row(verticalAlignment = Alignment.Top) {
-        PremiumIconTile(
-            icon = if (granted) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
-            color = if (granted) CatGreen else accentColor,
-            size = 34.dp,
-            iconSize = 18.dp,
-        )
-        Spacer(Modifier.width(10.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null, modifier = Modifier.size(17.dp))
+                Spacer(Modifier.size(7.dp))
+                Text(stringResource(R.string.onboarding_back))
+            }
             Spacer(Modifier.height(4.dp))
-            Text(detail, style = MaterialTheme.typography.bodySmall, color = CatSubtext)
-            Spacer(Modifier.height(6.dp))
-            StatusPill(
-                text = badge,
-                color = accentColor,
-                horizontalPadding = 8.dp,
-                verticalPadding = 4.dp,
-                textStyle = MaterialTheme.typography.labelSmall,
-            )
         }
-    }
-}
-
-@Composable
-private fun OnboardingBulletPoint(
-    text: String,
-    color: androidx.compose.ui.graphics.Color,
-) {
-    Row(verticalAlignment = Alignment.Top) {
-        Box(
+        PremiumActionButton(
+            label = primaryLabel(currentStep, setupState, runtimePermissionsBlocked),
+            icon = primaryIcon(currentStep, setupState),
+            color = presentation.accent,
+            onClick = ::runPrimaryAction,
             modifier =
                 Modifier
-                    .padding(top = 6.dp)
-                    .size(8.dp)
-                    .clip(CircleShape)
-                    .background(color),
+                    .fillMaxWidth()
+                    .testTag(primaryTag(currentStep)),
         )
-        Spacer(Modifier.width(10.dp))
-        Text(text, style = MaterialTheme.typography.bodySmall, color = CatText)
+    }
+}
+
+private data class OnboardingPresentation(
+    val icon: ImageVector,
+    val title: String,
+    val body: String,
+    val instruction: String?,
+    val accent: Color,
+)
+
+@Composable
+private fun onboardingPresentation(
+    step: OnboardingSetupStep,
+    setupState: OnboardingSetupState,
+    runtimePermissionsBlocked: Boolean,
+): OnboardingPresentation =
+    when (step) {
+        OnboardingSetupStep.Intro -> {
+            OnboardingPresentation(
+                Icons.Default.Shield,
+                stringResource(R.string.onboarding_guided_title),
+                stringResource(R.string.onboarding_guided_body),
+                null,
+                CatTeal,
+            )
+        }
+
+        OnboardingSetupStep.RuntimePermissions -> {
+            OnboardingPresentation(
+                Icons.Default.Security,
+                stringResource(R.string.onboarding_runtime_title),
+                stringResource(R.string.onboarding_runtime_body),
+                if (runtimePermissionsBlocked) {
+                    stringResource(R.string.onboarding_runtime_settings_instruction)
+                } else {
+                    stringResource(R.string.onboarding_runtime_instruction)
+                },
+                CatBlue,
+            )
+        }
+
+        OnboardingSetupStep.CallScreening -> {
+            OnboardingPresentation(
+                Icons.AutoMirrored.Filled.PhoneCallback,
+                stringResource(R.string.onboarding_call_screening_title),
+                if (setupState.screenerSupported) {
+                    stringResource(R.string.onboarding_call_screening_body)
+                } else {
+                    stringResource(R.string.onboarding_screener_unavailable_detail)
+                },
+                if (setupState.screenerSupported) {
+                    stringResource(R.string.onboarding_call_screening_instruction)
+                } else {
+                    null
+                },
+                CatMauve,
+            )
+        }
+
+        OnboardingSetupStep.Notifications -> {
+            OnboardingPresentation(
+                Icons.Default.Notifications,
+                stringResource(R.string.onboarding_notifications_title),
+                stringResource(R.string.onboarding_notifications_body),
+                stringResource(R.string.onboarding_notifications_instruction),
+                CatPeach,
+            )
+        }
+
+        OnboardingSetupStep.Overlay -> {
+            OnboardingPresentation(
+                Icons.Default.Layers,
+                stringResource(R.string.onboarding_overlay_title),
+                stringResource(R.string.onboarding_overlay_body),
+                stringResource(R.string.onboarding_overlay_instruction),
+                CatBlue,
+            )
+        }
+
+        OnboardingSetupStep.NotificationAccess -> {
+            OnboardingPresentation(
+                Icons.Default.NotificationsActive,
+                stringResource(R.string.onboarding_notification_access_title),
+                stringResource(R.string.onboarding_notification_access_body),
+                stringResource(R.string.onboarding_notification_access_instruction),
+                CatYellow,
+            )
+        }
+
+        OnboardingSetupStep.Review -> {
+            OnboardingPresentation(
+                Icons.Default.VerifiedUser,
+                if (setupState.isReady) {
+                    stringResource(R.string.onboarding_review_ready_title)
+                } else {
+                    stringResource(R.string.onboarding_review_missing_title)
+                },
+                if (setupState.isReady) {
+                    stringResource(R.string.onboarding_review_ready_body)
+                } else {
+                    stringResource(R.string.onboarding_review_missing_body)
+                },
+                null,
+                if (setupState.isReady) CatGreen else CatYellow,
+            )
+        }
+    }
+
+@Composable
+private fun OnboardingStepBody(
+    step: OnboardingSetupStep,
+    presentation: OnboardingPresentation,
+    setupState: OnboardingSetupState,
+) {
+    Column(
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(top = 22.dp, bottom = 12.dp),
+        horizontalAlignment = Alignment.Start,
+    ) {
+        if (step == OnboardingSetupStep.Intro) {
+            Image(
+                painter = painterResource(R.drawable.ic_callshield_brand_art),
+                contentDescription = stringResource(R.string.app_name),
+                modifier = Modifier.size(72.dp),
+            )
+        } else {
+            Icon(
+                imageVector = presentation.icon,
+                contentDescription = null,
+                tint = presentation.accent,
+                modifier = Modifier.size(42.dp),
+            )
+        }
+        Spacer(Modifier.height(16.dp))
+        Text(
+            text = presentation.title,
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+            color = CatText,
+        )
+        Spacer(Modifier.height(8.dp))
+        Text(
+            text = presentation.body,
+            style = MaterialTheme.typography.bodyLarge,
+            color = CatSubtext,
+        )
+        Spacer(Modifier.height(22.dp))
+
+        when (step) {
+            OnboardingSetupStep.Intro -> {
+                OnboardingIntroDetails()
+            }
+
+            OnboardingSetupStep.Review -> {
+                OnboardingReview(setupState)
+            }
+
+            else -> {
+                OnboardingVerification(
+                    complete = setupState.isComplete(step),
+                    unsupported = step == OnboardingSetupStep.CallScreening && !setupState.screenerSupported,
+                    accent = presentation.accent,
+                )
+                presentation.instruction?.let { instruction ->
+                    Spacer(Modifier.height(18.dp))
+                    Surface(
+                        color = MaterialTheme.colorScheme.surfaceContainerLow,
+                        shape = RoundedCornerShape(18.dp),
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                text = stringResource(R.string.onboarding_what_happens_next),
+                                style = MaterialTheme.typography.labelLarge,
+                                color = CatText,
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                            Spacer(Modifier.height(6.dp))
+                            Text(
+                                text = instruction,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = CatSubtext,
+                            )
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
 @Composable
-private fun OnboardingStatusRow(
-    label: String,
-    granted: Boolean,
-    color: androidx.compose.ui.graphics.Color,
+private fun OnboardingIntroDetails() {
+    Text(
+        text = stringResource(R.string.onboarding_intro_time),
+        style = MaterialTheme.typography.titleSmall,
+        color = CatTeal,
+        fontWeight = FontWeight.SemiBold,
+    )
+    Spacer(Modifier.height(18.dp))
+    OnboardingPlainRow(Icons.Default.Security, stringResource(R.string.onboarding_intro_private))
+    OnboardingPlainRow(Icons.AutoMirrored.Filled.OpenInNew, stringResource(R.string.onboarding_intro_guided))
+    OnboardingPlainRow(Icons.Default.CheckCircle, stringResource(R.string.onboarding_intro_verified))
+}
+
+@Composable
+private fun OnboardingVerification(
+    complete: Boolean,
+    unsupported: Boolean,
+    accent: Color,
 ) {
+    val color = if (complete) CatGreen else accent
     Row(verticalAlignment = Alignment.CenterVertically) {
-        PremiumIconTile(
-            icon = if (granted) Icons.Default.CheckCircle else Icons.Default.Warning,
-            color = color,
-            size = 34.dp,
-            iconSize = 18.dp,
+        Icon(
+            imageVector = if (complete) Icons.Default.CheckCircle else Icons.AutoMirrored.Filled.OpenInNew,
+            contentDescription = null,
+            tint = color,
+            modifier = Modifier.size(22.dp),
         )
-        Spacer(Modifier.width(8.dp))
-        Text(label, color = color, fontWeight = FontWeight.SemiBold)
+        Spacer(Modifier.size(10.dp))
+        Column {
+            Text(
+                text =
+                    when {
+                        unsupported -> stringResource(R.string.onboarding_not_supported_verified)
+                        complete -> stringResource(R.string.onboarding_android_verified)
+                        else -> stringResource(R.string.onboarding_action_needed)
+                    },
+                style = MaterialTheme.typography.titleSmall,
+                color = color,
+                fontWeight = FontWeight.SemiBold,
+            )
+            if (!complete) {
+                Text(
+                    text = stringResource(R.string.onboarding_return_to_verify),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = CatSubtext,
+                )
+            }
+        }
     }
 }
+
+@Composable
+private fun OnboardingReview(setupState: OnboardingSetupState) {
+    OnboardingReviewRow(
+        stringResource(R.string.onboarding_runtime_title),
+        setupState.runtimePermissionsGranted,
+    )
+    OnboardingReviewRow(
+        stringResource(R.string.onboarding_call_screening_title),
+        setupState.isComplete(OnboardingSetupStep.CallScreening),
+        unsupported = !setupState.screenerSupported,
+    )
+    OnboardingReviewRow(
+        stringResource(R.string.onboarding_notifications_title),
+        setupState.notificationsGranted,
+    )
+    OnboardingReviewRow(
+        stringResource(R.string.onboarding_overlay_title),
+        setupState.overlayGranted,
+    )
+    OnboardingReviewRow(
+        stringResource(R.string.onboarding_notification_access_title),
+        setupState.notificationAccessGranted,
+    )
+}
+
+@Composable
+private fun OnboardingReviewRow(
+    label: String,
+    complete: Boolean,
+    unsupported: Boolean = false,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = if (complete) Icons.Default.Check else Icons.AutoMirrored.Filled.OpenInNew,
+            contentDescription = null,
+            tint = if (complete) CatGreen else CatYellow,
+            modifier = Modifier.size(20.dp),
+        )
+        Spacer(Modifier.size(12.dp))
+        Text(
+            text = label,
+            modifier = Modifier.weight(1f),
+            style = MaterialTheme.typography.bodyLarge,
+            color = CatText,
+            fontWeight = FontWeight.Medium,
+        )
+        Text(
+            text =
+                when {
+                    unsupported -> stringResource(R.string.onboarding_skipped)
+                    complete -> stringResource(R.string.onboarding_ready)
+                    else -> stringResource(R.string.onboarding_needed)
+                },
+            style = MaterialTheme.typography.labelMedium,
+            color = if (complete) CatGreen else CatYellow,
+        )
+    }
+    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f))
+}
+
+@Composable
+private fun OnboardingPlainRow(
+    icon: ImageVector,
+    label: String,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(icon, contentDescription = null, tint = CatTeal, modifier = Modifier.size(20.dp))
+        Spacer(Modifier.size(12.dp))
+        Text(label, style = MaterialTheme.typography.bodyLarge, color = CatText)
+    }
+}
+
+@Composable
+private fun primaryLabel(
+    step: OnboardingSetupStep,
+    setupState: OnboardingSetupState,
+    runtimePermissionsBlocked: Boolean,
+): String =
+    when {
+        step == OnboardingSetupStep.Intro -> {
+            stringResource(R.string.onboarding_start_setup)
+        }
+
+        step == OnboardingSetupStep.Review && setupState.isReady -> {
+            stringResource(R.string.onboarding_finish_setup)
+        }
+
+        step == OnboardingSetupStep.Review -> {
+            stringResource(R.string.onboarding_fix_missing)
+        }
+
+        setupState.isComplete(step) -> {
+            stringResource(R.string.onboarding_continue)
+        }
+
+        step == OnboardingSetupStep.RuntimePermissions && runtimePermissionsBlocked -> {
+            stringResource(R.string.onboarding_open_app_permissions)
+        }
+
+        step == OnboardingSetupStep.RuntimePermissions -> {
+            stringResource(R.string.onboarding_allow_permissions)
+        }
+
+        step == OnboardingSetupStep.CallScreening -> {
+            stringResource(R.string.onboarding_choose_callshield)
+        }
+
+        step == OnboardingSetupStep.Notifications -> {
+            stringResource(R.string.onboarding_enable_notifications)
+        }
+
+        step == OnboardingSetupStep.Overlay -> {
+            stringResource(R.string.onboarding_open_display_settings)
+        }
+
+        step == OnboardingSetupStep.NotificationAccess -> {
+            stringResource(R.string.onboarding_open_notification_access)
+        }
+
+        else -> {
+            stringResource(R.string.onboarding_continue)
+        }
+    }
+
+private fun primaryIcon(
+    step: OnboardingSetupStep,
+    setupState: OnboardingSetupState,
+): ImageVector =
+    when {
+        step == OnboardingSetupStep.Review && setupState.isReady -> Icons.Default.Check
+        setupState.isComplete(step) -> Icons.AutoMirrored.Filled.ArrowForward
+        else -> Icons.AutoMirrored.Filled.OpenInNew
+    }
+
+internal fun primaryTag(step: OnboardingSetupStep): String =
+    when (step) {
+        OnboardingSetupStep.RuntimePermissions -> ONBOARDING_CORE_PERMISSIONS_BUTTON_TAG
+        OnboardingSetupStep.CallScreening -> ONBOARDING_SCREENER_BUTTON_TAG
+        OnboardingSetupStep.Notifications -> ONBOARDING_NOTIFICATIONS_BUTTON_TAG
+        OnboardingSetupStep.Overlay -> ONBOARDING_OVERLAY_BUTTON_TAG
+        OnboardingSetupStep.NotificationAccess -> ONBOARDING_NOTIFICATION_ACCESS_BUTTON_TAG
+        OnboardingSetupStep.Review -> ONBOARDING_FINISH_BUTTON_TAG
+        OnboardingSetupStep.Intro -> ONBOARDING_PRIMARY_ACTION_TAG
+    }

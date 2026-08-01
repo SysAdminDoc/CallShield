@@ -22,7 +22,7 @@ import kotlinx.coroutines.flow.map
 
 private val validAppThemes = setOf("system", "light", "graphite", "amoled")
 
-internal fun sanitizeAppTheme(value: String?): String = value?.takeIf(validAppThemes::contains) ?: "amoled"
+internal fun sanitizeAppTheme(value: String?): String = value?.takeIf(validAppThemes::contains) ?: "light"
 
 @Suppress("TooManyFunctions")
 class SettingsRepository(
@@ -155,7 +155,7 @@ class SettingsRepository(
     suspend fun setAppTheme(theme: String) =
         dataStore.edit { preferences ->
             val sanitized = sanitizeAppTheme(theme)
-            if (sanitized == "amoled") {
+            if (sanitized == "light") {
                 preferences.remove(SpamRepository.KEY_APP_THEME)
             } else {
                 preferences[SpamRepository.KEY_APP_THEME] = sanitized

@@ -10,6 +10,15 @@ import org.junit.Test
 
 class CallShieldPermissionsTest {
     @Test
+    fun `first-run runtime bundle covers core and compatibility grants`() {
+        assertEquals(
+            (CallShieldPermissions.corePermissions + CallShieldPermissions.compatibilityPermissions).toSet(),
+            CallShieldPermissions.onboardingRuntimePermissions.toSet(),
+        )
+        assertEquals(6, CallShieldPermissions.onboardingRuntimePermissions.size)
+    }
+
+    @Test
     fun `contract covers every user-actionable permission and role`() {
         val expectedIds =
             setOf(

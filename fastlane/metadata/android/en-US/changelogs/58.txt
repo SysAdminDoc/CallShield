@@ -1,0 +1,5 @@
+CallShield now opens in a warm light theme, with System, Graphite, and AMOLED still available from a new Appearance shortcut.
+
+Recent calls and blocked activity now share one Activity destination, while manual protection tools live under Rules.
+
+Larger type, compact headers, shorter copy, filled controls, fewer borders, and calmer spacing make every primary screen easier to scan.

@@ -10,6 +10,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -51,12 +52,12 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -107,6 +108,7 @@ import com.sysadmindoc.callshield.ui.theme.PremiumIconTile
 import com.sysadmindoc.callshield.ui.theme.SectionHeader
 import com.sysadmindoc.callshield.ui.theme.StatusPill
 import com.sysadmindoc.callshield.ui.theme.SurfaceElevated
+import com.sysadmindoc.callshield.ui.theme.SurfaceVariant
 import com.sysadmindoc.callshield.ui.theme.accentGlow
 import com.sysadmindoc.callshield.ui.theme.hapticConfirm
 import com.sysadmindoc.callshield.ui.theme.hapticTick
@@ -190,58 +192,21 @@ fun LookupScreen(viewModel: MainViewModel) {
                 Modifier
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 20.dp, vertical = 16.dp),
+                    .padding(horizontal = 20.dp, vertical = 12.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                SectionHeader(stringResource(R.string.lookup_title))
-                Text(
-                    stringResource(R.string.lookup_subtitle),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = CatSubtext,
-                )
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    StatusPill(
-                        text = stringResource(R.string.lookup_badge_layers),
-                        color = CatGreen,
-                    )
-                    when {
-                        previewLocation != null -> {
-                            StatusPill(
-                                text = previewLocation,
-                                color = CatYellow,
-                            )
-                        }
-
-                        clipboardHasText && numberInput.isBlank() -> {
-                            StatusPill(
-                                text = stringResource(R.string.lookup_badge_clipboard),
-                                color = CatYellow,
-                            )
-                        }
-                    }
-                }
-            }
-
             Column(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                OutlinedTextField(
+                TextField(
                     value = numberInput,
                     onValueChange = {
                         numberInput = sanitizeLookupInput(it)
                         errorMessage = null
                     },
-                    label = { Text(stringResource(R.string.lookup_phone_number)) },
-                    placeholder = { Text(stringResource(R.string.lookup_phone_placeholder)) },
+                    placeholder = { Text(stringResource(R.string.lookup_phone_number)) },
                     leadingIcon = {
                         Icon(
                             Icons.Default.Phone,
@@ -257,6 +222,24 @@ fun LookupScreen(viewModel: MainViewModel) {
                                     contentDescription = stringResource(R.string.cd_close),
                                     tint = CatOverlay,
                                 )
+                            }
+                        } else if (clipboardHasText) {
+                            androidx.compose.material3.TextButton(
+                                onClick = {
+                                    clipboardPhoneNumber(context)?.let {
+                                        numberInput = it
+                                        errorMessage = null
+                                    }
+                                },
+                                contentPadding = PaddingValues(horizontal = 8.dp),
+                            ) {
+                                Icon(
+                                    Icons.Default.ContentPaste,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(17.dp),
+                                )
+                                Spacer(Modifier.width(5.dp))
+                                Text(stringResource(R.string.lookup_paste_clipboard))
                             }
                         }
                     },
@@ -289,46 +272,17 @@ fun LookupScreen(viewModel: MainViewModel) {
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
                     colors =
-                        OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = SurfaceElevated,
-                            unfocusedContainerColor = SurfaceElevated,
+                        TextFieldDefaults.colors(
+                            focusedContainerColor = SurfaceVariant,
+                            unfocusedContainerColor = SurfaceVariant,
                             focusedTextColor = CatText,
                             unfocusedTextColor = CatText,
-                            focusedBorderColor = CatGreen,
+                            focusedIndicatorColor = Color.Transparent,
+                            unfocusedIndicatorColor = Color.Transparent,
+                            disabledIndicatorColor = Color.Transparent,
                             cursorColor = CatGreen,
                         ),
                 )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    if (clipboardHasText) {
-                        PremiumActionButton(
-                            label = stringResource(R.string.lookup_paste_clipboard),
-                            icon = Icons.Default.ContentPaste,
-                            color = CatYellow,
-                            onClick = {
-                                clipboardPhoneNumber(context)?.let {
-                                    numberInput = it
-                                    errorMessage = null
-                                }
-                            },
-                            modifier = Modifier.weight(1f),
-                            outlined = true,
-                        )
-                    }
-                    if (numberInput.isNotBlank()) {
-                        PremiumActionButton(
-                            label = stringResource(R.string.lookup_clear),
-                            icon = Icons.Default.Close,
-                            color = CatSubtext,
-                            onClick = { clearLookup() },
-                            modifier = Modifier.weight(1f),
-                            outlined = true,
-                        )
-                    }
-                }
 
                 PremiumActionButton(
                     label = stringResource(R.string.lookup_check_number),
@@ -558,7 +512,6 @@ private fun LookupIdleCard() {
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         SectionHeader(stringResource(R.string.lookup_idle_title))
-        Text(stringResource(R.string.lookup_idle_body), style = MaterialTheme.typography.bodySmall, color = CatSubtext)
         GradientDivider()
         LookupHintRow(
             icon = Icons.Default.Psychology,

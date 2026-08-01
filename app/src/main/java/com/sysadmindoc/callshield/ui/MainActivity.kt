@@ -25,7 +25,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
@@ -34,22 +33,17 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sysadmindoc.callshield.R
-import com.sysadmindoc.callshield.permissions.CallShieldPermissions
 import com.sysadmindoc.callshield.service.ProtectionHealthWorker
+import com.sysadmindoc.callshield.ui.screens.activity.ActivityScreen
 import com.sysadmindoc.callshield.ui.screens.details.NumberDetailScreen
 import com.sysadmindoc.callshield.ui.screens.lookup.LookupScreen
-import com.sysadmindoc.callshield.ui.screens.main.BlockedLogScreen
 import com.sysadmindoc.callshield.ui.screens.main.BlocklistScreen
 import com.sysadmindoc.callshield.ui.screens.main.DashboardScreen
 import com.sysadmindoc.callshield.ui.screens.more.MoreScreen
 import com.sysadmindoc.callshield.ui.screens.onboarding.OnboardingScreen
-import com.sysadmindoc.callshield.ui.screens.recent.RecentCallsScreen
 import com.sysadmindoc.callshield.ui.theme.*
 import com.sysadmindoc.callshield.util.hasMinAsciiDigits
 import com.sysadmindoc.callshield.util.normalizePhoneNumberInput
@@ -144,7 +138,7 @@ fun CallShieldRoot(
     // never re-ran, so the Lookup shortcut landed on Home.
     val initialTab =
         when (launchRequest.shortcutAction) {
-            "com.sysadmindoc.callshield.LOOKUP" -> 3
+            "com.sysadmindoc.callshield.LOOKUP" -> 2
             else -> 0
         }
     LaunchedEffect(launchRequest.id) {
@@ -206,28 +200,11 @@ fun CallShieldApp(
     startTab: Int = 0,
     tabRequestId: Int? = null,
 ) {
-    val context = LocalContext.current
-    val lifecycleOwner = LocalLifecycleOwner.current
     var selectedTab by rememberSaveable { mutableIntStateOf(startTab) }
     var showSearch by rememberSaveable { mutableStateOf(false) }
     var moreView by rememberSaveable { mutableIntStateOf(0) }
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     val searchResults by viewModel.searchResults.collectAsStateWithLifecycle()
-    val spamCount by viewModel.spamCount.collectAsStateWithLifecycle()
-    val blockCallsEnabled by viewModel.blockCallsEnabled.collectAsStateWithLifecycle()
-    val blockSmsEnabled by viewModel.blockSmsEnabled.collectAsStateWithLifecycle()
-
-    // Re-check protection permissions when the user returns from OS settings so
-    // the top-bar "Setup needed" pill flips to "Protected" without a tab switch.
-    var permissionRefreshTick by remember { mutableIntStateOf(0) }
-    DisposableEffect(lifecycleOwner) {
-        val observer =
-            LifecycleEventObserver { _, event ->
-                if (event == Lifecycle.Event.ON_RESUME) permissionRefreshTick++
-            }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
-    }
 
     // Apply a shortcut's target tab once per request. Without the handled-id
     // guard this re-fires whenever CallShieldApp re-enters composition (e.g.
@@ -257,18 +234,14 @@ fun CallShieldApp(
             }
 
             1 -> {
-                stringResource(R.string.nav_recent)
+                stringResource(R.string.nav_activity)
             }
 
             2 -> {
-                stringResource(R.string.nav_log)
-            }
-
-            3 -> {
                 stringResource(R.string.nav_lookup)
             }
 
-            4 -> {
+            3 -> {
                 stringResource(R.string.nav_blocklist)
             }
 
@@ -285,37 +258,12 @@ fun CallShieldApp(
     // Keep the shell unmistakably CallShield. Screen content can still use
     // semantic warning/error colours, but navigation should not become a
     // six-colour rainbow as users move through the app.
-    val currentAccent = CatGreen
-    val protectionStatusLabel =
-        when {
-            blockCallsEnabled && blockSmsEnabled -> stringResource(R.string.app_shell_status_calls_texts)
-            blockCallsEnabled -> stringResource(R.string.app_shell_status_calls)
-            blockSmsEnabled -> stringResource(R.string.app_shell_status_texts)
-            else -> stringResource(R.string.app_shell_status_paused)
-        }
-    val missingCorePerms =
-        remember(context, permissionRefreshTick, blockCallsEnabled, blockSmsEnabled) {
-            CallShieldPermissions.missingEnabledProtectionPermissions(
-                context = context,
-                callsEnabled = blockCallsEnabled,
-                smsEnabled = blockSmsEnabled,
-            )
-        }
-    val coreSetupNeeded = spamCount <= 0 || missingCorePerms.isNotEmpty()
-    val shellStatusLabel =
-        if (selectedTab == 0 && coreSetupNeeded) {
-            stringResource(R.string.app_shell_status_setup_needed)
-        } else {
-            protectionStatusLabel
-        }
-
     Scaffold(
         topBar = {
             AppChrome(
                 showSearch = showSearch,
                 title = currentTitle,
-                accentColor = currentAccent,
-                statusLabel = shellStatusLabel,
+                accentColor = CatGreen,
                 searchQuery = searchQuery,
                 onSearchQueryChange = viewModel::setSearchQuery,
                 onOpenSearch = { showSearch = true },
@@ -323,7 +271,7 @@ fun CallShieldApp(
                     showSearch = false
                     viewModel.setSearchQuery("")
                 },
-                onBack = if (selectedTab == 5 && moreView != 0) ({ moreView = 0 }) else null,
+                onBack = if (selectedTab == 4 && moreView != 0) ({ moreView = 0 }) else null,
             )
         },
         bottomBar = {
@@ -349,35 +297,28 @@ fun CallShieldApp(
                 NavItem(
                     selectedTab == 1,
                     { selectedTab = 1 },
-                    Icons.Default.Phone,
-                    stringResource(R.string.nav_recent),
+                    Icons.Default.History,
+                    stringResource(R.string.nav_activity),
                     CatGreen,
                 )
                 NavItem(
                     selectedTab == 2,
                     { selectedTab = 2 },
-                    Icons.Default.History,
-                    stringResource(R.string.nav_log),
-                    CatGreen,
-                )
-                NavItem(
-                    selectedTab == 3,
-                    { selectedTab = 3 },
                     Icons.Default.Search,
                     stringResource(R.string.nav_lookup),
                     CatGreen,
                 )
                 NavItem(
-                    selectedTab == 4,
-                    { selectedTab = 4 },
-                    Icons.Default.Block,
+                    selectedTab == 3,
+                    { selectedTab = 3 },
+                    Icons.Default.Tune,
                     stringResource(R.string.nav_blocklist),
                     CatGreen,
                 )
                 NavItem(
-                    selectedTab == 5,
-                    { selectedTab = 5 },
-                    Icons.Default.Settings,
+                    selectedTab == 4,
+                    { selectedTab = 4 },
+                    Icons.Default.MoreHoriz,
                     stringResource(R.string.nav_more),
                     CatGreen,
                 )
@@ -416,11 +357,10 @@ fun CallShieldApp(
                     tabStateHolder.SaveableStateProvider(tab) {
                         when (tab) {
                             0 -> DashboardScreen(viewModel)
-                            1 -> RecentCallsScreen(viewModel)
-                            2 -> BlockedLogScreen(viewModel)
-                            3 -> LookupScreen(viewModel)
-                            4 -> BlocklistScreen(viewModel)
-                            5 -> MoreScreen(viewModel, currentView = moreView, onViewChange = { moreView = it })
+                            1 -> ActivityScreen(viewModel)
+                            2 -> LookupScreen(viewModel)
+                            3 -> BlocklistScreen(viewModel)
+                            4 -> MoreScreen(viewModel, currentView = moreView, onViewChange = { moreView = it })
                         }
                     }
                 }
@@ -547,7 +487,6 @@ private fun AppChrome(
     showSearch: Boolean,
     title: String,
     accentColor: Color,
-    statusLabel: String,
     searchQuery: String,
     onSearchQueryChange: (String) -> Unit,
     onOpenSearch: () -> Unit,
@@ -603,7 +542,7 @@ private fun AppChrome(
                         }
                     } else {
                         Image(
-                            painter = painterResource(R.drawable.ic_launcher_foreground),
+                            painter = painterResource(R.drawable.ic_callshield_brand_art),
                             contentDescription = null,
                             modifier = Modifier.size(24.dp),
                         )
@@ -613,21 +552,8 @@ private fun AppChrome(
                         title,
                         modifier = Modifier.weight(1f),
                         color = CatText,
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.titleLarge,
                     )
-                    if (onBack == null) {
-                        StatusPill(
-                            text = statusLabel,
-                            color =
-                                if (statusLabel == stringResource(R.string.app_shell_status_setup_needed)) {
-                                    CatYellow
-                                } else {
-                                    accentColor
-                                },
-                            textStyle = MaterialTheme.typography.labelSmall,
-                        )
-                        Spacer(Modifier.width(4.dp))
-                    }
                     IconButton(onClick = onOpenSearch) {
                         Icon(
                             Icons.Default.Search,
@@ -651,7 +577,7 @@ private fun SearchField(
     val keyboard = LocalSoftwareKeyboardController.current
     val focusManager = LocalFocusManager.current
 
-    OutlinedTextField(
+    TextField(
         value = query,
         onValueChange = onValueChange,
         placeholder = {
@@ -686,15 +612,16 @@ private fun SearchField(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(ShapeXl),
         colors =
-            OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = SurfaceElevated,
-                unfocusedContainerColor = SurfaceElevated,
+            TextFieldDefaults.colors(
+                focusedContainerColor = SurfaceVariant,
+                unfocusedContainerColor = SurfaceVariant,
                 focusedTextColor = CatText,
                 unfocusedTextColor = CatText,
                 unfocusedLeadingIconColor = CatOverlay,
                 unfocusedTrailingIconColor = CatOverlay,
-                focusedBorderColor = accentColor.copy(alpha = 0.65f),
-                unfocusedBorderColor = CatOverlay.copy(alpha = 0.3f),
+                focusedIndicatorColor = Color.Transparent,
+                unfocusedIndicatorColor = Color.Transparent,
+                disabledIndicatorColor = Color.Transparent,
                 cursorColor = accentColor,
             ),
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),

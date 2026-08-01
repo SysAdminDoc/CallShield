@@ -1,23 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="108dp"
-    android:height="108dp"
-    android:viewportWidth="108"
-    android:viewportHeight="108">
-    <!-- Mint half of the protective shield. -->
-    <path
-        android:fillColor="#FFA6E3A1"
-        android:pathData="M54,20 C47,27 39,32 29,35 L29,58 C30,73 39,83 54,90 Z" />
-    <!-- Teal half with an interrupted incoming-call notch. -->
-    <path
-        android:fillColor="#FF94E2D5"
-        android:pathData="M54,20 C62,27 71,32 79,35 L71,43 L79,51 L79,58 C78,73 69,83 54,90 Z" />
-    <!-- Telephone handset. -->
-    <path
-        android:fillColor="#FFF2F3F0"
-        android:pathData="M40,37 C36,40 36,44 37,49 C40,62 49,72 61,79 C66,82 71,82 75,78 L78,75 C79,73 79,71 77,69 L72,63 C70,61 68,61 66,62 L60,66 C53,62 47,55 44,48 L47,44 C49,42 49,40 47,38 L45,36 C43,35 41,35 40,37 Z" />
-    <!-- A compact threat pulse stopped at the shield edge. -->
-    <path
-        android:fillColor="#FFF38BA8"
-        android:pathData="M85,36 L78,43 L85,50 Z" />
-</vector>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:gravity="fill">
+        <bitmap
+            android:antialias="true"
+            android:filter="true"
+            android:gravity="fill"
+            android:src="@drawable/ic_launcher_foreground_art" />
+    </item>
+</layer-list>
