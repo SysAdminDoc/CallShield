@@ -40,10 +40,21 @@ data class SigningSecretFinding(
 
 fun isExternalSecretReference(value: String): Boolean {
     val normalized = value.trim()
+    val interpolation = Regex("""\$\{[^}]*}""")
+    val lookupPrefixes =
+        listOf(
+            "System.getenv(",
+            "signingProp(",
+            "findProperty(",
+            "project.findProperty(",
+            "rootProject.findProperty(",
+            "providers.",
+            "property(",
+        )
     return normalized.isBlank() ||
-        '$' in normalized ||
-        listOf("System.getenv", "signingProp", "findProperty", "providers.", "property(")
-            .any(normalized::contains)
+        normalized in setOf("...", "<redacted>", "<secret>", "<password>") ||
+        interpolation.containsMatchIn(normalized) ||
+        lookupPrefixes.any(normalized::startsWith)
 }
 
 fun findSigningSecretFindings(
@@ -97,6 +108,47 @@ fun requireNoTrackedSigningSecrets(findings: List<SigningSecretFinding>) {
             }
     }
 }
+
+private val signingKeyContainerExtensions = setOf("jks", "keystore", "p12", "pfx")
+
+/**
+ * Decode only files that look like UTF-8 text. Every tracked file reaches
+ * this content sniff; binary assets are skipped because password assignments
+ * and PEM headers cannot be meaningfully searched in arbitrary binary data.
+ */
+fun readTextForSigningSecretScan(file: File): String? {
+    val bytes = file.readBytes()
+    if (bytes.isEmpty()) return ""
+    val sample = bytes.take(8_192)
+    if (sample.any { byte -> byte == 0.toByte() }) return null
+    val decoder =
+        Charsets.UTF_8
+            .newDecoder()
+            .onMalformedInput(java.nio.charset.CodingErrorAction.REPORT)
+            .onUnmappableCharacter(java.nio.charset.CodingErrorAction.REPORT)
+    return runCatching {
+        decoder.decode(java.nio.ByteBuffer.wrap(bytes)).toString()
+    }.getOrNull()
+}
+
+fun scanTrackedSigningFiles(
+    files: List<File>,
+    relativeTo: File,
+): List<SigningSecretFinding> =
+    files.flatMap { file ->
+        if (!file.isFile) {
+            emptyList()
+        } else {
+            val path = file.relativeTo(relativeTo).invariantSeparatorsPath
+            if (file.extension.lowercase() in signingKeyContainerExtensions) {
+                listOf(SigningSecretFinding(path, 1, "signing key container"))
+            } else {
+                readTextForSigningSecretScan(file)
+                    ?.let { text -> findSigningSecretFindings(path, text) }
+                    .orEmpty()
+            }
+        }
+    }
 
 val appReleaseVersion = parseAppReleaseVersion(file("app/build.gradle.kts"))
 
@@ -377,6 +429,8 @@ tasks.register("verifyReleaseMetadata") {
 tasks.register("verifySigningSecretGuardTests") {
     group = "verification"
     description = "Proves literal signing secrets fail without appearing in diagnostics."
+    val accrescentScript = layout.projectDirectory.file("scripts/build-accrescent-apks.ps1")
+    inputs.file(accrescentScript)
 
     doLast {
         val sentinel = "synthetic-secret-must-not-print"
@@ -385,14 +439,21 @@ tasks.register("verifySigningSecretGuardTests") {
                 "fixture.gradle.kts" to ("store" + "Password = \"$sentinel\""),
                 "fixture.properties" to ("RELEASE_STORE_" + "PASSWORD=$sentinel"),
                 "fixture.pem" to ("-----BEGIN " + "PRIVATE KEY-----\n$sentinel"),
+                "extensionless" to ("RELEASE_KEY_" + "PASSWORD=p@${'$'}${'$'}word"),
             )
-        val findings =
-            syntheticSecrets.flatMap { (path, text) ->
-                findSigningSecretFindings(path, text)
+        val fixtureRoot = temporaryDir.resolve("tracked-secret-fixtures").apply { mkdirs() }
+        val fixtureFiles =
+            syntheticSecrets.map { (path, text) ->
+                fixtureRoot.resolve(path).apply { writeText(text) }
             }
+        val binaryKeyContainer = fixtureRoot.resolve("fixture.p12").apply { writeBytes(byteArrayOf(0, 1, 2)) }
+        val findings = scanTrackedSigningFiles(fixtureFiles + binaryKeyContainer, fixtureRoot)
         val failure = runCatching { requireNoTrackedSigningSecrets(findings) }.exceptionOrNull()
         check(failure != null) { "Synthetic signing-secret fixture was not rejected." }
         check(sentinel !in failure.message.orEmpty()) { "Signing-secret diagnostic exposed the matched value." }
+        check(findings.map(SigningSecretFinding::path).containsAll(syntheticSecrets.map { it.first } + "fixture.p12")) {
+            "Every tracked-file fixture must pass through the production scanner and be rejected."
+        }
 
         val safeLookups =
             """
@@ -403,6 +464,24 @@ tasks.register("verifySigningSecretGuardTests") {
         check(findSigningSecretFindings("safe.yml", safeLookups).isEmpty()) {
             "Environment and property lookups must remain valid."
         }
+
+        val deceptiveLiterals =
+            listOf(
+                "RELEASE_STORE_" + "PASSWORD: p@${'$'}${'$'}word",
+                "RELEASE_KEY_" + "PASSWORD: prefixSystem.getenv(\"RELEASE_KEY_PASSWORD\")",
+            ).joinToString("\n")
+        check(findSigningSecretFindings("unsafe.properties", deceptiveLiterals).size == 2) {
+            "Dollar signs and embedded lookup names must not bypass literal-secret detection."
+        }
+
+        val accrescentText = accrescentScript.asFile.readText()
+        check(Regex("""(?i)\[securestring]\s*\${'$'}KeystorePassword""").containsMatchIn(accrescentText))
+        check(Regex("""(?i)\[securestring]\s*\${'$'}KeyPassword""").containsMatchIn(accrescentText))
+        check("SetAccessRuleProtection(${ '$' }true, ${ '$' }false)" in accrescentText)
+        check("ZeroFreeBSTR" in accrescentText)
+        check("New-TemporaryFile" !in accrescentText && "Set-Content -Path ${ '$' }ksPassFile" !in accrescentText) {
+            "Accrescent signing passwords must not use ordinary temporary files."
+        }
     }
 }
 
@@ -411,8 +490,6 @@ tasks.register("verifyTrackedSigningSecrets") {
     description = "Rejects signing secrets embedded in tracked source and configuration files."
     dependsOn("verifySigningSecretGuardTests")
 
-    val scannedExtensions =
-        setOf("bat", "cmd", "conf", "env", "gradle", "ini", "json", "kts", "properties", "ps1", "sh", "toml", "xml", "yaml", "yml")
     val trackedSourceFiles =
         providers
             .exec {
@@ -424,22 +501,11 @@ tasks.register("verifyTrackedSigningSecrets") {
                     .split('\u0000')
                     .filter(String::isNotBlank)
                     .map(rootProject::file)
-                    .filter { it.extension.lowercase() in scannedExtensions }
             }
     inputs.files(trackedSourceFiles)
 
     doLast {
-        val findings =
-            trackedSourceFiles.get().flatMap { file ->
-                if (!file.isFile) {
-                    emptyList()
-                } else {
-                    findSigningSecretFindings(
-                        path = file.relativeTo(rootDir).invariantSeparatorsPath,
-                        text = file.readText(),
-                    )
-                }
-            }
+        val findings = scanTrackedSigningFiles(trackedSourceFiles.get(), rootDir)
         requireNoTrackedSigningSecrets(findings)
     }
 }

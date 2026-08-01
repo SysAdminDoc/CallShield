@@ -35,15 +35,17 @@
     Destination `.apks` path.
 
 .EXAMPLE
+    $storePassword = Read-Host "Keystore password" -AsSecureString
+    $keyPassword = Read-Host "Key password" -AsSecureString
     pwsh scripts/build-accrescent-apks.ps1 -KeystorePath callshield-release.jks `
-        -KeystorePassword $env:RELEASE_STORE_PASSWORD -KeyAlias callshield `
-        -KeyPassword $env:RELEASE_KEY_PASSWORD
+        -KeystorePassword $storePassword -KeyAlias callshield `
+        -KeyPassword $keyPassword
 #>
 param(
     [Parameter(Mandatory = $true)][string]$KeystorePath,
-    [Parameter(Mandatory = $true)][string]$KeystorePassword,
+    [Parameter(Mandatory = $true)][securestring]$KeystorePassword,
     [Parameter(Mandatory = $true)][string]$KeyAlias,
-    [Parameter(Mandatory = $true)][string]$KeyPassword,
+    [Parameter(Mandatory = $true)][securestring]$KeyPassword,
     [string]$BundletoolJar = "",
     [string]$OutputApks = "app\build\outputs\apks\callshield-release.apks",
     [string]$SdkDir = ""
@@ -51,6 +53,43 @@ param(
 
 $ErrorActionPreference = "Stop"
 $MaxApksBytes = 150 * 1024 * 1024   # Accrescent limit: 150 MiB
+
+function Write-RestrictedPasswordFile {
+    param([Parameter(Mandatory = $true)][securestring]$Secret)
+
+    $path = Join-Path ([System.IO.Path]::GetTempPath()) ("callshield-pass-" + [System.Guid]::NewGuid().ToString("N"))
+    try {
+        # Create an empty file first, then remove inherited access before any
+        # secret bytes are written. bundletool supports only pass: and file:
+        # password sources, so a short-lived ACL-restricted file is required.
+        [System.IO.File]::WriteAllBytes($path, [byte[]]@())
+        $identity = [System.Security.Principal.WindowsIdentity]::GetCurrent().User
+        $acl = [System.Security.AccessControl.FileSecurity]::new()
+        $acl.SetOwner($identity)
+        $acl.SetAccessRuleProtection($true, $false)
+        $accessRule = [System.Security.AccessControl.FileSystemAccessRule]::new(
+            $identity,
+            [System.Security.AccessControl.FileSystemRights]::FullControl,
+            [System.Security.AccessControl.AccessControlType]::Allow
+        )
+        $acl.AddAccessRule($accessRule)
+        Set-Acl -LiteralPath $path -AclObject $acl
+
+        $secretPtr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($Secret)
+        try {
+            $plainText = [System.Runtime.InteropServices.Marshal]::PtrToStringBSTR($secretPtr)
+            $utf8NoBom = [System.Text.UTF8Encoding]::new($false)
+            [System.IO.File]::WriteAllText($path, $plainText, $utf8NoBom)
+        } finally {
+            $plainText = $null
+            [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($secretPtr)
+        }
+        return $path
+    } catch {
+        Remove-Item -LiteralPath $path -Force -ErrorAction SilentlyContinue
+        throw
+    }
+}
 
 function Resolve-Java {
     if ($env:JAVA_HOME) {
@@ -116,24 +155,26 @@ $aab = "app\build\outputs\bundle\release\app-release.aab"
 if (-not (Test-Path $aab)) { Write-Error "AAB not found at $aab"; exit 1 }
 
 # 2. Generate the signed .apks split set.
-# Pass keystore/key passwords via temp files (bundletool `pass:file:`) rather than
-# on the command line, where they would be visible to any local process (Win32_Process)
-# for the duration of the long build-apks run and captured in transcripts.
+# bundletool 1.x supports only pass: and file: sources. Use SecureString inputs
+# and ACL-restricted, short-lived files rather than ordinary string parameters
+# or command-line values that process inspection and transcripts can expose.
 $outDir = Split-Path -Parent $OutputApks
 if ($outDir -and -not (Test-Path $outDir)) { New-Item -ItemType Directory -Force $outDir | Out-Null }
 if (Test-Path $OutputApks) { Remove-Item $OutputApks -Force }
 Write-Output "Generating signed .apks split set..."
-$ksPassFile = New-TemporaryFile
-$keyPassFile = New-TemporaryFile
+$ksPassFile = $null
+$keyPassFile = $null
 try {
-    Set-Content -Path $ksPassFile -Value $KeystorePassword -NoNewline -Encoding ascii
-    Set-Content -Path $keyPassFile -Value $KeyPassword -NoNewline -Encoding ascii
+    $ksPassFile = Write-RestrictedPasswordFile -Secret $KeystorePassword
+    $keyPassFile = Write-RestrictedPasswordFile -Secret $KeyPassword
     & $java -jar $bundletool build-apks `
         --bundle=$aab --output=$OutputApks --overwrite `
         --ks=$ks --ks-pass="file:$ksPassFile" --ks-key-alias=$KeyAlias --key-pass="file:$keyPassFile"
     if ($LASTEXITCODE -ne 0) { Write-Error "bundletool build-apks failed."; exit 1 }
 } finally {
-    Remove-Item $ksPassFile, $keyPassFile -Force -ErrorAction SilentlyContinue
+    @($ksPassFile, $keyPassFile) |
+        Where-Object { $_ } |
+        ForEach-Object { Remove-Item -LiteralPath $_ -Force -ErrorAction SilentlyContinue }
 }
 
 # 3a. Size gate
