@@ -230,6 +230,9 @@ class MainViewModel
         val urlhausRemoteLookupEnabled =
             repo.urlhausRemoteLookupEnabled
                 .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+        val liveCallerEnrichmentEnabled =
+            repo.liveCallerEnrichmentEnabled
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
         val contactWhitelistEnabled = repo.contactWhitelistEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
         val contactsOnlyEnabled =
             repo.contactsOnlyEnabled
@@ -796,6 +799,8 @@ class MainViewModel
         fun setUrlhausStripQuery(v: Boolean) = viewModelScope.launch { repo.setUrlhausStripQuery(v) }
 
         fun setUrlhausRemoteLookup(v: Boolean) = viewModelScope.launch { repo.setUrlhausRemoteLookup(v) }
+
+        fun setLiveCallerEnrichment(v: Boolean) = viewModelScope.launch { repo.setLiveCallerEnrichment(v) }
 
         fun setContactWhitelist(v: Boolean) = viewModelScope.launch { repo.setContactWhitelist(v) }
 

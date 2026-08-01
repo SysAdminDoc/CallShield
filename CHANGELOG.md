@@ -35,6 +35,9 @@ All notable changes to CallShield will be documented in this file.
 - SMS and RCS links are now checked against the local spam-domain list without
   disclosure. Optional URLhaus checks default off and send only a registrable
   domain, never a path, query, fragment, subdomain, or one-time token.
+- Live caller enrichment is now explicit opt-in and limited to calls the local
+  heuristic pipeline already marked suspicious. The setting identifies all four
+  recipient hosts; clean callers stay entirely on-device.
 
 ### Fixed
 

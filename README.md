@@ -359,7 +359,7 @@ All detection layers implement a shared `IChecker` interface and run in priority
 SMS-specific layers (append after the shared chain, in their own priority order): **SMS Keyword Rules** (5400, with schedule) → **SMS Context Trust** (4700, trusted-sender allow) → **SMS Burst Protection** (4650) → **SMS Content Analysis** (1900 — 30+ regex patterns, URL shorteners, suspicious TLDs, spam domain blocklist).
 
 ### Additional Layers
-- **Caller ID Overlay** — suspicious calls (heuristic score 30-59) trigger a live multi-source lookup overlay with SkipCalls, PhoneBlock, WhoCalledMe + OpenCNAM caller name
+- **Caller ID Overlay** — suspicious calls (heuristic score 30-59) can use an explicit, default-off live enrichment option with SkipCalls, PhoneBlock, WhoCalledMe + OpenCNAM caller name; clean calls never trigger these lookups
 - **Region & caller-name rules** — opt-in offline blocking outside selected US/Canadian regions, plus bounded `*`/`?` trust and block patterns for carrier-presented caller names; explicit number/system/prefix/wildcard blocks and all allow layers keep priority
 - **Opt-in message notification screening** — Google/Samsung Messages are enabled by default; AOSP Messages, SMS Organizer, Signal, WhatsApp, WhatsApp Business, Gmail, Outlook, and Thunderbird can be enabled individually. Private-messenger/email matches show a separate warning without removing the original notification.
 - **URL Safety** — local spam-domain checks stay on-device; optional URLhaus (abuse.ch) checks default off and disclose only the registrable domain
@@ -371,7 +371,7 @@ Any wildcard, range, or SMS keyword rule can be time-gated to specific days of t
 
 ## Live Caller ID Overlay
 
-When a call comes in, CallShield shows a real-time overlay that queries **4 sources simultaneously**:
+For a locally suspicious call, CallShield can show a real-time overlay that queries **4 sources simultaneously** when the default-off **Live caller enrichment** setting is enabled:
 
 ```
 ┌──────────────────────────────────┐
@@ -513,7 +513,7 @@ Trained weekly from the CallShield database (50K positive + 50K negative samples
 
 All detection runs on-device. No personal data is collected. Network requests:
 - Syncing spam database from GitHub (public)
-- Real-time lookups against free public APIs (number queried, not stored)
+- Optional live caller enrichment is default-off and runs only for locally suspicious calls; the setting names every destination host before a number is shared
 - Community reports to Cloudflare Worker (phone number only, no identity)
 - Local spam-domain checks do not disclose SMS/RCS links; optional URLhaus checks are explicit opt-in and send only the registrable domain
 

@@ -158,6 +158,7 @@ object BackupRestore {
         val smsBurstEnabled: Boolean = true,
         val urlhausStripQueryEnabled: Boolean = true,
         val urlhausRemoteLookupEnabled: Boolean = false,
+        val liveCallerEnrichmentEnabled: Boolean = false,
         val contactWhitelistEnabled: Boolean = true,
         val contactsOnlyEnabled: Boolean = false,
         val dbPrefixExpansionEnabled: Boolean = false,
@@ -1119,6 +1120,7 @@ object BackupRestore {
             smsBurstEnabled = this[SpamRepository.KEY_SMS_BURST] ?: true,
             urlhausStripQueryEnabled = this[SpamRepository.KEY_URLHAUS_STRIP_QUERY] ?: true,
             urlhausRemoteLookupEnabled = this[SpamRepository.KEY_URLHAUS_REMOTE_LOOKUP] ?: false,
+            liveCallerEnrichmentEnabled = this[SpamRepository.KEY_LIVE_CALLER_ENRICHMENT] ?: false,
             contactWhitelistEnabled = this[SpamRepository.KEY_CONTACT_WHITELIST] ?: true,
             contactsOnlyEnabled = this[SpamRepository.KEY_CONTACTS_ONLY] ?: false,
             dbPrefixExpansionEnabled = this[SpamRepository.KEY_DB_PREFIX_EXPANSION] ?: false,
@@ -1223,6 +1225,7 @@ object BackupRestore {
         preferences[SpamRepository.KEY_SMS_BURST] = smsBurstEnabled
         preferences[SpamRepository.KEY_URLHAUS_STRIP_QUERY] = urlhausStripQueryEnabled
         preferences[SpamRepository.KEY_URLHAUS_REMOTE_LOOKUP] = urlhausRemoteLookupEnabled
+        preferences[SpamRepository.KEY_LIVE_CALLER_ENRICHMENT] = liveCallerEnrichmentEnabled
         preferences[SpamRepository.KEY_CONTACT_WHITELIST] = contactWhitelistEnabled
         preferences[SpamRepository.KEY_CONTACTS_ONLY] = contactsOnlyEnabled
         preferences[SpamRepository.KEY_OUTGOING_RISK_WARNING] = outgoingRiskWarningEnabled

@@ -750,6 +750,7 @@ internal class HeuristicChecker(
                 ctx.number,
                 hResult.score,
                 hResult.reasons.firstOrNull() ?: "suspicious",
+                ctx.prefs[SpamRepository.KEY_LIVE_CALLER_ENRICHMENT] ?: false,
             )
         }
         return null
@@ -779,6 +780,7 @@ internal class HeuristicChecker(
         number: String,
         confidence: Int,
         reason: String,
+        liveEnrichmentEnabled: Boolean,
     ) {
         try {
             val intent =
@@ -786,6 +788,7 @@ internal class HeuristicChecker(
                     putExtra("number", number)
                     putExtra("confidence", confidence)
                     putExtra("reason", reason)
+                    putExtra(CallerIdOverlayService.EXTRA_LIVE_ENRICHMENT, liveEnrichmentEnabled)
                 }
             ctx.startService(intent)
         } catch (_: Exception) {
