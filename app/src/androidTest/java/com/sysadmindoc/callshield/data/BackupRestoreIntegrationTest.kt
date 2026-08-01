@@ -5,6 +5,8 @@ import android.net.Uri
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.squareup.moshi.Moshi
+import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import com.sysadmindoc.callshield.data.BackupRestore.Backup
 import com.sysadmindoc.callshield.data.BackupRestore.BackupKeyword
 import com.sysadmindoc.callshield.data.BackupRestore.BackupLogEntry
@@ -18,6 +20,7 @@ import com.sysadmindoc.callshield.data.local.AppDatabase
 import com.sysadmindoc.callshield.data.local.SpamDao
 import com.sysadmindoc.callshield.data.model.BlockedCall
 import com.sysadmindoc.callshield.data.model.HashWildcardRule
+import com.sysadmindoc.callshield.data.model.RestoreJournal
 import com.sysadmindoc.callshield.data.model.SmsKeywordRule
 import com.sysadmindoc.callshield.data.model.SpamNumber
 import com.sysadmindoc.callshield.data.model.WhitelistEntry
@@ -304,6 +307,7 @@ class BackupRestoreIntegrationTest {
             )
             assertEquals(setOf(contactGroupKey), repo.selectedContactGroups.first())
             assertTrue(repo.outgoingRiskWarningEnabled.first())
+            assertNull(dao.getRestoreJournal())
 
             repo.setBlockCalls(true)
             repo.setFreqEscalation(true)
@@ -312,6 +316,53 @@ class BackupRestoreIntegrationTest {
             repo.setCategoryCallAction(CallCategory.Scam, CategoryCallAction.INHERIT)
             repo.setSelectedContactGroups(emptySet())
             repo.setOutgoingRiskWarning(false)
+            Unit
+        }
+
+    @Test
+    fun startupJournalReconciliationRollsBackPreparedAndCompletesCommittedRestore() =
+        runBlocking {
+            val adapter =
+                Moshi
+                    .Builder()
+                    .addLast(KotlinJsonAdapterFactory())
+                    .build()
+                    .adapter(BackupSettings::class.java)
+            val before = BackupSettings(blockCallsEnabled = true, frequencyThreshold = 3)
+            val desired = BackupSettings(blockCallsEnabled = false, frequencyThreshold = 8)
+
+            repo.setBlockCalls(false)
+            repo.setFreqThreshold(8)
+            dao.upsertRestoreJournal(
+                RestoreJournal(
+                    phase = RestoreJournal.PHASE_PREPARED,
+                    beforeSettingsJson = adapter.toJson(before),
+                    desiredSettingsJson = adapter.toJson(desired),
+                    createdAt = 1L,
+                ),
+            )
+
+            assertTrue(BackupRestore.reconcilePendingRestore(dao, repo))
+            assertTrue(repo.blockCallsEnabled.first())
+            assertEquals(3, repo.freqThreshold.first())
+            assertNull(dao.getRestoreJournal())
+
+            dao.upsertRestoreJournal(
+                RestoreJournal(
+                    phase = RestoreJournal.PHASE_ROOM_COMMITTED,
+                    beforeSettingsJson = adapter.toJson(before),
+                    desiredSettingsJson = adapter.toJson(desired),
+                    createdAt = 2L,
+                ),
+            )
+
+            assertTrue(BackupRestore.reconcilePendingRestore(dao, repo))
+            assertFalse(repo.blockCallsEnabled.first())
+            assertEquals(8, repo.freqThreshold.first())
+            assertNull(dao.getRestoreJournal())
+
+            repo.setBlockCalls(true)
+            repo.setFreqThreshold(3)
             Unit
         }
 

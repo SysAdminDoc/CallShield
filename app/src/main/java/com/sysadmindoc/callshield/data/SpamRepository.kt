@@ -478,10 +478,6 @@ class SpamRepository(
         settingsRepository.editPreferences(transform)
     }
 
-    internal suspend fun replacePrefsSnapshot(snapshot: Preferences) {
-        settingsRepository.replacePrefsSnapshot(snapshot)
-    }
-
     // ── Primary spam check ─────────────────────────────────────────────
 
     /**
