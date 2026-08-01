@@ -72,6 +72,7 @@
             android:name=".ui.PostCallActivity"
             android:excludeFromRecents="true"
             android:exported="true"
+            android:permission="android.permission.MODIFY_PHONE_STATE"
             android:theme="@style/Theme.CallShield">
             <intent-filter>
                 <action android:name="android.telecom.action.POST_CALL" />
