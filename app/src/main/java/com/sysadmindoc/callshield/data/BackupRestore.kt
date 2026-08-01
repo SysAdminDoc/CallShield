@@ -14,6 +14,7 @@ import com.sysadmindoc.callshield.data.local.AppDatabase
 import com.sysadmindoc.callshield.data.local.SpamDao
 import com.sysadmindoc.callshield.data.model.BlockedCall
 import com.sysadmindoc.callshield.data.model.HashWildcardRule
+import com.sysadmindoc.callshield.data.model.RestoreJournal
 import com.sysadmindoc.callshield.data.model.SmsKeywordRule
 import com.sysadmindoc.callshield.data.model.WildcardRule
 import com.sysadmindoc.callshield.util.filterAsciiDigits
@@ -58,6 +59,7 @@ object BackupRestore {
     internal const val MAX_BACKUP_RESTORE_ROWS = MAX_IMPORT_ROWS
 
     private val moshi = Moshi.Builder().addLast(KotlinJsonAdapterFactory()).build()
+    private val backupSettingsAdapter = moshi.adapter(BackupSettings::class.java)
 
     enum class BackupSection {
         BLOCKED_NUMBERS,
@@ -581,6 +583,31 @@ object BackupRestore {
             )
         }
 
+    /** Reconcile a restore interrupted between its DataStore and Room commits. */
+    suspend fun reconcilePendingRestore(context: Context): Boolean =
+        withContext(Dispatchers.IO) {
+            val dao = AppDatabase.getInstance(context).spamDao()
+            reconcilePendingRestore(dao, SpamRepository.getInstance(context))
+        }
+
+    internal suspend fun reconcilePendingRestore(
+        dao: SpamDao,
+        repo: SpamRepository,
+    ): Boolean {
+        val journal = dao.getRestoreJournal() ?: return false
+        val settingsJson =
+            if (journal.phase == RestoreJournal.PHASE_ROOM_COMMITTED) {
+                journal.desiredSettingsJson
+            } else {
+                journal.beforeSettingsJson
+            }
+        val settings = checkNotNull(backupSettingsAdapter.fromJson(settingsJson))
+        settings.applyTo(repo)
+        dao.deleteRestoreJournal()
+        repo.invalidateRestoredRuleCaches()
+        return true
+    }
+
     internal suspend fun previewRestoreJson(
         context: Context,
         json: String,
@@ -646,22 +673,26 @@ object BackupRestore {
             var logsRestored = 0
             var settingsRestored = 0
 
-            // DataStore and Room cannot share a transaction. Commit the
-            // settings in one atomic DataStore edit before touching Room; if
-            // it fails, every database table is still untouched. Keep the
-            // exact prior preference snapshot so a later Room failure can be
-            // compensated without losing unrelated settings.
-            val preferencesBeforeRestore = payload.settings?.let { repo.readPrefsSnapshot() }
-            payload.settings?.let { settings ->
+            // The singleton Room journal turns the DataStore + Room restore
+            // into a recoverable two-phase commit. Startup rolls settings back
+            // while PREPARED, or reapplies the desired settings after the Room
+            // transaction atomically advances the marker to ROOM_COMMITTED.
+            val desiredSettings = payload.settings?.sanitized()
+            val settingsBeforeRestore = desiredSettings?.let { repo.readPrefsSnapshot().toBackupSettings() }
+            if (desiredSettings != null && settingsBeforeRestore != null) {
+                dao.upsertRestoreJournal(
+                    RestoreJournal(
+                        phase = RestoreJournal.PHASE_PREPARED,
+                        beforeSettingsJson = backupSettingsAdapter.toJson(settingsBeforeRestore),
+                        desiredSettingsJson = backupSettingsAdapter.toJson(desiredSettings),
+                        createdAt = System.currentTimeMillis(),
+                    ),
+                )
                 try {
-                    settingsWriter(settings, repo)
+                    settingsWriter(desiredSettings, repo)
                     settingsRestored = 1
                 } catch (settingsFailure: Exception) {
-                    preferencesBeforeRestore?.let { snapshot ->
-                        runCatching { repo.replacePrefsSnapshot(snapshot) }
-                            .exceptionOrNull()
-                            ?.let(settingsFailure::addSuppressed)
-                    }
+                    rollbackPreparedRestore(settingsBeforeRestore, repo, dao, settingsFailure)
                     throw settingsFailure
                 }
             }
@@ -770,15 +801,19 @@ object BackupRestore {
                         )
                         logsRestored++
                     }
+
+                    if (desiredSettings != null) {
+                        dao.updateRestoreJournalPhase(RestoreJournal.PHASE_ROOM_COMMITTED)
+                    }
                 }
             } catch (roomFailure: Exception) {
-                preferencesBeforeRestore?.let { snapshot ->
-                    runCatching { repo.replacePrefsSnapshot(snapshot) }
-                        .exceptionOrNull()
-                        ?.let(roomFailure::addSuppressed)
+                settingsBeforeRestore?.let { settings ->
+                    rollbackPreparedRestore(settings, repo, dao, roomFailure)
                 }
                 throw roomFailure
             }
+
+            if (desiredSettings != null) dao.deleteRestoreJournal()
 
             repo.invalidateRestoredRuleCaches()
 
@@ -803,6 +838,18 @@ object BackupRestore {
             Log.w("BackupRestore", "Restore failed", e)
             RestoreResult(false, context.getString(R.string.backup_restore_error_generic))
         }
+
+    private suspend fun rollbackPreparedRestore(
+        settingsBeforeRestore: BackupSettings,
+        repo: SpamRepository,
+        dao: SpamDao,
+        failure: Exception,
+    ) {
+        runCatching {
+            settingsBeforeRestore.applyTo(repo)
+            dao.deleteRestoreJournal()
+        }.exceptionOrNull()?.let(failure::addSuppressed)
+    }
 
     internal fun validateBackupJson(
         json: String,

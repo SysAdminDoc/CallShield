@@ -5,6 +5,7 @@ import com.sysadmindoc.callshield.data.model.BlockedCall
 import com.sysadmindoc.callshield.data.model.HashWildcardRule
 import com.sysadmindoc.callshield.data.model.NumberCount
 import com.sysadmindoc.callshield.data.model.PendingBlockedCallLog
+import com.sysadmindoc.callshield.data.model.RestoreJournal
 import com.sysadmindoc.callshield.data.model.SmsKeywordRule
 import com.sysadmindoc.callshield.data.model.SpamNumber
 import com.sysadmindoc.callshield.data.model.SpamPrefix
@@ -14,6 +15,18 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface SpamDao {
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertRestoreJournal(journal: RestoreJournal)
+
+    @Query("SELECT * FROM restore_journal WHERE journalId = 1 LIMIT 1")
+    suspend fun getRestoreJournal(): RestoreJournal?
+
+    @Query("UPDATE restore_journal SET phase = :phase WHERE journalId = 1")
+    suspend fun updateRestoreJournalPhase(phase: String)
+
+    @Query("DELETE FROM restore_journal WHERE journalId = 1")
+    suspend fun deleteRestoreJournal()
+
     // Spam numbers
     @Query("SELECT * FROM spam_numbers WHERE number = :number LIMIT 1")
     suspend fun findByNumber(number: String): SpamNumber?

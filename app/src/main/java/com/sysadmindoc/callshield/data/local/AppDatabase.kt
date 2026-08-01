@@ -10,10 +10,12 @@ import com.sysadmindoc.callshield.data.PhoneIdentityCanonicalizer
 import com.sysadmindoc.callshield.data.model.*
 
 /** Single source of truth for the Room database version. */
-const val DB_VERSION = 12
+const val DB_VERSION = 13
 private const val DB_VERSION_9 = 9
 private const val DB_VERSION_10 = 10
 private const val DB_VERSION_11 = 11
+private const val DB_VERSION_12 = 12
+private const val DB_VERSION_13 = 13
 
 /**
  * v5 → v6: Add `isEmergency INTEGER NOT NULL DEFAULT 0` to the whitelist
@@ -169,6 +171,25 @@ val MIGRATION_10_11 =
         }
     }
 
+/** v12 -> v13: Add the singleton two-phase backup-restore journal. */
+val MIGRATION_12_13 =
+    object : Migration(DB_VERSION_12, DB_VERSION_13) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `restore_journal` (
+                    `journalId` INTEGER NOT NULL,
+                    `phase` TEXT NOT NULL,
+                    `beforeSettingsJson` TEXT NOT NULL,
+                    `desiredSettingsJson` TEXT NOT NULL,
+                    `createdAt` INTEGER NOT NULL,
+                    PRIMARY KEY(`journalId`)
+                )
+                """.trimIndent(),
+            )
+        }
+    }
+
 @Database(
     entities = [
         SpamNumber::class,
@@ -179,6 +200,7 @@ val MIGRATION_10_11 =
         SmsKeywordRule::class,
         HashWildcardRule::class,
         PendingBlockedCallLog::class,
+        RestoreJournal::class,
     ],
     version = DB_VERSION,
     exportSchema = true,
@@ -215,6 +237,7 @@ abstract class AppDatabase : RoomDatabase() {
                         phoneIdentityMigration(
                             PhoneIdentityCanonicalizer.fromContext(context.applicationContext),
                         ),
+                        MIGRATION_12_13,
                     ).build()
                     .also { instance = it }
             }

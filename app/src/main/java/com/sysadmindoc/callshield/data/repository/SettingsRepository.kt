@@ -370,10 +370,6 @@ class SettingsRepository(
         dataStore.edit(transform)
     }
 
-    internal suspend fun replacePrefsSnapshot(snapshot: Preferences) {
-        dataStore.updateData { snapshot }
-    }
-
     suspend fun readLastDataSha(): String? = dataStore.data.first()[SpamRepository.KEY_LAST_SHA]
 
     suspend fun readExternalBlocklistSubscriptions(): List<ExternalBlocklistSubscription> =

@@ -26,6 +26,9 @@ All notable changes to CallShield will be documented in this file.
 
 - Regex-rule safety validation now uses an Android-compatible escaped closing
   brace, preventing the rule model from failing class initialization on-device.
+- Backup restore now journals its DataStore and Room phases durably. Startup
+  rolls back an uncommitted settings phase or completes settings after a Room
+  commit, without replacing unrelated sync preferences.
 
 ## v1.7.32 — 2026-08-01
 
