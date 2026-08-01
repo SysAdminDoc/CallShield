@@ -44,6 +44,9 @@ All notable changes to CallShield will be documented in this file.
 - The community translation gate now scans format tokens in linear time and
   rejects DTD/entity declarations before XML parsing, preventing malicious
   resource submissions from exhausting maintainer or CI machines.
+- Release APK verification now requires the published signer-certificate
+  SHA-256, so a throwaway key with a look-alike subject cannot pass the
+  production release gate.
 
 ### Fixed
 

@@ -571,3 +571,13 @@ tasks.register<Exec>("verifyPipelineTests") {
         script.asFile.absolutePath,
     )
 }
+
+tasks.register<Exec>("verifyReleaseSigningPolicyTests") {
+    group = "verification"
+    description = "Proves the release gate accepts only the pinned signer certificate."
+
+    val policy = layout.projectDirectory.file("scripts/release-signing-policy.ps1")
+    val test = layout.projectDirectory.file("scripts/test-release-signing-policy.ps1")
+    inputs.files(policy, test)
+    commandLine("pwsh", "-NoProfile", "-NonInteractive", "-File", test.asFile.absolutePath)
+}
