@@ -16,6 +16,11 @@ local.properties
 *.aab.sha256
 *.jks
 *.keystore
+*.pem
+*.p12
+*.pfx
+*.key
+*.der
 CallShield-*.apk
 .wrangler/
 .kotlin/

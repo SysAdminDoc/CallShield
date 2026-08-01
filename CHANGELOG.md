@@ -26,6 +26,12 @@ All notable changes to CallShield will be documented in this file.
   history before user-authored notification content can authorize a call.
 - SMS relationship trust now requires prior outbound history; repeated inbound
   messages alone cannot bypass keyword or content screening.
+- Release-secret checks now inspect every tracked text file and known binary
+  key container, reject literal passwords containing dollar signs or disguised
+  lookup names, and ignore common signing-key formats by default.
+- The Accrescent helper now accepts passwords as `SecureString` values and uses
+  ACL-restricted, short-lived handoff files because bundletool supports only
+  inline or file-based password sources.
 
 ### Fixed
 

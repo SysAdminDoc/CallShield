@@ -226,6 +226,7 @@ tasks.named("check") {
     dependsOn(rootProject.tasks.named("verifyDebugApkPrivacy"))
     dependsOn(rootProject.tasks.named("verifyBackupPrivacyRules"))
     dependsOn(rootProject.tasks.named("verifyPipelineTests"))
+    dependsOn(rootProject.tasks.named("verifyTrackedSigningSecrets"))
 }
 
 tasks.named("preBuild") {
