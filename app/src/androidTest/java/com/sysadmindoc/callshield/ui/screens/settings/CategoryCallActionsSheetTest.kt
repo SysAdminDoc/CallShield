@@ -28,7 +28,7 @@ class CategoryCallActionsSheetTest {
             )
         }
 
-        composeRule.onNodeWithText("Emergency and manual whitelists", substring = true).assertIsDisplayed()
+        composeRule.onNodeWithText("Emergency contacts and manually trusted numbers", substring = true).assertIsDisplayed()
         composeRule
             .onNodeWithTag("${CATEGORY_CALL_ACTION_TAG_PREFIX}robocall:silence")
             .assertIsSelected()
