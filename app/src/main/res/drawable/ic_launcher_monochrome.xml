@@ -4,9 +4,31 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- Single-color mask with the handset preserved as negative space. -->
-    <path
-        android:fillColor="#FFFFFFFF"
-        android:fillType="evenOdd"
-        android:pathData="M54,20 C62,27 71,32 79,35 L71,43 L79,51 L79,58 C78,73 69,83 54,90 C39,83 30,73 29,58 L29,35 C39,32 47,27 54,20 Z M40,37 C36,40 36,44 37,49 C40,62 49,72 61,79 C66,82 71,82 75,78 L78,75 C79,73 79,71 77,69 L72,63 C70,61 68,61 66,62 L60,66 C53,62 47,55 44,48 L47,44 C49,42 49,40 47,38 L45,36 C43,35 41,35 40,37 Z M85,36 L78,43 L85,50 Z" />
+    <!-- Compact one-color companion to the cyan/white/coral brand artwork. -->
+    <group
+        android:pivotX="54"
+        android:pivotY="54"
+        android:scaleX="0.78"
+        android:scaleY="0.78">
+        <path
+            android:fillColor="#00000000"
+            android:strokeColor="#FFFFFFFF"
+            android:strokeLineJoin="round"
+            android:strokeWidth="7"
+            android:pathData="M54,18 C46,25 37,29 26,32 L26,56 C27,73 36,84 54,93 C72,84 81,73 82,56 L82,32 C71,29 62,25 54,18 Z" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M37,37 C33,40 33,45 34,50 C37,62 45,72 57,79 C62,82 66,81 70,77 L74,73 C76,71 76,68 73,66 L67,61 C65,59 62,59 60,61 L55,64 C49,60 45,55 42,49 L45,45 C47,43 47,40 45,38 L43,36 C41,35 39,35 37,37 Z" />
+        <path
+            android:fillColor="#00000000"
+            android:strokeColor="#FFFFFFFF"
+            android:strokeWidth="5"
+            android:pathData="M79,40 A11,11 0,1 1 57,40 A11,11 0,1 1 79,40" />
+        <path
+            android:fillColor="#00000000"
+            android:strokeColor="#FFFFFFFF"
+            android:strokeLineCap="round"
+            android:strokeWidth="5"
+            android:pathData="M60,48 L76,32" />
+    </group>
 </vector>

@@ -9,9 +9,7 @@ import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
 import androidx.compose.animation.core.*
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -31,6 +29,7 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalView
@@ -55,7 +54,7 @@ enum class AppThemeMode(
     ;
 
     companion object {
-        fun fromStorage(value: String?): AppThemeMode = entries.firstOrNull { it.storageValue == value } ?: Amoled
+        fun fromStorage(value: String?): AppThemeMode = entries.firstOrNull { it.storageValue == value } ?: Light
     }
 }
 
@@ -134,12 +133,12 @@ private val GraphitePalette =
 
 private val LightPalette =
     CallShieldPalette(
-        background = Color(0xFFF5F6F7),
+        background = Color(0xFFF7F8F5),
         surface = Color(0xFFFFFFFF),
-        surfaceVariant = Color(0xFFEEF1F3),
-        surfaceBright = Color(0xFFE5E9EC),
+        surfaceVariant = Color(0xFFF0F3EF),
+        surfaceBright = Color(0xFFE8EDE8),
         surfaceElevated = Color(0xFFFFFFFF),
-        primary = Color(0xFF176B53),
+        primary = Color(0xFF176B4D),
         onPrimary = Color(0xFFFFFFFF),
         error = Color(0xFFB32642),
         blue = Color(0xFF285FAE),
@@ -152,7 +151,7 @@ private val LightPalette =
         subtext = Color(0xFF4E5963),
         // AA against surfaceBright too (was 3.97:1).
         overlay = Color(0xFF5A646E),
-        muted = Color(0xFFD6DDE2),
+        muted = Color(0xFFD8DFD9),
         isLight = true,
     )
 
@@ -289,99 +288,99 @@ private fun colorScheme(palette: CallShieldPalette): ColorScheme {
 }
 
 // ─── Custom Typography ─────────────────────────────────────────────
-// Tighter headlines, wider labels — the hallmark of premium type
+// Compact hierarchy without forcing body copy into accessibility-hostile sizes.
 private val CallShieldTypography =
     Typography(
         headlineLarge =
             TextStyle(
                 fontWeight = FontWeight.SemiBold,
-                fontSize = 26.sp,
+                fontSize = 28.sp,
                 letterSpacing = 0.sp,
-                lineHeight = 32.sp,
+                lineHeight = 34.sp,
             ),
         headlineMedium =
             TextStyle(
                 fontWeight = FontWeight.SemiBold,
-                fontSize = 22.sp,
+                fontSize = 24.sp,
                 letterSpacing = 0.sp,
-                lineHeight = 28.sp,
+                lineHeight = 30.sp,
             ),
         headlineSmall =
             TextStyle(
                 fontWeight = FontWeight.SemiBold,
-                fontSize = 19.sp,
+                fontSize = 20.sp,
                 letterSpacing = 0.sp,
-                lineHeight = 24.sp,
+                lineHeight = 26.sp,
             ),
         titleLarge =
             TextStyle(
                 fontWeight = FontWeight.SemiBold,
-                fontSize = 18.sp,
+                fontSize = 20.sp,
                 letterSpacing = 0.sp,
-                lineHeight = 24.sp,
+                lineHeight = 26.sp,
             ),
         titleMedium =
             TextStyle(
                 fontWeight = FontWeight.SemiBold,
-                fontSize = 16.sp,
+                fontSize = 17.sp,
                 letterSpacing = 0.sp,
-                lineHeight = 21.sp,
+                lineHeight = 23.sp,
             ),
         titleSmall =
             TextStyle(
                 fontWeight = FontWeight.SemiBold,
-                fontSize = 14.sp,
-                letterSpacing = 0.sp,
-                lineHeight = 19.sp,
-            ),
-        bodyLarge =
-            TextStyle(
-                fontWeight = FontWeight.Normal,
                 fontSize = 15.sp,
                 letterSpacing = 0.sp,
                 lineHeight = 21.sp,
             ),
+        bodyLarge =
+            TextStyle(
+                fontWeight = FontWeight.Normal,
+                fontSize = 16.sp,
+                letterSpacing = 0.sp,
+                lineHeight = 23.sp,
+            ),
         bodyMedium =
             TextStyle(
                 fontWeight = FontWeight.Normal,
-                fontSize = 13.sp,
+                fontSize = 14.sp,
                 letterSpacing = 0.sp,
-                lineHeight = 18.sp,
+                lineHeight = 20.sp,
             ),
         bodySmall =
             TextStyle(
                 fontWeight = FontWeight.Normal,
-                fontSize = 12.sp,
-                letterSpacing = 0.sp,
-                lineHeight = 17.sp,
-            ),
-        labelLarge =
-            TextStyle(
-                fontWeight = FontWeight.SemiBold,
                 fontSize = 13.sp,
                 letterSpacing = 0.sp,
                 lineHeight = 18.sp,
             ),
+        labelLarge =
+            TextStyle(
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 14.sp,
+                letterSpacing = 0.sp,
+                lineHeight = 20.sp,
+            ),
         labelMedium =
+            TextStyle(
+                fontWeight = FontWeight.Medium,
+                fontSize = 13.sp,
+                letterSpacing = 0.sp,
+                lineHeight = 18.sp,
+            ),
+        labelSmall =
             TextStyle(
                 fontWeight = FontWeight.Medium,
                 fontSize = 12.sp,
                 letterSpacing = 0.sp,
                 lineHeight = 16.sp,
             ),
-        labelSmall =
-            TextStyle(
-                fontWeight = FontWeight.Medium,
-                fontSize = 11.sp,
-                letterSpacing = 0.sp,
-                lineHeight = 15.sp,
-            ),
     )
 
 @Composable
 @Suppress("FunctionNaming")
 fun CallShieldTheme(
-    themeMode: AppThemeMode = AppThemeMode.Amoled,
+    themeMode: AppThemeMode = AppThemeMode.Light,
     content: @Composable () -> Unit,
 ) {
     val systemDark = isSystemInDarkTheme()
@@ -420,22 +419,15 @@ fun PremiumCard(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val shape = RoundedCornerShape(cornerRadius)
-    val colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
+    val baseColor = MaterialTheme.colorScheme.surfaceContainerLow
+    val containerColor = accentColor?.copy(alpha = 0.05f)?.compositeOver(baseColor) ?: baseColor
+    val colors = CardDefaults.cardColors(containerColor = containerColor)
     val elevation = CardDefaults.cardElevation(defaultElevation = 0.dp, pressedElevation = 0.dp)
-    // When a caller opts into an accent, render a subtle hairline border in that
-    // hue (not a pill/backdrop — banned by the design rules). Cards without an
-    // accent are unchanged.
-    val cardModifier =
-        if (accentColor != null) {
-            modifier.border(1.dp, accentColor.copy(alpha = 0.22f), shape)
-        } else {
-            modifier
-        }
 
     if (onClick != null) {
         Card(
             onClick = onClick,
-            modifier = cardModifier,
+            modifier = modifier,
             colors = colors,
             shape = shape,
             elevation = elevation,
@@ -443,7 +435,7 @@ fun PremiumCard(
         )
     } else {
         Card(
-            modifier = cardModifier,
+            modifier = modifier,
             colors = colors,
             shape = shape,
             elevation = elevation,

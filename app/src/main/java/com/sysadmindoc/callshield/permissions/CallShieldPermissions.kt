@@ -94,6 +94,13 @@ object CallShieldPermissions {
             Manifest.permission.ANSWER_PHONE_CALLS,
         )
 
+    /**
+     * Runtime grants requested during first-run setup. Keeping this list next
+     * to the capability contract prevents onboarding from silently omitting a
+     * permission that the live call path expects on some Android builds.
+     */
+    val onboardingRuntimePermissions = (corePermissions + compatibilityPermissions).distinct()
+
     val permissionCapabilityContracts =
         listOf(
             PermissionCapabilityContract(
@@ -217,6 +224,8 @@ object CallShieldPermissions {
 
     fun hasCorePermissions(context: Context): Boolean = missingPermissions(context, corePermissions).isEmpty()
 
+    fun hasOnboardingRuntimePermissions(context: Context): Boolean = missingOnboardingRuntimePermissions(context).isEmpty()
+
     fun hasCallProtectionPermissions(
         context: Context,
     ): Boolean = missingPermissions(context, callProtectionPermissions).isEmpty()
@@ -226,6 +235,8 @@ object CallShieldPermissions {
     ): Boolean = missingPermissions(context, smsProtectionPermissions).isEmpty()
 
     fun missingCorePermissions(context: Context): List<String> = missingPermissions(context, corePermissions)
+
+    fun missingOnboardingRuntimePermissions(context: Context): List<String> = missingPermissions(context, onboardingRuntimePermissions)
 
     fun missingEnabledProtectionPermissions(
         context: Context,

@@ -1,18 +1,17 @@
 package com.sysadmindoc.callshield.ui.screens.onboarding
 
-import android.os.Build
-import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.accessibility.enableAccessibilityChecks
 import androidx.compose.ui.test.junit4.v2.createComposeRule
-import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.tryPerformAccessibilityChecks
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -24,160 +23,120 @@ class OnboardingTest {
 
     @Test
     fun onboardingScreenPassesAutomatedAccessibilityChecks() {
-        setOnboardingContent(
-            permsGranted = true,
-            notificationsGranted = true,
-            overlayGranted = true,
-            screenerGranted = true,
-        )
+        setOnboardingContent(setupState = readyState())
 
         composeRule.enableAccessibilityChecks()
         composeRule.onRoot().tryPerformAccessibilityChecks()
     }
 
     @Test
-    fun walkthroughVisitsFourPagesAndCompletes() {
+    fun guidedSetupVisitsEveryStepAndCompletes() {
         var completed = 0
         setOnboardingContent(
-            permsGranted = true,
-            notificationsGranted = true,
-            overlayGranted = true,
-            screenerGranted = true,
+            setupState = readyState(),
             onComplete = { completed++ },
         )
 
-        assertPage(1, "Welcome to CallShield")
-        composeRule.onNodeWithText("Next").performClick()
-
-        assertPage(2, "Grant Permissions")
-        composeRule.onNodeWithText("Next").performClick()
-
-        assertPage(3, "Set as Call Screener")
-        composeRule.onNodeWithText("Next").performClick()
-
-        assertPage(4, "Stay Updated")
-        composeRule.onNodeWithText("Finish Setup").performClick()
-
-        composeRule.runOnIdle {
-            assertEquals(1, completed)
+        val expectedTitles =
+            listOf(
+                "Set up protection",
+                "Phone & messages",
+                "Call screening",
+                "Protection alerts",
+                "Caller ID overlay",
+                "Notification access",
+                "Protection is ready",
+            )
+        expectedTitles.forEachIndexed { index, title ->
+            assertPage(index + 1, title)
+            if (index < expectedTitles.lastIndex) {
+                composeRule.onNodeWithTag(primaryTag(onboardingSteps[index])).performClick()
+            }
         }
+
+        composeRule.onNodeWithTag(ONBOARDING_FINISH_BUTTON_TAG).performClick()
+        composeRule.runOnIdle { assertEquals(1, completed) }
     }
 
     @Test
-    fun permissionPageExposesCoreAndOptionalRequestAffordances() {
-        var coreRequests = 0
-        var notificationRequests = 0
-        var overlayRequests = 0
-        setOnboardingContent(
-            permsGranted = false,
-            notificationsGranted = false,
-            overlayGranted = false,
-            screenerGranted = false,
-            onRequestCorePermissions = { coreRequests++ },
-            onRequestNotifications = { notificationRequests++ },
-            onRequestOverlay = { overlayRequests++ },
-        )
-
-        composeRule.onNodeWithText("Next").performClick()
-
-        composeRule
-            .onNodeWithTag(ONBOARDING_CORE_PERMISSIONS_BUTTON_TAG)
-            .performScrollTo()
-            .assertIsDisplayed()
-            .performClick()
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            composeRule
-                .onNodeWithTag(ONBOARDING_NOTIFICATIONS_BUTTON_TAG)
-                .performScrollTo()
-                .assertIsDisplayed()
-                .performClick()
-        } else {
-            composeRule.onAllNodesWithTag(ONBOARDING_NOTIFICATIONS_BUTTON_TAG).assertCountEquals(0)
+    fun runtimePermissionStepWaitsForAndroidVerificationThenAdvances() {
+        var state by mutableStateOf(readyState().copy(runtimePermissionsGranted = false))
+        var requests = 0
+        composeRule.setContent {
+            OnboardingScreenContent(
+                setupState = state,
+                onRequestRuntimePermissions = {
+                    requests++
+                    state = state.copy(runtimePermissionsGranted = true)
+                },
+                onRequestScreener = {},
+                onRequestNotifications = {},
+                onRequestOverlay = {},
+                onRequestNotificationAccess = {},
+                onComplete = {},
+            )
         }
 
-        composeRule
-            .onNodeWithTag(ONBOARDING_OVERLAY_BUTTON_TAG)
-            .performScrollTo()
-            .assertIsDisplayed()
-            .performClick()
+        composeRule.onNodeWithTag(ONBOARDING_PRIMARY_ACTION_TAG).performClick()
+        assertPage(2, "Phone & messages")
+        composeRule.onNodeWithTag(ONBOARDING_CORE_PERMISSIONS_BUTTON_TAG).performClick()
 
-        composeRule.runOnIdle {
-            assertEquals(1, coreRequests)
-            assertEquals(if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) 1 else 0, notificationRequests)
-            assertEquals(1, overlayRequests)
-        }
+        composeRule.waitForIdle()
+        assertPage(3, "Call screening")
+        assertEquals(1, requests)
     }
 
     @Test
-    fun screenerPageExposesSupportedSetupAction() {
-        var screenerRequests = 0
-        setOnboardingContent(
-            permsGranted = false,
-            notificationsGranted = false,
-            overlayGranted = false,
-            screenerGranted = false,
-            screenerSupported = true,
-            onRequestScreener = { screenerRequests++ },
-        )
-
-        composeRule.onNodeWithText("Next").performClick()
-        composeRule.onNodeWithText("Next").performClick()
-
-        composeRule
-            .onNodeWithTag(ONBOARDING_SCREENER_BUTTON_TAG)
-            .performScrollTo()
-            .assertIsDisplayed()
-            .performClick()
-
-        composeRule.runOnIdle {
-            assertEquals(1, screenerRequests)
+    fun reviewRoutesBackToASettingRevokedDuringSetup() {
+        var state by mutableStateOf(readyState())
+        var completed = 0
+        composeRule.setContent {
+            OnboardingScreenContent(
+                setupState = state,
+                onRequestRuntimePermissions = {},
+                onRequestScreener = {},
+                onRequestNotifications = {},
+                onRequestOverlay = {},
+                onRequestNotificationAccess = {},
+                onComplete = { completed++ },
+            )
         }
+
+        repeat(onboardingSteps.lastIndex) {
+            composeRule.onNodeWithTag(primaryTag(onboardingSteps[it])).performClick()
+        }
+        assertPage(7, "Protection is ready")
+
+        composeRule.runOnIdle { state = state.copy(overlayGranted = false) }
+        composeRule.onNodeWithText("Fix missing access").performClick()
+
+        assertPage(5, "Caller ID overlay")
+        assertEquals(0, completed)
     }
 
     @Test
-    fun screenerPageShowsUnavailableStateWithoutSetupButton() {
-        setOnboardingContent(
-            permsGranted = false,
-            notificationsGranted = false,
-            overlayGranted = false,
-            screenerGranted = false,
-            screenerSupported = false,
-        )
+    fun unsupportedCallScreeningIsClearlySkipped() {
+        val state = readyState().copy(screenerGranted = false, screenerSupported = false)
+        setOnboardingContent(setupState = state)
 
-        composeRule.onNodeWithText("Next").performClick()
-        composeRule.onNodeWithText("Next").performClick()
-
-        composeRule
-            .onNodeWithText("Call screening unavailable on this device")
-            .performScrollTo()
-            .assertIsDisplayed()
-        composeRule.onAllNodesWithTag(ONBOARDING_SCREENER_BUTTON_TAG).assertCountEquals(0)
+        composeRule.onNodeWithTag(ONBOARDING_PRIMARY_ACTION_TAG).performClick()
+        composeRule.onNodeWithTag(ONBOARDING_CORE_PERMISSIONS_BUTTON_TAG).performClick()
+        assertPage(3, "Call screening")
+        composeRule.onNodeWithText("Not supported on this device · safely skipped").assertIsDisplayed()
     }
 
     private fun setOnboardingContent(
-        permsGranted: Boolean,
-        notificationsGranted: Boolean,
-        overlayGranted: Boolean,
-        screenerGranted: Boolean,
-        screenerSupported: Boolean = true,
-        onRequestCorePermissions: () -> Unit = {},
-        onRequestNotifications: () -> Unit = {},
-        onRequestOverlay: () -> Unit = {},
-        onRequestScreener: () -> Unit = {},
+        setupState: OnboardingSetupState,
         onComplete: () -> Unit = {},
     ) {
         composeRule.setContent {
             OnboardingScreenContent(
-                permsGranted = permsGranted,
-                notificationsGranted = notificationsGranted,
-                overlayGranted = overlayGranted,
-                screenerGranted = screenerGranted,
-                screenerSupported = screenerSupported,
-                onRequestCorePermissions = onRequestCorePermissions,
-                onRequestNotifications = onRequestNotifications,
-                onRequestOverlay = onRequestOverlay,
-                onRequestScreener = onRequestScreener,
+                setupState = setupState,
+                onRequestRuntimePermissions = {},
+                onRequestScreener = {},
+                onRequestNotifications = {},
+                onRequestOverlay = {},
+                onRequestNotificationAccess = {},
                 onComplete = onComplete,
             )
         }
@@ -187,7 +146,17 @@ class OnboardingTest {
         page: Int,
         title: String,
     ) {
-        composeRule.onNodeWithContentDescription("Onboarding page $page of 4").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Onboarding page $page of 7").assertIsDisplayed()
         composeRule.onAllNodesWithText(title)[0].assertIsDisplayed()
     }
+
+    private fun readyState() =
+        OnboardingSetupState(
+            runtimePermissionsGranted = true,
+            notificationsGranted = true,
+            overlayGranted = true,
+            notificationAccessGranted = true,
+            screenerGranted = true,
+            screenerSupported = true,
+        )
 }

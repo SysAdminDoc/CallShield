@@ -73,7 +73,7 @@ class DigestWorker
                 val notif =
                     NotificationCompat
                         .Builder(applicationContext, NotificationHelper.CHANNEL_DIGEST)
-                        .setSmallIcon(android.R.drawable.ic_menu_info_details)
+                        .setSmallIcon(R.drawable.ic_launcher_monochrome)
                         .setContentTitle(applicationContext.getString(R.string.digest_title))
                         .setContentText(applicationContext.getString(R.string.digest_text, blocked, calls, sms))
                         .setStyle(

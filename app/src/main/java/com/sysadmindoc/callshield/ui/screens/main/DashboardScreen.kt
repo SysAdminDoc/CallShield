@@ -264,6 +264,14 @@ fun DashboardScreen(viewModel: MainViewModel) {
         }
     val heroSubtitle =
         when {
+            dashboardStatus.heroMode == DashboardHeroMode.SetupNeeded -> {
+                stringResource(
+                    R.string.dashboard_setup_progress,
+                    requiredSetupComplete,
+                    requiredSetupTotal,
+                )
+            }
+
             shieldActive && blockCallsEnabled && blockSmsEnabled -> {
                 stringResource(R.string.dashboard_calls_and_texts_protected)
             }
@@ -336,7 +344,7 @@ fun DashboardScreen(viewModel: MainViewModel) {
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         var heroVisible by remember { mutableStateOf(false) }
         LaunchedEffect(Unit) { heroVisible = true }
@@ -935,17 +943,17 @@ internal fun DashboardHeroCard(
 ) {
     Column(
         modifier = modifier.fillMaxWidth().padding(vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Text(
             text = heroTitle,
-            style = MaterialTheme.typography.headlineLarge,
+            style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
             color = CatText,
         )
         Text(
             text = heroSubtitle,
-            style = MaterialTheme.typography.bodyLarge,
+            style = MaterialTheme.typography.bodyMedium,
             color = CatSubtext,
         )
         heroAction?.let { action ->
@@ -956,7 +964,7 @@ internal fun DashboardHeroCard(
                 onClick = action.onClick,
                 enabled = syncState !is SyncState.Syncing || action.icon != Icons.Default.Sync,
                 loading = syncState is SyncState.Syncing && action.icon == Icons.Default.Sync,
-                modifier = Modifier.fillMaxWidth().height(52.dp),
+                modifier = Modifier.fillMaxWidth().height(50.dp),
             )
         }
         if (heroAction?.icon != Icons.Default.Sync) {
@@ -981,7 +989,7 @@ internal fun DashboardHeroCard(
                 color = if (dashboardStatus.setupComplete) CatGreen else CatYellow,
                 modifier = Modifier.weight(1f),
             )
-            Box(Modifier.width(1.dp).height(68.dp).background(CatMuted))
+            Box(Modifier.width(1.dp).height(60.dp).background(CatMuted))
             DashboardReadinessMetric(
                 value = engineCount.toString(),
                 label = stringResource(R.string.dashboard_metric_engines),
@@ -989,7 +997,7 @@ internal fun DashboardHeroCard(
                 color = CatGreen,
                 modifier = Modifier.weight(1f),
             )
-            Box(Modifier.width(1.dp).height(68.dp).background(CatMuted))
+            Box(Modifier.width(1.dp).height(60.dp).background(CatMuted))
             DashboardReadinessMetric(
                 value =
                     if (lastSync > 0L || lastSyncSource == SpamRepository.SYNC_SOURCE_BUNDLED) {
@@ -1267,12 +1275,12 @@ private fun SetupStateBadge(
     label: String,
     color: Color,
 ) {
-    StatusPill(
+    Text(
         text = label,
         color = color,
         modifier = Modifier.wrapContentWidth(),
-        horizontalPadding = 10.dp,
-        verticalPadding = 6.dp,
+        style = MaterialTheme.typography.labelMedium,
+        fontWeight = FontWeight.SemiBold,
     )
 }
 

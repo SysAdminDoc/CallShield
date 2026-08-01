@@ -10,12 +10,12 @@ import org.junit.Test
 
 class AppThemeModeTest {
     @Test
-    fun `storage values round trip and invalid values preserve AMOLED default`() {
+    fun `storage values round trip and invalid values use light default`() {
         AppThemeMode.entries.forEach { mode ->
             assertEquals(mode, AppThemeMode.fromStorage(mode.storageValue))
         }
-        assertEquals(AppThemeMode.Amoled, AppThemeMode.fromStorage(null))
-        assertEquals(AppThemeMode.Amoled, AppThemeMode.fromStorage("neon"))
+        assertEquals(AppThemeMode.Light, AppThemeMode.fromStorage(null))
+        assertEquals(AppThemeMode.Light, AppThemeMode.fromStorage("neon"))
     }
 
     @Test

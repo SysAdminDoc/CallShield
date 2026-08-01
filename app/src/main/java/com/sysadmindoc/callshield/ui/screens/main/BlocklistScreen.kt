@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -43,6 +44,7 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -320,16 +322,16 @@ fun BlocklistScreen(viewModel: MainViewModel) {
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
                 workspace = workspace,
             )
 
             PrimaryScrollableTabRow(
                 selectedTabIndex = tabIndex,
-                containerColor = com.sysadmindoc.callshield.ui.theme.Surface,
+                containerColor = com.sysadmindoc.callshield.ui.theme.Black,
                 contentColor = CatText,
                 edgePadding = 8.dp,
-                divider = {},
+                divider = { HorizontalDivider(color = com.sysadmindoc.callshield.ui.theme.DividerColor) },
                 // Selection is already communicated by label colour. A custom
                 // full-width indicator rendered as a solid accent slab on
                 // current Material 3, obscuring the content below the tabs.
@@ -340,42 +342,72 @@ fun BlocklistScreen(viewModel: MainViewModel) {
                     onClick = { tabIndex = BLOCKLIST_TAB_BLOCKED },
                     selectedContentColor = CatGreen,
                     unselectedContentColor = CatSubtext,
-                    text = { Text(stringResource(R.string.blocklist_tab_blocked_short)) },
+                    text = {
+                        RuleTabLabel(
+                            stringResource(R.string.blocklist_tab_blocked_short),
+                            tabIndex == BLOCKLIST_TAB_BLOCKED,
+                        )
+                    },
                 )
                 Tab(
                     selected = tabIndex == BLOCKLIST_TAB_WILDCARDS,
                     onClick = { tabIndex = BLOCKLIST_TAB_WILDCARDS },
                     selectedContentColor = CatGreen,
                     unselectedContentColor = CatSubtext,
-                    text = { Text(stringResource(R.string.blocklist_tab_wildcards_short)) },
+                    text = {
+                        RuleTabLabel(
+                            stringResource(R.string.blocklist_tab_wildcards_short),
+                            tabIndex == BLOCKLIST_TAB_WILDCARDS,
+                        )
+                    },
                 )
                 Tab(
                     selected = tabIndex == BLOCKLIST_TAB_RANGES,
                     onClick = { tabIndex = BLOCKLIST_TAB_RANGES },
                     selectedContentColor = CatGreen,
                     unselectedContentColor = CatSubtext,
-                    text = { Text(stringResource(R.string.blocklist_tab_ranges_short)) },
+                    text = {
+                        RuleTabLabel(
+                            stringResource(R.string.blocklist_tab_ranges_short),
+                            tabIndex == BLOCKLIST_TAB_RANGES,
+                        )
+                    },
                 )
                 Tab(
                     selected = tabIndex == BLOCKLIST_TAB_KEYWORDS,
                     onClick = { tabIndex = BLOCKLIST_TAB_KEYWORDS },
                     selectedContentColor = CatGreen,
                     unselectedContentColor = CatSubtext,
-                    text = { Text(stringResource(R.string.blocklist_tab_keywords_short)) },
+                    text = {
+                        RuleTabLabel(
+                            stringResource(R.string.blocklist_tab_keywords_short),
+                            tabIndex == BLOCKLIST_TAB_KEYWORDS,
+                        )
+                    },
                 )
                 Tab(
                     selected = tabIndex == BLOCKLIST_TAB_WHITELIST,
                     onClick = { tabIndex = BLOCKLIST_TAB_WHITELIST },
                     selectedContentColor = CatGreen,
                     unselectedContentColor = CatSubtext,
-                    text = { Text(stringResource(R.string.blocklist_tab_whitelist_short)) },
+                    text = {
+                        RuleTabLabel(
+                            stringResource(R.string.blocklist_tab_whitelist_short),
+                            tabIndex == BLOCKLIST_TAB_WHITELIST,
+                        )
+                    },
                 )
                 Tab(
                     selected = tabIndex == BLOCKLIST_TAB_DATABASE,
                     onClick = { tabIndex = BLOCKLIST_TAB_DATABASE },
                     selectedContentColor = CatGreen,
                     unselectedContentColor = CatSubtext,
-                    text = { Text(stringResource(R.string.blocklist_tab_database_short)) },
+                    text = {
+                        RuleTabLabel(
+                            stringResource(R.string.blocklist_tab_database_short),
+                            tabIndex == BLOCKLIST_TAB_DATABASE,
+                        )
+                    },
                 )
             }
 
@@ -542,7 +574,7 @@ fun BlocklistScreen(viewModel: MainViewModel) {
                             Modifier
                                 .align(Alignment.BottomEnd)
                                 .padding(16.dp),
-                        containerColor = workspace.accentColor,
+                        containerColor = CatGreen,
                         contentColor = MaterialTheme.colorScheme.onPrimary,
                         shape = RoundedCornerShape(12.dp),
                         icon = { Icon(Icons.Default.Add, stringResource(R.string.cd_add)) },
@@ -657,51 +689,42 @@ private fun BlocklistOverviewCard(
 ) {
     Column(
         modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.Top,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             PremiumIconTile(
                 icon = workspace.icon,
                 color = workspace.accentColor,
-                size = 42.dp,
-                iconSize = 23.dp,
+                size = 38.dp,
+                iconSize = 21.dp,
             )
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
+                verticalArrangement = Arrangement.spacedBy(1.dp),
             ) {
-                StatusPill(
+                Text(text = workspace.title, style = MaterialTheme.typography.titleMedium, color = CatText)
+                Text(
                     text =
                         pluralStringResource(
                             R.plurals.blocklist_count_saved,
                             workspace.count,
                             workspace.count,
                         ),
+                    style = MaterialTheme.typography.labelMedium,
                     color = workspace.accentColor,
                 )
-                Text(text = workspace.title, style = MaterialTheme.typography.titleLarge, color = CatText)
-                Text(
-                    text = workspace.subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = CatSubtext,
-                    maxLines = 2,
-                )
             }
-        }
-
-        if (workspace.primaryUtilityLabel != null || workspace.secondaryUtilityLabel != null) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 workspace.primaryUtilityLabel?.let { label ->
                     PremiumCompactButton(
                         label = label,
                         icon = Icons.Default.FileOpen,
                         color = workspace.accentColor,
                         onClick = { workspace.onPrimaryUtility?.invoke() },
-                        modifier = Modifier.weight(1f),
                     )
                 }
                 workspace.secondaryUtilityLabel?.let { label ->
@@ -710,12 +733,33 @@ private fun BlocklistOverviewCard(
                         icon = Icons.Default.Share,
                         color = workspace.accentColor,
                         onClick = { workspace.onSecondaryUtility?.invoke() },
-                        modifier = Modifier.weight(1f),
                     )
                 }
             }
         }
         GradientDivider()
+    }
+}
+
+@Composable
+private fun RuleTabLabel(
+    label: String,
+    selected: Boolean,
+) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+        )
+        Spacer(Modifier.height(7.dp))
+        Box(
+            modifier =
+                Modifier
+                    .width(36.dp)
+                    .height(2.dp)
+                    .background(if (selected) CatGreen else Color.Transparent),
+        )
     }
 }
 

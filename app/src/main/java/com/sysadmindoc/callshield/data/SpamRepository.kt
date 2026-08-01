@@ -221,16 +221,28 @@ class SpamRepository(
 
         /** SharedPreferences key for the synchronous theme mirror (cold-start flash fix). */
         private const val KEY_THEME_CACHE = "app_theme"
+        private const val KEY_THEME_CACHE_SCHEMA = "app_theme_schema"
+        private const val THEME_CACHE_SCHEMA = 3
 
         /**
          * Static variant of [cachedAppTheme] for Activities that must resolve
          * the theme BEFORE super.onCreate (window-background selection) without
          * constructing the full repository singleton on the main thread.
          */
-        fun cachedAppTheme(context: Context): String =
-            context.applicationContext
-                .getSharedPreferences("theme_cache", Context.MODE_PRIVATE)
-                .getString(KEY_THEME_CACHE, "amoled") ?: "amoled"
+        fun cachedAppTheme(context: Context): String {
+            val cache =
+                context.applicationContext
+                    .getSharedPreferences("theme_cache", Context.MODE_PRIVATE)
+            val cached = cache.getString(KEY_THEME_CACHE, null)
+            return if (cache.getInt(KEY_THEME_CACHE_SCHEMA, 1) >= THEME_CACHE_SCHEMA) {
+                cached ?: "light"
+            } else {
+                // In schema 1, AMOLED was both the implicit default and the
+                // stored mirror. Treat only that legacy value as the new Light
+                // default; explicit Light/Graphite selections stay intact.
+                cached?.takeUnless { it == "amoled" } ?: "light"
+            }
+        }
 
         const val SYNC_SOURCE_REMOTE = "remote"
         const val SYNC_SOURCE_BUNDLED = "bundled"
@@ -311,19 +323,30 @@ class SpamRepository(
 
     // Synchronous mirror of the persisted theme. DataStore is async-only, so its
     // first emission arrives a frame or two after the Activity starts, flashing the
-    // Amoled default (black + wrong status-bar icons) for Light/Graphite users on
+    // System-theme fallback with a synchronous cache prevents a mismatched window
     // every cold start. A tiny SharedPreferences mirror lets the ViewModel seed the
     // theme StateFlow synchronously at construction and eliminate that flash.
     private val themeCache: android.content.SharedPreferences by lazy {
         appContext.getSharedPreferences("theme_cache", Context.MODE_PRIVATE)
     }
 
-    /** Last-known theme, read synchronously. Defaults to the app default (amoled). */
-    fun cachedAppTheme(): String = themeCache.getString(KEY_THEME_CACHE, "amoled") ?: "amoled"
+    /** Last-known theme, read synchronously. Defaults to the system-following theme. */
+    fun cachedAppTheme(): String {
+        val cached = themeCache.getString(KEY_THEME_CACHE, null)
+        return if (themeCache.getInt(KEY_THEME_CACHE_SCHEMA, 1) >= THEME_CACHE_SCHEMA) {
+            cached ?: "light"
+        } else {
+            cached?.takeUnless { it == "amoled" } ?: "light"
+        }
+    }
 
     /** Update the synchronous theme mirror (called on writes and backfilled at start). */
     fun cacheAppTheme(theme: String) {
-        themeCache.edit().putString(KEY_THEME_CACHE, theme).apply()
+        themeCache
+            .edit()
+            .putString(KEY_THEME_CACHE, theme)
+            .putInt(KEY_THEME_CACHE_SCHEMA, THEME_CACHE_SCHEMA)
+            .apply()
     }
 
     suspend fun setAppTheme(theme: String) {

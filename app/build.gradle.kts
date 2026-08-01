@@ -47,9 +47,10 @@ android {
         applicationId = "com.sysadmindoc.callshield"
         minSdk = 29
         targetSdk = 36
-        versionCode = 57
-        versionName = "1.7.29"
+        versionCode = 60
+        versionName = "1.7.32"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        manifestPlaceholders["appLabel"] = "@string/app_name"
     }
 
     val releaseStoreFile = signingProp("RELEASE_STORE_FILE")
@@ -71,6 +72,12 @@ android {
     buildTypes {
         debug {
             isPseudoLocalesEnabled = true
+            if (providers.gradleProperty("callshield.qaInstall").orNull == "true") {
+                applicationIdSuffix = ".qa"
+                versionNameSuffix = "-qa"
+                resValue("string", "qa_app_name", "CallShield QA")
+                manifestPlaceholders["appLabel"] = "@string/qa_app_name"
+            }
         }
         release {
             isMinifyEnabled = true

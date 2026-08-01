@@ -9,6 +9,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -18,6 +19,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -87,6 +89,7 @@ fun MoreHub(
     val blockCallsEnabled by viewModel.blockCallsEnabled.collectAsStateWithLifecycle()
     val blockSmsEnabled by viewModel.blockSmsEnabled.collectAsStateWithLifecycle()
     val lastSync by viewModel.lastSyncTimestamp.collectAsStateWithLifecycle()
+    val appTheme by viewModel.appTheme.collectAsStateWithLifecycle()
     val appVersion = "v${BuildConfig.VERSION_NAME}"
     val localizedSpamCount =
         remember(spamCount) {
@@ -140,10 +143,9 @@ fun MoreHub(
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp, vertical = 10.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-            SectionHeader(stringResource(R.string.more_snapshot_title))
             Text(
                 protectionLabel,
                 style = MaterialTheme.typography.titleLarge,
@@ -173,6 +175,9 @@ fun MoreHub(
             Spacer(Modifier.height(6.dp))
             GradientDivider()
         }
+
+        AppearanceRow(theme = appTheme, onClick = onSettings)
+        GradientDivider()
 
         MoreSection(stringResource(R.string.more_section_tools)) {
             MoreNavCard(
@@ -275,7 +280,7 @@ fun MoreHub(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Image(
-                painter = painterResource(R.drawable.ic_launcher_foreground),
+                painter = painterResource(R.drawable.ic_callshield_brand_art),
                 contentDescription = null,
                 modifier = Modifier.size(30.dp),
             )
@@ -295,6 +300,66 @@ fun MoreHub(
         }
     }
 }
+
+@Composable
+private fun AppearanceRow(
+    theme: AppThemeMode,
+    onClick: () -> Unit,
+) {
+    TextButton(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
+        contentPadding = PaddingValues(horizontal = 0.dp, vertical = 4.dp),
+    ) {
+        PremiumIconTile(icon = Icons.Default.Palette, color = CatSubtext, size = 34.dp, iconSize = 19.dp)
+        Spacer(Modifier.width(10.dp))
+        Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.Start) {
+            Text(
+                stringResource(R.string.more_appearance),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = CatText,
+            )
+            Text(
+                stringResource(theme.labelResource()),
+                style = MaterialTheme.typography.bodySmall,
+                color = CatSubtext,
+            )
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+            ThemeSwatch(Color(0xFF83908B), theme == AppThemeMode.System)
+            ThemeSwatch(Color(0xFFE5EAE5), theme == AppThemeMode.Light)
+            ThemeSwatch(Color(0xFF29333E), theme == AppThemeMode.Graphite)
+            ThemeSwatch(Color.Black, theme == AppThemeMode.Amoled)
+        }
+        Spacer(Modifier.width(8.dp))
+        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = CatOverlay)
+    }
+}
+
+@Composable
+private fun ThemeSwatch(
+    color: Color,
+    selected: Boolean,
+) {
+    Box(
+        modifier =
+            Modifier
+                .size(if (selected) 20.dp else 14.dp)
+                .background(if (selected) CatGreen.copy(alpha = 0.16f) else Color.Transparent, CircleShape),
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(Modifier.size(12.dp).background(color, CircleShape))
+    }
+}
+
+private fun AppThemeMode.labelResource(): Int =
+    when (this) {
+        AppThemeMode.System -> R.string.settings_theme_system
+        AppThemeMode.Light -> R.string.settings_theme_light
+        AppThemeMode.Graphite -> R.string.settings_theme_graphite
+        AppThemeMode.Amoled -> R.string.settings_theme_amoled
+    }
 
 @Composable
 private fun MoreSection(
