@@ -35,6 +35,8 @@ All notable changes to CallShield will be documented in this file.
 
 ### Fixed
 
+- External blocklist redirects are now handled manually, revalidated on every
+  hop, limited to five hops, and refused if they leave the user-selected host.
 - Regex-rule safety validation now uses an Android-compatible escaped closing
   brace, preventing the rule model from failing class initialization on-device.
 - Backup restore now journals its DataStore and Room phases durably. Startup
