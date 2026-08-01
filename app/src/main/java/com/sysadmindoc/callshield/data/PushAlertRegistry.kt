@@ -160,6 +160,13 @@ object PushAlertRegistry {
         val packageName: String,
         val title: String,
         val body: String,
+        /**
+         * Conversation sender identity captured from MessagingStyle's Person
+         * URI when available, otherwise the notification title. The checker
+         * treats this as untrusted input until it resolves to a contact or a
+         * number the user has previously messaged.
+         */
+        val senderIdentity: String = "",
         val timestamp: Long,
     ) {
         /** `title` + `body` joined for regex matching. */
@@ -183,6 +190,7 @@ object PushAlertRegistry {
                 recent.packageName == alert.packageName &&
                 recent.title == alert.title &&
                 recent.body == alert.body &&
+                recent.senderIdentity == alert.senderIdentity &&
                 alert.timestamp - recent.timestamp < 5_000
             ) {
                 return

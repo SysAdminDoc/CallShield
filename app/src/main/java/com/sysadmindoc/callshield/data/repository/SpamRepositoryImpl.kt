@@ -104,6 +104,7 @@ class SpamRepositoryImpl(
         realtimeCall: Boolean = true,
         prefsSnapshot: Preferences? = null,
         callerIdentity: CallerIdentity? = null,
+        smsContextTrusted: Boolean = false,
     ): SpamCheckResult {
         val normalized = normalizePhone(number)
         if (normalized.isBlank()) return SpamCheckResult(false)
@@ -118,6 +119,7 @@ class SpamRepositoryImpl(
                 prefs = prefs,
                 verificationStatus = callerIdentity?.verificationStatus,
                 callerName = callerIdentity?.presentedName,
+                smsContextTrusted = smsContextTrusted,
             )
 
         val verdict =
@@ -136,10 +138,19 @@ class SpamRepositoryImpl(
     ): SpamCheckResult {
         val prefs = prefsSnapshot ?: settingsRepository.readPrefsSnapshot()
         val canonicalPhone = normalizePhone(number)
+        val smsContextTrusted =
+            canonicalPhone.isNotBlank() &&
+                checkerDependencies.smsContextChecker.isTrustedSender(context, canonicalPhone)
         var trustedAllowSource: String? = null
         if (canonicalPhone.isNotBlank()) {
             val numberResult =
-                isSpam(canonicalPhone, smsBody = body, realtimeCall = realtimeCall, prefsSnapshot = prefs)
+                isSpam(
+                    canonicalPhone,
+                    smsBody = body,
+                    realtimeCall = realtimeCall,
+                    prefsSnapshot = prefs,
+                    smsContextTrusted = smsContextTrusted,
+                )
             if (numberResult.isSpam) return numberResult
             // Carry a user-intent allow into the SMS extension chain so the
             // behavioral burst/content checkers yield to it (whitelisted /
@@ -160,6 +171,7 @@ class SpamRepositoryImpl(
                 realtimeCall = realtimeCall,
                 prefs = prefs,
                 trustedAllowSource = trustedAllowSource,
+                smsContextTrusted = smsContextTrusted,
             )
         val verdict =
             CheckerPipeline.run(smsExtensions, ctx)

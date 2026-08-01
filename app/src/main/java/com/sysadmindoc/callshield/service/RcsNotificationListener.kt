@@ -1,7 +1,9 @@
 package com.sysadmindoc.callshield.service
 
 import android.app.Notification
+import android.app.Person
 import android.content.ComponentName
+import android.os.Bundle
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import androidx.datastore.preferences.core.Preferences
@@ -152,7 +154,8 @@ class RcsNotificationListener : NotificationListenerService() {
      * available before any subsequent call-screening coroutine runs.
      */
     private fun captureAlert(sbn: StatusBarNotification) {
-        val extras = sbn.notification?.extras ?: return
+        val notification = sbn.notification ?: return
+        val extras = notification.extras ?: return
         val title = extras.getCharSequence(Notification.EXTRA_TITLE)?.toString().orEmpty()
         val body = extras.getCharSequence(Notification.EXTRA_TEXT)?.toString().orEmpty()
         if (title.isBlank() && body.isBlank()) return
@@ -161,6 +164,7 @@ class RcsNotificationListener : NotificationListenerService() {
                 packageName = sbn.packageName,
                 title = title,
                 body = body,
+                senderIdentity = extractAlertSenderIdentity(notification, title),
                 timestamp = sbn.postTime.takeIf { it > 0 } ?: System.currentTimeMillis(),
             ),
         )
@@ -297,6 +301,30 @@ class RcsNotificationListener : NotificationListenerService() {
     }
 
     companion object {
+        /**
+         * Prefer the structured conversation sender URI (normally `tel:`)
+         * over display text. Titles remain a conservative fallback for
+         * messaging implementations that omit MessagingStyle metadata.
+         */
+        @Suppress("DEPRECATION")
+        internal fun extractAlertSenderIdentity(
+            notification: Notification,
+            fallbackTitle: String,
+        ): String {
+            // MessagingStyle serializes each Message into EXTRA_MESSAGES.
+            // `sender_person` carries the conversation address on modern
+            // messaging apps; `sender` is the compatible display fallback.
+            val latestMessage =
+                notification.extras
+                    .getParcelableArray(Notification.EXTRA_MESSAGES)
+                    ?.lastOrNull() as? Bundle
+            val person = latestMessage?.getParcelable<Person>("sender_person")
+            return person?.uri?.takeIf { it.isNotBlank() }
+                ?: person?.name?.toString()?.takeIf { it.isNotBlank() }
+                ?: latestMessage?.getCharSequence("sender")?.toString()?.takeIf { it.isNotBlank() }
+                ?: fallbackTitle
+        }
+
         internal fun isNotificationScreeningEnabled(
             prefs: Preferences,
         ): Boolean = prefs[SpamRepository.KEY_RCS_FILTER] ?: true

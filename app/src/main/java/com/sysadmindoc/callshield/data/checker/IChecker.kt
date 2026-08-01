@@ -118,6 +118,12 @@ data class CheckContext(
      * rules still inspect these senders — only statistical checks yield.
      */
     val trustedAllowSource: String? = null,
+    /**
+     * True only when the user previously sent an SMS to this sender. The
+     * shared heuristic checker suppresses message-content scoring for this
+     * relationship so the later, globally ordered SMS trust rule can decide.
+     */
+    val smsContextTrusted: Boolean = false,
 ) {
     /**
      * Milliseconds remaining before the 5-second Android CallScreeningService
@@ -362,7 +368,7 @@ object SpamCheckers {
             add(AnsweredCallerChecker(appContext, dependencies.callbackDetector))
             add(RepeatedUrgentChecker(appContext, dependencies.callbackDetector))
             add(CallerNameTrustChecker())
-            add(PushAlertChecker())
+            add(PushAlertChecker(dependencies.spamHeuristics, dependencies.smsContextChecker))
             add(CampaignRecorderChecker(dependencies.campaignDetector))
             add(RegionBlockChecker())
             add(TimeBlockChecker())
@@ -380,7 +386,7 @@ object SpamCheckers {
         dependencies: CheckerDependencies = CheckerDependencies(),
     ): List<IChecker> =
         buildList {
-            add(SmsContextTrustChecker(appContext, dependencies.smsContextChecker))
+            add(SmsContextTrustChecker())
             add(SmsBurstChecker(appContext, dependencies.smsContextChecker))
             add(SmsKeywordChecker(repo))
             add(SmsContentChecker(dependencies.smsContentAnalyzer))

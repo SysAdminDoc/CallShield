@@ -718,7 +718,7 @@ internal class HeuristicChecker(
 
     override suspend fun check(ctx: CheckContext): BlockResult? {
         val recentBlocked = repo.getRecentBlockedNumbersInternal(System.currentTimeMillis() - 3_600_000L)
-        val sms = if (ctx.prefs[SpamRepository.KEY_SMS_CONTENT] ?: true) ctx.smsBody else null
+        val sms = smsBodyForAnalysis(ctx)
 
         val hResult =
             spamHeuristics.analyze(
@@ -766,6 +766,13 @@ internal class HeuristicChecker(
             "voip_spam_range" in reasons -> "robocall"
             else -> "suspicious"
         }
+
+    internal companion object {
+        fun smsBodyForAnalysis(ctx: CheckContext): String? =
+            ctx.smsBody.takeIf {
+                (ctx.prefs[SpamRepository.KEY_SMS_CONTENT] ?: true) && !ctx.smsContextTrusted
+            }
+    }
 
     private fun showCallerIdOverlay(
         ctx: Context,
@@ -834,15 +841,12 @@ internal class MlScorerChecker(
 // ─────────────────────────────────────────────────────────────────────
 
 /** Adapts the SMS context trust evaluator to the shared checker chain. */
-internal class SmsContextTrustChecker(
-    private val appContext: Context,
-    private val smsContextChecker: SmsContextChecker,
-) : IChecker {
+internal class SmsContextTrustChecker : IChecker {
     override val priority = CheckerPriority.SMS_CONTEXT_TRUST // sits at trust tier
     override val name = "sms_context"
 
     override suspend fun check(ctx: CheckContext): BlockResult? =
-        if (smsContextChecker.isTrustedSender(appContext, ctx.number)) {
+        if (ctx.smsContextTrusted) {
             BlockResult.allow("sms_context")
         } else {
             null

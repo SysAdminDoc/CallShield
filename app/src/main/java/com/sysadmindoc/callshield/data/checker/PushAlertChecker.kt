@@ -1,7 +1,10 @@
 package com.sysadmindoc.callshield.data.checker
 
 import com.sysadmindoc.callshield.data.PushAlertRegistry
+import com.sysadmindoc.callshield.data.SmsContextChecker
+import com.sysadmindoc.callshield.data.SpamHeuristics
 import com.sysadmindoc.callshield.data.SpamRepository
+import com.sysadmindoc.callshield.util.filterAsciiDigits
 import com.sysadmindoc.callshield.util.filterAsciiDigitsLast
 
 /**
@@ -43,7 +46,10 @@ import com.sysadmindoc.callshield.util.filterAsciiDigitsLast
  *      /MFA phrases only match for messaging apps that actually send
  *      SMS codes — an Outlook MFA push no longer unblocks random callers.
  */
-internal class PushAlertChecker : IChecker {
+internal class PushAlertChecker(
+    private val spamHeuristics: SpamHeuristics,
+    private val smsContextChecker: SmsContextChecker,
+) : IChecker {
     override val priority = CheckerPriority.PUSH_ALERT_BRIDGE
     override val name = "push_alert"
 
@@ -65,6 +71,9 @@ internal class PushAlertChecker : IChecker {
                 "com.android.mms",
                 "com.microsoft.android.smsorganizer",
             )
+
+        /** Messaging notification text is written by the remote sender. */
+        internal val USER_AUTHORED_MESSAGE_PACKAGES = VERIFICATION_SENDERS
 
         /**
          * Packages with a meaningful "appointment" / meeting-reminder
@@ -125,6 +134,16 @@ internal class PushAlertChecker : IChecker {
          * "5551234" from matching inside "15551234567".
          */
         internal fun anchoredDigitRegex(last7: String): Regex = Regex("(?<!\\d)${Regex.escape(last7)}(?!\\d)")
+
+        internal fun senderNumber(identity: String): String? {
+            val digits = filterAsciiDigits(identity.substringBefore('?'))
+            return digits.takeIf { it.length >= 7 }?.let { "+$it" }
+        }
+
+        internal fun alertSourceCanAuthorize(
+            packageName: String,
+            senderIsTrusted: Boolean,
+        ): Boolean = packageName !in USER_AUTHORED_MESSAGE_PACKAGES || senderIsTrusted
     }
 
     override suspend fun check(ctx: CheckContext): BlockResult? {
@@ -135,6 +154,18 @@ internal class PushAlertChecker : IChecker {
         val digitMatcher = if (last7.length == 7) anchoredDigitRegex(last7) else null
 
         for (alert in alerts) {
+            // A messaging notification's title/body is controlled by the
+            // remote sender. It cannot create trust for itself: the structured
+            // conversation sender must already be a contact or have outbound
+            // history. First-party rideshare/delivery/calendar notifications
+            // remain trusted by their explicit package allowlist.
+            val trustedSender =
+                senderNumber(alert.senderIdentity)?.let { sender ->
+                    spamHeuristics.isInContacts(ctx.appContext, sender) ||
+                        smsContextChecker.hasSentMessageTo(ctx.appContext, sender)
+                } == true
+            if (!alertSourceCanAuthorize(alert.packageName, trustedSender)) continue
+
             // Anchored direct-number match — body only (see class docs).
             // Titles often carry short standalone digit runs (order IDs,
             // tracking numbers, delivery PINs) that would otherwise allow

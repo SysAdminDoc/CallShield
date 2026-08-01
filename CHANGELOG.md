@@ -21,6 +21,11 @@ All notable changes to CallShield will be documented in this file.
   community-only challenges are parked for maintainer review.
 - Spam domains now require independent reporters, pass public-suffix and
   legitimate-domain checks, and remain in a review queue until approved.
+- Messaging notifications can no longer establish their own push-alert trust.
+  The conversation sender must already be a contact or have prior outbound SMS
+  history before user-authored notification content can authorize a call.
+- SMS relationship trust now requires prior outbound history; repeated inbound
+  messages alone cannot bypass keyword or content screening.
 
 ### Fixed
 
@@ -29,6 +34,8 @@ All notable changes to CallShield will be documented in this file.
 - Backup restore now journals its DataStore and Room phases durably. Startup
   rolls back an uncommitted settings phase or completes settings after a Room
   commit, without replacing unrelated sync preferences.
+- SMS senders with prior outbound history no longer have their message bodies
+  rejected by the shared heuristic stage before the ordered trust rule runs.
 
 ## v1.7.32 — 2026-08-01
 
