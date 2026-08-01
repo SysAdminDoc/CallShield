@@ -16,8 +16,9 @@ object SmsBodyRedactor {
     fun redactForPreview(body: String?): String? {
         val trimmed = body?.trim().orEmpty()
         if (trimmed.isBlank()) return null
+        val scanBody = trimmed.take(SmsContentAnalyzer.MAX_ANALYSIS_LENGTH)
 
-        val indicators = SmsContentAnalyzer.extractReportableIndicators(trimmed)
+        val indicators = SmsContentAnalyzer.extractReportableIndicators(scanBody)
         val parts =
             mutableListOf(
                 "SMS body redacted",
@@ -30,13 +31,13 @@ object SmsBodyRedactor {
         if (indicators.urlIndicators.isNotEmpty()) {
             parts += "URL signals: ${indicators.urlIndicators.joinToString(", ")}"
         }
-        if (otpLikePattern.containsMatchIn(trimmed)) {
+        if (otpLikePattern.containsMatchIn(scanBody)) {
             parts += "code-like tokens hidden"
         }
-        if (phoneLikePattern.containsMatchIn(trimmed)) {
+        if (phoneLikePattern.containsMatchIn(scanBody)) {
             parts += "numbers hidden"
         }
-        if (emailLikePattern.containsMatchIn(trimmed)) {
+        if (emailLikePattern.containsMatchIn(scanBody)) {
             parts += "email-like text hidden"
         }
 
