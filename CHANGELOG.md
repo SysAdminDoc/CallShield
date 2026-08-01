@@ -47,6 +47,9 @@ All notable changes to CallShield will be documented in this file.
 - Release APK verification now requires the published signer-certificate
   SHA-256, so a throwaway key with a look-alike subject cannot pass the
   production release gate.
+- Local contact-group scopes now use provider row identities that survive group
+  renames. Existing title-based selections migrate automatically, with legacy
+  matching retained until migration completes.
 
 ### Fixed
 

@@ -26,6 +26,39 @@ class ContactGroupCatalogTest {
     }
 
     @Test
+    fun `local group key survives rename and distinguishes provider rows`() {
+        val beforeRename = ContactGroupCatalog.stableKey("local", "type", null, "Friends", 17L)
+        val afterRename = ContactGroupCatalog.stableKey("local", "type", null, "Family", 17L)
+        val differentRow = ContactGroupCatalog.stableKey("local", "type", null, "Family", 18L)
+
+        assertEquals(beforeRename, afterRename)
+        assertNotEquals(beforeRename, differentRow)
+    }
+
+    @Test
+    fun `legacy local title key migrates to rename stable row key`() {
+        val legacy = ContactGroupCatalog.stableKey("local", "type", null, "Friends")
+        val current = ContactGroupCatalog.stableKey("local", "type", null, "Friends", 17L)
+        val groups = listOf(ContactGroup(current, "Friends", "local", 3, legacy))
+
+        assertEquals(setOf(current), ContactGroupCatalog.migrateSelectedKeys(groups, setOf(legacy)))
+    }
+
+    @Test
+    fun `ambiguous legacy local title key remains fail closed`() {
+        val legacy = ContactGroupCatalog.stableKey("local", "type", null, "Friends")
+        val first = ContactGroupCatalog.stableKey("local", "type", null, "Friends", 17L)
+        val second = ContactGroupCatalog.stableKey("local", "type", null, "Friends", 18L)
+        val groups =
+            listOf(
+                ContactGroup(first, "Friends", "local", 3, legacy),
+                ContactGroup(second, "Friends", "local", 2, legacy),
+            )
+
+        assertEquals(setOf(legacy), ContactGroupCatalog.migrateSelectedKeys(groups, setOf(legacy)))
+    }
+
+    @Test
     fun `sanitize keys drops malformed values and caps stored scope`() {
         val valid = (1..105).map { value -> value.toString(16).padStart(64, '0') }
 
