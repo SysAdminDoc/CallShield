@@ -224,6 +224,7 @@ class SpamRepository(
         /** SharedPreferences key for the synchronous theme mirror (cold-start flash fix). */
         private const val KEY_THEME_CACHE = "app_theme"
         private const val KEY_THEME_CACHE_SCHEMA = "app_theme_schema"
+        private const val KEY_POST_CALL_CACHE = "post_call_screen_enabled"
         private const val THEME_CACHE_SCHEMA = 3
 
         /**
@@ -244,6 +245,29 @@ class SpamRepository(
                 // default; explicit Light/Graphite selections stay intact.
                 cached?.takeUnless { it == "amoled" } ?: "light"
             }
+        }
+
+        /** Null until the asynchronous preference has been mirrored at least once. */
+        fun cachedPostCallScreenEnabled(context: Context): Boolean? {
+            val cache =
+                context.applicationContext
+                    .getSharedPreferences("theme_cache", Context.MODE_PRIVATE)
+            return if (cache.contains(KEY_POST_CALL_CACHE)) {
+                cache.getBoolean(KEY_POST_CALL_CACHE, false)
+            } else {
+                null
+            }
+        }
+
+        fun cachePostCallScreenEnabled(
+            context: Context,
+            enabled: Boolean,
+        ) {
+            context.applicationContext
+                .getSharedPreferences("theme_cache", Context.MODE_PRIVATE)
+                .edit()
+                .putBoolean(KEY_POST_CALL_CACHE, enabled)
+                .apply()
         }
 
         const val SYNC_SOURCE_REMOTE = "remote"
@@ -353,6 +377,10 @@ class SpamRepository(
             .apply()
     }
 
+    fun cachePostCallScreenEnabled(enabled: Boolean) {
+        cachePostCallScreenEnabled(appContext, enabled)
+    }
+
     suspend fun setAppTheme(theme: String) {
         settingsRepository.setAppTheme(theme)
         cacheAppTheme(theme)
@@ -364,7 +392,10 @@ class SpamRepository(
 
     suspend fun setRcsFilter(enabled: Boolean) = settingsRepository.setRcsFilter(enabled)
 
-    suspend fun setPostCallScreen(enabled: Boolean) = settingsRepository.setPostCallScreen(enabled)
+    suspend fun setPostCallScreen(enabled: Boolean) {
+        settingsRepository.setPostCallScreen(enabled)
+        cachePostCallScreenEnabled(enabled)
+    }
 
     suspend fun setNotificationScreeningPackage(
         packageName: String,

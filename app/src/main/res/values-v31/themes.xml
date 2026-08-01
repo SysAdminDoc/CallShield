@@ -11,4 +11,19 @@
         <item name="android:windowSplashScreenBackground">#F5F6F7</item>
         <item name="android:windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
     </style>
+
+    <style name="Theme.CallShield.Light">
+        <item name="android:windowSplashScreenBackground">#F5F6F7</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+    </style>
+
+    <style name="Theme.CallShield.Graphite">
+        <item name="android:windowSplashScreenBackground">#0F1216</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+    </style>
+
+    <style name="Theme.CallShield.Amoled">
+        <item name="android:windowSplashScreenBackground">#000000</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+    </style>
 </resources>

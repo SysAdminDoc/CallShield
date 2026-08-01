@@ -35,6 +35,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -68,6 +71,8 @@ import kotlinx.coroutines.withContext
 /** Optional Android 11+ review surface launched by Telecom after an eligible completed call. */
 class PostCallActivity : AppCompatActivity() {
     private lateinit var details: PostCallDetails
+    private var appTheme by mutableStateOf(AppThemeMode.Light)
+    private var contentInstalled = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         applyCachedWindowTheme(this)
@@ -84,6 +89,11 @@ class PostCallActivity : AppCompatActivity() {
             return
         }
 
+        appTheme = AppThemeMode.fromStorage(SpamRepository.cachedAppTheme(applicationContext))
+        if (SpamRepository.cachedPostCallScreenEnabled(applicationContext) == true) {
+            installContent()
+        }
+
         lifecycleScope.launch {
             val repository = SpamRepository.getInstance(applicationContext)
             val enabled =
@@ -91,25 +101,32 @@ class PostCallActivity : AppCompatActivity() {
                     repository.postCallScreenEnabled.first()
                 }.onFailure { Log.w(TAG, "Unable to read post-call preference", it) }
                     .getOrDefault(false)
+            repository.cachePostCallScreenEnabled(enabled)
             if (!enabled) {
                 finishAndRemoveTask()
                 return@launch
             }
 
-            val appTheme =
+            installContent()
+
+            appTheme =
                 runCatching { AppThemeMode.fromStorage(repository.appTheme.first()) }
                     .onFailure { Log.w(TAG, "Unable to read app theme", it) }
-                    .getOrDefault(AppThemeMode.Light)
+                    .getOrDefault(appTheme)
+        }
+    }
 
-            setContent {
-                CallShieldTheme(themeMode = appTheme) {
-                    PostCallScreen(
-                        details = details,
-                        onMarkSpam = ::markSpam,
-                        onAddContact = ::addContact,
-                        onDismiss = ::finishAndRemoveTask,
-                    )
-                }
+    private fun installContent() {
+        if (contentInstalled || isFinishing || isDestroyed) return
+        contentInstalled = true
+        setContent {
+            CallShieldTheme(themeMode = appTheme) {
+                PostCallScreen(
+                    details = details,
+                    onMarkSpam = ::markSpam,
+                    onAddContact = ::addContact,
+                    onDismiss = ::finishAndRemoveTask,
+                )
             }
         }
     }

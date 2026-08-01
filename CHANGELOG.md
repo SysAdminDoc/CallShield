@@ -62,6 +62,9 @@ All notable changes to CallShield will be documented in this file.
 
 ### Fixed
 
+- Android 12+ cold starts now select matching Light or dark splash resources,
+  and enabled post-call reviews render immediately from synchronous theme and
+  preference mirrors instead of waiting on DataStore before their first frame.
 - The caller-ID overlay now follows the selected System, Light, Graphite, or
   AMOLED palette instead of always rendering as a dark Catppuccin card.
 - Dashboard readiness, setup status, Settings summaries, and bottom navigation

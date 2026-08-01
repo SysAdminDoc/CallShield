@@ -3,7 +3,10 @@
 package com.sysadmindoc.callshield.ui.theme
 
 import android.app.Activity
+import android.app.UiModeManager
 import android.content.Context
+import android.content.res.Configuration
+import android.content.res.Resources
 import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
@@ -56,6 +59,58 @@ enum class AppThemeMode(
     companion object {
         fun fromStorage(value: String?): AppThemeMode = entries.firstOrNull { it.storageValue == value } ?: Light
     }
+}
+
+internal fun shouldUseDarkApplicationResources(
+    themeMode: AppThemeMode,
+    systemNightMode: Int,
+    systemConfigurationDark: Boolean,
+): Boolean =
+    when (themeMode) {
+        AppThemeMode.Light -> {
+            false
+        }
+
+        AppThemeMode.Graphite,
+        AppThemeMode.Amoled,
+        -> {
+            true
+        }
+
+        AppThemeMode.System -> {
+            when (systemNightMode) {
+                UiModeManager.MODE_NIGHT_YES -> true
+                UiModeManager.MODE_NIGHT_NO -> false
+                else -> systemConfigurationDark
+            }
+        }
+    }
+
+/**
+ * Keep Android 12+'s process-external splash screen in the same light/dark
+ * family as CallShield. The platform persists this per-app choice and uses it
+ * before the process starts, when the cached Compose theme is not available.
+ */
+internal fun syncApplicationNightMode(
+    context: Context,
+    themeMode: AppThemeMode,
+): Boolean {
+    val systemConfigurationDark =
+        Resources.getSystem().configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK ==
+            Configuration.UI_MODE_NIGHT_YES
+    val manager = context.getSystemService(UiModeManager::class.java)
+    val useDark =
+        shouldUseDarkApplicationResources(
+            themeMode = themeMode,
+            systemNightMode = manager?.nightMode ?: UiModeManager.MODE_NIGHT_AUTO,
+            systemConfigurationDark = systemConfigurationDark,
+        )
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        manager?.setApplicationNightMode(
+            if (useDark) UiModeManager.MODE_NIGHT_YES else UiModeManager.MODE_NIGHT_NO,
+        )
+    }
+    return useDark
 }
 
 @Immutable
