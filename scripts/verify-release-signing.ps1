@@ -1,17 +1,16 @@
 <#
 .SYNOPSIS
-    Fails when a release APK is debug-signed or signed with multiple certificates.
+    Fails unless a release APK has exactly the pinned signer certificate.
 
 .DESCRIPTION
-    Debug-signed or multi-certificate release APKs break signing-key continuity
+    Unpinned or multi-certificate release APKs break signing-key continuity
     (can't co-install with a real-key build), are rejected by Accrescent, and
     fail Google Developer Verification's single-stable-key prerequisite. This
     gate turns those silent distribution blockers into a build-time error.
 
     It runs `apksigner verify --print-certs` and asserts:
       1. exactly one signer certificate is present, and
-      2. the certificate is NOT the Android debug certificate
-         (DN "CN=Android Debug, O=Android, C=US").
+      2. its SHA-256 digest matches the pinned CallShield release certificate.
 
 .PARAMETER ApkPath
     Path to the release APK to verify. Defaults to the AGP release output.
@@ -19,15 +18,21 @@
 .PARAMETER SdkDir
     Android SDK root. Defaults to ANDROID_HOME, then sdk.dir in local.properties.
 
+.PARAMETER ExpectedSignerSha256
+    Pinned release-certificate SHA-256. Defaults to the published F-Droid pin.
+
 .EXAMPLE
     pwsh scripts/verify-release-signing.ps1 -ApkPath app\build\outputs\apk\release\app-release.apk
 #>
 param(
     [string]$ApkPath = "app\build\outputs\apk\release\app-release.apk",
-    [string]$SdkDir = ""
+    [string]$SdkDir = "",
+    [string]$ExpectedSignerSha256 = "d179d0daa9eac6b52fc19d3a7126fd6ccb911923a43a3cf0bef9f74b12234ad2"
 )
 
 $ErrorActionPreference = "Stop"
+
+. (Join-Path $PSScriptRoot "release-signing-policy.ps1")
 
 function Resolve-SdkDir {
     param([string]$Explicit)
@@ -73,36 +78,16 @@ if ($exit -ne 0) {
     exit 1
 }
 
-# Match both apksigner output dialects:
-#   build-tools <=36:  "Signer #1 certificate DN: <dn>"
-#   build-tools >=37:  "V3.0 Signer: certificate DN: <dn>"  (one line per signature scheme)
-# Deduplicate: a single cert signed with v1+v2+v3 emits the same DN several times;
-# that is ONE signer. Distinct DNs mean a genuine multi-certificate APK.
-$dns = @($out |
-    Where-Object { $_ -match 'certificate DN:' } |
-    ForEach-Object { ($_ -replace '^.*?certificate DN:\s*', '').Trim() } |
-    Select-Object -Unique)
-
-if ($dns.Count -eq 0) {
-    Write-Error "No signer certificate found. A release APK must be signed with a real release key."
+try {
+    $signer = Assert-ReleaseSignerPolicy `
+        -CertificateOutput $out `
+        -ExpectedSignerSha256 $ExpectedSignerSha256
+} catch {
+    Write-Error $_.Exception.Message
     exit 1
 }
 
-if ($dns.Count -gt 1) {
-    Write-Error ("Release APK is signed with $($dns.Count) certificates; exactly one is required " +
-        "(multi-cert makes key rotation impossible and is rejected by Accrescent):`n  " +
-        ($dns -join "`n  "))
-    exit 1
-}
-
-$dn = $dns[0]
-if ($dn -match 'CN=Android Debug' -or $dn -match 'O=Android Debug') {
-    Write-Error ("Release APK is DEBUG-signed (DN: $dn). Debug releases break key continuity, " +
-        "can't co-install with a real-key build, are rejected by Accrescent, and fail Google " +
-        "Developer Verification. Configure RELEASE_STORE_* in local.properties and rebuild.")
-    exit 1
-}
-
-Write-Output "OK: single non-debug signer certificate."
-Write-Output "  DN: $dn"
+Write-Output "OK: single pinned release signer certificate."
+Write-Output "  DN: $($signer.DistinguishedName)"
+Write-Output "  SHA-256: $($signer.Sha256)"
 exit 0
