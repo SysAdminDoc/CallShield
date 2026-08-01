@@ -44,6 +44,11 @@ private fun Context.overlayDp(designPx: Float): Int = overlayDpF(designPx).round
 
 private fun Context.overlayDpF(designPx: Float): Float = designPx * resources.displayMetrics.density / OVERLAY_DESIGN_DENSITY
 
+internal fun shouldRunLiveCallerEnrichment(
+    confidence: Int,
+    optedIn: Boolean,
+): Boolean = optedIn && confidence > 0
+
 /**
  * Real-time caller ID overlay with live multi-source spam lookup.
  *
@@ -55,6 +60,7 @@ private fun Context.overlayDpF(designPx: Float): Float = designPx * resources.di
 class CallerIdOverlayService : Service() {
     companion object {
         internal const val EXTRA_OUTGOING_RISK_WARNING = "outgoing_risk_warning"
+        internal const val EXTRA_LIVE_ENRICHMENT = "live_caller_enrichment"
         private const val EXTRA_NUMBER = "number"
         private const val EXTRA_CONFIDENCE = "confidence"
         private const val EXTRA_REASON = "reason"
@@ -120,6 +126,12 @@ class CallerIdOverlayService : Service() {
         val confidence = intent?.getIntExtra(EXTRA_CONFIDENCE, 0) ?: 0
         val reason = intent?.getStringExtra(EXTRA_REASON) ?: ""
         val outgoingRiskWarning = intent?.getBooleanExtra(EXTRA_OUTGOING_RISK_WARNING, false) ?: false
+        val liveEnrichmentEnabled =
+            !outgoingRiskWarning &&
+                shouldRunLiveCallerEnrichment(
+                    confidence,
+                    intent?.getBooleanExtra(EXTRA_LIVE_ENRICHMENT, false) ?: false,
+                )
 
         if (number.isEmpty()) {
             stopSelf()
@@ -138,11 +150,11 @@ class CallerIdOverlayService : Service() {
         }
 
         val sessionId =
-            showOverlay(number, confidence, reason, outgoingRiskWarning)
+            showOverlay(number, confidence, reason, outgoingRiskWarning, liveEnrichmentEnabled)
                 ?: return START_NOT_STICKY
-        if (!outgoingRiskWarning) {
-            // Incoming caller ID may be enriched live. Outgoing warnings stay
-            // local-only and display the exact database decision unchanged.
+        if (liveEnrichmentEnabled) {
+            // Remote enrichment is explicit opt-in and only starts when the
+            // local heuristic pipeline has already identified suspicion.
             runLiveLookups(number, sessionId)
         }
         return START_NOT_STICKY
@@ -153,6 +165,7 @@ class CallerIdOverlayService : Service() {
         confidence: Int,
         reason: String,
         outgoingRiskWarning: Boolean,
+        liveEnrichmentEnabled: Boolean,
     ): Long? {
         if (!android.provider.Settings.canDrawOverlays(this)) {
             stopSelf()
@@ -246,8 +259,10 @@ class CallerIdOverlayService : Service() {
                                 context.getString(R.string.overlay_outgoing_risk_score, confidence)
                             } else if (confidence > 0) {
                                 context.getString(R.string.overlay_initial_score, confidence)
-                            } else {
+                            } else if (liveEnrichmentEnabled) {
                                 context.getString(R.string.overlay_score_loading)
+                            } else {
+                                context.getString(R.string.overlay_score_local_clear)
                             }
                         setTextColor(Color.parseColor("#FFFAB387"))
                         textSize = 13f
@@ -261,7 +276,7 @@ class CallerIdOverlayService : Service() {
                     ProgressBar(context, null, android.R.attr.progressBarStyleSmall).apply {
                         setPadding(0, context.overlayDp(10f), 0, 0)
                         visibility =
-                            if (outgoingRiskWarning) {
+                            if (outgoingRiskWarning || !liveEnrichmentEnabled) {
                                 android.view.View.GONE
                             } else {
                                 android.view.View.VISIBLE
@@ -296,8 +311,10 @@ class CallerIdOverlayService : Service() {
                             context.getString(
                                 if (outgoingRiskWarning) {
                                     R.string.overlay_outgoing_risk_status
-                                } else {
+                                } else if (liveEnrichmentEnabled) {
                                     R.string.overlay_status_querying
+                                } else {
+                                    R.string.overlay_status_local_only
                                 },
                             )
                         setTextColor(Color.parseColor("#FF585B70"))

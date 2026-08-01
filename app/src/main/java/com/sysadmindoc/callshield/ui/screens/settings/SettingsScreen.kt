@@ -112,6 +112,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
     val smsContent by viewModel.smsContentEnabled.collectAsStateWithLifecycle()
     val smsBurst by viewModel.smsBurstEnabled.collectAsStateWithLifecycle()
     val urlhausRemoteLookup by viewModel.urlhausRemoteLookupEnabled.collectAsStateWithLifecycle()
+    val liveCallerEnrichment by viewModel.liveCallerEnrichmentEnabled.collectAsStateWithLifecycle()
     val contactWhitelist by viewModel.contactWhitelistEnabled.collectAsStateWithLifecycle()
     val contactsOnly by viewModel.contactsOnlyEnabled.collectAsStateWithLifecycle()
     val selectedContactGroups by viewModel.selectedContactGroups.collectAsStateWithLifecycle()
@@ -569,6 +570,13 @@ fun SettingsScreen(viewModel: MainViewModel) {
                 Icons.Default.Security,
                 urlhausRemoteLookup,
             ) { viewModel.setUrlhausRemoteLookup(it) }
+            GradientDivider()
+            SettingsToggle(
+                stringResource(R.string.settings_live_caller_enrichment),
+                stringResource(R.string.settings_live_caller_enrichment_desc),
+                Icons.Default.TravelExplore,
+                liveCallerEnrichment,
+            ) { viewModel.setLiveCallerEnrichment(it) }
             GradientDivider()
             SettingsToggle(
                 stringResource(R.string.settings_sms_burst),

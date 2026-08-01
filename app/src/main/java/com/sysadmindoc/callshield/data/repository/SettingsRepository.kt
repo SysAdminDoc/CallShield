@@ -64,6 +64,8 @@ class SettingsRepository(
         dataStore.data.map { it[SpamRepository.KEY_URLHAUS_STRIP_QUERY] ?: true }
     val urlhausRemoteLookupEnabled: Flow<Boolean> =
         dataStore.data.map { it[SpamRepository.KEY_URLHAUS_REMOTE_LOOKUP] ?: false }
+    val liveCallerEnrichmentEnabled: Flow<Boolean> =
+        dataStore.data.map { it[SpamRepository.KEY_LIVE_CALLER_ENRICHMENT] ?: false }
     val contactWhitelistEnabled: Flow<Boolean> =
         dataStore.data.map { it[SpamRepository.KEY_CONTACT_WHITELIST] ?: true }
     val contactsOnlyEnabled: Flow<Boolean> =
@@ -253,6 +255,8 @@ class SettingsRepository(
     suspend fun setUrlhausStripQuery(enabled: Boolean) = dataStore.edit { it[SpamRepository.KEY_URLHAUS_STRIP_QUERY] = enabled }
 
     suspend fun setUrlhausRemoteLookup(enabled: Boolean) = dataStore.edit { it[SpamRepository.KEY_URLHAUS_REMOTE_LOOKUP] = enabled }
+
+    suspend fun setLiveCallerEnrichment(enabled: Boolean) = dataStore.edit { it[SpamRepository.KEY_LIVE_CALLER_ENRICHMENT] = enabled }
 
     suspend fun setContactWhitelist(enabled: Boolean) = dataStore.edit { it[SpamRepository.KEY_CONTACT_WHITELIST] = enabled }
 
