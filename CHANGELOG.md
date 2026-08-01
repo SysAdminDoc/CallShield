@@ -62,6 +62,8 @@ All notable changes to CallShield will be documented in this file.
 
 ### Fixed
 
+- The caller-ID overlay now follows the selected System, Light, Graphite, or
+  AMOLED palette instead of always rendering as a dark Catppuccin card.
 - Dashboard readiness, setup status, Settings summaries, and bottom navigation
   now adapt cleanly at 200% font scale without clipped or overlapping text.
 - Android device coverage now verifies TalkBack toggle state, caller-ID overlay
