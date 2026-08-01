@@ -23,6 +23,13 @@ fun spamTypeLabelRes(type: String): Int? =
         "survey" -> R.string.spam_type_survey
         "political" -> R.string.spam_type_political
         "phishing" -> R.string.spam_type_phishing
+        "spoofed" -> R.string.spam_type_spoofed
+        "user_blocked" -> R.string.spam_type_user_blocked
+        "caller_name" -> R.string.spam_type_caller_name
+        "out_of_region" -> R.string.spam_type_out_of_region
+        "premium_scam" -> R.string.spam_type_premium_scam
+        "wangiri_scam" -> R.string.spam_type_wangiri_scam
+        "suspicious" -> R.string.spam_type_suspicious
         "unknown" -> R.string.spam_type_unknown
         else -> null
     }
@@ -34,13 +41,54 @@ fun localizedSpamType(
 ): String =
     spamTypeLabelRes(type)
         ?.let(context::getString)
-        ?: type.replace("_", " ").replaceFirstChar { it.uppercase() }
+        ?: context.getString(R.string.spam_type_other)
 
 @Composable
 fun friendlySpamTypeLabel(type: String): String =
     spamTypeLabelRes(type)
         ?.let { stringResource(it) }
-        ?: type.replace("_", " ").replaceFirstChar { it.uppercase() }
+        ?: stringResource(R.string.spam_type_other)
+
+/** Resource id for a stable, user-facing pipeline checker label. */
+fun pipelineCheckerLabelRes(checkerName: String): Int =
+    when (checkerName.trim().lowercase()) {
+        "manual_whitelist" -> R.string.lookup_checker_manual_whitelist
+        "contact_whitelist" -> R.string.lookup_checker_contact_whitelist
+        "contacts_only" -> R.string.lookup_checker_contacts_only
+        "stir_shaken_trusted" -> R.string.lookup_checker_stir_shaken_trusted
+        "stir_shaken_failed" -> R.string.lookup_checker_stir_shaken_failed
+        "temporary_allow" -> R.string.lookup_checker_temporary_allow
+        "system_block_list" -> R.string.lookup_checker_system_block_list
+        "user_blocklist" -> R.string.lookup_checker_user_blocklist
+        "database" -> R.string.lookup_checker_database
+        "db_prefix_expansion" -> R.string.lookup_checker_db_prefix_expansion
+        "prefix" -> R.string.lookup_checker_prefix
+        "wildcard" -> R.string.lookup_checker_wildcard
+        "hash_wildcard" -> R.string.lookup_checker_hash_wildcard
+        "recently_dialed" -> R.string.lookup_checker_recently_dialed
+        "answered_caller" -> R.string.lookup_checker_answered_caller
+        "emergency_callback" -> R.string.lookup_checker_emergency_callback
+        "repeated_urgent" -> R.string.lookup_checker_repeated_urgent
+        "caller_name_trust" -> R.string.lookup_checker_caller_name_trust
+        "caller_name" -> R.string.lookup_checker_caller_name
+        "region_block" -> R.string.lookup_checker_region_block
+        "campaign_recorder" -> R.string.lookup_checker_campaign_recorder
+        "time_block" -> R.string.lookup_checker_time_block
+        "frequency" -> R.string.lookup_checker_frequency
+        "heuristic" -> R.string.lookup_checker_heuristic
+        "campaign_burst" -> R.string.lookup_checker_campaign_burst
+        "ml_scorer" -> R.string.lookup_checker_ml_scorer
+        "sms_context" -> R.string.lookup_checker_sms_context
+        "sms_burst" -> R.string.lookup_checker_sms_burst
+        "keyword" -> R.string.lookup_checker_keyword
+        "sms_content" -> R.string.lookup_checker_sms_content
+        "push_alert" -> R.string.lookup_checker_push_alert
+        else -> R.string.lookup_checker_other
+    }
+
+/** Localized label that never exposes checker implementation identifiers. */
+@Composable
+fun friendlyPipelineCheckerLabel(checkerName: String): String = stringResource(pipelineCheckerLabelRes(checkerName))
 
 /**
  * Localized display label for an internal matchReason/matchSource token.

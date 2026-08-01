@@ -92,6 +92,7 @@ import com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup
 import com.sysadmindoc.callshield.domain.model.SpamCheckResult
 import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.friendlyMatchReasonLabel
+import com.sysadmindoc.callshield.ui.friendlyPipelineCheckerLabel
 import com.sysadmindoc.callshield.ui.friendlySpamTypeLabel
 import com.sysadmindoc.callshield.ui.theme.CatBlue
 import com.sysadmindoc.callshield.ui.theme.CatGreen
@@ -834,7 +835,7 @@ private fun PipelineTraceSection(trace: com.sysadmindoc.callshield.data.checker.
                         Icon(icon, contentDescription = label, tint = tint, modifier = Modifier.size(14.dp))
                         Spacer(Modifier.width(6.dp))
                         Text(
-                            entry.checkerName.replace("_", " ").replaceFirstChar { it.uppercase() },
+                            friendlyPipelineCheckerLabel(entry.checkerName),
                             style = MaterialTheme.typography.bodySmall,
                             color = tint,
                             modifier = Modifier.weight(1f),

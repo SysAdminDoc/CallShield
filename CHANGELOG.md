@@ -62,6 +62,9 @@ All notable changes to CallShield will be documented in this file.
 
 ### Fixed
 
+- Lookup results now render localized spam categories and human-readable
+  pipeline checker names, with neutral fallbacks that never expose new internal
+  identifiers to users.
 - Android 12+ cold starts now select matching Light or dark splash resources,
   and enabled post-call reviews render immediately from synchronous theme and
   preference mirrors instead of waiting on DataStore before their first frame.
