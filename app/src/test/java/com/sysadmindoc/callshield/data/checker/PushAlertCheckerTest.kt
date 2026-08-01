@@ -1,8 +1,12 @@
 package com.sysadmindoc.callshield.data.checker
 
 import com.sysadmindoc.callshield.data.checker.PushAlertChecker.Companion.TRUST_PHRASES
+import com.sysadmindoc.callshield.data.checker.PushAlertChecker.Companion.alertSourceCanAuthorize
 import com.sysadmindoc.callshield.data.checker.PushAlertChecker.Companion.anchoredDigitRegex
+import com.sysadmindoc.callshield.data.checker.PushAlertChecker.Companion.senderNumber
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -13,6 +17,20 @@ import org.junit.Test
  * prefs snapshot + registry fixtures.
  */
 class PushAlertCheckerTest {
+    @Test fun `untrusted messaging sender cannot authorize an alert`() {
+        assertFalse(alertSourceCanAuthorize("com.google.android.apps.messaging", senderIsTrusted = false))
+        assertTrue(alertSourceCanAuthorize("com.google.android.apps.messaging", senderIsTrusted = true))
+    }
+
+    @Test fun `allowlisted first party app can authorize its own alert`() {
+        assertTrue(alertSourceCanAuthorize("com.ubercab", senderIsTrusted = false))
+    }
+
+    @Test fun `sender identity requires a phone-like value`() {
+        assertEquals("+15551234567", senderNumber("tel:+1 (555) 123-4567"))
+        assertNull(senderNumber("Alice"))
+    }
+
     // ── H1: anchored digit match ───────────────────────────────────────
 
     @Test fun `anchored regex matches standalone 7-digit run`() {

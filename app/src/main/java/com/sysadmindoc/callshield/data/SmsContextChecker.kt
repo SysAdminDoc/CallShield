@@ -3,7 +3,6 @@ package com.sysadmindoc.callshield.data
 import android.content.Context
 import android.provider.Telephony
 import com.sysadmindoc.callshield.util.filterAsciiDigits
-import java.util.Calendar
 import javax.inject.Inject
 
 /**
@@ -14,10 +13,9 @@ import javax.inject.Inject
  * spam database nor heuristics can: a number that has exchanged real
  * messages with the user is almost never spam.
  *
- * Two trust signals (either is sufficient):
- *  1. We have previously SENT at least one SMS to this number.
- *  2. We have RECEIVED messages from this number on 2+ distinct days
- *     (indicates an ongoing relationship, not a one-shot blast).
+ * Trust requires strong evidence of user intent: the user must previously
+ * have SENT at least one SMS to this number. Inbound-only history is never a
+ * trust signal because a remote sender can create it without user action.
  *
  * Requires READ_SMS permission (already declared in AndroidManifest).
  * All queries are local — no network access.
@@ -63,56 +61,13 @@ class SmsContextChecker
         }
 
         /**
-         * Returns true if the user has received messages from this number
-         * on at least 2 different calendar days.
-         *
-         * Single-day multi-blast is a common spam pattern; genuine contacts
-         * message across multiple days.
-         *
-         * Uses a LIKE pre-filter on the last 7 digits (same rationale as
-         * [hasSentMessageTo]) to avoid loading the entire inbox.
-         */
-        fun hasRecurringConversation(
-            context: Context,
-            number: String,
-        ): Boolean {
-            val normalized = normalize(number)
-            if (normalized.isEmpty()) return false
-            val likeSuffix = normalized.takeLast(7)
-
-            return try {
-                context.contentResolver
-                    .query(
-                        Telephony.Sms.Inbox.CONTENT_URI,
-                        arrayOf(Telephony.Sms.Inbox.ADDRESS, Telephony.Sms.Inbox.DATE),
-                        "${Telephony.Sms.Inbox.ADDRESS} LIKE ?",
-                        arrayOf("%$likeSuffix"),
-                        "${Telephony.Sms.Inbox.DATE} ASC",
-                    )?.use { cursor ->
-                        val days = mutableSetOf<String>()
-                        val cal = Calendar.getInstance()
-                        while (cursor.moveToNext()) {
-                            val address = cursor.getString(0) ?: continue
-                            if (normalize(address) != normalized) continue
-                            cal.timeInMillis = cursor.getLong(1)
-                            days.add("${cal.get(Calendar.YEAR)}-${cal.get(Calendar.MONTH) + 1}-${cal.get(Calendar.DAY_OF_MONTH)}")
-                            if (days.size >= 2) return true
-                        }
-                        false
-                    } ?: false
-            } catch (_: Exception) {
-                false
-            }
-        }
-
-        /**
-         * Combined trust check — true if either signal fires.
+         * Strong trust check backed exclusively by prior outbound history.
          * Called from SpamRepository before keyword/content analysis.
          */
         fun isTrustedSender(
             context: Context,
             number: String,
-        ): Boolean = hasSentMessageTo(context, number) || hasRecurringConversation(context, number)
+        ): Boolean = hasSentMessageTo(context, number)
 
         /**
          * Detect short-window SMS floods from unknown senders.
@@ -298,11 +253,6 @@ class SmsContextChecker
                 context: Context,
                 number: String,
             ): Boolean = shared.hasSentMessageTo(context, number)
-
-            fun hasRecurringConversation(
-                context: Context,
-                number: String,
-            ): Boolean = shared.hasRecurringConversation(context, number)
 
             fun isTrustedSender(
                 context: Context,
