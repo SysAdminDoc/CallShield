@@ -22,6 +22,11 @@ All notable changes to CallShield will be documented in this file.
 - Spam domains now require independent reporters, pass public-suffix and
   legitimate-domain checks, and remain in a review queue until approved.
 
+### Fixed
+
+- Regex-rule safety validation now uses an Android-compatible escaped closing
+  brace, preventing the rule model from failing class initialization on-device.
+
 ## v1.7.32 — 2026-08-01
 
 ### Changed

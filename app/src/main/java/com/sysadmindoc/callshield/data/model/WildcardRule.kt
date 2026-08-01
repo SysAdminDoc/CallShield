@@ -149,7 +149,7 @@ data class WildcardRule(
         }
 
         /** Open-ended repeats: `*`, `+`, and `{n,}` (but not bounded `{n,m}`). */
-        private val unboundedQuantifier = Regex("""[*+]|\{\d*,}""")
+        private val unboundedQuantifier = Regex("""[*+]|\{\d*,\}""")
 
         /**
          * Reject regex patterns that are known catastrophic-backtracking
