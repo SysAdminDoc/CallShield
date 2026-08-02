@@ -6,12 +6,12 @@
 
 <p align="center">
   <strong>Open-source spam call and text blocker for Android</strong><br>
-  15+ layer detection + Gradient-Boosted Tree ML | 32,623 spam numbers | Real-time caller ID | RCS filter | No required API keys
+  15+ layer detection + Gradient-Boosted Tree ML | 51,463 spam numbers | Real-time caller ID | RCS filter | No required API keys
 </p>
 
 <p align="center">
   <a href="https://github.com/SysAdminDoc/CallShield/releases/latest"><img src="https://img.shields.io/github/v/release/SysAdminDoc/CallShield?style=flat-square&color=a6e3a1" alt="Release"></a>
-  <img src="https://img.shields.io/badge/Spam%20Numbers-32%2C623-f38ba8?style=flat-square" alt="32,623 Numbers">
+  <img src="https://img.shields.io/badge/Spam%20Numbers-51%2C463-f38ba8?style=flat-square" alt="51,463 Numbers">
   <img src="https://img.shields.io/badge/Tests-952-94e2d5?style=flat-square" alt="952 Tests">
   <img src="https://img.shields.io/badge/Android-10%2B-89b4fa?style=flat-square" alt="Android 10+">
   <img src="https://img.shields.io/badge/License-MIT-cba6f7?style=flat-square" alt="MIT License">
@@ -20,7 +20,7 @@
 
 ---
 
-CallShield blocks spam calls and texts using a **15+ layer on-device detection engine** with a gradient-boosted tree ML scorer, campaign burst detection, RCS notification filter, and real-time caller ID overlay. Powered by a 32,623-number database with scheduled hot-list updates. Community-maintained, no accounts, no tracking.
+CallShield blocks spam calls and texts using a **15+ layer on-device detection engine** with a gradient-boosted tree ML scorer, campaign burst detection, RCS notification filter, and real-time caller ID overlay. Powered by a 51,463-number database with scheduled hot-list updates. Community-maintained, no accounts, no tracking.
 
 ## Screenshots
 
@@ -328,7 +328,7 @@ CallShield blocks spam calls and texts using a **15+ layer on-device detection e
 
 ## How It Works
 
-1. **32,617 confirmed spam numbers** — sourced from 1.75M FCC consumer complaints (2+ reports each), FTC Do Not Call, ToastedSpam, and community reports
+1. **51,463 imported spam numbers** — sourced from FCC consumer complaints (2+ reports each), FTC Do Not Call, ToastedSpam, and community reports
 2. **15+ layer detection + ML** — database, heuristics, campaign burst detection, on-device gradient-boosted tree, SMS content/burst analysis, RCS filter, STIR/SHAKEN, and more
 3. **Real-time caller ID overlay** — parallel lookups against SkipCalls, PhoneBlock, WhoCalledMe + OpenCNAM caller name, with SIT tone anti-autodialer
 4. **Scheduled hot list** — trending spam numbers and campaign ranges refresh through the repository data pipeline
@@ -352,7 +352,7 @@ All detection layers implement a shared `IChecker` interface and run in priority
 |  5350 | **Temporary Allow** | Allow | One-off false-positive recovery from the Blocked Log — beats all downloaded data, never your own rules |
 |  5320 | **Prefix Rules** | Block | Downloaded wangiri country codes, US premium rate (+1900), international premium |
 |  5300 | **STIR/SHAKEN Authenticated** | Allow | Carrier-authenticated caller ID can allow through lower-confidence heuristic/ML suspicion while explicit blocks still win first |
-|  5200 | **Spam Database** | Block | 32,617 confirmed spam numbers plus scheduled hot-list data |
+|  5200 | **Spam Database** | Block | 51,463 imported spam numbers plus scheduled hot-list data |
 |  5150 | **Database Prefix Expansion** | Block | Auto-blocks last-two-digit siblings of confirmed database entries |
 |  5000 | **Recently Dialed** | Allow | Numbers you called in the last 24h — they're probably calling back |
 |  4980 | **Emergency Callback** | Allow | Unknown callbacks can ring through after a local emergency call during the configured grace window |
@@ -483,13 +483,32 @@ Trained weekly from the CallShield database (50K positive + 50K negative samples
 
 ## Data Sources
 
-### Database (32,617 numbers, locally maintained)
+### Database (51,463 numbers + 431 range prefixes, locally maintained)
 | Source | Method |
 |--------|--------|
 | **FCC Consumer Complaints** | Socrata API, 500K records, min 2 reports |
 | **FTC Do Not Call** | `api.ftc.gov` (DEMO_KEY) |
+| **Saracroche** | Daily French telemarketing ranges; imported as compact prefixes |
+| **PhoneBlock** | Optional authenticated bulk snapshot; public per-number lookup remains live |
+| **Nomorobo IRS** | Optional carrier-authorized callback-scam CSV feed |
 | **ToastedSpam** | Community curated list |
 | **Community Reports** | Anonymous via Cloudflare Worker |
+
+The source importer also has optional adapters for **PhoneBlock's** versioned
+bulk list. PhoneBlock requires an account/API key for bulk downloads on current
+deployments, so the app continues to use its public per-number lookup by
+default. Run `python scripts/import_all_sources.py --include-saracroche` to
+refresh the French ranges; add `--phoneblock-limit 5000` and
+`PHONEBLOCK_API_KEY` only when the maintainer has bulk-feed access. Saracroche
+range data is published under CC BY-NC-SA 4.0 and must retain attribution and
+those downstream restrictions.
+
+The importer also accepts a carrier-authorized Nomorobo IRS callback-scam CSV
+feed without embedding credentials in the app. Pass the HTTPS URL with
+`--nomorobo-irs-url` (or `NOMOROBO_IRS_FEED_URL`) and, if required by the feed,
+the bearer token with `--nomorobo-irs-token`/`NOMOROBO_IRS_TOKEN`. The adapter
+is disabled unless explicitly configured and rejects cleartext URLs; it does
+not scrape Nomorobo's restricted carrier feed.
 
 ### Hot List (scheduled refresh)
 | File | Contents |
