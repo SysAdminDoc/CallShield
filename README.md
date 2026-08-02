@@ -35,6 +35,14 @@ CallShield blocks spam calls and texts using a **15+ layer on-device detection e
   <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/06-more.png" width="30%" alt="Protection tools and release information">
 </p>
 
+## v1.7.33 Highlights
+
+- **Broader public spam coverage** — Saracroche, PhoneBlock, Nomorobo IRS,
+  FCC advertiser numbers, and bounded FTC retries now feed the importer with
+  idempotent merges and explicit provenance.
+- **Fail-open screening reliability** — lazy repository initialization errors
+  now receive an explicit allow response instead of abandoning Telecom's call.
+
 ## v1.7.32 Highlights
 
 - **Guided first-run setup** — CallShield walks through phone and message
@@ -335,7 +343,7 @@ CallShield blocks spam calls and texts using a **15+ layer on-device detection e
 5. **Callback-aware** — won't block callbacks from numbers you recently called, answered repeatedly, after a local emergency call, or urgent repeated callers
 6. **Community-driven** — one-tap anonymous contribution via Cloudflare Worker, merged into the database by the maintainer
 
-## Detection Pipeline (v1.7.32)
+## Detection Pipeline (v1.7.33)
 
 All detection layers implement a shared `IChecker` interface and run in priority order via `CheckerPipeline.run` — first non-null result wins, every layer is testable in isolation. Priorities are stable numbers; the ladder below is the live order.
 
@@ -502,6 +510,11 @@ refresh the French ranges; add `--phoneblock-limit 5000` and
 `PHONEBLOCK_API_KEY` only when the maintainer has bulk-feed access. Saracroche
 range data is published under CC BY-NC-SA 4.0 and must retain attribution and
 those downstream restrictions.
+
+Every feed is declared in `data/source-manifest.json` with its access mode,
+geography, licence, attribution, parser version, redistribution policy, and
+freshness window. Each importer run writes a local `data/source-snapshot.json`
+for release review; it is intentionally not bundled into the APK.
 
 The importer also accepts a carrier-authorized Nomorobo IRS callback-scam CSV
 feed without embedding credentials in the app. Pass the HTTPS URL with

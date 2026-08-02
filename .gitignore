@@ -41,3 +41,6 @@ RESEARCH_FEATURE_PLAN*.md
 # Python
 __pycache__/
 *.pyc
+
+# Generated feed provenance (published with importer artifacts, not the app bundle)
+data/source-snapshot.json

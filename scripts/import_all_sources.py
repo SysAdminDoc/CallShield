@@ -38,6 +38,7 @@ from phone_normalization import (
 )
 
 from pipeline_io import atomic_write_json
+from source_registry import load_source_manifest, source_snapshot
 
 try:
     import requests
@@ -49,6 +50,8 @@ except ImportError as exc:  # pragma: no cover - environment guard
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 DB_FILE = DATA_DIR / "spam_numbers.json"
+SOURCE_MANIFEST_FILE = DATA_DIR / "source-manifest.json"
+SOURCE_SNAPSHOT_FILE = DATA_DIR / "source-snapshot.json"
 
 PHONEBLOCK_BLOCKLIST_URL = "https://phoneblock.net/phoneblock/api/blocklist"
 SARACROCHE_PREFIX_URL = "https://saracroche.org/api/v1/lists/french-list-arcep-operators"
@@ -478,6 +481,7 @@ def merge_into_database(
     min_reports: int = 1,
     prefixes: list[dict] | None = None,
     source_names: set[str] | None = None,
+    source_stats: dict[str, dict] | None = None,
 ):
     """Merge numbers. min_reports filters low-confidence single-source entries."""
     if DB_FILE.exists():
@@ -529,6 +533,15 @@ def merge_into_database(
         else:
             existing[num] = entry
             added += 1
+
+    # Persist source evidence even when the data payload is unchanged. A
+    # successful no-op import is still useful: it proves the feeds were
+    # reachable and keeps freshness visible to release review tooling.
+    manifest = load_source_manifest(SOURCE_MANIFEST_FILE)
+    atomic_write_json(
+        SOURCE_SNAPSHOT_FILE,
+        source_snapshot(manifest, source_stats or {}),
+    )
 
     # Apply min_reports filter to NEWLY-ADDED entries only. Applying it to the
     # whole merged dict deleted every community-reported row (they are written
@@ -647,14 +660,17 @@ def main():
     print("=" * 50)
 
     all_numbers = []
+    source_stats: dict[str, dict] = {}
 
     # Source 1: FTC
     ftc = fetch_ftc(max_records=min(args.max, 5000))  # FTC API is slow; bulk is via CSV
     all_numbers.extend(ftc)
+    source_stats["ftc_complaints"] = {"status": "ok", "accepted": len(ftc)}
 
     # Source 2: FCC (biggest source — pull up to --max records)
     fcc = fetch_fcc(max_records=args.max)
     all_numbers.extend(fcc)
+    source_stats["fcc_complaints"] = {"status": "ok", "accepted": len(fcc)}
 
     # Source 3: PhoneBlock (per-number lookup — seed only, real-time in app)
     pb = fetch_phoneblock(
@@ -662,22 +678,39 @@ def main():
         api_key=args.phoneblock_api_key or os.environ.get("PHONEBLOCK_API_KEY"),
     )
     all_numbers.extend(pb)
+    source_stats["phoneblock_bulk"] = {
+        "status": "ok" if pb else "not_requested",
+        "accepted": len(pb),
+    }
 
     nomorobo = fetch_nomorobo_irs(
         feed_url=args.nomorobo_irs_url or os.environ.get("NOMOROBO_IRS_FEED_URL"),
         api_token=args.nomorobo_irs_token or os.environ.get("NOMOROBO_IRS_TOKEN"),
     )
     all_numbers.extend(nomorobo)
+    source_stats["nomorobo_irs"] = {
+        "status": "ok" if nomorobo else "not_requested",
+        "accepted": len(nomorobo),
+    }
 
     saracroche_prefixes = fetch_saracroche_prefixes() if args.include_saracroche else []
+    source_stats["saracroche_prefixes"] = {
+        "status": "ok" if saracroche_prefixes else "not_requested",
+        "accepted": len(saracroche_prefixes),
+    }
 
     # Source 4: ToastedSpam
     ts = fetch_toastedspam(allow_insecure=args.allow_insecure_sources)
     all_numbers.extend(ts)
+    source_stats["toastedspam"] = {
+        "status": "ok" if ts else "not_requested",
+        "accepted": len(ts),
+    }
 
     # Source 5: Community text lists
     cl = fetch_community_text_lists()
     all_numbers.extend(cl)
+    source_stats["community_reports"] = {"status": "ok", "accepted": len(cl)}
 
     # Deduplicate across all sources (accumulate reports)
     deduped = {}
@@ -707,6 +740,7 @@ def main():
         min_reports=args.min_reports,
         prefixes=saracroche_prefixes,
         source_names=source_names,
+        source_stats=source_stats,
     )
     print("\nDone! Commit and push to update the live database.")
 

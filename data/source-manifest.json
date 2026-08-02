@@ -1,0 +1,82 @@
+{
+  "version": 1,
+  "sources": [
+    {
+      "id": "ftc_complaints",
+      "access_mode": "public_api",
+      "geography": "US",
+      "license": "US government public data",
+      "attribution": "US Federal Trade Commission Do Not Call complaints",
+      "cadence": "daily",
+      "parser_version": "ftc-v2",
+      "redistributable": true,
+      "stale_after_days": 14
+    },
+    {
+      "id": "fcc_complaints",
+      "access_mode": "public_api",
+      "geography": "US",
+      "license": "US government public data",
+      "attribution": "US Federal Communications Commission unwanted calls dataset",
+      "cadence": "daily",
+      "parser_version": "fcc-v2",
+      "redistributable": true,
+      "stale_after_days": 14
+    },
+    {
+      "id": "phoneblock_bulk",
+      "access_mode": "optional_operator_key",
+      "geography": "EU",
+      "license": "PhoneBlock terms; operator review required",
+      "attribution": "PhoneBlock community database",
+      "cadence": "on demand",
+      "parser_version": "phoneblock-v2",
+      "redistributable": false,
+      "stale_after_days": 30
+    },
+    {
+      "id": "saracroche_prefixes",
+      "access_mode": "public_feed",
+      "geography": "FR",
+      "license": "CC BY-NC-SA",
+      "attribution": "Saracroche French telemarketing range list",
+      "cadence": "daily",
+      "parser_version": "saracroche-v1",
+      "redistributable": true,
+      "stale_after_days": 14
+    },
+    {
+      "id": "nomorobo_irs",
+      "access_mode": "carrier_authorized",
+      "geography": "US",
+      "license": "Provider terms; authorization required",
+      "attribution": "Nomorobo IRS callback-scam feed",
+      "cadence": "on demand",
+      "parser_version": "nomorobo-irs-v1",
+      "redistributable": false,
+      "stale_after_days": 30
+    },
+    {
+      "id": "toastedspam",
+      "access_mode": "opt_in_http",
+      "geography": "US/CA",
+      "license": "Public list; verify terms before redistribution",
+      "attribution": "ToastedSpam community blocklist",
+      "cadence": "weekly",
+      "parser_version": "toastedspam-v1",
+      "redistributable": false,
+      "stale_after_days": 30
+    },
+    {
+      "id": "community_reports",
+      "access_mode": "local_reports",
+      "geography": "global",
+      "license": "CallShield community report policy",
+      "attribution": "CallShield users",
+      "cadence": "continuous",
+      "parser_version": "community-v2",
+      "redistributable": true,
+      "stale_after_days": 90
+    }
+  ]
+}
