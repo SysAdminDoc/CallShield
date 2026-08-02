@@ -10,6 +10,11 @@ All notable changes to CallShield will be documented in this file.
   calmer dividers, text-led status treatments, and denser page spacing across Home, Activity,
   Lookup, Rules, and More.
 
+### Data pipeline
+
+- Added a validated source registry and per-run provenance snapshot so feed
+  access, licensing, attribution, redistribution, and freshness are reviewable.
+
 ## v1.7.33 — 2026-08-01
 
 ### Detection data
