@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
@@ -33,7 +32,6 @@ import com.sysadmindoc.callshield.ui.screens.recent.RecentCallsScreen
 import com.sysadmindoc.callshield.ui.theme.Black
 import com.sysadmindoc.callshield.ui.theme.CatGreen
 import com.sysadmindoc.callshield.ui.theme.CatSubtext
-import com.sysadmindoc.callshield.ui.theme.DividerColor
 
 /** One activity workspace keeps call history and blocked outcomes together. */
 @Composable
@@ -54,7 +52,6 @@ fun ActivityScreen(viewModel: MainViewModel) {
                 onClick = { selectedView = ACTIVITY_BLOCKED },
             )
         }
-        HorizontalDivider(color = DividerColor)
         Box(modifier = Modifier.weight(1f)) {
             stateHolder.SaveableStateProvider(selectedView) {
                 if (selectedView == ACTIVITY_RECENT) {
@@ -76,7 +73,7 @@ private fun RowScope.ActivityTab(
     Tab(
         selected = selected,
         onClick = onClick,
-        modifier = Modifier.weight(1f).height(52.dp),
+        modifier = Modifier.weight(1f).height(46.dp),
         selectedContentColor = CatGreen,
         unselectedContentColor = CatSubtext,
         text = {
@@ -86,7 +83,7 @@ private fun RowScope.ActivityTab(
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
                 )
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(5.dp))
                 Box(
                     modifier =
                         Modifier

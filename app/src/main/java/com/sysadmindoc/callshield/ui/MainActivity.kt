@@ -22,8 +22,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
@@ -227,7 +225,6 @@ fun CallShieldApp(
         }
     }
 
-    val navBarTopBorder = DividerColor
     val currentTitle =
         when (selectedTab) {
             0 -> {
@@ -278,15 +275,6 @@ fun CallShieldApp(
         bottomBar = {
             NavigationBar(
                 containerColor = Surface,
-                modifier =
-                    Modifier.drawBehind {
-                        drawLine(
-                            color = navBarTopBorder,
-                            start = Offset(0f, 0f),
-                            end = Offset(size.width, 0f),
-                            strokeWidth = 1f,
-                        )
-                    },
             ) {
                 NavItem(
                     selectedTab == 0,
@@ -503,11 +491,11 @@ private fun AppChrome(
                 Modifier
                     .fillMaxWidth()
                     .statusBarsPadding()
-                    .padding(horizontal = 16.dp, vertical = 2.dp),
+                    .padding(horizontal = 16.dp),
         ) {
             if (showSearch) {
                 Row(
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 50.dp),
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 46.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
@@ -530,7 +518,7 @@ private fun AppChrome(
                 }
             } else {
                 Row(
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 50.dp),
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 46.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     if (onBack != null) {
@@ -553,7 +541,7 @@ private fun AppChrome(
                         title,
                         modifier = Modifier.weight(1f),
                         color = CatText,
-                        style = MaterialTheme.typography.titleLarge,
+                        style = MaterialTheme.typography.headlineSmall,
                     )
                     IconButton(onClick = onOpenSearch) {
                         Icon(
@@ -564,7 +552,6 @@ private fun AppChrome(
                     }
                 }
             }
-            HorizontalDivider(color = DividerColor)
         }
     }
 }

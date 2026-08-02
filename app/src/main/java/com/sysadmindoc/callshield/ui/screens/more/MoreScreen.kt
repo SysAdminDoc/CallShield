@@ -142,8 +142,8 @@ fun MoreHub(
             Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 10.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
             Text(
@@ -173,11 +173,9 @@ fun MoreHub(
                 MoreMetric(appVersion, stringResource(R.string.more_snapshot_version), Modifier.weight(1f))
             }
             Spacer(Modifier.height(6.dp))
-            GradientDivider()
         }
 
         AppearanceRow(theme = appTheme, onClick = onSettings)
-        GradientDivider()
 
         MoreSection(stringResource(R.string.more_section_tools)) {
             MoreNavCard(
@@ -187,7 +185,6 @@ fun MoreHub(
                 CatGreen,
                 onStats,
             )
-            GradientDivider()
             MoreNavCard(
                 Icons.Default.Verified,
                 stringResource(R.string.more_protection_test),
@@ -195,7 +192,6 @@ fun MoreHub(
                 CatGreen,
                 onTest,
             )
-            GradientDivider()
             MoreNavCard(
                 Icons.Default.Settings,
                 stringResource(R.string.more_settings),
@@ -213,7 +209,6 @@ fun MoreHub(
                 CatSubtext,
                 onChangelog,
             )
-            GradientDivider()
             QuickLink(
                 icon = Icons.Default.Description,
                 label = stringResource(R.string.more_share_crash_log),
@@ -243,7 +238,6 @@ fun MoreHub(
             ) {
                 launchExternalLink(context, "https://github.com/SysAdminDoc/CallShield")
             }
-            GradientDivider()
             QuickLink(
                 Icons.Default.BugReport,
                 stringResource(R.string.more_report_bug),
@@ -252,7 +246,6 @@ fun MoreHub(
             ) {
                 launchExternalLink(context, "https://github.com/SysAdminDoc/CallShield/issues/new")
             }
-            GradientDivider()
             QuickLink(
                 Icons.Default.Star,
                 stringResource(R.string.more_star_github),
@@ -261,7 +254,6 @@ fun MoreHub(
             ) {
                 launchExternalLink(context, "https://github.com/SysAdminDoc/CallShield")
             }
-            GradientDivider()
             QuickLink(
                 Icons.Default.Flag,
                 stringResource(R.string.more_report_spam_number),
@@ -308,7 +300,7 @@ private fun AppearanceRow(
 ) {
     TextButton(
         onClick = onClick,
-        modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
+        modifier = Modifier.fillMaxWidth().heightIn(min = 50.dp),
         contentPadding = PaddingValues(horizontal = 0.dp, vertical = 4.dp),
     ) {
         PremiumIconTile(icon = Icons.Default.Palette, color = CatSubtext, size = 34.dp, iconSize = 19.dp)
@@ -368,7 +360,7 @@ private fun MoreSection(
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         SectionHeader(title)
-        Spacer(Modifier.height(3.dp))
+        Spacer(Modifier.height(2.dp))
         content()
         Spacer(Modifier.height(4.dp))
         GradientDivider()
@@ -402,7 +394,7 @@ fun MoreNavCard(
 ) {
     TextButton(
         onClick = onClick,
-        modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
+        modifier = Modifier.fillMaxWidth().heightIn(min = 50.dp),
         contentPadding = PaddingValues(horizontal = 0.dp, vertical = 4.dp),
     ) {
         PremiumIconTile(icon = icon, color = color, size = 34.dp, iconSize = 19.dp)
@@ -440,7 +432,7 @@ fun QuickLink(
 ) {
     TextButton(
         onClick = onClick,
-        modifier = Modifier.fillMaxWidth().heightIn(min = 54.dp),
+        modifier = Modifier.fillMaxWidth().heightIn(min = 50.dp),
         contentPadding = PaddingValues(horizontal = 0.dp, vertical = 4.dp),
     ) {
         PremiumIconTile(icon = icon, color = color, size = 34.dp, iconSize = 18.dp)

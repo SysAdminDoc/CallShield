@@ -4,6 +4,28 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+### Interface
+
+- Refined the shared Compose visual system around a compact header, flatter content groups,
+  calmer dividers, text-led status treatments, and denser page spacing across Home, Activity,
+  Lookup, Rules, and More.
+
+## v1.7.33 — 2026-08-01
+
+### Detection data
+
+- The data importer now ingests Saracroche's daily French telemarketing ranges
+  as compact prefixes, preserving the source's 17M-number coverage without
+  expanding the database into millions of rows.
+- Optional PhoneBlock bulk imports now accept international E.164 numbers,
+  map fraud/advertising ratings into CallShield categories, and fail closed
+  when the service requires credentials. The existing public per-number lookup
+  remains unchanged.
+- FCC imports now retain both caller-ID and advertiser-business numbers from a
+  complaint instead of silently dropping the second field.
+- Added an opt-in HTTPS adapter for carrier-authorized Nomorobo IRS callback-
+  scam CSV feeds; no private URL or credential is guessed or scraped.
+
 ### Security
 
 - Post-call review can now be launched only by privileged Telecom callers, and
@@ -21,6 +43,7 @@ All notable changes to CallShield will be documented in this file.
   community-only challenges are parked for maintainer review.
 - Spam domains now require independent reporters, pass public-suffix and
   legitimate-domain checks, and remain in a review queue until approved.
+
 - Messaging notifications can no longer establish their own push-alert trust.
   The conversation sender must already be a contact or have prior outbound SMS
   history before user-authored notification content can authorize a call.
@@ -53,6 +76,12 @@ All notable changes to CallShield will be documented in this file.
 - Explicit user blocks now remain enforceable between reboot and first unlock.
   A minimal device-encrypted mirror carries only the blocking essentials;
   checks that need credential-encrypted data fail open until unlock.
+
+### Reliability
+
+- Re-audited the screening service, caller-ID overlay, and checker chain. Lazy
+  repository or heuristics initialization failures now remain inside the
+  screener's fail-open boundary so Telecom always receives an explicit allow.
 
 ### Added
 
