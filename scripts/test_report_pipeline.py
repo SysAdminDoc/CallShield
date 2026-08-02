@@ -284,6 +284,117 @@ def assert_min_reports_spares_existing_rows(data_dir: Path) -> None:
     if "+12122340101" not in numbers or "+15302340123" in numbers:
         raise AssertionError(f"min_reports filtering regressed: {numbers}")
 
+def assert_external_source_parsers() -> None:
+    """Exercise the optional international bulk/range feeds without network."""
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "import_all_sources", SCRIPTS_DIR / "import_all_sources.py"
+    )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    class FakeResponse:
+        def __init__(self, payload: dict, status_code: int = 200, text: str | None = None):
+            self._payload = payload
+            self.status_code = status_code
+            self.text = text if text is not None else json.dumps(payload)
+
+        def raise_for_status(self):
+            if self.status_code >= 400:
+                raise RuntimeError(f"HTTP {self.status_code}")
+
+        def json(self):
+            return self._payload
+
+    original_get = module.requests.get
+    try:
+        def fake_get(url, **kwargs):
+            if url == "https://api.ftc.gov/v0/dnc-complaints":
+                return FakeResponse({}, status_code=429)
+            if url == module.PHONEBLOCK_BLOCKLIST_URL:
+                return FakeResponse(
+                    {
+                        "version": 42,
+                        "numbers": [
+                            {
+                                "phone": "+49123456789",
+                                "rating": "G_FRAUD",
+                                "votes": 20,
+                                "lastActivity": 1_735_689_600_000,
+                            },
+                            {"phone": "+12125561234", "rating": "E_ADVERTISING", "votes": 4},
+                            {"phone": "+49111111111", "rating": "G_FRAUD", "votes": 0},
+                        ],
+                    }
+                )
+            if url.startswith("https://opendata.fcc.gov/resource/"):
+                return FakeResponse(
+                    [
+                        {
+                            "caller_id_number": "+12125561234",
+                            "advertiser_business_phone_number": "+13105561234",
+                            "issue": "Telemarketing",
+                            "issue_date": "2026-07-31T00:00:00.000",
+                        }
+                    ]
+                )
+            if url == "https://nomorobo.example/irs.csv":
+                return FakeResponse(
+                    {},
+                    text="phone,reason\n+34912345678,IRS callback scam\n+34912345678,repeat report\n",
+                )
+            return FakeResponse(
+                {
+                    "version": "2026-08-01T00:00:00+00:00",
+                    "blocked_numbers_count": 17_000_000,
+                    "patterns": [
+                        {"action": "block", "name": "ARCEP", "pattern": "33162######"},
+                        {"action": "allow", "name": "ignore", "pattern": "33163######"},
+                        {"action": "block", "name": "operator", "pattern": "332688#####"},
+                        {"action": "block", "name": "bad", "pattern": "abc######"},
+                    ],
+                }
+            )
+
+        module.requests.get = fake_get
+        original_sleep = module.time.sleep
+        module.time.sleep = lambda _seconds: None
+        if module.fetch_ftc(max_records=1):
+            raise AssertionError("FTC rate-limit handling must fail closed")
+        phoneblock = module.fetch_phoneblock(limit=10)
+        if {row["number"] for row in phoneblock} != {"+49123456789", "+12125561234"}:
+            raise AssertionError(f"PhoneBlock parsing regressed: {phoneblock}")
+        if not any(row["type"] == "scam" for row in phoneblock):
+            raise AssertionError("PhoneBlock fraud rating did not map to scam")
+
+        fcc = module.fetch_fcc(max_records=1)
+        fcc_numbers = {row["number"]: row for row in fcc}
+        if set(fcc_numbers) != {"+12125561234", "+13105561234"}:
+            raise AssertionError(f"FCC dual-number parsing regressed: {fcc}")
+        if not all("FCC" in row["description"] for row in fcc_numbers.values()):
+            raise AssertionError(f"FCC provenance missing: {fcc}")
+
+        nomorobo = module.fetch_nomorobo_irs("https://nomorobo.example/irs.csv")
+        if len(nomorobo) != 1 or nomorobo[0]["number"] != "+34912345678":
+            raise AssertionError(f"Nomorobo parsing regressed: {nomorobo}")
+        if nomorobo[0]["reports"] != 4 or nomorobo[0]["type"] != "scam":
+            raise AssertionError(f"Nomorobo confidence mapping regressed: {nomorobo}")
+        if module.fetch_nomorobo_irs("http://nomorobo.example/irs.csv"):
+            raise AssertionError("Nomorobo HTTP feed must fail closed")
+
+        prefixes = module.fetch_saracroche_prefixes()
+        prefix_values = {row["prefix"] for row in prefixes}
+        if prefix_values != {"+33162", "+332688"}:
+            raise AssertionError(f"Saracroche parsing regressed: {prefixes}")
+
+        module.requests.get = lambda *args, **kwargs: FakeResponse({}, status_code=401)
+        if module.fetch_phoneblock(limit=5):
+            raise AssertionError("PhoneBlock auth failure must fail closed")
+    finally:
+        module.requests.get = original_get
+        module.time.sleep = original_sleep
+
 
 def main() -> None:
     with tempfile.TemporaryDirectory() as tmp:
@@ -296,6 +407,7 @@ def main() -> None:
         assert_merge_cleanup(data_dir)
         assert_derived_outputs(data_dir)
         assert_min_reports_spares_existing_rows(data_dir)
+        assert_external_source_parsers()
 
     with tempfile.TemporaryDirectory() as tmp:
         assert_not_spam_requires_review(Path(tmp) / "data")

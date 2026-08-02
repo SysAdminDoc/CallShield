@@ -4,6 +4,20 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+### Detection data
+
+- The data importer now ingests Saracroche's daily French telemarketing ranges
+  as compact prefixes, preserving the source's 17M-number coverage without
+  expanding the database into millions of rows.
+- Optional PhoneBlock bulk imports now accept international E.164 numbers,
+  map fraud/advertising ratings into CallShield categories, and fail closed
+  when the service requires credentials. The existing public per-number lookup
+  remains unchanged.
+- FCC imports now retain both caller-ID and advertiser-business numbers from a
+  complaint instead of silently dropping the second field.
+- Added an opt-in HTTPS adapter for carrier-authorized Nomorobo IRS callback-
+  scam CSV feeds; no private URL or credential is guessed or scraped.
+
 ### Security
 
 - Post-call review can now be launched only by privileged Telecom callers, and
