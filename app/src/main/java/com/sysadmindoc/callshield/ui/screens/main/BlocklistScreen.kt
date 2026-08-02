@@ -323,7 +323,7 @@ fun BlocklistScreen(viewModel: MainViewModel) {
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                        .padding(horizontal = 16.dp, vertical = 4.dp),
                 workspace = workspace,
             )
 
@@ -332,7 +332,7 @@ fun BlocklistScreen(viewModel: MainViewModel) {
                 containerColor = com.sysadmindoc.callshield.ui.theme.Black,
                 contentColor = CatText,
                 edgePadding = 8.dp,
-                divider = { HorizontalDivider(color = com.sysadmindoc.callshield.ui.theme.DividerColor) },
+                divider = {},
                 // Selection is already communicated by label colour. A custom
                 // full-width indicator rendered as a solid accent slab on
                 // current Material 3, obscuring the content below the tabs.
@@ -424,8 +424,8 @@ fun BlocklistScreen(viewModel: MainViewModel) {
                             )
                         } else {
                             LazyColumn(
-                                contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 104.dp),
-                                verticalArrangement = Arrangement.spacedBy(8.dp),
+                                contentPadding = PaddingValues(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 104.dp),
+                                verticalArrangement = Arrangement.spacedBy(6.dp),
                             ) {
                                 items(userBlocked, key = { it.id }) { number ->
                                     SwipeToRemoveBlocklistItem(

@@ -470,12 +470,19 @@ fun PremiumCard(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
     accentColor: Color? = null,
-    cornerRadius: Dp = ShapeXl,
+    cornerRadius: Dp = ShapeSm,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val shape = RoundedCornerShape(cornerRadius)
-    val baseColor = MaterialTheme.colorScheme.surfaceContainerLow
-    val containerColor = accentColor?.copy(alpha = 0.05f)?.compositeOver(baseColor) ?: baseColor
+    // Most sections are content groups, not individual panels. Keep the
+    // default treatment transparent so hierarchy comes from typography and
+    // spacing; reserve a quiet tint for genuinely stateful/accented cards.
+    val baseColor = Color.Transparent
+    val containerColor =
+        accentColor
+            ?.copy(alpha = 0.055f)
+            ?.compositeOver(MaterialTheme.colorScheme.background)
+            ?: baseColor
     val colors = CardDefaults.cardColors(containerColor = containerColor)
     val elevation = CardDefaults.cardElevation(defaultElevation = 0.dp, pressedElevation = 0.dp)
 
@@ -534,26 +541,15 @@ fun StatusPill(
     verticalPadding: Dp = 2.dp,
     textStyle: TextStyle = MaterialTheme.typography.labelMedium,
 ) {
-    Row(
+    Text(
+        text = text,
         modifier = modifier.padding(horizontal = horizontalPadding, vertical = verticalPadding),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(
-            modifier =
-                Modifier
-                    .size(7.dp)
-                    .background(color, RoundedCornerShape(ShapeXs)),
-        )
-        Spacer(Modifier.width(7.dp))
-        Text(
-            text = text,
-            style = textStyle,
-            color = color,
-            fontWeight = FontWeight.SemiBold,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-        )
-    }
+        style = textStyle,
+        color = color,
+        fontWeight = FontWeight.SemiBold,
+        maxLines = 2,
+        overflow = TextOverflow.Ellipsis,
+    )
 }
 
 @Composable
@@ -768,7 +764,7 @@ fun GradientDivider(
             modifier
                 .fillMaxWidth()
                 .height(1.dp)
-                .background(if (color == CatOverlay) DividerColor else color.copy(alpha = 0.16f)),
+                .background(if (color == CatOverlay) DividerColor.copy(alpha = 0.72f) else color.copy(alpha = 0.12f)),
     )
 }
 

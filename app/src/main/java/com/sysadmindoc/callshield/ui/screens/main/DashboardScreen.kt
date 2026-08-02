@@ -12,7 +12,6 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateIntAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -63,7 +62,6 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -125,6 +123,7 @@ import com.sysadmindoc.callshield.ui.theme.PremiumCard
 import com.sysadmindoc.callshield.ui.theme.PremiumCompactButton
 import com.sysadmindoc.callshield.ui.theme.PremiumIconTile
 import com.sysadmindoc.callshield.ui.theme.SectionHeader
+import com.sysadmindoc.callshield.ui.theme.ShapeSm
 import com.sysadmindoc.callshield.ui.theme.StatusPill
 import com.sysadmindoc.callshield.ui.theme.hapticConfirm
 import com.sysadmindoc.callshield.ui.theme.hapticTick
@@ -345,8 +344,8 @@ fun DashboardScreen(viewModel: MainViewModel) {
             Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         var heroVisible by remember { mutableStateOf(false) }
         LaunchedEffect(Unit) { heroVisible = true }
@@ -1554,7 +1553,7 @@ fun ProfileChip(
     onClick: () -> Unit,
 ) {
     val context = LocalContext.current
-    OutlinedButton(
+    TextButton(
         onClick = {
             hapticConfirm(context)
             onClick()
@@ -1565,11 +1564,10 @@ fun ProfileChip(
             modifier
                 .height(36.dp)
                 .semantics { selected = isActive },
-        shape = RoundedCornerShape(10.dp),
-        border = BorderStroke(1.dp, if (isActive) color.copy(alpha = 0.6f) else color.copy(alpha = 0.2f)),
+        shape = RoundedCornerShape(ShapeSm),
         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
         colors =
-            ButtonDefaults.outlinedButtonColors(
+            ButtonDefaults.textButtonColors(
                 contentColor = color,
                 containerColor = if (isActive) color.copy(alpha = 0.12f) else Color.Transparent,
             ),
