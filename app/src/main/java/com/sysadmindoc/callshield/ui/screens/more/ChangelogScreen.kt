@@ -25,6 +25,17 @@ fun ChangelogScreen() {
         verticalArrangement = Arrangement.spacedBy(0.dp),
     ) {
         VersionEntry(
+            "1.7.33",
+            "Broader public spam coverage and fail-open screening reliability",
+            isLatest = true,
+            changes =
+                listOf(
+                    "Saracroche, PhoneBlock, Nomorobo IRS, FCC advertiser numbers, and bounded FTC retries expand public source coverage",
+                    "Idempotent source merges preserve provenance without duplicating numbers",
+                    "Lazy screening-service initialization failures now return an explicit allow response",
+                ),
+        )
+        VersionEntry(
             "1.7.32",
             "Guided first-run setup with verified Android permission handoffs",
             isLatest = true,

@@ -27,6 +27,7 @@ import com.sysadmindoc.callshield.data.PhoneFormatter
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.remote.ExternalLookup
 import com.sysadmindoc.callshield.data.remote.RemoteLookupStatus
+import com.sysadmindoc.callshield.ui.spamTypeLabelRes
 import com.sysadmindoc.callshield.ui.theme.AppThemeMode
 import com.sysadmindoc.callshield.ui.theme.paletteFor
 import com.sysadmindoc.callshield.util.filterAsciiDigits
@@ -53,6 +54,26 @@ internal fun shouldRunLiveCallerEnrichment(
     confidence: Int,
     optedIn: Boolean,
 ): Boolean = optedIn && confidence > 0
+
+internal fun overlayReasonLabelRes(reason: String): Int? {
+    val normalized = reason.trim().lowercase().replace(' ', '_')
+    return when (normalized) {
+        "premium_rate" -> R.string.overlay_reason_premium_rate
+        "wangiri_country" -> R.string.overlay_reason_wangiri
+        "invalid_format" -> R.string.overlay_reason_invalid_format
+        "voip_spam_range", "high_spam_npa" -> R.string.overlay_reason_voip_range
+        "hot_campaign_range" -> R.string.overlay_reason_hot_campaign
+        "toll_free" -> R.string.overlay_reason_toll_free
+        "neighbor_spoof" -> R.string.overlay_reason_neighbor_spoof
+        "rapid_fire" -> R.string.overlay_reason_rapid_fire
+        "spam_keywords" -> R.string.overlay_reason_spam_keywords
+        "shortened_url", "suspicious_tld" -> R.string.overlay_reason_risky_link
+        "suspicious" -> R.string.overlay_reason_suspicious_pattern
+        else -> spamTypeLabelRes(normalized)
+    }
+}
+
+internal fun looksLikeInternalOverlayReason(reason: String): Boolean = reason.matches(Regex("[a-z0-9]+(?:_[a-z0-9]+)+"))
 
 internal data class CallerIdOverlayPalette(
     val background: Int,
@@ -241,6 +262,7 @@ class CallerIdOverlayService : Service() {
         windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
         val formatted = PhoneFormatter.formatIsolated(number)
         val digits = filterAsciiDigits(number)
+        val displayReason = localizedOverlayReason(reason)
         val sessionId = SystemClock.elapsedRealtimeNanos()
 
         overlayView =
@@ -297,10 +319,10 @@ class CallerIdOverlayService : Service() {
                         setPadding(0, context.overlayDp(8f), 0, context.overlayDp(2f))
                     },
                 )
-                if (reason.isNotEmpty()) {
+                if (displayReason.isNotEmpty()) {
                     addView(
                         TextView(context).apply {
-                            text = reason
+                            text = displayReason
                             setTextColor(palette.subtext)
                             textSize = 12f
                         },
@@ -507,6 +529,14 @@ class CallerIdOverlayService : Service() {
         registerCallStateWatcher(sessionId, outgoingRiskWarning)
         return sessionId
     }
+
+    private fun localizedOverlayReason(reason: String): String =
+        overlayReasonLabelRes(reason)?.let(::getString)
+            ?: if (looksLikeInternalOverlayReason(reason)) {
+                getString(R.string.overlay_reason_suspicious_pattern)
+            } else {
+                reason
+            }
 
     /**
      * Dismiss the overlay when the phone returns to [TelephonyManager.CALL_STATE_IDLE].

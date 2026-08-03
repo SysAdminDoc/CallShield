@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.sysadmindoc.callshield.data.model.BlockedCall
 import com.sysadmindoc.callshield.data.model.PendingBlockedCallLog
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -52,12 +53,38 @@ class PendingBlockedCallLogDaoTest {
 
             assertTrue(dao.consumePendingBlockedCallLog(pending) != -1L)
             assertEquals(0, dao.getPendingBlockedCallLogCount())
-            assertEquals(1, dao.getNumberFrequencySince("+15551234567", since = 0L))
+            assertEquals(1, dao.getCallFrequencySince("+15551234567", since = 0L))
 
             assertTrue(dao.insertPendingBlockedCallLog(pending.copy(createdAt = 2_000L)) != -1L)
             assertEquals(-1L, dao.consumePendingBlockedCallLog(pending))
             assertEquals(0, dao.getPendingBlockedCallLogCount())
-            assertEquals(1, dao.getNumberFrequencySince("+15551234567", since = 0L))
+            assertEquals(1, dao.getCallFrequencySince("+15551234567", since = 0L))
+        }
+
+    @Test
+    fun messageLogsDoNotInflateCallFrequency() =
+        runBlocking {
+            val number = "+15551234568"
+            dao.insertBlockedCall(
+                BlockedCall(
+                    number = number,
+                    timestamp = 1_000L,
+                    type = "sms_spam",
+                    isCall = false,
+                    matchReason = "sms_content",
+                ),
+            )
+            dao.insertBlockedCall(
+                BlockedCall(
+                    number = number,
+                    timestamp = 2_000L,
+                    type = "call",
+                    isCall = true,
+                    matchReason = "database",
+                ),
+            )
+
+            assertEquals(1, dao.getCallFrequencySince(number, since = 0L))
         }
 
     @Test

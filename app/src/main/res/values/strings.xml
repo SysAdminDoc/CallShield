@@ -419,6 +419,17 @@
     <string name="overlay_header_outgoing_risk">Known-risk outgoing call</string>
     <string name="overlay_header_likely_spam">Likely Spam</string>
     <string name="overlay_header_suspicious">Suspicious</string>
+    <string name="overlay_reason_premium_rate">Premium-rate number</string>
+    <string name="overlay_reason_wangiri">One-ring scam pattern</string>
+    <string name="overlay_reason_invalid_format">Unusual number format</string>
+    <string name="overlay_reason_voip_range">High-risk VoIP range</string>
+    <string name="overlay_reason_hot_campaign">Active spam campaign</string>
+    <string name="overlay_reason_toll_free">Toll-free caller</string>
+    <string name="overlay_reason_neighbor_spoof">Possible neighbor spoofing</string>
+    <string name="overlay_reason_rapid_fire">Repeated call pattern</string>
+    <string name="overlay_reason_spam_keywords">Spam wording detected</string>
+    <string name="overlay_reason_risky_link">Risky link pattern</string>
+    <string name="overlay_reason_suspicious_pattern">Suspicious calling pattern</string>
     <string name="overlay_header_safe">Looks Safe</string>
     <string name="overlay_initial_score">Score: %1$d%%</string>
     <string name="overlay_outgoing_risk_score">Local risk confidence: %1$d%%</string>

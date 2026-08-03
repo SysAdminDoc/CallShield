@@ -2,6 +2,7 @@ package com.sysadmindoc.callshield.service
 
 import com.sysadmindoc.callshield.data.CategoryCallAction
 import com.sysadmindoc.callshield.service.CallShieldScreeningService.Companion.AUTO_MUTE_CONFIDENCE_THRESHOLD
+import com.sysadmindoc.callshield.service.CallShieldScreeningService.Companion.shouldPostFeedbackForCallState
 import com.sysadmindoc.callshield.service.CallShieldScreeningService.Companion.shouldSilence
 import com.sysadmindoc.callshield.service.CallShieldScreeningService.Companion.shouldSuppressAfterCallFeedback
 import org.junit.Assert.assertFalse
@@ -120,5 +121,26 @@ class CallShieldScreeningServiceAutoMuteTest {
         assertTrue(shouldSuppressAfterCallFeedback("emergency_callback"))
         assertFalse(shouldSuppressAfterCallFeedback("answered_caller"))
         assertFalse(shouldSuppressAfterCallFeedback("manual_whitelist"))
+    }
+
+    @Test fun `after-call prompt waits while phone state is active`() {
+        assertFalse(
+            shouldPostFeedbackForCallState(
+                canReadPhoneState = true,
+                callState = android.telephony.TelephonyManager.CALL_STATE_OFFHOOK,
+            ),
+        )
+        assertTrue(
+            shouldPostFeedbackForCallState(
+                canReadPhoneState = true,
+                callState = android.telephony.TelephonyManager.CALL_STATE_IDLE,
+            ),
+        )
+        assertTrue(
+            shouldPostFeedbackForCallState(
+                canReadPhoneState = false,
+                callState = android.telephony.TelephonyManager.CALL_STATE_OFFHOOK,
+            ),
+        )
     }
 }
