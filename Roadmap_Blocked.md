@@ -34,6 +34,24 @@ Items moved here from ROADMAP.md because they require external action, dedicated
 
 ## Blocked on External Action
 
+- [ ] P1 — Purge the historical Cloudflare account metadata blob
+  Why: `worker/.wrangler/cache/wrangler-account.json` remains readable from public commit `98a2a5c` even though `.wrangler/` is now ignored.
+  Blocker: Safe removal requires the operator to rotate and re-scope the Worker's `GITHUB_TOKEN`, then authorize a repository-wide `git-filter-repo` rewrite and force-push before verifying the historical path is gone from GitHub. The secret rotation cannot be completed from repository state.
+  Evidence: commit `98a2a5c`; `.gitignore`; `worker/.wrangler/cache/wrangler-account.json` (history only).
+  Complexity: S (operator action, destructive history rewrite)
+
+- [ ] P2 — Provision atomic Cloudflare report-rate controls and redeploy the Worker
+  Why: Source now fails closed without `RATE_LIMIT`, but `wrangler.toml` still has a placeholder namespace and eventual consistency makes KV read-modify-write non-atomic under concurrent requests. The deployed Worker also cannot receive the source fixes until its bindings and secrets are provisioned.
+  Blocker: Requires the operator's Cloudflare account to provision a Workers rate-limiting binding or Durable Object, supply the real KV/account configuration, set `GITHUB_TOKEN` and `REPORTER_BUCKET_SECRET`, and deploy.
+  Evidence: `worker/wrangler.toml`; `worker/community-reports-worker.js` (`validateReportEnvironment`, `checkRateLimit`, `checkDedup`).
+  Complexity: M (operator account + infrastructure migration)
+
+- [ ] P3 — Verify the deployed Cloudflare Worker against repository source
+  Why: Source behavior is covered locally, but safe confirmation of the live POST, secret bindings, atomic limiter, and deployed revision belongs after the operator redeploy above.
+  Blocker: Depends on the Cloudflare provisioning/redeploy item and operator access; probing state-changing abuse controls before that would create public report commits without proving the intended configuration.
+  Evidence: `worker/community-reports-worker.js`; deployed `callshield-reports.workers.dev` endpoint.
+  Complexity: S (operator verification)
+
 - [ ] P3 — Validate STIR PASSporT/attestation exposure, else formally close 2.3.1–2.3.5
   Why: Android's current public documentation says carrier SIP headers are not shared directly with apps because they contain PII; a default caller-ID/spam app receives only the `getCallerNumberVerificationStatus()` verdict. The API 35 and API 37 emulators available in this session have no cellular carrier or STIR/SHAKEN call path, so they cannot satisfy the roadmap's shipping-device validation requirement.
   Blocker: Requires a physical, shipping Android 11+ device on a STIR-capable carrier plus an authenticated incoming call. Capture the `Call.Details` surface and extras there before formally rejecting 2.3.1–2.3.5.

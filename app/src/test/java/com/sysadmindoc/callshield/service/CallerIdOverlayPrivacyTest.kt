@@ -1,5 +1,6 @@
 package com.sysadmindoc.callshield.service
 
+import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.ui.theme.AppThemeMode
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -21,6 +22,18 @@ class CallerIdOverlayPrivacyTest {
     @Test
     fun `live caller enrichment accepts opted in locally suspicious calls`() {
         assertTrue(shouldRunLiveCallerEnrichment(confidence = 45, optedIn = true))
+    }
+
+    @Test
+    fun `heuristic overlay reasons use localized resources`() {
+        assertEquals(R.string.overlay_reason_neighbor_spoof, overlayReasonLabelRes("neighbor_spoof"))
+        assertEquals(R.string.overlay_reason_hot_campaign, overlayReasonLabelRes(" hot_campaign_range "))
+    }
+
+    @Test
+    fun `unknown internal reason is recognized while human detail is preserved`() {
+        assertTrue(looksLikeInternalOverlayReason("experimental_signal_v2"))
+        assertFalse(looksLikeInternalOverlayReason("Washington, DC"))
     }
 
     @Test

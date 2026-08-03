@@ -3,10 +3,12 @@ package com.sysadmindoc.callshield.data.checker
 import android.content.Context
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.test.core.app.ApplicationProvider
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -29,13 +31,17 @@ class CheckerPipelineRunTest {
         override val priority: Int,
         override val name: String,
         private val enabled: Boolean = true,
+        private val throwOnEnablement: Boolean = false,
         private val throwOnCheck: Boolean = false,
         private val result: BlockResult? = null,
     ) : IChecker {
         var checked = false
             private set
 
-        override suspend fun isEnabled(ctx: CheckContext): Boolean = enabled
+        override suspend fun isEnabled(ctx: CheckContext): Boolean {
+            if (throwOnEnablement) error("enablement boom")
+            return enabled
+        }
 
         override suspend fun check(ctx: CheckContext): BlockResult? {
             checked = true
@@ -93,6 +99,36 @@ class CheckerPipelineRunTest {
             assertTrue(boom.checked)
             assertTrue(next.checked)
         }
+
+    @Test
+    fun `checker enablement exception is swallowed and the pipeline continues`() =
+        runBlocking {
+            val boom = FakeChecker(9_000, "boom", throwOnEnablement = true)
+            val next = FakeChecker(1_000, "next", result = BlockResult.block("next"))
+
+            val result = CheckerPipeline.run(listOf(boom, next), ctx())
+
+            assertEquals("next", result?.matchSource)
+            assertFalse(boom.checked)
+            assertTrue(next.checked)
+        }
+
+    @Test
+    fun `checker cancellation is propagated`() {
+        val cancelled =
+            object : IChecker {
+                override val priority = 9_000
+                override val name = "cancelled"
+
+                override suspend fun isEnabled(ctx: CheckContext): Boolean = true
+
+                override suspend fun check(ctx: CheckContext): BlockResult? = throw CancellationException("cancelled")
+            }
+
+        assertThrows(CancellationException::class.java) {
+            runBlocking { CheckerPipeline.run(listOf(cancelled), ctx()) }
+        }
+    }
 
     @Test
     fun `disabled checker is skipped without invoking check`() =

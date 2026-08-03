@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.datastore.preferences.core.Preferences
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.repository.SpamRepositoryImpl
+import kotlinx.coroutines.CancellationException
 
 /**
  * Priority-sorted detection pipeline.
@@ -268,10 +269,21 @@ object CheckerPipeline {
     ): BlockResult? {
         for (checker in sortedCheckers) {
             if (ctx.timeLeftMillis() <= 0L) return null
-            if (!checker.isEnabled(ctx)) continue
+            val enabled =
+                try {
+                    checker.isEnabled(ctx)
+                } catch (failure: CancellationException) {
+                    throw failure
+                } catch (failure: Exception) {
+                    Log.w("CheckerPipeline", "Checker ${checker.name} enablement failed", failure)
+                    false
+                }
+            if (!enabled) continue
             val result =
                 try {
                     checker.check(ctx)
+                } catch (failure: CancellationException) {
+                    throw failure
                 } catch (failure: Exception) {
                     Log.w("CheckerPipeline", "Checker ${checker.name} failed", failure)
                     null
@@ -295,6 +307,8 @@ object CheckerPipeline {
             val enabled =
                 try {
                     checker.isEnabled(ctx)
+                } catch (failure: CancellationException) {
+                    throw failure
                 } catch (_: Exception) {
                     false
                 }
@@ -305,6 +319,8 @@ object CheckerPipeline {
             val result =
                 try {
                     checker.check(ctx)
+                } catch (failure: CancellationException) {
+                    throw failure
                 } catch (_: Exception) {
                     null
                 }

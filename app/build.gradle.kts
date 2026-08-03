@@ -47,8 +47,8 @@ android {
         applicationId = "com.sysadmindoc.callshield"
         minSdk = 29
         targetSdk = 36
-        versionCode = 60
-        versionName = "1.7.32"
+        versionCode = 61
+        versionName = "1.7.33"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         manifestPlaceholders["appLabel"] = "@string/app_name"
     }

@@ -39,6 +39,7 @@ import org.robolectric.shadow.api.Shadow
 import org.robolectric.shadows.ShadowCallScreeningService
 import org.robolectric.shadows.ShadowUserManager
 import org.robolectric.util.ReflectionHelpers
+import javax.inject.Provider
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
@@ -53,6 +54,10 @@ class CallShieldScreeningServiceRobolectricTest {
 
     @Before
     fun setUp() {
+        // Robolectric keeps the shadow user manager across tests; start every
+        // ordinary screening case unlocked so direct-boot state from a prior
+        // test cannot divert this class into the device-encrypted mirror.
+        Shadow.extract<ShadowUserManager>(context.getSystemService(UserManager::class.java)).setUserUnlocked(true)
         fixture = IsolatedRepositoryFixture(context)
         repository = fixture.repository
         runBlocking {
@@ -132,6 +137,24 @@ class CallShieldScreeningServiceRobolectricTest {
         runBlocking { repository.setBlockCalls(false) }
 
         service.onScreenCall(callDetails("+12125550181"))
+
+        val response = awaitResponse()
+        assertFalse(response.disallowCall)
+        assertFalse(response.rejectCall)
+        assertFalse(response.silenceCall)
+    }
+
+    @Test
+    fun `onScreenCall fails open when lazy repository creation throws`() {
+        val failingService = Robolectric.setupService(CallShieldScreeningService::class.java).also {
+            it.applicationScope = scope
+            it.repoProvider = object : Provider<SpamRepository> {
+                override fun get(): SpamRepository = error("repository initialization failed")
+            }
+        }
+        shadowService = Shadow.extract(failingService)
+
+        failingService.onScreenCall(callDetails("+12125550180"))
 
         val response = awaitResponse()
         assertFalse(response.disallowCall)

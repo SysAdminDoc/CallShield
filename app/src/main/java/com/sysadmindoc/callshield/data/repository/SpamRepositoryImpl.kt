@@ -84,10 +84,10 @@ class SpamRepositoryImpl(
 
     internal suspend fun getActiveHashWildcardsCachedInternal(): List<HashWildcardRule> = cachedHashWildcardRules ?: dao.getActiveHashWildcardRules().also { cachedHashWildcardRules = it }
 
-    internal suspend fun getNumberFrequencySinceInternal(
+    internal suspend fun getCallFrequencySinceInternal(
         number: String,
         since: Long,
-    ): Int = dao.getNumberFrequencySince(number, since)
+    ): Int = dao.getCallFrequencySince(number, since)
 
     internal suspend fun getRecentBlockedNumbersInternal(since: Long): List<BlockedCall> = dao.getRecentBlockedNumbers(since)
 

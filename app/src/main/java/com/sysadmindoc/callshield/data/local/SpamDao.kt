@@ -256,8 +256,8 @@ interface SpamDao {
     // Feature 10: Frequency tracking — count how many times a number appears in
     // the log within a time window. Unbounded counts caused false positives for
     // legitimate callers with 3+ calls spread over months.
-    @Query("SELECT COUNT(*) FROM call_log WHERE number = :number AND timestamp > :since")
-    suspend fun getNumberFrequencySince(
+    @Query("SELECT COUNT(*) FROM call_log WHERE number = :number AND isCall = 1 AND timestamp > :since")
+    suspend fun getCallFrequencySince(
         number: String,
         since: Long,
     ): Int

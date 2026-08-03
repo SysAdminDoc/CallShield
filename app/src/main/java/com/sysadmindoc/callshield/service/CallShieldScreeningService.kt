@@ -20,9 +20,11 @@ import com.sysadmindoc.callshield.di.ApplicationScope
 import com.sysadmindoc.callshield.domain.model.CallerIdentity
 import com.sysadmindoc.callshield.domain.usecase.CheckSpamUseCase
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Provider
@@ -95,16 +97,26 @@ class CallShieldScreeningService : CallScreeningService() {
         // subsequent logging/notification always run to completion.
         applicationScope.launch {
             val appContext = applicationContext
-            val repository = repository()
-            val heuristics = heuristics()
-            try {
+            // The checker pipeline has its own budget accounting, but provider
+            // creation, Room startup, and an individual DAO call can still
+            // stall before a checker gets a chance to observe that budget.
+            // Keep a 500 ms response buffer for Telecom's five-second window.
+            withTimeoutOrNull(SCREENING_TIMEOUT_MS) {
+                try {
+                // Resolve injected providers inside the fail-open boundary. Room,
+                // DataStore, or a Hilt component can fail during lazy creation;
+                // resolving them before this try block would crash the coroutine
+                // without ever sending telecom an explicit response.
+                val repository = repository()
+                val heuristics = heuristics()
+
                 // One snapshot of all prefs — the 5-second deadline is tight
                 // and individual Flow.first() calls each spin up a collector.
                 val prefs = repository.readPrefsSnapshot()
 
                 if (!(prefs[SpamRepository.KEY_BLOCK_CALLS] ?: true)) {
                     respondAllow(callDetails)
-                    return@launch
+                    return@withTimeoutOrNull
                 }
 
                 val handle = callDetails.handle
@@ -116,7 +128,7 @@ class CallShieldScreeningService : CallScreeningService() {
                     } else {
                         respondAllow(callDetails)
                     }
-                    return@launch
+                    return@withTimeoutOrNull
                 }
 
                 // Contact whitelist — cached inside SpamHeuristics so this stays cheap.
@@ -132,7 +144,7 @@ class CallShieldScreeningService : CallScreeningService() {
                     )
                 ) {
                     respondAllow(callDetails)
-                    return@launch
+                    return@withTimeoutOrNull
                 }
 
                 // STIR/SHAKEN now lives in the pipeline as StirShakenChecker so a
@@ -199,14 +211,28 @@ class CallShieldScreeningService : CallScreeningService() {
                         // time 10 s has passed. Contact status is re-checked at
                         // post-time in case the user just added the caller.
                         applicationScope.launch {
-                            delay(10_000L)
-                            if (!heuristics.isInContacts(appContext, number)) {
-                                NotificationHelper.notifyAfterCall(appContext, number)
+                            try {
+                                if (waitForFeedbackWindow(appContext) &&
+                                    !heuristics.isInContacts(
+                                        appContext,
+                                        number,
+                                        prefs[SpamRepository.KEY_SELECTED_CONTACT_GROUPS]
+                                            ?.let(ContactGroupCatalog::preserveScope),
+                                    )
+                                ) {
+                                    NotificationHelper.notifyAfterCall(appContext, number)
+                                }
+                            } catch (failure: CancellationException) {
+                                throw failure
+                            } catch (failure: Exception) {
+                                Log.w(TAG, "After-call feedback failed", failure)
                             }
                         }
                     }
                 }
-            } catch (e: Exception) {
+                } catch (failure: CancellationException) {
+                    throw failure
+                } catch (e: Exception) {
                 // Guarantee a response even on error — fail-open (allow call through).
                 try {
                     respondAllow(callDetails)
@@ -226,7 +252,8 @@ class CallShieldScreeningService : CallScreeningService() {
                     } catch (_: Exception) {
                     }
                 }
-            }
+                }
+            } ?: respondAllow(callDetails)
         }
     }
 
@@ -418,12 +445,46 @@ class CallShieldScreeningService : CallScreeningService() {
 
     private fun repository(): SpamRepository = if (::repo.isInitialized) repo else repoProvider.get()
 
+    private suspend fun waitForFeedbackWindow(context: android.content.Context): Boolean {
+        delay(AFTER_CALL_FEEDBACK_DELAY_MS)
+        if (context.checkSelfPermission(android.Manifest.permission.READ_PHONE_STATE) !=
+            android.content.pm.PackageManager.PERMISSION_GRANTED
+        ) {
+            return true
+        }
+        val telecomState =
+            try {
+                context.getSystemService(android.telephony.TelephonyManager::class.java)
+            } catch (_: RuntimeException) {
+                null
+            } ?: return true
+
+        return withTimeoutOrNull(AFTER_CALL_MAX_WAIT_MS) {
+            @Suppress("DEPRECATION")
+            while (shouldPostFeedbackForCallState(canReadPhoneState = true, callState = telecomState.callState).not()) {
+                delay(AFTER_CALL_STATE_POLL_MS)
+            }
+            true
+        } ?: false
+    }
+
     private fun spamChecker(): CheckSpamUseCase = if (::checkSpam.isInitialized) checkSpam else checkSpamProvider.get()
 
     private fun heuristics(): SpamHeuristics = if (::spamHeuristics.isInitialized) spamHeuristics else spamHeuristicsProvider.get()
 
     companion object {
         private const val TAG = "CallShieldScreening"
+        private const val SCREENING_TIMEOUT_MS = 4_500L
+        private const val AFTER_CALL_FEEDBACK_DELAY_MS = 10_000L
+        private const val AFTER_CALL_STATE_POLL_MS = 1_000L
+        private const val AFTER_CALL_MAX_WAIT_MS = 4L * 60L * 60L * 1000L
+
+        internal fun shouldPostFeedbackForCallState(
+            canReadPhoneState: Boolean,
+            callState: Int,
+        ): Boolean =
+            !canReadPhoneState ||
+                callState == android.telephony.TelephonyManager.CALL_STATE_IDLE
 
         // Blocks at or above this confidence are always hard-rejected even
         // with auto-mute on — a database hit, user blocklist, STIR fail, or

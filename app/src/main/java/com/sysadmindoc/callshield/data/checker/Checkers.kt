@@ -692,17 +692,28 @@ internal class FrequencyEscalationChecker(
     override val priority = CheckerPriority.FREQUENCY_ESCALATION
     override val name = "frequency"
 
-    override suspend fun isEnabled(ctx: CheckContext): Boolean = ctx.prefs[SpamRepository.KEY_FREQ_ESCALATION] ?: true
+    override suspend fun isEnabled(ctx: CheckContext): Boolean =
+        shouldRun(
+            settingEnabled = ctx.prefs[SpamRepository.KEY_FREQ_ESCALATION] ?: true,
+            isSms = ctx.smsBody != null,
+        )
 
     override suspend fun check(ctx: CheckContext): BlockResult? {
         val windowMs = 7 * 86_400_000L // 7-day window
-        val freq = repo.getNumberFrequencySinceInternal(ctx.number, System.currentTimeMillis() - windowMs)
+        val freq = repo.getCallFrequencySinceInternal(ctx.number, System.currentTimeMillis() - windowMs)
         val threshold = (ctx.prefs[SpamRepository.KEY_FREQ_THRESHOLD] ?: 3).coerceAtLeast(2)
         return if (freq >= threshold) {
             BlockResult.block("frequency", "repeat_caller", "Called $freq times in 7 days - auto-blocked")
         } else {
             null
         }
+    }
+
+    companion object {
+        internal fun shouldRun(
+            settingEnabled: Boolean,
+            isSms: Boolean,
+        ): Boolean = settingEnabled && !isSms
     }
 }
 
