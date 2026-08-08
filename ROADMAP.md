@@ -152,6 +152,8 @@ The helper objects are now constructor-injectable classes. `DetectionModule` pro
 | 1.8.1 Audit all main Kotlin files for hardcoded user-facing strings | S | `[DONE]` `docs/hardcoded-string-audit.md`, `res/values/strings.xml` |
 | 1.8.3 Number-formatting localization — display E.164 numbers in local format ((212) 555-0100 in en-US, +33 1 23 45 67 89 in fr-FR) using `libphonenumber` or `PhoneNumberUtils.formatNumber()` [Addendum B item B.27] | M | `data/PhoneFormatter.kt` |
 
+> **2026-08-04 research note (1.8.3 / B.U.7):** prefer bundling over the platform API. `PhoneNumberUtils.formatNumber(String, String)` delegates to the OEM's *bundled* libphonenumber, so output varies per device and goes stale on old builds; the single-arg overloads are deprecated since API 21. Use `io.michaelrocks:libphonenumber-android:9.0.36` (tracks upstream within days, loads metadata via `AssetManager` as upstream's own Android guidance asks). Upstream jar is 360,303 bytes; measure the real APK delta with `bundletool` before committing — the size cost is the only open question, not the choice.
+
 ---
 
 ## Phase 2 — Detection Quality
@@ -213,6 +215,8 @@ Skeleton ("Was this spam?" notification) shipped in v1.4.x. Remaining:
 | 2.6.2 `isSpam()` perf benchmark, hard ceiling 50 ms p99 | `[WIP]` | `HotPathBenchmarkTest.kt` exists; needs local gate | `androidTest/.../SpamCheckBenchmark.kt` |
 | 2.6.4 **Baseline Profile** for screener cold-start [Addendum B item B.30] — first-call latency drops measurably; CallScreeningService has 5 s deadline | M | `[NEXT]` | `app/baselineprofile/` |
 
+> **2026-08-04 research note (2.6.4):** profile the **service** path, not the launcher activity. A `StartupMode.COLD` activity benchmark will not cover Hilt graph construction, Room open, or the DataStore snapshot on the `onScreenCall` path after process death, which is the only latency that can drop a call. `androidx.benchmark` stable is 1.4.1 (1.5.0-beta01 2026-07-29); 1.5.0 flips `androidx.benchmark.requireAot` to default-true, which is what you want here.
+
 ---
 
 ## Phase 3 — Real-Time Data Pipeline
@@ -235,6 +239,8 @@ Skeleton ("Was this spam?" notification) shipped in v1.4.x. Remaining:
 | Task | Size | Files |
 |------|------|-------|
 | 3.2.1 Delta API — `last_sync_timestamp` → only-deltas response | L | `data/remote/ApiDataSource.kt`, server |
+
+> **2026-08-04 research note (3.2.1):** the transfer problem does not need the server. `data/spam_numbers.json` is 11.1 MB / 413,876 lines / 51,463 numbers, is bundled into the APK by `stageBundledAssets`, is re-downloaded whole whenever its SHA moves (7× in the last 200 commits), and is rewritten wholesale in git each time. A static content-addressed shard set on GitHub raw — a small manifest of shard hashes plus per-shard files, fetch only the shards whose hash changed — gets most of the win with no backend and keeps the legacy full-file URL serving for old clients. See the P1 item in Research-Driven Additions (2026-08-04). YetAnotherCallBlocker's incremental daily deltas are the prior art.
 | 3.2.2 SSE push for new hot numbers within 30 s of ingestion | XL | server, new `service/RealtimeSyncService.kt` |
 | 3.2.3 Polling fallback when SSE drops | M | `HotListSyncWorker.kt` |
 
@@ -276,6 +282,8 @@ This one is worth doing **without** a backend. The bloom filter alone gives O(μ
 | Task | Size | Files |
 |------|------|-------|
 | 4.2.1 `calculateWindowSizeClass()` + `androidx.window 1.3+` [src research] | S | `MainActivity.kt` |
+
+> **2026-08-04 research note (4.2):** current stable is `androidx.window` **1.5.1**, which adds Large/XLarge breakpoints, `WindowMetrics` from an application `Context`, and direct `WindowLayoutInfo` getters; `WindowSizeClass` stays in androidx.window (no Material3 migration). This tranche also stops being optional at targetSdk 37: the orientation/resizability/aspect-ratio opt-out is removed for `sw >= 600dp` and `PROPERTY_COMPAT_ALLOW_RESTRICTED_RESIZABILITY` stops working. Note there are currently no `values-land` or `sw600dp` resources of any kind.
 | 4.2.2 Tablet list-detail pane for blocklist / log | L | screen files |
 | 4.2.3 Foldable `FoldingFeature` support | M | `MainActivity.kt` |
 | 4.2.4 Landscape — horizontal stats, wider dialogs | M | screens |
@@ -318,6 +326,8 @@ This one is worth doing **without** a backend. The bloom filter alone gives O(μ
 |------|------|-------|
 | 4.7.2 Translate to ES, FR, DE, PT, JA, KO. Plus **TR, ES-MX, IT, NL, PL, RU** based on top OSS-app reach. Each L. | many | `res/values-{lang}/strings.xml` |
 | 4.7.3 RTL layout (Arabic, Hebrew) | M | layouts |
+
+> **2026-08-04 research note (4.7 — this is a zero, not a partial):** `res/` contains **no `values-<lang>` directory at all**, and `res/xml/locales_config.xml` lists only `en`. Everything else already exists — 1,103 strings, 30 `<plurals>`, `ui/AppLanguage.kt`, the in-app language picker, `autoStoreLocales`, `docs/TRANSLATING.md`, and `scripts/check_translations.py` wired into `verifyPipelineTests`. So the first locale is a data drop, not an engineering task, and it unblocks the whole tranche. Landing one locale end-to-end also proves the gate: `check_translations.py` fails on format-specifier drift, missing plural quantities, and any locale absent from `locales_config.xml` — none of which can be exercised today. Priority is not cosmetic: "US-centric, useless outside North America" is a recurring reason users abandon this app category (F-Droid forum "Best call blocker" thread).
 
 ### 4.8 Spam Trends Dashboard `[NEXT]`
 
@@ -412,14 +422,14 @@ Harvested from a 30-source sweep (see Appendix). Scoped to NEW signal not alread
 | B.O.1 | **"Explain this decision" drawer** — tap any log entry to see rules triggered, in priority order, with confidence | 4 | 2 | [research] | Cheap with existing `IChecker` returning `BlockResult` reasons |
 | B.U.8 | Predictive back full preview (where missing) | 2 | 2 | [28] | Polish for Android 14+ |
 | B.S.2 | Certificate pinning for **all** API endpoints (existing `network_security_config.xml` covers cleartext only) | 4 | 2 | [research] | `[DONE]` v1.7.6: central OkHttp `CertificatePinner` covers GitHub, Cloudflare Worker, URLhaus, AbstractAPI, and caller-ID enrichment hosts. |
-| B.U.9 | `androidx.glance` widget rewrite (current widget is `RemoteViews`); pin Glance ≥ 1.1.1 against **CVE-2024-7254** | 3 | 3 | [22] | Widget preview API + adaptive sizing |
+| B.U.9 | `androidx.glance` widget rewrite (current widget is `RemoteViews`); pin Glance ≥ 1.1.1 against **CVE-2024-7254** | 3 | 3 | [22] | **2026-08-04: defer.** Glance stable is *still* 1.1.1; 1.2.0 has sat at `rc01` since 2025-12-03 with no promotion while 1.3.0-alpha moved on to Wear widgets. Every reason to do the rewrite — `providePreview`/`setWidgetPreview`, `MultiProcessGlanceAppWidget`, `previewSize` — lives only in the RC. An 8-month-stalled RC is not a dependency to ship on. |
 
 ### B.NEXT — Next (3–6 releases)
 
 | ID | Item | Impact | Effort | Source | Notes |
 |----|------|-------:|-------:|--------|-------|
 | B.F.9 | **ICS / iCal calendar-based scheduling** — parse iCal subscription URL into dynamic allow windows (shift workers, on-call) | 3 | 4 | [SpamBlocker #359] | Builds on existing per-rule schedule (A6) |
-| B.F.10 | **DID range fuzzy matching** — allow numbers within ±N of a saved contact's number | 2 | 2 | [SpamBlocker #554] | Covers contacts whose business rotates last digits |
+| B.F.10 | **DID range fuzzy matching** — allow numbers within ±N of a saved contact's number | 2 | 2 | [SpamBlocker #554] | **2026-08-04: raise impact to 4.** SpamBlocker shipped this as "Contact Prefix" in v5.7 (contact `xxxxxxx111` auto-allows `xxxxxxx000–999`). It is the cheapest available cut in the highest-cost false-positive class — clinic/PBX/school switchboards that rotate the last digits — which is one of the best-documented harm classes for call blockers. Prefer the prefix/length-locked form over ±N; it composes with the existing `HashWildcardMatcher`. |
 | B.F.11 | **Family DB sharing** — opt-in mesh-share local user blocklist with N trusted devices via QR-paired keys | 4 | 4 | [SpamBlocker #549] | ⚠ Privacy: end-to-end encrypted; no server involvement |
 | B.F.12 | **Wi-Fi SSID / geofence rule profiles** — corporate SSID = work rules, home SSID = relaxed | 3 | 3 | [research, NetGuard pattern] | Builds on existing BlockingProfiles |
 | B.F.13 | **Bidirectional blocklist subscription** — publish your local list as a stable URL others can subscribe to (Pi-hole / OPML model) | 3 | 4 | [26] | Pairs with B.F.7 |
@@ -739,3 +749,176 @@ Only incomplete, implementation-ready items from the research pass are listed he
   Touches: Gradle verification, metadata checker, dependency lock/advisory report, release documentation.
   Acceptance: one command reports synchronized version strings, current source metadata, dependency versions, known advisories, and generated snapshot provenance; stale docs or missing changelog/attribution fail before release.
   Complexity: S
+
+## Research-Driven Additions (2026-08-04 pass — anchored to v1.7.33, versionCode 61, rev 2834d0b)
+
+Sweep focused on angles the 2026-08-02 source/feed pass did not cover: release delivery, the app's own runtime data plane, Android 16/17 behavior changes, OSS competitor releases through SpamBlocker v5.14, dependency currency + advisories, explainability UX prior art, and the FCC/WCAG obligations a blocker inherits. Every item below was verified against code, data files, published artifacts, or a primary source during this pass, and cross-checked against Phases 1-5, Addendum A/B, all prior Research-Driven and Audit sections, and `Roadmap_Blocked.md`. Items that restate a tracked entry are annotated inline above rather than duplicated here. Baseline at audit time: `testDebugUnitTest` = 991 tests, **1 failing** (`DirectBootScreeningStoreTest:27`).
+
+### P0 — delivery and data integrity
+
+- [ ] P0 — Sign every published release artifact with one stable release key, and make the signing gate a build dependency
+  Why: the shipped `CallShield-v1.7.29.apk` is unsigned, so Android's PackageManager cannot install it — the current public download is inert, and the same defect blocks F-Droid, IzzyOnDroid and Accrescent at once.
+  Evidence: `apksigner verify --print-certs CallShield-v1.7.29.apk` → `DOES NOT VERIFY / ERROR: Missing META-INF/MANIFEST.MF`; no `APK Sig Block 42` magic in the file; sha256 `f61d865c…3e01` and size 8,460,144 match the GitHub release asset byte-for-byte. `app/build.gradle.kts:88-93` sets `signingConfig = null` whenever the four `RELEASE_*` properties are absent instead of failing. `docs/fdroid/com.sysadmindoc.callshield.yml` pins `AllowedAPKSigningKeys: d179d0da…` with a `Binaries:` URL, which can never verify against an unsigned asset. IzzyOnDroid App Inclusion Policy (release-key signed, no debug/testOnly); Accrescent publish requirements (v2/v3 required, v1 and debug certs rejected, single cert).
+  Touches: `app/build.gradle.kts` (release `signingConfig`), `scripts/verify-release-signing.ps1`, `scripts/write-release-sha256.ps1`, root `build.gradle.kts` (`verifyReleaseSigningPolicyTests`), `docs/reproducible-builds.md`, release runbook.
+  Acceptance: `assembleRelease` fails loudly when release signing properties are missing rather than emitting an unsigned APK; `verify-release-signing.ps1` runs as a `finalizedBy`/`dependsOn` of the release artifact, not as a remembered manual step; `apksigner verify --print-certs` on the published artifact prints exactly one signer whose SHA-256 equals the `AllowedAPKSigningKeys` value in the F-Droid metadata; the runbook states which keystore is canonical and what happens to existing installs signed by a different key.
+  Complexity: S (blocked on Open Question 1 in `RESEARCH.md` — which key is canonical)
+
+- [ ] P0 — Distinguish "feed returned nothing" from "feed unavailable"; never let an empty success delete a tier
+  Why: `data/hot_numbers.json`, `data/hot_ranges.json` and `data/spam_domains.json` have all carried `count: 0` since 2026-07-30, and an empty-but-successful fetch is applied destructively — so every install wipes its hot-list rows, hot campaign ranges and SMS spam-domain set every 30 minutes. Three checker tiers are inert fleet-wide and nothing reports it.
+  Evidence: `service/HotDataSync.kt` — `loadHotList`/`loadHotRanges`/`loadSpamDomains` return `resolved = true` on any HTTP success including an empty array, and `resolved` drives `repo.replaceHotList(...)` → `SpamDao.replaceBySource` (`SpamDao.kt:100-106`, delete-then-insert-if-non-empty), `SpamHeuristics.updateHotRanges(empty)`, `SmsContentAnalyzer.updateSpamDomains(empty)`. The v1.7.28 `shouldUseBundledFallback` guard covers fetch *failure* only. `app/build.gradle.kts:29-40` bakes the same empty files into the APK, and `primeBundled` only fills an already-empty store, so the bundled snapshot cannot repair it.
+  Touches: `service/HotDataSync.kt`, `data/repository/SyncRepository.kt`, `data/SpamHeuristics.kt`, `data/SmsContentAnalyzer.kt`, `service/HotListSyncWorker.kt`, `androidTest/.../service/HotListSyncIntegrationTest.kt`.
+  Acceptance: a successful fetch returning zero entries leaves existing rows/sets untouched and is recorded as a distinct outcome, not as a refresh; a feed that legitimately empties requires an explicit signal in the payload (for example an explicit `cleared: true` or a generation counter) before any destructive replace runs; tests cover empty-success, failure-with-existing-data, failure-with-no-data, and explicit-clear for all three feeds; the app surfaces "hot data unavailable / last good N hours ago" instead of silently reporting a healthy sync.
+  Complexity: S
+
+- [ ] P0 — Upgrade the Gradle wrapper off 8.11.1 and pin the distribution checksum
+  Why: 8.11.1 is affected by two High-severity advisories with a published fix, and the wrapper properties carry no `distributionSha256Sum`, so the distribution download itself is unverified.
+  Evidence: `gradle/wrapper/gradle-wrapper.properties` → `gradle-8.11.1-bin.zip`, no `distributionSha256Sum`. CVE-2026-22865 / GHSA-mqwm-5m85-gmcv and CVE-2026-22816 / GHSA-w78c-w6vf-rw82, both CVSS4 8.6, affect `< 8.14.4`; fixed in 8.14.4 (8.x line) and 9.3.0.
+  Touches: `gradle/wrapper/gradle-wrapper.properties`, `gradlew`, `gradlew.bat`, all Gradle lockfiles if resolution shifts.
+  Acceptance: wrapper is at 8.14.4 or later (8.14.4 keeps AGP 8.10.1 viable and does not pull in the AGP-9 tranche); `distributionSha256Sum` is set and `validateDistributionUrl=true` retained; `testDebugUnitTest`, `ktlintCheck`, `detekt`, `lintDebug`, `koverVerify`, `verifyReleaseMetadata`, `verifyPipelineTests` and `assembleRelease` all pass on the new wrapper.
+  Complexity: S
+
+- [ ] P0 — Stop depending on `android:priority="999"` for SMS ordering
+  Why: on Android 16, for all apps regardless of `targetSdk`, ordered-broadcast `android:priority` is honoured only among receivers inside the declaring process. The manifest's stated ordering guarantee is already false on shipping devices, so the SMS path's behaviour relative to the default SMS app is now undefined rather than merely fragile.
+  Evidence: `AndroidManifest.xml:101` (`<intent-filter android:priority="999">` on `SMS_RECEIVED`); Android 16 behavior changes for all apps (developer.android.com/about/versions/16/behavior-changes-all).
+  Touches: `AndroidManifest.xml`, `service/SmsReceiver.kt`, `permissions/CallShieldPermissions.kt` (capability/degraded-mode matrix), onboarding and Settings copy, `test/.../service/SmsReceiverReassemblyTest.kt` and the Robolectric receiver tests.
+  Acceptance: no code path assumes CallShield observed an SMS before another app did; ordering-dependent behaviour (suppression expectations, dedup against the inbox) is either removed or re-expressed as best-effort with an explicit degraded state; the capability matrix reports on Android 16+ that SMS interception is advisory, and user-facing copy no longer promises suppression it cannot deliver; a comment on the manifest attribute records why it is retained (pre-16 devices) rather than trusted.
+  Complexity: M
+
+### P1 — safety floors, auditability, and currency
+
+- [ ] P1 — Add never-block floors for verification/OTP messages and emergency numbers, plus a redress-shaped blocked-call export
+  Why: nothing in the SMS path exempts one-time-passcode traffic, so a 2FA code from an unfamiliar shortcode can be eaten by content keywords or by `sms_burst` (4650) — a harm class already aggravated by carrier-side A2P filtering. There is likewise no floor stopping any rule from blocking an emergency/PSAP number, and no export shaped like the redress obligation regulators impose on blockers.
+  Evidence: grep for `otp` / `verification code` / `one-time` across `data/SmsContentAnalyzer.kt` and `service/SmsReceiver.kt` returns nothing; `EMERGENCY_NUMBERS` in `data/CallbackDetector.kt:328` exists only to recognise *outgoing* emergency calls for the callback grace window. 47 CFR §64.1200(k): a blocking provider may not block emergency calls, must cease erroneous blocking promptly on credible demonstration, and must supply on request a free list of blocked calls with date, time and calling number.
+  Touches: new floor checkers above `MANUAL_WHITELIST` in `data/checker/IChecker.kt` + `Checkers.kt`, `data/SmsContentAnalyzer.kt`, `data/LogExporter.kt`, `ui/screens/main/BlockedLogScreen.kt`, `res/values/strings.xml`, checker priority regression tests.
+  Acceptance: a message matching a bounded OTP/verification shape is never blocked and is logged as floor-exempted with the rule that *would* have fired; emergency and PSAP-shaped numbers cannot be blocked by any rule including a user rule, and the UI explains the refusal rather than silently ignoring the rule; a one-tap export produces a blocked-call list carrying date, time, number and reason, documented as the redress artefact; priority-ladder regression tests assert the floors outrank every existing checker. Cross-references the tracked Android 15-17 notification/SMS capability item, which handles *missing* evidence; this item handles *present* evidence that must not be acted on.
+  Complexity: M
+
+- [ ] P1 — Surface `BackgroundExecutionStatus` in the UI
+  Why: the OEM background-kill classifier is fully implemented and unit-tested but has **zero production consumers**, so the app cannot tell a user that Xiaomi Autostart was reset by an OTA or that Samsung has put it to sleep — the failure mode where a blocker appears installed and does nothing.
+  Evidence: `grep -rn BackgroundExecutionStatus app/src/main/java` matches only its own file; the only other reference is `test/.../permissions/BackgroundExecutionStatusTest.kt`. v1.7.17 shipped it with "UI surfacing deferred". dontkillmyapp.com documents the Xiaomi/Samsung behaviours; SpamBlocker issue #362 (46 comments) is the canonical "it silently stopped screening" thread.
+  Touches: `permissions/BackgroundExecutionStatus.kt`, `ui/screens/main/DashboardScreen.kt` (or the Protection Test surface), `ui/MainViewModel.kt`, `service/ProtectionHealthWorker.kt`, `res/values/strings.xml`, a Compose test.
+  Acceptance: when `isAtRisk()` is true the app shows a persistent, dismissible warning naming the specific risk and offering the battery-exemption / MIUI-autostart intent; the state is re-evaluated on resume and after `MY_PACKAGE_REPLACED`; the class has at least one production call site so it cannot silently rot again; the warning is covered by a Compose test.
+  Complexity: S
+
+- [ ] P1 — Gate the data pipeline against feed collapse and drain the report queue
+  Why: the generated feeds went to zero on 2026-07-30 and nothing failed. `merge_community_reports.py` deletes `data/reports/*.json`, which the hot-list and spam-domain generators read, so running them out of order silently produces exactly the empty files now shipping. 35 reports sit unprocessed, roughly 29 of them fictional `+1555…` test numbers.
+  Evidence: `data/hot_numbers.json`, `data/hot_ranges.json`, `data/spam_domains.json` all `count: 0`, `generated: 2026-07-30T17:40`; `data/reports/` holds 35 files; ordering hazard documented in `data/README.md`; `scripts/generate_hot_list.py`, `scripts/extract_spam_domains.py`, `scripts/merge_community_reports.py`.
+  Touches: `scripts/generate_hot_list.py`, `scripts/extract_spam_domains.py`, `scripts/merge_community_reports.py`, `scripts/pipeline_io.py`, `scripts/run-pipeline-tests.ps1`, `scripts/test_report_pipeline.py`, `data/README.md`.
+  Acceptance: a generator that would write an output smaller than a configured floor (absolute count and/or percentage of the previous run) exits non-zero and leaves the previous file in place unless an explicit `--allow-collapse` flag is passed; the merge refuses to run before the generators in the same cycle, or the generators no longer depend on files the merge deletes; the queued reports are drained and the resulting feeds committed; `data/README.md` documents all six files in `data/`, not just `spam_numbers.json`.
+  Complexity: S
+
+- [ ] P1 — Replace free-text `matchReason` with a stable enumerated reason code plus the matching rule ID
+  Why: "why was this blocked" is currently a `String` threaded from checkers through Room, `BlockReasoning`, `MatchReasonLabels`, exports and the widget — which is why localizing it, filtering by it and exporting it have each been reworked separately, and why a log row cannot say *which* of your rules fired. Every serious filtering tool stores an enumerated code plus the responsible rule.
+  Evidence: Pi-hole's query database stores a 19-value enumerated `status` plus `regex_id` and `additional_info` (docs.pi-hole.net/database/query-database/); NextDNS exposes `status`/`reasons`/`matched_name` in UI, API and CSV; uBlock Origin's logger shows the responsible filter in its own column. In-repo: `data/checker/IChecker.kt` `BlockResult`, `data/BlockReasoning.kt`, `ui/MatchReasonLabels.kt`, `data/model/BlockedCall.kt`, `data/LogExporter.kt`.
+  Touches: `data/checker/IChecker.kt` + `Checkers.kt` (all 27 checkers), `data/model/BlockedCall.kt`, Room migration (v13 → v14), `data/BlockReasoning.kt`, `ui/MatchReasonLabels.kt`, `data/LogExporter.kt`, `ui/screens/main/BlockedLogScreen.kt`, `androidTest/.../AppDatabaseMigrationTest.kt`.
+  Acceptance: every `BlockResult` carries a stable enum value and, where a user-authored rule matched, that rule's row id; the blocked log can filter by reason code; CSV/JSON export includes both code and rule id; existing rows migrate to their equivalent code without loss; the enum is the only thing tests and the widget switch on, and no consumer parses a human string. Supersedes the string-matching half of B.O.1 (the "explain this decision" drawer keeps its UI scope and becomes cheap once this lands).
+  Complexity: M
+
+- [ ] P1 — Extend the automated accessibility harness to every screen and raise its severity threshold
+  Why: the harness already exists and already fails tests, but runs on 4 of roughly 21 screens at the default severity, so contrast, touch-target and traversal-order findings — the ones that matter for a red/green verdict UI — are never enforced. Meanwhile only 59 `contentDescription` sites exist across roughly 30 screens and about 16 uses of `semantics{}`/`heading()`/`liveRegion`/`customActions` repo-wide.
+  Evidence: `enableAccessibilityChecks()` + `tryPerformAccessibilityChecks()` appear only in `DashboardTest`, `BlocklistTest`, `SettingsTest`, `OnboardingTest`; `libs.androidx.compose.ui.test.junit4.accessibility` is declared in `app/build.gradle.kts:277`. Unchecked: Lookup, NumberDetail, Stats, Activity, BlockedLog, RecentCalls, More, Changelog, ProtectionTest and the four settings sheets. WCAG 2.2 adds 2.5.8 Target Size (Min) and 2.5.7 Dragging Movements — the latter directly implicates swipe-to-unblock and swipe-to-delete.
+  Touches: all `app/src/androidTest/.../ui/**` test files, `ui/AccessibilitySemantics.kt`, the screen files that fail, `app/build.gradle.kts` if a shared rule is extracted.
+  Acceptance: every Compose screen and bottom sheet has an accessibility-check test; the validator is configured with `setThrowExceptionFor(WARNING)` so contrast and touch-target findings fail rather than log; every swipe action has an equivalent `customActions` entry (WCAG 2.2 2.5.7); no verdict is conveyed by colour alone — each red/green state carries text or a distinct icon. Cross-references 4.6.1-4.6.4, which remain the *manual* TalkBack/contrast/touch-target audits; this item is the automated floor that keeps them from regressing.
+  Complexity: M
+
+- [ ] P1 — Take the intermediate dependency refresh that does not require AGP 9
+  Why: several pins are 18+ months stale and the whole tranche has been parked behind the blocked AGP-9 session, but AGP has a current **8.x** line (8.13.2) and KSP has decoupled from the Kotlin version, so most of the refresh is available without touching the AGP-9 gate. Recording this separately also corrects a false precondition: the AGP-9 tranche lists "Kotlin ≥ 2.4.20" as the CVE-2026-53914 fix, and 2.4.20 is still Beta2 with GA slated for September 2026 — no stable upgrade closes that CVE today, so the build-cache mitigation must stay in force regardless of when the tranche lands.
+  Evidence: `gradle/libs.versions.toml`. Latest stable as of 2026-08-04: AGP 8.13.2 (8.x line; 9.3.1 is the 9.x line and needs Gradle 9.5+/API 37), Kotlin 2.4.10, KSP 2.3.11 (new decoupled versioning since 2.3.0), androidx.core-ktx 1.19.0, lifecycle 2.11.0, activity-compose 1.13.0, navigation 2.9.8, appcompat 1.7.1 (already current), Hilt 2.60.1, androidx.hilt 1.4.0, Compose BOM 2026.06.01 (patch-level: same ui/foundation 1.11.4 and material3 1.4.0), Robolectric 4.16.1, Kover 0.9.9, kotlinx-serialization-json 1.11.0. Already latest and needing no action: Room 2.8.4, WorkManager 2.11.2, DataStore 1.2.1, OkHttp 5.4.0, Moshi 1.15.2, ktlint 1.8.0 / 14.2.0, all `androidx.test` artifacts. GHSA-r937-wjx7-w2jp / CVE-2026-53914 for the Kotlin note.
+  Touches: `gradle/libs.versions.toml`, `app/build.gradle.kts`, `build.gradle.kts`, all Gradle lockfiles, `gradle.properties` (keep the build-cache note).
+  Acceptance: the refresh lands as one tranche with `:app:dependencies --write-locks` run across *all* configurations (a per-config run leaves stale lines in `debugAndroidTest`/release); every gate green afterwards; anything that genuinely requires AGP 9 is left behind with the version and the reason recorded; the CLAUDE.md claim that core-ktx 1.19.0 requires AGP 9.1 is re-verified against the release notes rather than carried forward. Note Robolectric 4.16.1 covers SDK 36 but SDK 37 needs the 4.17 beta — do not raise `compileSdk` in this tranche.
+  Complexity: L
+
+- [ ] P1 — Ship the spam database as content-addressed shards instead of one 11.1 MB file
+  Why: `data/spam_numbers.json` is 11.1 MB / 413,876 lines / 51,463 numbers. It is bundled into every APK, re-downloaded in full whenever its SHA moves, and rewritten wholesale in git on each pipeline run — so a handful of new community rows costs every user a full re-download and costs the repository another 11 MB of history. This is the transfer half of the problem 3.3.1's bloom filter does not address.
+  Evidence: `data/spam_numbers.json` (11,630,940 bytes); `app/build.gradle.kts:29-40` `stageBundledAssets`; `data/repository/SyncRepository.kt:57` SHA pre-check; the file changed 7 times in the last 200 commits. YetAnotherCallBlocker ships incremental daily deltas as prior art.
+  Touches: `scripts/import_all_sources.py`, `scripts/pipeline_io.py`, `data/` layout plus a shard manifest, `data/remote/GitHubDataSource.kt`, `data/repository/SyncRepository.kt`, `service/SyncWorker.kt`, `app/build.gradle.kts` bundling, `androidTest/.../data/SyncIntegrationTest.kt`, `data/README.md`.
+  Acceptance: a manifest lists shard ids with per-shard hashes; sync fetches only shards whose hash changed and applies them transactionally; a typical incremental update transfers under roughly 1% of the current bytes; the monolithic legacy URL keeps serving unchanged for existing clients (roadmap backward-compatibility contract); a partial or interrupted shard set never leaves the database in a half-applied state; the APK bundles the shard set, not the monolith. Cross-references 3.2.1, which remains the server-side delta API; this is the serverless form.
+  Complexity: L
+
+### P2 — trust surfaces, hygiene, and platform polish
+
+- [ ] P2 — Record and surface checker errors and budget exhaustion
+  Why: `CheckerPipeline.run()` abandons the remaining checkers when `ctx.timeLeftMillis() <= 0`, and a checker that throws or times out leaves no trace — so a decision made on partial evidence is indistinguishable in the log from one made on complete evidence. SpamBlocker surfaces exactly this with a per-record warning marker.
+  Evidence: `data/checker/IChecker.kt` (`CheckerPipeline.run` budget abort), `data/repository/SpamRepositoryImpl.kt`; SpamBlocker v5.5 release notes (per-call log with an error/timeout indicator).
+  Touches: `data/checker/IChecker.kt`, `data/model/BlockedCall.kt` (plus a Room migration, ideally the same one as the reason-code item), `ui/screens/main/BlockedLogScreen.kt`, `ui/screens/details/NumberDetailScreen.kt`, `res/values/strings.xml`.
+  Acceptance: a decision reached with unevaluated checkers is flagged in the log with which stage was cut and why; per-checker exceptions are counted and shown in Protection Test; the flag is exported alongside the reason code; a test drives a deliberately slow checker and asserts both the flag and a single on-time response.
+  Complexity: M
+
+- [ ] P2 — Audit the existing rule set for conflicts, not just new rules
+  Why: `RuleConflictAnalyzer` runs only at creation time from four `BlocklistScreen` call sites, so a rule set can become self-contradictory after a sync adds prefixes or after a whitelist edit, and the user is never told. "Why did it block my doctor" is the single question the product most needs to answer without a support round-trip.
+  Evidence: `RuleConflictAnalyzer` referenced only at `ui/screens/main/BlocklistScreen.kt:1153,1243,1355,1681`; `data/RuleConflictAnalyzer.kt`. SpamBlocker v5.10 shipped standing priority-conflict detection with a visual warning.
+  Touches: `data/RuleConflictAnalyzer.kt`, `ui/screens/main/BlocklistScreen.kt`, `ui/MainViewModel.kt`, `ui/screens/more/ProtectionTestScreen.kt`, `res/values/strings.xml`.
+  Acceptance: the Rules surface shows a standing count of conflicting rules with a tap-through to each conflicting pair and the winning priority; the audit re-runs after sync and after any rule CRUD; resolving or dismissing a conflict persists; a unit test covers whitelist-vs-block, wildcard-vs-exact, and prefix-vs-hash conflicts.
+  Complexity: M
+
+- [ ] P2 — Add an in-app update check against the GitHub Releases API
+  Why: direct-download users have no way to learn a release exists. F-Droid, IzzyOnDroid and Obtainium all notify their own users; the GitHub-Releases channel — currently the only working channel — notifies nobody.
+  Evidence: no `releases/latest` or tag-name consumer exists in `app/src/main/java` (`data/remote/GitHubDataSource.kt:231` `checkForUpdate` is the spam-database SHA check, not an app-version check). `api.github.com` is already in `HttpClient.pinnedEndpointPins`, so no new pinned host is needed. `docs/reproducible-builds.md` already documents the Obtainium/SHA256 workflow for the same audience.
+  Touches: `data/remote/GitHubDataSource.kt`, a new use case or `service/ProtectionHealthWorker.kt`, `ui/screens/more/MoreScreen.kt`, `service/NotificationHelper.kt`, `res/values/strings.xml`, a settings toggle, tests.
+  Acceptance: an opt-in, default-off-or-clearly-disclosed periodic check compares the latest release tag to `BuildConfig.VERSION_NAME` and offers a link to the release page plus the published sha256; it never auto-downloads or self-installs (IzzyOnDroid forbids self-updating without opt-in); it fails silently offline and never blocks any detection path; a unit test covers newer, older, equal and malformed tags.
+  Complexity: S
+
+- [ ] P2 — Declare a Quick Settings tile category
+  Why: without the category meta-data the tile lands in the generic "From apps you installed" bucket in the Android 16 QPR2+ tile picker, where users will not find it.
+  Evidence: `AndroidManifest.xml:106-110` declares `CallShieldTileService` with icon, label and `BIND_QUICK_SETTINGS_TILE` but no `TILE_CATEGORY` meta-data; developer.android.com/develop/ui/views/quicksettings-tiles.
+  Touches: `AndroidManifest.xml`.
+  Acceptance: the `TileService` declares `android.service.quicksettings.TILE_CATEGORY`; the tile appears under the named category on an Android 16 QPR2+ device and still appears normally on older releases.
+  Complexity: S
+
+- [ ] P2 — Delete the orphaned pipeline scripts, or wire them into a gate
+  Why: `scripts/import_blocklists.py` is referenced by nothing, is still runnable, and writes `data/spam_numbers.json` while bypassing the plausibility gate and source registry that `import_all_sources.py` added — a loaded footgun aimed at the one file the whole product depends on. `scripts/capture-pseudolocale-screens.ps1` is referenced by no doc, script or Gradle task.
+  Evidence: a repo-wide grep finds no reference to either script outside itself; `scripts/import_all_sources.py` and `scripts/source_registry.py` are the current path; `data/README.md` documents the canonical sequence and does not include `import_blocklists.py`.
+  Touches: `scripts/import_blocklists.py`, `scripts/capture-pseudolocale-screens.ps1`, `data/README.md`, `scripts/run-pipeline-tests.ps1`.
+  Acceptance: `import_blocklists.py` is deleted (git history is the record) or reduced to a thin wrapper that routes through the registry and plausibility gates; the pseudolocale capture script is either wired into a documented verification step alongside `isPseudoLocalesEnabled` or removed; no script that writes `data/*.json` exists outside the documented sequence.
+  Complexity: S
+
+- [ ] P2 — Rebuild the Home screen around outcomes and stop duplicating the setup checklist
+  Why: Home's hero is `3/3 Core setup · 8 Engines · Ready Database` over a five-row checklist that reads "Setup complete / Ready" forever, and that checklist restates the Settings "Permissions & access" group verbatim. The primary screen of a spam blocker shows no spam-blocking outcome, and its dominant content is permanently-solved onboarding state.
+  Evidence: `fastlane/metadata/android/en-US/images/phoneScreenshots/01-home.png` and `05-settings.png`; `ui/screens/main/DashboardScreen.kt` (1,612 lines), `ui/screens/settings/SettingsScreen.kt` (2,077 lines). Settings additionally shows "Access checks ready: 2/2" above four rows. Home renders `Spam numbers loaded: 32624` with no locale grouping separator. Settings has an "Open app settings" section header with no row beneath it.
+  Touches: `ui/screens/main/DashboardScreen.kt`, `ui/screens/main/DashboardStatusModel.kt`, `ui/screens/settings/SettingsScreen.kt`, `res/values/strings.xml`, `androidTest/.../DashboardTest.kt`.
+  Acceptance: when setup is complete the checklist collapses to a single row that expands on demand, and the hero leads with blocked-call/text counts over a chosen window; the permissions list has exactly one authoritative home and the other surface links to it; the "2/2" count and the rows it summarises agree or the discrepancy is labelled; all counts render through the localized number formatter; "Open app settings" is a row with an affordance or is removed.
+  Complexity: M
+
+- [ ] P2 — Lead the Lookup verdict with the cause, not the confidence number
+  Why: Lookup opens with a "100 / SPAM" gauge and "CallShield is 100% confident this number should be blocked", with the actual cause ("Detection: Manual block") below the fold. Reporting a user's own manual block back to them as model confidence is misleading, and a score-first verdict is exactly the pattern the mature comparators avoid.
+  Evidence: `fastlane/metadata/android/en-US/images/phoneScreenshots/03-lookup.png`; `ui/screens/lookup/LookupScreen.kt`, `data/BlockReasoning.kt`. Gmail differentiates severity with chrome and always gives a causal sentence rather than a score; Windows Defender Protection History leads with threat name and action taken plus a per-item allow escape.
+  Touches: `ui/screens/lookup/LookupScreen.kt`, `ui/screens/details/NumberDetailScreen.kt`, `data/BlockReasoning.kt`, `res/values/strings.xml`.
+  Acceptance: the verdict card leads with a plain-language causal sentence naming the layer that decided and, where applicable, the user's own rule; confidence is shown only for genuinely probabilistic layers and never for deterministic ones; severity is distinguished by chrome as well as colour; a reverse action ("this is not spam" / "remove my rule") is reachable from the verdict card itself. Depends on the P1 reason-code item.
+  Complexity: M
+
+- [ ] P2 — Harden the Worker's KV state handling and rate-limit keying
+  Why: a corrupt KV value throws out of an unguarded `JSON.parse` into the outer handler and is reported to the client as `400 Bad request`, hiding a server-side fault as a client error; and keying limits on `cf-connecting-ip || "unknown"` puts every header-less caller in one shared bucket and behaves badly under mobile CGNAT.
+  Evidence: `worker/community-reports-worker.js:252` (unguarded parse), `:129`/`:172`/`:175-176` (rate-limit and dedup keying and windows).
+  Touches: `worker/community-reports-worker.js`, `worker/community-reports-worker.test.mjs`.
+  Acceptance: unparseable stored state is treated as absent and logged, not surfaced as a client error; a state fault returns 5xx while a malformed request returns 4xx; requests with no `cf-connecting-ip` are rejected or given their own conservative bucket rather than sharing one; tests cover corrupt state, missing IP, and shared-CGNAT-shaped traffic. Cross-references the operator-gated Cloudflare provisioning items in `Roadmap_Blocked.md` — this is the source-side half, which does not need the account.
+  Complexity: S
+
+- [ ] P2 — Adopt worker stop-reason diagnostics for background-execution failures
+  Why: Android 16 tightened JobScheduler quotas by standby bucket and now counts jobs started while TOP or under a foreground service against quota, which is a plausible new cause of missed 30-minute hot-list and 6-hour syncs — and the app currently cannot distinguish a dropped run from one that never scheduled.
+  Evidence: developer.android.com/about/versions/16/behavior-changes-all (JobScheduler quotas, `STOP_REASON_TIMEOUT_ABANDONED`); WorkManager 2.12.0-beta01 (2026-07-29) adds a `work-analytics` artifact and `WorkMetricsInfo` exposing `stopReasonCounts`, `runAttemptCount` and durations.
+  Touches: `gradle/libs.versions.toml`, `service/SyncWorker.kt`, `service/HotListSyncWorker.kt`, `service/DigestWorker.kt`, `service/ProtectionHealthWorker.kt`, `ui/screens/more/ProtectionTestScreen.kt`.
+  Acceptance: worker stop reasons and attempt counts are recorded locally and shown in Protection Test; a repeatedly quota-dropped worker produces a user-visible warning rather than silent staleness; nothing is transmitted off-device. Note WorkManager 2.12 is beta — prefer recording `WorkInfo.getStopReason()` on the current 2.11.2, which needs no dependency change, and adopt `work-analytics` only once it is stable.
+  Complexity: S
+
+### P3 — evaluation, docs, and a longer bet
+
+- [ ] P3 — Reconcile the drifting version and count claims, and delete `PROJECT_CONTEXT.md`
+  Why: `verifyReleaseMetadata` gates six files on a version bump but does not cover the claims that have actually drifted, and a file the repo's own `AGENTS.md` forbids is still present and stale in every material respect.
+  Evidence: the README badge says 952 tests against an actual 991; `CLAUDE.md`'s header says v1.7.32/versionCode 60 against a build of 1.7.33/61; `data/README.md` documents 1 of 6 files in `data/`; `PROJECT_CONTEXT.md` (dated 2026-06-27) claims 100 Kotlin files vs 168 and Room v10 vs v13, and `AGENTS.md` lists it under "Never create".
+  Touches: `README.md`, `CLAUDE.md`, `data/README.md`, `PROJECT_CONTEXT.md`, root `build.gradle.kts` (`verifyReleaseMetadata`).
+  Acceptance: `verifyReleaseMetadata` additionally asserts the README test-count badge against the summed `tests="N"` across `test-results/*.xml` and the CLAUDE.md header version against `versionName`/`versionCode`; `data/README.md` documents every file in `data/`; `PROJECT_CONTEXT.md` is deleted.
+  Complexity: S
+
+- [ ] P3 — Add accessibility coverage for telephony-specific assistive paths
+  Why: a call blocker sits directly in the path of assistive telephony, and two requirements are specific enough that a generic audit will miss them: RTT sessions must not be disrupted, and swipe-only actions must have non-drag equivalents.
+  Evidence: source.android.com/docs/core/connect/rtt (RTT replaces TTY from Android 9, shares the voice number, supports 911); WCAG 2.2 2.5.7 Dragging Movements and 2.5.8 Target Size (Min) at w3.org/TR/WCAG22/; W3C COGA "Making Content Usable" for the plain-language requirement. In-repo: swipe-to-unblock and swipe-to-delete in `BlockedLogScreen.kt` / `BlocklistScreen.kt`; `ui/AccessibilitySemantics.kt`.
+  Touches: `service/CallShieldScreeningService.kt`, `service/CallerIdOverlayService.kt`, `ui/screens/main/BlockedLogScreen.kt`, `ui/screens/main/BlocklistScreen.kt`, `ui/AccessibilitySemantics.kt`, instrumented tests.
+  Acceptance: screening and the overlay are verified not to interfere with an RTT call, and the behaviour is documented; every swipe action has a `customActions` equivalent and a 48 dp or larger target; block reasons read as one plain sentence with no jargon (no bare "attestation C") when spoken by TalkBack. Cross-references 4.6, which owns the broader manual audit.
+  Complexity: M
+
+- [ ] P3 — Evaluate a bundled LiteRT text classifier for SMS scam detection
+  Why: the current SMS content layer is 30+ regexes plus a spam-domain list, both of which rotate-and-evade cheaply, while the phone-number GBT model cannot see message text at all. A small bundled text classifier is the one detection upgrade that would work identically outside North America, where the 51k-number list is useless.
+  Evidence: LiteRT's `CompiledModel` API is explicitly documented as operating independently of Google Play services, with GPU/NPU delegates across Qualcomm, MediaTek, Tensor and Samsung (developers.google.com/edge/litert) — unlike ML Kit GenAI / Gemini Nano, which are AICore-bound and blocked from background use. Published quantized smishing classifiers land around 127 KB with no accuracy loss; BiLSTM SMS-spam TFLite models sit under 1 MB. SpamBlocker's own on-device-AI request (issue #642) is open and unclaimed. Evasion is an active research area (arXiv 2505.18233), so the model must be one signal among several.
+  Touches: new `data/SmsTextClassifier.kt`, `data/SmsContentAnalyzer.kt`, `data/checker/Checkers.kt` (a new low-priority SMS checker), `gradle/libs.versions.toml`, `scripts/` training plus evaluation, `app/build.gradle.kts` asset bundling.
+  Acceptance: a spike answers, with measurements, whether a bundled classifier fits the APK budget and the SMS path's latency budget on a low-end device; if it proceeds, the model is bundled (never fetched at first use), the checker sits below every deterministic layer and cannot alone hard-block, precision and recall are reported per locale against a licensed corpus with a false-positive budget agreed first, and the model version is visible in Protection Test alongside the existing `ModelHealth`. Depends on the licensed multilingual corpus item from the 2026-08-02 pass.
+  Complexity: XL

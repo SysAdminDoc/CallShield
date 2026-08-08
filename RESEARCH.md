@@ -1,165 +1,199 @@
-# CallShield Research
+# Research — CallShield
 
-Date: 2026-08-02
-Scope: exhaustive product, competitor, source, platform, security, and dependency review. This replaces the previous research report.
+Date: 2026-08-04 — replaces all prior research.
+Anchored to: `master` @ `2834d0b`, versionName 1.7.33 / versionCode 61.
+Verification run this pass: `./gradlew testDebugUnitTest` → **991 tests, 1 failed** (`DirectBootScreeningStoreTest:27`). Gradle/SDK/JDK notes in *Verification environment* below.
 
-## Executive summary
+## Executive Summary
 
-CallShield already has a strong local-first foundation: a Kotlin/Compose Android app, a priority-ordered multi-layer detector, Room-backed hot data, SMS/RCS handling, optional caller-ID overlay, a Python ingestion pipeline, and a Cloudflare community-report worker. The repository advertises 15+ detection layers and 51,463 bundled numbers. The next large accuracy gain is not to copy every available list into the APK. It is to make each signal attributable, time-bounded, license-safe, region-aware, and resistant to spoofed-number churn.
+CallShield is a mature, single-module Kotlin/Compose Android call and SMS blocker: 168 main Kotlin files (~40k LOC), a 27-checker priority pipeline behind a 4.5 s budget under Android's screening deadline, an on-device GBT scorer, Room v13 with explicit migrations from v5, Hilt DI, a Python ingestion pipeline, a Cloudflare report Worker, and an unusually strong local gate set (ktlint, detekt, lint, Kover, `verifyReleaseMetadata`, `verifyPipelineTests`, `verifyReleaseSigningPolicyTests`). The detection engineering is ahead of the field. **What is broken is the delivery and data plane around it, and three of those breaks are silent.** The published release APK is unsigned and therefore uninstallable; the three feeds the app re-syncs every 30 minutes have been empty since 2026-07-30 and an empty-but-successful fetch destructively wipes the corresponding tiers on device; and the SMS receiver's ordering guarantee was removed by Android 16. The highest-value direction is not more detection layers — it is **making delivery, feed integrity, and decision auditability provable**, which is also the only axis where a no-account on-device app can beat Hiya/Truecaller/Nomorobo, since it can never beat them on fresh crowd reputation.
 
-The highest-value additions are:
+Top opportunities, in priority order:
 
-1. Preserve source, license, retrieval time, evidence type, and confidence for every imported row; apply decay and quarantine rather than treating a complaint as a permanent hard block.
-2. Add permitted, incremental government feeds (FTC and FCC), privacy-preserving PhoneBlock lookups, and optional Nomorobo IRS feed support with explicit attribution. Keep commercial APIs and restricted regional services operator-gated.
-3. Add number- and campaign-level features: E.164/line-type validation, unassigned/DNO ranges, STIR/SHAKEN/RCD evidence, prefix velocity, neighbor spoofing, number churn, and cross-source corroboration.
-4. Treat SMS URLs, sender IDs, and brand impersonation as a separate verdict path. URLhaus, PhishTank, OpenPhish, Safe Browsing/Web Risk, Google’s on-device scam research, and regional sender-ID registries are useful signals but never single-source hard blocks.
-5. Test the Android five-second screening contract under cold start, Room/provider failure, direct boot, OEM rebinding, and notification privacy changes in Android 15–17.
+1. Sign every published release artifact with one stable key — today's GitHub release APK cannot be installed at all, and blocks F-Droid, IzzyOnDroid and Accrescent simultaneously.
+2. Treat a successful-but-empty remote feed as *no data*, not as *delete everything* — three checker tiers are currently inert fleet-wide.
+3. Upgrade the Gradle wrapper off 8.11.1 (two High-severity CVEs with a published fix).
+4. Stop depending on `android:priority="999"` for SMS ordering; Android 16 confined ordered-broadcast priority to the declaring process.
+5. Add never-block floors for OTP/verification SMS and emergency numbers, plus an FCC-§64.1200(k)-shaped redress surface.
+6. Persist enumerated block-reason codes and the matching rule ID (Pi-hole/NextDNS model) so every decision is filterable, exportable and reversible from the log row.
+7. Surface `BackgroundExecutionStatus` — the OEM background-kill classifier ships with zero production consumers, and OEM kill is a top documented uninstall cause.
+8. Close the zero-locale gap: full i18n machinery exists (1,103 strings, 30 plurals, language picker, `check_translations.py`) and not one translation ships.
+9. Move the 11.1 MB monolithic `spam_numbers.json` to a sharded/delta distribution — it is bundled in the APK, re-downloaded whole on every change, and rewritten wholesale in git.
+10. Extend the automated accessibility harness from 4 screens to all of them and raise its severity threshold.
 
-No code was implemented in this research pass. Existing uncommitted implementation changes in the D: working copy were preserved.
+## Product Map
 
-## Phase 0 — repository reconnaissance
+**Core workflows**
+- Live call screening: `CallShieldScreeningService` (direct-boot aware) → one DataStore snapshot → `CheckerPipeline.run()` over 27 checkers, first non-null wins, aborts on budget exhaustion → `buildBlockResponse()` (silent-voicemail / auto-mute / reject) → pending Room row flushed by `PendingBlockedCallLogWorker`.
+- SMS/RCS filtering: `SmsReceiver` (BroadcastReceiver) and `RcsNotificationListener` (NotificationListenerService, 10+ selectable source apps) → shared chain plus SMS extensions (keyword 5400, context trust 4700, burst 4650, content 1900).
+- Data refresh: `SyncWorker` 6 h (SHA-gated full DB), `HotListSyncWorker` 30 min (hot numbers/ranges/spam domains), `DigestWorker` 24 h, `ProtectionHealthWorker`.
+- Explainable lookup: `LookupScreen` runs `CheckerPipeline.traceAll()` (non-short-circuit) → `BlockReasoning.explain()`; `NumberDetailScreen` per-number history.
+- Rule authoring and recovery: exact/wildcard/regex/hash rules with per-rule day+hour schedules, temporary allow at 5350, swipe-to-remove with undo, backup/restore with passphrase, CSV/JSON export.
 
-### Product and architecture
+**Personas** — (1) the US consumer drowning in robocalls who wants it to just work; (2) the sysadmin/power user who wants rules, logs and proof; (3) the FOSS/privacy user who chose this precisely because there is no account and no telemetry. Persona 1 is the one currently served worst: five "Ready" rows on the home screen and no outcome data.
 
-- Single-module Android application (`app`) using Kotlin 2.2.21, Compose BOM 2026.05.00, Room 2.8.4, WorkManager 2.11.2, Hilt 2.58, OkHttp 5.4.0, Java 17, compile/target SDK 36, minimum SDK 29.
-- `CallShieldScreeningService` is direct-boot aware and uses an explicit fail-open response plus a 4.5-second local budget. The service resolves providers, snapshots preferences, checks contacts, runs the detector, and records/alerts after the call.
-- The manifest also exposes SMS receive, notification-listener/RCS, caller-ID overlay, boot, widget, tile, post-call, and WorkManager-related surfaces. These permissions and roles create separate privacy and OEM-survival test matrices.
-- Detection is checker-based and already includes local rules, contacts/whitelist, temporary decisions, STIR/SHAKEN status, area/prefix/campaign heuristics, SMS content/URL checks, RCS notifications, SIT/robocall behavior, and on-device ML.
-- `scripts/import_all_sources.py` currently handles FTC, FCC, optional PhoneBlock, Saracroche prefixes, optional Nomorobo IRS, opt-in HTTP ToastedSpam, and repository/community lists. The merged JSON is number-centric; source licenses, retrieval metadata, feed health, and evidence decay are not first-class fields.
-- External blocklist subscriptions are user-controlled and parsed with size/format/redirect safeguards. This is a good extension point for signed or hashed feeds, not permission to scrape closed databases.
-- The Cloudflare Worker has tests and a rate-limit design, but `worker/wrangler.toml` still contains `REPLACE_WITH_KV_NAMESPACE_ID`; deployment cannot be considered protected until an operator provisions and verifies the namespace.
-- `CLAUDE.md` still describes v1.7.32/versionCode 60 while the dirty working copy contains v1.7.33/versionCode 61 changes. `PROJECT_CONTEXT.md` is older and non-authoritative; the F-Droid draft deliberately carries an older release metadata line plus a current-source line. Version consistency needs a single release gate.
-- No production TODO/FIXME/HACK/XXX or obvious stub was found. The last 200 commits are dominated by community-report churn (120/200), followed by reliability/security fixes; this supports investing in report quality and campaign aggregation rather than merely increasing row count.
+**Platforms and distribution** — Android 10+ (minSdk 29 / compile+target 36), phone only; no landscape, `sw600dp`, or foldable resources. Distribution is GitHub Releases today; `docs/fdroid/com.sysadmindoc.callshield.yml` is drafted with `Binaries:` + `AllowedAPKSigningKeys`, and IzzyOnDroid/Accrescent are queued in `Roadmap_Blocked.md`.
 
-### Current strengths
+**Integrations and data flows** — GitHub raw (spam DB, hot feeds, model weights) with SHA pre-check and 6 h branch-resolution cache; Cloudflare Worker → GitHub Contents API commits for anonymous reports; optional enrichment (SkipCalls, PhoneBlock, WhoCalledMe, OpenCNAM) and URLhaus, all default-off and behind `HttpClient.pinnedEndpointPins` (2–3 SPKI pins per host); user-subscribed external blocklist URLs.
 
-- Offline operation and no mandatory account/cloud audio path.
-- Explicit local allow/deny precedence, contact protection, direct-boot handling, provider failure fail-open behavior, and bounded untrusted text/URL processing.
-- Shared Kotlin/Python/Worker number-normalization fixtures and pipeline gates.
-- Existing URLhaus integration, report deduplication, source-specific importer guards, atomic pipeline writes, and release metadata checks.
+## Competitive Landscape
 
-### Material gaps
+**SpamBlocker (aj3423)** — 1,761★, MIT, 15 releases in 2026, 1 open issue. Best-in-class at *rule ergonomics*: rule-priority conflict detection with a visual warning (v5.10), per-record replay/Test on history rows (v5.5), a published SMS-screening bound-service protocol so any SMS app can query it (v5.9), Recent-Apps / Meeting-Mode / calendar context rules, boolean rating expressions (v5.12), 7726 carrier reporting (v5.13). **Learn:** conflict detection and per-call replay attack the #1 documented uninstall cause directly. **Avoid:** its user-editable JSON workflow engine — the F-Droid forum's recurring complaint about the category is "too complex, unable to understand anything", and complexity is what makes users bounce.
 
-- A `reports` integer conflates independent complaints, source confidence, and freshness. FTC/FCC complaints are explicitly unverified; crowd databases can contain spoofed or stale numbers; curated feeds are not equivalent to a user report.
-- There is no durable source registry with license, geographic coverage, update cadence, parser version, last-success/last-failure, and permitted redistribution mode.
-- Importers do not yet provide a common k-anonymous lookup, signed-manifest, source-health, or TTL/decay contract.
-- Existing campaign work is mainly local/in-memory and NPA-NXX oriented; large-scale number churn, neighbor spoofing, callback-number reuse, and cross-region campaigns deserve persistent evidence.
-- RCS/SMS interception depends on Android notification and default-handler policies. Android 15 redacts OTP content from untrusted notification listeners and Android 17 delays SMS OTP access for non-default handlers; the classifier must degrade safely and explain missing evidence.
-- The baseline full JVM run in this working copy still has a Direct Boot failure in `DirectBootScreeningStoreTest`; it is a pre-existing verification issue, not a reason to mask new work.
+**PhoneBlock (haumacher)** — 339★, GPL-3.0, server + client + SIP answerbot. **Learn:** the k-anonymous lookup contract (`SHA1(+E164)` plus `prefix10`/`prefix100` hashes of the number minus its last 1–2 digits) — the server answers useful queries without ever seeing a number, and range spam is still caught; and its 7-way rating taxonomy (`A_LEGITIMATE … G_FRAUD`) which drives per-category actions rather than a binary verdict. **Avoid:** the SIP answerbot — engaging callers is TCPA/recording-consent exposure and is already reject-leaning in this roadmap.
 
-## Product and competitor map
+**Saracroche** — 189★, GPL-3.0, France. **Learn:** blocking by *regulator-assigned allocation range* (ARCEP telemarketing prefixes) rather than by observed history — it is the only approach that works before a number has any reputation, and it is exactly what CallShield's US-centric 51k-number list cannot do outside North America. **Avoid:** hard-coding one country's ranges into the app; this belongs in the source registry as region-scoped data.
 
-| Surface | What the ecosystem demonstrates | CallShield implication |
+**Nomorobo / Call Control / RoboKiller (commercial)** — Nomorobo Max ($59.99/yr) paywalls personalized allow/block lists and neighbor-spoof blocking; Call Control Premium ($29.99/yr) paywalls *wildcard blocking, unlimited lists, quiet hours, call history and settings backup*. **Learn:** every one of those is pure local logic that CallShield already ships free — say so. The genuinely new commercial signal is **tolerance controls** (RoboKiller's blocking-aggressiveness slider) and **contextual caller ID** (Truecaller moving from "spam/unknown" to *why* and *what kind*). **Avoid:** account-bound features — Truecaller Family Protection, cloud transcription, per-device licensing.
+
+**Pi-hole / NextDNS / uBlock Origin logger (adjacent)** — the auditability reference. Pi-hole stores a per-query enumerated `status` (19 codes: gravity, regex denylist, exact denylist, CNAME-inspection…) plus `regex_id` and `additional_info`; NextDNS exposes `status`/`reasons`/`matched_name` in log, API and CSV export; uBlock's logger shows the *responsible filter* in its own column with one-click drill-down. **Learn:** a stable enumerated reason code plus the exact matching rule ID, persisted and exportable — not a free-text `matchReason` string. **Avoid:** their density; a phone log row gets one plain sentence, with the rule ID one tap deeper.
+
+**Gmail spam banner / Windows Defender Protection History (adjacent)** — Gmail differentiates severity with chrome (grey nuisance vs red dangerous) and always gives a causal sentence, never a score; Defender shows action-taken with an explicit per-item "allow on device" escape. **Learn:** quarantine-not-delete semantics and one-tap reversal *from the log entry itself*; CallShield's Lookup screen currently leads with a "100 SPAM" gauge and "CallShield is 100% confident", which is the score-first pattern both of these deliberately avoid. **Avoid:** exposing model confidence as a headline number — it is unfalsifiable to the user and reads as arrogance when wrong.
+
+## Security, Privacy, and Reliability
+
+### Verified defects
+
+1. **Published release APKs are unsigned and cannot be installed.** `CallShield-v1.7.29.apk` at the repo root is byte-identical to the GitHub release asset (sha256 `f61d865c…3e01`, 8,460,144 bytes, confirmed against `gh release view`). `apksigner verify --print-certs` returns `DOES NOT VERIFY / ERROR: Missing META-INF/MANIFEST.MF`; a byte scan finds no `APK Sig Block 42` magic, so there is no v2/v3 block either. Android's PackageManager rejects unsigned APKs outright. Separately this makes `docs/fdroid/com.sysadmindoc.callshield.yml`'s `AllowedAPKSigningKeys: d179d0da…` + `Binaries:` verification structurally impossible, and fails IzzyOnDroid's "release-key signed" and Accrescent's "v2/v3 required, debug certs rejected" rules. `app/build.gradle.kts:88-93` sets `signingConfig = null` whenever the four `RELEASE_*` properties are absent — the release build silently degrades to unsigned instead of failing. Confidence: **Verified**.
+
+2. **A successful-but-empty remote feed destroys the hot tier on every device, every 30 minutes.** `data/hot_numbers.json`, `data/hot_ranges.json` and `data/spam_domains.json` all carry `count: 0` with `generated: 2026-07-30T17:40`. In `service/HotDataSync.kt`, `loadHotList`/`loadHotRanges`/`loadSpamDomains` return `resolved = true` on any HTTP success including an empty array; `resolved` then triggers `repo.replaceHotList(...)` → `SpamDao.replaceBySource` (`deleteBySource` then insert-if-non-empty, `SpamDao.kt:100-106`), `SpamHeuristics.updateHotRanges(empty)` and `SmsContentAnalyzer.updateSpamDomains(empty)`. The v1.7.28 fix guarded against *fetch failure*; it does not guard against *successful emptiness*. `stageBundledAssets` (`app/build.gradle.kts:29-40`) also bakes the empty files into the APK, and `primeBundled` only fills a store that is already empty, so the bundled snapshot cannot repair it either. Net effect: the `hot_list` database tier, hot campaign ranges, and the SMS spam-domain list are all inert. Confidence: **Verified** (code + data read; on-device confirmation not run).
+
+3. **Gradle wrapper 8.11.1 carries two High-severity CVEs.** `gradle/wrapper/gradle-wrapper.properties` pins `gradle-8.11.1-bin.zip`. CVE-2026-22865 (GHSA-mqwm-5m85-gmcv) and CVE-2026-22816 (GHSA-w78c-w6vf-rw82), both CVSS4 8.6, affect `< 8.14.4`; fixed in 8.14.4 and 9.3.0. The wrapper also has no `distributionSha256Sum`, so the distribution download is unverified. Confidence: **Verified**.
+
+4. **The JVM gate is red at HEAD.** `DirectBootScreeningStoreTest > device protected mirror preserves active explicit blocks and preferences` fails with `AssertionError at DirectBootScreeningStoreTest.kt:27` (991 tests, 1 failed, 3m43s). This was already noted in the prior research pass; it is still failing a day later, which means every green-gate claim in `CLAUDE.md` since then is unearned. Confidence: **Verified**.
+
+5. **Android 16 removed the SMS receiver's ordering guarantee.** `AndroidManifest.xml:101` declares `<intent-filter android:priority="999">` on `SMS_RECEIVED`. On Android 16, for *all apps regardless of targetSdk*, ordered-broadcast `android:priority` is honoured only among receivers within the same process. CallShield can no longer assume it runs before the default SMS app. Confidence: **Verified** (documented behavior change; device confirmation not run).
+
+6. **No never-block floor for OTP/verification SMS.** Grepping `SmsContentAnalyzer.kt` and `SmsReceiver.kt` for `otp` / `verification code` / `one-time` returns nothing. A 2FA code from an unfamiliar shortcode can be blocked by content keywords, and repeated codes can trip `sms_burst` (4650). US carriers already filter unregistered A2P traffic; an app-level second filter compounds a well-documented harm class. Confidence: **Verified** (absence of code).
+
+7. **`permissions/BackgroundExecutionStatus.kt` has zero production consumers.** It is referenced only by `BackgroundExecutionStatusTest.kt`. The classifier (`classify()`, `isAtRisk()`, battery-exemption intent, MIUI autostart probe) exists and is tested, but no screen or notification reads it, while OEM background kill (Xiaomi Autostart reset after OTA, Samsung "Sleeping apps" after 3 days) is one of the best-documented causes of a silently dead blocker. Confidence: **Verified**.
+
+8. **Worker: unguarded `JSON.parse` on KV state.** `worker/community-reports-worker.js:252` parses stored rate-limit state without a try/catch; a corrupt value throws into the outer handler and returns a misleading `400 Bad request` for what is a server-side state fault. Rate limiting is also keyed on `cf-connecting-ip || "unknown"`, which collapses every header-less caller into one shared bucket and behaves poorly under mobile CGNAT. Confidence: **Verified** (source read).
+
+9. **Distribution/data drift.** The community-report queue holds 35 unprocessed files in `data/reports/`, ~29 of them fictional `+1555…` test numbers, and the hot feeds have not regenerated since 2026-07-30. `data/README.md` documents 1 of the 6 files in `data/`. The README test badge says 952 against an actual 991. `CLAUDE.md` header says v1.7.32/60 against a build of 1.7.33/61. Confidence: **Verified**.
+
+### Missing guardrails
+
+- No pipeline gate fails when a generated feed collapses to zero or shrinks past a floor — `scripts/generate_hot_list.py` and `extract_spam_domains.py` emit empty output silently, and `merge_community_reports.py` deletes `data/reports/*.json` that the generators need, so running them out of order produces exactly the current state.
+- No hard floor preventing any rule from blocking emergency/PSAP numbers; `EMERGENCY_NUMBERS` in `CallbackDetector.kt:328` exists only to recognise *outgoing* emergency calls for the callback grace window.
+- Checker errors and budget exhaustion are invisible: `CheckerPipeline.run()` aborts when `ctx.timeLeftMillis() <= 0` and nothing in the log tells the user a decision was made on partial evidence.
+- Rule conflicts are detected only at creation time (`RuleConflictAnalyzer` is called from four `BlocklistScreen` add/edit paths); an existing rule set is never re-audited after a sync adds prefixes.
+- `scripts/import_blocklists.py` is orphaned but still runnable and writes `spam_numbers.json` while bypassing the newer plausibility and source-registry gates added in `import_all_sources.py`.
+
+### Recovery and rollback
+
+Backup/restore covers rules, settings and logs with a passphrase and a `RestoreJournal` entity; Room self-heals on corruption. What is missing is *decision* rollback at the user level: a blocked call can be temporarily allowed from the log, but there is no per-source "this feed was wrong, drop its contribution" action, and no export shaped like the FCC's redress requirement (47 CFR §64.1200(k): on request, a list of blocked calls with date, time and calling number, free, within three business days). `LogExporter` produces CSV but is not framed or documented as that artefact.
+
+## Architecture Assessment
+
+**Boundaries that need work**
+- Distribution is not a boundary at all: `verifyReleaseSigningPolicyTests` and `scripts/verify-release-signing.ps1` exist and *would* have caught the unsigned APK, but nothing forces them to run before `gh release create`. The signing policy needs to be a build-graph dependency of the release artifact, not a script somebody remembers.
+- The feed contract has no "no data vs zero data" distinction. `FeedLoadResult.resolved` conflates *the fetch worked* with *the fetch returned something usable*. Every consumer of `resolved` inherits the bug.
+- `matchReason` is a free-text `String` threaded from checkers through Room, `BlockReasoning`, `MatchReasonLabels`, exports and the widget. It should be a stable enumerated code plus an optional rule ID; the current shape is why localization, filtering and export of "why" have each been reworked separately.
+
+**Refactor candidates (measured)**
+- `ui/screens/settings/SettingsScreen.kt` (2,077 lines), `ui/screens/main/BlocklistScreen.kt` (1,826), `ui/screens/main/DashboardScreen.kt` (1,612), `data/BackupRestore.kt` (1,364), `ui/MainViewModel.kt` (1,065), `service/CallerIdOverlayService.kt` (1,040), `data/checker/Checkers.kt` (950), `data/SpamRepository.kt` (936). The four functions pinning detekt's thresholds at CCM 45 / LongMethod 250 are already measured in `Roadmap_Blocked.md`; that item is correct and stays blocked on device verification.
+- `data/spam_numbers.json` is 11.1 MB (11,630,940 bytes / 413,876 lines / 51,463 numbers + 431 prefixes). It is bundled into every APK by `stageBundledAssets`, re-downloaded in full whenever its SHA moves (`SyncRepository.kt:57` gates on SHA, so the check is cheap but the transfer is not), and rewritten wholesale in git on each pipeline run — it changed 7 times in the last 200 commits, each time as a full-file rewrite. The bloom filter in 3.3.1 addresses lookup cost, not transfer cost; nothing currently addresses transfer cost.
+- `ui/MainActivity.kt:347-352` routes by an integer `when(tab)` inside a `SaveableStateHolder` with `NumberDetailScreen` and onboarding as sibling root branches. There is no Navigation-Compose. This is why intent handling, tab restoration and back behaviour have each needed bespoke fixes (`v1.7.27`, `v1.7.28`), and it caps what predictive back can do.
+
+**Test and documentation gaps**
+- No tests at all for: `CallShieldWidget`, `CallShieldTileService`, `CallerIdOverlayService` lifecycle (1,040 lines, one privacy unit test), `CallLogScanner`, `SmsInboxScanner`, `MainViewModel` (1,065 lines), and all five `domain/usecase` classes.
+- Automated accessibility checks (`enableAccessibilityChecks()` + `tryPerformAccessibilityChecks()`, which *does* fail the test) run on only 4 screens — Dashboard, Blocklist, Settings, Onboarding — at default severity, so the contrast, touch-target and traversal-order checks that report at WARNING never fail. Lookup, NumberDetail, Stats, Activity, BlockedLog, RecentCalls, More, Changelog, ProtectionTest and the four settings sheets are unchecked.
+- No pseudolocale or RTL instrumentation despite `isPseudoLocalesEnabled = true` on debug and an orphaned `scripts/capture-pseudolocale-screens.ps1`.
+- `PROJECT_CONTEXT.md` (root, gitignored, dated 2026-06-27) is stale in every material respect — 100 Kotlin files vs 168, Room v10 vs v13, v1.7.12 vs v1.7.33 — and `AGENTS.md` explicitly forbids the file. It should be deleted.
+
+**UI/UX findings** (from `fastlane/metadata/android/en-US/images/phoneScreenshots/`, v1.7.30+ light-first system)
+- **Home leads with plumbing, not outcomes.** The hero is `3/3 Core setup · 8 Engines · Ready Database`; below it a five-row Setup Checklist that stays fully expanded and reads "Setup complete / Ready ×5" forever. A blocker's home screen should lead with "N calls blocked this week". The completed checklist should collapse to one line.
+- **Home and Settings render the same content twice.** The Home "Setup Checklist" and the Settings "Permissions & access" group list the same four capabilities with the same "Ready" labels. Settings additionally shows "Access checks ready: 2/2" above four rows — the count and the list disagree with no explanation.
+- **Icon colour is decorative, not semantic.** Home shows seven accent hues (green shield, green shield-outline, blue check, blue shield, green check, purple phone, teal layers, blue bell) with no mapping to state; Settings is all-green except a blue globe. Verdict must never be signalled by colour alone (Android accessibility principles; WCAG 1.4.1), and inconsistent hue spends the signal.
+- **"Open app settings" in Settings is a bare section header with no row beneath it** — an action styled as a group label, followed by a divider and the next group. It reads as an empty section.
+- **Activity → Blocked has ~150 dp of unexplained dead space** between the tab strip and the filter chips, and two unlabelled icon-only actions sit at the end of the chip row, one of which is a red destructive control (bulk delete) adjacent to filters.
+- **Lookup leads with a "100 / SPAM" gauge and "CallShield is 100% confident this number should be blocked."** This is the score-first pattern Gmail and Defender deliberately avoid; the causal sentence ("Detection: Manual block") is below the fold. A user's own manual block being reported back as 100% model confidence is actively misleading.
+- **`Spam numbers loaded: 32624`** on Home is an unformatted integer — no locale grouping separator.
+- No landscape, `sw600dp` or foldable resources exist; dynamic type is handled by five ad-hoc `fontScale >= 1.5f` branches rather than reflowing layout.
+
+## Platform, Dependency, and Distribution Signal
+
+**Android 16/17 (beyond the two defects above)** — no behavior change to `CallScreeningService` is documented for either release; `getCallerNumberVerificationStatus()` (API 30) remains the entire STIR/SHAKEN surface, and `ACTION_POST_CALL` remains the only platform spam-report hook. Android 16 tightened JobScheduler quotas by standby bucket and now counts jobs started while TOP or under a foreground service against quota, with a new `STOP_REASON_TIMEOUT_ABANDONED` — a plausible new cause of missed 30-minute and 6-hour syncs that the app currently cannot distinguish from "never scheduled". Android 16 QPR2 added Quick Settings tile categories; `CallShieldTileService` declares no `TILE_CATEGORY` meta-data (`AndroidManifest.xml:106-110`) and therefore lands in the generic "From apps you installed" bucket. 16 KB page size is Play-only and native-code-only — no action for a pure Kotlin app. targetSdk 37 additionally makes `ACCESS_LOCAL_NETWORK` a mandatory runtime permission, which would newly implicate the deliberately-supported LAN-hosted external blocklist case, removes the resizability opt-out for `sw >= 600dp`, and turns on Certificate Transparency by default (relevant to the pinned endpoints). None of that is worth taking in 2026 — see *Rejected Ideas*.
+
+**Dependency currency** (latest stable as of 2026-08-04, sources under *Sources → Dependencies*) — already current and needing no action: Room 2.8.4, WorkManager 2.11.2, DataStore 1.2.1, OkHttp 5.4.0, Moshi 1.15.2, appcompat 1.7.1, ktlint 1.8.0 / gradle-plugin 14.2.0, and every `androidx.test` artifact. Stale but reachable **without** the blocked AGP-9 tranche, because AGP maintains a current 8.x line and KSP decoupled from the Kotlin version at 2.3.0: AGP 8.13.2, Kotlin 2.4.10, KSP 2.3.11, core-ktx 1.19.0, lifecycle 2.11.0, activity-compose 1.13.0, navigation 2.9.8, Hilt 2.60.1, androidx.hilt 1.4.0, Robolectric 4.16.1, Kover 0.9.9, kotlinx-serialization-json 1.11.0 (debug/test scopes only here), Compose BOM 2026.06.01 (patch-level — identical ui/foundation 1.11.4 and material3 1.4.0). Compose 1.12 is the first release requiring compileSdk 37 + AGP 9, so the Testing-v2 migration already tracked in `Roadmap_Blocked.md` is the real gate on that BOM line, not the BOM itself. Robolectric 4.16.1 covers SDK 36; SDK 37 needs the 4.17 beta.
+
+**Distribution and update channel** — GitHub Releases is currently the only channel, and it notifies nobody: no `releases/latest` consumer exists anywhere in `app/src/main/java` (`GitHubDataSource.checkForUpdate` at line 231 is the spam-database SHA check, not an app-version check). F-Droid, IzzyOnDroid and Obtainium each notify their own users, so the gap is specific to direct downloaders — and `api.github.com` is already a pinned host, so closing it adds no new network surface. Note IzzyOnDroid forbids self-updating without opt-in, so this must stay a notification, never an installer. Separately, Accrescent is phasing in domain-ownership verification for the application ID's domain on new submissions; `com.sysadmindoc.callshield` maps to no domain the project controls, and an application ID cannot be changed after users install — see *Open Questions*. Google's Developer Verification enforcement begins 2026-09-30 in Brazil, Indonesia, Singapore and Thailand for participating stores only; unregistered apps stay installable there via ADB or the "advanced flow", with friction. F-Droid's reproducible-build path uses apksigcopier to re-apply the *developer's* signature, so a single stable release key serves GitHub, F-Droid, IzzyOnDroid and Accrescent simultaneously — which is what makes the unsigned-artifact defect a four-channel blocker rather than a cosmetic one.
+
+**On-device ML, the viable path** — ML Kit GenAI and Gemini Nano are AICore-bound and blocked from background use, so they cannot classify an arriving SMS; MediaPipe's LLM Inference API is maintenance-only. LiteRT's `CompiledModel` API is documented as operating independently of Google Play services with GPU/NPU delegates across Qualcomm, MediaTek, Tensor and Samsung, which makes a **bundled** text classifier the only GMS-free option. Size evidence is favourable — published quantized smishing classifiers land around 127 KB with no accuracy loss, and BiLSTM SMS-spam TFLite models sit under 1 MB. Evasion is an active research area, so such a model belongs below every deterministic layer and must never hard-block alone.
+
+**Telephony-specific accessibility** — two requirements a generic audit will miss: RTT (Android 9+, replaces TTY, shares the voice number, supports 911) must not be disrupted by screening or the overlay, and Live Caption does not caption live phone calls, so no screening UI may assume system captions exist. WCAG 2.2's new 2.5.7 Dragging Movements directly implicates swipe-to-unblock and swipe-to-delete; 2.5.8 Target Size (Min) implicates the paired block/allow controls in a log row. W3C COGA's plain-language guidance argues against surfacing jargon such as a bare "attestation C" in a user-facing reason.
+
+**Consciously excluded from this pass** — *plugin ecosystem*: the app has no plugin surface, and the nearest real analogue (implementing SpamBlocker's SMS-screening bound-service protocol as a provider) is an Open Question, not a roadmap item, until the SMS strategy is settled. *Multi-user / accounts*: excluded by the locked philosophy; Android Work Profile awareness remains tracked as B.E.2. *iOS/KMP*: unchanged since the last pass and still Phase 4.1.
+
+## Rejected Ideas
+
+| Idea | Source | Why rejected |
 |---|---|---|
-| Offline rules | CallFilter, Hush, SpamBlocker, YetAnotherCallBlocker, and PhoneBlock support regex/prefix/wildcard rules and local operation. | Keep deterministic rules fast; expose rule provenance and an explainable preview. |
-| Crowdsourced reputation | PhoneBlock, tellows, Should I Answer, 800Notes, whocall.me, and community reports combine votes/comments with changing caller behavior. | Store independent evidence and age it; never equate a popular label with verified identity. |
-| Carrier-scale reputation | Hiya, Nomorobo, First Orion, TNS, RoboKiller, Truecaller, YouMail, and carrier products combine honeypots, reputation, STIR/SHAKEN, and behavioral analytics. | Optional remote adapters can enrich a local decision, but keys, privacy, terms, and outage behavior must remain operator-controlled. |
-| Screening interaction | RoboKiller/YouMail use challenge, voicemail, transcription, or answer-bot flows. | Treat audio screening as an opt-in, future, on-device feature; do not introduce cloud audio as a hidden dependency. |
-| SMS scam defense | Google Scam Detection, Singapore ScamShield, Scamwatch, URLhaus, PhishTank, OpenPhish, and Safe Browsing emphasize links, sender identity, urgency, impersonation, and conversation context. | Build a separate SMS/link verdict with redaction and hard-negative tests. |
-| Verified identity | STIR/SHAKEN, PASSporT, Rich Call Data, Free Caller Registry, ACMA sender IDs, and regional numbering authorities provide positive provenance as well as abuse signals. | A trusted identity should reduce false positives, not grant unconditional allow. |
-
-## Source inventory and integration assessment
-
-### Production-safe or near-safe public sources
-
-- FTC Do Not Call complaint API (`https://www.ftc.gov/developer/api/v0/endpoints/do-not-call-dnc-reported-calls-data-api`) and weekday dataset (`https://www.ftc.gov/policy-notices/open-government/data-sets/do-not-call-data`): paginated, rate-limited, unverified complaints with robocall/topic/date fields. Use as weighted evidence, preserve attribution, and back off on 429/403.
-- FCC unwanted-call Socrata dataset (`https://opendata.fcc.gov/Consumer/Consumer-Complaints-Data-Unwanted-Calls/vakf-fz8e`): caller and advertiser fields, issue/date/category metadata, public export, and unverified reports. Deduplicate both phone fields and retain the role.
-- FCC complaint guidance (`https://consumercomplaints.fcc.gov/hc/en-us/articles/115002234203-Unwanted-Calls-Texts-Phone`) and Robocall Mitigation Database (`https://www.fcc.gov/robocall-mitigation-database`, `https://docs.fcc.gov/public/attachments/DA-24-73A1_Rcd.pdf`): provenance and provider/mitigation context, not direct caller blocklists.
-- Nomorobo IRS feed (`https://www.nomorobo.com/irs`): active IRS callback-scam CSV, updated about every 20 minutes, CC BY 4.0, but access requires an approved carrier/request. Keep the current optional adapter and attribution; do not scrape the paid full list.
-- PhoneBlock API (`https://phoneblock.net/phoneblock/api`) and site (`https://phoneblock.net/phoneblock/`): hash lookup, prefix k-anonymity, incremental blocklist, and report endpoints. Code is GPL-3.0 while site/data carries CC BY-NC-SA 4.0; confirm redistribution compatibility before bundling rows.
-- Saracroche (`https://github.com/cbouvat/saracroche`, `https://f-droid.org/en/packages/com.cbouvat.android.saracroche/`): French ARCEP nuisance prefixes; useful as a country-scoped range signal, with attribution/license and stale-prefix handling.
-- Google libphonenumber (`https://libphonenumber.org/`): E.164 parsing, country, carrier, and line-type metadata. Normalize before every merge and retain original country/line-type evidence.
-- Ofcom numbering data (`https://www.ofcom.org.uk/phones-and-broadband/phone-numbers/numbering-data?language=en`): UK allocated/available ranges. Use to identify unassigned or implausible presentation numbers, not as a spam list.
-- FCC/FTC material is generally government-public-domain or government-work data with attribution obligations; record the exact dataset date and query window in generated snapshots.
-
-### Optional, authenticated, or licensing-gated feeds
-
-- Nomorobo API v2.1 (`https://assets.nomorobo.com/enterprise/Nomorobo%20Enterprise%20API%20Documentation%20v2.1.pdf`, `https://www.nomorobo.com/api/`): risk score, STIR/SHAKEN grade, reported category, DNO/FTC violations, transcription metadata, and decaying downloads; requires `X-API-Key` and a commercial agreement.
-- Hiya Protect (`https://developer.hiya.com/docs/getting-started/introduction`, `https://developer.hiya.com/docs/protect/business-partner-api/endpoints/get-reputation-for-phones`): E.164 reputation and engagement metrics; manual partner access and per-number fees.
-- First Orion (`https://developer.firstorion.com/`, `https://developer.firstorion.com/firstorion-public/docs/protect-plus`) and TNS Call Guardian (`https://communications.tnsi.com/tns-call-guardian`): carrier-scale risk/identity signals; partnership only.
-- Tellows API (`https://www.tellows.com/s/about-en/tellows-api-partnership-program`, `https://shop.tellows.de/en/tellows-api-key.html`): score 1–9, caller type/name, country coverage, daily Scorelist/API; licensing and key required.
-- Truecaller developer API (`https://www.truecaller.com/blog/news/truecaller-releases-api`), YouMail (`https://www.youmail.com/home/`, `https://support.youmail.com/en/articles/10848465/permissions-required-by-youmail`), RoboKiller (`https://support.robokiller.com/hc/en-us/articles/17677056875796-How-does-Robokiller-know-which-calls-to-block`), and Free Caller Registry (`https://freecallerregistry.com/fcr/public/html/home.html?t=1668614400022`): useful benchmark/positive identity signals, not unrestricted feeds.
-- IPQualityScore (`https://www.ipqualityscore.com/documentation/phone-number-validation-api/overview`) and Twilio Lookup (`https://www.twilio.com/docs/lookup`): line type, VOIP/prepaid, reassignment, SIM-swap, forwarding, DNC, and SMS-pumping risk. Use only as optional enrichment; never ship keys in the APK.
-- Global Signal Exchange (`https://www.globalsignalexchange.org/docs/signal-format`, `https://www.globalsignalexchange.org/docs/receiving-signals`): normalized phone/URL signals with abuse type, confidence, date, source, and predictive context; API key/secret and plan-gated.
-- PenipuMY (`https://penipu.my/api/v1/docs`): Malaysian phone/bank/social/URL reports, business verification and compromised-business fields; key-gated and rate-limited.
-- Singapore ScamShield (`https://reports.open.gov.sg/scamshield/overview`, `https://reports.open.gov.sg/scamshield/updates`, `https://www.scamshield.gov.sg/terms-of-use/`): reviewed numbers plus on-device SMS model and campaign clustering; terms prohibit scraping/reproduction, so pursue a partnership only.
-
-### SMS and URL threat feeds
-
-- URLhaus (`https://urlhaus.abuse.ch/api/`): active malware-distribution URLs, periodic dumps, authenticated access, and explicit fetch cadence. Keep URL verdicts separate from phone-number blocks.
-- PhishTank (`https://dev.phishtank.com/api_info.php`): Cisco Talos community-verified phishing feed; use local snapshots and respect rate limits.
-- OpenPhish (`https://openphish.com/phishing_feeds.html`): community and paid phishing feeds with license restrictions; do not assume an unrestricted live API.
-- Google Safe Browsing v5 (`https://developers.google.com/safe-browsing/reference/rest`) is non-commercial; commercial use belongs on Web Risk. Canonicalize/redact URLs and make network lookup opt-in.
-- Google’s on-device scam detection/security material (`https://blog.google/security/new-ai-powered-scam-detection-features/`, `https://blog.google/security/whats-new-in-android-security-privacy-2025/`, `https://services.google.com/fh/files/misc/android_2025_text_based_scams_report.pdf`) provides current categories and hard negatives, not a third-party bulk list.
-- USPS smishing guidance (`https://www.uspis.gov/news/scam-article/smishing-package-tracking-text-scams`), Scamwatch SMS patterns/statistics (`https://www.scamwatch.gov.au/types-of-scams/text-or-sms-scams`, `https://www.scamwatch.gov.au/research-and-resources/scam-statistics`), FBI IC3 report (`https://www.fbi.gov/file-repository/2025_ic3report.pdf/view`), and UK ICO guidance (`https://ico.org.uk/make-a-complaint/nuisance-calls-and-messages/spam-texts-and-nuisance-calls/`) are taxonomy/training/evaluation sources, not live blocklists.
-
-### Regional and standards signals
-
-- ACMA SMS Sender ID Register (`https://www.acma.gov.au/sms-sender-id-register`) and telco guide (`https://www.acma.gov.au/sites/default/files/2025-10/sms_sender_id_register_user_guide_for_telcos.pdf`): registered brands are positive provenance; `Unverified` should raise risk in Australia without automatic blocking.
-- Ofcom nuisance calls/CLI (`https://www.ofcom.org.uk/phones-and-broadband/unwanted-calls-and-messages/tackling-nuisance-calls-and-messages`, `https://www.ofcom.org.uk/phones-and-broadband/phone-numbers/calling-line-identification`), France ARCEP (`https://en.arcep.fr/news/press-releases/view/n/numbering-plan-021225.html`), Germany Bundesnetzagentur (`https://www.bundesnetzagentur.de/SharedDocs/Pressemitteilungen/EN/2025/20250115_Rufmani.html`), and France Bloctel (`https://www.bloctel.gouv.fr/donnees-essentielles`) inform regional numbering/complaint priors. Bloctel is a consumer do-not-call registry, not a blocklist.
-- ATIS SHAKEN (`https://sti-ga.atis.org/atis-standards-and-technical-reports/`, `https://atis.org/resources/signature-based-handling-of-asserted-information-using-tokens-shaken-atis-1000074-e/`), RFC 8224 (`https://datatracker.ietf.org/doc/rfc8224/`), PASSporT RFC 8225 (`https://www.rfc-editor.org/rfc/rfc8225.html`), SHAKEN RFC 8588 (`https://www.ietf.org/rfc/rfc8588.html`), and Rich Call Data RFC 9795 (`https://www.rfc-editor.org/rfc/rfc9795.html`) define caller authentication, attestation, signed names/logos/reasons, and future parsing contracts.
-- IoC handling RFC 9424 (`https://www.rfc-editor.org/rfc/rfc9424.html`) supports context, confidence, source, and time-bounded indicators; this is the correct model for phone numbers and domains.
-- Canada CRTC traceback decision (`https://www.crtc.gc.ca/eng/archive/2026/2026-52.htm`) and the UK/Australia/France regulator material show that carrier-origin metadata is becoming more useful, but public number-level feeds remain uncommon.
-- NANPA NPA/CO-code assignments (`https://www.nanpa.com/index.php/reports/npa-reports`, `https://www.nanpa.com/reports/co-code-reports/cocodes_assign`) and the FCC Reassigned Numbers Database (`https://www.reassigned.us/`, `https://docs.fcc.gov/public/attachments/DA-20-105A2.pdf`) can reject unassigned/available ranges and reduce false positives after a number is recycled; both are validation/paid-query signals, not spam lists.
-- India TRAI DND/UCC guidance (`https://www.trai.gov.in/faqcategory/unsolicited-commercial-communicationsucc`, `https://trai.gov.in/sites/default/files/2026-02/PR_No.21of2026.pdf`) and DoT Chakshu (`https://www.sancharsaathi.gov.in/SancharSaathiDocuments/ImportantDocuments/Press%20Release-DoT%20takes%20action%20against%20Electricity%20KYC%20Update%20Scam.pdf`) provide localized report categories and impersonation patterns; no public bulk number feed is offered.
-- Brazil Anatel rules (`https://www.gov.br/anatel/pt-br/consumidor/chamadas-abusivas/medidas-cautelares`, `https://www.gov.br/anatel/pt-br/assuntos/noticias/anatel-define-regras-para-implementacao-da-autenticacao-de-chamadas`, `https://www.gov.br/anatel/pt-br/assuntos/noticias/anatel-amplia-0303-no-combate-as-chamadas-indesejadas`) provide 0303 commercial-call labeling, invalid-range and high-volume behavior signals, and authentication requirements.
-- Spain’s 400 commercial prefix and anti-spoofing rules (`https://www.boe.es/buscar/act.php?id=BOE-A-2026-8409`, `https://www.boe.es/buscar/doc.php?id=BOE-A-2025-2870`, `https://www.boe.es/buscar/doc.php?id=BOE-A-2026-12045`) support locale-specific presentation validation; unknown commercial callers should be treated as suspicious context, not an automatic block.
-- Ireland ComReg sender-ID registry (`https://www.comreg.ie/media/2025/06/SMS-Sender-ID-Registry-Rules-Of-Registration.pdf`, `https://www.comreg.ie/media/2025/06/SMS-Sender-ID-Registry-Public-Guide-ver-1-2.pdf`, `https://www.comreg.ie/media/2025/06/Sender-ID-Press-Release-040625.pdf`) labels unregistered IDs and shows how a regional allow/provenance registry can work without a global blacklist.
-- Poland CERT Polska (`https://www.gov.pl/web/baza-wiedzy/dostales-niepokojacy-sms-lub-email-zglos-go-do-cert-polska-csirt-nask`) and Sweden PTS (`https://pts.se/en/internet-and-telephony/sakerhet-och-skydd-av-uppgifter/telephone-scams-spoofing/`) / Belgium BIPT (`https://www.bipt.be/operatoren/telecom/consumentenbescherming/koninklijk-besluit-betreffende-spoofing`) document regional report and spoofed-CLI rules; use for locale policy and training, not scraping.
-- UK 7726/NCSC guidance (`https://www.ofcom.org.uk/phones-and-broadband/scam-calls-and-messages/what-to-do-about-a-scam-call-text-or-message`, `https://www.ncsc.gov.uk/collection/phishing-scams/report-scam-text-message`) supports an opt-in report-forwarding workflow. The raw carrier feed is not open.
-- ACCC/National Anti-Scam Centre (`https://www.accc.gov.au/system/files/targeting-scams-report-2025.pdf`, `https://www.accc.gov.au/system/files/nasc-job-scam-fusion-cell-final-report-2025.pdf`) confirms that ephemeral SMS numbers favor campaign/content/domain clustering over permanent exact-number blocks.
-- Mavenir carrier descriptions (`https://www.mavenir.com/portfolio/mavapps/fraud-security/spamshield-messaging-fraud/`, `https://www.mavenir.com/portfolio/mavapps/fraud-security/callshield-voice-fraud-and-revenue-protection/`) are useful feature benchmarks: message fingerprints, callback reputation, answer/decline/voicemail behavior, neighbor/mirror spoofing, and invalid/unallocated ranges. They are carrier-gated products, not public feeds.
-
-### OSS competitors and community signals
-
-- CallFilter (`https://callfilter.pedrorau.dev/`), Stefan Ilchev CallBlocker (`https://github.com/StefanIlchev/CallBlocker`), SpamBlocker (`https://github.com/aj3423/SpamBlocker`, `https://f-droid.org/en/packages/spam.blocker/`), YetAnotherCallBlocker (`https://gitlab.com/xynngh/YetAnotherCallBlocker`), Hush (`https://github.com/nouradeen/hush`), and calls-blocker (`https://github.com/ryosoftware/calls-blocker`) demonstrate local regex, wildcard, country-prefix, and official CallScreeningService UX.
-- PhoneBlock upstream (`https://github.com/haumacher/phoneblock`), JingHu (`https://qclb.com/en/`), SpamBlocker Extended (`https://f-droid.org/en/packages/dev.kerballone.spamblocker/`), and minimal Call Screener (`https://sites.google.com/view/callscreener`) demonstrate offline databases, on-device models, rule testing, and notification/role constraints.
-- Should I Answer methodology (`https://www.shouldianswer.com/post/does-the-should-i-answer-app-block-all-spam-calls`), 800Notes (`https://800notes.com/faq`), whocall.me (`https://whocall.me/`), SkipCalls (`https://skipcalls.com/tools/spam-check-api`), SpravPortal WhoCalls API (`https://github.com/spravportal/whocallsapi`), and the small GitHub seed list (`https://gist.github.com/jsadeli/6e2bf66bd02c9c444acdc3c8f605b50e`) are discovery/benchmark sources only; terms, provenance, and noise prevent blind scraping or bundling.
-- Dynamic/static spam-blocker studies (`https://cse3000-research-project.github.io/static/dc9aa83becc038e76b259b7c315ea0ad/poster.pdf`, `https://cse3000-research-project.github.io/static/ad0294aeb01805a5f88b039518bd32ca/poster.pdf`) show common permissions, CallScreeningService use, and app-level implementation patterns.
-
-### Academic and evaluation sources
-
-- Malicious-call detection (`https://arxiv.org/abs/1804.02566`), virtual-assistant spam screening (`https://arxiv.org/abs/2008.03554`), multiple-vantage robocall analysis (`https://arxiv.org/abs/2410.17361`), worldwide campaign analysis (`https://arxiv.org/abs/2606.31790`), disposable-number ecosystems (`https://arxiv.org/abs/2306.14497`), cross-app phone-number attacks (`https://arxiv.org/abs/1512.07330`), voice-phishing detection (`https://wsp-lab.github.io/papers/kim-hearmeout-mobisys22.pdf`), and local differential-privacy blacklists (`https://arxiv.org/abs/2006.09287`) support campaign graphs, churn/velocity features, privacy-preserving aggregation, and calibrated confidence.
-- SMS/scam datasets: user-report study (`https://arxiv.org/abs/2508.05276`), SmishTank (`https://arxiv.org/abs/2402.18430`), and 153,551-message benchmark (`https://arxiv.org/abs/2210.10451`). Check each dataset license before training or redistribution.
-- Google’s CallShield-adjacent audio authentication work (`https://arxiv.org/abs/2601.09327`) is research, not a drop-in dependency; keep audio features future/opt-in.
-
-## Security, privacy, and reliability assessment
-
-1. **Telecom deadline:** Android requires a screening response within five seconds (`https://developer.android.com/reference/android/telecom/CallScreeningService`). Keep the 4.5-second guard, fail open on provider/Room/ML errors, and add fault-injection tests for cold start, direct boot, cancellation, and OEM rebind. Never add a network call to the synchronous screening path.
-2. **Source trust:** Complaint, crowd, and scraped data are unverified. Store source/evidence/first-seen/last-seen/license and a confidence tier; use corroboration and decay. A single complaint or a single phishing feed hit should produce a warning/review signal, not an irreversible hard block.
-3. **Privacy:** Keep contacts, call logs, SMS bodies, notification text, and URLs local by default. Hash/k-anonymous PhoneBlock lookups and URL-host-only checks are preferable to uploading raw identifiers. Redact OTPs and message bodies from logs/exports.
-4. **Android policy drift:** Android 15 notification-listener OTP redaction and Android 17 delayed SMS OTP access can remove evidence. The RCS/SMS path must surface a degraded state, avoid re-request loops, and never ask users to become a default SMS app solely to bypass platform protections.
-5. **Identity:** STIR/SHAKEN A/B/C status, PASSporT, RCD, DNO, line type, and sender registration are confidence inputs. Verified identity is not proof of good intent; spoofing and compromised business numbers remain possible.
-6. **Supply chain:** Current dependencies are recent but need release/advisory monitoring. Review OkHttp, Room, WorkManager, Kotlin/KSP, Hilt, Compose, and Glance release/security notes before upgrades. Keep Gradle lockfiles and dependency provenance in the release gate.
-7. **Deployment:** `REPLACE_WITH_KV_NAMESPACE_ID` means the Worker’s production rate-limit/dedup guarantee is not verified. Provisioning, secret configuration, deployment, and a live probe are operator-gated and belong in `Roadmap_Blocked.md` if credentials are unavailable.
-8. **Signing/data:** A local `callshield-release.jks` exists but is ignored by Git; verify it never enters artifacts, backups, or logs. Do not introduce signing certificates or API keys into source, APK assets, or client-side configuration.
-
-## Architecture direction
-
-Adopt a source adapter registry with these fields: stable source ID, geography, signal type (number/prefix/URL/sender ID/identity), license/attribution, access mode (bundled/public/API/key/operator), parser version, retrieval timestamp, source timestamp, TTL, confidence tier, and health status. Normalize all numbers through libphonenumber-compatible logic; canonicalize URLs; retain raw evidence only in a bounded, local/import-time quarantine.
-
-Use a two-stage decision: (1) local deterministic screening must complete offline and fail open within the deadline; (2) optional background enrichment updates reputation/campaign evidence for future calls. Separate `number reputation`, `identity verification`, `campaign behavior`, `SMS content`, and `URL threat` verdicts so users can understand why a decision changed.
-
-Build source snapshots reproducibly with a manifest containing URL, query window, retrieval time, checksum, license, row count, accepted/rejected counts, and parser version. Publish only permitted data; for restricted sources retain a runtime adapter or hashed lookup, never a scraped copy.
-
-## Rejected or gated approaches
-
-- Scraping Truecaller, Hiya, Nomorobo full lists, ScamShield, tellows, Should I Answer, whocall.me, or other closed sites; access, terms, rate limits, and redistribution rights are not present.
-- Bundling commercial API keys or paid proprietary rows in the APK.
-- Treating FTC/FCC complaints, crowd reports, DNC registrations, or unverified sender IDs as automatic hard blocks.
-- Replacing the default SMS role or requesting broad notification access only to defeat Android 15/17 OTP protections.
-- Cloud audio recording/transcription or always-on remote reputation gating; conflicts with local-first/privacy goals and the five-second screening contract.
-- Importing Bloctel or DNC registration data as caller blocklists; those are consumer preference registries and can create false positives.
-- Adding model training data without checking dataset license, consent, redaction, and reproducibility.
-
-## Open questions and operator gates
-
-- Which launch geographies and languages should receive regional source adapters first (US/Canada, UK, France, Australia, Singapore, Malaysia, or global)?
-- Which paid/API partnerships and monthly request budget are acceptable?
-- Can an operator provision the Cloudflare KV namespace, secrets, live Worker deployment, and authorized Nomorobo/PhoneBlock credentials?
-- Should SMS URL reputation be opt-in per source, and is a small on-device model acceptable for message-body classification?
-- What false-positive rate and review/appeal workflow are required before any source can influence automatic blocking?
+| ML Kit GenAI / Gemini Nano for SMS classification | SpamBlocker issue #642; developer.android.com/ai/gemini-nano | Built on AICore (GMS), ~30 flagship devices, and **foreground-use-only** (`ErrorCode.BACKGROUND_USE_BLOCKED`) — structurally unusable for SMS-arrival classification, and breaks the FOSS/no-GMS constraint. |
+| MediaPipe LLM Inference API | ai.google.dev/edge/mediapipe | Maintenance-only; Google directs migration to LiteRT-LM. Do not build on it. |
+| SpamBlocker-style user-editable JSON workflow engine | SpamBlocker wiki "Regex Workflow Templates" | It is SpamBlocker's moat *and* its adoption tax; "too complex, unable to understand anything" is the recurring F-Droid-forum complaint about the category. Contradicts nothing in the philosophy but contradicts the persona. |
+| PhoneBlock SIP answerbot / any engage-the-caller bot | github.com/haumacher/phoneblock | TCPA and state recording-consent exposure; already reject-leaning as B.?.1. |
+| Moving to targetSdk 37 in 2026 | developer.android.com/about/versions/17/behavior-changes-17 | Buys nothing (not on Play; Play's own deadline is Aug 2027) and costs *all* standard-format OTP SMS behind a 3-hour withholding wall. Stay at 36. |
+| Glance widget rewrite now (existing B.U.9) | developer.android.com/jetpack/androidx/releases/glance | Glance stable is still **1.1.1**; 1.2.0 has sat at `rc01` since 2025-12-03 with no promotion. Widget previews and adaptive sizing all require the RC. Defer, don't rc-pin. |
+| Upgrading Kotlin to close CVE-2026-53914 | GHSA-r937-wjx7-w2jp; kotlinlang.org/docs/releases.html | The fix lands in Kotlin **2.4.20, which is still Beta2** (GA slated Sept 2026). No stable upgrade closes it today. The `Roadmap_Blocked.md` AGP-9 tranche's "Kotlin must reach ≥ 2.4.20" precondition is currently unsatisfiable — the documented remote/shared-build-cache mitigation remains the only answer, and it is sound because the attack requires poisoned cache metadata as untrusted input. |
+| Blocking private/loopback hosts in `ExternalBlocklistParser` | prior pass, retained | Still correct: the URL is user-entered and unreflected; blocking RFC1918 breaks the legitimate LAN-hosted-blocklist case. |
+| Adding a spam-tolerance "aggressiveness" slider as a new top-level control | RoboKiller, Call Control feature pages | The mechanism already exists as `BlockingProfiles` + per-category call actions + configurable thresholds. This is a naming/IA problem, not a feature gap; fold it into the Settings IA work rather than adding a fourth overlapping control. |
 
 ## Sources
 
-This report cites 70+ distinct sources above, grouped by use and access status. The most actionable source families are FTC/FCC public data, PhoneBlock/Saracroche/Nomorobo IRS with license review, URLhaus/PhishTank/OpenPhish/Safe Browsing for SMS links, ACMA/Ofcom/ARCEP/ATIS/IETF identity signals, and authenticated Hiya/Nomorobo/Tellows/First Orion/TNS/IPQS/Twilio/GSE adapters.
+**OSS competitors**
+- https://github.com/aj3423/SpamBlocker · /releases/tag/v5.5 · v5.7 · v5.9 · v5.10 · v5.12 · v5.13 · v5.14 · /wiki/SMS-Screening-Protocol · /wiki/Regex-Workflow-Templates · /issues/362 · /issues/587 · /issues/642
+- https://github.com/haumacher/phoneblock · /blob/master/INTEGRATIONS.md
+- https://codeberg.org/cbouvat/saracroche-android
+- https://github.com/KerballOne/SpamBlocker-Extended · https://f-droid.org/en/packages/dev.kerballone.spamblocker/
+- https://f-droid.org/packages/me.lucky.silence/ · https://gitlab.com/xynngh/YetAnotherCallBlocker
+- https://github.com/FossifyOrg/Messages · https://github.com/FossifyOrg/Phone
+
+**Android platform**
+- https://developer.android.com/about/versions/16/behavior-changes-all · /16/behavior-changes-16
+- https://developer.android.com/about/versions/17/behavior-changes-17 · /17/behavior-changes-all · /17/release-notes
+- https://developer.android.com/develop/connectivity/telecom/dialer-app/screen-calls · /prevent-spoofing
+- https://developer.android.com/develop/ui/compose/accessibility/testing · https://developer.android.com/guide/topics/ui/accessibility/principles
+- https://developer.android.com/develop/ui/views/quicksettings-tiles
+- https://developer.android.com/topic/performance/baselineprofiles/create-baselineprofile · /measure-baselineprofile
+- https://developer.android.com/guide/practices/page-sizes
+
+**Dependencies and advisories**
+- https://github.com/gradle/gradle/security/advisories/GHSA-mqwm-5m85-gmcv · /GHSA-w78c-w6vf-rw82 · https://services.gradle.org/versions/current
+- https://github.com/advisories/GHSA-r937-wjx7-w2jp · https://nvd.nist.gov/vuln/detail/CVE-2026-53914
+- https://developer.android.com/build/releases/gradle-plugin · https://kotlinlang.org/docs/releases.html · https://github.com/google/ksp/releases/tag/2.3.11
+- https://developer.android.com/develop/ui/compose/bom/bom-mapping · https://developer.android.com/jetpack/androidx/releases/compose · /glance · /window · /benchmark · /work · /lifecycle · /activity · /navigation · /core
+- https://github.com/google/dagger/releases/tag/dagger-2.60 · https://github.com/robolectric/robolectric/releases · https://github.com/Kotlin/kotlinx-kover/releases/tag/v0.9.9
+- https://github.com/google/libphonenumber/releases/tag/v9.0.36 · https://repo1.maven.org/maven2/io/michaelrocks/libphonenumber-android/maven-metadata.xml
+- https://developers.google.com/edge/litert · https://developers.google.com/ml-kit/genai
+
+**Distribution**
+- https://f-droid.org/en/docs/Inclusion_Policy/ · /Inclusion_How-To/ · /Reproducible_Builds/
+- https://izzyondroid.org/docs/general/AppInclusionPolicy/
+- https://accrescent.app/docs/guide/publish/requirements.html · https://blog.accrescent.app/posts/android-developer-verification/
+- https://developer.android.com/developer-verification · https://f-droid.org/2026/02/24/open-letter-opposing-developer-verification.html
+
+**Regulatory, harm and accessibility**
+- https://www.law.cornell.edu/cfr/text/47/64.1200 (§64.1200(k) blocking redress)
+- https://www.acma.gov.au/combating-phone-scams · https://www.bandwidth.com/support/en/articles/12823054-what-can-i-do-if-my-calls-are-improperly-labeled-as-spam-or-scam
+- https://www.w3.org/TR/WCAG22/ · https://www.w3.org/TR/coga-usable/introduction.html · https://source.android.com/docs/core/connect/rtt
+- https://dontkillmyapp.com/xiaomi · https://forum.f-droid.org/t/best-call-blocker/25033
+
+**Explainability patterns**
+- https://docs.pi-hole.net/database/query-database/ · https://github.com/gorhill/uBlock/wiki/The-logger · https://help.nextdns.io/t/q6hmvc6/i-found-a-domain-blocked-by-error · https://support.microsoft.com/en-au/windows/protection-history-f1e5fd95-09b4-46d1-b8c7-1059a1e09708
+
+**Commercial**
+- https://blog.google/security/staying-one-step-ahead-strengthening-androids-lead-in-scam-protection/ · https://techcrunch.com/2026/03/12/truecallers-now-lets-you-hang-up-on-scammers-on-behalf-of-your-family/ · vendor pricing pages for Nomorobo, Call Control, RoboKiller, YouMail, Hiya
+
+## Open Questions
+
+1. **Which release key signs public artifacts from now on?** `callshield-release.jks` exists locally and is gitignored; `docs/fdroid/…yml` already pins `AllowedAPKSigningKeys: d179d0da…`; `CLAUDE.md` records that the phone's installed v1.7.25 has "an unavailable signing key". Whether `d179d0da…` is the fingerprint of the extant keystore determines whether existing installs can upgrade in place or whether every user must uninstall. Nothing in the repo answers this. Blocks the P0 signing item.
+2. **SMS strategy: default-SMS role, screening-provider protocol, or accept degradation?** Android 17 withholds OTP-format SMS for 3 hours from non-default handlers; Android 16 already removed the receiver ordering guarantee; and the "SMS Screening Provider mode" item in `Roadmap_Blocked.md` describes it as *"Android's SMS screening ContentProvider protocol"* — that is wrong. No such platform API exists; it is SpamBlocker's own bound-service/Messenger contract (`sms.screening.provider.PublicSMSScreeningService`), implemented by SpamBlocker and QUIK SMS. That correction changes the item's cost and its ceiling (it only helps users of participating SMS apps) and should be settled before either path is staffed.
+3. **Does the project accept a domain-bound application ID?** Accrescent is phasing in domain-ownership verification for the app ID's domain on new submissions; `com.sysadmindoc.callshield` maps to no domain the project controls. Renaming the application ID after users have installed is unrecoverable, so this must be decided before, not after, the first store submission.
+4. **What is the acceptable false-positive budget, and who adjudicates it?** Several proposed items (region prefix ranges, campaign velocity, an SMS text classifier) trade recall for precision, and there is currently no stated target to hold them to.
+5. **Is `+15559876543`-class synthetic traffic a test fixture or live pollution?** 29 of 35 queued reports are fictional 555 numbers. If a device or script is still emitting them, draining the queue fixes the symptom and not the source.
+
+## Verification environment
+
+The Gradle build could not run as checked out: `local.properties` pointed at `D:\tools\android-sdk`, which no longer exists (that machine was retired), and `JAVA_HOME` pointed at a JDK 21.0.11 path superseded by 21.0.12. Both were corrected locally (`sdk.dir=C:/Users/--/AppData/Local/Android/Sdk`, `JAVA_HOME=…/jdk-21.0.12.8-hotspot`) to produce the test run cited above. `local.properties` is gitignored and machine-local; note the escaping trap — a Java `.properties` file eats single backslashes, so a Windows path must use forward slashes or doubled backslashes or Gradle fails with `IOException: The filename, directory name, or volume label syntax is incorrect` before any task resolves.
