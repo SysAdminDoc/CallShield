@@ -553,6 +553,32 @@ Fresh 30+ source sweep (SpamBlocker 2026 releases + issue tracker, SpamBlocker E
 
 ### P1
 
+### P0 — the deployed Cloudflare Worker is still stale (re-confirmed 2026-08-08)
+
+The public report endpoint still runs a pre-v1.7.29 build. Two things are wrong with the
+repo state and both must be fixed in the same pass:
+
+1. `worker/wrangler.toml` still carries `id = "REPLACE_WITH_KV_NAMESPACE_ID"`. With no real
+   namespace the rate-limit and dedup guards are permissive rather than merely racy.
+2. Every queued report still arrives without `reporter_bucket` and without the `_rand`
+   filename segment, which is the observable proof the deployed build predates v1.7.29.
+   `generate_hot_list.py` skips bucket-less reports, so the 30-minute hot-list fast path is
+   silently dead for **all** community reports.
+
+**Cannot be done unattended.** `wrangler` reports "You are not authenticated", there is no
+`wrangler-account.json` or `CLOUDFLARE_*` credential on this machine, and `wrangler login`
+is an interactive OAuth flow. Steps once signed in:
+
+```bash
+cd worker
+npx wrangler login
+npx wrangler kv namespace create RATE_LIMIT   # paste the returned id into wrangler.toml
+npx wrangler deploy
+```
+
+Verify afterwards by posting one report and confirming the queued file has both
+`reporter_bucket` and a `_rand` segment.
+
 ### P2
 
 ### P3
