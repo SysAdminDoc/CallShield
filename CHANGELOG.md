@@ -18,6 +18,10 @@ All notable changes to CallShield will be documented in this file.
   protection unless the payload explicitly declares a clear. Unavailable feeds
   are retried and surfaced with the age of the last good refresh.
 
+### Build
+
+- Upgraded the Gradle wrapper to 8.14.4 and pinned its distribution checksum.
+
 ## v1.7.33 — 2026-08-01
 
 ### Detection data
