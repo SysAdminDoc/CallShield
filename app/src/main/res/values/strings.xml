@@ -838,6 +838,8 @@
     <string name="protection_test_ml_fp_fail">False positive — threshold may be too low</string>
     <string name="protection_test_hot_pass">Hot campaign ranges loaded</string>
     <string name="protection_test_hot_fail">Empty — will populate on next 30-min sync</string>
+    <string name="protection_test_hot_unavailable_age">Hot data unavailable; last good update was %1$d hours ago</string>
+    <string name="protection_test_hot_unavailable_never">Hot data unavailable; no successful update yet</string>
     <string name="protection_test_overlay_pass">Can display caller ID overlay</string>
     <string name="protection_test_overlay_fail">Not granted — overlay won\'t show</string>
     <string name="protection_test_notif_pass">RCS filter can monitor messages</string>

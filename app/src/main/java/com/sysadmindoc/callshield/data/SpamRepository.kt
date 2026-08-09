@@ -122,6 +122,8 @@ class SpamRepository(
         internal val KEY_LAST_SYNC_SOURCE = stringPreferencesKey("last_sync_source")
         internal val KEY_LAST_SHA = stringPreferencesKey("last_data_sha")
         internal val KEY_DB_VERSION = intPreferencesKey("db_version")
+        internal val KEY_HOT_DATA_LAST_GOOD = longPreferencesKey("hot_data_last_good_timestamp")
+        internal val KEY_HOT_DATA_UNAVAILABLE = stringSetPreferencesKey("hot_data_unavailable_feeds")
         val KEY_BLOCK_CALLS = booleanPreferencesKey("block_calls_enabled")
         val KEY_BLOCK_SMS = booleanPreferencesKey("block_sms_enabled")
         val KEY_BLOCK_UNKNOWN = booleanPreferencesKey("block_unknown_enabled")
@@ -742,6 +744,13 @@ class SpamRepository(
 
     // ── Hot list (30-minute trending sync) ────────────────────────────
     suspend fun replaceHotList(numbers: List<SpamNumber>) = syncRepository.replaceHotList(numbers)
+
+    internal suspend fun readHotDataHealth(): HotDataHealth = settingsRepository.readHotDataHealth()
+
+    internal suspend fun recordHotDataHealth(
+        lastGoodTimestamp: Long?,
+        unavailableFeeds: Set<String>,
+    ) = settingsRepository.recordHotDataHealth(lastGoodTimestamp, unavailableFeeds)
 
     // ── Auto-cleanup ──────────────────────────────────────────────────
     suspend fun cleanupOldLogs() = blocklistRepository.cleanupOldLogs()

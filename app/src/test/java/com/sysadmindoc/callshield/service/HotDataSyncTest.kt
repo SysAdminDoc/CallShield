@@ -68,6 +68,13 @@ class HotDataSyncTest {
     }
 
     @Test
+    fun emptyFeedOnlyAppliesWhenExplicitlyCleared() {
+        assertEquals(false, HotDataSync.shouldApplyFeed(emptyList<Any>(), explicitlyCleared = false))
+        assertEquals(true, HotDataSync.shouldApplyFeed(emptyList<Any>(), explicitlyCleared = true))
+        assertEquals(true, HotDataSync.shouldApplyFeed(listOf("usable"), explicitlyCleared = false))
+    }
+
+    @Test
     fun sanitizeSpamDomains_normalizesSchemesAndDuplicates() {
         val sanitized =
             HotDataSync.sanitizeSpamDomains(

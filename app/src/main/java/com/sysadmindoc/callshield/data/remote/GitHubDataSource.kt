@@ -187,37 +187,52 @@ class GitHubDataSource :
     override suspend fun fetchHotList(
         owner: String,
         repo: String,
-    ): Result<List<HotNumber>> =
+    ): Result<List<HotNumber>> = fetchHotListSnapshot(owner, repo).map { it.data }
+
+    override suspend fun fetchHotListSnapshot(
+        owner: String,
+        repo: String,
+    ): Result<HotFeedSnapshot<List<HotNumber>>> =
         withContext(Dispatchers.IO) {
             val result = fetchRawText(HOT_LIST_PATH, owner, repo)
             if (result.isFailure) {
                 return@withContext Result.failure(result.exceptionOrNull()!!)
             }
-            Result.success(parseHotListJson(result.getOrThrow()))
+            Result.success(parseHotListSnapshotJson(result.getOrThrow()))
         }
 
     override suspend fun fetchHotRanges(
         owner: String,
         repo: String,
-    ): Result<List<String>> =
+    ): Result<List<String>> = fetchHotRangesSnapshot(owner, repo).map { it.data }
+
+    override suspend fun fetchHotRangesSnapshot(
+        owner: String,
+        repo: String,
+    ): Result<HotFeedSnapshot<List<String>>> =
         withContext(Dispatchers.IO) {
             val result = fetchRawText(HOT_RANGES_PATH, owner, repo)
             if (result.isFailure) {
                 return@withContext Result.failure(result.exceptionOrNull()!!)
             }
-            Result.success(parseHotRangesJson(result.getOrThrow()))
+            Result.success(parseHotRangesSnapshotJson(result.getOrThrow()))
         }
 
     override suspend fun fetchSpamDomains(
         owner: String,
         repo: String,
-    ): Result<List<String>> =
+    ): Result<List<String>> = fetchSpamDomainsSnapshot(owner, repo).map { it.data }
+
+    override suspend fun fetchSpamDomainsSnapshot(
+        owner: String,
+        repo: String,
+    ): Result<HotFeedSnapshot<List<String>>> =
         withContext(Dispatchers.IO) {
             val result = fetchRawText(SPAM_DOMAINS_PATH, owner, repo)
             if (result.isFailure) {
                 return@withContext Result.failure(result.exceptionOrNull()!!)
             }
-            Result.success(parseSpamDomainsJson(result.getOrThrow()))
+            Result.success(parseSpamDomainsSnapshotJson(result.getOrThrow()))
         }
 
     suspend fun fetchModelWeightsJson(
@@ -277,18 +292,19 @@ class GitHubDataSource :
             database
         }
 
-    override fun parseHotListJson(body: String): List<HotNumber> {
+    override fun parseHotListJson(body: String): List<HotNumber> = parseHotListSnapshotJson(body).data
+
+    override fun parseHotListSnapshotJson(body: String): HotFeedSnapshot<List<HotNumber>> {
         val trimmedBody = body.trimStart()
-        val entries =
+        val (entries, explicitlyCleared) =
             when {
                 trimmedBody.startsWith("{") -> {
-                    hotListEnvelopeAdapter.fromJson(body)?.numbers
-                        ?: error("Failed to parse hot list payload")
+                    val payload = hotListEnvelopeAdapter.fromJson(body) ?: error("Failed to parse hot list payload")
+                    payload.numbers to payload.cleared
                 }
 
                 trimmedBody.startsWith("[") -> {
-                    hotListArrayAdapter.fromJson(body)
-                        ?: error("Failed to parse hot list array")
+                    (hotListArrayAdapter.fromJson(body) ?: error("Failed to parse hot list array")) to false
                 }
 
                 else -> {
@@ -299,35 +315,37 @@ class GitHubDataSource :
             "hot list row count ${entries.size} exceeds cap $MAX_HOT_LIST_ROWS"
         }
 
-        return entries.mapNotNull { entry ->
-            val number = entry.number.trim()
-            if (number.isBlank()) {
-                null
-            } else {
-                HotNumber(
-                    number = number,
-                    type = entry.type.trim().ifBlank { "robocall" },
-                    description = entry.description.trim().ifBlank { "Trending community report" },
-                )
-            }
-        }
+        return HotFeedSnapshot(
+            data =
+                entries.mapNotNull { entry ->
+                    val number = entry.number.trim()
+                    if (number.isBlank()) {
+                        null
+                    } else {
+                        HotNumber(
+                            number = number,
+                            type = entry.type.trim().ifBlank { "robocall" },
+                            description = entry.description.trim().ifBlank { "Trending community report" },
+                        )
+                    }
+                },
+            explicitlyCleared = explicitlyCleared,
+        )
     }
 
-    override fun parseHotRangesJson(body: String): List<String> {
+    override fun parseHotRangesJson(body: String): List<String> = parseHotRangesSnapshotJson(body).data
+
+    override fun parseHotRangesSnapshotJson(body: String): HotFeedSnapshot<List<String>> {
         val trimmedBody = body.trimStart()
-        val ranges =
+        val (ranges, explicitlyCleared) =
             when {
                 trimmedBody.startsWith("{") -> {
-                    hotRangesEnvelopeAdapter
-                        .fromJson(body)
-                        ?.ranges
-                        .orEmpty()
-                        .map { it.npanxx }
+                    val payload = hotRangesEnvelopeAdapter.fromJson(body) ?: error("Failed to parse hot ranges payload")
+                    payload.ranges.map { it.npanxx } to payload.cleared
                 }
 
                 trimmedBody.startsWith("[") -> {
-                    hotRangesArrayAdapter.fromJson(body)
-                        ?: error("Failed to parse hot ranges array")
+                    (hotRangesArrayAdapter.fromJson(body) ?: error("Failed to parse hot ranges array")) to false
                 }
 
                 else -> {
@@ -337,23 +355,22 @@ class GitHubDataSource :
         requireFeed(ranges.size <= MAX_HOT_RANGE_ROWS, GitHubFeedFailureReason.ROW_LIMIT) {
             "hot ranges row count ${ranges.size} exceeds cap $MAX_HOT_RANGE_ROWS"
         }
-        return ranges
+        return HotFeedSnapshot(ranges, explicitlyCleared)
     }
 
-    override fun parseSpamDomainsJson(body: String): List<String> {
+    override fun parseSpamDomainsJson(body: String): List<String> = parseSpamDomainsSnapshotJson(body).data
+
+    override fun parseSpamDomainsSnapshotJson(body: String): HotFeedSnapshot<List<String>> {
         val trimmedBody = body.trimStart()
-        val domains =
+        val (domains, explicitlyCleared) =
             when {
                 trimmedBody.startsWith("{") -> {
-                    spamDomainsEnvelopeAdapter
-                        .fromJson(body)
-                        ?.domains
-                        .orEmpty()
+                    val payload = spamDomainsEnvelopeAdapter.fromJson(body) ?: error("Failed to parse spam domains payload")
+                    payload.domains to payload.cleared
                 }
 
                 trimmedBody.startsWith("[") -> {
-                    spamDomainsArrayAdapter.fromJson(body)
-                        ?: error("Failed to parse spam domains array")
+                    (spamDomainsArrayAdapter.fromJson(body) ?: error("Failed to parse spam domains array")) to false
                 }
 
                 else -> {
@@ -363,9 +380,10 @@ class GitHubDataSource :
         requireFeed(domains.size <= MAX_SPAM_DOMAIN_ROWS, GitHubFeedFailureReason.ROW_LIMIT) {
             "spam domains row count ${domains.size} exceeds cap $MAX_SPAM_DOMAIN_ROWS"
         }
-        return domains
-            .map { it.trim() }
-            .filter { it.isNotBlank() }
+        return HotFeedSnapshot(
+            data = domains.map { it.trim() }.filter { it.isNotBlank() },
+            explicitlyCleared = explicitlyCleared,
+        )
     }
 
     private suspend fun fetchRawText(
@@ -532,6 +550,7 @@ class GitHubDataSource :
 
     private data class HotListPayload(
         val numbers: List<HotListEntry> = emptyList(),
+        val cleared: Boolean = false,
     )
 
     private data class HotListEntry(
@@ -542,6 +561,7 @@ class GitHubDataSource :
 
     private data class HotRangesPayload(
         val ranges: List<HotRangeEntry> = emptyList(),
+        val cleared: Boolean = false,
     )
 
     private data class HotRangeEntry(
@@ -550,5 +570,6 @@ class GitHubDataSource :
 
     private data class SpamDomainsPayload(
         val domains: List<String> = emptyList(),
+        val cleared: Boolean = false,
     )
 }
