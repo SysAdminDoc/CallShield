@@ -789,13 +789,6 @@ Sweep focused on angles the 2026-08-02 source/feed pass did not cover: release d
   Acceptance: `assembleRelease` fails loudly when release signing properties are missing rather than emitting an unsigned APK; `verify-release-signing.ps1` runs as a `finalizedBy`/`dependsOn` of the release artifact, not as a remembered manual step; `apksigner verify --print-certs` on the published artifact prints exactly one signer whose SHA-256 equals the `AllowedAPKSigningKeys` value in the F-Droid metadata; the runbook states which keystore is canonical and what happens to existing installs signed by a different key.
   Complexity: S (blocked on Open Question 1 in `RESEARCH.md` — which key is canonical)
 
-- [ ] P0 — Upgrade the Gradle wrapper off 8.11.1 and pin the distribution checksum
-  Why: 8.11.1 is affected by two High-severity advisories with a published fix, and the wrapper properties carry no `distributionSha256Sum`, so the distribution download itself is unverified.
-  Evidence: `gradle/wrapper/gradle-wrapper.properties` → `gradle-8.11.1-bin.zip`, no `distributionSha256Sum`. CVE-2026-22865 / GHSA-mqwm-5m85-gmcv and CVE-2026-22816 / GHSA-w78c-w6vf-rw82, both CVSS4 8.6, affect `< 8.14.4`; fixed in 8.14.4 (8.x line) and 9.3.0.
-  Touches: `gradle/wrapper/gradle-wrapper.properties`, `gradlew`, `gradlew.bat`, all Gradle lockfiles if resolution shifts.
-  Acceptance: wrapper is at 8.14.4 or later (8.14.4 keeps AGP 8.10.1 viable and does not pull in the AGP-9 tranche); `distributionSha256Sum` is set and `validateDistributionUrl=true` retained; `testDebugUnitTest`, `ktlintCheck`, `detekt`, `lintDebug`, `koverVerify`, `verifyReleaseMetadata`, `verifyPipelineTests` and `assembleRelease` all pass on the new wrapper.
-  Complexity: S
-
 - [ ] P0 — Stop depending on `android:priority="999"` for SMS ordering
   Why: on Android 16, for all apps regardless of `targetSdk`, ordered-broadcast `android:priority` is honoured only among receivers inside the declaring process. The manifest's stated ordering guarantee is already false on shipping devices, so the SMS path's behaviour relative to the default SMS app is now undefined rather than merely fragile.
   Evidence: `AndroidManifest.xml:101` (`<intent-filter android:priority="999">` on `SMS_RECEIVED`); Android 16 behavior changes for all apps (developer.android.com/about/versions/16/behavior-changes-all).
