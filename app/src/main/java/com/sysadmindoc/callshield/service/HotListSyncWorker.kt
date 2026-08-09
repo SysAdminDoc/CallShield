@@ -59,7 +59,7 @@ class HotListSyncWorker
                 // success: the bundled snapshot is not used to repair a stale
                 // store any more, so a failed fetch leaves genuinely stale data
                 // that a backed-off retry should replace.
-                if (outcome.refreshedAnyFeed) {
+                if (outcome.refreshedAnyFeed && outcome.unavailableFeeds.isEmpty()) {
                     Result.success()
                 } else {
                     Result.retry()

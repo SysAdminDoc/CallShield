@@ -14,6 +14,9 @@ All notable changes to CallShield will be documented in this file.
 
 - Added a validated source registry and per-run provenance snapshot so feed
   access, licensing, attribution, redistribution, and freshness are reviewable.
+- Empty hot-list, campaign-range, or spam-domain fetches no longer erase working
+  protection unless the payload explicitly declares a clear. Unavailable feeds
+  are retried and surfaced with the age of the last good refresh.
 
 ## v1.7.33 — 2026-08-01
 

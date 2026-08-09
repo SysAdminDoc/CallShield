@@ -20,11 +20,13 @@ internal object HotDataSync {
     internal data class RefreshOutcome(
         val refreshedAnyFeed: Boolean,
         val hasAnyHotProtection: Boolean,
+        val unavailableFeeds: Set<String>,
     )
 
     private data class FeedLoadResult<T>(
         val data: T,
         val resolved: Boolean,
+        val explicitlyCleared: Boolean = false,
     )
 
     suspend fun primeBundled(
@@ -42,22 +44,25 @@ internal object HotDataSync {
         // the build-time snapshot until the next 30-minute cycle.
         if (!dependencies.spamHeuristics.hasHotRanges()) {
             val bundledRanges = loadBundledHotRanges(appContext, source)
-            if (bundledRanges.resolved) {
-                dependencies.spamHeuristics.updateHotRanges(sanitizeHotRanges(bundledRanges.data))
+            val ranges = sanitizeHotRanges(bundledRanges.data)
+            if (bundledRanges.resolved && shouldApplyFeed(ranges, bundledRanges.explicitlyCleared)) {
+                dependencies.spamHeuristics.updateHotRanges(ranges)
             }
         }
 
         if (!dependencies.smsContentAnalyzer.hasSpamDomains()) {
             val bundledDomains = loadBundledSpamDomains(appContext, source)
-            if (bundledDomains.resolved) {
-                dependencies.smsContentAnalyzer.updateSpamDomains(sanitizeSpamDomains(bundledDomains.data))
+            val domains = sanitizeSpamDomains(bundledDomains.data)
+            if (bundledDomains.resolved && shouldApplyFeed(domains, bundledDomains.explicitlyCleared)) {
+                dependencies.smsContentAnalyzer.updateSpamDomains(domains)
             }
         }
 
         if (dao.getCountBySource(HOT_LIST_SOURCE) == 0) {
             val bundledHotList = loadBundledHotList(appContext, source)
-            if (bundledHotList.resolved) {
-                repo.replaceHotList(sanitizeHotNumbers(bundledHotList.data, repo::normalizeNumber))
+            val hotNumbers = sanitizeHotNumbers(bundledHotList.data, repo::normalizeNumber)
+            if (bundledHotList.resolved && shouldApplyFeed(hotNumbers, bundledHotList.explicitlyCleared)) {
+                repo.replaceHotList(hotNumbers)
             }
         }
     }
@@ -92,26 +97,43 @@ internal object HotDataSync {
             // freshly synced trending rows and reinstate weeks-old data. Only
             // use it where the corresponding store is still empty.
             val hotList = loadHotList(appContext, source, dao.getCountBySource(HOT_LIST_SOURCE) > 0)
-            if (hotList.resolved) {
-                repo.replaceHotList(sanitizeHotNumbers(hotList.data, repo::normalizeNumber))
+            val hotNumbers = sanitizeHotNumbers(hotList.data, repo::normalizeNumber)
+            val hotListApplied = shouldApplyFeed(hotNumbers, hotList.explicitlyCleared)
+            if (hotList.resolved && hotListApplied) {
+                repo.replaceHotList(hotNumbers)
             }
 
             val hotRanges = loadHotRanges(appContext, source, dependencies.spamHeuristics.hasHotRanges())
-            if (hotRanges.resolved) {
-                dependencies.spamHeuristics.updateHotRanges(sanitizeHotRanges(hotRanges.data))
+            val ranges = sanitizeHotRanges(hotRanges.data)
+            val hotRangesApplied = shouldApplyFeed(ranges, hotRanges.explicitlyCleared)
+            if (hotRanges.resolved && hotRangesApplied) {
+                dependencies.spamHeuristics.updateHotRanges(ranges)
             }
 
             val spamDomains = loadSpamDomains(appContext, source, dependencies.smsContentAnalyzer.hasSpamDomains())
-            if (spamDomains.resolved) {
-                dependencies.smsContentAnalyzer.updateSpamDomains(sanitizeSpamDomains(spamDomains.data))
+            val domains = sanitizeSpamDomains(spamDomains.data)
+            val spamDomainsApplied = shouldApplyFeed(domains, spamDomains.explicitlyCleared)
+            if (spamDomains.resolved && spamDomainsApplied) {
+                dependencies.smsContentAnalyzer.updateSpamDomains(domains)
             }
 
+            val unavailableFeeds =
+                buildSet {
+                    if (!hotList.resolved || !hotListApplied) add(HOT_LIST_FEED)
+                    if (!hotRanges.resolved || !hotRangesApplied) add(HOT_RANGES_FEED)
+                    if (!spamDomains.resolved || !spamDomainsApplied) add(SPAM_DOMAINS_FEED)
+                }
+            repo.recordHotDataHealth(
+                lastGoodTimestamp = System.currentTimeMillis().takeIf { unavailableFeeds.isEmpty() },
+                unavailableFeeds = unavailableFeeds,
+            )
             RefreshOutcome(
-                refreshedAnyFeed = hotList.resolved || hotRanges.resolved || spamDomains.resolved,
+                refreshedAnyFeed = hotListApplied || hotRangesApplied || spamDomainsApplied,
                 hasAnyHotProtection =
                     dao.getCountBySource(HOT_LIST_SOURCE) > 0 ||
                         dependencies.spamHeuristics.hasHotRanges() ||
                         dependencies.smsContentAnalyzer.hasSpamDomains(),
+                unavailableFeeds = unavailableFeeds,
             )
         }
 
@@ -134,9 +156,10 @@ internal object HotDataSync {
         source: HotFeedDataSource,
         hasExistingData: Boolean,
     ): FeedLoadResult<List<HotNumber>> {
-        val remote = source.fetchHotList()
+        val remote = source.fetchHotListSnapshot()
         if (remote.isSuccess) {
-            return FeedLoadResult(remote.getOrDefault(emptyList()), resolved = true)
+            val snapshot = remote.getOrThrow()
+            return FeedLoadResult(snapshot.data, resolved = true, explicitlyCleared = snapshot.explicitlyCleared)
         }
         if (!shouldUseBundledFallback(false, hasExistingData)) {
             return FeedLoadResult(emptyList(), resolved = false)
@@ -149,9 +172,10 @@ internal object HotDataSync {
         source: HotFeedDataSource,
         hasExistingData: Boolean,
     ): FeedLoadResult<List<String>> {
-        val remote = source.fetchHotRanges()
+        val remote = source.fetchHotRangesSnapshot()
         if (remote.isSuccess) {
-            return FeedLoadResult(remote.getOrDefault(emptyList()), resolved = true)
+            val snapshot = remote.getOrThrow()
+            return FeedLoadResult(snapshot.data, resolved = true, explicitlyCleared = snapshot.explicitlyCleared)
         }
         if (!shouldUseBundledFallback(false, hasExistingData)) {
             return FeedLoadResult(emptyList(), resolved = false)
@@ -164,9 +188,10 @@ internal object HotDataSync {
         source: HotFeedDataSource,
         hasExistingData: Boolean,
     ): FeedLoadResult<List<String>> {
-        val remote = source.fetchSpamDomains()
+        val remote = source.fetchSpamDomainsSnapshot()
         if (remote.isSuccess) {
-            return FeedLoadResult(remote.getOrDefault(emptyList()), resolved = true)
+            val snapshot = remote.getOrThrow()
+            return FeedLoadResult(snapshot.data, resolved = true, explicitlyCleared = snapshot.explicitlyCleared)
         }
         if (!shouldUseBundledFallback(false, hasExistingData)) {
             return FeedLoadResult(emptyList(), resolved = false)
@@ -181,8 +206,13 @@ internal object HotDataSync {
         val bundled =
             GitHubDataSource
                 .readBundledAsset(context, GitHubDataSource.BUNDLED_HOT_LIST_ASSET)
-                .map { source.parseHotListJson(it) }
-        return FeedLoadResult(bundled.getOrDefault(emptyList()), bundled.isSuccess)
+                .map { source.parseHotListSnapshotJson(it) }
+        val snapshot = bundled.getOrNull()
+        return FeedLoadResult(
+            data = snapshot?.data.orEmpty(),
+            resolved = bundled.isSuccess,
+            explicitlyCleared = snapshot?.explicitlyCleared == true,
+        )
     }
 
     private fun loadBundledHotRanges(
@@ -192,8 +222,13 @@ internal object HotDataSync {
         val bundled =
             GitHubDataSource
                 .readBundledAsset(context, GitHubDataSource.BUNDLED_HOT_RANGES_ASSET)
-                .map { source.parseHotRangesJson(it) }
-        return FeedLoadResult(bundled.getOrDefault(emptyList()), bundled.isSuccess)
+                .map { source.parseHotRangesSnapshotJson(it) }
+        val snapshot = bundled.getOrNull()
+        return FeedLoadResult(
+            data = snapshot?.data.orEmpty(),
+            resolved = bundled.isSuccess,
+            explicitlyCleared = snapshot?.explicitlyCleared == true,
+        )
     }
 
     private fun loadBundledSpamDomains(
@@ -203,9 +238,19 @@ internal object HotDataSync {
         val bundled =
             GitHubDataSource
                 .readBundledAsset(context, GitHubDataSource.BUNDLED_SPAM_DOMAINS_ASSET)
-                .map { source.parseSpamDomainsJson(it) }
-        return FeedLoadResult(bundled.getOrDefault(emptyList()), bundled.isSuccess)
+                .map { source.parseSpamDomainsSnapshotJson(it) }
+        val snapshot = bundled.getOrNull()
+        return FeedLoadResult(
+            data = snapshot?.data.orEmpty(),
+            resolved = bundled.isSuccess,
+            explicitlyCleared = snapshot?.explicitlyCleared == true,
+        )
     }
+
+    internal fun shouldApplyFeed(
+        data: Collection<*>,
+        explicitlyCleared: Boolean,
+    ): Boolean = data.isNotEmpty() || explicitlyCleared
 
     internal fun sanitizeHotNumbers(
         hotNumbers: Collection<HotNumber>,
@@ -249,4 +294,8 @@ internal object HotDataSync {
             .toList()
 
     private fun canonicalNumberKey(number: String): String = number.trim()
+
+    private const val HOT_LIST_FEED = "hot_list"
+    private const val HOT_RANGES_FEED = "hot_ranges"
+    private const val SPAM_DOMAINS_FEED = "spam_domains"
 }

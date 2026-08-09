@@ -16,6 +16,7 @@ import com.sysadmindoc.callshield.data.NotificationScreeningSources
 import com.sysadmindoc.callshield.data.RegionRules
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.model.ExternalBlocklistSubscription
+import com.sysadmindoc.callshield.data.model.HotDataHealth
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -379,6 +380,24 @@ class SettingsRepository(
     }
 
     suspend fun readLastDataSha(): String? = dataStore.data.first()[SpamRepository.KEY_LAST_SHA]
+
+    suspend fun readHotDataHealth(): HotDataHealth {
+        val preferences = dataStore.data.first()
+        return HotDataHealth(
+            lastGoodTimestamp = preferences[SpamRepository.KEY_HOT_DATA_LAST_GOOD] ?: 0L,
+            unavailableFeeds = preferences[SpamRepository.KEY_HOT_DATA_UNAVAILABLE].orEmpty(),
+        )
+    }
+
+    suspend fun recordHotDataHealth(
+        lastGoodTimestamp: Long?,
+        unavailableFeeds: Set<String>,
+    ) = dataStore.edit { preferences ->
+        if (lastGoodTimestamp != null) {
+            preferences[SpamRepository.KEY_HOT_DATA_LAST_GOOD] = lastGoodTimestamp
+        }
+        preferences[SpamRepository.KEY_HOT_DATA_UNAVAILABLE] = unavailableFeeds
+    }
 
     suspend fun readExternalBlocklistSubscriptions(): List<ExternalBlocklistSubscription> =
         decodeExternalBlocklistSubscriptions(

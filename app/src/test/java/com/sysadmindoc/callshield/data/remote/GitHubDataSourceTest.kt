@@ -59,6 +59,29 @@ class GitHubDataSourceTest {
     }
 
     @Test
+    fun `hot feed envelopes expose explicit clear without treating legacy arrays as clear`() {
+        val cleared =
+            dataSource.parseHotListSnapshotJson(
+                """{"cleared":true,"numbers":[]}""",
+            )
+        val legacy = dataSource.parseHotListSnapshotJson("[]")
+
+        assertTrue(cleared.data.isEmpty())
+        assertTrue(cleared.explicitlyCleared)
+        assertTrue(legacy.data.isEmpty())
+        assertTrue(!legacy.explicitlyCleared)
+    }
+
+    @Test
+    fun `hot range and domain envelopes expose explicit clear`() {
+        val ranges = dataSource.parseHotRangesSnapshotJson("""{"cleared":true,"ranges":[]}""")
+        val domains = dataSource.parseSpamDomainsSnapshotJson("""{"cleared":true,"domains":[]}""")
+
+        assertTrue(ranges.explicitlyCleared)
+        assertTrue(domains.explicitlyCleared)
+    }
+
+    @Test
     fun `parseHotRangesJson supports envelope and legacy array`() {
         val envelopeParsed =
             dataSource.parseHotRangesJson(

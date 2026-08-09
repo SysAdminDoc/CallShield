@@ -630,18 +630,27 @@ private suspend fun runTests(context: Context): List<TestResult> =
         val hotRangesLoaded =
             com.sysadmindoc.callshield.data.SpamHeuristics
                 .hasHotRanges()
+        val hotDataHealth = repo.readHotDataHealth()
+        val hotDataUnavailable = hotDataHealth.unavailableFeeds.isNotEmpty()
         results.add(
             TestResult(
                 name = context.getString(R.string.protection_test_hot_list_data),
-                passed = hotRangesLoaded,
+                passed = hotRangesLoaded && !hotDataUnavailable,
                 detail =
-                    if (hotRangesLoaded) {
+                    if (hotDataUnavailable) {
+                        hotDataHealthDetail(context, hotDataHealth.lastGoodTimestamp)
+                    } else if (hotRangesLoaded) {
                         context.getString(R.string.protection_test_hot_pass)
                     } else {
                         context.getString(R.string.protection_test_hot_fail)
                     },
                 priority = TestPriority.Recommended,
-                recoveryHint = if (hotRangesLoaded) null else context.getString(R.string.protection_test_fix_sync),
+                recoveryHint =
+                    if (hotRangesLoaded && !hotDataUnavailable) {
+                        null
+                    } else {
+                        context.getString(R.string.protection_test_fix_sync)
+                    },
             ),
         )
 
@@ -720,4 +729,19 @@ private suspend fun runTests(context: Context): List<TestResult> =
         )
 
         results
+    }
+
+private fun hotDataHealthDetail(
+    context: Context,
+    lastGoodTimestamp: Long,
+): String =
+    if (lastGoodTimestamp > 0L) {
+        val ageHours =
+            (System.currentTimeMillis() - lastGoodTimestamp)
+                .coerceAtLeast(0L)
+                .div(TimeUnit.HOURS.toMillis(1))
+                .coerceAtLeast(1L)
+        context.getString(R.string.protection_test_hot_unavailable_age, ageHours)
+    } else {
+        context.getString(R.string.protection_test_hot_unavailable_never)
     }
