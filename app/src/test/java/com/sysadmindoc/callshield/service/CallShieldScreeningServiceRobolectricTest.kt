@@ -15,7 +15,11 @@ import com.sysadmindoc.callshield.data.SpamHeuristics
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.model.SpamNumber
 import com.sysadmindoc.callshield.data.repository.SpamRepositoryAdapter
+import com.sysadmindoc.callshield.domain.model.CallerIdentity
+import com.sysadmindoc.callshield.domain.model.SpamCheckResult
+import com.sysadmindoc.callshield.domain.repository.SpamCheckRepository
 import com.sysadmindoc.callshield.domain.usecase.CheckSpamUseCase
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -159,6 +163,129 @@ class CallShieldScreeningServiceRobolectricTest {
         failingService.onScreenCall(callDetails("+12125550180"))
 
         val response = awaitResponse()
+        assertFalse(response.disallowCall)
+        assertFalse(response.rejectCall)
+        assertFalse(response.silenceCall)
+    }
+
+    @Test
+    fun `onScreenCall fails open when database startup is locked`() {
+        val lockedService =
+            Robolectric.setupService(CallShieldScreeningService::class.java).also {
+                it.applicationScope = scope
+                it.repoProvider =
+                    object : Provider<SpamRepository> {
+                        override fun get(): SpamRepository = error("database is locked")
+                    }
+            }
+        shadowService = Shadow.extract(lockedService)
+
+        lockedService.onScreenCall(callDetails("+12125550180"))
+
+        val response = awaitResponse()
+        assertFalse(response.disallowCall)
+        assertFalse(response.rejectCall)
+        assertFalse(response.silenceCall)
+    }
+
+    @Test
+    fun `contact fast path allows without invoking the checker`() {
+        var checkerCalled = false
+        runBlocking { repository.setContactWhitelist(true) }
+        service.contactLookup = { _, _, _ -> true }
+        service.checkSpam =
+            CheckSpamUseCase(
+                object : SpamCheckRepository {
+                    override suspend fun checkSpam(
+                        number: String,
+                        smsBody: String?,
+                        realtimeCall: Boolean,
+                        prefsSnapshot: androidx.datastore.preferences.core.Preferences?,
+                        callerIdentity: CallerIdentity?,
+                    ): SpamCheckResult {
+                        checkerCalled = true
+                        return SpamCheckResult(isSpam = true, matchSource = "test")
+                    }
+
+                    override suspend fun checkSpamSms(
+                        number: String,
+                        body: String,
+                        realtimeCall: Boolean,
+                        prefsSnapshot: androidx.datastore.preferences.core.Preferences?,
+                    ): SpamCheckResult = SpamCheckResult(isSpam = false)
+                },
+            )
+
+        service.onScreenCall(callDetails("+12125550182"))
+
+        val response = awaitResponse()
+        assertFalse(response.disallowCall)
+        assertFalse(response.rejectCall)
+        assertFalse(response.silenceCall)
+        assertFalse(checkerCalled)
+    }
+
+    @Test
+    fun `cancellation during screening still receives one explicit allow`() {
+        service.checkSpam =
+            CheckSpamUseCase(
+                object : SpamCheckRepository {
+                    override suspend fun checkSpam(
+                        number: String,
+                        smsBody: String?,
+                        realtimeCall: Boolean,
+                        prefsSnapshot: androidx.datastore.preferences.core.Preferences?,
+                        callerIdentity: CallerIdentity?,
+                    ): SpamCheckResult = throw CancellationException("screening cancelled")
+
+                    override suspend fun checkSpamSms(
+                        number: String,
+                        body: String,
+                        realtimeCall: Boolean,
+                        prefsSnapshot: androidx.datastore.preferences.core.Preferences?,
+                    ): SpamCheckResult = SpamCheckResult(isSpam = false)
+                },
+            )
+
+        service.onScreenCall(callDetails("+12125550183"))
+
+        val response = awaitResponse()
+        assertFalse(response.disallowCall)
+        assertFalse(response.rejectCall)
+        assertFalse(response.silenceCall)
+    }
+
+    @Test
+    fun `checker that exceeds the budget fails open before telecom timeout`() {
+        service.checkSpam =
+            CheckSpamUseCase(
+                object : SpamCheckRepository {
+                    override suspend fun checkSpam(
+                        number: String,
+                        smsBody: String?,
+                        realtimeCall: Boolean,
+                        prefsSnapshot: androidx.datastore.preferences.core.Preferences?,
+                        callerIdentity: CallerIdentity?,
+                    ): SpamCheckResult {
+                        delay(10_000L)
+                        return SpamCheckResult(isSpam = true, matchSource = "too_slow")
+                    }
+
+                    override suspend fun checkSpamSms(
+                        number: String,
+                        body: String,
+                        realtimeCall: Boolean,
+                        prefsSnapshot: androidx.datastore.preferences.core.Preferences?,
+                    ): SpamCheckResult = SpamCheckResult(isSpam = false)
+                },
+            )
+        val startedAt = System.nanoTime()
+
+        service.onScreenCall(callDetails("+12125550184"))
+
+        val response = awaitResponse()
+        val elapsedMillis = (System.nanoTime() - startedAt) / 1_000_000L
+        assertTrue("response took ${elapsedMillis}ms", elapsedMillis < 5_000L)
         assertFalse(response.disallowCall)
         assertFalse(response.rejectCall)
         assertFalse(response.silenceCall)

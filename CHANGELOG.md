@@ -39,6 +39,8 @@ All notable changes to CallShield will be documented in this file.
   burst, or content checks.
 - Added a privacy-minimized redress export containing only blocked-call date,
   time, calling number, and reason; raw SMS and allowed activity are excluded.
+- Expanded screening fault injection for locked startup, cancellation, contact fast paths,
+  slow checkers, direct boot, and concurrent fallback responses; every path remains fail-open.
 
 ### Build
 
