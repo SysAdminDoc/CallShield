@@ -93,7 +93,7 @@ class SyncIntegrationTest {
             assertEquals("scam", plusNumber?.type)
             assertEquals("Remote scam", plusNumber?.description)
 
-            val prefixes = dao.getAllPrefixes()
+            val prefixes = dao.getAllPrefixes(System.currentTimeMillis())
             assertEquals(1, prefixes.size)
             assertEquals("+1508555", prefixes.single().prefix)
         }
