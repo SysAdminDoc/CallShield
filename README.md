@@ -479,6 +479,7 @@ by locale and message type without shipping personal data:
 - Detection source donut chart
 - Monthly trend line
 - Top offenders, area code heatmap, hourly heatmap
+- Protection Test shows local WorkManager attempts and Android stop reasons, with a warning when background quota repeatedly defers protection refreshes
 
 ### Smart Features
 - Smart suggestions — detects area code spam patterns, one-tap block entire area code

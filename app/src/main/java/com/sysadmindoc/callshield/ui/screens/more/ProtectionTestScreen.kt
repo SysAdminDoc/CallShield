@@ -39,6 +39,8 @@ import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.permissions.CallShieldPermissions
 import com.sysadmindoc.callshield.permissions.PermissionCapabilityPriority
 import com.sysadmindoc.callshield.permissions.PermissionCapabilityStatus
+import com.sysadmindoc.callshield.service.WorkerDiagnostic
+import com.sysadmindoc.callshield.service.WorkerDiagnostics
 import com.sysadmindoc.callshield.ui.theme.*
 import com.sysadmindoc.callshield.util.startActivitySafely
 import kotlinx.coroutines.Dispatchers
@@ -61,6 +63,37 @@ private data class TestResult(
     val priority: TestPriority = TestPriority.Required,
     val recoveryHint: String? = null,
 )
+
+private fun workerDiagnosticResult(
+    context: Context,
+    diagnostic: WorkerDiagnostic,
+): TestResult {
+    val state = context.getString(WorkerDiagnostics.stateLabelRes(diagnostic.state))
+    val stopReason = context.getString(WorkerDiagnostics.stopReasonLabelRes(diagnostic.stopReason))
+    val status =
+        context.getString(
+            R.string.protection_test_worker_status,
+            state,
+            diagnostic.runAttemptCount,
+            stopReason,
+        )
+    return if (diagnostic.hasRepeatedQuotaStops) {
+        TestResult(
+            name = context.getString(diagnostic.labelRes),
+            passed = false,
+            detail = context.getString(R.string.protection_test_worker_quota_warning, status),
+            priority = TestPriority.Recommended,
+            recoveryHint = context.getString(R.string.protection_test_worker_quota_hint),
+        )
+    } else {
+        TestResult(
+            name = context.getString(diagnostic.labelRes),
+            passed = true,
+            detail = status,
+            priority = TestPriority.Informational,
+        )
+    }
+}
 
 internal enum class ModelHealthSeverity { Healthy, Info, Warning, Error }
 
@@ -762,6 +795,11 @@ private suspend fun runTests(context: Context): List<TestResult> =
                 recoveryHint = if (patchRecent) null else context.getString(R.string.test_security_patch_hint),
             ),
         )
+
+        WorkerDiagnostics
+            .read(context)
+            .map { diagnostic -> workerDiagnosticResult(context, diagnostic) }
+            .forEach(results::add)
 
         results
     }

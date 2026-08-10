@@ -99,7 +99,7 @@ class DigestWorker
 
         companion object {
             private const val DIGEST_NOTIFICATION_ID = 9999
-            private const val WORK_NAME = "callshield_digest"
+            internal const val WORK_NAME = BackgroundWorkNames.DIGEST
 
             /**
              * Map a checker's `matchReason` to a coarse, user-facing source

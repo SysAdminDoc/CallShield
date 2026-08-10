@@ -69,7 +69,7 @@ class HotListSyncWorker
             }
 
         companion object {
-            private const val WORK_NAME = "callshield_hot_list_sync"
+            internal const val WORK_NAME = BackgroundWorkNames.HOT_LIST
 
             fun schedule(context: Context) {
                 WorkManager.getInstance(context).enqueueUniquePeriodicWork(

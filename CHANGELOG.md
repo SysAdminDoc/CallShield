@@ -84,6 +84,9 @@ All notable changes to CallShield will be documented in this file.
   delivery authority.
 - Android 15–17 message evidence health now records redacted, delayed,
   sender-only, and unsupported SMS/notification states without message bodies;
+- Protection Test now reads WorkManager's local attempt counts and Android stop
+  reasons for scheduled sync, hot-list, digest, and protection-health work;
+  repeated background-quota stops become a visible recovery warning.
 - Community report abuse controls now reject requests without a Cloudflare client
   identity, distinguish malformed JSON (400) from corrupt or unavailable KV state (503),
   and log/reset invalid rate-limit state without leaking it as a client error.
