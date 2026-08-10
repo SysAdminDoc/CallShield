@@ -58,6 +58,14 @@ All notable changes to CallShield will be documented in this file.
 ### Build
 
 - Upgraded the Gradle wrapper to 8.14.4 and pinned its distribution checksum.
+- Refreshed the non-AGP-9 build tranche: AGP 8.13.2, Kotlin 2.3.21, decoupled
+  KSP 2.3.11, Compose BOM 2026.06.01, core-ktx 1.18.0, lifecycle 2.10.0,
+  AndroidX Activity/Navigation, Robolectric, Kover, and serialization tooling;
+  Room, WorkManager, DataStore, OkHttp, Moshi, ktlint, Hilt 2.58, and test
+  artifacts remain on their already-current pins. core-ktx 1.19.0, lifecycle
+  2.11.0, Hilt 2.60.1, and the Kotlin 2.4.x line remain in the AGP-9 blocked
+  tranche because the AGP-8-compatible Hilt 2.58 compiler cannot read Kotlin
+  2.4 metadata.
 
 ## v1.7.33 — 2026-08-01
 
