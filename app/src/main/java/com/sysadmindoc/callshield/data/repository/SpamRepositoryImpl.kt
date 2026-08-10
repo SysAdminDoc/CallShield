@@ -73,10 +73,11 @@ class SpamRepositoryImpl(
     internal suspend fun hasDbPrefixMatch(normalized: String): Boolean {
         if (normalized.length < 9) return false
         val prefix = normalized.dropLast(2)
-        return dao.countByPrefix(prefix) > 0
+        return dao.countByPrefix(prefix, System.currentTimeMillis()) > 0
     }
 
-    internal suspend fun getPrefixesCachedInternal(): List<SpamPrefix> = cachedPrefixes ?: dao.getAllPrefixes().also { cachedPrefixes = it }
+    internal suspend fun getPrefixesCachedInternal(): List<SpamPrefix> =
+        cachedPrefixes ?: dao.getAllPrefixes(System.currentTimeMillis()).also { cachedPrefixes = it }
 
     internal suspend fun getActiveWildcardsCachedInternal(): List<WildcardRule> = cachedWildcardRules ?: dao.getActiveWildcardRules().also { cachedWildcardRules = it }
 

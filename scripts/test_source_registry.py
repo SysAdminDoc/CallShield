@@ -39,6 +39,8 @@ class SourceRegistryTest(unittest.TestCase):
                     "attribution": "Example",
                     "cadence": "daily",
                     "parser_version": "v1",
+                    "evidence_type": "complaint",
+                    "confidence_tier": "unverified",
                     "redistributable": True,
                     "stale_after_days": 7,
                 },
@@ -50,6 +52,8 @@ class SourceRegistryTest(unittest.TestCase):
                     "attribution": "Example",
                     "cadence": "on demand",
                     "parser_version": "v1",
+                    "evidence_type": "reputation",
+                    "confidence_tier": "corroborated",
                     "redistributable": False,
                     "stale_after_days": 30,
                 },
@@ -62,8 +66,45 @@ class SourceRegistryTest(unittest.TestCase):
         )
         self.assertEqual(snapshot["generated_at"], "2026-08-02T12:00:00+00:00")
         self.assertEqual(snapshot["sources"][0]["accepted"], 12)
+        self.assertIsNone(snapshot["sources"][0]["checksum"])
         self.assertEqual(snapshot["sources"][1]["status"], "not_requested")
         self.assertIsNone(snapshot["sources"][1]["fetched_at"])
+
+    def test_source_evidence_carries_expiry_and_manifest_metadata(self):
+        manifest = {
+            "version": 1,
+            "sources": [
+                {
+                    "id": "public",
+                    "access_mode": "public_api",
+                    "geography": "US",
+                    "license": "public",
+                    "attribution": "Example",
+                    "cadence": "daily",
+                    "parser_version": "v1",
+                    "evidence_type": "complaint",
+                    "confidence_tier": "unverified",
+                    "redistributable": True,
+                    "stale_after_days": 7,
+                }
+            ],
+        }
+        evidence = source_registry.source_evidence(
+            manifest,
+            "public",
+            {"first_seen": "2026-08-01", "last_seen": "2026-08-02"},
+            retrieved_at="2026-08-02T12:00:00+00:00",
+        )
+        self.assertEqual(evidence["source_id"], "public")
+        self.assertEqual(evidence["evidence_type"], "complaint")
+        self.assertGreater(evidence["expires_at_epoch_ms"], 0)
+
+    def test_merge_evidence_replaces_a_source_on_rerun_and_keeps_independent_sources(self):
+        first = {"source_id": "fcc", "retrieved_at": "old"}
+        refreshed = {"source_id": "fcc", "retrieved_at": "new"}
+        independent = {"source_id": "ftc", "retrieved_at": "new"}
+        merged = source_registry.merge_evidence([first], [refreshed, independent])
+        self.assertEqual(merged, [refreshed, independent])
 
     def test_invalid_manifest_is_rejected(self):
         with tempfile.TemporaryDirectory() as directory:

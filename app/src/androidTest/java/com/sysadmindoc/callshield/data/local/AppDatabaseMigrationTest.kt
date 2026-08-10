@@ -60,6 +60,7 @@ class AppDatabaseMigrationTest {
                 MIGRATION_10_11,
                 migration11To12,
                 MIGRATION_12_13,
+                MIGRATION_13_14,
             )
 
         db.assertSingleInt("SELECT COUNT(*) FROM spam_numbers", 1)
@@ -70,6 +71,10 @@ class AppDatabaseMigrationTest {
         db.assertHasColumn("call_log", "logKey")
         db.assertHasColumn("pending_blocked_call_logs", "idempotencyKey")
         db.assertHasColumn("spam_numbers", "expiresAt")
+        db.assertHasColumn("spam_numbers", "evidenceJson")
+        db.assertHasColumn("spam_numbers", "evidenceExpiresAt")
+        db.assertHasColumn("spam_prefixes", "evidenceJson")
+        db.assertHasColumn("spam_prefixes", "evidenceExpiresAt")
         db.assertHasColumn("whitelist", "expiresAt")
         db.assertHasColumn("restore_journal", "phase")
         db.close()
@@ -95,6 +100,7 @@ class AppDatabaseMigrationTest {
                 MIGRATION_10_11,
                 migration11To12,
                 MIGRATION_12_13,
+                MIGRATION_13_14,
             )
 
         db.assertSingleInt("SELECT isEmergency FROM whitelist WHERE number = '+15550000003'", 1)
@@ -121,6 +127,7 @@ class AppDatabaseMigrationTest {
                 MIGRATION_10_11,
                 migration11To12,
                 MIGRATION_12_13,
+                MIGRATION_13_14,
             )
 
         db.assertSingleInt(
@@ -152,6 +159,7 @@ class AppDatabaseMigrationTest {
                 MIGRATION_10_11,
                 migration11To12,
                 MIGRATION_12_13,
+                MIGRATION_13_14,
             )
 
         db.assertSingleInt("SELECT scheduleDays FROM wildcard_rules WHERE pattern = '+1666*'", 0)
@@ -181,6 +189,7 @@ class AppDatabaseMigrationTest {
                 MIGRATION_10_11,
                 migration11To12,
                 MIGRATION_12_13,
+                MIGRATION_13_14,
             )
 
         db.assertSingleInt("SELECT COUNT(*) FROM call_log WHERE number = '+17770000001'", 1)
@@ -234,6 +243,7 @@ class AppDatabaseMigrationTest {
                 true,
                 migration11To12,
                 MIGRATION_12_13,
+                MIGRATION_13_14,
             )
 
         db.assertSingleInt("SELECT COUNT(*) FROM spam_numbers WHERE number = '+12125551234'", 1)

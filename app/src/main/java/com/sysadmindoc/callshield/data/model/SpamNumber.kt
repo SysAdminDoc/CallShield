@@ -22,16 +22,20 @@ data class SpamNumber(
     @param:Json(name = "last_seen") val lastSeen: String = "",
     val description: String = "",
     val source: String = "community",
+    /** JSON-encoded independent feed evidence; kept opaque on the hot path. */
+    val evidenceJson: String = "[]",
+    /** Earliest expiry among the retained feed-evidence records, if any. */
+    val evidenceExpiresAt: Long? = null,
     val isUserBlocked: Boolean = false,
     val expiresAt: Long? = null,
 ) {
-    fun activeDecision(now: Long = System.currentTimeMillis()): SpamNumber? =
-        when {
-            expiresAt == null || expiresAt > now -> this
-            !isUserBlocked -> this
-            source == "user" -> null
-            else -> copy(isUserBlocked = false, expiresAt = null)
-        }
+    fun activeDecision(now: Long = System.currentTimeMillis()): SpamNumber? {
+        val evidenceActive = evidenceExpiresAt == null || evidenceExpiresAt > now
+        if (!isUserBlocked) return takeIf { evidenceActive }
+        if (expiresAt == null || expiresAt > now) return this
+        if (source == "user" || !evidenceActive) return null
+        return copy(isUserBlocked = false, expiresAt = null)
+    }
 }
 
 @Entity(
@@ -43,6 +47,8 @@ data class SpamPrefix(
     val prefix: String,
     val type: String,
     val description: String = "",
+    val evidenceJson: String = "[]",
+    val evidenceExpiresAt: Long? = null,
 )
 
 @Entity(
@@ -103,6 +109,23 @@ data class SpamNumberJson(
     @param:Json(name = "first_seen") val firstSeen: String = "",
     @param:Json(name = "last_seen") val lastSeen: String = "",
     val description: String = "",
+    val evidence: List<SourceEvidenceJson> = emptyList(),
+)
+
+/** Independent source evidence retained on an imported database row. */
+@JsonClass(generateAdapter = false)
+data class SourceEvidenceJson(
+    @param:Json(name = "source_id") val sourceId: String,
+    @param:Json(name = "evidence_type") val evidenceType: String,
+    val license: String,
+    val attribution: String,
+    @param:Json(name = "first_seen") val firstSeen: String = "",
+    @param:Json(name = "last_seen") val lastSeen: String = "",
+    @param:Json(name = "retrieved_at") val retrievedAt: String = "",
+    val geography: String = "global",
+    @param:Json(name = "confidence_tier") val confidenceTier: String = "unverified",
+    @param:Json(name = "parser_version") val parserVersion: String = "",
+    @param:Json(name = "expires_at_epoch_ms") val expiresAtEpochMs: Long? = null,
 )
 
 data class NumberCount(
@@ -122,4 +145,5 @@ data class SpamPrefixJson(
     val prefix: String,
     val type: String,
     val description: String = "",
+    val evidence: List<SourceEvidenceJson> = emptyList(),
 )

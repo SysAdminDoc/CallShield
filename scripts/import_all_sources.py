@@ -21,6 +21,7 @@ Usage:
 """
 
 import csv
+import hashlib
 import io
 import json
 import re
@@ -28,7 +29,7 @@ import sys
 import time
 import argparse
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from collections import Counter
 from phone_normalization import (
@@ -38,7 +39,7 @@ from phone_normalization import (
 )
 
 from pipeline_io import atomic_write_json
-from source_registry import load_source_manifest, source_snapshot
+from source_registry import attach_source_evidence, load_source_manifest, merge_evidence, source_evidence, source_snapshot
 
 try:
     import requests
@@ -57,6 +58,15 @@ PHONEBLOCK_BLOCKLIST_URL = "https://phoneblock.net/phoneblock/api/blocklist"
 SARACROCHE_PREFIX_URL = "https://saracroche.org/api/v1/lists/french-list-arcep-operators"
 PHONEBLOCK_MAX_LIMIT = 5000
 NOMOROBO_MAX_RECORDS = 250000
+
+
+def payload_checksum(entries: list[dict]) -> str | None:
+    """Return a stable checksum for the accepted adapter payload."""
+
+    if not entries:
+        return None
+    encoded = json.dumps(entries, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
 
 
 def normalize_phone(raw: str) -> str | None:
@@ -497,6 +507,12 @@ def merge_into_database(
             "prefixes": [],
         }
 
+    manifest = load_source_manifest(SOURCE_MANIFEST_FILE)
+    legacy_retrieved_at = f"{db.get('updated', datetime.now().strftime('%Y-%m-%d'))}T00:00:00+00:00"
+    for row in db["numbers"]:
+        if not row.get("evidence"):
+            row["evidence"] = [source_evidence(manifest, "github_database", row, retrieved_at=legacy_retrieved_at)]
+
     existing = {n["number"]: n for n in db["numbers"]}
     # Snapshot the pre-merge keys so the min_reports filter below can be
     # scoped to newly-added entries only. Rows already in the shipped
@@ -522,6 +538,10 @@ def merge_into_database(
             if entry.get("first_seen", "9999") < existing[num].get("first_seen", "9999"):
                 existing[num]["first_seen"] = entry["first_seen"]
                 changed = True
+            merged_evidence = merge_evidence(existing[num].get("evidence"), entry.get("evidence"))
+            if merged_evidence != existing[num].get("evidence", []):
+                existing[num]["evidence"] = merged_evidence
+                changed = True
             description = entry.get("description", "")
             if description and description not in existing[num].get("description", ""):
                 existing[num]["description"] = (
@@ -537,7 +557,6 @@ def merge_into_database(
     # Persist source evidence even when the data payload is unchanged. A
     # successful no-op import is still useful: it proves the feeds were
     # reachable and keeps freshness visible to release review tooling.
-    manifest = load_source_manifest(SOURCE_MANIFEST_FILE)
     atomic_write_json(
         SOURCE_SNAPSHOT_FILE,
         source_snapshot(manifest, source_stats or {}),
@@ -661,56 +680,88 @@ def main():
 
     all_numbers = []
     source_stats: dict[str, dict] = {}
+    manifest = load_source_manifest(SOURCE_MANIFEST_FILE)
+    retrieved_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
 
     # Source 1: FTC
     ftc = fetch_ftc(max_records=min(args.max, 5000))  # FTC API is slow; bulk is via CSV
+    attach_source_evidence(ftc, manifest, "ftc_complaints", retrieved_at=retrieved_at)
     all_numbers.extend(ftc)
-    source_stats["ftc_complaints"] = {"status": "ok", "accepted": len(ftc)}
+    source_stats["ftc_complaints"] = {
+        "status": "ok",
+        "accepted": len(ftc),
+        "checksum": payload_checksum(ftc),
+        "last_success_at": retrieved_at,
+    }
 
     # Source 2: FCC (biggest source — pull up to --max records)
     fcc = fetch_fcc(max_records=args.max)
+    attach_source_evidence(fcc, manifest, "fcc_complaints", retrieved_at=retrieved_at)
     all_numbers.extend(fcc)
-    source_stats["fcc_complaints"] = {"status": "ok", "accepted": len(fcc)}
+    source_stats["fcc_complaints"] = {
+        "status": "ok",
+        "accepted": len(fcc),
+        "checksum": payload_checksum(fcc),
+        "last_success_at": retrieved_at,
+    }
 
     # Source 3: PhoneBlock (per-number lookup — seed only, real-time in app)
     pb = fetch_phoneblock(
         limit=args.phoneblock_limit,
         api_key=args.phoneblock_api_key or os.environ.get("PHONEBLOCK_API_KEY"),
     )
+    attach_source_evidence(pb, manifest, "phoneblock_bulk", retrieved_at=retrieved_at)
     all_numbers.extend(pb)
     source_stats["phoneblock_bulk"] = {
         "status": "ok" if pb else "not_requested",
         "accepted": len(pb),
+        "checksum": payload_checksum(pb),
+        "last_success_at": retrieved_at if pb else None,
     }
 
     nomorobo = fetch_nomorobo_irs(
         feed_url=args.nomorobo_irs_url or os.environ.get("NOMOROBO_IRS_FEED_URL"),
         api_token=args.nomorobo_irs_token or os.environ.get("NOMOROBO_IRS_TOKEN"),
     )
+    attach_source_evidence(nomorobo, manifest, "nomorobo_irs", retrieved_at=retrieved_at)
     all_numbers.extend(nomorobo)
     source_stats["nomorobo_irs"] = {
         "status": "ok" if nomorobo else "not_requested",
         "accepted": len(nomorobo),
+        "checksum": payload_checksum(nomorobo),
+        "last_success_at": retrieved_at if nomorobo else None,
     }
 
     saracroche_prefixes = fetch_saracroche_prefixes() if args.include_saracroche else []
+    attach_source_evidence(saracroche_prefixes, manifest, "saracroche_prefixes", retrieved_at=retrieved_at)
     source_stats["saracroche_prefixes"] = {
         "status": "ok" if saracroche_prefixes else "not_requested",
         "accepted": len(saracroche_prefixes),
+        "checksum": payload_checksum(saracroche_prefixes),
+        "last_success_at": retrieved_at if saracroche_prefixes else None,
     }
 
     # Source 4: ToastedSpam
     ts = fetch_toastedspam(allow_insecure=args.allow_insecure_sources)
+    attach_source_evidence(ts, manifest, "toastedspam", retrieved_at=retrieved_at)
     all_numbers.extend(ts)
     source_stats["toastedspam"] = {
         "status": "ok" if ts else "not_requested",
         "accepted": len(ts),
+        "checksum": payload_checksum(ts),
+        "last_success_at": retrieved_at if ts else None,
     }
 
     # Source 5: Community text lists
     cl = fetch_community_text_lists()
+    attach_source_evidence(cl, manifest, "community_text_lists", retrieved_at=retrieved_at)
     all_numbers.extend(cl)
-    source_stats["community_reports"] = {"status": "ok", "accepted": len(cl)}
+    source_stats["community_reports"] = {
+        "status": "ok",
+        "accepted": len(cl),
+        "checksum": payload_checksum(cl),
+        "last_success_at": retrieved_at,
+    }
 
     # Deduplicate across all sources (accumulate reports)
     deduped = {}
@@ -718,6 +769,7 @@ def main():
         num = n["number"]
         if num in deduped:
             deduped[num]["reports"] += n["reports"]
+            deduped[num]["evidence"] = merge_evidence(deduped[num].get("evidence"), n.get("evidence"))
         else:
             deduped[num] = n
 

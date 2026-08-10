@@ -879,6 +879,21 @@ internal fun sanitizeDatabaseNumbers(
         if (normalizedNumber.isBlank()) {
             null
         } else {
+            val evidence =
+                json.evidence.ifEmpty {
+                    listOf(
+                        SourceEvidenceJson(
+                            sourceId = "github_database",
+                            evidenceType = "aggregate_database",
+                            license = "CallShield database terms",
+                            attribution = "CallShield maintained spam database",
+                            firstSeen = json.firstSeen,
+                            lastSeen = json.lastSeen,
+                            confidenceTier = if (json.reports >= 2) "corroborated" else "unverified",
+                            parserVersion = "legacy-v1",
+                        ),
+                    )
+                }
             SpamNumber(
                 number = normalizedNumber,
                 type = json.type.trim().ifBlank { "unknown" },
@@ -887,6 +902,8 @@ internal fun sanitizeDatabaseNumbers(
                 lastSeen = json.lastSeen,
                 description = json.description.trim(),
                 source = "github",
+                evidenceJson = SourceEvidenceCodec.encode(evidence),
+                evidenceExpiresAt = evidence.mapNotNull { it.expiresAtEpochMs }.minOrNull(),
                 isUserBlocked = normalizedNumber in preservedUserBlockedNumbers,
                 expiresAt = preservedUserBlockedNumbers[normalizedNumber],
             )
@@ -914,6 +931,8 @@ internal fun mergeHotListNumbers(
                         id = existing.id,
                         isUserBlocked = existing.isUserBlocked,
                         expiresAt = existing.expiresAt,
+                        evidenceJson = hotNumber.evidenceJson,
+                        evidenceExpiresAt = hotNumber.evidenceExpiresAt,
                     )
                 }
             }

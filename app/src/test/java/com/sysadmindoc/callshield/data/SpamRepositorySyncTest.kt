@@ -2,6 +2,8 @@ package com.sysadmindoc.callshield.data
 
 import com.sysadmindoc.callshield.data.model.SpamNumber
 import com.sysadmindoc.callshield.data.model.SpamNumberJson
+import com.sysadmindoc.callshield.data.model.SourceEvidenceJson
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -67,6 +69,31 @@ class SpamRepositorySyncTest {
         assertEquals("unknown", sanitized.single().type)
         assertEquals(1, sanitized.single().reports)
         assertEquals("Test", sanitized.single().description)
+    }
+
+    @Test
+    fun `expired source evidence is quarantined while active evidence remains blockable`() {
+        val now = 1_000_000L
+        val evidence =
+            SourceEvidenceJson(
+                sourceId = "fcc_complaints",
+                evidenceType = "unverified_complaint",
+                license = "public",
+                attribution = "FCC",
+                expiresAtEpochMs = now - 1L,
+            )
+        val expired =
+            SpamNumber(
+                number = "+12125550100",
+                type = "robocall",
+                evidenceJson = SourceEvidenceCodec.encode(listOf(evidence)),
+                evidenceExpiresAt = now - 1L,
+            )
+        val active = expired.copy(evidenceExpiresAt = now + 1L)
+
+        assertNull(expired.activeDecision(now))
+        assertEquals(active, active.activeDecision(now))
+        assertEquals("fcc_complaints", SourceEvidenceCodec.decode(active.evidenceJson).single().sourceId)
     }
 
     @Test

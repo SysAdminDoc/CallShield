@@ -13,6 +13,8 @@ import com.sysadmindoc.callshield.data.model.ExternalBlocklistSubscription
 import com.sysadmindoc.callshield.data.model.SpamDatabase
 import com.sysadmindoc.callshield.data.model.SpamNumber
 import com.sysadmindoc.callshield.data.model.SpamPrefix
+import com.sysadmindoc.callshield.data.model.SourceEvidenceJson
+import com.sysadmindoc.callshield.data.SourceEvidenceCodec
 import com.sysadmindoc.callshield.data.remote.ExternalBlocklistDataSource
 import com.sysadmindoc.callshield.data.remote.GitHubDataSource
 import com.sysadmindoc.callshield.data.remote.OkHttpExternalBlocklistDataSource
@@ -298,10 +300,25 @@ class SyncRepository(
                 if (!VALID_PREFIX_REGEX.matches(trimmedPrefix)) {
                     null
                 } else {
+                    val evidence =
+                        json.evidence.ifEmpty {
+                            listOf(
+                                SourceEvidenceJson(
+                                    sourceId = "github_database",
+                                    evidenceType = "aggregate_database",
+                                    license = "CallShield database terms",
+                                    attribution = "CallShield maintained spam database",
+                                    confidenceTier = "unverified",
+                                    parserVersion = "legacy-v1",
+                                ),
+                            )
+                        }
                     SpamPrefix(
                         prefix = trimmedPrefix,
                         type = json.type.trim().ifBlank { "unknown" },
                         description = json.description.trim(),
+                        evidenceJson = SourceEvidenceCodec.encode(evidence),
+                        evidenceExpiresAt = evidence.mapNotNull { it.expiresAtEpochMs }.minOrNull(),
                     )
                 }
             }
