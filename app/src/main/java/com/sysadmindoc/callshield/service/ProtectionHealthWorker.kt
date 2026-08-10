@@ -108,7 +108,7 @@ class ProtectionHealthWorker
         }
 
         companion object {
-            private const val PERIODIC_WORK_NAME = "callshield_protection_health"
+            private const val PERIODIC_WORK_NAME = BackgroundWorkNames.PROTECTION_HEALTH
             private const val IMMEDIATE_WORK_NAME = "callshield_protection_health_now"
             private const val CHECK_INTERVAL_HOURS = 24L
 

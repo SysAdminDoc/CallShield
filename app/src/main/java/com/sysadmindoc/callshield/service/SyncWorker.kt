@@ -42,7 +42,7 @@ class SyncWorker
         }
 
         companion object {
-            private const val WORK_NAME = "callshield_sync"
+            internal const val WORK_NAME = BackgroundWorkNames.SYNC
 
             fun schedule(context: Context) {
                 WorkManager.getInstance(context).enqueueUniquePeriodicWork(
