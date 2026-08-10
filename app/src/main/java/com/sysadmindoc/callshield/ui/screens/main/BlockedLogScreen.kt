@@ -35,7 +35,7 @@ import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
-import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -49,6 +49,8 @@ import com.sysadmindoc.callshield.domain.model.BlockReasonCode
 import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.TemporaryDecisionDuration
 import com.sysadmindoc.callshield.ui.TemporaryDecisionMenu
+import com.sysadmindoc.callshield.ui.accessibleSwipeActions
+import com.sysadmindoc.callshield.ui.blockReasonAccessibilityLabelRes
 import com.sysadmindoc.callshield.ui.expandableStateSemantics
 import com.sysadmindoc.callshield.ui.friendlyMatchReasonLabel
 import com.sysadmindoc.callshield.ui.rememberTemporaryDecisionDurations
@@ -288,6 +290,8 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
                                 R.string.blocked_log_number_blocked,
                                 PhoneFormatter.formatIsolated(call.number),
                             )
+                        val deleteActionLabel = stringResource(R.string.blocked_log_action_delete)
+                        val blockActionLabel = stringResource(R.string.blocked_log_action_block)
                         LaunchedEffect(call.id) {
                             kotlinx.coroutines.delay(index.toLong().coerceAtMost(15) * 30)
                             visible = true
@@ -295,6 +299,51 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
                         AnimatedVisibility(visible = visible, enter = slideInVertically { 40 } + fadeIn()) {
                             val dismissState = rememberSwipeToDismissBoxState()
                             var actionHandled by remember(call.id) { mutableStateOf(false) }
+
+                            fun deleteEntryWithUndo() {
+                                viewModel.deleteLogEntry(call)
+                                hapticTick(context)
+                                scope.launch {
+                                    val result =
+                                        snackbarHost.showSnackbar(
+                                            message = deletedMessage,
+                                            actionLabel = undoLabel,
+                                            duration = SnackbarDuration.Short,
+                                        )
+                                    if (result == SnackbarResult.ActionPerformed) {
+                                        viewModel.restoreLogEntry(call)
+                                    }
+                                }
+                            }
+
+                            fun blockEntryWithUndo() {
+                                viewModel.blockNumber(call.number, "spam", blockedFromSwipeDescription)
+                                hapticConfirm(context)
+                                scope.launch {
+                                    // Offer Undo for assistive actions as well as the gesture.
+                                    val result =
+                                        snackbarHost.showSnackbar(
+                                            message = blockedMessage,
+                                            actionLabel = undoLabel,
+                                            duration = SnackbarDuration.Short,
+                                        )
+                                    if (result == SnackbarResult.ActionPerformed) {
+                                        viewModel.unblockByNumber(call.number)
+                                    }
+                                }
+                            }
+
+                            val swipeActions =
+                                listOf(
+                                    CustomAccessibilityAction(deleteActionLabel) {
+                                        deleteEntryWithUndo()
+                                        true
+                                    },
+                                    CustomAccessibilityAction(blockActionLabel) {
+                                        blockEntryWithUndo()
+                                        true
+                                    },
+                                )
                             LaunchedEffect(dismissState.currentValue) {
                                 when (dismissState.currentValue) {
                                     SwipeToDismissBoxValue.EndToStart -> {
@@ -308,39 +357,15 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
                                         // again. snapTo (not reset) because disposal
                                         // cancels an in-flight animation.
                                         dismissState.snapTo(SwipeToDismissBoxValue.Settled)
-                                        viewModel.deleteLogEntry(call)
-                                        hapticTick(context)
-                                        scope.launch {
-                                            val result =
-                                                snackbarHost.showSnackbar(
-                                                    message = deletedMessage,
-                                                    actionLabel = undoLabel,
-                                                    duration = SnackbarDuration.Short,
-                                                )
-                                            if (result == SnackbarResult.ActionPerformed) {
-                                                viewModel.restoreLogEntry(call)
-                                            }
-                                        }
+                                        deleteEntryWithUndo()
                                     }
 
                                     SwipeToDismissBoxValue.StartToEnd -> {
                                         if (actionHandled) return@LaunchedEffect
                                         actionHandled = true
-                                        viewModel.blockNumber(call.number, "spam", blockedFromSwipeDescription)
-                                        hapticConfirm(context)
-                                        scope.launch {
-                                            // Offer Undo — a permanent block is the more consequential
-                                            // swipe and one accidental right-swipe otherwise sticks.
-                                            val result =
-                                                snackbarHost.showSnackbar(
-                                                    message = blockedMessage,
-                                                    actionLabel = undoLabel,
-                                                    duration = SnackbarDuration.Short,
-                                                )
-                                            if (result == SnackbarResult.ActionPerformed) {
-                                                viewModel.unblockByNumber(call.number)
-                                            }
-                                        }
+                                        // Offer Undo — a permanent block is the more consequential
+                                        // swipe and one accidental right-swipe otherwise sticks.
+                                        blockEntryWithUndo()
                                         dismissState.reset()
                                     }
 
@@ -351,6 +376,7 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
                             }
                             SwipeToDismissBox(
                                 state = dismissState,
+                                modifier = Modifier.accessibleSwipeActions(swipeActions),
                                 backgroundContent = {
                                     val direction = dismissState.dismissDirection
                                     val color =
@@ -385,25 +411,7 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
                             ) {
                                 val allowReason = stringResource(R.string.blocked_log_temporary_allow_reason)
                                 val blockReason = stringResource(R.string.blocked_log_temporary_block_reason)
-                                // Swipe-only Delete/Block are unreachable for switch-access
-                                // and TalkBack users — expose them as custom actions.
-                                val deleteActionLabel = stringResource(R.string.blocked_log_action_delete)
-                                val blockActionLabel = stringResource(R.string.blocked_log_action_block)
                                 BlockedCallItem(
-                                    modifier =
-                                        Modifier.semantics {
-                                            customActions =
-                                                listOf(
-                                                    CustomAccessibilityAction(deleteActionLabel) {
-                                                        viewModel.deleteLogEntry(call)
-                                                        true
-                                                    },
-                                                    CustomAccessibilityAction(blockActionLabel) {
-                                                        viewModel.blockNumber(call.number, "spam", blockedFromSwipeDescription)
-                                                        true
-                                                    },
-                                                )
-                                        },
                                     call = call,
                                     onTap = { viewModel.openNumberDetail(call.number) },
                                     onTemporaryAllow = { duration ->
@@ -655,7 +663,16 @@ fun BlockedCallItem(
                             } else {
                                 "$reasonText$confidenceText"
                             }
-                        Text(label, style = MaterialTheme.typography.labelSmall, color = CatPeach)
+                        val accessibilityReason = stringResource(blockReasonAccessibilityLabelRes(call.reasonCode))
+                        Text(
+                            label,
+                            modifier =
+                                Modifier.semantics {
+                                    contentDescription = accessibilityReason
+                                },
+                            style = MaterialTheme.typography.labelSmall,
+                            color = CatPeach,
+                        )
                     }
                     val redactedSmsBody =
                         remember(call.smsBody) {
@@ -816,8 +833,13 @@ fun GroupedCallItem(
                     )
                 }
                 if (call.reasonCode != BlockReasonCode.UNKNOWN) {
+                    val accessibilityReason = stringResource(blockReasonAccessibilityLabelRes(call.reasonCode))
                     Text(
                         friendlyMatchReasonLabel(call.reasonCode.wireValue),
+                        modifier =
+                            Modifier.semantics {
+                                contentDescription = accessibilityReason
+                            },
                         style = MaterialTheme.typography.labelSmall,
                         color = CatPeach,
                     )

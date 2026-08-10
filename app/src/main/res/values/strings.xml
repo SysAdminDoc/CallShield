@@ -1436,6 +1436,47 @@
     <string name="cd_onboarding_page">Onboarding page %1$d of %2$d</string>
     <string name="cd_search_result_spam">Spam number</string>
 
+    <!-- Spoken block reasons: complete sentences without internal checker jargon. -->
+    <string name="accessibility_reason_emergency_floor">This item was allowed by a built-in emergency safety rule.</string>
+    <string name="accessibility_reason_otp_floor">This item was allowed by a built-in verification safety rule.</string>
+    <string name="accessibility_reason_emergency_contact">This item was allowed because it is an emergency contact.</string>
+    <string name="accessibility_reason_manual_whitelist">This item was allowed because you saved it as safe.</string>
+    <string name="accessibility_reason_contact_whitelist">This item was allowed because it is in your contacts.</string>
+    <string name="accessibility_reason_contacts_only">This item was allowed because it is in your contacts-only list.</string>
+    <string name="accessibility_reason_stir_trusted">This item was allowed because the carrier verified the caller.</string>
+    <string name="accessibility_reason_stir_failed">This item was blocked because the carrier could not verify the caller ID.</string>
+    <string name="accessibility_reason_temporary_allow">This item was allowed because you granted a temporary exception.</string>
+    <string name="accessibility_reason_temporary_block">This item was blocked by your temporary rule.</string>
+    <string name="accessibility_reason_system_block_list">This item was blocked by the phone system block list.</string>
+    <string name="accessibility_reason_user_blocklist">This item was blocked because you saved a rule for it.</string>
+    <string name="accessibility_reason_hidden_number">This item was blocked because no phone number was provided.</string>
+    <string name="accessibility_reason_database">This item was blocked because it is in the spam database.</string>
+    <string name="accessibility_reason_database_prefix">This item was blocked because it matches a known spam number range.</string>
+    <string name="accessibility_reason_prefix">This item was blocked because it matches a known spam number range.</string>
+    <string name="accessibility_reason_saved_pattern">This item was blocked because it matches one of your saved number patterns.</string>
+    <string name="accessibility_reason_recently_dialed">This item was allowed because you called it recently.</string>
+    <string name="accessibility_reason_answered_caller">This item was allowed because you have answered this caller before.</string>
+    <string name="accessibility_reason_emergency_callback">This item was allowed because it may be an emergency callback.</string>
+    <string name="accessibility_reason_repeated_urgent">This item was allowed because the caller tried again soon after calling.</string>
+    <string name="accessibility_reason_caller_name_trust">This item was allowed because the caller name is trusted.</string>
+    <string name="accessibility_reason_caller_name_block">This item was blocked because the caller name matched your rule.</string>
+    <string name="accessibility_reason_campaign">This item was blocked because it matched a recent burst of spam calls.</string>
+    <string name="accessibility_reason_quiet_hours">This item was blocked because it arrived during your quiet hours.</string>
+    <string name="accessibility_reason_frequency">This item was blocked because the caller tried too often.</string>
+    <string name="accessibility_reason_suspicious_patterns">This item was blocked because it matched several suspicious calling patterns.</string>
+    <string name="accessibility_reason_on_device_analysis">This item was blocked because on-device protection found it likely to be spam.</string>
+    <string name="accessibility_reason_recent_reports">This item was blocked because recent reports identified the number as spam.</string>
+    <string name="accessibility_reason_spam_website">This item was blocked because the message contained a website linked to spam.</string>
+    <string name="accessibility_reason_push_alert">This item was blocked because a trusted alert identified it as spam.</string>
+    <string name="accessibility_reason_message_trust">This item was allowed because you have an existing message history with the sender.</string>
+    <string name="accessibility_reason_message_burst">This item was blocked because the sender sent several messages in a short time.</string>
+    <string name="accessibility_reason_keyword">This item was blocked because the message matched one of your keyword rules.</string>
+    <string name="accessibility_reason_message_content">This item was blocked because the message content looked like spam.</string>
+    <string name="accessibility_reason_message_filter">This item was blocked because the message matched a spam filter.</string>
+    <string name="accessibility_reason_category">This item was blocked because it matched one of your category rules.</string>
+    <string name="accessibility_reason_degraded">This item was allowed while protection was incomplete.</string>
+    <string name="accessibility_reason_unknown">This item was blocked by a CallShield protection rule.</string>
+
     <!-- Protection Test: v1.2.8 additions -->
     <string name="test_campaign_detection">Campaign Detection</string>
     <string name="test_campaign_monitoring">Active campaigns monitored: %d</string>

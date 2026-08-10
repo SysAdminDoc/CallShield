@@ -465,8 +465,15 @@ by locale and message type without shipping personal data:
 
 ### Recent Calls & Blocked Log
 - Recent calls with contact names, risk indicators, call type icons, filter chips (All/Missed/Spam)
-- Blocked log with swipe-to-dismiss + undo, grouping with severity-scaled accent bars, filter chips
+- Blocked log with swipe-to-dismiss + undo, grouping with severity-scaled accent bars, filter chips;
+  swipe actions also have equivalent TalkBack/switch-access actions and 48dp touch targets
 - Staggered entrance animations, shimmer loading skeletons
+
+### Assistive Telephony
+- RTT calls receive an immediate allow from the screening service; CallShield does not reject,
+  silence, or launch the caller-ID overlay for an active RTT session.
+- Block reasons are spoken as complete plain-English sentences, while swipe-only block, delete,
+  and unblock actions remain available through accessibility actions.
 
 ### Rules Management (5 tabs)
 - Blocklist, Wildcards, Keywords, Whitelist, Database

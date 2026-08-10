@@ -13,6 +13,10 @@ All notable changes to CallShield will be documented in this file.
   links, an optional MIUI autostart route, and a dismissible warning that refreshes on resume.
 - Expanded Compose accessibility coverage to every screen and bottom sheet, with warnings treated
   as test failures and swipe-only actions exposed through equivalent custom actions.
+- Activity-log and blocklist swipe containers now keep a 48dp minimum target, expose the same
+  delete/block/unblock outcomes as custom accessibility actions, and announce plain-English block
+  reasons without carrier or detector jargon. RTT calls receive an explicit allow before any
+  screening or caller-ID overlay path can run.
 - Rebuilt Home around localized blocked-call/text outcomes for the current calendar week; completed setup
   now collapses to one reviewable row, while Settings owns the detailed access checklist.
 - Categorized the Quick Settings protection tile under Privacy on Android 16.1+ while preserving

@@ -8,16 +8,30 @@ import android.util.TypedValue
 import android.view.View
 import android.widget.TextView
 import androidx.annotation.RequiresApi
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.collapse
+import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.expand
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+
+/**
+ * Makes a gesture-driven telephony action reachable through switch access and
+ * TalkBack, while keeping the gesture's visual container at the Android 48 dp
+ * minimum touch target.
+ */
+internal fun Modifier.accessibleSwipeActions(actions: List<CustomAccessibilityAction>): Modifier =
+    heightIn(min = MIN_INTERACTIVE_TARGET_DP.dp).semantics {
+        customActions = actions
+    }
 
 /** Adds a spoken state and native expand/collapse actions to an expandable control. */
 fun Modifier.expandableStateSemantics(
@@ -116,3 +130,4 @@ private fun buildDurationTtsTextApi36(
 
 private const val SECONDS_PER_MINUTE = 60
 private const val SECONDS_PER_HOUR = 3_600
+private const val MIN_INTERACTIVE_TARGET_DP = 48
