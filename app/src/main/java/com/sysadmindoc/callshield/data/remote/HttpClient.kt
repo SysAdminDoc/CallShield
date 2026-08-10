@@ -9,7 +9,8 @@ import java.util.concurrent.TimeUnit
  *
  * OkHttpClient instances are expensive — each creates its own connection pool,
  * thread pool, and cache. Sharing a single instance enables HTTP/2 connection
- * reuse across GitHub API, ExternalLookup, URLhaus, and community report calls.
+ * reuse across GitHub API, ExternalLookup, URL threat feeds, and community
+ * report calls.
  *
  * Callers that need different timeouts should use [OkHttpClient.newBuilder] to
  * create a derived client that shares the same connection pool:

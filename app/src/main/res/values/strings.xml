@@ -574,10 +574,10 @@
     <string name="settings_heuristic_analysis_desc">VoIP ranges, premium rate, wangiri, rapid-fire</string>
     <string name="settings_sms_content">SMS content analysis</string>
     <string name="settings_sms_content_desc">Spam keywords, phishing links, scam patterns</string>
-    <string name="settings_urlhaus_privacy">URLhaus privacy mode</string>
-    <string name="settings_urlhaus_privacy_desc">Remove URL queries before remote checks</string>
-    <string name="settings_urlhaus_remote_lookup">Share link domains with URLhaus</string>
-    <string name="settings_urlhaus_remote_lookup_desc">Optional. Send only the registrable domain to abuse.ch for malware checks</string>
+    <string name="settings_urlhaus_privacy">Threat-feed privacy mode</string>
+    <string name="settings_urlhaus_privacy_desc">Hide link query parameters in local evidence; remote checks always use the domain only</string>
+    <string name="settings_urlhaus_remote_lookup">Share link domains with threat feeds</string>
+    <string name="settings_urlhaus_remote_lookup_desc">Optional. Send only the registrable domain—not message text—to enabled threat feeds</string>
     <string name="settings_sms_burst">SMS burst protection</string>
     <string name="settings_sms_burst_desc">Detect repeated unknown senders and message floods</string>
     <string name="settings_repeat_caller">Repeat caller auto-block</string>
@@ -1248,7 +1248,7 @@
     <string name="notif_action_report">Report</string>
     <string name="notif_phishing_title">Phishing URL detected</string>
     <string name="notif_phishing_text">SMS from %1$s contains a %2$s link</string>
-    <string name="notif_phishing_big_text">An SMS from %1$s contains a URL flagged by URLhaus as %2$s. Do not tap any links in this message.</string>
+    <string name="notif_phishing_big_text">An SMS from %1$s contains a URL flagged by a threat feed as %2$s. Do not tap any links in this message.</string>
     <string name="notif_status_title">CallShield active</string>
     <string name="notif_status_text">Protecting against spam calls &amp; texts</string>
     <string name="notif_role_lost_title">Call screening is off</string>

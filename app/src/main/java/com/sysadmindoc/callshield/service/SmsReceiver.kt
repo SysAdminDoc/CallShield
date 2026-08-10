@@ -144,9 +144,9 @@ class SmsReceiver : BroadcastReceiver() {
                 pendingResult.finish()
             }
 
-            // Background local domain check plus optional URLhaus domain-only
-            // lookup. This runs after the broadcast decision so it never adds
-            // latency to SMS delivery.
+            // Background local domain check plus optional domain-only threat
+            // feed lookup. This runs after the broadcast decision so it never
+            // adds latency to SMS delivery.
             if (body.isNotEmpty()) {
                 try {
                     val maliciousUrls =

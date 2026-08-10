@@ -87,6 +87,17 @@ class UrlSafetyCheckerTest {
     }
 
     @Test
+    fun `remote lookup strips embedded credentials as well as message URL data`() {
+        val normalized =
+            UrlSafetyChecker.normalizeRemoteLookupUrl(
+                "https://alice:secret@login.example.test/pay?token=secret#frag",
+                registrableDomain = { "example.test" },
+            )
+
+        assertEquals("https://example.test/", normalized)
+    }
+
+    @Test
     fun `remote lookup fails closed when registrable domain cannot be resolved`() {
         val normalized =
             UrlSafetyChecker.normalizeRemoteLookupUrl(
@@ -119,6 +130,8 @@ class UrlSafetyCheckerTest {
             assertEquals("https://login.evil.test/pay", malicious.single().url)
             assertEquals("known_spam_domain", malicious.single().threat)
             assertEquals(listOf("local_spam_domain"), malicious.single().tags)
+            assertEquals(UrlThreatSource.LOCAL_SPAM_DOMAINS, malicious.single().source)
+            assertEquals(UrlThreatVerdict.MALICIOUS, malicious.single().verdict)
         }
 
     @Test
