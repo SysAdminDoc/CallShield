@@ -1,7 +1,7 @@
 package com.sysadmindoc.callshield.ui.screens.main
 
-import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import com.sysadmindoc.callshield.data.model.BlockedCall
 import com.sysadmindoc.callshield.domain.model.BlockReasonCode
@@ -33,9 +33,7 @@ class BlockedLogAccessibilityTest {
         }
 
         composeRule
-            .onNodeWithContentDescription(
-                "This item was blocked because it is in the spam database.",
-            )
+            .onNodeWithContentDescription("This item was blocked because it is in the spam database.")
             .assertIsDisplayed()
         composeRule.runStrictAccessibilityChecks()
     }

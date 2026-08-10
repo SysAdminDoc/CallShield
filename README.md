@@ -667,6 +667,12 @@ RELEASE_KEY_PASSWORD=...
 
 Run tests, lint, release metadata checks, and artifact builds locally before publishing.
 
+The pinned GitHub Actions verification workflow repeats the unit-test, lint,
+pipeline, reproducibility, and release metadata gates on pull requests and
+scheduled runs. Scheduled runs submit the resolved Gradle dependency graph;
+Dependabot watches Gradle lockfiles and GitHub Actions for update PRs, while
+dependency review fails new high-severity advisories.
+
 ## Translations
 
 CallShield ships English only. Translations are welcome — see
