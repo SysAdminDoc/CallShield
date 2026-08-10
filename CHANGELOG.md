@@ -25,6 +25,8 @@ All notable changes to CallShield will be documented in this file.
 - Derived feeds now record the pending-report queue digest; collapse guards preserve
   healthy outputs, and the community merge refuses to consume reports until hot numbers,
   ranges, and domains were generated from that same queue.
+- Drained the queued community reports through that guarded pipeline and committed the
+  regenerated feed snapshots; unsupported reports did not promote into shared feeds.
 
 ### Reliability
 
