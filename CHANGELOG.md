@@ -131,6 +131,8 @@ All notable changes to CallShield will be documented in this file.
 - Added `verifyReleaseDrift`, a reproducible release audit for synchronized
   version metadata, locked direct dependencies, explicitly dispositioned
   advisories, F-Droid preparation state, and privacy-safe source snapshots.
+- Made the release-drift checkout test derive its audit clock from the generated
+  source snapshot and added the current version-code Fastlane changelog.
 
 ## v1.7.34 — 2026-08-10
 
