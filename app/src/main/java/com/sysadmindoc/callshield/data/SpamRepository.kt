@@ -13,8 +13,8 @@ import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
-import androidx.room.withTransaction
 import androidx.paging.PagingSource
+import androidx.room.withTransaction
 import com.sysadmindoc.callshield.data.checker.BlockResult
 import com.sysadmindoc.callshield.data.checker.CheckerDependencies
 import com.sysadmindoc.callshield.data.local.AppDatabase
@@ -127,6 +127,8 @@ class SpamRepository(
         internal val KEY_LAST_SHA = stringPreferencesKey("last_data_sha")
         internal val KEY_LAST_SHARD_HASHES = stringPreferencesKey("last_data_shard_hashes")
         internal val KEY_DB_VERSION = intPreferencesKey("db_version")
+        internal val KEY_DB_UPDATED = stringPreferencesKey("db_updated")
+        internal val KEY_LAST_MANIFEST_DIGEST = stringPreferencesKey("last_data_manifest_digest")
         internal val KEY_HOT_DATA_LAST_GOOD = longPreferencesKey("hot_data_last_good_timestamp")
         internal val KEY_HOT_DATA_UNAVAILABLE = stringSetPreferencesKey("hot_data_unavailable_feeds")
         internal val KEY_DISMISSED_RULE_CONFLICTS = stringSetPreferencesKey("dismissed_rule_conflict_keys")

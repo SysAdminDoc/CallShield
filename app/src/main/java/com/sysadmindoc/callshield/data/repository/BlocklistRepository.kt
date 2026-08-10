@@ -8,8 +8,8 @@ import com.sysadmindoc.callshield.data.TimeSchedule
 import com.sysadmindoc.callshield.data.escapeLikeQuery
 import com.sysadmindoc.callshield.data.local.SpamDao
 import com.sysadmindoc.callshield.data.model.BlockedCall
-import com.sysadmindoc.callshield.data.model.HashWildcardRule
 import com.sysadmindoc.callshield.data.model.BlockedCallGroup
+import com.sysadmindoc.callshield.data.model.HashWildcardRule
 import com.sysadmindoc.callshield.data.model.LogAggregate
 import com.sysadmindoc.callshield.data.model.PendingBlockedCallLog
 import com.sysadmindoc.callshield.data.model.SmsKeywordRule

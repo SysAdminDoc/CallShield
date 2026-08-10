@@ -509,6 +509,15 @@ class SettingsRepository(
 
     suspend fun readLastDataSha(): String? = dataStore.data.first()[SpamRepository.KEY_LAST_SHA]
 
+    internal suspend fun readAcceptedSpamFeedMetadata(): AcceptedSpamFeedMetadata {
+        val preferences = dataStore.data.first()
+        return AcceptedSpamFeedMetadata(
+            version = preferences[SpamRepository.KEY_DB_VERSION],
+            updated = preferences[SpamRepository.KEY_DB_UPDATED],
+            manifestDigest = preferences[SpamRepository.KEY_LAST_MANIFEST_DIGEST],
+        )
+    }
+
     suspend fun readLastDataShardHashes(): Map<String, String>? {
         val encoded = dataStore.data.first()[SpamRepository.KEY_LAST_SHARD_HASHES] ?: return null
         return runCatching { shardHashesAdapter.fromJson(encoded).orEmpty() }
@@ -553,11 +562,19 @@ class SettingsRepository(
         syncSource: String,
         databaseVersion: Int,
         shardHashes: Map<String, String>? = null,
+        databaseUpdated: String? = null,
+        manifestDigest: String? = null,
     ) = dataStore.edit {
         it[SpamRepository.KEY_LAST_SYNC] = System.currentTimeMillis()
         it[SpamRepository.KEY_LAST_SYNC_SOURCE] = syncSource
         it[SpamRepository.KEY_DB_VERSION] = databaseVersion
+        if (databaseUpdated != null) it[SpamRepository.KEY_DB_UPDATED] = databaseUpdated
         if (sha != null) it[SpamRepository.KEY_LAST_SHA] = sha
+        if (manifestDigest != null) {
+            it[SpamRepository.KEY_LAST_MANIFEST_DIGEST] = manifestDigest
+        } else {
+            it.remove(SpamRepository.KEY_LAST_MANIFEST_DIGEST)
+        }
         if (shardHashes != null) {
             if (shardHashes.isEmpty()) {
                 it.remove(SpamRepository.KEY_LAST_SHARD_HASHES)

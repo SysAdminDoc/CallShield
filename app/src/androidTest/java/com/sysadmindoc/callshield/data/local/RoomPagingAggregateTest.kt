@@ -94,8 +94,9 @@ class RoomPagingAggregateTest {
 
             val groupedPage = dao.pageGroupedBlockedCalls(null, null).refreshPage(loadSize = 10)
             assertEquals(2, groupedPage.data.size)
-            assertEquals("+15551230001", groupedPage.data.first().call.number)
-            assertEquals(2, groupedPage.data.first().occurrences)
+            val firstGroup = groupedPage.data.first()
+            assertEquals("+15551230001", firstGroup.call.number)
+            assertEquals(2, firstGroup.occurrences)
             assertEquals(1, groupedPage.data[1].occurrences)
         }
 
@@ -133,10 +134,14 @@ class RoomPagingAggregateTest {
             assertEquals(3, dao.observeLogCount().first())
             assertEquals(2, dao.observeLogCallCount().first())
             assertEquals(1, dao.observeLogSmsCount().first())
-            assertEquals(2, dao.observeLogNumberCounts(1).first().single().count)
-            assertEquals("555", dao.observeLogAreaCodeCounts(1).first().single().key)
-            assertEquals(2, dao.observeLogReasonCounts().first().first().count)
-            assertEquals(3, dao.observeLogDayCounts(0L).first().sumOf { it.count })
+            val numberCounts = dao.observeLogNumberCounts(1).first()
+            assertEquals(2, numberCounts.single().count)
+            val areaCodeCounts = dao.observeLogAreaCodeCounts(1).first()
+            assertEquals("555", areaCodeCounts.single().key)
+            val reasonCounts = dao.observeLogReasonCounts().first()
+            assertEquals(2, reasonCounts.first().count)
+            val dayCounts = dao.observeLogDayCounts(0L).first()
+            assertEquals(3, dayCounts.sumOf { it.count })
             assertEquals(3, dao.observeLogCountBetween(0L, Long.MAX_VALUE).first())
         }
 
@@ -169,9 +174,12 @@ class RoomPagingAggregateTest {
             val secondPage = dao.pageAllSpamNumbers().appendPage(firstPage.nextKey!!, loadSize = 50)
             assertEquals(50, firstPage.data.size)
             assertEquals(50, secondPage.data.size)
-            assertTrue(firstPage.data.map { it.id }.intersect(secondPage.data.map { it.id }.toSet()).isEmpty())
+            val firstIds = firstPage.data.map { it.id }.toSet()
+            val secondIds = secondPage.data.map { it.id }.toSet()
+            assertTrue(firstIds.intersect(secondIds).isEmpty())
             assertEquals(rowCount, dao.observeLogCount().first())
-            assertEquals(rowCount, dao.observeLogReasonCounts().first().single().count)
+            val reasonCounts = dao.observeLogReasonCounts().first()
+            assertEquals(rowCount, reasonCounts.single().count)
         }
 
     private suspend fun <T : Any> PagingSource<Int, T>.refreshPage(loadSize: Int): PagingSource.LoadResult.Page<Int, T> {

@@ -1,7 +1,7 @@
 package com.sysadmindoc.callshield.data.local
 
-import androidx.room.*
 import androidx.paging.PagingSource
+import androidx.room.*
 import com.sysadmindoc.callshield.data.model.BlockedCall
 import com.sysadmindoc.callshield.data.model.BlockedCallGroup
 import com.sysadmindoc.callshield.data.model.CampaignObservation

@@ -21,6 +21,7 @@ import com.sysadmindoc.callshield.data.model.SpamShardDescriptor
 import com.sysadmindoc.callshield.data.model.SpamShardManifest
 import com.sysadmindoc.callshield.data.remote.ExternalBlocklistDataSource
 import com.sysadmindoc.callshield.data.remote.GitHubDataSource
+import com.sysadmindoc.callshield.data.remote.GitHubFeedValidationException
 import com.sysadmindoc.callshield.data.remote.OkHttpExternalBlocklistDataSource
 import com.sysadmindoc.callshield.data.remote.SpamDataSource
 import com.sysadmindoc.callshield.data.remote.sha256Hex
@@ -88,6 +89,19 @@ class SyncRepository(
                                 success = true,
                                 message = context.getString(R.string.sync_success_counts, numberCount, prefixCount),
                             )
+                        }
+                        val shardError = shardResult.exceptionOrNull()
+                        if (shardError is SpamFeedManifestRejectedException && currentCount > 0) {
+                            return@withContext retainedDatabaseWarning(shardError)
+                        }
+                    } else {
+                        val manifestError = manifestResult.exceptionOrNull()
+                        if (
+                            currentCount > 0 &&
+                            (manifestError is GitHubFeedValidationException ||
+                                manifestError is SpamFeedManifestRejectedException)
+                        ) {
+                            return@withContext retainedDatabaseWarning(manifestError)
                         }
                     }
 
@@ -290,6 +304,12 @@ class SyncRepository(
         force: Boolean,
     ): Result<Pair<Int, Int>> =
         runCatching {
+            val manifestDigest = spamShardManifestDigest(manifest)
+            validateSpamShardManifestPolicy(
+                previous = settingsRepository.readAcceptedSpamFeedMetadata(),
+                manifest = manifest,
+                digest = manifestDigest,
+            )
             val previousHashes =
                 if (force) {
                     emptyMap()
@@ -347,6 +367,8 @@ class SyncRepository(
                 syncSource = SpamRepository.SYNC_SOURCE_REMOTE,
                 databaseVersion = manifest.version,
                 shardHashes = manifest.shards.associate { it.id to it.sha256 },
+                databaseUpdated = manifest.updated,
+                manifestDigest = manifestDigest,
             )
             numbers.size to prefixes.size
         }
@@ -424,6 +446,10 @@ class SyncRepository(
         syncSource: String,
         shardHashes: Map<String, String>,
     ): Pair<Int, Int> {
+        validateSpamDatabasePolicy(
+            previous = settingsRepository.readAcceptedSpamFeedMetadata(),
+            database = database,
+        )
         val now = System.currentTimeMillis()
         val preservedUserBlocks = readPreservedUserBlocks(now)
 
@@ -443,11 +469,19 @@ class SyncRepository(
             syncSource = syncSource,
             databaseVersion = database.version,
             shardHashes = shardHashes,
+            databaseUpdated = database.updated,
         )
 
         CallShieldWidget.refreshAll(context)
         return numbers.size to prefixes.size
     }
+
+    private fun retainedDatabaseWarning(error: Throwable): SyncResult =
+        SyncResult(
+            success = true,
+            message = context.getString(R.string.sync_remote_unavailable_existing, error.message ?: "Invalid feed metadata"),
+            warning = true,
+        )
 
     private suspend fun readPreservedUserBlocks(now: Long = System.currentTimeMillis()): Map<String, Long?> =
         dao

@@ -177,6 +177,7 @@ class SyncIntegrationTest {
 
             val changedFirst = shardFixture(firstId, firstNumber, "Updated first shard")
             remote.sha = "sharded-v2"
+            remote.version = 2
             remote.replaceShards(listOf(changedFirst, secondShard))
             val incremental = repo.syncFromGitHub()
 
@@ -187,12 +188,52 @@ class SyncIntegrationTest {
 
             val beforeFailedUpdate = db.spamDao().findByNumber(firstNumber)
             remote.sha = "sharded-v3"
+            remote.version = 3
             remote.replaceShards(listOf(changedFirst.copy(hashOverride = "0".repeat(64)), secondShard))
             val failed = repo.syncFromGitHub()
 
             assertTrue(failed.success)
             assertTrue(failed.warning)
             assertEquals(beforeFailedUpdate, db.spamDao().findByNumber(firstNumber))
+        }
+
+    @Test
+    fun shardedSyncRejectsReplayAndSameVersionContentChangesBeforeFetchingShards() =
+        runBlocking {
+            val number = "+12125550111"
+            val id = spamShardIdFor(number)
+            val initialShard = shardFixture(id, number, "Initial content")
+            val remote =
+                ShardedFakeSpamDataSource(
+                    sha = "sharded-policy-v1",
+                    initialShards = listOf(initialShard),
+                )
+            val repo = SpamRepository(context, db, remote)
+
+            assertTrue(repo.syncFromGitHub(force = true).success)
+            remote.version = 2
+            remote.sha = "sharded-policy-v2"
+            assertTrue(repo.syncFromGitHub(force = true).success)
+            val accepted = db.spamDao().findByNumber(number)
+            val fetchCountAfterInitialSync = remote.fetchShardCount
+
+            remote.sha = "sharded-policy-replay"
+            remote.replaceShards(listOf(shardFixture(id, number, "Replayed content")))
+            val sameVersion = repo.syncFromGitHub(force = true)
+
+            assertTrue(sameVersion.success)
+            assertTrue(sameVersion.warning)
+            assertEquals(fetchCountAfterInitialSync, remote.fetchShardCount)
+            assertEquals(accepted, db.spamDao().findByNumber(number))
+
+            remote.sha = "sharded-policy-downgrade"
+            remote.version = 1
+            val downgraded = repo.syncFromGitHub(force = true)
+
+            assertTrue(downgraded.success)
+            assertTrue(downgraded.warning)
+            assertEquals(fetchCountAfterInitialSync, remote.fetchShardCount)
+            assertEquals(accepted, db.spamDao().findByNumber(number))
         }
 
     private fun shardFixture(
@@ -273,6 +314,7 @@ class SyncIntegrationTest {
         initialShards: List<ShardFixture>,
     ) : SpamDataSource {
         private val shards = linkedMapOf<String, ShardFixture>()
+        var version = 1
         var fetchShardCount = 0
             private set
 
@@ -302,7 +344,7 @@ class SyncIntegrationTest {
             Result.success(
                 SpamShardManifest(
                     formatVersion = 1,
-                    version = 1,
+                    version = version,
                     updated = "2026-08-10",
                     legacyPath = "data/spam_numbers.json",
                     shardDirectory = "data/spam_number_shards",
