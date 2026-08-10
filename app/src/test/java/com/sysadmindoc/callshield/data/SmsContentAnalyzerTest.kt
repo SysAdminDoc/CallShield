@@ -34,6 +34,20 @@ class SmsContentAnalyzerTest {
         assertEquals(0, result.score)
     }
 
+    @Test
+    fun `verification message requires an explicit phrase and code`() {
+        assertTrue(SmsContentAnalyzer.isVerificationMessage("Your verification code is 482913."))
+        assertTrue(SmsContentAnalyzer.isVerificationMessage("Use OTP 4829 to finish signing in."))
+        assertFalse(SmsContentAnalyzer.isVerificationMessage("Please verify your account immediately."))
+        assertFalse(SmsContentAnalyzer.isVerificationMessage("Your order number is 482913."))
+    }
+
+    @Test
+    fun `verification floor rejects unbounded message bodies`() {
+        val body = "Your verification code is 482913. " + "x".repeat(1_025)
+        assertFalse(SmsContentAnalyzer.isVerificationMessage(body))
+    }
+
     // ── DoS guard: oversized bodies are truncated before regex sweep ────
 
     @Test

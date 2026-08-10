@@ -208,4 +208,44 @@ class LogExporterTest {
 
         assertTrue(csv.contains(rawBody))
     }
+
+    @Test
+    fun `exportRedressToCsv contains only required blocked call fields`() {
+        val timestamp = 1_735_689_600_000L
+        val csv =
+            LogExporter.exportRedressToCsv(
+                listOf(
+                    BlockedCall(
+                        number = "+12125550100",
+                        timestamp = timestamp,
+                        isCall = true,
+                        wasBlocked = true,
+                        matchReason = "user_blocklist",
+                        smsBody = "secret code 1234",
+                    ),
+                    BlockedCall(
+                        number = "+12125550101",
+                        timestamp = timestamp,
+                        isCall = false,
+                        wasBlocked = true,
+                        matchReason = "sms_content",
+                        smsBody = "not a call",
+                    ),
+                    BlockedCall(
+                        number = "+12125550102",
+                        timestamp = timestamp,
+                        isCall = true,
+                        wasBlocked = false,
+                        matchReason = "emergency_floor",
+                    ),
+                ),
+            )
+
+        assertTrue(csv.startsWith("Date,Time,CallingNumber,Reason\n"))
+        assertTrue(csv.contains("+12125550100"))
+        assertTrue(csv.contains("user_blocklist"))
+        assertFalse(csv.contains("+12125550101"))
+        assertFalse(csv.contains("+12125550102"))
+        assertFalse(csv.contains("secret code"))
+    }
 }

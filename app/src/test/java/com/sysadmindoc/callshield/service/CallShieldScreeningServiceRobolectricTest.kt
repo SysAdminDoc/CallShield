@@ -146,12 +146,14 @@ class CallShieldScreeningServiceRobolectricTest {
 
     @Test
     fun `onScreenCall fails open when lazy repository creation throws`() {
-        val failingService = Robolectric.setupService(CallShieldScreeningService::class.java).also {
-            it.applicationScope = scope
-            it.repoProvider = object : Provider<SpamRepository> {
-                override fun get(): SpamRepository = error("repository initialization failed")
+        val failingService =
+            Robolectric.setupService(CallShieldScreeningService::class.java).also {
+                it.applicationScope = scope
+                it.repoProvider =
+                    object : Provider<SpamRepository> {
+                        override fun get(): SpamRepository = error("repository initialization failed")
+                    }
             }
-        }
         shadowService = Shadow.extract(failingService)
 
         failingService.onScreenCall(callDetails("+12125550180"))

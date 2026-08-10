@@ -48,7 +48,10 @@ interface SpamDao {
             "WHERE number LIKE :prefix || '%' AND isUserBlocked = 0 " +
             "AND (evidenceExpiresAt IS NULL OR evidenceExpiresAt > :now) LIMIT 1",
     )
-    suspend fun countByPrefix(prefix: String, now: Long): Int
+    suspend fun countByPrefix(
+        prefix: String,
+        now: Long,
+    ): Int
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertNumber(number: SpamNumber)

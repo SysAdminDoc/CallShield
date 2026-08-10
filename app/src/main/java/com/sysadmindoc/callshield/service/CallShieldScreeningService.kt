@@ -108,134 +108,134 @@ class CallShieldScreeningService : CallScreeningService() {
             try {
                 withTimeoutOrNull(SCREENING_TIMEOUT_MS) {
                     try {
-                // Resolve injected providers inside the fail-open boundary. Room,
-                // DataStore, or a Hilt component can fail during lazy creation;
-                // resolving them before this try block would crash the coroutine
-                // without ever sending telecom an explicit response.
-                val repository = repository()
-                val heuristics = heuristics()
+                        // Resolve injected providers inside the fail-open boundary. Room,
+                        // DataStore, or a Hilt component can fail during lazy creation;
+                        // resolving them before this try block would crash the coroutine
+                        // without ever sending telecom an explicit response.
+                        val repository = repository()
+                        val heuristics = heuristics()
 
-                // One snapshot of all prefs — the 5-second deadline is tight
-                // and individual Flow.first() calls each spin up a collector.
-                val prefs = repository.readPrefsSnapshot()
+                        // One snapshot of all prefs — the 5-second deadline is tight
+                        // and individual Flow.first() calls each spin up a collector.
+                        val prefs = repository.readPrefsSnapshot()
 
-                if (!(prefs[SpamRepository.KEY_BLOCK_CALLS] ?: true)) {
-                    respondAllow(responseGate)
-                    return@withTimeoutOrNull
-                }
-
-                val handle = callDetails.handle
-                val number = repository.normalizeNumber(handle?.schemeSpecificPart.orEmpty())
-
-                if (number.isEmpty()) {
-                    if (prefs[SpamRepository.KEY_BLOCK_UNKNOWN] ?: false) {
-                        respondBlock(callDetails, responseGate, number, "hidden_number", prefs = prefs)
-                    } else {
-                        respondAllow(responseGate)
-                    }
-                    return@withTimeoutOrNull
-                }
-
-                // Contact whitelist — cached inside SpamHeuristics so this stays cheap.
-                // Fast-path shortcut before we run the pipeline: a contact never
-                // needs any of the 13 downstream checks, and skipping them saves
-                // tens of milliseconds against the 5 s deadline.
-                if ((prefs[SpamRepository.KEY_CONTACT_WHITELIST] ?: true) &&
-                    heuristics.isInContacts(
-                        appContext,
-                        number,
-                        prefs[SpamRepository.KEY_SELECTED_CONTACT_GROUPS]
-                            ?.let(ContactGroupCatalog::preserveScope),
-                    )
-                ) {
-                    respondAllow(responseGate)
-                    return@withTimeoutOrNull
-                }
-
-                // STIR/SHAKEN now lives in the pipeline as StirShakenChecker so a
-                // MANUAL_WHITELIST or CONTACT_WHITELIST entry can override it. We
-                // just forward the verification status through the pipeline.
-                val verificationStatus: Int? =
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                        callDetails.callerNumberVerificationStatus
-                    } else {
-                        null
-                    }
-                val callerName =
-                    callDetails.callerDisplayName?.takeIf {
-                        callDetails.callerDisplayNamePresentation == TelecomManager.PRESENTATION_ALLOWED &&
-                            it.isNotBlank()
-                    }
-
-                // Full spam check — reuses the snapshot so we don't re-read DataStore.
-                val result =
-                    spamChecker()(
-                        number = number,
-                        prefsSnapshot = prefs,
-                        callerIdentity = CallerIdentity(verificationStatus, callerName),
-                    )
-                if (result.isSpam) {
-                    val categoryAction =
-                        CategoryCallPolicy.parseMatchSource(result.matchSource)?.action
-                            ?: CategoryCallAction.INHERIT
-                    if (categoryAction == CategoryCallAction.ALLOW) {
-                        respondAllow(responseGate)
-                    } else {
-                        respondBlock(
-                            callDetails = callDetails,
-                            responseGate = responseGate,
-                            number = number,
-                            reason = result.matchSource,
-                            confidence = result.confidence,
-                            prefs = prefs,
-                        )
-                    }
-                } else {
-                    val repeatedUrgentAllow = result.matchSource == "repeated_urgent"
-                    val suppressFeedback = shouldSuppressAfterCallFeedback(result.matchSource)
-                    // Unknown non-contact caller — area-code-only caller ID overlay
-                    val location = AreaCodeLookup.lookup(number)
-                    if (location != null) {
-                        try {
-                            val intent =
-                                android.content.Intent(appContext, CallerIdOverlayService::class.java).apply {
-                                    putExtra("number", number)
-                                    putExtra("confidence", 0)
-                                    putExtra("reason", location)
-                                }
-                            appContext.startService(intent)
-                        } catch (_: Exception) {
+                        if (!(prefs[SpamRepository.KEY_BLOCK_CALLS] ?: true)) {
+                            respondAllow(responseGate)
+                            return@withTimeoutOrNull
                         }
-                    }
-                    respondAllow(responseGate)
 
-                    if (repeatedUrgentAllow) {
-                        NotificationHelper.notifyRepeatedUrgentAllowed(appContext, number)
-                    } else if (!suppressFeedback) {
-                        // After-call feedback notification, deferred. Must run on
-                        // appScope since the service is typically unbound by the
-                        // time 10 s has passed. Contact status is re-checked at
-                        // post-time in case the user just added the caller.
-                        applicationScope.launch {
-                            try {
-                                if (waitForFeedbackWindow(appContext) &&
-                                    !heuristics.isInContacts(
-                                        appContext,
-                                        number,
-                                        prefs[SpamRepository.KEY_SELECTED_CONTACT_GROUPS]
-                                            ?.let(ContactGroupCatalog::preserveScope),
-                                    )
-                                ) {
-                                    NotificationHelper.notifyAfterCall(appContext, number)
+                        val handle = callDetails.handle
+                        val number = repository.normalizeNumber(handle?.schemeSpecificPart.orEmpty())
+
+                        if (number.isEmpty()) {
+                            if (prefs[SpamRepository.KEY_BLOCK_UNKNOWN] ?: false) {
+                                respondBlock(callDetails, responseGate, number, "hidden_number", prefs = prefs)
+                            } else {
+                                respondAllow(responseGate)
+                            }
+                            return@withTimeoutOrNull
+                        }
+
+                        // Contact whitelist — cached inside SpamHeuristics so this stays cheap.
+                        // Fast-path shortcut before we run the pipeline: a contact never
+                        // needs any of the 13 downstream checks, and skipping them saves
+                        // tens of milliseconds against the 5 s deadline.
+                        if ((prefs[SpamRepository.KEY_CONTACT_WHITELIST] ?: true) &&
+                            heuristics.isInContacts(
+                                appContext,
+                                number,
+                                prefs[SpamRepository.KEY_SELECTED_CONTACT_GROUPS]
+                                    ?.let(ContactGroupCatalog::preserveScope),
+                            )
+                        ) {
+                            respondAllow(responseGate)
+                            return@withTimeoutOrNull
+                        }
+
+                        // STIR/SHAKEN now lives in the pipeline as StirShakenChecker so a
+                        // MANUAL_WHITELIST or CONTACT_WHITELIST entry can override it. We
+                        // just forward the verification status through the pipeline.
+                        val verificationStatus: Int? =
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                                callDetails.callerNumberVerificationStatus
+                            } else {
+                                null
+                            }
+                        val callerName =
+                            callDetails.callerDisplayName?.takeIf {
+                                callDetails.callerDisplayNamePresentation == TelecomManager.PRESENTATION_ALLOWED &&
+                                    it.isNotBlank()
+                            }
+
+                        // Full spam check — reuses the snapshot so we don't re-read DataStore.
+                        val result =
+                            spamChecker()(
+                                number = number,
+                                prefsSnapshot = prefs,
+                                callerIdentity = CallerIdentity(verificationStatus, callerName),
+                            )
+                        if (result.isSpam) {
+                            val categoryAction =
+                                CategoryCallPolicy.parseMatchSource(result.matchSource)?.action
+                                    ?: CategoryCallAction.INHERIT
+                            if (categoryAction == CategoryCallAction.ALLOW) {
+                                respondAllow(responseGate)
+                            } else {
+                                respondBlock(
+                                    callDetails = callDetails,
+                                    responseGate = responseGate,
+                                    number = number,
+                                    reason = result.matchSource,
+                                    confidence = result.confidence,
+                                    prefs = prefs,
+                                )
+                            }
+                        } else {
+                            val repeatedUrgentAllow = result.matchSource == "repeated_urgent"
+                            val suppressFeedback = shouldSuppressAfterCallFeedback(result.matchSource)
+                            // Unknown non-contact caller — area-code-only caller ID overlay
+                            val location = AreaCodeLookup.lookup(number)
+                            if (location != null) {
+                                try {
+                                    val intent =
+                                        android.content.Intent(appContext, CallerIdOverlayService::class.java).apply {
+                                            putExtra("number", number)
+                                            putExtra("confidence", 0)
+                                            putExtra("reason", location)
+                                        }
+                                    appContext.startService(intent)
+                                } catch (_: Exception) {
                                 }
-                            } catch (failure: CancellationException) {
-                                throw failure
-                            } catch (failure: Exception) {
-                                Log.w(TAG, "After-call feedback failed", failure)
+                            }
+                            respondAllow(responseGate)
+
+                            if (repeatedUrgentAllow) {
+                                NotificationHelper.notifyRepeatedUrgentAllowed(appContext, number)
+                            } else if (!suppressFeedback) {
+                                // After-call feedback notification, deferred. Must run on
+                                // appScope since the service is typically unbound by the
+                                // time 10 s has passed. Contact status is re-checked at
+                                // post-time in case the user just added the caller.
+                                applicationScope.launch {
+                                    try {
+                                        if (waitForFeedbackWindow(appContext) &&
+                                            !heuristics.isInContacts(
+                                                appContext,
+                                                number,
+                                                prefs[SpamRepository.KEY_SELECTED_CONTACT_GROUPS]
+                                                    ?.let(ContactGroupCatalog::preserveScope),
+                                            )
+                                        ) {
+                                            NotificationHelper.notifyAfterCall(appContext, number)
+                                        }
+                                    } catch (failure: CancellationException) {
+                                        throw failure
+                                    } catch (failure: Exception) {
+                                        Log.w(TAG, "After-call feedback failed", failure)
+                                    }
+                                }
                             }
                         }
-                    }
-                }
                     } catch (failure: CancellationException) {
                         throw failure
                     } catch (e: Exception) {

@@ -1,6 +1,7 @@
 package com.sysadmindoc.callshield.data.repository
 
 import android.content.Context
+import com.sysadmindoc.callshield.data.EmergencyNumberFloor
 import com.sysadmindoc.callshield.data.SpamNumberWhitelistResolution
 import com.sysadmindoc.callshield.data.TimeSchedule
 import com.sysadmindoc.callshield.data.escapeLikeQuery
@@ -55,6 +56,7 @@ class BlocklistRepository(
     ): Boolean {
         val normalized = normalizeNumber(number)
         if (normalized.isBlank()) return false
+        if (EmergencyNumberFloor.isProtected(normalized)) return false
         // Atomic check-then-act: without the transaction a process death between
         // the whitelist delete and the block insert would strip the user's allow
         // without adding the block, and a concurrent addToWhitelist could
@@ -122,7 +124,11 @@ class BlocklistRepository(
     }
 
     /** Re-insert a previously-removed block row verbatim (undo). */
-    suspend fun restoreBlockedNumber(number: SpamNumber) = dao.insertNumber(number)
+    suspend fun restoreBlockedNumber(number: SpamNumber): Boolean {
+        if (EmergencyNumberFloor.isProtected(number.number) && number.isUserBlocked) return false
+        dao.insertNumber(number)
+        return true
+    }
 
     /** Undo a block by number string (e.g. an accidental blocked-log swipe). */
     suspend fun unblockByNumber(number: String) {
@@ -226,6 +232,36 @@ class BlocklistRepository(
         if (inserted == -1L) return
         CallShieldWidget.refreshAll(context)
         NotificationHelper.notifyBlocked(context, number, matchReason, isCall, smsBody)
+    }
+
+    /**
+     * Retain an allowed safety-floor decision for auditability without
+     * presenting it as a block or sending a blocked notification.
+     */
+    suspend fun logScreeningExemption(
+        number: String,
+        isCall: Boolean = false,
+        smsBody: String? = null,
+        matchReason: String,
+        type: String = "safety_floor",
+        confidence: Int = 100,
+        timestamp: Long = System.currentTimeMillis(),
+    ) {
+        val normalizedNumber = normalizeLogIdentity(number)
+        val inserted =
+            dao.insertBlockedCallIgnoringDuplicate(
+                BlockedCall(
+                    number = normalizedNumber,
+                    timestamp = timestamp,
+                    type = type,
+                    wasBlocked = false,
+                    isCall = isCall,
+                    smsBody = smsBody,
+                    matchReason = matchReason,
+                    confidence = confidence,
+                ),
+            )
+        if (inserted != -1L) CallShieldWidget.refreshAll(context)
     }
 
     suspend fun enqueuePendingBlockedCallLog(

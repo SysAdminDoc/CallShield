@@ -19,6 +19,7 @@ import com.sysadmindoc.callshield.data.CategoryCallAction
 import com.sysadmindoc.callshield.data.CommunityContributor
 import com.sysadmindoc.callshield.data.ContactGroup
 import com.sysadmindoc.callshield.data.ContactGroupCatalog
+import com.sysadmindoc.callshield.data.EmergencyNumberFloor
 import com.sysadmindoc.callshield.data.SpamHeuristics
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.TimeSchedule
@@ -535,7 +536,18 @@ class MainViewModel
             type: String = "unknown",
             description: String = "",
         ) {
-            viewModelScope.launch { manageBlocklist.blockNumber(number, type, description) }
+            if (EmergencyNumberFloor.isProtected(number)) {
+                Toast
+                    .makeText(
+                        appContext,
+                        appContext.getString(R.string.emergency_number_block_refused),
+                        Toast.LENGTH_LONG,
+                    ).show()
+                return
+            }
+            viewModelScope.launch {
+                manageBlocklist.blockNumber(number, type, description)
+            }
         }
 
         fun temporaryBlockNumber(
@@ -1036,6 +1048,19 @@ class MainViewModel
                     return@launchExport
                 }
                 exportLogs.exportBlockedLog(calls, includeRawSmsBodies)
+            }
+        }
+
+        fun exportRedressLog() {
+            launchExport {
+                val calls = repo.getBlockedCalls().first().filter { it.isCall && it.wasBlocked }
+                if (calls.isEmpty()) {
+                    Toast
+                        .makeText(appContext, appContext.getString(R.string.export_redress_empty), Toast.LENGTH_SHORT)
+                        .show()
+                    return@launchExport
+                }
+                exportLogs.exportRedressLog(calls)
             }
         }
 

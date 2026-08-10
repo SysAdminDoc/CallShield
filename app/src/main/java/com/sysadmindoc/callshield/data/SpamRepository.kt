@@ -667,6 +667,25 @@ class SpamRepository(
     ) = blocklistRepository.logBlockedCall(number, isCall, smsBody, matchReason, confidence, timestamp, logKey)
 
     @Suppress("LongParameterList")
+    suspend fun logScreeningExemption(
+        number: String,
+        isCall: Boolean = false,
+        smsBody: String? = null,
+        matchReason: String,
+        type: String = "safety_floor",
+        confidence: Int = 100,
+        timestamp: Long = System.currentTimeMillis(),
+    ) = blocklistRepository.logScreeningExemption(
+        number = number,
+        isCall = isCall,
+        smsBody = smsBody,
+        matchReason = matchReason,
+        type = type,
+        confidence = confidence,
+        timestamp = timestamp,
+    )
+
+    @Suppress("LongParameterList")
     suspend fun enqueuePendingBlockedCallLog(
         idempotencyKey: String,
         number: String,

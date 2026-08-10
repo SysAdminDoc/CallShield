@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.provider.Telephony
 import com.sysadmindoc.callshield.data.SpamRepository
+import com.sysadmindoc.callshield.data.checker.CheckerPriority
 import com.sysadmindoc.callshield.data.remote.UrlSafetyChecker
 import com.sysadmindoc.callshield.data.repository.SpamRepositoryAdapter
 import com.sysadmindoc.callshield.di.ApplicationScope
@@ -91,6 +92,14 @@ class SmsReceiver : BroadcastReceiver() {
                             isCall = false,
                             smsBody = body,
                             matchReason = result.matchSource,
+                            confidence = result.confidence,
+                        )
+                    } else if (CheckerPriority.isSafetyFloor(result.matchSource)) {
+                        repo.logScreeningExemption(
+                            number = sender,
+                            smsBody = body,
+                            matchReason = result.matchSource,
+                            type = result.type,
                             confidence = result.confidence,
                         )
                     }

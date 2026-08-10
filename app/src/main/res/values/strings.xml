@@ -153,6 +153,7 @@
     <string name="blocked_log_copied">Copied %s</string>
     <string name="blocked_log_blocked_call">Blocked call</string>
     <string name="blocked_log_blocked_sms">Blocked SMS</string>
+    <string name="blocked_log_safety_exempted">Allowed by a safety floor</string>
     <string name="blocked_log_google">Google</string>
     <string name="blocked_log_databases">Databases</string>
     <string name="blocked_log_copy">Copy</string>
@@ -160,6 +161,7 @@
     <string name="blocked_log_detail">Detail</string>
     <string name="blocked_log_temporary_allow_reason">Allowed from blocked log</string>
     <string name="blocked_log_temporary_block_reason">Blocked from blocked log</string>
+    <string name="emergency_number_block_refused">Emergency and public-safety numbers cannot be blocked.</string>
     <string name="blocked_log_call">Call</string>
     <string name="blocked_log_sms">SMS</string>
 
@@ -356,6 +358,8 @@
     <string name="lookup_trace_show">Show %d active</string>
     <string name="lookup_trace_hide">Hide</string>
     <string name="lookup_checker_manual_whitelist">Saved safe numbers</string>
+    <string name="lookup_checker_emergency_floor">Emergency safety floor</string>
+    <string name="lookup_checker_otp_floor">Verification safety floor</string>
     <string name="lookup_checker_contact_whitelist">Contacts</string>
     <string name="lookup_checker_contacts_only">Contacts-only mode</string>
     <string name="lookup_checker_stir_shaken_trusted">Verified caller</string>
@@ -606,6 +610,8 @@
     <string name="settings_export">Export</string>
     <string name="settings_export_csv">Export blocked log as CSV</string>
     <string name="settings_export_csv_desc">Export blocked calls/SMS as a CSV file. SMS message bodies are redacted by default.</string>
+    <string name="settings_export_redress_csv">Export blocked calls for redress</string>
+    <string name="settings_export_redress_csv_desc">Date, time, calling number, and reason only — no message bodies or contacts.</string>
     <string name="settings_export_raw_sms_csv">Export raw SMS bodies</string>
     <string name="settings_export_raw_sms_csv_desc">Creates a separate CSV that includes original blocked SMS text.</string>
     <string name="settings_export_raw_sms_confirm_title">Export raw SMS text?</string>
@@ -721,6 +727,8 @@
     <string name="stats_reason_repeat_caller">Repeat caller rule</string>
     <string name="stats_reason_quiet_hours">Quiet hours</string>
     <string name="stats_reason_manual_block">Manual block</string>
+    <string name="stats_reason_emergency_floor">Emergency safety floor</string>
+    <string name="stats_reason_otp_floor">Verification safety floor</string>
     <string name="stats_reason_unknown">Unknown</string>
     <string name="stats_no_data">No data yet</string>
     <string name="stats_no_data_desc">Stats will appear after CallShield blocks its first calls or texts.</string>
@@ -1170,6 +1178,8 @@
     <string name="clip_label_spam_number">CallShield spam number</string>
     <string name="log_export_subject">CallShield Blocked Log</string>
     <string name="log_export_chooser_title">Export log</string>
+    <string name="redress_export_subject">CallShield blocked-call redress list</string>
+    <string name="redress_export_chooser_title">Export blocked calls for redress</string>
     <string name="share_spam_warning_text">Spam alert: %1$s%2$s is a known spam number.%3$s Blocked by CallShield.</string>
     <string name="share_spam_warning_location"> (%s)</string>
     <string name="share_spam_warning_type"> Type: %s.</string>
@@ -1236,6 +1246,7 @@
     <string name="notification_action_failed">Action failed — try again from the app</string>
     <string name="export_share_failed">Couldn\'t create the export file — storage may be full</string>
     <string name="export_log_empty">Nothing to export yet — no blocked calls or messages</string>
+    <string name="export_redress_empty">Nothing to export yet — no blocked calls</string>
     <string name="backup_restore_not_protected">This file isn\'t a passphrase-protected backup. Clear the passphrase field to restore it as-is.</string>
     <string name="settings_post_call_screen">Android post-call screen</string>
     <string name="settings_post_call_screen_desc">Optionally open CallShield after eligible calls with spam and save-contact actions. Off by default; rating notifications stay enabled.</string>

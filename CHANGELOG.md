@@ -30,6 +30,13 @@ All notable changes to CallShield will be documented in this file.
 - Call screening responses now pass through a single-response gate and still
   fail open on timeout or cancellation, with direct-boot, lazy-start, missing
   number, and error paths covered by Robolectric tests.
+- Recognized emergency/public-safety numbers now have an absolute allow floor,
+  and the repository refuses manual blocks for them with a user-facing explanation.
+  Bounded verification-code SMS receive the same floor, are recorded as safety
+  exemptions without a blocked notification, and cannot be undone by keyword,
+  burst, or content checks.
+- Added a privacy-minimized redress export containing only blocked-call date,
+  time, calling number, and reason; raw SMS and allowed activity are excluded.
 
 ### Build
 
