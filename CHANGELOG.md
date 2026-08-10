@@ -27,6 +27,9 @@ All notable changes to CallShield will be documented in this file.
   never assumes cross-app broadcast ordering or promises inbox suppression,
   while the permission and onboarding surfaces explain the default SMS app's
   delivery authority.
+- Call screening responses now pass through a single-response gate and still
+  fail open on timeout or cancellation, with direct-boot, lazy-start, missing
+  number, and error paths covered by Robolectric tests.
 
 ### Build
 
