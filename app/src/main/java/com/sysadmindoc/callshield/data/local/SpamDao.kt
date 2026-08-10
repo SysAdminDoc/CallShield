@@ -1,9 +1,12 @@
 package com.sysadmindoc.callshield.data.local
 
 import androidx.room.*
+import androidx.paging.PagingSource
 import com.sysadmindoc.callshield.data.model.BlockedCall
+import com.sysadmindoc.callshield.data.model.BlockedCallGroup
 import com.sysadmindoc.callshield.data.model.CampaignObservation
 import com.sysadmindoc.callshield.data.model.HashWildcardRule
+import com.sysadmindoc.callshield.data.model.LogAggregate
 import com.sysadmindoc.callshield.data.model.NumberCount
 import com.sysadmindoc.callshield.data.model.PendingBlockedCallLog
 import com.sysadmindoc.callshield.data.model.RestoreJournal
@@ -16,6 +19,7 @@ import com.sysadmindoc.callshield.domain.model.BlockReasonCode
 import kotlinx.coroutines.flow.Flow
 
 @Dao
+@Suppress("TooManyFunctions")
 interface SpamDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertRestoreJournal(journal: RestoreJournal)
@@ -33,8 +37,14 @@ interface SpamDao {
     @Query("SELECT * FROM spam_numbers WHERE number = :number LIMIT 1")
     suspend fun findByNumber(number: String): SpamNumber?
 
+    @Query("SELECT * FROM spam_numbers WHERE number = :number LIMIT 1")
+    fun observeNumber(number: String): Flow<SpamNumber?>
+
     @Query("SELECT * FROM spam_numbers ORDER BY reports DESC")
     fun getAllSpamNumbers(): Flow<List<SpamNumber>>
+
+    @Query("SELECT * FROM spam_numbers ORDER BY reports DESC, id DESC")
+    fun pageAllSpamNumbers(): PagingSource<Int, SpamNumber>
 
     @Query("SELECT * FROM spam_numbers WHERE isUserBlocked = 1 ORDER BY number")
     fun getUserBlockedNumbers(): Flow<List<SpamNumber>>
@@ -146,6 +156,9 @@ interface SpamDao {
     @Insert(onConflict = androidx.room.OnConflictStrategy.REPLACE)
     suspend fun insertBlockedCall(call: BlockedCall)
 
+    @Insert(onConflict = androidx.room.OnConflictStrategy.REPLACE)
+    suspend fun insertBlockedCalls(calls: List<BlockedCall>)
+
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertBlockedCallIgnoringDuplicate(call: BlockedCall): Long
 
@@ -208,6 +221,109 @@ interface SpamDao {
 
     @Query("SELECT * FROM call_log ORDER BY timestamp DESC")
     fun getBlockedCalls(): Flow<List<BlockedCall>>
+
+    @Query("SELECT * FROM call_log ORDER BY timestamp DESC, id DESC LIMIT :limit")
+    fun observeRecentLog(limit: Int): Flow<List<BlockedCall>>
+
+    @Query("SELECT * FROM call_log WHERE number = :number ORDER BY timestamp DESC, id DESC")
+    fun observeBlockedCallsForNumber(number: String): Flow<List<BlockedCall>>
+
+    @Query(
+        """
+        SELECT * FROM call_log
+        WHERE (:isCall IS NULL OR isCall = :isCall)
+          AND (:reasonCode IS NULL OR reasonCode = :reasonCode)
+        ORDER BY timestamp DESC, id DESC
+        """,
+    )
+    fun pageBlockedCalls(
+        isCall: Int?,
+        reasonCode: String?,
+    ): PagingSource<Int, BlockedCall>
+
+    @Query(
+        """
+        SELECT latest.*, COUNT(grouped.id) AS occurrences
+        FROM call_log AS latest
+        INNER JOIN call_log AS grouped ON grouped.number = latest.number
+        WHERE latest.id = (
+            SELECT candidate.id
+            FROM call_log AS candidate
+            WHERE candidate.number = latest.number
+              AND (:isCall IS NULL OR candidate.isCall = :isCall)
+              AND (:reasonCode IS NULL OR candidate.reasonCode = :reasonCode)
+            ORDER BY candidate.timestamp DESC, candidate.id DESC
+            LIMIT 1
+        )
+          AND (:isCall IS NULL OR grouped.isCall = :isCall)
+          AND (:reasonCode IS NULL OR grouped.reasonCode = :reasonCode)
+        GROUP BY latest.id
+        ORDER BY occurrences DESC, latest.timestamp DESC, latest.id DESC
+        """,
+    )
+    fun pageGroupedBlockedCalls(
+        isCall: Int?,
+        reasonCode: String?,
+    ): PagingSource<Int, BlockedCallGroup>
+
+    @Query(
+        "SELECT DISTINCT reasonCode FROM call_log " +
+            "WHERE reasonCode != 'unknown' ORDER BY reasonCode",
+    )
+    fun observeLogReasonCodes(): Flow<List<String>>
+
+    @Query("SELECT COUNT(*) FROM call_log")
+    fun observeLogCount(): Flow<Int>
+
+    @Query("SELECT COUNT(*) FROM call_log WHERE isCall = 1")
+    fun observeLogCallCount(): Flow<Int>
+
+    @Query("SELECT COUNT(*) FROM call_log WHERE isCall = 0")
+    fun observeLogSmsCount(): Flow<Int>
+
+    @Query(
+        "SELECT reasonCode AS `key`, COUNT(*) AS `count` FROM call_log " +
+            "GROUP BY reasonCode ORDER BY `count` DESC, `key` ASC",
+    )
+    fun observeLogReasonCounts(): Flow<List<LogAggregate>>
+
+    @Query(
+        "SELECT strftime('%H', timestamp / 1000, 'unixepoch', 'localtime') AS `key`, " +
+            "COUNT(*) AS `count` FROM call_log " +
+            "GROUP BY strftime('%H', timestamp / 1000, 'unixepoch', 'localtime') " +
+            "ORDER BY `key` ASC",
+    )
+    fun observeLogHourCounts(): Flow<List<LogAggregate>>
+
+    @Query(
+        "SELECT strftime('%Y-%m-%d', timestamp / 1000, 'unixepoch', 'localtime') AS `key`, " +
+            "COUNT(*) AS `count` FROM call_log WHERE timestamp >= :since " +
+            "GROUP BY strftime('%Y-%m-%d', timestamp / 1000, 'unixepoch', 'localtime') " +
+            "ORDER BY `key` ASC",
+    )
+    fun observeLogDayCounts(since: Long): Flow<List<LogAggregate>>
+
+    @Query(
+        "SELECT number AS `key`, COUNT(*) AS `count` FROM call_log " +
+            "GROUP BY number ORDER BY `count` DESC, `key` ASC LIMIT :limit",
+    )
+    fun observeLogNumberCounts(limit: Int): Flow<List<LogAggregate>>
+
+    @Query(
+        "SELECT CASE " +
+            "WHEN length(number) = 12 AND substr(number, 1, 2) = '+1' THEN substr(number, 3, 3) " +
+            "WHEN length(number) = 10 THEN substr(number, 1, 3) END AS `key`, " +
+            "COUNT(*) AS `count` FROM call_log " +
+            "WHERE (length(number) = 12 AND substr(number, 1, 2) = '+1') OR length(number) = 10 " +
+            "GROUP BY `key` ORDER BY `count` DESC, `key` ASC LIMIT :limit",
+    )
+    fun observeLogAreaCodeCounts(limit: Int): Flow<List<LogAggregate>>
+
+    @Query("SELECT COUNT(*) FROM call_log WHERE timestamp >= :start AND timestamp < :end")
+    fun observeLogCountBetween(
+        start: Long,
+        end: Long,
+    ): Flow<Int>
 
     @Query("SELECT * FROM call_log WHERE isCall = 1 ORDER BY timestamp DESC")
     fun getBlockedCallsOnly(): Flow<List<BlockedCall>>

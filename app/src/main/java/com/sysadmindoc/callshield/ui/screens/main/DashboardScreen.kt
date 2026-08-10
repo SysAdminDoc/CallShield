@@ -155,7 +155,8 @@ fun DashboardScreen(
     val blockedCallsThisWeek by viewModel.blockedCallsThisWeek.collectAsStateWithLifecycle()
     val blockedSmsThisWeek by viewModel.blockedSmsThisWeek.collectAsStateWithLifecycle()
     val blockedLastWeek by viewModel.blockedLastWeek.collectAsStateWithLifecycle()
-    val blockedCalls by viewModel.blockedCalls.collectAsStateWithLifecycle()
+    val blockedCalls by viewModel.recentBlockedCalls.collectAsStateWithLifecycle()
+    val areaCodeAggregates by viewModel.logAreaCodeCounts.collectAsStateWithLifecycle()
     val scanResult by viewModel.scanResult.collectAsStateWithLifecycle()
     val smsScanResult by viewModel.smsScanResult.collectAsStateWithLifecycle()
     val lastSync by viewModel.lastSyncTimestamp.collectAsStateWithLifecycle()
@@ -892,14 +893,10 @@ fun DashboardScreen(
         }
 
         val topAreaCodes =
-            remember(blockedCalls) {
-                blockedCalls
-                    .mapNotNull { AreaCodeLookup.getAreaCode(it.number) }
-                    .groupBy { it }
-                    .mapValues { it.value.size }
-                    .filter { it.value >= 5 }
-                    .entries
-                    .sortedByDescending { it.value }
+            remember(areaCodeAggregates) {
+                areaCodeAggregates
+                    .map { it.key to it.count }
+                    .filter { it.second >= 5 }
                     .take(3)
             }
         if (topAreaCodes.isNotEmpty()) {

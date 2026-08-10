@@ -32,7 +32,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.PhoneFormatter
 import com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup
-import com.sysadmindoc.callshield.data.model.BlockedCall
+import com.sysadmindoc.callshield.data.model.LogAggregate
 import com.sysadmindoc.callshield.domain.model.BlockReasonCode
 import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.friendlyMatchReasonLabel
@@ -40,7 +40,10 @@ import com.sysadmindoc.callshield.ui.theme.*
 import kotlinx.coroutines.delay
 import java.text.DateFormatSymbols
 import java.text.NumberFormat
+import java.text.SimpleDateFormat
 import java.util.Calendar
+import java.util.Date
+import java.util.Locale
 
 private data class DailyStat(
     val label: String,
@@ -51,107 +54,81 @@ private data class DailyStat(
 
 @Composable
 fun StatsScreen(viewModel: MainViewModel) {
-    val blockedCalls by viewModel.blockedCalls.collectAsStateWithLifecycle()
+    val logCount by viewModel.logCount.collectAsStateWithLifecycle()
+    val logCallCount by viewModel.logCallCount.collectAsStateWithLifecycle()
+    val logSmsCount by viewModel.logSmsCount.collectAsStateWithLifecycle()
     val totalBlocked by viewModel.totalBlocked.collectAsStateWithLifecycle()
     val spamCount by viewModel.spamCount.collectAsStateWithLifecycle()
+    val reasonAggregates by viewModel.logReasonCounts.collectAsStateWithLifecycle()
+    val hourAggregates by viewModel.logHourCounts.collectAsStateWithLifecycle()
+    val topNumberAggregates by viewModel.logTopNumbers.collectAsStateWithLifecycle()
+    val areaCodeAggregates by viewModel.logAreaCodeCounts.collectAsStateWithLifecycle()
     val numberFormatter = remember { NumberFormat.getIntegerInstance() }
 
-    // The log is unbounded (auto-cleanup is off by default), and these are
-    // O(n) groupings over the whole thing. Without remember they re-ran on
-    // every recomposition of the screen.
-    val callsOnly = remember(blockedCalls) { blockedCalls.filter { it.isCall } }
-    val smsOnly = remember(blockedCalls) { blockedCalls.filter { !it.isCall } }
-
-    // Type breakdown
-    val typeBreakdown =
-        remember(blockedCalls) {
-            blockedCalls
-                .groupBy { it.reasonCode }
-                .mapValues { it.value.size }
+    // Room emits compact projections instead of materializing the unbounded
+    // log and its potentially large SMS bodies into the composition.
+    val typeBreakdown: List<Map.Entry<BlockReasonCode, Int>> =
+        remember(reasonAggregates) {
+            val counts = mutableMapOf<BlockReasonCode, Int>()
+            reasonAggregates.forEach { aggregate ->
+                val reasonCode = BlockReasonCode.fromStored(aggregate.key)
+                counts[reasonCode] = (counts[reasonCode] ?: 0) + aggregate.count
+            }
+            counts
                 .entries
                 .sortedByDescending { it.value }
         }
 
-    // One shared hour histogram: it was built inline at the overview card and
-    // again for the heatmap, walking the whole log twice per recomposition.
-    val hourCounts =
-        remember(blockedCalls) {
+    val hourCounts: IntArray =
+        remember(hourAggregates) {
             IntArray(24).also { hours ->
-                val calendar = Calendar.getInstance()
-                blockedCalls.forEach { call ->
-                    calendar.timeInMillis = call.timestamp
-                    hours[calendar.get(Calendar.HOUR_OF_DAY)]++
+                hourAggregates.forEach { aggregate ->
+                    aggregate.key.toIntOrNull()?.takeIf { it in hours.indices }?.let { hour ->
+                        hours[hour] = aggregate.count
+                    }
                 }
             }
         }
 
-    // Top offenders
-    val topOffenders =
-        remember(blockedCalls) {
-            blockedCalls
-                .groupBy { it.number }
-                .mapValues { it.value.size }
-                .entries
-                .sortedByDescending { it.value }
-                .take(10)
-        }
+    val topOffenders: List<Pair<String, Int>> =
+        remember(topNumberAggregates) { topNumberAggregates.map { it.key to it.count } }
+
+    val areaCodeCounts: List<Pair<String, Int>> =
+        remember(areaCodeAggregates) { areaCodeAggregates.map { it.key to it.count } }
 
     val dayBucket = rememberDayBucket()
+    val todayStart = remember(dayBucket) { currentDayStart() }
+    val dayQueryStart = dayOffset(todayStart, -14)
+    val dailyAggregates by
+        remember(dayQueryStart) { viewModel.observeLogDayCounts(dayQueryStart) }
+            .collectAsStateWithLifecycle(initialValue = emptyList<LogAggregate>())
 
-    // Weekly activity should align to true local calendar days rather than
-    // rolling 24-hour windows. This keeps charts stable across the day and
-    // fixes the "today" bucket after midnight.
-    val dailyStats = remember(blockedCalls, dayBucket) { buildRecentDailyStats(blockedCalls) }
+    // Weekly activity aligns to true local calendar days while the SQL query
+    // remains limited to the two weeks needed for the comparison.
+    val dailyStats = remember(dailyAggregates, todayStart) { buildRecentDailyStats(dailyAggregates, todayStart) }
     val dailyCounts = remember(dailyStats) { dailyStats.map { it.label to it.count } }
     val weeklyTotal = remember(dailyStats) { dailyStats.sumOf { it.count } }
     val previousWeekTotal =
-        remember(blockedCalls, dailyStats) {
-            previousWeekCount(blockedCalls, dailyStats.firstOrNull()?.startMillis)
+        remember(dailyAggregates, dailyStats) {
+            previousWeekCount(dailyAggregates, dailyStats.firstOrNull()?.startMillis)
         }
     val weeklyDelta = weeklyTotal - previousWeekTotal
     val busiestDay = remember(dailyStats) { dailyStats.maxByOrNull { it.count } }
 
-    // Source breakdown for donut chart
     val sourceBreakdown =
-        remember(blockedCalls) {
-            blockedCalls
-                .groupBy { it.reasonCode }
-                .mapValues { it.value.size }
-                .entries
-                .sortedByDescending { it.value }
-                .take(8)
-                .associate { it.key to it.value }
-        }
+        remember(typeBreakdown) { typeBreakdown.take(8).associate { it.key to it.value } }
 
-    // Monthly trend
+    val thisMonthStart = remember(todayStart) { monthStart(todayStart, 0) }
+    val lastMonthStart = remember(todayStart) { monthStart(todayStart, -1) }
+    val thisMonthCount by
+        remember(thisMonthStart) { viewModel.observeLogCountBetween(thisMonthStart, Long.MAX_VALUE) }
+            .collectAsStateWithLifecycle(0)
+    val lastMonthCount by
+        remember(lastMonthStart, thisMonthStart) {
+            viewModel.observeLogCountBetween(lastMonthStart, thisMonthStart)
+        }.collectAsStateWithLifecycle(0)
     val monthlyTrend =
-        remember(blockedCalls, dayBucket) {
-            val thisMonthStart =
-                Calendar
-                    .getInstance()
-                    .apply {
-                        set(Calendar.DAY_OF_MONTH, 1)
-                        set(Calendar.HOUR_OF_DAY, 0)
-                        set(Calendar.MINUTE, 0)
-                        set(Calendar.SECOND, 0)
-                        set(Calendar.MILLISECOND, 0)
-                    }.timeInMillis
-            val lastMonthStart =
-                Calendar
-                    .getInstance()
-                    .apply {
-                        add(Calendar.MONTH, -1)
-                        set(Calendar.DAY_OF_MONTH, 1)
-                        set(Calendar.HOUR_OF_DAY, 0)
-                        set(Calendar.MINUTE, 0)
-                        set(Calendar.SECOND, 0)
-                        set(Calendar.MILLISECOND, 0)
-                    }.timeInMillis
-
-            val thisMonth = blockedCalls.count { it.timestamp >= thisMonthStart }
-            val lastMonth = blockedCalls.count { it.timestamp in lastMonthStart until thisMonthStart }
-            Pair(thisMonth, lastMonth)
-        }
+        remember(thisMonthCount, lastMonthCount) { Pair(thisMonthCount, lastMonthCount) }
 
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
@@ -162,7 +139,7 @@ fun StatsScreen(viewModel: MainViewModel) {
             weeklyDelta = weeklyDelta,
             topSource = typeBreakdown.firstOrNull()?.key,
             peakHour =
-                blockedCalls.takeIf { it.isNotEmpty() }?.let {
+                logCount.takeIf { it > 0 }?.let {
                     val peakHourIndex = hourCounts.indices.maxByOrNull { index -> hourCounts[index] } ?: 0
                     if (hourCounts[peakHourIndex] > 0) formatHourRange(peakHourIndex) else null
                 },
@@ -170,12 +147,12 @@ fun StatsScreen(viewModel: MainViewModel) {
 
         // Summary row
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            MiniStat(Modifier.weight(1f), stringResource(R.string.stats_calls), numberFormatter.format(callsOnly.size), CatRed)
-            MiniStat(Modifier.weight(1f), stringResource(R.string.stats_sms), numberFormatter.format(smsOnly.size), CatMauve)
+            MiniStat(Modifier.weight(1f), stringResource(R.string.stats_calls), numberFormatter.format(logCallCount), CatRed)
+            MiniStat(Modifier.weight(1f), stringResource(R.string.stats_sms), numberFormatter.format(logSmsCount), CatMauve)
             MiniStat(Modifier.weight(1f), stringResource(R.string.stats_db_size), numberFormatter.format(spamCount), CatGreen)
         }
 
-        if (blockedCalls.isEmpty()) {
+        if (logCount == 0) {
             PremiumStateCard(
                 icon = Icons.Default.BarChart,
                 title = stringResource(R.string.stats_no_data),
@@ -319,20 +296,18 @@ fun StatsScreen(viewModel: MainViewModel) {
                         color = CatBlue,
                     )
 
-                    val peakHourCount =
-                        blockedCalls
-                            .groupingBy {
-                                Calendar.getInstance().apply { timeInMillis = it.timestamp }.get(Calendar.HOUR_OF_DAY)
-                            }.eachCount()
-                    val peakHourEntry = peakHourCount.maxByOrNull { it.value }
+                    val peakHourEntry =
+                        hourCounts.indices
+                            .map { it to hourCounts[it] }
+                            .maxByOrNull { it.second }
                     StatsInsightRow(
                         title = stringResource(R.string.stats_highlight_peak_window),
                         value =
                             peakHourEntry?.let {
                                 stringResource(
                                     R.string.stats_highlight_peak_value,
-                                    formatHourRange(it.key),
-                                    it.value,
+                                     formatHourRange(it.first),
+                                     it.second,
                                 )
                             } ?: stringResource(R.string.stats_insight_waiting),
                         color = CatMauve,
@@ -393,22 +368,12 @@ fun StatsScreen(viewModel: MainViewModel) {
             }
 
             // Area code heatmap
-            val areaCodeCounts =
-                remember(blockedCalls) {
-                    blockedCalls
-                        .mapNotNull { AreaCodeLookup.getAreaCode(it.number) }
-                        .groupBy { it }
-                        .mapValues { it.value.size }
-                        .entries
-                        .sortedByDescending { it.value }
-                        .take(15)
-                }
             if (areaCodeCounts.isNotEmpty()) {
                 PremiumCard(accentColor = CatPeach) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         SectionHeader(stringResource(R.string.stats_spam_by_area_code), CatPeach)
                         Spacer(Modifier.height(8.dp))
-                        val maxAc = areaCodeCounts.first().value.coerceAtLeast(1)
+                        val maxAc = areaCodeCounts.first().second.coerceAtLeast(1)
                         areaCodeCounts.forEach { (ac, count) ->
                             val loc = AreaCodeLookup.lookup("+1$ac") ?: ac
                             val fraction = count.toFloat() / maxAc
@@ -430,7 +395,7 @@ fun StatsScreen(viewModel: MainViewModel) {
             }
 
             // Time-of-day heatmap
-            if (blockedCalls.size >= 5) {
+            if (logCount >= 5) {
                 val maxHour = hourCounts.max().coerceAtLeast(1)
                 PremiumCard {
                     Column(modifier = Modifier.padding(16.dp)) {
@@ -609,6 +574,27 @@ private fun currentDayBucket(): Int {
     return calendar.get(Calendar.YEAR) * 1000 + calendar.get(Calendar.DAY_OF_YEAR)
 }
 
+private fun currentDayStart(): Long =
+    Calendar
+        .getInstance()
+        .apply {
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }.timeInMillis
+
+private fun dayOffset(
+    start: Long,
+    days: Int,
+): Long =
+    Calendar
+        .getInstance()
+        .apply {
+            timeInMillis = start
+            add(Calendar.DAY_OF_YEAR, days)
+        }.timeInMillis
+
 private fun millisUntilNextDay(): Long {
     val now = Calendar.getInstance()
     val nextMidnight =
@@ -623,16 +609,12 @@ private fun millisUntilNextDay(): Long {
     return (nextMidnight.timeInMillis - now.timeInMillis).coerceAtLeast(60_000L)
 }
 
-private fun buildRecentDailyStats(blockedCalls: List<BlockedCall>): List<DailyStat> {
-    val todayStart =
-        Calendar
-            .getInstance()
-            .apply {
-                set(Calendar.HOUR_OF_DAY, 0)
-                set(Calendar.MINUTE, 0)
-                set(Calendar.SECOND, 0)
-                set(Calendar.MILLISECOND, 0)
-            }.timeInMillis
+private fun buildRecentDailyStats(
+    dailyAggregates: List<LogAggregate>,
+    todayStart: Long,
+): List<DailyStat> {
+    val countsByDay = dailyAggregates.associate { it.key to it.count }
+    val dayKeyFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
 
     return (6 downTo 0).map { daysAgo ->
         val dayStart =
@@ -665,16 +647,18 @@ private fun buildRecentDailyStats(blockedCalls: List<BlockedCall>): List<DailySt
             label = label,
             startMillis = dayStart,
             endMillis = dayEnd,
-            count = blockedCalls.count { it.timestamp in dayStart until dayEnd },
+            count = countsByDay[dayKeyFormat.format(Date(dayStart))] ?: 0,
         )
     }
 }
 
 private fun previousWeekCount(
-    blockedCalls: List<BlockedCall>,
+    dailyAggregates: List<LogAggregate>,
     currentWeekStart: Long?,
 ): Int {
     currentWeekStart ?: return 0
+    val countsByDay = dailyAggregates.associate { it.key to it.count }
+    val dayKeyFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
 
     val previousWeekStart =
         Calendar
@@ -684,8 +668,36 @@ private fun previousWeekCount(
                 add(Calendar.DAY_OF_YEAR, -7)
             }.timeInMillis
 
-    return blockedCalls.count { it.timestamp in previousWeekStart until currentWeekStart }
+    var count = 0
+    var dayStart = previousWeekStart
+    while (dayStart < currentWeekStart) {
+        count += countsByDay[dayKeyFormat.format(Date(dayStart))] ?: 0
+        dayStart =
+            Calendar
+                .getInstance()
+                .apply {
+                    timeInMillis = dayStart
+                    add(Calendar.DAY_OF_YEAR, 1)
+                }.timeInMillis
+    }
+    return count
 }
+
+private fun monthStart(
+    dayBucket: Long,
+    monthOffset: Int,
+): Long =
+    Calendar
+        .getInstance()
+        .apply {
+            timeInMillis = dayBucket
+            add(Calendar.MONTH, monthOffset)
+            set(Calendar.DAY_OF_MONTH, 1)
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }.timeInMillis
 
 // friendlyMatchReasonLabel moved to ui/MatchReasonLabels.kt so every screen
 // that shows a block reason shares the same localized labels.

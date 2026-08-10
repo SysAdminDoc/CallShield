@@ -6,6 +6,9 @@ All notable changes to CallShield will be documented in this file.
 
 ### Interface
 
+- Paged the Room-backed database, blocked-log, grouped-log, dashboard, and
+  number-detail surfaces; moved statistics to SQL aggregates while keeping
+  full-log export as an explicit non-UI path.
 - Refined the shared Compose visual system around a compact header, flatter content groups,
   calmer dividers, text-led status treatments, and denser page spacing across Home, Activity,
   Lookup, Rules, and More.
