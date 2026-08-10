@@ -804,6 +804,11 @@ class SpamRepository(
 
     fun getBlockedCountSince(since: Long): Flow<Int> = blocklistRepository.getBlockedCountSince(since)
 
+    fun getBlockedCountSinceByType(
+        since: Long,
+        isCall: Boolean,
+    ): Flow<Int> = blocklistRepository.getBlockedCountSinceByType(since, isCall)
+
     fun getBlockedCountBetween(
         start: Long,
         end: Long,

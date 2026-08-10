@@ -77,6 +77,7 @@ import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.StatusMessage
 import com.sysadmindoc.callshield.ui.theme.*
 import com.sysadmindoc.callshield.util.startActivitySafely
+import java.text.NumberFormat
 
 internal const val SETTINGS_QUIET_HOURS_TOGGLE_TAG = "settings_quiet_hours_toggle"
 internal const val SETTINGS_ANSWERED_CALLER_TOGGLE_TAG = "settings_answered_caller_toggle"
@@ -103,6 +104,7 @@ private val backupSectionOrder =
 fun SettingsScreen(viewModel: MainViewModel) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
+    val numberFormatter = remember { NumberFormat.getIntegerInstance() }
     val appTheme by viewModel.appTheme.collectAsStateWithLifecycle()
     val blockCalls by viewModel.blockCallsEnabled.collectAsStateWithLifecycle()
     val blockSms by viewModel.blockSmsEnabled.collectAsStateWithLifecycle()
@@ -275,9 +277,18 @@ fun SettingsScreen(viewModel: MainViewModel) {
             }
             Spacer(Modifier.height(4.dp))
             Text(
-                stringResource(R.string.settings_setup_progress, setupReadyCount, setupTotal),
+                stringResource(
+                    R.string.settings_setup_progress,
+                    numberFormatter.format(setupReadyCount),
+                    numberFormatter.format(setupTotal),
+                ),
                 style = MaterialTheme.typography.bodySmall,
                 color = CatSubtext,
+            )
+            Text(
+                stringResource(R.string.settings_setup_progress_note),
+                style = MaterialTheme.typography.labelSmall,
+                color = CatOverlay,
             )
             Spacer(Modifier.height(8.dp))
             LinearProgressIndicator(
@@ -376,14 +387,15 @@ fun SettingsScreen(viewModel: MainViewModel) {
                     }
                 },
             )
-            TextButton(
+            SettingsLinkRow(
+                title = stringResource(R.string.settings_open_app_settings),
+                value = stringResource(R.string.settings_open_app_settings_subtitle),
+                icon = Icons.Default.Settings,
+                tintColor = CatBlue,
                 onClick = {
                     context.startActivitySafely(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}")))
                 },
-                contentPadding = PaddingValues(horizontal = 0.dp),
-            ) {
-                Text(stringResource(R.string.settings_open_app_settings), color = CatSubtext)
-            }
+            )
             GradientDivider()
         }
 

@@ -345,11 +345,31 @@ fun CallShieldApp(
                 }, label = "tabs") { tab ->
                     tabStateHolder.SaveableStateProvider(tab) {
                         when (tab) {
-                            0 -> DashboardScreen(viewModel)
-                            1 -> ActivityScreen(viewModel)
-                            2 -> LookupScreen(viewModel)
-                            3 -> BlocklistScreen(viewModel)
-                            4 -> MoreScreen(viewModel, currentView = moreView, onViewChange = { moreView = it })
+                            0 -> {
+                                DashboardScreen(
+                                    viewModel,
+                                    onOpenSettings = {
+                                        selectedTab = 4
+                                        moreView = 2
+                                    },
+                                )
+                            }
+
+                            1 -> {
+                                ActivityScreen(viewModel)
+                            }
+
+                            2 -> {
+                                LookupScreen(viewModel)
+                            }
+
+                            3 -> {
+                                BlocklistScreen(viewModel)
+                            }
+
+                            4 -> {
+                                MoreScreen(viewModel, currentView = moreView, onViewChange = { moreView = it })
+                            }
                         }
                     }
                 }

@@ -403,6 +403,11 @@ class BlocklistRepository(
 
     fun getBlockedCountSince(since: Long): Flow<Int> = dao.getBlockedCountSince(since)
 
+    fun getBlockedCountSinceByType(
+        since: Long,
+        isCall: Boolean,
+    ): Flow<Int> = dao.getBlockedCountSinceByType(since, isCall)
+
     fun getBlockedCountBetween(
         start: Long,
         end: Long,
