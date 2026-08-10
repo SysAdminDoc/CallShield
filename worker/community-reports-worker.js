@@ -183,6 +183,16 @@ function allowsUnlimitedReports(env) {
   return env?.ALLOW_UNLIMITED_REPORTS === "true";
 }
 
+function hasClientIp(ip) {
+  return typeof ip === "string" && ip.trim().length > 0 && ip.trim().length <= 128;
+}
+
+/** Return the Cloudflare-provided client identity without a shared fallback. */
+export function getClientIp(request) {
+  const ip = request?.headers?.get("cf-connecting-ip")?.trim();
+  return hasClientIp(ip) ? ip : null;
+}
+
 /** Validate the bindings required to accept a state-changing report. */
 export function validateReportEnvironment(env) {
   const missing = [];
@@ -231,6 +241,10 @@ export async function deriveReporterBucket(ip, reportedAt, secret) {
  * ALLOW_UNLIMITED_REPORTS=true. Production must never set that flag.
  */
 export async function checkRateLimit(ip, env) {
+  if (!hasClientIp(ip)) {
+    return { allowed: false, remaining: 0, retryAfter: 0, identityError: true };
+  }
+
   if (!env?.RATE_LIMIT) {
     if (allowsUnlimitedReports(env)) {
       return { allowed: true, remaining: RATE_LIMIT_MAX_REQUESTS, retryAfter: 0 };
@@ -238,8 +252,14 @@ export async function checkRateLimit(ip, env) {
     return { allowed: false, remaining: 0, retryAfter: 0, configurationError: true };
   }
 
-  const key = `rl:${ip}`;
-  const raw = await env.RATE_LIMIT.get(key);
+  const key = `rl:${ip.trim()}`;
+  let raw;
+  try {
+    raw = await env.RATE_LIMIT.get(key);
+  } catch (error) {
+    console.error("Unable to read community report rate-limit state", error);
+    return { allowed: false, remaining: 0, retryAfter: 0, stateError: true };
+  }
 
   if (raw === null) {
     // First request in window — initialize counter.
@@ -249,7 +269,38 @@ export async function checkRateLimit(ip, env) {
     return { allowed: true, remaining: RATE_LIMIT_MAX_REQUESTS - 1, retryAfter: 0 };
   }
 
-  const state = JSON.parse(raw);
+  let state;
+  try {
+    state = JSON.parse(raw);
+  } catch (error) {
+    console.error("Invalid community report rate-limit state; treating it as absent", error);
+    try {
+      await env.RATE_LIMIT.put(key, JSON.stringify({ count: 1, windowStart: Date.now() }), {
+        expirationTtl: RATE_LIMIT_WINDOW_S,
+      });
+    } catch (resetError) {
+      console.error("Unable to reset invalid community report rate-limit state", resetError);
+    }
+    return { allowed: false, remaining: 0, retryAfter: RATE_LIMIT_WINDOW_S, stateError: true };
+  }
+  if (
+    !state ||
+    Array.isArray(state) ||
+    !Number.isInteger(state.count) ||
+    state.count < 1 ||
+    !Number.isFinite(state.windowStart) ||
+    state.windowStart <= 0
+  ) {
+    console.error("Malformed community report rate-limit state; treating it as absent");
+    try {
+      await env.RATE_LIMIT.put(key, JSON.stringify({ count: 1, windowStart: Date.now() }), {
+        expirationTtl: RATE_LIMIT_WINDOW_S,
+      });
+    } catch (resetError) {
+      console.error("Unable to reset malformed community report rate-limit state", resetError);
+    }
+    return { allowed: false, remaining: 0, retryAfter: RATE_LIMIT_WINDOW_S, stateError: true };
+  }
   const elapsed = (Date.now() - state.windowStart) / 1000;
 
   if (elapsed >= RATE_LIMIT_WINDOW_S) {
@@ -279,23 +330,25 @@ export async function checkRateLimit(ip, env) {
  * "Duplicate report" lockout that silently dropped the report on retry.
  */
 export async function checkDedup(ip, normalizedNumber, env) {
+  if (!hasClientIp(ip)) throw new Error("client IP is required");
   if (!env?.RATE_LIMIT) {
     if (allowsUnlimitedReports(env)) return false;
     throw new Error("RATE_LIMIT binding is required");
   }
 
-  const key = `dedup:${ip}:${normalizedNumber}`;
+  const key = `dedup:${ip.trim()}:${normalizedNumber}`;
   const existing = await env.RATE_LIMIT.get(key);
   return existing !== null;
 }
 
 /** Mark this (IP, number) pair as reported. Call after a successful store. */
 export async function recordDedup(ip, normalizedNumber, env) {
+  if (!hasClientIp(ip)) throw new Error("client IP is required");
   if (!env?.RATE_LIMIT) {
     if (allowsUnlimitedReports(env)) return;
     throw new Error("RATE_LIMIT binding is required");
   }
-  const key = `dedup:${ip}:${normalizedNumber}`;
+  const key = `dedup:${ip.trim()}:${normalizedNumber}`;
   await env.RATE_LIMIT.put(key, "1", { expirationTtl: DEDUP_WINDOW_S });
 }
 
@@ -406,9 +459,19 @@ code{background:#252525;padding:2px 6px;border-radius:4px;font-size:12px;color:#
       }
 
       // Per-IP burst rate limit (KV-backed, persists across isolates)
-      const clientIp = request.headers.get("cf-connecting-ip") || "unknown";
+      const clientIp = getClientIp(request);
+      if (!clientIp) {
+        return new Response(JSON.stringify({ error: "A client IP is required" }), {
+          status: 400, headers: { ...responseHeaders, "Content-Type": "application/json" }
+        });
+      }
       const rl = await checkRateLimit(clientIp, env);
-      if (rl.configurationError) {
+      if (rl.identityError) {
+        return new Response(JSON.stringify({ error: "A client IP is required" }), {
+          status: 400, headers: { ...responseHeaders, "Content-Type": "application/json" }
+        });
+      }
+      if (rl.configurationError || rl.stateError) {
         return new Response(JSON.stringify({ error: "Reporting service is temporarily unavailable" }), {
           status: 503,
           headers: { ...responseHeaders, "Retry-After": "300", "Content-Type": "application/json" },
@@ -431,7 +494,19 @@ code{background:#252525;padding:2px 6px;border-radius:4px;font-size:12px;color:#
           status: 413, headers: { ...responseHeaders, "Content-Type": "application/json" }
         });
       }
-      const body = JSON.parse(bodyText);
+      let body;
+      try {
+        body = JSON.parse(bodyText);
+      } catch (_error) {
+        return new Response(JSON.stringify({ error: "Request body must be valid JSON" }), {
+          status: 400, headers: { ...responseHeaders, "Content-Type": "application/json" }
+        });
+      }
+      if (!body || typeof body !== "object" || Array.isArray(body)) {
+        return new Response(JSON.stringify({ error: "Request body must be a JSON object" }), {
+          status: 400, headers: { ...responseHeaders, "Content-Type": "application/json" }
+        });
+      }
       const number = body.number;
 
       // Validate type against allowed values
@@ -523,9 +598,10 @@ code{background:#252525;padding:2px 6px;border-radius:4px;font-size:12px;color:#
         status: 200, headers: { ...responseHeaders, "Content-Type": "application/json" }
       });
 
-    } catch (e) {
-      return new Response(JSON.stringify({ error: "Bad request" }), {
-        status: 400, headers: { ...responseHeaders, "Content-Type": "application/json" }
+    } catch (error) {
+      console.error("Community report worker failed", error);
+      return new Response(JSON.stringify({ error: "Reporting service is temporarily unavailable" }), {
+        status: 500, headers: { ...responseHeaders, "Content-Type": "application/json" }
       });
     }
   }
