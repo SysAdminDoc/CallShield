@@ -1,0 +1,3 @@
+Paged database and activity surfaces, moved statistics to SQL aggregates, and
+rejected replayed or downgraded spam-feed manifests before replacing local data.
+Added pinned CI checks for dependency advisories, provenance, and release drift.

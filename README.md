@@ -12,7 +12,7 @@
 <p align="center">
   <a href="https://github.com/SysAdminDoc/CallShield/releases/latest"><img src="https://img.shields.io/github/v/release/SysAdminDoc/CallShield?style=flat-square&color=a6e3a1" alt="Release"></a>
   <img src="https://img.shields.io/badge/Spam%20Numbers-51%2C463-f38ba8?style=flat-square" alt="51,463 Numbers">
-  <img src="https://img.shields.io/badge/Tests-952-94e2d5?style=flat-square" alt="952 Tests">
+  <img src="https://img.shields.io/badge/Tests-1094-94e2d5?style=flat-square" alt="1094 Tests">
   <img src="https://img.shields.io/badge/Android-10%2B-89b4fa?style=flat-square" alt="Android 10+">
   <img src="https://img.shields.io/badge/License-MIT-cba6f7?style=flat-square" alt="MIT License">
   <img src="https://img.shields.io/badge/API%20Keys-None-fab387?style=flat-square" alt="No required API keys">
@@ -41,19 +41,15 @@ legacy snapshot when the shard service is unavailable.
   <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/06-more.png" width="30%" alt="Protection tools and release information">
 </p>
 
-## v1.7.34 Highlights
+## v1.7.35 Highlights
 
-- **Broader public spam coverage** — Saracroche, PhoneBlock, Nomorobo IRS,
-  FCC advertiser numbers, and bounded incremental FTC/FCC windows now feed the
-  importer with idempotent merges, role-aware spoof signals, and explicit provenance.
-- **Fail-open screening reliability** — lazy repository initialization errors
-  now receive an explicit allow response instead of abandoning Telecom's call.
-- **Incremental database delivery** — current APKs bundle the manifest and
-  content-addressed spam shards rather than the monolith; sync verifies hashes,
-  downloads only changed shards, and retains the legacy raw URL for older apps.
-- **Explainable protection** — lookup and number-detail verdicts lead with the
-  deciding rule, worker stop reasons surface background-quota recovery, and RTT
-  calls bypass screening and caller-ID overlays.
+- **Bounded local data surfaces** — database and activity views page Room rows,
+  while dashboard and statistics cards use bounded SQL queries and aggregates.
+- **Feed rollback protection** — accepted sharded-feed version, date, and
+  fingerprint metadata reject replayed, downgraded, or mutated manifests before
+  replacing the local database.
+- **Release gates in CI** — pinned pull-request and scheduled checks cover tests,
+  provenance, dependency advisories, lock drift, and resolved dependency graphs.
 
 ## v1.7.32 Highlights
 
@@ -341,7 +337,7 @@ legacy snapshot when the shard service is unavailable.
 - **Answered-caller trust** — numbers answered repeatedly inside the configured lookback window can ring through lower-confidence heuristic/ML suspicion while explicit block rules still win first.
 - **Emergency callback grace** — unknown callbacks can ring through after a local emergency call for a configurable window while explicit block rules still win first.
 - **SMS burst protection** - repeated unknown SMS senders or same-prefix floods can be blocked as `sms_burst`, with blocked-SMS notification actions to mark safe or report.
-- **952 total JVM unit tests** - the local unit suite covers detection, workers, utilities, repository contracts, and permission readiness before release.
+- **1094 total JVM unit tests** - the local unit suite covers detection, workers, utilities, repository contracts, and permission readiness before release.
 - **Gradient-Boosted Tree ML model** — 20 features, pure Kotlin, no TFLite dependency.
 - **Campaign burst detection** — bounded local observations retain seven days of prefix/neighbor churn, callback reuse, and source-agreement evidence while the live detector uses a one-hour window.
 - **Full accessibility** — content descriptions across Compose UI, 48dp minimum touch targets.
@@ -355,7 +351,7 @@ legacy snapshot when the shard service is unavailable.
 5. **Callback-aware** — won't block callbacks from numbers you recently called, answered repeatedly, after a local emergency call, or urgent repeated callers
 6. **Community-driven** — one-tap anonymous contribution via Cloudflare Worker, merged into the database by the maintainer
 
-## Detection Pipeline (v1.7.34)
+## Detection Pipeline (v1.7.35)
 
 All detection layers implement a shared `IChecker` interface and run in priority order via `CheckerPipeline.run` — first non-null result wins, every layer is testable in isolation. Priorities are stable numbers; the ladder below is the live order.
 
@@ -660,7 +656,7 @@ RELEASE_KEY_PASSWORD=...
 ## Testing
 
 ```bash
-./gradlew testDebugUnitTest   # 952 tests
+./gradlew testDebugUnitTest   # 1094 tests
 ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.sysadmindoc.callshield.platform.TargetSdkBehaviorSmokeTest
 ./gradlew verifyPipelineTests # Cloudflare Worker (node) + data-pipeline and translation checks (python)
 ```
@@ -697,7 +693,7 @@ language in [issue #7](https://github.com/SysAdminDoc/CallShield/issues/7).
 | Community API | Cloudflare Workers |
 | URL Safety | Local spam-domain data; optional URLhaus (abuse.ch) |
 | Verification | Local Gradle, lint, and release-artifact checks |
-| Tests | 952 JVM unit tests (JUnit) |
+| Tests | 1094 JVM unit tests (JUnit) |
 | Strings | 1160 string resources and 29 plural groups (translation-ready) |
 | Accessibility | 100+ content descriptions, 48dp touch targets |
 | Min SDK | 29 (Android 10) |

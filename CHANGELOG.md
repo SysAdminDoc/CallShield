@@ -144,6 +144,24 @@ All notable changes to CallShield will be documented in this file.
   scheduled runs submit the resolved Gradle dependency graph and Dependabot tracks
   Gradle and GitHub Action updates.
 
+## v1.7.35 — 2026-08-10
+
+### Interface
+
+- Database and activity surfaces now page Room-backed rows; dashboard and
+  statistics cards use bounded SQL aggregates instead of materializing full logs.
+
+### Reliability
+
+- Sharded-feed version, update date, and manifest fingerprint are persisted;
+  replayed, downgraded, malformed, and same-version-mutated manifests are
+  rejected before replacing the local database.
+
+### Build
+
+- Added pinned pull-request and scheduled verification for tests, release
+  provenance, dependency advisories, lock drift, and Gradle dependency graphs.
+
 ## v1.7.34 — 2026-08-10
 
 ### Interface
