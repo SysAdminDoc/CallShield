@@ -15,6 +15,8 @@ All notable changes to CallShield will be documented in this file.
   as test failures and swipe-only actions exposed through equivalent custom actions.
 - Categorized the Quick Settings protection tile under Privacy on Android 16.1+ while preserving
   the existing tile behavior on older releases.
+- Removed the orphaned direct blocklist importer and unreferenced pseudolocale screenshot helper;
+  the documented source-registry pipeline is now the sole supported data regeneration path.
 
 ### Data pipeline
 
