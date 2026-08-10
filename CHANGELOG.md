@@ -84,6 +84,9 @@ All notable changes to CallShield will be documented in this file.
   delivery authority.
 - Android 15–17 message evidence health now records redacted, delayed,
   sender-only, and unsupported SMS/notification states without message bodies;
+- Community report abuse controls now reject requests without a Cloudflare client
+  identity, distinguish malformed JSON (400) from corrupt or unavailable KV state (503),
+  and log/reset invalid rate-limit state without leaking it as a client error.
   Settings and Protection Test show degraded mode while sender and URL checks
   continue when content is available.
 - Call screening responses now pass through a single-response gate and still

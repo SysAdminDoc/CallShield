@@ -11,6 +11,7 @@ import worker, {
   sanitizeSmsReportFields,
   sanitizeSmsUrlIndicators,
   checkRateLimit,
+  getClientIp,
   checkDedup,
   deriveReporterBucket,
   recordDedup,
@@ -172,6 +173,34 @@ test("rate limiter isolates different IPs", async () => {
   // 10.0.0.2 should still have its full quota
   const allowed = await checkRateLimit("10.0.0.2", env);
   assert.equal(allowed.allowed, true);
+  assert.equal(kv._store.has("rl:unknown"), false);
+});
+
+test("missing client identity is rejected instead of entering a shared bucket", async () => {
+  const kv = createMockKV();
+  assert.equal(getClientIp(new Request("https://reports.example")), null);
+
+  const rl = await checkRateLimit("", { RATE_LIMIT: kv });
+  assert.equal(rl.allowed, false);
+  assert.equal(rl.identityError, true);
+  assert.equal(kv._store.size, 0);
+});
+
+test("corrupt rate-limit state is logged, reset, and surfaced as a state failure", async () => {
+  const kv = createMockKV();
+  kv._store.set("rl:203.0.113.40", { value: "{not-json" });
+  const errors = [];
+  const originalError = console.error;
+  console.error = (...args) => errors.push(args.join(" "));
+  try {
+    const rl = await checkRateLimit("203.0.113.40", { RATE_LIMIT: kv });
+    assert.equal(rl.allowed, false);
+    assert.equal(rl.stateError, true);
+  } finally {
+    console.error = originalError;
+  }
+  assert.equal(errors.length > 0, true);
+  assert.equal(JSON.parse(kv._store.get("rl:203.0.113.40").value).count, 1);
 });
 
 test("rate limiter fails closed when KV is not bound", async () => {
@@ -298,6 +327,59 @@ test("POST fails closed when production bindings are missing", async () => {
     {},
   );
   assert.equal(response.status, 503);
+});
+
+test("POST rejects missing client identity before touching KV", async () => {
+  const kv = createMockKV();
+  const response = await worker.fetch(
+    new Request("https://reports.example", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ number: "+12122340101", type: "spam" }),
+    }),
+    {
+      RATE_LIMIT: kv,
+      GITHUB_TOKEN: "test-token",
+      REPORTER_BUCKET_SECRET: "s".repeat(32),
+    },
+  );
+  assert.equal(response.status, 400);
+  assert.equal(kv._store.size, 0);
+});
+
+test("POST returns 503 for corrupt KV state and 400 for malformed JSON", async () => {
+  const kv = createMockKV();
+  kv._store.set("rl:203.0.113.41", { value: "not-json" });
+  const env = {
+    RATE_LIMIT: kv,
+    GITHUB_TOKEN: "test-token",
+    REPORTER_BUCKET_SECRET: "s".repeat(32),
+  };
+  const stateFailure = await worker.fetch(
+    new Request("https://reports.example", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "cf-connecting-ip": "203.0.113.41",
+      },
+      body: JSON.stringify({ number: "+12122340101", type: "spam" }),
+    }),
+    env,
+  );
+  assert.equal(stateFailure.status, 503);
+
+  const malformedRequest = await worker.fetch(
+    new Request("https://reports.example", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "cf-connecting-ip": "203.0.113.42",
+      },
+      body: "{not-json",
+    }),
+    env,
+  );
+  assert.equal(malformedRequest.status, 400);
 });
 
 test("stored reports carry only a daily reporter bucket, never an IP", async () => {
