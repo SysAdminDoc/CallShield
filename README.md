@@ -286,8 +286,8 @@ CallShield blocks spam calls and texts using a **15+ layer on-device detection e
   feeds validate byte and row limits, preview add/remove/source impact before
   commit, and can be disabled or removed with feed-owned rows rolled back.
 
-- **Compose BOM 2026.05.00 refresh** — UI dependencies now resolve on the
-  current Compose 1.11.1 release train, with Material 3 1.4.0 and refreshed
+- **Compose BOM 2026.06.01 refresh** — UI dependencies now resolve on the
+  current Compose 1.11.4 release train, with Material 3 1.4.0 and refreshed
   lifecycle/core/savedstate transitive locks across debug, release, and unit
   test configurations.
 - **Configuration-aware Compose copy** — snackbar, toast, semantic, validation,
@@ -313,11 +313,11 @@ CallShield blocks spam calls and texts using a **15+ layer on-device detection e
 - **Release hash sidecars** — release builds now produce SHA256 sidecars for
   APK artifact integrity, with Windows helpers for signed local releases and
   content-level APK rebuild comparisons.
-- **Network hardening** — OkHttp is upgraded to 5.3.2 and all direct data,
+- **Network hardening** — OkHttp is upgraded to 5.4.0 and all direct data,
   community-report, URL-safety, and caller-ID enrichment hosts are protected by
   centralized certificate pinning.
-- **Modern Android build stack** — AGP is upgraded to 8.10.1, Kotlin/KSP are
-  aligned on 2.2.21, and Room is upgraded to 2.8.4, keeping codegen and R8
+- **Modern Android build stack** — AGP is upgraded to 8.13.2, Kotlin 2.3.21 and
+  decoupled KSP 2.3.11 are aligned with Room 2.8.4, keeping codegen and R8
   compatible with the current Kotlin metadata used by the networking stack.
 - **Stats and scan feedback polish** — weekly activity labels now respect locale weekday names, Statistics detection-source labels are resource-backed, and scan permission/failure copy is consistent across call-log and SMS flows.
 - **Settings credential polish** — the optional AbstractAPI key is masked by default, has explicit show/hide control, reports "Not configured", "Saved locally", and "Unsaved changes" states before saving, and is now kept out of backed-up public preferences.
@@ -625,11 +625,11 @@ language in [issue #7](https://github.com/SysAdminDoc/CallShield/issues/7).
 
 | Component | Technology |
 |-----------|-----------|
-| Language | Kotlin 2.2.21 |
-| UI | Jetpack Compose BOM 2026.05.00 + Material 3 |
+| Language | Kotlin 2.3.21 |
+| UI | Jetpack Compose BOM 2026.06.01 + Material 3 |
 | Theme | System, Light, Graphite, and true-black AMOLED |
 | Database | Room 2.8.4 (SQLite) — 8 entities |
-| Networking | OkHttp 5.3.2 + certificate pinning |
+| Networking | OkHttp 5.4.0 + certificate pinning |
 | JSON | Moshi |
 | ML | Pure Kotlin gradient-boosted tree (20 features) |
 | Settings | DataStore Preferences 1.2.1 |
