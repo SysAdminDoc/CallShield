@@ -375,8 +375,8 @@
     <string name="lookup_trace_error">ERROR</string>
     <string name="lookup_spam_detected">SPAM DETECTED</string>
     <string name="lookup_clean">CLEAN</string>
-    <string name="lookup_result_spam_summary">High-risk match. CallShield is %d%% confident this number should be blocked.</string>
-    <string name="lookup_result_safe_summary">No spam rule matched. You can still save this number as safe or inspect its full detail view.</string>
+    <string name="lookup_verdict_confidence">Probabilistic signal</string>
+    <string name="lookup_verdict_probabilistic_note">This confidence comes from on-device analysis and is shown only for probabilistic signals.</string>
     <string name="lookup_detection">Detection</string>
     <string name="lookup_type">Type</string>
     <string name="lookup_details">Details</string>
@@ -428,6 +428,10 @@
     <string name="lookup_report">Report</string>
     <string name="lookup_marked_safe_local">Marked as not spam</string>
     <string name="lookup_marked_safe_reported">Marked safe and reported</string>
+    <string name="lookup_not_spam">This is not spam</string>
+    <string name="lookup_remove_my_rule">Remove my rule</string>
+    <string name="lookup_rule_removed">Your rule was removed</string>
+    <string name="lookup_block_this_number">Block this number</string>
     <string name="lookup_open_detail">Open Full Detail</string>
     <string name="lookup_spam">SPAM</string>
     <string name="lookup_safe">SAFE</string>
@@ -1092,7 +1096,8 @@
 
     <!-- Number Detail Screen -->
     <string name="detail_copied">Copied</string>
-    <string name="detail_spam_score">Spam Score</string>
+    <string name="detail_verdict_confidence">Probabilistic signal</string>
+    <string name="detail_verdict_probabilistic_note">This confidence comes from on-device analysis and is shown only for probabilistic signals.</string>
     <string name="detail_block_area_code">Block all %s numbers</string>
     <string name="detail_statistics">Statistics</string>
     <string name="detail_calls">Calls</string>
@@ -1123,6 +1128,7 @@
     <string name="detail_report">Report</string>
     <string name="detail_report_spam">Report Spam</string>
     <string name="detail_not_spam">Not Spam</string>
+    <string name="detail_remove_my_rule">Remove my rule</string>
     <string name="detail_ftc_complaint">File FTC Do Not Call Complaint</string>
     <string name="detail_whitelist">Trust</string>
     <string name="detail_call">Call</string>

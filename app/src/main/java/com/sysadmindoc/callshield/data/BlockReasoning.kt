@@ -15,12 +15,32 @@ import com.sysadmindoc.callshield.domain.model.BlockReasonCode
  * the number, or report a false positive.
  */
 object BlockReasoning {
+    private val probabilisticReasons =
+        setOf(
+            BlockReasonCode.HEURISTIC,
+            BlockReasonCode.CAMPAIGN_BURST,
+            BlockReasonCode.ML_SCORER,
+            BlockReasonCode.SMS_CONTENT,
+        )
+
     data class Reasoning(
         /** One-line summary shown at the top of the panel. */
         val headline: String,
         /** Ordered bullet points with the decision details. */
         val bullets: List<String>,
     )
+
+    /**
+     * Whether a confidence value represents an actual probabilistic signal.
+     *
+     * Most protection decisions are deterministic rule matches. Their stored
+     * confidence is an implementation score or a legacy 100 value, not a
+     * probability that should be presented to a person as one.
+     */
+    fun isProbabilistic(reasonCode: BlockReasonCode): Boolean = reasonCode in probabilisticReasons
+
+    /** A personal block is reversible by removing the user's saved rule. */
+    fun isUserRule(reasonCode: BlockReasonCode): Boolean = reasonCode == BlockReasonCode.USER_BLOCKLIST || reasonCode == BlockReasonCode.TEMPORARY_BLOCK
 
     /**
      * @param matchReason from `BlockedCall.matchReason` or `SpamCheckResult.matchSource`
@@ -75,6 +95,18 @@ object BlockReasoning {
                 if (description.isNotBlank()) bullets += "Type on file: $description"
             }
 
+            reasonCode == BlockReasonCode.DB_PREFIX_EXPANSION -> {
+                headline = "This number matches a known spam database prefix."
+                bullets += "Matched at detection layer 6 (database prefix expansion)."
+                if (description.isNotBlank()) bullets += "Prefix tag: $description"
+            }
+
+            reasonCode == BlockReasonCode.HOT_LIST -> {
+                headline = "This number is on CallShield's active spam hot list."
+                bullets += "Matched the short-lived hot-list layer for recently reported activity."
+                if (description.isNotBlank()) bullets += description
+            }
+
             reasonCode == BlockReasonCode.PREFIX -> {
                 headline = "This number's prefix is a known spam range."
                 bullets += "Matched at detection layer 7 (prefix rules — premium-rate / wangiri country codes)."
@@ -126,6 +158,12 @@ object BlockReasoning {
                 headline = "The SMS matched one of your keyword rules."
                 bullets += "Matched at detection layer 13 (SMS keyword rules)."
                 if (description.isNotBlank()) bullets += "Rule: $description"
+            }
+
+            reasonCode == BlockReasonCode.SPAM_DOMAIN -> {
+                headline = "The message included a known spam domain."
+                bullets += "Matched at the spam-domain protection layer."
+                if (description.isNotBlank()) bullets += "Domain signal: $description"
             }
 
             reasonCode == BlockReasonCode.SMS_CONTENT -> {

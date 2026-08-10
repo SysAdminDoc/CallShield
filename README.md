@@ -457,8 +457,10 @@ by locale and message type without shipping personal data:
 ## Features
 
 ### Number Lookup
-- Instant spam check through all 15+ detection layers with animated score gauge (0-100)
+- Instant spam check through all 15+ detection layers, with an animated confidence gauge for probabilistic signals
 - Auto-paste from clipboard, area code lookup (330+ US/CA), haptic feedback
+- Verdict cards lead with the deciding rule or causal signal, reserve confidence for
+  genuinely probabilistic layers, and keep “This is not spam” / “Remove my rule” actions visible
 - Multi-source reverse lookup: SkipCalls + PhoneBlock + WhoCalledMe + OpenCNAM
 
 ### Recent Calls & Blocked Log
