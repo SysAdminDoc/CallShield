@@ -518,7 +518,7 @@ fun DashboardScreen(viewModel: MainViewModel) {
                             fontWeight = FontWeight.SemiBold,
                         )
                         Text(
-                            "${relativeTimeText(lastBlocked.timestamp)} · ${friendlyMatchReasonLabel(lastBlocked.matchReason)}",
+                            "${relativeTimeText(lastBlocked.timestamp)} · ${friendlyMatchReasonLabel(lastBlocked.reasonCode.wireValue)}",
                             style = MaterialTheme.typography.labelSmall,
                             color = CatOverlay,
                         )

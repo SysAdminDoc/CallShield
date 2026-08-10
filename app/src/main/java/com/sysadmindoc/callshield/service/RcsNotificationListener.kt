@@ -228,6 +228,7 @@ class RcsNotificationListener : NotificationListenerService() {
                 smsBody = effectiveBody,
                 matchReason = "rcs_${result.matchSource}",
                 confidence = confidence,
+                ruleId = result.ruleId,
             )
         } else if (isSpam) {
             NotificationHelper.notifyScreenedMessage(

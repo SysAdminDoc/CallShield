@@ -98,7 +98,7 @@ object LogExporter {
     ): String {
         val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US)
         val sb = StringBuilder()
-        sb.appendLine("Number,Date,Type,IsCall,MatchReason,Confidence,SMSBody")
+        sb.appendLine("Number,Date,Type,IsCall,ReasonCode,RuleId,Confidence,SMSBody")
 
         for (call in calls) {
             val date = dateFormat.format(Date(call.timestamp))
@@ -114,7 +114,8 @@ object LogExporter {
                     csvEscape(date),
                     csvEscape(call.type),
                     call.isCall.toString(),
-                    csvEscape(call.matchReason),
+                    csvEscape(call.reasonCode.wireValue),
+                    call.ruleId?.toString().orEmpty(),
                     call.confidence.toString(),
                     csvEscape(body),
                 ).joinToString(","),
@@ -128,7 +129,7 @@ object LogExporter {
         val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
         val timeFormat = SimpleDateFormat("HH:mm:ss", Locale.US)
         val sb = StringBuilder()
-        sb.appendLine("Date,Time,CallingNumber,Reason")
+        sb.appendLine("Date,Time,CallingNumber,ReasonCode,RuleId")
         calls
             .asSequence()
             .filter { it.isCall && it.wasBlocked }
@@ -138,7 +139,8 @@ object LogExporter {
                         csvEscape(dateFormat.format(Date(call.timestamp))),
                         csvEscape(timeFormat.format(Date(call.timestamp))),
                         csvEscape(call.number),
-                        csvEscape(call.matchReason),
+                        csvEscape(call.reasonCode.wireValue),
+                        call.ruleId?.toString().orEmpty(),
                     ).joinToString(","),
                 )
             }

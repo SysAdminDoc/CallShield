@@ -93,6 +93,7 @@ class SmsReceiver : BroadcastReceiver() {
                             smsBody = body,
                             matchReason = result.matchSource,
                             confidence = result.confidence,
+                            ruleId = result.ruleId,
                         )
                     } else if (CheckerPriority.isSafetyFloor(result.matchSource)) {
                         repo.logScreeningExemption(
@@ -101,6 +102,7 @@ class SmsReceiver : BroadcastReceiver() {
                             matchReason = result.matchSource,
                             type = result.type,
                             confidence = result.confidence,
+                            ruleId = result.ruleId,
                         )
                     }
                     // NOTE: we deliberately do NOT call abortBroadcast() here.

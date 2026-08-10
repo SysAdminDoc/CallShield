@@ -69,7 +69,10 @@ internal class WhitelistChecker(
 
     override suspend fun check(ctx: CheckContext): BlockResult? {
         val entry = repo.findWhitelistEntryInternal(ctx.number) ?: return null
-        return BlockResult.allow(if (entry.isEmergency) "emergency_contact" else "manual_whitelist")
+        return BlockResult.allow(
+            matchSource = if (entry.isEmergency) "emergency_contact" else "manual_whitelist",
+            ruleId = entry.id,
+        )
     }
 }
 
@@ -294,7 +297,7 @@ internal class UserBlocklistChecker(
                 } else {
                     entry.description.ifBlank { "Temporarily blocked" }
                 }
-            BlockResult.block(source, entry.type, description)
+            BlockResult.block(source, entry.type, description, ruleId = entry.id)
         } else {
             null
         }
@@ -377,7 +380,7 @@ internal class WildcardChecker(
         val now = java.util.Calendar.getInstance()
         for (rule in rules) {
             if (rule.matchesNow(ctx.number, now)) {
-                return BlockResult.block("wildcard", "blocked", rule.description)
+                return BlockResult.block("wildcard", "blocked", rule.description, ruleId = rule.id)
             }
         }
         return null
@@ -407,7 +410,7 @@ internal class HashWildcardChecker(
         for (rule in rules) {
             if (rule.matchesNow(ctx.number, now, hashWildcardMatcher)) {
                 val detail = rule.description.ifBlank { rule.pattern }
-                return BlockResult.block("hash_wildcard", "blocked", detail)
+                return BlockResult.block("hash_wildcard", "blocked", detail, ruleId = rule.id)
             }
         }
         return null
@@ -948,7 +951,7 @@ internal class SmsKeywordChecker(
         val now = java.util.Calendar.getInstance()
         for (rule in rules) {
             if (rule.matchesNow(body, now)) {
-                return BlockResult.block("keyword", "sms_spam", "Keyword: ${rule.keyword}")
+                return BlockResult.block("keyword", "sms_spam", "Keyword: ${rule.keyword}", ruleId = rule.id)
             }
         }
         return null

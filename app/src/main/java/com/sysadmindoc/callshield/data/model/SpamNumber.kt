@@ -70,6 +70,10 @@ data class BlockedCall(
     val matchReason: String = "",
     val confidence: Int = 100,
     val logKey: String? = null,
+    val ruleId: Long? = null,
+    val reasonCode: com.sysadmindoc.callshield.domain.model.BlockReasonCode =
+        com.sysadmindoc.callshield.domain.model.BlockReasonCode
+            .fromStored(matchReason),
 )
 
 @Entity(
@@ -91,6 +95,10 @@ data class PendingBlockedCallLog(
     val createdAt: Long = System.currentTimeMillis(),
     val attempts: Int = 0,
     val nextAttemptAt: Long = 0L,
+    val ruleId: Long? = null,
+    val reasonCode: com.sysadmindoc.callshield.domain.model.BlockReasonCode =
+        com.sysadmindoc.callshield.domain.model.BlockReasonCode
+            .fromStored(matchReason),
 )
 
 @JsonClass(generateAdapter = false)

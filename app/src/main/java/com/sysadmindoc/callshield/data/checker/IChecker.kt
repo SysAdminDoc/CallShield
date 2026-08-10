@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.datastore.preferences.core.Preferences
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.repository.SpamRepositoryImpl
+import com.sysadmindoc.callshield.domain.model.BlockReasonCode
 import kotlinx.coroutines.CancellationException
 
 /**
@@ -157,6 +158,10 @@ data class BlockResult(
     val description: String = "",
     /** 0-100; unused for allow results. */
     val confidence: Int = 100,
+    /** Stable persisted reason; [matchSource] remains the live checker identifier. */
+    val reasonCode: BlockReasonCode = BlockReasonCode.fromMatchSource(matchSource),
+    /** User-authored rule/row id when the deciding checker has one. */
+    val ruleId: Long? = null,
 ) {
     companion object {
         fun block(
@@ -164,14 +169,16 @@ data class BlockResult(
             type: String = "",
             description: String = "",
             confidence: Int = 100,
-        ) = BlockResult(true, matchSource, type, description, confidence)
+            ruleId: Long? = null,
+        ) = BlockResult(true, matchSource, type, description, confidence, BlockReasonCode.fromMatchSource(matchSource), ruleId)
 
         fun allow(
             matchSource: String,
             type: String = "",
             description: String = "",
             confidence: Int = 100,
-        ) = BlockResult(false, matchSource, type, description, confidence)
+            ruleId: Long? = null,
+        ) = BlockResult(false, matchSource, type, description, confidence, BlockReasonCode.fromMatchSource(matchSource), ruleId)
     }
 }
 

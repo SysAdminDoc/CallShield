@@ -193,6 +193,7 @@ class CallShieldScreeningService : CallScreeningService() {
                                     number = number,
                                     reason = result.matchSource,
                                     confidence = result.confidence,
+                                    ruleId = result.ruleId,
                                     prefs = prefs,
                                 )
                             }
@@ -304,6 +305,7 @@ class CallShieldScreeningService : CallScreeningService() {
         number: String,
         reason: String,
         confidence: Int = 100,
+        ruleId: Long? = null,
         prefs: androidx.datastore.preferences.core.Preferences,
     ) {
         val repository = repository()
@@ -318,6 +320,7 @@ class CallShieldScreeningService : CallScreeningService() {
                 matchReason = reason,
                 confidence = confidence,
                 timestamp = logTimestamp,
+                ruleId = ruleId,
             )
             pendingLogQueued = true
         } catch (_: Exception) {
@@ -343,6 +346,7 @@ class CallShieldScreeningService : CallScreeningService() {
                         confidence = confidence,
                         timestamp = logTimestamp,
                         logKey = logKey,
+                        ruleId = ruleId,
                     )
                 }
             } catch (_: Exception) {

@@ -1,5 +1,6 @@
 package com.sysadmindoc.callshield.data
 
+import com.sysadmindoc.callshield.domain.model.BlockReasonCode
 import com.sysadmindoc.callshield.domain.model.SpamCheckResult
 
 /**
@@ -96,25 +97,25 @@ object CallCategoryResolver {
         val desc = result.description.lowercase()
 
         // Wangiri / premium-rate prefix rules are extremely specific.
-        if (result.matchSource == "prefix" &&
+        if (result.reasonCode == BlockReasonCode.PREFIX &&
             (desc.contains("wangiri") || desc.contains("premium"))
         ) {
             return if (desc.contains("wangiri")) CallCategory.Wangiri else CallCategory.Scam
         }
 
         // SMS content analysis pattern → phishing.
-        if (result.matchSource == "sms_content" ||
-            result.matchSource == "keyword" ||
-            result.matchSource.startsWith("rcs_")
+        if (result.reasonCode == BlockReasonCode.SMS_CONTENT ||
+            result.reasonCode == BlockReasonCode.KEYWORD ||
+            result.reasonCode == BlockReasonCode.RCS_FILTER
         ) {
             return CallCategory.Phishing
         }
 
         // Campaign burst = coordinated robocall wave, by definition.
-        if (result.matchSource == "campaign_burst") return CallCategory.Robocall
+        if (result.reasonCode == BlockReasonCode.CAMPAIGN_BURST) return CallCategory.Robocall
 
         // Heuristic reasons: map the strongest signals.
-        if (result.matchSource == "heuristic") {
+        if (result.reasonCode == BlockReasonCode.HEURISTIC) {
             when {
                 "wangiri" in desc -> return CallCategory.Wangiri
                 "premium" in desc -> return CallCategory.Scam
@@ -129,7 +130,7 @@ object CallCategoryResolver {
         // High-confidence ML hits default to Robocall — the GBT model is
         // trained on patterns that overwhelmingly correlate with automated
         // dialers.
-        if (result.matchSource == "ml_scorer" && result.confidence >= 80) {
+        if (result.reasonCode == BlockReasonCode.ML_SCORER && result.confidence >= 80) {
             return CallCategory.Robocall
         }
 

@@ -203,7 +203,7 @@ fun NumberDetailScreen(
                             }
                         val sourceLabel =
                             if (categoryPolicy == null) {
-                                friendlyMatchReasonLabel(r.matchSource)
+                                friendlyMatchReasonLabel(r.reasonCode.wireValue)
                             } else {
                                 stringResource(
                                     R.string.detail_category_action_source,
@@ -227,14 +227,15 @@ fun NumberDetailScreen(
         }
 
         // Feature D: "Why was this blocked?" — narrative reconstruction from
-        // stored matchReason + description + confidence. Shows even for
+        // stored reason code + description + confidence. Shows even for
         // allow-through results so the user understands why *anything*
         // happened (e.g. "This number is in your emergency contacts").
         liveResult?.let { r ->
             val reasoning =
-                remember(r.matchSource, r.description, r.confidence) {
+                remember(r.reasonCode, r.matchSource, r.description, r.confidence) {
                     com.sysadmindoc.callshield.data.BlockReasoning.explain(
-                        matchReason = r.matchSource,
+                        reasonCode = r.reasonCode,
+                        matchSource = r.matchSource,
                         description = r.description,
                         confidence = r.confidence,
                     )
@@ -358,17 +359,17 @@ fun NumberDetailScreen(
                     if (lastSeen != null && lastSeen != firstSeen) {
                         TimelineRow(stringResource(R.string.detail_last_seen), dateFormat.format(Date(lastSeen)))
                     }
-                    val reasons = numberCalls.map { it.matchReason }.filter { it.isNotEmpty() }.distinct()
+                    val reasons = numberCalls.map { it.reasonCode }.filterNot { it == com.sysadmindoc.callshield.domain.model.BlockReasonCode.UNKNOWN }.distinct()
                     if (reasons.isNotEmpty()) {
                         Spacer(Modifier.height(8.dp))
                         GradientDivider()
                         Spacer(Modifier.height(8.dp))
                         Text(stringResource(R.string.detail_match_reasons), style = MaterialTheme.typography.labelMedium, color = CatOverlay)
-                        reasons.forEach { reason ->
+                        reasons.forEach { reasonCode ->
                             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 1.dp)) {
-                                Icon(detectionIcon(reason), null, tint = CatPeach, modifier = Modifier.size(14.dp))
+                                Icon(detectionIcon(reasonCode.wireValue), null, tint = CatPeach, modifier = Modifier.size(14.dp))
                                 Spacer(Modifier.width(6.dp))
-                                Text(friendlyMatchReasonLabel(reason), style = MaterialTheme.typography.bodySmall, color = CatPeach)
+                                Text(friendlyMatchReasonLabel(reasonCode.wireValue), style = MaterialTheme.typography.bodySmall, color = CatPeach)
                             }
                         }
                     }

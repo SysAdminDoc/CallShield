@@ -3,6 +3,7 @@ package com.sysadmindoc.callshield.ui
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import com.sysadmindoc.callshield.R
+import com.sysadmindoc.callshield.domain.model.BlockReasonCode
 
 /**
  * Resource id for a spam `type` token, or null when it is not one we know.
@@ -92,35 +93,37 @@ fun pipelineCheckerLabelRes(checkerName: String): Int =
 @Composable
 fun friendlyPipelineCheckerLabel(checkerName: String): String = stringResource(pipelineCheckerLabelRes(checkerName))
 
+/** Stable localized label mapping used by every log/statistics surface. */
+fun reasonCodeLabelRes(reasonCode: BlockReasonCode): Int =
+    when (reasonCode) {
+        BlockReasonCode.EMERGENCY_FLOOR -> R.string.stats_reason_emergency_floor
+        BlockReasonCode.OTP_FLOOR -> R.string.stats_reason_otp_floor
+        BlockReasonCode.DATABASE -> R.string.stats_reason_spam_database
+        BlockReasonCode.DB_PREFIX_EXPANSION -> R.string.stats_reason_spam_database
+        BlockReasonCode.HOT_LIST -> R.string.stats_reason_hot_list
+        BlockReasonCode.CAMPAIGN_BURST -> R.string.stats_reason_live_campaign
+        BlockReasonCode.HEURISTIC -> R.string.stats_reason_heuristic
+        BlockReasonCode.SMS_CONTENT -> R.string.stats_reason_sms_content
+        BlockReasonCode.SPAM_DOMAIN -> R.string.stats_reason_spam_domain
+        BlockReasonCode.ML_SCORER -> R.string.stats_reason_ml_scorer
+        BlockReasonCode.RCS_FILTER -> R.string.stats_reason_rcs_filter
+        BlockReasonCode.STIR_SHAKEN_FAILED, BlockReasonCode.STIR_SHAKEN_TRUSTED -> R.string.stats_reason_stir_shaken
+        BlockReasonCode.PREFIX, BlockReasonCode.REGION_BLOCK -> R.string.stats_reason_prefix_match
+        BlockReasonCode.WILDCARD, BlockReasonCode.HASH_WILDCARD -> R.string.stats_reason_wildcard_rule
+        BlockReasonCode.KEYWORD -> R.string.stats_reason_keyword_rule
+        BlockReasonCode.FREQUENCY -> R.string.stats_reason_repeat_caller
+        BlockReasonCode.TIME_BLOCK -> R.string.stats_reason_quiet_hours
+        BlockReasonCode.USER_BLOCKLIST, BlockReasonCode.TEMPORARY_BLOCK -> R.string.stats_reason_manual_block
+        BlockReasonCode.CATEGORY_POLICY -> R.string.stats_reason_category_policy
+        BlockReasonCode.HIDDEN_NUMBER -> R.string.stats_reason_hidden_number
+        BlockReasonCode.UNKNOWN -> R.string.stats_reason_unknown
+        else -> pipelineCheckerLabelRes(reasonCode.wireValue)
+    }
+
 /**
- * Localized display label for an internal matchReason/matchSource token.
- *
- * Every screen that shows a block reason must use this instead of the old
- * cosmetic `replace("_", " ")` — that leaked internal tokens ("hot list",
- * "db match", "sms content") to users and was untranslatable. Extracted from
- * StatsScreen so Dashboard, Blocked Log, Recent, Lookup, and Number Detail
- * render the same words Stats does.
+ * Localized display label for a stored reason. Legacy rows are converted by
+ * [BlockReasonCode.fromStored] at this boundary; no UI surface parses a
+ * free-form reason string or exposes an internal token.
  */
 @Composable
-fun friendlyMatchReasonLabel(reason: String): String =
-    when {
-        reason.contains("emergency_floor", ignoreCase = true) -> stringResource(R.string.stats_reason_emergency_floor)
-        reason.contains("otp_floor", ignoreCase = true) -> stringResource(R.string.stats_reason_otp_floor)
-        reason.contains("database", ignoreCase = true) -> stringResource(R.string.stats_reason_spam_database)
-        reason.contains("hot_list", ignoreCase = true) -> stringResource(R.string.stats_reason_hot_list)
-        reason.contains("hot_campaign", ignoreCase = true) -> stringResource(R.string.stats_reason_live_campaign)
-        reason.contains("heuristic", ignoreCase = true) -> stringResource(R.string.stats_reason_heuristic)
-        reason.contains("sms_content", ignoreCase = true) -> stringResource(R.string.stats_reason_sms_content)
-        reason.contains("spam_domain", ignoreCase = true) -> stringResource(R.string.stats_reason_spam_domain)
-        reason.contains("ml_scorer", ignoreCase = true) -> stringResource(R.string.stats_reason_ml_scorer)
-        reason.contains("rcs_", ignoreCase = true) -> stringResource(R.string.stats_reason_rcs_filter)
-        reason.contains("stir", ignoreCase = true) -> stringResource(R.string.stats_reason_stir_shaken)
-        reason.contains("prefix", ignoreCase = true) -> stringResource(R.string.stats_reason_prefix_match)
-        reason.contains("wildcard", ignoreCase = true) -> stringResource(R.string.stats_reason_wildcard_rule)
-        reason.contains("keyword", ignoreCase = true) -> stringResource(R.string.stats_reason_keyword_rule)
-        reason.contains("frequency", ignoreCase = true) -> stringResource(R.string.stats_reason_repeat_caller)
-        reason.contains("time", ignoreCase = true) -> stringResource(R.string.stats_reason_quiet_hours)
-        reason.contains("user", ignoreCase = true) -> stringResource(R.string.stats_reason_manual_block)
-        reason.isBlank() || reason == "unknown" -> stringResource(R.string.stats_reason_unknown)
-        else -> reason.replace("_", " ").replaceFirstChar { it.uppercase() }
-    }
+fun friendlyMatchReasonLabel(reason: String): String = stringResource(reasonCodeLabelRes(BlockReasonCode.fromStored(reason)))

@@ -11,6 +11,7 @@ import com.sysadmindoc.callshield.data.model.SpamNumber
 import com.sysadmindoc.callshield.data.model.SpamPrefix
 import com.sysadmindoc.callshield.data.model.WhitelistEntry
 import com.sysadmindoc.callshield.data.model.WildcardRule
+import com.sysadmindoc.callshield.domain.model.BlockReasonCode
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -187,6 +188,8 @@ interface SpamDao {
                     matchReason = log.matchReason,
                     confidence = log.confidence,
                     logKey = log.idempotencyKey,
+                    ruleId = log.ruleId,
+                    reasonCode = log.reasonCode,
                 ),
             )
         deletePendingBlockedCallLog(log.idempotencyKey)
@@ -250,15 +253,18 @@ interface SpamDao {
     // Bounded digest aggregates — avoid materializing the full 24h window
     // (including smsBody) in a constrained background process on heavy-spam
     // days. Counts are computed in SQL; the source breakdown reads only the
-    // short matchReason column, never full rows.
+    // short reasonCode column, never full rows.
     @Query("SELECT COUNT(*) FROM call_log WHERE wasBlocked = 1 AND isCall = 1 AND timestamp > :since")
     suspend fun getBlockedCallCountSince(since: Long): Int
 
     @Query("SELECT COUNT(*) FROM call_log WHERE wasBlocked = 1 AND isCall = 0 AND timestamp > :since")
     suspend fun getBlockedSmsCountSince(since: Long): Int
 
-    @Query("SELECT matchReason FROM call_log WHERE wasBlocked = 1 AND timestamp > :since")
+    @Query("SELECT reasonCode FROM call_log WHERE wasBlocked = 1 AND timestamp > :since")
     suspend fun getBlockedMatchReasonsSince(since: Long): List<String>
+
+    @Query("SELECT * FROM call_log WHERE reasonCode = :reasonCode ORDER BY timestamp DESC")
+    fun getBlockedCallsByReasonCode(reasonCode: BlockReasonCode): Flow<List<BlockedCall>>
 
     // Feature 10: Frequency tracking — count how many times a number appears in
     // the log within a time window. Unbounded counts caused false positives for
@@ -399,7 +405,7 @@ interface SpamDao {
     @Query(
         """SELECT * FROM call_log
               WHERE number LIKE '%' || :query || '%' ESCAPE '\'
-                 OR matchReason LIKE '%' || :query || '%' ESCAPE '\'
+                 OR reasonCode LIKE '%' || :query || '%' ESCAPE '\'
               ORDER BY timestamp DESC LIMIT 100""",
     )
     fun searchLog(query: String): Flow<List<BlockedCall>>

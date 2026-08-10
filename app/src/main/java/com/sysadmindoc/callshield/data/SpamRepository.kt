@@ -25,6 +25,7 @@ import com.sysadmindoc.callshield.data.repository.BlocklistRepository
 import com.sysadmindoc.callshield.data.repository.SettingsRepository
 import com.sysadmindoc.callshield.data.repository.SpamRepositoryImpl
 import com.sysadmindoc.callshield.data.repository.SyncRepository
+import com.sysadmindoc.callshield.domain.model.BlockReasonCode
 import com.sysadmindoc.callshield.domain.model.CallerIdentity
 import com.sysadmindoc.callshield.domain.model.SpamCheckResult
 import com.sysadmindoc.callshield.domain.model.SyncResult
@@ -664,7 +665,8 @@ class SpamRepository(
         confidence: Int = 100,
         timestamp: Long = System.currentTimeMillis(),
         logKey: String? = null,
-    ) = blocklistRepository.logBlockedCall(number, isCall, smsBody, matchReason, confidence, timestamp, logKey)
+        ruleId: Long? = null,
+    ) = blocklistRepository.logBlockedCall(number, isCall, smsBody, matchReason, confidence, timestamp, logKey, ruleId)
 
     @Suppress("LongParameterList")
     suspend fun logScreeningExemption(
@@ -675,6 +677,7 @@ class SpamRepository(
         type: String = "safety_floor",
         confidence: Int = 100,
         timestamp: Long = System.currentTimeMillis(),
+        ruleId: Long? = null,
     ) = blocklistRepository.logScreeningExemption(
         number = number,
         isCall = isCall,
@@ -683,6 +686,7 @@ class SpamRepository(
         type = type,
         confidence = confidence,
         timestamp = timestamp,
+        ruleId = ruleId,
     )
 
     @Suppress("LongParameterList")
@@ -694,6 +698,7 @@ class SpamRepository(
         matchReason: String = "",
         confidence: Int = 100,
         timestamp: Long = System.currentTimeMillis(),
+        ruleId: Long? = null,
     ) = blocklistRepository.enqueuePendingBlockedCallLog(
         idempotencyKey = idempotencyKey,
         number = number,
@@ -702,6 +707,7 @@ class SpamRepository(
         matchReason = matchReason,
         confidence = confidence,
         timestamp = timestamp,
+        ruleId = ruleId,
     )
 
     suspend fun flushPendingBlockedCallLogs(): Int = blocklistRepository.flushPendingBlockedCallLogs()
@@ -709,6 +715,8 @@ class SpamRepository(
     suspend fun getPendingBlockedCallLogCount(): Int = blocklistRepository.getPendingBlockedCallLogCount()
 
     fun getBlockedCalls(): Flow<List<BlockedCall>> = blocklistRepository.getBlockedCalls()
+
+    fun getBlockedCallsByReasonCode(reasonCode: BlockReasonCode): Flow<List<BlockedCall>> = blocklistRepository.getBlockedCallsByReasonCode(reasonCode)
 
     fun getBlockedCallsOnly(): Flow<List<BlockedCall>> = blocklistRepository.getBlockedCallsOnly()
 
@@ -886,6 +894,8 @@ internal fun BlockResult.toSpamCheckResult(): SpamCheckResult =
         type = type,
         description = description,
         confidence = confidence,
+        reasonCode = reasonCode,
+        ruleId = ruleId,
     )
 
 internal fun sanitizeDatabaseNumbers(

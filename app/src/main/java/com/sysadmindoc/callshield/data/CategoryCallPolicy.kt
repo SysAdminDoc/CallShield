@@ -2,6 +2,7 @@ package com.sysadmindoc.callshield.data
 
 import androidx.datastore.preferences.core.Preferences
 import com.sysadmindoc.callshield.R
+import com.sysadmindoc.callshield.domain.model.BlockReasonCode
 import com.sysadmindoc.callshield.domain.model.SpamCheckResult
 
 enum class CategoryCallAction(
@@ -76,7 +77,10 @@ object CategoryCallPolicy {
             decode(preferences[SpamRepository.KEY_CATEGORY_CALL_ACTIONS].orEmpty())[category]
                 ?: CategoryCallAction.INHERIT
         if (action == CategoryCallAction.INHERIT) return result
-        return result.copy(matchSource = encodeMatchSource(category, action, result.matchSource))
+        return result.copy(
+            matchSource = encodeMatchSource(category, action, result.matchSource),
+            reasonCode = BlockReasonCode.CATEGORY_POLICY,
+        )
     }
 
     @Suppress("ReturnCount")
