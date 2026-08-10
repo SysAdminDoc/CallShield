@@ -4,6 +4,7 @@ import androidx.datastore.preferences.core.mutablePreferencesOf
 import com.sysadmindoc.callshield.data.SpamRepository
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -103,5 +104,13 @@ class RcsEncryptedPlaceholderTest {
             "Our new banking app uses encrypted connections to protect every " +
                 "transaction you make, tap here to learn more about it today"
         assertFalse(RcsNotificationListener.isEncryptedPlaceholder(long))
+    }
+
+    @Test
+    fun `redacted body stays sender-only while real URL content remains available`() {
+        assertNull(RcsNotificationListener.bodyForAnalysis("Encrypted message"))
+        val body = "Review your account at https://example.test/login"
+        assertEquals(body, RcsNotificationListener.bodyForAnalysis(body))
+        assertFalse(RcsNotificationListener.contentVerdict("", enabled = true, aggressive = true).isSpam)
     }
 }

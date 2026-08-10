@@ -196,6 +196,18 @@ class SpamRepository(
         val KEY_POST_CALL_SCREEN = booleanPreferencesKey("post_call_screen_enabled")
         val KEY_NOTIFICATION_SCREENING_PACKAGES = stringSetPreferencesKey("notification_screening_packages")
 
+        // Privacy-safe message-ingress health. These values contain only the
+        // latest capability state, API level, and timing metadata — never a
+        // sender, message body, URL, or notification package.
+        internal val KEY_SMS_CAPABILITY_STATE = stringPreferencesKey("sms_capability_state")
+        internal val KEY_SMS_CAPABILITY_API = intPreferencesKey("sms_capability_api")
+        internal val KEY_SMS_CAPABILITY_OBSERVED_AT = longPreferencesKey("sms_capability_observed_at")
+        internal val KEY_SMS_CAPABILITY_LATENCY = longPreferencesKey("sms_capability_latency")
+        internal val KEY_NOTIFICATION_CAPABILITY_STATE = stringPreferencesKey("notification_capability_state")
+        internal val KEY_NOTIFICATION_CAPABILITY_API = intPreferencesKey("notification_capability_api")
+        internal val KEY_NOTIFICATION_CAPABILITY_OBSERVED_AT = longPreferencesKey("notification_capability_observed_at")
+        internal val KEY_NOTIFICATION_CAPABILITY_LATENCY = longPreferencesKey("notification_capability_latency")
+
         // Silent voicemail mode: when enabled, blocked calls are silenced (no
         // ring) and routed to voicemail instead of hard-rejected. Less
         // disruptive — phone stays quiet, caller hears normal rings and
@@ -345,6 +357,9 @@ class SpamRepository(
     val silentVoicemailEnabled: Flow<Boolean> = settingsRepository.silentVoicemailEnabled
     val pushAlertEnabled: Flow<Boolean> = settingsRepository.pushAlertEnabled
     val pushAlertDisabledPackages: Flow<Set<String>> = settingsRepository.pushAlertDisabledPackages
+    internal val smsMessageCapabilityStatus: Flow<MessageCapabilityStatus> = settingsRepository.smsMessageCapabilityStatus
+    internal val notificationMessageCapabilityStatus: Flow<MessageCapabilityStatus> =
+        settingsRepository.notificationMessageCapabilityStatus
     val lastSyncTimestamp: Flow<Long> = settingsRepository.lastSyncTimestamp
     val lastSyncSource: Flow<String> = settingsRepository.lastSyncSource
     val activeProfileName: Flow<String?> = settingsRepository.activeProfileName
@@ -352,6 +367,18 @@ class SpamRepository(
     val externalBlocklistSubscriptions = settingsRepository.externalBlocklistSubscriptions
 
     suspend fun setActiveProfileName(name: String?) = settingsRepository.setActiveProfileName(name)
+
+    /** Persist and log only message-ingress capability metadata; never message content. */
+    internal suspend fun recordMessageCapability(status: MessageCapabilityStatus) {
+        try {
+            settingsRepository.recordMessageCapability(status)
+            android.util.Log.i("CallShieldCapability", status.privacySafeLogLine())
+        } catch (exception: Exception) {
+            // Capability health is advisory. A locked/corrupt settings store
+            // must never prevent sender or URL screening from running.
+            android.util.Log.w("CallShieldCapability", "Capability state unavailable", exception)
+        }
+    }
 
     // Synchronous mirror of the persisted theme. DataStore is async-only, so its
     // first emission arrives a frame or two after the Activity starts, flashing the

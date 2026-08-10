@@ -30,6 +30,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.sysadmindoc.callshield.R
+import com.sysadmindoc.callshield.data.MessageCapabilitySource
+import com.sysadmindoc.callshield.data.MessageCapabilityState
+import com.sysadmindoc.callshield.data.MessageCapabilityStatus
 import com.sysadmindoc.callshield.data.ModelHealth
 import com.sysadmindoc.callshield.data.SpamMLScorer
 import com.sysadmindoc.callshield.data.SpamRepository
@@ -40,6 +43,7 @@ import com.sysadmindoc.callshield.ui.theme.*
 import com.sysadmindoc.callshield.util.startActivitySafely
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.concurrent.TimeUnit
@@ -533,6 +537,9 @@ private suspend fun runTests(context: Context): List<TestResult> =
             )
         }
 
+        results.add(messageCapabilityTestResult(context, repo.smsMessageCapabilityStatus.first()))
+        results.add(messageCapabilityTestResult(context, repo.notificationMessageCapabilityStatus.first()))
+
         val count = repo.getSpamCount()
         results.add(
             TestResult(
@@ -731,6 +738,55 @@ private suspend fun runTests(context: Context): List<TestResult> =
 
         results
     }
+
+private fun messageCapabilityTestResult(
+    context: Context,
+    status: MessageCapabilityStatus,
+): TestResult {
+    val uiState = messageCapabilityUiState(status)
+    val nameRes =
+        when (status.source) {
+            MessageCapabilitySource.SMS_BROADCAST -> R.string.protection_test_sms_capability
+            MessageCapabilitySource.NOTIFICATION_LISTENER -> R.string.protection_test_notification_capability
+        }
+    val detailRes =
+        when (status.state) {
+            MessageCapabilityState.NOT_OBSERVED -> {
+                R.string.protection_test_capability_not_observed
+            }
+
+            MessageCapabilityState.FULL_CONTENT -> {
+                if (status.smsOrderingAdvisory) {
+                    R.string.protection_test_capability_full_sms_advisory
+                } else {
+                    R.string.protection_test_capability_full
+                }
+            }
+
+            MessageCapabilityState.SENDER_ONLY -> {
+                R.string.protection_test_capability_sender_only
+            }
+
+            MessageCapabilityState.BODY_REDACTED -> {
+                R.string.protection_test_capability_redacted
+            }
+
+            MessageCapabilityState.DELAYED -> {
+                R.string.protection_test_capability_delayed
+            }
+
+            MessageCapabilityState.UNSUPPORTED -> {
+                R.string.protection_test_capability_unsupported
+            }
+        }
+    return TestResult(
+        name = context.getString(nameRes),
+        passed = uiState.passed,
+        detail = context.getString(detailRes),
+        priority = if (status.isDegraded) TestPriority.Recommended else TestPriority.Informational,
+        recoveryHint = if (status.isDegraded) context.getString(R.string.protection_test_capability_hint) else null,
+    )
+}
 
 private fun hotDataHealthDetail(
     context: Context,

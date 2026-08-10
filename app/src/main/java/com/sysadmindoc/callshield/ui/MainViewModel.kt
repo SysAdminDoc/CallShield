@@ -4,6 +4,7 @@ package com.sysadmindoc.callshield.ui
 
 import android.content.Context
 import android.net.Uri
+import android.os.Build
 import android.util.Log
 import android.widget.Toast
 import androidx.lifecycle.ViewModel
@@ -20,6 +21,8 @@ import com.sysadmindoc.callshield.data.CommunityContributor
 import com.sysadmindoc.callshield.data.ContactGroup
 import com.sysadmindoc.callshield.data.ContactGroupCatalog
 import com.sysadmindoc.callshield.data.EmergencyNumberFloor
+import com.sysadmindoc.callshield.data.MessageCapabilitySource
+import com.sysadmindoc.callshield.data.MessageCapabilityStatus
 import com.sysadmindoc.callshield.data.SpamHeuristics
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.TimeSchedule
@@ -305,6 +308,18 @@ class MainViewModel
 
         val mlScorerEnabled = repo.mlScorerEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
         val rcsFilterEnabled = repo.rcsFilterEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+        internal val smsMessageCapabilityStatus =
+            repo.smsMessageCapabilityStatus.stateIn(
+                viewModelScope,
+                SharingStarted.WhileSubscribed(5000),
+                MessageCapabilityStatus.notObserved(MessageCapabilitySource.SMS_BROADCAST, Build.VERSION.SDK_INT),
+            )
+        internal val notificationMessageCapabilityStatus =
+            repo.notificationMessageCapabilityStatus.stateIn(
+                viewModelScope,
+                SharingStarted.WhileSubscribed(5000),
+                MessageCapabilityStatus.notObserved(MessageCapabilitySource.NOTIFICATION_LISTENER, Build.VERSION.SDK_INT),
+            )
         val postCallScreenEnabled =
             repo.postCallScreenEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
         val notificationScreeningPackages =

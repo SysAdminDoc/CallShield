@@ -3,7 +3,9 @@ package com.sysadmindoc.callshield.service
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.provider.Telephony
+import com.sysadmindoc.callshield.data.MessageCapabilityDetector
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.checker.CheckerPriority
 import com.sysadmindoc.callshield.data.remote.UrlSafetyChecker
@@ -74,11 +76,27 @@ class SmsReceiver : BroadcastReceiver() {
                 val blockSmsEnabled = prefs[SpamRepository.KEY_BLOCK_SMS] ?: true
 
                 val messages = Telephony.Sms.Intents.getMessagesFromIntent(intent)
+                val observedAtMillis = System.currentTimeMillis()
+                val latestMessageTimestamp = messages?.maxOfOrNull { it.timestampMillis } ?: 0L
+                repo.recordMessageCapability(
+                    MessageCapabilityDetector.classifySmsBroadcast(
+                        apiLevel = Build.VERSION.SDK_INT,
+                        messagesDelivered = !messages.isNullOrEmpty(),
+                        senderPresent = messages?.firstOrNull()?.originatingAddress?.isNotBlank() == true,
+                        bodyPresent = messages?.any { !it.messageBody.isNullOrBlank() } == true,
+                        latencyMillis =
+                            MessageCapabilityDetector.latencyMillis(
+                                sourceTimestampMillis = latestMessageTimestamp,
+                                observedAtMillis = observedAtMillis,
+                            ),
+                        observedAtMillis = observedAtMillis,
+                    ),
+                )
                 if (messages.isNullOrEmpty()) {
                     return@launch
                 }
 
-                sender = messages[0].originatingAddress ?: return@launch
+                sender = messages[0].originatingAddress?.takeIf { it.isNotBlank() } ?: return@launch
                 body = reassembleBody(messages.map { it.messageBody })
 
                 // Spam classification + block logging is gated behind the
