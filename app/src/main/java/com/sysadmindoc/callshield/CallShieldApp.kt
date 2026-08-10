@@ -19,6 +19,7 @@ import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.SystemBlockList
 import com.sysadmindoc.callshield.data.checker.CheckerDependencies
 import com.sysadmindoc.callshield.di.ApplicationScope
+import com.sysadmindoc.callshield.service.AppUpdateWorker
 import com.sysadmindoc.callshield.service.CrashReporter
 import com.sysadmindoc.callshield.service.DigestWorker
 import com.sysadmindoc.callshield.service.DirectBootScreeningStore
@@ -30,6 +31,7 @@ import com.sysadmindoc.callshield.service.ProtectionHealthWorker
 import com.sysadmindoc.callshield.service.SyncWorker
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import javax.inject.Inject
@@ -90,6 +92,10 @@ class CallShieldApp :
             PendingBlockedCallLogWorker.schedule(this)
             ProtectionHealthWorker.schedule(this)
             ProtectionHealthWorker.checkNow(this)
+            appScope.launch {
+                val repository = SpamRepository.getInstance(this@CallShieldApp)
+                if (repository.appUpdateChecksEnabled.first()) AppUpdateWorker.schedule(this@CallShieldApp)
+            }
 
             registerCacheInvalidationObservers()
 

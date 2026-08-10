@@ -64,4 +64,23 @@ class WorkerScheduleTest {
         assertEquals(0L, immediate.initialDelay)
         assertEquals(NetworkType.NOT_REQUIRED, immediate.constraints.requiredNetworkType)
     }
+
+    @Test
+    fun appUpdateUsesWeeklyConnectedChecksAndExponentialBackoff() {
+        val spec = AppUpdateWorker.periodicRequest().workSpec
+
+        assertEquals(TimeUnit.DAYS.toMillis(7), spec.intervalDuration)
+        assertEquals(TimeUnit.DAYS.toMillis(7), spec.initialDelay)
+        assertEquals(NetworkType.CONNECTED, spec.constraints.requiredNetworkType)
+        assertEquals(BackoffPolicy.EXPONENTIAL, spec.backoffPolicy)
+        assertEquals(TimeUnit.MINUTES.toMillis(30), spec.backoffDelayDuration)
+    }
+
+    @Test
+    fun manualAppUpdateCheckRequiresNetwork() {
+        val spec = AppUpdateWorker.immediateRequest().workSpec
+
+        assertEquals(NetworkType.CONNECTED, spec.constraints.requiredNetworkType)
+        assertEquals(0L, spec.initialDelay)
+    }
 }

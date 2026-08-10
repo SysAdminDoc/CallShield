@@ -38,6 +38,48 @@ class GitHubDataSourceTest {
     }
 
     @Test
+    fun `parseLatestReleaseJson accepts release links and checksum asset`() {
+        val result =
+            dataSource
+                .parseLatestReleaseJson(
+                    """
+                    {
+                      "tag_name": "v1.8.0",
+                      "html_url": "https://github.com/SysAdminDoc/CallShield/releases/tag/v1.8.0",
+                      "assets": [
+                        {
+                          "name": "CallShield.apk",
+                          "browser_download_url": "https://github.com/SysAdminDoc/CallShield/releases/download/v1.8.0/CallShield.apk"
+                        },
+                        {
+                          "name": "CallShield.apk.sha256",
+                          "browser_download_url": "https://github.com/SysAdminDoc/CallShield/releases/download/v1.8.0/CallShield.apk.sha256"
+                        }
+                      ]
+                    }
+                    """.trimIndent(),
+                )
+        val parsed = result.getOrThrow()
+
+        assertEquals("v1.8.0", parsed.tagName)
+        assertEquals("https://github.com/SysAdminDoc/CallShield/releases/tag/v1.8.0", parsed.htmlUrl)
+        assertEquals(
+            "https://github.com/SysAdminDoc/CallShield/releases/download/v1.8.0/CallShield.apk.sha256",
+            parsed.checksumUrl,
+        )
+    }
+
+    @Test
+    fun `parseLatestReleaseJson rejects non GitHub release links`() {
+        assertTrue(
+            dataSource
+                .parseLatestReleaseJson(
+                    """{"tag_name":"v1.8.0","html_url":"https://example.com/release"}""",
+                ).isFailure,
+        )
+    }
+
+    @Test
     fun `parseHotListJson supports legacy top-level array`() {
         val parsed =
             dataSource.parseHotListJson(

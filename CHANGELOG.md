@@ -95,6 +95,8 @@ All notable changes to CallShield will be documented in this file.
   whitelist/exact, wildcard/exact, and downloaded-prefix/hash-range conflicts with persistent dismissal.
 - RTT calls receive an immediate explicit allow response so Telecom retains the active assistive
   voice/text session without screening or caller-ID overlay interference.
+- Added an opt-in weekly GitHub Releases check that stores release metadata locally, notifies once
+  per new version, and offers release/SHA256 links without downloading or self-installing an APK.
 
 ### Build
 

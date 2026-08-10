@@ -1,9 +1,11 @@
 package com.sysadmindoc.callshield.data.remote
 
 import android.content.Context
+import com.squareup.moshi.Json
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.Types
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
+import com.sysadmindoc.callshield.data.AppUpdateRelease
 import com.sysadmindoc.callshield.data.model.HotNumber
 import com.sysadmindoc.callshield.data.model.SpamDatabase
 import com.sysadmindoc.callshield.data.model.SpamDatabaseShard
@@ -78,6 +80,7 @@ class GitHubDataSource :
         moshi.adapter<List<String>>(
             Types.newParameterizedType(List::class.java, String::class.java),
         )
+    private val latestReleaseAdapter = moshi.adapter(GitHubReleasePayload::class.java)
 
     // Cache of resolved default branch per "owner/repo" → (branch, resolvedAtMs).
     private val defaultBranchLock = Any()
@@ -292,6 +295,50 @@ class GitHubDataSource :
     ): Result<String> =
         withContext(Dispatchers.IO) {
             fetchRawText(MODEL_WEIGHTS_PATH, owner, repo)
+        }
+
+    suspend fun fetchLatestRelease(
+        owner: String = DEFAULT_REPO_OWNER,
+        repo: String = DEFAULT_REPO_NAME,
+    ): Result<AppUpdateRelease> =
+        withContext(Dispatchers.IO) {
+            try {
+                val request =
+                    Request
+                        .Builder()
+                        .url("$GITHUB_API_BASE/$owner/$repo/releases/latest")
+                        .header("Accept", "application/vnd.github.v3+json")
+                        .header("User-Agent", USER_AGENT)
+                        .build()
+                client.newCall(request).execute().use { response ->
+                    if (!response.isSuccessful) {
+                        return@withContext Result.failure(Exception("HTTP ${response.code}: ${response.message}"))
+                    }
+                    val body = readLimitedBody(response, "GitHub releases API", MAX_GITHUB_API_BYTES) ?: "{}"
+                    parseLatestReleaseJson(body)
+                }
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        }
+
+    internal fun parseLatestReleaseJson(body: String): Result<AppUpdateRelease> =
+        runCatching {
+            val payload = latestReleaseAdapter.fromJson(body) ?: error("Failed to parse GitHub release")
+            val tagName = payload.tagName.trim().ifBlank { error("GitHub release has no tag") }
+            val htmlUrl =
+                payload.htmlUrl
+                    .trim()
+                    .takeIf { it.startsWith("https://github.com/") }
+                    ?: error("GitHub release has no safe release URL")
+            val checksumUrl =
+                payload.assets
+                    .firstOrNull { asset ->
+                        asset.name.contains("sha256", ignoreCase = true) || asset.name.endsWith(".sha", ignoreCase = true)
+                    }?.browserDownloadUrl
+                    ?.trim()
+                    ?.takeIf { it.startsWith("https://github.com/") }
+            AppUpdateRelease(tagName = tagName, htmlUrl = htmlUrl, checksumUrl = checksumUrl)
         }
 
     override suspend fun checkForUpdate(
@@ -680,6 +727,17 @@ class GitHubDataSource :
     private data class RawFeedSpec(
         val label: String,
         val maxBytes: Long,
+    )
+
+    private data class GitHubReleasePayload(
+        @Json(name = "tag_name") val tagName: String = "",
+        @Json(name = "html_url") val htmlUrl: String = "",
+        val assets: List<GitHubReleaseAsset> = emptyList(),
+    )
+
+    private data class GitHubReleaseAsset(
+        val name: String = "",
+        @Json(name = "browser_download_url") val browserDownloadUrl: String = "",
     )
 
     private data class HotListPayload(

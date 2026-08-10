@@ -11,6 +11,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sysadmindoc.callshield.CallShieldApp
 import com.sysadmindoc.callshield.R
+import com.sysadmindoc.callshield.data.AppUpdateState
 import com.sysadmindoc.callshield.data.BackupRestore
 import com.sysadmindoc.callshield.data.BlockingProfiles
 import com.sysadmindoc.callshield.data.BlocklistExporter
@@ -41,6 +42,7 @@ import com.sysadmindoc.callshield.domain.model.SpamCheckResult
 import com.sysadmindoc.callshield.domain.usecase.ExportLogsUseCase
 import com.sysadmindoc.callshield.domain.usecase.ManageBlocklistUseCase
 import com.sysadmindoc.callshield.domain.usecase.SyncDatabaseUseCase
+import com.sysadmindoc.callshield.service.AppUpdateWorker
 import com.sysadmindoc.callshield.service.CallLogScanner
 import com.sysadmindoc.callshield.service.NotificationHelper
 import com.sysadmindoc.callshield.service.SmsInboxScanner
@@ -330,6 +332,10 @@ class MainViewModel
 
         val lastSyncTimestamp = repo.lastSyncTimestamp.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0L)
         val lastSyncSource = repo.lastSyncSource.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
+        val appUpdateChecksEnabled =
+            repo.appUpdateChecksEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+        val appUpdateState =
+            repo.appUpdateState.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), AppUpdateState())
 
         val mlScorerEnabled = repo.mlScorerEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
         val rcsFilterEnabled = repo.rcsFilterEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
@@ -846,6 +852,22 @@ class MainViewModel
                 repo.setAppTheme(theme.storageValue)
                 syncApplicationNightMode(appContext, theme)
             }
+
+        fun setAppUpdateChecks(enabled: Boolean) {
+            viewModelScope.launch {
+                repo.setAppUpdateChecksEnabled(enabled)
+                if (enabled) {
+                    AppUpdateWorker.schedule(appContext)
+                    AppUpdateWorker.checkNow(appContext)
+                } else {
+                    AppUpdateWorker.cancel(appContext)
+                }
+            }
+        }
+
+        fun checkForAppUpdate() {
+            if (appUpdateChecksEnabled.value) AppUpdateWorker.checkNow(appContext)
+        }
 
         fun setBlockCalls(v: Boolean) = viewModelScope.launch { repo.setBlockCalls(v) }
 
