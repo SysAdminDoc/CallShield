@@ -46,6 +46,7 @@ import androidx.compose.material.icons.filled.SmartToy
 import androidx.compose.material.icons.filled.Sms
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.TextFields
+import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material.icons.filled.VerifiedUser
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.CircularProgressIndicator
@@ -85,6 +86,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sysadmindoc.callshield.R
+import com.sysadmindoc.callshield.data.BlockReasoning
 import com.sysadmindoc.callshield.data.CommunityContributor
 import com.sysadmindoc.callshield.data.PhoneFormatter
 import com.sysadmindoc.callshield.data.SpamRepository
@@ -139,6 +141,7 @@ fun LookupScreen(viewModel: MainViewModel) {
     // rotation, and so the verdict stays bound to the number that was actually
     // checked rather than to whatever is currently typed in the field.
     val outcome by viewModel.lookupOutcome.collectAsStateWithLifecycle()
+    val userBlocked by viewModel.userBlockedNumbers.collectAsStateWithLifecycle()
     val result = outcome?.result
     val trace = outcome?.trace
     val checkedNumber = outcome?.number
@@ -316,9 +319,18 @@ fun LookupScreen(viewModel: MainViewModel) {
                     // which is not necessarily what is typed in the field now.
                     val resultNumber = checkedNumber ?: normalizedNumber
                     val resultAccent = if (lookupResult.isSpam) CatRed else CatGreen
-                    val score = if (lookupResult.isSpam) lookupResult.confidence else 0
-
-                    SpamScoreGauge(score = score, isSpam = lookupResult.isSpam)
+                    val reasoning =
+                        remember(lookupResult.reasonCode, lookupResult.matchSource, lookupResult.description, lookupResult.confidence) {
+                            BlockReasoning.explain(
+                                reasonCode = lookupResult.reasonCode,
+                                matchSource = lookupResult.matchSource,
+                                description = lookupResult.description,
+                                confidence = lookupResult.confidence,
+                            )
+                        }
+                    val probabilistic = lookupResult.isSpam && BlockReasoning.isProbabilistic(lookupResult.reasonCode)
+                    val userRule = BlockReasoning.isUserRule(lookupResult.reasonCode)
+                    val userRuleEntry = userBlocked.firstOrNull { it.number == resultNumber }
 
                     PremiumCard(accentColor = resultAccent, modifier = Modifier.fillMaxWidth()) {
                         Column(
@@ -333,6 +345,12 @@ fun LookupScreen(viewModel: MainViewModel) {
                                     } else {
                                         stringResource(R.string.lookup_result_clear)
                                     },
+                                color = resultAccent,
+                            )
+                            Text(
+                                reasoning.headline,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
                                 color = resultAccent,
                             )
                             Icon(
@@ -359,15 +377,15 @@ fun LookupScreen(viewModel: MainViewModel) {
                             AreaCodeLookup.lookup(resultNumber)?.let {
                                 Text(it, style = MaterialTheme.typography.bodySmall, color = CatOverlay)
                             }
-                            Text(
-                                if (lookupResult.isSpam) {
-                                    stringResource(R.string.lookup_result_spam_summary, lookupResult.confidence)
-                                } else {
-                                    stringResource(R.string.lookup_result_safe_summary)
-                                },
-                                style = MaterialTheme.typography.bodySmall,
-                                color = if (lookupResult.isSpam) CatSubtext else CatGreen,
-                            )
+                            if (probabilistic) {
+                                SectionHeader(stringResource(R.string.lookup_verdict_confidence), color = CatOverlay)
+                                SpamScoreGauge(score = lookupResult.confidence, isSpam = true)
+                                Text(
+                                    stringResource(R.string.lookup_verdict_probabilistic_note),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = CatSubtext,
+                                )
+                            }
 
                             GradientDivider(color = resultAccent)
 
@@ -387,10 +405,12 @@ fun LookupScreen(viewModel: MainViewModel) {
                                         value = lookupResult.description,
                                     )
                                 }
-                                DetailRow(
-                                    label = stringResource(R.string.lookup_confidence),
-                                    value = stringResource(R.string.lookup_confidence_value, lookupResult.confidence),
-                                )
+                                if (probabilistic) {
+                                    DetailRow(
+                                        label = stringResource(R.string.lookup_confidence),
+                                        value = stringResource(R.string.lookup_confidence_value, lookupResult.confidence),
+                                    )
+                                }
                             } else {
                                 LookupHintRow(
                                     icon = Icons.Default.VerifiedUser,
@@ -399,6 +419,61 @@ fun LookupScreen(viewModel: MainViewModel) {
                                     accentColor = CatGreen,
                                 )
                             }
+                            GradientDivider(color = resultAccent)
+                            PremiumActionButton(
+                                label =
+                                    when {
+                                        userRule -> stringResource(R.string.lookup_remove_my_rule)
+                                        lookupResult.isSpam -> stringResource(R.string.lookup_not_spam)
+                                        else -> stringResource(R.string.lookup_block_this_number)
+                                    },
+                                icon =
+                                    when {
+                                        userRule -> Icons.Default.Remove
+                                        lookupResult.isSpam -> Icons.Default.ThumbUp
+                                        else -> Icons.Default.Block
+                                    },
+                                color = if (lookupResult.isSpam) CatGreen else CatRed,
+                                onClick = {
+                                    when {
+                                        userRule -> {
+                                            userRuleEntry?.let { viewModel.unblockNumber(it) }
+                                                ?: viewModel.unblockByNumber(resultNumber)
+                                            hapticTick(context)
+                                            scope.launch {
+                                                snackbarHostState.showSnackbar(resources.getString(R.string.lookup_rule_removed))
+                                            }
+                                        }
+
+                                        lookupResult.isSpam -> {
+                                            scope.launch {
+                                                val message =
+                                                    try {
+                                                        val repo = SpamRepository.getInstance(context)
+                                                        withContext(Dispatchers.IO) {
+                                                            repo.addToWhitelist(resultNumber, markedSafeDescription)
+                                                            val reportResult =
+                                                                CommunityContributor.reportNotSpam(repo.normalizeNumber(resultNumber))
+                                                            if (reportResult.success) markedSafeReportedMessage else markedSafeLocalMessage
+                                                        }
+                                                    } catch (_: Exception) {
+                                                        resources.getString(R.string.lookup_report_failed)
+                                                    }
+                                                hapticTick(context)
+                                                snackbarHostState.showSnackbar(message)
+                                            }
+                                        }
+
+                                        else -> {
+                                            viewModel.blockNumber(resultNumber, lookupResult.type.ifEmpty { "spam" }, lookupResult.description)
+                                            hapticConfirm(context)
+                                            scope.launch { snackbarHostState.showSnackbar(numberBlockedMessage) }
+                                        }
+                                    }
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                                outlined = true,
+                            )
                         }
                     }
 

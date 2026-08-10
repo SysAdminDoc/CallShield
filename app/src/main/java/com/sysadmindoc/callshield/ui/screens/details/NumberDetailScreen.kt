@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sysadmindoc.callshield.R
+import com.sysadmindoc.callshield.data.BlockReasoning
 import com.sysadmindoc.callshield.data.PhoneFormatter
 import com.sysadmindoc.callshield.data.SmsBodyRedactor
 import com.sysadmindoc.callshield.data.SpamRepository
@@ -178,23 +179,53 @@ fun NumberDetailScreen(
             }) { Icon(Icons.Default.ContentCopy, stringResource(R.string.cd_copy), tint = CatSubtext) }
         }
 
-        // Spam score gauge (live check)
+        // Lead with the causal verdict. A score is secondary evidence and is
+        // only meaningful for the four probabilistic protection layers.
         liveResult?.let { r ->
-            PremiumCard(accentColor = if (r.isSpam) CatRed else CatGreen) {
+            val reasoning =
+                remember(r.reasonCode, r.matchSource, r.description, r.confidence) {
+                    BlockReasoning.explain(
+                        reasonCode = r.reasonCode,
+                        matchSource = r.matchSource,
+                        description = r.description,
+                        confidence = r.confidence,
+                    )
+                }
+            val accent = if (r.isSpam) CatRed else CatGreen
+            val probabilistic = r.isSpam && BlockReasoning.isProbabilistic(r.reasonCode)
+            val userRule = isBlocked && BlockReasoning.isUserRule(r.reasonCode)
+            PremiumCard(accentColor = accent) {
                 Column(
                     modifier =
                         Modifier
                             .fillMaxWidth()
                             .accentGlow(
-                                color = if (r.isSpam) CatRed else CatGreen,
+                                color = accent,
                                 radius = 300f,
                                 alpha = 0.06f,
                             ).padding(16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    SectionHeader(stringResource(R.string.detail_spam_score), color = if (r.isSpam) CatRed else CatGreen)
+                    SectionHeader(stringResource(R.string.block_reasoning_title), color = accent)
                     Spacer(Modifier.height(8.dp))
-                    SpamScoreGauge(score = if (r.isSpam) r.confidence else 0, isSpam = r.isSpam)
+                    Text(
+                        reasoning.headline,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = accent,
+                    )
+                    if (probabilistic) {
+                        Spacer(Modifier.height(10.dp))
+                        SectionHeader(stringResource(R.string.detail_verdict_confidence), color = CatOverlay)
+                        Spacer(Modifier.height(6.dp))
+                        SpamScoreGauge(score = r.confidence, isSpam = true)
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            stringResource(R.string.detail_verdict_probabilistic_note),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = CatSubtext,
+                        )
+                    }
                     if (r.isSpam) {
                         val categoryPolicy =
                             remember(r.matchSource) {
@@ -211,7 +242,7 @@ fun NumberDetailScreen(
                                     stringResource(categoryPolicy.action.labelResId),
                                 )
                             }
-                        Spacer(Modifier.height(8.dp))
+                        Spacer(Modifier.height(10.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
                             Icon(
                                 detectionIcon(categoryPolicy?.originalMatchSource ?: r.matchSource),
@@ -222,30 +253,6 @@ fun NumberDetailScreen(
                             Text(sourceLabel, style = MaterialTheme.typography.bodySmall, color = CatPeach)
                         }
                     }
-                }
-            }
-        }
-
-        // Feature D: "Why was this blocked?" — narrative reconstruction from
-        // stored reason code + description + confidence. Shows even for
-        // allow-through results so the user understands why *anything*
-        // happened (e.g. "This number is in your emergency contacts").
-        liveResult?.let { r ->
-            val reasoning =
-                remember(r.reasonCode, r.matchSource, r.description, r.confidence) {
-                    com.sysadmindoc.callshield.data.BlockReasoning.explain(
-                        reasonCode = r.reasonCode,
-                        matchSource = r.matchSource,
-                        description = r.description,
-                        confidence = r.confidence,
-                    )
-                }
-            val accent = if (r.isSpam) CatPeach else CatGreen
-            PremiumCard(accentColor = accent) {
-                Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-                    SectionHeader(stringResource(R.string.block_reasoning_title), color = accent)
-                    Spacer(Modifier.height(8.dp))
-                    Text(reasoning.headline, fontWeight = FontWeight.SemiBold, color = accent)
                     if (reasoning.bullets.isNotEmpty()) {
                         Spacer(Modifier.height(8.dp))
                         reasoning.bullets.forEach { bullet ->
@@ -255,6 +262,45 @@ fun NumberDetailScreen(
                             }
                         }
                     }
+                    Spacer(Modifier.height(10.dp))
+                    PremiumActionButton(
+                        label =
+                            when {
+                                userRule -> stringResource(R.string.detail_remove_my_rule)
+                                r.isSpam -> stringResource(R.string.detail_not_spam)
+                                else -> stringResource(R.string.detail_block)
+                            },
+                        icon =
+                            when {
+                                userRule -> Icons.Default.Remove
+                                r.isSpam -> Icons.Default.ThumbUp
+                                else -> Icons.Default.Block
+                            },
+                        color = if (r.isSpam) CatGreen else CatRed,
+                        onClick = {
+                            when {
+                                userRule -> {
+                                    userBlocked.find { it.number == number }?.let { viewModel.unblockNumber(it) }
+                                        ?: viewModel.unblockByNumber(number)
+                                    hapticTick(context)
+                                    Toast.makeText(context, numberUnblockedMessage, Toast.LENGTH_SHORT).show()
+                                }
+
+                                r.isSpam -> {
+                                    hapticTick(context)
+                                    viewModel.reportNotSpam(number)
+                                }
+
+                                else -> {
+                                    viewModel.blockNumber(number, "spam", blockedFromDetail)
+                                    hapticConfirm(context)
+                                    Toast.makeText(context, numberBlockedMessage, Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        outlined = true,
+                    )
                 }
             }
         }

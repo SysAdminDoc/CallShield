@@ -19,6 +19,9 @@ All notable changes to CallShield will be documented in this file.
   the existing tile behavior on older releases.
 - Removed the orphaned direct blocklist importer and unreferenced pseudolocale screenshot helper;
   the documented source-registry pipeline is now the sole supported data regeneration path.
+- Lookup and number-detail verdicts now lead with the deciding rule or causal signal;
+  deterministic matches no longer masquerade as 100% probabilities, and reversal actions
+  are available directly from the verdict card.
 
 ### Data pipeline
 

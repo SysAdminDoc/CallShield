@@ -6,6 +6,23 @@ import org.junit.Test
 
 class BlockReasoningTest {
     @Test
+    fun `only probabilistic layers expose confidence as a probability`() {
+        assertTrue(BlockReasoning.isProbabilistic(com.sysadmindoc.callshield.domain.model.BlockReasonCode.HEURISTIC))
+        assertTrue(BlockReasoning.isProbabilistic(com.sysadmindoc.callshield.domain.model.BlockReasonCode.CAMPAIGN_BURST))
+        assertTrue(BlockReasoning.isProbabilistic(com.sysadmindoc.callshield.domain.model.BlockReasonCode.ML_SCORER))
+        assertTrue(BlockReasoning.isProbabilistic(com.sysadmindoc.callshield.domain.model.BlockReasonCode.SMS_CONTENT))
+        assertTrue(!BlockReasoning.isProbabilistic(com.sysadmindoc.callshield.domain.model.BlockReasonCode.USER_BLOCKLIST))
+        assertTrue(!BlockReasoning.isProbabilistic(com.sysadmindoc.callshield.domain.model.BlockReasonCode.DATABASE))
+    }
+
+    @Test
+    fun `user rule classification is limited to reversible saved blocks`() {
+        assertTrue(BlockReasoning.isUserRule(com.sysadmindoc.callshield.domain.model.BlockReasonCode.USER_BLOCKLIST))
+        assertTrue(BlockReasoning.isUserRule(com.sysadmindoc.callshield.domain.model.BlockReasonCode.TEMPORARY_BLOCK))
+        assertTrue(!BlockReasoning.isUserRule(com.sysadmindoc.callshield.domain.model.BlockReasonCode.DATABASE))
+    }
+
+    @Test
     fun `user_blocklist explanation names the layer and includes note`() {
         val r = BlockReasoning.explain("user_blocklist", "Spammer, blocked manually", 100)
         assertTrue(r.headline.contains("You blocked"))
