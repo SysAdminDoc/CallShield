@@ -56,7 +56,7 @@ if ($node) {
 # from a non-interactive shell with no console attached (CI-style invocation).
 $python = Get-Tool @('python3', 'python')
 if ($python) {
-    foreach ($test in @('test_phone_normalization.py', 'test_report_dedup.py', 'test_report_pipeline.py', 'test_model_calibration.py', 'test_check_translations.py', 'test_source_registry.py', 'test_spam_shards.py')) {
+    foreach ($test in @('test_phone_normalization.py', 'test_report_dedup.py', 'test_report_pipeline.py', 'test_model_calibration.py', 'test_check_translations.py', 'test_source_registry.py', 'test_spam_shards.py', 'test_incremental_sources.py')) {
         $path = Join-Path $PSScriptRoot $test
         if (-not (Test-Path $path)) { continue }
         Write-Host "Running $test..."

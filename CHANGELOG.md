@@ -33,6 +33,9 @@ All notable changes to CallShield will be documented in this file.
   sync validates hashes before one transactional Room refresh, downloads only changed
   shards, keeps the legacy monolithic raw URL for older clients, and bundles the shard
   set instead of the 11 MB monolith.
+- FTC and FCC complaint imports now use bounded resumable cursors with 403/429
+  backoff, preserve caller-ID versus callback-business roles and spoof signals,
+  and require independent caller evidence before new complaint rows are promoted.
 
 ### Reliability
 

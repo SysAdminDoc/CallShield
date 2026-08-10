@@ -54,11 +54,144 @@ DATA_DIR = Path(__file__).parent.parent / "data"
 DB_FILE = DATA_DIR / "spam_numbers.json"
 SOURCE_MANIFEST_FILE = DATA_DIR / "source-manifest.json"
 SOURCE_SNAPSHOT_FILE = DATA_DIR / "source-snapshot.json"
+SOURCE_CURSOR_FILE = DATA_DIR / "source-cursors.json"
 
 PHONEBLOCK_BLOCKLIST_URL = "https://phoneblock.net/phoneblock/api/blocklist"
 SARACROCHE_PREFIX_URL = "https://saracroche.org/api/v1/lists/french-list-arcep-operators"
 PHONEBLOCK_MAX_LIMIT = 5000
 NOMOROBO_MAX_RECORDS = 250000
+FTC_PAGE_SIZE = 50
+FCC_PAGE_SIZE = 5000
+SOURCE_CURSOR_SCHEMA_VERSION = 1
+RETRYABLE_STATUS_CODES = {403, 429}
+
+
+class SourceFetchResult(list[dict]):
+    """List-compatible adapter result carrying a resumable high-water mark."""
+
+    def __init__(
+        self,
+        entries: list[dict],
+        *,
+        cursor: dict[str, str] | None,
+        complete: bool,
+        error: str | None = None,
+    ) -> None:
+        super().__init__(entries)
+        self.cursor = cursor
+        self.complete = complete
+        self.error = error
+
+
+def _cursor_key(timestamp: str, record_id: str) -> tuple[str, str]:
+    return timestamp or "", record_id or ""
+
+
+def _record_cursor(
+    record: dict,
+    *,
+    timestamp_field: str,
+) -> dict[str, str] | None:
+    timestamp = str(record.get(timestamp_field, "") or "").strip()
+    record_id = str(record.get("id", "") or "").strip()
+    if not timestamp:
+        return None
+    return {"timestamp": timestamp, "id": record_id}
+
+
+def _cursor_after(
+    record: dict,
+    cursor: dict[str, str] | None,
+    *,
+    timestamp_field: str,
+) -> bool:
+    candidate = _record_cursor(record, timestamp_field=timestamp_field)
+    if candidate is None or cursor is None:
+        return True
+    return _cursor_key(candidate["timestamp"], candidate["id"]) > _cursor_key(
+        cursor.get("timestamp", ""),
+        cursor.get("id", ""),
+    )
+
+
+def _max_cursor(
+    records: list[dict],
+    previous: dict[str, str] | None,
+    *,
+    timestamp_field: str,
+) -> dict[str, str] | None:
+    candidates = [
+        candidate
+        for record in records
+        if (candidate := _record_cursor(record, timestamp_field=timestamp_field)) is not None
+    ]
+    if previous:
+        candidates.append(previous)
+    return max(candidates, key=lambda item: _cursor_key(item["timestamp"], item["id"]), default=None)
+
+
+def _get_with_backoff(
+    url: str,
+    *,
+    params: dict | None = None,
+    timeout: int,
+    label: str,
+    max_attempts: int = 4,
+):
+    """GET a public feed with bounded 403/429 backoff and no partial success."""
+
+    for attempt in range(max_attempts):
+        try:
+            response = requests.get(url, params=params, timeout=timeout)
+        except Exception as exc:
+            return None, str(exc)
+        if response.status_code not in RETRYABLE_STATUS_CODES:
+            return response, None
+        if attempt == max_attempts - 1:
+            return None, f"{label} returned HTTP {response.status_code} after {max_attempts} attempts"
+        delay = min(60, 5 * (2**attempt))
+        print(f"  {label} HTTP {response.status_code}; waiting {delay}s (retry {attempt + 1}/{max_attempts - 1})...")
+        time.sleep(delay)
+    return None, f"{label} request did not complete"
+
+
+def load_source_cursors(path: Path = SOURCE_CURSOR_FILE) -> dict[str, dict[str, str]]:
+    if not path.exists():
+        return {}
+    try:
+        with path.open(encoding="utf-8") as cursor_file:
+            payload = json.load(cursor_file)
+        if payload.get("schema_version") != SOURCE_CURSOR_SCHEMA_VERSION:
+            return {}
+        sources = payload.get("sources", {})
+        return {key: value for key, value in sources.items() if isinstance(value, dict)}
+    except (OSError, ValueError, AttributeError):
+        return {}
+
+
+def save_source_cursors(
+    cursors: dict[str, dict[str, str]],
+    path: Path = SOURCE_CURSOR_FILE,
+) -> None:
+    atomic_write_json(
+        path,
+        {
+            "schema_version": SOURCE_CURSOR_SCHEMA_VERSION,
+            "sources": dict(sorted(cursors.items())),
+        },
+    )
+
+
+def _fetch_stats(result: SourceFetchResult, retrieved_at: str) -> dict:
+    return {
+        "status": "ok" if result.complete else "error",
+        "accepted": len(result),
+        "checksum": payload_checksum(result),
+        "last_success_at": retrieved_at if result.complete else None,
+        "last_failure_at": retrieved_at if not result.complete else None,
+        "error": result.error,
+        "cursor": result.cursor,
+    }
 
 
 def payload_checksum(entries: list[dict]) -> str | None:
@@ -91,135 +224,260 @@ def normalize_external_phone(raw: str) -> str | None:
 
 
 # ── Source 1: FTC API ──────────────────────────────────────────────────
-def fetch_ftc(max_records: int = 5000) -> list[dict]:
-    print("\n[FTC Do Not Call API]")
-    API_BASE = "https://api.ftc.gov/v0/dnc-complaints"
-    numbers = {}
-    offset = 0
-    rate_limit_retries = 0
+FTC_API_URL = "https://api.ftc.gov/v0/dnc-complaints"
 
-    while len(numbers) < max_records:
+
+def _failed_fetch(
+    label: str,
+    cursor: dict[str, str] | None,
+    error: str,
+) -> SourceFetchResult:
+    print(f"  {label} unavailable; preserving the previous cursor ({error})")
+    return SourceFetchResult([], cursor=cursor, complete=False, error=error)
+
+
+def fetch_ftc(
+    max_records: int = 5000,
+    cursor: dict[str, str] | None = None,
+) -> SourceFetchResult:
+    """Fetch a bounded FTC window and return a commit-safe high-water mark."""
+
+    print("\n[FTC Do Not Call API]")
+    numbers: dict[str, dict] = {}
+    cursor_records: list[dict] = []
+    offset = 0
+    records_fetched = 0
+    previous_cursor = dict(cursor) if cursor else None
+    now = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+
+    while records_fetched < max_records:
+        page_size = min(FTC_PAGE_SIZE, max_records - records_fetched)
+        params = {
+            "api_key": "DEMO_KEY",
+            "items_per_page": page_size,
+            "offset": offset,
+            "sort_order": "asc" if cursor else "desc",
+        }
+        if cursor:
+            # The FTC API requires the two date filters together. Keep the
+            # lower bound inclusive and filter the exact high-water tuple
+            # locally so records sharing a timestamp are not lost.
+            params["created_date_from"] = f'"{cursor["timestamp"]}"'
+            params["created_date_to"] = f'"{now}"'
+
+        response, error = _get_with_backoff(
+            FTC_API_URL,
+            params=params,
+            timeout=30,
+            label="FTC",
+        )
+        if response is None:
+            return _failed_fetch("FTC", previous_cursor, error or "request failed")
         try:
-            resp = requests.get(API_BASE, params={
-                "api_key": "DEMO_KEY",
-                "items_per_page": 50,
-                "offset": offset,
-                "sort_order": "desc",
-            }, timeout=30)
-            if resp.status_code == 429:
-                rate_limit_retries += 1
-                if rate_limit_retries > 3:
-                    print("  Rate limited repeatedly; skipping FTC for this run")
-                    break
-                delay = min(60, 5 * (2 ** (rate_limit_retries - 1)))
-                print(f"  Rate limited, waiting {delay}s (retry {rate_limit_retries}/3)...")
-                time.sleep(delay)
-                continue
-            resp.raise_for_status()
-            records = resp.json().get("data", [])
-            if not records:
-                break
-            rate_limit_retries = 0
-        except Exception as e:
-            print(f"  Error: {e}")
+            response.raise_for_status()
+            payload = response.json()
+            records = payload.get("data", [])
+            if not isinstance(records, list):
+                raise ValueError("FTC response data is not an array")
+        except Exception as exc:
+            return _failed_fetch("FTC", previous_cursor, str(exc))
+        if not records:
             break
 
-        for r in records:
-            attrs = r.get("attributes", {})
-            phone = attrs.get("company-phone-number", "")
-            if not phone:
+        records_fetched += len(records)
+        for record in records:
+            attrs = record.get("attributes", {}) or {}
+            if not isinstance(attrs, dict):
+                attrs = {}
+            cursor_record = {
+                "id": str(record.get("id", "") or ""),
+                "created-date": str(attrs.get("created-date", "") or ""),
+            }
+            if not _cursor_after(
+                cursor_record,
+                cursor,
+                timestamp_field="created-date",
+            ):
                 continue
-            normalized = normalize_phone(phone)
+            if cursor_record.get("created-date"):
+                cursor_records.append(cursor_record)
+
+            phone = attrs.get("company-phone-number", "")
+            normalized = normalize_external_phone(phone)
             if not normalized:
                 continue
 
-            subject = attrs.get("subject", "")
-            is_robo = attrs.get("recorded-message-or-robocall", "") == "Y"
-            created = attrs.get("created-date", "")[:10]
-
+            subject = str(attrs.get("subject", "") or "").strip()
+            is_robo = (
+                str(attrs.get("recorded-message-or-robocall", "") or "").upper() == "Y"
+                or str(attrs.get("is-robocall", "") or "").lower() in {"y", "yes", "true", "1"}
+            )
+            created_raw = str(attrs.get("created-date", "") or "")
+            created = created_raw[:10]
+            if not created:
+                created = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+            description = f"FTC caller ID: {subject}" if subject else "FTC caller-ID complaint"
             if normalized in numbers:
                 numbers[normalized]["reports"] += 1
+                numbers[normalized]["first_seen"] = min(numbers[normalized]["first_seen"], created)
+                numbers[normalized]["last_seen"] = max(numbers[normalized]["last_seen"], created)
+                if description not in numbers[normalized]["description"]:
+                    numbers[normalized]["description"] += f"; {description}"
             else:
                 numbers[normalized] = {
                     "number": normalized,
                     "type": "robocall" if is_robo else "telemarketer",
                     "reports": 1,
-                    "first_seen": created or datetime.now().strftime("%Y-%m-%d"),
-                    "last_seen": created or datetime.now().strftime("%Y-%m-%d"),
-                    "description": f"FTC: {subject}" if subject else "FTC complaint",
+                    "first_seen": created,
+                    "last_seen": created,
+                    "description": description,
+                    "complaint_role": "caller_id",
+                    "spoof_signal": "unverified_originating_number",
                 }
 
-        offset += 50
-        if len(records) < 50:
+        offset += len(records)
+        if len(records) < page_size:
+            break
+        if records_fetched >= max_records:
             break
         time.sleep(0.5)
 
-    print(f"  Fetched {len(numbers):,} unique numbers")
-    return list(numbers.values())
+    next_cursor = _max_cursor(
+        cursor_records,
+        previous_cursor,
+        timestamp_field="created-date",
+    )
+    print(f"  Fetched {len(numbers):,} unique numbers ({records_fetched:,} records)")
+    return SourceFetchResult(
+        list(numbers.values()),
+        cursor=next_cursor,
+        complete=True,
+    )
 
 
 # ── Source 2: FCC Unwanted Calls (Socrata) ─────────────────────────────
-def fetch_fcc(max_records: int = 50000) -> list[dict]:
-    print("\n[FCC Unwanted Calls Dataset]")
-    numbers = {}
-    offset = 0
-    batch = 5000
+FCC_API_URL = "https://opendata.fcc.gov/resource/vakf-fz8e.json"
 
-    while offset < max_records:
+
+def fetch_fcc(
+    max_records: int = 50000,
+    cursor: dict[str, str] | None = None,
+) -> SourceFetchResult:
+    """Fetch a bounded Socrata window while retaining both phone roles."""
+
+    print("\n[FCC Unwanted Calls Dataset]")
+    numbers: dict[tuple[str, str, str], dict] = {}
+    cursor_records: list[dict] = []
+    offset = 0
+    records_fetched = 0
+    previous_cursor = dict(cursor) if cursor else None
+
+    while records_fetched < max_records:
+        batch = min(FCC_PAGE_SIZE, max_records - records_fetched)
+        params = {
+            "$limit": batch,
+            "$offset": offset,
+            "$order": "issue_date ASC, id ASC" if cursor else "issue_date DESC, id DESC",
+        }
+        if cursor:
+            params["$where"] = f"issue_date >= '{cursor['timestamp']}'"
+
+        response, error = _get_with_backoff(
+            FCC_API_URL,
+            params=params,
+            timeout=60,
+            label="FCC",
+        )
+        if response is None:
+            return _failed_fetch("FCC", previous_cursor, error or "request failed")
         try:
-            url = f"https://opendata.fcc.gov/resource/vakf-fz8e.json?$limit={batch}&$offset={offset}"
-            resp = requests.get(url, timeout=60)
-            resp.raise_for_status()
-            records = resp.json()
-            if not records:
-                break
-        except Exception as e:
-            print(f"  Error at offset {offset}: {e}")
+            response.raise_for_status()
+            records = response.json()
+            if not isinstance(records, list):
+                raise ValueError("FCC response is not an array")
+        except Exception as exc:
+            return _failed_fetch("FCC", previous_cursor, str(exc))
+        if not records:
             break
 
-        for r in records:
-            issue = r.get("issue", "Unwanted Calls")
-            date = (r.get("issue_date", "") or "")[:10]
-            seen_in_record = set()
-            for field, role in (
-                ("caller_id_number", "caller ID"),
-                ("advertiser_business_phone_number", "advertiser"),
-            ):
-                normalized = normalize_phone(r.get(field, ""))
-                if not normalized or normalized in seen_in_record:
-                    continue
-                seen_in_record.add(normalized)
+        records_fetched += len(records)
+        for record in records:
+            record = record if isinstance(record, dict) else {}
+            cursor_record = {
+                "id": str(record.get("id", "") or ""),
+                "issue_date": str(record.get("issue_date", "") or ""),
+            }
+            if not _cursor_after(cursor_record, cursor, timestamp_field="issue_date"):
+                continue
+            if cursor_record.get("issue_date"):
+                cursor_records.append(cursor_record)
 
-                spam_type = "robocall"
-                if "telemarket" in issue.lower():
-                    spam_type = "telemarketer"
-                elif "text" in issue.lower() or "sms" in issue.lower():
-                    spam_type = "sms_spam"
-                description = f"FCC {role}: {issue}"
-                if normalized in numbers:
-                    numbers[normalized]["reports"] += 1
-                    if date and date > numbers[normalized]["last_seen"]:
-                        numbers[normalized]["last_seen"] = date
-                    if description not in numbers[normalized]["description"]:
-                        numbers[normalized]["description"] += f"; {description}"
-                else:
-                    numbers[normalized] = {
+            issue = str(record.get("issue", "Unwanted Calls") or "Unwanted Calls").strip()
+            call_type = str(record.get("type_of_call_or_messge", "") or "").strip()
+            issue_context = " ".join(part for part in (issue, call_type) if part)
+            issue_lower = issue_context.lower()
+            date = str(record.get("issue_date", "") or "")[:10]
+            if not date:
+                date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+            explicit_spoof = "spoof" in issue_lower
+
+            spam_type = "robocall"
+            if "telemarket" in issue_lower:
+                spam_type = "telemarketer"
+            elif "text" in issue_lower or "sms" in issue_lower:
+                spam_type = "sms_spam"
+
+            for field, role, default_signal, report_weight in (
+                ("caller_id_number", "caller_id", "unverified_caller_id", 1),
+                ("advertiser_business_phone_number", "callback_business", "callback_number_only", 0),
+            ):
+                normalized = normalize_external_phone(record.get(field, ""))
+                if not normalized:
+                    continue
+                spoof_signal = "explicit_spoof_claim" if role == "caller_id" and explicit_spoof else default_signal
+                effective_weight = 0 if spoof_signal == "explicit_spoof_claim" else report_weight
+                key = (normalized, role, spoof_signal)
+                description = f"FCC {role}: {issue or 'Unwanted Calls'}"
+                if call_type:
+                    description += f" ({call_type})"
+                current = numbers.get(key)
+                if current is None:
+                    numbers[key] = {
                         "number": normalized,
                         "type": spam_type,
-                        "reports": 1,
-                        "first_seen": date or datetime.now().strftime("%Y-%m-%d"),
-                        "last_seen": date or datetime.now().strftime("%Y-%m-%d"),
+                        "reports": effective_weight,
+                        "first_seen": date,
+                        "last_seen": date,
                         "description": description,
+                        "complaint_role": role,
+                        "spoof_signal": spoof_signal,
                     }
+                else:
+                    current["reports"] += effective_weight
+                    current["first_seen"] = min(current["first_seen"], date)
+                    current["last_seen"] = max(current["last_seen"], date)
+                    if description not in current["description"]:
+                        current["description"] += f"; {description}"
 
-        offset += batch
+        offset += len(records)
         if len(records) < batch:
             break
-        print(f"  {offset:,} records processed, {len(numbers):,} unique...")
+        if records_fetched >= max_records:
+            break
+        print(f"  {offset:,} records processed, {len(numbers):,} role-separated entries...")
         time.sleep(0.3)
 
-    print(f"  Fetched {len(numbers):,} unique numbers")
-    return list(numbers.values())
+    next_cursor = _max_cursor(
+        cursor_records,
+        previous_cursor,
+        timestamp_field="issue_date",
+    )
+    print(f"  Fetched {len(numbers):,} role-separated entries ({records_fetched:,} records)")
+    return SourceFetchResult(
+        list(numbers.values()),
+        cursor=next_cursor,
+        complete=True,
+    )
 
 
 # ── Source 3: Nomorobo IRS callback-scam feed ─────────────────────────
@@ -487,6 +745,28 @@ def fetch_community_text_lists() -> list[dict]:
     return list(numbers.values())
 
 
+COMPLAINT_SOURCE_IDS = {"ftc_complaints", "fcc_complaints"}
+
+
+def complaint_is_corroborated(entry: dict) -> bool:
+    """Require independent, non-spoof complaint evidence for new rows."""
+
+    complaint_evidence = [
+        item
+        for item in entry.get("evidence", [])
+        if item.get("source_id") in COMPLAINT_SOURCE_IDS
+    ]
+    if not complaint_evidence:
+        return True
+    source_ids = {item.get("source_id") for item in complaint_evidence}
+    roles = {item.get("complaint_role") for item in complaint_evidence}
+    if len(source_ids) < 2 or "caller_id" not in roles:
+        return False
+    # An explicit spoof claim is useful context, but cannot promote a row on
+    # its own. A second, non-spoof signal may corroborate the same number.
+    return any(item.get("spoof_signal") != "explicit_spoof_claim" for item in complaint_evidence)
+
+
 def merge_into_database(
     all_numbers: list[dict],
     min_reports: int = 1,
@@ -568,15 +848,27 @@ def merge_into_database(
     # at reports=1 by merge_community_reports.py) on the documented no-flag
     # regen, because --min-reports defaults to 2.
     filtered = 0
-    if min_reports > 1:
-        before = len(existing)
-        existing = {
-            k: v
-            for k, v in existing.items()
-            if k in pre_existing or v.get("reports", 0) >= min_reports
-        }
-        filtered = before - len(existing)
-        print(f"  Filtered {filtered:,} new entries below min_reports={min_reports}")
+    filtered_uncorroborated = 0
+    before = len(existing)
+    retained = {}
+    for key, value in existing.items():
+        if key in pre_existing:
+            retained[key] = value
+            continue
+        if not complaint_is_corroborated(value):
+            filtered_uncorroborated += 1
+            continue
+        if value.get("reports", 0) < min_reports:
+            continue
+        retained[key] = value
+    existing = retained
+    filtered = before - len(existing)
+    if filtered:
+        print(
+            f"  Filtered {filtered:,} new entries below min_reports={min_reports} "
+            f"or without independent complaint corroboration "
+            f"({filtered_uncorroborated:,} uncorroborated)"
+        )
 
     existing_prefixes = {p["prefix"]: p for p in db.get("prefixes", []) if p.get("prefix")}
     prefix_added = 0
@@ -687,26 +979,26 @@ def main():
     retrieved_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
 
     # Source 1: FTC
-    ftc = fetch_ftc(max_records=min(args.max, 5000))  # FTC API is slow; bulk is via CSV
+    cursors = load_source_cursors()
+    next_cursors = dict(cursors)
+
+    ftc = fetch_ftc(  # FTC API is slow; bulk is via CSV
+        max_records=min(args.max, 5000),
+        cursor=cursors.get("ftc_complaints"),
+    )
     attach_source_evidence(ftc, manifest, "ftc_complaints", retrieved_at=retrieved_at)
     all_numbers.extend(ftc)
-    source_stats["ftc_complaints"] = {
-        "status": "ok",
-        "accepted": len(ftc),
-        "checksum": payload_checksum(ftc),
-        "last_success_at": retrieved_at,
-    }
+    source_stats["ftc_complaints"] = _fetch_stats(ftc, retrieved_at)
+    if ftc.complete and ftc.cursor:
+        next_cursors["ftc_complaints"] = ftc.cursor
 
     # Source 2: FCC (biggest source — pull up to --max records)
-    fcc = fetch_fcc(max_records=args.max)
+    fcc = fetch_fcc(max_records=args.max, cursor=cursors.get("fcc_complaints"))
     attach_source_evidence(fcc, manifest, "fcc_complaints", retrieved_at=retrieved_at)
     all_numbers.extend(fcc)
-    source_stats["fcc_complaints"] = {
-        "status": "ok",
-        "accepted": len(fcc),
-        "checksum": payload_checksum(fcc),
-        "last_success_at": retrieved_at,
-    }
+    source_stats["fcc_complaints"] = _fetch_stats(fcc, retrieved_at)
+    if fcc.complete and fcc.cursor:
+        next_cursors["fcc_complaints"] = fcc.cursor
 
     # Source 3: PhoneBlock (per-number lookup — seed only, real-time in app)
     pb = fetch_phoneblock(
@@ -772,6 +1064,15 @@ def main():
         num = n["number"]
         if num in deduped:
             deduped[num]["reports"] += n["reports"]
+            if n.get("first_seen", "") < deduped[num].get("first_seen", "9999"):
+                deduped[num]["first_seen"] = n["first_seen"]
+            if n.get("last_seen", "") > deduped[num].get("last_seen", ""):
+                deduped[num]["last_seen"] = n["last_seen"]
+            description = n.get("description", "")
+            if description and description not in deduped[num].get("description", ""):
+                deduped[num]["description"] = (
+                    f"{deduped[num].get('description', '')}; {description}"
+                ).strip("; ")
             deduped[num]["evidence"] = merge_evidence(deduped[num].get("evidence"), n.get("evidence"))
         else:
             deduped[num] = n
@@ -797,6 +1098,7 @@ def main():
         source_names=source_names,
         source_stats=source_stats,
     )
+    save_source_cursors(next_cursors)
     print("\nDone! Commit and push to update the live database.")
 
 

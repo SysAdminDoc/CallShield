@@ -164,6 +164,8 @@ data class SourceEvidenceJson(
     @param:Json(name = "confidence_tier") val confidenceTier: String = "unverified",
     @param:Json(name = "parser_version") val parserVersion: String = "",
     @param:Json(name = "expires_at_epoch_ms") val expiresAtEpochMs: Long? = null,
+    @param:Json(name = "complaint_role") val complaintRole: String? = null,
+    @param:Json(name = "spoof_signal") val spoofSignal: String? = null,
 )
 
 data class NumberCount(
