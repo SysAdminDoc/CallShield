@@ -15,6 +15,7 @@ import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.CategoryCallPolicy
 import com.sysadmindoc.callshield.data.PhoneFormatter
 import com.sysadmindoc.callshield.data.SmsContentAnalyzer
+import com.sysadmindoc.callshield.domain.model.BlockReasonCode
 import com.sysadmindoc.callshield.permissions.CallShieldPermissions
 import com.sysadmindoc.callshield.ui.MainActivity
 import com.sysadmindoc.callshield.util.filterAsciiDigits
@@ -241,7 +242,7 @@ object NotificationHelper {
                     context.getString(policy.category.stringResId),
                     context.getString(policy.action.labelResId),
                 )
-            } ?: reason
+            } ?: context.getString(reasonLabelRes(BlockReasonCode.fromMatchSource(reason)))
 
         val openIntent =
             PendingIntent.getActivity(
@@ -310,6 +311,30 @@ object NotificationHelper {
         safeNotify(context, nid, builder)
         updateSummary(context)
     }
+
+    private fun reasonLabelRes(reasonCode: BlockReasonCode): Int =
+        when (reasonCode) {
+            BlockReasonCode.EMERGENCY_FLOOR -> R.string.stats_reason_emergency_floor
+            BlockReasonCode.OTP_FLOOR -> R.string.stats_reason_otp_floor
+            BlockReasonCode.DATABASE, BlockReasonCode.DB_PREFIX_EXPANSION -> R.string.stats_reason_spam_database
+            BlockReasonCode.HOT_LIST -> R.string.stats_reason_hot_list
+            BlockReasonCode.CAMPAIGN_BURST -> R.string.stats_reason_live_campaign
+            BlockReasonCode.HEURISTIC -> R.string.stats_reason_heuristic
+            BlockReasonCode.SMS_CONTENT -> R.string.stats_reason_sms_content
+            BlockReasonCode.SPAM_DOMAIN -> R.string.stats_reason_spam_domain
+            BlockReasonCode.ML_SCORER -> R.string.stats_reason_ml_scorer
+            BlockReasonCode.RCS_FILTER -> R.string.stats_reason_rcs_filter
+            BlockReasonCode.STIR_SHAKEN_FAILED, BlockReasonCode.STIR_SHAKEN_TRUSTED -> R.string.stats_reason_stir_shaken
+            BlockReasonCode.PREFIX, BlockReasonCode.REGION_BLOCK -> R.string.stats_reason_prefix_match
+            BlockReasonCode.WILDCARD, BlockReasonCode.HASH_WILDCARD -> R.string.stats_reason_wildcard_rule
+            BlockReasonCode.KEYWORD -> R.string.stats_reason_keyword_rule
+            BlockReasonCode.FREQUENCY -> R.string.stats_reason_repeat_caller
+            BlockReasonCode.TIME_BLOCK -> R.string.stats_reason_quiet_hours
+            BlockReasonCode.USER_BLOCKLIST, BlockReasonCode.TEMPORARY_BLOCK -> R.string.stats_reason_manual_block
+            BlockReasonCode.CATEGORY_POLICY -> R.string.stats_reason_category_policy
+            BlockReasonCode.HIDDEN_NUMBER -> R.string.stats_reason_hidden_number
+            else -> R.string.stats_reason_unknown
+        }
 
     private fun NotificationCompat.Builder.addSmsSafeAction(
         context: Context,

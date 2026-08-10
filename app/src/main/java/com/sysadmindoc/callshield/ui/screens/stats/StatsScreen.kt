@@ -33,6 +33,7 @@ import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.PhoneFormatter
 import com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup
 import com.sysadmindoc.callshield.data.model.BlockedCall
+import com.sysadmindoc.callshield.domain.model.BlockReasonCode
 import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.friendlyMatchReasonLabel
 import com.sysadmindoc.callshield.ui.theme.*
@@ -65,7 +66,7 @@ fun StatsScreen(viewModel: MainViewModel) {
     val typeBreakdown =
         remember(blockedCalls) {
             blockedCalls
-                .groupBy { it.matchReason.ifEmpty { "unknown" } }
+                .groupBy { it.reasonCode }
                 .mapValues { it.value.size }
                 .entries
                 .sortedByDescending { it.value }
@@ -114,7 +115,7 @@ fun StatsScreen(viewModel: MainViewModel) {
     val sourceBreakdown =
         remember(blockedCalls) {
             blockedCalls
-                .groupBy { it.matchReason.ifEmpty { "unknown" } }
+                .groupBy { it.reasonCode }
                 .mapValues { it.value.size }
                 .entries
                 .sortedByDescending { it.value }
@@ -345,26 +346,11 @@ fun StatsScreen(viewModel: MainViewModel) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         SectionHeader(stringResource(R.string.stats_by_detection_method), CatGreen)
                         Spacer(Modifier.height(8.dp))
-                        typeBreakdown.take(8).forEach { (type, count) ->
+                        typeBreakdown.take(8).forEach { (reasonCode, count) ->
                             val fraction = count.toFloat() / totalBlocked.coerceAtLeast(1)
-                            val color =
-                                when {
-                                    "database" in type || "hot_list" in type -> CatGreen
-                                    "heuristic" in type || "hot_campaign" in type -> CatBlue
-                                    "sms_content" in type || "spam_domain" in type -> CatMauve
-                                    "ml_scorer" in type -> CatTeal
-                                    "rcs_" in type -> CatLavender
-                                    "stir" in type -> CatYellow
-                                    "prefix" in type -> CatPeach
-                                    "user" in type -> CatRed
-                                    "wildcard" in type -> CatYellow
-                                    "time" in type -> CatMauve
-                                    "frequency" in type -> CatPeach
-                                    "keyword" in type -> CatMauve
-                                    else -> CatSubtext
-                                }
+                            val color = reasonCodeColor(reasonCode)
                             Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Text(friendlyMatchReasonLabel(type), modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
+                                Text(friendlyMatchReasonLabel(reasonCode.wireValue), modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
                                 Text(numberFormatter.format(count), color = color, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall)
                             }
                             LinearProgressIndicator(
@@ -489,7 +475,7 @@ fun StatsScreen(viewModel: MainViewModel) {
 private fun StatsOverviewCard(
     weeklyTotal: Int,
     weeklyDelta: Int,
-    topSource: String?,
+    topSource: BlockReasonCode?,
     peakHour: String?,
 ) {
     PremiumCard(accentColor = if (weeklyTotal > 0) CatGreen else CatOverlay) {
@@ -537,7 +523,7 @@ private fun StatsOverviewCard(
                     modifier = Modifier.weight(1f),
                     label = stringResource(R.string.stats_overview_top_source),
                     value =
-                        topSource?.let { friendlyMatchReasonLabel(it) }
+                        topSource?.let { friendlyMatchReasonLabel(it.wireValue) }
                             ?: stringResource(R.string.stats_overview_no_source),
                     color = CatGreen,
                 )
@@ -758,7 +744,7 @@ fun WeeklyBarChart(
 // ─── Source Donut Chart (Canvas) ────────────────────────────────────
 @Composable
 fun SourceDonutChart(
-    sources: Map<String, Int>,
+    sources: Map<BlockReasonCode, Int>,
     modifier: Modifier = Modifier,
 ) {
     val total = sources.values.sum().coerceAtLeast(1)
@@ -800,7 +786,7 @@ fun SourceDonutChart(
 // ─── Source Legend ──────────────────────────────────────────────────
 @Composable
 fun SourceLegend(
-    sources: Map<String, Int>,
+    sources: Map<BlockReasonCode, Int>,
     modifier: Modifier = Modifier,
 ) {
     val total = sources.values.sum().coerceAtLeast(1)
@@ -818,7 +804,7 @@ fun SourceLegend(
                 )
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    friendlyMatchReasonLabel(source),
+                    friendlyMatchReasonLabel(source.wireValue),
                     style = MaterialTheme.typography.labelSmall,
                     color = CatSubtext,
                     modifier = Modifier.weight(1f),
@@ -833,6 +819,21 @@ fun SourceLegend(
         }
     }
 }
+
+@Composable
+private fun reasonCodeColor(reasonCode: BlockReasonCode): Color =
+    when (reasonCode) {
+        BlockReasonCode.DATABASE, BlockReasonCode.DB_PREFIX_EXPANSION, BlockReasonCode.HOT_LIST -> CatGreen
+        BlockReasonCode.HEURISTIC, BlockReasonCode.CAMPAIGN_BURST -> CatBlue
+        BlockReasonCode.SMS_CONTENT, BlockReasonCode.SPAM_DOMAIN, BlockReasonCode.KEYWORD -> CatMauve
+        BlockReasonCode.ML_SCORER -> CatTeal
+        BlockReasonCode.RCS_FILTER -> CatLavender
+        BlockReasonCode.STIR_SHAKEN_FAILED, BlockReasonCode.STIR_SHAKEN_TRUSTED, BlockReasonCode.WILDCARD -> CatYellow
+        BlockReasonCode.PREFIX, BlockReasonCode.REGION_BLOCK, BlockReasonCode.FREQUENCY -> CatPeach
+        BlockReasonCode.USER_BLOCKLIST, BlockReasonCode.TEMPORARY_BLOCK -> CatRed
+        BlockReasonCode.TIME_BLOCK -> CatMauve
+        else -> CatSubtext
+    }
 
 @Composable
 fun MiniStat(

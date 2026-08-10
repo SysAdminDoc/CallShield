@@ -28,6 +28,10 @@ All notable changes to CallShield will be documented in this file.
 
 ### Reliability
 
+- Screening decisions now persist a stable reason code and the responsible
+  rule ID, with Room migration/backfill, pending-log propagation, localized
+  log filtering, and CSV/JSON export support. Legacy match text is retained
+  for lossless restore compatibility.
 - Android 16+ SMS interception is now presented as advisory: the receiver
   never assumes cross-app broadcast ordering or promises inbox suppression,
   while the permission and onboarding surfaces explain the default SMS app's

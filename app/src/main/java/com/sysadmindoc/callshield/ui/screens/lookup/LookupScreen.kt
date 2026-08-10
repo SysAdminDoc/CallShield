@@ -374,7 +374,7 @@ fun LookupScreen(viewModel: MainViewModel) {
                             if (lookupResult.isSpam) {
                                 DetailRow(
                                     label = stringResource(R.string.lookup_detection),
-                                    value = friendlyMatchReasonLabel(lookupResult.matchSource),
+                                    value = friendlyMatchReasonLabel(lookupResult.reasonCode.wireValue),
                                     icon = detectionIcon(lookupResult.matchSource),
                                 )
                                 DetailRow(

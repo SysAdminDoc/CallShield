@@ -4,19 +4,21 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.TypeConverters
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.sysadmindoc.callshield.data.PhoneIdentityCanonicalizer
 import com.sysadmindoc.callshield.data.model.*
 
 /** Single source of truth for the Room database version. */
-const val DB_VERSION = 14
+const val DB_VERSION = 15
 private const val DB_VERSION_9 = 9
 private const val DB_VERSION_10 = 10
 private const val DB_VERSION_11 = 11
 private const val DB_VERSION_12 = 12
 private const val DB_VERSION_13 = 13
 private const val DB_VERSION_14 = 14
+private const val DB_VERSION_15 = 15
 
 /**
  * v5 → v6: Add `isEmergency INTEGER NOT NULL DEFAULT 0` to the whitelist
@@ -210,6 +212,53 @@ val MIGRATION_13_14 =
         }
     }
 
+/** v14 -> v15: retain the responsible user-rule row on screening log entries. */
+val MIGRATION_14_15 =
+    object : Migration(DB_VERSION_14, DB_VERSION_15) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE call_log ADD COLUMN ruleId INTEGER")
+            db.execSQL("ALTER TABLE pending_blocked_call_logs ADD COLUMN ruleId INTEGER")
+            db.execSQL("ALTER TABLE call_log ADD COLUMN reasonCode TEXT NOT NULL DEFAULT 'unknown'")
+            db.execSQL("ALTER TABLE pending_blocked_call_logs ADD COLUMN reasonCode TEXT NOT NULL DEFAULT 'unknown'")
+            db.execSQL("UPDATE call_log SET reasonCode = ${reasonCodeSql("matchReason")}")
+            db.execSQL("UPDATE pending_blocked_call_logs SET reasonCode = ${reasonCodeSql("matchReason")}")
+        }
+    }
+
+private fun reasonCodeSql(column: String): String =
+    """
+    CASE
+        WHEN lower(trim($column)) LIKE 'rcs_%' THEN 'rcs_filter'
+        WHEN lower(trim($column)) LIKE 'category_policy:%' THEN 'category_policy'
+        WHEN lower(trim($column)) LIKE 'database%' THEN 'database'
+        WHEN lower(trim($column)) LIKE 'db_prefix%' THEN 'db_prefix_expansion'
+        WHEN lower(trim($column)) LIKE 'hash_wildcard%' THEN 'hash_wildcard'
+        WHEN lower(trim($column)) LIKE 'wildcard%' THEN 'wildcard'
+        WHEN lower(trim($column)) LIKE 'prefix%' THEN 'prefix'
+        WHEN lower(trim($column)) LIKE 'heuristic%' THEN 'heuristic'
+        WHEN lower(trim($column)) LIKE 'campaign_burst%' THEN 'campaign_burst'
+        WHEN lower(trim($column)) LIKE 'hot_campaign%' THEN 'campaign_burst'
+        WHEN lower(trim($column)) LIKE 'ml_scorer%' THEN 'ml_scorer'
+        WHEN lower(trim($column)) LIKE 'known_spam_domain%' THEN 'spam_domain'
+        WHEN lower(trim($column)) LIKE 'local_spam_domain%' THEN 'spam_domain'
+        WHEN lower(trim($column)) LIKE 'spam_keywords%' THEN 'keyword'
+        WHEN lower(trim($column)) LIKE 'sms_content%' THEN 'sms_content'
+        WHEN lower(trim($column)) LIKE 'sms_burst%' THEN 'sms_burst'
+        WHEN lower(trim($column)) IN (
+            'emergency_floor', 'otp_floor', 'emergency_contact', 'manual_whitelist',
+            'contact_whitelist', 'contacts_only', 'stir_shaken_trusted',
+            'stir_shaken_failed', 'temporary_allow', 'temporary_block',
+            'system_block_list', 'user_blocklist', 'hidden_number',
+            'prefix', 'recently_dialed', 'answered_caller', 'emergency_callback',
+            'repeated_urgent', 'caller_name_trust', 'caller_name', 'region_block',
+            'campaign_recorder', 'time_block', 'frequency', 'push_alert',
+            'sms_context', 'keyword', 'sms_content', 'rcs_filter', 'hot_list',
+            'spam_domain', 'category_policy', 'unknown'
+        ) THEN lower(trim($column))
+        ELSE 'unknown'
+    END
+    """.trimIndent()
+
 @Database(
     entities = [
         SpamNumber::class,
@@ -225,6 +274,7 @@ val MIGRATION_13_14 =
     version = DB_VERSION,
     exportSchema = true,
 )
+@TypeConverters(BlockReasonCodeConverters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun spamDao(): SpamDao
 
@@ -259,6 +309,7 @@ abstract class AppDatabase : RoomDatabase() {
                         ),
                         MIGRATION_12_13,
                         MIGRATION_13_14,
+                        MIGRATION_14_15,
                     ).build()
                     .also { instance = it }
             }

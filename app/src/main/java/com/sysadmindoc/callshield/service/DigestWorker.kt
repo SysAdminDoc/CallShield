@@ -16,6 +16,7 @@ import androidx.work.WorkerParameters
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.CategoryCallPolicy
 import com.sysadmindoc.callshield.data.local.SpamDao
+import com.sysadmindoc.callshield.domain.model.BlockReasonCode
 import com.sysadmindoc.callshield.permissions.CallShieldPermissions
 import com.sysadmindoc.callshield.ui.MainActivity
 import dagger.assisted.Assisted
@@ -43,8 +44,8 @@ class DigestWorker
                 val calls = dao.getBlockedCallCountSince(since)
                 val sms = dao.getBlockedSmsCountSince(since)
 
-                // Source breakdown from matchReason prefix — reads only the
-                // short matchReason column, not full BlockedCall rows.
+                // Source breakdown from the short reasonCode column, not full
+                // BlockedCall rows.
                 val breakdown =
                     dao
                         .getBlockedMatchReasonsSince(since)
@@ -113,12 +114,12 @@ class DigestWorker
             }
 
             private fun matchReasonBucketRaw(reason: String): String =
-                when {
-                    reason.startsWith("database") || reason.startsWith("user_blocklist") -> "database"
-                    reason.startsWith("heuristic") -> "heuristic"
-                    reason.startsWith("ml_scorer") -> "ML"
-                    reason.startsWith("sms_content") || reason.startsWith("keyword") -> "content"
-                    reason.startsWith("rcs_") -> "RCS filter"
+                when (BlockReasonCode.fromStored(reason)) {
+                    BlockReasonCode.DATABASE, BlockReasonCode.USER_BLOCKLIST -> "database"
+                    BlockReasonCode.HEURISTIC -> "heuristic"
+                    BlockReasonCode.ML_SCORER -> "ML"
+                    BlockReasonCode.SMS_CONTENT, BlockReasonCode.KEYWORD -> "content"
+                    BlockReasonCode.RCS_FILTER -> "RCS filter"
                     else -> "other"
                 }
 

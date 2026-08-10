@@ -6,6 +6,8 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.sysadmindoc.callshield.data.model.BlockedCall
 import com.sysadmindoc.callshield.data.model.PendingBlockedCallLog
+import com.sysadmindoc.callshield.domain.model.BlockReasonCode
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -110,5 +112,28 @@ class PendingBlockedCallLogDaoTest {
             val ready = dao.getReadyPendingBlockedCallLogs(now = 10_000L, limit = 10)
             assertEquals(1, ready.size)
             assertEquals(1, ready.single().attempts)
+        }
+
+    @Test
+    fun pendingLogCarriesStableReasonCodeAndRuleIdIntoFinalLog() =
+        runBlocking {
+            val pending =
+                PendingBlockedCallLog(
+                    idempotencyKey = "call:3000:+15550000000:wildcard:90",
+                    number = "+15550000000",
+                    timestamp = 3_000L,
+                    matchReason = "wildcard",
+                    confidence = 90,
+                    ruleId = 23L,
+                )
+
+            dao.insertPendingBlockedCallLog(pending)
+            assertEquals(BlockReasonCode.WILDCARD, dao.getReadyPendingBlockedCallLogs(0L, 10).single().reasonCode)
+            dao.consumePendingBlockedCallLog(pending)
+
+            val finalLog = dao.getBlockedCalls().first().single()
+            assertEquals(BlockReasonCode.WILDCARD, finalLog.reasonCode)
+            assertEquals(23L, finalLog.ruleId)
+            assertEquals(1, dao.getBlockedCallsByReasonCode(BlockReasonCode.WILDCARD).first().size)
         }
 }

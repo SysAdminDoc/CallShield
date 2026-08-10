@@ -61,6 +61,7 @@ class AppDatabaseMigrationTest {
                 migration11To12,
                 MIGRATION_12_13,
                 MIGRATION_13_14,
+                MIGRATION_14_15,
             )
 
         db.assertSingleInt("SELECT COUNT(*) FROM spam_numbers", 1)
@@ -69,7 +70,11 @@ class AppDatabaseMigrationTest {
         db.assertSingleInt("SELECT scheduleStartHour FROM sms_keyword_rules WHERE keyword = 'prize'", 0)
         db.assertHasColumn("hash_wildcard_rules", "scheduleEndHour")
         db.assertHasColumn("call_log", "logKey")
+        db.assertHasColumn("call_log", "reasonCode")
+        db.assertHasColumn("call_log", "ruleId")
         db.assertHasColumn("pending_blocked_call_logs", "idempotencyKey")
+        db.assertHasColumn("pending_blocked_call_logs", "reasonCode")
+        db.assertHasColumn("pending_blocked_call_logs", "ruleId")
         db.assertHasColumn("spam_numbers", "expiresAt")
         db.assertHasColumn("spam_numbers", "evidenceJson")
         db.assertHasColumn("spam_numbers", "evidenceExpiresAt")
@@ -101,6 +106,7 @@ class AppDatabaseMigrationTest {
                 migration11To12,
                 MIGRATION_12_13,
                 MIGRATION_13_14,
+                MIGRATION_14_15,
             )
 
         db.assertSingleInt("SELECT isEmergency FROM whitelist WHERE number = '+15550000003'", 1)
@@ -128,6 +134,7 @@ class AppDatabaseMigrationTest {
                 migration11To12,
                 MIGRATION_12_13,
                 MIGRATION_13_14,
+                MIGRATION_14_15,
             )
 
         db.assertSingleInt(
@@ -160,6 +167,7 @@ class AppDatabaseMigrationTest {
                 migration11To12,
                 MIGRATION_12_13,
                 MIGRATION_13_14,
+                MIGRATION_14_15,
             )
 
         db.assertSingleInt("SELECT scheduleDays FROM wildcard_rules WHERE pattern = '+1666*'", 0)
@@ -190,12 +198,16 @@ class AppDatabaseMigrationTest {
                 migration11To12,
                 MIGRATION_12_13,
                 MIGRATION_13_14,
+                MIGRATION_14_15,
             )
 
         db.assertSingleInt("SELECT COUNT(*) FROM call_log WHERE number = '+17770000001'", 1)
         db.assertHasColumn("call_log", "logKey")
+        db.assertSingleText("SELECT matchReason FROM call_log WHERE number = '+17770000001'", "database")
+        db.assertSingleText("SELECT reasonCode FROM call_log WHERE number = '+17770000001'", "database")
         db.assertHasColumn("pending_blocked_call_logs", "idempotencyKey")
         db.assertHasColumn("pending_blocked_call_logs", "nextAttemptAt")
+        db.assertSingleText("SELECT reasonCode FROM call_log WHERE number = '+17770000001'", "database")
         db.assertHasColumn("spam_numbers", "expiresAt")
         db.assertHasColumn("whitelist", "expiresAt")
         db.close()
@@ -244,6 +256,7 @@ class AppDatabaseMigrationTest {
                 migration11To12,
                 MIGRATION_12_13,
                 MIGRATION_13_14,
+                MIGRATION_14_15,
             )
 
         db.assertSingleInt("SELECT COUNT(*) FROM spam_numbers WHERE number = '+12125551234'", 1)
@@ -253,6 +266,8 @@ class AppDatabaseMigrationTest {
         db.assertSingleInt("SELECT isEmergency FROM whitelist WHERE number = '+14155550100'", 1)
         db.assertSingleText("SELECT number FROM call_log WHERE logKey = 'phone-log'", "+16505550100")
         db.assertSingleText("SELECT number FROM call_log WHERE logKey = 'sender-log'", "BANK-ALERT")
+        db.assertSingleText("SELECT matchReason FROM call_log WHERE logKey = 'phone-log'", "manual")
+        db.assertSingleText("SELECT reasonCode FROM call_log WHERE logKey = 'phone-log'", "unknown")
         db.close()
     }
 

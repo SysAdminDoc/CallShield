@@ -17,6 +17,7 @@ import com.sysadmindoc.callshield.data.model.HashWildcardRule
 import com.sysadmindoc.callshield.data.model.RestoreJournal
 import com.sysadmindoc.callshield.data.model.SmsKeywordRule
 import com.sysadmindoc.callshield.data.model.WildcardRule
+import com.sysadmindoc.callshield.domain.model.BlockReasonCode
 import com.sysadmindoc.callshield.util.filterAsciiDigits
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -42,7 +43,8 @@ import java.io.File
  *   notification-screening apps.
  * - **v6**: preserves per-category call actions.
  * - **v7**: preserves the privacy-safe keys for selected contact-group scope.
- *   The reader accepts v1-v7; the writer emits v7.
+ * - **v8**: includes stable block reason codes and deciding rule IDs in logs.
+ *   The reader accepts v1-v8; the writer emits v8.
  *   Older backups that don't carry schedule fields are restored with
  *   all-zeros — the Kotlin defaults on [WildcardRule] and
  *   [SmsKeywordRule] treat that as "always active", preserving
@@ -54,7 +56,7 @@ object BackupRestore {
 
     /** Length cap for a non-numeric log sender identity kept verbatim on restore. */
     private const val MAX_LOG_IDENTITY_LEN = 64
-    private const val CURRENT_BACKUP_VERSION = 7
+    private const val CURRENT_BACKUP_VERSION = 8
     private const val OLDEST_SUPPORTED_VERSION = 1
     internal const val MAX_BACKUP_RESTORE_ROWS = MAX_IMPORT_ROWS
 
@@ -201,8 +203,11 @@ object BackupRestore {
         val isCall: Boolean = true,
         val smsBody: String? = null,
         val matchReason: String = "",
+        /** Stable wire value; matchReason remains only for backward-compatible round trips. */
+        val reasonCode: String = "",
         val confidence: Int = 100,
         val logKey: String? = null,
+        val ruleId: Long? = null,
     )
 
     enum class RestoreMode { MERGE, REPLACE }
@@ -374,8 +379,10 @@ object BackupRestore {
                             isCall = it.isCall,
                             smsBody = it.smsBody,
                             matchReason = it.matchReason,
+                            reasonCode = it.reasonCode.wireValue,
                             confidence = it.confidence,
                             logKey = it.logKey,
+                            ruleId = it.ruleId,
                         )
                     }
                 } else {
@@ -797,8 +804,10 @@ object BackupRestore {
                                 isCall = log.isCall,
                                 smsBody = log.smsBody,
                                 matchReason = log.matchReason,
+                                reasonCode = BlockReasonCode.fromStored(log.reasonCode.ifBlank { log.matchReason }),
                                 confidence = log.confidence,
                                 logKey = log.logKey,
+                                ruleId = log.ruleId,
                             ),
                         )
                         logsRestored++
@@ -994,8 +1003,10 @@ object BackupRestore {
                             isCall = log.isCall,
                             smsBody = log.smsBody,
                             matchReason = log.matchReason.trim(),
+                            reasonCode = BlockReasonCode.fromStored(log.reasonCode.ifBlank { log.matchReason }).wireValue,
                             confidence = log.confidence.coerceIn(0, 100),
                             logKey = log.logKey?.trim()?.ifBlank { null },
+                            ruleId = log.ruleId,
                         )
                     }
                 } else {

@@ -11,9 +11,11 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ViewList
@@ -43,6 +45,7 @@ import com.sysadmindoc.callshield.data.PhoneFormatter
 import com.sysadmindoc.callshield.data.SmsBodyRedactor
 import com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup
 import com.sysadmindoc.callshield.data.model.BlockedCall
+import com.sysadmindoc.callshield.domain.model.BlockReasonCode
 import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.TemporaryDecisionDuration
 import com.sysadmindoc.callshield.ui.TemporaryDecisionMenu
@@ -63,16 +66,33 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
     val resources = LocalResources.current
     val blockedCalls by viewModel.blockedCalls.collectAsStateWithLifecycle()
     var filterMode by rememberSaveable { mutableIntStateOf(0) }
+    var selectedReasonCodeWire by rememberSaveable { mutableStateOf("") }
+    var showReasonMenu by rememberSaveable { mutableStateOf(false) }
     var grouped by rememberSaveable { mutableStateOf(false) }
     val snackbarHost = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     var showClearDialog by rememberSaveable { mutableStateOf(false) }
+    val selectedReasonCode = BlockReasonCode.fromStored(selectedReasonCodeWire).takeIf { selectedReasonCodeWire.isNotBlank() }
+    val availableReasonCodes =
+        remember(blockedCalls) {
+            blockedCalls
+                .asSequence()
+                .map { it.reasonCode }
+                .filterNot { it == BlockReasonCode.UNKNOWN }
+                .distinct()
+                .sortedBy { it.wireValue }
+                .toList()
+        }
 
     val filtered =
-        when (filterMode) {
-            1 -> blockedCalls.filter { it.isCall }
-            2 -> blockedCalls.filter { !it.isCall }
-            else -> blockedCalls
+        blockedCalls.filter { call ->
+            val mediaMatches =
+                when (filterMode) {
+                    1 -> call.isCall
+                    2 -> !call.isCall
+                    else -> true
+                }
+            mediaMatches && (selectedReasonCode == null || call.reasonCode == selectedReasonCode)
         }
 
     // Grouped view: collapse by number
@@ -155,6 +175,56 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
                 }
             }
 
+            if (availableReasonCodes.isNotEmpty()) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Box {
+                        FilterChip(
+                            selected = selectedReasonCode != null,
+                            onClick = { showReasonMenu = true },
+                            label = {
+                                Text(
+                                    selectedReasonCode?.let { friendlyMatchReasonLabel(it.wireValue) }
+                                        ?: stringResource(R.string.blocked_log_filter_reason),
+                                )
+                            },
+                            shape = RoundedCornerShape(8.dp),
+                            colors =
+                                FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = SurfaceBright,
+                                    selectedLabelColor = CatGreen,
+                                    containerColor = Color.Transparent,
+                                    labelColor = CatSubtext,
+                                ),
+                            border = null,
+                        )
+                        DropdownMenu(
+                            expanded = showReasonMenu,
+                            onDismissRequest = { showReasonMenu = false },
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.blocked_log_filter_all_reasons)) },
+                                onClick = {
+                                    selectedReasonCodeWire = ""
+                                    showReasonMenu = false
+                                },
+                            )
+                            availableReasonCodes.forEach { reasonCode ->
+                                DropdownMenuItem(
+                                    text = { Text(friendlyMatchReasonLabel(reasonCode.wireValue)) },
+                                    onClick = {
+                                        selectedReasonCodeWire = reasonCode.wireValue
+                                        showReasonMenu = false
+                                    },
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
             if (filtered.isEmpty()) {
                 BlockedLogEmptyState(
                     title =
@@ -175,7 +245,10 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
                         if (blockedCalls.isEmpty()) {
                             null
                         } else {
-                            { filterMode = 0 }
+                            {
+                                filterMode = 0
+                                selectedReasonCodeWire = ""
+                            }
                         },
                 )
             } else if (grouped && groupedList != null) {
@@ -540,15 +613,17 @@ fun BlockedCallItem(
                         Text(dateFormat.format(Date(call.timestamp)), style = MaterialTheme.typography.bodySmall, color = CatSubtext)
                         if (location != null) Text(location, style = MaterialTheme.typography.labelSmall, color = CatOverlay)
                     }
-                    if (call.matchReason.isNotEmpty()) {
+                    if (call.reasonCode != BlockReasonCode.UNKNOWN) {
+                        val reasonSource =
+                            if (call.reasonCode == BlockReasonCode.CATEGORY_POLICY) call.matchReason else call.reasonCode.wireValue
                         val categoryPolicy =
-                            remember(call.matchReason) {
+                            remember(call.reasonCode, call.matchReason) {
                                 com.sysadmindoc.callshield.data.CategoryCallPolicy
-                                    .parseMatchSource(call.matchReason)
+                                    .parseMatchSource(reasonSource)
                             }
                         val reasonText =
                             if (categoryPolicy == null) {
-                                friendlyMatchReasonLabel(call.matchReason)
+                                friendlyMatchReasonLabel(call.reasonCode.wireValue)
                             } else {
                                 stringResource(
                                     R.string.detail_category_action_source,
@@ -566,9 +641,9 @@ fun BlockedCallItem(
                         // Falls back silently to just the raw reason if the
                         // resolver lands on Unknown — no noise, no mislabels.
                         val category =
-                            remember(call.matchReason, call.type, call.confidence) {
+                            remember(call.reasonCode, reasonSource, call.type, call.confidence) {
                                 com.sysadmindoc.callshield.data.CallCategoryResolver.resolveFromLog(
-                                    matchReason = call.matchReason,
+                                    matchReason = reasonSource,
                                     type = call.type,
                                     description = "",
                                     confidence = call.confidence,
@@ -733,9 +808,9 @@ fun GroupedCallItem(
                         color = CatSubtext,
                     )
                 }
-                if (call.matchReason.isNotEmpty()) {
+                if (call.reasonCode != BlockReasonCode.UNKNOWN) {
                     Text(
-                        friendlyMatchReasonLabel(call.matchReason),
+                        friendlyMatchReasonLabel(call.reasonCode.wireValue),
                         style = MaterialTheme.typography.labelSmall,
                         color = CatPeach,
                     )

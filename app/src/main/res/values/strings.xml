@@ -141,6 +141,8 @@
     <string name="blocked_log_filter_all">All (%d)</string>
     <string name="blocked_log_filter_calls">Calls</string>
     <string name="blocked_log_filter_sms">Texts</string>
+    <string name="blocked_log_filter_reason">Reason</string>
+    <string name="blocked_log_filter_all_reasons">All reasons</string>
     <string name="blocked_log_empty_all_title">No blocked activity</string>
     <string name="blocked_log_empty_all_body">Blocked calls and texts will appear here.</string>
     <string name="blocked_log_empty_filter_title">Nothing matches this filter</string>
@@ -734,6 +736,8 @@
     <string name="stats_reason_repeat_caller">Repeat caller rule</string>
     <string name="stats_reason_quiet_hours">Quiet hours</string>
     <string name="stats_reason_manual_block">Manual block</string>
+    <string name="stats_reason_category_policy">Category policy</string>
+    <string name="stats_reason_hidden_number">Hidden number</string>
     <string name="stats_reason_emergency_floor">Emergency safety floor</string>
     <string name="stats_reason_otp_floor">Verification safety floor</string>
     <string name="stats_reason_unknown">Unknown</string>

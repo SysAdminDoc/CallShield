@@ -14,6 +14,7 @@ import com.sysadmindoc.callshield.data.model.SpamNumber
 import com.sysadmindoc.callshield.data.model.WhitelistEntry
 import com.sysadmindoc.callshield.data.model.WildcardRule
 import com.sysadmindoc.callshield.data.resolveSpamNumberForWhitelist
+import com.sysadmindoc.callshield.domain.model.BlockReasonCode
 import com.sysadmindoc.callshield.service.NotificationHelper
 import com.sysadmindoc.callshield.ui.widget.CallShieldWidget
 import com.sysadmindoc.callshield.util.filterAsciiDigits
@@ -215,6 +216,7 @@ class BlocklistRepository(
         confidence: Int = 100,
         timestamp: Long = System.currentTimeMillis(),
         logKey: String? = null,
+        ruleId: Long? = null,
     ) {
         val normalizedNumber = normalizeLogIdentity(number)
         val inserted =
@@ -227,6 +229,8 @@ class BlocklistRepository(
                     matchReason = matchReason,
                     confidence = confidence,
                     logKey = logKey,
+                    ruleId = ruleId,
+                    reasonCode = BlockReasonCode.fromMatchSource(matchReason),
                 ),
             )
         if (inserted == -1L) return
@@ -246,6 +250,7 @@ class BlocklistRepository(
         type: String = "safety_floor",
         confidence: Int = 100,
         timestamp: Long = System.currentTimeMillis(),
+        ruleId: Long? = null,
     ) {
         val normalizedNumber = normalizeLogIdentity(number)
         val inserted =
@@ -259,6 +264,8 @@ class BlocklistRepository(
                     smsBody = smsBody,
                     matchReason = matchReason,
                     confidence = confidence,
+                    ruleId = ruleId,
+                    reasonCode = BlockReasonCode.fromMatchSource(matchReason),
                 ),
             )
         if (inserted != -1L) CallShieldWidget.refreshAll(context)
@@ -272,6 +279,7 @@ class BlocklistRepository(
         matchReason: String = "",
         confidence: Int = 100,
         timestamp: Long = System.currentTimeMillis(),
+        ruleId: Long? = null,
     ) {
         dao.insertPendingBlockedCallLog(
             PendingBlockedCallLog(
@@ -282,6 +290,8 @@ class BlocklistRepository(
                 smsBody = smsBody,
                 matchReason = matchReason,
                 confidence = confidence,
+                ruleId = ruleId,
+                reasonCode = BlockReasonCode.fromMatchSource(matchReason),
             ),
         )
     }
@@ -331,10 +341,14 @@ class BlocklistRepository(
                 matchReason = call.matchReason,
                 confidence = call.confidence,
                 logKey = call.logKey,
+                ruleId = call.ruleId,
+                reasonCode = call.reasonCode,
             ),
         )
 
     fun getBlockedCalls(): Flow<List<BlockedCall>> = dao.getBlockedCalls()
+
+    fun getBlockedCallsByReasonCode(reasonCode: BlockReasonCode): Flow<List<BlockedCall>> = dao.getBlockedCallsByReasonCode(reasonCode)
 
     fun getBlockedCallsOnly(): Flow<List<BlockedCall>> = dao.getBlockedCallsOnly()
 

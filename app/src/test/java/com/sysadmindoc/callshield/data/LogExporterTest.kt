@@ -141,6 +141,8 @@ class LogExporterTest {
         assertFalse(csv.contains("Your reset code"))
         assertFalse(csv.contains("987654"))
         assertFalse(csv.contains("token=secret"))
+        assertTrue(csv.startsWith("Number,Date,Type,IsCall,ReasonCode,RuleId,Confidence,SMSBody\n"))
+        assertTrue(csv.contains("sms_content"))
     }
 
     // ── csvEscape: spreadsheet formula-injection neutralization ──────────
@@ -222,6 +224,7 @@ class LogExporterTest {
                         wasBlocked = true,
                         matchReason = "user_blocklist",
                         smsBody = "secret code 1234",
+                        ruleId = 17L,
                     ),
                     BlockedCall(
                         number = "+12125550101",
@@ -241,9 +244,10 @@ class LogExporterTest {
                 ),
             )
 
-        assertTrue(csv.startsWith("Date,Time,CallingNumber,Reason\n"))
+        assertTrue(csv.startsWith("Date,Time,CallingNumber,ReasonCode,RuleId\n"))
         assertTrue(csv.contains("+12125550100"))
         assertTrue(csv.contains("user_blocklist"))
+        assertTrue(csv.contains("\"user_blocklist\",17"))
         assertFalse(csv.contains("+12125550101"))
         assertFalse(csv.contains("+12125550102"))
         assertFalse(csv.contains("secret code"))
