@@ -9,6 +9,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import com.sysadmindoc.callshield.data.CallCategory
 import com.sysadmindoc.callshield.data.CategoryCallAction
+import com.sysadmindoc.callshield.ui.runStrictAccessibilityChecks
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -27,6 +28,8 @@ class CategoryCallActionsSheetTest {
                 onDismiss = {},
             )
         }
+
+        composeRule.runStrictAccessibilityChecks()
 
         composeRule.onNodeWithText("Emergency contacts and manually trusted numbers", substring = true).assertIsDisplayed()
         composeRule

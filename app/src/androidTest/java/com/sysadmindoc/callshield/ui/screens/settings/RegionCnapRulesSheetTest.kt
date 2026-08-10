@@ -8,6 +8,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextReplacement
+import com.sysadmindoc.callshield.ui.runStrictAccessibilityChecks
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -31,6 +32,8 @@ class RegionCnapRulesSheetTest {
                 onDismiss = {},
             )
         }
+
+        composeRule.runStrictAccessibilityChecks()
 
         composeRule.onNodeWithTag(REGION_RULES_ENABLED_TAG).assertIsOn()
         composeRule.onNodeWithTag(REGION_RULES_CODES_TAG).performTextReplacement("ny, NJ")

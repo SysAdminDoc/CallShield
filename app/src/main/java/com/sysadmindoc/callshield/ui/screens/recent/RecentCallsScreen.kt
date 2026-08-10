@@ -37,6 +37,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -437,6 +439,12 @@ fun RecentCallItem(
             CallLog.Calls.VOICEMAIL_TYPE -> CatSubtext
             else -> CatSubtext
         }
+    val riskDescription =
+        when {
+            call.contactName != null -> stringResource(R.string.recent_summary_known)
+            call.isSpam -> stringResource(R.string.recent_summary_spam)
+            else -> stringResource(R.string.stats_unknown_caller)
+        }
 
     // Left accent bar color: calls get CatBlue, SMS-related types could be CatMauve
     // Since RecentCall represents call log entries, we use CatBlue for calls
@@ -483,7 +491,14 @@ fun RecentCallItem(
                             call.isSpam -> CatRed
                             else -> CatYellow
                         }
-                    Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(riskColor))
+                    Box(
+                        modifier =
+                            Modifier
+                                .size(8.dp)
+                                .clip(CircleShape)
+                                .background(riskColor)
+                                .semantics { contentDescription = riskDescription },
+                    )
                     Spacer(Modifier.width(8.dp))
                     Icon(typeIcon, typeDescription, tint = typeColor, modifier = Modifier.size(24.dp))
                     Spacer(Modifier.width(8.dp))
