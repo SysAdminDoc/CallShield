@@ -60,6 +60,10 @@ All notable changes to CallShield will be documented in this file.
   never assumes cross-app broadcast ordering or promises inbox suppression,
   while the permission and onboarding surfaces explain the default SMS app's
   delivery authority.
+- Android 15–17 message evidence health now records redacted, delayed,
+  sender-only, and unsupported SMS/notification states without message bodies;
+  Settings and Protection Test show degraded mode while sender and URL checks
+  continue when content is available.
 - Call screening responses now pass through a single-response gate and still
   fail open on timeout or cancellation, with direct-boot, lazy-start, missing
   number, and error paths covered by Robolectric tests.

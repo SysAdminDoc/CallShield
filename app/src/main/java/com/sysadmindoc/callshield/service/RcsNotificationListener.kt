@@ -3,10 +3,12 @@ package com.sysadmindoc.callshield.service
 import android.app.Notification
 import android.app.Person
 import android.content.ComponentName
+import android.os.Build
 import android.os.Bundle
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import androidx.datastore.preferences.core.Preferences
+import com.sysadmindoc.callshield.data.MessageCapabilityDetector
 import com.sysadmindoc.callshield.data.NotificationScreeningCategory
 import com.sysadmindoc.callshield.data.NotificationScreeningSource
 import com.sysadmindoc.callshield.data.NotificationScreeningSources
@@ -187,10 +189,46 @@ class RcsNotificationListener : NotificationListenerService() {
         if (!isNotificationScreeningEnabled(prefs)) return
         val spamBlockingEnabled = isSpamBlockingEnabled(prefs)
 
-        val extras = sbn.notification.extras ?: return
+        val observedAtMillis = System.currentTimeMillis()
+        val extras = sbn.notification.extras
+        if (extras == null) {
+            repo.recordMessageCapability(
+                MessageCapabilityDetector.classifyNotification(
+                    apiLevel = Build.VERSION.SDK_INT,
+                    notificationAccessGranted = true,
+                    senderPresent = false,
+                    bodyPresent = false,
+                    redactionSuspected = false,
+                    latencyMillis =
+                        MessageCapabilityDetector.latencyMillis(
+                            sourceTimestampMillis = sbn.postTime,
+                            observedAtMillis = observedAtMillis,
+                        ),
+                    observedAtMillis = observedAtMillis,
+                ),
+            )
+            return
+        }
 
         val sender = extras.getCharSequence(Notification.EXTRA_TITLE)?.toString() ?: ""
         val body = extras.getCharSequence(Notification.EXTRA_TEXT)?.toString() ?: ""
+        val effectiveBody = bodyForAnalysis(body)
+        val bodyAvailable = effectiveBody != null
+        repo.recordMessageCapability(
+            MessageCapabilityDetector.classifyNotification(
+                apiLevel = Build.VERSION.SDK_INT,
+                notificationAccessGranted = true,
+                senderPresent = sender.isNotBlank(),
+                bodyPresent = bodyAvailable,
+                redactionSuspected = body.isNotBlank() && effectiveBody == null,
+                latencyMillis =
+                    MessageCapabilityDetector.latencyMillis(
+                        sourceTimestampMillis = sbn.postTime,
+                        observedAtMillis = observedAtMillis,
+                    ),
+                observedAtMillis = observedAtMillis,
+            ),
+        )
 
         if (sender.isEmpty()) return
 
@@ -199,7 +237,6 @@ class RcsNotificationListener : NotificationListenerService() {
         // placeholder, fall back to sender-number-only analysis (database +
         // heuristics, no content rules). GSMA UP 3.0/4.0 MLS encryption
         // will progressively make RCS notification bodies opaque.
-        val effectiveBody = body.takeIf { it.isNotBlank() && !isEncryptedPlaceholder(it) }
         val result =
             senderDigits
                 .takeIf { spamBlockingEnabled && it.length >= 7 }
@@ -367,6 +404,9 @@ class RcsNotificationListener : NotificationListenerService() {
                 reason = analysis.reasons.joinToString(", ") { it.replace('_', ' ') },
             )
         }
+
+        /** Return real content only; encrypted/empty placeholders stay sender-only. */
+        internal fun bodyForAnalysis(body: String): String? = body.takeIf { it.isNotBlank() && !isEncryptedPlaceholder(it) }
 
         /** Longest body still treated as a possible encryption placeholder. */
         private const val MAX_PLACEHOLDER_LEN = 48

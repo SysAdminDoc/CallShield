@@ -57,6 +57,8 @@ import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.BackupRestore
 import com.sysadmindoc.callshield.data.CallCategory
 import com.sysadmindoc.callshield.data.CategoryCallAction
+import com.sysadmindoc.callshield.data.MessageCapabilityState
+import com.sysadmindoc.callshield.data.MessageCapabilityStatus
 import com.sysadmindoc.callshield.data.PortableBackupCrypto
 import com.sysadmindoc.callshield.data.model.ExternalBlocklistPreview
 import com.sysadmindoc.callshield.data.model.ExternalBlocklistSubscription
@@ -141,6 +143,8 @@ fun SettingsScreen(viewModel: MainViewModel) {
     val freqThreshold by viewModel.freqThreshold.collectAsStateWithLifecycle()
     val mlScorer by viewModel.mlScorerEnabled.collectAsStateWithLifecycle()
     val rcsFilter by viewModel.rcsFilterEnabled.collectAsStateWithLifecycle()
+    val smsMessageCapabilityStatus by viewModel.smsMessageCapabilityStatus.collectAsStateWithLifecycle()
+    val notificationMessageCapabilityStatus by viewModel.notificationMessageCapabilityStatus.collectAsStateWithLifecycle()
     val postCallScreen by viewModel.postCallScreenEnabled.collectAsStateWithLifecycle()
     val notificationScreeningPackages by viewModel.notificationScreeningPackages.collectAsStateWithLifecycle()
     val silentVoicemail by viewModel.silentVoicemailEnabled.collectAsStateWithLifecycle()
@@ -413,6 +417,10 @@ fun SettingsScreen(viewModel: MainViewModel) {
             SettingsToggle(stringResource(R.string.settings_block_spam_calls), stringResource(R.string.settings_block_spam_calls_desc), Icons.Default.PhoneDisabled, blockCalls) { viewModel.setBlockCalls(it) }
             GradientDivider()
             SettingsToggle(stringResource(R.string.settings_block_spam_sms), stringResource(R.string.settings_block_spam_sms_desc), Icons.Default.SpeakerNotesOff, blockSms) { viewModel.setBlockSms(it) }
+            MessageCapabilityStatusRow(
+                title = stringResource(R.string.settings_sms_capability_status),
+                status = smsMessageCapabilityStatus,
+            )
             GradientDivider()
             SettingsToggle(stringResource(R.string.settings_block_unknown), stringResource(R.string.settings_block_unknown_desc), Icons.Default.QuestionMark, blockUnknown) { viewModel.setBlockUnknown(it) }
             GradientDivider()
@@ -629,6 +637,10 @@ fun SettingsScreen(viewModel: MainViewModel) {
             GradientDivider()
             SettingsToggle(stringResource(R.string.settings_rcs_filter), stringResource(R.string.settings_rcs_filter_desc), Icons.Default.MarkChatRead, rcsFilter) { viewModel.setRcsFilter(it) }
             if (rcsFilter) {
+                MessageCapabilityStatusRow(
+                    title = stringResource(R.string.settings_notification_capability_status),
+                    status = notificationMessageCapabilityStatus,
+                )
                 Spacer(Modifier.height(4.dp))
                 PremiumActionButton(
                     label = stringResource(R.string.settings_notification_screening_sources),
@@ -1153,6 +1165,69 @@ fun SettingsScreen(viewModel: MainViewModel) {
                 }
             },
         )
+    }
+}
+
+@Composable
+private fun MessageCapabilityStatusRow(
+    title: String,
+    status: MessageCapabilityStatus,
+) {
+    val detailRes =
+        when (status.state) {
+            MessageCapabilityState.NOT_OBSERVED -> {
+                R.string.settings_capability_not_observed
+            }
+
+            MessageCapabilityState.FULL_CONTENT -> {
+                if (status.smsOrderingAdvisory) {
+                    R.string.settings_capability_full_sms_advisory
+                } else {
+                    R.string.settings_capability_full
+                }
+            }
+
+            MessageCapabilityState.SENDER_ONLY -> {
+                R.string.settings_capability_sender_only
+            }
+
+            MessageCapabilityState.BODY_REDACTED -> {
+                R.string.settings_capability_redacted
+            }
+
+            MessageCapabilityState.DELAYED -> {
+                R.string.settings_capability_delayed
+            }
+
+            MessageCapabilityState.UNSUPPORTED -> {
+                R.string.settings_capability_unsupported
+            }
+        }
+    val tint =
+        when {
+            status.isDegraded -> CatPeach
+            status.state == MessageCapabilityState.FULL_CONTENT -> CatGreen
+            else -> CatSubtext
+        }
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        PremiumIconTile(
+            icon = if (status.isDegraded) Icons.Default.Warning else Icons.Default.Info,
+            color = tint,
+            size = 30.dp,
+            iconSize = 16.dp,
+        )
+        Spacer(Modifier.width(10.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+            Text(
+                stringResource(detailRes),
+                style = MaterialTheme.typography.labelSmall,
+                color = tint,
+            )
+        }
     }
 }
 

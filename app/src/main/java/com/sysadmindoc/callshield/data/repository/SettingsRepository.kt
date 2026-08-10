@@ -1,5 +1,6 @@
 package com.sysadmindoc.callshield.data.repository
 
+import android.os.Build
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
@@ -12,6 +13,8 @@ import com.sysadmindoc.callshield.data.CallbackDetector
 import com.sysadmindoc.callshield.data.CategoryCallAction
 import com.sysadmindoc.callshield.data.CategoryCallPolicy
 import com.sysadmindoc.callshield.data.ContactGroupCatalog
+import com.sysadmindoc.callshield.data.MessageCapabilitySource
+import com.sysadmindoc.callshield.data.MessageCapabilityStatus
 import com.sysadmindoc.callshield.data.NotificationScreeningSources
 import com.sysadmindoc.callshield.data.RegionRules
 import com.sysadmindoc.callshield.data.SpamRepository
@@ -152,6 +155,28 @@ class SettingsRepository(
     val pushAlertEnabled: Flow<Boolean> = dataStore.data.map { it[SpamRepository.KEY_PUSH_ALERT] ?: true }
     val pushAlertDisabledPackages: Flow<Set<String>> =
         dataStore.data.map { it[SpamRepository.KEY_PUSH_ALERT_DISABLED] ?: emptySet() }
+    internal val smsMessageCapabilityStatus: Flow<MessageCapabilityStatus> =
+        dataStore.data.map { prefs ->
+            MessageCapabilityStatus.decode(
+                source = MessageCapabilitySource.SMS_BROADCAST,
+                stateName = prefs[SpamRepository.KEY_SMS_CAPABILITY_STATE],
+                apiLevel = prefs[SpamRepository.KEY_SMS_CAPABILITY_API],
+                observedAtMillis = prefs[SpamRepository.KEY_SMS_CAPABILITY_OBSERVED_AT],
+                latencyMillis = prefs[SpamRepository.KEY_SMS_CAPABILITY_LATENCY],
+                currentApiLevel = Build.VERSION.SDK_INT,
+            )
+        }
+    internal val notificationMessageCapabilityStatus: Flow<MessageCapabilityStatus> =
+        dataStore.data.map { prefs ->
+            MessageCapabilityStatus.decode(
+                source = MessageCapabilitySource.NOTIFICATION_LISTENER,
+                stateName = prefs[SpamRepository.KEY_NOTIFICATION_CAPABILITY_STATE],
+                apiLevel = prefs[SpamRepository.KEY_NOTIFICATION_CAPABILITY_API],
+                observedAtMillis = prefs[SpamRepository.KEY_NOTIFICATION_CAPABILITY_OBSERVED_AT],
+                latencyMillis = prefs[SpamRepository.KEY_NOTIFICATION_CAPABILITY_LATENCY],
+                currentApiLevel = Build.VERSION.SDK_INT,
+            )
+        }
     val lastSyncTimestamp: Flow<Long> = dataStore.data.map { it[SpamRepository.KEY_LAST_SYNC] ?: 0L }
     val lastSyncSource: Flow<String> = dataStore.data.map { it[SpamRepository.KEY_LAST_SYNC_SOURCE] ?: "" }
     val activeProfileName: Flow<String?> = dataStore.data.map { it[SpamRepository.KEY_ACTIVE_PROFILE] }
@@ -213,6 +238,36 @@ class SettingsRepository(
     suspend fun setSilentVoicemail(enabled: Boolean) = dataStore.edit { it[SpamRepository.KEY_SILENT_VOICEMAIL] = enabled }
 
     suspend fun setPushAlert(enabled: Boolean) = dataStore.edit { it[SpamRepository.KEY_PUSH_ALERT] = enabled }
+
+    internal suspend fun recordMessageCapability(status: MessageCapabilityStatus) =
+        dataStore.edit { prefs ->
+            val keys =
+                when (status.source) {
+                    MessageCapabilitySource.SMS_BROADCAST -> {
+                        CapabilityPreferenceKeys(
+                            state = SpamRepository.KEY_SMS_CAPABILITY_STATE,
+                            api = SpamRepository.KEY_SMS_CAPABILITY_API,
+                            observedAt = SpamRepository.KEY_SMS_CAPABILITY_OBSERVED_AT,
+                            latency = SpamRepository.KEY_SMS_CAPABILITY_LATENCY,
+                        )
+                    }
+
+                    MessageCapabilitySource.NOTIFICATION_LISTENER -> {
+                        CapabilityPreferenceKeys(
+                            state = SpamRepository.KEY_NOTIFICATION_CAPABILITY_STATE,
+                            api = SpamRepository.KEY_NOTIFICATION_CAPABILITY_API,
+                            observedAt = SpamRepository.KEY_NOTIFICATION_CAPABILITY_OBSERVED_AT,
+                            latency = SpamRepository.KEY_NOTIFICATION_CAPABILITY_LATENCY,
+                        )
+                    }
+                }
+            prefs[keys.state] = status.state.name
+            prefs[keys.api] = status.apiLevel.coerceIn(1, 1_000)
+            prefs[keys.observedAt] = status.observedAtMillis.coerceAtLeast(0L)
+            status.latencyMillis?.let { latency ->
+                prefs[keys.latency] = latency.coerceAtLeast(0L)
+            } ?: prefs.remove(keys.latency)
+        }
 
     suspend fun togglePushAlertPackage(
         pkg: String,
@@ -472,6 +527,13 @@ class SettingsRepository(
             .getOrDefault(emptyList())
             .filter { it.id.isNotBlank() && it.url.isNotBlank() }
     }
+
+    private data class CapabilityPreferenceKeys(
+        val state: androidx.datastore.preferences.core.Preferences.Key<String>,
+        val api: androidx.datastore.preferences.core.Preferences.Key<Int>,
+        val observedAt: androidx.datastore.preferences.core.Preferences.Key<Long>,
+        val latency: androidx.datastore.preferences.core.Preferences.Key<Long>,
+    )
 }
 
 internal const val ANSWERED_CALLER_THRESHOLD_MIN = 1
