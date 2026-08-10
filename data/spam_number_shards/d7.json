@@ -1,0 +1,2217 @@
+{
+  "shard_id": "d7",
+  "numbers": [
+    {
+      "number": "+12012975449",
+      "type": "robocall",
+      "reports": 4,
+      "first_seen": "2015-01-07",
+      "last_seen": "2015-08-29",
+      "description": "FCC: Robocalls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+12015598826",
+      "type": "robocall",
+      "reports": 4,
+      "first_seen": "2022-11-05",
+      "last_seen": "2022-11-09",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+12017338052",
+      "type": "robocall",
+      "reports": 3,
+      "first_seen": "2022-08-26",
+      "last_seen": "2022-11-07",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+12019424396",
+      "type": "robocall",
+      "reports": 3,
+      "first_seen": "2015-03-27",
+      "last_seen": "2015-04-01",
+      "description": "FCC advertiser: Robocalls; FCC caller ID: Robocalls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+12024700159",
+      "type": "robocall",
+      "reports": 4,
+      "first_seen": "2015-07-10",
+      "last_seen": "2015-07-20",
+      "description": "FCC: Telemarketing (inclu",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+12025596602",
+      "type": "robocall",
+      "reports": 6,
+      "first_seen": "2015-07-03",
+      "last_seen": "2015-09-10",
+      "description": "FCC: Telemarketing (inclu",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+12027666704",
+      "type": "robocall",
+      "reports": 6,
+      "first_seen": "2016-02-08",
+      "last_seen": "2016-02-09",
+      "description": "FCC: Robocalls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+12027952235",
+      "type": "robocall",
+      "reports": 9,
+      "first_seen": "2018-02-13",
+      "last_seen": "2018-02-26",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+12028640214",
+      "type": "robocall",
+      "reports": 2,
+      "first_seen": "2016-06-10",
+      "last_seen": "2016-06-10",
+      "description": "FCC caller ID: Robocalls; FCC advertiser: Robocalls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+12028641183",
+      "type": "robocall",
+      "reports": 48,
+      "first_seen": "2015-05-06",
+      "last_seen": "2026-08-01",
+      "description": "FCC: Telemarketing (inclu",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+12028667291",
+      "type": "robocall",
+      "reports": 10,
+      "first_seen": "2018-02-20",
+      "last_seen": "2018-03-21",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+12029823841",
+      "type": "robocall",
+      "reports": 3,
+      "first_seen": "2024-11-17",
+      "last_seen": "2024-12-12",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+12053522581",
+      "type": "robocall",
+      "reports": 4,
+      "first_seen": "2018-11-20",
+      "last_seen": "2018-11-26",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+12056320015",
+      "type": "robocall",
+      "reports": 88,
+      "first_seen": "2015-01-21",
+      "last_seen": "2015-03-10",
+      "description": "FCC: Robocalls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+12062380197",
+      "type": "robocall",
+      "reports": 3,
+      "first_seen": "2016-09-06",
+      "last_seen": "2016-09-19",
+      "description": "FCC: Robocalls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+12064560188",
+      "type": "robocall",
+      "reports": 4,
+      "first_seen": "2016-08-11",
+      "last_seen": "2016-08-12",
+      "description": "FCC caller ID: Robocalls; FCC advertiser: Telemarketing (including do not call and spoofing); FCC caller ID: Telemarketing (including do not call and spoofing)",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+12067929779",
+      "type": "robocall",
+      "reports": 2,
+      "first_seen": "2015-07-16",
+      "last_seen": "2015-07-16",
+      "description": "FCC caller ID: Robocalls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+12068233339",
+      "type": "robocall",
+      "reports": 4,
+      "first_seen": "2016-05-26",
+      "last_seen": "2016-06-15",
+      "description": "FCC advertiser: Robocalls; FCC advertiser: Telemarketing (including do not call and spoofing); FCC caller ID: Telemarketing (including do not call and spoofing)",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+12068233819",
+      "type": "robocall",
+      "reports": 3,
+      "first_seen": "2016-06-03",
+      "last_seen": "2016-06-03",
+      "description": "FCC caller ID: Robocalls; FCC advertiser: Robocalls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+12083692525",
+      "type": "robocall",
+      "reports": 3,
+      "first_seen": "2022-03-31",
+      "last_seen": "2022-05-03",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+12086001035",
+      "type": "robocall",
+      "reports": 4,
+      "first_seen": "2016-11-08",
+      "last_seen": "2016-11-10",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+12127845630",
+      "type": "telemarketer",
+      "reports": 2,
+      "first_seen": "2015-03-11",
+      "last_seen": "2015-03-11",
+      "description": "FCC caller ID: Telemarketing (including do not call and spoofing)",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+12143066695",
+      "type": "robocall",
+      "reports": 6,
+      "first_seen": "2015-05-05",
+      "last_seen": "2016-06-24",
+      "description": "FCC: Telemarketing (inclu",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+12152000000",
+      "type": "robocall",
+      "reports": 3,
+      "first_seen": "2018-01-30",
+      "last_seen": "2020-12-06",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+12152406550",
+      "type": "robocall",
+      "reports": 2,
+      "first_seen": "2016-09-08",
+      "last_seen": "2016-09-08",
+      "description": "FCC caller ID: Robocalls; FCC caller ID: Telemarketing (including do not call and spoofing)",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+12154868356",
+      "type": "robocall",
+      "reports": 2,
+      "first_seen": "2022-06-15",
+      "last_seen": "2022-08-29",
+      "description": "FCC caller ID: Unwanted Calls; FCC advertiser: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+12172820165",
+      "type": "robocall",
+      "reports": 4,
+      "first_seen": "2020-06-17",
+      "last_seen": "2020-08-25",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+12185954572",
+      "type": "robocall",
+      "reports": 23,
+      "first_seen": "2015-03-20",
+      "last_seen": "2015-05-20",
+      "description": "FCC: Robocalls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+12486290521",
+      "type": "robocall",
+      "reports": 3,
+      "first_seen": "2020-09-26",
+      "last_seen": "2020-10-15",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+12524265231",
+      "type": "robocall",
+      "reports": 3,
+      "first_seen": "2016-02-11",
+      "last_seen": "2016-02-19",
+      "description": "FCC: Robocalls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+12538577175",
+      "type": "robocall",
+      "reports": 2,
+      "first_seen": "2020-09-10",
+      "last_seen": "2020-09-10",
+      "description": "FCC caller ID: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+12542123060",
+      "type": "robocall",
+      "reports": 6,
+      "first_seen": "2014-11-18",
+      "last_seen": "2016-02-24",
+      "description": "FCC: Telemarketing (inclu",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+12722206398",
+      "type": "robocall",
+      "reports": 2,
+      "first_seen": "2020-10-20",
+      "last_seen": "2020-10-25",
+      "description": "FCC advertiser: Unwanted Calls; FCC caller ID: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+12813776408",
+      "type": "robocall",
+      "reports": 2,
+      "first_seen": "2020-01-10",
+      "last_seen": "2020-01-10",
+      "description": "FCC caller ID: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+13044263209",
+      "type": "robocall",
+      "reports": 3,
+      "first_seen": "2015-04-22",
+      "last_seen": "2015-04-24",
+      "description": "FCC: Robocalls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+13057634207",
+      "type": "robocall",
+      "reports": 3,
+      "first_seen": "2015-09-22",
+      "last_seen": "2015-10-21",
+      "description": "FCC: Telemarketing (inclu",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+13057821468",
+      "type": "robocall",
+      "reports": 2,
+      "first_seen": "2016-08-12",
+      "last_seen": "2016-08-12",
+      "description": "FCC caller ID: Robocalls; FCC caller ID: Telemarketing (including do not call and spoofing)",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+13092207626",
+      "type": "robocall",
+      "reports": 4,
+      "first_seen": "2023-03-27",
+      "last_seen": "2023-09-28",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+13109946203",
+      "type": "robocall",
+      "reports": 4,
+      "first_seen": "2015-10-07",
+      "last_seen": "2015-11-05",
+      "description": "FCC: Telemarketing (inclu",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+13173271700",
+      "type": "robocall",
+      "reports": 6,
+      "first_seen": "2023-09-11",
+      "last_seen": "2024-07-02",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+13215087466",
+      "type": "robocall",
+      "reports": 8,
+      "first_seen": "2016-04-07",
+      "last_seen": "2016-04-08",
+      "description": "FCC: Telemarketing (inclu",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+13232138001",
+      "type": "robocall",
+      "reports": 3,
+      "first_seen": "2015-01-08",
+      "last_seen": "2016-01-25",
+      "description": "FCC: Telemarketing (inclu",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+13317012998",
+      "type": "robocall",
+      "reports": 4,
+      "first_seen": "2015-10-29",
+      "last_seen": "2015-11-06",
+      "description": "FCC: Telemarketing (inclu",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+13362033947",
+      "type": "robocall",
+      "reports": 5,
+      "first_seen": "2018-04-05",
+      "last_seen": "2018-04-12",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+13512772504",
+      "type": "robocall",
+      "reports": 43,
+      "first_seen": "2018-05-14",
+      "last_seen": "2018-05-15",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+13607711576",
+      "type": "robocall",
+      "reports": 4,
+      "first_seen": "2017-12-18",
+      "last_seen": "2018-08-07",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+13609674543",
+      "type": "robocall",
+      "reports": 3,
+      "first_seen": "2016-01-21",
+      "last_seen": "2016-01-21",
+      "description": "FCC advertiser: Robocalls; FCC caller ID: Robocalls; FCC caller ID: Telemarketing (including do not call and spoofing)",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+13852139149",
+      "type": "robocall",
+      "reports": 2,
+      "first_seen": "2020-09-24",
+      "last_seen": "2020-10-16",
+      "description": "FCC caller ID: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+13857868757",
+      "type": "robocall",
+      "reports": 3,
+      "first_seen": "2024-10-08",
+      "last_seen": "2026-03-09",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+14013525853",
+      "type": "robocall",
+      "reports": 2,
+      "first_seen": "2015-10-14",
+      "last_seen": "2015-10-14",
+      "description": "FCC caller ID: Robocalls; FCC caller ID: Telemarketing (including do not call and spoofing)",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+14023827149",
+      "type": "robocall",
+      "reports": 2,
+      "first_seen": "2016-09-17",
+      "last_seen": "2016-09-17",
+      "description": "FCC caller ID: Robocalls; FCC advertiser: Telemarketing (including do not call and spoofing)",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+14027709632",
+      "type": "robocall",
+      "reports": 2,
+      "first_seen": "2016-09-03",
+      "last_seen": "2016-09-03",
+      "description": "FCC caller ID: Robocalls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+14046372227",
+      "type": "robocall",
+      "reports": 2,
+      "first_seen": "2020-07-23",
+      "last_seen": "2020-07-24",
+      "description": "FCC caller ID: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+14057553131",
+      "type": "robocall",
+      "reports": 4,
+      "first_seen": "2015-03-18",
+      "last_seen": "2019-05-29",
+      "description": "FCC: Telemarketing (inclu",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+14074578598",
+      "type": "robocall",
+      "reports": 2,
+      "first_seen": "2015-04-07",
+      "last_seen": "2015-04-07",
+      "description": "FCC caller ID: Robocalls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+14077835794",
+      "type": "robocall",
+      "reports": 4,
+      "first_seen": "2023-11-03",
+      "last_seen": "2024-01-15",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+14103390604",
+      "type": "robocall",
+      "reports": 4,
+      "first_seen": "2024-03-18",
+      "last_seen": "2024-03-18",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+14109001658",
+      "type": "robocall",
+      "reports": 8,
+      "first_seen": "2016-11-02",
+      "last_seen": "2016-12-02",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+14124651129",
+      "type": "robocall",
+      "reports": 16,
+      "first_seen": "2016-07-15",
+      "last_seen": "2016-10-17",
+      "description": "FCC: Telemarketing (inclu",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+14142612333",
+      "type": "robocall",
+      "reports": 2,
+      "first_seen": "2021-09-01",
+      "last_seen": "2021-09-01",
+      "description": "FCC caller ID: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+14142855709",
+      "type": "robocall",
+      "reports": 3,
+      "first_seen": "2024-09-23",
+      "last_seen": "2024-10-23",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+14145091572",
+      "type": "robocall",
+      "reports": 7,
+      "first_seen": "2016-09-13",
+      "last_seen": "2016-10-28",
+      "description": "FCC: Robocalls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+14155273472",
+      "type": "robocall",
+      "reports": 6,
+      "first_seen": "2015-10-23",
+      "last_seen": "2015-10-30",
+      "description": "FCC: Telemarketing (inclu",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+14156914761",
+      "type": "robocall",
+      "reports": 2,
+      "first_seen": "2016-10-01",
+      "last_seen": "2016-10-01",
+      "description": "FCC caller ID: Robocalls; FCC caller ID: Telemarketing (including do not call and spoofing)",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+14158977417",
+      "type": "telemarketer",
+      "reports": 2,
+      "first_seen": "2016-06-21",
+      "last_seen": "2016-06-21",
+      "description": "FCC caller ID: Telemarketing (including do not call and spoofing)",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+14172183614",
+      "type": "robocall",
+      "reports": 3,
+      "first_seen": "2022-03-21",
+      "last_seen": "2022-03-30",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+14192087961",
+      "type": "robocall",
+      "reports": 6,
+      "first_seen": "2016-11-10",
+      "last_seen": "2016-11-29",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+14402219406",
+      "type": "telemarketer",
+      "reports": 2,
+      "first_seen": "2016-01-06",
+      "last_seen": "2016-01-06",
+      "description": "FCC caller ID: Telemarketing (including do not call and spoofing)",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+14404097917",
+      "type": "robocall",
+      "reports": 4,
+      "first_seen": "2024-06-10",
+      "last_seen": "2024-06-25",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+14436925455",
+      "type": "telemarketer",
+      "reports": 2,
+      "first_seen": "2016-09-05",
+      "last_seen": "2020-12-30",
+      "description": "FCC advertiser: Telemarketing (including do not call and spoofing); FCC caller ID: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+14437259925",
+      "type": "robocall",
+      "reports": 5,
+      "first_seen": "2024-07-15",
+      "last_seen": "2024-09-05",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+14582143348",
+      "type": "robocall",
+      "reports": 4,
+      "first_seen": "2024-06-08",
+      "last_seen": "2024-06-08",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+14693191121",
+      "type": "robocall",
+      "reports": 4,
+      "first_seen": "2015-09-09",
+      "last_seen": "2015-10-03",
+      "description": "FCC: Telemarketing (inclu",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+14752000010",
+      "type": "robocall",
+      "reports": 3,
+      "first_seen": "2018-08-22",
+      "last_seen": "2018-09-19",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+14849863038",
+      "type": "robocall",
+      "reports": 7,
+      "first_seen": "2016-04-19",
+      "last_seen": "2016-12-07",
+      "description": "FCC: Telemarketing (inclu",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+15023233646",
+      "type": "robocall",
+      "reports": 4,
+      "first_seen": "2023-10-05",
+      "last_seen": "2023-10-17",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+15042757809",
+      "type": "robocall",
+      "reports": 2,
+      "first_seen": "2016-04-26",
+      "last_seen": "2016-04-26",
+      "description": "FCC advertiser: Robocalls; FCC caller ID: Robocalls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+15072008725",
+      "type": "robocall",
+      "reports": 4,
+      "first_seen": "2023-05-21",
+      "last_seen": "2023-05-23",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+15092638615",
+      "type": "robocall",
+      "reports": 3,
+      "first_seen": "2018-02-15",
+      "last_seen": "2018-02-16",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+15125934436",
+      "type": "robocall",
+      "reports": 9,
+      "first_seen": "2015-06-10",
+      "last_seen": "2015-06-12",
+      "description": "FCC: Telemarketing (inclu",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+15203170627",
+      "type": "robocall",
+      "reports": 4,
+      "first_seen": "2021-06-17",
+      "last_seen": "2021-06-17",
+      "description": "FCC advertiser: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+15303885071",
+      "type": "robocall",
+      "reports": 3,
+      "first_seen": "2015-09-26",
+      "last_seen": "2015-09-28",
+      "description": "FCC: Telemarketing (inclu",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+15304646646",
+      "type": "robocall",
+      "reports": 3,
+      "first_seen": "2018-10-16",
+      "last_seen": "2019-04-11",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+15304887026",
+      "type": "robocall",
+      "reports": 4,
+      "first_seen": "2015-04-24",
+      "last_seen": "2016-03-28",
+      "description": "FCC: Robocalls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+15612109573",
+      "type": "robocall",
+      "reports": 3,
+      "first_seen": "2017-08-09",
+      "last_seen": "2017-08-11",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+15622685339",
+      "type": "telemarketer",
+      "reports": 2,
+      "first_seen": "2016-07-17",
+      "last_seen": "2016-07-25",
+      "description": "FCC caller ID: Telemarketing (including do not call and spoofing)",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+15625135551",
+      "type": "robocall",
+      "reports": 3,
+      "first_seen": "2015-12-02",
+      "last_seen": "2021-03-03",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+15719332121",
+      "type": "robocall",
+      "reports": 17,
+      "first_seen": "2016-06-01",
+      "last_seen": "2016-10-25",
+      "description": "FCC: Telemarketing (inclu",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+15857867759",
+      "type": "robocall",
+      "reports": 5,
+      "first_seen": "2016-03-08",
+      "last_seen": "2016-03-15",
+      "description": "FCC: Telemarketing (inclu",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+15868852809",
+      "type": "robocall",
+      "reports": 4,
+      "first_seen": "2016-03-04",
+      "last_seen": "2017-07-22",
+      "description": "FCC: Telemarketing (inclu",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+16052994686",
+      "type": "robocall",
+      "reports": 4,
+      "first_seen": "2015-11-10",
+      "last_seen": "2015-12-07",
+      "description": "FCC: Robocalls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+16092086408",
+      "type": "robocall",
+      "reports": 4,
+      "first_seen": "2015-10-06",
+      "last_seen": "2015-10-31",
+      "description": "FCC: Telemarketing (inclu",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+16092509180",
+      "type": "robocall",
+      "reports": 12,
+      "first_seen": "2019-03-08",
+      "last_seen": "2019-03-29",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+16093373141",
+      "type": "robocall",
+      "reports": 6,
+      "first_seen": "2016-03-17",
+      "last_seen": "2017-05-05",
+      "description": "FCC: Telemarketing (inclu",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+16148266090",
+      "type": "robocall",
+      "reports": 5,
+      "first_seen": "2018-06-04",
+      "last_seen": "2018-06-09",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+16155050813",
+      "type": "robocall",
+      "reports": 6,
+      "first_seen": "2024-07-11",
+      "last_seen": "2024-07-26",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+16172844298",
+      "type": "robocall",
+      "reports": 4,
+      "first_seen": "2023-08-10",
+      "last_seen": "2023-08-10",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+16193295515",
+      "type": "robocall",
+      "reports": 12,
+      "first_seen": "2019-09-27",
+      "last_seen": "2019-10-04",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+16196846950",
+      "type": "robocall",
+      "reports": 4,
+      "first_seen": "2015-10-20",
+      "last_seen": "2016-05-05",
+      "description": "FCC: Robocalls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+16206590708",
+      "type": "robocall",
+      "reports": 2,
+      "first_seen": "2022-01-20",
+      "last_seen": "2022-01-20",
+      "description": "FCC caller ID: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+16303180252",
+      "type": "robocall",
+      "reports": 4,
+      "first_seen": "2016-06-27",
+      "last_seen": "2016-09-30",
+      "description": "FCC advertiser: Robocalls; FCC caller ID: Telemarketing (including do not call and spoofing); FCC advertiser: Telemarketing (including do not call and spoofing)",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+16305424316",
+      "type": "robocall",
+      "reports": 7,
+      "first_seen": "2016-08-23",
+      "last_seen": "2016-08-29",
+      "description": "FCC: Telemarketing (inclu",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+16313187101",
+      "type": "robocall",
+      "reports": 22,
+      "first_seen": "2015-02-12",
+      "last_seen": "2018-05-30",
+      "description": "FCC: Robocalls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+16317348220",
+      "type": "robocall",
+      "reports": 3,
+      "first_seen": "2019-04-29",
+      "last_seen": "2021-06-09",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+16363191522",
+      "type": "robocall",
+      "reports": 4,
+      "first_seen": "2023-01-30",
+      "last_seen": "2023-01-30",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+16368751228",
+      "type": "robocall",
+      "reports": 5,
+      "first_seen": "2022-01-10",
+      "last_seen": "2025-02-19",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+16416828108",
+      "type": "robocall",
+      "reports": 2,
+      "first_seen": "2019-07-18",
+      "last_seen": "2019-07-18",
+      "description": "FCC caller ID: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+16466657301",
+      "type": "robocall",
+      "reports": 4,
+      "first_seen": "2023-07-06",
+      "last_seen": "2023-10-27",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+16466885059",
+      "type": "robocall",
+      "reports": 4,
+      "first_seen": "2016-08-30",
+      "last_seen": "2016-09-06",
+      "description": "FCC: Robocalls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+16467571286",
+      "type": "robocall",
+      "reports": 9,
+      "first_seen": "2015-12-23",
+      "last_seen": "2016-01-15",
+      "description": "FCC: Telemarketing (inclu",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+16467975733",
+      "type": "robocall",
+      "reports": 3,
+      "first_seen": "2015-04-07",
+      "last_seen": "2015-04-12",
+      "description": "FCC: Telemarketing (inclu",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+16467988400",
+      "type": "robocall",
+      "reports": 3,
+      "first_seen": "2016-11-17",
+      "last_seen": "2018-03-12",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+16473616581",
+      "type": "robocall",
+      "reports": 3,
+      "first_seen": "2016-09-15",
+      "last_seen": "2016-09-27",
+      "description": "FCC caller ID: Robocalls; FCC advertiser: Telemarketing (including do not call and spoofing); FCC caller ID: Telemarketing (including do not call and spoofing)",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+17025147157",
+      "type": "robocall",
+      "reports": 2,
+      "first_seen": "2016-06-14",
+      "last_seen": "2016-06-14",
+      "description": "FCC caller ID: Robocalls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+17027662335",
+      "type": "robocall",
+      "reports": 3,
+      "first_seen": "2018-06-21",
+      "last_seen": "2018-06-27",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+17028274731",
+      "type": "robocall",
+      "reports": 6,
+      "first_seen": "2018-05-07",
+      "last_seen": "2018-05-10",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+17035496946",
+      "type": "robocall",
+      "reports": 2,
+      "first_seen": "2015-04-20",
+      "last_seen": "2015-04-29",
+      "description": "FCC caller ID: Robocalls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+17042337925",
+      "type": "robocall",
+      "reports": 3,
+      "first_seen": "2018-06-28",
+      "last_seen": "2021-02-10",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+17072160742",
+      "type": "robocall",
+      "reports": 3,
+      "first_seen": "2019-03-16",
+      "last_seen": "2019-04-04",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+17077263037",
+      "type": "robocall",
+      "reports": 4,
+      "first_seen": "2022-12-02",
+      "last_seen": "2022-12-10",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+17082150539",
+      "type": "robocall",
+      "reports": 4,
+      "first_seen": "2022-04-03",
+      "last_seen": "2022-04-03",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+17147056937",
+      "type": "robocall",
+      "reports": 4,
+      "first_seen": "2015-09-25",
+      "last_seen": "2015-09-28",
+      "description": "FCC: Telemarketing (inclu",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+17156005085",
+      "type": "robocall",
+      "reports": 3,
+      "first_seen": "2018-04-26",
+      "last_seen": "2018-12-04",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+17189185000",
+      "type": "robocall",
+      "reports": 3,
+      "first_seen": "2023-03-10",
+      "last_seen": "2025-06-29",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+17192702916",
+      "type": "robocall",
+      "reports": 5,
+      "first_seen": "2018-03-02",
+      "last_seen": "2018-10-25",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+17205977093",
+      "type": "robocall",
+      "reports": 4,
+      "first_seen": "2018-05-02",
+      "last_seen": "2024-02-25",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+17345427758",
+      "type": "robocall",
+      "reports": 29,
+      "first_seen": "2012-09-14",
+      "last_seen": "2016-09-30",
+      "description": "FCC: Telemarketing (inclu",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+17707794839",
+      "type": "robocall",
+      "reports": 3,
+      "first_seen": "2015-10-11",
+      "last_seen": "2015-10-28",
+      "description": "FCC: Telemarketing (inclu",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+17722286613",
+      "type": "robocall",
+      "reports": 3,
+      "first_seen": "2018-02-21",
+      "last_seen": "2018-02-26",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+17792056072",
+      "type": "telemarketer",
+      "reports": 2,
+      "first_seen": "2016-08-16",
+      "last_seen": "2016-08-16",
+      "description": "FCC caller ID: Telemarketing (including do not call and spoofing)",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+17814128889",
+      "type": "robocall",
+      "reports": 4,
+      "first_seen": "2023-11-09",
+      "last_seen": "2023-11-17",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+17815560400",
+      "type": "robocall",
+      "reports": 7,
+      "first_seen": "2018-02-11",
+      "last_seen": "2020-03-09",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+17864050898",
+      "type": "robocall",
+      "reports": 2,
+      "first_seen": "2016-05-24",
+      "last_seen": "2016-06-07",
+      "description": "FCC caller ID: Robocalls; FCC advertiser: Telemarketing (including do not call and spoofing)",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+17865901097",
+      "type": "robocall",
+      "reports": 15,
+      "first_seen": "2018-07-11",
+      "last_seen": "2018-07-12",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+18002224357",
+      "type": "robocall",
+      "reports": 3,
+      "first_seen": "2018-04-10",
+      "last_seen": "2019-03-26",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+18002254333",
+      "type": "robocall",
+      "reports": 8,
+      "first_seen": "2015-04-20",
+      "last_seen": "2018-08-14",
+      "description": "FCC: Robocalls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+18003913000",
+      "type": "robocall",
+      "reports": 27,
+      "first_seen": "2018-07-05",
+      "last_seen": "2022-04-15",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+18006182247",
+      "type": "robocall",
+      "reports": 18,
+      "first_seen": "2016-08-24",
+      "last_seen": "2025-12-26",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+18007721218",
+      "type": "robocall",
+      "reports": 5,
+      "first_seen": "2018-11-26",
+      "last_seen": "2019-12-10",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+18008987180",
+      "type": "robocall",
+      "reports": 3,
+      "first_seen": "2019-04-05",
+      "last_seen": "2020-07-08",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+18042102946",
+      "type": "robocall",
+      "reports": 2,
+      "first_seen": "2015-08-11",
+      "last_seen": "2015-08-31",
+      "description": "FCC caller ID: Robocalls; FCC advertiser: Robocalls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+18043350225",
+      "type": "robocall",
+      "reports": 3,
+      "first_seen": "2016-09-07",
+      "last_seen": "2016-10-13",
+      "description": "FCC: Robocalls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+18052283487",
+      "type": "robocall",
+      "reports": 4,
+      "first_seen": "2015-01-15",
+      "last_seen": "2015-03-11",
+      "description": "FCC: Robocalls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+18056149665",
+      "type": "robocall",
+      "reports": 22,
+      "first_seen": "2015-07-01",
+      "last_seen": "2015-10-22",
+      "description": "FCC: Telemarketing (inclu",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+18182222229",
+      "type": "telemarketer",
+      "reports": 2,
+      "first_seen": "2016-06-01",
+      "last_seen": "2016-06-01",
+      "description": "FCC caller ID: Telemarketing (including do not call and spoofing)",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+18302710663",
+      "type": "robocall",
+      "reports": 4,
+      "first_seen": "2023-08-24",
+      "last_seen": "2023-08-24",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+18326545895",
+      "type": "robocall",
+      "reports": 2,
+      "first_seen": "2016-06-03",
+      "last_seen": "2016-06-03",
+      "description": "FCC caller ID: Robocalls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+18336764106",
+      "type": "robocall",
+      "reports": 2,
+      "first_seen": "2022-10-17",
+      "last_seen": "2022-10-17",
+      "description": "FCC advertiser: Unwanted Calls; FCC caller ID: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+18337827181",
+      "type": "robocall",
+      "reports": 4,
+      "first_seen": "2018-11-30",
+      "last_seen": "2019-04-02",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+18339590215",
+      "type": "robocall",
+      "reports": 6,
+      "first_seen": "2023-02-15",
+      "last_seen": "2024-05-15",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+18442027283",
+      "type": "robocall",
+      "reports": 2,
+      "first_seen": "2015-09-16",
+      "last_seen": "2015-09-30",
+      "description": "FCC advertiser: Robocalls; FCC caller ID: Telemarketing (including do not call and spoofing)",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+18442342500",
+      "type": "robocall",
+      "reports": 6,
+      "first_seen": "2022-03-14",
+      "last_seen": "2025-07-30",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+18443778313",
+      "type": "robocall",
+      "reports": 3,
+      "first_seen": "2021-09-22",
+      "last_seen": "2021-10-19",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+18445233146",
+      "type": "robocall",
+      "reports": 4,
+      "first_seen": "2024-01-27",
+      "last_seen": "2024-01-27",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+18446988333",
+      "type": "robocall",
+      "reports": 4,
+      "first_seen": "2018-04-21",
+      "last_seen": "2018-04-28",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+18447902700",
+      "type": "robocall",
+      "reports": 8,
+      "first_seen": "2020-09-18",
+      "last_seen": "2020-10-16",
+      "description": "FCC advertiser: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+18454502153",
+      "type": "robocall",
+      "reports": 7,
+      "first_seen": "2018-04-30",
+      "last_seen": "2018-04-30",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+18482028737",
+      "type": "robocall",
+      "reports": 16,
+      "first_seen": "2015-12-30",
+      "last_seen": "2016-01-08",
+      "description": "FCC: Telemarketing (inclu",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+18503872322",
+      "type": "robocall",
+      "reports": 4,
+      "first_seen": "2014-12-04",
+      "last_seen": "2015-01-23",
+      "description": "FCC: Robocalls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+18505098054",
+      "type": "robocall",
+      "reports": 3,
+      "first_seen": "2016-11-28",
+      "last_seen": "2016-11-29",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+18524830891",
+      "type": "robocall",
+      "reports": 2,
+      "first_seen": "2016-07-25",
+      "last_seen": "2016-07-25",
+      "description": "FCC caller ID: Robocalls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+18553904769",
+      "type": "robocall",
+      "reports": 5,
+      "first_seen": "2016-01-05",
+      "last_seen": "2018-06-26",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+18554361088",
+      "type": "robocall",
+      "reports": 4,
+      "first_seen": "2023-03-06",
+      "last_seen": "2023-03-15",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+18582214771",
+      "type": "robocall",
+      "reports": 5,
+      "first_seen": "2017-12-18",
+      "last_seen": "2018-03-05",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+18583214328",
+      "type": "robocall",
+      "reports": 4,
+      "first_seen": "2023-02-13",
+      "last_seen": "2023-02-13",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+18622048024",
+      "type": "robocall",
+      "reports": 6,
+      "first_seen": "2016-02-11",
+      "last_seen": "2016-05-19",
+      "description": "FCC: Telemarketing (inclu",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+18635883419",
+      "type": "robocall",
+      "reports": 4,
+      "first_seen": "2018-07-26",
+      "last_seen": "2018-08-09",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+18663651347",
+      "type": "robocall",
+      "reports": 3,
+      "first_seen": "2021-11-08",
+      "last_seen": "2021-11-16",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+18664136900",
+      "type": "robocall",
+      "reports": 2,
+      "first_seen": "2021-08-10",
+      "last_seen": "2021-08-16",
+      "description": "FCC caller ID: Unwanted Calls; FCC advertiser: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+18664724748",
+      "type": "robocall",
+      "reports": 4,
+      "first_seen": "2016-07-07",
+      "last_seen": "2016-07-07",
+      "description": "FCC caller ID: Robocalls; FCC advertiser: Telemarketing (including do not call and spoofing)",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+18667509185",
+      "type": "robocall",
+      "reports": 9,
+      "first_seen": "2017-12-14",
+      "last_seen": "2018-08-20",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+18668762156",
+      "type": "robocall",
+      "reports": 2,
+      "first_seen": "2016-08-16",
+      "last_seen": "2021-01-27",
+      "description": "FCC caller ID: Robocalls; FCC caller ID: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+18668975349",
+      "type": "robocall",
+      "reports": 2,
+      "first_seen": "2015-12-20",
+      "last_seen": "2022-02-18",
+      "description": "FCC advertiser: Robocalls; FCC caller ID: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+18669784927",
+      "type": "robocall",
+      "reports": 6,
+      "first_seen": "2018-04-12",
+      "last_seen": "2018-05-15",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+18773784727",
+      "type": "robocall",
+      "reports": 4,
+      "first_seen": "2018-03-06",
+      "last_seen": "2021-01-14",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+18882255502",
+      "type": "robocall",
+      "reports": 4,
+      "first_seen": "2018-09-27",
+      "last_seen": "2020-12-07",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+18883157525",
+      "type": "robocall",
+      "reports": 3,
+      "first_seen": "2018-01-19",
+      "last_seen": "2018-02-13",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+18885571980",
+      "type": "robocall",
+      "reports": 2,
+      "first_seen": "2014-12-01",
+      "last_seen": "2014-12-02",
+      "description": "FCC advertiser: Robocalls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+18889196143",
+      "type": "robocall",
+      "reports": 11,
+      "first_seen": "2018-09-26",
+      "last_seen": "2018-10-29",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+19014534337",
+      "type": "robocall",
+      "reports": 3,
+      "first_seen": "2018-03-02",
+      "last_seen": "2018-07-27",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+19044258244",
+      "type": "robocall",
+      "reports": 6,
+      "first_seen": "2015-07-14",
+      "last_seen": "2015-07-16",
+      "description": "FCC: Robocalls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+19045720449",
+      "type": "robocall",
+      "reports": 6,
+      "first_seen": "2016-08-17",
+      "last_seen": "2016-09-29",
+      "description": "FCC: Telemarketing (inclu",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+19057712581",
+      "type": "spam",
+      "reports": 7,
+      "first_seen": "2026-07-07",
+      "last_seen": "2026-07-07",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
+    },
+    {
+      "number": "+19099413419",
+      "type": "robocall",
+      "reports": 2,
+      "first_seen": "2021-03-02",
+      "last_seen": "2021-03-02",
+      "description": "FCC advertiser: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+19104757767",
+      "type": "robocall",
+      "reports": 8,
+      "first_seen": "2015-11-19",
+      "last_seen": "2016-01-29",
+      "description": "FCC: Robocalls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+19136778324",
+      "type": "robocall",
+      "reports": 3,
+      "first_seen": "2018-11-01",
+      "last_seen": "2023-02-17",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+19148585445",
+      "type": "robocall",
+      "reports": 42,
+      "first_seen": "2015-10-19",
+      "last_seen": "2016-11-16",
+      "description": "FCC: Robocalls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+19166616200",
+      "type": "robocall",
+      "reports": 10,
+      "first_seen": "2015-07-17",
+      "last_seen": "2015-07-17",
+      "description": "FCC: Telemarketing (inclu",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+19179728052",
+      "type": "robocall",
+      "reports": 2,
+      "first_seen": "2020-07-11",
+      "last_seen": "2020-07-19",
+      "description": "FCC advertiser: Unwanted Calls; FCC caller ID: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+19492437666",
+      "type": "telemarketer",
+      "reports": 2,
+      "first_seen": "2016-05-19",
+      "last_seen": "2016-05-19",
+      "description": "FCC advertiser: Telemarketing (including do not call and spoofing); FCC caller ID: Telemarketing (including do not call and spoofing)",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+19513836690",
+      "type": "robocall",
+      "reports": 6,
+      "first_seen": "2014-12-19",
+      "last_seen": "2015-02-04",
+      "description": "FCC: Telemarketing (inclu",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+19518002158",
+      "type": "robocall",
+      "reports": 7,
+      "first_seen": "2016-12-02",
+      "last_seen": "2016-12-05",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+19518467204",
+      "type": "robocall",
+      "reports": 23,
+      "first_seen": "2015-03-27",
+      "last_seen": "2015-05-15",
+      "description": "FCC: Robocalls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+19544955976",
+      "type": "robocall",
+      "reports": 4,
+      "first_seen": "2022-04-11",
+      "last_seen": "2022-04-11",
+      "description": "FCC caller ID: Unwanted Calls; FCC advertiser: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+19548585445",
+      "type": "robocall",
+      "reports": 47,
+      "first_seen": "2015-05-08",
+      "last_seen": "2015-10-22",
+      "description": "FCC: Robocalls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+19712024260",
+      "type": "robocall",
+      "reports": 3,
+      "first_seen": "2019-08-22",
+      "last_seen": "2019-08-22",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+19728101958",
+      "type": "robocall",
+      "reports": 3,
+      "first_seen": "2014-12-09",
+      "last_seen": "2016-06-17",
+      "description": "FCC: Telemarketing (inclu",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+19733851539",
+      "type": "robocall",
+      "reports": 3,
+      "first_seen": "2016-03-04",
+      "last_seen": "2016-05-05",
+      "description": "FCC: Robocalls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+19737481997",
+      "type": "robocall",
+      "reports": 5,
+      "first_seen": "2015-03-17",
+      "last_seen": "2015-03-17",
+      "description": "FCC: Robocalls",
+      "sources": [
+        "legacy_import"
+      ]
+    },
+    {
+      "number": "+19806774652",
+      "type": "robocall",
+      "reports": 6,
+      "first_seen": "2018-05-14",
+      "last_seen": "2018-06-06",
+      "description": "FCC: Unwanted Calls",
+      "sources": [
+        "legacy_import"
+      ]
+    }
+  ],
+  "prefixes": [
+    {
+      "prefix": "+33159177",
+      "type": "telemarketer",
+      "description": "Saracroche: Onoff telecom"
+    },
+    {
+      "prefix": "+3315939",
+      "type": "telemarketer",
+      "description": "Saracroche: Qwalikom"
+    }
+  ]
+}

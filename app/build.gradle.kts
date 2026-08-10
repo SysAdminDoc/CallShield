@@ -29,7 +29,8 @@ val stageBundledAssets =
     tasks.register<Sync>("stageBundledAssets") {
         from(rootProject.file("data")) {
             include(
-                "spam_numbers.json",
+                "spam_numbers.manifest.json",
+                "spam_number_shards/**/*.json",
                 "hot_numbers.json",
                 "hot_ranges.json",
                 "spam_domains.json",

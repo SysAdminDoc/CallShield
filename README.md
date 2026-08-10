@@ -22,6 +22,12 @@
 
 CallShield blocks spam calls and texts using a **15+ layer on-device detection engine** with a gradient-boosted tree ML scorer, campaign burst detection, RCS notification filter, and real-time caller ID overlay. Powered by a 51,463-number database with scheduled hot-list updates. Community-maintained, no accounts, no tracking.
 
+The database keeps `data/spam_numbers.json` as a stable legacy GitHub-raw
+endpoint for older clients, while current builds bundle a signed-by-hash
+manifest and 256 content-addressed shards. Devices fetch only changed shards,
+verify every payload before a transactional Room refresh, and fall back to the
+legacy snapshot when the shard service is unavailable.
+
 ## Screenshots
 
 <p align="center">
@@ -42,6 +48,9 @@ CallShield blocks spam calls and texts using a **15+ layer on-device detection e
   idempotent merges and explicit provenance.
 - **Fail-open screening reliability** — lazy repository initialization errors
   now receive an explicit allow response instead of abandoning Telecom's call.
+- **Incremental database delivery** — current APKs bundle the manifest and
+  content-addressed spam shards rather than the monolith; sync verifies hashes,
+  downloads only changed shards, and retains the legacy raw URL for older apps.
 
 ## v1.7.32 Highlights
 

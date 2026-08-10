@@ -6,6 +6,8 @@ import com.squareup.moshi.Types
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import com.sysadmindoc.callshield.data.model.HotNumber
 import com.sysadmindoc.callshield.data.model.SpamDatabase
+import com.sysadmindoc.callshield.data.model.SpamDatabaseShard
+import com.sysadmindoc.callshield.data.model.SpamShardManifest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.Request
@@ -39,6 +41,10 @@ private fun requireFeed(
         failFeedValidation(reason, message())
     }
 }
+
+private val SHARD_ID_REGEX = Regex("[0-9a-f]{2}")
+private val SHA256_REGEX = Regex("[0-9a-f]{64}")
+private val SHARD_PATH_REGEX = Regex("data/spam_number_shards/[0-9a-f]{2}\\.json")
 
 class GitHubDataSource :
     SpamDataSource,
@@ -82,18 +88,23 @@ class GitHubDataSource :
         const val DEFAULT_REPO_NAME = "CallShield"
 
         const val DATA_PATH = "data/spam_numbers.json"
+        const val SHARD_MANIFEST_PATH = "data/spam_numbers.manifest.json"
+        const val SHARD_DIRECTORY_PATH = "data/spam_number_shards/"
         const val HOT_LIST_PATH = "data/hot_numbers.json"
         const val HOT_RANGES_PATH = "data/hot_ranges.json"
         const val SPAM_DOMAINS_PATH = "data/spam_domains.json"
         const val MODEL_WEIGHTS_PATH = "data/spam_model_weights.json"
 
         const val BUNDLED_DATABASE_ASSET = "spam_numbers.json"
+        const val BUNDLED_SHARD_MANIFEST_ASSET = "spam_numbers.manifest.json"
+        const val BUNDLED_SHARD_DIRECTORY_ASSET = "spam_number_shards"
         const val BUNDLED_HOT_LIST_ASSET = "hot_numbers.json"
         const val BUNDLED_HOT_RANGES_ASSET = "hot_ranges.json"
         const val BUNDLED_SPAM_DOMAINS_ASSET = "spam_domains.json"
         const val BUNDLED_MODEL_WEIGHTS_ASSET = "spam_model_weights.json"
 
         internal const val MAX_SPAM_DATABASE_BYTES = 16L * 1024L * 1024L
+        internal const val MAX_SPAM_SHARD_BYTES = 1L * 1024L * 1024L
         internal const val MAX_HOT_LIST_BYTES = 1L * 1024L * 1024L
         internal const val MAX_HOT_RANGES_BYTES = 512L * 1024L
         internal const val MAX_SPAM_DOMAINS_BYTES = 2L * 1024L * 1024L
@@ -101,6 +112,7 @@ class GitHubDataSource :
 
         internal const val MAX_SPAM_DATABASE_NUMBERS = 250_000
         internal const val MAX_SPAM_DATABASE_PREFIXES = 100_000
+        internal const val MAX_SPAM_SHARDS = 256
         internal const val MAX_HOT_LIST_ROWS = 5_000
         internal const val MAX_HOT_RANGE_ROWS = 20_000
         internal const val MAX_SPAM_DOMAIN_ROWS = 50_000
@@ -116,6 +128,7 @@ class GitHubDataSource :
         private val RAW_FEED_SPECS =
             mapOf(
                 DATA_PATH to RawFeedSpec("spam database", MAX_SPAM_DATABASE_BYTES),
+                SHARD_MANIFEST_PATH to RawFeedSpec("spam database shard manifest", MAX_GITHUB_API_BYTES),
                 HOT_LIST_PATH to RawFeedSpec("hot list", MAX_HOT_LIST_BYTES),
                 HOT_RANGES_PATH to RawFeedSpec("hot ranges", MAX_HOT_RANGES_BYTES),
                 SPAM_DOMAINS_PATH to RawFeedSpec("spam domains", MAX_SPAM_DOMAINS_BYTES),
@@ -140,6 +153,14 @@ class GitHubDataSource :
                     .use { it.readText() }
             }
 
+        fun readBundledAssetBytes(
+            context: Context,
+            assetName: String,
+        ): Result<ByteArray> =
+            runCatching {
+                context.assets.open(assetName).use { it.readBytes() }
+            }
+
         internal fun validateRawFeedBody(
             path: String,
             body: String,
@@ -159,7 +180,13 @@ class GitHubDataSource :
 
         internal fun rawFeedLabel(path: String): String = rawFeedSpec(path).label
 
-        private fun rawFeedSpec(path: String): RawFeedSpec = RAW_FEED_SPECS[path] ?: RawFeedSpec(path, MAX_GITHUB_API_BYTES)
+        private fun rawFeedSpec(path: String): RawFeedSpec =
+            RAW_FEED_SPECS[path]
+                ?: if (path.startsWith(SHARD_DIRECTORY_PATH) && path.endsWith(".json")) {
+                    RawFeedSpec("spam database shard", MAX_SPAM_SHARD_BYTES)
+                } else {
+                    RawFeedSpec(path, MAX_GITHUB_API_BYTES)
+                }
 
         private fun validateModelWeightsEnvelope(body: String) {
             val trimmed = body.trimStart()
@@ -182,6 +209,30 @@ class GitHubDataSource :
                 return@withContext Result.failure(result.exceptionOrNull()!!)
             }
             parseSpamDatabaseJson(result.getOrThrow())
+        }
+
+    override suspend fun fetchSpamShardManifest(
+        owner: String,
+        repo: String,
+    ): Result<SpamShardManifest> =
+        withContext(Dispatchers.IO) {
+            val result = fetchRawText(SHARD_MANIFEST_PATH, owner, repo)
+            if (result.isFailure) {
+                return@withContext Result.failure(result.exceptionOrNull()!!)
+            }
+            parseSpamShardManifestJson(result.getOrThrow())
+        }
+
+    override suspend fun fetchSpamShardJson(
+        path: String,
+        owner: String,
+        repo: String,
+    ): Result<String> =
+        withContext(Dispatchers.IO) {
+            if (!path.startsWith(SHARD_DIRECTORY_PATH) || !SHARD_PATH_REGEX.matches(path)) {
+                return@withContext Result.failure(IllegalArgumentException("Invalid spam shard path"))
+            }
+            fetchRawText(path, owner, repo)
         }
 
     override suspend fun fetchHotList(
@@ -290,6 +341,22 @@ class GitHubDataSource :
             val database = adapter.fromJson(body) ?: error("Failed to parse spam database")
             validateSpamDatabase(database)
             database
+        }
+
+    override fun parseSpamShardManifestJson(body: String): Result<SpamShardManifest> =
+        runCatching {
+            val adapter = moshi.adapter(SpamShardManifest::class.java)
+            val manifest = adapter.fromJson(body) ?: error("Failed to parse spam shard manifest")
+            validateSpamShardManifest(manifest)
+            manifest
+        }
+
+    override fun parseSpamShardJson(body: String): Result<SpamDatabaseShard> =
+        runCatching {
+            val adapter = moshi.adapter(SpamDatabaseShard::class.java)
+            val shard = adapter.fromJson(body) ?: error("Failed to parse spam database shard")
+            validateSpamDatabaseShard(shard)
+            shard
         }
 
     override fun parseHotListJson(body: String): List<HotNumber> = parseHotListSnapshotJson(body).data
@@ -512,6 +579,73 @@ class GitHubDataSource :
             GitHubFeedFailureReason.ROW_LIMIT,
         ) {
             "spam database prefix row count ${database.prefixes.size} exceeds cap $MAX_SPAM_DATABASE_PREFIXES"
+        }
+    }
+
+    private fun validateSpamShardManifest(manifest: SpamShardManifest) {
+        requireFeed(manifest.formatVersion == 1, GitHubFeedFailureReason.INVALID_SCHEMA) {
+            "unsupported spam shard manifest format ${manifest.formatVersion}"
+        }
+        requireFeed(manifest.version > 0, GitHubFeedFailureReason.INVALID_SCHEMA) {
+            "spam shard manifest version must be positive"
+        }
+        requireFeed(manifest.updated.isNotBlank(), GitHubFeedFailureReason.MISSING_SCHEMA_FIELD) {
+            "spam shard manifest updated timestamp is missing"
+        }
+        requireFeed(manifest.legacyPath == DATA_PATH, GitHubFeedFailureReason.INVALID_SCHEMA) {
+            "spam shard manifest changed the legacy database path"
+        }
+        requireFeed(manifest.shardDirectory == SHARD_DIRECTORY_PATH.removeSuffix("/"), GitHubFeedFailureReason.INVALID_SCHEMA) {
+            "spam shard manifest has an invalid shard directory"
+        }
+        requireFeed(manifest.shardCount == MAX_SPAM_SHARDS, GitHubFeedFailureReason.INVALID_SCHEMA) {
+            "spam shard manifest shard count ${manifest.shardCount} does not match $MAX_SPAM_SHARDS"
+        }
+        requireFeed(manifest.shards.size <= MAX_SPAM_SHARDS, GitHubFeedFailureReason.ROW_LIMIT) {
+            "spam shard manifest has too many shard descriptors"
+        }
+
+        val ids = manifest.shards.map { it.id }
+        requireFeed(ids.size == ids.toSet().size, GitHubFeedFailureReason.INVALID_SCHEMA) {
+            "spam shard manifest contains duplicate shard ids"
+        }
+        val totalNumbers = manifest.shards.sumOf { it.numbers.toLong() }
+        val totalPrefixes = manifest.shards.sumOf { it.prefixes.toLong() }
+        requireFeed(totalNumbers <= MAX_SPAM_DATABASE_NUMBERS, GitHubFeedFailureReason.ROW_LIMIT) {
+            "spam shard manifest number row count $totalNumbers exceeds cap $MAX_SPAM_DATABASE_NUMBERS"
+        }
+        requireFeed(totalPrefixes <= MAX_SPAM_DATABASE_PREFIXES, GitHubFeedFailureReason.ROW_LIMIT) {
+            "spam shard manifest prefix row count $totalPrefixes exceeds cap $MAX_SPAM_DATABASE_PREFIXES"
+        }
+
+        manifest.shards.forEach { descriptor ->
+            requireFeed(SHARD_ID_REGEX.matches(descriptor.id), GitHubFeedFailureReason.INVALID_SCHEMA) {
+                "spam shard id ${descriptor.id} is not two lowercase hexadecimal characters"
+            }
+            requireFeed(descriptor.path == "$SHARD_DIRECTORY_PATH${descriptor.id}.json", GitHubFeedFailureReason.INVALID_SCHEMA) {
+                "spam shard ${descriptor.id} has an invalid path"
+            }
+            requireFeed(SHA256_REGEX.matches(descriptor.sha256), GitHubFeedFailureReason.INVALID_SCHEMA) {
+                "spam shard ${descriptor.id} has an invalid content hash"
+            }
+            requireFeed(descriptor.bytes in 1..MAX_SPAM_SHARD_BYTES, GitHubFeedFailureReason.OVERSIZE) {
+                "spam shard ${descriptor.id} has an invalid byte count"
+            }
+            requireFeed(descriptor.numbers >= 0 && descriptor.prefixes >= 0, GitHubFeedFailureReason.INVALID_SCHEMA) {
+                "spam shard ${descriptor.id} has negative row counts"
+            }
+        }
+    }
+
+    private fun validateSpamDatabaseShard(shard: SpamDatabaseShard) {
+        requireFeed(SHARD_ID_REGEX.matches(shard.shardId), GitHubFeedFailureReason.INVALID_SCHEMA) {
+            "spam database shard id is invalid"
+        }
+        requireFeed(shard.numbers.size <= MAX_SPAM_DATABASE_NUMBERS, GitHubFeedFailureReason.ROW_LIMIT) {
+            "spam database shard number row count exceeds cap $MAX_SPAM_DATABASE_NUMBERS"
+        }
+        requireFeed(shard.prefixes.size <= MAX_SPAM_DATABASE_PREFIXES, GitHubFeedFailureReason.ROW_LIMIT) {
+            "spam database shard prefix row count exceeds cap $MAX_SPAM_DATABASE_PREFIXES"
         }
     }
 

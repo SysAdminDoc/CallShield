@@ -109,6 +109,36 @@ data class SpamDatabase(
     val prefixes: List<SpamPrefixJson>,
 )
 
+/** Metadata for the content-addressed database payloads published beside the legacy feed. */
+@JsonClass(generateAdapter = false)
+data class SpamShardManifest(
+    @param:Json(name = "format_version") val formatVersion: Int,
+    val version: Int,
+    val updated: String,
+    @param:Json(name = "legacy_path") val legacyPath: String,
+    @param:Json(name = "shard_directory") val shardDirectory: String,
+    @param:Json(name = "shard_count") val shardCount: Int,
+    val shards: List<SpamShardDescriptor>,
+)
+
+@JsonClass(generateAdapter = false)
+data class SpamShardDescriptor(
+    val id: String,
+    val path: String,
+    val sha256: String,
+    val bytes: Long,
+    val numbers: Int,
+    val prefixes: Int,
+)
+
+/** A single independently downloadable database payload. */
+@JsonClass(generateAdapter = false)
+data class SpamDatabaseShard(
+    @param:Json(name = "shard_id") val shardId: String,
+    val numbers: List<SpamNumberJson>,
+    val prefixes: List<SpamPrefixJson>,
+)
+
 @JsonClass(generateAdapter = false)
 data class SpamNumberJson(
     val number: String,
