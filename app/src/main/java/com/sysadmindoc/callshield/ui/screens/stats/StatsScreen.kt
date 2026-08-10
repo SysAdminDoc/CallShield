@@ -306,8 +306,8 @@ fun StatsScreen(viewModel: MainViewModel) {
                             peakHourEntry?.let {
                                 stringResource(
                                     R.string.stats_highlight_peak_value,
-                                     formatHourRange(it.first),
-                                     it.second,
+                                    formatHourRange(it.first),
+                                    it.second,
                                 )
                             } ?: stringResource(R.string.stats_insight_waiting),
                         color = CatMauve,

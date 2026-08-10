@@ -1240,7 +1240,9 @@ private fun DatabaseTabContent(viewModel: MainViewModel) {
                     }
                 }
 
-                else -> Unit
+                else -> {
+                    Unit
+                }
             }
         }
     }

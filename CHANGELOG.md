@@ -32,6 +32,9 @@ All notable changes to CallShield will be documented in this file.
 
 ### Data pipeline
 
+- Persisted accepted sharded-feed version, update date, and manifest fingerprint;
+  replayed, downgraded, malformed, and same-version-mutated manifests are rejected
+  before Room replacement while legacy and bundled fallback paths remain guarded.
 - Added a validated source registry and per-run provenance snapshot so feed
   access, licensing, attribution, redistribution, and freshness are reviewable.
 - Source snapshots now include privacy-safe freshness, corroboration,
