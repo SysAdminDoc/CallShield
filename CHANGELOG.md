@@ -21,6 +21,9 @@ All notable changes to CallShield will be documented in this file.
 - Source snapshots now include privacy-safe freshness, corroboration,
   false-positive, and quarantine aggregates; anonymous corrections remain
   review-only until an operator explicitly approves a community-only decay.
+- Added a CC0, CallShield-authored SMS evaluation corpus spanning seven locales,
+  sender/link metadata, hard negatives, and per-locale/message-type precision,
+  recall, and false-positive budget checks.
 - Imported numbers and prefixes now retain independent source evidence,
   confidence tier, parser metadata, and an expiry horizon in Room; expired
   feed evidence is quarantined out of hard-block and prefix-expansion paths.

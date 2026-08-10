@@ -448,6 +448,12 @@ On-device **20-feature gradient-boosted tree** model — pure Kotlin, no TFLite,
 
 Trained weekly from the CallShield database (50K positive + 50K negative samples). Threshold: 0.7 (conservative).
 
+SMS content regressions use a separate CC0, CallShield-authored synthetic
+corpus covering seven locales, sender forms, link classes, legitimate messages,
+and hard negatives. The test reports precision, recall, and false-positive rate
+by locale and message type without shipping personal data:
+`./gradlew :app:testDebugUnitTest --tests com.sysadmindoc.callshield.data.SmsEvaluationCorpusTest`.
+
 ## Features
 
 ### Number Lookup
