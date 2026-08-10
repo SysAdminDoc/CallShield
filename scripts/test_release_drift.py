@@ -6,7 +6,7 @@ from __future__ import annotations
 import json
 import tempfile
 import unittest
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import verify_release_drift
@@ -17,9 +17,14 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class ReleaseDriftTest(unittest.TestCase):
     def test_checkout_is_synchronized(self) -> None:
+        snapshot = json.loads((ROOT / "data/source-snapshot.json").read_text(encoding="utf-8"))
+        snapshot_time = verify_release_drift.parse_iso_timestamp(snapshot["generated_at"])
         report = verify_release_drift.audit(
             ROOT,
-            now=datetime(2026, 8, 10, 12, 0, tzinfo=timezone.utc),
+            # Keep the checkout assertion deterministic relative to the generated
+            # fixture. A wall-clock value from an earlier release made a healthy
+            # snapshot appear to be in the future after the pipeline refreshed it.
+            now=snapshot_time + timedelta(minutes=1),
         )
         self.assertEqual([], report["issues"], report)
         self.assertEqual("1.7.34", report["version_name"])
