@@ -96,11 +96,10 @@ class SyncRepository(
                         }
                     } else {
                         val manifestError = manifestResult.exceptionOrNull()
-                        if (
-                            currentCount > 0 &&
-                            (manifestError is GitHubFeedValidationException ||
-                                manifestError is SpamFeedManifestRejectedException)
-                        ) {
+                        val invalidManifest =
+                            manifestError is GitHubFeedValidationException ||
+                                manifestError is SpamFeedManifestRejectedException
+                        if (currentCount > 0 && invalidManifest) {
                             return@withContext retainedDatabaseWarning(manifestError)
                         }
                     }
