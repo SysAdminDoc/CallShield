@@ -11,16 +11,23 @@ Called by the local/community report merge workflow and
 during the weekly full database rebuild.
 """
 
+import argparse
 import json
 import os
 import re
+import sys
 from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 from publicsuffixlist import PublicSuffixList
 from phone_normalization import validated_report_number
 
-from pipeline_io import atomic_write_json
+from pipeline_io import (
+    FeedCollapseError,
+    atomic_write_json,
+    ensure_feed_not_collapsed,
+    report_queue_digest,
+)
 from report_dedup import validated_reporter_bucket
 
 DATA_DIR = Path(os.environ.get("CALLSHIELD_DATA_DIR", Path(__file__).parent.parent / "data"))
@@ -124,8 +131,16 @@ def report_domains(report: dict) -> set[str]:
     return domains
 
 
-def main():
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--allow-collapse",
+        action="store_true",
+        help="publish a smaller/empty feed after verifying the source or an intentional clear",
+    )
+    args = parser.parse_args(argv)
     print("=== CallShield Spam Domain Extractor ===\n")
+    input_report_digest = report_queue_digest(REPORTS_DIR)
 
     # Count DISTINCT reported numbers per domain, not report files. The worker
     # dedups per (IP, number) for only 5 minutes, so one reporter re-submitting
@@ -173,31 +188,46 @@ def main():
     approved = approved_domains()
     spam_domains = [domain for domain in candidates if domain in approved][:MAX_DOMAINS]
 
-    atomic_write_json(
-        REVIEW_FILE,
-        {
-            "generated": datetime.now(timezone.utc).isoformat(),
-            "count": len([domain for domain in candidates if domain not in approved]),
-            "candidates": [
-                {
-                    "domain": domain,
-                    "distinct_numbers": domain_counts[domain],
-                    "distinct_reporters": len(domain_reporters[domain]),
-                }
-                for domain in candidates
-                if domain not in approved
-            ],
-        },
-    )
+    review_output = {
+        "generated": datetime.now(timezone.utc).isoformat(),
+        "input_report_digest": input_report_digest,
+        "count": len([domain for domain in candidates if domain not in approved]),
+        "candidates": [
+            {
+                "domain": domain,
+                "distinct_numbers": domain_counts[domain],
+                "distinct_reporters": len(domain_reporters[domain]),
+            }
+            for domain in candidates
+            if domain not in approved
+        ],
+    }
 
     output = {
         "generated": datetime.now(timezone.utc).isoformat(),
+        "input_report_digest": input_report_digest,
         "count": len(spam_domains),
         "min_reports": MIN_REPORTS,
         "min_distinct_reporters": MIN_REPORTERS,
         "domains": spam_domains,
     }
 
+    try:
+        ensure_feed_not_collapsed(
+            OUTPUT_FILE,
+            output,
+            item_key="domains",
+            absolute_floor=1,
+            previous_ratio=0.10,
+            allow_collapse=args.allow_collapse,
+        )
+    except FeedCollapseError as error:
+        print(f"ERROR: {error}", file=sys.stderr)
+        return 2
+
+    # The primary feed is checked before either review or primary output is
+    # replaced, preserving both artifacts if the source collapses.
+    atomic_write_json(REVIEW_FILE, review_output)
     atomic_write_json(OUTPUT_FILE, output)
 
     print(
@@ -210,7 +240,8 @@ def main():
         print("\nTop 5 spam domains:")
         for d in spam_domains[:5]:
             print(f"  {d} ({domain_counts[d]} reports)")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

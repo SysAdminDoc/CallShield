@@ -22,6 +22,9 @@ All notable changes to CallShield will be documented in this file.
 - Empty hot-list, campaign-range, or spam-domain fetches no longer erase working
   protection unless the payload explicitly declares a clear. Unavailable feeds
   are retried and surfaced with the age of the last good refresh.
+- Derived feeds now record the pending-report queue digest; collapse guards preserve
+  healthy outputs, and the community merge refuses to consume reports until hot numbers,
+  ranges, and domains were generated from that same queue.
 
 ### Reliability
 

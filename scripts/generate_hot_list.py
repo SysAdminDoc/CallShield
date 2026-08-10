@@ -11,13 +11,20 @@ Run locally BEFORE merge_community_reports.py — the merge deletes the pending
 report files this generator reads. See data/README.md for the regen sequence.
 """
 
+import argparse
 import json
 import os
+import sys
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from phone_normalization import validated_report_number
 
-from pipeline_io import atomic_write_json
+from pipeline_io import (
+    FeedCollapseError,
+    atomic_write_json,
+    ensure_feed_not_collapsed,
+    report_queue_digest,
+)
 from report_dedup import (
     BURST_DUPLICATE_SECONDS,
     find_burst_duplicates,
@@ -70,11 +77,19 @@ def npanxx_of(number: str) -> str:
     return digits[:6] if len(digits) >= 6 else ""
 
 
-def main():
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--allow-collapse",
+        action="store_true",
+        help="publish a smaller/empty feed after verifying the source or an intentional clear",
+    )
+    args = parser.parse_args(argv)
     print("=== CallShield Hot List Generator ===\n")
 
     now = current_time_utc()
     cutoff = now - timedelta(hours=HOT_WINDOW_HOURS)
+    input_report_digest = report_queue_digest(REPORTS_DIR)
 
     # ── Tally reports from pending report files ────────────────────────
     # Collected first, then collapsed, because near-simultaneous duplicates have
@@ -238,23 +253,6 @@ def main():
         "numbers": hot,
     }
 
-    atomic_write_json(HOT_LIST_FILE, output)
-
-    print(f"Hot list: {len(hot)} numbers in last {HOT_WINDOW_HOURS}h")
-    print(f"Written to: {HOT_LIST_FILE}")
-
-    if hot:
-        print("\nTop 5 trending:")
-        for entry in hot[:5]:
-            print(f"  {entry['number']} — {entry['reports']} reports — {entry.get('description','')[:40]}")
-
-    # ── Velocity spike alert (print for CI log visibility) ───────────
-    spikes = [v for v in hot if v.get("reports", 0) >= 10]
-    if spikes:
-        print(f"\nWARNING: VELOCITY SPIKES ({len(spikes)} numbers with 10+ reports in 24h):")
-        for s in spikes[:10]:
-            print(f"  {s['number']} — {s['reports']} reports")
-
     # ── Campaign detection: NPA-NXX clustering ────────────────────────
     # When 3+ distinct numbers from the same NPA-NXX appear in the hot list,
     # a robocaller is likely running a campaign across that exchange. Flag the
@@ -287,21 +285,62 @@ def main():
         if len(hot_ranges) >= MAX_NEW_CAMPAIGN_RANGES:
             break
 
-    atomic_write_json(
-        HOT_RANGES_FILE,
-        {
-            "generated": now.isoformat(),
-            "threshold": CAMPAIGN_THRESHOLD,
-            "min_reports_per_number": CAMPAIGN_REPORTS_PER_NUMBER,
-            "min_distinct_reporters_per_number": CAMPAIGN_REPORTERS_PER_NUMBER,
-            "min_union_reporters": CAMPAIGN_MIN_UNION_REPORTERS,
-            "count": len(hot_ranges),
-            "ranges": hot_ranges,
-        },
-    )
+    ranges_output = {
+        "generated": now.isoformat(),
+        "input_report_digest": input_report_digest,
+        "threshold": CAMPAIGN_THRESHOLD,
+        "min_reports_per_number": CAMPAIGN_REPORTS_PER_NUMBER,
+        "min_distinct_reporters_per_number": CAMPAIGN_REPORTERS_PER_NUMBER,
+        "min_union_reporters": CAMPAIGN_MIN_UNION_REPORTERS,
+        "count": len(hot_ranges),
+        "ranges": hot_ranges,
+    }
+    output["input_report_digest"] = input_report_digest
+
+    try:
+        ensure_feed_not_collapsed(
+            HOT_LIST_FILE,
+            output,
+            item_key="numbers",
+            absolute_floor=1,
+            previous_ratio=0.10,
+            allow_collapse=args.allow_collapse,
+        )
+        ensure_feed_not_collapsed(
+            HOT_RANGES_FILE,
+            ranges_output,
+            item_key="ranges",
+            absolute_floor=0,
+            previous_ratio=0.10,
+            allow_collapse=args.allow_collapse,
+        )
+    except FeedCollapseError as error:
+        print(f"ERROR: {error}", file=sys.stderr)
+        return 2
+
+    # Validate both outputs before replacing either one, so a collapse in the
+    # range feed cannot leave the number feed from a newer, unmergeable run.
+    atomic_write_json(HOT_LIST_FILE, output)
+    atomic_write_json(HOT_RANGES_FILE, ranges_output)
+
+    print(f"Hot list: {len(hot)} numbers in last {HOT_WINDOW_HOURS}h")
+    print(f"Written to: {HOT_LIST_FILE}")
+
+    if hot:
+        print("\nTop 5 trending:")
+        for entry in hot[:5]:
+            print(f"  {entry['number']} — {entry['reports']} reports — {entry.get('description','')[:40]}")
+
+    # ── Velocity spike alert (print for CI log visibility) ───────────
+    spikes = [v for v in hot if v.get("reports", 0) >= 10]
+    if spikes:
+        print(f"\nWARNING: VELOCITY SPIKES ({len(spikes)} numbers with 10+ reports in 24h):")
+        for s in spikes[:10]:
+            print(f"  {s['number']} — {s['reports']} reports")
 
     print(f"\nHot campaign ranges: {len(hot_ranges)} NPA-NXX prefixes with {CAMPAIGN_THRESHOLD}+ distinct numbers")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
