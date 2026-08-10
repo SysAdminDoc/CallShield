@@ -16,6 +16,7 @@ import com.sysadmindoc.callshield.data.SpamMLScorer
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.SystemBlockList
 import com.sysadmindoc.callshield.data.repository.SpamRepositoryImpl
+import com.sysadmindoc.callshield.domain.model.CallerIdentitySignals
 import com.sysadmindoc.callshield.service.CallerIdOverlayService
 import kotlinx.coroutines.withTimeoutOrNull
 import java.util.Calendar
@@ -892,12 +893,16 @@ internal class MlScorerChecker(
     override suspend fun isEnabled(ctx: CheckContext): Boolean = ctx.prefs[SpamRepository.KEY_ML_SCORER] ?: true
 
     override suspend fun check(ctx: CheckContext): BlockResult? {
-        val verdict = spamMLScorer.verdict(ctx.number)
+        val verdict = spamMLScorer.verdict(ctx.number, ctx.callerIdentity)
         return if (verdict.isSpam) {
             BlockResult.block(
                 matchSource = "ml_scorer",
                 type = "robocall",
-                description = "ML model: ${verdict.confidence}% spam probability",
+                description =
+                    listOfNotNull(
+                        "ML model: ${verdict.confidence}% spam probability",
+                        CallerIdentitySignals.describe(ctx.callerIdentity).takeIf { it.isNotBlank() },
+                    ).joinToString(". "),
                 confidence = verdict.confidence,
             )
         } else {

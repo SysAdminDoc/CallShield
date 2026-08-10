@@ -45,6 +45,10 @@ All notable changes to CallShield will be documented in this file.
   stale evidence, and exposes repeat-number/callback and source-agreement counts
   in the block explanation without allowing a single repeated number to activate
   a campaign.
+- Optional carrier identity extras now undergo bounded PASSporT/RCD structural parsing;
+  Android PASS remains the verification gate, while A/B/C metadata, DNO-listed or
+  unassigned status, and VoIP/prepaid line types make only small calibrated ML adjustments.
+  Only a validated PASSporT `origid` UUID is retained in the call log.
 
 ### Reliability
 

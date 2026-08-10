@@ -120,6 +120,7 @@ class SpamRepositoryImpl(
                 prefs = prefs,
                 verificationStatus = callerIdentity?.verificationStatus,
                 callerName = callerIdentity?.presentedName,
+                callerIdentity = callerIdentity,
                 smsContextTrusted = smsContextTrusted,
             )
 

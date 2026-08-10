@@ -195,6 +195,7 @@ interface SpamDao {
                     logKey = log.idempotencyKey,
                     ruleId = log.ruleId,
                     reasonCode = log.reasonCode,
+                    origid = log.origid,
                 ),
             )
         deletePendingBlockedCallLog(log.idempotencyKey)

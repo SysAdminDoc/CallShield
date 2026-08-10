@@ -20,7 +20,7 @@
 
 ---
 
-CallShield blocks spam calls and texts using a **15+ layer on-device detection engine** with a gradient-boosted tree ML scorer, bounded campaign/churn evidence, RCS notification filter, and real-time caller ID overlay. Powered by a 51,463-number database with scheduled hot-list updates. Community-maintained, no accounts, no tracking.
+CallShield blocks spam calls and texts using a **15+ layer on-device detection engine** with a gradient-boosted tree ML scorer, bounded campaign/churn evidence, conservative carrier identity metadata signals, RCS notification filter, and real-time caller ID overlay. Powered by a 51,463-number database with scheduled hot-list updates. Community-maintained, no accounts, no tracking.
 
 The database keeps `data/spam_numbers.json` as a stable legacy GitHub-raw
 endpoint for older clients, while current builds bundle a signed-by-hash

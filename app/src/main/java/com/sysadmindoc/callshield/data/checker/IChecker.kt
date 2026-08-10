@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.Preferences
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.repository.SpamRepositoryImpl
 import com.sysadmindoc.callshield.domain.model.BlockReasonCode
+import com.sysadmindoc.callshield.domain.model.CallerIdentity
 import kotlinx.coroutines.CancellationException
 
 /**
@@ -101,6 +102,8 @@ data class CheckContext(
      * allowed presentation. This is deliberately not a contacts-derived name.
      */
     val callerName: String? = null,
+    /** Optional parsed carrier identity metadata and calibrated DNO/line-type signals. */
+    val callerIdentity: CallerIdentity? = null,
     /**
      * Millisecond clock for budget accounting. Production uses the monotonic
      * [android.os.SystemClock.elapsedRealtime]: the wall clock can step (NTP

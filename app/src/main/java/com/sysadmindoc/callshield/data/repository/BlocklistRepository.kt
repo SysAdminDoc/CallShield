@@ -217,6 +217,7 @@ class BlocklistRepository(
         timestamp: Long = System.currentTimeMillis(),
         logKey: String? = null,
         ruleId: Long? = null,
+        origid: String? = null,
     ) {
         val normalizedNumber = normalizeLogIdentity(number)
         val inserted =
@@ -231,6 +232,7 @@ class BlocklistRepository(
                     logKey = logKey,
                     ruleId = ruleId,
                     reasonCode = BlockReasonCode.fromMatchSource(matchReason),
+                    origid = origid,
                 ),
             )
         if (inserted == -1L) return
@@ -280,6 +282,7 @@ class BlocklistRepository(
         confidence: Int = 100,
         timestamp: Long = System.currentTimeMillis(),
         ruleId: Long? = null,
+        origid: String? = null,
     ) {
         dao.insertPendingBlockedCallLog(
             PendingBlockedCallLog(
@@ -292,6 +295,7 @@ class BlocklistRepository(
                 confidence = confidence,
                 ruleId = ruleId,
                 reasonCode = BlockReasonCode.fromMatchSource(matchReason),
+                origid = origid,
             ),
         )
     }
@@ -343,6 +347,7 @@ class BlocklistRepository(
                 logKey = call.logKey,
                 ruleId = call.ruleId,
                 reasonCode = call.reasonCode,
+                origid = call.origid,
             ),
         )
 

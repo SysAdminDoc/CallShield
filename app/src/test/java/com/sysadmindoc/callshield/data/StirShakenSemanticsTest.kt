@@ -1,5 +1,6 @@
 package com.sysadmindoc.callshield.data
 
+import com.sysadmindoc.callshield.domain.model.ParsedPassport
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -54,6 +55,27 @@ class StirShakenSemanticsTest {
         val display = StirShakenSemantics.forAndroidVerificationStatus(-1)
 
         assertNull(display)
+    }
+
+    @Test
+    fun `structural PASSporT copy does not claim signature verification`() {
+        val display =
+            StirShakenSemantics.forPassportMetadata(
+                ParsedPassport(
+                    typ = "passport",
+                    algorithm = "ES256",
+                    certificateUrl = "https://example.com/cert",
+                    issuedAtEpochSeconds = 1_700_000_000L,
+                    originTelephoneNumber = "+12125550100",
+                    destinationTelephoneNumbers = listOf("+12125550101"),
+                    destinationUris = emptyList(),
+                    attestation = "A",
+                ),
+            )
+
+        assertTrue(display.description.contains("did not verify"))
+        assertTrue(display.description.contains("not a verdict"))
+        assertNoApprovalLanguage(display)
     }
 
     private fun assertNoApprovalLanguage(display: StirShakenDisplay) {

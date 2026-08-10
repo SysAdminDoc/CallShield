@@ -74,6 +74,8 @@ data class BlockedCall(
     val reasonCode: com.sysadmindoc.callshield.domain.model.BlockReasonCode =
         com.sysadmindoc.callshield.domain.model.BlockReasonCode
             .fromStored(matchReason),
+    /** PASSporT origid only; raw identity tokens and URLs are never persisted. */
+    val origid: String? = null,
 )
 
 @Entity(
@@ -99,6 +101,8 @@ data class PendingBlockedCallLog(
     val reasonCode: com.sysadmindoc.callshield.domain.model.BlockReasonCode =
         com.sysadmindoc.callshield.domain.model.BlockReasonCode
             .fromStored(matchReason),
+    /** PASSporT origid only; raw identity tokens and URLs are never persisted. */
+    val origid: String? = null,
 )
 
 @JsonClass(generateAdapter = false)

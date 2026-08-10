@@ -1,5 +1,7 @@
 package com.sysadmindoc.callshield.data
 
+import com.sysadmindoc.callshield.domain.model.ParsedPassport
+
 /**
  * Conservative display semantics for carrier caller-ID authentication.
  *
@@ -101,6 +103,22 @@ object StirShakenSemantics {
                 )
             }
         }
+
+    /** Structural PASSporT/RCD copy; it deliberately does not claim signature verification. */
+    fun forPassportMetadata(passport: ParsedPassport): StirShakenDisplay {
+        val claims = passport.attestation?.let { "Attestation $it was present in the token." }
+        val rcd = passport.richCallData?.let { "Rich caller-data metadata was supplied." }
+        return StirShakenDisplay(
+            headline = "PASSporT caller-ID metadata was decoded.",
+            bullets =
+                listOfNotNull(
+                    claims,
+                    rcd,
+                    "CallShield checked the token structure but did not verify its ES256 signature or fetch its certificate.",
+                    "Caller-ID metadata is not a verdict that the call is wanted or lawful.",
+                ),
+        )
+    }
 }
 
 data class StirShakenDisplay(
