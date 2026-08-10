@@ -122,6 +122,54 @@ fun reasonCodeLabelRes(reasonCode: BlockReasonCode): Int =
     }
 
 /**
+ * Short, complete sentences for assistive technology. These intentionally do
+ * not expose checker names, internal layers, or carrier-authentication
+ * terminology that is useful in diagnostics but not useful when spoken aloud.
+ */
+fun blockReasonAccessibilityLabelRes(reasonCode: BlockReasonCode): Int =
+    when (reasonCode) {
+        BlockReasonCode.EMERGENCY_FLOOR -> R.string.accessibility_reason_emergency_floor
+        BlockReasonCode.OTP_FLOOR -> R.string.accessibility_reason_otp_floor
+        BlockReasonCode.EMERGENCY_CONTACT -> R.string.accessibility_reason_emergency_contact
+        BlockReasonCode.MANUAL_WHITELIST -> R.string.accessibility_reason_manual_whitelist
+        BlockReasonCode.CONTACT_WHITELIST -> R.string.accessibility_reason_contact_whitelist
+        BlockReasonCode.CONTACTS_ONLY -> R.string.accessibility_reason_contacts_only
+        BlockReasonCode.STIR_SHAKEN_TRUSTED -> R.string.accessibility_reason_stir_trusted
+        BlockReasonCode.STIR_SHAKEN_FAILED -> R.string.accessibility_reason_stir_failed
+        BlockReasonCode.TEMPORARY_ALLOW -> R.string.accessibility_reason_temporary_allow
+        BlockReasonCode.TEMPORARY_BLOCK -> R.string.accessibility_reason_temporary_block
+        BlockReasonCode.SYSTEM_BLOCK_LIST -> R.string.accessibility_reason_system_block_list
+        BlockReasonCode.USER_BLOCKLIST -> R.string.accessibility_reason_user_blocklist
+        BlockReasonCode.HIDDEN_NUMBER -> R.string.accessibility_reason_hidden_number
+        BlockReasonCode.DATABASE -> R.string.accessibility_reason_database
+        BlockReasonCode.DB_PREFIX_EXPANSION -> R.string.accessibility_reason_database_prefix
+        BlockReasonCode.PREFIX, BlockReasonCode.REGION_BLOCK -> R.string.accessibility_reason_prefix
+        BlockReasonCode.WILDCARD, BlockReasonCode.HASH_WILDCARD -> R.string.accessibility_reason_saved_pattern
+        BlockReasonCode.RECENTLY_DIALED -> R.string.accessibility_reason_recently_dialed
+        BlockReasonCode.ANSWERED_CALLER -> R.string.accessibility_reason_answered_caller
+        BlockReasonCode.EMERGENCY_CALLBACK -> R.string.accessibility_reason_emergency_callback
+        BlockReasonCode.REPEATED_URGENT -> R.string.accessibility_reason_repeated_urgent
+        BlockReasonCode.CALLER_NAME_TRUST -> R.string.accessibility_reason_caller_name_trust
+        BlockReasonCode.CALLER_NAME_BLOCK -> R.string.accessibility_reason_caller_name_block
+        BlockReasonCode.CAMPAIGN_RECORDER, BlockReasonCode.CAMPAIGN_BURST -> R.string.accessibility_reason_campaign
+        BlockReasonCode.TIME_BLOCK -> R.string.accessibility_reason_quiet_hours
+        BlockReasonCode.FREQUENCY -> R.string.accessibility_reason_frequency
+        BlockReasonCode.HEURISTIC -> R.string.accessibility_reason_suspicious_patterns
+        BlockReasonCode.ML_SCORER -> R.string.accessibility_reason_on_device_analysis
+        BlockReasonCode.HOT_LIST -> R.string.accessibility_reason_recent_reports
+        BlockReasonCode.SPAM_DOMAIN -> R.string.accessibility_reason_spam_website
+        BlockReasonCode.PUSH_ALERT -> R.string.accessibility_reason_push_alert
+        BlockReasonCode.SMS_CONTEXT -> R.string.accessibility_reason_message_trust
+        BlockReasonCode.SMS_BURST -> R.string.accessibility_reason_message_burst
+        BlockReasonCode.KEYWORD -> R.string.accessibility_reason_keyword
+        BlockReasonCode.SMS_CONTENT -> R.string.accessibility_reason_message_content
+        BlockReasonCode.RCS_FILTER -> R.string.accessibility_reason_message_filter
+        BlockReasonCode.CATEGORY_POLICY -> R.string.accessibility_reason_category
+        BlockReasonCode.PIPELINE_DIAGNOSTIC -> R.string.accessibility_reason_degraded
+        BlockReasonCode.UNKNOWN -> R.string.accessibility_reason_unknown
+    }
+
+/**
  * Localized display label for a stored reason. Legacy rows are converted by
  * [BlockReasonCode.fromStored] at this boundary; no UI surface parses a
  * free-form reason string or exposes an internal token.

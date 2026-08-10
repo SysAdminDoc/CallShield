@@ -130,6 +130,11 @@ private fun Context.currentOverlayPalette(): CallerIdOverlayPalette {
  * Shows immediately with area code, then queries SkipCalls, PhoneBlock,
  * and WhoCalledMe in parallel. Updates the overlay in real-time as each
  * source responds. Shows aggregate spam score + Google search button.
+ *
+ * RTT calls never reach this service: [CallShieldScreeningService] explicitly
+ * allows [android.telecom.Call.Details.PROPERTY_RTT] sessions before it can
+ * launch an overlay. This service does not alter Telecom call state or audio;
+ * the optional SIT-tone control is available only on the non-RTT surface.
  */
 @Suppress("DEPRECATION")
 class CallerIdOverlayService : Service() {

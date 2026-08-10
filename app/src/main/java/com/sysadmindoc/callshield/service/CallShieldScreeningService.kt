@@ -64,6 +64,18 @@ class CallShieldScreeningService : CallScreeningService() {
             context.startService(CallerIdOverlayService.outgoingRiskIntent(context, warning))
         }
 
+    /** Kept injectable so the RTT contract can prove that no overlay is launched. */
+    internal var incomingOverlayLauncher: (android.content.Context, String, Int, String) -> Unit =
+        { context, number, confidence, reason ->
+            val intent =
+                android.content.Intent(context, CallerIdOverlayService::class.java).apply {
+                    putExtra("number", number)
+                    putExtra("confidence", confidence)
+                    putExtra("reason", reason)
+                }
+            context.startService(intent)
+        }
+
     override fun onScreenCall(callDetails: Call.Details) {
         val responseGate =
             ScreeningResponseGate<CallResponse> { response -> respondToCall(callDetails, response) }
@@ -226,13 +238,7 @@ class CallShieldScreeningService : CallScreeningService() {
                             val location = AreaCodeLookup.lookup(number)
                             if (location != null) {
                                 try {
-                                    val intent =
-                                        android.content.Intent(appContext, CallerIdOverlayService::class.java).apply {
-                                            putExtra("number", number)
-                                            putExtra("confidence", 0)
-                                            putExtra("reason", location)
-                                        }
-                                    appContext.startService(intent)
+                                    incomingOverlayLauncher(appContext, number, 0, location)
                                 } catch (_: Exception) {
                                 }
                             }

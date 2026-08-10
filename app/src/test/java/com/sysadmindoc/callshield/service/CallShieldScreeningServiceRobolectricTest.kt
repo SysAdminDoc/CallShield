@@ -55,6 +55,7 @@ class CallShieldScreeningServiceRobolectricTest {
     private lateinit var service: CallShieldScreeningService
     private lateinit var shadowService: ShadowCallScreeningService
     private val outgoingWarnings = mutableListOf<OutgoingRiskWarning>()
+    private val incomingOverlays = mutableListOf<Triple<String, Int, String>>()
 
     @Before
     fun setUp() {
@@ -88,8 +89,12 @@ class CallShieldScreeningServiceRobolectricTest {
         service.spamHeuristics = SpamHeuristics.shared
         service.applicationScope = scope
         outgoingWarnings.clear()
+        incomingOverlays.clear()
         OutgoingRiskPolicy.resetForTests()
         service.outgoingWarningLauncher = { _, warning -> outgoingWarnings += warning }
+        service.incomingOverlayLauncher = { _, number, confidence, reason ->
+            incomingOverlays += Triple(number, confidence, reason)
+        }
         shadowService = Shadow.extract(service)
     }
 
@@ -161,6 +166,7 @@ class CallShieldScreeningServiceRobolectricTest {
         assertFalse(response.silenceCall)
         awaitScopeIdle()
         assertTrue(outgoingWarnings.isEmpty())
+        assertTrue(incomingOverlays.isEmpty())
     }
 
     @Test

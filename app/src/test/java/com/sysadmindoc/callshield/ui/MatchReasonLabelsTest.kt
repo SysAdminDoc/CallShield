@@ -1,10 +1,19 @@
 package com.sysadmindoc.callshield.ui
 
+import androidx.test.core.app.ApplicationProvider
 import com.sysadmindoc.callshield.R
+import com.sysadmindoc.callshield.domain.model.BlockReasonCode
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [36])
 class MatchReasonLabelsTest {
     @Test
     fun `every production checker has a dedicated localized label`() {
@@ -78,5 +87,20 @@ class MatchReasonLabelsTest {
     @Test
     fun `type mapping is case and whitespace tolerant`() {
         assertEquals(R.string.spam_type_robocall, spamTypeLabelRes("  ROBOCALL "))
+    }
+
+    @Test
+    fun `every persisted reason has a plain spoken sentence`() {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val jargon = listOf("attestation", "stir", "shaken", "rcs", "heuristic", " ml ", "layer")
+
+        BlockReasonCode.entries.forEach { reasonCode ->
+            val sentence = context.getString(blockReasonAccessibilityLabelRes(reasonCode))
+            assertTrue(reasonCode.wireValue, sentence.endsWith('.'))
+            assertFalse(
+                "${reasonCode.wireValue}: $sentence",
+                jargon.any { token -> sentence.lowercase().contains(token) },
+            )
+        }
     }
 }

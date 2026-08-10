@@ -86,7 +86,6 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -111,6 +110,7 @@ import com.sysadmindoc.callshield.data.model.SpamNumber
 import com.sysadmindoc.callshield.data.model.WhitelistEntry
 import com.sysadmindoc.callshield.data.model.WildcardRule
 import com.sysadmindoc.callshield.ui.MainViewModel
+import com.sysadmindoc.callshield.ui.accessibleSwipeActions
 import com.sysadmindoc.callshield.ui.theme.CatBlue
 import com.sysadmindoc.callshield.ui.theme.CatGreen
 import com.sysadmindoc.callshield.ui.theme.CatMauve
@@ -954,16 +954,15 @@ internal fun SwipeToRemoveBlocklistItem(
         modifier =
             Modifier
                 .testTag(BLOCKLIST_SWIPE_ITEM_TAG)
-                .semantics {
-                    // The visual swipe is a convenience, never the only path
-                    // to the destructive action for switch-access users.
-                    customActions =
-                        listOf(
-                            CustomAccessibilityAction(unblockActionLabel) {
-                                removeOnce()
-                            },
-                        )
-                },
+                // The visual swipe is a convenience, never the only path to
+                // the destructive action for switch-access users.
+                .accessibleSwipeActions(
+                    listOf(
+                        CustomAccessibilityAction(unblockActionLabel) {
+                            removeOnce()
+                        },
+                    ),
+                ),
         backgroundContent = {
             val active = dismissState.dismissDirection == SwipeToDismissBoxValue.EndToStart
             Box(

@@ -11,11 +11,13 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeLeft
+import androidx.compose.ui.unit.dp
 import com.sysadmindoc.callshield.data.TimeSchedule
 import com.sysadmindoc.callshield.data.model.SpamNumber
 import com.sysadmindoc.callshield.data.model.WhitelistEntry
 import com.sysadmindoc.callshield.ui.runStrictAccessibilityChecks
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
@@ -155,6 +157,20 @@ class BlocklistTest {
                 .config[SemanticsActions.CustomActions]
 
         assertEquals(listOf("Unblock number"), actions.map { it.label })
+    }
+
+    @Test
+    fun blocklistSwipeContainerKeepsTheMinimumTouchTarget() {
+        composeRule.setContent {
+            SwipeToRemoveBlocklistItem(
+                number = manualSpamNumber(),
+                onRemove = {},
+            )
+        }
+
+        val node = composeRule.onNodeWithTag(BLOCKLIST_SWIPE_ITEM_TAG).fetchSemanticsNode()
+        val minimumPixels = with(composeRule.density) { 48.dp.toPx() }
+        assertTrue("Swipe target was ${node.boundsInRoot.height}px", node.boundsInRoot.height >= minimumPixels)
     }
 
     private fun manualSpamNumber(): SpamNumber =
