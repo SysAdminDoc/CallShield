@@ -9,6 +9,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import com.sysadmindoc.callshield.data.NotificationScreeningSources
+import com.sysadmindoc.callshield.ui.runStrictAccessibilityChecks
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -28,6 +29,8 @@ class NotificationScreeningSourcesSheetTest {
                 onDismiss = {},
             )
         }
+
+        composeRule.runStrictAccessibilityChecks()
 
         composeRule.onNodeWithText("reads notification sender and text", substring = true).assertIsDisplayed()
         composeRule

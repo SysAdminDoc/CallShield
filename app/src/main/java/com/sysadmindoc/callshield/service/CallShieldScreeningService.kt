@@ -66,6 +66,15 @@ class CallShieldScreeningService : CallScreeningService() {
     override fun onScreenCall(callDetails: Call.Details) {
         val responseGate =
             ScreeningResponseGate<CallResponse> { response -> respondToCall(callDetails, response) }
+
+        // Real-time text (RTT) is an active assistive voice/text channel and
+        // may carry emergency traffic. Screening must not reject, silence, or
+        // launch the caller-ID overlay for it; Telecom owns the RTT session.
+        if (callDetails.hasProperty(Call.Details.PROPERTY_RTT)) {
+            respondAllow(responseGate)
+            return
+        }
+
         val userManager = getSystemService(UserManager::class.java)
         if (userManager?.isUserUnlocked == false) {
             handleDirectBootCall(callDetails, responseGate)

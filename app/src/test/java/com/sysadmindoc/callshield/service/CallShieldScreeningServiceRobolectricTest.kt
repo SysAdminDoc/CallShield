@@ -149,6 +149,21 @@ class CallShieldScreeningServiceRobolectricTest {
     }
 
     @Test
+    fun `onScreenCall allows RTT sessions without running blocking or overlay paths`() {
+        val number = "+12125550181"
+        runBlocking { repository.blockNumber(number, type = "test") }
+
+        service.onScreenCall(callDetails(number, properties = Call.Details.PROPERTY_RTT))
+
+        val response = awaitResponse()
+        assertFalse(response.disallowCall)
+        assertFalse(response.rejectCall)
+        assertFalse(response.silenceCall)
+        awaitScopeIdle()
+        assertTrue(outgoingWarnings.isEmpty())
+    }
+
+    @Test
     fun `onScreenCall fails open when lazy repository creation throws`() {
         val failingService =
             Robolectric.setupService(CallShieldScreeningService::class.java).also {
@@ -560,11 +575,13 @@ class CallShieldScreeningServiceRobolectricTest {
     private fun callDetails(
         number: String,
         direction: Int = Call.Details.DIRECTION_INCOMING,
+        properties: Int = 0,
     ): Call.Details =
         ReflectionHelpers.callConstructor(Call.Details::class.java).also { details ->
             ReflectionHelpers.setField(details, "mHandle", Uri.parse("tel:$number"))
             ReflectionHelpers.setField(details, "mCreationTimeMillis", 1_753_094_800_000L)
             ReflectionHelpers.setField(details, "mCallDirection", direction)
+            ReflectionHelpers.setField(details, "mCallProperties", properties)
         }
 
     private fun awaitResponse(): CallScreeningService.CallResponse =

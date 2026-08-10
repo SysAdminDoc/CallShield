@@ -1,21 +1,20 @@
 package com.sysadmindoc.callshield.ui.screens.main
 
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
-import androidx.compose.ui.test.junit4.accessibility.enableAccessibilityChecks
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeLeft
-import androidx.compose.ui.test.tryPerformAccessibilityChecks
 import com.sysadmindoc.callshield.data.TimeSchedule
 import com.sysadmindoc.callshield.data.model.SpamNumber
 import com.sysadmindoc.callshield.data.model.WhitelistEntry
+import com.sysadmindoc.callshield.ui.runStrictAccessibilityChecks
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -33,8 +32,7 @@ class BlocklistTest {
             )
         }
 
-        composeRule.enableAccessibilityChecks()
-        composeRule.onRoot().tryPerformAccessibilityChecks()
+        composeRule.runStrictAccessibilityChecks()
     }
 
     @Test
@@ -139,6 +137,24 @@ class BlocklistTest {
         }
 
         composeRule.waitUntil(timeoutMillis = 3_000) { removed == 1 }
+    }
+
+    @Test
+    fun blocklistSwipeHasAnUnblockCustomAction() {
+        composeRule.setContent {
+            SwipeToRemoveBlocklistItem(
+                number = manualSpamNumber(),
+                onRemove = {},
+            )
+        }
+
+        val actions =
+            composeRule
+                .onNodeWithTag(BLOCKLIST_SWIPE_ITEM_TAG)
+                .fetchSemanticsNode()
+                .config[SemanticsActions.CustomActions]
+
+        assertEquals(listOf("Unblock number"), actions.map { it.label })
     }
 
     private fun manualSpamNumber(): SpamNumber =

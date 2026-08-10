@@ -65,7 +65,7 @@ fun ActivityScreen(viewModel: MainViewModel) {
 }
 
 @Composable
-private fun RowScope.ActivityTab(
+internal fun RowScope.ActivityTab(
     selected: Boolean,
     label: String,
     onClick: () -> Unit,

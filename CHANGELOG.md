@@ -11,6 +11,8 @@ All notable changes to CallShield will be documented in this file.
   Lookup, Rules, and More.
 - Dashboard now surfaces background-execution and battery-optimization risk with safe recovery
   links, an optional MIUI autostart route, and a dismissible warning that refreshes on resume.
+- Expanded Compose accessibility coverage to every screen and bottom sheet, with warnings treated
+  as test failures and swipe-only actions exposed through equivalent custom actions.
 
 ### Data pipeline
 
@@ -50,6 +52,8 @@ All notable changes to CallShield will be documented in this file.
   time, calling number, and reason; raw SMS and allowed activity are excluded.
 - Expanded screening fault injection for locked startup, cancellation, contact fast paths,
   slow checkers, direct boot, and concurrent fallback responses; every path remains fail-open.
+- RTT calls receive an immediate explicit allow response so Telecom retains the active assistive
+  voice/text session without screening or caller-ID overlay interference.
 
 ### Build
 

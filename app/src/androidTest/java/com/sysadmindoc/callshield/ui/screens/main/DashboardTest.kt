@@ -3,14 +3,12 @@ package com.sysadmindoc.callshield.ui.screens.main
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.junit4.accessibility.enableAccessibilityChecks
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.tryPerformAccessibilityChecks
 import com.sysadmindoc.callshield.permissions.BackgroundExecutionRisk
 import com.sysadmindoc.callshield.ui.SyncState
+import com.sysadmindoc.callshield.ui.runStrictAccessibilityChecks
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -48,8 +46,7 @@ class DashboardTest {
             )
         }
 
-        composeRule.enableAccessibilityChecks()
-        composeRule.onRoot().tryPerformAccessibilityChecks()
+        composeRule.runStrictAccessibilityChecks()
     }
 
     @Test

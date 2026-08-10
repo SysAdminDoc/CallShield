@@ -10,6 +10,7 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import com.sysadmindoc.callshield.data.ContactGroup
+import com.sysadmindoc.callshield.ui.runStrictAccessibilityChecks
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -32,6 +33,8 @@ class ContactGroupPickerSheetTest {
                 onDismiss = {},
             )
         }
+
+        composeRule.runStrictAccessibilityChecks()
 
         composeRule.onNodeWithTag(CONTACT_SCOPE_ALL_TAG).assertIsSelected()
         composeRule.onNodeWithTag("$CONTACT_SCOPE_GROUP_TAG_PREFIX$groupKey").performClick().assertIsOn()

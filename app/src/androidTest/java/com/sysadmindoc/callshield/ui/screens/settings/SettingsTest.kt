@@ -3,16 +3,14 @@ package com.sysadmindoc.callshield.ui.screens.settings
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.junit4.accessibility.enableAccessibilityChecks
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
-import androidx.compose.ui.test.tryPerformAccessibilityChecks
 import com.sysadmindoc.callshield.data.BackupRestore
+import com.sysadmindoc.callshield.ui.runStrictAccessibilityChecks
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -35,8 +33,7 @@ class SettingsTest {
             )
         }
 
-        composeRule.enableAccessibilityChecks()
-        composeRule.onRoot().tryPerformAccessibilityChecks()
+        composeRule.runStrictAccessibilityChecks()
     }
 
     @Test

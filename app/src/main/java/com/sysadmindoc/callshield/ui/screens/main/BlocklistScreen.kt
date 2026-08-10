@@ -83,7 +83,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -815,12 +817,21 @@ internal fun SwipeToRemoveBlocklistItem(
 ) {
     var removalHandled by remember(number.id) { mutableStateOf(false) }
     val currentOnRemove by rememberUpdatedState(onRemove)
+
+    fun removeOnce(): Boolean {
+        if (removalHandled) return false
+        removalHandled = true
+        currentOnRemove()
+        return true
+    }
+
+    val unblockActionLabel = stringResource(R.string.cd_unblock)
+
     val dismissState =
         rememberSwipeToDismissBoxState(
             confirmValueChange = { targetValue ->
                 if (targetValue == SwipeToDismissBoxValue.EndToStart && !removalHandled) {
-                    removalHandled = true
-                    currentOnRemove()
+                    removeOnce()
                     // Keep the reusable saveable state settled so Undo can
                     // reinsert this same item id without immediately removing it.
                     false
@@ -831,7 +842,19 @@ internal fun SwipeToRemoveBlocklistItem(
         )
     SwipeToDismissBox(
         state = dismissState,
-        modifier = Modifier.testTag(BLOCKLIST_SWIPE_ITEM_TAG),
+        modifier =
+            Modifier
+                .testTag(BLOCKLIST_SWIPE_ITEM_TAG)
+                .semantics {
+                    // The visual swipe is a convenience, never the only path
+                    // to the destructive action for switch-access users.
+                    customActions =
+                        listOf(
+                            CustomAccessibilityAction(unblockActionLabel) {
+                                removeOnce()
+                            },
+                        )
+                },
         backgroundContent = {
             val active = dismissState.dismissDirection == SwipeToDismissBoxValue.EndToStart
             Box(
