@@ -220,6 +220,12 @@ object BlockReasoning {
                 bullets += "Matched SMS context trust — you've sent a message to this number, or received from it on 2+ distinct days."
             }
 
+            reasonCode == BlockReasonCode.PIPELINE_DIAGNOSTIC -> {
+                headline = "Protection ran in degraded mode for this decision."
+                bullets += "CallShield allowed the activity while one or more detection stages were not evaluated."
+                if (description.isNotBlank()) bullets += description
+            }
+
             reasonCode == BlockReasonCode.UNKNOWN && rcsMatchSource.isBlank() -> {
                 headline = "No block — this number was allowed through."
                 bullets += "None of the 15+ detection layers matched."

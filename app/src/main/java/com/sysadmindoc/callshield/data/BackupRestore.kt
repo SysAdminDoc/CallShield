@@ -45,7 +45,8 @@ import java.util.UUID
  * - **v6**: preserves per-category call actions.
  * - **v7**: preserves the privacy-safe keys for selected contact-group scope.
  * - **v8**: includes stable block reason codes and deciding rule IDs in logs.
- *   The reader accepts v1-v8; the writer emits v8.
+ * - **v9**: includes privacy-safe checker cutoff/error diagnostics in logs.
+ *   The reader accepts v1-v9; the writer emits v9.
  *   Older backups that don't carry schedule fields are restored with
  *   all-zeros — the Kotlin defaults on [WildcardRule] and
  *   [SmsKeywordRule] treat that as "always active", preserving
@@ -57,7 +58,7 @@ object BackupRestore {
 
     /** Length cap for a non-numeric log sender identity kept verbatim on restore. */
     private const val MAX_LOG_IDENTITY_LEN = 64
-    private const val CURRENT_BACKUP_VERSION = 8
+    private const val CURRENT_BACKUP_VERSION = 9
     private const val OLDEST_SUPPORTED_VERSION = 1
     internal const val MAX_BACKUP_RESTORE_ROWS = MAX_IMPORT_ROWS
 
@@ -209,6 +210,7 @@ object BackupRestore {
         val confidence: Int = 100,
         val logKey: String? = null,
         val ruleId: Long? = null,
+        val pipelineDiagnostic: String? = null,
         val origid: String? = null,
     )
 
@@ -385,6 +387,7 @@ object BackupRestore {
                             confidence = it.confidence,
                             logKey = it.logKey,
                             ruleId = it.ruleId,
+                            pipelineDiagnostic = it.pipelineDiagnostic,
                             origid = sanitizeOrigid(it.origid),
                         )
                     }
@@ -811,6 +814,7 @@ object BackupRestore {
                                 confidence = log.confidence,
                                 logKey = log.logKey,
                                 ruleId = log.ruleId,
+                                pipelineDiagnostic = log.pipelineDiagnostic,
                                 origid = sanitizeOrigid(log.origid),
                             ),
                         )
@@ -1011,6 +1015,11 @@ object BackupRestore {
                             confidence = log.confidence.coerceIn(0, 100),
                             logKey = log.logKey?.trim()?.ifBlank { null },
                             ruleId = log.ruleId,
+                            pipelineDiagnostic =
+                                log.pipelineDiagnostic
+                                    ?.trim()
+                                    ?.take(512)
+                                    ?.ifBlank { null },
                             origid = sanitizeOrigid(log.origid),
                         )
                     }

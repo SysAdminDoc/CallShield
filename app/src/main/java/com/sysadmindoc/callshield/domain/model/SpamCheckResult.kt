@@ -8,4 +8,5 @@ data class SpamCheckResult(
     val confidence: Int = 100,
     val reasonCode: BlockReasonCode = BlockReasonCode.fromMatchSource(matchSource),
     val ruleId: Long? = null,
+    val screeningDiagnostics: ScreeningDiagnostics? = null,
 )

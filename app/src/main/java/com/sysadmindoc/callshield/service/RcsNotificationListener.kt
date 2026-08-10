@@ -266,6 +266,14 @@ class RcsNotificationListener : NotificationListenerService() {
                 matchReason = "rcs_${result.matchSource}",
                 confidence = confidence,
                 ruleId = result.ruleId,
+                pipelineDiagnostic = result.screeningDiagnostics?.toWireValue(),
+            )
+        } else if (result?.screeningDiagnostics?.hasIssues == true) {
+            repo.logScreeningDiagnostic(
+                number = senderDigits,
+                isCall = false,
+                smsBody = effectiveBody,
+                pipelineDiagnostic = result.screeningDiagnostics.toWireValue().orEmpty(),
             )
         } else if (isSpam) {
             NotificationHelper.notifyScreenedMessage(

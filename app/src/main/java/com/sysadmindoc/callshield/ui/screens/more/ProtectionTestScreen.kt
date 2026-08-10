@@ -601,6 +601,33 @@ private suspend fun runTests(context: Context): List<TestResult> =
             ),
         )
 
+        val pipelineTrace = repo.traceRules("+15555550123")
+        val checkerErrors =
+            pipelineTrace.entries.count {
+                it.verdict == com.sysadmindoc.callshield.data.checker.PipelineTraceVerdict.ERROR
+            }
+        results.add(
+            TestResult(
+                name = context.getString(R.string.protection_test_checker_health),
+                passed = checkerErrors == 0,
+                detail =
+                    if (checkerErrors == 0) {
+                        context.getString(
+                            R.string.protection_test_checker_health_ok,
+                            pipelineTrace.entries.size,
+                        )
+                    } else {
+                        context.getString(
+                            R.string.protection_test_checker_health_errors,
+                            checkerErrors,
+                            pipelineTrace.entries.size,
+                        )
+                    },
+                priority = TestPriority.Required,
+                recoveryHint = if (checkerErrors == 0) null else context.getString(R.string.protection_test_fix_engine),
+            ),
+        )
+
         val mlResult =
             com.sysadmindoc.callshield.data.SpamMLScorer
                 .isSpam("+15555550000")

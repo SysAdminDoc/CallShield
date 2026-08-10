@@ -141,8 +141,27 @@ class LogExporterTest {
         assertFalse(csv.contains("Your reset code"))
         assertFalse(csv.contains("987654"))
         assertFalse(csv.contains("token=secret"))
-        assertTrue(csv.startsWith("Number,Date,Type,IsCall,ReasonCode,RuleId,Confidence,SMSBody\n"))
+        assertTrue(csv.startsWith("Number,Date,Type,IsCall,ReasonCode,RuleId,Confidence,PipelineDiagnostic,SMSBody\n"))
         assertTrue(csv.contains("sms_content"))
+    }
+
+    @Test
+    fun `exportToCsv includes privacy safe pipeline diagnostic`() {
+        val csv =
+            LogExporter.exportToCsv(
+                listOf(
+                    BlockedCall(
+                        number = "+15551234567",
+                        timestamp = 0L,
+                        matchReason = "pipeline_diagnostic",
+                        wasBlocked = false,
+                        pipelineDiagnostic = "budget_exhausted|cutoff=ml_scorer|unevaluated=ml_scorer",
+                    ),
+                ),
+            )
+
+        assertTrue(csv.contains("PipelineDiagnostic"))
+        assertTrue(csv.contains("budget_exhausted|cutoff=ml_scorer"))
     }
 
     // ── csvEscape: spreadsheet formula-injection neutralization ──────────

@@ -112,6 +112,14 @@ class SmsReceiver : BroadcastReceiver() {
                             matchReason = result.matchSource,
                             confidence = result.confidence,
                             ruleId = result.ruleId,
+                            pipelineDiagnostic = result.screeningDiagnostics?.toWireValue(),
+                        )
+                    } else if (result.screeningDiagnostics?.hasIssues == true) {
+                        repo.logScreeningDiagnostic(
+                            number = sender,
+                            isCall = false,
+                            smsBody = body,
+                            pipelineDiagnostic = result.screeningDiagnostics.toWireValue().orEmpty(),
                         )
                     } else if (CheckerPriority.isSafetyFloor(result.matchSource)) {
                         repo.logScreeningExemption(

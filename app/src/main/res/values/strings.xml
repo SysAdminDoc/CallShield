@@ -163,6 +163,7 @@
     <string name="blocked_log_blocked_call">Blocked call</string>
     <string name="blocked_log_blocked_sms">Blocked SMS</string>
     <string name="blocked_log_safety_exempted">Allowed by a safety floor</string>
+    <string name="blocked_log_pipeline_diagnostic">Protection warning: %s</string>
     <string name="blocked_log_google">Google</string>
     <string name="blocked_log_databases">Databases</string>
     <string name="blocked_log_copy">Copy</string>
@@ -353,6 +354,7 @@
     <string name="lookup_trace_allow">ALLOW</string>
     <string name="lookup_trace_off">OFF</string>
     <string name="lookup_trace_pass">PASS</string>
+    <string name="lookup_trace_error">ERROR</string>
     <string name="lookup_spam_detected">SPAM DETECTED</string>
     <string name="lookup_clean">CLEAN</string>
     <string name="lookup_result_spam_summary">High-risk match. CallShield is %d%% confident this number should be blocked.</string>
@@ -749,6 +751,7 @@
     <string name="stats_reason_hidden_number">Hidden number</string>
     <string name="stats_reason_emergency_floor">Emergency safety floor</string>
     <string name="stats_reason_otp_floor">Verification safety floor</string>
+    <string name="stats_reason_pipeline_diagnostic">Protection diagnostic</string>
     <string name="stats_reason_unknown">Unknown</string>
     <string name="stats_no_data">No data yet</string>
     <string name="stats_no_data_desc">Stats will appear after CallShield blocks its first calls or texts.</string>
@@ -883,6 +886,9 @@
     <string name="protection_test_prefix_detection">Prefix Detection</string>
     <string name="protection_test_wangiri_detection">Wangiri Detection</string>
     <string name="protection_test_sms_content_analysis">SMS Content Analysis</string>
+    <string name="protection_test_checker_health">Checker health</string>
+    <string name="protection_test_checker_health_ok">All %1$d checkers completed without exceptions.</string>
+    <string name="protection_test_checker_health_errors">%1$d of %2$d checkers reported an exception; affected checks fail open.</string>
     <string name="protection_test_ml_spam_scorer">ML Spam Scorer</string>
     <string name="protection_test_ml_false_positive">ML False Positive</string>
     <string name="protection_test_hot_list_data">Hot List Data</string>

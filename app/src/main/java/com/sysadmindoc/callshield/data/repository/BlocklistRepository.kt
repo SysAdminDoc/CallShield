@@ -217,6 +217,7 @@ class BlocklistRepository(
         timestamp: Long = System.currentTimeMillis(),
         logKey: String? = null,
         ruleId: Long? = null,
+        pipelineDiagnostic: String? = null,
         origid: String? = null,
     ) {
         val normalizedNumber = normalizeLogIdentity(number)
@@ -232,6 +233,7 @@ class BlocklistRepository(
                     logKey = logKey,
                     ruleId = ruleId,
                     reasonCode = BlockReasonCode.fromMatchSource(matchReason),
+                    pipelineDiagnostic = pipelineDiagnostic,
                     origid = origid,
                 ),
             )
@@ -253,6 +255,7 @@ class BlocklistRepository(
         confidence: Int = 100,
         timestamp: Long = System.currentTimeMillis(),
         ruleId: Long? = null,
+        pipelineDiagnostic: String? = null,
     ) {
         val normalizedNumber = normalizeLogIdentity(number)
         val inserted =
@@ -268,6 +271,39 @@ class BlocklistRepository(
                     confidence = confidence,
                     ruleId = ruleId,
                     reasonCode = BlockReasonCode.fromMatchSource(matchReason),
+                    pipelineDiagnostic = pipelineDiagnostic,
+                ),
+            )
+        if (inserted != -1L) CallShieldWidget.refreshAll(context)
+    }
+
+    /**
+     * Retain a fail-open decision whose checker chain was incomplete. This is
+     * deliberately a non-blocked log row: the user should see that protection
+     * degraded without mistaking the diagnostic for a spam verdict.
+     */
+    suspend fun logScreeningDiagnostic(
+        number: String,
+        isCall: Boolean = true,
+        smsBody: String? = null,
+        pipelineDiagnostic: String,
+        timestamp: Long = System.currentTimeMillis(),
+    ) {
+        val normalizedNumber = normalizeLogIdentity(number)
+        val inserted =
+            dao.insertBlockedCallIgnoringDuplicate(
+                BlockedCall(
+                    number = normalizedNumber,
+                    timestamp = timestamp,
+                    type = "screening_diagnostic",
+                    wasBlocked = false,
+                    isCall = isCall,
+                    smsBody = smsBody,
+                    matchReason = BlockReasonCode.PIPELINE_DIAGNOSTIC.wireValue,
+                    confidence = 0,
+                    logKey = "screening-diagnostic|$normalizedNumber|$timestamp|${pipelineDiagnostic.hashCode()}",
+                    reasonCode = BlockReasonCode.PIPELINE_DIAGNOSTIC,
+                    pipelineDiagnostic = pipelineDiagnostic,
                 ),
             )
         if (inserted != -1L) CallShieldWidget.refreshAll(context)
@@ -282,6 +318,7 @@ class BlocklistRepository(
         confidence: Int = 100,
         timestamp: Long = System.currentTimeMillis(),
         ruleId: Long? = null,
+        pipelineDiagnostic: String? = null,
         origid: String? = null,
     ) {
         dao.insertPendingBlockedCallLog(
@@ -295,6 +332,7 @@ class BlocklistRepository(
                 confidence = confidence,
                 ruleId = ruleId,
                 reasonCode = BlockReasonCode.fromMatchSource(matchReason),
+                pipelineDiagnostic = pipelineDiagnostic,
                 origid = origid,
             ),
         )
@@ -347,6 +385,7 @@ class BlocklistRepository(
                 logKey = call.logKey,
                 ruleId = call.ruleId,
                 reasonCode = call.reasonCode,
+                pipelineDiagnostic = call.pipelineDiagnostic,
                 origid = call.origid,
             ),
         )

@@ -501,7 +501,7 @@ by locale and message type without shipping personal data:
 - Selective backup/restore for rules, non-secret settings, and opt-in logs; CSV log export; auto-cleanup (7/14/30/90 days)
 - Weekly full sync + scheduled hot list refresh, daily digest notification
 - Quick Settings tile, app shortcuts, home screen widget
-- Protection test validates all layers and permissions
+- Protection test validates all layers and permissions, including checker errors and deadline cutoffs
 - Onboarding wizard with permission requests
 
 ## Data Sources
