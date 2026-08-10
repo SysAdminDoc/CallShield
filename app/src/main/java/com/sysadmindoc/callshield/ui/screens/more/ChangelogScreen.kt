@@ -25,9 +25,20 @@ fun ChangelogScreen() {
         verticalArrangement = Arrangement.spacedBy(0.dp),
     ) {
         VersionEntry(
+            "1.7.34",
+            "Explainable protection, RTT safety, and assistive action coverage",
+            isLatest = true,
+            changes =
+                listOf(
+                    "RTT calls receive an explicit allow before screening or caller-ID overlay work",
+                    "TalkBack and switch access expose equivalent delete, block, and unblock actions",
+                    "Block reasons are spoken as complete plain-English sentences",
+                    "Protection Test shows background-worker stop reasons and quota recovery guidance",
+                ),
+        )
+        VersionEntry(
             "1.7.33",
             "Broader public spam coverage and fail-open screening reliability",
-            isLatest = true,
             changes =
                 listOf(
                     "Saracroche, PhoneBlock, Nomorobo IRS, FCC advertiser numbers, and bounded FTC retries expand public source coverage",
@@ -38,7 +49,6 @@ fun ChangelogScreen() {
         VersionEntry(
             "1.7.32",
             "Guided first-run setup with verified Android permission handoffs",
-            isLatest = true,
             changes =
                 listOf(
                     "First launch now guides every permission and special-access step separately",

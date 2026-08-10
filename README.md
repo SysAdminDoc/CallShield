@@ -41,7 +41,7 @@ legacy snapshot when the shard service is unavailable.
   <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/06-more.png" width="30%" alt="Protection tools and release information">
 </p>
 
-## v1.7.33 Highlights
+## v1.7.34 Highlights
 
 - **Broader public spam coverage** — Saracroche, PhoneBlock, Nomorobo IRS,
   FCC advertiser numbers, and bounded incremental FTC/FCC windows now feed the
@@ -51,6 +51,9 @@ legacy snapshot when the shard service is unavailable.
 - **Incremental database delivery** — current APKs bundle the manifest and
   content-addressed spam shards rather than the monolith; sync verifies hashes,
   downloads only changed shards, and retains the legacy raw URL for older apps.
+- **Explainable protection** — lookup and number-detail verdicts lead with the
+  deciding rule, worker stop reasons surface background-quota recovery, and RTT
+  calls bypass screening and caller-ID overlays.
 
 ## v1.7.32 Highlights
 
@@ -352,7 +355,7 @@ legacy snapshot when the shard service is unavailable.
 5. **Callback-aware** — won't block callbacks from numbers you recently called, answered repeatedly, after a local emergency call, or urgent repeated callers
 6. **Community-driven** — one-tap anonymous contribution via Cloudflare Worker, merged into the database by the maintainer
 
-## Detection Pipeline (v1.7.33)
+## Detection Pipeline (v1.7.34)
 
 All detection layers implement a shared `IChecker` interface and run in priority order via `CheckerPipeline.run` — first non-null result wins, every layer is testable in isolation. Priorities are stable numbers; the ladder below is the live order.
 

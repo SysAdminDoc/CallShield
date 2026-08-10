@@ -132,6 +132,22 @@ All notable changes to CallShield will be documented in this file.
   version metadata, locked direct dependencies, explicitly dispositioned
   advisories, F-Droid preparation state, and privacy-safe source snapshots.
 
+## v1.7.34 — 2026-08-10
+
+### Interface
+
+- Added plain-English TalkBack block reasons and equivalent accessibility actions
+  for activity-log and blocklist swipe actions, with 48dp minimum swipe targets.
+- Lookup and number-detail verdict cards now lead with causal decisions instead of
+  presenting deterministic rules as probabilities.
+
+### Reliability
+
+- RTT calls receive an immediate allow before screening or caller-ID overlay work,
+  preserving the active assistive voice/text session.
+- Protection Test now surfaces WorkManager attempt counts and stop reasons, including
+  a recovery warning when Android repeatedly defers background work for quota.
+
 ## v1.7.33 — 2026-08-01
 
 ### Detection data
