@@ -2,12 +2,14 @@ package com.sysadmindoc.callshield.service
 
 import android.content.Context
 import com.sysadmindoc.callshield.data.SmsContentAnalyzer
+import com.sysadmindoc.callshield.data.SourceEvidenceCodec
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.checker.CheckerDependencies
 import com.sysadmindoc.callshield.data.local.AppDatabase
 import com.sysadmindoc.callshield.data.local.SpamDao
 import com.sysadmindoc.callshield.data.model.HotNumber
 import com.sysadmindoc.callshield.data.model.SpamNumber
+import com.sysadmindoc.callshield.data.model.SourceEvidenceJson
 import com.sysadmindoc.callshield.data.remote.GitHubDataSource
 import com.sysadmindoc.callshield.data.remote.HotFeedDataSource
 import com.sysadmindoc.callshield.util.isAsciiDigit
@@ -270,6 +272,22 @@ internal object HotDataSync {
                     reports = 1,
                     description = hot.description.trim().ifBlank { "Trending community report" },
                     source = HOT_LIST_SOURCE,
+                    evidenceJson =
+                        SourceEvidenceCodec.encode(
+                            listOf(
+                                SourceEvidenceJson(
+                                    sourceId = HOT_LIST_SOURCE,
+                                    evidenceType = "community_velocity",
+                                    license = "CallShield community report policy",
+                                    attribution = "CallShield hot-list generator",
+                                    retrievedAt = java.time.Instant.now().toString(),
+                                    confidenceTier = "unverified",
+                                    parserVersion = "hot-list-v1",
+                                    expiresAtEpochMs = System.currentTimeMillis() + HOT_LIST_EVIDENCE_TTL_MS,
+                                ),
+                            ),
+                        ),
+                    evidenceExpiresAt = System.currentTimeMillis() + HOT_LIST_EVIDENCE_TTL_MS,
                 )
             }
         }
@@ -298,4 +316,5 @@ internal object HotDataSync {
     private const val HOT_LIST_FEED = "hot_list"
     private const val HOT_RANGES_FEED = "hot_ranges"
     private const val SPAM_DOMAINS_FEED = "spam_domains"
+    private const val HOT_LIST_EVIDENCE_TTL_MS = 7L * 24L * 60L * 60L * 1000L
 }

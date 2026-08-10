@@ -8,7 +8,7 @@ operator-gated; the snapshot records that distinction for review.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import json
 from pathlib import Path
 from typing import Any, Mapping
@@ -24,6 +24,8 @@ REQUIRED_FIELDS = {
     "parser_version",
     "redistributable",
     "stale_after_days",
+    "evidence_type",
+    "confidence_tier",
 }
 
 
@@ -76,10 +78,15 @@ def source_snapshot(
                 "parser_version": source["parser_version"],
                 "redistributable": source["redistributable"],
                 "stale_after_days": source["stale_after_days"],
+                "evidence_type": source["evidence_type"],
+                "confidence_tier": source["confidence_tier"],
                 "fetched_at": timestamp if result else None,
                 "status": result.get("status", "not_requested"),
                 "accepted": int(result.get("accepted", 0)),
                 "rejected": int(result.get("rejected", 0)),
+                "checksum": result.get("checksum"),
+                "last_success_at": result.get("last_success_at"),
+                "last_failure_at": result.get("last_failure_at"),
                 "error": result.get("error"),
             }
         )
@@ -88,3 +95,66 @@ def source_snapshot(
         "generated_at": timestamp,
         "sources": rows,
     }
+
+
+def source_evidence(
+    manifest: Mapping[str, Any],
+    source_id: str,
+    entry: Mapping[str, Any],
+    *,
+    retrieved_at: str | None = None,
+) -> dict[str, Any]:
+    """Build the immutable evidence record attached to one imported row."""
+
+    source = next((item for item in manifest["sources"] if item["id"] == source_id), None)
+    if source is None:
+        raise ValueError(f"unknown source id: {source_id}")
+    timestamp = retrieved_at or datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+    try:
+        fetched = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise ValueError(f"invalid retrieved_at timestamp: {timestamp}") from exc
+    expires_at = fetched + timedelta(days=source["stale_after_days"])
+    return {
+        "source_id": source_id,
+        "evidence_type": source["evidence_type"],
+        "license": source["license"],
+        "attribution": source["attribution"],
+        "first_seen": str(entry.get("first_seen", "")),
+        "last_seen": str(entry.get("last_seen", "")),
+        "retrieved_at": timestamp,
+        "geography": source["geography"],
+        "confidence_tier": source["confidence_tier"],
+        "parser_version": source["parser_version"],
+        "expires_at_epoch_ms": int(expires_at.timestamp() * 1000),
+    }
+
+
+def attach_source_evidence(
+    entries: list[dict[str, Any]],
+    manifest: Mapping[str, Any],
+    source_id: str,
+    *,
+    retrieved_at: str | None = None,
+) -> list[dict[str, Any]]:
+    """Attach a fresh evidence record to every row returned by an adapter."""
+
+    for entry in entries:
+        evidence = list(entry.get("evidence", []))
+        evidence.append(source_evidence(manifest, source_id, entry, retrieved_at=retrieved_at))
+        entry["evidence"] = evidence
+    return entries
+
+
+def merge_evidence(
+    current: list[dict[str, Any]] | None,
+    incoming: list[dict[str, Any]] | None,
+) -> list[dict[str, Any]]:
+    """Merge one source's refreshed evidence without duplicating a rerun."""
+
+    by_source = {item.get("source_id"): item for item in current or [] if item.get("source_id")}
+    for item in incoming or []:
+        source_id = item.get("source_id")
+        if source_id:
+            by_source[source_id] = item
+    return sorted(by_source.values(), key=lambda item: item["source_id"])

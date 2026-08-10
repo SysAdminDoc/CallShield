@@ -43,8 +43,12 @@ interface SpamDao {
     @Query("SELECT COUNT(*) FROM spam_numbers")
     fun observeSpamCount(): Flow<Int>
 
-    @Query("SELECT COUNT(*) FROM spam_numbers WHERE number LIKE :prefix || '%' AND isUserBlocked = 0 LIMIT 1")
-    suspend fun countByPrefix(prefix: String): Int
+    @Query(
+        "SELECT COUNT(*) FROM spam_numbers " +
+            "WHERE number LIKE :prefix || '%' AND isUserBlocked = 0 " +
+            "AND (evidenceExpiresAt IS NULL OR evidenceExpiresAt > :now) LIMIT 1",
+    )
+    suspend fun countByPrefix(prefix: String, now: Long): Int
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertNumber(number: SpamNumber)
@@ -106,8 +110,8 @@ interface SpamDao {
     }
 
     // Spam prefixes
-    @Query("SELECT * FROM spam_prefixes")
-    suspend fun getAllPrefixes(): List<SpamPrefix>
+    @Query("SELECT * FROM spam_prefixes WHERE evidenceExpiresAt IS NULL OR evidenceExpiresAt > :now")
+    suspend fun getAllPrefixes(now: Long): List<SpamPrefix>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertPrefixes(prefixes: List<SpamPrefix>)

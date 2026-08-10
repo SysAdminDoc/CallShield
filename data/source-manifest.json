@@ -9,6 +9,8 @@
       "attribution": "US Federal Trade Commission Do Not Call complaints",
       "cadence": "daily",
       "parser_version": "ftc-v2",
+      "evidence_type": "unverified_complaint",
+      "confidence_tier": "unverified",
       "redistributable": true,
       "stale_after_days": 14
     },
@@ -20,6 +22,8 @@
       "attribution": "US Federal Communications Commission unwanted calls dataset",
       "cadence": "daily",
       "parser_version": "fcc-v2",
+      "evidence_type": "unverified_complaint",
+      "confidence_tier": "unverified",
       "redistributable": true,
       "stale_after_days": 14
     },
@@ -31,6 +35,8 @@
       "attribution": "PhoneBlock community database",
       "cadence": "on demand",
       "parser_version": "phoneblock-v2",
+      "evidence_type": "community_reputation",
+      "confidence_tier": "corroborated",
       "redistributable": false,
       "stale_after_days": 30
     },
@@ -42,6 +48,8 @@
       "attribution": "Saracroche French telemarketing range list",
       "cadence": "daily",
       "parser_version": "saracroche-v1",
+      "evidence_type": "curated_range",
+      "confidence_tier": "curated",
       "redistributable": true,
       "stale_after_days": 14
     },
@@ -53,6 +61,8 @@
       "attribution": "Nomorobo IRS callback-scam feed",
       "cadence": "on demand",
       "parser_version": "nomorobo-irs-v1",
+      "evidence_type": "provider_authorized",
+      "confidence_tier": "authorized",
       "redistributable": false,
       "stale_after_days": 30
     },
@@ -64,6 +74,8 @@
       "attribution": "ToastedSpam community blocklist",
       "cadence": "weekly",
       "parser_version": "toastedspam-v1",
+      "evidence_type": "community_curated",
+      "confidence_tier": "unverified",
       "redistributable": false,
       "stale_after_days": 30
     },
@@ -75,8 +87,36 @@
       "attribution": "CallShield users",
       "cadence": "continuous",
       "parser_version": "community-v2",
+      "evidence_type": "user_report",
+      "confidence_tier": "unverified",
       "redistributable": true,
       "stale_after_days": 90
+    },
+    {
+      "id": "github_database",
+      "access_mode": "generated_snapshot",
+      "geography": "global",
+      "license": "CallShield database terms",
+      "attribution": "CallShield maintained spam database",
+      "cadence": "release",
+      "parser_version": "legacy-v1",
+      "evidence_type": "aggregate_database",
+      "confidence_tier": "unverified",
+      "redistributable": true,
+      "stale_after_days": 30
+    },
+    {
+      "id": "community_text_lists",
+      "access_mode": "public_feed",
+      "geography": "global",
+      "license": "Upstream list terms; verify before redistribution",
+      "attribution": "Community-maintained text blocklists",
+      "cadence": "on demand",
+      "parser_version": "community-text-v1",
+      "evidence_type": "community_curated",
+      "confidence_tier": "unverified",
+      "redistributable": false,
+      "stale_after_days": 30
     }
   ]
 }

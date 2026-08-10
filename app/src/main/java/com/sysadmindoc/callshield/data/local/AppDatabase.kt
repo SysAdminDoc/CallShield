@@ -10,12 +10,13 @@ import com.sysadmindoc.callshield.data.PhoneIdentityCanonicalizer
 import com.sysadmindoc.callshield.data.model.*
 
 /** Single source of truth for the Room database version. */
-const val DB_VERSION = 13
+const val DB_VERSION = 14
 private const val DB_VERSION_9 = 9
 private const val DB_VERSION_10 = 10
 private const val DB_VERSION_11 = 11
 private const val DB_VERSION_12 = 12
 private const val DB_VERSION_13 = 13
+private const val DB_VERSION_14 = 14
 
 /**
  * v5 → v6: Add `isEmergency INTEGER NOT NULL DEFAULT 0` to the whitelist
@@ -190,6 +191,25 @@ val MIGRATION_12_13 =
         }
     }
 
+/** v13 -> v14: retain source evidence and independent feed freshness. */
+val MIGRATION_13_14 =
+    object : Migration(DB_VERSION_13, DB_VERSION_14) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE spam_numbers ADD COLUMN evidenceJson TEXT NOT NULL DEFAULT '[]'")
+            db.execSQL("ALTER TABLE spam_numbers ADD COLUMN evidenceExpiresAt INTEGER")
+            db.execSQL("ALTER TABLE spam_prefixes ADD COLUMN evidenceJson TEXT NOT NULL DEFAULT '[]'")
+            db.execSQL("ALTER TABLE spam_prefixes ADD COLUMN evidenceExpiresAt INTEGER")
+            db.execSQL(
+                "CREATE INDEX IF NOT EXISTS `index_spam_numbers_evidenceExpiresAt` " +
+                    "ON `spam_numbers`(`evidenceExpiresAt`)",
+            )
+            db.execSQL(
+                "CREATE INDEX IF NOT EXISTS `index_spam_prefixes_evidenceExpiresAt` " +
+                    "ON `spam_prefixes`(`evidenceExpiresAt`)",
+            )
+        }
+    }
+
 @Database(
     entities = [
         SpamNumber::class,
@@ -238,6 +258,7 @@ abstract class AppDatabase : RoomDatabase() {
                             PhoneIdentityCanonicalizer.fromContext(context.applicationContext),
                         ),
                         MIGRATION_12_13,
+                        MIGRATION_13_14,
                     ).build()
                     .also { instance = it }
             }
