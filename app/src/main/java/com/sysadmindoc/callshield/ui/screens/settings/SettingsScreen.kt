@@ -764,6 +764,23 @@ fun SettingsScreen(viewModel: MainViewModel) {
             Text(stringResource(R.string.settings_export_csv_desc), style = MaterialTheme.typography.labelSmall, color = CatSubtext)
             Spacer(Modifier.height(8.dp))
             PremiumActionButton(
+                label = stringResource(R.string.settings_export_redress_csv),
+                icon = Icons.Default.Assignment,
+                color = CatGreen,
+                onClick = {
+                    hapticTick(context)
+                    viewModel.exportRedressLog()
+                },
+                modifier = Modifier.fillMaxWidth(),
+                outlined = true,
+            )
+            Text(
+                stringResource(R.string.settings_export_redress_csv_desc),
+                style = MaterialTheme.typography.labelSmall,
+                color = CatSubtext,
+            )
+            Spacer(Modifier.height(8.dp))
+            PremiumActionButton(
                 label = stringResource(R.string.settings_export_raw_sms_csv),
                 icon = Icons.Default.Warning,
                 color = CatPeach,

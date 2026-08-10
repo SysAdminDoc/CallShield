@@ -6,6 +6,7 @@ import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.CallbackDetector
 import com.sysadmindoc.callshield.data.CampaignDetector
 import com.sysadmindoc.callshield.data.ContactGroupCatalog
+import com.sysadmindoc.callshield.data.EmergencyNumberFloor
 import com.sysadmindoc.callshield.data.HashWildcardMatcher
 import com.sysadmindoc.callshield.data.RegionRules
 import com.sysadmindoc.callshield.data.SmsContentAnalyzer
@@ -17,6 +18,39 @@ import com.sysadmindoc.callshield.data.SystemBlockList
 import com.sysadmindoc.callshield.data.repository.SpamRepositoryImpl
 import com.sysadmindoc.callshield.service.CallerIdOverlayService
 import java.util.Calendar
+
+/** Absolute safety floor for recognized emergency and public-safety codes. */
+internal class EmergencyNumberFloorChecker : IChecker {
+    override val priority = CheckerPriority.EMERGENCY_FLOOR
+    override val name = CheckerPriority.EMERGENCY_FLOOR_MATCH_SOURCE
+
+    override suspend fun check(ctx: CheckContext): BlockResult? {
+        if (ctx.smsBody != null || !EmergencyNumberFloor.isProtected(ctx.number)) return null
+        return BlockResult.allow(
+            matchSource = name,
+            type = "safety_floor",
+            description = "Emergency and public-safety numbers are never blocked",
+        )
+    }
+}
+
+/** Absolute safety floor for short, explicit verification-code messages. */
+internal class VerificationMessageFloorChecker(
+    private val smsContentAnalyzer: SmsContentAnalyzer,
+) : IChecker {
+    override val priority = CheckerPriority.OTP_FLOOR
+    override val name = CheckerPriority.OTP_FLOOR_MATCH_SOURCE
+
+    override suspend fun check(ctx: CheckContext): BlockResult? {
+        val body = ctx.smsBody ?: return null
+        if (!smsContentAnalyzer.isVerificationMessage(body)) return null
+        return BlockResult.allow(
+            matchSource = name,
+            type = "safety_floor",
+            description = "Verification messages are exempt from blocking",
+        )
+    }
+}
 
 // ─────────────────────────────────────────────────────────────────────
 // Allow-side checkers

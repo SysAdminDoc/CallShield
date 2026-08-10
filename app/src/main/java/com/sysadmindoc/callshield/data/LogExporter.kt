@@ -55,6 +55,43 @@ object LogExporter {
         }
     }
 
+    /**
+     * Share the regulator/redress-shaped call list. It intentionally contains
+     * only blocked calls, date, time, calling number, and the stored reason —
+     * never SMS bodies, contacts, or unrelated allowed activity.
+     */
+    suspend fun exportRedressAsCsv(
+        context: Context,
+        calls: List<BlockedCall>,
+    ) {
+        val chooserIntent =
+            withContext(Dispatchers.IO) {
+                val dir = File(context.cacheDir, "exports")
+                dir.mkdirs()
+                dir
+                    .listFiles { file -> file.name.startsWith("callshield_redress_") }
+                    ?.forEach { it.delete() }
+                val file = File(dir, "callshield_redress_${System.currentTimeMillis()}.csv")
+                file.writeText(exportRedressToCsv(calls))
+
+                val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+                val intent =
+                    Intent(Intent.ACTION_SEND).apply {
+                        type = "text/csv"
+                        putExtra(Intent.EXTRA_STREAM, uri)
+                        putExtra(Intent.EXTRA_SUBJECT, context.getString(R.string.redress_export_subject))
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                Intent
+                    .createChooser(intent, context.getString(R.string.redress_export_chooser_title))
+                    .apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
+            }
+
+        withContext(Dispatchers.Main) {
+            context.startActivity(chooserIntent)
+        }
+    }
+
     fun exportToCsv(
         calls: List<BlockedCall>,
         includeRawSmsBodies: Boolean = false,
@@ -84,6 +121,27 @@ object LogExporter {
             )
         }
 
+        return sb.toString()
+    }
+
+    fun exportRedressToCsv(calls: List<BlockedCall>): String {
+        val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+        val timeFormat = SimpleDateFormat("HH:mm:ss", Locale.US)
+        val sb = StringBuilder()
+        sb.appendLine("Date,Time,CallingNumber,Reason")
+        calls
+            .asSequence()
+            .filter { it.isCall && it.wasBlocked }
+            .forEach { call ->
+                sb.appendLine(
+                    listOf(
+                        csvEscape(dateFormat.format(Date(call.timestamp))),
+                        csvEscape(timeFormat.format(Date(call.timestamp))),
+                        csvEscape(call.number),
+                        csvEscape(call.matchReason),
+                    ).joinToString(","),
+                )
+            }
         return sb.toString()
     }
 

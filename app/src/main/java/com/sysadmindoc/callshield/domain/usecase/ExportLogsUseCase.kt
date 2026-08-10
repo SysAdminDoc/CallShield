@@ -20,6 +20,10 @@ class ExportLogsUseCase
             LogExporter.exportAsCsv(context, calls, includeRawSmsBodies)
         }
 
+        suspend fun exportRedressLog(calls: List<BlockedCall>) {
+            LogExporter.exportRedressAsCsv(context, calls)
+        }
+
         suspend fun exportBlocklist(numbers: List<SpamNumber>) {
             BlocklistExporter.exportAndShare(context, numbers)
         }

@@ -143,6 +143,25 @@ class SmsContentAnalyzer
 
         fun hasSpamDomains(): Boolean = spamDomains.isNotEmpty()
 
+        /**
+         * True only for a short, bounded message that has both an explicit
+         * verification/OTP phrase and a plausible one-time code. Requiring
+         * both prevents ordinary "verify your account" phishing copy or an
+         * arbitrary order number from receiving the safety exemption.
+         */
+        fun isVerificationMessage(body: String): Boolean {
+            if (body.isBlank() || body.length > MAX_VERIFICATION_BODY_LENGTH) return false
+            val phrase = verificationPhrasePattern.containsMatchIn(body)
+            if (!phrase) return false
+
+            val numericCode = numericVerificationCodePattern.containsMatchIn(body)
+            val alphaNumericCode =
+                alphaNumericVerificationCodePattern
+                    .findAll(body)
+                    .any { it.value.any(Char::isDigit) }
+            return numericCode || alphaNumericCode
+        }
+
         /** Extract root domain from a URL string (strips scheme, www, path, port). */
         private fun extractDomain(url: String): String {
             val lower =
@@ -336,15 +355,27 @@ class SmsContentAnalyzer
 
             internal const val MAX_ANALYSIS_LENGTH = 16_384
             internal const val MAX_REPORT_DOMAINS = 10
+            private const val MAX_VERIFICATION_BODY_LENGTH = 1_024
             private const val MIN_REPORT_DOMAIN_LENGTH = 5
             private const val MAX_REPORT_DOMAIN_LENGTH = 253
             private const val MAX_REPORT_DOMAIN_LABEL_LENGTH = 63
+
+            private val verificationPhrasePattern =
+                Regex(
+                    "(?i)\\b(?:verification|security|login|authentication|confirmation)\\s+(?:code|number|token|pin)\\b" +
+                        "|\\b(?:one[- ]time|otp|2fa|mfa)\\s*(?:password|passcode|code|pin|token)?\\b" +
+                        "|\\bpasscode\\b",
+                )
+            private val numericVerificationCodePattern = Regex("(?<!\\d)\\d{4,8}(?!\\d)")
+            private val alphaNumericVerificationCodePattern = Regex("(?i)(?<![a-z0-9])[a-z0-9]{4,10}(?![a-z0-9])")
 
             fun updateSpamDomains(domains: Collection<String>) {
                 shared.updateSpamDomains(domains)
             }
 
             fun hasSpamDomains(): Boolean = shared.hasSpamDomains()
+
+            fun isVerificationMessage(body: String): Boolean = shared.isVerificationMessage(body)
 
             fun isKnownSpamDomainUrl(url: String): Boolean = shared.isKnownSpamDomainUrl(url)
 

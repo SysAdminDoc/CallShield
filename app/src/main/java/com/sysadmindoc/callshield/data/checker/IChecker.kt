@@ -166,7 +166,12 @@ data class BlockResult(
             confidence: Int = 100,
         ) = BlockResult(true, matchSource, type, description, confidence)
 
-        fun allow(matchSource: String) = BlockResult(false, matchSource)
+        fun allow(
+            matchSource: String,
+            type: String = "",
+            description: String = "",
+            confidence: Int = 100,
+        ) = BlockResult(false, matchSource, type, description, confidence)
     }
 }
 
@@ -179,6 +184,14 @@ data class BlockResult(
  * full detection order reviewable at a glance.
  */
 object CheckerPriority {
+    // ── Safety floors — nothing below may block these decisions ────────
+    const val EMERGENCY_FLOOR = 11_000 // recognized emergency / PSAP codes
+    const val OTP_FLOOR = 10_900 // bounded verification-code messages
+    const val EMERGENCY_FLOOR_MATCH_SOURCE = "emergency_floor"
+    const val OTP_FLOOR_MATCH_SOURCE = "otp_floor"
+
+    fun isSafetyFloor(matchSource: String): Boolean = matchSource == EMERGENCY_FLOOR_MATCH_SOURCE || matchSource == OTP_FLOOR_MATCH_SOURCE
+
     // ── Top-priority allows — can override every block below ─────────
     const val MANUAL_WHITELIST = 10_000 // user-added entries; emergency contacts
     const val CONTACT_WHITELIST = 9_000 // device contacts lookup
@@ -366,6 +379,8 @@ object SpamCheckers {
         dependencies: CheckerDependencies = CheckerDependencies(),
     ): List<IChecker> =
         buildList {
+            add(EmergencyNumberFloorChecker())
+            add(VerificationMessageFloorChecker(dependencies.smsContentAnalyzer))
             add(WhitelistChecker(repo))
             add(ContactWhitelistChecker(appContext, dependencies.spamHeuristics))
             add(ContactsOnlyChecker(appContext, dependencies.spamHeuristics))

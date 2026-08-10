@@ -52,6 +52,8 @@ fun friendlySpamTypeLabel(type: String): String =
 /** Resource id for a stable, user-facing pipeline checker label. */
 fun pipelineCheckerLabelRes(checkerName: String): Int =
     when (checkerName.trim().lowercase()) {
+        "emergency_floor" -> R.string.lookup_checker_emergency_floor
+        "otp_floor" -> R.string.lookup_checker_otp_floor
         "manual_whitelist" -> R.string.lookup_checker_manual_whitelist
         "contact_whitelist" -> R.string.lookup_checker_contact_whitelist
         "contacts_only" -> R.string.lookup_checker_contacts_only
@@ -102,6 +104,8 @@ fun friendlyPipelineCheckerLabel(checkerName: String): String = stringResource(p
 @Composable
 fun friendlyMatchReasonLabel(reason: String): String =
     when {
+        reason.contains("emergency_floor", ignoreCase = true) -> stringResource(R.string.stats_reason_emergency_floor)
+        reason.contains("otp_floor", ignoreCase = true) -> stringResource(R.string.stats_reason_otp_floor)
         reason.contains("database", ignoreCase = true) -> stringResource(R.string.stats_reason_spam_database)
         reason.contains("hot_list", ignoreCase = true) -> stringResource(R.string.stats_reason_hot_list)
         reason.contains("hot_campaign", ignoreCase = true) -> stringResource(R.string.stats_reason_live_campaign)

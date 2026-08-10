@@ -6,6 +6,7 @@ import com.sysadmindoc.callshield.data.CategoryCallPolicy
 import com.sysadmindoc.callshield.data.checker.CheckContext
 import com.sysadmindoc.callshield.data.checker.CheckerDependencies
 import com.sysadmindoc.callshield.data.checker.CheckerPipeline
+import com.sysadmindoc.callshield.data.checker.CheckerPriority
 import com.sysadmindoc.callshield.data.checker.IChecker
 import com.sysadmindoc.callshield.data.checker.PipelineTrace
 import com.sysadmindoc.callshield.data.checker.SpamCheckers
@@ -76,8 +77,7 @@ class SpamRepositoryImpl(
         return dao.countByPrefix(prefix, System.currentTimeMillis()) > 0
     }
 
-    internal suspend fun getPrefixesCachedInternal(): List<SpamPrefix> =
-        cachedPrefixes ?: dao.getAllPrefixes(System.currentTimeMillis()).also { cachedPrefixes = it }
+    internal suspend fun getPrefixesCachedInternal(): List<SpamPrefix> = cachedPrefixes ?: dao.getAllPrefixes(System.currentTimeMillis()).also { cachedPrefixes = it }
 
     internal suspend fun getActiveWildcardsCachedInternal(): List<WildcardRule> = cachedWildcardRules ?: dao.getActiveWildcardRules().also { cachedWildcardRules = it }
 
@@ -153,6 +153,11 @@ class SpamRepositoryImpl(
                     smsContextTrusted = smsContextTrusted,
                 )
             if (numberResult.isSpam) return numberResult
+            if (CheckerPriority.isSafetyFloor(numberResult.matchSource)) {
+                // A safety-floor allow must also bypass the SMS-only extension
+                // chain; otherwise keyword/content checks could undo it.
+                return numberResult
+            }
             // Carry a user-intent allow into the SMS extension chain so the
             // behavioral burst/content checkers yield to it (whitelisted /
             // contact / temporarily-allowed senders must not be blocked by

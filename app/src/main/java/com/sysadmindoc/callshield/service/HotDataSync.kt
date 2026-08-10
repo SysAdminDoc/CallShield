@@ -8,8 +8,8 @@ import com.sysadmindoc.callshield.data.checker.CheckerDependencies
 import com.sysadmindoc.callshield.data.local.AppDatabase
 import com.sysadmindoc.callshield.data.local.SpamDao
 import com.sysadmindoc.callshield.data.model.HotNumber
-import com.sysadmindoc.callshield.data.model.SpamNumber
 import com.sysadmindoc.callshield.data.model.SourceEvidenceJson
+import com.sysadmindoc.callshield.data.model.SpamNumber
 import com.sysadmindoc.callshield.data.remote.GitHubDataSource
 import com.sysadmindoc.callshield.data.remote.HotFeedDataSource
 import com.sysadmindoc.callshield.util.isAsciiDigit
@@ -280,7 +280,10 @@ internal object HotDataSync {
                                     evidenceType = "community_velocity",
                                     license = "CallShield community report policy",
                                     attribution = "CallShield hot-list generator",
-                                    retrievedAt = java.time.Instant.now().toString(),
+                                    retrievedAt =
+                                        java.time.Instant
+                                            .now()
+                                            .toString(),
                                     confidenceTier = "unverified",
                                     parserVersion = "hot-list-v1",
                                     expiresAtEpochMs = System.currentTimeMillis() + HOT_LIST_EVIDENCE_TTL_MS,

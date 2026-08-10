@@ -420,11 +420,16 @@ fun LookupScreen(viewModel: MainViewModel) {
                                     scope.launch {
                                         val message =
                                             try {
-                                                withContext(Dispatchers.IO) {
-                                                    repo.blockNumber(resultNumber, lookupResult.type, lookupResult.matchSource)
+                                                val blocked =
+                                                    withContext(Dispatchers.IO) {
+                                                        repo.blockNumber(resultNumber, lookupResult.type, lookupResult.matchSource)
+                                                    }
+                                                if (blocked) {
+                                                    hapticConfirm(context)
+                                                    numberBlockedMessage
+                                                } else {
+                                                    resources.getString(R.string.emergency_number_block_refused)
                                                 }
-                                                hapticConfirm(context)
-                                                numberBlockedMessage
                                             } catch (_: Exception) {
                                                 resources.getString(R.string.lookup_block_failed)
                                             }

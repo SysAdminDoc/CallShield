@@ -511,12 +511,26 @@ fun BlockedCallItem(
         Column {
             Row(modifier = Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                 Icon(
-                    imageVector = if (call.isCall) Icons.Default.PhoneDisabled else Icons.Default.SpeakerNotesOff,
+                    imageVector =
+                        if (call.isCall) {
+                            if (call.wasBlocked) Icons.Default.PhoneDisabled else Icons.Default.Phone
+                        } else {
+                            if (call.wasBlocked) Icons.Default.SpeakerNotesOff else Icons.Default.MarkEmailRead
+                        },
                     contentDescription =
                         stringResource(
-                            if (call.isCall) R.string.blocked_log_blocked_call else R.string.blocked_log_blocked_sms,
+                            if (call.wasBlocked) {
+                                if (call.isCall) R.string.blocked_log_blocked_call else R.string.blocked_log_blocked_sms
+                            } else {
+                                R.string.blocked_log_safety_exempted
+                            },
                         ),
-                    tint = if (call.isCall) CatRed else CatMauve,
+                    tint =
+                        if (call.wasBlocked) {
+                            if (call.isCall) CatRed else CatMauve
+                        } else {
+                            CatGreen
+                        },
                     modifier = Modifier.size(32.dp),
                 )
                 Spacer(Modifier.width(12.dp))
