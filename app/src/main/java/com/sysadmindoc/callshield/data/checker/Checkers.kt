@@ -777,6 +777,7 @@ internal class HeuristicChecker(
                 smsBody = sms,
                 recentBlockedNumbers = recentBlocked.map { it.number to it.timestamp },
                 enableNeighborSpoof = ctx.prefs[SpamRepository.KEY_NEIGHBOR_SPOOF] ?: true,
+                senderProvenance = ctx.senderProvenance,
             )
 
         val aggressive = ctx.prefs[SpamRepository.KEY_AGGRESSIVE_MODE] ?: false
@@ -786,7 +787,29 @@ internal class HeuristicChecker(
             return BlockResult.block(
                 matchSource = "heuristic",
                 type = classifyHeuristicReasons(hResult.reasons),
-                description = hResult.reasons.joinToString(", ") { it.replace("_", " ") },
+                description =
+                    hResult.reasons.joinToString(", ") { reason ->
+                        when (reason) {
+                            "sender_provenance_unverified" -> {
+                                appContext.getString(
+                                    R.string.block_reason_sender_provenance_unverified,
+                                    ctx.senderProvenance?.regionIso.orEmpty(),
+                                )
+                            }
+
+                            "sender_provenance_unassigned" -> {
+                                appContext.getString(
+                                    R.string.block_reason_sender_provenance_unassigned,
+                                    ctx.senderProvenance?.matchedPrefix.orEmpty(),
+                                    ctx.senderProvenance?.regionIso.orEmpty(),
+                                )
+                            }
+
+                            else -> {
+                                reason.replace("_", " ")
+                            }
+                        }
+                    },
                 confidence = hResult.score,
             )
         }

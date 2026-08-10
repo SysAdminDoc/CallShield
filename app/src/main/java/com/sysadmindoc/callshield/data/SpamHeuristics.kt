@@ -391,6 +391,7 @@ class SpamHeuristics
             smsBody: String? = null,
             recentBlockedNumbers: List<Pair<String, Long>> = emptyList(),
             enableNeighborSpoof: Boolean = true,
+            senderProvenance: SenderProvenance? = null,
         ): HeuristicResult {
             var score = 0
             val reasons = mutableListOf<String>()
@@ -447,6 +448,16 @@ class SpamHeuristics
                 score += smsResult.score
                 reasons.addAll(smsResult.reasons)
             }
+
+            // Regional provenance is deliberately advisory. The maximum
+            // contribution stays below either SMS-content threshold, so an
+            // unverified or unassigned sender cannot block by itself.
+            senderProvenance
+                ?.takeIf { it.riskPoints > 0 }
+                ?.let {
+                    score += it.riskPoints
+                    reasons.add(it.reasonToken)
+                }
 
             return HeuristicResult(score.coerceAtMost(100), reasons)
         }
@@ -514,6 +525,7 @@ class SpamHeuristics
                 number: String,
                 smsBody: String? = null,
                 recentBlockedNumbers: List<Pair<String, Long>> = emptyList(),
-            ): HeuristicResult = shared.analyze(context, number, smsBody, recentBlockedNumbers)
+                senderProvenance: SenderProvenance? = null,
+            ): HeuristicResult = shared.analyze(context, number, smsBody, recentBlockedNumbers, senderProvenance = senderProvenance)
         }
     }

@@ -49,6 +49,9 @@ All notable changes to CallShield will be documented in this file.
   Android PASS remains the verification gate, while A/B/C metadata, DNO-listed or
   unassigned status, and VoIP/prepaid line types make only small calibrated ML adjustments.
   Only a validated PASSporT `origid` UUID is retained in the call log.
+- Added region-scoped sender-ID and numbering-plan provenance with registered, allocated,
+  unverified, unassigned, and unavailable states; missing regional data fails open and
+  unverified evidence contributes only a bounded advisory signal.
 
 ### Reliability
 
