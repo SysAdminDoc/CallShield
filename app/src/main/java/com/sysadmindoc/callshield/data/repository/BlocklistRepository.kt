@@ -11,6 +11,7 @@ import com.sysadmindoc.callshield.data.model.HashWildcardRule
 import com.sysadmindoc.callshield.data.model.PendingBlockedCallLog
 import com.sysadmindoc.callshield.data.model.SmsKeywordRule
 import com.sysadmindoc.callshield.data.model.SpamNumber
+import com.sysadmindoc.callshield.data.model.SpamPrefix
 import com.sysadmindoc.callshield.data.model.WhitelistEntry
 import com.sysadmindoc.callshield.data.model.WildcardRule
 import com.sysadmindoc.callshield.data.resolveSpamNumberForWhitelist
@@ -507,6 +508,8 @@ class BlocklistRepository(
         val removedWhitelistRows = dao.deleteExpiredWhitelistEntries(now)
         return removedUserBlocks + clearedSyncedFlags + removedWhitelistRows
     }
+
+    fun observeAllPrefixes(): Flow<List<SpamPrefix>> = dao.observeAllPrefixes()
 
     fun getAllKeywordRules(): Flow<List<SmsKeywordRule>> = dao.getAllKeywordRules()
 

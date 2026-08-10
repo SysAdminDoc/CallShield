@@ -2,6 +2,7 @@ package com.sysadmindoc.callshield.data
 
 import com.sysadmindoc.callshield.data.model.HashWildcardRule
 import com.sysadmindoc.callshield.data.model.SpamNumber
+import com.sysadmindoc.callshield.data.model.SpamPrefix
 import com.sysadmindoc.callshield.data.model.WhitelistEntry
 import com.sysadmindoc.callshield.data.model.WildcardRule
 import org.junit.Assert.assertEquals
@@ -9,6 +10,72 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 
 class RuleConflictAnalyzerTest {
+    @Test
+    fun `standing audit reports whitelist over exact block with winner priority`() {
+        val conflicts =
+            RuleConflictAnalyzer.audit(
+                exactBlocks =
+                    listOf(
+                        SpamNumber(
+                            number = "+12125550100",
+                            type = "manual",
+                            source = "user",
+                            isUserBlocked = true,
+                        ),
+                    ),
+                wildcardRules = emptyList(),
+                hashWildcardRules = emptyList(),
+                whitelist = listOf(WhitelistEntry(number = "+12125550100")),
+                prefixes = emptyList(),
+            )
+
+        assertEquals(1, conflicts.size)
+        assertEquals(StandingRuleConflictKind.WHITELIST_VS_EXACT, conflicts.single().kind)
+        assertEquals(10_000, conflicts.single().winnerPriority)
+        assertEquals(7_000, conflicts.single().overriddenPriority)
+    }
+
+    @Test
+    fun `standing audit reports exact block over overlapping wildcard`() {
+        val conflicts =
+            RuleConflictAnalyzer.audit(
+                exactBlocks =
+                    listOf(
+                        SpamNumber(
+                            number = "+12125550100",
+                            type = "manual",
+                            source = "user",
+                            isUserBlocked = true,
+                        ),
+                    ),
+                wildcardRules = listOf(WildcardRule(pattern = "+1212*")),
+                hashWildcardRules = emptyList(),
+                whitelist = emptyList(),
+                prefixes = emptyList(),
+            )
+
+        assertEquals(StandingRuleConflictKind.WILDCARD_VS_EXACT, conflicts.single().kind)
+        assertEquals(7_000, conflicts.single().winnerPriority)
+        assertEquals(5_500, conflicts.single().overriddenPriority)
+    }
+
+    @Test
+    fun `standing audit reports hash range over downloaded prefix`() {
+        val conflicts =
+            RuleConflictAnalyzer.audit(
+                exactBlocks = emptyList(),
+                wildcardRules = emptyList(),
+                hashWildcardRules = listOf(HashWildcardRule(pattern = "+33162######")),
+                whitelist = emptyList(),
+                prefixes = listOf(SpamPrefix(prefix = "+33162", type = "campaign")),
+            )
+
+        assertEquals(StandingRuleConflictKind.PREFIX_VS_HASH, conflicts.single().kind)
+        assertEquals("+33162000000", conflicts.single().sampleNumber)
+        assertEquals(5_400, conflicts.single().winnerPriority)
+        assertEquals(5_320, conflicts.single().overriddenPriority)
+    }
+
     @Test
     fun `emergency allow wins over an exact block`() {
         val conflict =

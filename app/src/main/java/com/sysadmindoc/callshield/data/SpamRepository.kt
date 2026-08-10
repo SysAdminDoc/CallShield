@@ -128,6 +128,7 @@ class SpamRepository(
         internal val KEY_DB_VERSION = intPreferencesKey("db_version")
         internal val KEY_HOT_DATA_LAST_GOOD = longPreferencesKey("hot_data_last_good_timestamp")
         internal val KEY_HOT_DATA_UNAVAILABLE = stringSetPreferencesKey("hot_data_unavailable_feeds")
+        internal val KEY_DISMISSED_RULE_CONFLICTS = stringSetPreferencesKey("dismissed_rule_conflict_keys")
         val KEY_BLOCK_CALLS = booleanPreferencesKey("block_calls_enabled")
         val KEY_BLOCK_SMS = booleanPreferencesKey("block_sms_enabled")
         val KEY_BLOCK_UNKNOWN = booleanPreferencesKey("block_unknown_enabled")
@@ -672,6 +673,8 @@ class SpamRepository(
     // ── Hash wildcard rules (A5, length-locked `#` patterns) ───────────
     fun getAllHashWildcardRules(): Flow<List<HashWildcardRule>> = blocklistRepository.getAllHashWildcardRules()
 
+    fun observeAllPrefixes(): Flow<List<SpamPrefix>> = blocklistRepository.observeAllPrefixes()
+
     suspend fun addHashWildcardRule(
         pattern: String,
         description: String = "",
@@ -831,6 +834,10 @@ class SpamRepository(
         id: Long,
         emergency: Boolean,
     ) = blocklistRepository.setWhitelistEmergency(id, emergency)
+
+    val dismissedRuleConflictKeys: Flow<Set<String>> = settingsRepository.dismissedRuleConflictKeys
+
+    suspend fun dismissRuleConflict(key: String) = settingsRepository.dismissRuleConflict(key)
 
     // ── Hot list (30-minute trending sync) ────────────────────────────
     suspend fun replaceHotList(numbers: List<SpamNumber>) = syncRepository.replaceHotList(numbers)
