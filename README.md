@@ -44,8 +44,8 @@ legacy snapshot when the shard service is unavailable.
 ## v1.7.33 Highlights
 
 - **Broader public spam coverage** — Saracroche, PhoneBlock, Nomorobo IRS,
-  FCC advertiser numbers, and bounded FTC retries now feed the importer with
-  idempotent merges and explicit provenance.
+  FCC advertiser numbers, and bounded incremental FTC/FCC windows now feed the
+  importer with idempotent merges, role-aware spoof signals, and explicit provenance.
 - **Fail-open screening reliability** — lazy repository initialization errors
   now receive an explicit allow response instead of abandoning Telecom's call.
 - **Incremental database delivery** — current APKs bundle the manifest and
@@ -523,7 +523,10 @@ those downstream restrictions.
 Every feed is declared in `data/source-manifest.json` with its access mode,
 geography, licence, attribution, parser version, redistribution policy, and
 freshness window. Each importer run writes a local `data/source-snapshot.json`
-for release review; it is intentionally not bundled into the APK.
+for release review; it is intentionally not bundled into the APK. FTC and FCC
+runs persist bounded high-water cursors in `data/source-cursors.json`, retain
+caller-ID and callback-business evidence as separate roles, and do not promote
+unverified complaint-only rows without independent caller corroboration.
 
 The importer also accepts a carrier-authorized Nomorobo IRS callback-scam CSV
 feed without embedding credentials in the app. Pass the HTTPS URL with

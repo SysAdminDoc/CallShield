@@ -88,6 +88,7 @@ def source_snapshot(
                 "last_success_at": result.get("last_success_at"),
                 "last_failure_at": result.get("last_failure_at"),
                 "error": result.get("error"),
+                "cursor": result.get("cursor"),
             }
         )
     return {
@@ -115,7 +116,7 @@ def source_evidence(
     except ValueError as exc:
         raise ValueError(f"invalid retrieved_at timestamp: {timestamp}") from exc
     expires_at = fetched + timedelta(days=source["stale_after_days"])
-    return {
+    evidence = {
         "source_id": source_id,
         "evidence_type": source["evidence_type"],
         "license": source["license"],
@@ -128,6 +129,11 @@ def source_evidence(
         "parser_version": source["parser_version"],
         "expires_at_epoch_ms": int(expires_at.timestamp() * 1000),
     }
+    for field in ("complaint_role", "spoof_signal"):
+        value = entry.get(field)
+        if value not in (None, ""):
+            evidence[field] = str(value)
+    return evidence
 
 
 def attach_source_evidence(
@@ -152,9 +158,27 @@ def merge_evidence(
 ) -> list[dict[str, Any]]:
     """Merge one source's refreshed evidence without duplicating a rerun."""
 
-    by_source = {item.get("source_id"): item for item in current or [] if item.get("source_id")}
+    def evidence_key(item: Mapping[str, Any]) -> tuple[str, str, str]:
+        return (
+            str(item.get("source_id", "")),
+            str(item.get("complaint_role", "")),
+            str(item.get("spoof_signal", "")),
+        )
+
+    by_source = {
+        evidence_key(item): item
+        for item in current or []
+        if item.get("source_id")
+    }
     for item in incoming or []:
         source_id = item.get("source_id")
         if source_id:
-            by_source[source_id] = item
-    return sorted(by_source.values(), key=lambda item: item["source_id"])
+            by_source[evidence_key(item)] = item
+    return sorted(
+        by_source.values(),
+        key=lambda item: (
+            item["source_id"],
+            item.get("complaint_role", ""),
+            item.get("spoof_signal", ""),
+        ),
+    )
