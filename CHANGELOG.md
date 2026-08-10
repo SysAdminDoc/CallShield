@@ -36,6 +36,10 @@ All notable changes to CallShield will be documented in this file.
 - FTC and FCC complaint imports now use bounded resumable cursors with 403/429
   backoff, preserve caller-ID versus callback-business roles and spoof signals,
   and require independent caller evidence before new complaint rows are promoted.
+- PhoneBlock live enrichment now sends only full, one-digit-prefix, and
+  two-digit-prefix SHA-1 hashes through a bounded expiring cache; Saracroche
+  ranges are restricted to French `+33` allocations and source-owned ranges
+  expire only after a successful non-empty refresh.
 
 ### Reliability
 

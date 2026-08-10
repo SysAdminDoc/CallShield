@@ -1414,7 +1414,7 @@
     <string name="model_health_loading">Model status pending</string>
     <string name="model_health_loading_detail">No model load has completed yet.</string>
     <string name="settings_live_caller_enrichment">Live caller enrichment</string>
-    <string name="settings_live_caller_enrichment_desc">Optional. For locally suspicious calls only, share the number with spam.skipcalls.app, phoneblock.net, whocalledme.com, and api.opencnam.com</string>
+    <string name="settings_live_caller_enrichment_desc">Optional. For locally suspicious calls only, PhoneBlock receives one-way number hashes; the other enabled lookup services receive the number</string>
     <string name="overlay_score_local_clear">Local checks clear</string>
     <string name="overlay_status_local_only">Based on on-device checks; live enrichment is off</string>
 </resources>

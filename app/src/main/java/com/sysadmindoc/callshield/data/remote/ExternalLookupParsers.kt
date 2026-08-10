@@ -25,9 +25,22 @@ internal fun parsePhoneBlockBody(body: String): ExternalLookup.SourceResult {
     if (body.isMalformedJsonObject()) {
         return ExternalLookup.SourceResult("PhoneBlock", isSpam = false, status = RemoteLookupStatus.PARSE_ERROR)
     }
-    val votesMatch = Regex(""""votes":\s*(\d+)""").find(body)
-    val votes = votesMatch?.groupValues?.get(1)?.toIntOrNull() ?: 0
-    val blacklisted = body.contains("\"blackListed\":true")
+    val votes =
+        Regex(""""votes":\s*(\d+)""")
+            .find(body)
+            ?.groupValues
+            ?.get(1)
+            ?.toIntOrNull()
+            ?: 0
+    val wildcardVotes =
+        Regex(""""votesWildcard":\s*(\d+)""")
+            .find(body)
+            ?.groupValues
+            ?.get(1)
+            ?.toIntOrNull()
+            ?: 0
+    val reports = maxOf(votes, wildcardVotes)
+    val blacklisted = Regex(""""blackListed":\s*true""", RegexOption.IGNORE_CASE).containsMatchIn(body)
     val rating =
         Regex(""""rating":\s*"([^"]+)"""")
             .find(body)
@@ -36,20 +49,23 @@ internal fun parsePhoneBlockBody(body: String): ExternalLookup.SourceResult {
             .orEmpty()
     val isSpam =
         blacklisted ||
-            votes >= MIN_SPAM_REPORTS ||
+            reports >= MIN_SPAM_REPORTS ||
             rating.startsWith("D_") ||
             rating.startsWith("E_")
     return ExternalLookup.SourceResult(
         "PhoneBlock",
         isSpam,
-        votes,
+        reports,
         when {
+            blacklisted && wildcardVotes > 0 -> "Blacklisted ($votes direct, $wildcardVotes range votes)"
             blacklisted -> "Blacklisted ($votes votes)"
+            votes > 0 && wildcardVotes > 0 -> "$votes direct, $wildcardVotes range votes"
             votes > 0 -> "$votes community votes"
+            wildcardVotes > 0 -> "$wildcardVotes range votes"
             rating.isNotBlank() -> "Rating: $rating"
             else -> ""
         },
-        if (isSpam || votes > 0) RemoteLookupStatus.FOUND else RemoteLookupStatus.CLEAN,
+        if (isSpam || reports > 0) RemoteLookupStatus.FOUND else RemoteLookupStatus.CLEAN,
     )
 }
 

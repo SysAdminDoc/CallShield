@@ -478,13 +478,20 @@ class SyncRepository(
                             ),
                         )
                     }
-                SpamPrefix(
-                    prefix = trimmedPrefix,
-                    type = json.type.trim().ifBlank { "unknown" },
-                    description = json.description.trim(),
-                    evidenceJson = SourceEvidenceCodec.encode(evidence),
-                    evidenceExpiresAt = evidence.mapNotNull { it.expiresAtEpochMs }.minOrNull(),
-                )
+                val invalidSaracrocheEvidence =
+                    evidence.any { item -> item.sourceId == SARACROCHE_SOURCE_ID } &&
+                        !VALID_FRENCH_REGIONAL_PREFIX_REGEX.matches(trimmedPrefix)
+                if (invalidSaracrocheEvidence) {
+                    null
+                } else {
+                    SpamPrefix(
+                        prefix = trimmedPrefix,
+                        type = json.type.trim().ifBlank { "unknown" },
+                        description = json.description.trim(),
+                        evidenceJson = SourceEvidenceCodec.encode(evidence),
+                        evidenceExpiresAt = evidence.mapNotNull { it.expiresAtEpochMs }.minOrNull(),
+                    )
+                }
             }
         }
 
@@ -696,3 +703,7 @@ private const val EXTERNAL_BLOCKLIST_LOOKUP_CHUNK_SIZE = 500
 
 /** "+", then 3-15 digits: whole-country-code rows are the shortest legitimate prefixes. */
 private val VALID_PREFIX_REGEX = Regex("""\+[0-9]{3,15}""")
+
+/** Saracroche publishes French (+33) ranges; keep regional evidence country-scoped. */
+private val VALID_FRENCH_REGIONAL_PREFIX_REGEX = Regex("""\+33[1-9][0-9]{2,12}""")
+private const val SARACROCHE_SOURCE_ID = "saracroche_prefixes"

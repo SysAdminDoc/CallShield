@@ -61,6 +61,8 @@ object ExternalLookup {
             .readTimeout(8, TimeUnit.SECONDS)
             .build()
 
+    private val phoneBlockCache = PhoneBlockLookupCache()
+
     fun spamLookupSources(): List<SpamLookupSource> =
         listOf(
             SpamLookupSource.SKIP_CALLS,
@@ -75,7 +77,7 @@ object ExternalLookup {
 
             val spamDeferred =
                 spamLookupSources().map { source ->
-                    async { lookupSpamSource(digits, source) }
+                    async { lookupSpamSource(number, source) }
                 }
             val cnamDeferred = async { fetchCallerName(digits) }
             val spamResults = spamDeferred.awaitAll().filterNotNull()
@@ -107,7 +109,7 @@ object ExternalLookup {
         if (digits.length < 7) return null
         return when (source) {
             SpamLookupSource.SKIP_CALLS -> checkSkipCalls(digits)
-            SpamLookupSource.PHONE_BLOCK -> checkPhoneBlock(digits)
+            SpamLookupSource.PHONE_BLOCK -> checkPhoneBlock(numberOrDigits)
             SpamLookupSource.WHO_CALLED_ME -> checkWhoCalledMe(digits)
         }
     }
@@ -151,15 +153,20 @@ object ExternalLookup {
             }
         }
 
-    private suspend fun checkPhoneBlock(digits: String): SourceResult? =
-        withContext(Dispatchers.IO) {
+    private suspend fun checkPhoneBlock(number: String): SourceResult? {
+        val international =
+            phoneBlockInternationalNumber(number)
+                ?: return sourceFallback("PhoneBlock", RemoteLookupStatus.INVALID_INPUT)
+        val lookupKey = phoneBlockSha1Hex(international)
+        cachedPhoneBlockResult(lookupKey)?.let { return it }
+
+        return withContext(Dispatchers.IO) {
             try {
-                val usNumber = if (digits.length == 10) "1$digits" else digits
-                val url = "https://phoneblock.net/phoneblock/api/num/$usNumber"
                 val request =
                     Builder()
-                        .url(url)
+                        .url(phoneBlockLookupUrl(international))
                         .header("Accept", "application/json")
+                        .header("User-Agent", "CallShield/1.0")
                         .build()
                 client.newCall(request).execute().use { response ->
                     if (!response.isSuccessful) {
@@ -168,16 +175,35 @@ object ExternalLookup {
                             RemoteLookupStatus.fromHttpCode(response.code),
                         )
                     }
-                    when (val body = response.body?.readUtf8Bounded(JSON_RESPONSE_LIMIT_BYTES)) {
-                        is BoundedResponseBody.Text -> parsePhoneBlockBody(body.value)
-                        null -> sourceFallback("PhoneBlock", RemoteLookupStatus.EMPTY_BODY)
-                        else -> sourceFallback("PhoneBlock", body.status())
+                    val result =
+                        when (val body = response.body?.readUtf8Bounded(JSON_RESPONSE_LIMIT_BYTES)) {
+                            is BoundedResponseBody.Text -> parsePhoneBlockBody(body.value)
+                            null -> sourceFallback("PhoneBlock", RemoteLookupStatus.EMPTY_BODY)
+                            else -> sourceFallback("PhoneBlock", body.status())
+                        }
+                    if (result.status == RemoteLookupStatus.FOUND || result.status == RemoteLookupStatus.CLEAN) {
+                        cachePhoneBlockResult(lookupKey, result)
                     }
+                    result
                 }
             } catch (exception: IOException) {
                 sourceFallback("PhoneBlock", exception.toRemoteLookupStatus())
             }
         }
+    }
+
+    private fun cachedPhoneBlockResult(lookupKey: String): SourceResult? = phoneBlockCache.get(lookupKey)
+
+    private fun cachePhoneBlockResult(
+        lookupKey: String,
+        result: SourceResult,
+    ) {
+        phoneBlockCache.put(lookupKey, result)
+    }
+
+    internal fun clearPhoneBlockCacheForTests() {
+        phoneBlockCache.clear()
+    }
 
     private suspend fun checkWhoCalledMe(digits: String): SourceResult? =
         withContext(Dispatchers.IO) {

@@ -164,7 +164,16 @@ def load_source_cursors(path: Path = SOURCE_CURSOR_FILE) -> dict[str, dict[str, 
         if payload.get("schema_version") != SOURCE_CURSOR_SCHEMA_VERSION:
             return {}
         sources = payload.get("sources", {})
-        return {key: value for key, value in sources.items() if isinstance(value, dict)}
+        return {
+            key: {
+                "timestamp": str(value.get("timestamp", "")),
+                "id": str(value.get("id", "")),
+            }
+            for key, value in sources.items()
+            if isinstance(key, str)
+            and isinstance(value, dict)
+            and str(value.get("timestamp", "")).strip()
+        }
     except (OSError, ValueError, AttributeError):
         return {}
 
@@ -413,7 +422,9 @@ def fetch_fcc(
                 cursor_records.append(cursor_record)
 
             issue = str(record.get("issue", "Unwanted Calls") or "Unwanted Calls").strip()
-            call_type = str(record.get("type_of_call_or_messge", "") or "").strip()
+            call_type = str(
+                record.get("type_of_call_or_messge", record.get("type_of_call_or_message", "")) or ""
+            ).strip()
             issue_context = " ".join(part for part in (issue, call_type) if part)
             issue_lower = issue_context.lower()
             date = str(record.get("issue_date", "") or "")[:10]
@@ -621,7 +632,13 @@ def fetch_phoneblock(limit: int = 0, api_key: str | None = None) -> list[dict]:
     return list(numbers.values())
 
 
-def fetch_saracroche_prefixes() -> list[dict]:
+def is_valid_saracroche_prefix(prefix: str) -> bool:
+    """Accept only French E.164 prefixes within the feed's country allocation."""
+
+    return re.fullmatch(r"\+33[1-9][0-9]{2,12}", str(prefix).strip()) is not None
+
+
+def fetch_saracroche_prefixes() -> SourceFetchResult:
     """Fetch Saracroche's daily French telemarketing range feed.
 
     The endpoint publishes wildcard patterns such as ``33162######``.  The
@@ -632,23 +649,34 @@ def fetch_saracroche_prefixes() -> list[dict]:
     sync payload needlessly huge.
     """
     print("\n[Saracroche France telemarketing prefixes]")
+    response, error = _get_with_backoff(
+        SARACROCHE_PREFIX_URL,
+        timeout=60,
+        label="Saracroche",
+    )
+    if response is None:
+        return _failed_fetch("Saracroche", None, error or "request failed")
     try:
-        response = requests.get(SARACROCHE_PREFIX_URL, timeout=60)
         response.raise_for_status()
         payload = response.json()
     except Exception as exc:
         print(f"  Error: {exc}")
-        return []
+        return _failed_fetch("Saracroche", None, str(exc))
+    patterns = payload.get("patterns", [])
+    if not isinstance(patterns, list):
+        return _failed_fetch("Saracroche", None, "patterns is not an array")
 
     prefixes = {}
-    for row in payload.get("patterns", []):
+    for row in patterns:
+        if not isinstance(row, dict):
+            continue
         if str(row.get("action", "block")).lower() != "block":
             continue
         pattern = str(row.get("pattern", "")).strip()
         fixed = pattern.split("#", 1)[0]
-        if not fixed.isdigit() or len(fixed) < 5 or len(fixed) > 15:
-            continue
         prefix = f"+{fixed}"
+        if not fixed.isdigit() or not is_valid_saracroche_prefix(prefix):
+            continue
         name = str(row.get("name", "French telemarketing range")).strip()
         prefixes[prefix] = {
             "prefix": prefix,
@@ -661,7 +689,11 @@ def fetch_saracroche_prefixes() -> list[dict]:
         f"{payload.get('blocked_numbers_count', 'unknown')} numbers "
         f"(version {payload.get('version', 'unknown')})"
     )
-    return list(prefixes.values())
+    return SourceFetchResult(
+        list(prefixes.values()),
+        cursor=None,
+        complete=True,
+    )
 
 
 # ── Source 4: ToastedSpam (US/Canada curated plain-text blocklist) ────
@@ -773,6 +805,7 @@ def merge_into_database(
     prefixes: list[dict] | None = None,
     source_names: set[str] | None = None,
     source_stats: dict[str, dict] | None = None,
+    refresh_prefix_sources: set[str] | None = None,
 ):
     """Merge numbers. min_reports filters low-confidence single-source entries."""
     if DB_FILE.exists():
@@ -873,10 +906,49 @@ def merge_into_database(
     existing_prefixes = {p["prefix"]: p for p in db.get("prefixes", []) if p.get("prefix")}
     prefix_added = 0
     prefix_updated = 0
+    prefix_removed = 0
+    incoming_prefixes = {}
     for entry in prefixes or []:
+        entry_source_ids = {
+            str(item.get("source_id", ""))
+            for item in entry.get("evidence", [])
+            if item.get("source_id")
+        }
         prefix = entry.get("prefix", "")
         if not prefix:
             continue
+        if "saracroche_prefixes" in entry_source_ids and not is_valid_saracroche_prefix(prefix):
+            continue
+        incoming_prefixes[prefix] = entry
+
+    def prefix_source_ids(entry: dict) -> set[str]:
+        source_ids = {
+            str(item.get("source_id", ""))
+            for item in entry.get("evidence", [])
+            if item.get("source_id")
+        }
+        # Prefixes shipped before source evidence was added are still safely
+        # attributable from their stable legacy description.
+        if str(entry.get("description", "")).startswith("Saracroche:"):
+            source_ids.add("saracroche_prefixes")
+        return source_ids
+
+    refreshable_sources = set(refresh_prefix_sources or {})
+    if "saracroche_prefixes" in refreshable_sources and not incoming_prefixes:
+        # An empty successful response is not enough evidence to erase a
+        # regional blocklist; retain the last known good range set.
+        refreshable_sources.remove("saracroche_prefixes")
+    for prefix, entry in list(existing_prefixes.items()):
+        if (
+            "saracroche_prefixes" in refreshable_sources
+            and "saracroche_prefixes" in prefix_source_ids(entry)
+            and prefix not in incoming_prefixes
+        ):
+            del existing_prefixes[prefix]
+            prefix_removed += 1
+
+    for entry in incoming_prefixes.values():
+        prefix = entry["prefix"]
         if prefix in existing_prefixes:
             before = existing_prefixes[prefix].copy()
             existing_prefixes[prefix].update(
@@ -896,7 +968,14 @@ def merge_into_database(
     db["prefixes"] = list(existing_prefixes.values())
     # Bump the published version only on a real change: the app re-downloads
     # the whole database whenever it moves.
-    if added == 0 and updated == 0 and filtered == 0 and prefix_added == 0 and prefix_updated == 0:
+    if (
+        added == 0
+        and updated == 0
+        and filtered == 0
+        and prefix_added == 0
+        and prefix_updated == 0
+        and prefix_removed == 0
+    ):
         write_sharded_database(db, DB_FILE.parent)
         print("No changes — database version left at", db.get("version", 0))
         return
@@ -918,6 +997,7 @@ def merge_into_database(
     print(f"  Updated: {updated:,}")
     print(f"  Prefixes added:   {prefix_added:,}")
     print(f"  Prefixes updated: {prefix_updated:,}")
+    print(f"  Prefixes expired:  {prefix_removed:,}")
     print(f"  Total:   {len(db['numbers']):,}")
     print(f"  Size:    {DB_FILE.stat().st_size / 1024:.1f} KB")
     print(f"  Version: {db['version']}")
@@ -1027,14 +1107,18 @@ def main():
         "last_success_at": retrieved_at if nomorobo else None,
     }
 
-    saracroche_prefixes = fetch_saracroche_prefixes() if args.include_saracroche else []
-    attach_source_evidence(saracroche_prefixes, manifest, "saracroche_prefixes", retrieved_at=retrieved_at)
-    source_stats["saracroche_prefixes"] = {
-        "status": "ok" if saracroche_prefixes else "not_requested",
-        "accepted": len(saracroche_prefixes),
-        "checksum": payload_checksum(saracroche_prefixes),
-        "last_success_at": retrieved_at if saracroche_prefixes else None,
-    }
+    if args.include_saracroche:
+        saracroche_prefixes = fetch_saracroche_prefixes()
+        attach_source_evidence(saracroche_prefixes, manifest, "saracroche_prefixes", retrieved_at=retrieved_at)
+        source_stats["saracroche_prefixes"] = _fetch_stats(saracroche_prefixes, retrieved_at)
+    else:
+        saracroche_prefixes = SourceFetchResult([], cursor=None, complete=False)
+        source_stats["saracroche_prefixes"] = {
+            "status": "not_requested",
+            "accepted": 0,
+            "checksum": None,
+            "last_success_at": None,
+        }
 
     # Source 4: ToastedSpam
     ts = fetch_toastedspam(allow_insecure=args.allow_insecure_sources)
@@ -1097,6 +1181,9 @@ def main():
         prefixes=saracroche_prefixes,
         source_names=source_names,
         source_stats=source_stats,
+        refresh_prefix_sources={"saracroche_prefixes"}
+        if args.include_saracroche and saracroche_prefixes.complete
+        else set(),
     )
     save_source_cursors(next_cursors)
     print("\nDone! Commit and push to update the live database.")

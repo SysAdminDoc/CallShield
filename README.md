@@ -506,7 +506,7 @@ Trained weekly from the CallShield database (50K positive + 50K negative samples
 | **FCC Consumer Complaints** | Socrata API, 500K records, min 2 reports |
 | **FTC Do Not Call** | `api.ftc.gov` (DEMO_KEY) |
 | **Saracroche** | Daily French telemarketing ranges; imported as compact prefixes |
-| **PhoneBlock** | Optional authenticated bulk snapshot; public per-number lookup remains live |
+| **PhoneBlock** | Optional authenticated bulk snapshot; live lookup sends SHA-1 number/prefix hashes only |
 | **Nomorobo IRS** | Optional carrier-authorized callback-scam CSV feed |
 | **ToastedSpam** | Community curated list |
 | **Community Reports** | Anonymous via Cloudflare Worker |
@@ -514,11 +514,15 @@ Trained weekly from the CallShield database (50K positive + 50K negative samples
 The source importer also has optional adapters for **PhoneBlock's** versioned
 bulk list. PhoneBlock requires an account/API key for bulk downloads on current
 deployments, so the app continues to use its public per-number lookup by
-default. Run `python scripts/import_all_sources.py --include-saracroche` to
+default. The live PhoneBlock request never uploads the raw number: it sends a
+full SHA-1 plus bounded one- and two-digit prefix hashes and caches the result
+briefly. Run `python scripts/import_all_sources.py --include-saracroche` to
 refresh the French ranges; add `--phoneblock-limit 5000` and
 `PHONEBLOCK_API_KEY` only when the maintainer has bulk-feed access. Saracroche
-range data is published under CC BY-NC-SA 4.0 and must retain attribution and
-those downstream restrictions.
+range data is published under CC BY-NC-SA 4.0, must retain attribution and
+those downstream restrictions, and is accepted only as a `+33` French
+allocation. A successful non-empty refresh expires removed Saracroche ranges;
+failed or empty responses preserve the last known good set.
 
 Every feed is declared in `data/source-manifest.json` with its access mode,
 geography, licence, attribution, parser version, redistribution policy, and
