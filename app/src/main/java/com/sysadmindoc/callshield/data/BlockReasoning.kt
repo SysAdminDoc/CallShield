@@ -47,6 +47,7 @@ object BlockReasoning {
         )
 
     /** Explain a decision using its stable code; matchSource is only retained for structured metadata. */
+    @Suppress("CyclomaticComplexMethod")
     fun explain(
         reasonCode: BlockReasonCode,
         description: String,
