@@ -27,8 +27,8 @@ class ReleaseDriftTest(unittest.TestCase):
             now=snapshot_time + timedelta(minutes=1),
         )
         self.assertEqual([], report["issues"], report)
-        self.assertEqual("1.7.34", report["version_name"])
-        self.assertEqual(62, report["version_code"])
+        self.assertEqual("1.7.35", report["version_name"])
+        self.assertEqual(63, report["version_code"])
         self.assertEqual(9, report["sources"]["source_count"])
         self.assertEqual(3, len(report["advisories"]))
 

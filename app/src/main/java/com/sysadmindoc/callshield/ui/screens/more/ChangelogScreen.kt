@@ -25,9 +25,19 @@ fun ChangelogScreen() {
         verticalArrangement = Arrangement.spacedBy(0.dp),
     ) {
         VersionEntry(
+            "1.7.35",
+            "Bounded data surfaces, feed rollback protection, and release gates",
+            isLatest = true,
+            changes =
+                listOf(
+                    "Database and activity rows load in pages while statistics use SQL aggregates",
+                    "Replayed, downgraded, malformed, and mutated feed manifests cannot replace newer data",
+                    "Pull requests and scheduled runs verify dependencies, provenance, and release metadata",
+                ),
+        )
+        VersionEntry(
             "1.7.34",
             "Explainable protection, RTT safety, and assistive action coverage",
-            isLatest = true,
             changes =
                 listOf(
                     "RTT calls receive an explicit allow before screening or caller-ID overlay work",
