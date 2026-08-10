@@ -1,57 +1,53 @@
 package com.sysadmindoc.callshield.data.remote
 
 import com.sysadmindoc.callshield.data.SmsContentAnalyzer
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.Request
-import okhttp3.RequestBody.Companion.toRequestBody
-import java.util.concurrent.TimeUnit
 
 /**
- * Background URL safety checker using URLhaus (abuse.ch).
- * Free, no API key, community-maintained malware/phishing URL database.
- *
- * This runs AFTER the real-time blocking decision to avoid adding
- * latency to SMS interception. Results are used to update block log
- * entries and flag phishing URLs in notifications.
- *
- * API: https://urlhaus-api.abuse.ch/v1/url/
- * Rate limit: generous, no key required.
+ * Background URL safety checker with local domain matching and opt-in threat
+ * adapters. URL lookups run after the real-time blocking decision so a remote
+ * service can never add latency to call or SMS interception.
  */
 object UrlSafetyChecker {
     data class UrlCheckResult(
         val url: String,
         val isMalicious: Boolean,
-        val threat: String = "", // "malware", "phishing", "botnet_cc", etc.
+        val threat: String = "",
         val tags: List<String> = emptyList(),
+        val source: UrlThreatSource = UrlThreatSource.URLHAUS,
+        val sourceVersion: String = UrlThreatSource.URLHAUS.defaultVersion,
+        val category: UrlThreatCategory = UrlThreatCategory.UNKNOWN,
+        val verdict: UrlThreatVerdict = if (isMalicious) UrlThreatVerdict.MALICIOUS else UrlThreatVerdict.CLEAN,
+        val expiresAtMillis: Long = 0L,
     )
 
-    // URL pattern — extract all URLs from message body
-    private val URL_PATTERN =
+    private val urlPattern =
         Regex(
-            """https?://[^\s<>"]+|www\.[^\s<>"]+""",
+            """https?://[^\s<>\"]+|www\.[^\s<>\"]+""",
             RegexOption.IGNORE_CASE,
         )
 
-    private val client =
-        HttpClient
-            .shared
-            .newBuilder()
-            .connectTimeout(10, TimeUnit.SECONDS)
-            .readTimeout(10, TimeUnit.SECONDS)
-            .build()
-
-    // URLhaus URL-status responses are small JSON; cap generously to bound memory.
-    private const val MAX_URLHAUS_BYTES = 256L * 1024L
-
-    private val JSON_TYPE = "application/json".toMediaType()
+    /** Cache keys include source and version; no URL evidence is persisted. */
+    private val threatCache = UrlThreatCache()
 
     /**
-     * Extract all URLs from an SMS body and check each against URLhaus.
-     * Returns a list of malicious URLs found, or empty list if clean/unreachable.
-     * Safe to call from a background coroutine — never blocks the call/SMS decision.
+     * Keyed adapters stay disabled until their key is supplied. PhishTank's
+     * low-rate endpoint and the OpenPhish public feed are available for the
+     * explicit remote-lookup setting without embedding credentials.
+     */
+    private val enabledAdapters = UrlThreatAdapterCatalog.enabled()
+
+    /**
+     * Extract URLs from an SMS body and return only malicious evidence.
+     * Local spam-domain evidence is checked first and does not require network
+     * access. Remote adapters receive only a canonical registrable-domain
+     * origin, never the raw message or URL path/query.
      */
     suspend fun checkSmsBody(
         body: String,
@@ -59,90 +55,97 @@ object UrlSafetyChecker {
         allowRemoteLookup: Boolean = false,
     ): List<UrlCheckResult> {
         val urls = extractCandidateUrls(body)
-
         if (urls.isEmpty()) return emptyList()
 
         return urls.mapNotNull { url ->
             localSpamDomainResult(url, stripQuery)
-                ?: if (allowRemoteLookup) checkUrl(url).takeIf { it.isMalicious } else null
+                ?: if (allowRemoteLookup) {
+                    checkUrlMatches(url).firstOrNull()
+                } else {
+                    null
+                }
         }
     }
 
     /**
-     * Check a single URL against URLhaus.
+     * Check one URL and return its first adapter's evidence. Consumers should
+     * use [checkSmsBody] for notification decisions, which only returns
+     * malicious matches and never treats a remote unknown as malicious.
      */
-    suspend fun checkUrl(
-        url: String,
-    ): UrlCheckResult =
+    suspend fun checkUrl(url: String): UrlCheckResult =
         withContext(Dispatchers.IO) {
             val lookupUrl = normalizeRemoteLookupUrl(url)
-            if (lookupUrl.isBlank()) return@withContext UrlCheckResult("", false)
-            try {
-                val escapedUrl =
-                    lookupUrl
-                        .replace("\\", "\\\\")
-                        .replace("\"", "\\\"")
-                        .replace("\n", "\\n")
-                        .replace("\r", "\\r")
-                        .replace("\t", "\\t")
-                val jsonBody = """{"url":"$escapedUrl"}""".toRequestBody(JSON_TYPE)
-                val request =
-                    Request
-                        .Builder()
-                        .url("https://urlhaus-api.abuse.ch/v1/url/")
-                        .post(jsonBody)
-                        .header("User-Agent", "CallShield/1.0")
-                        .build()
-
-                client.newCall(request).execute().use { response ->
-                    if (!response.isSuccessful) return@withContext UrlCheckResult(lookupUrl, false)
-
-                    // Bound the response read — every other remote lookup caps its
-                    // body; a large/abusive endpoint response should not inflate
-                    // memory on the post-decision SMS/RCS URL-scan path.
-                    val responseBody =
-                        when (val bounded = response.body?.readUtf8Bounded(MAX_URLHAUS_BYTES)) {
-                            is BoundedResponseBody.Text -> bounded.value
-                            else -> return@withContext UrlCheckResult(lookupUrl, false)
-                        }
-
-                    // Parse response
-                    // {"query_status":"is_phishing","url_status":"online","threat":"phishing",...}
-                    // {"query_status":"no_results"} — clean or unknown
-                    val status =
-                        Regex(""""query_status"\s*:\s*"([^"]+)"""")
-                            .find(responseBody)
-                            ?.groupValues
-                            ?.get(1)
-                            ?: "no_results"
-
-                    val isMalicious = status in listOf("is_malware", "is_phishing", "is_botnet_cc")
-
-                    if (!isMalicious) return@withContext UrlCheckResult(lookupUrl, false)
-
-                    val threat =
-                        Regex(""""threat"\s*:\s*"([^"]+)"""")
-                            .find(responseBody)
-                            ?.groupValues
-                            ?.get(1)
-                            ?: status
-
-                    val tagsMatch = Regex(""""tags"\s*:\s*\[([^\]]*)]""").find(responseBody)
-                    val tags =
-                        tagsMatch
-                            ?.groupValues
-                            ?.get(1)
-                            ?.split(",")
-                            ?.map { it.trim().trim('"') }
-                            ?.filter { it.isNotEmpty() }
-                            ?: emptyList()
-
-                    UrlCheckResult(url = lookupUrl, isMalicious = true, threat = threat, tags = tags)
-                }
-            } catch (_: Exception) {
-                UrlCheckResult(lookupUrl, false) // Network error = don't flag
+            if (lookupUrl.isBlank()) {
+                return@withContext UrlCheckResult(
+                    url = "",
+                    isMalicious = false,
+                    verdict = UrlThreatVerdict.UNKNOWN,
+                )
             }
+            val evidence = lookupUrlEvidence(lookupUrl)
+            evidence.firstOrNull(UrlThreatResult::isMalicious)?.let(::toCheckResult)
+                ?: evidence.firstOrNull()?.let(::toCheckResult)
+                ?: UrlCheckResult(
+                    url = lookupUrl,
+                    isMalicious = false,
+                    verdict = UrlThreatVerdict.UNKNOWN,
+                )
         }
+
+    /** Return all malicious adapter matches for a canonical URL. */
+    internal suspend fun checkUrlMatches(url: String): List<UrlCheckResult> {
+        val lookupUrl = normalizeRemoteLookupUrl(url)
+        if (lookupUrl.isBlank()) return emptyList()
+        return lookupUrlEvidence(lookupUrl)
+            .filter(UrlThreatResult::isMalicious)
+            .map(::toCheckResult)
+    }
+
+    private suspend fun lookupUrlEvidence(lookupUrl: String): List<UrlThreatResult> {
+        if (enabledAdapters.isEmpty()) return emptyList()
+        val nowMillis = System.currentTimeMillis()
+        return coroutineScope {
+            enabledAdapters
+                .map { adapter ->
+                    async {
+                        val cached = threatCache.get(adapter.source, adapter.sourceVersion, lookupUrl)
+                        if (cached != null) {
+                            cached
+                        } else {
+                            val result =
+                                try {
+                                    adapter.lookup(lookupUrl, nowMillis)
+                                } catch (cancellation: CancellationException) {
+                                    throw cancellation
+                                } catch (_: RuntimeException) {
+                                    UrlThreatResult.unknown(
+                                        source = adapter.source,
+                                        sourceVersion = adapter.sourceVersion,
+                                        canonicalUrl = lookupUrl,
+                                        nowMillis = nowMillis,
+                                        detail = "adapter_error",
+                                    )
+                                }
+                            threatCache.put(result)
+                            result
+                        }
+                    }
+                }.awaitAll()
+        }
+    }
+
+    private fun toCheckResult(result: UrlThreatResult): UrlCheckResult =
+        UrlCheckResult(
+            url = result.canonicalUrl,
+            isMalicious = result.isMalicious,
+            threat = result.detail.ifBlank { result.category.name.lowercase() },
+            tags = result.tags,
+            source = result.source,
+            sourceVersion = result.sourceVersion,
+            category = result.category,
+            verdict = result.verdict,
+            expiresAtMillis = result.expiresAtMillis,
+        )
 
     internal fun localSpamDomainResult(
         url: String,
@@ -154,6 +157,11 @@ object UrlSafetyChecker {
             isMalicious = true,
             threat = "known_spam_domain",
             tags = listOf("local_spam_domain"),
+            source = UrlThreatSource.LOCAL_SPAM_DOMAINS,
+            sourceVersion = UrlThreatSource.LOCAL_SPAM_DOMAINS.defaultVersion,
+            category = UrlThreatCategory.UNKNOWN,
+            verdict = UrlThreatVerdict.MALICIOUS,
+            expiresAtMillis = System.currentTimeMillis() + UrlThreatCache.DEFAULT_TTL_MILLIS,
         )
     }
 
@@ -161,7 +169,7 @@ object UrlSafetyChecker {
         body: String,
         limit: Int = 5,
     ): List<String> =
-        URL_PATTERN
+        urlPattern
             .findAll(body)
             .map { normalizeCandidateUrl(it.value) }
             .filter { it.isNotBlank() }
@@ -183,13 +191,10 @@ object UrlSafetyChecker {
         registrableDomain: (okhttp3.HttpUrl) -> String? = { it.topPrivateDomain() },
     ): String {
         val normalizedUrl = normalizeCandidateUrl(rawUrl)
-        val parsedUrl =
-            normalizedUrl.toHttpUrlOrNull()
-                ?: return ""
+        val parsedUrl = normalizedUrl.toHttpUrlOrNull() ?: return ""
 
-        // Never disclose an SMS/RCS path, query, or subdomain to URLhaus.
-        // A remote lookup is explicit opt-in and receives only the
-        // registrable domain (or literal IP host) as an origin URL.
+        // Never disclose an SMS/RCS path, query, fragment, subdomain, or
+        // embedded username/password to a threat service.
         val resolvedDomain = runCatching { registrableDomain(parsedUrl) }
         if (resolvedDomain.isFailure) return ""
         val lookupHost =
@@ -198,12 +203,18 @@ object UrlSafetyChecker {
                 ?: return ""
         return parsedUrl
             .newBuilder()
+            .username("")
+            .password("")
             .host(lookupHost)
             .encodedPath("/")
             .query(null)
             .fragment(null)
             .build()
             .toString()
+    }
+
+    internal fun clearThreatCacheForTests() {
+        threatCache.clear()
     }
 
     private fun isIpLiteral(host: String): Boolean =

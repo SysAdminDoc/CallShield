@@ -52,6 +52,10 @@ All notable changes to CallShield will be documented in this file.
 
 ### Reliability
 
+- URL checks now use privacy-minimized, opt-in URLhaus/PhishTank/OpenPhish and
+  Safe Browsing/Web Risk adapters with bounded source-version caches; only
+  canonical registrable-domain origins leave the device, and unknown feed
+  responses remain advisory.
 - Screening decisions now persist a stable reason code and the responsible
   rule ID, with Room migration/backfill, pending-log propagation, localized
   log filtering, and CSV/JSON export support. Legacy match text is retained
