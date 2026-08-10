@@ -122,6 +122,7 @@ class SpamRepository(
         internal val KEY_LAST_SYNC = longPreferencesKey("last_sync_timestamp")
         internal val KEY_LAST_SYNC_SOURCE = stringPreferencesKey("last_sync_source")
         internal val KEY_LAST_SHA = stringPreferencesKey("last_data_sha")
+        internal val KEY_LAST_SHARD_HASHES = stringPreferencesKey("last_data_shard_hashes")
         internal val KEY_DB_VERSION = intPreferencesKey("db_version")
         internal val KEY_HOT_DATA_LAST_GOOD = longPreferencesKey("hot_data_last_good_timestamp")
         internal val KEY_HOT_DATA_UNAVAILABLE = stringSetPreferencesKey("hot_data_unavailable_feeds")

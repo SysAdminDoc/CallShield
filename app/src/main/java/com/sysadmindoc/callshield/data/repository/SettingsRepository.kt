@@ -49,6 +49,19 @@ class SettingsRepository(
                 ),
             )
 
+    private val shardHashesAdapter =
+        Moshi
+            .Builder()
+            .addLast(KotlinJsonAdapterFactory())
+            .build()
+            .adapter<Map<String, String>>(
+                Types.newParameterizedType(
+                    Map::class.java,
+                    String::class.java,
+                    String::class.java,
+                ),
+            )
+
     val blockCallsEnabled: Flow<Boolean> = dataStore.data.map { it[SpamRepository.KEY_BLOCK_CALLS] ?: true }
     val blockSmsEnabled: Flow<Boolean> = dataStore.data.map { it[SpamRepository.KEY_BLOCK_SMS] ?: true }
     val blockUnknownEnabled: Flow<Boolean> = dataStore.data.map { it[SpamRepository.KEY_BLOCK_UNKNOWN] ?: false }
@@ -381,6 +394,12 @@ class SettingsRepository(
 
     suspend fun readLastDataSha(): String? = dataStore.data.first()[SpamRepository.KEY_LAST_SHA]
 
+    suspend fun readLastDataShardHashes(): Map<String, String>? {
+        val encoded = dataStore.data.first()[SpamRepository.KEY_LAST_SHARD_HASHES] ?: return null
+        return runCatching { shardHashesAdapter.fromJson(encoded).orEmpty() }
+            .getOrDefault(emptyMap())
+    }
+
     suspend fun readHotDataHealth(): HotDataHealth {
         val preferences = dataStore.data.first()
         return HotDataHealth(
@@ -418,11 +437,19 @@ class SettingsRepository(
         sha: String?,
         syncSource: String,
         databaseVersion: Int,
+        shardHashes: Map<String, String>? = null,
     ) = dataStore.edit {
         it[SpamRepository.KEY_LAST_SYNC] = System.currentTimeMillis()
         it[SpamRepository.KEY_LAST_SYNC_SOURCE] = syncSource
         it[SpamRepository.KEY_DB_VERSION] = databaseVersion
         if (sha != null) it[SpamRepository.KEY_LAST_SHA] = sha
+        if (shardHashes != null) {
+            if (shardHashes.isEmpty()) {
+                it.remove(SpamRepository.KEY_LAST_SHARD_HASHES)
+            } else {
+                it[SpamRepository.KEY_LAST_SHARD_HASHES] = shardHashes.toSortedMap().let(shardHashesAdapter::toJson)
+            }
+        }
     }
 
     /**

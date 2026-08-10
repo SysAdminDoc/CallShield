@@ -29,6 +29,10 @@ All notable changes to CallShield will be documented in this file.
   ranges, and domains were generated from that same queue.
 - Drained the queued community reports through that guarded pipeline and committed the
   regenerated feed snapshots; unsupported reports did not promote into shared feeds.
+- The spam database is now published as a manifest plus 256 content-addressed shards;
+  sync validates hashes before one transactional Room refresh, downloads only changed
+  shards, keeps the legacy monolithic raw URL for older clients, and bundles the shard
+  set instead of the 11 MB monolith.
 
 ### Reliability
 

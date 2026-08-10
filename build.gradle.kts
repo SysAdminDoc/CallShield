@@ -155,7 +155,7 @@ val appReleaseVersion = parseAppReleaseVersion(file("app/build.gradle.kts"))
 
 val bundledRuntimeAssets =
     setOf(
-        "assets/spam_numbers.json",
+        "assets/spam_numbers.manifest.json",
         "assets/hot_numbers.json",
         "assets/hot_ranges.json",
         "assets/spam_domains.json",
@@ -170,6 +170,8 @@ fun verifyApkDataPrivacy(apkFile: File) {
             .filter { it.isFile }
             .map { "assets/${it.relativeTo(dataRoot).invariantSeparatorsPath}" }
             .toSet()
+    val bundledShardAssets = repositoryDataAssets.filter { it.startsWith("assets/spam_number_shards/") }.toSet()
+    val expectedRuntimeAssets = bundledRuntimeAssets + bundledShardAssets
 
     ZipFile(apkFile).use { zip ->
         val packagedAssets =
@@ -177,8 +179,8 @@ fun verifyApkDataPrivacy(apkFile: File) {
                 .map { it.name }
                 .filter { it.startsWith("assets/") && !it.endsWith("/") }
                 .toSet()
-        val missing = bundledRuntimeAssets - packagedAssets
-        val leaked = (packagedAssets intersect repositoryDataAssets) - bundledRuntimeAssets
+        val missing = expectedRuntimeAssets - packagedAssets
+        val leaked = (packagedAssets intersect repositoryDataAssets) - expectedRuntimeAssets
 
         check(missing.isEmpty()) {
             "APK is missing required bundled feeds: ${missing.sorted().joinToString()}"

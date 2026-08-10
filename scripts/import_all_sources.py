@@ -39,6 +39,7 @@ from phone_normalization import (
 )
 
 from pipeline_io import atomic_write_json
+from spam_shards import write_sharded_database
 from source_registry import attach_source_evidence, load_source_manifest, merge_evidence, source_evidence, source_snapshot
 
 try:
@@ -604,6 +605,7 @@ def merge_into_database(
     # Bump the published version only on a real change: the app re-downloads
     # the whole database whenever it moves.
     if added == 0 and updated == 0 and filtered == 0 and prefix_added == 0 and prefix_updated == 0:
+        write_sharded_database(db, DB_FILE.parent)
         print("No changes — database version left at", db.get("version", 0))
         return
     db["version"] = db.get("version", 0) + 1
@@ -616,6 +618,7 @@ def merge_into_database(
     db["prefixes"].sort(key=lambda x: x.get("prefix", ""))
 
     atomic_write_json(DB_FILE, db)
+    write_sharded_database(db, DB_FILE.parent)
 
     print(f"\n{'='*50}")
     print(f"Database updated:")

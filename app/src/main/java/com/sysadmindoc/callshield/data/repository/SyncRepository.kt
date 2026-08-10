@@ -13,12 +13,18 @@ import com.sysadmindoc.callshield.data.model.ExternalBlocklistPreview
 import com.sysadmindoc.callshield.data.model.ExternalBlocklistSubscription
 import com.sysadmindoc.callshield.data.model.SourceEvidenceJson
 import com.sysadmindoc.callshield.data.model.SpamDatabase
+import com.sysadmindoc.callshield.data.model.SpamDatabaseShard
 import com.sysadmindoc.callshield.data.model.SpamNumber
 import com.sysadmindoc.callshield.data.model.SpamPrefix
+import com.sysadmindoc.callshield.data.model.SpamPrefixJson
+import com.sysadmindoc.callshield.data.model.SpamShardDescriptor
+import com.sysadmindoc.callshield.data.model.SpamShardManifest
 import com.sysadmindoc.callshield.data.remote.ExternalBlocklistDataSource
 import com.sysadmindoc.callshield.data.remote.GitHubDataSource
 import com.sysadmindoc.callshield.data.remote.OkHttpExternalBlocklistDataSource
 import com.sysadmindoc.callshield.data.remote.SpamDataSource
+import com.sysadmindoc.callshield.data.remote.sha256Hex
+import com.sysadmindoc.callshield.data.remote.spamShardIdFor
 import com.sysadmindoc.callshield.data.sanitizeDatabaseNumbers
 import com.sysadmindoc.callshield.domain.model.SyncResult
 import com.sysadmindoc.callshield.ui.widget.CallShieldWidget
@@ -57,12 +63,30 @@ class SyncRepository(
                     // pre-fetch SHA fails the other way: at worst the next
                     // check sees a mismatch and re-downloads, which self-heals.
                     val preFetchSha = remote.checkForUpdate().getOrNull()
+                    val currentShardHashes = settingsRepository.readLastDataShardHashes()
                     if (!force) {
                         val currentSha = settingsRepository.readLastDataSha()
-                        if (preFetchSha != null && preFetchSha == currentSha) {
+                        if (preFetchSha != null && preFetchSha == currentSha && currentShardHashes != null) {
                             return@withContext SyncResult(
                                 success = true,
                                 message = context.getString(R.string.sync_database_up_to_date),
+                            )
+                        }
+                    }
+
+                    val manifestResult = remote.fetchSpamShardManifest()
+                    if (manifestResult.isSuccess) {
+                        val shardResult =
+                            applyShardedDatabase(
+                                manifest = manifestResult.getOrThrow(),
+                                sha = preFetchSha,
+                                force = force,
+                            )
+                        if (shardResult.isSuccess) {
+                            val (numberCount, prefixCount) = shardResult.getOrThrow()
+                            return@withContext SyncResult(
+                                success = true,
+                                message = context.getString(R.string.sync_success_counts, numberCount, prefixCount),
                             )
                         }
                     }
@@ -76,6 +100,7 @@ class SyncRepository(
                                 database = database,
                                 sha = newSha,
                                 syncSource = SpamRepository.SYNC_SOURCE_REMOTE,
+                                shardHashes = emptyMap(),
                             )
                         return@withContext SyncResult(
                             success = true,
@@ -102,6 +127,7 @@ class SyncRepository(
                                 database = database,
                                 sha = null,
                                 syncSource = SpamRepository.SYNC_SOURCE_BUNDLED,
+                                shardHashes = emptyMap(),
                             )
                         return@withContext SyncResult(
                             success = true,
@@ -258,31 +284,148 @@ class SyncRepository(
             }
         }
 
-    private suspend fun loadBundledSpamDatabase(): Result<SpamDatabase> {
-        val asset = GitHubDataSource.readBundledAsset(context, GitHubDataSource.BUNDLED_DATABASE_ASSET)
-        if (asset.isFailure) {
-            return Result.failure(asset.exceptionOrNull()!!)
+    private suspend fun applyShardedDatabase(
+        manifest: SpamShardManifest,
+        sha: String?,
+        force: Boolean,
+    ): Result<Pair<Int, Int>> =
+        runCatching {
+            val previousHashes =
+                if (force) {
+                    emptyMap()
+                } else {
+                    settingsRepository.readLastDataShardHashes().orEmpty()
+                }
+            val descriptorsById = manifest.shards.associateBy { it.id }
+            val changedDescriptors = manifest.shards.filter { previousHashes[it.id] != it.sha256 }
+            val changedIds = changedDescriptors.map { it.id }.toSet()
+            val removedIds = previousHashes.keys - descriptorsById.keys
+            val fetchedShards =
+                changedDescriptors.associate { descriptor ->
+                    descriptor.id to fetchAndValidateShard(descriptor)
+                }
+
+            val preservedUserBlocks = readPreservedUserBlocks()
+            val retainedNumbers =
+                dao
+                    .getNumbersBySource("github")
+                    .filter { number ->
+                        val shardId = spamShardIdFor(number.number)
+                        shardId in descriptorsById && shardId !in changedIds
+                    }
+            val importedNumbers =
+                fetchedShards.values.flatMap { shard ->
+                    sanitizeDatabaseNumbers(
+                        databaseNumbers = shard.numbers,
+                        normalizeNumber = normalizeNumber,
+                        preservedUserBlockedNumbers = preservedUserBlocks,
+                    )
+                }
+            val numbers = mergeNumbers(retainedNumbers, importedNumbers)
+
+            val retainedPrefixes =
+                dao
+                    .getAllPrefixesForSync()
+                    .filter { prefix ->
+                        val shardId = spamShardIdFor(prefix.prefix)
+                        shardId in descriptorsById && shardId !in changedIds
+                    }
+            val importedPrefixes = fetchedShards.values.flatMap { shard -> sanitizeDatabasePrefixes(shard.prefixes) }
+            val prefixes = mergePrefixes(retainedPrefixes, importedPrefixes)
+
+            if (changedIds.isNotEmpty() || removedIds.isNotEmpty()) {
+                // All shard bodies and hashes have been verified before this
+                // single Room transaction. A failed/interrupted shard set can
+                // therefore never expose a half-applied database.
+                dao.replaceGithubData(numbers, prefixes)
+                invalidateAllCaches()
+                CallShieldWidget.refreshAll(context)
+            }
+
+            settingsRepository.recordSyncSuccess(
+                sha = sha,
+                syncSource = SpamRepository.SYNC_SOURCE_REMOTE,
+                databaseVersion = manifest.version,
+                shardHashes = manifest.shards.associate { it.id to it.sha256 },
+            )
+            numbers.size to prefixes.size
         }
-        return remote.parseSpamDatabaseJson(asset.getOrThrow())
+
+    private suspend fun fetchAndValidateShard(descriptor: SpamShardDescriptor): SpamDatabaseShard {
+        val body =
+            remote
+                .fetchSpamShardJson(path = descriptor.path)
+                .getOrThrow()
+        return parseVerifiedShard(descriptor, body)
+    }
+
+    private fun parseVerifiedShard(
+        descriptor: SpamShardDescriptor,
+        body: String,
+    ): SpamDatabaseShard {
+        val bytes = body.toByteArray(Charsets.UTF_8)
+        check(bytes.size.toLong() == descriptor.bytes) {
+            "Spam shard ${descriptor.id} byte count did not match its manifest"
+        }
+        check(sha256Hex(bytes) == descriptor.sha256) {
+            "Spam shard ${descriptor.id} hash did not match its manifest"
+        }
+        val shard = remote.parseSpamShardJson(body).getOrThrow()
+        check(shard.shardId == descriptor.id) {
+            "Spam shard ${descriptor.id} declared a different payload id"
+        }
+        check(shard.numbers.size == descriptor.numbers && shard.prefixes.size == descriptor.prefixes) {
+            "Spam shard ${descriptor.id} row counts did not match its manifest"
+        }
+        return shard
+    }
+
+    private suspend fun loadBundledSpamDatabase(): Result<SpamDatabase> {
+        val shardedResult =
+            runCatching {
+                val manifestBody =
+                    GitHubDataSource
+                        .readBundledAsset(context, GitHubDataSource.BUNDLED_SHARD_MANIFEST_ASSET)
+                        .getOrThrow()
+                val manifest = remote.parseSpamShardManifestJson(manifestBody).getOrThrow()
+                val shards =
+                    manifest.shards.map { descriptor ->
+                        val assetName = descriptor.path.removePrefix("data/")
+                        val body =
+                            GitHubDataSource
+                                .readBundledAssetBytes(context, assetName)
+                                .getOrThrow()
+                                .toString(Charsets.UTF_8)
+                        parseVerifiedShard(descriptor, body)
+                    }
+                SpamDatabase(
+                    version = manifest.version,
+                    updated = manifest.updated,
+                    numbers = shards.flatMap { it.numbers },
+                    prefixes = shards.flatMap { it.prefixes },
+                )
+            }
+        if (shardedResult.isSuccess) {
+            return shardedResult
+        }
+
+        // Keep the legacy bundled asset as a compatibility fallback for an
+        // older APK or a test fixture that predates the shard bundle.
+        val legacyAsset = GitHubDataSource.readBundledAsset(context, GitHubDataSource.BUNDLED_DATABASE_ASSET)
+        if (legacyAsset.isSuccess) {
+            return remote.parseSpamDatabaseJson(legacyAsset.getOrThrow())
+        }
+        return Result.failure(shardedResult.exceptionOrNull() ?: legacyAsset.exceptionOrNull()!!)
     }
 
     private suspend fun persistSpamDatabase(
         database: SpamDatabase,
         sha: String?,
         syncSource: String,
+        shardHashes: Map<String, String>,
     ): Pair<Int, Int> {
         val now = System.currentTimeMillis()
-        val preservedUserRows = dao.getUserBlockedNumbersSync()
-        val preservedUserBlocks =
-            preservedUserRows
-                .mapNotNull { row ->
-                    val activeRow = row.activeDecision(now)
-                    if (activeRow?.isUserBlocked == true) {
-                        activeRow.number to activeRow.expiresAt
-                    } else {
-                        null
-                    }
-                }.toMap()
+        val preservedUserBlocks = readPreservedUserBlocks(now)
 
         val numbers =
             sanitizeDatabaseNumbers(
@@ -290,38 +433,7 @@ class SyncRepository(
                 normalizeNumber = normalizeNumber,
                 preservedUserBlockedNumbers = preservedUserBlocks,
             )
-        val prefixes =
-            database.prefixes.mapNotNull { json ->
-                val trimmedPrefix = json.prefix.trim()
-                // PrefixChecker is a startsWith hard block at priority 6000,
-                // so a malformed feed row like "+" or "+1" would block every
-                // (NANP) caller. Require "+" plus at least 3 digits — the
-                // shortest legitimate rows are whole country codes ("+232").
-                if (!VALID_PREFIX_REGEX.matches(trimmedPrefix)) {
-                    null
-                } else {
-                    val evidence =
-                        json.evidence.ifEmpty {
-                            listOf(
-                                SourceEvidenceJson(
-                                    sourceId = "github_database",
-                                    evidenceType = "aggregate_database",
-                                    license = "CallShield database terms",
-                                    attribution = "CallShield maintained spam database",
-                                    confidenceTier = "unverified",
-                                    parserVersion = "legacy-v1",
-                                ),
-                            )
-                        }
-                    SpamPrefix(
-                        prefix = trimmedPrefix,
-                        type = json.type.trim().ifBlank { "unknown" },
-                        description = json.description.trim(),
-                        evidenceJson = SourceEvidenceCodec.encode(evidence),
-                        evidenceExpiresAt = evidence.mapNotNull { it.expiresAtEpochMs }.minOrNull(),
-                    )
-                }
-            }
+        val prefixes = sanitizeDatabasePrefixes(database.prefixes)
 
         dao.replaceGithubData(numbers, prefixes)
         invalidateAllCaches()
@@ -330,10 +442,70 @@ class SyncRepository(
             sha = sha,
             syncSource = syncSource,
             databaseVersion = database.version,
+            shardHashes = shardHashes,
         )
 
         CallShieldWidget.refreshAll(context)
         return numbers.size to prefixes.size
+    }
+
+    private suspend fun readPreservedUserBlocks(now: Long = System.currentTimeMillis()): Map<String, Long?> =
+        dao
+            .getUserBlockedNumbersSync()
+            .mapNotNull { row ->
+                val activeRow = row.activeDecision(now)
+                if (activeRow?.isUserBlocked == true) activeRow.number to activeRow.expiresAt else null
+            }.toMap()
+
+    private fun sanitizeDatabasePrefixes(databasePrefixes: Collection<SpamPrefixJson>): List<SpamPrefix> =
+        databasePrefixes.mapNotNull { json ->
+            val trimmedPrefix = json.prefix.trim()
+            // PrefixChecker is a startsWith hard block at priority 6000, so a
+            // malformed feed row like "+" or "+1" would block every caller.
+            if (!VALID_PREFIX_REGEX.matches(trimmedPrefix)) {
+                null
+            } else {
+                val evidence =
+                    json.evidence.ifEmpty {
+                        listOf(
+                            SourceEvidenceJson(
+                                sourceId = "github_database",
+                                evidenceType = "aggregate_database",
+                                license = "CallShield database terms",
+                                attribution = "CallShield maintained spam database",
+                                confidenceTier = "unverified",
+                                parserVersion = "legacy-v1",
+                            ),
+                        )
+                    }
+                SpamPrefix(
+                    prefix = trimmedPrefix,
+                    type = json.type.trim().ifBlank { "unknown" },
+                    description = json.description.trim(),
+                    evidenceJson = SourceEvidenceCodec.encode(evidence),
+                    evidenceExpiresAt = evidence.mapNotNull { it.expiresAtEpochMs }.minOrNull(),
+                )
+            }
+        }
+
+    private fun mergeNumbers(
+        retained: Collection<SpamNumber>,
+        imported: Collection<SpamNumber>,
+    ): List<SpamNumber> {
+        val byNumber = LinkedHashMap<String, SpamNumber>()
+        retained.forEach { byNumber[it.number] = it }
+        imported.forEach { byNumber[it.number] = it }
+        return byNumber.values.toList()
+    }
+
+    private fun mergePrefixes(
+        retained: Collection<SpamPrefix>,
+        imported: Collection<SpamPrefix>,
+    ): List<SpamPrefix> {
+        val byPrefix = LinkedHashMap<String, SpamPrefix>()
+        retained.forEach { byPrefix[it.prefix] = it }
+        imported.forEach { byPrefix[it.prefix] = it }
+        return byPrefix.values.toList()
     }
 
     private suspend fun fetchAndParseExternalBlocklist(

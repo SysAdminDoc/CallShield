@@ -154,6 +154,66 @@ class GitHubDataSourceTest {
     }
 
     @Test
+    fun `parseSpamShardManifestJson validates the content addressed schema`() {
+        val parsed =
+            dataSource.parseSpamShardManifestJson(
+                """
+                {
+                  "format_version": 1,
+                  "version": 7,
+                  "updated": "2026-08-10",
+                  "legacy_path": "data/spam_numbers.json",
+                  "shard_directory": "data/spam_number_shards",
+                  "shard_count": 256,
+                  "shards": [
+                    {
+                      "id": "00",
+                      "path": "data/spam_number_shards/00.json",
+                      "sha256": "${"a".repeat(64)}",
+                      "bytes": 128,
+                      "numbers": 1,
+                      "prefixes": 0
+                    }
+                  ]
+                }
+                """.trimIndent(),
+            )
+
+        assertTrue(parsed.isSuccess)
+        val descriptor = parsed.getOrThrow().shards.single()
+        assertEquals("00", descriptor.id)
+    }
+
+    @Test
+    fun `parseSpamShardManifestJson rejects a path outside the shard directory`() {
+        val parsed =
+            dataSource.parseSpamShardManifestJson(
+                """
+                {
+                  "format_version": 1,
+                  "version": 7,
+                  "updated": "2026-08-10",
+                  "legacy_path": "data/spam_numbers.json",
+                  "shard_directory": "data/spam_number_shards",
+                  "shard_count": 256,
+                  "shards": [
+                    {
+                      "id": "00",
+                      "path": "data/other/00.json",
+                      "sha256": "${"a".repeat(64)}",
+                      "bytes": 128,
+                      "numbers": 1,
+                      "prefixes": 0
+                    }
+                  ]
+                }
+                """.trimIndent(),
+            )
+
+        assertFeedValidationResult(GitHubFeedFailureReason.INVALID_SCHEMA, parsed)
+    }
+
+    @Test
     fun `parseHotListJson rejects row count over cap`() {
         val body =
             buildJsonArray(GitHubDataSource.MAX_HOT_LIST_ROWS + 1) { index ->
