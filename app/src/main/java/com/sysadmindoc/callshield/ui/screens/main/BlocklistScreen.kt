@@ -43,6 +43,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.HorizontalDivider
@@ -93,6 +94,9 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.paging.LoadState
+import androidx.paging.compose.collectAsLazyPagingItems
+import androidx.paging.compose.itemKey
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.ExistingBlockRules
 import com.sysadmindoc.callshield.data.HashWildcardMatcher
@@ -1196,8 +1200,20 @@ fun WhitelistItem(
 
 @Composable
 private fun DatabaseTabContent(viewModel: MainViewModel) {
-    val allSpam by viewModel.allSpamNumbers.collectAsStateWithLifecycle()
-    if (allSpam.isEmpty()) {
+    val allSpam = viewModel.allSpamNumbers.collectAsLazyPagingItems()
+    val refreshState = allSpam.loadState.refresh
+    if (refreshState is LoadState.Loading && allSpam.itemCount == 0) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator(color = CatBlue)
+        }
+    } else if (refreshState is LoadState.Error && allSpam.itemCount == 0) {
+        EmptyStateCard(
+            title = stringResource(R.string.blocklist_empty_database),
+            subtitle = stringResource(R.string.blocklist_empty_database_sub),
+            icon = Icons.Default.PriorityHigh,
+            accentColor = CatRed,
+        )
+    } else if (allSpam.itemCount == 0) {
         EmptyStateCard(
             title = stringResource(R.string.blocklist_empty_database),
             subtitle = stringResource(R.string.blocklist_empty_database_sub),
@@ -1209,8 +1225,22 @@ private fun DatabaseTabContent(viewModel: MainViewModel) {
             contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            items(allSpam, key = { it.id }) { number ->
-                DatabaseItem(number)
+            items(
+                count = allSpam.itemCount,
+                key = allSpam.itemKey { it.id },
+            ) { index ->
+                allSpam[index]?.let { number -> DatabaseItem(number) }
+            }
+            when (allSpam.loadState.append) {
+                LoadState.Loading -> {
+                    item {
+                        Box(modifier = Modifier.fillMaxWidth().padding(12.dp), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator(color = CatBlue, modifier = Modifier.size(24.dp))
+                        }
+                    }
+                }
+
+                else -> Unit
             }
         }
     }

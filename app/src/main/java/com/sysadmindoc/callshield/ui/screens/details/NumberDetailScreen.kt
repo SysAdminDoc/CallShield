@@ -35,6 +35,7 @@ import com.sysadmindoc.callshield.data.PhoneFormatter
 import com.sysadmindoc.callshield.data.SmsBodyRedactor
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup
+import com.sysadmindoc.callshield.data.model.BlockedCall
 import com.sysadmindoc.callshield.data.remote.ExternalLookup
 import com.sysadmindoc.callshield.data.remote.RemoteLookupStatus
 import com.sysadmindoc.callshield.domain.model.SpamCheckResult
@@ -59,12 +60,14 @@ fun NumberDetailScreen(
 ) {
     BackHandler { onBack() }
     val context = LocalContext.current
-    val blockedCalls by viewModel.blockedCalls.collectAsStateWithLifecycle()
-    val allSpam by viewModel.allSpamNumbers.collectAsStateWithLifecycle()
+    val numberCalls by
+        remember(number) { viewModel.observeBlockedCallsForNumber(number) }
+            .collectAsStateWithLifecycle(initialValue = emptyList<BlockedCall>())
+    val dbEntry by
+        remember(number) { viewModel.observeSpamNumber(number) }
+            .collectAsStateWithLifecycle(initialValue = null)
     val userBlocked by viewModel.userBlockedNumbers.collectAsStateWithLifecycle()
 
-    val numberCalls = blockedCalls.filter { it.number == number }
-    val dbEntry = allSpam.find { it.number == number }
     val isBlocked = userBlocked.any { it.number == number }
     val callCount = numberCalls.count { it.isCall }
     val smsCount = numberCalls.count { !it.isCall }
@@ -362,13 +365,13 @@ fun NumberDetailScreen(
                     StatChip(stringResource(R.string.detail_sms), smsCount.toString(), CatMauve)
                     StatChip(stringResource(R.string.detail_total), numberCalls.size.toString(), CatBlue)
                 }
-                if (dbEntry != null) {
+                dbEntry?.let { databaseEntry ->
                     Spacer(Modifier.height(12.dp))
                     GradientDivider()
                     Spacer(Modifier.height(12.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         StatusPill(
-                            text = dbEntry.type.replaceFirstChar { it.uppercase() },
+                            text = databaseEntry.type.replaceFirstChar { it.uppercase() },
                             color = CatRed,
                             horizontalPadding = 10.dp,
                             verticalPadding = 6.dp,
@@ -378,8 +381,8 @@ fun NumberDetailScreen(
                             text =
                                 pluralStringResource(
                                     R.plurals.detail_reports_count_plural,
-                                    dbEntry.reports,
-                                    dbEntry.reports,
+                                    databaseEntry.reports,
+                                    databaseEntry.reports,
                                 ),
                             color = CatPeach,
                             horizontalPadding = 10.dp,
@@ -387,9 +390,9 @@ fun NumberDetailScreen(
                             textStyle = MaterialTheme.typography.labelSmall,
                         )
                     }
-                    if (dbEntry.description.isNotEmpty()) {
+                    if (databaseEntry.description.isNotEmpty()) {
                         Spacer(Modifier.height(8.dp))
-                        Text(dbEntry.description, color = CatSubtext, style = MaterialTheme.typography.bodyMedium)
+                        Text(databaseEntry.description, color = CatSubtext, style = MaterialTheme.typography.bodyMedium)
                     }
                 }
             }

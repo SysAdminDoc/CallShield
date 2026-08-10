@@ -9,6 +9,10 @@ import android.util.Log
 import android.widget.Toast
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import androidx.paging.PagingData
+import androidx.paging.cachedIn
 import com.sysadmindoc.callshield.CallShieldApp
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.AppUpdateState
@@ -31,14 +35,17 @@ import com.sysadmindoc.callshield.data.StandingRuleConflict
 import com.sysadmindoc.callshield.data.TimeSchedule
 import com.sysadmindoc.callshield.data.checker.PipelineTrace
 import com.sysadmindoc.callshield.data.model.BlockedCall
+import com.sysadmindoc.callshield.data.model.BlockedCallGroup
 import com.sysadmindoc.callshield.data.model.ExternalBlocklistPreview
 import com.sysadmindoc.callshield.data.model.ExternalBlocklistSubscription
 import com.sysadmindoc.callshield.data.model.HashWildcardRule
+import com.sysadmindoc.callshield.data.model.LogAggregate
 import com.sysadmindoc.callshield.data.model.SmsKeywordRule
 import com.sysadmindoc.callshield.data.model.SpamNumber
 import com.sysadmindoc.callshield.data.model.WhitelistEntry
 import com.sysadmindoc.callshield.data.model.WildcardRule
 import com.sysadmindoc.callshield.domain.model.SpamCheckResult
+import com.sysadmindoc.callshield.domain.model.BlockReasonCode
 import com.sysadmindoc.callshield.domain.usecase.ExportLogsUseCase
 import com.sysadmindoc.callshield.domain.usecase.ManageBlocklistUseCase
 import com.sysadmindoc.callshield.domain.usecase.SyncDatabaseUseCase
@@ -81,15 +88,64 @@ class MainViewModel
         private val manageBlocklist: ManageBlocklistUseCase,
         private val exportLogs: ExportLogsUseCase,
     ) : ViewModel() {
-        val blockedCalls: StateFlow<List<BlockedCall>> =
-            repo
-                .getBlockedCalls()
-                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+        private companion object {
+            const val DATABASE_PAGE_SIZE = 50
+            const val LOG_PAGE_SIZE = 50
+            const val DASHBOARD_RECENT_LOG_LIMIT = 50
+            const val STATS_TOP_LIMIT = 10
+            const val STATS_AREA_CODE_LIMIT = 15
+        }
 
         val totalBlocked: StateFlow<Int> =
             repo
                 .getTotalBlockedCount()
                 .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
+        val recentBlockedCalls: StateFlow<List<BlockedCall>> =
+            repo
+                .observeRecentLog(DASHBOARD_RECENT_LOG_LIMIT)
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+        val logCount: StateFlow<Int> =
+            repo
+                .observeLogCount()
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
+        val logCallCount: StateFlow<Int> =
+            repo
+                .observeLogCallCount()
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
+        val logSmsCount: StateFlow<Int> =
+            repo
+                .observeLogSmsCount()
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
+        val logReasonCodes: StateFlow<List<BlockReasonCode>> =
+            repo
+                .observeLogReasonCodes()
+                .map { values -> values.map(BlockReasonCode::fromStored) }
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+        val logReasonCounts: StateFlow<List<LogAggregate>> =
+            repo
+                .observeLogReasonCounts()
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+        val logHourCounts: StateFlow<List<LogAggregate>> =
+            repo
+                .observeLogHourCounts()
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+        val logTopNumbers: StateFlow<List<LogAggregate>> =
+            repo
+                .observeLogNumberCounts(STATS_TOP_LIMIT)
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+        val logAreaCodeCounts: StateFlow<List<LogAggregate>> =
+            repo
+                .observeLogAreaCodeCounts(STATS_AREA_CODE_LIMIT)
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
         // Rolling time anchor — re-emits the current wall-clock every minute so the
         // "today / this week / last week" counts below stay accurate when the app is
@@ -138,10 +194,37 @@ class MainViewModel
                     repo.getBlockedCountBetween(windows.lastWeekStart, windows.lastWeekEnd)
                 }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
-        val allSpamNumbers: StateFlow<List<SpamNumber>> =
-            repo
-                .getAllSpamNumbers()
-                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+        val allSpamNumbers: Flow<PagingData<SpamNumber>> =
+            Pager(PagingConfig(pageSize = DATABASE_PAGE_SIZE, initialLoadSize = DATABASE_PAGE_SIZE * 2, enablePlaceholders = false)) {
+                repo.pageAllSpamNumbers()
+            }.flow.cachedIn(viewModelScope)
+
+        fun blockedCallsPager(
+            isCall: Int?,
+            reasonCode: String?,
+        ): Flow<PagingData<BlockedCall>> =
+            Pager(PagingConfig(pageSize = LOG_PAGE_SIZE, initialLoadSize = LOG_PAGE_SIZE * 2, enablePlaceholders = false)) {
+                repo.pageBlockedCalls(isCall, reasonCode)
+            }.flow.cachedIn(viewModelScope)
+
+        fun groupedBlockedCallsPager(
+            isCall: Int?,
+            reasonCode: String?,
+        ): Flow<PagingData<BlockedCallGroup>> =
+            Pager(PagingConfig(pageSize = LOG_PAGE_SIZE, initialLoadSize = LOG_PAGE_SIZE * 2, enablePlaceholders = false)) {
+                repo.pageGroupedBlockedCalls(isCall, reasonCode)
+            }.flow.cachedIn(viewModelScope)
+
+        fun observeLogDayCounts(since: Long): Flow<List<LogAggregate>> = repo.observeLogDayCounts(since)
+
+        fun observeLogCountBetween(
+            start: Long,
+            end: Long,
+        ): Flow<Int> = repo.observeLogCountBetween(start, end)
+
+        fun observeBlockedCallsForNumber(number: String): Flow<List<BlockedCall>> = repo.observeBlockedCallsForNumber(number)
+
+        fun observeSpamNumber(number: String): Flow<SpamNumber?> = repo.observeNumber(number)
 
         val userBlockedNumbers: StateFlow<List<SpamNumber>> =
             repo

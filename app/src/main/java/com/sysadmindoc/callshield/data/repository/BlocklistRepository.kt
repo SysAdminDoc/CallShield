@@ -1,6 +1,7 @@
 package com.sysadmindoc.callshield.data.repository
 
 import android.content.Context
+import androidx.paging.PagingSource
 import com.sysadmindoc.callshield.data.EmergencyNumberFloor
 import com.sysadmindoc.callshield.data.SpamNumberWhitelistResolution
 import com.sysadmindoc.callshield.data.TimeSchedule
@@ -8,6 +9,8 @@ import com.sysadmindoc.callshield.data.escapeLikeQuery
 import com.sysadmindoc.callshield.data.local.SpamDao
 import com.sysadmindoc.callshield.data.model.BlockedCall
 import com.sysadmindoc.callshield.data.model.HashWildcardRule
+import com.sysadmindoc.callshield.data.model.BlockedCallGroup
+import com.sysadmindoc.callshield.data.model.LogAggregate
 import com.sysadmindoc.callshield.data.model.PendingBlockedCallLog
 import com.sysadmindoc.callshield.data.model.SmsKeywordRule
 import com.sysadmindoc.callshield.data.model.SpamNumber
@@ -393,6 +396,43 @@ class BlocklistRepository(
 
     fun getBlockedCalls(): Flow<List<BlockedCall>> = dao.getBlockedCalls()
 
+    fun observeBlockedCallsForNumber(number: String): Flow<List<BlockedCall>> = dao.observeBlockedCallsForNumber(number)
+
+    fun observeRecentLog(limit: Int): Flow<List<BlockedCall>> = dao.observeRecentLog(limit)
+
+    fun pageBlockedCalls(
+        isCall: Int?,
+        reasonCode: String?,
+    ): PagingSource<Int, BlockedCall> = dao.pageBlockedCalls(isCall, reasonCode)
+
+    fun pageGroupedBlockedCalls(
+        isCall: Int?,
+        reasonCode: String?,
+    ): PagingSource<Int, BlockedCallGroup> = dao.pageGroupedBlockedCalls(isCall, reasonCode)
+
+    fun observeLogReasonCodes(): Flow<List<String>> = dao.observeLogReasonCodes()
+
+    fun observeLogCount(): Flow<Int> = dao.observeLogCount()
+
+    fun observeLogCallCount(): Flow<Int> = dao.observeLogCallCount()
+
+    fun observeLogSmsCount(): Flow<Int> = dao.observeLogSmsCount()
+
+    fun observeLogReasonCounts(): Flow<List<LogAggregate>> = dao.observeLogReasonCounts()
+
+    fun observeLogHourCounts(): Flow<List<LogAggregate>> = dao.observeLogHourCounts()
+
+    fun observeLogDayCounts(since: Long): Flow<List<LogAggregate>> = dao.observeLogDayCounts(since)
+
+    fun observeLogNumberCounts(limit: Int): Flow<List<LogAggregate>> = dao.observeLogNumberCounts(limit)
+
+    fun observeLogAreaCodeCounts(limit: Int): Flow<List<LogAggregate>> = dao.observeLogAreaCodeCounts(limit)
+
+    fun observeLogCountBetween(
+        start: Long,
+        end: Long,
+    ): Flow<Int> = dao.observeLogCountBetween(start, end)
+
     fun getBlockedCallsByReasonCode(reasonCode: BlockReasonCode): Flow<List<BlockedCall>> = dao.getBlockedCallsByReasonCode(reasonCode)
 
     fun getBlockedCallsOnly(): Flow<List<BlockedCall>> = dao.getBlockedCallsOnly()
@@ -414,6 +454,10 @@ class BlocklistRepository(
     ): Flow<Int> = dao.getBlockedCountBetween(start, end)
 
     fun getAllSpamNumbers(): Flow<List<SpamNumber>> = dao.getAllSpamNumbers()
+
+    fun observeNumber(number: String): Flow<SpamNumber?> = dao.observeNumber(number)
+
+    fun pageAllSpamNumbers(): PagingSource<Int, SpamNumber> = dao.pageAllSpamNumbers()
 
     fun getUserBlockedNumbers(): Flow<List<SpamNumber>> =
         dao.getUserBlockedNumbers().map { rows ->

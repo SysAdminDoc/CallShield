@@ -14,7 +14,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -40,6 +40,9 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.paging.LoadState
+import androidx.paging.compose.collectAsLazyPagingItems
+import androidx.paging.compose.itemKey
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.PhoneFormatter
 import com.sysadmindoc.callshield.data.SmsBodyRedactor
@@ -66,7 +69,8 @@ import java.util.*
 fun BlockedLogScreen(viewModel: MainViewModel) {
     val context = LocalContext.current
     val resources = LocalResources.current
-    val blockedCalls by viewModel.blockedCalls.collectAsStateWithLifecycle()
+    val logCount by viewModel.logCount.collectAsStateWithLifecycle()
+    val availableReasonCodes by viewModel.logReasonCodes.collectAsStateWithLifecycle()
     var filterMode by rememberSaveable { mutableIntStateOf(0) }
     var selectedReasonCodeWire by rememberSaveable { mutableStateOf("") }
     var showReasonMenu by rememberSaveable { mutableStateOf(false) }
@@ -75,39 +79,23 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
     val scope = rememberCoroutineScope()
     var showClearDialog by rememberSaveable { mutableStateOf(false) }
     val selectedReasonCode = BlockReasonCode.fromStored(selectedReasonCodeWire).takeIf { selectedReasonCodeWire.isNotBlank() }
-    val availableReasonCodes =
-        remember(blockedCalls) {
-            blockedCalls
-                .asSequence()
-                .map { it.reasonCode }
-                .filterNot { it == BlockReasonCode.UNKNOWN }
-                .distinct()
-                .sortedBy { it.wireValue }
-                .toList()
+    val mediaFilter =
+        when (filterMode) {
+            1 -> 1
+            2 -> 0
+            else -> null
         }
-
-    val filtered =
-        blockedCalls.filter { call ->
-            val mediaMatches =
-                when (filterMode) {
-                    1 -> call.isCall
-                    2 -> !call.isCall
-                    else -> true
-                }
-            mediaMatches && (selectedReasonCode == null || call.reasonCode == selectedReasonCode)
-        }
-
-    // Grouped view: collapse by number
-    val groupedList =
-        if (grouped) {
-            filtered
-                .groupBy { it.number }
-                .map { (number, calls) ->
-                    calls.first().copy() to calls.size
-                }.sortedByDescending { it.second }
-        } else {
-            null
-        }
+    val reasonFilter = selectedReasonCode?.wireValue
+    val pagedCalls =
+        remember(filterMode, selectedReasonCodeWire) {
+            viewModel.blockedCallsPager(mediaFilter, reasonFilter)
+        }.collectAsLazyPagingItems()
+    val groupedCalls =
+        remember(filterMode, selectedReasonCodeWire) {
+            viewModel.groupedBlockedCallsPager(mediaFilter, reasonFilter)
+        }.collectAsLazyPagingItems()
+    val activeItemCount = if (grouped) groupedCalls.itemCount else pagedCalls.itemCount
+    val activeRefreshState = if (grouped) groupedCalls.loadState.refresh else pagedCalls.loadState.refresh
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHost) },
@@ -123,7 +111,7 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
                 FilterChip(
                     selected = filterMode == 0,
                     onClick = { filterMode = 0 },
-                    label = { Text(stringResource(R.string.blocked_log_filter_all, blockedCalls.size)) },
+                    label = { Text(stringResource(R.string.blocked_log_filter_all, logCount)) },
                     shape = RoundedCornerShape(8.dp),
                     colors =
                         FilterChipDefaults.filterChipColors(
@@ -170,7 +158,7 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
                         tint = if (grouped) CatYellow else CatOverlay,
                     )
                 }
-                if (blockedCalls.isNotEmpty()) {
+                if (logCount > 0) {
                     IconButton(onClick = { showClearDialog = true }) {
                         Icon(Icons.Default.DeleteSweep, stringResource(R.string.cd_clear_log), tint = CatRed)
                     }
@@ -227,24 +215,40 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
                 }
             }
 
-            if (filtered.isEmpty()) {
+            if (activeRefreshState is LoadState.Loading && activeItemCount == 0) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = CatGreen)
+                }
+            } else if (activeRefreshState is LoadState.Error && activeItemCount == 0) {
+                BlockedLogEmptyState(
+                    title = stringResource(R.string.blocked_log_empty_filter_title),
+                    subtitle = stringResource(R.string.blocked_log_empty_filter_body),
+                    accentColor = CatRed,
+                    actionLabel = stringResource(R.string.blocked_log_show_all),
+                    onAction = {
+                        filterMode = 0
+                        selectedReasonCodeWire = ""
+                        if (grouped) groupedCalls.retry() else pagedCalls.retry()
+                    },
+                )
+            } else if (activeItemCount == 0) {
                 BlockedLogEmptyState(
                     title =
-                        if (blockedCalls.isEmpty()) {
+                        if (logCount == 0) {
                             stringResource(R.string.blocked_log_empty_all_title)
                         } else {
                             stringResource(R.string.blocked_log_empty_filter_title)
                         },
                     subtitle =
-                        if (blockedCalls.isEmpty()) {
+                        if (logCount == 0) {
                             stringResource(R.string.blocked_log_empty_all_body)
                         } else {
                             stringResource(R.string.blocked_log_empty_filter_body)
                         },
-                    accentColor = if (blockedCalls.isEmpty()) CatGreen else CatPeach,
-                    actionLabel = if (blockedCalls.isEmpty()) null else stringResource(R.string.blocked_log_show_all),
+                    accentColor = if (logCount == 0) CatGreen else CatPeach,
+                    actionLabel = if (logCount == 0) null else stringResource(R.string.blocked_log_show_all),
                     onAction =
-                        if (blockedCalls.isEmpty()) {
+                        if (logCount == 0) {
                             null
                         } else {
                             {
@@ -253,19 +257,21 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
                             }
                         },
                 )
-            } else if (grouped && groupedList != null) {
+            } else if (grouped) {
                 // Grouped view
                 LazyColumn(
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    itemsIndexed(
-                        items = groupedList,
-                        key = { _, item -> item.first.number },
-                    ) { _, (call, count) ->
+                    items(
+                        count = groupedCalls.itemCount,
+                        key = groupedCalls.itemKey { it.call.number },
+                    ) { index ->
+                        val group = groupedCalls[index] ?: return@items
+                        val call = group.call
                         GroupedCallItem(
                             call = call,
-                            count = count,
+                            count = group.occurrences,
                             onTap = { viewModel.openNumberDetail(call.number) },
                             onBlock = { viewModel.blockNumber(call.number) },
                         )
@@ -277,7 +283,11 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    itemsIndexed(filtered, key = { _, call -> call.id }) { index, call ->
+                    items(
+                        count = pagedCalls.itemCount,
+                        key = pagedCalls.itemKey { it.id },
+                    ) { index ->
+                        val call = pagedCalls[index] ?: return@items
                         // rememberSaveable (keyed by the item's stable id via the
                         // LazyColumn saveable registry) keeps the entrance animation
                         // from replaying every time a row scrolls off-screen and back.
@@ -472,8 +482,8 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
                 Text(
                     pluralStringResource(
                         R.plurals.blocked_log_clear_message,
-                        blockedCalls.size,
-                        blockedCalls.size,
+                        logCount,
+                        logCount,
                     ),
                     color = CatSubtext,
                 )

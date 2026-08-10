@@ -14,6 +14,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.room.withTransaction
+import androidx.paging.PagingSource
 import com.sysadmindoc.callshield.data.checker.BlockResult
 import com.sysadmindoc.callshield.data.checker.CheckerDependencies
 import com.sysadmindoc.callshield.data.local.AppDatabase
@@ -794,6 +795,43 @@ class SpamRepository(
 
     fun getBlockedCalls(): Flow<List<BlockedCall>> = blocklistRepository.getBlockedCalls()
 
+    fun observeBlockedCallsForNumber(number: String): Flow<List<BlockedCall>> = blocklistRepository.observeBlockedCallsForNumber(number)
+
+    fun observeRecentLog(limit: Int): Flow<List<BlockedCall>> = blocklistRepository.observeRecentLog(limit)
+
+    fun pageBlockedCalls(
+        isCall: Int?,
+        reasonCode: String?,
+    ): PagingSource<Int, BlockedCall> = blocklistRepository.pageBlockedCalls(isCall, reasonCode)
+
+    fun pageGroupedBlockedCalls(
+        isCall: Int?,
+        reasonCode: String?,
+    ): PagingSource<Int, BlockedCallGroup> = blocklistRepository.pageGroupedBlockedCalls(isCall, reasonCode)
+
+    fun observeLogReasonCodes(): Flow<List<String>> = blocklistRepository.observeLogReasonCodes()
+
+    fun observeLogCount(): Flow<Int> = blocklistRepository.observeLogCount()
+
+    fun observeLogCallCount(): Flow<Int> = blocklistRepository.observeLogCallCount()
+
+    fun observeLogSmsCount(): Flow<Int> = blocklistRepository.observeLogSmsCount()
+
+    fun observeLogReasonCounts(): Flow<List<LogAggregate>> = blocklistRepository.observeLogReasonCounts()
+
+    fun observeLogHourCounts(): Flow<List<LogAggregate>> = blocklistRepository.observeLogHourCounts()
+
+    fun observeLogDayCounts(since: Long): Flow<List<LogAggregate>> = blocklistRepository.observeLogDayCounts(since)
+
+    fun observeLogNumberCounts(limit: Int): Flow<List<LogAggregate>> = blocklistRepository.observeLogNumberCounts(limit)
+
+    fun observeLogAreaCodeCounts(limit: Int): Flow<List<LogAggregate>> = blocklistRepository.observeLogAreaCodeCounts(limit)
+
+    fun observeLogCountBetween(
+        start: Long,
+        end: Long,
+    ): Flow<Int> = blocklistRepository.observeLogCountBetween(start, end)
+
     fun getBlockedCallsByReasonCode(reasonCode: BlockReasonCode): Flow<List<BlockedCall>> = blocklistRepository.getBlockedCallsByReasonCode(reasonCode)
 
     fun getBlockedCallsOnly(): Flow<List<BlockedCall>> = blocklistRepository.getBlockedCallsOnly()
@@ -815,6 +853,10 @@ class SpamRepository(
     ): Flow<Int> = blocklistRepository.getBlockedCountBetween(start, end)
 
     fun getAllSpamNumbers(): Flow<List<SpamNumber>> = blocklistRepository.getAllSpamNumbers()
+
+    fun observeNumber(number: String): Flow<SpamNumber?> = blocklistRepository.observeNumber(number)
+
+    fun pageAllSpamNumbers(): PagingSource<Int, SpamNumber> = blocklistRepository.pageAllSpamNumbers()
 
     fun getUserBlockedNumbers(): Flow<List<SpamNumber>> = blocklistRepository.getUserBlockedNumbers()
 
