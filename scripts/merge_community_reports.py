@@ -10,7 +10,11 @@ from datetime import datetime
 from pathlib import Path
 from phone_normalization import is_plausible_number, validated_report_number
 
-from pipeline_io import atomic_write_json
+from pipeline_io import (
+    atomic_write_json,
+    report_queue_digest,
+    require_matching_derived_feed,
+)
 from report_dedup import (
     find_burst_duplicates,
     parse_reported_at,
@@ -67,6 +71,14 @@ def main():
     if not report_files:
         print("No pending reports.")
         return
+
+    report_digest = report_queue_digest(REPORTS_DIR)
+    for derived_file in (
+        DATA_DIR / "hot_numbers.json",
+        DATA_DIR / "hot_ranges.json",
+        DATA_DIR / "spam_domains.json",
+    ):
+        require_matching_derived_feed(derived_file, report_digest=report_digest)
 
     print(f"Found {len(report_files)} report files")
 

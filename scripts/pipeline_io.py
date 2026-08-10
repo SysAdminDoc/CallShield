@@ -9,10 +9,16 @@ silently stop updating until the next regeneration.
 
 from __future__ import annotations
 
+import hashlib
 import json
+import math
 import os
 from pathlib import Path
 from typing import Any
+
+
+class FeedCollapseError(RuntimeError):
+    """Raised when a derived feed would overwrite healthy data with a collapse."""
 
 
 def atomic_write_json(path: Path, payload: Any, indent: int = 2) -> None:
@@ -30,3 +36,91 @@ def atomic_write_json(path: Path, payload: Any, indent: int = 2) -> None:
     with open(tmp, encoding="utf-8") as f:  # validate before swapping into place
         json.load(f)
     os.replace(tmp, path)
+
+
+def report_queue_digest(reports_dir: Path) -> str:
+    """Return a stable digest of the active report queue.
+
+    The merge step consumes these files, so derived feeds record this digest to
+    prove they were generated from the same queue. Rejected reports live in a
+    subdirectory and are intentionally excluded.
+    """
+    digest = hashlib.sha256()
+    reports_dir = Path(reports_dir)
+    if not reports_dir.exists():
+        return digest.hexdigest()
+    for report_file in sorted(reports_dir.glob("*.json")):
+        digest.update(report_file.name.encode("utf-8"))
+        digest.update(b"\0")
+        digest.update(report_file.read_bytes())
+        digest.update(b"\0")
+    return digest.hexdigest()
+
+
+def _payload_count(payload: Any, item_key: str) -> int:
+    if not isinstance(payload, dict):
+        raise FeedCollapseError("feed payload must be a JSON object")
+    items = payload.get(item_key)
+    if isinstance(items, list):
+        return len(items)
+    count = payload.get("count")
+    if isinstance(count, int) and count >= 0:
+        return count
+    raise FeedCollapseError(f"feed payload has no countable {item_key!r} field")
+
+
+def ensure_feed_not_collapsed(
+    path: Path,
+    payload: Any,
+    *,
+    item_key: str,
+    absolute_floor: int,
+    previous_ratio: float,
+    allow_collapse: bool,
+) -> None:
+    """Reject a suspiciously small feed before its output is replaced.
+
+    The absolute floor protects a first generated artifact. The relative floor
+    protects a previously healthy artifact from a source outage or an ordering
+    mistake. An explicit ``--allow-collapse`` is required to publish a known
+    empty/small result.
+    """
+    if allow_collapse:
+        return
+    current_count = _payload_count(payload, item_key)
+    path = Path(path)
+    previous_count = 0
+    if path.exists():
+        try:
+            with path.open(encoding="utf-8") as existing_file:
+                previous_count = _payload_count(json.load(existing_file), item_key)
+        except (OSError, ValueError, FeedCollapseError) as error:
+            raise FeedCollapseError(f"cannot safely replace unreadable feed {path}: {error}") from error
+
+    relative_floor = math.ceil(previous_count * previous_ratio)
+    floor = max(absolute_floor, relative_floor)
+    if current_count < floor:
+        raise FeedCollapseError(
+            f"refusing to collapse {path}: {current_count} {item_key} would replace "
+            f"{previous_count}; minimum is {floor}. Re-run with --allow-collapse "
+            "only after verifying the source outage or intentional clear."
+        )
+
+
+def require_matching_derived_feed(
+    path: Path,
+    *,
+    report_digest: str,
+) -> None:
+    """Require a derived feed generated from the current report queue."""
+    path = Path(path)
+    try:
+        with path.open(encoding="utf-8") as feed_file:
+            payload = json.load(feed_file)
+    except (OSError, ValueError) as error:
+        raise RuntimeError(f"derived feed {path} is missing or unreadable: {error}") from error
+    if not isinstance(payload, dict) or payload.get("input_report_digest") != report_digest:
+        raise RuntimeError(
+            f"derived feed {path} does not match the current report queue; "
+            "run generate_hot_list.py and extract_spam_domains.py before merging"
+        )

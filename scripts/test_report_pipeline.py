@@ -21,18 +21,27 @@ TIMES = [
 BUCKETS = [f"{index:016x}" for index in range(1, 7)]
 
 
-def run_script(name: str, data_dir: Path) -> None:
+def run_script_result(
+    name: str,
+    data_dir: Path,
+    args: list[str] | None = None,
+) -> subprocess.CompletedProcess[str]:
     env = os.environ.copy()
     env["CALLSHIELD_DATA_DIR"] = str(data_dir)
     env["CALLSHIELD_NOW"] = NOW
     result = subprocess.run(
-        [sys.executable, str(SCRIPTS_DIR / name)],
+        [sys.executable, str(SCRIPTS_DIR / name), *(args or [])],
         cwd=ROOT,
         env=env,
         text=True,
         capture_output=True,
         check=False,
     )
+    return result
+
+
+def run_script(name: str, data_dir: Path, args: list[str] | None = None) -> None:
+    result = run_script_result(name, data_dir, args)
     if result.returncode != 0:
         raise AssertionError(
             f"{name} failed with {result.returncode}\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
@@ -218,6 +227,8 @@ def assert_not_spam_requires_review(data_dir: Path) -> None:
         )
     write_report(data_dir, "anonymous_vote.json", community, None, NOW, report_type="not_spam")
 
+    run_script("extract_spam_domains.py", data_dir, ["--allow-collapse"])
+    run_script("generate_hot_list.py", data_dir, ["--allow-collapse"])
     run_script("merge_community_reports.py", data_dir)
     merged = json.loads((data_dir / "spam_numbers.json").read_text(encoding="utf-8"))
     by_number = {entry["number"]: entry for entry in merged["numbers"]}
@@ -230,6 +241,51 @@ def assert_not_spam_requires_review(data_dir: Path) -> None:
     candidates = {entry["number"] for entry in review["candidates"]}
     if candidates != {community}:
         raise AssertionError(f"unexpected not-spam review candidates: {candidates}")
+
+
+def assert_collapse_guard(data_dir: Path) -> None:
+    """A source outage must not replace healthy derived feeds with empties."""
+    write_json(
+        data_dir / "spam_numbers.json",
+        {"version": 1, "numbers": [], "prefixes": []},
+    )
+    previous_outputs = {
+        "hot_numbers.json": {"count": 3, "numbers": [{"number": "+12125550101"}] * 3},
+        "hot_ranges.json": {"count": 1, "ranges": [{"npanxx": "212555"}]},
+        "spam_domains.json": {"count": 2, "domains": ["bad.example", "worse.example"]},
+    }
+    before = {}
+    for name, payload in previous_outputs.items():
+        path = data_dir / name
+        write_json(path, payload)
+        before[name] = path.read_bytes()
+
+    hot_result = run_script_result("generate_hot_list.py", data_dir)
+    if hot_result.returncode == 0:
+        raise AssertionError("hot generator published a collapsed feed without --allow-collapse")
+    domains_result = run_script_result("extract_spam_domains.py", data_dir)
+    if domains_result.returncode == 0:
+        raise AssertionError("domain generator published a collapsed feed without --allow-collapse")
+    for name, original in before.items():
+        if (data_dir / name).read_bytes() != original:
+            raise AssertionError(f"collapse guard replaced {name} before explicit approval")
+
+    run_script("generate_hot_list.py", data_dir, ["--allow-collapse"])
+    run_script("extract_spam_domains.py", data_dir, ["--allow-collapse"])
+
+
+def assert_merge_requires_current_derived_outputs(data_dir: Path) -> None:
+    """Merge must not consume reports until all derived feeds share its queue."""
+    seed_reports(data_dir)
+    result = run_script_result("merge_community_reports.py", data_dir)
+    if result.returncode == 0:
+        raise AssertionError("merge consumed reports before derived feeds were generated")
+    if not list((data_dir / "reports").glob("*.json")):
+        raise AssertionError("merge removed reports after refusing stale derived feeds")
+
+    run_script("extract_spam_domains.py", data_dir)
+    run_script("generate_hot_list.py", data_dir)
+    run_script("merge_community_reports.py", data_dir)
 
 
 def assert_min_reports_spares_existing_rows(data_dir: Path) -> None:
@@ -397,6 +453,12 @@ def assert_external_source_parsers() -> None:
 
 
 def main() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        assert_collapse_guard(Path(tmp) / "data")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        assert_merge_requires_current_derived_outputs(Path(tmp) / "data")
+
     with tempfile.TemporaryDirectory() as tmp:
         data_dir = Path(tmp) / "data"
         seed_reports(data_dir)
