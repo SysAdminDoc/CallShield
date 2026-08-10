@@ -527,10 +527,17 @@ failed or empty responses preserve the last known good set.
 Every feed is declared in `data/source-manifest.json` with its access mode,
 geography, licence, attribution, parser version, redistribution policy, and
 freshness window. Each importer run writes a local `data/source-snapshot.json`
-for release review; it is intentionally not bundled into the APK. FTC and FCC
-runs persist bounded high-water cursors in `data/source-cursors.json`, retain
-caller-ID and callback-business evidence as separate roles, and do not promote
-unverified complaint-only rows without independent caller corroboration.
+for release review; it is intentionally not bundled into the APK. After the
+community merge, its health section adds per-source freshness, accepted and
+quarantine counts, corroboration, and bounded false-positive rates without
+copying phone numbers, contacts, SMS, or call audio. Anonymous `not_spam`
+votes remain review candidates by default; after an operator marks a candidate
+`approved: true`, `python scripts/merge_community_reports.py --apply-reviewed-corrections`
+can decay or remove only that community-only contribution. FTC and FCC runs
+persist bounded high-water cursors in
+`data/source-cursors.json`, retain caller-ID and callback-business evidence as
+separate roles, and do not promote unverified complaint-only rows without
+independent caller corroboration.
 
 The importer also accepts a carrier-authorized Nomorobo IRS callback-scam CSV
 feed without embedding credentials in the app. Pass the HTTPS URL with

@@ -82,6 +82,23 @@ def seed_reports(data_dir: Path) -> None:
             "prefixes": [],
         },
     )
+    write_json(
+        data_dir / "source-snapshot.json",
+        {
+            "schema_version": 1,
+            "generated_at": NOW,
+            "sources": [
+                {
+                    "id": "community_reports",
+                    "status": "ok",
+                    "accepted": 0,
+                    "rejected": 0,
+                    "last_success_at": NOW,
+                    "stale_after_days": 90,
+                }
+            ],
+        },
+    )
     write_json(data_dir / "spam_domains_approved.json", {"domains": ["bad.example"]})
 
     campaign_buckets = [
@@ -158,6 +175,12 @@ def assert_merge_cleanup(data_dir: Path) -> None:
         raise AssertionError(f"legacy report was not preserved: {merged_numbers}")
     if any(entry.get("sources") != ["community"] for entry in merged_numbers.values()):
         raise AssertionError(f"community provenance missing: {merged_numbers}")
+
+    snapshot = json.loads((data_dir / "source-snapshot.json").read_text(encoding="utf-8"))
+    if "health" not in snapshot or snapshot["health"]["summary"]["evidence_row_count"] <= 0:
+        raise AssertionError(f"source health was not attached to the pipeline snapshot: {snapshot}")
+    if "+12122340101" in json.dumps(snapshot):
+        raise AssertionError("source health snapshot leaked a raw phone number")
 
 
 def assert_not_spam_requires_review(data_dir: Path) -> None:
@@ -241,6 +264,16 @@ def assert_not_spam_requires_review(data_dir: Path) -> None:
     candidates = {entry["number"] for entry in review["candidates"]}
     if candidates != {community}:
         raise AssertionError(f"unexpected not-spam review candidates: {candidates}")
+
+    review["candidates"][0]["approved"] = True
+    write_json(data_dir / "not_spam_review.json", review)
+    run_script("merge_community_reports.py", data_dir, ["--apply-reviewed-corrections"])
+    corrected = json.loads((data_dir / "spam_numbers.json").read_text(encoding="utf-8"))
+    if any(entry.get("number") == community for entry in corrected["numbers"]):
+        raise AssertionError("approved community false-positive correction did not remove the row")
+    corrected_numbers = {entry["number"] for entry in corrected["numbers"]}
+    if authoritative not in corrected_numbers or legacy_authoritative not in corrected_numbers:
+        raise AssertionError("reviewed correction changed an authoritative row")
 
 
 def assert_collapse_guard(data_dir: Path) -> None:

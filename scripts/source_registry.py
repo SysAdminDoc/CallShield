@@ -98,6 +98,202 @@ def source_snapshot(
     }
 
 
+_SOURCE_ID_ALIASES = {
+    "community": "community_reports",
+}
+
+
+def _canonical_source_id(source_id: Any) -> str:
+    value = str(source_id or "").strip()
+    return _SOURCE_ID_ALIASES.get(value, value)
+
+
+def _entry_source_ids(entry: Mapping[str, Any]) -> set[str]:
+    evidence = entry.get("evidence")
+    ids = {
+        _canonical_source_id(item.get("source_id"))
+        for item in evidence or []
+        if isinstance(item, Mapping) and item.get("source_id")
+    }
+    if ids:
+        return ids
+    sources = entry.get("sources")
+    return {
+        _canonical_source_id(source)
+        for source in sources or []
+        if isinstance(source, str) and source.strip()
+    }
+
+
+def _parse_timestamp(value: Any) -> datetime | None:
+    if not isinstance(value, str) or not value.strip():
+        return None
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return parsed.replace(tzinfo=timezone.utc) if parsed.tzinfo is None else parsed
+
+
+def _freshness_state(source: Mapping[str, Any], generated_at: datetime) -> str:
+    if source.get("status") == "error":
+        return "failed"
+    last_success = _parse_timestamp(source.get("last_success_at"))
+    if last_success is None:
+        return "never"
+    age = max(0.0, (generated_at - last_success).total_seconds())
+    stale_after_days = max(1, int(source.get("stale_after_days", 30)))
+    return "stale" if age > stale_after_days * 86_400 else "fresh"
+
+
+def _false_positive_rate(
+    not_spam_votes: int,
+    spam_reports: int,
+) -> float:
+    denominator = not_spam_votes + spam_reports
+    if denominator <= 0:
+        return 0.0
+    return round(not_spam_votes / denominator, 4)
+
+
+def source_health_report(
+    snapshot: Mapping[str, Any],
+    database: Mapping[str, Any],
+    review: Mapping[str, Any] | None = None,
+    *,
+    quarantined_count: int = 0,
+    quarantined_this_run: int = 0,
+    generated_at: str | None = None,
+) -> dict[str, Any]:
+    """Build an aggregate review report without exporting user content.
+
+    The database and review files are read locally by the maintainer. Only
+    counts, source IDs, freshness states, and bounded rates are emitted. No
+    phone number, SMS text, contact, or audio field is copied into the report.
+    """
+
+    timestamp = generated_at or str(snapshot.get("generated_at") or datetime.now(timezone.utc).isoformat())
+    generated = _parse_timestamp(timestamp) or datetime.now(timezone.utc)
+    entries = [entry for entry in database.get("numbers", []) if isinstance(entry, Mapping)]
+    evidence_rows: dict[str, int] = {}
+    corroborated_rows: dict[str, int] = {}
+    by_number = {
+        str(entry.get("number")): entry
+        for entry in entries
+        if entry.get("number")
+    }
+    for entry in entries:
+        source_ids = _entry_source_ids(entry)
+        for source_id in source_ids:
+            evidence_rows[source_id] = evidence_rows.get(source_id, 0) + 1
+        if len(source_ids) >= 2:
+            for source_id in source_ids:
+                corroborated_rows[source_id] = corroborated_rows.get(source_id, 0) + 1
+
+    false_positive: dict[str, dict[str, int]] = {}
+    for candidate in (review or {}).get("candidates", []):
+        if not isinstance(candidate, Mapping):
+            continue
+        source_ids = {
+            _canonical_source_id(source_id)
+            for source_id in candidate.get("source_ids", [])
+            if isinstance(source_id, str) and source_id.strip()
+        }
+        if not source_ids:
+            source_ids = _entry_source_ids(by_number.get(str(candidate.get("number")), {}))
+        if not source_ids:
+            source_ids = {"community_reports"}
+        try:
+            votes = max(0, int(candidate.get("not_spam_votes", 0)))
+            reports = max(0, int(candidate.get("spam_reports", 0)))
+        except (TypeError, ValueError):
+            continue
+        for source_id in source_ids:
+            stats = false_positive.setdefault(
+                source_id,
+                {"candidates": 0, "not_spam_votes": 0, "spam_reports": 0},
+            )
+            stats["candidates"] += 1
+            stats["not_spam_votes"] += votes
+            stats["spam_reports"] += reports
+
+    source_ids = {
+        _canonical_source_id(source.get("id"))
+        for source in snapshot.get("sources", [])
+        if isinstance(source, Mapping) and source.get("id")
+    }
+    source_ids.update(evidence_rows)
+    source_ids.update(false_positive)
+    if quarantined_count:
+        source_ids.add("community_reports")
+
+    source_by_id = {
+        _canonical_source_id(source.get("id")): source
+        for source in snapshot.get("sources", [])
+        if isinstance(source, Mapping) and source.get("id")
+    }
+    source_rows = []
+    for source_id in sorted(source_ids):
+        source = source_by_id.get(source_id, {})
+        fp = false_positive.get(
+            source_id,
+            {"candidates": 0, "not_spam_votes": 0, "spam_reports": 0},
+        )
+        state = _freshness_state(source, generated) if source else "unknown"
+        source_rows.append(
+            {
+                "id": source_id,
+                "freshness": state,
+                "status": source.get("status", "not_in_snapshot"),
+                "accepted": int(source.get("accepted", 0)),
+                "rejected": int(source.get("rejected", 0)),
+                "evidence_rows": evidence_rows.get(source_id, 0),
+                "corroborated_rows": corroborated_rows.get(source_id, 0),
+                "false_positive_candidates": fp["candidates"],
+                "not_spam_votes": fp["not_spam_votes"],
+                "spam_reports": fp["spam_reports"],
+                "false_positive_rate": _false_positive_rate(fp["not_spam_votes"], fp["spam_reports"]),
+                "quarantined": quarantined_count if source_id == "community_reports" else 0,
+            }
+        )
+
+    freshness_counts = {
+        state: sum(1 for source in source_rows if source["freshness"] == state)
+        for state in ("fresh", "stale", "failed", "never", "unknown")
+    }
+    return {
+        "schema_version": 1,
+        "generated_at": timestamp,
+        "privacy": {
+            "raw_phone_numbers": False,
+            "raw_contacts": False,
+            "raw_sms": False,
+            "call_audio": False,
+        },
+        "summary": {
+            "source_count": len(source_rows),
+            "fresh_source_count": freshness_counts["fresh"],
+            "stale_source_count": freshness_counts["stale"],
+            "failed_source_count": freshness_counts["failed"],
+            "never_requested_source_count": freshness_counts["never"],
+            "evidence_row_count": sum(evidence_rows.values()),
+            "corroborated_row_count": len(
+                {
+                    str(entry.get("number"))
+                    for entry in entries
+                    if len(_entry_source_ids(entry)) >= 2
+                }
+            ),
+            "false_positive_candidate_count": sum(
+                stats["candidates"] for stats in false_positive.values()
+            ),
+            "quarantined_count": quarantined_count,
+            "quarantined_this_run": quarantined_this_run,
+        },
+        "sources": source_rows,
+    }
+
+
 def source_evidence(
     manifest: Mapping[str, Any],
     source_id: str,

@@ -4,9 +4,10 @@ Merges community-reported spam numbers from data/reports/ into
 the main spam_numbers.json database, then deletes processed files.
 """
 
+import argparse
 import json
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from phone_normalization import is_plausible_number, validated_report_number
 
@@ -21,11 +22,13 @@ from report_dedup import (
     reporter_day_key,
     validated_reporter_bucket,
 )
+from source_registry import source_health_report
 
 DATA_DIR = Path(os.environ.get("CALLSHIELD_DATA_DIR", Path(__file__).parent.parent / "data"))
 DB_FILE = DATA_DIR / "spam_numbers.json"
 REPORTS_DIR = Path(os.environ.get("CALLSHIELD_REPORTS_DIR", DATA_DIR / "reports"))
 NOT_SPAM_REVIEW_FILE = DATA_DIR / "not_spam_review.json"
+SOURCE_SNAPSHOT_FILE = DATA_DIR / "source-snapshot.json"
 
 COMMUNITY_DESCRIPTION = "Community reported"
 COMMUNITY_SOURCE = "community"
@@ -40,6 +43,107 @@ def quarantine(report_file: Path, rejected_dir: Path) -> None:
         report_file.rename(rejected_dir / report_file.name)
     except OSError:
         pass
+
+
+def load_review_candidates() -> list[dict]:
+    if not NOT_SPAM_REVIEW_FILE.exists():
+        return []
+    try:
+        payload = json.loads(NOT_SPAM_REVIEW_FILE.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return []
+    candidates = payload.get("candidates") if isinstance(payload, dict) else None
+    if not isinstance(candidates, list):
+        return []
+    return [candidate for candidate in candidates if isinstance(candidate, dict)]
+
+
+def canonical_source_ids(entry: dict) -> set[str]:
+    source_ids = set()
+    for source in entry.get("sources", []):
+        if isinstance(source, str) and source.strip():
+            source_ids.add("community_reports" if source == COMMUNITY_SOURCE else source)
+    for evidence in entry.get("evidence", []):
+        if isinstance(evidence, dict) and evidence.get("source_id"):
+            source_ids.add(str(evidence["source_id"]))
+    return source_ids
+
+
+def apply_approved_corrections(
+    existing: dict[str, dict],
+    candidates: list[dict],
+    today: str,
+) -> tuple[int, int]:
+    """Apply only explicit maintainer approvals to community-only rows.
+
+    Anonymous votes create review candidates but do not change the shipped
+    database. An operator may set ``approved: true`` in the local review file;
+    the next merge then decays the community report count or removes the row.
+    Authoritative or mixed-source rows are never changed by this path.
+    """
+
+    decayed = 0
+    removed = 0
+    for candidate in candidates:
+        if candidate.get("approved") is not True or candidate.get("applied_at"):
+            continue
+        number = candidate.get("number")
+        entry = existing.get(number) if isinstance(number, str) else None
+        if entry is None:
+            candidate["skipped_reason"] = "row_missing"
+            candidate["reviewed_at"] = today
+            continue
+        if canonical_source_ids(entry) != {"community_reports"}:
+            candidate["skipped_reason"] = "authoritative_source_present"
+            candidate["reviewed_at"] = today
+            continue
+        try:
+            votes = max(0, int(candidate.get("not_spam_votes", 0)))
+            reports = max(0, int(entry.get("reports", 0)))
+        except (TypeError, ValueError):
+            candidate["skipped_reason"] = "invalid_counts"
+            candidate["reviewed_at"] = today
+            continue
+        if votes <= 0 or reports <= 0:
+            candidate["skipped_reason"] = "no_active_contribution"
+            candidate["reviewed_at"] = today
+            continue
+        remaining = max(0, reports - votes)
+        if remaining == 0:
+            del existing[number]
+            removed += 1
+        else:
+            entry["reports"] = remaining
+            decayed += 1
+        candidate["applied_at"] = today
+        candidate["applied_not_spam_votes"] = votes
+    return decayed, removed
+
+
+def update_source_health_snapshot(
+    database: dict,
+    review_candidates: list[dict],
+    *,
+    quarantined_count: int,
+    quarantined_this_run: int,
+) -> None:
+    if not SOURCE_SNAPSHOT_FILE.exists():
+        return
+    try:
+        snapshot = json.loads(SOURCE_SNAPSHOT_FILE.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return
+    if not isinstance(snapshot, dict) or not isinstance(snapshot.get("sources"), list):
+        return
+    snapshot["health"] = source_health_report(
+        snapshot,
+        database,
+        {"candidates": review_candidates},
+        quarantined_count=quarantined_count,
+        quarantined_this_run=quarantined_this_run,
+        generated_at=datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
+    )
+    atomic_write_json(SOURCE_SNAPSHOT_FILE, snapshot)
 
 
 def sanitize_dates(db: dict, today: str) -> None:
@@ -60,25 +164,47 @@ def sanitize_dates(db: dict, today: str) -> None:
             entry["last_seen"] = fs2 if lo <= fs2 <= hi else hi
 
 
-def main():
+def main(argv: list[str] | None = None):
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--apply-reviewed-corrections",
+        action="store_true",
+        help="apply only review candidates explicitly marked approved: true",
+    )
+    args = parser.parse_args(argv)
     print("=== Merge Community Reports ===\n")
 
-    if not REPORTS_DIR.exists():
+    if not REPORTS_DIR.exists() and not args.apply_reviewed_corrections:
         print("No reports directory found.")
         return
 
-    report_files = list(REPORTS_DIR.glob("*.json"))
-    if not report_files:
+    report_files = list(REPORTS_DIR.glob("*.json")) if REPORTS_DIR.exists() else []
+    if not report_files and not args.apply_reviewed_corrections:
+        if DB_FILE.exists():
+            try:
+                database = json.loads(DB_FILE.read_text(encoding="utf-8"))
+                rejected_dir = REPORTS_DIR / "rejected"
+                update_source_health_snapshot(
+                    database,
+                    load_review_candidates(),
+                    quarantined_count=len(list(rejected_dir.glob("*.json")))
+                    if rejected_dir.exists()
+                    else 0,
+                    quarantined_this_run=0,
+                )
+            except (OSError, ValueError):
+                pass
         print("No pending reports.")
         return
 
-    report_digest = report_queue_digest(REPORTS_DIR)
-    for derived_file in (
-        DATA_DIR / "hot_numbers.json",
-        DATA_DIR / "hot_ranges.json",
-        DATA_DIR / "spam_domains.json",
-    ):
-        require_matching_derived_feed(derived_file, report_digest=report_digest)
+    if report_files:
+        report_digest = report_queue_digest(REPORTS_DIR)
+        for derived_file in (
+            DATA_DIR / "hot_numbers.json",
+            DATA_DIR / "hot_ranges.json",
+            DATA_DIR / "spam_domains.json",
+        ):
+            require_matching_derived_feed(derived_file, report_digest=report_digest)
 
     print(f"Found {len(report_files)} report files")
 
@@ -231,10 +357,10 @@ def main():
             quarantine(report_file, rejected_dir)
             rejected += 1
 
-    # Anonymous false-positive votes never mutate the shipped database. A
-    # distinct-source quorum strictly larger than the spam count can only park
-    # a community-only row for maintainer review; rows with any authoritative
-    # provenance are not candidates at all.
+    # Anonymous false-positive votes never mutate the shipped database by
+    # default. A distinct-source quorum strictly larger than the spam count can
+    # only park a community-only row for maintainer review; rows with any
+    # authoritative provenance are not candidates at all.
     review_candidates = []
     for number, reporters in sorted(not_spam_votes.items()):
         entry = existing.get(number)
@@ -248,29 +374,34 @@ def main():
                     "not_spam_votes": len(reporters),
                     "spam_reports": report_count,
                     "reported_at": today,
+                    "source_ids": ["community_reports"],
                 }
             )
 
-    if review_candidates:
-        prior_candidates = []
-        if NOT_SPAM_REVIEW_FILE.exists():
-            try:
-                prior = json.loads(NOT_SPAM_REVIEW_FILE.read_text(encoding="utf-8"))
-                if isinstance(prior, dict) and isinstance(prior.get("candidates"), list):
-                    prior_candidates = prior["candidates"]
-            except (OSError, ValueError):
-                prior_candidates = []
-        by_number = {
-            candidate["number"]: candidate
-            for candidate in prior_candidates + review_candidates
-            if isinstance(candidate, dict) and isinstance(candidate.get("number"), str)
-        }
+    prior_candidates = load_review_candidates()
+    by_number = {}
+    for candidate in prior_candidates + review_candidates:
+        number = candidate.get("number")
+        if not isinstance(number, str):
+            continue
+        merged = dict(by_number.get(number, {}))
+        merged.update(candidate)
+        by_number[number] = merged
+    review_candidates = list(by_number.values())
+
+    decayed, removed = (0, 0)
+    if args.apply_reviewed_corrections:
+        decayed, removed = apply_approved_corrections(existing, review_candidates, today)
+
+    if review_candidates and (
+        review_candidates != prior_candidates or args.apply_reviewed_corrections
+    ):
         atomic_write_json(
             NOT_SPAM_REVIEW_FILE,
             {
                 "updated": today,
                 "count": len(by_number),
-                "candidates": list(by_number.values()),
+                "candidates": review_candidates,
             },
         )
 
@@ -278,7 +409,14 @@ def main():
     # Only publish a new version when the contents actually changed. The app
     # re-syncs the whole 6.5 MB database whenever `version` moves, so bumping
     # it on a no-op run costs every device a pointless download.
-    changed = added > 0 or updated > 0 or purged > 0 or provenance_migrated > 0
+    changed = (
+        added > 0
+        or updated > 0
+        or purged > 0
+        or provenance_migrated > 0
+        or decayed > 0
+        or removed > 0
+    )
     if changed:
         db["version"] += 1
         db["updated"] = today
@@ -298,7 +436,18 @@ def main():
     if REPORTS_DIR.exists() and not list(REPORTS_DIR.iterdir()):
         REPORTS_DIR.rmdir()
 
-    print(f"\nMerged: {added} new, {updated} updated, {skipped} skipped (implausible), {rejected} quarantined")
+    quarantined_count = len(list(rejected_dir.glob("*.json"))) if rejected_dir.exists() else 0
+    update_source_health_snapshot(
+        db,
+        review_candidates,
+        quarantined_count=quarantined_count,
+        quarantined_this_run=rejected,
+    )
+
+    print(
+        f"\nMerged: {added} new, {updated} updated, {skipped} skipped (implausible), "
+        f"{rejected} quarantined, {decayed} corrections decayed, {removed} rows removed"
+    )
     print(f"Total database: {len(db['numbers'])} numbers")
 
 

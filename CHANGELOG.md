@@ -18,6 +18,9 @@ All notable changes to CallShield will be documented in this file.
 
 - Added a validated source registry and per-run provenance snapshot so feed
   access, licensing, attribution, redistribution, and freshness are reviewable.
+- Source snapshots now include privacy-safe freshness, corroboration,
+  false-positive, and quarantine aggregates; anonymous corrections remain
+  review-only until an operator explicitly approves a community-only decay.
 - Imported numbers and prefixes now retain independent source evidence,
   confidence tier, parser metadata, and an expiry horizon in Room; expired
   feed evidence is quarantined out of hard-block and prefix-expansion paths.

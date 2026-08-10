@@ -106,6 +106,70 @@ class SourceRegistryTest(unittest.TestCase):
         merged = source_registry.merge_evidence([first], [refreshed, independent])
         self.assertEqual(merged, [refreshed, independent])
 
+    def test_health_report_is_aggregate_and_tracks_freshness_corroboration_and_reviews(self):
+        snapshot = {
+            "generated_at": "2026-08-10T12:00:00+00:00",
+            "sources": [
+                {
+                    "id": "public",
+                    "status": "ok",
+                    "accepted": 12,
+                    "rejected": 1,
+                    "last_success_at": "2026-08-10T00:00:00+00:00",
+                    "stale_after_days": 7,
+                },
+                {
+                    "id": "old",
+                    "status": "ok",
+                    "accepted": 4,
+                    "rejected": 0,
+                    "last_success_at": "2026-07-01T00:00:00+00:00",
+                    "stale_after_days": 7,
+                },
+            ],
+        }
+        database = {
+            "numbers": [
+                {
+                    "number": "+15551234567",
+                    "evidence": [{"source_id": "public"}, {"source_id": "old"}],
+                },
+                {"number": "+15557654321", "sources": ["public"]},
+            ]
+        }
+        review = {
+            "candidates": [
+                {
+                    "number": "+15557654321",
+                    "source_ids": ["public"],
+                    "not_spam_votes": 3,
+                    "spam_reports": 2,
+                }
+            ]
+        }
+
+        report = source_registry.source_health_report(
+            snapshot,
+            database,
+            review,
+            quarantined_count=2,
+            quarantined_this_run=1,
+            generated_at="2026-08-10T12:00:00+00:00",
+        )
+        by_id = {source["id"]: source for source in report["sources"]}
+
+        self.assertEqual(by_id["public"]["freshness"], "fresh")
+        self.assertEqual(by_id["old"]["freshness"], "stale")
+        self.assertEqual(by_id["public"]["corroborated_rows"], 1)
+        self.assertEqual(by_id["public"]["false_positive_candidates"], 1)
+        self.assertEqual(by_id["public"]["false_positive_rate"], 0.6)
+        self.assertEqual(by_id["community_reports"]["quarantined"], 2)
+        self.assertEqual(report["summary"]["quarantined_this_run"], 1)
+        self.assertFalse(any(report["privacy"].values()))
+        serialized = json.dumps(report)
+        self.assertNotIn("+15551234567", serialized)
+        self.assertNotIn("+15557654321", serialized)
+
     def test_invalid_manifest_is_rejected(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "manifest.json"
