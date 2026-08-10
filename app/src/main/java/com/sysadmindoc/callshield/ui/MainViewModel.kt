@@ -117,6 +117,20 @@ class MainViewModel
                     repo.getBlockedCountSince(windows.weekStart)
                 }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
+        val blockedCallsThisWeek: StateFlow<Int> =
+            timeAnchor
+                .flatMapLatest { now ->
+                    val windows = buildDashboardTimeWindows(now)
+                    repo.getBlockedCountSinceByType(windows.weekStart, isCall = true)
+                }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
+        val blockedSmsThisWeek: StateFlow<Int> =
+            timeAnchor
+                .flatMapLatest { now ->
+                    val windows = buildDashboardTimeWindows(now)
+                    repo.getBlockedCountSinceByType(windows.weekStart, isCall = false)
+                }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
         val blockedLastWeek: StateFlow<Int> =
             timeAnchor
                 .flatMapLatest { now ->

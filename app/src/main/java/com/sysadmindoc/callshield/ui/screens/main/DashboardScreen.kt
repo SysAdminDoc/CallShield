@@ -131,9 +131,13 @@ import com.sysadmindoc.callshield.ui.theme.hapticConfirm
 import com.sysadmindoc.callshield.ui.theme.hapticTick
 import com.sysadmindoc.callshield.util.startActivitySafely
 import kotlinx.coroutines.delay
+import java.text.NumberFormat
 
 @Composable
-fun DashboardScreen(viewModel: MainViewModel) {
+fun DashboardScreen(
+    viewModel: MainViewModel,
+    onOpenSettings: (() -> Unit)? = null,
+) {
     val totalBlocked by viewModel.totalBlocked.collectAsStateWithLifecycle()
     val blockedToday by viewModel.blockedToday.collectAsStateWithLifecycle()
     val spamCount by viewModel.spamCount.collectAsStateWithLifecycle()
@@ -148,6 +152,8 @@ fun DashboardScreen(viewModel: MainViewModel) {
     val rcsFilter by viewModel.rcsFilterEnabled.collectAsStateWithLifecycle()
     val freqEscalation by viewModel.freqEscalationEnabled.collectAsStateWithLifecycle()
     val blockedThisWeek by viewModel.blockedThisWeek.collectAsStateWithLifecycle()
+    val blockedCallsThisWeek by viewModel.blockedCallsThisWeek.collectAsStateWithLifecycle()
+    val blockedSmsThisWeek by viewModel.blockedSmsThisWeek.collectAsStateWithLifecycle()
     val blockedLastWeek by viewModel.blockedLastWeek.collectAsStateWithLifecycle()
     val blockedCalls by viewModel.blockedCalls.collectAsStateWithLifecycle()
     val scanResult by viewModel.scanResult.collectAsStateWithLifecycle()
@@ -155,10 +161,12 @@ fun DashboardScreen(viewModel: MainViewModel) {
     val lastSync by viewModel.lastSyncTimestamp.collectAsStateWithLifecycle()
     val lastSyncSource by viewModel.lastSyncSource.collectAsStateWithLifecycle()
     val activeProfile by viewModel.activeProfile.collectAsStateWithLifecycle()
-    val scanningCalls by viewModel.scanningCalls.collectAsStateWithLifecycle()
-    val scanningSms by viewModel.scanningSms.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
+    val numberFormatter = remember { NumberFormat.getIntegerInstance() }
+    val openPermissions = onOpenSettings ?: { openAppSettings(context) }
+    val scanningCalls by viewModel.scanningCalls.collectAsStateWithLifecycle()
+    val scanningSms by viewModel.scanningSms.collectAsStateWithLifecycle()
     val roleManager =
         remember(context) {
             context.getSystemService(Context.ROLE_SERVICE) as? RoleManager
@@ -282,8 +290,8 @@ fun DashboardScreen(viewModel: MainViewModel) {
             dashboardStatus.heroMode == DashboardHeroMode.SetupNeeded -> {
                 stringResource(
                     R.string.dashboard_setup_progress,
-                    requiredSetupComplete,
-                    requiredSetupTotal,
+                    numberFormatter.format(requiredSetupComplete),
+                    numberFormatter.format(requiredSetupTotal),
                 )
             }
 
@@ -325,7 +333,7 @@ fun DashboardScreen(viewModel: MainViewModel) {
                 HeroAction(
                     label = stringResource(R.string.dashboard_review_permissions),
                     icon = Icons.Default.Settings,
-                    onClick = { openAppSettings(context) },
+                    onClick = openPermissions,
                 )
             }
 
@@ -340,11 +348,11 @@ fun DashboardScreen(viewModel: MainViewModel) {
                 )
             }
 
-            blockCallsEnabled && !callScreenerReady && roleManager != null -> {
+            blockCallsEnabled && !callScreenerReady -> {
                 HeroAction(
                     label = stringResource(R.string.dashboard_enable_call_screening),
                     icon = Icons.AutoMirrored.Filled.PhoneCallback,
-                    onClick = { requestCallScreening(context, roleManager) },
+                    onClick = openPermissions,
                 )
             }
 
@@ -387,6 +395,8 @@ fun DashboardScreen(viewModel: MainViewModel) {
             heroSubtitle = heroSubtitle,
             requiredSetupComplete = requiredSetupComplete,
             requiredSetupTotal = requiredSetupTotal,
+            blockedCallsThisWeek = blockedCallsThisWeek,
+            blockedSmsThisWeek = blockedSmsThisWeek,
             engineCount =
                 activeEngineCount(
                     stirShaken = stirShaken,
@@ -433,19 +443,14 @@ fun DashboardScreen(viewModel: MainViewModel) {
             callScreenerReady = callScreenerReady,
             overlayGranted = overlayGranted,
             notificationsGranted = notificationsGranted,
-            onReviewPermissions = { openAppSettings(context) },
+            onReviewPermissions = openPermissions,
             onSyncDatabase = {
                 hapticTick(context)
                 viewModel.sync()
             },
-            onEnableCallScreener =
-                if (roleManager == null) {
-                    null
-                } else {
-                    { requestCallScreening(context, roleManager) }
-                },
-            onEnableOverlay = { openOverlaySettings(context) },
-            onEnableNotifications = { openNotificationSettings(context) },
+            onEnableCallScreener = openPermissions,
+            onEnableOverlay = openPermissions,
+            onEnableNotifications = openPermissions,
         )
 
         DashboardStatsRow(
@@ -470,8 +475,8 @@ fun DashboardScreen(viewModel: MainViewModel) {
                 }
             val trendText =
                 when {
-                    diff > 0 -> stringResource(R.string.dashboard_trend_more, diff)
-                    diff < 0 -> stringResource(R.string.dashboard_trend_fewer, -diff)
+                    diff > 0 -> stringResource(R.string.dashboard_trend_more, numberFormatter.format(diff))
+                    diff < 0 -> stringResource(R.string.dashboard_trend_fewer, numberFormatter.format(-diff))
                     else -> stringResource(R.string.dashboard_trend_same)
                 }
             Row(
@@ -603,7 +608,7 @@ fun DashboardScreen(viewModel: MainViewModel) {
                             pluralStringResource(
                                 R.plurals.dashboard_action_sync_subtitle_ready,
                                 spamCount,
-                                spamCount,
+                                numberFormatter.format(spamCount),
                             )
                         } else {
                             stringResource(R.string.dashboard_action_sync_subtitle)
@@ -640,7 +645,7 @@ fun DashboardScreen(viewModel: MainViewModel) {
                         hapticTick(context)
                         viewModel.scanCallLog()
                     } else {
-                        openAppSettings(context)
+                        openPermissions()
                     }
                 }
                 GradientDivider()
@@ -667,7 +672,7 @@ fun DashboardScreen(viewModel: MainViewModel) {
                         hapticTick(context)
                         viewModel.scanSmsInbox()
                     } else {
-                        openAppSettings(context)
+                        openPermissions()
                     }
                 }
             }
@@ -741,13 +746,13 @@ fun DashboardScreen(viewModel: MainViewModel) {
                             pluralStringResource(
                                 R.plurals.dashboard_scan_unique_numbers_scanned,
                                 result.totalScanned,
-                                result.totalScanned,
+                                numberFormatter.format(result.totalScanned),
                             )
                         val spamFoundText =
                             pluralStringResource(
                                 R.plurals.dashboard_scan_spam_found,
                                 result.spamFound,
-                                result.spamFound,
+                                numberFormatter.format(result.spamFound),
                             )
                         Text(
                             stringResource(
@@ -773,7 +778,7 @@ fun DashboardScreen(viewModel: MainViewModel) {
                                         fontWeight = FontWeight.SemiBold,
                                     )
                                     Text(
-                                        "${spam.callCount}x | ${friendlyMatchReasonLabel(spam.matchReason)}",
+                                        "${numberFormatter.format(spam.callCount)}x | ${friendlyMatchReasonLabel(spam.matchReason)}",
                                         style = MaterialTheme.typography.bodySmall,
                                         color = CatSubtext,
                                     )
@@ -790,7 +795,11 @@ fun DashboardScreen(viewModel: MainViewModel) {
                             Spacer(Modifier.height(4.dp))
                             val moreCount = result.spamNumbers.size - 5
                             Text(
-                                pluralStringResource(R.plurals.dashboard_scan_more, moreCount, moreCount),
+                                pluralStringResource(
+                                    R.plurals.dashboard_scan_more,
+                                    moreCount,
+                                    numberFormatter.format(moreCount),
+                                ),
                                 color = CatOverlay,
                                 style = MaterialTheme.typography.bodySmall,
                             )
@@ -826,13 +835,13 @@ fun DashboardScreen(viewModel: MainViewModel) {
                             pluralStringResource(
                                 R.plurals.dashboard_sms_scan_messages_scanned,
                                 result.totalScanned,
-                                result.totalScanned,
+                                numberFormatter.format(result.totalScanned),
                             )
                         val spamFoundText =
                             pluralStringResource(
                                 R.plurals.dashboard_scan_spam_found,
                                 result.spamFound,
-                                result.spamFound,
+                                numberFormatter.format(result.spamFound),
                             )
                         Text(
                             stringResource(
@@ -868,7 +877,11 @@ fun DashboardScreen(viewModel: MainViewModel) {
                             Spacer(Modifier.height(4.dp))
                             val moreCount = result.spamMessages.size - 5
                             Text(
-                                pluralStringResource(R.plurals.dashboard_scan_more, moreCount, moreCount),
+                                pluralStringResource(
+                                    R.plurals.dashboard_scan_more,
+                                    moreCount,
+                                    numberFormatter.format(moreCount),
+                                ),
                                 color = CatOverlay,
                                 style = MaterialTheme.typography.bodySmall,
                             )
@@ -912,7 +925,7 @@ fun DashboardScreen(viewModel: MainViewModel) {
                         val loc = AreaCodeLookup.lookup("+1$ac") ?: ac
                         Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                stringResource(R.string.dashboard_spam_from_area, count, ac, loc),
+                                stringResource(R.string.dashboard_spam_from_area, numberFormatter.format(count), ac, loc),
                                 style = MaterialTheme.typography.bodySmall,
                                 modifier = Modifier.weight(1f),
                             )
@@ -1051,6 +1064,8 @@ internal fun DashboardHeroCard(
     heroSubtitle: String,
     requiredSetupComplete: Int,
     requiredSetupTotal: Int,
+    blockedCallsThisWeek: Int = 0,
+    blockedSmsThisWeek: Int = 0,
     engineCount: Int,
     lastSync: Long,
     lastSyncSource: String,
@@ -1058,10 +1073,15 @@ internal fun DashboardHeroCard(
     heroAction: HeroAction?,
     onSyncDatabase: () -> Unit = {},
 ) {
+    val numberFormatter = remember { NumberFormat.getIntegerInstance() }
     Column(
         modifier = modifier.fillMaxWidth().padding(vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
+        DashboardOutcomeSummary(
+            blockedCalls = blockedCallsThisWeek,
+            blockedTexts = blockedSmsThisWeek,
+        )
         Text(
             text = heroTitle,
             style = MaterialTheme.typography.headlineMedium,
@@ -1104,7 +1124,7 @@ internal fun DashboardHeroCard(
         if (LocalDensity.current.fontScale >= 1.5f) {
             Column(modifier = Modifier.fillMaxWidth()) {
                 DashboardReadinessMetric(
-                    value = "$requiredSetupComplete/$requiredSetupTotal",
+                    value = "${numberFormatter.format(requiredSetupComplete)}/${numberFormatter.format(requiredSetupTotal)}",
                     label = stringResource(R.string.dashboard_metric_core_setup),
                     icon = Icons.Default.Shield,
                     color = if (dashboardStatus.setupComplete) CatGreen else CatYellow,
@@ -1112,7 +1132,7 @@ internal fun DashboardHeroCard(
                 )
                 GradientDivider()
                 DashboardReadinessMetric(
-                    value = engineCount.toString(),
+                    value = numberFormatter.format(engineCount),
                     label = stringResource(R.string.dashboard_metric_engines),
                     icon = Icons.Default.Security,
                     color = CatGreen,
@@ -1133,7 +1153,7 @@ internal fun DashboardHeroCard(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 DashboardReadinessMetric(
-                    value = "$requiredSetupComplete/$requiredSetupTotal",
+                    value = "${numberFormatter.format(requiredSetupComplete)}/${numberFormatter.format(requiredSetupTotal)}",
                     label = stringResource(R.string.dashboard_metric_core_setup),
                     icon = Icons.Default.Shield,
                     color = if (dashboardStatus.setupComplete) CatGreen else CatYellow,
@@ -1141,7 +1161,7 @@ internal fun DashboardHeroCard(
                 )
                 Box(Modifier.width(1.dp).height(60.dp).background(CatMuted))
                 DashboardReadinessMetric(
-                    value = engineCount.toString(),
+                    value = numberFormatter.format(engineCount),
                     label = stringResource(R.string.dashboard_metric_engines),
                     icon = Icons.Default.Security,
                     color = CatGreen,
@@ -1231,143 +1251,231 @@ internal fun DashboardSetupChecklistCard(
     onEnableOverlay: () -> Unit,
     onEnableNotifications: () -> Unit,
 ) {
+    val numberFormatter = remember { NumberFormat.getIntegerInstance() }
     Column(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            val setupStateLabel =
-                if (dashboardStatus.setupComplete) {
-                    stringResource(R.string.dashboard_setup_complete)
-                } else {
-                    stringResource(R.string.dashboard_setup_needs_attention)
-                }
-            if (LocalDensity.current.fontScale >= 1.5f) {
-                SectionHeader(stringResource(R.string.dashboard_setup_checklist))
-                SetupStateBadge(
-                    label = setupStateLabel,
-                    color = if (dashboardStatus.setupComplete) CatGreen else CatYellow,
-                )
-            } else {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
+            var detailsExpanded by rememberSaveable { mutableStateOf(!dashboardStatus.setupComplete) }
+            LaunchedEffect(dashboardStatus.setupComplete) {
+                detailsExpanded = !dashboardStatus.setupComplete
+            }
+
+            if (!dashboardStatus.setupComplete || detailsExpanded) {
+                val setupStateLabel =
+                    if (dashboardStatus.setupComplete) {
+                        stringResource(R.string.dashboard_setup_complete)
+                    } else {
+                        stringResource(R.string.dashboard_setup_needs_attention)
+                    }
+                if (LocalDensity.current.fontScale >= 1.5f) {
                     SectionHeader(stringResource(R.string.dashboard_setup_checklist))
                     SetupStateBadge(
                         label = setupStateLabel,
                         color = if (dashboardStatus.setupComplete) CatGreen else CatYellow,
                     )
+                } else {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        SectionHeader(stringResource(R.string.dashboard_setup_checklist))
+                        SetupStateBadge(
+                            label = setupStateLabel,
+                            color = if (dashboardStatus.setupComplete) CatGreen else CatYellow,
+                        )
+                    }
                 }
+
+                SetupChecklistRow(
+                    icon = Icons.Default.Security,
+                    title = stringResource(R.string.dashboard_setup_permissions_title),
+                    detail =
+                        if (corePermissionsReady) {
+                            stringResource(R.string.dashboard_permissions_ready_detail)
+                        } else {
+                            stringResource(R.string.dashboard_permissions_required_short)
+                        },
+                    ready = corePermissionsReady,
+                    accentColor = CatBlue,
+                    actionLabel = if (corePermissionsReady) null else stringResource(R.string.dashboard_action_review),
+                    onAction = if (corePermissionsReady) null else onReviewPermissions,
+                )
+
+                GradientDivider()
+
+                SetupChecklistRow(
+                    icon = Icons.Default.DownloadDone,
+                    title = stringResource(R.string.dashboard_setup_database_title),
+                    detail =
+                        when {
+                            syncState is SyncState.Syncing -> {
+                                stringResource(R.string.dashboard_database_syncing_short)
+                            }
+
+                            spamDatabaseReady -> {
+                                pluralStringResource(
+                                    R.plurals.dashboard_database_ready_detail,
+                                    spamCount,
+                                    numberFormatter.format(spamCount),
+                                )
+                            }
+
+                            else -> {
+                                stringResource(R.string.dashboard_database_needed_short)
+                            }
+                        },
+                    ready = spamDatabaseReady,
+                    accentColor = CatGreen,
+                    actionLabel = if (spamDatabaseReady) null else stringResource(R.string.dashboard_sync),
+                    onAction = if (spamDatabaseReady) null else onSyncDatabase,
+                )
+
+                GradientDivider()
+
+                SetupChecklistRow(
+                    icon = Icons.AutoMirrored.Filled.PhoneCallback,
+                    title = stringResource(R.string.dashboard_setup_call_screener_title),
+                    detail =
+                        when {
+                            !blockCallsEnabled -> stringResource(R.string.dashboard_screener_optional_short)
+                            callScreenerReady -> stringResource(R.string.dashboard_screener_ready_short)
+                            else -> stringResource(R.string.dashboard_screener_needed_short)
+                        },
+                    ready = !blockCallsEnabled || callScreenerReady,
+                    accentColor = CatMauve,
+                    actionLabel =
+                        if (!blockCallsEnabled || callScreenerReady || onEnableCallScreener == null) {
+                            null
+                        } else {
+                            stringResource(R.string.dashboard_enable_call_screening)
+                        },
+                    onAction = if (!blockCallsEnabled || callScreenerReady) null else onEnableCallScreener,
+                )
+
+                GradientDivider(modifier = Modifier.padding(top = 2.dp))
+
+                Text(
+                    text = stringResource(R.string.dashboard_optional_extras),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = CatOverlay,
+                    fontWeight = FontWeight.SemiBold,
+                )
+
+                SetupChecklistRow(
+                    icon = Icons.Default.Layers,
+                    title = stringResource(R.string.dashboard_setup_overlay_title),
+                    detail =
+                        if (overlayGranted) {
+                            stringResource(R.string.dashboard_overlay_ready_short)
+                        } else {
+                            stringResource(R.string.dashboard_overlay_needed_short)
+                        },
+                    ready = overlayGranted,
+                    accentColor = CatTeal,
+                    actionLabel = if (overlayGranted) null else stringResource(R.string.dashboard_enable_overlay),
+                    onAction = if (overlayGranted) null else onEnableOverlay,
+                )
+
+                GradientDivider()
+
+                SetupChecklistRow(
+                    icon = Icons.Default.Notifications,
+                    title = stringResource(R.string.dashboard_setup_notifications_title),
+                    detail =
+                        if (notificationsGranted) {
+                            stringResource(R.string.dashboard_notifications_ready_short)
+                        } else {
+                            stringResource(R.string.dashboard_notifications_needed_short)
+                        },
+                    ready = notificationsGranted,
+                    accentColor = CatBlue,
+                    actionLabel = if (notificationsGranted) null else stringResource(R.string.dashboard_enable_notifications),
+                    onAction = if (notificationsGranted) null else onEnableNotifications,
+                )
+
+                if (dashboardStatus.setupComplete) {
+                    TextButton(
+                        onClick = { detailsExpanded = false },
+                        modifier = Modifier.align(Alignment.End),
+                    ) {
+                        Text(stringResource(R.string.dashboard_setup_hide_details))
+                    }
+                }
+            } else {
+                SetupChecklistRow(
+                    icon = Icons.Default.Shield,
+                    title = stringResource(R.string.dashboard_setup_checklist),
+                    detail = stringResource(R.string.dashboard_setup_collapsed_detail),
+                    ready = true,
+                    accentColor = CatGreen,
+                    actionLabel = stringResource(R.string.dashboard_setup_review),
+                    onAction = { detailsExpanded = true },
+                )
             }
+        }
+    }
+}
 
-            SetupChecklistRow(
-                icon = Icons.Default.Security,
-                title = stringResource(R.string.dashboard_setup_permissions_title),
-                detail =
-                    if (corePermissionsReady) {
-                        stringResource(R.string.dashboard_permissions_ready_detail)
-                    } else {
-                        stringResource(R.string.dashboard_permissions_required_short)
-                    },
-                ready = corePermissionsReady,
-                accentColor = CatBlue,
-                actionLabel = if (corePermissionsReady) null else stringResource(R.string.dashboard_action_review),
-                onAction = if (corePermissionsReady) null else onReviewPermissions,
+@Composable
+internal fun DashboardOutcomeSummary(
+    blockedCalls: Int,
+    blockedTexts: Int,
+) {
+    val numberFormatter = remember { NumberFormat.getIntegerInstance() }
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text(
+            text = stringResource(R.string.dashboard_outcome_title),
+            style = MaterialTheme.typography.titleMedium,
+            color = CatText,
+            fontWeight = FontWeight.SemiBold,
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            DashboardOutcomeMetric(
+                modifier = Modifier.weight(1f),
+                value = numberFormatter.format(blockedCalls),
+                label = stringResource(R.string.dashboard_outcome_calls),
+                icon = Icons.Default.PhoneDisabled,
+                color = CatRed,
             )
-
-            GradientDivider()
-
-            SetupChecklistRow(
-                icon = Icons.Default.DownloadDone,
-                title = stringResource(R.string.dashboard_setup_database_title),
-                detail =
-                    when {
-                        syncState is SyncState.Syncing -> {
-                            stringResource(R.string.dashboard_database_syncing_short)
-                        }
-
-                        spamDatabaseReady -> {
-                            pluralStringResource(
-                                R.plurals.dashboard_database_ready_detail,
-                                spamCount,
-                                spamCount,
-                            )
-                        }
-
-                        else -> {
-                            stringResource(R.string.dashboard_database_needed_short)
-                        }
-                    },
-                ready = spamDatabaseReady,
-                accentColor = CatGreen,
-                actionLabel = if (spamDatabaseReady) null else stringResource(R.string.dashboard_sync),
-                onAction = if (spamDatabaseReady) null else onSyncDatabase,
+            DashboardOutcomeMetric(
+                modifier = Modifier.weight(1f),
+                value = numberFormatter.format(blockedTexts),
+                label = stringResource(R.string.dashboard_outcome_texts),
+                icon = Icons.Default.SpeakerNotesOff,
+                color = CatMauve,
             )
+        }
+        Text(
+            text = stringResource(R.string.dashboard_outcome_window),
+            style = MaterialTheme.typography.labelSmall,
+            color = CatSubtext,
+        )
+    }
+}
 
-            GradientDivider()
-
-            SetupChecklistRow(
-                icon = Icons.AutoMirrored.Filled.PhoneCallback,
-                title = stringResource(R.string.dashboard_setup_call_screener_title),
-                detail =
-                    when {
-                        !blockCallsEnabled -> stringResource(R.string.dashboard_screener_optional_short)
-                        callScreenerReady -> stringResource(R.string.dashboard_screener_ready_short)
-                        else -> stringResource(R.string.dashboard_screener_needed_short)
-                    },
-                ready = !blockCallsEnabled || callScreenerReady,
-                accentColor = CatMauve,
-                actionLabel =
-                    if (!blockCallsEnabled || callScreenerReady || onEnableCallScreener == null) {
-                        null
-                    } else {
-                        stringResource(R.string.dashboard_enable_call_screening)
-                    },
-                onAction = if (!blockCallsEnabled || callScreenerReady) null else onEnableCallScreener,
-            )
-
-            GradientDivider(modifier = Modifier.padding(top = 2.dp))
-
-            Text(
-                text = stringResource(R.string.dashboard_optional_extras),
-                style = MaterialTheme.typography.labelMedium,
-                color = CatOverlay,
-                fontWeight = FontWeight.SemiBold,
-            )
-
-            SetupChecklistRow(
-                icon = Icons.Default.Layers,
-                title = stringResource(R.string.dashboard_setup_overlay_title),
-                detail =
-                    if (overlayGranted) {
-                        stringResource(R.string.dashboard_overlay_ready_short)
-                    } else {
-                        stringResource(R.string.dashboard_overlay_needed_short)
-                    },
-                ready = overlayGranted,
-                accentColor = CatTeal,
-                actionLabel = if (overlayGranted) null else stringResource(R.string.dashboard_enable_overlay),
-                onAction = if (overlayGranted) null else onEnableOverlay,
-            )
-
-            GradientDivider()
-
-            SetupChecklistRow(
-                icon = Icons.Default.Notifications,
-                title = stringResource(R.string.dashboard_setup_notifications_title),
-                detail =
-                    if (notificationsGranted) {
-                        stringResource(R.string.dashboard_notifications_ready_short)
-                    } else {
-                        stringResource(R.string.dashboard_notifications_needed_short)
-                    },
-                ready = notificationsGranted,
-                accentColor = CatBlue,
-                actionLabel = if (notificationsGranted) null else stringResource(R.string.dashboard_enable_notifications),
-                onAction = if (notificationsGranted) null else onEnableNotifications,
-            )
+@Composable
+private fun DashboardOutcomeMetric(
+    modifier: Modifier,
+    value: String,
+    label: String,
+    icon: ImageVector,
+    color: Color,
+) {
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(20.dp))
+        Column {
+            Text(value, style = MaterialTheme.typography.titleLarge, color = CatText, fontWeight = FontWeight.Bold)
+            Text(label, style = MaterialTheme.typography.bodySmall, color = CatSubtext)
         }
     }
 }
@@ -1385,7 +1493,7 @@ internal fun DashboardStatsRow(
         StatCard(
             modifier = Modifier.weight(1f),
             title = stringResource(R.string.dashboard_stat_today),
-            value = blockedToday.toString(),
+            value = blockedToday,
             icon = Icons.Default.Today,
             color = CatBlue,
         )
@@ -1393,7 +1501,7 @@ internal fun DashboardStatsRow(
         StatCard(
             modifier = Modifier.weight(1f),
             title = stringResource(R.string.dashboard_stat_this_week),
-            value = blockedThisWeek.toString(),
+            value = blockedThisWeek,
             icon = Icons.Default.DateRange,
             color = CatMauve,
         )
@@ -1401,7 +1509,7 @@ internal fun DashboardStatsRow(
         StatCard(
             modifier = Modifier.weight(1f),
             title = stringResource(R.string.dashboard_stat_total),
-            value = totalBlocked.toString(),
+            value = totalBlocked,
             icon = Icons.Default.Block,
             color = CatPeach,
         )
@@ -1586,40 +1694,6 @@ private fun openAppSettings(context: Context) {
     )
 }
 
-private fun openOverlaySettings(context: Context) {
-    // Some ROMs lack the overlay-permission activity entirely — fall back to the
-    // app-details screen rather than crashing.
-    context.startActivitySafely(
-        Intent(
-            Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-            Uri.parse("package:${context.packageName}"),
-        ),
-        onFailure = { openAppSettings(context) },
-    )
-}
-
-private fun openNotificationSettings(context: Context) {
-    context.startActivitySafely(
-        Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
-            putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
-        },
-        onFailure = { openAppSettings(context) },
-    )
-}
-
-private fun requestCallScreening(
-    context: Context,
-    roleManager: RoleManager,
-) {
-    try {
-        context.startActivity(roleManager.createRequestRoleIntent(RoleManager.ROLE_CALL_SCREENING))
-    } catch (_: Exception) {
-        // Some OEM ROMs remove ROLE_CALL_SCREENING entirely — fall back to app settings
-        // so the user can at least see what's available.
-        openAppSettings(context)
-    }
-}
-
 @Composable
 fun QuickToggle(
     icon: ImageVector,
@@ -1700,13 +1774,12 @@ fun ProfileChip(
 fun StatCard(
     modifier: Modifier,
     title: String,
-    value: String,
+    value: Int,
     icon: ImageVector,
     color: Color,
 ) {
-    val targetValue = value.toIntOrNull() ?: 0
     val animatedValue by animateIntAsState(
-        targetValue = targetValue,
+        targetValue = value,
         animationSpec = tween(800, easing = FastOutSlowInEasing),
         label = "counter",
     )
@@ -1718,7 +1791,7 @@ fun StatCard(
     ) {
         Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(21.dp))
         Text(
-            animatedValue.toString(),
+            NumberFormat.getIntegerInstance().format(animatedValue),
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.SemiBold,
             color = CatText,

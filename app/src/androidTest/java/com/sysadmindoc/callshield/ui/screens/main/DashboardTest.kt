@@ -2,8 +2,10 @@ package com.sysadmindoc.callshield.ui.screens.main
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Sync
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import com.sysadmindoc.callshield.permissions.BackgroundExecutionRisk
@@ -119,6 +121,63 @@ class DashboardTest {
         composeRule.onNodeWithText("12").assertIsDisplayed()
         composeRule.onNodeWithText("Total").assertIsDisplayed()
         composeRule.onNodeWithText("42").assertIsDisplayed()
+    }
+
+    @Test
+    fun outcomeSummaryLeadsWithLocalizedCallAndTextCounts() {
+        composeRule.setContent {
+            DashboardOutcomeSummary(
+                blockedCalls = 1_234,
+                blockedTexts = 56,
+            )
+        }
+
+        composeRule.onNodeWithText("Blocked this week").assertIsDisplayed()
+        composeRule.onNodeWithText("1,234").assertIsDisplayed()
+        composeRule.onNodeWithText("56").assertIsDisplayed()
+        composeRule.onNodeWithText("Calls").assertIsDisplayed()
+        composeRule.onNodeWithText("Texts").assertIsDisplayed()
+    }
+
+    @Test
+    fun completedSetupCollapsesToOneReviewableSummaryRow() {
+        val status =
+            buildDashboardStatusModel(
+                blockCallsEnabled = true,
+                blockSmsEnabled = true,
+                callPermissionsReady = true,
+                smsPermissionsReady = true,
+                permissionsReady = true,
+                spamDatabaseReady = true,
+                callScreenerReady = true,
+                overlayGranted = true,
+                notificationsGranted = true,
+            )
+
+        composeRule.setContent {
+            DashboardSetupChecklistCard(
+                dashboardStatus = status,
+                corePermissionsReady = true,
+                syncState = SyncState.Idle,
+                spamDatabaseReady = true,
+                spamCount = 1_234,
+                blockCallsEnabled = true,
+                callScreenerReady = true,
+                overlayGranted = true,
+                notificationsGranted = true,
+                onReviewPermissions = {},
+                onSyncDatabase = {},
+                onEnableCallScreener = {},
+                onEnableOverlay = {},
+                onEnableNotifications = {},
+            )
+        }
+
+        composeRule.onNodeWithText("Setup Checklist").assertIsDisplayed()
+        composeRule.onNodeWithText("Required permissions, database, and call screening are ready.").assertIsDisplayed()
+        composeRule.onNodeWithText("Review").performClick()
+        composeRule.onNodeWithText("Core permissions are granted.").assertIsDisplayed()
+        composeRule.onAllNodesWithText("Required permissions, database, and call screening are ready.").assertCountEquals(0)
     }
 
     @Test

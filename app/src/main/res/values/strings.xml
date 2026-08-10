@@ -14,7 +14,11 @@
     <string name="dashboard_protection_active">Protection Active</string>
     <string name="dashboard_protection_disabled">Protection Paused</string>
     <string name="dashboard_setup_needed">Setup Needed</string>
-    <string name="dashboard_setup_progress">%1$d of %2$d complete</string>
+    <string name="dashboard_setup_progress">%1$s of %2$s complete</string>
+    <string name="dashboard_outcome_title">Blocked this week</string>
+    <string name="dashboard_outcome_calls">Calls</string>
+    <string name="dashboard_outcome_texts">Texts</string>
+    <string name="dashboard_outcome_window">This calendar week · on-device blocked activity</string>
     <string name="dashboard_calls_and_texts_protected">Calls and texts are actively protected.</string>
     <string name="dashboard_calls_protected">Calls are actively protected.</string>
     <string name="dashboard_texts_protected">Texts are actively protected.</string>
@@ -37,6 +41,9 @@
     <string name="dashboard_setup_checklist">Setup Checklist</string>
     <string name="dashboard_setup_complete">Setup complete</string>
     <string name="dashboard_setup_needs_attention">Needs attention</string>
+    <string name="dashboard_setup_collapsed_detail">Required permissions, database, and call screening are ready.</string>
+    <string name="dashboard_setup_review">Review</string>
+    <string name="dashboard_setup_hide_details">Hide details</string>
     <string name="dashboard_setup_permissions_title">Permissions</string>
     <string name="dashboard_setup_database_title">Spam database</string>
     <string name="dashboard_setup_call_screener_title">Call screener</string>
@@ -45,8 +52,8 @@
     <string name="dashboard_permissions_ready_detail">Core permissions are granted.</string>
     <string name="dashboard_permissions_required_short">Grant required call and text access.</string>
     <plurals name="dashboard_database_ready_detail">
-        <item quantity="one">Spam number loaded: %d</item>
-        <item quantity="other">Spam numbers loaded: %d</item>
+        <item quantity="one">Spam number loaded: %1$s</item>
+        <item quantity="other">Spam numbers loaded: %1$s</item>
     </plurals>
     <string name="dashboard_database_needed_short">Download current protection data.</string>
     <string name="dashboard_database_syncing_short">Refreshing protection data.</string>
@@ -67,8 +74,8 @@
     <string name="dashboard_stat_today">Today</string>
     <string name="dashboard_stat_this_week">This Week</string>
     <string name="dashboard_stat_total">Total</string>
-    <string name="dashboard_trend_more">Change vs last week: +%d</string>
-    <string name="dashboard_trend_fewer">Change vs last week: -%d</string>
+    <string name="dashboard_trend_more">Change vs last week: +%1$s</string>
+    <string name="dashboard_trend_fewer">Change vs last week: -%1$s</string>
     <string name="dashboard_trend_same">Same as last week</string>
     <string name="dashboard_last_blocked">Last blocked: %s</string>
     <string name="dashboard_time_just_now">Just now</string>
@@ -88,8 +95,8 @@
     <string name="dashboard_quick_actions">Quick Actions</string>
     <string name="dashboard_action_sync_subtitle">Refresh the spam database before unknown campaigns slip through.</string>
     <plurals name="dashboard_action_sync_subtitle_ready">
-        <item quantity="one">Refresh %d local spam record with the latest reports.</item>
-        <item quantity="other">Refresh %d local spam records with the latest reports.</item>
+        <item quantity="one">Refresh %1$s local spam record with the latest reports.</item>
+        <item quantity="other">Refresh %1$s local spam records with the latest reports.</item>
     </plurals>
     <string name="dashboard_action_scan_calls_subtitle">Review recent calls against your latest protection rules.</string>
     <string name="dashboard_action_scan_sms_subtitle">Scan your SMS inbox for messages that match spam rules.</string>
@@ -104,12 +111,12 @@
     <string name="dashboard_call_log_scan">Call Log Scan</string>
     <string name="dashboard_scan_result">%1$s | %2$s</string>
     <plurals name="dashboard_scan_unique_numbers_scanned">
-        <item quantity="one">%d unique number scanned</item>
-        <item quantity="other">%d unique numbers scanned</item>
+        <item quantity="one">%1$s unique number scanned</item>
+        <item quantity="other">%1$s unique numbers scanned</item>
     </plurals>
     <plurals name="dashboard_scan_spam_found">
-        <item quantity="one">%d spam match found</item>
-        <item quantity="other">%d spam matches found</item>
+        <item quantity="one">%1$s spam match found</item>
+        <item quantity="other">%1$s spam matches found</item>
     </plurals>
     <string name="dashboard_scan_failed">Scan failed: %s</string>
     <string name="dashboard_scan_unknown_error">unknown error</string>
@@ -117,17 +124,17 @@
     <string name="dashboard_sms_inbox_permission_denied">SMS inbox permission denied. Grant SMS access in Settings.</string>
     <string name="dashboard_block">Block</string>
     <plurals name="dashboard_scan_more">
-        <item quantity="one">More match: +%d</item>
-        <item quantity="other">More matches: +%d</item>
+        <item quantity="one">More match: +%1$s</item>
+        <item quantity="other">More matches: +%1$s</item>
     </plurals>
     <string name="dashboard_sms_inbox_scan">SMS Inbox Scan</string>
     <string name="dashboard_sms_scan_result">%1$s | %2$s</string>
     <plurals name="dashboard_sms_scan_messages_scanned">
-        <item quantity="one">%d message scanned</item>
-        <item quantity="other">%d messages scanned</item>
+        <item quantity="one">%1$s message scanned</item>
+        <item quantity="other">%1$s messages scanned</item>
     </plurals>
     <string name="dashboard_smart_suggestions">Smart Suggestions</string>
-    <string name="dashboard_spam_from_area">Spam count: %1$d | %2$s (%3$s)</string>
+    <string name="dashboard_spam_from_area">Spam count: %1$s | %2$s (%3$s)</string>
     <string name="dashboard_block_area">Block %s</string>
     <string name="dashboard_block_area_confirm_title">Block area code %s?</string>
     <string name="dashboard_block_area_confirm_body">This adds a rule that blocks every call and text from a +1 %1$s number (%2$s) — roughly 7.9 million numbers. You can remove it later from the blocklist.</string>
@@ -488,7 +495,8 @@
 
     <!-- Settings Screen -->
     <string name="settings_permissions_access">Permissions &amp; access</string>
-    <string name="settings_setup_progress">Access checks ready: %1$d/%2$d</string>
+    <string name="settings_setup_progress">Access checks ready: %1$s/%2$s</string>
+    <string name="settings_setup_progress_note">This count covers the two required access rows below; database readiness is shown on Home.</string>
     <string name="settings_setup_ready_summary">Everything connected</string>
     <string name="settings_setup_attention_summary">Finish setup</string>
     <string name="settings_permissions_needed">Permissions needed</string>
@@ -499,6 +507,7 @@
     <string name="settings_notifications_enabled">Notifications ready</string>
     <string name="settings_notifications_optional">Notifications optional</string>
     <string name="settings_open_app_settings">Open app settings</string>
+    <string name="settings_open_app_settings_subtitle">Android permission details and special access</string>
     <string name="settings_overlay">Overlay</string>
     <string name="settings_access_calls_messages">Calls &amp; messages</string>
     <string name="settings_access_call_screening">Call screening</string>
