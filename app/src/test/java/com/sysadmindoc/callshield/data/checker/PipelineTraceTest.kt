@@ -61,11 +61,12 @@ class PipelineTraceTest {
     }
 
     @Test
-    fun `all four verdict types map correctly`() {
+    fun `all five verdict types map correctly`() {
         assertEquals("BLOCK", PipelineTraceVerdict.BLOCK.name)
         assertEquals("ALLOW", PipelineTraceVerdict.ALLOW.name)
         assertEquals("PASS", PipelineTraceVerdict.PASS.name)
         assertEquals("DISABLED", PipelineTraceVerdict.DISABLED.name)
+        assertEquals("ERROR", PipelineTraceVerdict.ERROR.name)
     }
 
     @Test

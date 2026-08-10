@@ -195,6 +195,7 @@ interface SpamDao {
                     logKey = log.idempotencyKey,
                     ruleId = log.ruleId,
                     reasonCode = log.reasonCode,
+                    pipelineDiagnostic = log.pipelineDiagnostic,
                     origid = log.origid,
                 ),
             )

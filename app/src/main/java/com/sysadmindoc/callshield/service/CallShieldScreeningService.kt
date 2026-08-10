@@ -205,6 +205,7 @@ class CallShieldScreeningService : CallScreeningService() {
                                     ?: CategoryCallAction.INHERIT
                             if (categoryAction == CategoryCallAction.ALLOW) {
                                 respondAllow(responseGate)
+                                logPipelineDiagnostic(repository, number, result.screeningDiagnostics?.toWireValue())
                             } else {
                                 respondBlock(
                                     callDetails = callDetails,
@@ -213,6 +214,7 @@ class CallShieldScreeningService : CallScreeningService() {
                                     reason = result.matchSource,
                                     confidence = result.confidence,
                                     ruleId = result.ruleId,
+                                    pipelineDiagnostic = result.screeningDiagnostics?.toWireValue(),
                                     prefs = prefs,
                                     callerIdentity = callerIdentity,
                                 )
@@ -235,6 +237,7 @@ class CallShieldScreeningService : CallScreeningService() {
                                 }
                             }
                             respondAllow(responseGate)
+                            logPipelineDiagnostic(repository, number, result.screeningDiagnostics?.toWireValue())
 
                             if (repeatedUrgentAllow) {
                                 NotificationHelper.notifyRepeatedUrgentAllowed(appContext, number)
@@ -326,6 +329,7 @@ class CallShieldScreeningService : CallScreeningService() {
         reason: String,
         confidence: Int = 100,
         ruleId: Long? = null,
+        pipelineDiagnostic: String? = null,
         prefs: androidx.datastore.preferences.core.Preferences,
         callerIdentity: CallerIdentity? = null,
     ) {
@@ -342,6 +346,7 @@ class CallShieldScreeningService : CallScreeningService() {
                 confidence = confidence,
                 timestamp = logTimestamp,
                 ruleId = ruleId,
+                pipelineDiagnostic = pipelineDiagnostic,
                 origid = callerIdentity?.passport?.origid,
             )
             pendingLogQueued = true
@@ -369,6 +374,7 @@ class CallShieldScreeningService : CallScreeningService() {
                         timestamp = logTimestamp,
                         logKey = logKey,
                         ruleId = ruleId,
+                        pipelineDiagnostic = pipelineDiagnostic,
                         origid = callerIdentity?.passport?.origid,
                     )
                 }
@@ -378,6 +384,22 @@ class CallShieldScreeningService : CallScreeningService() {
             } finally {
                 PendingBlockedCallLogWorker.schedule(applicationContext)
             }
+        }
+    }
+
+    private suspend fun logPipelineDiagnostic(
+        repository: SpamRepository,
+        number: String,
+        pipelineDiagnostic: String?,
+    ) {
+        if (pipelineDiagnostic.isNullOrBlank()) return
+        try {
+            repository.logScreeningDiagnostic(
+                number = number,
+                pipelineDiagnostic = pipelineDiagnostic,
+            )
+        } catch (_: Exception) {
+            // Diagnostic logging must never delay or change the response.
         }
     }
 

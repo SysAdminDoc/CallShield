@@ -74,6 +74,8 @@ data class BlockedCall(
     val reasonCode: com.sysadmindoc.callshield.domain.model.BlockReasonCode =
         com.sysadmindoc.callshield.domain.model.BlockReasonCode
             .fromStored(matchReason),
+    /** Privacy-safe pipeline cutoff/error summary; never contains exception text. */
+    val pipelineDiagnostic: String? = null,
     /** PASSporT origid only; raw identity tokens and URLs are never persisted. */
     val origid: String? = null,
 )
@@ -101,6 +103,8 @@ data class PendingBlockedCallLog(
     val reasonCode: com.sysadmindoc.callshield.domain.model.BlockReasonCode =
         com.sysadmindoc.callshield.domain.model.BlockReasonCode
             .fromStored(matchReason),
+    /** Privacy-safe pipeline cutoff/error summary; never contains exception text. */
+    val pipelineDiagnostic: String? = null,
     /** PASSporT origid only; raw identity tokens and URLs are never persisted. */
     val origid: String? = null,
 )

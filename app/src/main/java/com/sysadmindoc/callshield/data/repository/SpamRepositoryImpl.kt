@@ -22,6 +22,7 @@ import com.sysadmindoc.callshield.data.model.WhitelistEntry
 import com.sysadmindoc.callshield.data.model.WildcardRule
 import com.sysadmindoc.callshield.data.toSpamCheckResult
 import com.sysadmindoc.callshield.domain.model.CallerIdentity
+import com.sysadmindoc.callshield.domain.model.ScreeningDiagnostics
 import com.sysadmindoc.callshield.domain.model.SpamCheckResult
 
 @Suppress("TooManyFunctions", "ReturnCount")
@@ -130,11 +131,13 @@ class SpamRepositoryImpl(
                 senderProvenance = senderProvenance,
             )
 
-        val verdict =
-            CheckerPipeline.run(callChain, ctx)
-                ?: return SpamCheckResult(false)
+        val pipelineRun = CheckerPipeline.runWithDiagnostics(callChain, ctx)
+        val verdict = pipelineRun.result
+        if (verdict == null) {
+            return SpamCheckResult(isSpam = false, screeningDiagnostics = pipelineRun.diagnostics)
+        }
 
-        val result = verdict.toSpamCheckResult()
+        val result = verdict.toSpamCheckResult(pipelineRun.diagnostics)
         return if (smsBody == null) CategoryCallPolicy.apply(result, prefs) else result
     }
 
@@ -151,6 +154,7 @@ class SpamRepositoryImpl(
             canonicalPhone.isNotBlank() &&
                 checkerDependencies.smsContextChecker.isTrustedSender(context, canonicalPhone)
         var trustedAllowSource: String? = null
+        var sharedDiagnostics: ScreeningDiagnostics? = null
         if (canonicalPhone.isNotBlank()) {
             val numberResult =
                 isSpam(
@@ -161,6 +165,7 @@ class SpamRepositoryImpl(
                     smsContextTrusted = smsContextTrusted,
                     senderProvenance = senderProvenance,
                 )
+            sharedDiagnostics = numberResult.screeningDiagnostics
             if (numberResult.isSpam) return numberResult
             if (CheckerPriority.isSafetyFloor(numberResult.matchSource)) {
                 // A safety-floor allow must also bypass the SMS-only extension
@@ -189,11 +194,16 @@ class SpamRepositoryImpl(
                 smsContextTrusted = smsContextTrusted,
                 senderProvenance = senderProvenance,
             )
-        val verdict =
-            CheckerPipeline.run(smsExtensions, ctx)
-                ?: return SpamCheckResult(false)
+        val pipelineRun = CheckerPipeline.runWithDiagnostics(smsExtensions, ctx)
+        val verdict = pipelineRun.result
+        if (verdict == null) {
+            return SpamCheckResult(
+                isSpam = false,
+                screeningDiagnostics = ScreeningDiagnostics.merge(sharedDiagnostics, pipelineRun.diagnostics),
+            )
+        }
 
-        return verdict.toSpamCheckResult()
+        return verdict.toSpamCheckResult(ScreeningDiagnostics.merge(sharedDiagnostics, pipelineRun.diagnostics))
     }
 
     fun normalizeNumber(number: String): String = normalizePhone(number)

@@ -829,6 +829,10 @@ private fun PipelineTraceSection(trace: com.sysadmindoc.callshield.data.checker.
                             com.sysadmindoc.callshield.data.checker.PipelineTraceVerdict.PASS -> {
                                 Triple(Icons.Default.Remove, CatSubtext, stringResource(R.string.lookup_trace_pass))
                             }
+
+                            com.sysadmindoc.callshield.data.checker.PipelineTraceVerdict.ERROR -> {
+                                Triple(Icons.Default.Warning, CatRed, stringResource(R.string.lookup_trace_error))
+                            }
                         }
                     Row(
                         modifier =

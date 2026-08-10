@@ -88,6 +88,54 @@ class CheckerPipelineRunTest {
         }
 
     @Test
+    fun `diagnostic run identifies the stage and checkers skipped by the budget`() =
+        runBlocking {
+            val wouldBlock = FakeChecker(9_000, "would_block", result = BlockResult.block("would_block"))
+            val expired = ctx(elapsedMs = 10_000)
+
+            val run = CheckerPipeline.runWithDiagnostics(listOf(wouldBlock), expired)
+
+            assertNull(run.result)
+            assertTrue(run.diagnostics?.budgetExhausted == true)
+            assertEquals("would_block", run.diagnostics?.cutoffChecker)
+            assertEquals(listOf("would_block"), run.diagnostics?.unevaluatedCheckers)
+            assertFalse(wouldBlock.checked)
+        }
+
+    @Test
+    fun `slow checker produces one fail-open diagnostic before lower stages run`() =
+        runBlocking {
+            var elapsed = 0L
+            val slow =
+                object : IChecker {
+                    override val priority = 9_000
+                    override val name = "slow"
+
+                    override suspend fun check(ctx: CheckContext): BlockResult? {
+                        elapsed = 5_000L
+                        return null
+                    }
+                }
+            val lower = FakeChecker(1_000, "lower", result = BlockResult.block("lower"))
+            val contextWithClock =
+                CheckContext(
+                    appContext = context,
+                    number = "+15551230000",
+                    realtimeCall = true,
+                    prefs = emptyPreferences(),
+                    clock = { elapsed },
+                    startTimeMillis = 0L,
+                )
+
+            val run = CheckerPipeline.runWithDiagnostics(listOf(slow, lower), contextWithClock)
+
+            assertNull(run.result)
+            assertEquals(listOf("lower"), run.diagnostics?.unevaluatedCheckers)
+            assertEquals("lower", run.diagnostics?.cutoffChecker)
+            assertFalse(lower.checked)
+        }
+
+    @Test
     fun `checker exception is swallowed and the pipeline continues`() =
         runBlocking {
             val boom = FakeChecker(9_000, "boom", throwOnCheck = true)
@@ -98,6 +146,9 @@ class CheckerPipelineRunTest {
             assertEquals("next", result?.matchSource)
             assertTrue(boom.checked)
             assertTrue(next.checked)
+
+            val diagnostic = CheckerPipeline.runWithDiagnostics(listOf(boom, next), ctx()).diagnostics
+            assertEquals(listOf("boom"), diagnostic?.failedCheckers)
         }
 
     @Test

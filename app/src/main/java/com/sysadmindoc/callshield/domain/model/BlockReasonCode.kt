@@ -49,6 +49,7 @@ enum class BlockReasonCode(
     SMS_CONTENT("sms_content"),
     RCS_FILTER("rcs_filter"),
     CATEGORY_POLICY("category_policy"),
+    PIPELINE_DIAGNOSTIC("pipeline_diagnostic"),
 
     ;
 

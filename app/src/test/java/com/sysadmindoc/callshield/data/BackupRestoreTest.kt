@@ -29,10 +29,10 @@ class BackupRestoreTest {
     // ── Backup data class defaults ───────────────────────────────────────
 
     @Test
-    fun `Backup default version is 8`() {
-        // v8 preserves stable reason codes and deciding rule IDs. Older versions remain accepted.
+    fun `Backup default version is 9`() {
+        // v9 preserves privacy-safe pipeline diagnostics. Older versions remain accepted.
         val backup = Backup()
-        assertEquals(8, backup.version)
+        assertEquals(9, backup.version)
     }
 
     @Test

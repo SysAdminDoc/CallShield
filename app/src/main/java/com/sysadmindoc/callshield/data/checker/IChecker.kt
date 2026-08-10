@@ -8,6 +8,7 @@ import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.repository.SpamRepositoryImpl
 import com.sysadmindoc.callshield.domain.model.BlockReasonCode
 import com.sysadmindoc.callshield.domain.model.CallerIdentity
+import com.sysadmindoc.callshield.domain.model.ScreeningDiagnostics
 import kotlinx.coroutines.CancellationException
 
 /**
@@ -289,12 +290,34 @@ object CheckerPriority {
  * already-sorted list (see [SpamCheckers.sorted]) to keep the hot path fast.
  */
 object CheckerPipeline {
+    /**
+     * Compatibility API for callers that only need the winning verdict.
+     * Production screening uses [runWithDiagnostics] so partial evaluation is
+     * retained without changing the existing checker test contract.
+     */
     suspend fun run(
         sortedCheckers: List<IChecker>,
         ctx: CheckContext,
-    ): BlockResult? {
-        for (checker in sortedCheckers) {
-            if (ctx.timeLeftMillis() <= 0L) return null
+    ): BlockResult? = runWithDiagnostics(sortedCheckers, ctx).result
+
+    suspend fun runWithDiagnostics(
+        sortedCheckers: List<IChecker>,
+        ctx: CheckContext,
+    ): PipelineRunResult {
+        val failedCheckers = mutableListOf<String>()
+        for ((index, checker) in sortedCheckers.withIndex()) {
+            if (ctx.timeLeftMillis() <= 0L) {
+                return PipelineRunResult(
+                    result = null,
+                    diagnostics =
+                        ScreeningDiagnostics(
+                            budgetExhausted = true,
+                            cutoffChecker = checker.name,
+                            unevaluatedCheckers = sortedCheckers.drop(index).map(IChecker::name),
+                            failedCheckers = failedCheckers.toList(),
+                        ),
+                )
+            }
             val enabled =
                 try {
                     checker.isEnabled(ctx)
@@ -302,6 +325,7 @@ object CheckerPipeline {
                     throw failure
                 } catch (failure: Exception) {
                     Log.w("CheckerPipeline", "Checker ${checker.name} enablement failed", failure)
+                    failedCheckers += checker.name
                     false
                 }
             if (!enabled) continue
@@ -312,11 +336,20 @@ object CheckerPipeline {
                     throw failure
                 } catch (failure: Exception) {
                     Log.w("CheckerPipeline", "Checker ${checker.name} failed", failure)
+                    failedCheckers += checker.name
                     null
                 }
-            if (result != null) return result
+            if (result != null) {
+                return PipelineRunResult(
+                    result = result,
+                    diagnostics = ScreeningDiagnostics(failedCheckers = failedCheckers.toList()).takeIf { it.hasIssues },
+                )
+            }
         }
-        return null
+        return PipelineRunResult(
+            result = null,
+            diagnostics = ScreeningDiagnostics(failedCheckers = failedCheckers.toList()).takeIf { it.hasIssues },
+        )
     }
 
     /**
@@ -335,21 +368,28 @@ object CheckerPipeline {
                     checker.isEnabled(ctx)
                 } catch (failure: CancellationException) {
                     throw failure
-                } catch (_: Exception) {
-                    false
+                } catch (failure: Exception) {
+                    Log.w("CheckerPipeline", "Checker ${checker.name} enablement failed during trace", failure)
+                    entries.add(PipelineTraceEntry(checker.name, checker.priority, PipelineTraceVerdict.ERROR))
+                    continue
                 }
             if (!enabled) {
                 entries.add(PipelineTraceEntry(checker.name, checker.priority, PipelineTraceVerdict.DISABLED))
                 continue
             }
+            var failed = false
             val result =
                 try {
                     checker.check(ctx)
                 } catch (failure: CancellationException) {
                     throw failure
-                } catch (_: Exception) {
+                } catch (failure: Exception) {
+                    Log.w("CheckerPipeline", "Checker ${checker.name} failed during trace", failure)
+                    entries.add(PipelineTraceEntry(checker.name, checker.priority, PipelineTraceVerdict.ERROR))
+                    failed = true
                     null
                 }
+            if (failed) continue
             if (result == null) {
                 entries.add(PipelineTraceEntry(checker.name, checker.priority, PipelineTraceVerdict.PASS))
             } else if (result.shouldBlock) {
@@ -364,7 +404,12 @@ object CheckerPipeline {
     }
 }
 
-enum class PipelineTraceVerdict { BLOCK, ALLOW, PASS, DISABLED }
+data class PipelineRunResult(
+    val result: BlockResult?,
+    val diagnostics: ScreeningDiagnostics? = null,
+)
+
+enum class PipelineTraceVerdict { BLOCK, ALLOW, PASS, DISABLED, ERROR }
 
 data class PipelineTraceEntry(
     val checkerName: String,

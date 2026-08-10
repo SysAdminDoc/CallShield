@@ -27,6 +27,7 @@ import com.sysadmindoc.callshield.data.repository.SpamRepositoryImpl
 import com.sysadmindoc.callshield.data.repository.SyncRepository
 import com.sysadmindoc.callshield.domain.model.BlockReasonCode
 import com.sysadmindoc.callshield.domain.model.CallerIdentity
+import com.sysadmindoc.callshield.domain.model.ScreeningDiagnostics
 import com.sysadmindoc.callshield.domain.model.SpamCheckResult
 import com.sysadmindoc.callshield.domain.model.SyncResult
 import kotlinx.coroutines.CoroutineScope
@@ -695,6 +696,7 @@ class SpamRepository(
         timestamp: Long = System.currentTimeMillis(),
         logKey: String? = null,
         ruleId: Long? = null,
+        pipelineDiagnostic: String? = null,
         origid: String? = null,
     ) = blocklistRepository.logBlockedCall(
         number = number,
@@ -705,6 +707,7 @@ class SpamRepository(
         timestamp = timestamp,
         logKey = logKey,
         ruleId = ruleId,
+        pipelineDiagnostic = pipelineDiagnostic,
         origid = origid,
     )
 
@@ -718,6 +721,7 @@ class SpamRepository(
         confidence: Int = 100,
         timestamp: Long = System.currentTimeMillis(),
         ruleId: Long? = null,
+        pipelineDiagnostic: String? = null,
     ) = blocklistRepository.logScreeningExemption(
         number = number,
         isCall = isCall,
@@ -727,6 +731,21 @@ class SpamRepository(
         confidence = confidence,
         timestamp = timestamp,
         ruleId = ruleId,
+        pipelineDiagnostic = pipelineDiagnostic,
+    )
+
+    suspend fun logScreeningDiagnostic(
+        number: String,
+        isCall: Boolean = true,
+        smsBody: String? = null,
+        pipelineDiagnostic: String,
+        timestamp: Long = System.currentTimeMillis(),
+    ) = blocklistRepository.logScreeningDiagnostic(
+        number = number,
+        isCall = isCall,
+        smsBody = smsBody,
+        pipelineDiagnostic = pipelineDiagnostic,
+        timestamp = timestamp,
     )
 
     @Suppress("LongParameterList")
@@ -739,6 +758,7 @@ class SpamRepository(
         confidence: Int = 100,
         timestamp: Long = System.currentTimeMillis(),
         ruleId: Long? = null,
+        pipelineDiagnostic: String? = null,
         origid: String? = null,
     ) = blocklistRepository.enqueuePendingBlockedCallLog(
         idempotencyKey = idempotencyKey,
@@ -749,6 +769,7 @@ class SpamRepository(
         confidence = confidence,
         timestamp = timestamp,
         ruleId = ruleId,
+        pipelineDiagnostic = pipelineDiagnostic,
         origid = origid,
     )
 
@@ -929,7 +950,9 @@ internal fun escapeLikeQuery(query: String): String = query.replace("\\", "\\\\"
  * of the app (UI, service, notification code). Keeps the checker
  * internals decoupled from legacy call sites.
  */
-internal fun BlockResult.toSpamCheckResult(): SpamCheckResult =
+internal fun BlockResult.toSpamCheckResult(): SpamCheckResult = toSpamCheckResult(null)
+
+internal fun BlockResult.toSpamCheckResult(diagnostics: ScreeningDiagnostics?): SpamCheckResult =
     SpamCheckResult(
         isSpam = shouldBlock,
         matchSource = matchSource,
@@ -938,6 +961,7 @@ internal fun BlockResult.toSpamCheckResult(): SpamCheckResult =
         confidence = confidence,
         reasonCode = reasonCode,
         ruleId = ruleId,
+        screeningDiagnostics = diagnostics,
     )
 
 internal fun sanitizeDatabaseNumbers(

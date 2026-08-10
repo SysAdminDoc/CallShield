@@ -116,6 +116,7 @@ fun reasonCodeLabelRes(reasonCode: BlockReasonCode): Int =
         BlockReasonCode.USER_BLOCKLIST, BlockReasonCode.TEMPORARY_BLOCK -> R.string.stats_reason_manual_block
         BlockReasonCode.CATEGORY_POLICY -> R.string.stats_reason_category_policy
         BlockReasonCode.HIDDEN_NUMBER -> R.string.stats_reason_hidden_number
+        BlockReasonCode.PIPELINE_DIAGNOSTIC -> R.string.stats_reason_pipeline_diagnostic
         BlockReasonCode.UNKNOWN -> R.string.stats_reason_unknown
         else -> pipelineCheckerLabelRes(reasonCode.wireValue)
     }

@@ -11,7 +11,7 @@ import com.sysadmindoc.callshield.data.PhoneIdentityCanonicalizer
 import com.sysadmindoc.callshield.data.model.*
 
 /** Single source of truth for the Room database version. */
-const val DB_VERSION = 17
+const val DB_VERSION = 18
 private const val DB_VERSION_9 = 9
 private const val DB_VERSION_10 = 10
 private const val DB_VERSION_11 = 11
@@ -21,6 +21,7 @@ private const val DB_VERSION_14 = 14
 private const val DB_VERSION_15 = 15
 private const val DB_VERSION_16 = 16
 private const val DB_VERSION_17 = 17
+private const val DB_VERSION_18 = 18
 
 /**
  * v5 → v6: Add `isEmergency INTEGER NOT NULL DEFAULT 0` to the whitelist
@@ -266,6 +267,15 @@ val MIGRATION_16_17 =
         }
     }
 
+/** v17 -> v18: retain privacy-safe checker cutoff/error diagnostics. */
+val MIGRATION_17_18 =
+    object : Migration(DB_VERSION_17, DB_VERSION_18) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE call_log ADD COLUMN pipelineDiagnostic TEXT")
+            db.execSQL("ALTER TABLE pending_blocked_call_logs ADD COLUMN pipelineDiagnostic TEXT")
+        }
+    }
+
 private fun reasonCodeSql(column: String): String =
     """
     CASE
@@ -294,7 +304,7 @@ private fun reasonCodeSql(column: String): String =
             'repeated_urgent', 'caller_name_trust', 'caller_name', 'region_block',
             'campaign_recorder', 'time_block', 'frequency', 'push_alert',
             'sms_context', 'keyword', 'sms_content', 'rcs_filter', 'hot_list',
-            'spam_domain', 'category_policy', 'unknown'
+            'spam_domain', 'category_policy', 'pipeline_diagnostic', 'unknown'
         ) THEN lower(trim($column))
         ELSE 'unknown'
     END
@@ -354,6 +364,7 @@ abstract class AppDatabase : RoomDatabase() {
                         MIGRATION_14_15,
                         MIGRATION_15_16,
                         MIGRATION_16_17,
+                        MIGRATION_17_18,
                     ).build()
                     .also { instance = it }
             }

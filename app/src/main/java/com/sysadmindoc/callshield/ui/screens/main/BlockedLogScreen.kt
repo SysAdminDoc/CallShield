@@ -669,6 +669,13 @@ fun BlockedCallItem(
                             maxLines = 2,
                         )
                     }
+                    call.pipelineDiagnostic?.takeIf(String::isNotBlank)?.let { diagnostic ->
+                        Text(
+                            stringResource(R.string.blocked_log_pipeline_diagnostic, diagnostic),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = CatRed,
+                        )
+                    }
                 }
                 IconButton(
                     onClick = { expanded = !expanded },

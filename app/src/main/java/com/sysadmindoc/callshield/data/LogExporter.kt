@@ -98,7 +98,7 @@ object LogExporter {
     ): String {
         val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US)
         val sb = StringBuilder()
-        sb.appendLine("Number,Date,Type,IsCall,ReasonCode,RuleId,Confidence,SMSBody")
+        sb.appendLine("Number,Date,Type,IsCall,ReasonCode,RuleId,Confidence,PipelineDiagnostic,SMSBody")
 
         for (call in calls) {
             val date = dateFormat.format(Date(call.timestamp))
@@ -117,6 +117,7 @@ object LogExporter {
                     csvEscape(call.reasonCode.wireValue),
                     call.ruleId?.toString().orEmpty(),
                     call.confidence.toString(),
+                    csvEscape(call.pipelineDiagnostic.orEmpty()),
                     csvEscape(body),
                 ).joinToString(","),
             )

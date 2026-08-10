@@ -89,6 +89,8 @@ All notable changes to CallShield will be documented in this file.
   time, calling number, and reason; raw SMS and allowed activity are excluded.
 - Expanded screening fault injection for locked startup, cancellation, contact fast paths,
   slow checkers, direct boot, and concurrent fallback responses; every path remains fail-open.
+- Checker exceptions and deadline cutoffs now remain visible in Protection Test, lookup/log
+  details, and CSV/backup exports without exposing exception text or delaying the response gate.
 - RTT calls receive an immediate explicit allow response so Telecom retains the active assistive
   voice/text session without screening or caller-ID overlay interference.
 
