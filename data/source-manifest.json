@@ -47,7 +47,7 @@
       "license": "CC BY-NC-SA",
       "attribution": "Saracroche French telemarketing range list",
       "cadence": "daily",
-      "parser_version": "saracroche-v1",
+      "parser_version": "saracroche-v2",
       "evidence_type": "curated_range",
       "confidence_tier": "curated",
       "redistributable": true,
