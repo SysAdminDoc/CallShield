@@ -98,6 +98,8 @@
             android:name=".service.SmsReceiver"
             android:permission="android.permission.BROADCAST_SMS"
             android:exported="true">
+            <!-- Kept for pre-Android 16 devices only; Android 16 scopes ordering to
+                 receivers in the declaring process, so CallShield never trusts this. -->
             <intent-filter android:priority="999">
                 <action android:name="android.provider.Telephony.SMS_RECEIVED" />
             </intent-filter>

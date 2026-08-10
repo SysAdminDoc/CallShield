@@ -35,6 +35,7 @@ import com.sysadmindoc.callshield.data.SpamMLScorer
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.permissions.CallShieldPermissions
 import com.sysadmindoc.callshield.permissions.PermissionCapabilityPriority
+import com.sysadmindoc.callshield.permissions.PermissionCapabilityStatus
 import com.sysadmindoc.callshield.ui.theme.*
 import com.sysadmindoc.callshield.util.startActivitySafely
 import kotlinx.coroutines.Dispatchers
@@ -521,7 +522,7 @@ private suspend fun runTests(context: Context): List<TestResult> =
                     name = context.getString(state.contract.nameRes),
                     passed = state.passed,
                     detail =
-                        if (state.passed) {
+                        if (state.status == PermissionCapabilityStatus.Advisory || state.passed) {
                             context.getString(state.detailRes)
                         } else {
                             context.getString(state.contract.degradedModeRes)

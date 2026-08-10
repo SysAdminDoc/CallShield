@@ -18,7 +18,7 @@
     <string name="dashboard_calls_and_texts_protected">Calls and texts are actively protected.</string>
     <string name="dashboard_calls_protected">Calls are actively protected.</string>
     <string name="dashboard_texts_protected">Texts are actively protected.</string>
-    <string name="dashboard_turn_on_protection_hint">Turn on call or SMS blocking to start screening.</string>
+    <string name="dashboard_turn_on_protection_hint">Turn on call or SMS protection to start screening.</string>
     <string name="dashboard_finish_permissions_hint">Finish required permissions to activate protection.</string>
     <string name="dashboard_finish_setup_hint">Finish setup to activate the spam shield.</string>
     <string name="dashboard_call_screener_missing_hint">Enable the call screener so spam calls can be blocked.</string>
@@ -70,7 +70,7 @@
     <string name="dashboard_time_days_ago">%dd ago</string>
     <string name="dashboard_quick_controls">Quick Controls</string>
     <string name="dashboard_block_calls">Block Calls</string>
-    <string name="dashboard_block_sms">Block SMS</string>
+    <string name="dashboard_block_sms">Analyze spam SMS</string>
     <string name="dashboard_quick_profiles">Quick Profiles</string>
     <string name="dashboard_profile_work">Work</string>
     <string name="dashboard_profile_personal">Personal</string>
@@ -322,10 +322,10 @@
     <string name="dialog_whitelist">Trust</string>
 
     <!-- Add Keyword Dialog -->
-    <string name="dialog_block_sms_keyword">Block SMS keyword</string>
+    <string name="dialog_block_sms_keyword">Flag SMS keyword</string>
     <string name="dialog_keyword">Keyword</string>
     <string name="dialog_keyword_placeholder">e.g., free gift card</string>
-    <string name="dialog_keyword_note">Any SMS containing this keyword will be blocked.</string>
+    <string name="dialog_keyword_note">SMS containing this keyword will be flagged in the CallShield log.</string>
 
     <!-- Lookup Screen -->
     <string name="lookup_title">Number lookup</string>
@@ -504,8 +504,8 @@
     <string name="settings_category_actions_precedence">Emergency contacts and manually trusted numbers always ring. Explicit personal block rules always block.</string>
     <string name="settings_block_spam_calls">Block spam calls</string>
     <string name="settings_block_spam_calls_desc">Reject calls from known spam numbers</string>
-    <string name="settings_block_spam_sms">Block spam SMS</string>
-    <string name="settings_block_spam_sms_desc">Filter texts from spam numbers and content</string>
+    <string name="settings_block_spam_sms">Analyze spam SMS</string>
+    <string name="settings_block_spam_sms_desc">Analyze and log suspected spam texts; delivery stays with your SMS app</string>
     <string name="settings_block_unknown">Block unknown numbers</string>
     <string name="settings_block_unknown_desc">Reject calls with hidden/no caller ID</string>
     <string name="settings_safety">Safety</string>
@@ -864,6 +864,7 @@
     <string name="permission_contract_degraded_contacts">Contact trust and local caller trust cannot protect known callers without contacts access.</string>
     <string name="permission_contract_degraded_read_sms">SMS inbox scans and blocked-message review cannot read existing texts without SMS inbox access.</string>
     <string name="permission_contract_degraded_receive_sms">Incoming SMS spam filtering cannot inspect new texts until incoming-SMS access is granted.</string>
+    <string name="permission_contract_advisory_receive_sms">Android 16+ makes incoming-SMS interception advisory; the default SMS app may receive messages first and controls inbox delivery.</string>
     <string name="permission_contract_degraded_call_screening">Live call blocking is unavailable until CallShield is the active call screening app.</string>
     <string name="permission_contract_call_screening_unsupported">This Android build does not expose the default call screening role.</string>
     <string name="permission_contract_fix_call_screening_unsupported">Use a phone/OEM build that supports Android call screening, or keep SMS/RCS protection enabled.</string>
@@ -883,7 +884,7 @@
     <string name="onboarding_welcome_title">Welcome to CallShield</string>
     <string name="onboarding_welcome_subtitle">Private call and text protection, entirely on-device.</string>
     <string name="onboarding_permissions_title">Grant Permissions</string>
-    <string name="onboarding_permissions_subtitle">CallShield needs access to your call log, contacts, and SMS to detect and block spam.</string>
+    <string name="onboarding_permissions_subtitle">CallShield needs access to your call log, contacts, and SMS to detect spam. Your default SMS app controls delivery.</string>
     <string name="onboarding_screener_title">Set as Call Screener</string>
     <string name="onboarding_screener_subtitle">CallShield needs to be your default call screening app to block spam calls.</string>
     <string name="onboarding_sync_title">Stay Updated</string>
@@ -907,7 +908,7 @@
     <string name="onboarding_feature_updates_body">Protected immediately; updates improve coverage.</string>
     <string name="onboarding_permissions_required">Required</string>
     <string name="onboarding_permissions_optional">Optional</string>
-    <string name="onboarding_core_permissions_detail">Needed for scanning calls, checking contacts, and filtering SMS spam.</string>
+    <string name="onboarding_core_permissions_detail">Needed for scanning calls, checking contacts, and analyzing SMS spam. Your SMS app remains responsible for delivery.</string>
     <string name="onboarding_notification_detail">Lets CallShield show alert notifications and monitor RCS spam when enabled.</string>
     <string name="onboarding_overlay_detail">Shows a floating caller ID card on top of incoming calls.</string>
     <string name="onboarding_screener_ready_detail">Android will route incoming calls through CallShield before they ring.</string>

@@ -105,6 +105,24 @@ class CallShieldPermissionsTest {
     }
 
     @Test
+    fun `android 16 sms receive capability is explicitly advisory`() {
+        val state =
+            CallShieldPermissions
+                .evaluatePermissionContract(
+                    PermissionReadinessSnapshot(
+                        grantedPermissions = setOf(Manifest.permission.RECEIVE_SMS),
+                        callScreeningRoleAvailable = true,
+                        smsInterceptionAdvisory = true,
+                    ),
+                ).first { state -> state.contract.id == PermissionCapabilityId.ReceiveSms }
+
+        assertEquals(PermissionCapabilityStatus.Advisory, state.status)
+        assertFalse(state.passed)
+        assertEquals(R.string.permission_contract_advisory_receive_sms, state.detailRes)
+        assertEquals(null, state.recoveryHintRes)
+    }
+
+    @Test
     fun `contacts mode degraded when a contacts-dependent mode is on but READ_CONTACTS denied`() {
         // Contact-whitelist on, permission denied → degraded.
         assertTrue(

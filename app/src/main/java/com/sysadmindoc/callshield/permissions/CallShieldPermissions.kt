@@ -36,6 +36,7 @@ enum class PermissionCapabilityPriority {
 
 enum class PermissionCapabilityStatus {
     Ready,
+    Advisory,
     Degraded,
     Unsupported,
 }
@@ -52,6 +53,7 @@ data class PermissionCapabilityContract(
     val manifestPermission: String? = null,
     val readyWhenRuntimePermissionNotRequired: Boolean = false,
     val unsupportedDetailRes: Int = degradedDetailRes,
+    val advisoryDetailRes: Int = grantedDetailRes,
 )
 
 data class PermissionReadinessSnapshot(
@@ -61,6 +63,7 @@ data class PermissionReadinessSnapshot(
     val overlayGranted: Boolean = false,
     val notificationAccessGranted: Boolean = false,
     val postNotificationsRuntimeRequired: Boolean = true,
+    val smsInterceptionAdvisory: Boolean = false,
 )
 
 data class PermissionCapabilityState(
@@ -73,6 +76,9 @@ data class PermissionCapabilityState(
 }
 
 object CallShieldPermissions {
+    /** Android 16 limits ordered-broadcast priority to receivers in one process. */
+    const val SMS_BROADCAST_ORDERING_ADVISORY_API = 36
+
     val callProtectionPermissions =
         listOf(
             Manifest.permission.READ_CALL_LOG,
@@ -146,6 +152,7 @@ object CallShieldPermissions {
                 recoveryHintRes = R.string.protection_test_fix_permissions,
                 priority = PermissionCapabilityPriority.Required,
                 manifestPermission = Manifest.permission.RECEIVE_SMS,
+                advisoryDetailRes = R.string.permission_contract_advisory_receive_sms,
             ),
             PermissionCapabilityContract(
                 id = PermissionCapabilityId.CallScreeningRole,
@@ -306,6 +313,7 @@ object CallShieldPermissions {
                 overlayGranted = canDrawOverlays(context),
                 notificationAccessGranted = hasNotificationListenerAccess(context),
                 postNotificationsRuntimeRequired = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU,
+                smsInterceptionAdvisory = Build.VERSION.SDK_INT >= SMS_BROADCAST_ORDERING_ADVISORY_API,
             ),
         )
 
@@ -314,6 +322,16 @@ object CallShieldPermissions {
             val ready = isCapabilityReady(contract, snapshot)
 
             when {
+                ready &&
+                    contract.id == PermissionCapabilityId.ReceiveSms &&
+                    snapshot.smsInterceptionAdvisory -> {
+                    PermissionCapabilityState(
+                        contract = contract,
+                        status = PermissionCapabilityStatus.Advisory,
+                        detailRes = contract.advisoryDetailRes,
+                    )
+                }
+
                 ready -> {
                     PermissionCapabilityState(
                         contract = contract,
