@@ -10,7 +10,7 @@ class PhoneIdentityCanonicalizer internal constructor(
     regionIso: String?,
     private val formatToE164: (String, String) -> String?,
 ) {
-    private val regionIso = normalizeRegion(regionIso)
+    internal val homeRegionIso = normalizeRegion(regionIso)
 
     constructor(regionIso: String?) : this(regionIso, PhoneNumberUtils::formatNumberToE164)
 
@@ -21,10 +21,10 @@ class PhoneIdentityCanonicalizer internal constructor(
             normalized.isNotBlank() &&
                 !normalized.startsWith("+") &&
                 digitCount > MAX_SHORT_CODE_DIGITS &&
-                regionIso != null
+                homeRegionIso != null
         val formatted =
             if (shouldFormat) {
-                runCatching { formatToE164(normalized, requireNotNull(regionIso)) }.getOrNull()
+                runCatching { formatToE164(normalized, requireNotNull(homeRegionIso)) }.getOrNull()
             } else {
                 null
             }

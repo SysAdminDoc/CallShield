@@ -3,6 +3,7 @@ package com.sysadmindoc.callshield.data.checker
 import android.content.Context
 import android.util.Log
 import androidx.datastore.preferences.core.Preferences
+import com.sysadmindoc.callshield.data.SenderProvenance
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.repository.SpamRepositoryImpl
 import com.sysadmindoc.callshield.domain.model.BlockReasonCode
@@ -129,6 +130,8 @@ data class CheckContext(
      * relationship so the later, globally ordered SMS trust rule can decide.
      */
     val smsContextTrusted: Boolean = false,
+    /** Region-scoped sender-ID/numbering evidence for SMS only. */
+    val senderProvenance: SenderProvenance? = null,
 ) {
     /**
      * Milliseconds remaining before the 5-second Android CallScreeningService

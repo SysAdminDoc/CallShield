@@ -3,6 +3,8 @@ package com.sysadmindoc.callshield.data.repository
 import android.content.Context
 import androidx.datastore.preferences.core.Preferences
 import com.sysadmindoc.callshield.data.CategoryCallPolicy
+import com.sysadmindoc.callshield.data.SenderProvenance
+import com.sysadmindoc.callshield.data.SenderProvenanceResolver
 import com.sysadmindoc.callshield.data.checker.CheckContext
 import com.sysadmindoc.callshield.data.checker.CheckerDependencies
 import com.sysadmindoc.callshield.data.checker.CheckerPipeline
@@ -30,6 +32,8 @@ class SpamRepositoryImpl(
     private val checkerDependencies: CheckerDependencies = CheckerDependencies(),
     private val normalizePhone: (String) -> String,
     private val normalizeSenderIdentity: (String) -> String,
+    private val senderProvenanceResolver: SenderProvenanceResolver = SenderProvenanceResolver(),
+    private val senderRegionIso: String? = null,
 ) {
     // isSpam() is the critical real-time path. Loading all prefixes,
     // wildcard rules, and keyword rules from Room on every call adds
@@ -106,6 +110,7 @@ class SpamRepositoryImpl(
         prefsSnapshot: Preferences? = null,
         callerIdentity: CallerIdentity? = null,
         smsContextTrusted: Boolean = false,
+        senderProvenance: SenderProvenance? = null,
     ): SpamCheckResult {
         val normalized = normalizePhone(number)
         if (normalized.isBlank()) return SpamCheckResult(false)
@@ -122,6 +127,7 @@ class SpamRepositoryImpl(
                 callerName = callerIdentity?.presentedName,
                 callerIdentity = callerIdentity,
                 smsContextTrusted = smsContextTrusted,
+                senderProvenance = senderProvenance,
             )
 
         val verdict =
@@ -139,6 +145,7 @@ class SpamRepositoryImpl(
         prefsSnapshot: Preferences? = null,
     ): SpamCheckResult {
         val prefs = prefsSnapshot ?: settingsRepository.readPrefsSnapshot()
+        val senderProvenance = senderProvenanceResolver.resolve(number, senderRegionIso)
         val canonicalPhone = normalizePhone(number)
         val smsContextTrusted =
             canonicalPhone.isNotBlank() &&
@@ -152,6 +159,7 @@ class SpamRepositoryImpl(
                     realtimeCall = realtimeCall,
                     prefsSnapshot = prefs,
                     smsContextTrusted = smsContextTrusted,
+                    senderProvenance = senderProvenance,
                 )
             if (numberResult.isSpam) return numberResult
             if (CheckerPriority.isSafetyFloor(numberResult.matchSource)) {
@@ -179,6 +187,7 @@ class SpamRepositoryImpl(
                 prefs = prefs,
                 trustedAllowSource = trustedAllowSource,
                 smsContextTrusted = smsContextTrusted,
+                senderProvenance = senderProvenance,
             )
         val verdict =
             CheckerPipeline.run(smsExtensions, ctx)

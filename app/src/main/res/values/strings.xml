@@ -1419,6 +1419,8 @@
     <string name="block_reason_caller_name">Blocked — caller name “%1$s” matched your name rule</string>
     <string name="block_reason_out_of_region">Blocked — %1$s is outside allowed regions</string>
     <string name="block_reason_out_of_region_unknown">Blocked — international or unknown region is outside allowed regions</string>
+    <string name="block_reason_sender_provenance_unverified">Sender ID is not registered in the %1$s sender registry</string>
+    <string name="block_reason_sender_provenance_unassigned">Number prefix %1$s is unassigned in the %2$s numbering plan</string>
     <string name="model_health_title">ML model health</string>
     <string name="model_health_gbt_active">Gradient-boosted model active</string>
     <string name="model_health_gbt_active_detail">The highest-quality on-device model loaded successfully.</string>

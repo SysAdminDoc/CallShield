@@ -95,6 +95,7 @@ class SpamRepository(
             checkerDependencies = checkerDependencies,
             normalizePhone = phoneIdentityCanonicalizer::canonicalizePhone,
             normalizeSenderIdentity = phoneIdentityCanonicalizer::canonicalizeIdentity,
+            senderRegionIso = phoneIdentityCanonicalizer.homeRegionIso,
         )
     private val syncRepository =
         SyncRepository(
