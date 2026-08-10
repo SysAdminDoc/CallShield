@@ -292,6 +292,18 @@ class CallShieldScreeningServiceRobolectricTest {
     }
 
     @Test
+    fun `onScreenCall applies the unknown-caller policy when no number is present`() {
+        runBlocking { repository.setBlockUnknown(true) }
+
+        service.onScreenCall(callDetails(""))
+
+        val response = awaitResponse()
+        assertTrue(response.disallowCall)
+        assertTrue(response.rejectCall)
+        assertFalse(response.silenceCall)
+    }
+
+    @Test
     fun `onScreenCall ignores outgoing calls without responding`() {
         val number = "+12125550184"
         runBlocking { repository.blockNumber(number, type = "test") }

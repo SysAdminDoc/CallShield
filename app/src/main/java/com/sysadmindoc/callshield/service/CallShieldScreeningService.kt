@@ -22,8 +22,10 @@ import com.sysadmindoc.callshield.domain.usecase.CheckSpamUseCase
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import java.io.IOException
 import javax.inject.Inject
@@ -59,9 +61,11 @@ class CallShieldScreeningService : CallScreeningService() {
         }
 
     override fun onScreenCall(callDetails: Call.Details) {
+        val responseGate =
+            ScreeningResponseGate<CallResponse> { response -> respondToCall(callDetails, response) }
         val userManager = getSystemService(UserManager::class.java)
         if (userManager?.isUserUnlocked == false) {
-            handleDirectBootCall(callDetails)
+            handleDirectBootCall(callDetails, responseGate)
             return
         }
 
@@ -84,7 +88,7 @@ class CallShieldScreeningService : CallScreeningService() {
                 // calls without a direction. Fail open with an explicit allow —
                 // returning without responding would make Android hold the
                 // screening slot until its timeout and delay ringing.
-                respondAllow(callDetails)
+                respondAllow(responseGate)
                 return
             }
         }
@@ -101,8 +105,9 @@ class CallShieldScreeningService : CallScreeningService() {
             // creation, Room startup, and an individual DAO call can still
             // stall before a checker gets a chance to observe that budget.
             // Keep a 500 ms response buffer for Telecom's five-second window.
-            withTimeoutOrNull(SCREENING_TIMEOUT_MS) {
-                try {
+            try {
+                withTimeoutOrNull(SCREENING_TIMEOUT_MS) {
+                    try {
                 // Resolve injected providers inside the fail-open boundary. Room,
                 // DataStore, or a Hilt component can fail during lazy creation;
                 // resolving them before this try block would crash the coroutine
@@ -115,7 +120,7 @@ class CallShieldScreeningService : CallScreeningService() {
                 val prefs = repository.readPrefsSnapshot()
 
                 if (!(prefs[SpamRepository.KEY_BLOCK_CALLS] ?: true)) {
-                    respondAllow(callDetails)
+                    respondAllow(responseGate)
                     return@withTimeoutOrNull
                 }
 
@@ -124,9 +129,9 @@ class CallShieldScreeningService : CallScreeningService() {
 
                 if (number.isEmpty()) {
                     if (prefs[SpamRepository.KEY_BLOCK_UNKNOWN] ?: false) {
-                        respondBlock(callDetails, number, "hidden_number", prefs = prefs)
+                        respondBlock(callDetails, responseGate, number, "hidden_number", prefs = prefs)
                     } else {
-                        respondAllow(callDetails)
+                        respondAllow(responseGate)
                     }
                     return@withTimeoutOrNull
                 }
@@ -143,7 +148,7 @@ class CallShieldScreeningService : CallScreeningService() {
                             ?.let(ContactGroupCatalog::preserveScope),
                     )
                 ) {
-                    respondAllow(callDetails)
+                    respondAllow(responseGate)
                     return@withTimeoutOrNull
                 }
 
@@ -174,10 +179,11 @@ class CallShieldScreeningService : CallScreeningService() {
                         CategoryCallPolicy.parseMatchSource(result.matchSource)?.action
                             ?: CategoryCallAction.INHERIT
                     if (categoryAction == CategoryCallAction.ALLOW) {
-                        respondAllow(callDetails)
+                        respondAllow(responseGate)
                     } else {
                         respondBlock(
                             callDetails = callDetails,
+                            responseGate = responseGate,
                             number = number,
                             reason = result.matchSource,
                             confidence = result.confidence,
@@ -201,7 +207,7 @@ class CallShieldScreeningService : CallScreeningService() {
                         } catch (_: Exception) {
                         }
                     }
-                    respondAllow(callDetails)
+                    respondAllow(responseGate)
 
                     if (repeatedUrgentAllow) {
                         NotificationHelper.notifyRepeatedUrgentAllowed(appContext, number)
@@ -230,30 +236,38 @@ class CallShieldScreeningService : CallScreeningService() {
                         }
                     }
                 }
-                } catch (failure: CancellationException) {
-                    throw failure
-                } catch (e: Exception) {
-                // Guarantee a response even on error — fail-open (allow call through).
-                try {
-                    respondAllow(callDetails)
-                } catch (_: Exception) {
-                }
-                // A corrupt on-disk database would otherwise fail every DAO
-                // call and leave the screener permanently fail-open with no
-                // signal. Detect that specific case, rebuild a clean DB, and
-                // re-sync so protection self-heals on the next call.
-                if (AppDatabase.isCorruptionException(e)) {
-                    try {
-                        if (AppDatabase.recoverFromCorruption(appContext)) {
-                            Log.w(TAG, "Recovered from corrupt database; re-syncing spam data")
-                            SyncWorker.syncNow(appContext)
-                            HotListSyncWorker.schedule(appContext)
+                    } catch (failure: CancellationException) {
+                        throw failure
+                    } catch (e: Exception) {
+                        // Guarantee a response even on error — fail-open (allow call through).
+                        try {
+                            respondAllow(responseGate)
+                        } catch (_: Exception) {
                         }
-                    } catch (_: Exception) {
+                        // A corrupt on-disk database would otherwise fail every DAO
+                        // call and leave the screener permanently fail-open with no
+                        // signal. Detect that specific case, rebuild a clean DB, and
+                        // re-sync so protection self-heals on the next call.
+                        if (AppDatabase.isCorruptionException(e)) {
+                            try {
+                                if (AppDatabase.recoverFromCorruption(appContext)) {
+                                    Log.w(TAG, "Recovered from corrupt database; re-syncing spam data")
+                                    SyncWorker.syncNow(appContext)
+                                    HotListSyncWorker.schedule(appContext)
+                                }
+                            } catch (_: Exception) {
+                            }
+                        }
                     }
                 }
+                    ?: respondAllow(responseGate)
+            } catch (failure: CancellationException) {
+                // Even a service-scope cancellation must leave Telecom with an
+                // explicit response; otherwise it waits until its hard timeout.
+                withContext(NonCancellable) {
+                    respondAllow(responseGate)
                 }
-            } ?: respondAllow(callDetails)
+            }
         }
     }
 
@@ -280,6 +294,7 @@ class CallShieldScreeningService : CallScreeningService() {
 
     private suspend fun respondBlock(
         callDetails: Call.Details,
+        responseGate: ScreeningResponseGate<CallResponse>,
         number: String,
         reason: String,
         confidence: Int = 100,
@@ -308,7 +323,7 @@ class CallShieldScreeningService : CallScreeningService() {
             CategoryCallPolicy.parseMatchSource(reason)?.action
                 ?: CategoryCallAction.INHERIT
         val response = buildBlockResponse(prefs, confidence, categoryAction)
-        respondToCall(callDetails, response)
+        responseGate.respond(response)
 
         applicationScope.launch {
             try {
@@ -382,7 +397,10 @@ class CallShieldScreeningService : CallScreeningService() {
         }
     }
 
-    private fun handleDirectBootCall(callDetails: Call.Details) {
+    private fun handleDirectBootCall(
+        callDetails: Call.Details,
+        responseGate: ScreeningResponseGate<CallResponse>,
+    ) {
         when (callDetails.callDirection) {
             Call.Details.DIRECTION_OUTGOING -> {
                 return
@@ -393,14 +411,14 @@ class CallShieldScreeningService : CallScreeningService() {
             }
 
             else -> {
-                respondAllow(callDetails)
+                respondAllow(responseGate)
                 return
             }
         }
         try {
             val snapshot = DirectBootScreeningStore.read(applicationContext)
             if (!snapshot.ready || !snapshot.blockCallsEnabled) {
-                respondAllow(callDetails)
+                respondAllow(responseGate)
                 return
             }
 
@@ -415,7 +433,7 @@ class CallShieldScreeningService : CallScreeningService() {
                     snapshot.isBlocked(number)
                 }
             if (!shouldBlock) {
-                respondAllow(callDetails)
+                respondAllow(responseGate)
                 return
             }
 
@@ -436,10 +454,10 @@ class CallShieldScreeningService : CallScreeningService() {
                         .setSkipNotification(false)
                         .build()
                 }
-            respondToCall(callDetails, response)
+            responseGate.respond(response)
         } catch (exception: RuntimeException) {
             Log.w(TAG, "Direct-boot screening failed open", exception)
-            respondAllow(callDetails)
+            respondAllow(responseGate)
         }
     }
 
@@ -545,13 +563,13 @@ class CallShieldScreeningService : CallScreeningService() {
         return "call:$callTimestamp:$caller:$reason:$confidence"
     }
 
-    private fun respondAllow(callDetails: Call.Details) {
+    private fun respondAllow(responseGate: ScreeningResponseGate<CallResponse>) {
         val response =
             CallResponse
                 .Builder()
                 .setDisallowCall(false)
                 .setRejectCall(false)
                 .build()
-        respondToCall(callDetails, response)
+        responseGate.respond(response)
     }
 }
