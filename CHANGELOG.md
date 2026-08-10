@@ -9,6 +9,8 @@ All notable changes to CallShield will be documented in this file.
 - Refined the shared Compose visual system around a compact header, flatter content groups,
   calmer dividers, text-led status treatments, and denser page spacing across Home, Activity,
   Lookup, Rules, and More.
+- Dashboard now surfaces background-execution and battery-optimization risk with safe recovery
+  links, an optional MIUI autostart route, and a dismissible warning that refreshes on resume.
 
 ### Data pipeline
 

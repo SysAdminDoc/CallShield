@@ -102,6 +102,8 @@ import com.sysadmindoc.callshield.data.BlockingProfiles
 import com.sysadmindoc.callshield.data.PhoneFormatter
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup
+import com.sysadmindoc.callshield.permissions.BackgroundExecutionRisk
+import com.sysadmindoc.callshield.permissions.BackgroundExecutionStatus
 import com.sysadmindoc.callshield.permissions.CallShieldPermissions
 import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.SyncState
@@ -162,6 +164,18 @@ fun DashboardScreen(viewModel: MainViewModel) {
             context.getSystemService(Context.ROLE_SERVICE) as? RoleManager
         }
     var permissionRefreshTick by remember { mutableIntStateOf(0) }
+    val backgroundExecutionRisk =
+        remember(context, permissionRefreshTick) {
+            BackgroundExecutionStatus.evaluate(context)
+        }
+    var backgroundWarningDismissed by rememberSaveable { mutableStateOf(false) }
+
+    LaunchedEffect(backgroundExecutionRisk) {
+        if (backgroundExecutionRisk == BackgroundExecutionRisk.Ok) {
+            backgroundWarningDismissed = false
+        }
+    }
+
     // Pending "Block area code" confirmation: (areaCode, locationLabel).
     // Saved as a two-element list so the confirm dialog survives rotation
     // (Pair itself has no Bundle saver).
@@ -392,6 +406,22 @@ fun DashboardScreen(viewModel: MainViewModel) {
                 viewModel.sync()
             },
         )
+
+        if (backgroundExecutionRisk != BackgroundExecutionRisk.Ok && !backgroundWarningDismissed) {
+            BackgroundExecutionWarning(
+                risk = backgroundExecutionRisk,
+                showMiuiAction = remember { BackgroundExecutionStatus.isLikelyMiui() },
+                onOpenBatterySettings = {
+                    context.startActivitySafely(
+                        BackgroundExecutionStatus.batteryExemptionSettingsIntent(context),
+                    )
+                },
+                onOpenMiuiSettings = {
+                    context.startActivitySafely(BackgroundExecutionStatus.miuiAutostartIntent())
+                },
+                onDismiss = { backgroundWarningDismissed = true },
+            )
+        }
 
         DashboardSetupChecklistCard(
             dashboardStatus = dashboardStatus,
@@ -923,6 +953,92 @@ fun DashboardScreen(viewModel: MainViewModel) {
                 }
             },
         )
+    }
+}
+
+@Composable
+internal fun BackgroundExecutionWarning(
+    risk: BackgroundExecutionRisk,
+    showMiuiAction: Boolean,
+    onOpenBatterySettings: () -> Unit,
+    onOpenMiuiSettings: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val title: String
+    val body: String
+    when (risk) {
+        BackgroundExecutionRisk.BackgroundRestricted -> {
+            title = stringResource(R.string.dashboard_background_restricted_title)
+            body = stringResource(R.string.dashboard_background_restricted_body)
+        }
+
+        BackgroundExecutionRisk.NotBatteryExempt -> {
+            title = stringResource(R.string.dashboard_background_battery_title)
+            body = stringResource(R.string.dashboard_background_battery_body)
+        }
+
+        BackgroundExecutionRisk.Ok -> {
+            return
+        }
+    }
+
+    PremiumCard(modifier = Modifier.fillMaxWidth(), accentColor = CatYellow) {
+        Column(
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Warning,
+                    contentDescription = null,
+                    tint = CatYellow,
+                    modifier = Modifier.size(22.dp),
+                )
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = CatText,
+                )
+            }
+            Text(
+                text = body,
+                style = MaterialTheme.typography.bodySmall,
+                color = CatSubtext,
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                PremiumCompactButton(
+                    label = stringResource(R.string.dashboard_background_battery_action),
+                    icon = Icons.Default.Settings,
+                    color = CatYellow,
+                    onClick = onOpenBatterySettings,
+                    modifier = Modifier.weight(1f),
+                )
+                if (showMiuiAction) {
+                    PremiumCompactButton(
+                        label = stringResource(R.string.dashboard_background_miui_action),
+                        icon = Icons.Default.Settings,
+                        color = CatMauve,
+                        onClick = onOpenMiuiSettings,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+            }
+            TextButton(
+                onClick = onDismiss,
+                modifier = Modifier.align(Alignment.End),
+            ) {
+                Text(stringResource(R.string.dashboard_background_dismiss))
+            }
+        }
     }
 }
 

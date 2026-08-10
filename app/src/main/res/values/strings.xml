@@ -22,6 +22,13 @@
     <string name="dashboard_finish_permissions_hint">Finish required permissions to activate protection.</string>
     <string name="dashboard_finish_setup_hint">Finish setup to activate the spam shield.</string>
     <string name="dashboard_call_screener_missing_hint">Enable the call screener so spam calls can be blocked.</string>
+    <string name="dashboard_background_restricted_title">Background activity is restricted</string>
+    <string name="dashboard_background_restricted_body">CallShield may miss live protection updates while the system limits background activity. Allow background activity and battery access in Settings.</string>
+    <string name="dashboard_background_battery_title">Battery access may delay protection</string>
+    <string name="dashboard_background_battery_body">Battery optimization can delay sync and background protection. Allow CallShield to run without battery restrictions.</string>
+    <string name="dashboard_background_battery_action">Open battery settings</string>
+    <string name="dashboard_background_miui_action">Open autostart settings</string>
+    <string name="dashboard_background_dismiss">Dismiss</string>
     <string name="dashboard_sync_database">Sync Database</string>
     <string name="dashboard_metric_core_setup">Core setup</string>
     <string name="dashboard_metric_engines">Engines</string>

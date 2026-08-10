@@ -9,6 +9,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.tryPerformAccessibilityChecks
+import com.sysadmindoc.callshield.permissions.BackgroundExecutionRisk
 import com.sysadmindoc.callshield.ui.SyncState
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -165,6 +166,31 @@ class DashboardTest {
 
         composeRule.runOnIdle {
             assertEquals(1, screenerRequests)
+        }
+    }
+
+    @Test
+    fun backgroundWarningNamesTheRiskAndOffersRecovery() {
+        var batterySettingsRequests = 0
+        var dismissRequests = 0
+
+        composeRule.setContent {
+            BackgroundExecutionWarning(
+                risk = BackgroundExecutionRisk.BackgroundRestricted,
+                showMiuiAction = false,
+                onOpenBatterySettings = { batterySettingsRequests++ },
+                onOpenMiuiSettings = {},
+                onDismiss = { dismissRequests++ },
+            )
+        }
+
+        composeRule.onNodeWithText("Background activity is restricted").assertIsDisplayed()
+        composeRule.onNodeWithText("Open battery settings").performClick()
+        composeRule.onNodeWithText("Dismiss").performClick()
+
+        composeRule.runOnIdle {
+            assertEquals(1, batterySettingsRequests)
+            assertEquals(1, dismissRequests)
         }
     }
 }
