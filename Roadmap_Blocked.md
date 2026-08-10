@@ -2,10 +2,28 @@
 
 Items moved here from ROADMAP.md because they require external action, dedicated sessions, or have dependency gates that prevent autonomous implementation.
 
+## Blocked on File-Hygiene Policy
+
+- [ ] P3 — Reconcile the drifting version and count claims
+  Why: the requested acceptance spans the tracked `data/README.md` plus ignored
+  `CLAUDE.md`, while the session's explicit hygiene rule permits commits only to
+  code, `.gitignore`, `CHANGELOG.md`, and the root `README.md`.
+  Blocker: completing and committing the verifier/documentation changes would
+  violate that higher-priority file policy. The ignored stale `PROJECT_CONTEXT.md`
+  was removed locally as requested, but the remaining documentation and verifier
+  contract cannot be shipped without an explicit policy change.
+  Complexity: S
+
+## Blocked on Model Artifact and Evaluation Approval
+
+- [ ] P3 — Evaluate a bundled LiteRT text classifier for SMS scam detection
+  Why: the acceptance requires an actual bundled model and tokenizer, measured low-end latency/APK impact, and a licensed evaluation artifact with an agreed false-positive budget for every locale.
+  Blocker: the repository contains only the synthetic CC0 evaluation fixtures and regex analyzer; it does not contain a licensed model/tokenizer or an approved per-locale false-positive budget. Choosing or training one would require external model licensing and human evaluation-policy input.
+
 ## Blocked on Dedicated Session (too large for autonomous batch)
 
-- [ ] P1 — AGP 9 + Kotlin 2.3+ (≥ 2.4.20) + Hilt 2.59 + Moshi→kotlinx.serialization migration tranche
-  Why: AGP 8.x is on a deprecation path; Hilt 2.59+ drops AGP 8 support; Moshi 1.x codegen requires KSP1 while KSP2 is now default; AGP 10 removes all escape hatches mid-2026. All four must move together. Also carries the **CVE-2026-53914** fix — Kotlin must reach ≥ 2.4.20 (the current 2.2.21 pin is below the fix). Interim mitigation (no remote/shared Gradle build cache) is already documented in `gradle.properties`, so the vector is not reachable until then.
+- [ ] P1 — AGP 9 + Kotlin 2.4.20+ + Hilt 2.60.1 + Moshi→kotlinx.serialization migration tranche
+  Why: AGP 8.x is on a deprecation path; Hilt 2.59+ drops AGP 8 support; core-ktx 1.19.0 and lifecycle 2.11.0 require AGP 9.1 and compileSdk 37; Moshi 1.x codegen requires KSP1 while KSP2 is now default; AGP 10 removes all escape hatches mid-2026. All four must move together. This tranche also carries the **CVE-2026-53914** fix — the AGP-8/Hilt-2.58 stack cannot read Kotlin 2.4 metadata, so the app remains on Kotlin 2.3.21 until the dedicated migration. Interim mitigation (no remote/shared Gradle build cache) is already documented in `gradle.properties`, so the vector is not reachable until then.
   Blocker: XL complexity — touches every build file, all lockfiles, all JSON parsing sites. Requires a dedicated session with build validation.
   Evidence: AGP 9 release notes; Dagger 2.59 release; Kotlin 2.3.0/2.3.20 changelogs; Moshi KSP2 compatibility issues; CVE-2026-53914 (GHSA-r937-wjx7-w2jp).
   Touches: `build.gradle.kts`, `app/build.gradle.kts`, `gradle/libs.versions.toml`, all Gradle lockfiles, `proguard-rules.pro`, all JSON parsing sites, Hilt module files.
@@ -134,11 +152,27 @@ Items moved here from ROADMAP.md because they require external action, dedicated
   Blocker: Requires registration at hosted.weblate.org (manual web action) and GitHub webhook configuration.
   Complexity: S
 
+- [ ] P2 — Define optional authenticated reputation adapters with strict key isolation
+  Why: Hiya, Nomorobo, Tellows, First Orion, TNS, IPQS, Twilio, Call Control, and GSE expose useful risk/identity signals but require contracts, keys, quotas, and privacy review.
+  Blocker: Provider contracts, credentials, quota terms, retention/region policies, and the operator's consent decision are external inputs. No adapter may be enabled or validated from repository state alone.
+  Evidence: official developer portals and API documentation listed in `RESEARCH.md`.
+  Complexity: L
+
 ## Blocked on Future Platform Availability
 
 - [ ] P3 — Rich Call Data display in caller-ID overlay
   Blocker: FCC RCD rules not yet finalized (expected 2027+). No carriers currently transmit RCD data. Forward-compat work only.
   Complexity: M
+
+## P0 — Stable release signing key
+
+The release-signing gate cannot be finalized until the operator confirms which
+keystore is canonical. The repository contains a local `callshield-release.jks`
+and F-Droid metadata pins a signing fingerprint, but the available evidence
+does not prove that the keystore and fingerprint match the installed release.
+Choosing a key affects upgrade continuity and is an operator-owned release
+decision. Once confirmed, restore the item to ROADMAP.md and wire the signing
+policy into the release build.
 
 ## Existing Roadmap Items with External Dependencies
 
@@ -153,3 +187,17 @@ Items from the main ROADMAP.md that are tracked there but blocked:
 - B.?.2 Audio CAPTCHA: UX pilot decision
 - B.E.1 Enterprise/MDM: Market decision
 - 1.7.8 Play Integrity: GMS-only, feature-flag decision for FOSS builds
+
+## Roadmap cleanup — 2026-08-10 — ROADMAP.md
+
+**Blocked on:** The source roadmap marked this work as parked, optional, or dependent on external input.
+
+Blocked items moved from the actionable roadmap:
+
+| ID | Item | Source | Decision Needed |
+|----|------|--------|-----------------|
+| B.?.1 | **AI Answer Bot** that engages spam callers to waste their time | [9 RoboKiller] | Legal/ethical: TCPA + state recording-consent laws; harassment exposure. Lean reject for now |
+| B.?.2 | **Audio CAPTCHA screening** ("press 1 to connect") | [10 YouMail] | UX cost vs spam-reduction; pilot opt-in for unknown callers |
+| B.?.3 | **Visual voicemail with spam-priority sorting** | [10 YouMail] | Scope creep — replaces dialer/voicemail. Keep in mind for a separate sister app |
+| B.?.4 | **Auto-attendant / IVR for first-time callers** | [10 YouMail] | Same scope concern as B.?.3 |
+| B.?.5 | **Truecaller-style B2B verified-caller display** | [29 Truecaller] | Requires partnerships; conflicts with on-device-first |
