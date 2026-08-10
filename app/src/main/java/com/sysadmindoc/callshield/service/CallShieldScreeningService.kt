@@ -277,7 +277,7 @@ class CallShieldScreeningService : CallScreeningService() {
                     }
                 }
                     ?: respondAllow(responseGate)
-            } catch (failure: CancellationException) {
+            } catch (_: CancellationException) {
                 // Even a service-scope cancellation must leave Telecom with an
                 // explicit response; otherwise it waits until its hard timeout.
                 withContext(NonCancellable) {
