@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "advisories": [
+    {
+      "id": "GHSA-r937-wjx7-w2jp",
+      "component": "org.jetbrains.kotlin:kotlin-gradle-plugin",
+      "dependency_key": "kotlin",
+      "fixed_in": "2.4.20",
+      "disposition": "mitigated-build-cache",
+      "evidence_files": ["gradle.properties"],
+      "source": "https://github.com/advisories/GHSA-r937-wjx7-w2jp",
+      "rationale": "No shared or remote Gradle build cache is configured; the local cache is trusted until the AGP 9 dependency tranche can move Kotlin to the fixed line."
+    },
+    {
+      "id": "GHSA-mqwm-5m85-gmcv",
+      "component": "Gradle wrapper",
+      "dependency_key": "gradle_wrapper",
+      "fixed_in": "8.14.4",
+      "disposition": "resolved",
+      "evidence_files": ["gradle/wrapper/gradle-wrapper.properties"],
+      "source": "https://github.com/advisories/GHSA-mqwm-5m85-gmcv",
+      "rationale": "The wrapper is pinned to the fixed Gradle release and its distribution checksum is checked in."
+    },
+    {
+      "id": "GHSA-w78c-w6vf-rw82",
+      "component": "Gradle wrapper",
+      "dependency_key": "gradle_wrapper",
+      "fixed_in": "8.14.4",
+      "disposition": "resolved",
+      "evidence_files": ["gradle/wrapper/gradle-wrapper.properties"],
+      "source": "https://github.com/advisories/GHSA-w78c-w6vf-rw82",
+      "rationale": "The wrapper is pinned to the fixed Gradle release and its distribution checksum is checked in."
+    }
+  ]
+}
