@@ -18,6 +18,13 @@ All notable changes to CallShield will be documented in this file.
   protection unless the payload explicitly declares a clear. Unavailable feeds
   are retried and surfaced with the age of the last good refresh.
 
+### Reliability
+
+- Android 16+ SMS interception is now presented as advisory: the receiver
+  never assumes cross-app broadcast ordering or promises inbox suppression,
+  while the permission and onboarding surfaces explain the default SMS app's
+  delivery authority.
+
 ### Build
 
 - Upgraded the Gradle wrapper to 8.14.4 and pinned its distribution checksum.
