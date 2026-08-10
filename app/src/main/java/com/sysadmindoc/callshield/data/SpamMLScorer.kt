@@ -3,6 +3,8 @@ package com.sysadmindoc.callshield.data
 import android.content.Context
 import com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup
 import com.sysadmindoc.callshield.data.remote.GitHubDataSource
+import com.sysadmindoc.callshield.domain.model.CallerIdentity
+import com.sysadmindoc.callshield.domain.model.CallerIdentitySignals
 import com.sysadmindoc.callshield.util.filterAsciiDigits
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -351,9 +353,13 @@ class SpamMLScorer
          * [confidence], which repeated the entire scoring pipeline. Callers on
          * the 5-second deadline should use this instead.
          */
-        fun verdict(number: String): Verdict {
+        fun verdict(
+            number: String,
+            callerIdentity: CallerIdentity? = null,
+        ): Verdict {
             val snap = state
-            val s = scoreWith(number, snap)
+            val rawScore = scoreWith(number, snap)
+            val s = CallerIdentitySignals.adjustProbability(rawScore, callerIdentity)
             val clamped = if (s < 0.0) 0.0 else s.coerceAtMost(1.0)
             return Verdict(
                 score = s,
@@ -920,7 +926,10 @@ class SpamMLScorer
 
             fun confidence(number: String): Int = shared.confidence(number)
 
-            fun verdict(number: String): Verdict = shared.verdict(number)
+            fun verdict(
+                number: String,
+                callerIdentity: CallerIdentity? = null,
+            ): Verdict = shared.verdict(number, callerIdentity)
 
             /** Health of the most recent model load/sync. */
             fun modelHealth(): ModelHealth = shared.modelHealth

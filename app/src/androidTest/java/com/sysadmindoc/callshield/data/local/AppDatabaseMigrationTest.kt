@@ -63,6 +63,7 @@ class AppDatabaseMigrationTest {
                 MIGRATION_13_14,
                 MIGRATION_14_15,
                 MIGRATION_15_16,
+                MIGRATION_16_17,
             )
 
         db.assertSingleInt("SELECT COUNT(*) FROM spam_numbers", 1)
@@ -110,6 +111,7 @@ class AppDatabaseMigrationTest {
                 MIGRATION_13_14,
                 MIGRATION_14_15,
                 MIGRATION_15_16,
+                MIGRATION_16_17,
             )
 
         db.assertSingleInt("SELECT isEmergency FROM whitelist WHERE number = '+15550000003'", 1)
@@ -139,6 +141,7 @@ class AppDatabaseMigrationTest {
                 MIGRATION_13_14,
                 MIGRATION_14_15,
                 MIGRATION_15_16,
+                MIGRATION_16_17,
             )
 
         db.assertSingleInt(
@@ -173,6 +176,7 @@ class AppDatabaseMigrationTest {
                 MIGRATION_13_14,
                 MIGRATION_14_15,
                 MIGRATION_15_16,
+                MIGRATION_16_17,
             )
 
         db.assertSingleInt("SELECT scheduleDays FROM wildcard_rules WHERE pattern = '+1666*'", 0)
@@ -205,6 +209,7 @@ class AppDatabaseMigrationTest {
                 MIGRATION_13_14,
                 MIGRATION_14_15,
                 MIGRATION_15_16,
+                MIGRATION_16_17,
             )
 
         db.assertSingleInt("SELECT COUNT(*) FROM call_log WHERE number = '+17770000001'", 1)
@@ -264,6 +269,7 @@ class AppDatabaseMigrationTest {
                 MIGRATION_13_14,
                 MIGRATION_14_15,
                 MIGRATION_15_16,
+                MIGRATION_16_17,
             )
 
         db.assertSingleInt("SELECT COUNT(*) FROM spam_numbers WHERE number = '+12125551234'", 1)
@@ -275,6 +281,8 @@ class AppDatabaseMigrationTest {
         db.assertSingleText("SELECT number FROM call_log WHERE logKey = 'sender-log'", "BANK-ALERT")
         db.assertSingleText("SELECT matchReason FROM call_log WHERE logKey = 'phone-log'", "manual")
         db.assertSingleText("SELECT reasonCode FROM call_log WHERE logKey = 'phone-log'", "unknown")
+        db.assertHasColumn("call_log", "origid")
+        db.assertHasColumn("pending_blocked_call_logs", "origid")
         db.close()
     }
 

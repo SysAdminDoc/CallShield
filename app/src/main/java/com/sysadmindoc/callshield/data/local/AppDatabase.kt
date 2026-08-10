@@ -11,7 +11,7 @@ import com.sysadmindoc.callshield.data.PhoneIdentityCanonicalizer
 import com.sysadmindoc.callshield.data.model.*
 
 /** Single source of truth for the Room database version. */
-const val DB_VERSION = 16
+const val DB_VERSION = 17
 private const val DB_VERSION_9 = 9
 private const val DB_VERSION_10 = 10
 private const val DB_VERSION_11 = 11
@@ -20,6 +20,7 @@ private const val DB_VERSION_13 = 13
 private const val DB_VERSION_14 = 14
 private const val DB_VERSION_15 = 15
 private const val DB_VERSION_16 = 16
+private const val DB_VERSION_17 = 17
 
 /**
  * v5 → v6: Add `isEmergency INTEGER NOT NULL DEFAULT 0` to the whitelist
@@ -256,6 +257,15 @@ val MIGRATION_15_16 =
         }
     }
 
+/** v16 -> v17: retain only the PASSporT origid correlation UUID on call logs. */
+val MIGRATION_16_17 =
+    object : Migration(DB_VERSION_16, DB_VERSION_17) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE call_log ADD COLUMN origid TEXT")
+            db.execSQL("ALTER TABLE pending_blocked_call_logs ADD COLUMN origid TEXT")
+        }
+    }
+
 private fun reasonCodeSql(column: String): String =
     """
     CASE
@@ -343,6 +353,7 @@ abstract class AppDatabase : RoomDatabase() {
                         MIGRATION_13_14,
                         MIGRATION_14_15,
                         MIGRATION_15_16,
+                        MIGRATION_16_17,
                     ).build()
                     .also { instance = it }
             }

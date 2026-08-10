@@ -125,15 +125,18 @@ class PendingBlockedCallLogDaoTest {
                     matchReason = "wildcard",
                     confidence = 90,
                     ruleId = 23L,
+                    origid = "550e8400-e29b-41d4-a716-446655440000",
                 )
 
             dao.insertPendingBlockedCallLog(pending)
             assertEquals(BlockReasonCode.WILDCARD, dao.getReadyPendingBlockedCallLogs(0L, 10).single().reasonCode)
+            assertEquals(pending.origid, dao.getReadyPendingBlockedCallLogs(0L, 10).single().origid)
             dao.consumePendingBlockedCallLog(pending)
 
             val finalLog = dao.getBlockedCalls().first().single()
             assertEquals(BlockReasonCode.WILDCARD, finalLog.reasonCode)
             assertEquals(23L, finalLog.ruleId)
+            assertEquals(pending.origid, finalLog.origid)
             assertEquals(1, dao.getBlockedCallsByReasonCode(BlockReasonCode.WILDCARD).first().size)
         }
 }

@@ -14,6 +14,7 @@ import com.sysadmindoc.callshield.data.OutgoingRiskWarning
 import com.sysadmindoc.callshield.data.PhoneIdentityCanonicalizer
 import com.sysadmindoc.callshield.data.SpamHeuristics
 import com.sysadmindoc.callshield.data.SpamRepository
+import com.sysadmindoc.callshield.data.StirShakenParser
 import com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup
 import com.sysadmindoc.callshield.data.local.AppDatabase
 import com.sysadmindoc.callshield.di.ApplicationScope
@@ -181,13 +182,22 @@ class CallShieldScreeningService : CallScreeningService() {
                                 callDetails.callerDisplayNamePresentation == TelecomManager.PRESENTATION_ALLOWED &&
                                     it.isNotBlank()
                             }
+                        val carrierExtras = StirShakenParser.readExtras(callDetails.extras)
+                        val callerIdentity =
+                            CallerIdentity(
+                                verificationStatus = verificationStatus,
+                                presentedName = callerName,
+                                passport = carrierExtras.passport,
+                                dnoStatus = carrierExtras.dnoStatus,
+                                lineType = carrierExtras.lineType,
+                            )
 
                         // Full spam check — reuses the snapshot so we don't re-read DataStore.
                         val result =
                             spamChecker()(
                                 number = number,
                                 prefsSnapshot = prefs,
-                                callerIdentity = CallerIdentity(verificationStatus, callerName),
+                                callerIdentity = callerIdentity,
                             )
                         if (result.isSpam) {
                             val categoryAction =
@@ -204,6 +214,7 @@ class CallShieldScreeningService : CallScreeningService() {
                                     confidence = result.confidence,
                                     ruleId = result.ruleId,
                                     prefs = prefs,
+                                    callerIdentity = callerIdentity,
                                 )
                             }
                         } else {
@@ -316,6 +327,7 @@ class CallShieldScreeningService : CallScreeningService() {
         confidence: Int = 100,
         ruleId: Long? = null,
         prefs: androidx.datastore.preferences.core.Preferences,
+        callerIdentity: CallerIdentity? = null,
     ) {
         val repository = repository()
         val logTimestamp = System.currentTimeMillis()
@@ -330,6 +342,7 @@ class CallShieldScreeningService : CallScreeningService() {
                 confidence = confidence,
                 timestamp = logTimestamp,
                 ruleId = ruleId,
+                origid = callerIdentity?.passport?.origid,
             )
             pendingLogQueued = true
         } catch (_: Exception) {
@@ -356,6 +369,7 @@ class CallShieldScreeningService : CallScreeningService() {
                         timestamp = logTimestamp,
                         logKey = logKey,
                         ruleId = ruleId,
+                        origid = callerIdentity?.passport?.origid,
                     )
                 }
             } catch (_: Exception) {

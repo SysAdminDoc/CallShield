@@ -23,6 +23,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.util.UUID
 
 /**
  * Full app backup/restore — settings, blocklist, whitelist, wildcard rules, call log.
@@ -208,6 +209,7 @@ object BackupRestore {
         val confidence: Int = 100,
         val logKey: String? = null,
         val ruleId: Long? = null,
+        val origid: String? = null,
     )
 
     enum class RestoreMode { MERGE, REPLACE }
@@ -383,6 +385,7 @@ object BackupRestore {
                             confidence = it.confidence,
                             logKey = it.logKey,
                             ruleId = it.ruleId,
+                            origid = sanitizeOrigid(it.origid),
                         )
                     }
                 } else {
@@ -808,6 +811,7 @@ object BackupRestore {
                                 confidence = log.confidence,
                                 logKey = log.logKey,
                                 ruleId = log.ruleId,
+                                origid = sanitizeOrigid(log.origid),
                             ),
                         )
                         logsRestored++
@@ -1007,6 +1011,7 @@ object BackupRestore {
                             confidence = log.confidence.coerceIn(0, 100),
                             logKey = log.logKey?.trim()?.ifBlank { null },
                             ruleId = log.ruleId,
+                            origid = sanitizeOrigid(log.origid),
                         )
                     }
                 } else {
@@ -1311,6 +1316,14 @@ object BackupRestore {
 
     private val BlockedCall.conflictKey: String
         get() = logKey?.takeIf { it.isNotBlank() } ?: "$number|$timestamp|$isCall"
+
+    private fun sanitizeOrigid(value: String?): String? {
+        val trimmed = value?.trim() ?: return null
+        return runCatching { UUID.fromString(trimmed) }
+            .getOrNull()
+            ?.toString()
+            ?.takeIf { it.equals(trimmed, ignoreCase = true) }
+    }
 
     private fun RestoreValidation.Invalid.message(context: Context): String =
         when (failure) {
