@@ -3,6 +3,7 @@ package com.sysadmindoc.callshield.ui.screens.main
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -101,6 +102,8 @@ import com.sysadmindoc.callshield.data.RuleConflict
 import com.sysadmindoc.callshield.data.RuleConflictAnalyzer
 import com.sysadmindoc.callshield.data.RuleConflictRule
 import com.sysadmindoc.callshield.data.RuleConflictWinner
+import com.sysadmindoc.callshield.data.StandingRuleConflict
+import com.sysadmindoc.callshield.data.StandingRuleConflictKind
 import com.sysadmindoc.callshield.data.TimeSchedule
 import com.sysadmindoc.callshield.data.model.HashWildcardRule
 import com.sysadmindoc.callshield.data.model.SmsKeywordRule
@@ -165,6 +168,7 @@ fun BlocklistScreen(viewModel: MainViewModel) {
     val wildcardRules by viewModel.wildcardRules.collectAsStateWithLifecycle()
     val hashWildcardRules by viewModel.hashWildcardRules.collectAsStateWithLifecycle()
     val whitelistEntries by viewModel.whitelistEntries.collectAsStateWithLifecycle()
+    val ruleConflicts by viewModel.ruleConflicts.collectAsStateWithLifecycle()
     val keywordRules by viewModel.keywordRules.collectAsStateWithLifecycle()
     val importResult by viewModel.importResult.collectAsStateWithLifecycle()
     var showAddDialog by rememberSaveable { mutableStateOf(false) }
@@ -328,6 +332,22 @@ fun BlocklistScreen(viewModel: MainViewModel) {
                         .padding(horizontal = 16.dp, vertical = 4.dp),
                 workspace = workspace,
             )
+
+            if (ruleConflicts.isNotEmpty()) {
+                RuleConflictAuditCard(
+                    conflicts = ruleConflicts,
+                    onOpenRules = { kind ->
+                        tabIndex =
+                            when (kind) {
+                                StandingRuleConflictKind.WHITELIST_VS_EXACT -> BLOCKLIST_TAB_WHITELIST
+                                StandingRuleConflictKind.WILDCARD_VS_EXACT -> BLOCKLIST_TAB_WILDCARDS
+                                StandingRuleConflictKind.PREFIX_VS_HASH -> BLOCKLIST_TAB_RANGES
+                            }
+                    },
+                    onDismiss = { viewModel.dismissRuleConflict(it.key) },
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                )
+            }
 
             PrimaryScrollableTabRow(
                 selectedTabIndex = tabIndex,
@@ -741,6 +761,95 @@ private fun BlocklistOverviewCard(
             }
         }
         GradientDivider()
+    }
+}
+
+@Composable
+private fun RuleConflictAuditCard(
+    conflicts: List<StandingRuleConflict>,
+    onOpenRules: (StandingRuleConflictKind) -> Unit,
+    onDismiss: (StandingRuleConflict) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var expanded by rememberSaveable { mutableStateOf(false) }
+    Surface(
+        modifier = modifier.testTag("blocklist_conflict_audit"),
+        color = CatYellow.copy(alpha = 0.12f),
+        shape = RoundedCornerShape(12.dp),
+    ) {
+        Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.PriorityHigh, contentDescription = null, tint = CatYellow)
+                Column(modifier = Modifier.weight(1f).padding(start = 8.dp)) {
+                    Text(
+                        text = pluralStringResource(R.plurals.rule_conflict_count, conflicts.size, conflicts.size),
+                        style = MaterialTheme.typography.titleSmall,
+                        color = CatText,
+                    )
+                    Text(
+                        text = stringResource(R.string.rule_conflict_audit_subtitle),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = CatSubtext,
+                    )
+                }
+                TextButton(onClick = { expanded = !expanded }) {
+                    Text(
+                        text =
+                            stringResource(
+                                if (expanded) R.string.rule_conflict_hide else R.string.rule_conflict_review,
+                            ),
+                        color = CatYellow,
+                    )
+                }
+            }
+            if (expanded) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
+                    conflicts.forEach { conflict ->
+                        Column(
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .clickable { onOpenRules(conflict.kind) }
+                                    .padding(top = 8.dp),
+                        ) {
+                            Text(
+                                text =
+                                    stringResource(
+                                        R.string.rule_conflict_audit_pair,
+                                        conflict.winningRule,
+                                        conflict.winnerPriority,
+                                        conflict.overriddenRule,
+                                        conflict.overriddenPriority,
+                                    ),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = CatText,
+                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = stringResource(R.string.rule_conflict_audit_sample, PhoneFormatter.formatIsolated(conflict.sampleNumber)),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = CatSubtext,
+                                    modifier = Modifier.weight(1f),
+                                )
+                                TextButton(onClick = { onOpenRules(conflict.kind) }) {
+                                    Text(stringResource(R.string.rule_conflict_open), color = CatYellow)
+                                }
+                                IconButton(
+                                    onClick = { onDismiss(conflict) },
+                                    modifier = Modifier.size(32.dp),
+                                ) {
+                                    Icon(
+                                        Icons.Default.Close,
+                                        contentDescription = stringResource(R.string.rule_conflict_dismiss),
+                                        tint = CatSubtext,
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 

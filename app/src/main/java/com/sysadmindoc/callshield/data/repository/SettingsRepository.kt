@@ -38,6 +38,7 @@ class SettingsRepository(
         const val DEFAULT_TIME_BLOCK_END = 7
         const val DEFAULT_FREQUENCY_THRESHOLD = 3
         const val DEFAULT_CLEANUP_DAYS = 30
+        const val MAX_DISMISSED_RULE_CONFLICTS = 256
     }
 
     private val externalBlocklistAdapter =
@@ -155,6 +156,8 @@ class SettingsRepository(
     val pushAlertEnabled: Flow<Boolean> = dataStore.data.map { it[SpamRepository.KEY_PUSH_ALERT] ?: true }
     val pushAlertDisabledPackages: Flow<Set<String>> =
         dataStore.data.map { it[SpamRepository.KEY_PUSH_ALERT_DISABLED] ?: emptySet() }
+    val dismissedRuleConflictKeys: Flow<Set<String>> =
+        dataStore.data.map { it[SpamRepository.KEY_DISMISSED_RULE_CONFLICTS] ?: emptySet() }
     internal val smsMessageCapabilityStatus: Flow<MessageCapabilityStatus> =
         dataStore.data.map { prefs ->
             MessageCapabilityStatus.decode(
@@ -283,6 +286,17 @@ class SettingsRepository(
     }
 
     suspend fun resetPushAlertPackages() = dataStore.edit { it.remove(SpamRepository.KEY_PUSH_ALERT_DISABLED) }
+
+    suspend fun dismissRuleConflict(key: String) {
+        val sanitized = key.trim().take(256)
+        if (sanitized.isBlank()) return
+        dataStore.edit { preferences ->
+            val next = LinkedHashSet(preferences[SpamRepository.KEY_DISMISSED_RULE_CONFLICTS].orEmpty())
+            next.add(sanitized)
+            preferences[SpamRepository.KEY_DISMISSED_RULE_CONFLICTS] =
+                next.toList().takeLast(MAX_DISMISSED_RULE_CONFLICTS).toSet()
+        }
+    }
 
     suspend fun setOnboardingDone() = dataStore.edit { it[SpamRepository.KEY_ONBOARDING_DONE] = true }
 

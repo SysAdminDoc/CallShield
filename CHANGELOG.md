@@ -91,6 +91,8 @@ All notable changes to CallShield will be documented in this file.
   slow checkers, direct boot, and concurrent fallback responses; every path remains fail-open.
 - Checker exceptions and deadline cutoffs now remain visible in Protection Test, lookup/log
   details, and CSV/backup exports without exposing exception text or delaying the response gate.
+- Rules now run a standing overlap audit after sync and CRUD, showing the winning priority for
+  whitelist/exact, wildcard/exact, and downloaded-prefix/hash-range conflicts with persistent dismissal.
 - RTT calls receive an immediate explicit allow response so Telecom retains the active assistive
   voice/text session without screening or caller-ID overlay interference.
 

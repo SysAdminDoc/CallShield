@@ -502,6 +502,7 @@ by locale and message type without shipping personal data:
 - Weekly full sync + scheduled hot list refresh, daily digest notification
 - Quick Settings tile, app shortcuts, home screen widget
 - Protection test validates all layers and permissions, including checker errors and deadline cutoffs
+- Rules surface priority conflicts after sync and edits, with the winning rule and a review path
 - Onboarding wizard with permission requests
 
 ## Data Sources

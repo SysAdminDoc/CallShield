@@ -311,6 +311,17 @@
     <string name="rule_conflict_exact_block">Exact block</string>
     <string name="rule_conflict_wildcard_block">Wildcard block</string>
     <string name="rule_conflict_range_block">Range block</string>
+    <plurals name="rule_conflict_count">
+        <item quantity="one">%1$d active rule conflict</item>
+        <item quantity="other">%1$d active rule conflicts</item>
+    </plurals>
+    <string name="rule_conflict_audit_subtitle">The priority ladder has overlapping rules. Review the winner or dismiss this warning.</string>
+    <string name="rule_conflict_review">Review</string>
+    <string name="rule_conflict_hide">Hide</string>
+    <string name="rule_conflict_open">Open rules</string>
+    <string name="rule_conflict_dismiss">Dismiss conflict</string>
+    <string name="rule_conflict_audit_pair">%1$s (priority %2$d) wins over %3$s (priority %4$d)</string>
+    <string name="rule_conflict_audit_sample">Example: %1$s</string>
     <string name="dialog_phone_number">Phone Number</string>
     <string name="dialog_phone_placeholder">+1234567890</string>
     <string name="dialog_description_optional">Description (optional)</string>

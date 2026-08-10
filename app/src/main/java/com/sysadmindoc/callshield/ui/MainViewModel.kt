@@ -23,8 +23,10 @@ import com.sysadmindoc.callshield.data.ContactGroupCatalog
 import com.sysadmindoc.callshield.data.EmergencyNumberFloor
 import com.sysadmindoc.callshield.data.MessageCapabilitySource
 import com.sysadmindoc.callshield.data.MessageCapabilityStatus
+import com.sysadmindoc.callshield.data.RuleConflictAnalyzer
 import com.sysadmindoc.callshield.data.SpamHeuristics
 import com.sysadmindoc.callshield.data.SpamRepository
+import com.sysadmindoc.callshield.data.StandingRuleConflict
 import com.sysadmindoc.callshield.data.TimeSchedule
 import com.sysadmindoc.callshield.data.checker.PipelineTrace
 import com.sysadmindoc.callshield.data.model.BlockedCall
@@ -144,6 +146,29 @@ class MainViewModel
             repo
                 .getAllWhitelist()
                 .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+        private val liveRuleConflicts: Flow<List<StandingRuleConflict>> =
+            combine(
+                userBlockedNumbers,
+                wildcardRules,
+                hashWildcardRules,
+                whitelistEntries,
+                repo.observeAllPrefixes(),
+            ) { exactBlocks, wildcards, hashWildcards, whitelist, prefixes ->
+                RuleConflictAnalyzer.audit(
+                    exactBlocks = exactBlocks,
+                    wildcardRules = wildcards,
+                    hashWildcardRules = hashWildcards,
+                    whitelist = whitelist,
+                    prefixes = prefixes,
+                )
+            }
+
+        val ruleConflicts: StateFlow<List<StandingRuleConflict>> =
+            liveRuleConflicts
+                .combine(repo.dismissedRuleConflictKeys) { conflicts, dismissedKeys ->
+                    conflicts.filterNot { it.key in dismissedKeys }
+                }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
         val emergencyContacts: StateFlow<List<WhitelistEntry>> =
             repo
@@ -586,6 +611,10 @@ class MainViewModel
 
         fun unblockNumber(number: SpamNumber) {
             viewModelScope.launch { manageBlocklist.unblockNumber(number) }
+        }
+
+        fun dismissRuleConflict(key: String) {
+            viewModelScope.launch { repo.dismissRuleConflict(key) }
         }
 
         /**

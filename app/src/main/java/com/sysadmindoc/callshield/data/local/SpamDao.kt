@@ -118,6 +118,9 @@ interface SpamDao {
     @Query("SELECT * FROM spam_prefixes WHERE evidenceExpiresAt IS NULL OR evidenceExpiresAt > :now")
     suspend fun getAllPrefixes(now: Long): List<SpamPrefix>
 
+    @Query("SELECT * FROM spam_prefixes")
+    fun observeAllPrefixes(): Flow<List<SpamPrefix>>
+
     /** Unfiltered snapshot used when retaining shards that did not change. */
     @Query("SELECT * FROM spam_prefixes")
     suspend fun getAllPrefixesForSync(): List<SpamPrefix>
