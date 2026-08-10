@@ -503,6 +503,7 @@ by locale and message type without shipping personal data:
 - Quick Settings tile, app shortcuts, home screen widget
 - Protection test validates all layers and permissions, including checker errors and deadline cutoffs
 - Rules surface priority conflicts after sync and edits, with the winning rule and a review path
+- Optional weekly GitHub Releases update checks are off by default and only offer release/SHA256 links
 - Onboarding wizard with permission requests
 
 ## Data Sources

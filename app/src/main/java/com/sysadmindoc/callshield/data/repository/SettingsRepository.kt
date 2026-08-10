@@ -8,6 +8,8 @@ import androidx.datastore.preferences.core.edit
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.Types
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
+import com.sysadmindoc.callshield.data.AppUpdateState
+import com.sysadmindoc.callshield.data.AppUpdateStatus
 import com.sysadmindoc.callshield.data.CallCategory
 import com.sysadmindoc.callshield.data.CallbackDetector
 import com.sysadmindoc.callshield.data.CategoryCallAction
@@ -184,6 +186,20 @@ class SettingsRepository(
     val lastSyncSource: Flow<String> = dataStore.data.map { it[SpamRepository.KEY_LAST_SYNC_SOURCE] ?: "" }
     val activeProfileName: Flow<String?> = dataStore.data.map { it[SpamRepository.KEY_ACTIVE_PROFILE] }
     val appTheme: Flow<String> = dataStore.data.map { sanitizeAppTheme(it[SpamRepository.KEY_APP_THEME]) }
+    val appUpdateChecksEnabled: Flow<Boolean> = dataStore.data.map { it[SpamRepository.KEY_APP_UPDATE_CHECKS] ?: false }
+    val appUpdateState: Flow<AppUpdateState> =
+        dataStore.data.map { prefs ->
+            AppUpdateState(
+                status =
+                    prefs[SpamRepository.KEY_APP_UPDATE_STATUS]
+                        ?.let { value -> runCatching { AppUpdateStatus.valueOf(value) }.getOrNull() }
+                        ?: AppUpdateStatus.NEVER_CHECKED,
+                latestTag = prefs[SpamRepository.KEY_APP_UPDATE_TAG],
+                releaseUrl = prefs[SpamRepository.KEY_APP_UPDATE_RELEASE_URL],
+                checksumUrl = prefs[SpamRepository.KEY_APP_UPDATE_CHECKSUM_URL],
+                checkedAt = prefs[SpamRepository.KEY_APP_UPDATE_CHECKED_AT] ?: 0L,
+            )
+        }
     val externalBlocklistSubscriptions: Flow<List<ExternalBlocklistSubscription>> =
         dataStore.data.map { prefs ->
             decodeExternalBlocklistSubscriptions(prefs[SpamRepository.KEY_EXTERNAL_BLOCKLIST_SUBSCRIPTIONS])
@@ -205,6 +221,36 @@ class SettingsRepository(
                 preferences.remove(SpamRepository.KEY_APP_THEME)
             } else {
                 preferences[SpamRepository.KEY_APP_THEME] = sanitized
+            }
+        }
+
+    suspend fun setAppUpdateChecksEnabled(enabled: Boolean) =
+        dataStore.edit { preferences ->
+            if (enabled) {
+                preferences[SpamRepository.KEY_APP_UPDATE_CHECKS] = true
+            } else {
+                preferences.remove(SpamRepository.KEY_APP_UPDATE_CHECKS)
+            }
+        }
+
+    suspend fun recordAppUpdateState(state: AppUpdateState) =
+        dataStore.edit { preferences ->
+            preferences[SpamRepository.KEY_APP_UPDATE_STATUS] = state.status.name
+            preferences[SpamRepository.KEY_APP_UPDATE_CHECKED_AT] = state.checkedAt
+            if (state.latestTag == null) {
+                preferences.remove(SpamRepository.KEY_APP_UPDATE_TAG)
+            } else {
+                preferences[SpamRepository.KEY_APP_UPDATE_TAG] = state.latestTag
+            }
+            if (state.releaseUrl == null) {
+                preferences.remove(SpamRepository.KEY_APP_UPDATE_RELEASE_URL)
+            } else {
+                preferences[SpamRepository.KEY_APP_UPDATE_RELEASE_URL] = state.releaseUrl
+            }
+            if (state.checksumUrl == null) {
+                preferences.remove(SpamRepository.KEY_APP_UPDATE_CHECKSUM_URL)
+            } else {
+                preferences[SpamRepository.KEY_APP_UPDATE_CHECKSUM_URL] = state.checksumUrl
             }
         }
 

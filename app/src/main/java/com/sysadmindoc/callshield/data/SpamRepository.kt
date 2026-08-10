@@ -239,6 +239,12 @@ class SpamRepository(
         // Maximum profile (and every other profile) would visually "reset" — issue #2.
         val KEY_ACTIVE_PROFILE = stringPreferencesKey("active_profile_name")
         internal val KEY_APP_THEME = stringPreferencesKey("app_theme")
+        val KEY_APP_UPDATE_CHECKS = booleanPreferencesKey("app_update_checks_enabled")
+        internal val KEY_APP_UPDATE_STATUS = stringPreferencesKey("app_update_status")
+        internal val KEY_APP_UPDATE_TAG = stringPreferencesKey("app_update_latest_tag")
+        internal val KEY_APP_UPDATE_RELEASE_URL = stringPreferencesKey("app_update_release_url")
+        internal val KEY_APP_UPDATE_CHECKSUM_URL = stringPreferencesKey("app_update_checksum_url")
+        internal val KEY_APP_UPDATE_CHECKED_AT = longPreferencesKey("app_update_checked_at")
 
         /** SharedPreferences key for the synchronous theme mirror (cold-start flash fix). */
         private const val KEY_THEME_CACHE = "app_theme"
@@ -367,9 +373,15 @@ class SpamRepository(
     val lastSyncSource: Flow<String> = settingsRepository.lastSyncSource
     val activeProfileName: Flow<String?> = settingsRepository.activeProfileName
     val appTheme: Flow<String> = settingsRepository.appTheme
+    val appUpdateChecksEnabled: Flow<Boolean> = settingsRepository.appUpdateChecksEnabled
+    val appUpdateState: Flow<AppUpdateState> = settingsRepository.appUpdateState
     val externalBlocklistSubscriptions = settingsRepository.externalBlocklistSubscriptions
 
     suspend fun setActiveProfileName(name: String?) = settingsRepository.setActiveProfileName(name)
+
+    suspend fun setAppUpdateChecksEnabled(enabled: Boolean) = settingsRepository.setAppUpdateChecksEnabled(enabled)
+
+    suspend fun recordAppUpdateState(state: AppUpdateState) = settingsRepository.recordAppUpdateState(state)
 
     /** Persist and log only message-ingress capability metadata; never message content. */
     internal suspend fun recordMessageCapability(status: MessageCapabilityStatus) {

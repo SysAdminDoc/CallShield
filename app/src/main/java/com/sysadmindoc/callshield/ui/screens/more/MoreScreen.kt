@@ -10,6 +10,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -29,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sysadmindoc.callshield.BuildConfig
 import com.sysadmindoc.callshield.R
+import com.sysadmindoc.callshield.data.AppUpdateStatus
 import com.sysadmindoc.callshield.service.CrashReporter
 import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.screens.main.rememberNowTick
@@ -89,6 +91,8 @@ fun MoreHub(
     val blockCallsEnabled by viewModel.blockCallsEnabled.collectAsStateWithLifecycle()
     val blockSmsEnabled by viewModel.blockSmsEnabled.collectAsStateWithLifecycle()
     val lastSync by viewModel.lastSyncTimestamp.collectAsStateWithLifecycle()
+    val appUpdateChecksEnabled by viewModel.appUpdateChecksEnabled.collectAsStateWithLifecycle()
+    val appUpdateState by viewModel.appUpdateState.collectAsStateWithLifecycle()
     val appTheme by viewModel.appTheme.collectAsStateWithLifecycle()
     val appVersion = "v${BuildConfig.VERSION_NAME}"
     val localizedSpamCount =
@@ -209,6 +213,31 @@ fun MoreHub(
                 CatSubtext,
                 onChangelog,
             )
+            AppUpdatePreferenceRow(
+                enabled = appUpdateChecksEnabled,
+                status = appUpdateState.status,
+                latestTag = appUpdateState.latestTag,
+                onEnabledChange = viewModel::setAppUpdateChecks,
+                onCheckNow = viewModel::checkForAppUpdate,
+            )
+            if (appUpdateState.status == AppUpdateStatus.UPDATE_AVAILABLE) {
+                appUpdateState.releaseUrl?.let { releaseUrl ->
+                    QuickLink(
+                        icon = Icons.Default.SystemUpdate,
+                        label = stringResource(R.string.more_update_available, appUpdateState.latestTag ?: ""),
+                        subtitle = stringResource(R.string.more_update_available_subtitle),
+                        color = CatGreen,
+                    ) { launchExternalLink(context, releaseUrl) }
+                }
+                appUpdateState.checksumUrl?.let { checksumUrl ->
+                    QuickLink(
+                        icon = Icons.Default.VerifiedUser,
+                        label = stringResource(R.string.more_update_checksum),
+                        subtitle = stringResource(R.string.more_update_checksum_subtitle),
+                        color = CatSubtext,
+                    ) { launchExternalLink(context, checksumUrl) }
+                }
+            }
             QuickLink(
                 icon = Icons.Default.Description,
                 label = stringResource(R.string.more_share_crash_log),
@@ -352,6 +381,62 @@ private fun AppThemeMode.labelResource(): Int =
         AppThemeMode.Graphite -> R.string.settings_theme_graphite
         AppThemeMode.Amoled -> R.string.settings_theme_amoled
     }
+
+@Composable
+private fun AppUpdatePreferenceRow(
+    enabled: Boolean,
+    status: AppUpdateStatus,
+    latestTag: String?,
+    onEnabledChange: (Boolean) -> Unit,
+    onCheckNow: () -> Unit,
+) {
+    val statusText =
+        when (status) {
+            AppUpdateStatus.UPDATE_AVAILABLE -> stringResource(R.string.more_update_available_subtitle)
+            AppUpdateStatus.UP_TO_DATE -> stringResource(R.string.more_update_current, latestTag ?: "")
+            AppUpdateStatus.INSTALLED_NEWER -> stringResource(R.string.more_update_installed_newer, latestTag ?: "")
+            AppUpdateStatus.MALFORMED_RELEASE -> stringResource(R.string.more_update_malformed)
+            AppUpdateStatus.UNAVAILABLE -> stringResource(R.string.more_update_unavailable)
+            AppUpdateStatus.NEVER_CHECKED -> stringResource(R.string.more_update_never_checked)
+        }
+    Surface(
+        color = SurfaceVariant,
+        shape = RoundedCornerShape(12.dp),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                PremiumIconTile(icon = Icons.Default.SystemUpdate, color = CatSubtext, size = 34.dp, iconSize = 18.dp)
+                Spacer(Modifier.width(10.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        stringResource(R.string.more_update_checks),
+                        color = CatText,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Text(
+                        if (enabled) statusText else stringResource(R.string.more_update_checks_off),
+                        color = CatSubtext,
+                        style = MaterialTheme.typography.bodySmall,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                Switch(checked = enabled, onCheckedChange = onEnabledChange)
+            }
+            if (enabled) {
+                TextButton(
+                    onClick = onCheckNow,
+                    modifier = Modifier.fillMaxWidth(),
+                    contentPadding = PaddingValues(vertical = 4.dp),
+                ) {
+                    Text(stringResource(R.string.more_update_check_now), color = CatGreen)
+                }
+            }
+        }
+    }
+}
 
 @Composable
 private fun MoreSection(

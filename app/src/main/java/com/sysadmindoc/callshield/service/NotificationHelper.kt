@@ -7,11 +7,13 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.graphics.drawable.Icon
+import android.net.Uri
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.sysadmindoc.callshield.R
+import com.sysadmindoc.callshield.data.AppUpdateRelease
 import com.sysadmindoc.callshield.data.CategoryCallPolicy
 import com.sysadmindoc.callshield.data.PhoneFormatter
 import com.sysadmindoc.callshield.data.SmsContentAnalyzer
@@ -50,6 +52,7 @@ object NotificationHelper {
     const val CHANNEL_MESSAGE_SCREENING = "message_screening"
     const val CHANNEL_SYNC = "database_sync"
     const val CHANNEL_PROTECTION_HEALTH = "protection_health"
+    const val CHANNEL_APP_UPDATES = "app_updates"
     const val ACTION_BLOCK = "com.sysadmindoc.callshield.ACTION_BLOCK"
     const val ACTION_REPORT = "com.sysadmindoc.callshield.ACTION_REPORT"
     const val ACTION_SAFE = "com.sysadmindoc.callshield.ACTION_SAFE"
@@ -70,6 +73,7 @@ object NotificationHelper {
     private const val PROGRESS_TOTAL = 100
     internal const val SYNC_NOTIFICATION_ID = 3
     internal const val PROTECTION_HEALTH_NOTIFICATION_ID = 4
+    internal const val APP_UPDATE_NOTIFICATION_ID = 5
 
     /**
      * Notification ID for the after-call "Was this spam?" feedback notice.
@@ -162,6 +166,47 @@ object NotificationHelper {
             },
         )
         createProtectionHealthChannel(context, nm)
+        nm.createNotificationChannel(
+            NotificationChannel(
+                CHANNEL_APP_UPDATES,
+                context.getString(R.string.notif_channel_app_updates),
+                NotificationManager.IMPORTANCE_DEFAULT,
+            ).apply {
+                description = context.getString(R.string.notif_channel_app_updates_desc)
+            },
+        )
+    }
+
+    fun notifyAppUpdate(
+        context: Context,
+        release: AppUpdateRelease,
+    ): Boolean {
+        val openIntent =
+            PendingIntent.getActivity(
+                context,
+                APP_UPDATE_NOTIFICATION_ID,
+                Intent(Intent.ACTION_VIEW, Uri.parse(release.htmlUrl)),
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            )
+        val checksumText =
+            if (release.checksumUrl.isNullOrBlank()) {
+                context.getString(R.string.notif_app_update_body, release.tagName)
+            } else {
+                context.getString(R.string.notif_app_update_body_checksum, release.tagName)
+            }
+        val builder =
+            NotificationCompat
+                .Builder(context, CHANNEL_APP_UPDATES)
+                .setSmallIcon(R.drawable.ic_launcher_monochrome)
+                .setContentTitle(context.getString(R.string.notif_app_update_title))
+                .setContentText(checksumText)
+                .setStyle(NotificationCompat.BigTextStyle().bigText(checksumText))
+                .setContentIntent(openIntent)
+                .addAction(0, context.getString(R.string.notif_app_update_open), openIntent)
+                .setAutoCancel(true)
+                .setCategory(NotificationCompat.CATEGORY_STATUS)
+                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+        return safeNotify(context, APP_UPDATE_NOTIFICATION_ID, builder)
     }
 
     private fun createProtectionHealthChannel(
