@@ -139,6 +139,10 @@ All notable changes to CallShield will be documented in this file.
   advisories, F-Droid preparation state, and privacy-safe source snapshots.
 - Made the release-drift checkout test derive its audit clock from the generated
   source snapshot and added the current version-code Fastlane changelog.
+- Added pinned pull-request and scheduled GitHub verification with Gradle lock,
+  release/provenance, pipeline, and high-severity dependency-review gates;
+  scheduled runs submit the resolved Gradle dependency graph and Dependabot tracks
+  Gradle and GitHub Action updates.
 
 ## v1.7.34 — 2026-08-10
 
