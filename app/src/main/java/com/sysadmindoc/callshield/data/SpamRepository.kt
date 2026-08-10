@@ -527,9 +527,9 @@ class SpamRepository(
      * @param realtimeCall `true` for live incoming calls/SMS (the default) —
      *   feeds `CampaignDetector` and may surface the suspicious-caller overlay.
      *   Pass `false` from the historical call-log / SMS-inbox scanners so they
-     *   don't poison the in-memory campaign detector with old numbers (any 5+
-     *   historical unknowns sharing an NPA-NXX would otherwise flag that prefix
-     *   as an active campaign for the next hour) and don't pop overlays for
+     *   don't poison the bounded local campaign detector with old numbers (any
+     *   5+ historical unknowns sharing an NPA-NXX would otherwise flag that
+     *   prefix as an active campaign for the next hour) and don't pop overlays for
      *   calls that already happened.
      * @param prefsSnapshot caller-supplied prefs read. Pass a pre-loaded
      *   snapshot to avoid repeating the DataStore read when the caller has

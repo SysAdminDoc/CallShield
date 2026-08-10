@@ -11,7 +11,7 @@ import com.sysadmindoc.callshield.data.PhoneIdentityCanonicalizer
 import com.sysadmindoc.callshield.data.model.*
 
 /** Single source of truth for the Room database version. */
-const val DB_VERSION = 15
+const val DB_VERSION = 16
 private const val DB_VERSION_9 = 9
 private const val DB_VERSION_10 = 10
 private const val DB_VERSION_11 = 11
@@ -19,6 +19,7 @@ private const val DB_VERSION_12 = 12
 private const val DB_VERSION_13 = 13
 private const val DB_VERSION_14 = 14
 private const val DB_VERSION_15 = 15
+private const val DB_VERSION_16 = 16
 
 /**
  * v5 → v6: Add `isEmergency INTEGER NOT NULL DEFAULT 0` to the whitelist
@@ -225,6 +226,36 @@ val MIGRATION_14_15 =
         }
     }
 
+/** v15 -> v16: retain bounded local neighbor-number campaign observations. */
+val MIGRATION_15_16 =
+    object : Migration(DB_VERSION_15, DB_VERSION_16) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `campaign_observations` (
+                    `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                    `number` TEXT NOT NULL,
+                    `prefix` TEXT NOT NULL,
+                    `observedAt` INTEGER NOT NULL,
+                    `sourceIds` TEXT NOT NULL
+                )
+                """.trimIndent(),
+            )
+            db.execSQL(
+                "CREATE INDEX IF NOT EXISTS `index_campaign_observations_prefix_observedAt` " +
+                    "ON `campaign_observations`(`prefix`, `observedAt`)",
+            )
+            db.execSQL(
+                "CREATE INDEX IF NOT EXISTS `index_campaign_observations_observedAt` " +
+                    "ON `campaign_observations`(`observedAt`)",
+            )
+            db.execSQL(
+                "CREATE INDEX IF NOT EXISTS `index_campaign_observations_number_observedAt` " +
+                    "ON `campaign_observations`(`number`, `observedAt`)",
+            )
+        }
+    }
+
 private fun reasonCodeSql(column: String): String =
     """
     CASE
@@ -270,6 +301,7 @@ private fun reasonCodeSql(column: String): String =
         HashWildcardRule::class,
         PendingBlockedCallLog::class,
         RestoreJournal::class,
+        CampaignObservation::class,
     ],
     version = DB_VERSION,
     exportSchema = true,
@@ -310,6 +342,7 @@ abstract class AppDatabase : RoomDatabase() {
                         MIGRATION_12_13,
                         MIGRATION_13_14,
                         MIGRATION_14_15,
+                        MIGRATION_15_16,
                     ).build()
                     .also { instance = it }
             }

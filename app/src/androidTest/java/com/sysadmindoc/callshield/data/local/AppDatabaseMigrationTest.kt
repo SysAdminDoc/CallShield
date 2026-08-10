@@ -62,6 +62,7 @@ class AppDatabaseMigrationTest {
                 MIGRATION_12_13,
                 MIGRATION_13_14,
                 MIGRATION_14_15,
+                MIGRATION_15_16,
             )
 
         db.assertSingleInt("SELECT COUNT(*) FROM spam_numbers", 1)
@@ -80,6 +81,7 @@ class AppDatabaseMigrationTest {
         db.assertHasColumn("spam_numbers", "evidenceExpiresAt")
         db.assertHasColumn("spam_prefixes", "evidenceJson")
         db.assertHasColumn("spam_prefixes", "evidenceExpiresAt")
+        db.assertHasColumn("campaign_observations", "prefix")
         db.assertHasColumn("whitelist", "expiresAt")
         db.assertHasColumn("restore_journal", "phase")
         db.close()
@@ -107,6 +109,7 @@ class AppDatabaseMigrationTest {
                 MIGRATION_12_13,
                 MIGRATION_13_14,
                 MIGRATION_14_15,
+                MIGRATION_15_16,
             )
 
         db.assertSingleInt("SELECT isEmergency FROM whitelist WHERE number = '+15550000003'", 1)
@@ -135,6 +138,7 @@ class AppDatabaseMigrationTest {
                 MIGRATION_12_13,
                 MIGRATION_13_14,
                 MIGRATION_14_15,
+                MIGRATION_15_16,
             )
 
         db.assertSingleInt(
@@ -168,6 +172,7 @@ class AppDatabaseMigrationTest {
                 MIGRATION_12_13,
                 MIGRATION_13_14,
                 MIGRATION_14_15,
+                MIGRATION_15_16,
             )
 
         db.assertSingleInt("SELECT scheduleDays FROM wildcard_rules WHERE pattern = '+1666*'", 0)
@@ -199,6 +204,7 @@ class AppDatabaseMigrationTest {
                 MIGRATION_12_13,
                 MIGRATION_13_14,
                 MIGRATION_14_15,
+                MIGRATION_15_16,
             )
 
         db.assertSingleInt("SELECT COUNT(*) FROM call_log WHERE number = '+17770000001'", 1)
@@ -257,6 +263,7 @@ class AppDatabaseMigrationTest {
                 MIGRATION_12_13,
                 MIGRATION_13_14,
                 MIGRATION_14_15,
+                MIGRATION_15_16,
             )
 
         db.assertSingleInt("SELECT COUNT(*) FROM spam_numbers WHERE number = '+12125551234'", 1)

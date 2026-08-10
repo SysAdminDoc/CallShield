@@ -30,6 +30,18 @@ class BlockReasoningTest {
     }
 
     @Test
+    fun `campaign_burst explanation includes measured evidence`() {
+        val r =
+            BlockReasoning.explain(
+                "campaign_burst",
+                "Active campaign: 5 neighbor numbers in 6 calls; 1 repeated number(s) suggest callback reuse",
+                75,
+            )
+
+        assertTrue(r.bullets.any { it.contains("callback reuse") })
+    }
+
+    @Test
     fun `ml_scorer explanation reassures the user that inference is on-device`() {
         val r = BlockReasoning.explain("ml_scorer", "", 84)
         assertTrue(r.headline.contains("84%"))

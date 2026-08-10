@@ -2,6 +2,7 @@ package com.sysadmindoc.callshield.data.local
 
 import androidx.room.*
 import com.sysadmindoc.callshield.data.model.BlockedCall
+import com.sysadmindoc.callshield.data.model.CampaignObservation
 import com.sysadmindoc.callshield.data.model.HashWildcardRule
 import com.sysadmindoc.callshield.data.model.NumberCount
 import com.sysadmindoc.callshield.data.model.PendingBlockedCallLog
@@ -253,6 +254,28 @@ interface SpamDao {
 
     @Query("SELECT * FROM call_log WHERE timestamp > :since ORDER BY timestamp DESC")
     suspend fun getRecentBlockedNumbers(since: Long): List<BlockedCall>
+
+    // Local campaign evidence
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertCampaignObservation(observation: CampaignObservation)
+
+    @Query(
+        "SELECT * FROM campaign_observations " +
+            "WHERE prefix = :prefix AND observedAt > :since ORDER BY observedAt ASC",
+    )
+    suspend fun getCampaignObservations(
+        prefix: String,
+        since: Long,
+    ): List<CampaignObservation>
+
+    @Query("DELETE FROM campaign_observations WHERE observedAt <= :before")
+    suspend fun deleteCampaignObservationsBefore(before: Long)
+
+    @Query(
+        "DELETE FROM campaign_observations " +
+            "WHERE id NOT IN (SELECT id FROM campaign_observations ORDER BY observedAt DESC LIMIT :maxRows)",
+    )
+    suspend fun trimCampaignObservations(maxRows: Int)
 
     // Bounded digest aggregates — avoid materializing the full 24h window
     // (including smsBody) in a constrained background process on heavy-spam

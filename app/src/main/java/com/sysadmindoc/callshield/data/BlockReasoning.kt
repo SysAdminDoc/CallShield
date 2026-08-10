@@ -111,6 +111,7 @@ object BlockReasoning {
                 headline = "This prefix is running an active spam campaign."
                 bullets += "Matched at detection layer 11.5 (campaign burst detector)."
                 bullets += "5+ distinct numbers from this NPA-NXX prefix have called in the last hour."
+                if (description.isNotBlank()) bullets += description
                 bullets += "Campaign confidence: $confidence%."
             }
 
