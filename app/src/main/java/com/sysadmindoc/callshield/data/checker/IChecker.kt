@@ -247,7 +247,7 @@ object CheckerPriority {
     const val CALLER_NAME_TRUST = 4_850 // carrier-presented name matches a user trust pattern
     const val PUSH_ALERT_BRIDGE = 4_700 // reserved for A3 — notification-bridged allow
     const val SMS_BURST = 4_650 // repeated unknown SMS sender/prefix in short window
-    const val CAMPAIGN_RECORDER = 4_500 // side-effect only (records into in-memory map)
+    const val CAMPAIGN_RECORDER = 4_500 // side-effect only (records bounded local evidence)
 
     // ── Weaker blocks (statistical / heuristic / temporal) ───────────
     const val REGION_BLOCK = 4_300 // opt-in block outside user-selected NANP regions

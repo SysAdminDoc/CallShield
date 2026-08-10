@@ -1,5 +1,7 @@
 package com.sysadmindoc.callshield.data
 
+import com.sysadmindoc.callshield.data.model.CampaignObservation
+import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
@@ -166,6 +168,47 @@ class CampaignDetectorTest {
     }
 
     @Test
+    fun isActiveCampaign_repeatedSingleNumberDoesNotBecomeNeighborCampaign() {
+        repeat(10) { CampaignDetector.recordCall("3124441234") }
+
+        assertFalse(CampaignDetector.isActiveCampaign("3124449999"))
+    }
+
+    @Test
+    fun persistedEvidenceRetainsChurnAndSourceAgreement() =
+        runBlocking {
+            val now = System.currentTimeMillis()
+            val store =
+                FakeCampaignObservationStore(
+                    (0 until 5).map { index ->
+                        CampaignObservation(
+                            number = "312444${1000 + index}",
+                            prefix = "312444",
+                            observedAt = now - index,
+                            sourceIds = if (index % 2 == 0) "ftc_complaints" else "fcc_complaints",
+                        )
+                    } +
+                        CampaignObservation(
+                            number = "3124441000",
+                            prefix = "312444",
+                            observedAt = now - 10,
+                            sourceIds = "ftc_complaints,fcc_complaints",
+                        ),
+                )
+            val detector = CampaignDetector()
+            detector.attachObservationStore(store)
+
+            val evidence = detector.getCampaignEvidence("3124449999")
+
+            val resolved = requireNotNull(evidence)
+            assertTrue(resolved.isActive)
+            assertEquals(5, resolved.distinctNumberCount)
+            assertEquals(6, resolved.observationCount)
+            assertEquals(1, resolved.repeatedNumberCount)
+            assertEquals(2, resolved.sourceAgreementCount)
+        }
+
+    @Test
     fun isActiveCampaign_aboveThreshold_returnsTrue() {
         repeat(10) { i ->
             CampaignDetector.recordCall("312444${1000 + i}")
@@ -259,4 +302,20 @@ class CampaignDetectorTest {
     // ─── Helper ──────────────────────────────────────────────────────
 
     private fun callExtract(number: String): String? = extractNpaNxx.invoke(CampaignDetector.shared, number) as String?
+
+    private class FakeCampaignObservationStore(
+        private val observations: List<CampaignObservation>,
+    ) : CampaignObservationStore {
+        override suspend fun record(observation: CampaignObservation) = Unit
+
+        override suspend fun load(
+            prefix: String,
+            since: Long,
+        ): List<CampaignObservation> = observations.filter { it.prefix == prefix && it.observedAt > since }
+
+        override suspend fun prune(
+            before: Long,
+            maxRows: Int,
+        ) = Unit
+    }
 }

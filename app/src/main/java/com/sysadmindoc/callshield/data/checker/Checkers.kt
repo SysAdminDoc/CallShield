@@ -17,6 +17,7 @@ import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.SystemBlockList
 import com.sysadmindoc.callshield.data.repository.SpamRepositoryImpl
 import com.sysadmindoc.callshield.service.CallerIdOverlayService
+import kotlinx.coroutines.withTimeoutOrNull
 import java.util.Calendar
 
 /** Absolute safety floor for recognized emergency and public-safety codes. */
@@ -623,7 +624,7 @@ internal class RegionBlockChecker : IChecker {
 }
 
 /**
- * Side-effect-only checker that records the call into the in-memory
+ * Side-effect-only checker that records the call into the bounded local
  * campaign detector. Placed after the recently-dialed / repeated-urgent
  * allows so family / coworkers / repeat-callback numbers don't poison the
  * campaign bucket for their NPA-NXX.
@@ -851,17 +852,35 @@ internal class CampaignBurstChecker(
     override val priority = CheckerPriority.CAMPAIGN_BURST
     override val name = "campaign_burst"
 
-    override suspend fun check(ctx: CheckContext): BlockResult? =
-        if (campaignDetector.isActiveCampaign(ctx.number)) {
-            BlockResult.block(
-                matchSource = "campaign_burst",
-                type = "robocall",
-                description = "Active spam campaign detected from this prefix",
-                confidence = 75,
-            )
-        } else {
-            null
-        }
+    override suspend fun check(ctx: CheckContext): BlockResult? {
+        val lookupBudget = ctx.timeLeftMillis().coerceAtMost(CAMPAIGN_LOOKUP_BUDGET_MS)
+        if (lookupBudget <= 0L) return null
+        val evidence =
+            withTimeoutOrNull(lookupBudget) {
+                campaignDetector.getCampaignEvidence(ctx.number)
+            } ?: return null
+        if (!evidence.isActive) return null
+        val details =
+            buildList {
+                add("${evidence.distinctNumberCount} neighbor numbers in ${evidence.observationCount} calls")
+                if (evidence.repeatedNumberCount > 0) {
+                    add("${evidence.repeatedNumberCount} repeated number(s) suggest callback reuse")
+                }
+                if (evidence.sourceAgreementCount > 0) {
+                    add("${evidence.sourceAgreementCount} source signal(s) agree")
+                }
+            }.joinToString("; ")
+        return BlockResult.block(
+            matchSource = "campaign_burst",
+            type = "robocall",
+            description = "Active campaign: $details",
+            confidence = 75,
+        )
+    }
+
+    companion object {
+        private const val CAMPAIGN_LOOKUP_BUDGET_MS = 250L
+    }
 }
 
 internal class MlScorerChecker(

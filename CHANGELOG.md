@@ -40,6 +40,11 @@ All notable changes to CallShield will be documented in this file.
   two-digit-prefix SHA-1 hashes through a bounded expiring cache; Saracroche
   ranges are restricted to French `+33` allocations and source-owned ranges
   expire only after a successful non-empty refresh.
+- Campaign detection now retains bounded seven-day local observations, combines
+  them with the one-hour neighbor-number window after process restarts, expires
+  stale evidence, and exposes repeat-number/callback and source-agreement counts
+  in the block explanation without allowing a single repeated number to activate
+  a campaign.
 
 ### Reliability
 
