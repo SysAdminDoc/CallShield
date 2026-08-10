@@ -42,6 +42,9 @@ class CallShieldScreeningService : CallScreeningService() {
 
     lateinit var spamHeuristics: SpamHeuristics
 
+    /** Narrow seam for fault-injecting the contact fast path without a contacts provider. */
+    internal var contactLookup: ((android.content.Context, String, Set<String>?) -> Boolean)? = null
+
     @Inject
     lateinit var repoProvider: Provider<SpamRepository>
 
@@ -140,14 +143,17 @@ class CallShieldScreeningService : CallScreeningService() {
                         // Fast-path shortcut before we run the pipeline: a contact never
                         // needs any of the 13 downstream checks, and skipping them saves
                         // tens of milliseconds against the 5 s deadline.
-                        if ((prefs[SpamRepository.KEY_CONTACT_WHITELIST] ?: true) &&
-                            heuristics.isInContacts(
-                                appContext,
-                                number,
-                                prefs[SpamRepository.KEY_SELECTED_CONTACT_GROUPS]
-                                    ?.let(ContactGroupCatalog::preserveScope),
-                            )
-                        ) {
+                        val contactIsKnown =
+                            if (prefs[SpamRepository.KEY_CONTACT_WHITELIST] ?: true) {
+                                val selectedContactGroups =
+                                    prefs[SpamRepository.KEY_SELECTED_CONTACT_GROUPS]
+                                        ?.let(ContactGroupCatalog::preserveScope)
+                                contactLookup?.invoke(appContext, number, selectedContactGroups)
+                                    ?: heuristics.isInContacts(appContext, number, selectedContactGroups)
+                            } else {
+                                false
+                            }
+                        if (contactIsKnown) {
                             respondAllow(responseGate)
                             return@withTimeoutOrNull
                         }
