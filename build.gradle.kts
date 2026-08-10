@@ -251,6 +251,31 @@ tasks.register("verifyReproducibleBuildInputs") {
     }
 }
 
+tasks.register<Exec>("verifyReleaseDrift") {
+    group = "verification"
+    description = "Reports release version, dependency-lock, advisory, and source-snapshot drift."
+
+    val script = layout.projectDirectory.file("scripts/verify_release_drift.py")
+    inputs.files(
+        script,
+        layout.projectDirectory.file("scripts/release_advisories.json"),
+        layout.projectDirectory.file("app/build.gradle.kts"),
+        layout.projectDirectory.file("gradle/libs.versions.toml"),
+        layout.projectDirectory.file("app/gradle.lockfile"),
+        layout.projectDirectory.file("gradle/wrapper/gradle-wrapper.properties"),
+        layout.projectDirectory.file("README.md"),
+        layout.projectDirectory.file("CHANGELOG.md"),
+        layout.projectDirectory.file("app/src/main/java/com/sysadmindoc/callshield/ui/screens/more/ChangelogScreen.kt"),
+        layout.projectDirectory.file("docs/fdroid/com.sysadmindoc.callshield.yml"),
+        layout.projectDirectory.file("docs/fdroid-submission.md"),
+        layout.projectDirectory.file("fastlane/metadata/android/en-US/changelogs/${appReleaseVersion.code}.txt"),
+        layout.projectDirectory.file("data/source-manifest.json"),
+        layout.projectDirectory.file("data/source-snapshot.json"),
+    )
+    workingDir(rootDir)
+    commandLine("python", script.asFile.absolutePath)
+}
+
 tasks.register("verifyReleaseApkReproducibleMetadata") {
     group = "verification"
     description = "Fails when the release APK contains AGP VCS metadata."
@@ -282,7 +307,7 @@ tasks.register("verifyReleaseApkReproducibleMetadata") {
 tasks.register("verifyReleaseMetadata") {
     group = "verification"
     description = "Fails when release, store, README, or F-Droid metadata drifts from the app."
-    dependsOn("verifyTrackedSigningSecrets")
+    dependsOn("verifyTrackedSigningSecrets", "verifyReleaseDrift")
 
     val readme = layout.projectDirectory.file("README.md")
     val storeDescription = layout.projectDirectory.file("fastlane/metadata/android/en-US/full_description.txt")

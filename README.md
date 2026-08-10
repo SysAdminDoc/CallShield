@@ -609,6 +609,12 @@ No API keys — none required, none optional, no credential entry anywhere in th
 ./gradlew verifyReleaseMetadata verifyReproducibleBuildInputs verifyReleaseApkReproducibleMetadata
 ```
 
+`verifyReleaseMetadata` invokes `scripts/verify_release_drift.py`, which prints
+the synchronized app/F-Droid/changelog versions, locked dependency summary,
+known-advisory dispositions, and source-snapshot provenance. Run the report
+directly with `python scripts/verify_release_drift.py` when reviewing metadata
+without building an APK.
+
 Requires JDK 17+. Signed APK at `app/build/outputs/apk/release/app-release.apk`.
 Generate the release hash sidecar with:
 

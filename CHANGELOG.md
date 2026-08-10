@@ -103,6 +103,9 @@ All notable changes to CallShield will be documented in this file.
   2.11.0, Hilt 2.60.1, and the Kotlin 2.4.x line remain in the AGP-9 blocked
   tranche because the AGP-8-compatible Hilt 2.58 compiler cannot read Kotlin
   2.4 metadata.
+- Added `verifyReleaseDrift`, a reproducible release audit for synchronized
+  version metadata, locked direct dependencies, explicitly dispositioned
+  advisories, F-Droid preparation state, and privacy-safe source snapshots.
 
 ## v1.7.33 — 2026-08-01
 
