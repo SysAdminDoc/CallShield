@@ -4,6 +4,8 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+## v1.7.36 — 2026-08-12
+
 ### Interface
 
 - Paged the Room-backed database, blocked-log, grouped-log, dashboard, and

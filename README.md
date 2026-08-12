@@ -12,7 +12,7 @@
 <p align="center">
   <a href="https://github.com/SysAdminDoc/CallShield/releases/latest"><img src="https://img.shields.io/github/v/release/SysAdminDoc/CallShield?style=flat-square&color=a6e3a1" alt="Release"></a>
   <img src="https://img.shields.io/badge/Spam%20Numbers-51%2C463-f38ba8?style=flat-square" alt="51,463 Numbers">
-  <img src="https://img.shields.io/badge/Tests-1094-94e2d5?style=flat-square" alt="1094 Tests">
+  <img src="https://img.shields.io/badge/Tests-1100-94e2d5?style=flat-square" alt="1100 Tests">
   <img src="https://img.shields.io/badge/Android-10%2B-89b4fa?style=flat-square" alt="Android 10+">
   <img src="https://img.shields.io/badge/License-MIT-cba6f7?style=flat-square" alt="MIT License">
   <img src="https://img.shields.io/badge/API%20Keys-None-fab387?style=flat-square" alt="No required API keys">
@@ -41,18 +41,20 @@ legacy snapshot when the shard service is unavailable.
   <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/06-more.png" width="30%" alt="Protection tools and release information">
 </p>
 
-## v1.7.35 Highlights
+## v1.7.36 Highlights
 
 - **Bounded local data surfaces** — database and activity views page Room rows,
   while dashboard and statistics cards use bounded SQL queries and aggregates.
+- **Consistent ML inference** — Kotlin and Python now share a versioned 20-feature
+  schema with golden vectors and deterministic hour handling.
+- **Bounded exports and backup** — CSV and portable backup paths stream Room data
+  in cursor batches while preserving redaction and restore caps.
 - **Feed rollback protection** — accepted sharded-feed version, date, and
   fingerprint metadata reject replayed, downgraded, or mutated manifests before
   replacing the local database.
-- **Release gates in CI** — pinned pull-request and scheduled checks cover tests,
-  provenance, dependency advisories, lock drift, and resolved dependency graphs.
-- **Release supply-chain evidence** — release artifacts are paired with a
-  lockfile-derived CycloneDX SBOM, an in-toto/SLSA provenance record, and a
-  SHA-256 sidecar; version-tag builds receive a GitHub OIDC attestation.
+- **Release evidence** — release artifacts are paired with a lockfile-derived
+  CycloneDX SBOM, in-toto/SLSA provenance, a SHA-256 sidecar, and tag OIDC
+  attestation; the screener hot path has a 50 ms p99 benchmark.
 
 ## v1.7.32 Highlights
 
@@ -340,7 +342,7 @@ legacy snapshot when the shard service is unavailable.
 - **Answered-caller trust** — numbers answered repeatedly inside the configured lookback window can ring through lower-confidence heuristic/ML suspicion while explicit block rules still win first.
 - **Emergency callback grace** — unknown callbacks can ring through after a local emergency call for a configurable window while explicit block rules still win first.
 - **SMS burst protection** - repeated unknown SMS senders or same-prefix floods can be blocked as `sms_burst`, with blocked-SMS notification actions to mark safe or report.
-- **1094 total JVM unit tests** - the local unit suite covers detection, workers, utilities, repository contracts, and permission readiness before release.
+- **1100 total JVM unit tests** - the local unit suite covers detection, workers, utilities, repository contracts, and permission readiness before release.
 - **Gradient-Boosted Tree ML model** — 20 features, pure Kotlin, no TFLite dependency.
 - **Campaign burst detection** — bounded local observations retain seven days of prefix/neighbor churn, callback reuse, and source-agreement evidence while the live detector uses a one-hour window.
 - **Full accessibility** — content descriptions across Compose UI, 48dp minimum touch targets.
@@ -354,7 +356,7 @@ legacy snapshot when the shard service is unavailable.
 5. **Callback-aware** — won't block callbacks from numbers you recently called, answered repeatedly, after a local emergency call, or urgent repeated callers
 6. **Community-driven** — one-tap anonymous contribution via Cloudflare Worker, merged into the database by the maintainer
 
-## Detection Pipeline (v1.7.35)
+## Detection Pipeline (v1.7.36)
 
 All detection layers implement a shared `IChecker` interface and run in priority order via `CheckerPipeline.run` — first non-null result wins, every layer is testable in isolation. Priorities are stable numbers; the ladder below is the live order.
 
@@ -670,7 +672,7 @@ RELEASE_KEY_PASSWORD=...
 ## Testing
 
 ```bash
-./gradlew testDebugUnitTest   # 1094 tests
+./gradlew testDebugUnitTest   # 1100 tests
 ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.sysadmindoc.callshield.platform.TargetSdkBehaviorSmokeTest
 ./gradlew verifyPipelineTests # Cloudflare Worker (node) + data-pipeline and translation checks (python)
 ```
@@ -707,7 +709,7 @@ language in [issue #7](https://github.com/SysAdminDoc/CallShield/issues/7).
 | Community API | Cloudflare Workers |
 | URL Safety | Local spam-domain data; optional URLhaus (abuse.ch) |
 | Verification | Local Gradle, lint, and release-artifact checks |
-| Tests | 1094 JVM unit tests (JUnit) |
+| Tests | 1100 JVM unit tests (JUnit) |
 | Strings | 1160 string resources and 29 plural groups (translation-ready) |
 | Accessibility | 100+ content descriptions, 48dp touch targets |
 | Min SDK | 29 (Android 10) |
