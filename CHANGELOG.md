@@ -150,6 +150,9 @@ All notable changes to CallShield will be documented in this file.
   release/provenance, pipeline, and high-severity dependency-review gates;
   scheduled runs submit the resolved Gradle dependency graph and Dependabot tracks
   Gradle and GitHub Action updates.
+- Release artifacts now carry an exact CycloneDX SBOM, in-toto/SLSA provenance
+  record, and SHA-256 sidecar bound to the release-runtime lockfile; version tags
+  also receive a GitHub OIDC build-provenance attestation.
 
 ## v1.7.35 — 2026-08-10
 

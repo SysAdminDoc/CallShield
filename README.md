@@ -50,6 +50,9 @@ legacy snapshot when the shard service is unavailable.
   replacing the local database.
 - **Release gates in CI** — pinned pull-request and scheduled checks cover tests,
   provenance, dependency advisories, lock drift, and resolved dependency graphs.
+- **Release supply-chain evidence** — release artifacts are paired with a
+  lockfile-derived CycloneDX SBOM, an in-toto/SLSA provenance record, and a
+  SHA-256 sidecar; version-tag builds receive a GitHub OIDC attestation.
 
 ## v1.7.32 Highlights
 
@@ -621,7 +624,7 @@ No API keys — none required, none optional, no credential entry anywhere in th
 ## Building
 
 ```bash
-./gradlew verifyReleaseMetadata verifyReproducibleBuildInputs verifyReleaseApkReproducibleMetadata
+./gradlew verifyReleaseMetadata verifyReproducibleBuildInputs verifyReleaseSbom verifyReleaseApkReproducibleMetadata
 ```
 
 `verifyReleaseMetadata` invokes `scripts/verify_release_drift.py`, which prints
@@ -630,12 +633,23 @@ known-advisory dispositions, and source-snapshot provenance. Run the report
 directly with `python scripts/verify_release_drift.py` when reviewing metadata
 without building an APK.
 
-Requires JDK 17+. Signed APK at `app/build/outputs/apk/release/app-release.apk`.
+Requires JDK 17+. With release signing properties configured, the signed APK is
+at `app/build/outputs/apk/release/app-release.apk`; without them, the local
+verification build emits `app-release-unsigned.apk`.
 Generate the release hash sidecar with:
 
 ```powershell
 .\scripts\write-release-sha256.ps1
 ```
+
+`verifyReleaseSbom` also writes `<release-apk-stem>.cdx.json`,
+`<release-apk-stem>.provenance.json`, and `<release-apk-stem>.sha256` beside the
+APK. The SBOM contains the exact `releaseRuntimeClasspath` coordinates from
+`app/gradle.lockfile`; the verifier fails if the APK, lockfile, SBOM, or
+provenance record drift. GitHub OIDC attestations are created only for
+version-tag CI builds. A locally signed APK remains governed by the maintainer
+release key and its SHA-256 sidecar; the local JSON provenance is evidence, not
+a replacement for that signature.
 
 See `docs/reproducible-builds.md` for the dependency-lock and hash-comparison
 runbook.
