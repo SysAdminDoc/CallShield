@@ -118,6 +118,9 @@ All notable changes to CallShield will be documented in this file.
   so the full JVM suite cannot rewrite device-protected preferences while asserting fail-open state.
 - Log CSV/redress exports and backup generation now use ordered cursor batches and buffered
   writers, preserving row caps and redaction without materializing the full call history.
+- Versioned the 20-feature spam model contract with shared Kotlin/Python golden vectors,
+  deterministic time-of-day cases, model-score parity checks, and schema rejection for mismatched
+  v3 payloads.
 - Checker exceptions and deadline cutoffs now remain visible in Protection Test, lookup/log
   details, and CSV/backup exports without exposing exception text or delaying the response gate.
 - Rules now run a standing overlap audit after sync and CRUD, showing the winning priority for

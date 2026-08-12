@@ -1,5 +1,6 @@
 {
   "version": 3,
+  "feature_schema_version": 1,
   "model_type": "gbt",
   "description": "CallShield GBT spam scorer v3 \u2014 50 trees, 20 features, LR fallback",
   "threshold": 0.653332,

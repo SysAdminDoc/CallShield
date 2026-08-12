@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "feature_names": [
+    "toll_free",
+    "high_spam_npa",
+    "voip_range",
+    "repeated_digits_ratio",
+    "sequential_asc_ratio",
+    "all_same_digit",
+    "nxx_555",
+    "last4_zero",
+    "invalid_nxx",
+    "subscriber_all_same",
+    "alternating_pattern",
+    "sequential_desc_ratio",
+    "nxx_below_200",
+    "low_digit_entropy",
+    "subscriber_sequential",
+    "time_of_day_sin",
+    "time_of_day_cos",
+    "geographic_distance",
+    "short_number",
+    "plus_one_prefix"
+  ],
+  "cases": [
+    {
+      "name": "valid_us",
+      "input": "2125551234",
+      "hour": 12,
+      "scoreable": true,
+      "gbt_score": 0.07972236451979337,
+      "lr_score": 0.4146379670923992,
+      "expected": [0.0, 0.0, 0.0, 0.3, 0.4444444444444444, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.1111111111111111, 0.0, 0.0, 1.0, 1.2246467991473532e-16, -1.0, 0.0, 0.0, 0.0]
+    },
+    {
+      "name": "formatted_plus_one",
+      "input": "+1 (415) 555-1234",
+      "hour": 0,
+      "scoreable": true,
+      "gbt_score": 0.9874082370264008,
+      "lr_score": 0.5848137647938659,
+      "expected": [0.0, 1.0, 1.0, 0.4, 0.3333333333333333, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0]
+    },
+    {
+      "name": "invalid_short",
+      "input": "555123",
+      "hour": 6,
+      "scoreable": false,
+      "expected": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+    },
+    {
+      "name": "international",
+      "input": "+44 20 7123 4567",
+      "hour": 18,
+      "scoreable": false,
+      "expected": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+    },
+    {
+      "name": "boundary_alternating",
+      "input": "5050505050",
+      "hour": 23,
+      "scoreable": true,
+      "gbt_score": 0.49443829390088323,
+      "lr_score": 0.42177148075198506,
+      "expected": [0.0, 0.0, 0.0, 0.5, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, -0.25881904510252157, 0.9659258262890681, 0.0, 0.0, 0.0]
+    },
+    {
+      "name": "time_midnight",
+      "input": "3124567890",
+      "hour": 0,
+      "scoreable": true,
+      "gbt_score": 0.5909240677613796,
+      "lr_score": 0.4124411780179878,
+      "expected": [0.0, 0.0, 0.0, 0.1, 0.6666666666666666, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0]
+    },
+    {
+      "name": "time_noon",
+      "input": "3124567890",
+      "hour": 12,
+      "scoreable": true,
+      "gbt_score": 0.5909240677613796,
+      "lr_score": 0.4124411780179878,
+      "expected": [0.0, 0.0, 0.0, 0.1, 0.6666666666666666, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.2246467991473532e-16, -1.0, 0.0, 0.0, 0.0]
+    }
+  ]
+}

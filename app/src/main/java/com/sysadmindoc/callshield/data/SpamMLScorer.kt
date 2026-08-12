@@ -1,7 +1,6 @@
 package com.sysadmindoc.callshield.data
 
 import android.content.Context
-import com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup
 import com.sysadmindoc.callshield.data.remote.GitHubDataSource
 import com.sysadmindoc.callshield.domain.model.CallerIdentity
 import com.sysadmindoc.callshield.domain.model.CallerIdentitySignals
@@ -374,7 +373,21 @@ class SpamMLScorer
             snap: ModelState,
         ): Double {
             val features = extractFeatures(number).takeIf { it.isNotEmpty() } ?: return -1.0
-            if (snap.useGbt) {
+            return scoreFeatures(features, snap, useLogisticFallback = false)
+        }
+
+        /** Score a deterministic contract vector with either shipped model path. */
+        internal fun scoreFeaturesForContract(
+            features: DoubleArray,
+            useLogisticFallback: Boolean,
+        ): Double = scoreFeatures(features, state, useLogisticFallback)
+
+        private fun scoreFeatures(
+            features: DoubleArray,
+            snap: ModelState,
+            useLogisticFallback: Boolean,
+        ): Double {
+            if (!useLogisticFallback && snap.useGbt) {
                 val trees = snap.gbtTrees
                 if (trees != null && trees.isNotEmpty()) {
                     return scoreGbt(
@@ -441,7 +454,18 @@ class SpamMLScorer
             return 0.0
         }
 
-        private fun extractFeatures(number: String): DoubleArray {
+        private fun extractFeatures(number: String): DoubleArray = extractFeaturesAtHour(number, Calendar.getInstance().get(Calendar.HOUR_OF_DAY)) ?: doubleArrayOf()
+
+        /** Deterministic feature extraction used by the cross-language contract tests. */
+        internal fun extractFeaturesForContract(
+            number: String,
+            hourOfDay: Int,
+        ): DoubleArray = extractFeaturesAtHour(number, hourOfDay) ?: DoubleArray(SPAM_ML_FEATURE_NAMES.size)
+
+        private fun extractFeaturesAtHour(
+            number: String,
+            hourOfDay: Int,
+        ): DoubleArray? {
             // Check raw number properties before normalizing to 10 digits
             val rawDigits = filterAsciiDigits(number)
             val plusOnePrefix = if (number.trimStart().startsWith("+1")) 1.0 else 0.0
@@ -449,7 +473,7 @@ class SpamMLScorer
 
             var digits = rawDigits
             if (digits.length == 11 && digits.startsWith("1")) digits = digits.drop(1)
-            if (digits.length != 10) return doubleArrayOf()
+            if (digits.length != 10) return null
 
             val npa = digits.substring(0, 3)
             val nxx = digits.substring(3, 6)
@@ -500,8 +524,9 @@ class SpamMLScorer
             val subSeq = if (subAsc == 3 || subDesc == 3) 1.0 else 0.0
 
             // ── Features 16–20 (behavioral & temporal) ──────────────────
-            // Cyclical time-of-day encoding using current hour
-            val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
+            // Cyclical time-of-day encoding. Production passes the device hour;
+            // the contract test passes an explicit hour for deterministic parity.
+            val hour = hourOfDay.coerceIn(0, 23)
             val timeAngle = 2.0 * Math.PI * hour / 24.0
             val timeSin = sin(timeAngle)
             val timeCos = cos(timeAngle)
@@ -510,19 +535,14 @@ class SpamMLScorer
             // NOT true user-relative geographic distance — NPA codes are not
             // ordered by geography. It is a coarse proxy: whether the caller's
             // NPA is numerically far (>200) from a fixed central reference
-            // (312). It fires only when the NPA resolves to a known US area
-            // code. A genuinely user-relative feature (distance from the user's
-            // home area code) is roadmap item 2.2.4; the feature name/position
-            // is kept stable so existing trained model weights stay valid.
+            // (312). It applies to every syntactically scoreable NANP NPA so
+            // Kotlin and the Python trainer share the same feature contract.
+            // A genuinely user-relative feature (distance from the user's home
+            // area code) is roadmap item 2.2.4; the feature name/position is
+            // kept stable so existing trained model weights stay valid.
             val callerNpa = npa.toIntOrNull() ?: 0
-            val callerLocation = AreaCodeLookup.lookup(number)
             val geoDist =
-                if (callerLocation != null) {
-                    val refNpa = REFERENCE_NPA
-                    if (kotlin.math.abs(callerNpa - refNpa) > 200) 1.0 else 0.0
-                } else {
-                    0.0
-                }
+                if (kotlin.math.abs(callerNpa - REFERENCE_NPA) > 200) 1.0 else 0.0
 
             return doubleArrayOf(
                 tollFree,
@@ -610,6 +630,8 @@ class SpamMLScorer
                 val parsedThreshold = thresholdMatch?.groupValues?.get(1)?.toDoubleOrNull() ?: 0.7
                 val parsedInitialScore = initialScoreMatch?.groupValues?.get(1)?.toDoubleOrNull() ?: 0.0
 
+                if (version >= 3 && !modelFeatureSchemaMatches(json)) return null
+
                 // Always try to load fallback LR weights (used by v2 or as fallback for v3)
                 val fallback = parseFallbackWeights(json, version)
 
@@ -670,29 +692,7 @@ class SpamMLScorer
                             .map { it.groupValues[1] to it.groupValues[2].toDouble() }
                             .toMap()
 
-                    val featureNames =
-                        listOf(
-                            "toll_free",
-                            "high_spam_npa",
-                            "voip_range",
-                            "repeated_digits_ratio",
-                            "sequential_asc_ratio",
-                            "all_same_digit",
-                            "nxx_555",
-                            "last4_zero",
-                            "invalid_nxx",
-                            "subscriber_all_same",
-                            "alternating_pattern",
-                            "sequential_desc_ratio",
-                            "nxx_below_200",
-                            "low_digit_entropy",
-                            "subscriber_sequential",
-                            "time_of_day_sin",
-                            "time_of_day_cos",
-                            "geographic_distance",
-                            "short_number",
-                            "plus_one_prefix",
-                        )
+                    val featureNames = SPAM_ML_FEATURE_NAMES
                     // Count how many of the named weights were actually present
                     // in the parsed block. The old guard checked
                     // `parsedWeights.size >= 15`, but `featureNames.map { ... }`

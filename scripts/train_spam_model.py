@@ -111,6 +111,8 @@ FEATURE_NAMES = [
     "plus_one_prefix",
 ]
 
+FEATURE_SCHEMA_VERSION = 1
+
 # Reference area code for geographic distance heuristic (Chicago, central US)
 REFERENCE_NPA = 312
 
@@ -139,8 +141,13 @@ def is_scoreable(number: str) -> bool:
     return len(digits) == 10
 
 
-def extract_features(number: str) -> list[float]:
-    """Extract 20-feature vector from a phone number string."""
+def extract_features(number: str, hour: int = 12) -> list[float]:
+    """Extract the versioned 20-feature vector from a phone number string.
+
+    ``hour`` defaults to the fixed noon value used by training data. The
+    Android contract tests pass explicit hours to exercise the same cyclical
+    encoding deterministically.
+    """
     raw = number.replace("-", "").replace(" ", "").replace("(", "").replace(")", "")
     digits = raw.replace("+", "")
     raw_digit_len = len(digits)
@@ -207,7 +214,7 @@ def extract_features(number: str) -> list[float]:
     # Cyclical time-of-day encoding — use fixed reference hour (noon) for training
     # since we don't have actual call timestamps. Model learns other features;
     # time features activate only at inference with real hour from device.
-    rand_hour = 12
+    rand_hour = max(0, min(23, hour))
     time_angle = 2.0 * math.pi * rand_hour / 24.0
     f16_time_sin = math.sin(time_angle)
     f17_time_cos = math.cos(time_angle)
@@ -504,6 +511,7 @@ def main():
 
     output = {
         "version": 3,
+        "feature_schema_version": FEATURE_SCHEMA_VERSION,
         "model_type": "gbt",
         "description": "CallShield GBT spam scorer v3 — 50 trees, 20 features, LR fallback",
         "threshold": calibrated_threshold,
