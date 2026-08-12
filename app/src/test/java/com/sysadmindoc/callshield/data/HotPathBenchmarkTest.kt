@@ -113,6 +113,36 @@ class HotPathBenchmarkTest {
     }
 
     @Test
+    fun spamScreener_verdict_p99_stays_under_50ms() {
+        val numbers =
+            listOf(
+                "+12125551234",
+                "+18005551234",
+                "+19005551234",
+                "+15555555555",
+                "+13105550000",
+                "+16465551111",
+                "+17185559999",
+                "+14155551234",
+            )
+        repeat(200) { SpamMLScorer.verdict(numbers[it % numbers.size]) }
+
+        val elapsedNanos =
+            LongArray(1_000) { index ->
+                val start = System.nanoTime()
+                SpamMLScorer.verdict(numbers[index % numbers.size])
+                System.nanoTime() - start
+            }.sorted()
+        val p99 = elapsedNanos[(elapsedNanos.size * 99 / 100).coerceAtMost(elapsedNanos.lastIndex)]
+        val ceilingNanos = (50_000_000.0 * headroom).toLong()
+
+        assertTrue(
+            "Spam screener verdict p99 took ${p99 / 1_000_000.0}ms, ceiling ${ceilingNanos / 1_000_000.0}ms",
+            p99 < ceilingNanos,
+        )
+    }
+
+    @Test
     fun spamHeuristics_pure_checks_1k_iterations_under_ceiling() {
         // Only hit the context-free heuristics so the test stays in pure JVM.
         val n = "+12125551234"
