@@ -276,10 +276,98 @@ tasks.register<Exec>("verifyReleaseDrift") {
     commandLine("python", script.asFile.absolutePath)
 }
 
+val releaseArtifactDirectory = layout.projectDirectory.dir("app/build/outputs/apk/release")
+val releaseArtifactCandidates = listOf(
+    releaseArtifactDirectory.file("app-release.apk"),
+    releaseArtifactDirectory.file("app-release-unsigned.apk"),
+)
+val releaseSbomScript = layout.projectDirectory.file("scripts/release_sbom.py")
+
+fun resolveReleaseArtifact(): java.io.File {
+    val metadataFile = releaseArtifactDirectory.file("output-metadata.json").asFile
+    val metadataName =
+        if (metadataFile.isFile) {
+            Regex(""""outputFile"\s*:\s*"([^"]+\.apk)"""")
+                .find(metadataFile.readText())
+                ?.groupValues
+                ?.getOrNull(1)
+        } else {
+            null
+        }
+    val artifact =
+        metadataName
+            ?.let { releaseArtifactDirectory.file(it).asFile }
+            ?.takeIf { it.isFile }
+            ?: releaseArtifactCandidates
+                .map { it.asFile }
+                .firstOrNull { it.isFile }
+    return artifact ?: error(
+        "Release artifact does not exist in ${releaseArtifactDirectory.asFile}; " +
+            "expected the APK named by output-metadata.json.",
+    )
+}
+
+tasks.register<Exec>("generateReleaseSbom") {
+    group = "verification"
+    description = "Generates a CycloneDX SBOM and in-toto provenance for the release APK."
+    dependsOn(":app:assembleRelease")
+    inputs.files(
+        releaseSbomScript,
+        layout.projectDirectory.file("app/build.gradle.kts"),
+        layout.projectDirectory.file("app/gradle.lockfile"),
+        layout.projectDirectory.file("gradle/wrapper/gradle-wrapper.properties"),
+        releaseArtifactCandidates,
+        releaseArtifactDirectory.file("output-metadata.json"),
+    )
+    outputs.files(
+        releaseArtifactDirectory.asFileTree.matching {
+            include("*.cdx.json", "*.provenance.json", "*.sha256")
+        },
+    )
+    workingDir(rootDir)
+    doFirst {
+        commandLine(
+            "python",
+            releaseSbomScript.asFile.absolutePath,
+            "generate",
+            "--artifact",
+            resolveReleaseArtifact().absolutePath,
+            "--output-dir",
+            releaseArtifactDirectory.asFile.absolutePath,
+        )
+    }
+}
+
+tasks.register<Exec>("verifyReleaseSbom") {
+    group = "verification"
+    description = "Verifies the release APK, CycloneDX SBOM, provenance, and SHA-256 sidecar agree."
+    dependsOn("verifyReleaseMetadata", "generateReleaseSbom")
+    inputs.files(
+        releaseSbomScript,
+        releaseArtifactCandidates,
+        releaseArtifactDirectory.file("output-metadata.json"),
+        releaseArtifactDirectory.asFileTree.matching {
+            include("*.cdx.json", "*.provenance.json", "*.sha256")
+        },
+    )
+    workingDir(rootDir)
+    doFirst {
+        commandLine(
+            "python",
+            releaseSbomScript.asFile.absolutePath,
+            "verify",
+            "--artifact",
+            resolveReleaseArtifact().absolutePath,
+            "--output-dir",
+            releaseArtifactDirectory.asFile.absolutePath,
+        )
+    }
+}
+
 tasks.register("verifyReleaseApkReproducibleMetadata") {
     group = "verification"
     description = "Fails when the release APK contains AGP VCS metadata."
-    dependsOn("verifyReleaseMetadata", ":app:assembleRelease")
+    dependsOn("verifyReleaseMetadata", ":app:assembleRelease", "verifyReleaseSbom")
 
     val releaseOutput = layout.projectDirectory.dir("app/build/outputs/apk/release")
     inputs.dir(releaseOutput)
