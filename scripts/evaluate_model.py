@@ -32,7 +32,12 @@ import numpy as np
 from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.model_selection import StratifiedKFold
 
-from train_spam_model import build_dataset, FEATURE_NAMES, OUTPUT_FILE
+from train_spam_model import (
+    FEATURE_NAMES,
+    FEATURE_SCHEMA_VERSION,
+    OUTPUT_FILE,
+    build_dataset,
+)
 
 
 def sigmoid(x: float) -> float:
@@ -127,6 +132,13 @@ def main() -> int:
 
     with open(model_path) as f:
         model = json.load(f)
+
+    if (
+        model.get("feature_schema_version") != FEATURE_SCHEMA_VERSION
+        or model.get("feature_names") != FEATURE_NAMES
+    ):
+        print("ERROR: model feature schema does not match the trainer contract.")
+        return 1
 
     threshold = float(model.get("threshold", 0.7))
     learning_rate = float(model.get("learning_rate", 0.1))
