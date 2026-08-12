@@ -25,9 +25,20 @@ fun ChangelogScreen() {
         verticalArrangement = Arrangement.spacedBy(0.dp),
     ) {
         VersionEntry(
+            "1.7.36",
+            "Bounded exports, deterministic ML contracts, and verifiable releases",
+            isLatest = true,
+            changes =
+                listOf(
+                    "CSV and portable backup paths stream Room rows without materializing full logs",
+                    "Kotlin and Python share a versioned 20-feature ML contract with golden vectors",
+                    "Release artifacts carry SBOM, provenance, SHA-256, and tag-attestation evidence",
+                    "The detection pipeline's spam verdict path has an executable 50 ms p99 benchmark",
+                ),
+        )
+        VersionEntry(
             "1.7.35",
             "Bounded data surfaces, feed rollback protection, and release gates",
-            isLatest = true,
             changes =
                 listOf(
                     "Database and activity rows load in pages while statistics use SQL aggregates",
