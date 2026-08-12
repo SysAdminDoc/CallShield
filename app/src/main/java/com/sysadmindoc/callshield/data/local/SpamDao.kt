@@ -222,6 +222,26 @@ interface SpamDao {
     @Query("SELECT * FROM call_log ORDER BY timestamp DESC")
     fun getBlockedCalls(): Flow<List<BlockedCall>>
 
+    /**
+     * Reads a stable, bounded page for exports and backups without materializing
+     * the complete call log. The `(timestamp, id)` cursor keeps equal-timestamp
+     * rows deterministic and avoids OFFSET scans as the log grows.
+     */
+    @Query(
+        """
+        SELECT * FROM call_log
+        WHERE timestamp < :beforeTimestamp
+           OR (timestamp = :beforeTimestamp AND id < :beforeId)
+        ORDER BY timestamp DESC, id DESC
+        LIMIT :limit
+        """,
+    )
+    suspend fun readBlockedCallsBatch(
+        beforeTimestamp: Long,
+        beforeId: Long,
+        limit: Int,
+    ): List<BlockedCall>
+
     @Query("SELECT * FROM call_log ORDER BY timestamp DESC, id DESC LIMIT :limit")
     fun observeRecentLog(limit: Int): Flow<List<BlockedCall>>
 

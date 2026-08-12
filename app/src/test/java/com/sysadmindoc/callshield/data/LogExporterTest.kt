@@ -1,6 +1,7 @@
 package com.sysadmindoc.callshield.data
 
 import com.sysadmindoc.callshield.data.model.BlockedCall
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -271,4 +272,65 @@ class LogExporterTest {
         assertFalse(csv.contains("+12125550102"))
         assertFalse(csv.contains("secret code"))
     }
+
+    @Test
+    fun `batched CSV writer follows the stable cursor across pages`() =
+        runBlocking {
+            val calls =
+                (0 until 513).map { index ->
+                    BlockedCall(
+                        id = index + 1L,
+                        number = "+1212555${index.toString().padStart(4, '0')}",
+                        timestamp = 1_000_000L - index,
+                        matchReason = "heuristic",
+                    )
+                }
+            var reads = 0
+            val reader: BlockedCallBatchReader = { beforeTimestamp, beforeId, limit ->
+                reads++
+                calls
+                    .filter { call ->
+                        call.timestamp < beforeTimestamp ||
+                            (call.timestamp == beforeTimestamp && call.id < beforeId)
+                    }.take(limit)
+            }
+
+            val output = StringBuilder()
+            assertTrue(LogExporter.writeCsvBatches(output, reader))
+
+            assertEquals(3, reads)
+            assertEquals(514, output.count { it == '\n' })
+            assertTrue(output.indexOf("+12125550000") < output.indexOf("+12125550512"))
+        }
+
+    @Test
+    fun `batched redress writer filters non-call and allowed rows`() =
+        runBlocking {
+            val calls =
+                (0 until 300).map { index ->
+                    BlockedCall(
+                        id = index + 1L,
+                        number = "+1212555${index.toString().padStart(4, '0')}",
+                        timestamp = 2_000_000L - index,
+                        isCall = index % 3 != 0,
+                        wasBlocked = index % 3 == 1,
+                        matchReason = "heuristic",
+                    )
+                }
+            val reader: BlockedCallBatchReader = { beforeTimestamp, beforeId, limit ->
+                calls
+                    .filter { call ->
+                        call.timestamp < beforeTimestamp ||
+                            (call.timestamp == beforeTimestamp && call.id < beforeId)
+                    }.take(limit)
+            }
+
+            val output = StringBuilder()
+            assertTrue(LogExporter.writeRedressBatches(output, reader))
+
+            assertEquals(101, output.count { it == '\n' })
+            assertTrue(output.contains("+12125550001"))
+            assertFalse(output.contains("+12125550000"))
+            assertFalse(output.contains("+12125550002"))
+        }
 }

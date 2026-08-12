@@ -1198,32 +1198,34 @@ class MainViewModel
         // Log export
         fun exportLog(includeRawSmsBodies: Boolean = false) {
             launchExport {
-                // Read the log directly rather than sampling the blockedCalls
-                // StateFlow. That flow is WhileSubscribed, and Settings never
-                // collects it — launching straight into Settings (e.g. via the
-                // Lookup shortcut) left it at its initial empty value, so Export
-                // silently did nothing with a full log on disk.
-                val calls = repo.getBlockedCalls().first()
-                if (calls.isEmpty()) {
+                val exported =
+                    exportLogs.exportBlockedLog(
+                        readBatch = { beforeTimestamp, beforeId, limit ->
+                            repo.readBlockedCallsBatch(beforeTimestamp, beforeId, limit)
+                        },
+                        includeRawSmsBodies = includeRawSmsBodies,
+                    )
+                if (!exported) {
                     Toast
                         .makeText(appContext, appContext.getString(R.string.export_log_empty), Toast.LENGTH_SHORT)
                         .show()
                     return@launchExport
                 }
-                exportLogs.exportBlockedLog(calls, includeRawSmsBodies)
             }
         }
 
         fun exportRedressLog() {
             launchExport {
-                val calls = repo.getBlockedCalls().first().filter { it.isCall && it.wasBlocked }
-                if (calls.isEmpty()) {
+                val exported =
+                    exportLogs.exportRedressLog { beforeTimestamp, beforeId, limit ->
+                        repo.readBlockedCallsBatch(beforeTimestamp, beforeId, limit)
+                    }
+                if (!exported) {
                     Toast
                         .makeText(appContext, appContext.getString(R.string.export_redress_empty), Toast.LENGTH_SHORT)
                         .show()
                     return@launchExport
                 }
-                exportLogs.exportRedressLog(calls)
             }
         }
 

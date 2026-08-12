@@ -116,6 +116,8 @@ All notable changes to CallShield will be documented in this file.
   slow checkers, direct boot, and concurrent fallback responses; every path remains fail-open.
 - Isolated the direct-boot Robolectric store tests from the application-scope mirror observer,
   so the full JVM suite cannot rewrite device-protected preferences while asserting fail-open state.
+- Log CSV/redress exports and backup generation now use ordered cursor batches and buffered
+  writers, preserving row caps and redaction without materializing the full call history.
 - Checker exceptions and deadline cutoffs now remain visible in Protection Test, lookup/log
   details, and CSV/backup exports without exposing exception text or delaying the response gate.
 - Rules now run a standing overlap audit after sync and CRUD, showing the winning priority for
