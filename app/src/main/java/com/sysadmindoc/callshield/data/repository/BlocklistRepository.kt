@@ -396,6 +396,12 @@ class BlocklistRepository(
 
     fun getBlockedCalls(): Flow<List<BlockedCall>> = dao.getBlockedCalls()
 
+    suspend fun readBlockedCallsBatch(
+        beforeTimestamp: Long,
+        beforeId: Long,
+        limit: Int,
+    ): List<BlockedCall> = dao.readBlockedCallsBatch(beforeTimestamp, beforeId, limit)
+
     fun observeBlockedCallsForNumber(number: String): Flow<List<BlockedCall>> = dao.observeBlockedCallsForNumber(number)
 
     fun observeRecentLog(limit: Int): Flow<List<BlockedCall>> = dao.observeRecentLog(limit)

@@ -372,43 +372,19 @@ object BackupRestore {
                 } else {
                     null
                 }
-            val logs =
-                if (BackupSection.LOGS in sections) {
-                    dao.getBlockedCalls().first().map {
-                        BackupLogEntry(
-                            number = it.number,
-                            timestamp = it.timestamp,
-                            type = it.type,
-                            wasBlocked = it.wasBlocked,
-                            isCall = it.isCall,
-                            smsBody = it.smsBody,
-                            matchReason = it.matchReason,
-                            reasonCode = it.reasonCode.wireValue,
-                            confidence = it.confidence,
-                            logKey = it.logKey,
-                            ruleId = it.ruleId,
-                            pipelineDiagnostic = it.pipelineDiagnostic,
-                            origid = sanitizeOrigid(it.origid),
-                        )
-                    }
-                } else {
-                    emptyList()
-                }
-
-            // Keep the export within the same row cap that restore enforces, so a
-            // large device never produces a backup the app then refuses to import.
-            // The user-authored sections (numbers/whitelist/rules/settings) are
-            // preserved in full; the blocked-call log — unbounded and re-generable
-            // — absorbs the trim, keeping the most recent entries.
             val nonLogRows =
                 numbers.size + whitelist.size + wildcards.size + keywords.size + ranges.size +
                     if (settings != null) 1 else 0
             val logBudget = (MAX_BACKUP_RESTORE_ROWS - nonLogRows).coerceAtLeast(0)
-            val cappedLogs =
-                if (logs.size > logBudget) {
-                    logs.sortedByDescending { it.timestamp }.take(logBudget)
+            // Keep the export within the same row cap that restore enforces, so a
+            // large device never produces a backup the app then refuses to import.
+            // Read only the newest bounded batches; the log is re-generable and
+            // absorbs the trim while user-authored sections remain in full.
+            val logs =
+                if (BackupSection.LOGS in sections) {
+                    BackupLogReader.read(dao, logBudget)
                 } else {
-                    logs
+                    emptyList()
                 }
 
             val backup =
@@ -419,7 +395,7 @@ object BackupRestore {
                     keywordRules = keywords,
                     rangeRules = ranges,
                     settings = settings,
-                    logs = cappedLogs,
+                    logs = logs,
                 )
 
             val adapter = moshi.adapter(Backup::class.java).indent("  ")
@@ -1326,7 +1302,7 @@ object BackupRestore {
     private val BlockedCall.conflictKey: String
         get() = logKey?.takeIf { it.isNotBlank() } ?: "$number|$timestamp|$isCall"
 
-    private fun sanitizeOrigid(value: String?): String? {
+    internal fun sanitizeOrigid(value: String?): String? {
         val trimmed = value?.trim() ?: return null
         return runCatching { UUID.fromString(trimmed) }
             .getOrNull()

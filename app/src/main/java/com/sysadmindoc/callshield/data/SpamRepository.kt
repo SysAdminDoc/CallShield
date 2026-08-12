@@ -797,6 +797,12 @@ class SpamRepository(
 
     fun getBlockedCalls(): Flow<List<BlockedCall>> = blocklistRepository.getBlockedCalls()
 
+    suspend fun readBlockedCallsBatch(
+        beforeTimestamp: Long,
+        beforeId: Long,
+        limit: Int,
+    ): List<BlockedCall> = blocklistRepository.readBlockedCallsBatch(beforeTimestamp, beforeId, limit)
+
     fun observeBlockedCallsForNumber(number: String): Flow<List<BlockedCall>> = blocklistRepository.observeBlockedCallsForNumber(number)
 
     fun observeRecentLog(limit: Int): Flow<List<BlockedCall>> = blocklistRepository.observeRecentLog(limit)
