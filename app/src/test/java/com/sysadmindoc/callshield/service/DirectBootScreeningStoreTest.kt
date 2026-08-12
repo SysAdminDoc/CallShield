@@ -1,5 +1,6 @@
 package com.sysadmindoc.callshield.service
 
+import android.app.Application
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.sysadmindoc.callshield.data.model.SpamNumber
@@ -13,7 +14,10 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34])
+// This store test must not start CallShieldApp: its application-scope mirror
+// observer can legitimately rewrite the same device-protected preferences
+// while a test is asserting the uninitialized/fail-open state.
+@Config(application = Application::class, sdk = [34])
 class DirectBootScreeningStoreTest {
     private val context: Context = ApplicationProvider.getApplicationContext()
 
