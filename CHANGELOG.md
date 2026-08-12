@@ -153,6 +153,8 @@ All notable changes to CallShield will be documented in this file.
 - Release artifacts now carry an exact CycloneDX SBOM, in-toto/SLSA provenance
   record, and SHA-256 sidecar bound to the release-runtime lockfile; version tags
   also receive a GitHub OIDC build-provenance attestation.
+- The screener hot path now has an executable 50 ms p99 JVM benchmark covering
+  the same verdict call used by the detection pipeline.
 
 ## v1.7.35 — 2026-08-10
 
