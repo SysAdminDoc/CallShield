@@ -27,7 +27,7 @@
 param(
     [string]$ApkPath = "app\build\outputs\apk\release\app-release.apk",
     [string]$SdkDir = "",
-    [string]$ExpectedSignerSha256 = "d179d0daa9eac6b52fc19d3a7126fd6ccb911923a43a3cf0bef9f74b12234ad2"
+    [string]$ExpectedSignerSha256 = "920e583ae6ce9f3863a6b3b8847e927d53a66c38a245e12e30ce124c9f4a75f5"
 )
 
 $ErrorActionPreference = "Stop"

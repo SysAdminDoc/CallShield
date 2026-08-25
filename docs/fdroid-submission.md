@@ -12,7 +12,10 @@ This repo now carries the upstream metadata needed before opening an F-Droid
 - Version code: `40`
 - Release APK: `https://github.com/SysAdminDoc/CallShield/releases/download/v1.7.12/CallShield-v1.7.12.apk`
 - APK SHA256: *(generate with `scripts/write-release-sha256.ps1` after signing)*
-- Signer SHA256: `d179d0daa9eac6b52fc19d3a7126fd6ccb911923a43a3cf0bef9f74b12234ad2`
+- Signer SHA256: `920e583ae6ce9f3863a6b3b8847e927d53a66c38a245e12e30ce124c9f4a75f5`
+  (rotated 2026-08-24: the previous release key's credentials were lost in a
+  machine rebuild, so releases from v1.7.37 on use a new key; installs signed
+  by the old key must be uninstalled before upgrading)
 
 ## Files To Copy Into fdroiddata
 
@@ -34,7 +37,7 @@ developer-signed binary.
 Expected signer:
 
 ```text
-d179d0daa9eac6b52fc19d3a7126fd6ccb911923a43a3cf0bef9f74b12234ad2
+920e583ae6ce9f3863a6b3b8847e927d53a66c38a245e12e30ce124c9f4a75f5
 ```
 
 ## Remaining External Steps

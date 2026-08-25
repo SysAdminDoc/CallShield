@@ -2,7 +2,7 @@ $ErrorActionPreference = "Stop"
 
 . (Join-Path $PSScriptRoot "release-signing-policy.ps1")
 
-$expected = "d179d0daa9eac6b52fc19d3a7126fd6ccb911923a43a3cf0bef9f74b12234ad2"
+$expected = "920e583ae6ce9f3863a6b3b8847e927d53a66c38a245e12e30ce124c9f4a75f5"
 $dn = "CN=CallShield, O=SysAdminDoc"
 
 function Assert-Throws {
