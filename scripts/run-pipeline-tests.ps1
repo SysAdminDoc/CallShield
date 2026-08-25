@@ -31,7 +31,13 @@ function Get-Tool {
     param([string[]]$Candidates)
     foreach ($candidate in $Candidates) {
         $found = Get-Command $candidate -ErrorAction SilentlyContinue
-        if ($found) { return $found.Source }
+        # Windows ships App Execution Alias stubs (python.exe/python3.exe under
+        # WindowsApps) that print a Store install hint and exit non-zero. They
+        # satisfy Get-Command, which made every Python suite "fail" instead of
+        # running. Treat a stub as not-found so the next candidate is tried.
+        if ($found -and $found.Source -and $found.Source -notmatch '\\Microsoft\\WindowsApps\\') {
+            return $found.Source
+        }
     }
     return $null
 }
