@@ -203,6 +203,73 @@ test("corrupt rate-limit state is logged, reset, and surfaced as a state failure
   assert.equal(JSON.parse(kv._store.get("rl:203.0.113.40").value).count, 1);
 });
 
+test("atomic limiter binding is authoritative over the KV counter", async () => {
+  const kv = createMockKV();
+  const calls = [];
+  const env = {
+    RATE_LIMIT: kv,
+    REPORT_LIMITER: {
+      async limit({ key }) {
+        calls.push(key);
+        return { success: calls.length <= 5 };
+      },
+    },
+  };
+
+  for (let i = 0; i < 5; i++) {
+    const rl = await checkRateLimit("1.2.3.4", env);
+    assert.equal(rl.allowed, true, `request ${i + 1} should be allowed`);
+  }
+  const blocked = await checkRateLimit("1.2.3.4", env);
+  assert.equal(blocked.allowed, false);
+  assert.ok(blocked.retryAfter > 0);
+  assert.deepEqual(calls, Array(6).fill("1.2.3.4"));
+  // The non-atomic KV counter must not be consulted while the limiter is bound.
+  assert.equal(kv._store.has("rl:1.2.3.4"), false);
+});
+
+test("atomic limiter failure fails closed as a state error", async () => {
+  const errors = [];
+  const originalError = console.error;
+  console.error = (...args) => errors.push(args.join(" "));
+  try {
+    const rl = await checkRateLimit("1.2.3.4", {
+      RATE_LIMIT: createMockKV(),
+      REPORT_LIMITER: {
+        async limit() {
+          throw new Error("limiter unavailable");
+        },
+      },
+    });
+    assert.equal(rl.allowed, false);
+    assert.equal(rl.stateError, true);
+  } finally {
+    console.error = originalError;
+  }
+  assert.equal(errors.length > 0, true);
+});
+
+test("POST returns 429 when the atomic limiter refuses the request", async () => {
+  const response = await worker.fetch(
+    new Request("https://reports.example", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "cf-connecting-ip": "203.0.113.50",
+      },
+      body: JSON.stringify({ number: "+12122340101", type: "spam" }),
+    }),
+    {
+      RATE_LIMIT: createMockKV(),
+      REPORT_LIMITER: { async limit() { return { success: false }; } },
+      GITHUB_TOKEN: "test-token",
+      REPORTER_BUCKET_SECRET: "s".repeat(32),
+    },
+  );
+  assert.equal(response.status, 429);
+  assert.ok(Number(response.headers.get("retry-after")) > 0);
+});
+
 test("rate limiter fails closed when KV is not bound", async () => {
   const rl = await checkRateLimit("1.2.3.4", {});
   assert.equal(rl.allowed, false);
