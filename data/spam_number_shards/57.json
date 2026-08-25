@@ -2156,6 +2156,17 @@
       "sources": [
         "legacy_import"
       ]
+    },
+    {
+      "number": "+528144300226",
+      "type": "spam",
+      "reports": 1,
+      "first_seen": "2026-08-18",
+      "last_seen": "2026-08-18",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
     }
   ],
   "prefixes": [

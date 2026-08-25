@@ -2554,6 +2554,17 @@
       ]
     },
     {
+      "number": "+523369655538",
+      "type": "spam",
+      "reports": 1,
+      "first_seen": "2026-08-22",
+      "last_seen": "2026-08-22",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
+    },
+    {
       "number": "+908502700595",
       "type": "spam",
       "reports": 1,

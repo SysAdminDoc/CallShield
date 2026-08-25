@@ -2015,6 +2015,17 @@
       ]
     },
     {
+      "number": "+19049057360",
+      "type": "spam",
+      "reports": 1,
+      "first_seen": "2026-08-14",
+      "last_seen": "2026-08-14",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
+    },
+    {
       "number": "+19095822623",
       "type": "robocall",
       "reports": 4,

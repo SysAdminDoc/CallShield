@@ -2123,6 +2123,17 @@
       "sources": [
         "legacy_import"
       ]
+    },
+    {
+      "number": "+523338377660",
+      "type": "spam",
+      "reports": 2,
+      "first_seen": "2026-08-14",
+      "last_seen": "2026-08-15",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
     }
   ],
   "prefixes": [

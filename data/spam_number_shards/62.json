@@ -2013,6 +2013,17 @@
       "sources": [
         "legacy_import"
       ]
+    },
+    {
+      "number": "+523389944012",
+      "type": "spam",
+      "reports": 1,
+      "first_seen": "2026-08-14",
+      "last_seen": "2026-08-14",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
     }
   ],
   "prefixes": [
