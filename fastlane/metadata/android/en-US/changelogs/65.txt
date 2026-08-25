@@ -1,0 +1,1 @@
+Simplified Chinese (zh-CN) translation, contributed by wj-on-git and selectable in the per-app language picker. Release APKs are properly signed again, so downloads from the release page install normally. Community spam database update.

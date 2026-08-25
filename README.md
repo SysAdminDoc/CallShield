@@ -41,6 +41,16 @@ legacy snapshot when the shard service is unavailable.
   <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/06-more.png" width="30%" alt="Protection tools and release information">
 </p>
 
+## v1.7.37 Highlights
+
+- **Simplified Chinese:** a community zh-CN translation from wj-on-git covers
+  most of the app, is selectable from Android's per-app language picker, and
+  falls back to English per string for anything still untranslated.
+- **Installable releases:** release APKs are signed again after several
+  releases shipped unsigned and would not install; the signer certificate pin
+  moved to the new release key.
+- **Community database:** one new reported robocall number, database version 38.
+
 ## v1.7.36 Highlights
 
 - **Bounded local data surfaces** — database and activity views page Room rows,
@@ -356,7 +366,7 @@ legacy snapshot when the shard service is unavailable.
 5. **Callback-aware** — won't block callbacks from numbers you recently called, answered repeatedly, after a local emergency call, or urgent repeated callers
 6. **Community-driven** — one-tap anonymous contribution via Cloudflare Worker, merged into the database by the maintainer
 
-## Detection Pipeline (v1.7.36)
+## Detection Pipeline (v1.7.37)
 
 All detection layers implement a shared `IChecker` interface and run in priority order via `CheckerPipeline.run` — first non-null result wins, every layer is testable in isolation. Priorities are stable numbers; the ladder below is the live order.
 
