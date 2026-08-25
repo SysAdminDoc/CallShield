@@ -234,15 +234,38 @@ export async function deriveReporterBucket(ip, reportedAt, secret) {
 }
 
 /**
- * Check the per-IP rate limit against KV.
+ * Check the per-IP rate limit.
  * Returns { allowed: boolean, remaining: number, retryAfter: number }.
  *
- * Missing KV fails closed unless a local test explicitly sets
+ * When the REPORT_LIMITER rate-limiting binding is bound it is authoritative:
+ * the platform evaluates its counter atomically per key, so a burst of
+ * concurrent requests cannot slip past the cap the way it can between the KV
+ * counter's read and write (KV is eventually consistent and non-atomic).
+ * The KV counter remains as a best-effort fallback for a deployment that has
+ * not provisioned the limiter binding yet.
+ *
+ * Missing bindings fail closed unless a local test explicitly sets
  * ALLOW_UNLIMITED_REPORTS=true. Production must never set that flag.
  */
 export async function checkRateLimit(ip, env) {
   if (!hasClientIp(ip)) {
     return { allowed: false, remaining: 0, retryAfter: 0, identityError: true };
+  }
+
+  if (env?.REPORT_LIMITER) {
+    let outcome;
+    try {
+      outcome = await env.REPORT_LIMITER.limit({ key: ip.trim() });
+    } catch (error) {
+      console.error("Unable to evaluate the community report rate limiter", error);
+      return { allowed: false, remaining: 0, retryAfter: 0, stateError: true };
+    }
+    if (!outcome?.success) {
+      return { allowed: false, remaining: 0, retryAfter: RATE_LIMIT_WINDOW_S };
+    }
+    // The binding does not expose a remaining count; only `allowed` and
+    // `retryAfter` are consumed by the request handler.
+    return { allowed: true, remaining: RATE_LIMIT_MAX_REQUESTS - 1, retryAfter: 0 };
   }
 
   if (!env?.RATE_LIMIT) {
@@ -372,9 +395,10 @@ export async function recordDedup(ip, normalizedNumber, env) {
  * periodically by running scripts/merge_community_reports.py locally (this
  * project builds and publishes from a workstation, not CI).
  *
- * Rate limiting: per-IP burst limit (5 reports/60 s) and per-IP+number
- * dedup (same number cannot be re-reported from same IP within 5 min).
- * Both use Cloudflare KV with auto-expiring keys.
+ * Rate limiting: per-IP burst limit (5 reports/60 s) via the atomic
+ * REPORT_LIMITER rate-limiting binding declared in wrangler.toml (KV counter
+ * fallback when unbound), plus per-IP+number dedup in KV (same number cannot
+ * be re-reported from the same IP within 5 min).
  */
 
 export default {
