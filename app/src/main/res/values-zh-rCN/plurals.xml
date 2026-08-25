@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <plurals name="dashboard_database_ready_detail">
+        <item quantity="one">已加载垃圾号码：%s</item>
+        <item quantity="other">已加载垃圾号码：%s</item>
+    </plurals>
+    <plurals name="dashboard_action_sync_subtitle_ready">
+        <item quantity="one">用最新报告刷新 %s 条本地垃圾记录。</item>
+        <item quantity="other">用最新报告刷新 %s 条本地垃圾记录。</item>
+    </plurals>
+    <plurals name="dashboard_scan_unique_numbers_scanned">
+        <item quantity="one">已扫描 %s 个不重复号码</item>
+        <item quantity="other">已扫描 %s 个不重复号码</item>
+    </plurals>
+    <plurals name="dashboard_scan_spam_found">
+        <item quantity="one">发现 %s 个垃圾匹配</item>
+        <item quantity="other">发现 %s 个垃圾匹配</item>
+    </plurals>
+    <plurals name="dashboard_scan_more">
+        <item quantity="one">更多匹配：+%s</item>
+        <item quantity="other">更多匹配：+%s</item>
+    </plurals>
+    <plurals name="dashboard_sms_scan_messages_scanned">
+        <item quantity="one">已扫描 %s 条消息</item>
+        <item quantity="other">已扫描 %s 条消息</item>
+    </plurals>
+    <plurals name="blocked_log_clear_message">
+        <item quantity="one">这将永久删除已拦截通话与短信日志。总记录数：%d。此操作无法撤销。</item>
+        <item quantity="other">这将永久删除已拦截通话与短信日志。总记录数：%d。此操作无法撤销。</item>
+    </plurals>
+    <plurals name="blocklist_count_saved">
+        <item quantity="one">%1$,d 条</item>
+        <item quantity="other">%1$,d 条</item>
+    </plurals>
+    <plurals name="blocklist_reports">
+        <item quantity="one">举报：%d</item>
+        <item quantity="other">举报：%d</item>
+    </plurals>
+    <plurals name="blocklist_imported_numbers">
+        <item quantity="one">已导入 %d 个号码</item>
+        <item quantity="other">已导入 %d 个号码</item>
+    </plurals>
+    <plurals name="settings_contact_groups_selected">
+        <item quantity="one">%d 个群组</item>
+        <item quantity="other">%d 个群组</item>
+    </plurals>
+    <plurals name="settings_contact_group_members">
+        <item quantity="one">%d 个联系人</item>
+        <item quantity="other">%d 个联系人</item>
+    </plurals>
+    <plurals name="settings_contact_groups_unavailable">
+        <item quantity="one">%d 个所选群组不可用。请选择“全部联系人”以重置范围。</item>
+        <item quantity="other">%d 个所选群组不可用。请选择“全部联系人”以重置范围。</item>
+    </plurals>
+    <plurals name="protection_test_issues">
+        <item quantity="one">需要处理的问题：%d</item>
+        <item quantity="other">需要处理的问题：%d</item>
+    </plurals>
+    <plurals name="detail_reports_count_label">
+        <item quantity="one">举报：%d</item>
+        <item quantity="other">举报：%d</item>
+    </plurals>
+    <plurals name="detail_report_issue_body">
+        <item quantity="one">## 电话号码
+%1$s
+
+## 类型
+来自 CallShield 的举报
+
+## 描述
+已被看到 %2$d 次</item>
+        <item quantity="other">## 电话号码
+%1$s
+
+## 类型
+来自 CallShield 的举报
+
+## 描述
+已被看到 %2$d 次</item>
+    </plurals>
+    <plurals name="detail_reports_count_plural">
+        <item quantity="one">%d 条举报</item>
+        <item quantity="other">%d 条举报</item>
+    </plurals>
+    <plurals name="detail_sources_count_plural">
+        <item quantity="one">%d 个来源</item>
+        <item quantity="other">%d 个来源</item>
+    </plurals>
+    <plurals name="search_results_count">
+        <item quantity="one">%d 条结果</item>
+        <item quantity="other">%d 条结果</item>
+    </plurals>
+    <plurals name="search_result_type_reports">
+        <item quantity="one">%1$s - %2$d 条举报</item>
+        <item quantity="other">%1$s - %2$d 条举报</item>
+    </plurals>
+    <plurals name="backup_restore_preview_conflicts">
+        <item quantity="one">%1$d 个现有条目存在匹配键，合并时可能被更新。</item>
+        <item quantity="other">%1$d 个现有条目存在匹配键，合并时可能被更新。</item>
+    </plurals>
+    <plurals name="settings_answered_caller_threshold_value">
+        <item quantity="one">%1$d 次已接来电</item>
+        <item quantity="other">%1$d 次已接来电</item>
+    </plurals>
+    <plurals name="settings_repeat_caller_threshold_value">
+        <item quantity="one">%1$d 次呼叫</item>
+        <item quantity="other">%1$d 次呼叫</item>
+    </plurals>
+    <plurals name="settings_answered_caller_window_value">
+        <item quantity="one">%1$d 天</item>
+        <item quantity="other">%1$d 天</item>
+    </plurals>
+    <plurals name="settings_emergency_callback_window_value">
+        <item quantity="one">%1$d 分钟</item>
+        <item quantity="other">%1$d 分钟</item>
+    </plurals>
+    <plurals name="duration_hours">
+        <item quantity="one">%d 小时</item>
+        <item quantity="other">%d 小时</item>
+    </plurals>
+    <plurals name="overlay_reports_count">
+        <item quantity="one">%1$s 条举报</item>
+        <item quantity="other">%1$s 条举报</item>
+    </plurals>
+    <plurals name="notif_summary_text_recent">
+        <item quantity="one">近期已拦截 %d 个垃圾项</item>
+        <item quantity="other">近期已拦截 %d 个垃圾项</item>
+    </plurals>
+</resources>
