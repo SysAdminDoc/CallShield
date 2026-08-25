@@ -70,8 +70,15 @@ $sdk = Resolve-SdkDir -Explicit $SdkDir
 $apksigner = Find-ApkSigner -Sdk $sdk
 
 Write-Output "Verifying signer certificate of: $resolvedApk"
-# Coerce every record (native stderr merged by 2>&1 arrives as ErrorRecord) to a string.
-$out = @(& $apksigner verify --print-certs $resolvedApk 2>&1 | ForEach-Object { [string]$_ })
+# Coerce every record (native stderr merged by 2>&1 arrives as ErrorRecord) to a
+# string, and drop blank lines: newer apksigner builds separate their JDK
+# native-access warnings from the signer block with an empty line, and the
+# policy function's [string[]] parameter refuses empty elements.
+$out = @(
+    & $apksigner verify --print-certs $resolvedApk 2>&1 |
+        ForEach-Object { [string]$_ } |
+        Where-Object { $_.Trim() }
+)
 $exit = $LASTEXITCODE
 if ($exit -ne 0) {
     Write-Error "apksigner could not verify the APK (is it signed?):`n$($out -join "`n")"
