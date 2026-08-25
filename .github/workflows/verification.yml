@@ -66,52 +66,6 @@ jobs:
         with:
           fail-on-severity: high
 
-  release-artifact:
-    name: Build, attest, and archive release artifact
-    if: startsWith(github.ref, 'refs/tags/v')
-    runs-on: ubuntu-24.04
-    timeout-minutes: 20
-    permissions:
-      contents: read
-      id-token: write
-      attestations: write
-    steps:
-      - name: Check out source
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-
-      - name: Set up Java
-        uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 # v4.7.1
-        with:
-          distribution: temurin
-          java-version: "17"
-          cache: gradle
-
-      - name: Generate and verify release SBOM
-        run: ./gradlew --no-daemon --max-workers=2 verifyReleaseSbom
-
-      - name: Resolve release APK
-        id: release-apk
-        run: |
-          apk="$(find app/build/outputs/apk/release -maxdepth 1 -type f -name 'app-release*.apk' -print -quit)"
-          test -n "$apk"
-          echo "path=$apk" >> "$GITHUB_OUTPUT"
-
-      - name: Archive APK, SBOM, provenance, and hash
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: callshield-release-${{ github.ref_name }}
-          if-no-files-found: error
-          path: |
-            ${{ steps.release-apk.outputs.path }}
-            app/build/outputs/apk/release/app-release*.cdx.json
-            app/build/outputs/apk/release/app-release*.provenance.json
-            app/build/outputs/apk/release/app-release*.sha256
-
-      - name: Create GitHub OIDC provenance attestation
-        uses: actions/attest-build-provenance@c074443f1aee8d4aeeae555aebba3282517141b2 # v2.2.3
-        with:
-          subject-path: ${{ steps.release-apk.outputs.path }}
-
   dependency-submission:
     name: Publish resolved Gradle dependency graph
     if: github.event_name != 'pull_request'
