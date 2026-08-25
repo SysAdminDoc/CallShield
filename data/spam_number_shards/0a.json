@@ -332,6 +332,17 @@
       ]
     },
     {
+      "number": "+12813100282",
+      "type": "spam",
+      "reports": 1,
+      "first_seen": "2026-08-17",
+      "last_seen": "2026-08-17",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
+    },
+    {
       "number": "+12927637698",
       "type": "robocall",
       "reports": 4,

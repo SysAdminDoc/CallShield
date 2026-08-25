@@ -2112,6 +2112,17 @@
       "sources": [
         "community"
       ]
+    },
+    {
+      "number": "+523392946233",
+      "type": "spam",
+      "reports": 1,
+      "first_seen": "2026-08-22",
+      "last_seen": "2026-08-22",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
     }
   ],
   "prefixes": [

@@ -1947,6 +1947,17 @@
       "sources": [
         "legacy_import"
       ]
+    },
+    {
+      "number": "+523381544031",
+      "type": "spam",
+      "reports": 1,
+      "first_seen": "2026-08-14",
+      "last_seen": "2026-08-14",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
     }
   ],
   "prefixes": [

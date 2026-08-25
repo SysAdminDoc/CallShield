@@ -1971,6 +1971,17 @@
       ]
     },
     {
+      "number": "+19085332167",
+      "type": "spam",
+      "reports": 1,
+      "first_seen": "2026-08-19",
+      "last_seen": "2026-08-19",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
+    },
+    {
       "number": "+19103396438",
       "type": "telemarketer",
       "reports": 2,

@@ -2387,6 +2387,17 @@
       "sources": [
         "legacy_import"
       ]
+    },
+    {
+      "number": "+523332912722",
+      "type": "spam",
+      "reports": 1,
+      "first_seen": "2026-08-17",
+      "last_seen": "2026-08-17",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
     }
   ],
   "prefixes": [

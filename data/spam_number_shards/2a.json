@@ -2015,6 +2015,17 @@
       ]
     },
     {
+      "number": "+19047894654",
+      "type": "spam",
+      "reports": 1,
+      "first_seen": "2026-08-15",
+      "last_seen": "2026-08-15",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
+    },
+    {
       "number": "+19083738416",
       "type": "robocall",
       "reports": 2,

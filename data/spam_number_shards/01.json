@@ -1674,6 +1674,17 @@
       ]
     },
     {
+      "number": "+18002990523",
+      "type": "spam",
+      "reports": 1,
+      "first_seen": "2026-08-25",
+      "last_seen": "2026-08-25",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
+    },
+    {
       "number": "+18004468848",
       "type": "robocall",
       "reports": 9,
