@@ -4,7 +4,29 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
-## v1.7.36 — 2026-08-12
+## v1.7.37 — 2026-08-24
+
+### Interface
+
+- Added the Simplified Chinese (zh-CN) translation contributed by wj-on-git,
+  covering 1,068 of 1,373 strings and 28 of 31 plurals with zero format-specifier
+  drift. Strings added since the fork fall back to English individually. The
+  locale is registered in locales_config.xml so it appears in Android's per-app
+  language picker.
+
+### Distribution
+
+- Release APKs are signed again. The v1.7.26 through v1.7.29 release downloads
+  were built without any signature, so Android rejected them as invalid packages
+  (issue #19). The original release key's credentials were lost in a machine
+  rebuild, so releases now use a new signing key and the pinned signer
+  certificate moved with it. Anyone still on an old signed install has to
+  uninstall it before installing v1.7.37.
+
+### Data
+
+- Blocked +8651667456713, an audiobook-course robocall reported through the
+  in-app flow and the issue tracker (issue #20). Database version 38.
 
 ### Interface
 

@@ -48,8 +48,8 @@ android {
         applicationId = "com.sysadmindoc.callshield"
         minSdk = 29
         targetSdk = 36
-        versionCode = 64
-        versionName = "1.7.36"
+        versionCode = 65
+        versionName = "1.7.37"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         manifestPlaceholders["appLabel"] = "@string/app_name"
     }
@@ -116,6 +116,16 @@ android {
             // allowlist instead of recursively packaging that directory.
             assets.srcDir(layout.buildDirectory.dir("generated/callshieldAssets"))
         }
+    }
+
+    lint {
+        // Partial community translations are supported by design
+        // (docs/TRANSLATING.md): Android falls back to English per string,
+        // and scripts/check_translations.py gates specifier drift, plural
+        // coverage, and locale registration. Left enabled, MissingTranslation
+        // hard-fails the build for every string a contributor has not
+        // translated yet, which would block any partial translation landing.
+        disable += "MissingTranslation"
     }
 
     testOptions {

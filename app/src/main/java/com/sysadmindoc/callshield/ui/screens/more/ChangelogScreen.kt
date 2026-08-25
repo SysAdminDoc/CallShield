@@ -25,9 +25,19 @@ fun ChangelogScreen() {
         verticalArrangement = Arrangement.spacedBy(0.dp),
     ) {
         VersionEntry(
+            "1.7.37",
+            "Simplified Chinese translation and installable signed releases",
+            isLatest = true,
+            changes =
+                listOf(
+                    "Simplified Chinese (zh-CN) translation contributed by wj-on-git, selectable per app",
+                    "Release APKs are signed again; earlier unsigned release downloads would not install",
+                    "Community spam database updated with a reported robocall number",
+                ),
+        )
+        VersionEntry(
             "1.7.36",
             "Bounded exports, deterministic ML contracts, and verifiable releases",
-            isLatest = true,
             changes =
                 listOf(
                     "CSV and portable backup paths stream Room rows without materializing full logs",
