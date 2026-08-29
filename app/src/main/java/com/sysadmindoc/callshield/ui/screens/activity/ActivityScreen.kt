@@ -73,7 +73,7 @@ internal fun RowScope.ActivityTab(
     Tab(
         selected = selected,
         onClick = onClick,
-        modifier = Modifier.weight(1f).height(46.dp),
+        modifier = Modifier.weight(1f).height(56.dp),
         selectedContentColor = CatGreen,
         unselectedContentColor = CatSubtext,
         text = {

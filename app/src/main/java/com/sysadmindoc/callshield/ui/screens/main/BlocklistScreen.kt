@@ -129,6 +129,7 @@ import com.sysadmindoc.callshield.ui.theme.PremiumActionButton
 import com.sysadmindoc.callshield.ui.theme.PremiumCard
 import com.sysadmindoc.callshield.ui.theme.PremiumCompactButton
 import com.sysadmindoc.callshield.ui.theme.PremiumIconTile
+import com.sysadmindoc.callshield.ui.theme.SectionHeader
 import com.sysadmindoc.callshield.ui.theme.StatusPill
 import com.sysadmindoc.callshield.ui.theme.SurfaceBright
 import com.sysadmindoc.callshield.ui.theme.hapticConfirm
@@ -333,7 +334,7 @@ fun BlocklistScreen(viewModel: MainViewModel) {
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                        .padding(horizontal = 20.dp, vertical = 8.dp),
                 workspace = workspace,
             )
 
@@ -587,7 +588,10 @@ fun BlocklistScreen(viewModel: MainViewModel) {
                 }
 
                 workspace.addActionLabel?.let { addLabel ->
-                    ExtendedFloatingActionButton(
+                    PremiumActionButton(
+                        label = addLabel,
+                        icon = Icons.Default.Add,
+                        color = CatGreen,
                         onClick = {
                             when (tabIndex) {
                                 BLOCKLIST_TAB_BLOCKED -> showAddDialog = true
@@ -599,13 +603,10 @@ fun BlocklistScreen(viewModel: MainViewModel) {
                         },
                         modifier =
                             Modifier
-                                .align(Alignment.BottomEnd)
-                                .padding(16.dp),
-                        containerColor = CatGreen,
-                        contentColor = MaterialTheme.colorScheme.onPrimary,
-                        shape = RoundedCornerShape(12.dp),
-                        icon = { Icon(Icons.Default.Add, stringResource(R.string.cd_add)) },
-                        text = { Text(addLabel, fontWeight = FontWeight.Bold) },
+                                .align(Alignment.BottomCenter)
+                                .fillMaxWidth()
+                                .padding(horizontal = 20.dp, vertical = 16.dp)
+                                .height(54.dp),
                     )
                 }
             }
@@ -718,53 +719,53 @@ private fun BlocklistOverviewCard(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
+        SectionHeader(workspace.title, CatGreen)
+        Text(
+            text =
+                if (workspace.addActionLabel == null) {
+                    pluralStringResource(
+                        R.plurals.blocklist_count_saved,
+                        workspace.count,
+                        workspace.count,
+                    )
+                } else {
+                    pluralStringResource(
+                        R.plurals.blocklist_count_active_rules,
+                        workspace.count,
+                        workspace.count,
+                    )
+                },
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = CatText,
+        )
+        Text(
+            text = workspace.subtitle,
+            style = MaterialTheme.typography.bodyMedium,
+            color = CatSubtext,
+        )
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            PremiumIconTile(
-                icon = workspace.icon,
-                color = workspace.accentColor,
-                size = 38.dp,
-                iconSize = 21.dp,
-            )
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(1.dp),
-            ) {
-                Text(text = workspace.title, style = MaterialTheme.typography.titleMedium, color = CatText)
-                Text(
-                    text =
-                        pluralStringResource(
-                            R.plurals.blocklist_count_saved,
-                            workspace.count,
-                            workspace.count,
-                        ),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = workspace.accentColor,
+            workspace.primaryUtilityLabel?.let { label ->
+                PremiumCompactButton(
+                    label = label,
+                    icon = Icons.Default.FileOpen,
+                    color = CatGreen,
+                    onClick = { workspace.onPrimaryUtility?.invoke() },
                 )
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                workspace.primaryUtilityLabel?.let { label ->
-                    PremiumCompactButton(
-                        label = label,
-                        icon = Icons.Default.FileOpen,
-                        color = workspace.accentColor,
-                        onClick = { workspace.onPrimaryUtility?.invoke() },
-                    )
-                }
-                workspace.secondaryUtilityLabel?.let { label ->
-                    PremiumCompactButton(
-                        label = label,
-                        icon = Icons.Default.Share,
-                        color = workspace.accentColor,
-                        onClick = { workspace.onSecondaryUtility?.invoke() },
-                    )
-                }
+            workspace.secondaryUtilityLabel?.let { label ->
+                PremiumCompactButton(
+                    label = label,
+                    icon = Icons.Default.Share,
+                    color = CatGreen,
+                    onClick = { workspace.onSecondaryUtility?.invoke() },
+                )
             }
         }
-        GradientDivider()
     }
 }
 

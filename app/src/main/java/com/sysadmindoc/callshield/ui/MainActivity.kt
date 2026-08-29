@@ -273,44 +273,45 @@ fun CallShieldApp(
             )
         },
         bottomBar = {
-            NavigationBar(
-                containerColor = Surface,
-            ) {
-                NavItem(
-                    selectedTab == 0,
-                    { selectedTab = 0 },
-                    Icons.Default.Shield,
-                    stringResource(R.string.nav_home),
-                    CatGreen,
-                )
-                NavItem(
-                    selectedTab == 1,
-                    { selectedTab = 1 },
-                    Icons.Default.History,
-                    stringResource(R.string.nav_activity),
-                    CatGreen,
-                )
-                NavItem(
-                    selectedTab == 2,
-                    { selectedTab = 2 },
-                    Icons.Default.Search,
-                    stringResource(R.string.nav_lookup),
-                    CatGreen,
-                )
-                NavItem(
-                    selectedTab == 3,
-                    { selectedTab = 3 },
-                    Icons.Default.Tune,
-                    stringResource(R.string.nav_blocklist),
-                    CatGreen,
-                )
-                NavItem(
-                    selectedTab == 4,
-                    { selectedTab = 4 },
-                    Icons.Default.MoreHoriz,
-                    stringResource(R.string.nav_more),
-                    CatGreen,
-                )
+            Column {
+                HorizontalDivider(color = DividerColor)
+                NavigationBar(containerColor = Surface) {
+                    NavItem(
+                        selectedTab == 0,
+                        { selectedTab = 0 },
+                        Icons.Default.Home,
+                        stringResource(R.string.nav_home),
+                        CatGreen,
+                    )
+                    NavItem(
+                        selectedTab == 1,
+                        { selectedTab = 1 },
+                        Icons.Default.History,
+                        stringResource(R.string.nav_activity),
+                        CatGreen,
+                    )
+                    NavItem(
+                        selectedTab == 2,
+                        { selectedTab = 2 },
+                        Icons.Default.Search,
+                        stringResource(R.string.nav_lookup),
+                        CatGreen,
+                    )
+                    NavItem(
+                        selectedTab == 3,
+                        { selectedTab = 3 },
+                        Icons.Default.Tune,
+                        stringResource(R.string.nav_blocklist),
+                        CatGreen,
+                    )
+                    NavItem(
+                        selectedTab == 4,
+                        { selectedTab = 4 },
+                        Icons.Default.MoreHoriz,
+                        stringResource(R.string.nav_more),
+                        CatGreen,
+                    )
+                }
             }
         },
         containerColor = Black,
@@ -511,11 +512,11 @@ private fun AppChrome(
                 Modifier
                     .fillMaxWidth()
                     .statusBarsPadding()
-                    .padding(horizontal = 16.dp),
+                    .padding(horizontal = 20.dp),
         ) {
             if (showSearch) {
                 Row(
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 46.dp),
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 64.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
@@ -538,7 +539,7 @@ private fun AppChrome(
                 }
             } else {
                 Row(
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 46.dp),
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 64.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     if (onBack != null) {
@@ -553,9 +554,9 @@ private fun AppChrome(
                         Image(
                             painter = painterResource(R.drawable.ic_callshield_brand_art),
                             contentDescription = null,
-                            modifier = Modifier.size(24.dp),
+                            modifier = Modifier.size(38.dp),
                         )
-                        Spacer(Modifier.width(8.dp))
+                        Spacer(Modifier.width(12.dp))
                     }
                     Text(
                         title,
@@ -568,6 +569,7 @@ private fun AppChrome(
                             Icons.Default.Search,
                             contentDescription = stringResource(R.string.cd_search),
                             tint = CatText,
+                            modifier = Modifier.size(28.dp),
                         )
                     }
                 }
@@ -766,6 +768,8 @@ fun RowScope.NavItem(
                 selectedIconColor = iconTint,
                 selectedTextColor = color,
                 indicatorColor = Color.Transparent,
+                unselectedIconColor = CatSubtext,
+                unselectedTextColor = CatSubtext,
             ),
         // Five 200%-scaled labels cannot fit a compact phone navigation bar.
         // Material still exposes every label to accessibility services while

@@ -40,6 +40,7 @@ import androidx.compose.material.icons.automirrored.filled.PhoneCallback
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Layers
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Security
@@ -92,7 +93,10 @@ import com.sysadmindoc.callshield.ui.theme.CatSubtext
 import com.sysadmindoc.callshield.ui.theme.CatTeal
 import com.sysadmindoc.callshield.ui.theme.CatText
 import com.sysadmindoc.callshield.ui.theme.CatYellow
+import com.sysadmindoc.callshield.ui.theme.GradientDivider
+import com.sysadmindoc.callshield.ui.theme.LedgerCard
 import com.sysadmindoc.callshield.ui.theme.PremiumActionButton
+import com.sysadmindoc.callshield.ui.theme.SectionHeader
 import com.sysadmindoc.callshield.util.startActivitySafely
 import kotlinx.coroutines.launch
 
@@ -333,9 +337,9 @@ internal fun OnboardingScreenContent(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = stringResource(R.string.onboarding_setup_label),
-                style = MaterialTheme.typography.labelLarge,
-                color = CatSubtext,
+                text = stringResource(R.string.onboarding_setup_label).uppercase(),
+                style = MaterialTheme.typography.labelMedium,
+                color = CatGreen,
                 fontWeight = FontWeight.SemiBold,
             )
             Text(
@@ -391,6 +395,26 @@ internal fun OnboardingScreenContent(
                 Text(stringResource(R.string.onboarding_back))
             }
             Spacer(Modifier.height(4.dp))
+        }
+        if (currentPage == 0) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    Icons.Default.Lock,
+                    contentDescription = null,
+                    tint = CatGreen,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(Modifier.size(8.dp))
+                Text(
+                    stringResource(R.string.onboarding_no_account_required),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = CatSubtext,
+                )
+            }
         }
         PremiumActionButton(
             label = primaryLabel(currentStep, setupState, runtimePermissionsBlocked),
@@ -525,7 +549,7 @@ private fun OnboardingStepBody(
             Image(
                 painter = painterResource(R.drawable.ic_callshield_brand_art),
                 contentDescription = stringResource(R.string.app_name),
-                modifier = Modifier.size(72.dp),
+                modifier = Modifier.size(84.dp),
             )
         } else {
             Icon(
@@ -536,6 +560,10 @@ private fun OnboardingStepBody(
             )
         }
         Spacer(Modifier.height(16.dp))
+        if (step == OnboardingSetupStep.Intro) {
+            SectionHeader(stringResource(R.string.onboarding_private_by_design), CatGreen)
+            Spacer(Modifier.height(10.dp))
+        }
         Text(
             text = presentation.title,
             style = MaterialTheme.typography.headlineMedium,
@@ -601,9 +629,15 @@ private fun OnboardingIntroDetails() {
         fontWeight = FontWeight.SemiBold,
     )
     Spacer(Modifier.height(18.dp))
-    OnboardingPlainRow(Icons.Default.Security, stringResource(R.string.onboarding_intro_private))
-    OnboardingPlainRow(Icons.AutoMirrored.Filled.OpenInNew, stringResource(R.string.onboarding_intro_guided))
-    OnboardingPlainRow(Icons.Default.CheckCircle, stringResource(R.string.onboarding_intro_verified))
+    LedgerCard(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+            OnboardingPlainRow(Icons.Default.Security, stringResource(R.string.onboarding_intro_private))
+            GradientDivider()
+            OnboardingPlainRow(Icons.AutoMirrored.Filled.OpenInNew, stringResource(R.string.onboarding_intro_guided))
+            GradientDivider()
+            OnboardingPlainRow(Icons.Default.CheckCircle, stringResource(R.string.onboarding_intro_verified))
+        }
+    }
 }
 
 @Composable

@@ -196,9 +196,9 @@ fun LookupScreen(viewModel: MainViewModel) {
                 Modifier
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                    .padding(horizontal = 20.dp, vertical = 10.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             Column(
                 modifier = Modifier.fillMaxWidth(),
@@ -314,7 +314,7 @@ fun LookupScreen(viewModel: MainViewModel) {
                 }
 
                 result != null -> {
-                    val lookupResult = result!!
+                    val lookupResult = result
                     // This branch describes the number that was checked,
                     // which is not necessarily what is typed in the field now.
                     val resultNumber = checkedNumber ?: normalizedNumber
@@ -332,54 +332,60 @@ fun LookupScreen(viewModel: MainViewModel) {
                     val userRule = BlockReasoning.isUserRule(lookupResult.reasonCode)
                     val userRuleEntry = userBlocked.firstOrNull { it.number == resultNumber }
 
+                    SectionHeader(
+                        stringResource(R.string.lookup_risk_assessment),
+                        if (lookupResult.isSpam) CatRed else CatGreen,
+                    )
                     PremiumCard(accentColor = resultAccent, modifier = Modifier.fillMaxWidth()) {
                         Column(
                             modifier = Modifier.padding(18.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
+                            horizontalAlignment = Alignment.Start,
                             verticalArrangement = Arrangement.spacedBy(12.dp),
                         ) {
-                            StatusPill(
-                                text =
-                                    if (lookupResult.isSpam) {
-                                        stringResource(R.string.lookup_result_high_risk)
-                                    } else {
-                                        stringResource(R.string.lookup_result_clear)
-                                    },
-                                color = resultAccent,
-                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                            ) {
+                                if (lookupResult.isSpam) {
+                                    SpamScoreGauge(score = lookupResult.confidence, isSpam = true)
+                                } else {
+                                    Icon(
+                                        Icons.Default.VerifiedUser,
+                                        contentDescription = stringResource(R.string.cd_number_clean),
+                                        tint = CatGreen,
+                                        modifier = Modifier.size(72.dp),
+                                    )
+                                }
+                                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    Text(
+                                        stringResource(
+                                            if (lookupResult.isSpam) {
+                                                R.string.lookup_verdict_suspected_spam
+                                            } else {
+                                                R.string.lookup_verdict_no_risk
+                                            },
+                                        ),
+                                        style = MaterialTheme.typography.headlineSmall,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = CatText,
+                                    )
+                                    Text(
+                                        PhoneFormatter.formatIsolated(resultNumber),
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = CatText,
+                                    )
+                                    AreaCodeLookup.lookup(resultNumber)?.let {
+                                        Text(it, style = MaterialTheme.typography.bodyMedium, color = CatSubtext)
+                                    }
+                                }
+                            }
                             Text(
                                 reasoning.headline,
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.SemiBold,
-                                color = resultAccent,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = CatSubtext,
                             )
-                            Icon(
-                                if (lookupResult.isSpam) Icons.Default.Warning else Icons.Default.CheckCircle,
-                                contentDescription =
-                                    if (lookupResult.isSpam) {
-                                        stringResource(R.string.cd_spam_detected)
-                                    } else {
-                                        stringResource(R.string.cd_number_clean)
-                                    },
-                                tint = resultAccent,
-                                modifier = Modifier.size(44.dp),
-                            )
-                            Text(
-                                if (lookupResult.isSpam) stringResource(R.string.lookup_spam_detected) else stringResource(R.string.lookup_clean),
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold,
-                                color = resultAccent,
-                            )
-                            StatusPill(
-                                text = PhoneFormatter.formatIsolated(resultNumber),
-                                color = if (lookupResult.isSpam) CatPeach else CatBlue,
-                            )
-                            AreaCodeLookup.lookup(resultNumber)?.let {
-                                Text(it, style = MaterialTheme.typography.bodySmall, color = CatOverlay)
-                            }
                             if (probabilistic) {
-                                SectionHeader(stringResource(R.string.lookup_verdict_confidence), color = CatOverlay)
-                                SpamScoreGauge(score = lookupResult.confidence, isSpam = true)
                                 Text(
                                     stringResource(R.string.lookup_verdict_probabilistic_note),
                                     style = MaterialTheme.typography.bodySmall,
@@ -590,10 +596,25 @@ fun LookupScreen(viewModel: MainViewModel) {
 private fun LookupIdleCard() {
     Column(
         modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        SectionHeader(stringResource(R.string.lookup_idle_title))
-        GradientDivider()
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Icon(
+                imageVector = Icons.Default.VerifiedUser,
+                contentDescription = null,
+                modifier = Modifier.size(16.dp),
+                tint = CatGreen,
+            )
+            Text(
+                text = stringResource(R.string.lookup_idle_title),
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium,
+                color = CatSubtext,
+            )
+        }
         LookupHintRow(
             icon = Icons.Default.Psychology,
             title = stringResource(R.string.lookup_idle_signal_title),

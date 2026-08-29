@@ -6,6 +6,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.VerifiedUser
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -21,13 +24,31 @@ import com.sysadmindoc.callshield.ui.theme.*
 @Composable
 fun ChangelogScreen() {
     Column(
-        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(0.dp),
     ) {
+        SectionHeader(stringResource(R.string.changelog_latest_release), CatGreen)
+        Spacer(Modifier.height(12.dp))
+        VersionEntry(
+            "1.7.38",
+            "A clearer CallShield",
+            isLatest = true,
+            date = "August 29, 2026",
+            summary = "Every core screen now shares one calm, readable protection system.",
+            changes =
+                listOf(
+                    "Protection status is easier to read at a glance",
+                    "Activity, lookup, and rules use consistent rows",
+                    "Settings and diagnostics are less dense",
+                ),
+        )
+        Spacer(Modifier.height(14.dp))
+        SectionHeader(stringResource(R.string.changelog_release_history), CatGreen)
+        Spacer(Modifier.height(12.dp))
         VersionEntry(
             "1.7.37",
             "Simplified Chinese translation and installable signed releases",
-            isLatest = true,
+            date = "August 24, 2026",
             changes =
                 listOf(
                     "Simplified Chinese (zh-CN) translation contributed by wj-on-git, selectable per app",
@@ -681,9 +702,69 @@ fun VersionEntry(
     title: String = "",
     isLatest: Boolean = false,
     isLast: Boolean = false,
+    date: String = "",
+    summary: String = "",
     changes: List<String>,
 ) {
     val accentColor = if (isLatest) CatGreen else CatSubtext
+
+    if (isLatest) {
+        LedgerCard(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 18.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.VerifiedUser,
+                        contentDescription = null,
+                        tint = CatGreen,
+                        modifier = Modifier.size(48.dp),
+                    )
+                    Column(modifier = Modifier.weight(1f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                "v$version",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = CatGreen,
+                            )
+                            Spacer(Modifier.width(10.dp))
+                            StatusPill(stringResource(R.string.changelog_latest), CatGreen)
+                        }
+                        if (date.isNotBlank()) {
+                            Text(date, style = MaterialTheme.typography.bodyMedium, color = CatSubtext)
+                        }
+                    }
+                }
+                Text(title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold, color = CatText)
+                if (summary.isNotBlank()) {
+                    Text(summary, style = MaterialTheme.typography.bodyMedium, color = CatSubtext)
+                }
+                GradientDivider()
+                changes.forEachIndexed { index, change ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = null,
+                            tint = if (index == 0) CatGreen else CatOverlay,
+                            modifier = Modifier.size(20.dp),
+                        )
+                        Spacer(Modifier.width(12.dp))
+                        Text(change, style = MaterialTheme.typography.bodyMedium, color = CatText)
+                    }
+                }
+            }
+        }
+        return
+    }
 
     Row(modifier = Modifier.fillMaxWidth()) {
         // Timeline rail
@@ -748,6 +829,9 @@ fun VersionEntry(
                             )
                         }
                     }
+                }
+                if (date.isNotBlank()) {
+                    Text(date, style = MaterialTheme.typography.labelSmall, color = CatOverlay)
                 }
                 if (title.isNotEmpty()) {
                     Text(title, style = MaterialTheme.typography.bodySmall, color = CatSubtext)

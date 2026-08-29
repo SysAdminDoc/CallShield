@@ -12,6 +12,7 @@ import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
@@ -35,6 +36,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -190,23 +192,23 @@ private val LightPalette =
     CallShieldPalette(
         background = Color(0xFFF7F8F5),
         surface = Color(0xFFFFFFFF),
-        surfaceVariant = Color(0xFFF0F3EF),
-        surfaceBright = Color(0xFFE8EDE8),
+        surfaceVariant = Color(0xFFF1F4F0),
+        surfaceBright = Color(0xFFE9EEEA),
         surfaceElevated = Color(0xFFFFFFFF),
-        primary = Color(0xFF176B4D),
+        primary = Color(0xFF087A55),
         onPrimary = Color(0xFFFFFFFF),
-        error = Color(0xFFB32642),
-        blue = Color(0xFF285FAE),
-        warning = Color(0xFF765900),
-        mauve = Color(0xFF6D4EA1),
+        error = Color(0xFFC62D4D),
+        blue = Color(0xFF2A63B7),
+        warning = Color(0xFFA66F00),
+        mauve = Color(0xFF7641B5),
         peach = Color(0xFF98552D),
         teal = Color(0xFF126B66),
         lavender = Color(0xFF4E5F9E),
-        text = Color(0xFF171B1F),
-        subtext = Color(0xFF4E5963),
+        text = Color(0xFF0A1932),
+        subtext = Color(0xFF536176),
         // AA against surfaceBright too (was 3.97:1).
-        overlay = Color(0xFF5A646E),
-        muted = Color(0xFFD8DFD9),
+        overlay = Color(0xFF627083),
+        muted = Color(0xFFD9E0DA),
         isLight = true,
     )
 
@@ -474,10 +476,9 @@ fun PremiumCard(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val shape = RoundedCornerShape(cornerRadius)
-    // Most sections are content groups, not individual panels. Keep the
-    // default treatment transparent so hierarchy comes from typography and
-    // spacing; reserve a quiet tint for genuinely stateful/accented cards.
-    val baseColor = Color.Transparent
+    // Signal Ledger uses one quiet white plane over the warm app background.
+    // Accent cards keep a very light semantic tint without adding elevation.
+    val baseColor = Surface
     val containerColor =
         accentColor
             ?.copy(alpha = 0.055f)
@@ -510,18 +511,54 @@ fun PremiumCard(
 @Composable
 fun SectionHeader(
     title: String,
-    color: Color = CatOverlay,
+    color: Color = CatGreen,
 ) {
+    val locale = LocalConfiguration.current.locales[0]
     Text(
-        title,
+        title.uppercase(locale),
         // Mark as a heading so TalkBack's heading navigation can jump between
         // sections — every screen routes its section titles through here, so
         // this single semantic makes the whole app navigable by headings.
         modifier = Modifier.padding(vertical = 1.dp).semantics { heading() },
-        style = MaterialTheme.typography.labelLarge,
-        color = if (color == CatOverlay) CatSubtext else color,
+        style = MaterialTheme.typography.labelMedium.copy(letterSpacing = 1.7.sp),
+        color = color,
         fontWeight = FontWeight.SemiBold,
     )
+}
+
+/**
+ * A thin outlined content plane for the few places where the design needs a
+ * visible boundary, such as insight tiles and compact tool shortcuts.
+ */
+@Composable
+fun LedgerCard(
+    modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    val shape = RoundedCornerShape(ShapeXl)
+    val colors = CardDefaults.cardColors(containerColor = Surface)
+    val border = BorderStroke(1.dp, DividerColor)
+    if (onClick == null) {
+        Card(
+            modifier = modifier,
+            colors = colors,
+            shape = shape,
+            border = border,
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+            content = content,
+        )
+    } else {
+        Card(
+            onClick = onClick,
+            modifier = modifier,
+            colors = colors,
+            shape = shape,
+            border = border,
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp, pressedElevation = 0.dp),
+            content = content,
+        )
+    }
 }
 
 /**
@@ -560,9 +597,19 @@ fun PremiumIconTile(
     size: Dp = 36.dp,
     iconSize: Dp = 18.dp,
     contentDescription: String? = null,
+    showContainer: Boolean = false,
 ) {
     Box(
-        modifier = modifier.size(size),
+        modifier =
+            modifier
+                .size(size)
+                .then(
+                    if (showContainer) {
+                        Modifier.background(color.copy(alpha = 0.10f), RoundedCornerShape(ShapeMd))
+                    } else {
+                        Modifier
+                    },
+                ),
         contentAlignment = Alignment.Center,
     ) {
         Icon(
@@ -764,7 +811,7 @@ fun GradientDivider(
             modifier
                 .fillMaxWidth()
                 .height(1.dp)
-                .background(if (color == CatOverlay) DividerColor.copy(alpha = 0.72f) else color.copy(alpha = 0.12f)),
+                .background(if (color == CatOverlay) DividerColor else color.copy(alpha = 0.12f)),
     )
 }
 

@@ -239,7 +239,7 @@ object CheckerPriority {
     // STIR_SHAKEN_TRUSTED: a carrier-signed PASSED attestation is a strong
     // trust signal, but the user's explicit blocklist / wildcard rules AND
     // the categorical prefix feed are authoritative and MUST win against it
-    // (SIM-box fraud can carry A-attestation — see CLAUDE.md). It still
+    // (SIM-box fraud can carry A-attestation). It still
     // beats exact downloaded rows and every statistical layer below.
     // Paired with STIR_SHAKEN (block side) above.
     const val TEMPORARY_ALLOW = 5_350 // one-off false-positive recovery

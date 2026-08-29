@@ -127,53 +127,25 @@ fun NumberDetailScreen(
     val coroutineScope = rememberCoroutineScope()
 
     Column(
-        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         // Header
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.cd_back), tint = CatSubtext)
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.cd_back), tint = CatText)
             }
-            Spacer(Modifier.width(8.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                contactName?.let { name ->
-                    Text(name, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = CatGreen)
-                }
-                Text(PhoneFormatter.formatIsolated(number), style = if (contactName != null) MaterialTheme.typography.bodyLarge else MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                Text(PhoneFormatter.formatWithCountryCodeIsolated(number), style = MaterialTheme.typography.bodySmall, color = CatSubtext)
-                if (location != null) Text(location, style = MaterialTheme.typography.bodySmall, color = CatOverlay)
-                // Feature A: smart call label chip under the header — shows
-                // the resolved category (Scam / Debt Collector / Phishing /
-                // etc.) once the live spam check completes. Only shown for
-                // spam matches; allow-through results don't need a label.
-                liveResult?.takeIf { it.isSpam }?.let { r ->
-                    val categoryPolicy =
-                        remember(r.matchSource) {
-                            com.sysadmindoc.callshield.data.CategoryCallPolicy
-                                .parseMatchSource(r.matchSource)
-                        }
-                    val category =
-                        remember(r.matchSource, r.type, r.description, r.confidence) {
-                            com.sysadmindoc.callshield.data.CallCategoryResolver
-                                .resolve(r)
-                        }
-                    Spacer(Modifier.height(6.dp))
-                    StatusPill(
-                        text =
-                            if (categoryPolicy == null) {
-                                "${category.emoji} ${stringResource(category.stringResId)}"
-                            } else {
-                                "${category.emoji} ${stringResource(category.stringResId)} · " +
-                                    stringResource(categoryPolicy.action.labelResId)
-                            },
-                        color = CatRed,
-                        horizontalPadding = 10.dp,
-                        verticalPadding = 6.dp,
-                        textStyle = MaterialTheme.typography.labelMedium,
-                    )
-                }
-            }
+            Spacer(Modifier.width(4.dp))
+            Text(
+                stringResource(R.string.detail_number_details),
+                modifier = Modifier.weight(1f),
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = CatText,
+            )
             // Copy button
             IconButton(onClick = {
                 (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager)
@@ -181,9 +153,23 @@ fun NumberDetailScreen(
                 Toast.makeText(context, copiedMessage, Toast.LENGTH_SHORT).show()
             }) { Icon(Icons.Default.ContentCopy, stringResource(R.string.cd_copy), tint = CatSubtext) }
         }
+        SectionHeader(stringResource(R.string.detail_phone_number), CatSubtext)
+        contactName?.let { name ->
+            Text(name, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold, color = CatGreen)
+        }
+        Text(
+            PhoneFormatter.formatIsolated(number),
+            style = MaterialTheme.typography.headlineLarge,
+            fontWeight = FontWeight.Bold,
+            color = CatText,
+        )
+        Text(
+            location ?: PhoneFormatter.formatWithCountryCodeIsolated(number),
+            style = MaterialTheme.typography.bodyLarge,
+            color = CatSubtext,
+        )
 
-        // Lead with the causal verdict. A score is secondary evidence and is
-        // only meaningful for the four probabilistic protection layers.
+        // Lead with a concise verdict. The score remains secondary evidence.
         liveResult?.let { r ->
             val reasoning =
                 remember(r.reasonCode, r.matchSource, r.description, r.confidence) {
@@ -195,117 +181,123 @@ fun NumberDetailScreen(
                     )
                 }
             val accent = if (r.isSpam) CatRed else CatGreen
-            val probabilistic = r.isSpam && BlockReasoning.isProbabilistic(r.reasonCode)
-            val userRule = isBlocked && BlockReasoning.isUserRule(r.reasonCode)
             PremiumCard(accentColor = accent) {
                 Column(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .accentGlow(
-                                color = accent,
-                                radius = 300f,
-                                alpha = 0.06f,
-                            ).padding(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
-                    SectionHeader(stringResource(R.string.block_reasoning_title), color = accent)
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        reasoning.headline,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = accent,
-                    )
-                    if (probabilistic) {
-                        Spacer(Modifier.height(10.dp))
-                        SectionHeader(stringResource(R.string.detail_verdict_confidence), color = CatOverlay)
-                        Spacer(Modifier.height(6.dp))
-                        SpamScoreGauge(score = r.confidence, isSpam = true)
-                        Spacer(Modifier.height(4.dp))
-                        Text(
-                            stringResource(R.string.detail_verdict_probabilistic_note),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = CatSubtext,
-                        )
-                    }
-                    if (r.isSpam) {
-                        val categoryPolicy =
-                            remember(r.matchSource) {
-                                com.sysadmindoc.callshield.data.CategoryCallPolicy
-                                    .parseMatchSource(r.matchSource)
-                            }
-                        val sourceLabel =
-                            if (categoryPolicy == null) {
-                                friendlyMatchReasonLabel(r.reasonCode.wireValue)
-                            } else {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    ) {
+                        if (r.isSpam) {
+                            SpamScoreGauge(score = r.confidence, isSpam = true)
+                        } else {
+                            Icon(
+                                imageVector = Icons.Default.VerifiedUser,
+                                contentDescription = null,
+                                tint = accent,
+                                modifier = Modifier.size(72.dp),
+                            )
+                        }
+                        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(
                                 stringResource(
-                                    R.string.detail_category_action_source,
-                                    stringResource(categoryPolicy.category.stringResId),
-                                    stringResource(categoryPolicy.action.labelResId),
+                                    if (r.isSpam) R.string.detail_high_risk else R.string.detail_no_risk,
+                                ),
+                                style = MaterialTheme.typography.headlineSmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = accent,
+                            )
+                            if (r.isSpam) {
+                                val categoryPolicy =
+                                    remember(r.matchSource) {
+                                        com.sysadmindoc.callshield.data.CategoryCallPolicy
+                                            .parseMatchSource(r.matchSource)
+                                    }
+                                val sourceLabel =
+                                    if (categoryPolicy == null) {
+                                        friendlyMatchReasonLabel(r.reasonCode.wireValue)
+                                    } else {
+                                        stringResource(
+                                            R.string.detail_category_action_source,
+                                            stringResource(categoryPolicy.category.stringResId),
+                                            stringResource(categoryPolicy.action.labelResId),
+                                        )
+                                    }
+                                Text(sourceLabel, style = MaterialTheme.typography.bodyMedium, color = CatSubtext)
+                            }
+                            if (isBlocked) {
+                                Text(
+                                    stringResource(R.string.detail_currently_blocked).uppercase(),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = CatRed,
                                 )
                             }
-                        Spacer(Modifier.height(10.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                detectionIcon(categoryPolicy?.originalMatchSource ?: r.matchSource),
-                                null,
-                                tint = CatPeach,
-                                modifier = Modifier.size(16.dp),
-                            )
-                            Text(sourceLabel, style = MaterialTheme.typography.bodySmall, color = CatPeach)
                         }
                     }
                     if (reasoning.bullets.isNotEmpty()) {
-                        Spacer(Modifier.height(8.dp))
-                        reasoning.bullets.forEach { bullet ->
+                        GradientDivider(color = accent)
+                        reasoning.bullets.take(3).forEach { bullet ->
                             Row(modifier = Modifier.padding(vertical = 2.dp)) {
-                                Text("•", color = CatSubtext, modifier = Modifier.width(16.dp))
+                                Icon(
+                                    Icons.Default.CheckCircle,
+                                    contentDescription = null,
+                                    tint = accent,
+                                    modifier = Modifier.size(16.dp),
+                                )
+                                Spacer(Modifier.width(8.dp))
                                 Text(bullet, style = MaterialTheme.typography.bodySmall, color = CatSubtext)
                             }
                         }
                     }
-                    Spacer(Modifier.height(10.dp))
-                    PremiumActionButton(
-                        label =
-                            when {
-                                userRule -> stringResource(R.string.detail_remove_my_rule)
-                                r.isSpam -> stringResource(R.string.detail_not_spam)
-                                else -> stringResource(R.string.detail_block)
-                            },
-                        icon =
-                            when {
-                                userRule -> Icons.Default.Remove
-                                r.isSpam -> Icons.Default.ThumbUp
-                                else -> Icons.Default.Block
-                            },
-                        color = if (r.isSpam) CatGreen else CatRed,
-                        onClick = {
-                            when {
-                                userRule -> {
-                                    userBlocked.find { it.number == number }?.let { viewModel.unblockNumber(it) }
-                                        ?: viewModel.unblockByNumber(number)
-                                    hapticTick(context)
-                                    Toast.makeText(context, numberUnblockedMessage, Toast.LENGTH_SHORT).show()
-                                }
-
-                                r.isSpam -> {
-                                    hapticTick(context)
-                                    viewModel.reportNotSpam(number)
-                                }
-
-                                else -> {
-                                    viewModel.blockNumber(number, "spam", blockedFromDetail)
-                                    hapticConfirm(context)
-                                    Toast.makeText(context, numberBlockedMessage, Toast.LENGTH_SHORT).show()
-                                }
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        outlined = true,
-                    )
                 }
             }
+        }
+
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            PremiumActionButton(
+                label = stringResource(if (isBlocked) R.string.detail_unblock else R.string.detail_block),
+                icon = if (isBlocked) Icons.Default.CheckCircle else Icons.Default.Block,
+                color = CatRed,
+                onClick = {
+                    if (isBlocked) {
+                        userBlocked.find { it.number == number }?.let { viewModel.unblockNumber(it) }
+                        hapticTick(context)
+                        Toast.makeText(context, numberUnblockedMessage, Toast.LENGTH_SHORT).show()
+                    } else {
+                        viewModel.blockNumber(number, "spam", blockedFromDetail)
+                        hapticConfirm(context)
+                        Toast.makeText(context, numberBlockedMessage, Toast.LENGTH_SHORT).show()
+                    }
+                },
+                modifier = Modifier.weight(1f),
+            )
+            PremiumActionButton(
+                label = stringResource(R.string.detail_report),
+                icon = Icons.Default.Flag,
+                color = CatRed,
+                onClick = {
+                    val title = Uri.encode(reportIssueTitle)
+                    val body = Uri.encode(reportIssueBody)
+                    context.launchViewUrlSafely("https://github.com/SysAdminDoc/CallShield/issues/new?title=$title&body=$body&labels=spam-report")
+                },
+                modifier = Modifier.weight(1f),
+                outlined = true,
+            )
+            PremiumActionButton(
+                label = stringResource(R.string.detail_call),
+                icon = Icons.Default.Phone,
+                color = CatText,
+                onClick = {
+                    context.startActivitySafely(
+                        Intent(Intent.ACTION_DIAL, Uri.parse("tel:$number")).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) },
+                    )
+                },
+                modifier = Modifier.weight(1f),
+                outlined = true,
+            )
         }
 
         // Block area code — confirmed first: a ~7.9M-number rule from a stray
@@ -607,47 +599,6 @@ fun NumberDetailScreen(
             }
         }
 
-        // Actions
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            if (!isBlocked) {
-                PremiumActionButton(
-                    label = stringResource(R.string.detail_block),
-                    icon = Icons.Default.Block,
-                    color = CatRed,
-                    onClick = {
-                        viewModel.blockNumber(number, "spam", blockedFromDetail)
-                        hapticConfirm(context)
-                        Toast.makeText(context, numberBlockedMessage, Toast.LENGTH_SHORT).show()
-                    },
-                    modifier = Modifier.weight(1f),
-                )
-            } else {
-                PremiumActionButton(
-                    label = stringResource(R.string.detail_unblock),
-                    icon = Icons.Default.CheckCircle,
-                    color = CatGreen,
-                    onClick = {
-                        userBlocked.find { it.number == number }?.let { viewModel.unblockNumber(it) }
-                        hapticTick(context)
-                        Toast.makeText(context, numberUnblockedMessage, Toast.LENGTH_SHORT).show()
-                    },
-                    modifier = Modifier.weight(1f),
-                )
-            }
-            PremiumActionButton(
-                label = stringResource(R.string.detail_report),
-                icon = Icons.Default.Flag,
-                color = CatPeach,
-                onClick = {
-                    val title = Uri.encode(reportIssueTitle)
-                    val body = Uri.encode(reportIssueBody)
-                    context.launchViewUrlSafely("https://github.com/SysAdminDoc/CallShield/issues/new?title=$title&body=$body&labels=spam-report")
-                },
-                modifier = Modifier.weight(1f),
-                outlined = true,
-            )
-        }
-
         // Community contribution buttons
         val contributeResult by viewModel.contributeResult.collectAsStateWithLifecycle()
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -697,25 +648,13 @@ fun NumberDetailScreen(
             outlined = true,
         )
 
-        // Whitelist / call / share actions
+        // Whitelist and share actions
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             PremiumActionButton(
                 label = stringResource(R.string.detail_whitelist),
                 icon = Icons.Default.CheckCircle,
                 color = CatGreen,
                 onClick = { viewModel.addToWhitelist(number, whitelistedFromDetail) },
-                modifier = Modifier.weight(1f),
-                outlined = true,
-            )
-            PremiumActionButton(
-                label = stringResource(R.string.detail_call),
-                icon = Icons.Default.Phone,
-                color = CatBlue,
-                onClick = {
-                    context.startActivitySafely(
-                        Intent(Intent.ACTION_DIAL, Uri.parse("tel:$number")).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) },
-                    )
-                },
                 modifier = Modifier.weight(1f),
                 outlined = true,
             )

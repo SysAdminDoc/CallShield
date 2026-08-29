@@ -254,7 +254,7 @@ fun RecentCallsScreen(viewModel: MainViewModel) {
             )
             if (calls.isNotEmpty()) {
                 LazyRow(
-                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    contentPadding = PaddingValues(horizontal = 20.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     items(filterOptions.size) { index ->
@@ -326,7 +326,7 @@ fun RecentCallsScreen(viewModel: MainViewModel) {
                     }
                 }
             LazyColumn(
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 itemsIndexed(
@@ -756,8 +756,8 @@ private fun RecentCallsSummaryCard(
 ) {
     val formatter = remember { NumberFormat.getIntegerInstance() }
     Column(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),

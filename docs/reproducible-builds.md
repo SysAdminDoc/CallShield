@@ -46,7 +46,7 @@ Debug or multi-certificate releases break signing-key continuity (they cannot
 co-install with a real-key build), are rejected by Accrescent, and fail Google
 Developer Verification's single-stable-key requirement. When `RELEASE_STORE_*`
 is absent from `local.properties`, `assembleRelease` produces an *unsigned* APK
-(then debug-signed for local testing) — this gate is what stops such a build
+(then debug-signed for local testing). This gate is what stops such a build
 from being shipped as a release.
 
 The signed APK is written to:
@@ -105,8 +105,8 @@ fdroidserver handoff steps, see `docs/fdroid-submission.md`.
 
 Google's Developer Verification (2026-09-30 in BR/ID/SG/TH, global through 2027)
 blocks sideloaded APKs on certified devices from unverified developers, and
-F-Droid has stated it cannot comply. Accrescent — which self-registered in the
-verification program and is a GrapheneOS-default store — accepts a
+F-Droid has stated it cannot comply. Accrescent. Which self-registered in the
+verification program and is a GrapheneOS-default store. Accepts a
 developer-signed bundletool `.apks` split set and is the viable survival path.
 
 Build and validate an Accrescent-ready split set:
@@ -126,7 +126,7 @@ certificate, `.apks` ≤ 150 MiB, bundletool ≥ 1.11.4. Upload the resulting
 `.apks` with the 512×512 icon at `app/src/main/ic_launcher-playstore.png`.
 
 Requirements not covered by the script (operator-gated): the release must be
-signed with the real `callshield-release.jks` (Accrescent rejects debug certs —
+signed with the real `callshield-release.jks` (Accrescent rejects debug certs ,
 see `verify-release-signing.ps1`), and publishing requires developer-identity
 registration on the Accrescent console. A dry-run with a throwaway key validates
 the pipeline structurally but must not be published.
