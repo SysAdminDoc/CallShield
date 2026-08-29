@@ -6,7 +6,7 @@ Items moved here from ROADMAP.md because they require external action, dedicated
 
 - [ ] P3 — Reconcile the drifting version and count claims
   Why: the requested acceptance spans the tracked `data/README.md` plus ignored
-  `CLAUDE.md`, while the session's explicit hygiene rule permits commits only to
+  the project working notes, while the session's explicit hygiene rule permits commits only to
   code, `.gitignore`, `CHANGELOG.md`, and the root `README.md`.
   Blocker: completing and committing the verifier/documentation changes would
   violate that higher-priority file policy. The ignored stale `PROJECT_CONTEXT.md`

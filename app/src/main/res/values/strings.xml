@@ -11,13 +11,14 @@
     <!-- Dashboard Screen -->
     <string name="dashboard_enable_call_screening">Enable Call Screening</string>
     <string name="dashboard_review_permissions">Review permissions</string>
-    <string name="dashboard_protection_active">Protection Active</string>
+    <string name="dashboard_live_protection">Live protection</string>
+    <string name="dashboard_protection_active">Protection active</string>
     <string name="dashboard_protection_disabled">Protection Paused</string>
     <string name="dashboard_setup_needed">Setup Needed</string>
     <string name="dashboard_setup_progress">%1$s of %2$s complete</string>
-    <string name="dashboard_outcome_title">Blocked this week</string>
-    <string name="dashboard_outcome_calls">Calls</string>
-    <string name="dashboard_outcome_texts">Texts</string>
+    <string name="dashboard_outcome_title">This week</string>
+    <string name="dashboard_outcome_calls">Calls blocked</string>
+    <string name="dashboard_outcome_texts">Texts blocked</string>
     <string name="dashboard_outcome_window">This calendar week · on-device blocked activity</string>
     <string name="dashboard_calls_and_texts_protected">Calls and texts are actively protected.</string>
     <string name="dashboard_calls_protected">Calls are actively protected.</string>
@@ -34,11 +35,14 @@
     <string name="dashboard_background_miui_action">Open autostart settings</string>
     <string name="dashboard_background_dismiss">Dismiss</string>
     <string name="dashboard_sync_database">Sync Database</string>
-    <string name="dashboard_metric_core_setup">Core setup</string>
+    <string name="dashboard_metric_core_setup">Setup</string>
     <string name="dashboard_metric_engines">Engines</string>
     <string name="dashboard_metric_database">Database</string>
+    <string name="dashboard_metric_numbers">Numbers</string>
     <string name="dashboard_metric_ready">Ready</string>
     <string name="dashboard_setup_checklist">Setup Checklist</string>
+    <string name="dashboard_protection_checks">Protection checks</string>
+    <string name="dashboard_setup_phone_messages_title">Phone &amp; messages</string>
     <string name="dashboard_setup_complete">Setup complete</string>
     <string name="dashboard_setup_needs_attention">Needs attention</string>
     <string name="dashboard_setup_collapsed_detail">Required permissions, database, and call screening are ready.</string>
@@ -71,6 +75,8 @@
     <string name="dashboard_synced_minutes_ago">Synced %dm ago</string>
     <string name="dashboard_synced_hours_ago">Synced %dh ago</string>
     <string name="dashboard_synced_days_ago">Synced %dd ago</string>
+    <string name="dashboard_database_bundled_ready">Protection snapshot ready</string>
+    <string name="dashboard_not_synced">Not synced yet</string>
     <string name="dashboard_stat_today">Today</string>
     <string name="dashboard_stat_this_week">This Week</string>
     <string name="dashboard_stat_total">Total</string>
@@ -189,7 +195,7 @@
     <string name="blocklist_tab_whitelist_short">Trusted</string>
     <string name="blocklist_tab_database_short">Database</string>
     <string name="blocklist_overview_blocked_title">Manual protection</string>
-    <string name="blocklist_overview_blocked_subtitle">Exact numbers you never want to ring through.</string>
+    <string name="blocklist_overview_blocked_subtitle">Your choices always override automatic detection.</string>
     <string name="blocklist_overview_wildcards_title">Wildcard rules</string>
     <string name="blocklist_overview_wildcards_subtitle">Match changing prefixes or suffixes.</string>
     <string name="blocklist_overview_keywords_title">SMS keywords</string>
@@ -201,6 +207,10 @@
     <plurals name="blocklist_count_saved">
         <item quantity="one">%1$,d entry</item>
         <item quantity="other">%1$,d entries</item>
+    </plurals>
+    <plurals name="blocklist_count_active_rules">
+        <item quantity="one">%1$,d active rule</item>
+        <item quantity="other">%1$,d active rules</item>
     </plurals>
     <string name="blocklist_action_add_number">Add number</string>
     <string name="blocklist_action_add_wildcard">Add wildcard</string>
@@ -376,6 +386,9 @@
     <string name="lookup_spam_detected">SPAM DETECTED</string>
     <string name="lookup_clean">CLEAN</string>
     <string name="lookup_verdict_confidence">Probabilistic signal</string>
+    <string name="lookup_risk_assessment">Risk assessment</string>
+    <string name="lookup_verdict_suspected_spam">Suspected spam</string>
+    <string name="lookup_verdict_no_risk">No risk detected</string>
     <string name="lookup_verdict_probabilistic_note">This confidence comes from on-device analysis and is shown only for probabilistic signals.</string>
     <string name="lookup_detection">Detection</string>
     <string name="lookup_type">Type</string>
@@ -498,8 +511,8 @@
     <string name="remote_lookup_status_unavailable">Unavailable</string>
 
     <!-- Settings Screen -->
-    <string name="settings_permissions_access">Permissions &amp; access</string>
-    <string name="settings_setup_progress">Access checks ready: %1$s/%2$s</string>
+    <string name="settings_permissions_access">Access status</string>
+    <string name="settings_setup_progress">%1$s of %2$s required checks ready</string>
     <string name="settings_setup_progress_note">This count covers the two required access rows below; database readiness is shown on Home.</string>
     <string name="settings_setup_ready_summary">Everything connected</string>
     <string name="settings_setup_attention_summary">Finish setup</string>
@@ -513,11 +526,13 @@
     <string name="settings_open_app_settings">Open app settings</string>
     <string name="settings_open_app_settings_subtitle">Android permission details and special access</string>
     <string name="settings_overlay">Overlay</string>
-    <string name="settings_access_calls_messages">Calls &amp; messages</string>
+    <string name="settings_access_calls_messages">Phone &amp; messages</string>
     <string name="settings_access_call_screening">Call screening</string>
     <string name="settings_access_caller_id">Caller ID overlay</string>
-    <string name="settings_access_optional_title">Optional enhancements</string>
+    <string name="settings_access_optional_title">Optional access</string>
+    <string name="settings_access_optional_ready">Caller ID overlay · Ready  |  Notifications · Ready</string>
     <string name="settings_access_ready">Ready</string>
+    <string name="settings_access_required">Required</string>
     <string name="settings_access_optional">Optional</string>
     <string name="settings_access_grant">Grant</string>
     <string name="settings_access_enable">Enable</string>
@@ -735,6 +750,13 @@
     <string name="stats_trend_down">Change vs last month: -%d</string>
     <string name="stats_trend_same">Same as last month</string>
     <string name="stats_overview_title">Protection Snapshot</string>
+    <plurals name="stats_threats_stopped">
+        <item quantity="one">%1$,d threat stopped this week</item>
+        <item quantity="other">%1$,d threats stopped this week</item>
+    </plurals>
+    <string name="stats_previous_week_more">%1$d more than the previous 7 days.</string>
+    <string name="stats_previous_week_fewer">%1$d fewer than the previous 7 days.</string>
+    <string name="stats_previous_week_same">Same as the previous 7 days.</string>
     <string name="stats_overview_subtitle">A quick read on what CallShield has intercepted recently.</string>
     <string name="stats_overview_week">This Week</string>
     <string name="stats_overview_change">Weekly Change</string>
@@ -791,6 +813,7 @@
     <string name="more_snapshot_texts">Texts protected</string>
     <string name="more_snapshot_paused">Protection paused</string>
     <string name="more_snapshot_never_synced">Not synced yet</string>
+    <string name="more_protection_status">Protection status</string>
     <string name="more_snapshot_database">Database</string>
     <string name="more_snapshot_today">Today</string>
     <string name="more_snapshot_version">Version</string>
@@ -859,8 +882,15 @@
 
     <!-- Protection Test Screen -->
     <string name="protection_test_subtitle">Check permissions, detection, and integrations.</string>
+    <string name="protection_test_system_check">System check</string>
+    <string name="protection_test_all_passed_title">All protection checks passed</string>
+    <string name="protection_test_ready_body">CallShield is ready to screen calls and messages.</string>
+    <string name="protection_test_last_tested_now">Last tested just now</string>
+    <string name="protection_test_check_results">Check results</string>
+    <string name="protection_test_check_count">%1$d of %2$d checks</string>
     <string name="protection_test_testing">Testing…</string>
     <string name="protection_test_run_all">Run All Tests</string>
+    <string name="protection_test_run_again">Run all tests again</string>
     <string name="protection_test_summary">Progress: %1$d/%2$d passed (%3$d%%)</string>
     <string name="protection_test_all_ok">All systems operational</string>
     <plurals name="protection_test_issues">
@@ -991,6 +1021,8 @@
 
     <!-- Changelog Screen -->
     <string name="changelog_latest">LATEST</string>
+    <string name="changelog_latest_release">Latest release</string>
+    <string name="changelog_release_history">Release history</string>
 
     <!-- Onboarding Screen -->
     <string name="onboarding_welcome_title">Welcome to CallShield</string>
@@ -1048,6 +1080,8 @@
     <string name="onboarding_intro_private">Your call and message data stays on this phone</string>
     <string name="onboarding_intro_guided">Every button opens the exact Android control you need</string>
     <string name="onboarding_intro_verified">Setup advances only after Android confirms access</string>
+    <string name="onboarding_private_by_design">Private by design</string>
+    <string name="onboarding_no_account_required">No account required.</string>
     <string name="onboarding_runtime_title">Phone &amp; messages</string>
     <string name="onboarding_runtime_body">Allow on-device access to calls, contacts, and messages so screening and spam checks can work.</string>
     <string name="onboarding_runtime_instruction">Android will show a short series of permission prompts. Choose Allow for each one. CallShield checks every grant before continuing.</string>
@@ -1133,6 +1167,10 @@
     <string name="detail_block_area_code">Block all %s numbers</string>
     <string name="detail_statistics">Statistics</string>
     <string name="detail_calls">Calls</string>
+    <string name="detail_number_details">Number details</string>
+    <string name="detail_phone_number">Phone number</string>
+    <string name="detail_high_risk">High risk</string>
+    <string name="detail_no_risk">No risk detected</string>
     <string name="detail_sms">SMS</string>
     <string name="detail_total">Total</string>
     <string name="detail_timeline">Timeline</string>
@@ -1157,6 +1195,7 @@
     <string name="detail_number_blocked">Number blocked</string>
     <string name="detail_unblock">Unblock</string>
     <string name="detail_number_unblocked">Number unblocked</string>
+    <string name="detail_currently_blocked">Currently blocked</string>
     <string name="detail_report">Report</string>
     <string name="detail_report_spam">Report Spam</string>
     <string name="detail_not_spam">Not Spam</string>

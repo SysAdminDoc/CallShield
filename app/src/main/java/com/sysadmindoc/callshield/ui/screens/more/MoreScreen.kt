@@ -146,18 +146,33 @@ fun MoreHub(
             Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+                .padding(horizontal = 20.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-            Text(
-                protectionLabel,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold,
-                color = CatText,
-            )
-            Text(syncLabel, style = MaterialTheme.typography.bodyMedium, color = CatSubtext)
-            Spacer(Modifier.height(6.dp))
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            SectionHeader(stringResource(R.string.more_protection_status))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.Default.VerifiedUser,
+                    contentDescription = null,
+                    tint = CatGreen,
+                    modifier = Modifier.size(56.dp),
+                )
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(
+                        protectionLabel,
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = CatText,
+                    )
+                    Text(syncLabel, style = MaterialTheme.typography.bodyMedium, color = CatSubtext)
+                }
+            }
+            Spacer(Modifier.height(2.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -176,32 +191,47 @@ fun MoreHub(
                 MoreMetricDivider()
                 MoreMetric(appVersion, stringResource(R.string.more_snapshot_version), Modifier.weight(1f))
             }
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(2.dp))
+            GradientDivider()
         }
 
         AppearanceRow(theme = appTheme, onClick = onSettings)
 
         MoreSection(stringResource(R.string.more_section_tools)) {
-            MoreNavCard(
-                Icons.Default.BarChart,
-                stringResource(R.string.more_statistics),
-                stringResource(R.string.more_statistics_subtitle),
-                CatGreen,
-                onStats,
-            )
-            MoreNavCard(
-                Icons.Default.Verified,
-                stringResource(R.string.more_protection_test),
-                stringResource(R.string.more_protection_test_subtitle),
-                CatGreen,
-                onTest,
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                MoreNavCard(
+                    Icons.Default.BarChart,
+                    stringResource(R.string.more_statistics),
+                    stringResource(R.string.more_statistics_subtitle),
+                    CatGreen,
+                    onStats,
+                    modifier = Modifier.weight(1f),
+                    outlined = true,
+                    compact = true,
+                )
+                MoreNavCard(
+                    Icons.Default.Verified,
+                    stringResource(R.string.more_protection_test),
+                    stringResource(R.string.more_protection_test_subtitle),
+                    CatGreen,
+                    onTest,
+                    modifier = Modifier.weight(1f),
+                    outlined = true,
+                    compact = true,
+                )
+            }
+            Spacer(Modifier.height(8.dp))
             MoreNavCard(
                 Icons.Default.Settings,
                 stringResource(R.string.more_settings),
                 stringResource(R.string.more_settings_subtitle),
                 CatGreen,
                 onSettings,
+                modifier = Modifier.fillMaxWidth(),
+                outlined = true,
             )
         }
 
@@ -476,12 +506,54 @@ fun MoreNavCard(
     subtitle: String,
     color: androidx.compose.ui.graphics.Color,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier.fillMaxWidth(),
+    outlined: Boolean = false,
+    compact: Boolean = false,
 ) {
-    TextButton(
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth().heightIn(min = 50.dp),
-        contentPadding = PaddingValues(horizontal = 0.dp, vertical = 4.dp),
-    ) {
+    if (outlined && compact) {
+        LedgerCard(
+            onClick = onClick,
+            modifier = modifier.heightIn(min = 96.dp),
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(7.dp),
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    PremiumIconTile(icon = icon, color = color, size = 30.dp, iconSize = 17.dp)
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        title,
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = CatText,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Icon(
+                        Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                        tint = CatOverlay,
+                    )
+                }
+                Text(
+                    subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = CatSubtext,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+        return
+    }
+
+    val rowContent: @Composable RowScope.() -> Unit = {
         PremiumIconTile(icon = icon, color = color, size = 34.dp, iconSize = 19.dp)
         Spacer(Modifier.width(10.dp))
         Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.Start) {
@@ -501,6 +573,25 @@ fun MoreNavCard(
             // "View details" to every row.
             contentDescription = null,
             tint = CatOverlay,
+        )
+    }
+    if (outlined) {
+        LedgerCard(
+            onClick = onClick,
+            modifier = modifier.heightIn(min = 76.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                content = rowContent,
+            )
+        }
+    } else {
+        TextButton(
+            onClick = onClick,
+            modifier = modifier.heightIn(min = 50.dp),
+            contentPadding = PaddingValues(horizontal = 0.dp, vertical = 4.dp),
+            content = rowContent,
         )
     }
 }

@@ -1,0 +1,1 @@
+CallShield now uses one calm, readable design across every page. Protection status is easier to scan, lookup and number details show concise risk verdicts, and Rules puts manual choices first. Settings, onboarding, statistics, diagnostics, and release history now share the same spacing and responsive layout.

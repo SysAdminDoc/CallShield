@@ -175,15 +175,33 @@ fun ProtectionTestScreen() {
             failures.mapNotNull { it.recoveryHint }.distinct().take(3)
         }
 
+    fun runAllTests() {
+        testing = true
+        results = emptyList()
+        runFailed = false
+        scope.launch {
+            try {
+                results = runTests(context)
+            } catch (_: Exception) {
+                runFailed = true
+            } finally {
+                testing = false
+            }
+        }
+    }
+
     Column(
-        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        Text(
-            stringResource(R.string.protection_test_subtitle),
-            style = MaterialTheme.typography.bodySmall,
-            color = CatSubtext,
-        )
+        SectionHeader(stringResource(R.string.protection_test_system_check), summaryColor)
+        if (results.isEmpty()) {
+            Text(
+                stringResource(R.string.protection_test_subtitle),
+                style = MaterialTheme.typography.bodyMedium,
+                color = CatSubtext,
+            )
+        }
 
         // Poll until the model resolves so entering this screen during model
         // load shows "pending" then updates to the real status without needing
@@ -194,39 +212,26 @@ fun ProtectionTestScreen() {
                 value = SpamMLScorer.modelHealth()
             }
         }
-        ModelHealthCard(modelHealth)
+        if (results.isEmpty()) {
+            ModelHealthCard(modelHealth)
+        }
 
-        PremiumActionButton(
-            label =
-                if (testing) {
-                    stringResource(R.string.protection_test_testing)
-                } else {
-                    stringResource(R.string.protection_test_run_all)
-                },
-            icon = Icons.Default.PlayArrow,
-            color = CatGreen,
-            onClick = {
-                testing = true
-                results = emptyList()
-                runFailed = false
-                scope.launch {
-                    try {
-                        results = runTests(context)
-                    } catch (_: Exception) {
-                        // A repository or database failure here would otherwise
-                        // escape this coroutine and kill the process — and this
-                        // is the screen users open precisely when something is
-                        // wrong. Surface it instead.
-                        runFailed = true
-                    } finally {
-                        testing = false
-                    }
-                }
-            },
-            enabled = !testing,
-            loading = testing,
-            modifier = Modifier.fillMaxWidth().height(48.dp),
-        )
+        if (results.isEmpty()) {
+            PremiumActionButton(
+                label =
+                    if (testing) {
+                        stringResource(R.string.protection_test_testing)
+                    } else {
+                        stringResource(R.string.protection_test_run_all)
+                    },
+                icon = Icons.Default.PlayArrow,
+                color = CatGreen,
+                onClick = ::runAllTests,
+                enabled = !testing,
+                loading = testing,
+                modifier = Modifier.fillMaxWidth().height(50.dp),
+            )
+        }
 
         if (runFailed) {
             PremiumCard(accentColor = CatRed) {
@@ -270,66 +275,70 @@ fun ProtectionTestScreen() {
             val total = results.size
             val allPassed = passed == total
 
-            PremiumCard(accentColor = summaryColor) {
-                Column(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .accentGlow(summaryColor, 300f, 0.06f)
-                            .padding(14.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        PremiumIconTile(
-                            icon = if (allPassed) Icons.Default.CheckCircle else Icons.Default.Warning,
-                            color = summaryColor,
-                            size = 52.dp,
-                            iconSize = 28.dp,
-                        )
-                        Spacer(Modifier.width(16.dp))
-                        Column {
-                            val scorePercent = (passed * 100) / total
-                            Text(
-                                stringResource(R.string.protection_test_summary, passed, total, scorePercent),
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                            )
-                            Text(
-                                if (allPassed) {
-                                    stringResource(R.string.protection_test_all_ok)
-                                } else {
-                                    val issueCount = total - passed
-                                    pluralStringResource(
-                                        R.plurals.protection_test_issues,
-                                        issueCount,
-                                        issueCount,
-                                    )
-                                },
-                                style = MaterialTheme.typography.bodySmall,
-                                color = summaryColor,
-                            )
-                        }
-                    }
-
-                    LinearProgressIndicator(
-                        progress = { passed / total.toFloat() },
-                        modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
-                        color = summaryColor,
-                        trackColor = CatMuted.copy(alpha = 0.2f),
+                    Icon(
+                        imageVector = if (allPassed) Icons.Default.VerifiedUser else Icons.Default.Warning,
+                        contentDescription = null,
+                        tint = summaryColor,
+                        modifier = Modifier.size(64.dp),
                     )
-
-                    Column {
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(3.dp),
+                    ) {
                         Text(
                             if (allPassed) {
-                                stringResource(R.string.protection_test_summary_body_ok)
+                                stringResource(R.string.protection_test_all_passed_title)
+                            } else {
+                                val scorePercent = (passed * 100) / total
+                                stringResource(R.string.protection_test_summary, passed, total, scorePercent)
+                            },
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = CatText,
+                        )
+                        Text(
+                            if (allPassed) {
+                                stringResource(R.string.protection_test_ready_body)
                             } else {
                                 stringResource(R.string.protection_test_summary_body_attention)
                             },
-                            style = MaterialTheme.typography.bodySmall,
+                            style = MaterialTheme.typography.bodyMedium,
                             color = CatSubtext,
+                        )
+                        Text(
+                            stringResource(R.string.protection_test_last_tested_now),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = CatOverlay,
                         )
                     }
                 }
+                Text(
+                    stringResource(R.string.protection_test_check_count, passed, total),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = CatSubtext,
+                )
+                LinearProgressIndicator(
+                    progress = { passed / total.toFloat() },
+                    modifier = Modifier.fillMaxWidth().height(5.dp).clip(RoundedCornerShape(3.dp)),
+                    color = summaryColor,
+                    trackColor = CatMuted.copy(alpha = 0.2f),
+                )
+                PremiumActionButton(
+                    label = stringResource(R.string.protection_test_run_again),
+                    icon = Icons.Default.PlayArrow,
+                    color = CatGreen,
+                    onClick = ::runAllTests,
+                    enabled = !testing,
+                    loading = testing,
+                    modifier = Modifier.fillMaxWidth().height(50.dp),
+                )
+                SectionHeader(stringResource(R.string.protection_test_check_results), summaryColor)
             }
 
             if (nextSteps.isNotEmpty()) {
@@ -391,12 +400,7 @@ fun ProtectionTestScreen() {
             }
 
             if (passing.isNotEmpty()) {
-                Text(
-                    stringResource(R.string.protection_test_working),
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = CatGreen,
-                )
+                SectionHeader(stringResource(R.string.protection_test_working), CatGreen)
             }
 
             passing.forEachIndexed { index, result ->

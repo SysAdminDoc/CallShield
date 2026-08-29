@@ -100,11 +100,12 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHost) },
         containerColor = Black,
+        contentWindowInsets = WindowInsets(0),
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
             // Filter chips
             Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 10.dp),
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -167,7 +168,7 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
 
             if (availableReasonCodes.isNotEmpty()) {
                 Row(
-                    modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp),
+                    modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 20.dp),
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
                     Box {
@@ -260,7 +261,7 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
             } else if (grouped) {
                 // Grouped view
                 LazyColumn(
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
+                    contentPadding = PaddingValues(horizontal = 20.dp, vertical = 6.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     items(
@@ -280,7 +281,7 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
             } else {
                 // Swipe-to-dismiss list
                 LazyColumn(
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
+                    contentPadding = PaddingValues(horizontal = 20.dp, vertical = 6.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     items(

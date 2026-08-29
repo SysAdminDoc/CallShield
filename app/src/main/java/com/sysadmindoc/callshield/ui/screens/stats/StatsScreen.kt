@@ -24,6 +24,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -131,8 +132,8 @@ fun StatsScreen(viewModel: MainViewModel) {
         remember(thisMonthCount, lastMonthCount) { Pair(thisMonthCount, lastMonthCount) }
 
     Column(
-        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         StatsOverviewCard(
             weeklyTotal = weeklyTotal,
@@ -146,9 +147,11 @@ fun StatsScreen(viewModel: MainViewModel) {
         )
 
         // Summary row
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             MiniStat(Modifier.weight(1f), stringResource(R.string.stats_calls), numberFormatter.format(logCallCount), CatRed)
+            Box(Modifier.width(1.dp).height(58.dp).background(CatMuted))
             MiniStat(Modifier.weight(1f), stringResource(R.string.stats_sms), numberFormatter.format(logSmsCount), CatMauve)
+            Box(Modifier.width(1.dp).height(58.dp).background(CatMuted))
             MiniStat(Modifier.weight(1f), stringResource(R.string.stats_db_size), numberFormatter.format(spamCount), CatGreen)
         }
 
@@ -443,62 +446,70 @@ private fun StatsOverviewCard(
     topSource: BlockReasonCode?,
     peakHour: String?,
 ) {
-    PremiumCard(accentColor = if (weeklyTotal > 0) CatGreen else CatOverlay) {
-        Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            SectionHeader(stringResource(R.string.stats_overview_title), CatGreen)
-            Text(
-                stringResource(R.string.stats_overview_subtitle),
-                style = MaterialTheme.typography.bodySmall,
-                color = CatSubtext,
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        SectionHeader(stringResource(R.string.stats_overview_title), CatGreen)
+        Text(
+            pluralStringResource(R.plurals.stats_threats_stopped, weeklyTotal, weeklyTotal),
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = CatText,
+        )
+        Text(
+            when {
+                weeklyDelta > 0 -> stringResource(R.string.stats_previous_week_more, weeklyDelta)
+                weeklyDelta < 0 -> stringResource(R.string.stats_previous_week_fewer, -weeklyDelta)
+                else -> stringResource(R.string.stats_previous_week_same)
+            },
+            style = MaterialTheme.typography.bodyMedium,
+            color = CatSubtext,
+        )
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            StatsInsightTile(
+                modifier = Modifier.weight(1f),
+                label = stringResource(R.string.stats_overview_week),
+                value = weeklyTotal.toString(),
+                color = CatGreen,
             )
+            StatsInsightTile(
+                modifier = Modifier.weight(1f),
+                label = stringResource(R.string.stats_overview_change),
+                value =
+                    when {
+                        weeklyDelta > 0 -> stringResource(R.string.stats_change_up, weeklyDelta)
+                        weeklyDelta < 0 -> stringResource(R.string.stats_change_down, -weeklyDelta)
+                        else -> stringResource(R.string.stats_change_same)
+                    },
+                color =
+                    when {
+                        weeklyDelta > 0 -> CatRed
+                        weeklyDelta < 0 -> CatGreen
+                        else -> CatOverlay
+                    },
+            )
+        }
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                StatsInsightTile(
-                    modifier = Modifier.weight(1f),
-                    label = stringResource(R.string.stats_overview_week),
-                    value = weeklyTotal.toString(),
-                    color = CatBlue,
-                )
-                StatsInsightTile(
-                    modifier = Modifier.weight(1f),
-                    label = stringResource(R.string.stats_overview_change),
-                    value =
-                        when {
-                            weeklyDelta > 0 -> stringResource(R.string.stats_change_up, weeklyDelta)
-                            weeklyDelta < 0 -> stringResource(R.string.stats_change_down, -weeklyDelta)
-                            else -> stringResource(R.string.stats_change_same)
-                        },
-                    color =
-                        when {
-                            weeklyDelta > 0 -> CatRed
-                            weeklyDelta < 0 -> CatGreen
-                            else -> CatOverlay
-                        },
-                )
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                StatsInsightTile(
-                    modifier = Modifier.weight(1f),
-                    label = stringResource(R.string.stats_overview_top_source),
-                    value =
-                        topSource?.let { friendlyMatchReasonLabel(it.wireValue) }
-                            ?: stringResource(R.string.stats_overview_no_source),
-                    color = CatGreen,
-                )
-                StatsInsightTile(
-                    modifier = Modifier.weight(1f),
-                    label = stringResource(R.string.stats_overview_peak_hour),
-                    value = peakHour ?: stringResource(R.string.stats_overview_no_peak),
-                    color = CatMauve,
-                )
-            }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            StatsInsightTile(
+                modifier = Modifier.weight(1f),
+                label = stringResource(R.string.stats_overview_top_source),
+                value =
+                    topSource?.let { friendlyMatchReasonLabel(it.wireValue) }
+                        ?: stringResource(R.string.stats_overview_no_source),
+                color = CatGreen,
+            )
+            StatsInsightTile(
+                modifier = Modifier.weight(1f),
+                label = stringResource(R.string.stats_overview_peak_hour),
+                value = peakHour ?: stringResource(R.string.stats_overview_no_peak),
+                color = CatMauve,
+            )
         }
     }
 }
@@ -510,11 +521,7 @@ private fun StatsInsightTile(
     value: String,
     color: Color,
 ) {
-    Surface(
-        modifier = modifier,
-        shape = RoundedCornerShape(12.dp),
-        color = color.copy(alpha = 0.08f),
-    ) {
+    LedgerCard(modifier = modifier.heightIn(min = 76.dp)) {
         Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
             Text(label, style = MaterialTheme.typography.labelSmall, color = CatSubtext)
             Spacer(Modifier.height(4.dp))
@@ -854,14 +861,15 @@ fun MiniStat(
     value: String,
     color: Color,
 ) {
-    PremiumCard(modifier = modifier, accentColor = color, cornerRadius = 12.dp) {
-        Column(modifier = Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = color)
-            Text(
-                label.uppercase(),
-                style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 0.sp),
-                color = CatSubtext,
-            )
-        }
+    Column(
+        modifier = modifier.padding(horizontal = 6.dp, vertical = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(value, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold, color = color)
+        Text(
+            label.uppercase(),
+            style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 0.7.sp),
+            color = CatSubtext,
+        )
     }
 }
