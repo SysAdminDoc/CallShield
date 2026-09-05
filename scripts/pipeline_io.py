@@ -107,6 +107,24 @@ def ensure_feed_not_collapsed(
         )
 
 
+def is_deliberate_clear(payload: Any, *, item_key: str, allow_collapse: bool) -> bool:
+    """Return whether this feed is being published empty on purpose.
+
+    The client distinguishes "the publisher says there is nothing" from "the
+    feed did not arrive": `HotDataSync.shouldApplyFeed` only replaces local rows
+    with an empty feed when the feed says it was cleared, and otherwise treats
+    the feed as unavailable and keeps what it has. Nothing on this side ever
+    wrote that flag, so the deliberate-clear path was unreachable and a healthy
+    publisher with nothing to report looked identical to an outage.
+
+    A clear is deliberate only when the operator passed ``--allow-collapse``
+    *and* the result is actually empty. Passing the flag on a run that produces
+    rows clears nothing. An empty feed without the flag never reaches this
+    point: `ensure_feed_not_collapsed` refuses it first.
+    """
+    return allow_collapse and _payload_count(payload, item_key) == 0
+
+
 def require_matching_derived_feed(
     path: Path,
     *,

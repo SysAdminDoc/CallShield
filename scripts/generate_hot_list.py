@@ -23,6 +23,7 @@ from pipeline_io import (
     FeedCollapseError,
     atomic_write_json,
     ensure_feed_not_collapsed,
+    is_deliberate_clear,
     report_queue_digest,
 )
 from report_dedup import (
@@ -317,6 +318,15 @@ def main(argv: list[str] | None = None) -> int:
     except FeedCollapseError as error:
         print(f"ERROR: {error}", file=sys.stderr)
         return 2
+
+    # Tell the client whether an empty feed is a decision or an accident. It
+    # keeps its local rows unless the feed says it was cleared on purpose.
+    output["cleared"] = is_deliberate_clear(
+        output, item_key="numbers", allow_collapse=args.allow_collapse
+    )
+    ranges_output["cleared"] = is_deliberate_clear(
+        ranges_output, item_key="ranges", allow_collapse=args.allow_collapse
+    )
 
     # Validate both outputs before replacing either one, so a collapse in the
     # range feed cannot leave the number feed from a newer, unmergeable run.

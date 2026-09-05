@@ -15,6 +15,12 @@ All notable changes to CallShield will be documented in this file.
   queue no longer reads the same as one that dropped nothing. Votes dropped for
   missing reporter identity are counted separately instead of being filed under
   "implausible".
+- Derived feeds now say whether an empty result is deliberate. The app already
+  refused to drop its local rows for an unexplained empty feed, but nothing on
+  the publishing side ever wrote the flag that distinguishes "there is nothing
+  to report" from "the feed did not arrive", so a healthy quiet publisher was
+  indistinguishable from an outage. `cleared` is set only when an operator
+  passes `--allow-collapse` and the result is genuinely empty.
 - The data pipeline is now gated on liveness, not only correctness. A queue
   deeper than 20 files, a report left behind by a later merge, or a queue where
   most reports carry no reporter identity all fail `verifyPipelineTests`. Every
