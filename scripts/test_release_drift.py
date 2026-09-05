@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import re
 import tempfile
 import unittest
 from datetime import datetime, timedelta, timezone
@@ -31,6 +32,53 @@ class ReleaseDriftTest(unittest.TestCase):
         self.assertEqual(66, report["version_code"])
         self.assertEqual(9, report["sources"]["source_count"])
         self.assertEqual(3, len(report["advisories"]))
+
+    def test_readme_resource_counts_must_match_the_resource_file(self) -> None:
+        """A stale translation-readiness claim must fail the release gate.
+
+        The README sat at 1160 strings / 29 plural groups while the base
+        resources held 1404 / 33, because nothing compared the two.
+        """
+        version_name, version_code = verify_release_drift.parse_app_version(
+            verify_release_drift.read_text(ROOT / "app/build.gradle.kts")
+        )
+        copied = [
+            "README.md",
+            "CHANGELOG.md",
+            "app/src/main/java/com/sysadmindoc/callshield/ui/screens/more/ChangelogScreen.kt",
+            "docs/fdroid/com.sysadmindoc.callshield.yml",
+            "docs/fdroid-submission.md",
+            f"fastlane/metadata/android/en-US/changelogs/{version_code}.txt",
+            "app/src/main/res/values/strings.xml",
+        ]
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for relative in copied:
+                destination = root / relative
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                destination.write_bytes((ROOT / relative).read_bytes())
+
+            # The checked-in README is the control: it must be clean.
+            self.assertEqual(
+                [],
+                verify_release_drift.release_metadata_audit(root, version_name, version_code),
+            )
+
+            readme_path = root / "README.md"
+            readme = readme_path.read_text(encoding="utf-8")
+            stale = re.sub(
+                r"\| Strings \| \d+ string resources and \d+ plural groups",
+                "| Strings | 1160 string resources and 29 plural groups",
+                readme,
+            )
+            self.assertNotEqual(readme, stale, "README resource-count row was not found to mutate")
+            readme_path.write_text(stale, encoding="utf-8")
+
+            issues = verify_release_drift.release_metadata_audit(root, version_name, version_code)
+            self.assertTrue(
+                any("resource counts" in issue for issue in issues),
+                issues,
+            )
 
     def test_source_snapshot_drift_is_actionable(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

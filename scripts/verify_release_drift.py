@@ -361,6 +361,23 @@ def release_metadata_audit(root: Path, version_name: str, version_code: int) -> 
     if not store_changelog or len(store_changelog) > 500:
         issues.append(f"Fastlane changelog {version_code}.txt is missing, empty, or over 500 characters.")
 
+    # The string and plural counts are a translation-readiness claim, and they
+    # drift every time a feature adds resources. Nothing gated them, so the
+    # README sat at 1160/29 while the resource file held 1404/33.
+    strings_file = root / "app/src/main/res/values/strings.xml"
+    if not strings_file.is_file():
+        issues.append("Base string resources are missing.")
+    else:
+        resources = read_text(strings_file)
+        string_count = len(re.findall(r"<string\s", resources))
+        plural_count = len(re.findall(r"<plurals\s", resources))
+        claim = f"| Strings | {string_count} string resources and {plural_count} plural groups"
+        if claim not in readme:
+            issues.append(
+                f"README declares the wrong resource counts; base resources hold "
+                f"{string_count} strings and {plural_count} plural groups."
+            )
+
     source_marker = f"Current app source: {version_name} ({version_code});"
     if source_marker not in fdroid:
         issues.append("F-Droid metadata does not identify the current app source version/code.")

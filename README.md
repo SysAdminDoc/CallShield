@@ -725,7 +725,7 @@ language in [issue #7](https://github.com/SysAdminDoc/CallShield/issues/7).
 | URL Safety | Local spam-domain data; optional URLhaus (abuse.ch) |
 | Verification | Local Gradle, lint, and release-artifact checks |
 | Tests | 1100 JVM unit tests (JUnit) |
-| Strings | 1160 string resources and 29 plural groups (translation-ready) |
+| Strings | 1404 string resources and 33 plural groups (translation-ready) |
 | Accessibility | 100+ content descriptions, 48dp touch targets |
 | Min SDK | 29 (Android 10) |
 | Target SDK | 36 |
