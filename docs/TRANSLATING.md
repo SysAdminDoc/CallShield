@@ -69,7 +69,21 @@ build time:
 - **Stale keys** that no longer exist upstream (a warning, not an error).
 - **Locales missing from `locales_config.xml`.**
 
-Missing strings are reported as coverage, never as a failure.
+Missing strings are reported as coverage, never as a failure - with one
+exception. Each shipped locale has a recorded coverage floor in
+`scripts/translation_floors.json`, and the checker fails if coverage drops
+below it. A partial translation is fine and expected; a translation quietly
+rotting as English strings are added faster than they are translated is not.
+
+If you improve a locale, raise its floor in the same change:
+
+```bash
+python scripts/check_translations.py --update-floors
+```
+
+The floor only ever goes up. Lowering one is a deliberate decision that
+belongs in the commit message. A new locale starts with no floor and only
+warns until someone records one.
 
 ## Style notes
 

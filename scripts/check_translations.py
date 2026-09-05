@@ -29,6 +29,7 @@ falls back to English per string.
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import sys
 import xml.etree.ElementTree as ET
@@ -61,6 +62,15 @@ DEFAULT_PLURAL_QUANTITIES = {"other"}
 # on the same prefix ("values-v31", "values-night", "values-land") are not
 # translations and must not be reported as untranslated locales.
 LOCALE_DIR_RE = re.compile(r"^values-(?:b\+[A-Za-z0-9+]+|[a-z]{2,3}(?:-r[A-Z]{2})?)$")
+
+# Coverage floors, one per shipped locale. A partial translation is the
+# documented policy (English falls back per string), so coverage is not
+# required to be complete - but it must not silently decay as English
+# strings are added faster than they are translated, which is what happens
+# on a repo shipping several releases a month. The floor ratchets: raise it
+# with --update-floors when coverage improves, never lower it by hand.
+FLOORS_FILE = ROOT / "scripts" / "translation_floors.json"
+FLOOR_TOLERANCE = 0.05  # floors are stored to one decimal place
 
 FORMAT_FLAGS = frozenset("-#+ 0,(<")
 FORBIDDEN_XML_DECLARATIONS = (b"<!DOCTYPE", b"<!ENTITY")
@@ -280,10 +290,79 @@ def check_locale(locale_dir: Path, base_strings, base_untranslatable, base_plura
     return errors, warnings, translated, len(translatable_base)
 
 
+def load_floors() -> dict[str, float]:
+    """Return the recorded per-locale coverage floors."""
+    try:
+        with FLOORS_FILE.open(encoding="utf-8") as handle:
+            recorded = json.load(handle)
+    except (OSError, ValueError):
+        return {}
+    if not isinstance(recorded, dict):
+        return {}
+    floors = {}
+    for locale, value in recorded.get("floors", {}).items():
+        if isinstance(value, (int, float)):
+            floors[str(locale)] = float(value)
+    return floors
+
+
+def floor_report(
+    coverage: dict[str, float],
+    floors: dict[str, float],
+) -> list[tuple[str, bool]]:
+    """Compare measured coverage against the recorded floors.
+
+    Returns one (message, is_error) pair per locale that needs attention. A
+    locale with no recorded floor is a warning, not a failure, so adding a
+    translation does not break the build before anyone has set its floor.
+    """
+    report: list[tuple[str, bool]] = []
+    for locale, percent in sorted(coverage.items()):
+        floor = floors.get(locale)
+        if floor is None:
+            report.append(
+                (
+                    f"  warning: {locale} has no recorded coverage floor; "
+                    f"run check_translations.py --update-floors to set it at {percent:.1f}%",
+                    False,
+                )
+            )
+        elif percent < floor - FLOOR_TOLERANCE:
+            report.append(
+                (
+                    f"  ERROR:   {locale} coverage fell to {percent:.1f}%, below its "
+                    f"{floor:.1f}% floor. Translate the new strings, or lower the floor "
+                    f"deliberately in {FLOORS_FILE.name} and say why.",
+                    True,
+                )
+            )
+    return report
+
+
+def write_floors(coverage: dict[str, float]) -> None:
+    """Record the current coverage as the new floor."""
+    payload = {
+        "description": (
+            "Minimum translated-string coverage per locale, in percent. check_translations.py "
+            "fails when a shipped locale drops below its floor. Raise a floor with --update-floors; "
+            "never lower one by hand."
+        ),
+        "floors": {locale: round(percent, 1) for locale, percent in sorted(coverage.items())},
+    }
+    with FLOORS_FILE.open("w", encoding="utf-8", newline="\n") as handle:
+        json.dump(payload, handle, indent=2)
+        handle.write("\n")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--locale", help="Check a single locale, e.g. zh-rCN")
     parser.add_argument("--dir", type=Path, help="Check an arbitrary values-* directory (e.g. a fork's, before merging)")
+    parser.add_argument(
+        "--update-floors",
+        action="store_true",
+        help="Record current coverage as the new per-locale floor (ratchet up only)",
+    )
     parser.add_argument("--coverage-only", action="store_true", help="Report coverage but always exit 0")
     args = parser.parse_args()
 
@@ -309,6 +388,7 @@ def main() -> int:
         return 0
 
     total_errors = 0
+    coverage: dict[str, float] = {}
     for locale_dir in locale_dirs:
         if not locale_dir.is_dir():
             print(f"error: {locale_dir} does not exist", file=sys.stderr)
@@ -318,12 +398,25 @@ def main() -> int:
         )
         percent = (translated / total * 100) if total else 0.0
         status = "FAIL" if errors else "ok"
+        coverage[locale_dir.name] = percent
         print(f"[{status}] {locale_dir.name}: {translated}/{total} strings ({percent:.1f}%)")
         for warning in warnings:
             print(f"  warning: {warning}")
         for error in errors:
             print(f"  ERROR:   {error}")
         total_errors += len(errors)
+
+    # A floor is only meaningful for a locale that ships from this repo;
+    # --dir points at an arbitrary tree (a fork's, pre-merge) that has none.
+    if not args.dir:
+        if args.update_floors:
+            write_floors(coverage)
+            print(f"\nRecorded coverage floors in {FLOORS_FILE.name}.")
+        else:
+            for message, is_error in floor_report(coverage, load_floors()):
+                print(message)
+                if is_error:
+                    total_errors += 1
 
     # Only meaningful for locales that actually live in the repo.
     for error in check_locales_config([d for d in locale_dirs if d.parent == RES_DIR]):
