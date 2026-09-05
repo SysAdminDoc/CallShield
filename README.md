@@ -690,6 +690,33 @@ The signer certificate SHA-256 must be:
 
 Every release also ships a `.sha256` sidecar for the APK itself.
 
+### Permissions look granted but nothing works
+
+On Android 13 and later a sideloaded app is put behind **restricted settings**.
+The system hides the SMS role and notification access from an app that was not
+installed by an app store, and the permission dialog either never appears or
+appears and changes nothing. GrapheneOS and CalyxOS apply this the same way
+stock Android does, and it is the most likely reason CallShield sees no
+messages after a clean sideload.
+
+To lift it:
+
+1. Long-press the CallShield icon and open **App info** (or Settings → Apps →
+   CallShield).
+2. Tap the **⋮** menu in the top right and choose **Allow restricted settings**.
+3. Confirm with your device PIN or biometric.
+4. Reopen CallShield and grant the permissions again. Onboarding rechecks each
+   one and will move on by itself once they take.
+
+If the ⋮ menu has no such entry, the permission is genuinely denied rather than
+restricted: grant it from **App info → Permissions**. A permission you denied
+twice is treated as permanently denied by Android, and CallShield's onboarding
+sends you to App info instead of re-prompting, because the prompt would no
+longer show.
+
+Installing through a client that registers as the installing package (Obtainium
+and F-Droid both do) avoids the restriction entirely.
+
 ## Building
 
 ```bash
