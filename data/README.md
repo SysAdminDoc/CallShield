@@ -16,6 +16,91 @@ This directory contains the spam number database that the CallShield app pulls f
 - `not_spam_review.json` - Generated community false-positive review candidates
 - `reports/*.json` - Pending community reports; `reports/rejected/` contains quarantined files
 
+## Consuming this data
+
+These files are fetched directly by the app and, judging by the clone traffic,
+by other tooling as well. This section is the contract for anyone reading them
+from outside the app.
+
+### Compatibility
+
+`spam_numbers.manifest.json` carries `format_version`; it governs the shard
+layout and the legacy snapshot together. Within one `format_version`:
+
+- fields are never removed and never change meaning or type
+- new optional fields may be added, so parse permissively and ignore unknown keys
+- `version` is a monotonically increasing integer bumped on every content change
+- `updated` is the UTC date (`YYYY-MM-DD`) of that change
+
+A breaking change increments `format_version` and ships alongside the old
+version for at least 90 days. `data/spam_numbers.json` is kept as a stable
+legacy endpoint for older clients; current builds should read the manifest and
+the 256 content-addressed shards under `spam_number_shards/` and fetch only the
+shards whose hashes changed.
+
+### Schemas
+
+`spam_numbers.json`
+
+| Field | Type | Notes |
+|---|---|---|
+| `version` | int | Monotonic; bumped on every content change |
+| `updated` | string | UTC `YYYY-MM-DD` |
+| `sources` | string[] | Source ids present in this build, matching `source-manifest.json` |
+| `numbers[]` | object[] | `number` (E.164), `type`, `reports` (int), `first_seen`, `last_seen`, `description`, `sources[]` |
+| `prefixes[]` | object[] | `prefix` (E.164 prefix), `type`, `description`. Prefix rows carry no per-row provenance |
+
+`spam_numbers.manifest.json`
+
+| Field | Type | Notes |
+|---|---|---|
+| `format_version` | int | Contract version for the shard layout |
+| `version` / `updated` | int / string | Mirror the database values above |
+| `legacy_path` | string | Where the single-file snapshot still lives |
+| `shard_directory` | string | Directory holding the shards |
+| `shard_count` | int | Currently 256, keyed by the first byte of the number hash |
+| `shards[]` | object[] | Per shard: `id`, `path`, `sha256`, `bytes`, `numbers`, `prefixes`. Fetch only the shards whose `sha256` changed |
+
+`hot_numbers.json`, `hot_ranges.json`, `spam_domains.json`
+
+| Field | Type | Notes |
+|---|---|---|
+| `generated` | string | ISO-8601 UTC timestamp of the generating run |
+| `input_report_digest` | string | SHA-256 of the report queue the run consumed |
+| `count` | int | Number of entries, matching the items array |
+| `cleared` | bool | **Load-bearing.** `true` means the publisher deliberately published an empty feed; `false` on an empty feed means the run produced nothing and consumers should keep what they already have rather than deleting rows |
+| `numbers[]` / `ranges[]` / `domains[]` | array | The entries; each feed also echoes the thresholds it applied |
+
+An empty feed with `cleared: false` should never be treated as an instruction to
+delete. That distinction is the whole reason the field exists.
+
+### Cadence
+
+| File | Regenerated | Consumers should poll |
+|---|---|---|
+| `spam_numbers.json` + shards | On merge, roughly daily when reports arrive | Every 6 hours |
+| `hot_numbers.json`, `hot_ranges.json`, `spam_domains.json` | Same run as the merge | Every 30 minutes |
+| `spam_model_weights.json` | On retrain, irregular | With the database |
+| `source-manifest.json` | On a feed change | With the database |
+
+Conditional requests are honoured by GitHub raw. Use them.
+
+### Licence and attribution
+
+The repository is MIT, but the data carries obligations inherited from its
+upstream feeds, and those travel with any redistribution. `source-manifest.json`
+is authoritative: every source declares its `license`, `attribution`,
+`redistributable` flag and `geography`. Two that matter in practice:
+
+- **Saracroche** French range data is CC BY-NC-SA 4.0. Attribution must be
+  retained and the non-commercial and share-alike terms pass downstream.
+- **PhoneBlock** bulk data is not redistributable and is excluded from shipped
+  builds; only the per-number hashed lookup is used at runtime.
+
+Before redistributing any subset, read `redistributable` on every source listed
+in the `sources` array of the rows you are taking.
+
+
 ## Contributing
 
 ### Report a Spam Number
