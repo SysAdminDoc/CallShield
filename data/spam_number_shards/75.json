@@ -1995,9 +1995,9 @@
     {
       "number": "+917003869903",
       "type": "spam",
-      "reports": 1,
+      "reports": 4,
       "first_seen": "2026-04-06",
-      "last_seen": "2026-04-06",
+      "last_seen": "2026-09-05",
       "description": "Community reported",
       "sources": [
         "community"
