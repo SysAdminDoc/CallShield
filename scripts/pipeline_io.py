@@ -107,7 +107,7 @@ def ensure_feed_not_collapsed(
         )
 
 
-def is_deliberate_clear(payload: Any, *, item_key: str, allow_collapse: bool) -> bool:
+def is_deliberate_clear(payload: Any, *, item_key: str, approved: bool) -> bool:
     """Return whether this feed is being published empty on purpose.
 
     The client distinguishes "the publisher says there is nothing" from "the
@@ -117,12 +117,34 @@ def is_deliberate_clear(payload: Any, *, item_key: str, allow_collapse: bool) ->
     wrote that flag, so the deliberate-clear path was unreachable and a healthy
     publisher with nothing to report looked identical to an outage.
 
-    A clear is deliberate only when the operator passed ``--allow-collapse``
-    *and* the result is actually empty. Passing the flag on a run that produces
-    rows clears nothing. An empty feed without the flag never reaches this
-    point: `ensure_feed_not_collapsed` refuses it first.
+    ``approved`` must be this feed's own approval, not the run's. They are not
+    the same thing: ``--allow-collapse`` forces the collapse guard for every
+    feed a run writes, so reading it here made approving a collapse of the
+    numbers feed also tell every device to delete its campaign ranges. Naming
+    the feed in ``--cleared`` is the only way to assert a deliberate clear.
+
+    Approval alone is not enough - a run that produced rows cleared nothing, so
+    the flag stays false whatever was approved.
     """
-    return allow_collapse and _payload_count(payload, item_key) == 0
+    return approved and _payload_count(payload, item_key) == 0
+
+
+def parse_cleared_feeds(value: str | None, *, known: frozenset[str]) -> frozenset[str]:
+    """Parse a --cleared list, rejecting names that are not real feeds.
+
+    A typo must not silently mean "approve nothing"; that would look like the
+    flag worked while the publisher kept saying the feed merely failed.
+    """
+    if not value:
+        return frozenset()
+    named = frozenset(part.strip() for part in value.split(",") if part.strip())
+    unknown = named - known
+    if unknown:
+        raise ValueError(
+            f"unknown feed name(s) in --cleared: {', '.join(sorted(unknown))}. "
+            f"Known feeds: {', '.join(sorted(known))}"
+        )
+    return named
 
 
 def require_matching_derived_feed(

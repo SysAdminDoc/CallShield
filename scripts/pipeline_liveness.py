@@ -44,6 +44,11 @@ DB_FILE = DATA_DIR / "spam_numbers.json"
 MAX_QUEUE_DEPTH = 20
 MAX_QUEUE_AGE_DAYS = 7
 MIN_BUCKET_COVERAGE = 0.5
+# Bucket-less reports are a supported input: the pipeline merges them into the
+# database at reports:1 and simply never counts them as independent evidence.
+# A handful of them is normal, so the coverage ratio only becomes meaningful
+# once there is enough of a queue for the proportion to mean anything.
+MIN_BUCKET_SAMPLE = 10
 
 
 def _parse_updated(value: object) -> datetime | None:
@@ -57,21 +62,29 @@ def _parse_updated(value: object) -> datetime | None:
     return parsed.replace(tzinfo=timezone.utc)
 
 
-def evaluate_queue_health(reports: list[dict], database_updated: object) -> list[str]:
+def evaluate_queue_health(
+    reports: list[dict],
+    database_updated: object,
+    unreadable: int = 0,
+) -> list[str]:
     """Return one message per liveness problem; an empty list means healthy.
 
-    `reports` is the parsed contents of the queue files. `database_updated` is
-    the published database's `updated` field, in whatever shape it was read, so
-    an unreadable or missing date degrades to "cannot judge age" rather than
-    raising on data the caller has no control over.
+    `reports` is the parsed contents of the readable queue files. `unreadable`
+    is how many files failed to parse - they are counted toward depth but kept
+    out of the reporter-identity ratio, because a corrupt file says nothing
+    about whether the Worker is writing buckets, and the merge quarantines it
+    on the next run anyway. `database_updated` is the published database's
+    `updated` field in whatever shape it was read, so an unreadable or missing
+    date degrades to "cannot judge age" rather than raising.
     """
     problems: list[str] = []
-    if not reports:
+    total = len(reports) + unreadable
+    if not total:
         return problems
 
-    if len(reports) > MAX_QUEUE_DEPTH:
+    if total > MAX_QUEUE_DEPTH:
         problems.append(
-            f"report queue holds {len(reports)} files, more than the {MAX_QUEUE_DEPTH} "
+            f"report queue holds {total} files, more than the {MAX_QUEUE_DEPTH} "
             "expected between merges - run the documented pipeline order to drain it"
         )
 
@@ -83,37 +96,50 @@ def evaluate_queue_health(reports: list[dict], database_updated: object) -> list
             stale_by = updated - oldest
             if stale_by > timedelta(days=MAX_QUEUE_AGE_DAYS):
                 problems.append(
-                    f"oldest queued report ({oldest.date().isoformat()}) predates the published "
-                    f"database ({updated.date().isoformat()}) by {stale_by.days} days - a merge "
-                    "ran and left it behind"
+                    f"oldest queued report ({oldest.date().isoformat()}) is more than "
+                    f"{MAX_QUEUE_AGE_DAYS} days older than the published database "
+                    f"({updated.date().isoformat()}) - the database has moved on while this "
+                    "report sat unconsumed"
                 )
 
-    with_bucket = sum(1 for r in reports if validated_reporter_bucket(r.get("reporter_bucket")))
-    coverage = with_bucket / len(reports)
-    if coverage < MIN_BUCKET_COVERAGE:
-        problems.append(
-            f"only {with_bucket} of {len(reports)} queued reports carry a reporter_bucket "
-            f"({coverage:.0%}); hot-list and spam-domain promotion need it to count independent "
-            "sources, so the queue cannot promote anything - the deployed Worker is stale"
-        )
+    if len(reports) >= MIN_BUCKET_SAMPLE:
+        with_bucket = sum(1 for r in reports if validated_reporter_bucket(r.get("reporter_bucket")))
+        coverage = with_bucket / len(reports)
+        if coverage < MIN_BUCKET_COVERAGE:
+            problems.append(
+                f"only {with_bucket} of {len(reports)} readable reports carry a reporter_bucket "
+                f"({coverage:.0%}); hot-list and spam-domain promotion need it to count independent "
+                "sources, so the queue cannot promote anything - check whether the deployed Worker "
+                "predates the field"
+            )
 
     return problems
 
 
-def load_queue(reports_dir: Path) -> list[dict]:
-    """Read every queued report. Unparseable files count as reports with no fields."""
+def load_queue(reports_dir: Path) -> tuple[list[dict], int]:
+    """Read every queued report.
+
+    Returns the readable reports and a count of the files that would not parse.
+    They are kept apart so a corrupt file cannot masquerade as a report the
+    Worker wrote without a reporter bucket.
+    """
     reports_dir = Path(reports_dir)
     if not reports_dir.exists():
-        return []
+        return [], 0
     loaded: list[dict] = []
+    unreadable = 0
     for report_file in sorted(reports_dir.glob("*.json")):
         try:
             with report_file.open(encoding="utf-8") as handle:
                 payload = json.load(handle)
         except (OSError, ValueError):
-            payload = None
-        loaded.append(payload if isinstance(payload, dict) else {})
-    return loaded
+            unreadable += 1
+            continue
+        if isinstance(payload, dict):
+            loaded.append(payload)
+        else:
+            unreadable += 1
+    return loaded, unreadable
 
 
 def load_database_updated(db_file: Path) -> object:
@@ -125,14 +151,16 @@ def load_database_updated(db_file: Path) -> object:
 
 
 def main() -> int:
-    reports = load_queue(REPORTS_DIR)
-    problems = evaluate_queue_health(reports, load_database_updated(DB_FILE))
+    reports, unreadable = load_queue(REPORTS_DIR)
+    total = len(reports) + unreadable
+    problems = evaluate_queue_health(reports, load_database_updated(DB_FILE), unreadable)
     if problems:
-        print(f"Report queue is not being consumed ({len(reports)} file(s) in {REPORTS_DIR}):", file=sys.stderr)
+        print(f"Report queue is not being consumed ({total} file(s) in {REPORTS_DIR}):", file=sys.stderr)
         for problem in problems:
             print(f"  - {problem}", file=sys.stderr)
         return 1
-    print(f"Report queue liveness OK ({len(reports)} file(s) pending).")
+    suffix = f", {unreadable} unreadable" if unreadable else ""
+    print(f"Report queue liveness OK ({total} file(s) pending{suffix}).")
     return 0
 
 

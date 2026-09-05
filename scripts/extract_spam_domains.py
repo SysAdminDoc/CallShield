@@ -27,6 +27,7 @@ from pipeline_io import (
     atomic_write_json,
     ensure_feed_not_collapsed,
     is_deliberate_clear,
+    parse_cleared_feeds,
     report_queue_digest,
 )
 from report_dedup import validated_reporter_bucket
@@ -139,7 +140,22 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="publish a smaller/empty feed after verifying the source or an intentional clear",
     )
+    parser.add_argument(
+        "--cleared",
+        metavar="FEEDS",
+        help=(
+            "comma-separated feeds whose emptiness is deliberate (domains). Only these "
+            "are published with cleared=true, which tells every device to drop its local "
+            "rows for that feed. --allow-collapse alone publishes cleared=false, so "
+            "devices keep what they have."
+        ),
+    )
     args = parser.parse_args(argv)
+    try:
+        cleared_feeds = parse_cleared_feeds(args.cleared, known=frozenset({"domains"}))
+    except ValueError as error:
+        print(f"ERROR: {error}", file=sys.stderr)
+        return 2
     print("=== CallShield Spam Domain Extractor ===\n")
     input_report_digest = report_queue_digest(REPORTS_DIR)
 
@@ -229,7 +245,7 @@ def main(argv: list[str] | None = None) -> int:
     # Tell the client whether an empty feed is a decision or an accident. It
     # keeps its local rows unless the feed says it was cleared on purpose.
     output["cleared"] = is_deliberate_clear(
-        output, item_key="domains", allow_collapse=args.allow_collapse
+        output, item_key="domains", approved="domains" in cleared_feeds
     )
 
     # The primary feed is checked before either review or primary output is
