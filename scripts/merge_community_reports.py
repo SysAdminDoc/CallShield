@@ -284,6 +284,7 @@ def main(argv: list[str] | None = None):
     added = 0
     updated = 0
     skipped = 0
+    unattributed_votes = 0
     collapsed = 0
     rejected = 0
     # Implausible submissions are consumed silently otherwise, so a drain that
@@ -337,7 +338,12 @@ def main(argv: list[str] | None = None):
                 if reporter_bucket:
                     not_spam_votes.setdefault(number, set()).add(reporter_bucket)
                 else:
-                    skipped += 1
+                    # A vote with no reporter identity cannot be counted as an
+                    # independent source, so it is dropped. Tracked separately
+                    # from implausible numbers: the number was fine, the
+                    # provenance was not, and reporting both under one
+                    # "implausible" total hides a stale Worker.
+                    unattributed_votes += 1
             elif number in existing:
                 existing[number]["reports"] += 1
                 sources = set(existing[number].get("sources", []))
@@ -459,7 +465,8 @@ def main(argv: list[str] | None = None):
 
     print(
         f"\nMerged: {added} new, {updated} updated, {skipped} skipped (implausible), "
-        f"{collapsed} collapsed (duplicate), {rejected} quarantined, "
+        f"{collapsed} collapsed (duplicate), {unattributed_votes} not_spam votes dropped "
+        f"(no reporter identity), {rejected} quarantined, "
         f"{decayed} corrections decayed, {removed} rows removed"
     )
     print(f"Total database: {len(db['numbers'])} numbers")

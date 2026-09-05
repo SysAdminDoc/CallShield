@@ -12,7 +12,15 @@ All notable changes to CallShield will be documented in this file.
   Colombia to 71 rows, Mexico to 36, Russia to 6.
 - The merge now lists every submission it rejects as implausible, and reports
   how many were collapsed as duplicates, so a drain that dropped a third of the
-  queue no longer reads the same as one that dropped nothing.
+  queue no longer reads the same as one that dropped nothing. Votes dropped for
+  missing reporter identity are counted separately instead of being filed under
+  "implausible".
+- The data pipeline is now gated on liveness, not only correctness. A queue
+  deeper than 20 files, a report left behind by a later merge, or a queue where
+  most reports carry no reporter identity all fail `verifyPipelineTests`. Every
+  suite stayed green through the eleven days the queue was stalled, because
+  each one asked a question about a queue it was handed rather than the queue
+  that exists.
 
 ## v1.7.38 (2026-08-29)
 
