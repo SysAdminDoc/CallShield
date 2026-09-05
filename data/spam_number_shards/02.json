@@ -2486,6 +2486,28 @@
       "sources": [
         "legacy_import"
       ]
+    },
+    {
+      "number": "+523389828506",
+      "type": "spam",
+      "reports": 1,
+      "first_seen": "2026-08-27",
+      "last_seen": "2026-08-27",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
+    },
+    {
+      "number": "+573013241972",
+      "type": "spam",
+      "reports": 2,
+      "first_seen": "2026-08-31",
+      "last_seen": "2026-08-31",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
     }
   ],
   "prefixes": []

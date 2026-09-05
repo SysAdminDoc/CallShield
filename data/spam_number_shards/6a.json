@@ -2178,6 +2178,17 @@
       "sources": [
         "legacy_import"
       ]
+    },
+    {
+      "number": "+573127446121",
+      "type": "spam",
+      "reports": 1,
+      "first_seen": "2026-08-29",
+      "last_seen": "2026-08-29",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
     }
   ],
   "prefixes": [

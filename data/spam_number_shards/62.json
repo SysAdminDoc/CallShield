@@ -2024,6 +2024,28 @@
       "sources": [
         "community"
       ]
+    },
+    {
+      "number": "+523389968916",
+      "type": "spam",
+      "reports": 1,
+      "first_seen": "2026-08-25",
+      "last_seen": "2026-08-25",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
+    },
+    {
+      "number": "+573164356426",
+      "type": "spam",
+      "reports": 2,
+      "first_seen": "2026-08-31",
+      "last_seen": "2026-08-31",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
     }
   ],
   "prefixes": [

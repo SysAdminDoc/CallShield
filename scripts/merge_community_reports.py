@@ -7,6 +7,7 @@ the main spam_numbers.json database, then deletes processed files.
 import argparse
 import json
 import os
+from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 from phone_normalization import is_plausible_number, validated_report_number
@@ -285,6 +286,11 @@ def main(argv: list[str] | None = None):
     skipped = 0
     collapsed = 0
     rejected = 0
+    # Implausible submissions are consumed silently otherwise, so a drain that
+    # dropped a third of the queue reads the same as one that dropped nothing.
+    # Counting them by raw value keeps the run auditable without reprinting one
+    # line per file for a burst of the same fictional number.
+    implausible: Counter[str] = Counter()
     processed_files = []
     not_spam_votes: dict[str, set[str]] = {}
     rejected_dir = REPORTS_DIR / "rejected"
@@ -303,6 +309,8 @@ def main(argv: list[str] | None = None):
             number = validated_report_number(report.get("number", ""))
             if not number:
                 # Junk / fictional / malformed number — drop the noise report.
+                raw = report.get("number")
+                implausible[raw if isinstance(raw, str) and raw else "<missing>"] += 1
                 processed_files.append(report_file)
                 skipped += 1
                 continue
@@ -444,9 +452,15 @@ def main(argv: list[str] | None = None):
         quarantined_this_run=rejected,
     )
 
+    if implausible:
+        print(f"\nRejected as implausible ({skipped} report(s), {len(implausible)} distinct):")
+        for raw, count in sorted(implausible.items(), key=lambda item: (-item[1], item[0])):
+            print(f"  {raw} x{count}")
+
     print(
         f"\nMerged: {added} new, {updated} updated, {skipped} skipped (implausible), "
-        f"{rejected} quarantined, {decayed} corrections decayed, {removed} rows removed"
+        f"{collapsed} collapsed (duplicate), {rejected} quarantined, "
+        f"{decayed} corrections decayed, {removed} rows removed"
     )
     print(f"Total database: {len(db['numbers'])} numbers")
 

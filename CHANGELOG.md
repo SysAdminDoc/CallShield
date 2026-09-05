@@ -4,6 +4,16 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+### Data
+
+- Drained a 267-file community report backlog that had been accumulating since
+  the 2026-08-24 merge. Database version 40 adds 132 numbers and updates 28,
+  bringing the total to 51,634. Coverage outside North America grew most:
+  Colombia to 71 rows, Mexico to 36, Russia to 6.
+- The merge now lists every submission it rejects as implausible, and reports
+  how many were collapsed as duplicates, so a drain that dropped a third of the
+  queue no longer reads the same as one that dropped nothing.
+
 ## v1.7.38 (2026-08-29)
 
 ### Interface

@@ -2200,6 +2200,28 @@
       "sources": [
         "legacy_import"
       ]
+    },
+    {
+      "number": "+390230619790",
+      "type": "spam",
+      "reports": 1,
+      "first_seen": "2026-09-04",
+      "last_seen": "2026-09-04",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
+    },
+    {
+      "number": "+529997738692",
+      "type": "spam",
+      "reports": 1,
+      "first_seen": "2026-09-01",
+      "last_seen": "2026-09-01",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
     }
   ],
   "prefixes": [

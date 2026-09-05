@@ -1971,6 +1971,28 @@
       ]
     },
     {
+      "number": "+79779758579",
+      "type": "spam",
+      "reports": 1,
+      "first_seen": "2026-09-02",
+      "last_seen": "2026-09-02",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
+    },
+    {
+      "number": "+84779422383",
+      "type": "unknown",
+      "reports": 1,
+      "first_seen": "2026-09-01",
+      "last_seen": "2026-09-01",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
+    },
+    {
       "number": "+917003869903",
       "type": "spam",
       "reports": 1,

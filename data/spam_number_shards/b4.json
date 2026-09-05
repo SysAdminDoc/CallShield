@@ -2046,6 +2046,39 @@
       "sources": [
         "legacy_import"
       ]
+    },
+    {
+      "number": "+357834204",
+      "type": "spam",
+      "reports": 1,
+      "first_seen": "2026-08-31",
+      "last_seen": "2026-08-31",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
+    },
+    {
+      "number": "+523389949798",
+      "type": "spam",
+      "reports": 1,
+      "first_seen": "2026-08-30",
+      "last_seen": "2026-08-30",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
+    },
+    {
+      "number": "+573134366317",
+      "type": "spam",
+      "reports": 1,
+      "first_seen": "2026-08-29",
+      "last_seen": "2026-08-29",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
     }
   ],
   "prefixes": []

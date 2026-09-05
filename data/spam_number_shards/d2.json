@@ -2268,6 +2268,17 @@
       ]
     },
     {
+      "number": "+523365147302",
+      "type": "spam",
+      "reports": 1,
+      "first_seen": "2026-08-27",
+      "last_seen": "2026-08-27",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
+    },
+    {
       "number": "+523381236067",
       "type": "spam",
       "reports": 1,

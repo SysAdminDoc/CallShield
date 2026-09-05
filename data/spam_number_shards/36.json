@@ -2090,6 +2090,17 @@
       "sources": [
         "community"
       ]
+    },
+    {
+      "number": "+573208345867",
+      "type": "spam",
+      "reports": 2,
+      "first_seen": "2026-08-31",
+      "last_seen": "2026-08-31",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
     }
   ],
   "prefixes": []

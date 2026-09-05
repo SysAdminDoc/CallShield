@@ -2244,6 +2244,17 @@
       "sources": [
         "legacy_import"
       ]
+    },
+    {
+      "number": "+79866210614",
+      "type": "spam",
+      "reports": 1,
+      "first_seen": "2026-08-28",
+      "last_seen": "2026-08-28",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
     }
   ],
   "prefixes": [

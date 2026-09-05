@@ -442,6 +442,17 @@
       ]
     },
     {
+      "number": "+13425336902",
+      "type": "spam",
+      "reports": 1,
+      "first_seen": "2026-08-31",
+      "last_seen": "2026-08-31",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
+    },
+    {
       "number": "+13475457414",
       "type": "robocall",
       "reports": 4,
@@ -2108,6 +2119,28 @@
       "reports": 1,
       "first_seen": "2026-07-08",
       "last_seen": "2026-07-08",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
+    },
+    {
+      "number": "+573163455662",
+      "type": "spam",
+      "reports": 1,
+      "first_seen": "2026-08-31",
+      "last_seen": "2026-08-31",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
+    },
+    {
+      "number": "+573239693710",
+      "type": "spam",
+      "reports": 1,
+      "first_seen": "2026-08-31",
+      "last_seen": "2026-08-31",
       "description": "Community reported",
       "sources": [
         "community"
