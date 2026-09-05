@@ -1,0 +1,6 @@
+{
+  "description": "Minimum translated-string coverage per locale, in percent. check_translations.py fails when a shipped locale drops below its floor. Raise a floor with --update-floors; never lower one by hand.",
+  "floors": {
+    "values-zh-rCN": 76.1
+  }
+}
