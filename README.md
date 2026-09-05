@@ -654,6 +654,42 @@ No API keys. None required, none optional, no credential entry anywhere in the a
 - Caller ID overlay requires "Display over other apps" permission
 - RCS filter requires Notification Access permission
 
+## Installing
+
+Every release from v1.7.37 onward is signed with a new key. The original
+keystore password was lost in a machine rebuild, which also meant releases
+v1.7.26 through v1.7.29 shipped unsigned and would not install at all, so the
+key was rotated rather than recovered.
+
+**Upgrading over an older install can fail with a signature mismatch.** Android
+refuses to replace an app with a build signed by a different key, and releases
+before v1.7.37 were signed with keys that are no longer available. If the
+install fails, you have to uninstall first, which erases your rules and logs,
+so export them before you do:
+
+1. Open CallShield, go to **More → Backup and restore**, and create a portable
+   backup. Save it somewhere outside the app, and set a passphrase if the
+   backup includes logs.
+2. Uninstall CallShield.
+3. Install the new APK and restore from that file.
+
+A fresh install is unaffected, and upgrades between v1.7.37 and later releases
+work normally.
+
+Verify an APK before installing it:
+
+```bash
+apksigner verify --print-certs CallShield-vX.Y.Z.apk
+```
+
+The signer certificate SHA-256 must be:
+
+```
+920e583ae6ce9f3863a6b3b8847e927d53a66c38a245e12e30ce124c9f4a75f5
+```
+
+Every release also ships a `.sha256` sidecar for the APK itself.
+
 ## Building
 
 ```bash

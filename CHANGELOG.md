@@ -4,6 +4,19 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+### Documentation
+
+- The README now explains the signing-key rotation. Releases v1.7.26 through
+  v1.7.29 shipped unsigned and the original keystore password was lost, so the
+  key was rotated at v1.7.37. Upgrading over an older install can fail with a
+  signature mismatch; the new Installing section covers exporting a backup
+  first and gives the signer certificate SHA-256 to check an APK against. That
+  caveat had only ever appeared in a comment on a closed issue.
+- The detection-pipeline section states that a blocked text still reaches your
+  inbox, and why: only the default SMS app controls delivery.
+- Corrected the string and plural counts, and gated them so they cannot drift
+  again.
+
 ### Data
 
 - Drained a 267-file community report backlog that had been accumulating since
