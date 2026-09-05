@@ -50,6 +50,7 @@ class ReleaseDriftTest(unittest.TestCase):
             "docs/fdroid-submission.md",
             f"fastlane/metadata/android/en-US/changelogs/{version_code}.txt",
             "app/src/main/res/values/strings.xml",
+            "data/spam_numbers.json",
         ]
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -79,6 +80,45 @@ class ReleaseDriftTest(unittest.TestCase):
                 any("resource counts" in issue for issue in issues),
                 issues,
             )
+
+    def test_readme_database_size_must_match_the_database(self) -> None:
+        """The advertised database size moves on every community merge."""
+        version_name, version_code = verify_release_drift.parse_app_version(
+            verify_release_drift.read_text(ROOT / "app/build.gradle.kts")
+        )
+        copied = [
+            "README.md",
+            "CHANGELOG.md",
+            "app/src/main/java/com/sysadmindoc/callshield/ui/screens/more/ChangelogScreen.kt",
+            "docs/fdroid/com.sysadmindoc.callshield.yml",
+            "docs/fdroid-submission.md",
+            f"fastlane/metadata/android/en-US/changelogs/{version_code}.txt",
+            "app/src/main/res/values/strings.xml",
+            "data/spam_numbers.json",
+        ]
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for relative in copied:
+                destination = root / relative
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                destination.write_bytes((ROOT / relative).read_bytes())
+
+            self.assertEqual(
+                [],
+                verify_release_drift.release_metadata_audit(root, version_name, version_code),
+            )
+
+            # Adding rows to the database without touching the README is the
+            # exact drift the 2026-09-05 merge introduced.
+            database_path = root / "data/spam_numbers.json"
+            database = json.loads(database_path.read_text(encoding="utf-8"))
+            database["numbers"].append(
+                {"number": "+12125550199", "type": "spam", "reports": 1, "sources": ["community"]}
+            )
+            database_path.write_text(json.dumps(database), encoding="utf-8")
+
+            issues = verify_release_drift.release_metadata_audit(root, version_name, version_code)
+            self.assertTrue(any("database size is stale" in issue for issue in issues), issues)
 
     def test_source_snapshot_drift_is_actionable(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

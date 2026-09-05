@@ -361,6 +361,31 @@ def release_metadata_audit(root: Path, version_name: str, version_code: int) -> 
     if not store_changelog or len(store_changelog) > 500:
         issues.append(f"Fastlane changelog {version_code}.txt is missing, empty, or over 500 characters.")
 
+    # The advertised database size moves on every community merge, and it is
+    # quoted in six places. The 2026-09-05 drain took it from 51,502 to 51,634
+    # and nothing caught the drift.
+    database_file = root / "data/spam_numbers.json"
+    if not database_file.is_file():
+        issues.append("Spam database is missing.")
+    else:
+        try:
+            database = json.loads(read_text(database_file))
+            row_count = len(database["numbers"])
+        except (ValueError, KeyError, TypeError):
+            issues.append("Spam database does not parse or has no numbers array.")
+        else:
+            grouped = f"{row_count:,}"
+            encoded = grouped.replace(",", "%2C")
+            stale = [
+                token
+                for token in re.findall(r"\d{1,3}(?:,\d{3})+", readme)
+                if token != grouped and f"{token} spam numbers" in readme
+            ]
+            if grouped not in readme or encoded not in readme or stale:
+                issues.append(
+                    f"README database size is stale; data/spam_numbers.json holds {grouped} numbers."
+                )
+
     # The string and plural counts are a translation-readiness claim, and they
     # drift every time a feature adds resources. Nothing gated them, so the
     # README sat at 1160/29 while the resource file held 1404/33.
