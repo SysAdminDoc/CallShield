@@ -317,9 +317,10 @@ def assert_collapse_guard(data_dir: Path) -> None:
     run_script("generate_hot_list.py", data_dir, ["--allow-collapse"])
     run_script("extract_spam_domains.py", data_dir, ["--allow-collapse"])
 
-    # An empty feed published on purpose must say so, or the client cannot tell
-    # a publisher with nothing to report from a publisher that never answered,
-    # and keeps stale rows forever.
+    # --allow-collapse forces the guard for every feed the run writes, but it
+    # is not an assertion about any of them. Approving a collapse of one feed
+    # must never tell devices to delete rows for a feed nobody mentioned, so
+    # the flag alone publishes cleared=false and devices keep what they have.
     for name, item_key in (
         ("hot_numbers.json", "numbers"),
         ("hot_ranges.json", "ranges"),
@@ -328,8 +329,26 @@ def assert_collapse_guard(data_dir: Path) -> None:
         payload = json.loads((data_dir / name).read_text(encoding="utf-8"))
         if payload.get(item_key):
             raise AssertionError(f"{name} was expected to be empty after the approved collapse")
-        if payload.get("cleared") is not True:
-            raise AssertionError(f"{name} published an approved empty feed without cleared=true")
+        if payload.get("cleared") is not False:
+            raise AssertionError(f"{name} claimed a deliberate clear from --allow-collapse alone")
+
+    # Naming the feed is what asserts the clear, and it is per feed.
+    run_script("generate_hot_list.py", data_dir, ["--allow-collapse", "--cleared", "ranges"])
+    run_script("extract_spam_domains.py", data_dir, ["--allow-collapse", "--cleared", "domains"])
+    hot_numbers = json.loads((data_dir / "hot_numbers.json").read_text(encoding="utf-8"))
+    hot_ranges = json.loads((data_dir / "hot_ranges.json").read_text(encoding="utf-8"))
+    spam_domains = json.loads((data_dir / "spam_domains.json").read_text(encoding="utf-8"))
+    if hot_ranges.get("cleared") is not True or spam_domains.get("cleared") is not True:
+        raise AssertionError("a feed named in --cleared must publish cleared=true")
+    if hot_numbers.get("cleared") is not False:
+        raise AssertionError("a feed absent from --cleared must not claim a deliberate clear")
+
+    # A typo must fail loudly rather than quietly approving nothing.
+    typo = run_script_result(
+        "generate_hot_list.py", data_dir, ["--allow-collapse", "--cleared", "rangez"]
+    )
+    if typo.returncode == 0:
+        raise AssertionError("an unknown --cleared feed name was accepted")
 
 
 def assert_merge_requires_current_derived_outputs(data_dir: Path) -> None:

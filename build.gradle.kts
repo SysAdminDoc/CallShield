@@ -718,12 +718,14 @@ tasks.register<Exec>("verifyPipelineTests") {
     inputs.dir(layout.projectDirectory.dir("worker"))
     inputs.dir(layout.projectDirectory.dir("scripts"))
 
-    // The liveness check reads the live report queue and the published database
-    // rather than a fixture, so both are real inputs. Without them the task goes
-    // UP-TO-DATE as soon as the scripts stop changing, and the queue could fill
-    // back up behind a gate that never runs again.
-    inputs.dir(layout.projectDirectory.dir("data/reports")).optional()
-    inputs.file(layout.projectDirectory.file("data/spam_numbers.json"))
+    // The liveness check reads the live report queue, but data/reports is NOT
+    // declared as an input. Two reasons. This task declares no outputs, so
+    // Gradle never marks it UP-TO-DATE and it re-runs every time regardless.
+    // And inputs.dir(...).optional() does not tolerate a missing directory --
+    // optional() only permits a null value, so a concrete path that does not
+    // exist still fails validation, and merge_community_reports.py removes
+    // data/reports once it is empty. Declaring it would break check the first
+    // time the queue drained past its .gitkeep.
 
     // Skips (with a warning) when node/python are absent, so a machine without
     // them can still run `check`.

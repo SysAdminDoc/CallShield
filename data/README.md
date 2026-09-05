@@ -153,9 +153,16 @@ python scripts/generate_hot_list.py                        # trending numbers / 
 python scripts/extract_spam_domains.py                     # trending spam domains
 
 # Use this only for a verified source outage or an intentional clear; otherwise
-# the generators fail closed and preserve the previous feed.
+# the generators fail closed and preserve the previous feed. --allow-collapse
+# forces the guard but publishes cleared=false, so devices keep their rows.
 python scripts/generate_hot_list.py --allow-collapse
 python scripts/extract_spam_domains.py --allow-collapse
+
+# Add --cleared only when the emptiness is deliberate AND you want every device
+# to DROP its local rows for that feed. It is per feed on purpose: approving a
+# collapse of the numbers feed must not silently wipe campaign ranges.
+python scripts/generate_hot_list.py --allow-collapse --cleared numbers,ranges
+python scripts/extract_spam_domains.py --allow-collapse --cleared domains
 
 # 3. Fold anonymous community reports into the main DB (consumes + clears data/reports/*.json;
 #    junk/fictional numbers are dropped, unreadable reports quarantined to data/reports/rejected/)

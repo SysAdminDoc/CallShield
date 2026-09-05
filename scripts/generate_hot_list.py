@@ -24,6 +24,7 @@ from pipeline_io import (
     atomic_write_json,
     ensure_feed_not_collapsed,
     is_deliberate_clear,
+    parse_cleared_feeds,
     report_queue_digest,
 )
 from report_dedup import (
@@ -85,7 +86,22 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="publish a smaller/empty feed after verifying the source or an intentional clear",
     )
+    parser.add_argument(
+        "--cleared",
+        metavar="FEEDS",
+        help=(
+            "comma-separated feeds whose emptiness is deliberate (numbers, ranges). "
+            "Only these are published with cleared=true, which tells every device to "
+            "drop its local rows for that feed. --allow-collapse alone publishes "
+            "cleared=false, so devices keep what they have."
+        ),
+    )
     args = parser.parse_args(argv)
+    try:
+        cleared_feeds = parse_cleared_feeds(args.cleared, known=frozenset({"numbers", "ranges"}))
+    except ValueError as error:
+        print(f"ERROR: {error}", file=sys.stderr)
+        return 2
     print("=== CallShield Hot List Generator ===\n")
 
     now = current_time_utc()
@@ -322,10 +338,10 @@ def main(argv: list[str] | None = None) -> int:
     # Tell the client whether an empty feed is a decision or an accident. It
     # keeps its local rows unless the feed says it was cleared on purpose.
     output["cleared"] = is_deliberate_clear(
-        output, item_key="numbers", allow_collapse=args.allow_collapse
+        output, item_key="numbers", approved="numbers" in cleared_feeds
     )
     ranges_output["cleared"] = is_deliberate_clear(
-        ranges_output, item_key="ranges", allow_collapse=args.allow_collapse
+        ranges_output, item_key="ranges", approved="ranges" in cleared_feeds
     )
 
     # Validate both outputs before replacing either one, so a collapse in the
