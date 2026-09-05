@@ -413,6 +413,16 @@ All detection layers implement a shared `IChecker` interface and run in priority
 
 SMS-specific layers (append after the shared chain, in their own priority order): **SMS Keyword Rules** (5400, with schedule) → **SMS Context Trust** (4700, trusted-sender allow) → **SMS Burst Protection** (4650) → **SMS Content Analysis** (1900. 30+ regex patterns, URL shorteners, suspicious TLDs, spam domain blocklist).
 
+> **A blocked text still reaches your inbox.** Calls are different from
+> messages here, and the table above is about verdicts, not delivery. CallShield
+> screens calls through Android's `CallScreeningService`, which can actually
+> reject a call. For messages it listens on `SMS_RECEIVED_ACTION`, and since
+> Android 4.4 that broadcast cannot be aborted by anyone. Only the default SMS
+> app receives `SMS_DELIVER_ACTION` and controls what lands in the inbox, and
+> becoming the default SMS app would mean replacing your whole messaging app.
+> So an SMS or RCS verdict logs the message, notifies you, and feeds the
+> statistics. It does not delete the message or stop it arriving.
+
 ### Additional Layers
 - **Caller ID Overlay**. Suspicious calls (heuristic score 30-59) can use an explicit, default-off live enrichment option with SkipCalls, PhoneBlock, WhoCalledMe + OpenCNAM caller name; clean calls never trigger these lookups
 - **Region & caller-name rules**. Opt-in offline blocking outside selected US/Canadian regions, plus bounded `*`/`?` trust and block patterns for carrier-presented caller names; explicit number/system/prefix/wildcard blocks and all allow layers keep priority
