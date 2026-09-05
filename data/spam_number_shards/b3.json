@@ -1740,6 +1740,17 @@
       ]
     },
     {
+      "number": "+18556854822",
+      "type": "spam",
+      "reports": 1,
+      "first_seen": "2026-09-03",
+      "last_seen": "2026-09-03",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
+    },
+    {
       "number": "+18557930314",
       "type": "robocall",
       "reports": 2,

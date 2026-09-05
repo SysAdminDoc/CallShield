@@ -2123,6 +2123,17 @@
       "sources": [
         "community"
       ]
+    },
+    {
+      "number": "+573224942305",
+      "type": "spam",
+      "reports": 1,
+      "first_seen": "2026-08-29",
+      "last_seen": "2026-08-29",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
     }
   ],
   "prefixes": [

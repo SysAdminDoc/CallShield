@@ -2420,6 +2420,17 @@
       "sources": [
         "community"
       ]
+    },
+    {
+      "number": "+573168809224",
+      "type": "spam",
+      "reports": 1,
+      "first_seen": "2026-08-31",
+      "last_seen": "2026-08-31",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
     }
   ],
   "prefixes": [

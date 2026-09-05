@@ -1377,6 +1377,17 @@
       ]
     },
     {
+      "number": "+17076763127",
+      "type": "spam",
+      "reports": 1,
+      "first_seen": "2026-09-02",
+      "last_seen": "2026-09-02",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
+    },
+    {
       "number": "+17148451930",
       "type": "telemarketer",
       "reports": 2,

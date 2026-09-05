@@ -2233,6 +2233,28 @@
       "sources": [
         "legacy_import"
       ]
+    },
+    {
+      "number": "+573175427276",
+      "type": "spam",
+      "reports": 1,
+      "first_seen": "2026-08-31",
+      "last_seen": "2026-08-31",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
+    },
+    {
+      "number": "+576017940938",
+      "type": "spam",
+      "reports": 1,
+      "first_seen": "2026-08-31",
+      "last_seen": "2026-08-31",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
     }
   ],
   "prefixes": [

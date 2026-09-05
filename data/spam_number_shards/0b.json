@@ -1982,6 +1982,28 @@
       ]
     },
     {
+      "number": "+523355879896",
+      "type": "spam",
+      "reports": 1,
+      "first_seen": "2026-08-30",
+      "last_seen": "2026-08-30",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
+    },
+    {
+      "number": "+573104631925",
+      "type": "spam",
+      "reports": 1,
+      "first_seen": "2026-08-31",
+      "last_seen": "2026-08-31",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
+    },
+    {
       "number": "+79092231669",
       "type": "spam",
       "reports": 1,

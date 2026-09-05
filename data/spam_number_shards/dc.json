@@ -2125,11 +2125,33 @@
       ]
     },
     {
+      "number": "+390221109652",
+      "type": "spam",
+      "reports": 1,
+      "first_seen": "2026-09-04",
+      "last_seen": "2026-09-04",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
+    },
+    {
       "number": "+393514810972",
       "type": "spam",
       "reports": 2,
       "first_seen": "2026-06-29",
       "last_seen": "2026-06-29",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
+    },
+    {
+      "number": "+576014897494",
+      "type": "unknown",
+      "reports": 1,
+      "first_seen": "2026-08-28",
+      "last_seen": "2026-08-28",
       "description": "Community reported",
       "sources": [
         "community"

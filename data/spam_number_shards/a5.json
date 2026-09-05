@@ -2059,6 +2059,17 @@
       ]
     },
     {
+      "number": "+19805953352",
+      "type": "spam",
+      "reports": 2,
+      "first_seen": "2026-09-03",
+      "last_seen": "2026-09-03",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
+    },
+    {
       "number": "+19897773880",
       "type": "robocall",
       "reports": 5,
