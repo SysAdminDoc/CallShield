@@ -1,10 +1,11 @@
 {
-  "generated": "2026-09-05T11:07:56.659601+00:00",
-  "input_report_digest": "137dcdb42eff8aa88862d5eff479fa815ee8b781c8b40391f6d3801835c71492",
+  "generated": "2026-09-05T11:24:40.985275+00:00",
+  "input_report_digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
   "threshold": 4,
   "min_reports_per_number": 5,
   "min_distinct_reporters_per_number": 4,
   "min_union_reporters": 6,
   "count": 0,
-  "ranges": []
+  "ranges": [],
+  "cleared": true
 }

@@ -153,6 +153,17 @@ def assert_derived_outputs(data_dir: Path) -> None:
     if ranges.get("212234", {}).get("count") != 4:
         raise AssertionError(f"expected robust 212234 campaign range, got {ranges}")
 
+    # A feed with rows cleared nothing, so the flag must stay false whether or
+    # not --allow-collapse was passed. Only an actually-empty approved run may
+    # tell the client to drop its local rows.
+    for name, payload in (
+        ("hot_numbers.json", hot_numbers),
+        ("hot_ranges.json", hot_ranges),
+        ("spam_domains.json", spam_domains),
+    ):
+        if payload.get("cleared") is not False:
+            raise AssertionError(f"{name} claimed cleared on a feed that has rows: {payload.get('cleared')}")
+
     if spam_domains["domains"] != ["bad.example"]:
         raise AssertionError(f"unexpected approved spam domains: {spam_domains['domains']}")
     review_domains = {candidate["domain"] for candidate in domain_review["candidates"]}
@@ -305,6 +316,20 @@ def assert_collapse_guard(data_dir: Path) -> None:
 
     run_script("generate_hot_list.py", data_dir, ["--allow-collapse"])
     run_script("extract_spam_domains.py", data_dir, ["--allow-collapse"])
+
+    # An empty feed published on purpose must say so, or the client cannot tell
+    # a publisher with nothing to report from a publisher that never answered,
+    # and keeps stale rows forever.
+    for name, item_key in (
+        ("hot_numbers.json", "numbers"),
+        ("hot_ranges.json", "ranges"),
+        ("spam_domains.json", "domains"),
+    ):
+        payload = json.loads((data_dir / name).read_text(encoding="utf-8"))
+        if payload.get(item_key):
+            raise AssertionError(f"{name} was expected to be empty after the approved collapse")
+        if payload.get("cleared") is not True:
+            raise AssertionError(f"{name} published an approved empty feed without cleared=true")
 
 
 def assert_merge_requires_current_derived_outputs(data_dir: Path) -> None:
