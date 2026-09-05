@@ -12,15 +12,26 @@ All notable changes to CallShield will be documented in this file.
   signature mismatch; the new Installing section covers exporting a backup
   first and gives the signer certificate SHA-256 to check an APK against. That
   caveat had only ever appeared in a comment on a closed issue.
+- New sideload troubleshooting for GrapheneOS, CalyxOS and stock Android 13+.
+  A sideloaded app is put behind restricted settings, so the SMS role and
+  notification access are hidden and the permission dialog either never appears
+  or appears and changes nothing. The README names the "Allow restricted
+  settings" path and distinguishes it from a genuinely denied permission.
 - The detection-pipeline section states that a blocked text still reaches your
   inbox, and why: only the default SMS app controls delivery.
-- Corrected the string and plural counts, and gated them so they cannot drift
-  again.
+- `data/README.md` now carries a contract for anything reading the published
+  feeds: the `format_version` compatibility promise, the schema of each file,
+  the regeneration cadence, and the licence obligations inherited from upstream
+  sources. Saracroche range data is CC BY-NC-SA and those terms travel with any
+  redistribution.
+- Corrected the string, plural and database-size counts, and gated all three so
+  they cannot drift again. The database figure moves on every community merge
+  and was the only count nothing checked.
 
 ### Data
 
-- Drained a 267-file community report backlog that had been accumulating since
-  the 2026-08-24 merge. Database version 40 adds 132 numbers and updates 28,
+- Drained a 280-file community report backlog that had been accumulating since
+  the 2026-08-24 merge. Database version 40 adds 132 numbers and updates 31,
   bringing the total to 51,634. Coverage outside North America grew most:
   Colombia to 71 rows, Mexico to 36, Russia to 6.
 - The merge now lists every submission it rejects as implausible, and reports
@@ -32,14 +43,23 @@ All notable changes to CallShield will be documented in this file.
   refused to drop its local rows for an unexplained empty feed, but nothing on
   the publishing side ever wrote the flag that distinguishes "there is nothing
   to report" from "the feed did not arrive", so a healthy quiet publisher was
-  indistinguishable from an outage. `cleared` is set only when an operator
-  passes `--allow-collapse` and the result is genuinely empty.
+  indistinguishable from an outage. `cleared` is set only for a feed named in
+  the new `--cleared` flag: `--allow-collapse` alone forces the collapse guard
+  but publishes `cleared: false`, because approving a collapse of one feed must
+  never tell every device to delete rows for a feed nobody mentioned.
 - The data pipeline is now gated on liveness, not only correctness. A queue
-  deeper than 20 files, a report left behind by a later merge, or a queue where
-  most reports carry no reporter identity all fail `verifyPipelineTests`. Every
-  suite stayed green through the eleven days the queue was stalled, because
-  each one asked a question about a queue it was handed rather than the queue
-  that exists.
+  deeper than 20 files, a report far older than the published database, or a
+  queue of at least ten reports where most carry no reporter identity all fail
+  `verifyPipelineTests`. Every suite stayed green through the eleven days the
+  queue was stalled, because each one asked a question about a queue it was
+  handed rather than the queue that exists.
+
+### Translations
+
+- A shipped locale can no longer decay silently. Each has a coverage floor in
+  `scripts/translation_floors.json` and dropping below it fails the build;
+  zh-rCN starts at 76.1%. A locale with no recorded floor warns instead, so
+  adding a translation does not break the build before anyone sets one.
 
 ## v1.7.38 (2026-08-29)
 
