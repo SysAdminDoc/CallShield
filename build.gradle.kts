@@ -718,6 +718,13 @@ tasks.register<Exec>("verifyPipelineTests") {
     inputs.dir(layout.projectDirectory.dir("worker"))
     inputs.dir(layout.projectDirectory.dir("scripts"))
 
+    // The liveness check reads the live report queue and the published database
+    // rather than a fixture, so both are real inputs. Without them the task goes
+    // UP-TO-DATE as soon as the scripts stop changing, and the queue could fill
+    // back up behind a gate that never runs again.
+    inputs.dir(layout.projectDirectory.dir("data/reports")).optional()
+    inputs.file(layout.projectDirectory.file("data/spam_numbers.json"))
+
     // Skips (with a warning) when node/python are absent, so a machine without
     // them can still run `check`.
     commandLine(

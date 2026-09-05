@@ -62,7 +62,7 @@ if ($node) {
 # from a non-interactive shell with no console attached (CI-style invocation).
 $python = Get-Tool @('python3', 'python')
 if ($python) {
-    foreach ($test in @('test_phone_normalization.py', 'test_report_dedup.py', 'test_report_pipeline.py', 'test_model_calibration.py', 'test_ml_feature_contract.py', 'test_release_sbom.py', 'test_check_translations.py', 'test_source_registry.py', 'test_spam_shards.py', 'test_incremental_sources.py', 'test_regional_prefixes.py', 'test_release_drift.py')) {
+    foreach ($test in @('test_phone_normalization.py', 'test_report_dedup.py', 'test_report_pipeline.py', 'test_pipeline_liveness.py', 'test_model_calibration.py', 'test_ml_feature_contract.py', 'test_release_sbom.py', 'test_check_translations.py', 'test_source_registry.py', 'test_spam_shards.py', 'test_incremental_sources.py', 'test_regional_prefixes.py', 'test_release_drift.py')) {
         $path = Join-Path $PSScriptRoot $test
         if (-not (Test-Path $path)) { continue }
         Write-Host "Running $test..."
@@ -72,6 +72,20 @@ if ($python) {
     }
 } else {
     Write-Warning 'python not found on PATH - skipping Python pipeline tests.'
+}
+
+# The suites above all answer questions about a queue they were handed. None of
+# them notices when the real queue stops being consumed, which is how 267 report
+# files accumulated while every gated test stayed green. This runs the same
+# checks against the live `data/reports/`.
+if ($python) {
+    $livenessCheck = Join-Path $PSScriptRoot 'pipeline_liveness.py'
+    if (Test-Path $livenessCheck) {
+        Write-Host 'Running pipeline_liveness.py (live report queue)...'
+        & $python $livenessCheck
+        if ($LASTEXITCODE -ne 0) { $failures += 'pipeline_liveness.py (live queue)' }
+        $ran++
+    }
 }
 
 # Translation resources are contributed by people who cannot run the Android
