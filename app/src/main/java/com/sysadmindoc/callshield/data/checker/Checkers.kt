@@ -460,7 +460,23 @@ internal class AnsweredCallerChecker(
                     ?: CallbackDetector.DEFAULT_ANSWERED_CALLER_WINDOW_DAYS
             ).coerceAtLeast(1)
 
-        return if (callbackDetector.wasAnsweredRepeatedly(appContext, ctx.number, windowDays, threshold)) {
+        val wasAnsweredRepeatedly =
+            if (ctx.prefs[SpamRepository.KEY_ANSWER_HANG_UP] == true) {
+                callbackDetector.wasAnsweredRepeatedly(
+                    appContext,
+                    ctx.number,
+                    windowDays,
+                    threshold,
+                    maxOf(
+                        CallbackDetector.MIN_ANSWERED_CALL_DURATION_SECONDS,
+                        CallbackDetector.AUTO_ANSWER_MIN_TRUSTED_SECONDS,
+                    ),
+                )
+            } else {
+                callbackDetector.wasAnsweredRepeatedly(appContext, ctx.number, windowDays, threshold)
+            }
+
+        return if (wasAnsweredRepeatedly) {
             BlockResult.allow("answered_caller")
         } else {
             null
@@ -500,7 +516,18 @@ internal class RepeatedUrgentChecker(
     override val name = "repeated_urgent"
 
     override suspend fun check(ctx: CheckContext): BlockResult? =
-        if (callbackDetector.isRepeatedUrgentCall(appContext, ctx.number)) {
+        if (
+            callbackDetector.isRepeatedUrgentCall(
+                appContext,
+                ctx.number,
+                minIncomingDurationSeconds =
+                    if (ctx.prefs[SpamRepository.KEY_ANSWER_HANG_UP] == true) {
+                        CallbackDetector.AUTO_ANSWER_MIN_TRUSTED_SECONDS
+                    } else {
+                        0
+                    },
+            )
+        ) {
             BlockResult.allow("repeated_urgent")
         } else {
             null
