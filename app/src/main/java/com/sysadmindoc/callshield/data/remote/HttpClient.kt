@@ -33,6 +33,9 @@ object HttpClient {
                 listOf(
                     "sha256/W+jBdq3o4qj8cXXBURwKqofJk8BG59NEPXOEgMh53sA=",
                     "sha256/kZwN96eHtZftBWrOZUsd6cA4es80n3NzSk/XtYz2EqQ=",
+                    // 2026-09-13: GitHub now chains through Let's Encrypt Root YR to ISRG Root X1.
+                    "sha256/C5+lpZ7tcVwmwQIMcRtPbsQtWLABXhQzejna0wHFr8M=",
+                    "sha256/fk6IOKit1ild5647BH06ujSIq5XbCgqlbYl6ANhhi88=",
                 ),
             "callshield-reports.snafumatthew.workers.dev" to
                 listOf(
@@ -50,6 +53,9 @@ object HttpClient {
                 listOf(
                     "sha256/QSCRpv+KcUv9sLsdsMT4utQr9dOiwcGQXplf7Nc7Igw=",
                     "sha256/y7xVm0TVJNahMr2sZydE2jQH8SquXV9yLF9seROHHHU=",
+                    // 2026-09-13: phoneblock.net now chains through Let's Encrypt Roots X2 and X1.
+                    "sha256/diGVwiVYbubAI3RW4hB9xU8e/CH2GnkuvVFZE8zmgzI=",
+                    "sha256/C5+lpZ7tcVwmwQIMcRtPbsQtWLABXhQzejna0wHFr8M=",
                 ),
             "www.whocalledme.com" to
                 listOf(
