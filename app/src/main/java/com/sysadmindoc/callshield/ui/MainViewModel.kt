@@ -49,6 +49,7 @@ import com.sysadmindoc.callshield.domain.model.SpamCheckResult
 import com.sysadmindoc.callshield.domain.usecase.ExportLogsUseCase
 import com.sysadmindoc.callshield.domain.usecase.ManageBlocklistUseCase
 import com.sysadmindoc.callshield.domain.usecase.SyncDatabaseUseCase
+import com.sysadmindoc.callshield.service.AnswerHangUpController
 import com.sysadmindoc.callshield.service.AppUpdateWorker
 import com.sysadmindoc.callshield.service.CallLogScanner
 import com.sysadmindoc.callshield.service.NotificationHelper
@@ -457,6 +458,13 @@ class MainViewModel
                 com.sysadmindoc.callshield.data.NotificationScreeningSources.defaultEnabledPackages,
             )
         val silentVoicemailEnabled = repo.silentVoicemailEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+        val answerHangUpEnabled = repo.answerHangUpEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+        val hangUpDelaySeconds =
+            repo.hangUpDelaySeconds.stateIn(
+                viewModelScope,
+                SharingStarted.WhileSubscribed(5000),
+                AnswerHangUpController.DEFAULT_DELAY_SECONDS,
+            )
         val pushAlertEnabled = repo.pushAlertEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
         val pushAlertDisabledPackages =
             repo.pushAlertDisabledPackages
@@ -1089,6 +1097,10 @@ class MainViewModel
         fun resetNotificationScreeningPackages() = viewModelScope.launch { repo.resetNotificationScreeningPackages() }
 
         fun setSilentVoicemail(v: Boolean) = viewModelScope.launch { repo.setSilentVoicemail(v) }
+
+        fun setAnswerHangUpEnabled(v: Boolean) = viewModelScope.launch { repo.setAnswerHangUpEnabled(v) }
+
+        fun setHangUpDelaySeconds(seconds: Int) = viewModelScope.launch { repo.setHangUpDelaySeconds(seconds) }
 
         fun setPushAlert(v: Boolean) = viewModelScope.launch { repo.setPushAlert(v) }
 

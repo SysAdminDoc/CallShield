@@ -652,6 +652,9 @@
     <string name="notification_screening_done">Done</string>
     <string name="settings_silent_voicemail">Silent voicemail mode</string>
     <string name="settings_silent_voicemail_desc">Blocked calls go to voicemail silently. Your phone stays quiet while callers hear normal ringing.</string>
+    <string name="settings_answer_hang_up">Answer &amp; hang up blocked calls</string>
+    <string name="settings_answer_hang_up_desc">Instead of rejecting, CallShield answers blocked calls and hangs up so they can\'t leave a voicemail. Silent Voicemail and low-confidence auto-mute still send calls to voicemail. If you\'re already on a call, the blocked call is rejected. Your screen may light up briefly.</string>
+    <string name="settings_hang_up_delay">Hang up after</string>
     <string name="settings_quiet_hours">Quiet hours</string>
     <string name="settings_quiet_hours_toggle">Block unknowns during quiet hours</string>
     <string name="settings_quiet_hours_desc">Block all non-contact calls during set hours</string>
@@ -1299,6 +1302,10 @@
     <plurals name="settings_repeat_caller_threshold_value">
         <item quantity="one">%1$d call</item>
         <item quantity="other">%1$d calls</item>
+    </plurals>
+    <plurals name="settings_hang_up_delay_value">
+        <item quantity="one">%d second</item>
+        <item quantity="other">%d seconds</item>
     </plurals>
     <plurals name="settings_answered_caller_window_value">
         <item quantity="one">%1$d day</item>

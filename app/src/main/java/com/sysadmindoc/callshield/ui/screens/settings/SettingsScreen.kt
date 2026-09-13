@@ -72,6 +72,7 @@ import com.sysadmindoc.callshield.data.repository.EMERGENCY_CALLBACK_WINDOW_MINU
 import com.sysadmindoc.callshield.data.repository.FREQ_THRESHOLD_MAX
 import com.sysadmindoc.callshield.data.repository.FREQ_THRESHOLD_MIN
 import com.sysadmindoc.callshield.permissions.CallShieldPermissions
+import com.sysadmindoc.callshield.service.AnswerHangUpController
 import com.sysadmindoc.callshield.ui.AppLanguage
 import com.sysadmindoc.callshield.ui.DurationTtsText
 import com.sysadmindoc.callshield.ui.MainViewModel
@@ -151,6 +152,8 @@ fun SettingsScreen(viewModel: MainViewModel) {
     val postCallScreen by viewModel.postCallScreenEnabled.collectAsStateWithLifecycle()
     val notificationScreeningPackages by viewModel.notificationScreeningPackages.collectAsStateWithLifecycle()
     val silentVoicemail by viewModel.silentVoicemailEnabled.collectAsStateWithLifecycle()
+    val answerHangUpEnabled by viewModel.answerHangUpEnabled.collectAsStateWithLifecycle()
+    val hangUpDelaySeconds by viewModel.hangUpDelaySeconds.collectAsStateWithLifecycle()
     val pushAlertEnabled by viewModel.pushAlertEnabled.collectAsStateWithLifecycle()
     val pushAlertDisabledPackages by viewModel.pushAlertDisabledPackages.collectAsStateWithLifecycle()
     val externalBlocklists by viewModel.externalBlocklistSubscriptions.collectAsStateWithLifecycle()
@@ -201,6 +204,22 @@ fun SettingsScreen(viewModel: MainViewModel) {
                     callsEnabled = blockCalls,
                     smsEnabled = blockSms,
                 )
+        }
+    val answerHangUpPermissions =
+        remember {
+            listOf(
+                Manifest.permission.ANSWER_PHONE_CALLS,
+                Manifest.permission.READ_PHONE_STATE,
+                Manifest.permission.READ_CALL_LOG,
+            )
+        }
+    val answerHangUpPermissionLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { grants ->
+            val allGranted =
+                answerHangUpPermissions.all { permission ->
+                    grants[permission] == true || CallShieldPermissions.isPermissionGranted(context, permission)
+                }
+            viewModel.setAnswerHangUpEnabled(allGranted)
         }
     val notificationLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
@@ -747,6 +766,43 @@ fun SettingsScreen(viewModel: MainViewModel) {
                 Icons.Default.Voicemail,
                 autoMuteLowConfidence,
             ) { viewModel.setAutoMuteLowConfidence(it) }
+            GradientDivider()
+            SettingsToggle(
+                stringResource(R.string.settings_answer_hang_up),
+                stringResource(R.string.settings_answer_hang_up_desc),
+                Icons.Default.CallEnd,
+                answerHangUpEnabled,
+            ) { enabled ->
+                if (!enabled) {
+                    viewModel.setAnswerHangUpEnabled(false)
+                    return@SettingsToggle
+                }
+                val missingPermissions =
+                    answerHangUpPermissions.filterNot { permission ->
+                        CallShieldPermissions.isPermissionGranted(context, permission)
+                    }
+                if (missingPermissions.isEmpty()) {
+                    viewModel.setAnswerHangUpEnabled(true)
+                } else {
+                    answerHangUpPermissionLauncher.launch(missingPermissions.toTypedArray())
+                }
+            }
+            if (answerHangUpEnabled) {
+                Spacer(Modifier.height(8.dp))
+                SettingsNumberStepper(
+                    label = stringResource(R.string.settings_hang_up_delay),
+                    valueText =
+                        pluralStringResource(
+                            R.plurals.settings_hang_up_delay_value,
+                            hangUpDelaySeconds,
+                            hangUpDelaySeconds,
+                        ),
+                    value = hangUpDelaySeconds,
+                    minValue = AnswerHangUpController.MIN_DELAY_SECONDS,
+                    maxValue = AnswerHangUpController.MAX_DELAY_SECONDS,
+                    onValueChange = viewModel::setHangUpDelaySeconds,
+                )
+            }
         }
 
         // Feature 9: Time-based blocking
