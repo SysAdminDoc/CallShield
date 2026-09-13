@@ -12,10 +12,15 @@ class AnswerHangUpReceiver : BroadcastReceiver() {
         context: Context,
         intent: Intent,
     ) {
-        if (!AnswerHangUpController.hasPendingCall()) return
+        if (intent.action != TelephonyManager.ACTION_PHONE_STATE_CHANGED ||
+            !AnswerHangUpController.hasPendingCall()
+        ) {
+            return
+        }
         AnswerHangUpController.onPhoneState(
             state = intent.getStringExtra(TelephonyManager.EXTRA_STATE),
             incomingNumber = intent.getStringExtra(TelephonyManager.EXTRA_INCOMING_NUMBER),
+            hasIncomingNumber = intent.hasExtra(TelephonyManager.EXTRA_INCOMING_NUMBER),
         )
     }
 }

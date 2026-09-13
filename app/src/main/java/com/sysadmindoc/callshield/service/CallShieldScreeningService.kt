@@ -100,6 +100,7 @@ class CallShieldScreeningService : CallScreeningService() {
         // feedback, or respond to an outgoing call.
         when (callDetails.callDirection) {
             Call.Details.DIRECTION_OUTGOING -> {
+                AnswerHangUpController.onOutgoingCallStarted()
                 handleOutgoingCall(callDetails)
                 return
             }
@@ -376,13 +377,17 @@ class CallShieldScreeningService : CallScreeningService() {
         val answerHangUpEnabled = prefs[SpamRepository.KEY_ANSWER_HANG_UP] ?: false
         val answerAndHangUp =
             if (answerHangUpEnabled && !silenceWins) {
-                val permissionsGranted = hasAnswerHangUpPermissions()
-                shouldAnswerAndHangUp(
-                    enabled = true,
-                    silenceWins = false,
-                    permissionsGranted = permissionsGranted,
-                    busy = !permissionsGranted || isAnswerHangUpBusy(),
-                )
+                try {
+                    val permissionsGranted = hasAnswerHangUpPermissions()
+                    shouldAnswerAndHangUp(
+                        enabled = true,
+                        silenceWins = false,
+                        permissionsGranted = permissionsGranted,
+                        busy = !permissionsGranted || isAnswerHangUpBusy(),
+                    )
+                } catch (_: RuntimeException) {
+                    false
+                }
             } else {
                 false
             }
@@ -395,17 +400,20 @@ class CallShieldScreeningService : CallScreeningService() {
             }
         if (answerAndHangUp) {
             AnswerHangUpController.configure(applicationContext)
-            AnswerHangUpController.arm(
-                rawNumber = number,
-                delaySeconds =
-                    AnswerHangUpController.clampDelaySeconds(
-                        prefs[SpamRepository.KEY_HANG_UP_DELAY_SECONDS],
-                    ),
-            )
-            if (responseGate.hasResponded) {
+            val armed =
+                AnswerHangUpController.tryArm(
+                    rawNumber = number,
+                    delaySeconds =
+                        AnswerHangUpController.clampDelaySeconds(
+                            prefs[SpamRepository.KEY_HANG_UP_DELAY_SECONDS],
+                        ),
+                )
+            if (armed && responseGate.hasResponded) {
                 AnswerHangUpController.disarm()
-            } else {
+            } else if (armed) {
                 responseGate.respond(response)
+            } else {
+                responseGate.respond(buildBlockResponse(prefs, confidence, categoryAction))
             }
         } else {
             responseGate.respond(response)
@@ -524,11 +532,13 @@ class CallShieldScreeningService : CallScreeningService() {
             @Suppress("DEPRECATION")
             val callState = getSystemService(android.telephony.TelephonyManager::class.java)?.callState
             val telephonyBusy = callState == android.telephony.TelephonyManager.CALL_STATE_OFFHOOK
-            val audioMode = getSystemService(android.media.AudioManager::class.java)?.mode
-            val audioBusy =
+            if (telephonyBusy || AnswerHangUpController.isBusy()) {
+                true
+            } else {
+                val audioMode = getSystemService(android.media.AudioManager::class.java)?.mode
                 audioMode == android.media.AudioManager.MODE_IN_CALL ||
                     audioMode == android.media.AudioManager.MODE_IN_COMMUNICATION
-            telephonyBusy || audioBusy || AnswerHangUpController.isBusy()
+            }
         } catch (_: SecurityException) {
             true
         }
