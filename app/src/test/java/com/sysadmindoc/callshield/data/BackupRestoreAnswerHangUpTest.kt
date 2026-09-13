@@ -2,7 +2,6 @@ package com.sysadmindoc.callshield.data
 
 import com.sysadmindoc.callshield.data.BackupRestore.Backup
 import com.sysadmindoc.callshield.data.BackupRestore.BackupSettings
-import com.sysadmindoc.callshield.service.AnswerHangUpController
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -38,7 +37,7 @@ class BackupRestoreAnswerHangUpTest {
         assertTrue(validation is BackupRestore.RestoreValidation.Valid)
         val settings = (validation as BackupRestore.RestoreValidation.Valid).payload.settings
         assertFalse(settings?.answerHangUpEnabled ?: true)
-        assertEquals(AnswerHangUpController.DEFAULT_DELAY_SECONDS, settings?.hangUpDelaySeconds)
+        assertEquals(1, settings?.hangUpDelaySeconds)
     }
 
     @Test
@@ -49,6 +48,6 @@ class BackupRestoreAnswerHangUpTest {
 
         assertTrue(validation is BackupRestore.RestoreValidation.Valid)
         val settings = (validation as BackupRestore.RestoreValidation.Valid).payload.settings
-        assertEquals(AnswerHangUpController.MAX_DELAY_SECONDS, settings?.hangUpDelaySeconds)
+        assertEquals(10, settings?.hangUpDelaySeconds)
     }
 }

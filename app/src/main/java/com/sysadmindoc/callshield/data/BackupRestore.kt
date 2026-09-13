@@ -1152,8 +1152,7 @@ object BackupRestore {
             postCallScreenEnabled = this[SpamRepository.KEY_POST_CALL_SCREEN] ?: false,
             silentVoicemailEnabled = this[SpamRepository.KEY_SILENT_VOICEMAIL] ?: false,
             answerHangUpEnabled = this[SpamRepository.KEY_ANSWER_HANG_UP] ?: false,
-            hangUpDelaySeconds =
-                AnswerHangUpController.clampDelaySeconds(this[SpamRepository.KEY_HANG_UP_DELAY_SECONDS]),
+            hangUpDelaySeconds = clampHangUpDelaySeconds(this[SpamRepository.KEY_HANG_UP_DELAY_SECONDS]),
             pushAlertEnabled = this[SpamRepository.KEY_PUSH_ALERT] ?: true,
             pushAlertDisabledPackages = (this[SpamRepository.KEY_PUSH_ALERT_DISABLED] ?: emptySet()).sorted(),
             regionBlockEnabled = this[SpamRepository.KEY_REGION_BLOCK] ?: false,
@@ -1181,6 +1180,12 @@ object BackupRestore {
                     ?.let { NotificationScreeningSources.enabledPackages(it).sorted() },
         )
 
+    private fun clampHangUpDelaySeconds(value: Int?): Int =
+        value?.coerceIn(
+            AnswerHangUpController.MIN_DELAY_SECONDS,
+            AnswerHangUpController.MAX_DELAY_SECONDS,
+        ) ?: AnswerHangUpController.DEFAULT_DELAY_SECONDS
+
     private fun BackupSettings.sanitized(): BackupSettings =
         copy(
             answeredCallerThreshold = answeredCallerThreshold.coerceIn(1, 10),
@@ -1190,7 +1195,7 @@ object BackupRestore {
             timeBlockEndHour = sanitizeScheduleHour(timeBlockEndHour),
             frequencyThreshold = frequencyThreshold.coerceIn(1, 25),
             cleanupDays = cleanupDays.coerceIn(1, 365),
-            hangUpDelaySeconds = AnswerHangUpController.clampDelaySeconds(hangUpDelaySeconds),
+            hangUpDelaySeconds = clampHangUpDelaySeconds(hangUpDelaySeconds),
             pushAlertDisabledPackages =
                 pushAlertDisabledPackages
                     .map { it.trim() }
