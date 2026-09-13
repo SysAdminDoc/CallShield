@@ -1,10 +1,12 @@
 package com.sysadmindoc.callshield.service
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.telecom.TelecomManager
+import android.telecom.VideoProfile
 import android.telephony.TelephonyManager
 import android.util.Log
 
@@ -32,7 +34,7 @@ object AnswerHangUpController {
     }
 
     internal interface CallControl {
-        fun acceptRingingCall()
+        fun acceptRingingCallAudioOnly(): Boolean
 
         fun endCall(): Boolean
 
@@ -92,12 +94,15 @@ object AnswerHangUpController {
 
     fun clampDelaySeconds(value: Int?): Int = value?.coerceIn(MIN_DELAY_SECONDS, MAX_DELAY_SECONDS) ?: DEFAULT_DELAY_SECONDS
 
-    /** Arms this process for the next matching PHONE_STATE broadcast. */
-    fun arm(
+    /** Arms this process for the next matching PHONE_STATE broadcast when no call is in flight. */
+    fun tryArm(
         rawNumber: String?,
         delaySeconds: Int,
-    ) {
+    ): Boolean =
         synchronized(lock) {
+            if (pendingCall?.phase == Phase.ANSWERING || pendingCall?.phase == Phase.HANGING_UP) {
+                return@synchronized false
+            }
             clearLocked()
             pendingCall =
                 PendingCall(
@@ -107,8 +112,8 @@ object AnswerHangUpController {
                     phase = Phase.ARMED,
                 )
             scheduleArmedExpiryLocked()
+            true
         }
-    }
 
     fun disarm() {
         synchronized(lock) {
@@ -125,6 +130,13 @@ object AnswerHangUpController {
         }
     }
 
+    /** A user-initiated outgoing call must never inherit a pending hang-up timer. */
+    fun onOutgoingCallStarted() {
+        synchronized(lock) {
+            clearLocked()
+        }
+    }
+
     fun hasPendingCall(): Boolean = synchronized(lock) { pendingCall != null }
 
     fun isBusy(): Boolean =
@@ -136,13 +148,26 @@ object AnswerHangUpController {
     fun onPhoneState(
         state: String?,
         incomingNumber: String?,
+        hasIncomingNumber: Boolean = true,
     ) {
         synchronized(lock) {
             val pending = pendingCall ?: return
             when (state) {
-                TelephonyManager.EXTRA_STATE_RINGING -> handleRingingLocked(pending, incomingNumber)
-                TelephonyManager.EXTRA_STATE_OFFHOOK -> handleOffhookLocked(pending, incomingNumber)
-                TelephonyManager.EXTRA_STATE_IDLE -> clearLocked()
+                TelephonyManager.EXTRA_STATE_RINGING -> {
+                    if (pending.phase == Phase.ARMED) {
+                        handleRingingLocked(pending, incomingNumber, hasIncomingNumber)
+                    }
+                }
+
+                TelephonyManager.EXTRA_STATE_OFFHOOK -> {
+                    handleOffhookLocked(pending, incomingNumber)
+                }
+
+                TelephonyManager.EXTRA_STATE_IDLE -> {
+                    if (pending.phase == Phase.ARMED) {
+                        clearLocked()
+                    }
+                }
             }
         }
     }
@@ -150,13 +175,9 @@ object AnswerHangUpController {
     private fun handleRingingLocked(
         pending: PendingCall,
         incomingNumber: String?,
+        hasIncomingNumber: Boolean,
     ) {
-        if (pending.phase == Phase.HANGING_UP) {
-            // A second incoming call must never be ended by a timer belonging to the first.
-            clearLocked()
-            return
-        }
-        if (pending.phase != Phase.ARMED) return
+        if (!hasIncomingNumber) return
         if (!isWithinArmWindow(pending)) {
             clearLocked()
             return
@@ -166,8 +187,11 @@ object AnswerHangUpController {
         pending.phase = Phase.ANSWERING
         pending.acceptedAt = clock()
         try {
-            callControl.acceptRingingCall()
-        } catch (exception: SecurityException) {
+            if (!callControl.acceptRingingCallAudioOnly()) {
+                clearLocked()
+                return
+            }
+        } catch (exception: RuntimeException) {
             Log.w(TAG, "Unable to answer screened call", exception)
             clearLocked()
             return
@@ -216,7 +240,7 @@ object AnswerHangUpController {
             val callState =
                 try {
                     callControl.currentCallState()
-                } catch (exception: SecurityException) {
+                } catch (exception: RuntimeException) {
                     Log.w(TAG, "Unable to read screened call state", exception)
                     clearLocked()
                     return
@@ -253,7 +277,7 @@ object AnswerHangUpController {
                             if (clock() >= (pending.hangUpDeadline ?: Long.MAX_VALUE)) {
                                 try {
                                     callControl.endCall()
-                                } catch (exception: SecurityException) {
+                                } catch (exception: RuntimeException) {
                                     Log.w(TAG, "Unable to hang up screened call", exception)
                                 }
                                 clearLocked()
@@ -283,16 +307,29 @@ object AnswerHangUpController {
 
     private fun productionCallControl(): CallControl =
         object : CallControl {
+            // The preceding permission gate is real, but lint does not trace this helper.
+            @SuppressLint("MissingPermission")
             @Suppress("DEPRECATION")
-            override fun acceptRingingCall() {
-                telecomManager().acceptRingingCall()
+            override fun acceptRingingCallAudioOnly(): Boolean {
+                if (!hasAnswerPhoneCallsPermission()) return false
+                telecomManager().acceptRingingCall(VideoProfile.STATE_AUDIO_ONLY)
+                return true
+            }
+
+            // The preceding permission gate is real, but lint does not trace this helper.
+            @SuppressLint("MissingPermission")
+            @Suppress("DEPRECATION")
+            override fun endCall(): Boolean {
+                if (!hasAnswerPhoneCallsPermission()) return false
+                return telecomManager().endCall()
             }
 
             @Suppress("DEPRECATION")
-            override fun endCall(): Boolean = telecomManager().endCall()
-
-            @Suppress("DEPRECATION")
             override fun currentCallState(): Int = applicationContext?.getSystemService(TelephonyManager::class.java)?.callState ?: -1
+
+            private fun hasAnswerPhoneCallsPermission(): Boolean =
+                applicationContext?.checkSelfPermission(android.Manifest.permission.ANSWER_PHONE_CALLS) ==
+                    android.content.pm.PackageManager.PERMISSION_GRANTED
 
             private fun telecomManager(): TelecomManager =
                 requireNotNull(applicationContext) { "AnswerHangUpController is not configured" }
