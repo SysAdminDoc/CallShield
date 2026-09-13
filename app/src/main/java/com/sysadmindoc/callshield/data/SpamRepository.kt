@@ -220,6 +220,8 @@ class SpamRepository(
         // reaches voicemail, user can review later without the interruption
         // or the missed-call entry from a rejection.
         val KEY_SILENT_VOICEMAIL = booleanPreferencesKey("silent_voicemail_mode")
+        val KEY_ANSWER_HANG_UP = booleanPreferencesKey("answer_hang_up_mode")
+        val KEY_HANG_UP_DELAY_SECONDS = intPreferencesKey("hang_up_delay_seconds")
 
         // A3 push-alert bridge — master toggle. When off, the registry is
         // not fed by RcsNotificationListener and PushAlertChecker returns

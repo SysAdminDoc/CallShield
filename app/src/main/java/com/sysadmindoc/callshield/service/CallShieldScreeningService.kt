@@ -118,6 +118,8 @@ class CallShieldScreeningService : CallScreeningService() {
             }
         }
 
+        AnswerHangUpController.onIncomingScreeningStarted()
+
         // Run on the process-wide appScope instead of a service-scoped one.
         // CallScreeningService is frequently unbound moments after we reply,
         // and a service-scoped coroutine could be cancelled mid-decision —
@@ -364,8 +366,50 @@ class CallShieldScreeningService : CallScreeningService() {
         val categoryAction =
             CategoryCallPolicy.parseMatchSource(reason)?.action
                 ?: CategoryCallAction.INHERIT
-        val response = buildBlockResponse(prefs, confidence, categoryAction)
-        responseGate.respond(response)
+        val silenceWins =
+            shouldSilence(
+                silentVoicemailEnabled = prefs[SpamRepository.KEY_SILENT_VOICEMAIL] ?: false,
+                autoMuteLowConfidenceEnabled = prefs[SpamRepository.KEY_AUTOMUTE_LOW_CONFIDENCE] ?: false,
+                confidence = confidence,
+                categoryAction = categoryAction,
+            )
+        val answerHangUpEnabled = prefs[SpamRepository.KEY_ANSWER_HANG_UP] ?: false
+        val answerAndHangUp =
+            if (answerHangUpEnabled && !silenceWins) {
+                val permissionsGranted = hasAnswerHangUpPermissions()
+                shouldAnswerAndHangUp(
+                    enabled = true,
+                    silenceWins = false,
+                    permissionsGranted = permissionsGranted,
+                    busy = !permissionsGranted || isAnswerHangUpBusy(),
+                )
+            } else {
+                false
+            }
+        val response =
+            if (answerAndHangUp) {
+                buildSilenceResponse()
+            } else {
+                // Keep the existing response construction untouched for every setting-off path.
+                buildBlockResponse(prefs, confidence, categoryAction)
+            }
+        if (answerAndHangUp) {
+            AnswerHangUpController.configure(applicationContext)
+            AnswerHangUpController.arm(
+                rawNumber = number,
+                delaySeconds =
+                    AnswerHangUpController.clampDelaySeconds(
+                        prefs[SpamRepository.KEY_HANG_UP_DELAY_SECONDS],
+                    ),
+            )
+            if (responseGate.hasResponded) {
+                AnswerHangUpController.disarm()
+            } else {
+                responseGate.respond(response)
+            }
+        } else {
+            responseGate.respond(response)
+        }
 
         applicationScope.launch {
             try {
@@ -457,6 +501,37 @@ class CallShieldScreeningService : CallScreeningService() {
                 .build()
         }
     }
+
+    private fun buildSilenceResponse(): CallResponse =
+        CallResponse
+            .Builder()
+            .setSilenceCall(true)
+            .setSkipCallLog(false)
+            .setSkipNotification(false)
+            .build()
+
+    private fun hasAnswerHangUpPermissions(): Boolean =
+        listOf(
+            android.Manifest.permission.ANSWER_PHONE_CALLS,
+            android.Manifest.permission.READ_PHONE_STATE,
+            android.Manifest.permission.READ_CALL_LOG,
+        ).all { permission ->
+            checkSelfPermission(permission) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        }
+
+    private fun isAnswerHangUpBusy(): Boolean =
+        try {
+            @Suppress("DEPRECATION")
+            val callState = getSystemService(android.telephony.TelephonyManager::class.java)?.callState
+            val telephonyBusy = callState == android.telephony.TelephonyManager.CALL_STATE_OFFHOOK
+            val audioMode = getSystemService(android.media.AudioManager::class.java)?.mode
+            val audioBusy =
+                audioMode == android.media.AudioManager.MODE_IN_CALL ||
+                    audioMode == android.media.AudioManager.MODE_IN_COMMUNICATION
+            telephonyBusy || audioBusy || AnswerHangUpController.isBusy()
+        } catch (_: SecurityException) {
+            true
+        }
 
     private fun handleDirectBootCall(
         callDetails: Call.Details,
@@ -608,6 +683,13 @@ class CallShieldScreeningService : CallScreeningService() {
                         (autoMuteLowConfidenceEnabled && confidence < AUTO_MUTE_CONFIDENCE_THRESHOLD)
                 }
             }
+
+        internal fun shouldAnswerAndHangUp(
+            enabled: Boolean,
+            silenceWins: Boolean,
+            permissionsGranted: Boolean,
+            busy: Boolean,
+        ): Boolean = enabled && !silenceWins && permissionsGranted && !busy
 
         fun shouldSuppressAfterCallFeedback(matchSource: String): Boolean = matchSource == "emergency_callback"
     }

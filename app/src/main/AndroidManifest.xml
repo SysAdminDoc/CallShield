@@ -95,6 +95,14 @@
             android:exported="false" />
 
         <receiver
+            android:name=".service.AnswerHangUpReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.PHONE_STATE" />
+            </intent-filter>
+        </receiver>
+
+        <receiver
             android:name=".service.SmsReceiver"
             android:permission="android.permission.BROADCAST_SMS"
             android:exported="true">
