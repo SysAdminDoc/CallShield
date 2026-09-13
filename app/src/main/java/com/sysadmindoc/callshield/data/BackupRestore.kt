@@ -18,6 +18,7 @@ import com.sysadmindoc.callshield.data.model.RestoreJournal
 import com.sysadmindoc.callshield.data.model.SmsKeywordRule
 import com.sysadmindoc.callshield.data.model.WildcardRule
 import com.sysadmindoc.callshield.domain.model.BlockReasonCode
+import com.sysadmindoc.callshield.service.AnswerHangUpController
 import com.sysadmindoc.callshield.util.filterAsciiDigits
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -183,6 +184,8 @@ object BackupRestore {
         val rcsFilterEnabled: Boolean = true,
         val postCallScreenEnabled: Boolean = false,
         val silentVoicemailEnabled: Boolean = false,
+        val answerHangUpEnabled: Boolean = false,
+        val hangUpDelaySeconds: Int = AnswerHangUpController.DEFAULT_DELAY_SECONDS,
         val pushAlertEnabled: Boolean = true,
         val pushAlertDisabledPackages: List<String> = emptyList(),
         val regionBlockEnabled: Boolean = false,
@@ -1148,6 +1151,9 @@ object BackupRestore {
             rcsFilterEnabled = this[SpamRepository.KEY_RCS_FILTER] ?: true,
             postCallScreenEnabled = this[SpamRepository.KEY_POST_CALL_SCREEN] ?: false,
             silentVoicemailEnabled = this[SpamRepository.KEY_SILENT_VOICEMAIL] ?: false,
+            answerHangUpEnabled = this[SpamRepository.KEY_ANSWER_HANG_UP] ?: false,
+            hangUpDelaySeconds =
+                AnswerHangUpController.clampDelaySeconds(this[SpamRepository.KEY_HANG_UP_DELAY_SECONDS]),
             pushAlertEnabled = this[SpamRepository.KEY_PUSH_ALERT] ?: true,
             pushAlertDisabledPackages = (this[SpamRepository.KEY_PUSH_ALERT_DISABLED] ?: emptySet()).sorted(),
             regionBlockEnabled = this[SpamRepository.KEY_REGION_BLOCK] ?: false,
@@ -1184,6 +1190,7 @@ object BackupRestore {
             timeBlockEndHour = sanitizeScheduleHour(timeBlockEndHour),
             frequencyThreshold = frequencyThreshold.coerceIn(1, 25),
             cleanupDays = cleanupDays.coerceIn(1, 365),
+            hangUpDelaySeconds = AnswerHangUpController.clampDelaySeconds(hangUpDelaySeconds),
             pushAlertDisabledPackages =
                 pushAlertDisabledPackages
                     .map { it.trim() }
@@ -1248,6 +1255,8 @@ object BackupRestore {
         preferences[SpamRepository.KEY_RCS_FILTER] = rcsFilterEnabled
         preferences[SpamRepository.KEY_POST_CALL_SCREEN] = postCallScreenEnabled
         preferences[SpamRepository.KEY_SILENT_VOICEMAIL] = silentVoicemailEnabled
+        preferences[SpamRepository.KEY_ANSWER_HANG_UP] = answerHangUpEnabled
+        preferences[SpamRepository.KEY_HANG_UP_DELAY_SECONDS] = hangUpDelaySeconds
         preferences[SpamRepository.KEY_PUSH_ALERT] = pushAlertEnabled
         if (pushAlertDisabledPackages.isEmpty()) {
             preferences.remove(SpamRepository.KEY_PUSH_ALERT_DISABLED)

@@ -369,6 +369,8 @@ class SpamRepository(
     val postCallScreenEnabled: Flow<Boolean> = settingsRepository.postCallScreenEnabled
     val notificationScreeningPackages: Flow<Set<String>> = settingsRepository.notificationScreeningPackages
     val silentVoicemailEnabled: Flow<Boolean> = settingsRepository.silentVoicemailEnabled
+    val answerHangUpEnabled: Flow<Boolean> = settingsRepository.answerHangUpEnabled
+    val hangUpDelaySeconds: Flow<Int> = settingsRepository.hangUpDelaySeconds
     val pushAlertEnabled: Flow<Boolean> = settingsRepository.pushAlertEnabled
     val pushAlertDisabledPackages: Flow<Set<String>> = settingsRepository.pushAlertDisabledPackages
     internal val smsMessageCapabilityStatus: Flow<MessageCapabilityStatus> = settingsRepository.smsMessageCapabilityStatus
@@ -460,6 +462,10 @@ class SpamRepository(
     }
 
     suspend fun setSilentVoicemail(enabled: Boolean) = settingsRepository.setSilentVoicemail(enabled)
+
+    suspend fun setAnswerHangUpEnabled(enabled: Boolean) = settingsRepository.setAnswerHangUpEnabled(enabled)
+
+    suspend fun setHangUpDelaySeconds(seconds: Int) = settingsRepository.setHangUpDelaySeconds(seconds)
 
     suspend fun setPushAlert(enabled: Boolean) = settingsRepository.setPushAlert(enabled)
 
