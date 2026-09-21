@@ -53,6 +53,19 @@ All notable changes to CallShield will be documented in this file.
 - Feed dates written with a `+00:00` offset, which is what the publisher
   actually writes, now parse on Android 10 to 13 as well.
 
+### Data pipeline
+
+- The pipeline check now notices a stall in the weeks right after a drain. It
+  used to measure the oldest queued report against the database's date, and
+  every report queued after a drain is newer than that, so a second stall ran
+  from 2026-09-05 without it firing. A weekly workflow now measures against the
+  calendar, also flags upstream sources that have gone longer than their
+  `stale_after_days` without an import, and keeps a single `pipeline-stalled`
+  issue open until the next passing run. The importer records each source's
+  last successful import in `data/source-freshness.json` for it.
+- A validation workflow runs the Worker and pipeline test suites on every push
+  that isn't a report commit. It builds nothing and publishes nothing.
+
 ### Documentation
 
 - The README now explains the signing-key rotation. Releases v1.7.26 through

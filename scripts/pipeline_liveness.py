@@ -25,10 +25,20 @@ Three signals separate a healthy queue from a stalled one:
   the exact shape of a Worker deployment that predates the field.
 
 An empty queue is healthy: nothing has arrived, nothing is stuck.
+
+With `--scheduled` (the weekly workflow) the age check measures against the
+current time instead of the database date, and upstream sources with a regular
+cadence are checked against `stale_after_days`. Both are left out of
+`verifyPipelineTests`: that task runs inside `check`, where a clock would fail
+every later build of an old tag. Measured against the database date, the age
+check cannot fire in the weeks after a drain, because every report queued since
+is newer than the database; that is how a second stall ran from 2026-09-05
+without the gate noticing.
 """
 
 from __future__ import annotations
 
+import argparse
 import json
 import os
 import sys
@@ -40,6 +50,8 @@ from report_dedup import parse_reported_at, validated_reporter_bucket
 DATA_DIR = Path(os.environ.get("CALLSHIELD_DATA_DIR", Path(__file__).parent.parent / "data"))
 REPORTS_DIR = Path(os.environ.get("CALLSHIELD_REPORTS_DIR", DATA_DIR / "reports"))
 DB_FILE = DATA_DIR / "spam_numbers.json"
+MANIFEST_FILE = DATA_DIR / "source-manifest.json"
+FRESHNESS_FILE = DATA_DIR / "source-freshness.json"
 
 MAX_QUEUE_DEPTH = 20
 MAX_QUEUE_AGE_DAYS = 7
@@ -49,6 +61,10 @@ MIN_BUCKET_COVERAGE = 0.5
 # A handful of them is normal, so the coverage ratio only becomes meaningful
 # once there is enough of a queue for the proportion to mean anything.
 MIN_BUCKET_SAMPLE = 10
+# Sources on a timetable. "on demand" sources need credentials or a manual
+# decision and have no schedule to fall behind; community reports and the
+# database itself are covered by the queue checks.
+REGULAR_CADENCES = frozenset({"daily", "weekly"})
 
 
 def _parse_updated(value: object) -> datetime | None:
@@ -62,10 +78,27 @@ def _parse_updated(value: object) -> datetime | None:
     return parsed.replace(tzinfo=timezone.utc)
 
 
+def _parse_instant(value: object) -> datetime | None:
+    """Parse an ISO-8601 instant into UTC; a value without an offset is taken as UTC.
+
+    Normalising matters for the dates printed in problems: every other date the
+    gate reports is a UTC date, so a stamp written with a local offset must not
+    print its local calendar day.
+    """
+    if not isinstance(value, str) or not value:
+        return None
+    try:
+        parsed = datetime.fromisoformat(value.strip().replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return (parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)).astimezone(timezone.utc)
+
+
 def evaluate_queue_health(
     reports: list[dict],
     database_updated: object,
     unreadable: int = 0,
+    now: datetime | None = None,
 ) -> list[str]:
     """Return one message per liveness problem; an empty list means healthy.
 
@@ -75,7 +108,8 @@ def evaluate_queue_health(
     about whether the Worker is writing buckets, and the merge quarantines it
     on the next run anyway. `database_updated` is the published database's
     `updated` field in whatever shape it was read, so an unreadable or missing
-    date degrades to "cannot judge age" rather than raising.
+    date degrades to "cannot judge age" rather than raising. With `now`, age is
+    measured against the clock instead of the database date.
     """
     problems: list[str] = []
     total = len(reports) + unreadable
@@ -88,9 +122,18 @@ def evaluate_queue_health(
             "expected between merges - run the documented pipeline order to drain it"
         )
 
+    timestamps = [ts for ts in (parse_reported_at(r.get("reported_at")) for r in reports) if ts is not None]
     updated = _parse_updated(database_updated)
-    if updated is not None:
-        timestamps = [ts for ts in (parse_reported_at(r.get("reported_at")) for r in reports) if ts is not None]
+    if now is not None:
+        if timestamps:
+            oldest = min(timestamps)
+            waited = now - oldest
+            if waited > timedelta(days=MAX_QUEUE_AGE_DAYS):
+                problems.append(
+                    f"oldest queued report ({oldest.date().isoformat()}) has waited {waited.days} days, "
+                    f"more than {MAX_QUEUE_AGE_DAYS} - no merge has consumed it"
+                )
+    elif updated is not None:
         if timestamps:
             oldest = min(timestamps)
             stale_by = updated - oldest
@@ -114,6 +157,46 @@ def evaluate_queue_health(
             )
 
     return problems
+
+
+def evaluate_source_freshness(manifest: object, freshness: object, now: datetime) -> list[str]:
+    """One message per regular-cadence source past its `stale_after_days`.
+
+    `freshness` is `data/source-freshness.json`, which import_all_sources.py
+    updates with each source's last successful import. A source with no record
+    has never been imported since the record began, which is stale too.
+    """
+    sources = manifest.get("sources") if isinstance(manifest, dict) else None
+    recorded = freshness.get("last_success") if isinstance(freshness, dict) else None
+    last_success = recorded if isinstance(recorded, dict) else {}
+    problems: list[str] = []
+    for source in sources if isinstance(sources, list) else []:
+        if not isinstance(source, dict) or source.get("cadence") not in REGULAR_CADENCES:
+            continue
+        source_id = source.get("id")
+        limit = source.get("stale_after_days")
+        if not isinstance(source_id, str) or not isinstance(limit, (int, float)):
+            continue
+        stamp = _parse_instant(last_success.get(source_id))
+        if stamp is None:
+            problems.append(
+                f"{source_id} ({source['cadence']} source) has no successful import recorded in "
+                f"{FRESHNESS_FILE.name} - run scripts/import_all_sources.py"
+            )
+        elif now - stamp > timedelta(days=limit):
+            problems.append(
+                f"{source_id} was last imported {stamp.date().isoformat()}, {(now - stamp).days} days ago, "
+                f"past its {limit:g}-day limit"
+            )
+    return problems
+
+
+def _load_json(path: Path) -> object:
+    try:
+        with Path(path).open(encoding="utf-8") as handle:
+            return json.load(handle)
+    except (OSError, ValueError):
+        return None
 
 
 def load_queue(reports_dir: Path) -> tuple[list[dict], int]:
@@ -150,12 +233,23 @@ def load_database_updated(db_file: Path) -> object:
         return None
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description="Report-pipeline liveness checks.")
+    parser.add_argument(
+        "--scheduled",
+        action="store_true",
+        help="measure queue age against the clock and check upstream source freshness (weekly workflow only)",
+    )
+    args = parser.parse_args(argv)
+    now = datetime.now(timezone.utc) if args.scheduled else None
+
     reports, unreadable = load_queue(REPORTS_DIR)
     total = len(reports) + unreadable
-    problems = evaluate_queue_health(reports, load_database_updated(DB_FILE), unreadable)
+    problems = evaluate_queue_health(reports, load_database_updated(DB_FILE), unreadable, now=now)
+    if now is not None:
+        problems += evaluate_source_freshness(_load_json(MANIFEST_FILE), _load_json(FRESHNESS_FILE), now)
     if problems:
-        print(f"Report queue is not being consumed ({total} file(s) in {REPORTS_DIR}):", file=sys.stderr)
+        print(f"Report pipeline is not healthy ({total} queued file(s) in {REPORTS_DIR}):", file=sys.stderr)
         for problem in problems:
             print(f"  - {problem}", file=sys.stderr)
         return 1

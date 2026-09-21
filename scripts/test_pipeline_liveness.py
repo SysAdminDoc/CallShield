@@ -11,6 +11,7 @@ from pipeline_liveness import (
     MAX_QUEUE_DEPTH,
     MIN_BUCKET_SAMPLE,
     evaluate_queue_health,
+    evaluate_source_freshness,
     load_database_updated,
     load_queue,
 )
@@ -134,7 +135,53 @@ def main() -> None:
         assert len(loaded) == 1, loaded
         assert unreadable == 2, unreadable
 
+    scheduled_checks()
     print("pipeline_liveness tests passed")
+
+
+def scheduled_checks() -> None:
+    """The --scheduled mode: queue age against the clock, and source freshness."""
+    # ── the 2026-09-05 second stall: invisible to the database-relative check ──
+    # Every report queued after the 09-05 drain is newer than the database, so
+    # the age check measured against it can never fire.
+    queued_since_drain = [report(offset_days=-i * 0.1) for i in range(5)]
+    assert evaluate_queue_health(queued_since_drain, "2026-09-04") == []
+    now = BASE + timedelta(days=16)
+    problems = evaluate_queue_health(queued_since_drain, "2026-09-04", now=now)
+    assert len(problems) == 1 and "has waited 16 days" in problems[0], problems
+
+    # A fresh queue measured against the clock is fine.
+    assert evaluate_queue_health(queued_since_drain, "2026-09-04", now=BASE + timedelta(days=MAX_QUEUE_AGE_DAYS)) == []
+
+    # ── upstream source freshness ────────────────────────────────────────
+    manifest = {
+        "sources": [
+            {"id": "ftc_complaints", "cadence": "daily", "stale_after_days": 14},
+            {"id": "toastedspam", "cadence": "weekly", "stale_after_days": 30},
+            # No timetable, so nothing to fall behind.
+            {"id": "phoneblock_bulk", "cadence": "on demand", "stale_after_days": 30},
+            {"id": "community_reports", "cadence": "continuous", "stale_after_days": 90},
+        ]
+    }
+    fresh = {
+        "last_success": {
+            "ftc_complaints": (BASE - timedelta(days=3)).isoformat(),
+            "toastedspam": (BASE - timedelta(days=29)).isoformat(),
+        }
+    }
+    assert evaluate_source_freshness(manifest, fresh, BASE) == []
+
+    stale = {"last_success": {"ftc_complaints": "2026-08-01T21:51:56-04:00", "toastedspam": fresh["last_success"]["toastedspam"]}}
+    problems = evaluate_source_freshness(manifest, stale, BASE)
+    assert len(problems) == 1 and problems[0].startswith("ftc_complaints was last imported 2026-08-02"), problems
+
+    # A source that has never been recorded is stale, not "unknown and fine".
+    problems = evaluate_source_freshness(manifest, {"last_success": {}}, BASE)
+    assert sorted(p.split(" ")[0] for p in problems) == ["ftc_complaints", "toastedspam"], problems
+    # Nor does a missing or unreadable record file hide it.
+    assert len(evaluate_source_freshness(manifest, None, BASE)) == 2
+    # An unreadable manifest has nothing to judge rather than raising.
+    assert evaluate_source_freshness(None, fresh, BASE) == []
 
 
 if __name__ == "__main__":

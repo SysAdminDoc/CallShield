@@ -11,6 +11,7 @@ This directory contains the spam number database that the CallShield app pulls f
 - `spam_model_weights.json` - Versioned on-device GBT and logistic fallback weights
 - `source-manifest.json` - Feed access, license, geography, attribution, and parser contract
 - `source-snapshot.json` - Per-run source health, checksum, accepted/rejected counts, and failures
+- `source-freshness.json` - Each upstream source's last successful import, kept across runs; the weekly liveness workflow checks it against `stale_after_days`
 - `spam_domains_approved.json` - Optional maintainer approval input for domain candidates
 - `spam_domains_review.json` - Generated domain candidates awaiting approval
 - `not_spam_review.json` - Generated community false-positive review candidates

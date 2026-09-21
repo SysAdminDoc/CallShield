@@ -172,6 +172,32 @@ def test_cursors_and_snapshot_are_durable_and_attributed():
     assert fcc_row["cursor"]["id"] == "fcc-2"
 
 
+def test_source_freshness_keeps_what_a_run_did_not_fetch():
+    module = load_importer()
+    previous = {"ftc_complaints": "2026-08-01T00:00:00+00:00", "toastedspam": "2026-08-10T00:00:00+00:00"}
+    stats = {
+        "ftc_complaints": {"status": "ok", "last_success_at": "2026-09-21T12:00:00+00:00"},
+        # Skipped or failed this run: its earlier success must survive.
+        "toastedspam": {"status": "not_requested", "last_success_at": None},
+        "fcc_complaints": {"status": "error", "last_success_at": None},
+    }
+    merged = module.merge_source_freshness(previous, stats)
+    assert merged == {
+        "ftc_complaints": "2026-09-21T12:00:00+00:00",
+        "toastedspam": "2026-08-10T00:00:00+00:00",
+    }, merged
+
+    with tempfile.TemporaryDirectory() as directory:
+        path = Path(directory) / "source-freshness.json"
+        assert module.load_source_freshness(path) == {}
+        module.save_source_freshness(merged, path)
+        assert module.load_source_freshness(path) == merged
+        # The liveness gate reads the same file under the same key.
+        assert json.loads(path.read_text(encoding="utf-8"))["last_success"] == merged
+        path.write_text(json.dumps({"schema_version": 99, "last_success": merged}), encoding="utf-8")
+        assert module.load_source_freshness(path) == {}
+
+
 def test_new_complaints_require_independent_caller_corroboration():
     module = load_importer()
     with tempfile.TemporaryDirectory() as directory:
@@ -258,6 +284,7 @@ def main():
     test_fcc_retains_roles_and_spoof_signals()
     test_incremental_window_retries_and_advances_cursor()
     test_cursors_and_snapshot_are_durable_and_attributed()
+    test_source_freshness_keeps_what_a_run_did_not_fetch()
     test_new_complaints_require_independent_caller_corroboration()
     print("incremental source tests: OK")
 

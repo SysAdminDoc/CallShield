@@ -15,12 +15,19 @@
     and skips that half rather than failing, so the Gradle `check` task still
     works on a machine without them.
 
+.PARAMETER CorrectnessOnly
+    Skip the check against the live report queue. The validation workflow runs
+    on every push and must be green on a healthy tree; queue liveness has its
+    own weekly workflow, which tracks a stall as a single issue instead.
+
 .EXAMPLE
     pwsh -File scripts/run-pipeline-tests.ps1
 #>
 
 [CmdletBinding()]
-param()
+param(
+    [switch]$CorrectnessOnly
+)
 
 $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path -Parent $PSScriptRoot
@@ -78,7 +85,7 @@ if ($python) {
 # them notices when the real queue stops being consumed, which is how 267 report
 # files accumulated while every gated test stayed green. This runs the same
 # checks against the live `data/reports/`.
-if ($python) {
+if ($python -and -not $CorrectnessOnly) {
     $livenessCheck = Join-Path $PSScriptRoot 'pipeline_liveness.py'
     if (Test-Path $livenessCheck) {
         Write-Host 'Running pipeline_liveness.py (live report queue)...'
