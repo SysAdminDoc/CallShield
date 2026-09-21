@@ -596,6 +596,74 @@ def assert_resend_across_drains_counts_once(data_dir: Path) -> None:
     assert reports_for(data_dir, number) == 2
 
 
+def assert_ledger_retention(data_dir: Path) -> None:
+    """Past, future, and non-date entries in the ledger are handled.
+
+    Past entries older than the retention window are dropped on the next
+    drain. Non-date strings and future dates never expire under plain
+    string comparison, so the fix validates every day value.
+    """
+    from datetime import datetime as dt
+    number = "+12124567890"
+    seed_reports(data_dir)
+    ledger_path = data_dir / "merged_report_ids.json"
+    # merge_community_reports uses datetime.now(), not CALLSHIELD_NOW,
+    # so "today" is the real system date. The good entry must be within
+    # the 14-day retention window of today.
+    real_today = dt.now().strftime("%Y-%m-%d")
+    old_uuid = "00000000-0000-4000-8000-000000000001"
+    garbage_uuid = "00000000-0000-4000-8000-000000000002"
+    future_uuid = "00000000-0000-4000-8000-000000000003"
+    good_uuid = "00000000-0000-4000-8000-000000000004"
+    write_json(ledger_path, {
+        "retention_days": 14,
+        "ids": {
+            old_uuid: "2020-01-01",
+            garbage_uuid: "zzzz",
+            future_uuid: "2099-12-31",
+            good_uuid: real_today,
+        },
+    })
+    write_report(data_dir, "one.json", number, BUCKETS[0], NOW)
+    run_script("extract_spam_domains.py", data_dir)
+    run_script("generate_hot_list.py", data_dir)
+    run_script("merge_community_reports.py", data_dir)
+
+    ledger = json.loads(ledger_path.read_text(encoding="utf-8"))["ids"]
+    assert old_uuid not in ledger, "expired entry was kept"
+    assert garbage_uuid not in ledger, "non-date entry was kept"
+    assert future_uuid not in ledger, "future-date entry was kept"
+    assert good_uuid in ledger, "recent valid entry was dropped"
+
+
+def assert_not_spam_id_not_recorded(data_dir: Path) -> None:
+    """A not_spam vote's report id must not be remembered as merged.
+
+    The id was previously recorded before the spam/not_spam branch, so a
+    quarantined report that later re-entered the queue as spam would be
+    silently skipped as "already merged".
+    """
+    number = "+12125553333"
+    vote_id = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
+    seed_reports(data_dir)
+    # Ensure the number exists as a community row so the vote has a target.
+    write_report(data_dir, "spam.json", number, BUCKETS[0], TIMES[0], report_type="spam")
+    run_script("extract_spam_domains.py", data_dir)
+    run_script("generate_hot_list.py", data_dir)
+    run_script("merge_community_reports.py", data_dir)
+
+    # Now submit a not_spam vote with a report_id.
+    write_report(data_dir, "vote.json", number, BUCKETS[1], TIMES[1], report_type="not_spam", report_id=vote_id)
+    run_script("extract_spam_domains.py", data_dir, ["--allow-collapse"])
+    run_script("generate_hot_list.py", data_dir, ["--allow-collapse"])
+    run_script("merge_community_reports.py", data_dir)
+
+    ledger_path = data_dir / "merged_report_ids.json"
+    if ledger_path.exists():
+        ledger = json.loads(ledger_path.read_text(encoding="utf-8"))["ids"]
+        assert vote_id not in ledger, f"not_spam vote id was recorded: {ledger}"
+
+
 def assert_fixed_clock_is_for_tests_only() -> None:
     """A feed stamped by CALLSHIELD_NOW and published would be refused by every
     device as a replay, or block every later feed until its time passed. So the
@@ -653,6 +721,12 @@ def main() -> None:
 
     with tempfile.TemporaryDirectory() as tmp:
         assert_resend_across_drains_counts_once(Path(tmp) / "data")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        assert_ledger_retention(Path(tmp) / "data")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        assert_not_spam_id_not_recorded(Path(tmp) / "data")
 
 
 if __name__ == "__main__":

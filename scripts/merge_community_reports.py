@@ -70,10 +70,19 @@ def load_merged_report_ids() -> dict[str, str]:
     return {str(report_id): str(day) for report_id, day in ids.items() if validated_report_id(report_id)}
 
 
+def _is_valid_day(day: str, today: str) -> bool:
+    """True when day is a YYYY-MM-DD string not later than today."""
+    try:
+        datetime.strptime(day, "%Y-%m-%d")
+    except (ValueError, TypeError):
+        return False
+    return day <= today
+
+
 def remember_merged_report_ids(merged: dict[str, str], counted: set[str], today: str) -> None:
     """Add this run's ids and drop those past MERGED_ID_RETENTION_DAYS."""
     cutoff = (datetime.strptime(today, "%Y-%m-%d") - timedelta(days=MERGED_ID_RETENTION_DAYS)).strftime("%Y-%m-%d")
-    kept = {report_id: day for report_id, day in merged.items() if day >= cutoff}
+    kept = {report_id: day for report_id, day in merged.items() if _is_valid_day(day, today) and day >= cutoff}
     kept.update(dict.fromkeys(counted, today))
     if kept != merged or MERGED_IDS_FILE.exists():
         atomic_write_json(MERGED_IDS_FILE, {"retention_days": MERGED_ID_RETENTION_DAYS, "ids": dict(sorted(kept.items()))})
@@ -384,8 +393,6 @@ def main(argv: list[str] | None = None):
                 continue
 
             report_id = validated_report_id(report.get("report_id"))
-            if report_id:
-                counted_ids.add(report_id)
 
             spam_type = report.get("type", "unknown")
             reported_raw = report.get("reported_at")
@@ -427,6 +434,12 @@ def main(argv: list[str] | None = None):
                     "sources": [COMMUNITY_SOURCE],
                 }
                 added += 1
+
+            # Record the id only after the database was changed so a
+            # not_spam vote or unattributed report that got skipped
+            # above is not remembered as merged.
+            if report_id:
+                counted_ids.add(report_id)
 
             processed_files.append(report_file)
 
