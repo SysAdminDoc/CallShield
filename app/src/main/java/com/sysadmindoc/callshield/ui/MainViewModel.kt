@@ -1079,6 +1079,9 @@ class MainViewModel
             }
         }
 
+        suspend fun readCallerNameUnavailable(): Boolean =
+            repo.readCallerNameSupport() == com.sysadmindoc.callshield.data.CallerNameSupport.NOT_PROVIDED
+
         fun saveRegionAndCnapRules(
             regionBlockEnabled: Boolean,
             allowedRegions: Set<String>,

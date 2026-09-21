@@ -41,6 +41,12 @@ import kotlinx.coroutines.flow.Flow
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 
+enum class CallerNameSupport {
+    UNKNOWN,
+    PROVIDED,
+    NOT_PROVIDED,
+}
+
 internal fun replaceCorruptPreferences() = ReplaceFileCorruptionHandler<Preferences> { emptyPreferences() }
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(
@@ -183,6 +189,9 @@ class SpamRepository(
         val KEY_ALLOWED_REGIONS = stringSetPreferencesKey("allowed_call_regions")
         val KEY_CNAP_TRUST_PATTERNS = stringSetPreferencesKey("cnap_trust_patterns")
         val KEY_CNAP_BLOCK_PATTERNS = stringSetPreferencesKey("cnap_block_patterns")
+        internal val KEY_CNAP_SCREENED_WITH = intPreferencesKey("cnap_screened_with_name")
+        internal val KEY_CNAP_SCREENED_WITHOUT = intPreferencesKey("cnap_screened_without_name")
+        internal const val CNAP_OBSERVATION_THRESHOLD = 20
         val KEY_CATEGORY_CALL_ACTIONS = stringSetPreferencesKey("category_call_actions")
         val KEY_DB_PREFIX_EXPANSION = booleanPreferencesKey("db_prefix_expansion_enabled")
         val KEY_AGGRESSIVE_MODE = booleanPreferencesKey("aggressive_mode_enabled")
@@ -997,6 +1006,13 @@ class SpamRepository(
     internal suspend fun readFeedTrustFailedAt(): Long = settingsRepository.readFeedTrustFailedAt()
 
     internal suspend fun readLastDataSha(): String? = settingsRepository.readLastDataSha()
+
+    // ── Caller-name screening observation ────────────────────────────
+    internal suspend fun recordCallerNamePresence(hadName: Boolean) =
+        settingsRepository.recordCallerNamePresence(hadName)
+
+    suspend fun readCallerNameSupport(): CallerNameSupport =
+        settingsRepository.readCallerNameSupport()
 
     internal suspend fun readFeedTrustNoticeVersion(): Int? = settingsRepository.readFeedTrustNoticeVersion()
 

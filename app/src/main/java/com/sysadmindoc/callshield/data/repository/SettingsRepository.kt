@@ -21,6 +21,7 @@ import com.sysadmindoc.callshield.data.MessageCapabilitySource
 import com.sysadmindoc.callshield.data.MessageCapabilityStatus
 import com.sysadmindoc.callshield.data.NotificationScreeningSources
 import com.sysadmindoc.callshield.data.RegionRules
+import com.sysadmindoc.callshield.data.CallerNameSupport
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.model.ExternalBlocklistSubscription
 import com.sysadmindoc.callshield.data.model.HotDataHealth
@@ -662,6 +663,26 @@ class SettingsRepository(
         dataStore.edit { preferences ->
             preferences[SpamRepository.KEY_FEED_TRUST_NOTICE_VERSION] = version
         }
+
+    // ── Caller-name screening observation ────────────────────────────
+    suspend fun recordCallerNamePresence(hadName: Boolean) {
+        privateDataStore.edit { prefs ->
+            val key = if (hadName) SpamRepository.KEY_CNAP_SCREENED_WITH else SpamRepository.KEY_CNAP_SCREENED_WITHOUT
+            prefs[key] = (prefs[key] ?: 0) + 1
+        }
+    }
+
+    suspend fun readCallerNameSupport(): CallerNameSupport {
+        val prefs = privateDataStore.data.first()
+        val withName = prefs[SpamRepository.KEY_CNAP_SCREENED_WITH] ?: 0
+        val withoutName = prefs[SpamRepository.KEY_CNAP_SCREENED_WITHOUT] ?: 0
+        val total = withName + withoutName
+        return when {
+            total < SpamRepository.CNAP_OBSERVATION_THRESHOLD -> CallerNameSupport.UNKNOWN
+            withName > 0 -> CallerNameSupport.PROVIDED
+            else -> CallerNameSupport.NOT_PROVIDED
+        }
+    }
 
     /** Drops the day's claim on a report that was refused or given up on ([CommunityReportLedger.remove]). */
     suspend fun releaseCommunityReport(

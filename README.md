@@ -413,7 +413,7 @@ All detection layers implement a shared `IChecker` interface and run in priority
 |  4980 | **Emergency Callback** | Allow | Unknown callbacks can ring through after a local emergency call during the configured grace window |
 |  4950 | **Answered Caller** | Allow | Numbers answered repeatedly inside the configured lookback window |
 |  4900 | **Repeated Urgent** | Allow | Same number calls 2x in 5 min → allowed through |
-|  4850 | **Caller Name Trust** | Allow | Carrier-presented name matches one of your trust patterns |
+|  4850 | **Caller Name Trust** | Allow | Carrier-presented name matches one of your trust patterns (requires the device to provide a name during screening) |
 |  4700 | **Push-Alert Bridge** (A3) | Allow | Uber/DoorDash/Amazon/Gmail notification about an arriving call? Let it through |
 |  4500 | *Campaign Recorder* |. | Side-effect only; feeds burst detection below |
 |  4300 | **Region Rules** | Block | Opt-in offline blocking outside your selected US/Canadian regions |
@@ -421,7 +421,7 @@ All detection layers implement a shared `IChecker` interface and run in priority
 |  3500 | **Frequency Auto-Block** | Block | Numbers that call 3+ times in 7 days get auto-blocked |
 |  3000 | **Heuristic Engine** | Block | VoIP ranges, neighbor spoofing, rapid-fire detection, 30+ rules |
 |  2500 | **Campaign Burst** | Block | NPA-NXX prefix clustering detects coordinated spam waves |
-|  2250 | **Caller Name Rules** | Block | Carrier-presented names can match bounded, user-defined `*`/`?` patterns after every allow layer |
+|  2250 | **Caller Name Rules** | Block | Carrier-presented names can match bounded, user-defined `*`/`?` patterns after every allow layer (requires the device to provide a name during screening) |
 |  2000 | **ML Spam Scorer** | Block | 20-feature on-device gradient-boosted tree model |
 
 SMS-specific layers (append after the shared chain, in their own priority order): **SMS Keyword Rules** (5400, with schedule) → **SMS Context Trust** (4700, trusted-sender allow) → **SMS Burst Protection** (4650) → **SMS Content Analysis** (1900. 30+ regex patterns, URL shorteners, suspicious TLDs, spam domain blocklist).

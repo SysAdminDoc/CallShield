@@ -1070,11 +1070,15 @@ fun SettingsScreen(viewModel: MainViewModel) {
     }
 
     if (showRegionCnapRules) {
+        val cnapUnavailable by produceState(initialValue = false) {
+            value = viewModel.readCallerNameUnavailable()
+        }
         RegionCnapRulesSheet(
             regionBlockEnabled = regionBlockEnabled,
             allowedRegions = allowedRegions,
             cnapTrustPatterns = cnapTrustPatterns,
             cnapBlockPatterns = cnapBlockPatterns,
+            callerNameUnavailable = cnapUnavailable,
             onSave = viewModel::saveRegionAndCnapRules,
             onDismiss = { showRegionCnapRules = false },
         )

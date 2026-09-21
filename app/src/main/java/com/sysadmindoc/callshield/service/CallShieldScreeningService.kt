@@ -204,6 +204,13 @@ class CallShieldScreeningService : CallScreeningService() {
                                 lineType = carrierExtras.lineType,
                             )
 
+                        applicationScope.launch {
+                            try {
+                                repository.recordCallerNamePresence(callerName != null)
+                            } catch (_: Exception) {
+                            }
+                        }
+
                         // Full spam check — reuses the snapshot so we don't re-read DataStore.
                         val result =
                             spamChecker()(

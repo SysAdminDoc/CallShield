@@ -768,6 +768,18 @@ private suspend fun runTests(context: Context): List<TestResult> =
             ),
         )
 
+        val callerNameSupport = repo.readCallerNameSupport()
+        if (callerNameSupport == com.sysadmindoc.callshield.data.CallerNameSupport.NOT_PROVIDED) {
+            results.add(
+                TestResult(
+                    name = context.getString(R.string.protection_test_caller_name),
+                    passed = false,
+                    detail = context.getString(R.string.protection_test_caller_name_unavailable),
+                    priority = TestPriority.Informational,
+                ),
+            )
+        }
+
         val activeCampaigns =
             com.sysadmindoc.callshield.data.CampaignDetector
                 .getActiveCampaigns()
