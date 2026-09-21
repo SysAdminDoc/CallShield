@@ -240,9 +240,9 @@ object CheckerPriority {
     // trust signal, but the user's explicit blocklist / wildcard rules AND
     // the categorical prefix feed are authoritative and MUST win against it
     // (SIM-box fraud can carry A-attestation). It beats every statistical
-    // layer below, but an exact downloaded row only when that row's evidence
-    // is stale: older than a year, not trending, and without corroborated
-    // community reports (StirShakenTrustChecker.hasCurrentEvidence).
+    // layer below, but an exact downloaded row only when that row's evidence,
+    // community reports included, is older than a year and the number isn't
+    // trending (StirShakenTrustChecker.decidePure).
     // Paired with STIR_SHAKEN (block side) above.
     const val TEMPORARY_ALLOW = 5_350 // one-off false-positive recovery
     const val PREFIX_MATCH = 5_320 // downloaded prefix reputation rows (country/NPA ranges)

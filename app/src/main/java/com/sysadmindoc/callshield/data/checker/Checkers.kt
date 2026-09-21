@@ -186,7 +186,8 @@ internal class StirShakenTrustChecker(
 
     override suspend fun check(ctx: CheckContext): BlockResult? {
         if (ctx.verificationStatus != VERIFICATION_STATUS_PASSED) return null
-        return decidePure(ctx.verificationStatus, repo.findByNumberInternal(ctx.number))
+        val trending = ctx.prefs[SpamRepository.KEY_TRENDING_NUMBERS]?.contains(ctx.number) == true
+        return decidePure(ctx.verificationStatus, repo.findByNumberInternal(ctx.number), trending = trending)
     }
 
     companion object {
@@ -207,32 +208,37 @@ internal class StirShakenTrustChecker(
         /** Database evidence at most this old outranks a PASSED attestation. */
         internal const val CURRENT_EVIDENCE_DAYS = 365L
 
-        private const val COMMUNITY_SOURCE_ID = "community_reports"
-        private const val CORROBORATED_TIER = "corroborated"
         private const val HOT_LIST_SOURCE = "hot_list"
         private const val ISO_DATE_LENGTH = 10
 
         /**
          * Pure-logic helper. Allows iff the carrier signed PASSED and the
          * matching database row, if any, has no current evidence against it.
+         * [trending] says the number is on the hot list right now, which a
+         * database row can't show itself: the hot sync keeps the database
+         * row and stores no hot row of its own for that number.
          */
         internal fun decidePure(
             verificationStatus: Int?,
             row: SpamNumber? = null,
             today: LocalDate = LocalDate.now(ZoneOffset.UTC),
+            trending: Boolean = false,
         ): BlockResult? =
             when {
                 verificationStatus != VERIFICATION_STATUS_PASSED -> null
-                row != null && hasCurrentEvidence(row, today) -> null
+                row != null && (trending || hasCurrentEvidence(row, today)) -> null
                 else -> BlockResult.allow("stir_shaken_trusted")
             }
 
         /**
-         * Whether a row is recent or corroborated enough to block a caller
-         * the carrier verified: seen within [CURRENT_EVIDENCE_DAYS], trending
-         * on the hot list (which requires three distinct reporters), or
-         * backed by corroborated community reports. A row with none of those
-         * is old complaint data, where the real owners of spoofed numbers sit.
+         * Whether a row is recent enough to block a caller the carrier
+         * verified: seen within [CURRENT_EVIDENCE_DAYS], by its own date or
+         * any evidence record's, or a hot-list row of its own. Community
+         * reports count by their date like any other evidence. Their tier
+         * can't stand in for a date, because a row's report count mixes
+         * one community report into the old complaint count and so reads
+         * as corroborated forever. A row with none of those is old
+         * complaint data, where the real owners of spoofed numbers sit.
          */
         internal fun hasCurrentEvidence(
             row: SpamNumber,
@@ -241,9 +247,7 @@ internal class StirShakenTrustChecker(
             if (row.source == HOT_LIST_SOURCE) return true
             val cutoff = today.minusDays(CURRENT_EVIDENCE_DAYS)
             if (seenSince(row.lastSeen, cutoff)) return true
-            val evidence = SourceEvidenceCodec.decode(row.evidenceJson)
-            return evidence.any { seenSince(it.lastSeen, cutoff) } ||
-                evidence.any { it.sourceId == COMMUNITY_SOURCE_ID && it.confidenceTier == CORROBORATED_TIER }
+            return SourceEvidenceCodec.decode(row.evidenceJson).any { seenSince(it.lastSeen, cutoff) }
         }
 
         /** An undated or unreadable stamp is no evidence of recency. */

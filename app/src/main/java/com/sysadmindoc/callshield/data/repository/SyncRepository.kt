@@ -216,6 +216,9 @@ class SyncRepository(
             // concurrent screening lookup (HotListSyncWorker runs every 30 min)
             // could miss a hot-list number between the two statements.
             dao.replaceBySource("hot_list", mergedHotNumbers)
+            // mergeHotListNumbers keeps a database row over its hot entry, so the
+            // full list is recorded separately for the STIR/SHAKEN trust allow.
+            settingsRepository.recordTrendingNumbers(hotNumbers.mapTo(HashSet()) { it.number })
             // Hot list entries are exact number rows. Prefix/rule caches do not change here.
         }
 

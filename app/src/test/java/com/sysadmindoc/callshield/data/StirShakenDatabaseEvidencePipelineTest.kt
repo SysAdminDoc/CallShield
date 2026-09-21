@@ -62,6 +62,37 @@ class StirShakenDatabaseEvidencePipelineTest {
     }
 
     @Test
+    fun `a verified call from a stale database number that is trending now is blocked`() {
+        databaseRow("+12125550144", lastSeen = today.minusDays(900))
+        runBlocking {
+            fixture.repository.replaceHotList(
+                listOf(SpamNumber(number = "+12125550144", type = "robocall", source = "hot_list")),
+            )
+        }
+
+        val result = callFrom("+12125550144", verificationStatus = PASSED)
+
+        assertTrue(result.isSpam)
+        assertEquals("database", result.matchSource)
+    }
+
+    @Test
+    fun `once it stops trending the same stale row rings through again`() {
+        databaseRow("+12125550145", lastSeen = today.minusDays(900))
+        runBlocking {
+            fixture.repository.replaceHotList(
+                listOf(SpamNumber(number = "+12125550145", type = "robocall", source = "hot_list")),
+            )
+            fixture.repository.replaceHotList(emptyList())
+        }
+
+        val result = callFrom("+12125550145", verificationStatus = PASSED)
+
+        assertFalse(result.isSpam)
+        assertEquals("stir_shaken_trusted", result.matchSource)
+    }
+
+    @Test
     fun `an explicit user block still beats a verified call`() {
         databaseRow("+12125550143", lastSeen = today.minusDays(900), isUserBlocked = true)
 

@@ -261,6 +261,13 @@ class SpamRepository(
         internal val KEY_APP_UPDATE_CHECKSUM_URL = stringPreferencesKey("app_update_checksum_url")
         internal val KEY_APP_UPDATE_CHECKED_AT = longPreferencesKey("app_update_checked_at")
 
+        /**
+         * Every number on the last applied hot list, including the ones already
+         * in the database, which get no hot row of their own. The STIR/SHAKEN
+         * trust allow reads it from the screening snapshot.
+         */
+        internal val KEY_TRENDING_NUMBERS = stringSetPreferencesKey("hot_trending_numbers")
+
         /** Base URL of the user's feed mirror ([com.sysadmindoc.callshield.data.remote.FeedMirror]); absent means none. */
         internal val KEY_FEED_MIRROR_URL = stringPreferencesKey("feed_mirror_url")
 
@@ -1105,9 +1112,9 @@ internal fun sanitizeDatabaseNumbers(
 
 /**
  * Evidence for a row the pipeline published without an evidence list of its
- * own. A row that came from community reports says so, because the
- * STIR/SHAKEN trust allow treats corroborated community evidence as current
- * however old the row's date is.
+ * own. A row that came from community reports says so. Its tier comes from
+ * the row's total report count, which includes legacy complaint counts, so
+ * it describes the row, not independent community corroboration.
  */
 private fun synthesizedDatabaseEvidence(json: SpamNumberJson): List<SourceEvidenceJson> {
     val tier = if (json.reports >= 2) "corroborated" else "unverified"

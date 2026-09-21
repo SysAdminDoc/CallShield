@@ -221,6 +221,17 @@ class SettingsRepository(
         dataStore.data.map { prefs ->
             decodeExternalBlocklistSubscriptions(prefs[SpamRepository.KEY_EXTERNAL_BLOCKLIST_SUBSCRIPTIONS])
         }
+
+    /** Replaces the set of numbers on the last applied hot list ([SpamRepository.KEY_TRENDING_NUMBERS]). */
+    suspend fun recordTrendingNumbers(numbers: Set<String>) =
+        dataStore.edit { prefs ->
+            if (numbers.isEmpty()) {
+                prefs.remove(SpamRepository.KEY_TRENDING_NUMBERS)
+            } else {
+                prefs[SpamRepository.KEY_TRENDING_NUMBERS] = numbers
+            }
+        }
+
     val feedMirrorUrl: Flow<String?> = dataStore.data.map { it[SpamRepository.KEY_FEED_MIRROR_URL] }.distinctUntilChanged()
 
     /**

@@ -125,11 +125,19 @@ class StirShakenTrustCheckerTest {
         assertNull(decidePure(VERIFICATION_STATUS_PASSED, row("2016-08-17", evidence = listOf(recent)), today))
     }
 
-    @Test fun `corroborated community reports keep an old row current and a single report does not`() {
-        val corroborated = evidence("community_reports", lastSeen = "2024-01-01", tier = "corroborated")
-        val single = evidence("community_reports", lastSeen = "2024-01-01")
-        assertNull(decidePure(VERIFICATION_STATUS_PASSED, row("2024-01-01", evidence = listOf(corroborated)), today))
-        assertNotNull(decidePure(VERIFICATION_STATUS_PASSED, row("2024-01-01", evidence = listOf(single)), today))
+    @Test fun `community reports count by their date, whatever their tier says`() {
+        // The tier comes from the row's total report count, legacy complaints
+        // included, so one community report on a 2015 FCC row reads as
+        // corroborated. It must not keep that row current forever.
+        val oldCorroborated = evidence("community_reports", lastSeen = "2024-01-01", tier = "corroborated")
+        val recentSingle = evidence("community_reports", lastSeen = "2026-06-01")
+        assertNotNull(decidePure(VERIFICATION_STATUS_PASSED, row("2015-03-01", evidence = listOf(oldCorroborated)), today))
+        assertNull(decidePure(VERIFICATION_STATUS_PASSED, row("2015-03-01", evidence = listOf(recentSingle)), today))
+    }
+
+    @Test fun `a number trending right now keeps its stale database row current`() {
+        assertNull(decidePure(VERIFICATION_STATUS_PASSED, row("2016-01-01"), today, trending = true))
+        assertNotNull(decidePure(VERIFICATION_STATUS_PASSED, row("2016-01-01"), today, trending = false))
     }
 
     @Test fun `a trending hot-list row counts as current without a date`() {
