@@ -81,6 +81,15 @@ All notable changes to CallShield will be documented in this file.
   remove can be put back with Undo right afterwards, numbers included, without
   downloading it again.
 
+### Interface
+
+- Setup now says what to do when Android won't let a permission through. Apps
+  installed outside an app store run into Android's restricted settings. The
+  grant screen refuses notification access from Android 13, and the overlay
+  and SMS permissions from Android 15, until you choose Allow restricted
+  settings in App info. A step you were sent to grant that comes back still
+  off now says so, with a button that opens App info (issue #21).
+
 ### Live caller lookup
 
 - Three of the four lookup services are gone, so the app no longer asks them.

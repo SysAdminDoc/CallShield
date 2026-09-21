@@ -73,7 +73,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -252,6 +254,15 @@ fun OnboardingScreen(onComplete: () -> Unit) {
             )
         },
         onComplete = onComplete,
+        onOpenAppInfo = {
+            context.startActivitySafely(
+                Intent(
+                    Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                    Uri.fromParts("package", context.packageName, null),
+                ),
+                onFailure = ::reportLaunchFailure,
+            )
+        },
     )
 }
 
@@ -266,6 +277,7 @@ internal fun OnboardingScreenContent(
     onComplete: () -> Unit,
     runtimePermissionsBlocked: Boolean = false,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
+    onOpenAppInfo: () -> Unit = {},
 ) {
     var currentPage by rememberSaveable { mutableIntStateOf(0) }
     var awaitingStep by rememberSaveable { mutableStateOf<OnboardingSetupStep?>(null) }
@@ -380,6 +392,9 @@ internal fun OnboardingScreenContent(
             )
         }
 
+        if (restrictedSettingsHintApplies(currentStep, awaitingStep, setupState, Build.VERSION.SDK_INT)) {
+            RestrictedSettingsHint(onOpenAppInfo = onOpenAppInfo)
+        }
         SnackbarHost(snackbarHostState)
         Spacer(Modifier.height(8.dp))
         if (currentPage > 0) {
@@ -426,6 +441,27 @@ internal fun OnboardingScreenContent(
                     .fillMaxWidth()
                     .testTag(primaryTag(currentStep)),
         )
+    }
+}
+
+/** Points a user whose grant didn't stick at Allow restricted settings in App info. */
+@Composable
+private fun RestrictedSettingsHint(onOpenAppInfo: () -> Unit) {
+    Column(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(vertical = 6.dp)
+                .semantics { liveRegion = LiveRegionMode.Polite },
+    ) {
+        Text(
+            stringResource(R.string.onboarding_restricted_settings_hint),
+            style = MaterialTheme.typography.bodySmall,
+            color = CatPeach,
+        )
+        TextButton(onClick = onOpenAppInfo) {
+            Text(stringResource(R.string.onboarding_open_app_info))
+        }
     }
 }
 

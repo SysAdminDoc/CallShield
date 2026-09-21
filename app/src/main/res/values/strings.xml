@@ -1129,6 +1129,8 @@
     <string name="onboarding_overlay_instruction">Turn on Allow display over other apps, then press the system Back button to return to CallShield.</string>
     <string name="onboarding_notification_access_title">Notification access</string>
     <string name="onboarding_notification_access_body">This lets on-device protection recognize suspicious RCS and supported messaging alerts.</string>
+    <string name="onboarding_restricted_settings_hint">Android can block this for apps installed from outside an app store. If it said the setting is restricted, open App info, tap the three-dot menu, choose Allow restricted settings, then try again.</string>
+    <string name="onboarding_open_app_info">Open App info</string>
     <string name="onboarding_notification_access_instruction">Find CallShield, turn access on, confirm the Android warning, then press Back to return here.</string>
     <string name="onboarding_what_happens_next">What to do</string>
     <string name="onboarding_android_verified">Verified by Android</string>
