@@ -1,7 +1,10 @@
 package com.sysadmindoc.callshield.data.remote
 
 import okhttp3.CertificatePinner
+import okhttp3.Dns
 import okhttp3.OkHttpClient
+import java.net.InetAddress
+import java.net.UnknownHostException
 import java.util.concurrent.TimeUnit
 import javax.net.ssl.SSLPeerUnverifiedException
 
@@ -79,6 +82,24 @@ object HttpClient {
                 }
             }.build()
 
+    /**
+     * Set by the unit-test task in app/build.gradle.kts. Under it, [shared] and
+     * every client derived from it resolve only loopback hosts, so a unit test
+     * can't reach a live server. One did: a receiver test posted a real report
+     * to the community Worker on every run, and the Worker commits each report
+     * it accepts to the public repo. An interceptor a test installs still
+     * answers first, because DNS only runs for a request that is leaving.
+     */
+    internal const val UNIT_TEST_PROPERTY = "callshield.unitTest"
+
+    private val loopbackOnlyDns =
+        object : Dns {
+            override fun lookup(hostname: String): List<InetAddress> {
+                if (hostname == "localhost" || hostname == "127.0.0.1" || hostname == "::1") return Dns.SYSTEM.lookup(hostname)
+                throw UnknownHostException("Unit tests must not reach $hostname")
+            }
+        }
+
     val shared: OkHttpClient =
         OkHttpClient
             .Builder()
@@ -86,6 +107,7 @@ object HttpClient {
             .connectTimeout(15, TimeUnit.SECONDS)
             .readTimeout(15, TimeUnit.SECONDS)
             .followRedirects(true)
+            .apply { if (System.getProperty(UNIT_TEST_PROPERTY) == "true") dns(loopbackOnlyDns) }
             .build()
 
     /**

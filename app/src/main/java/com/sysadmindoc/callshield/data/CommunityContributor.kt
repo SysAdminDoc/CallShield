@@ -25,7 +25,7 @@ import java.util.concurrent.TimeUnit
  * sender) is delivered once the network is back instead of being dropped.
  */
 object CommunityContributor {
-    private const val WORKER_URL = "https://callshield-reports.snafumatthew.workers.dev"
+    internal const val WORKER_URL = "https://callshield-reports.snafumatthew.workers.dev"
     private const val MAX_SMS_REPORT_DOMAINS = 10
     private const val MAX_SMS_URL_INDICATORS = 10
     private const val MIN_SMS_REPORT_DOMAIN_LENGTH = 5

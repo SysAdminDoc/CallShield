@@ -145,6 +145,9 @@ android {
                     "callshield.benchHeadroom",
                     (project.findProperty("benchHeadroom") as String?) ?: "1.0",
                 )
+                // HttpClient.shared resolves only loopback hosts under this, so
+                // no unit test can post to the live report Worker again.
+                it.systemProperty("callshield.unitTest", "true")
             }
         }
     }

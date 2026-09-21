@@ -166,6 +166,10 @@ All notable changes to CallShield will be documented in this file.
   the Worker says it stored the report. The deployed Worker writes that marker
   before storing, so its bare answer can mean the report was lost, and the app
   now tries again later instead of calling it sent.
+- The app's own unit tests no longer send reports. One of them had posted two
+  fictional numbers, +1 555-123-4567 and +1 555-987-6543, to the report service
+  on every run since July, and each landed in this repository's report queue.
+  The merge always rejected both as fictional, so the database never took them.
 
 The rest of this section takes effect when the report Worker is next deployed.
 
