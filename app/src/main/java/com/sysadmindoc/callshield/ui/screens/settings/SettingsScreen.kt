@@ -40,9 +40,12 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -158,6 +161,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
     val externalBlocklists by viewModel.externalBlocklistSubscriptions.collectAsStateWithLifecycle()
     val externalBlocklistPreview by viewModel.externalBlocklistPreview.collectAsStateWithLifecycle()
     val externalBlocklistResult by viewModel.externalBlocklistResult.collectAsStateWithLifecycle()
+    val externalBlocklistUndo by viewModel.externalBlocklistUndo.collectAsStateWithLifecycle()
     var showPushAlertSources by rememberSaveable { mutableStateOf(false) }
     var showNotificationScreeningSources by rememberSaveable { mutableStateOf(false) }
     var showRegionCnapRules by rememberSaveable { mutableStateOf(false) }
@@ -1007,6 +1011,11 @@ fun SettingsScreen(viewModel: MainViewModel) {
                 hapticTick(context)
                 viewModel.removeExternalBlocklist(subscription)
             },
+            canUndo = externalBlocklistUndo != null,
+            onUndo = {
+                hapticTick(context)
+                viewModel.undoRemoveExternalBlocklist()
+            },
             onClearResult = viewModel::clearExternalBlocklistResult,
         )
 
@@ -1623,6 +1632,8 @@ private fun ExternalBlocklistSettings(
     onApplyPreview: (ExternalBlocklistPreview) -> Unit,
     onToggle: (ExternalBlocklistSubscription, Boolean) -> Unit,
     onRemove: (ExternalBlocklistSubscription) -> Unit,
+    canUndo: Boolean,
+    onUndo: () -> Unit,
     onClearResult: () -> Unit,
 ) {
     SettingsCard(stringResource(R.string.settings_external_blocklists)) {
@@ -1708,8 +1719,13 @@ private fun ExternalBlocklistSettings(
                         } else {
                             CatPeach
                         },
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f).semantics { liveRegion = LiveRegionMode.Polite },
                 )
+                if (canUndo) {
+                    TextButton(onClick = onUndo) {
+                        Text(stringResource(R.string.settings_external_blocklist_undo), color = CatBlue)
+                    }
+                }
                 IconButton(onClick = onClearResult) {
                     Icon(Icons.Default.Close, contentDescription = stringResource(R.string.cd_close), tint = CatOverlay)
                 }
@@ -1882,14 +1898,28 @@ private fun ExternalBlocklistPreviewPanel(
 }
 
 @Composable
-@Suppress("FunctionNaming", "ktlint:standard:function-naming")
-private fun ExternalBlocklistSubscriptionRow(
+@Suppress("FunctionNaming", "LongMethod", "ktlint:standard:function-naming")
+internal fun ExternalBlocklistSubscriptionRow(
     subscription: ExternalBlocklistSubscription,
     onToggle: (Boolean) -> Unit,
     onRemove: () -> Unit,
 ) {
+    val removeAction = stringResource(R.string.settings_external_blocklist_remove_action, subscription.label)
+    // One TalkBack item per list: the row toggles it, and removing it is an action on the row.
     Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .toggleable(value = subscription.enabled, role = Role.Switch, onValueChange = onToggle)
+                .semantics {
+                    customActions =
+                        listOf(
+                            CustomAccessibilityAction(removeAction) {
+                                onRemove()
+                                true
+                            },
+                        )
+                }.padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
@@ -1901,7 +1931,7 @@ private fun ExternalBlocklistSubscriptionRow(
         )
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
             Text(subscription.label, style = MaterialTheme.typography.bodyMedium, color = CatText)
-            Text(subscription.url, style = MaterialTheme.typography.labelSmall, color = CatSubtext)
+            Text(subscription.host, style = MaterialTheme.typography.labelSmall, color = CatSubtext)
             Text(
                 stringResource(
                     R.string.settings_external_blocklist_subscription_stats,
@@ -1928,18 +1958,17 @@ private fun ExternalBlocklistSubscriptionRow(
         }
         Switch(
             checked = subscription.enabled,
-            onCheckedChange = onToggle,
-            // Associate the switch with its feed — enabling or disabling a whole
-            // blocklist subscription should never be announced without a target.
-            modifier = Modifier.semantics { contentDescription = subscription.label },
+            // The row handles the toggle, so TalkBack announces the list's name with it.
+            onCheckedChange = null,
             colors =
                 SwitchDefaults.colors(
                     checkedTrackColor = CatGreen,
                     checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
                 ),
         )
-        IconButton(onClick = onRemove) {
-            Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.cd_delete), tint = CatPeach)
+        // Hidden from TalkBack, which reaches remove through the row's custom action.
+        IconButton(onClick = onRemove, modifier = Modifier.clearAndSetSemantics { }) {
+            Icon(Icons.Default.Delete, contentDescription = null, tint = CatPeach)
         }
     }
 }

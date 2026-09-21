@@ -504,6 +504,11 @@ class MainViewModel
         private val _externalBlocklistResult = MutableStateFlow<StatusMessage?>(null)
         val externalBlocklistResult: StateFlow<StatusMessage?> = _externalBlocklistResult
 
+        private val _externalBlocklistUndo = MutableStateFlow<ExternalBlocklistSubscription?>(null)
+
+        /** The list just removed, while the status line still offers to put it back. */
+        val externalBlocklistUndo: StateFlow<ExternalBlocklistSubscription?> = _externalBlocklistUndo
+
         private val _feedMirrorResult = MutableStateFlow<StatusMessage?>(null)
         val feedMirrorResult: StateFlow<StatusMessage?> = _feedMirrorResult
 
@@ -522,6 +527,7 @@ class MainViewModel
         fun clearExternalBlocklistResult() {
             _externalBlocklistPreview.value = null
             _externalBlocklistResult.value = null
+            _externalBlocklistUndo.value = null
         }
 
         fun clearContributeResult() {
@@ -585,6 +591,7 @@ class MainViewModel
             url: String,
             label: String = "",
         ) {
+            _externalBlocklistUndo.value = null
             viewModelScope.launch {
                 val result = repo.previewExternalBlocklistSubscription(url, label)
                 _externalBlocklistPreview.value = result.preview
@@ -596,6 +603,7 @@ class MainViewModel
             url: String,
             label: String = "",
         ) {
+            _externalBlocklistUndo.value = null
             viewModelScope.launch {
                 val result = repo.applyExternalBlocklistSubscription(url, label)
                 _externalBlocklistPreview.value = if (result.success) null else result.preview
@@ -607,6 +615,7 @@ class MainViewModel
             subscription: ExternalBlocklistSubscription,
             enabled: Boolean,
         ) {
+            _externalBlocklistUndo.value = null
             viewModelScope.launch {
                 val result = repo.setExternalBlocklistSubscriptionEnabled(subscription.id, enabled)
                 _externalBlocklistResult.value = StatusMessage(result.message, result.success)
@@ -616,6 +625,16 @@ class MainViewModel
         fun removeExternalBlocklist(subscription: ExternalBlocklistSubscription) {
             viewModelScope.launch {
                 val result = repo.removeExternalBlocklistSubscription(subscription.id)
+                _externalBlocklistUndo.value = subscription.takeIf { result.success }
+                _externalBlocklistResult.value = StatusMessage(result.message, result.success)
+            }
+        }
+
+        fun undoRemoveExternalBlocklist() {
+            val removed = _externalBlocklistUndo.value ?: return
+            _externalBlocklistUndo.value = null
+            viewModelScope.launch {
+                val result = repo.undoRemoveExternalBlocklistSubscription(removed.id)
                 _externalBlocklistResult.value = StatusMessage(result.message, result.success)
             }
         }

@@ -657,6 +657,8 @@ class SpamRepository(
 
     suspend fun removeExternalBlocklistSubscription(id: String) = syncRepository.removeExternalBlocklistSubscription(id)
 
+    suspend fun undoRemoveExternalBlocklistSubscription(id: String) = syncRepository.undoRemoveExternalBlocklistSubscription(id)
+
     suspend fun refreshDueExternalBlocklists(now: Long = System.currentTimeMillis()): List<ExternalBlocklistRefreshOutcome> = syncRepository.refreshDueExternalBlocklists(now)
 
     /** False when this number and vote type was already reported in the last day. */

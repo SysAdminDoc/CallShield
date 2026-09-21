@@ -53,6 +53,9 @@ class SyncRepository(
 ) {
     private val syncMutex = Mutex()
 
+    /** What the last list removal took out, held so the user can undo it. Guarded by [syncMutex]. */
+    private var lastRemovedExternalBlocklist: RemovedExternalBlocklist? = null
+
     /**
      * @param force When true, skips the SHA check and always downloads.
      *              Used for manual sync to guarantee fresh data.
@@ -320,14 +323,67 @@ class SyncRepository(
                                 message = context.getString(R.string.external_blocklist_not_found),
                             )
                     val before = dao.getCountBySource(subscription.source)
+                    // deleteBySource keeps user-blocked rows, so these are all an undo puts back.
+                    val removedRows = dao.getNumbersBySource(subscription.source).filterNot { it.isUserBlocked }
                     dao.deleteBySource(subscription.source)
                     settingsRepository.saveExternalBlocklistSubscriptions(subscriptions.filterNot { it.id == id })
+                    lastRemovedExternalBlocklist =
+                        RemovedExternalBlocklist(subscription, subscriptions.indexOfFirst { it.id == id }, removedRows)
                     invalidateAllCaches()
                     CallShieldWidget.refreshAll(context)
                     ExternalBlocklistImportResult(
                         success = true,
                         message = context.getString(R.string.external_blocklist_removed, subscription.label, before),
                         subscription = subscription.copy(enabled = false, lastRemoved = before),
+                    )
+                }
+            }
+        }
+
+    /**
+     * Puts back the list [removeExternalBlocklistSubscription] last took out,
+     * in its old place and with its numbers, without downloading it again. A
+     * number another source has claimed since keeps that row. Only the latest
+     * removal can be undone, once, and not after the same list was added again.
+     */
+    suspend fun undoRemoveExternalBlocklistSubscription(id: String): ExternalBlocklistImportResult =
+        withContext(Dispatchers.IO) {
+            syncMutex.withLock {
+                runExternalBlocklistOperation {
+                    val removed = lastRemovedExternalBlocklist?.takeIf { it.subscription.id == id }
+                    val subscriptions = settingsRepository.readExternalBlocklistSubscriptions()
+                    if (removed == null || subscriptions.any { it.id == id }) {
+                        return@runExternalBlocklistOperation ExternalBlocklistImportResult(
+                            success = false,
+                            message = context.getString(R.string.external_blocklist_undo_unavailable),
+                        )
+                    }
+                    lastRemovedExternalBlocklist = null
+                    val claimed =
+                        removed.rows
+                            .map { it.number }
+                            .chunked(EXTERNAL_BLOCKLIST_LOOKUP_CHUNK_SIZE)
+                            .flatMap { dao.getNumbersByNumbers(it) }
+                            .mapTo(HashSet()) { it.number }
+                    val restored = removed.rows.filterNot { it.number in claimed }.map { it.copy(id = 0) }
+                    // The list goes back before its rows: a crash in between leaves a list
+                    // that refills on its next refresh, never rows that no list owns.
+                    settingsRepository.saveExternalBlocklistSubscriptions(
+                        subscriptions.toMutableList().apply { add(removed.position.coerceIn(0, size), removed.subscription) },
+                    )
+                    dao.insertNumbers(restored)
+                    invalidateAllCaches()
+                    CallShieldWidget.refreshAll(context)
+                    ExternalBlocklistImportResult(
+                        success = true,
+                        message =
+                            context.resources.getQuantityString(
+                                R.plurals.external_blocklist_restored,
+                                restored.size,
+                                removed.subscription.label,
+                                restored.size,
+                            ),
+                        subscription = removed.subscription,
                     )
                 }
             }
@@ -884,6 +940,12 @@ class SyncRepository(
         val permanentFailureCodes = listOf("HTTP 400", "HTTP 401", "HTTP 403", "HTTP 404")
         return permanentFailureCodes.none { code -> message.contains(code) }
     }
+
+    private class RemovedExternalBlocklist(
+        val subscription: ExternalBlocklistSubscription,
+        val position: Int,
+        val rows: List<SpamNumber>,
+    )
 
     private data class ExternalCandidateSet(
         val accepted: List<SpamNumber>,

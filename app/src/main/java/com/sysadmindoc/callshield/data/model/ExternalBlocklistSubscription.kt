@@ -1,5 +1,7 @@
 package com.sysadmindoc.callshield.data.model
 
+import java.net.URI
+
 data class ExternalBlocklistSubscription(
     val id: String,
     val label: String,
@@ -16,6 +18,9 @@ data class ExternalBlocklistSubscription(
     val lastAttemptAt: Long = 0L,
 ) {
     val source: String get() = sourceFor(id)
+
+    /** Only the host the list comes from, which is all a settings row has room for. */
+    val host: String get() = runCatching { URI(url).host }.getOrNull() ?: url
 
     companion object {
         const val SOURCE_PREFIX = "subscription:"
