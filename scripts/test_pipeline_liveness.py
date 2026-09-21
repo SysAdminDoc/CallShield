@@ -180,8 +180,72 @@ def scheduled_checks() -> None:
     assert sorted(p.split(" ")[0] for p in problems) == ["ftc_complaints", "toastedspam"], problems
     # Nor does a missing or unreadable record file hide it.
     assert len(evaluate_source_freshness(manifest, None, BASE)) == 2
-    # An unreadable manifest has nothing to judge rather than raising.
-    assert evaluate_source_freshness(None, fresh, BASE) == []
+    # An unreadable manifest is a failure: passing would switch the check off.
+    problems = evaluate_source_freshness(None, fresh, BASE)
+    assert len(problems) == 1 and "source-manifest.json is missing or unreadable" in problems[0], problems
+
+    # An opt-in source isn't required until it has been imported, and once it
+    # has, the message names the flag that refreshes it.
+    opt_in = {"sources": [{"id": "saracroche_prefixes", "cadence": "daily", "stale_after_days": 14, "import_flag": "--include-saracroche"}]}
+    assert evaluate_source_freshness(opt_in, {"last_success": {}}, BASE) == []
+    problems = evaluate_source_freshness(opt_in, {"last_success": {"saracroche_prefixes": "2026-08-01T00:00:00+00:00"}}, BASE)
+    assert len(problems) == 1 and problems[0].endswith("import_all_sources.py --include-saracroche"), problems
+
+    # A capitalised cadence is still a timetable, and an unusable limit is reported, not skipped.
+    odd = {"sources": [{"id": "a", "cadence": "Daily", "stale_after_days": 14}, {"id": "b", "cadence": "weekly", "stale_after_days": "30"}]}
+    problems = evaluate_source_freshness(odd, {"last_success": {}}, BASE)
+    assert [p.split(" ")[0] for p in problems] == ["a", "b"], problems
+    assert "stale_after_days" in problems[1], problems
+
+    # The real manifest after the documented default import (no opt-in flags)
+    # passes. It used to demand the two opt-in sources and could never go green.
+    real_manifest = json.loads((Path(__file__).resolve().parent.parent / "data" / "source-manifest.json").read_text(encoding="utf-8"))
+    default_import = {"last_success": {"ftc_complaints": BASE.isoformat(), "fcc_complaints": BASE.isoformat()}}
+    assert evaluate_source_freshness(real_manifest, default_import, BASE) == []
+
+    check_scheduled_switch()
+
+
+def check_scheduled_switch() -> None:
+    """Only --scheduled measures the queue against the clock and checks upstream freshness.
+
+    verifyPipelineTests runs main() without the flag inside `check`, where a
+    clock would fail every later build of an old tag.
+    """
+    import contextlib
+    import io
+
+    import pipeline_liveness as liveness
+
+    saved = (liveness.REPORTS_DIR, liveness.DB_FILE, liveness.MANIFEST_FILE, liveness.FRESHNESS_FILE)
+    with tempfile.TemporaryDirectory() as directory:
+        data = Path(directory)
+        (data / "reports").mkdir()
+        month_ago = datetime.now(timezone.utc) - timedelta(days=30)
+        queued = {"number": "+15125550100", "type": "spam", "reported_at": month_ago.isoformat(), "reporter_bucket": BUCKET}
+        (data / "reports" / "15125550100_1.json").write_text(json.dumps(queued), encoding="utf-8")
+        (data / "spam_numbers.json").write_text(json.dumps({"updated": month_ago.date().isoformat()}), encoding="utf-8")
+        (data / "source-manifest.json").write_text(
+            json.dumps({"sources": [{"id": "ftc_complaints", "cadence": "daily", "stale_after_days": 14}]}),
+            encoding="utf-8",
+        )
+        liveness.REPORTS_DIR = data / "reports"
+        liveness.DB_FILE = data / "spam_numbers.json"
+        liveness.MANIFEST_FILE = data / "source-manifest.json"
+        liveness.FRESHNESS_FILE = data / "source-freshness.json"
+        try:
+            quiet = io.StringIO()
+            with contextlib.redirect_stdout(quiet), contextlib.redirect_stderr(quiet):
+                assert liveness.main([]) == 0, quiet.getvalue()
+
+            scheduled = io.StringIO()
+            with contextlib.redirect_stdout(scheduled), contextlib.redirect_stderr(scheduled):
+                assert liveness.main(["--scheduled"]) == 1
+            report = scheduled.getvalue()
+            assert "has waited 30 days" in report, report
+            assert "ftc_complaints (daily source) has no successful import" in report, report
+        finally:
+            liveness.REPORTS_DIR, liveness.DB_FILE, liveness.MANIFEST_FILE, liveness.FRESHNESS_FILE = saved
 
 
 if __name__ == "__main__":

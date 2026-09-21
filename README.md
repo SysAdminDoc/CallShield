@@ -777,11 +777,12 @@ RELEASE_KEY_PASSWORD=...
 ```
 
 Two GitHub workflows run without building the app. **Validation** runs the Worker and
-pipeline suites on every push (`run-pipeline-tests.ps1 -CorrectnessOnly`), and the runner
-fails if any suite changes a file under `data/`. **Pipeline
+pipeline suites on every push except report-only ones (`run-pipeline-tests.ps1 -CorrectnessOnly`),
+and the runner fails if any suite changes a file under `data/`. **Pipeline
 liveness** runs weekly: it fails when community reports sit unconsumed for over a week
-or an upstream source misses its `stale_after_days`, and it keeps one issue labelled
-`pipeline-stalled` open until the next passing run.
+or a daily or weekly upstream source misses its `stale_after_days`, and it keeps one issue
+labelled `pipeline-stalled` open until the next passing run. A source that only imports with
+an opt-in flag, such as `--include-saracroche`, is held to its limit once it has been imported.
 
 Run tests, lint, release metadata checks, and artifact builds locally before publishing.
 

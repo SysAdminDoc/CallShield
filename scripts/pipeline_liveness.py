@@ -165,28 +165,45 @@ def evaluate_source_freshness(manifest: object, freshness: object, now: datetime
     `freshness` is `data/source-freshness.json`, which import_all_sources.py
     updates with each source's last successful import. A source with no record
     has never been imported since the record began, which is stale too.
+
+    A source that only imports with an opt-in flag (its manifest `import_flag`)
+    is held to its limit once it has been imported at all. A default import
+    never fetches it, so requiring a record would keep the gate red forever.
+
+    A manifest this can't read is a failure rather than a pass: a broken
+    manifest would otherwise switch the whole check off.
     """
     sources = manifest.get("sources") if isinstance(manifest, dict) else None
+    if not isinstance(sources, list):
+        return [f"{MANIFEST_FILE.name} is missing or unreadable, so upstream freshness can't be checked"]
     recorded = freshness.get("last_success") if isinstance(freshness, dict) else None
     last_success = recorded if isinstance(recorded, dict) else {}
     problems: list[str] = []
-    for source in sources if isinstance(sources, list) else []:
-        if not isinstance(source, dict) or source.get("cadence") not in REGULAR_CADENCES:
+    for source in sources:
+        if not isinstance(source, dict):
+            problems.append(f"{MANIFEST_FILE.name} has a source entry that isn't an object")
+            continue
+        cadence = str(source.get("cadence", "")).strip().lower()
+        if cadence not in REGULAR_CADENCES:
             continue
         source_id = source.get("id")
         limit = source.get("stale_after_days")
-        if not isinstance(source_id, str) or not isinstance(limit, (int, float)):
+        if not isinstance(source_id, str) or isinstance(limit, bool) or not isinstance(limit, (int, float)):
+            problems.append(f"{source_id or 'a source'} has no usable stale_after_days in {MANIFEST_FILE.name}")
             continue
+        flag = source.get("import_flag")
+        refresh = f"run scripts/import_all_sources.py {flag}" if flag else "run scripts/import_all_sources.py"
         stamp = _parse_instant(last_success.get(source_id))
         if stamp is None:
-            problems.append(
-                f"{source_id} ({source['cadence']} source) has no successful import recorded in "
-                f"{FRESHNESS_FILE.name} - run scripts/import_all_sources.py"
-            )
+            if not flag:
+                problems.append(
+                    f"{source_id} ({cadence} source) has no successful import recorded in "
+                    f"{FRESHNESS_FILE.name} - {refresh}"
+                )
         elif now - stamp > timedelta(days=limit):
             problems.append(
                 f"{source_id} was last imported {stamp.date().isoformat()}, {(now - stamp).days} days ago, "
-                f"past its {limit:g}-day limit"
+                f"past its {limit:g}-day limit - {refresh}"
             )
     return problems
 
