@@ -6,6 +6,18 @@ All notable changes to CallShield will be documented in this file.
 
 ### Protection
 
+- **Protection data downloads work again.** GitHub moved its certificates to a
+  new set of Let's Encrypt roots around 2026-08-02. The certificate pins in
+  v1.7.36 through v1.7.38 matched only the old ones, so every download of the
+  spam database, trending feeds and ML model has been refused since then. Your
+  phone kept protecting you with the database built into the app, but nothing
+  new arrived. Pins are now set on the Let's Encrypt roots themselves, plus a
+  second CA as a backup, and every release is checked against the live
+  certificate chain before it ships.
+- If this ever happens again, Protection Test says so directly and tells you to
+  update the app, and you get one notification per app version pointing to the
+  latest release. A certificate failure used to look like a successful sync.
+
 - Protection Test now tells a stalled publisher apart from a feed your phone
   couldn't reach. It reads the date each trending feed says it was generated.
   A feed that arrives but hasn't been regenerated in over a week reads as

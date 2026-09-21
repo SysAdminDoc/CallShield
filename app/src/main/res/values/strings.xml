@@ -947,6 +947,9 @@
     <string name="protection_test_fix_database">Run a database sync from the dashboard or More screen so local protection data is available.</string>
     <string name="protection_test_fix_engine">Review detection engine toggles in Settings and rerun this check.</string>
     <string name="protection_test_fix_sync">Wait for the next refresh or run a manual sync if this remains empty.</string>
+    <string name="protection_test_fix_update_app">Install the latest CallShield release. A sync can\'t fix this one.</string>
+    <string name="protection_test_feed_trust">Protection data server</string>
+    <string name="protection_test_feed_trust_fail">This version can\'t verify the server\'s certificate, so no new protection data is arriving</string>
     <string name="protection_test_fix_overlay">Allow overlay access if you want floating caller ID alerts on incoming calls.</string>
     <string name="protection_test_fix_notifications">Enable notification or listener access if you want alerts and RCS filtering.</string>
     <string name="protection_test_db_empty">No spam data loaded yet</string>
@@ -1377,6 +1380,9 @@
     <string name="notif_role_lost_title">Call screening is off</string>
     <string name="notif_role_lost_text">Android is no longer sending incoming calls to CallShield. Restore the call screener to resume protection.</string>
     <string name="notif_role_lost_action">Restore protection</string>
+    <string name="notif_feed_trust_title">CallShield can\'t download new protection data</string>
+    <string name="notif_feed_trust_text">This version can\'t verify the data server\'s certificate. Install the latest release to start getting updates again.</string>
+    <string name="notif_feed_trust_action">Get the latest release</string>
     <string name="notif_sync_title">Refreshing protection</string>
     <string name="notif_sync_text">Updating spam numbers and detection data…</string>
     <string name="notif_repeated_urgent_title">Repeated caller allowed</string>

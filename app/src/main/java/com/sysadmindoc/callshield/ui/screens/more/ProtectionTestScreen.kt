@@ -712,6 +712,19 @@ private suspend fun runTests(context: Context): List<TestResult> =
         // not missing protection.
         val hotRangesCleared = HotDataSync.HOT_RANGES_FEED in hotDataHealth.clearedFeeds
         val hotDataHealthy = hotDataState == HotFeedFreshness.State.CURRENT && (hotRangesLoaded || hotRangesCleared)
+        // Downloads failing certificate verification are not a network hiccup:
+        // this build's pins no longer match, and only an app update fixes that.
+        val feedTrustFailed = repo.readFeedTrustFailedAt() > 0L
+        if (feedTrustFailed) {
+            results.add(
+                TestResult(
+                    name = context.getString(R.string.protection_test_feed_trust),
+                    passed = false,
+                    detail = context.getString(R.string.protection_test_feed_trust_fail),
+                    recoveryHint = context.getString(R.string.protection_test_fix_update_app),
+                ),
+            )
+        }
         results.add(
             TestResult(
                 name = context.getString(R.string.protection_test_hot_list_data),
@@ -742,6 +755,9 @@ private suspend fun runTests(context: Context): List<TestResult> =
                         // A stalled publisher is not something the device can
                         // sync its way out of, so do not tell the user to retry.
                         hotDataState == HotFeedFreshness.State.STALLED -> null
+
+                        // Retrying a sync cannot get past a pin mismatch.
+                        feedTrustFailed -> context.getString(R.string.protection_test_fix_update_app)
 
                         else -> context.getString(R.string.protection_test_fix_sync)
                     },

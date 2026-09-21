@@ -568,6 +568,32 @@ class SettingsRepository(
         preferences[SpamRepository.KEY_HOT_DATA_DIGESTS] = shardHashesAdapter.toJson(digests.toSortedMap())
     }
 
+    /**
+     * Records whether the last feed download could verify the server. A pin
+     * failure is stored with its time; any later verified download clears it.
+     */
+    suspend fun recordFeedTrust(
+        failed: Boolean,
+        now: Long = System.currentTimeMillis(),
+    ) = dataStore.edit { preferences ->
+        if (failed) {
+            preferences[SpamRepository.KEY_FEED_TRUST_FAILED_AT] = now
+        } else {
+            preferences.remove(SpamRepository.KEY_FEED_TRUST_FAILED_AT)
+        }
+    }
+
+    /** When a feed download last failed certificate verification, or 0 when the last one succeeded. */
+    suspend fun readFeedTrustFailedAt(): Long = dataStore.data.first()[SpamRepository.KEY_FEED_TRUST_FAILED_AT] ?: 0L
+
+    /** The app version that last showed the update notice for a pin failure. */
+    suspend fun readFeedTrustNoticeVersion(): Int? = dataStore.data.first()[SpamRepository.KEY_FEED_TRUST_NOTICE_VERSION]
+
+    suspend fun recordFeedTrustNoticeVersion(version: Int) =
+        dataStore.edit { preferences ->
+            preferences[SpamRepository.KEY_FEED_TRUST_NOTICE_VERSION] = version
+        }
+
     suspend fun readExternalBlocklistSubscriptions(): List<ExternalBlocklistSubscription> =
         decodeExternalBlocklistSubscriptions(
             dataStore.data.first()[SpamRepository.KEY_EXTERNAL_BLOCKLIST_SUBSCRIPTIONS],

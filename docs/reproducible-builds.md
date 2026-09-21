@@ -40,6 +40,15 @@ Use PowerShell on Windows:
 Get-Content .\app\build\outputs\apk\release\app-release.apk.sha256
 ```
 
+`verifyReleaseApkReproducibleMetadata` also runs `verifyLiveCertificatePins`,
+which reads every pinned host from `HttpClient.kt`, fetches the certificate
+chain each one serves today, and fails if any host presents none of its pins.
+It needs the network, and "unreachable" counts as a failure. A release whose
+pins do not match downloads nothing on any device, which is how v1.7.36 to
+v1.7.38 shipped after GitHub's certificate moved to Let's Encrypt's
+Generation Y roots. Run `python scripts/check_live_pins.py` on its own to see
+the live keys of a host that fails.
+
 `verify-release-signing.ps1` is a mandatory release gate. It fails the release
 if the APK is **debug-signed** or carries **more than one signer certificate**.
 Debug or multi-certificate releases break signing-key continuity (they cannot
@@ -81,7 +90,7 @@ Get-Content .\app-release.apk.sha256
 5. Build:
 
 ```powershell
-.\gradlew.bat --no-daemon --offline verifyReproducibleBuildInputs verifyReleaseApkReproducibleMetadata
+.\gradlew.bat --no-daemon --offline verifyReproducibleBuildInputs verifyReleaseApkReproducibleMetadata -x verifyLiveCertificatePins
 .\scripts\write-release-sha256.ps1
 ```
 

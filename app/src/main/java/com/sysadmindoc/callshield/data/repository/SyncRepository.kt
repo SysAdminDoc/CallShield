@@ -22,6 +22,7 @@ import com.sysadmindoc.callshield.data.model.SpamShardManifest
 import com.sysadmindoc.callshield.data.remote.ExternalBlocklistDataSource
 import com.sysadmindoc.callshield.data.remote.GitHubDataSource
 import com.sysadmindoc.callshield.data.remote.GitHubFeedValidationException
+import com.sysadmindoc.callshield.data.remote.HttpClient
 import com.sysadmindoc.callshield.data.remote.OkHttpExternalBlocklistDataSource
 import com.sysadmindoc.callshield.data.remote.SpamDataSource
 import com.sysadmindoc.callshield.data.remote.sha256Hex
@@ -76,6 +77,7 @@ class SyncRepository(
                     }
 
                     val manifestResult = remote.fetchSpamShardManifest()
+                    recordFeedTrust(manifestResult)
                     if (manifestResult.isSuccess) {
                         val shardResult =
                             applyShardedDatabase(
@@ -105,6 +107,7 @@ class SyncRepository(
                     }
 
                     val result = remote.fetchSpamDatabase()
+                    recordFeedTrust(result)
                     if (result.isSuccess) {
                         val database = result.getOrThrow()
                         val newSha = preFetchSha
@@ -720,6 +723,19 @@ class SyncRepository(
                 message = context.getString(R.string.external_blocklist_failed_generic),
             )
         }
+
+    /**
+     * A download that succeeded proves the pins still match; one that failed
+     * certificate verification is recorded so Protection Test and the update
+     * notice can say an app update is needed. Other failures say nothing
+     * about trust and leave the record alone.
+     */
+    private suspend fun recordFeedTrust(result: Result<*>) {
+        when {
+            result.isSuccess -> settingsRepository.recordFeedTrust(failed = false)
+            HttpClient.isCertificateTrustFailure(result.exceptionOrNull()) -> settingsRepository.recordFeedTrust(failed = true)
+        }
+    }
 
     private fun shouldRetrySync(message: String): Boolean {
         val permanentFailureCodes = listOf("HTTP 400", "HTTP 401", "HTTP 403", "HTTP 404")

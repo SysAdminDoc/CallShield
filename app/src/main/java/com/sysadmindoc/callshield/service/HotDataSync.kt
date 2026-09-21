@@ -13,6 +13,7 @@ import com.sysadmindoc.callshield.data.model.SourceEvidenceJson
 import com.sysadmindoc.callshield.data.model.SpamNumber
 import com.sysadmindoc.callshield.data.remote.GitHubDataSource
 import com.sysadmindoc.callshield.data.remote.HotFeedDataSource
+import com.sysadmindoc.callshield.data.remote.HttpClient
 import com.sysadmindoc.callshield.util.isAsciiDigit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -34,6 +35,8 @@ internal object HotDataSync {
         val generatedAt: String? = null,
         /** The report-queue digest the publisher generated this feed from. */
         val inputDigest: String? = null,
+        /** Why the network fetch failed, when it did, even if the bundled snapshot then filled in. */
+        val failure: Throwable? = null,
     ) {
         fun observe(
             feed: String,
@@ -182,6 +185,13 @@ internal object HotDataSync {
                 lastGoodTimestamp = System.currentTimeMillis().takeIf { unavailableFeeds.isEmpty() },
                 update = update,
             )
+            val loads = listOf(hotList, hotRanges, spamDomains)
+            when {
+                loads.any { HttpClient.isCertificateTrustFailure(it.failure) } -> repo.recordFeedTrust(failed = true)
+
+                // Resolved with no failure means it came from the network, not the bundled snapshot.
+                loads.any { it.resolved && it.failure == null } -> repo.recordFeedTrust(failed = false)
+            }
             RefreshOutcome(
                 refreshedAnyFeed = hotListApplied || hotRangesApplied || spamDomainsApplied,
                 hasAnyHotProtection =
@@ -223,9 +233,9 @@ internal object HotDataSync {
             )
         }
         if (!shouldUseBundledFallback(false, hasExistingData)) {
-            return FeedLoadResult(emptyList(), resolved = false)
+            return FeedLoadResult(emptyList(), resolved = false, failure = remote.exceptionOrNull())
         }
-        return loadBundledHotList(context, source)
+        return loadBundledHotList(context, source).copy(failure = remote.exceptionOrNull())
     }
 
     private suspend fun loadHotRanges(
@@ -245,9 +255,9 @@ internal object HotDataSync {
             )
         }
         if (!shouldUseBundledFallback(false, hasExistingData)) {
-            return FeedLoadResult(emptyList(), resolved = false)
+            return FeedLoadResult(emptyList(), resolved = false, failure = remote.exceptionOrNull())
         }
-        return loadBundledHotRanges(context, source)
+        return loadBundledHotRanges(context, source).copy(failure = remote.exceptionOrNull())
     }
 
     private suspend fun loadSpamDomains(
@@ -267,9 +277,9 @@ internal object HotDataSync {
             )
         }
         if (!shouldUseBundledFallback(false, hasExistingData)) {
-            return FeedLoadResult(emptyList(), resolved = false)
+            return FeedLoadResult(emptyList(), resolved = false, failure = remote.exceptionOrNull())
         }
-        return loadBundledSpamDomains(context, source)
+        return loadBundledSpamDomains(context, source).copy(failure = remote.exceptionOrNull())
     }
 
     private fun loadBundledHotList(

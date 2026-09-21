@@ -54,6 +54,7 @@ class HotListSyncWorker
                         dao = dao,
                         dependencies = checkerDependencies,
                     )
+                FeedTrustNotice.maybeNotify(applicationContext, repo)
                 // Retry whenever nothing was actually refreshed from the remote
                 // feeds. Existing on-device protection no longer counts as
                 // success: the bundled snapshot is not used to repair a stale

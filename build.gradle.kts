@@ -364,10 +364,27 @@ tasks.register<Exec>("verifyReleaseSbom") {
     }
 }
 
+tasks.register<Exec>("verifyLiveCertificatePins") {
+    group = "verification"
+    description = "Fails when a pinned host serves a chain holding none of the app's pins. Needs network."
+
+    val script = layout.projectDirectory.file("scripts/check_live_pins.py")
+    inputs.files(
+        script,
+        layout.projectDirectory.file("app/src/main/java/com/sysadmindoc/callshield/data/remote/HttpClient.kt"),
+    )
+    // The answer depends on what the servers present today, not on any input file.
+    outputs.upToDateWhen { false }
+    workingDir(rootDir)
+    commandLine("python", script.asFile.absolutePath)
+}
+
 tasks.register("verifyReleaseApkReproducibleMetadata") {
     group = "verification"
     description = "Fails when the release APK contains AGP VCS metadata."
-    dependsOn("verifyReleaseMetadata", ":app:assembleRelease", "verifyReleaseSbom")
+    // A release whose pins no longer match the live chain downloads nothing on
+    // any device; three releases shipped that way from 2026-08-02.
+    dependsOn("verifyReleaseMetadata", ":app:assembleRelease", "verifyReleaseSbom", "verifyLiveCertificatePins")
 
     val releaseOutput = layout.projectDirectory.dir("app/build/outputs/apk/release")
     inputs.dir(releaseOutput)
