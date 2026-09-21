@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import re
 import sys
 import xml.etree.ElementTree as ET
@@ -317,7 +318,12 @@ def load_floors() -> dict[str, float]:
     for locale, value in recorded_floors.items():
         if isinstance(value, bool) or not isinstance(value, (int, float)):
             raise FloorsFileError(f"{FLOORS_FILE.name}: the floor for {locale} is {value!r}, not a number")
-        floors[str(locale)] = float(value)
+        f = float(value)
+        if not math.isfinite(f) or f < 0 or f > 100:
+            raise FloorsFileError(f"{FLOORS_FILE.name}: the floor for {locale} is {f}, must be 0..100")
+        if not LOCALE_DIR_RE.match(str(locale)):
+            raise FloorsFileError(f"{FLOORS_FILE.name}: key {locale!r} is not a valid locale directory name")
+        floors[str(locale)] = f
     return floors
 
 

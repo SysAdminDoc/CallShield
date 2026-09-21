@@ -112,6 +112,10 @@ class TranslationCoverageFloorTest(unittest.TestCase):
                     '{"description": "no floors object"}',
                     '{"floors": {"values-de": "60.0"}}',
                     '{"floors": {"values-de": true}}',
+                    '{"floors": {"values-de": -1}}',
+                    '{"floors": {"values-de": 101}}',
+                    '{"floors": {"de": 50.0}}',
+                    '{"floors": {"zh-rCN": 50.0}}',
                 ):
                     path.write_text(broken, encoding="utf-8")
                     with self.assertRaises(check_translations.FloorsFileError, msg=broken):
