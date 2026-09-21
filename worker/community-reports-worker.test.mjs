@@ -18,6 +18,7 @@ import worker, {
   deriveReporterBucket,
   recordDedup,
   validateReportEnvironment,
+  validatedReportId,
 } from "./community-reports-worker.js";
 
 const FIXTURES = JSON.parse(
@@ -604,6 +605,55 @@ test("stored reports carry only a daily reporter bucket, never an IP", async () 
     const report = JSON.parse(atob(githubPayload.content));
     assert.match(report.reporter_bucket, /^[a-f0-9]{16}$/);
     assert.equal(JSON.stringify(report).includes("203.0.113.7"), false);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("report ids are checked and lowercased", () => {
+  assert.equal(validatedReportId("3F1C9A52-7D4E-4B8A-9C1D-2E5F6A7B8C9D"), "3f1c9a52-7d4e-4b8a-9c1d-2e5f6a7b8c9d");
+  assert.equal(validatedReportId("not-an-id"), "");
+  assert.equal(validatedReportId(42), "");
+});
+
+test("a report resent under its id from another network is a duplicate", async () => {
+  const env = { RATE_LIMIT: createMockKV() };
+  const id = "3f1c9a52-7d4e-4b8a-9c1d-2e5f6a7b8c9d";
+
+  await recordDedup("2001:db8:1:2::a", "+12122340101", "spam", env, id);
+
+  // Wi-Fi to cellular is another /64, so only the id can recognise the resend.
+  assert.equal(await checkDedup("198.51.100.9", "+12122340101", "spam", env, id), true);
+  assert.equal(await checkDedup("198.51.100.9", "+12122340101", "spam", env, "0b1c2d3e-4f5a-4b6c-8d7e-9f0a1b2c3d4e"), false);
+  assert.equal(await checkDedup("198.51.100.9", "+12122340101", "spam", env), false);
+});
+
+test("a stored report keeps its id, and its resend is answered as already stored", async () => {
+  const originalFetch = globalThis.fetch;
+  const payloads = [];
+  globalThis.fetch = async (_url, options) => {
+    payloads.push(JSON.parse(options.body));
+    return new Response("{}", { status: 201 });
+  };
+  const env = { RATE_LIMIT: createMockKV(), GITHUB_TOKEN: "test-token", REPORTER_BUCKET_SECRET: "s".repeat(32) };
+  const send = (ip) =>
+    worker.fetch(
+      new Request("https://reports.example", {
+        method: "POST",
+        headers: { "content-type": "application/json", "cf-connecting-ip": ip },
+        body: JSON.stringify({ number: "+12122340101", type: "spam", report_id: "3f1c9a52-7d4e-4b8a-9c1d-2e5f6a7b8c9d" }),
+      }),
+      env,
+    );
+  try {
+    const first = await send("203.0.113.7");
+    const resend = await send("198.51.100.9");
+
+    assert.equal(first.status, 200);
+    assert.equal(JSON.parse(atob(payloads[0].content)).report_id, "3f1c9a52-7d4e-4b8a-9c1d-2e5f6a7b8c9d");
+    assert.equal(resend.status, 429);
+    assert.equal((await resend.json()).already_stored, true);
+    assert.equal(payloads.length, 1, "the resend is not stored again");
   } finally {
     globalThis.fetch = originalFetch;
   }

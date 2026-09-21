@@ -154,6 +154,12 @@ The rest of this section takes effect when the report Worker is next deployed.
 - A report that was stored no longer comes back as an error when the Worker
   can't write its duplicate marker, which had the app send it again.
 - The Worker's landing page shows an example number it actually accepts.
+- The Worker keeps the id each report now carries, remembers it for a week,
+  and answers a resend of a stored report with "already stored", so the app
+  counts it as sent. A report resent after the phone switched networks used
+  to be stored again and counted as a second person reporting the number. The
+  merge, the trending list and the text-domain feed now count a report stored
+  twice under one id once.
 
 ### Documentation
 

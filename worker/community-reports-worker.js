@@ -180,6 +180,12 @@ const RATE_LIMIT_MAX_REQUESTS = 5;
 // flooding.
 const DEDUP_WINDOW_S = 300;
 
+// The app gives each report an id and keeps it for every attempt. Its
+// outbox retries for about two days at most, so a week covers every resend,
+// including one from another network that the /64 dedup can't see.
+const REPORT_ID_DEDUP_S = 7 * 24 * 60 * 60;
+const REPORT_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
 // An IPv6 subscriber is handed at least a /64, and often a /56 or /48, so
 // keying on the full address let one line act as endless distinct clients.
 // The limiter and dedup key on the /64. The reporter bucket, which the hot
@@ -409,6 +415,17 @@ function dedupKey(ip, normalizedNumber, type) {
   return `dedup:${clientKey(ip, LIMITER_PREFIX_BITS)}:${type}:${normalizedNumber}`;
 }
 
+function reportIdKey(reportId) {
+  return `dedup:report:${reportId}`;
+}
+
+/** The id the app gave a report, lowercased, or "" when it has none or it isn't one. */
+export function validatedReportId(value) {
+  if (typeof value !== "string") return "";
+  const normalized = value.trim().toLowerCase();
+  return REPORT_ID_RE.test(normalized) ? normalized : "";
+}
+
 /**
  * Check per-client + per-number + per-type dedup against KV (read-only).
  * Returns true if this client already reported the number with this type
@@ -417,7 +434,7 @@ function dedupKey(ip, normalizedNumber, type) {
  * 5-minute "Duplicate report" lockout that silently dropped the report on
  * retry.
  */
-export async function checkDedup(ip, normalizedNumber, type, env) {
+export async function checkDedup(ip, normalizedNumber, type, env, reportId = "") {
   if (!hasClientIp(ip)) throw new Error("client IP is required");
   if (!env?.RATE_LIMIT) {
     if (allowsUnlimitedReports(env)) return false;
@@ -425,17 +442,22 @@ export async function checkDedup(ip, normalizedNumber, type, env) {
   }
 
   const existing = await env.RATE_LIMIT.get(dedupKey(ip, normalizedNumber, type));
-  return existing !== null;
+  if (existing !== null) return true;
+  if (!reportId) return false;
+  return (await env.RATE_LIMIT.get(reportIdKey(reportId))) !== null;
 }
 
-/** Mark this (client, number, type) as reported. Call after a successful store. */
-export async function recordDedup(ip, normalizedNumber, type, env) {
+/** Mark this (client, number, type), and the report's id, as reported. Call after a successful store. */
+export async function recordDedup(ip, normalizedNumber, type, env, reportId = "") {
   if (!hasClientIp(ip)) throw new Error("client IP is required");
   if (!env?.RATE_LIMIT) {
     if (allowsUnlimitedReports(env)) return;
     throw new Error("RATE_LIMIT binding is required");
   }
   await env.RATE_LIMIT.put(dedupKey(ip, normalizedNumber, type), "1", { expirationTtl: DEDUP_WINDOW_S });
+  if (reportId) {
+    await env.RATE_LIMIT.put(reportIdKey(reportId), "1", { expirationTtl: REPORT_ID_DEDUP_S });
+  }
 }
 
 /**
@@ -601,6 +623,7 @@ code{background:#252525;padding:2px 6px;border-radius:4px;font-size:12px;color:#
       const VALID_TYPES = ["spam", "robocall", "scam", "telemarketer", "debt_collector", "sms_spam", "not_spam", "ai_voice", "unknown"];
       const type = VALID_TYPES.includes(body.type) ? body.type : "unknown";
       const smsReportFields = sanitizeSmsReportFields(body);
+      const reportId = validatedReportId(body.report_id);
 
       const normalized = normalizePhoneNumberForReport(number);
       if (!normalized || !isPlausibleReportNumber(normalized)) {
@@ -609,10 +632,13 @@ code{background:#252525;padding:2px 6px;border-radius:4px;font-size:12px;color:#
         });
       }
 
-      // Per-client + per-number + per-type dedup (prevents replaying the same report)
-      const isDuplicate = await checkDedup(clientIp, normalized, type, env);
+      // Per-client + per-number + per-type dedup (prevents replaying the same
+      // report), and the report's own id (catches a resend from another network).
+      // Both markers are written only after a successful store, so this answer
+      // always means the report is already stored, and the app treats it as sent.
+      const isDuplicate = await checkDedup(clientIp, normalized, type, env, reportId);
       if (isDuplicate) {
-        return new Response(JSON.stringify({ error: "Duplicate report, already submitted" }), {
+        return new Response(JSON.stringify({ error: "Duplicate report, already submitted", already_stored: true }), {
           status: 429,
           headers: {
             ...responseHeaders,
@@ -638,6 +664,9 @@ code{background:#252525;padding:2px 6px;border-radius:4px;font-size:12px;color:#
         source: "community_app",
         reporter_bucket: reporterBucket,
       };
+      if (reportId) {
+        report.report_id = reportId;
+      }
       if (smsReportFields.sms_domains.length > 0) {
         report.sms_domains = smsReportFields.sms_domains;
       }
@@ -683,7 +712,7 @@ code{background:#252525;padding:2px 6px;border-radius:4px;font-size:12px;color:#
       // The report is committed whatever happens here, so a failed marker
       // write must not turn into a 500 that makes the client submit it again.
       try {
-        await recordDedup(clientIp, normalized, type, env);
+        await recordDedup(clientIp, normalized, type, env, reportId);
       } catch (error) {
         console.error("Report stored, but its dedup marker could not be written", error);
       }

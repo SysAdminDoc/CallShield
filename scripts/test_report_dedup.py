@@ -6,8 +6,10 @@ from datetime import datetime, timedelta, timezone
 from report_dedup import (
     BURST_DUPLICATE_SECONDS,
     find_burst_duplicates,
+    find_resent_reports,
     parse_reported_at,
     reporter_day_key,
+    validated_report_id,
     validated_reporter_bucket,
 )
 
@@ -132,6 +134,23 @@ def main() -> None:
     assert forward == reverse == {"second"}, (forward, reverse)
 
     assert find_burst_duplicates([]) == set()
+
+    # ── one report resent under its id ───────────────────────────────────
+    report_id = "3F1C9A52-7D4E-4B8A-9C1D-2E5F6A7B8C9D"
+    assert validated_report_id(report_id) == report_id.lower()
+    assert validated_report_id("not-a-uuid") == ""
+    assert validated_report_id(None) == ""
+    # Hours apart and from another reporter bucket, it is still the same report;
+    # the earliest copy is the one kept, whatever order the files come in.
+    resent = find_resent_reports(
+        [
+            (validated_report_id(report_id), at(7200), "resend"),
+            (validated_report_id(report_id), at(0), "original"),
+            ("", at(1), "no-id-a"),
+            ("", at(2), "no-id-b"),
+        ]
+    )
+    assert resent == {"resend"}, resent
 
     print("report_dedup tests passed")
 

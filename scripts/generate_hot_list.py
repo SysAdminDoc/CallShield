@@ -30,8 +30,10 @@ from pipeline_io import (
 from report_dedup import (
     BURST_DUPLICATE_SECONDS,
     find_burst_duplicates,
+    find_resent_reports,
     parse_reported_at,
     reporter_day_key,
+    validated_report_id,
     validated_reporter_bucket,
 )
 
@@ -113,6 +115,7 @@ def main(argv: list[str] | None = None) -> int:
     # to be recognised against the other reports for the same number rather than
     # in file-glob order.
     pending: list[tuple[str, datetime, str, str, str, str]] = []
+    report_ids: list[tuple[str, datetime, str]] = []
 
     if REPORTS_DIR.exists():
         for report_file in REPORTS_DIR.glob("*.json"):
@@ -136,8 +139,16 @@ def main(argv: list[str] | None = None) -> int:
                 pending.append(
                     (number, reported_at, reported_at_str, spam_type, report_file.name, reporter_bucket)
                 )
+                report_ids.append((validated_report_id(report.get("report_id")), reported_at, report_file.name))
             except Exception as e:
                 print(f"  Skipping {report_file.name}: {e}")
+
+    # A report the app sent twice under one id is one reporter, even when the
+    # resend came from another network and so from another reporter bucket.
+    resent_reports = find_resent_reports(report_ids)
+    if resent_reports:
+        print(f"  Collapsed {len(resent_reports)} resent report(s) carrying an id already counted")
+        pending = [entry for entry in pending if entry[4] not in resent_reports]
 
     # Repeat submissions for the same number seconds apart are one reporter, not
     # velocity — see report_dedup for why the Worker cannot be relied on here.

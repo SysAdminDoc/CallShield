@@ -19,8 +19,10 @@ from pipeline_io import (
 )
 from report_dedup import (
     find_burst_duplicates,
+    find_resent_reports,
     parse_reported_at,
     reporter_day_key,
+    validated_report_id,
     validated_reporter_bucket,
 )
 from source_registry import source_health_report
@@ -254,9 +256,7 @@ def main(argv: list[str] | None = None):
     # row one vote at a time. See report_dedup for why the Worker's own dedup
     # cannot be relied on. Unreadable files are ignored here and quarantined by
     # the main loop below.
-    burst_candidates = []
-    identity_duplicates = set()
-    seen_reporter_days = set()
+    peeked = []
     for report_file in report_files:
         try:
             with open(report_file) as f:
@@ -265,6 +265,19 @@ def main(argv: list[str] | None = None):
             continue
         peeked_number = validated_report_number(peek.get("number", ""))
         if not peeked_number:
+            continue
+        peeked.append((report_file, peeked_number, peek))
+    # One report the app sent twice under the same id counts once, even when the
+    # resend came from another network and so from another reporter bucket.
+    resent_reports = find_resent_reports(
+        (validated_report_id(peek.get("report_id")), parse_reported_at(peek.get("reported_at")), report_file.name)
+        for report_file, _, peek in peeked
+    )
+    burst_candidates = []
+    identity_duplicates = set()
+    seen_reporter_days = set()
+    for report_file, peeked_number, peek in peeked:
+        if report_file.name in resent_reports:
             continue
         spam_type = peek.get("type", "unknown")
         reported_at = parse_reported_at(peek.get("reported_at"))
@@ -316,7 +329,11 @@ def main(argv: list[str] | None = None):
                 skipped += 1
                 continue
 
-            if report_file.name in burst_duplicates or report_file.name in identity_duplicates:
+            if (
+                report_file.name in burst_duplicates
+                or report_file.name in identity_duplicates
+                or report_file.name in resent_reports
+            ):
                 # Same number and verdict as a report already counted seconds
                 # earlier. Consume the file so it does not linger in the queue.
                 processed_files.append(report_file)

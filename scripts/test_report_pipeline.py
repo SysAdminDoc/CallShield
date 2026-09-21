@@ -61,10 +61,13 @@ def write_report(
     reported_at: str,
     report_type: str = "phishing",
     domains: list[str] | None = None,
+    report_id: str | None = None,
 ) -> None:
     report = {"number": number, "type": report_type, "reported_at": reported_at}
     if bucket is not None:
         report["reporter_bucket"] = bucket
+    if report_id is not None:
+        report["report_id"] = report_id
     if domains:
         report["sms_domains"] = domains
     write_json(data_dir / "reports" / filename, report)
@@ -135,6 +138,20 @@ def seed_reports(data_dir: Path) -> None:
     # Legacy files remain mergeable but are not independent promotion evidence.
     write_report(data_dir, "legacy.json", "+12122340888", None, TIMES[0])
 
+    # One report resent under its id after the phone changed networks arrives
+    # from a second reporter bucket. Counted twice, these four files would make
+    # the number trend (4 reports, 4 reporters); counted once, they can't.
+    resent = "3f1c9a52-7d4e-4b8a-9c1d-2e5f6a7b8c9d"
+    for index, (bucket, reported_at, report_id) in enumerate(
+        [
+            (BUCKETS[0], TIMES[0], resent),
+            (BUCKETS[1], TIMES[1], resent),
+            (BUCKETS[2], TIMES[2], "a0b1c2d3-e4f5-4a6b-8c7d-9e0f1a2b3c4d"),
+            (BUCKETS[3], TIMES[3], "b1c2d3e4-f5a6-4b7c-9d8e-0f1a2b3c4d5e"),
+        ]
+    ):
+        write_report(data_dir, f"resent_{index}.json", "+13129870777", bucket, reported_at, report_id=report_id)
+
 
 def assert_derived_outputs(data_dir: Path) -> None:
     hot_numbers = json.loads((data_dir / "hot_numbers.json").read_text(encoding="utf-8"))
@@ -184,6 +201,8 @@ def assert_merge_cleanup(data_dir: Path) -> None:
         raise AssertionError(f"same-reporter daily reports were not collapsed: {merged_numbers}")
     if merged_numbers["+12122340888"]["reports"] != 1:
         raise AssertionError(f"legacy report was not preserved: {merged_numbers}")
+    if merged_numbers["+13129870777"]["reports"] != 3:
+        raise AssertionError(f"a report resent under its id was counted twice: {merged_numbers['+13129870777']}")
     if any(entry.get("sources") != ["community"] for entry in merged_numbers.values()):
         raise AssertionError(f"community provenance missing: {merged_numbers}")
 

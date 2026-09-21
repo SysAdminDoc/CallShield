@@ -30,7 +30,7 @@ from pipeline_io import (
     parse_cleared_feeds,
     report_queue_digest,
 )
-from report_dedup import validated_reporter_bucket
+from report_dedup import validated_report_id, validated_reporter_bucket
 
 DATA_DIR = Path(os.environ.get("CALLSHIELD_DATA_DIR", Path(__file__).parent.parent / "data"))
 REPORTS_DIR = Path(os.environ.get("CALLSHIELD_REPORTS_DIR", DATA_DIR / "reports"))
@@ -165,6 +165,9 @@ def main(argv: list[str] | None = None) -> int:
     # arbitrary domain and have it flagged malicious on every device.
     domain_numbers: dict[str, set[str]] = {}
     domain_reporters: dict[str, set[str]] = {}
+    # A report the app resent under the same id (from another network, so from
+    # another reporter bucket) must not count as a second reporter.
+    seen_report_ids: set[str] = set()
     reports_scanned = 0
 
     if REPORTS_DIR.exists():
@@ -184,6 +187,11 @@ def main(argv: list[str] | None = None) -> int:
                 reporter_bucket = validated_reporter_bucket(report.get("reporter_bucket"))
                 if not number or not reporter_bucket:
                     continue
+                report_id = validated_report_id(report.get("report_id"))
+                if report_id:
+                    if report_id in seen_report_ids:
+                        continue
+                    seen_report_ids.add(report_id)
 
                 reports_scanned += 1
                 for domain in domains:
