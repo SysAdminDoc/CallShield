@@ -189,6 +189,11 @@ The rest of this section takes effect when the report Worker is next deployed.
   `scripts/translation_floors.json` and dropping below it fails the build;
   zh-rCN starts at 76.1%. A locale with no recorded floor warns instead, so
   adding a translation does not break the build before anyone sets one.
+- `check_translations.py --update-floors` now only ever raises a floor. Run
+  after adding English strings that had no translation yet, it wrote down the
+  lower coverage instead, and the Chinese floor slid from 76.1% to 75.6% that
+  way. The eight strings behind the slide are translated now, and the floor is
+  back up at 76.5%.
 
 ## v1.7.38 (2026-08-29)
 

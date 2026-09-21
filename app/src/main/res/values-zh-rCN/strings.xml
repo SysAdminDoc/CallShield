@@ -679,6 +679,9 @@
     <string name="protection_test_fix_database">从主页或“更多”页运行号码库同步，以获取本地防护数据。</string>
     <string name="protection_test_fix_engine">在设置中检查检测引擎开关并重新运行本项检查。</string>
     <string name="protection_test_fix_sync">等待下次刷新，若仍为空则手动同步。</string>
+    <string name="protection_test_fix_update_app">请安装最新版 CallShield。同步无法解决这个问题。</string>
+    <string name="protection_test_feed_trust">防护数据服务器</string>
+    <string name="protection_test_feed_trust_fail">此版本无法验证服务器证书，因此收不到新的防护数据</string>
     <string name="protection_test_fix_overlay">若希望在来电时显示浮动来电识别提醒，请允许悬浮窗权限。</string>
     <string name="protection_test_fix_notifications">若希望接收提醒与 RCS 过滤，请启用通知或监听器权限。</string>
     <string name="protection_test_db_empty">尚未加载垃圾数据</string>
@@ -699,6 +702,8 @@
     <string name="protection_test_ml_fp_fail">误判 — 阈值可能过低</string>
     <string name="protection_test_hot_pass">热点营销号段已加载</string>
     <string name="protection_test_hot_fail">为空 — 将在下次 30 分钟同步时填充</string>
+    <string name="protection_test_hot_stalled">可以连接，但热点数据源已有 %1$d 天没有重新生成</string>
+    <string name="protection_test_hot_cleared">可以连接。发布方表示目前没有热点条目</string>
     <string name="protection_test_overlay_pass">可显示来电识别悬浮窗</string>
     <string name="protection_test_overlay_fail">未授予 — 悬浮窗不会显示</string>
     <string name="protection_test_notif_pass">RCS 过滤器可监控消息</string>
@@ -960,6 +965,9 @@
     <string name="notif_role_lost_title">来电筛查已关闭</string>
     <string name="notif_role_lost_text">Android 不再将来电发送至 CallShield。恢复来电筛查以继续防护。</string>
     <string name="notif_role_lost_action">恢复防护</string>
+    <string name="notif_feed_trust_title">CallShield 无法下载新的防护数据</string>
+    <string name="notif_feed_trust_text">此版本无法验证数据服务器的证书。请安装最新版本以重新接收更新。</string>
+    <string name="notif_feed_trust_action">获取最新版本</string>
     <string name="notif_sync_title">正在刷新防护</string>
     <string name="notif_sync_text">正在更新垃圾号码与检测数据…</string>
     <string name="notif_repeated_urgent_title">重复来电已放行</string>

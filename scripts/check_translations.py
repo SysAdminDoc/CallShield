@@ -340,14 +340,23 @@ def floor_report(
 
 
 def write_floors(coverage: dict[str, float]) -> None:
-    """Record the current coverage as the new floor."""
+    """Raise each measured locale's floor to its current coverage.
+
+    A floor only goes up here. Running --update-floors after adding English
+    strings nobody has translated yet used to record the lower coverage, which
+    quietly loosened the gate it exists to enforce. Floors for locales this
+    run didn't measure are kept.
+    """
+    floors = load_floors()
+    for locale, percent in coverage.items():
+        floors[locale] = max(floors.get(locale, 0.0), round(percent, 1))
     payload = {
         "description": (
             "Minimum translated-string coverage per locale, in percent. check_translations.py "
             "fails when a shipped locale drops below its floor. Raise a floor with --update-floors; "
             "never lower one by hand."
         ),
-        "floors": {locale: round(percent, 1) for locale, percent in sorted(coverage.items())},
+        "floors": dict(sorted(floors.items())),
     }
     with FLOORS_FILE.open("w", encoding="utf-8", newline="\n") as handle:
         json.dump(payload, handle, indent=2)

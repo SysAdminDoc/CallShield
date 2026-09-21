@@ -105,6 +105,22 @@ class TranslationCoverageFloorTest(unittest.TestCase):
             finally:
                 check_translations.FLOORS_FILE = original
 
+    def test_update_floors_only_ever_raises_a_floor(self):
+        # Recording coverage after adding untranslated strings lowered the
+        # zh-rCN floor from 76.1 to 75.6 in one step before this was fixed.
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "translation_floors.json"
+            original = check_translations.FLOORS_FILE
+            check_translations.FLOORS_FILE = path
+            try:
+                check_translations.write_floors({"values-zh-rCN": 76.1, "values-de": 40.0})
+                check_translations.write_floors({"values-zh-rCN": 75.6})
+                self.assertEqual({"values-de": 40.0, "values-zh-rCN": 76.1}, check_translations.load_floors())
+                check_translations.write_floors({"values-zh-rCN": 76.54})
+                self.assertEqual({"values-de": 40.0, "values-zh-rCN": 76.5}, check_translations.load_floors())
+            finally:
+                check_translations.FLOORS_FILE = original
+
     def test_recorded_floor_matches_the_shipped_locale(self):
         # The committed floor must describe reality, or the gate is decorative.
         floors = check_translations.load_floors()
