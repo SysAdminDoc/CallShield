@@ -3,6 +3,8 @@ package com.sysadmindoc.callshield.service
 import com.sysadmindoc.callshield.data.model.HotDataHealth
 import com.sysadmindoc.callshield.data.model.HotDataHealthUpdate
 import com.sysadmindoc.callshield.data.remote.GitHubDataSource
+import com.sysadmindoc.callshield.data.remote.GitHubFeedFailureReason
+import com.sysadmindoc.callshield.data.remote.GitHubFeedValidationException
 import com.sysadmindoc.callshield.util.HotFeedFreshness
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -71,6 +73,7 @@ class HotFeedHealthTest {
         unavailableFeeds = update.unavailableFeeds,
         unreachableFeeds = update.unreachableFeeds,
         clearedFeeds = update.clearedFeeds,
+        refusedFeeds = update.refusedFeeds,
         feedGeneratedAt =
             HotDataHealthUpdate.mergeFeedMetadata(previous.feedGeneratedAt, update.resolvedFeeds, update.feedGeneratedAt),
         feedDigests = HotDataHealthUpdate.mergeFeedMetadata(previous.feedDigests, update.resolvedFeeds, update.feedDigests),
@@ -171,6 +174,56 @@ class HotFeedHealthTest {
                 .FeedLoadResult(data = listOf("212555"), resolved = true, generatedAt = "2026-09-20T12:00:00+00:00")
                 .observe(HotDataSync.HOT_RANGES_FEED, applied = true, empty = false)
         assertTrue(read.fromNetwork)
+    }
+
+    @Test
+    fun `a download that fails its signature was reachable, so it is refused rather than unreachable`() {
+        val refused =
+            HotDataSync
+                .FeedLoadResult(
+                    data = emptyList<String>(),
+                    resolved = false,
+                    failure = GitHubFeedValidationException(GitHubFeedFailureReason.SIGNATURE, "hot ranges feed signature doesn't verify"),
+                ).observe(HotDataSync.HOT_RANGES_FEED, applied = false, empty = true)
+        val update = HotDataSync.healthUpdate(listOf(refused))
+
+        assertEquals(setOf(HotDataSync.HOT_RANGES_FEED), update.refusedFeeds)
+        assertTrue(update.unreachableFeeds.isEmpty())
+        assertEquals(setOf(HotDataSync.HOT_RANGES_FEED), update.unavailableFeeds)
+        assertEquals(HotFeedFreshness.State.REFUSED, HotFeedFreshness.stateOf(stored(update), now))
+    }
+
+    @Test
+    fun `an older signed copy is a replay, refused, and its stamp never replaces the newer one`() {
+        // Today's real hot list is `cleared: true`. Replayed later, it would wipe the device's rows.
+        val previous = HotDataHealth(feedGeneratedAt = mapOf(HotDataSync.HOT_RANGES_FEED to "2026-09-21T11:00:00+00:00"))
+        val replayed = "2026-09-05T12:01:53.867374+00:00"
+        assertTrue(HotDataSync.isReplay(replayed, previous.feedGeneratedAt[HotDataSync.HOT_RANGES_FEED]))
+
+        val observation =
+            HotDataSync
+                .FeedLoadResult(data = emptyList<String>(), resolved = true, explicitlyCleared = true, generatedAt = replayed)
+                .observe(HotDataSync.HOT_RANGES_FEED, applied = false, empty = true, replay = true)
+        val health = stored(HotDataSync.healthUpdate(listOf(observation)), previous)
+
+        assertEquals(setOf(HotDataSync.HOT_RANGES_FEED), health.refusedFeeds)
+        assertTrue(health.clearedFeeds.isEmpty())
+        assertEquals("2026-09-21T11:00:00+00:00", health.feedGeneratedAt[HotDataSync.HOT_RANGES_FEED])
+    }
+
+    @Test
+    fun `only a stamp older than the last one read is a replay`() {
+        assertFalse(HotDataSync.isReplay("2026-09-21T12:00:00+00:00", "2026-09-21T11:00:00+00:00"))
+        assertFalse(HotDataSync.isReplay("2026-09-21T11:00:00+00:00", "2026-09-21T11:00:00+00:00"))
+        assertFalse(HotDataSync.isReplay(null, "2026-09-21T11:00:00+00:00"))
+        assertFalse(HotDataSync.isReplay("2026-09-01T00:00:00+00:00", null))
+    }
+
+    @Test
+    fun `unreachable outranks refused, and refused outranks stalled`() {
+        val refused = HotFeedFreshness.State.REFUSED
+        assertEquals(HotFeedFreshness.State.UNREACHABLE, HotFeedFreshness.worst(listOf(refused, HotFeedFreshness.State.UNREACHABLE)))
+        assertEquals(refused, HotFeedFreshness.worst(listOf(HotFeedFreshness.State.STALLED, refused)))
     }
 
     @Test

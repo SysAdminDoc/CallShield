@@ -999,6 +999,7 @@
     <string name="protection_test_hot_unavailable_age">Hot data unavailable; last good update was %1$d hours ago</string>
     <string name="protection_test_hot_unavailable_never">Hot data unavailable; no successful update yet</string>
     <string name="protection_test_hot_stalled">Reachable, but the trending feed has not been regenerated in %1$d days</string>
+    <string name="protection_test_hot_refused">Reachable, but the last download failed its signature or freshness check, so the previous copy is still in use</string>
     <string name="protection_test_hot_cleared">Reachable. The publisher reports nothing trending right now</string>
     <string name="protection_test_overlay_pass">Can display caller ID overlay</string>
     <string name="protection_test_overlay_fail">Not granted — overlay won\'t show</string>

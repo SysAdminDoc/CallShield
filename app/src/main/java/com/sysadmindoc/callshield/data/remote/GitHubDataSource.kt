@@ -139,6 +139,7 @@ class GitHubDataSource internal constructor(
         private const val USER_AGENT = "CallShield/1.0"
         private const val MAX_GITHUB_API_BYTES = 256L * 1024L
         private const val READ_CHUNK_BYTES = 8192L
+        private const val HTTP_NOT_FOUND = 404
 
         /** How long a resolved default branch stays cached before re-querying. */
         private const val DEFAULT_BRANCH_TTL_MS = 6L * 60L * 60L * 1000L // 6 hours
@@ -590,15 +591,38 @@ class GitHubDataSource internal constructor(
         return github + listOfNotNull(mirror)
     }
 
-    /** [path] from [source], size-checked and signature-checked, or null for an empty body. */
+    /**
+     * [path] from [source], size-checked and signature-checked, or null for
+     * an empty body. The CDN caches a file and its signature separately, for
+     * minutes, so right after a publish it can pair the new body with the old
+     * signature. A signature refusal gets one more try past the cache, and
+     * stands if that copy doesn't verify either.
+     */
     private fun fetchVerified(
         path: String,
         source: FeedSource,
     ): String? =
-        client.newCall(rawRequest(source.url)).execute().use { response ->
+        try {
+            fetchVerifiedOnce(path, source.url, source.signatureUrl)
+        } catch (refused: GitHubFeedValidationException) {
+            if (refused.reason != GitHubFeedFailureReason.SIGNATURE) throw refused
+            val pastCache = "cb=${System.nanoTime()}"
+            try {
+                fetchVerifiedOnce(path, "${source.url}?$pastCache", "${source.signatureUrl}?$pastCache")
+            } catch (_: Exception) {
+                throw refused
+            }
+        }
+
+    private fun fetchVerifiedOnce(
+        path: String,
+        url: String,
+        signatureUrl: String,
+    ): String? =
+        client.newCall(rawRequest(url)).execute().use { response ->
             if (!response.isSuccessful) throw GitHubFeedHttpException(response.code, response.message)
             readLimitedBody(response, rawFeedLabel(path), rawFeedMaxBytes(path))?.let { body ->
-                signatureChecked(path, validateRawFeedBody(path, body), source.signatureUrl)
+                signatureChecked(path, validateRawFeedBody(path, body), signatureUrl)
             }
         }
 
@@ -616,7 +640,10 @@ class GitHubDataSource internal constructor(
      * The failure to report once [next] follows [previous]. A source that
      * served the file but failed validation (a bad signature, an oversized
      * body) says more than a later source answering 404, and the callers treat
-     * the two differently. A mirror's failure never hides GitHub's unless the
+     * the two differently. A later 404 never hides an earlier failure either:
+     * the fallback branch that doesn't exist says nothing about why the real
+     * one failed, and SyncRepository stops retrying on a 404. A mirror's
+     * failure never hides GitHub's unless the
      * mirror served a file that was refused: SyncRepository decides whether to
      * retry from the status code, and the certificate notice fires on a trust
      * failure, and both are about GitHub.
@@ -632,6 +659,7 @@ class GitHubDataSource internal constructor(
             previous == null -> next
             nextFromMirror -> if (nextRefused && !previousRefused && !HttpClient.isCertificateTrustFailure(previous)) next else previous
             previousRefused && !nextRefused -> previous
+            next is GitHubFeedHttpException && next.code == HTTP_NOT_FOUND -> previous
             else -> next
         }
     }
@@ -641,10 +669,20 @@ class GitHubDataSource internal constructor(
         signatureUrl: String,
     ): String? =
         client.newCall(rawRequest(signatureUrl)).execute().use { response ->
-            if (response.isSuccessful) {
-                readLimitedBody(response, "${rawFeedLabel(path)} signature", FeedSignature.MAX_SIGNATURE_BYTES)
-            } else {
-                null
+            when {
+                response.isSuccessful -> {
+                    readLimitedBody(response, "${rawFeedLabel(path)} signature", FeedSignature.MAX_SIGNATURE_BYTES)
+                }
+
+                // Only a missing file means unsigned. A busy or failing host says
+                // nothing about the feed, and reads as a network failure instead.
+                response.code == HTTP_NOT_FOUND -> {
+                    null
+                }
+
+                else -> {
+                    throw GitHubFeedHttpException(response.code, response.message)
+                }
             }
         }
 

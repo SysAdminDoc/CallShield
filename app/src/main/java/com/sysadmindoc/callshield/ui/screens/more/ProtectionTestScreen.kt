@@ -739,6 +739,10 @@ private suspend fun runTests(context: Context): List<TestResult> =
                             hotDataStalledDetail(context, hotDataHealth, hotDataNow)
                         }
 
+                        HotFeedFreshness.State.REFUSED -> {
+                            context.getString(R.string.protection_test_hot_refused)
+                        }
+
                         HotFeedFreshness.State.CURRENT -> {
                             when {
                                 hotRangesLoaded -> context.getString(R.string.protection_test_hot_pass)

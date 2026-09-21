@@ -18,6 +18,11 @@ data class HotDataHealth(
     /** Feeds the publisher emptied on purpose (`cleared: true`) on the last refresh. */
     val clearedFeeds: Set<String> = emptySet(),
     /**
+     * Feeds that were reachable on the last refresh but refused: the download
+     * didn't verify, or it was older than the copy already in use.
+     */
+    val refusedFeeds: Set<String> = emptySet(),
+    /**
      * Each feed's own ISO-8601 `generated` value from the last time it was read.
      * `lastGoodTimestamp` records when *this device* last synced successfully,
      * which says nothing about whether the publisher is still producing; this
@@ -37,6 +42,7 @@ data class HotDataHealthUpdate(
     val resolvedFeeds: Set<String>,
     val feedGeneratedAt: Map<String, String>,
     val feedDigests: Map<String, String>,
+    val refusedFeeds: Set<String> = emptySet(),
 ) {
     companion object {
         /**

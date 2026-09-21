@@ -578,6 +578,7 @@ class SettingsRepository(
             unavailableFeeds = preferences[SpamRepository.KEY_HOT_DATA_UNAVAILABLE].orEmpty(),
             unreachableFeeds = preferences[SpamRepository.KEY_HOT_DATA_UNREACHABLE],
             clearedFeeds = preferences[SpamRepository.KEY_HOT_DATA_CLEARED].orEmpty(),
+            refusedFeeds = preferences[SpamRepository.KEY_HOT_DATA_REFUSED].orEmpty(),
             feedGeneratedAt = decodeFeedMetadata(preferences[SpamRepository.KEY_HOT_DATA_GENERATED_AT]),
             feedDigests = decodeFeedMetadata(preferences[SpamRepository.KEY_HOT_DATA_DIGESTS]),
         )
@@ -598,6 +599,7 @@ class SettingsRepository(
         preferences[SpamRepository.KEY_HOT_DATA_UNAVAILABLE] = update.unavailableFeeds
         preferences[SpamRepository.KEY_HOT_DATA_UNREACHABLE] = update.unreachableFeeds
         preferences[SpamRepository.KEY_HOT_DATA_CLEARED] = update.clearedFeeds
+        preferences[SpamRepository.KEY_HOT_DATA_REFUSED] = update.refusedFeeds
         val generatedAt =
             HotDataHealthUpdate.mergeFeedMetadata(
                 previous = decodeFeedMetadata(preferences[SpamRepository.KEY_HOT_DATA_GENERATED_AT]),

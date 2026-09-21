@@ -40,6 +40,13 @@ object HotFeedFreshness {
         /** Reachable, but the publisher has not regenerated it in a long time. */
         STALLED,
 
+        /**
+         * Reachable, but the last download was refused: its signature didn't
+         * verify, or it was older than the copy in use. The device keeps its
+         * previous copy.
+         */
+        REFUSED,
+
         /** Could not be fetched at all. */
         UNREACHABLE,
     }
@@ -84,8 +91,10 @@ object HotFeedFreshness {
         publishedAtMillis: Long,
         now: Long,
         stallThresholdMillis: Long = DEFAULT_STALL_THRESHOLD_MILLIS,
+        refused: Boolean = false,
     ): State {
         if (unreachable) return State.UNREACHABLE
+        if (refused) return State.REFUSED
         if (publishedAtMillis <= 0L) return State.CURRENT
         val age = now - publishedAtMillis
         // A clock skewed backwards, or a feed generated moments ago on a device
@@ -105,6 +114,7 @@ object HotFeedFreshness {
         when {
             states.isEmpty() -> State.CURRENT
             states.contains(State.UNREACHABLE) -> State.UNREACHABLE
+            states.contains(State.REFUSED) -> State.REFUSED
             states.contains(State.STALLED) -> State.STALLED
             else -> State.CURRENT
         }
@@ -122,13 +132,14 @@ object HotFeedFreshness {
         now: Long,
     ): State {
         val unreachable = health.unreachableFeeds ?: health.unavailableFeeds
-        val feeds = unreachable + health.feedGeneratedAt.keys + health.clearedFeeds
+        val feeds = unreachable + health.refusedFeeds + health.feedGeneratedAt.keys + health.clearedFeeds
         return worst(
             feeds.map { feed ->
                 classify(
                     unreachable = feed in unreachable,
                     publishedAtMillis = publishedAtMillis(health.feedGeneratedAt[feed]),
                     now = now,
+                    refused = feed in health.refusedFeeds,
                 )
             },
         )

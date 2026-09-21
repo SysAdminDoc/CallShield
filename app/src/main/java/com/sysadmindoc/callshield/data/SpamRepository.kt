@@ -140,6 +140,7 @@ class SpamRepository(
         internal val KEY_FEED_TRUST_NOTICE_VERSION = intPreferencesKey("feed_trust_notice_version")
         internal val KEY_HOT_DATA_UNREACHABLE = stringSetPreferencesKey("hot_data_unreachable_feeds")
         internal val KEY_HOT_DATA_CLEARED = stringSetPreferencesKey("hot_data_cleared_feeds")
+        internal val KEY_HOT_DATA_REFUSED = stringSetPreferencesKey("hot_data_refused_feeds")
         internal val KEY_HOT_DATA_GENERATED_AT = stringPreferencesKey("hot_data_feed_generated_at")
         internal val KEY_HOT_DATA_DIGESTS = stringPreferencesKey("hot_data_feed_digests")
         internal val KEY_DISMISSED_RULE_CONFLICTS = stringSetPreferencesKey("dismissed_rule_conflict_keys")

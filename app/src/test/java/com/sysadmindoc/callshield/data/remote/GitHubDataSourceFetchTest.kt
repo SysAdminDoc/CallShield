@@ -134,34 +134,91 @@ class GitHubDataSourceFetchTest {
         masterFiles: Map<String, ByteArray>,
         mirrorFiles: Map<String, ByteArray> = emptyMap(),
         gitHubFailure: IOException? = null,
-    ) = runBlocking { dataSource(masterFiles, mirrorFiles, gitHubFailure).fetchHotListSnapshot(OWNER, REPO) }
+        masterStatus: Map<String, Int> = emptyMap(),
+        pastCacheFiles: Map<String, ByteArray>? = null,
+    ) = runBlocking {
+        dataSource(masterFiles, mirrorFiles, gitHubFailure, masterStatus, pastCacheFiles).fetchHotListSnapshot(OWNER, REPO)
+    }
 
+    /**
+     * [masterStatus] makes master answer an error for a path. [pastCacheFiles]
+     * is what master serves to a request that asks past the CDN cache.
+     */
     private fun dataSource(
         masterFiles: Map<String, ByteArray>,
         mirrorFiles: Map<String, ByteArray>,
         gitHubFailure: IOException? = null,
+        masterStatus: Map<String, Int> = emptyMap(),
+        pastCacheFiles: Map<String, ByteArray>? = null,
     ) = GitHubDataSource(
         Interceptor { chain ->
             val url = chain.request().url.toString()
             requested += url
             if (gitHubFailure != null && url.startsWith(RAW)) throw gitHubFailure
+            val pastCache = "?" in url
+            val file = url.substringBefore("?")
+            val status = if (file.startsWith(MASTER)) masterStatus[file.removePrefix(MASTER)] else null
             val body =
                 when {
+                    status != null -> null
                     url == REPOSITORY_API -> "{\"default_branch\":\"master\"}".toByteArray()
-                    url.startsWith(MASTER) -> masterFiles[url.removePrefix(MASTER)]
-                    url.startsWith(MIRROR) -> mirrorFiles[url.removePrefix(MIRROR)]
+                    file.startsWith(MASTER) && pastCache && pastCacheFiles != null -> pastCacheFiles[file.removePrefix(MASTER)]
+                    file.startsWith(MASTER) -> masterFiles[file.removePrefix(MASTER)]
+                    file.startsWith(MIRROR) -> mirrorFiles[file.removePrefix(MIRROR)]
                     else -> null
                 }
+            val code = status ?: if (body == null) 404 else 200
             Response
                 .Builder()
                 .request(chain.request())
                 .protocol(Protocol.HTTP_1_1)
-                .code(if (body == null) 404 else 200)
-                .message(if (body == null) "Not Found" else "OK")
+                .code(code)
+                .message(if (code == 200) "OK" else "Status $code")
                 .body((body ?: ByteArray(0)).toResponseBody("application/json".toMediaType()))
                 .build()
         },
     )
+
+    @Test
+    fun `a signature the host fails to serve is a network failure, not an unsigned feed`() {
+        val result = fetchHotList(masterFiles = mapOf(HOT_LIST to hotList), masterStatus = mapOf("$HOT_LIST.sig" to 503))
+
+        val error = result.exceptionOrNull()
+        assertTrue(error.toString(), error is GitHubFeedHttpException && error.code == 503)
+    }
+
+    @Test
+    fun `a fallback branch that doesn't exist doesn't hide why the real one failed`() {
+        // A 404 would also have told SyncRepository not to retry a transient failure.
+        val result = fetchHotList(masterFiles = emptyMap(), masterStatus = mapOf(HOT_LIST to 503))
+
+        val error = result.exceptionOrNull()
+        assertTrue(error.toString(), error is GitHubFeedHttpException && error.code == 503)
+    }
+
+    @Test
+    fun `a body the cache paired with an old signature is fetched again past the cache`() {
+        val oldSignature = file("$MANIFEST.sig")
+
+        val result =
+            fetchHotList(
+                masterFiles = mapOf(HOT_LIST to hotList, "$HOT_LIST.sig" to oldSignature),
+                pastCacheFiles = mapOf(HOT_LIST to hotList, "$HOT_LIST.sig" to hotListSignature),
+            )
+
+        assertTrue(result.exceptionOrNull()?.toString(), result.isSuccess)
+        assertTrue(requested.toString(), requested.any { it.startsWith("$MASTER$HOT_LIST.sig?cb=") })
+    }
+
+    @Test
+    fun `a signature that doesn't verify past the cache either stays refused`() {
+        val oldSignature = file("$MANIFEST.sig")
+        val files = mapOf(HOT_LIST to hotList, "$HOT_LIST.sig" to oldSignature)
+
+        val result = fetchHotList(masterFiles = files, pastCacheFiles = files)
+
+        assertEquals(GitHubFeedFailureReason.SIGNATURE, (result.exceptionOrNull() as GitHubFeedValidationException).reason)
+    }
 
     private fun tampered(bytes: ByteArray) = String(bytes, Charsets.UTF_8).replaceFirst("\"count\"", "\"Count\"").toByteArray(Charsets.UTF_8)
 

@@ -22,6 +22,19 @@ All notable changes to CallShield will be documented in this file.
   throws away a download that doesn't carry a valid one and keeps what it
   already has. Until now certificate pinning was the only check, and when it
   broke in August nothing else stood between a phone and a tampered file.
+- A download whose signature arrives damaged or late is handled for what it
+  is. Right after a new feed is published, the download network can hand out
+  the new file with the old signature for a few minutes, so a mismatch is now
+  fetched once more past its cache before it counts as a failure. A signature
+  the server fails to send is a network hiccup to retry, not an unsigned feed.
+  A trending feed that is refused shows as refused in Protection Test instead
+  of "unreachable".
+- An older signed copy of a trending feed can't replace a newer one any more.
+  Someone able to serve files once pinning fails could have replayed an old
+  "nothing trending" feed and wiped the trending numbers on your phone.
+- When the real download branch fails, the backup branch that doesn't exist no
+  longer hides why. Its "not found" answer used to replace a passing server
+  error and stop the app from retrying.
 - If GitHub is blocked where you live, Settings > Feed mirror takes a second
   address for the protection data. CallShield still asks GitHub first and only
   then tries the mirror, before falling back to the copy built into the app.

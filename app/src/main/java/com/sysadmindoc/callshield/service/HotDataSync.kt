@@ -12,8 +12,10 @@ import com.sysadmindoc.callshield.data.model.HotNumber
 import com.sysadmindoc.callshield.data.model.SourceEvidenceJson
 import com.sysadmindoc.callshield.data.model.SpamNumber
 import com.sysadmindoc.callshield.data.remote.GitHubDataSource
+import com.sysadmindoc.callshield.data.remote.GitHubFeedValidationException
 import com.sysadmindoc.callshield.data.remote.HotFeedDataSource
 import com.sysadmindoc.callshield.data.remote.HttpClient
+import com.sysadmindoc.callshield.util.HotFeedFreshness
 import com.sysadmindoc.callshield.util.isAsciiDigit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -42,6 +44,7 @@ internal object HotDataSync {
             feed: String,
             applied: Boolean,
             empty: Boolean,
+            replay: Boolean = false,
         ) = FeedObservation(
             feed = feed,
             resolved = resolved,
@@ -52,6 +55,8 @@ internal object HotDataSync {
             // The bundled snapshot resolves a feed after a failed fetch. It is
             // not evidence the publisher is reachable, current, or cleared.
             fromNetwork = resolved && failure == null,
+            // A host that served a file the app then refused was reachable.
+            refused = replay || failure is GitHubFeedValidationException,
         )
     }
 
@@ -68,6 +73,8 @@ internal object HotDataSync {
         val inputDigest: String? = null,
         /** The file came from the network, not the bundled snapshot. */
         val fromNetwork: Boolean = resolved,
+        /** The host served it, but it failed its signature check or was older than the copy in use. */
+        val refused: Boolean = false,
     )
 
     /**
@@ -84,10 +91,13 @@ internal object HotDataSync {
      * leaves the stored stamps alone.
      */
     internal fun healthUpdate(observations: List<FeedObservation>): HotDataHealthUpdate {
-        val read = observations.filter { it.fromNetwork }
+        // A refused file says nothing trustworthy about the publisher, and its
+        // stamp must not replace the newer one a replay check compares against.
+        val read = observations.filter { it.fromNetwork && !it.refused }
         return HotDataHealthUpdate(
             unavailableFeeds = observations.filterNot { it.resolved && it.applied }.mapTo(mutableSetOf()) { it.feed },
-            unreachableFeeds = observations.filterNot { it.fromNetwork }.mapTo(mutableSetOf()) { it.feed },
+            unreachableFeeds = observations.filterNot { it.fromNetwork || it.refused }.mapTo(mutableSetOf()) { it.feed },
+            refusedFeeds = observations.filter { it.refused }.mapTo(mutableSetOf()) { it.feed },
             clearedFeeds = read.filter { it.applied && it.empty }.mapTo(mutableSetOf()) { it.feed },
             resolvedFeeds = read.mapTo(mutableSetOf()) { it.feed },
             feedGeneratedAt = read.metadata { it.generatedAt },
@@ -161,6 +171,7 @@ internal object HotDataSync {
     ): RefreshOutcome =
         withContext(Dispatchers.IO) {
             val appContext = context.applicationContext
+            val lastRead = repo.readHotDataHealth().feedGeneratedAt
 
             // The bundled snapshot is a bootstrap source, never a repair source.
             // replaceHotList is delete-then-insert, so falling back to the
@@ -169,21 +180,24 @@ internal object HotDataSync {
             // use it where the corresponding store is still empty.
             val hotList = loadHotList(appContext, source, dao.getCountBySource(HOT_LIST_SOURCE) > 0)
             val hotNumbers = sanitizeHotNumbers(hotList.data, repo::normalizeNumber)
-            val hotListApplied = shouldApplyFeed(hotNumbers, hotList.explicitlyCleared)
+            val hotListReplay = isReplay(hotList.generatedAt, lastRead[HOT_LIST_FEED])
+            val hotListApplied = !hotListReplay && shouldApplyFeed(hotNumbers, hotList.explicitlyCleared)
             if (hotList.resolved && hotListApplied) {
                 repo.replaceHotList(hotNumbers)
             }
 
             val hotRanges = loadHotRanges(appContext, source, dependencies.spamHeuristics.hasHotRanges())
             val ranges = sanitizeHotRanges(hotRanges.data)
-            val hotRangesApplied = shouldApplyFeed(ranges, hotRanges.explicitlyCleared)
+            val hotRangesReplay = isReplay(hotRanges.generatedAt, lastRead[HOT_RANGES_FEED])
+            val hotRangesApplied = !hotRangesReplay && shouldApplyFeed(ranges, hotRanges.explicitlyCleared)
             if (hotRanges.resolved && hotRangesApplied) {
                 dependencies.spamHeuristics.updateHotRanges(ranges)
             }
 
             val spamDomains = loadSpamDomains(appContext, source, dependencies.smsContentAnalyzer.hasSpamDomains())
             val domains = sanitizeSpamDomains(spamDomains.data)
-            val spamDomainsApplied = shouldApplyFeed(domains, spamDomains.explicitlyCleared)
+            val spamDomainsReplay = isReplay(spamDomains.generatedAt, lastRead[SPAM_DOMAINS_FEED])
+            val spamDomainsApplied = !spamDomainsReplay && shouldApplyFeed(domains, spamDomains.explicitlyCleared)
             if (spamDomains.resolved && spamDomainsApplied) {
                 dependencies.smsContentAnalyzer.updateSpamDomains(domains)
             }
@@ -191,9 +205,9 @@ internal object HotDataSync {
             val update =
                 healthUpdate(
                     listOf(
-                        hotList.observe(HOT_LIST_FEED, applied = hotListApplied, empty = hotNumbers.isEmpty()),
-                        hotRanges.observe(HOT_RANGES_FEED, applied = hotRangesApplied, empty = ranges.isEmpty()),
-                        spamDomains.observe(SPAM_DOMAINS_FEED, applied = spamDomainsApplied, empty = domains.isEmpty()),
+                        hotList.observe(HOT_LIST_FEED, hotListApplied, hotNumbers.isEmpty(), hotListReplay),
+                        hotRanges.observe(HOT_RANGES_FEED, hotRangesApplied, ranges.isEmpty(), hotRangesReplay),
+                        spamDomains.observe(SPAM_DOMAINS_FEED, spamDomainsApplied, domains.isEmpty(), spamDomainsReplay),
                     ),
                 )
             val unavailableFeeds = update.unavailableFeeds
@@ -344,6 +358,23 @@ internal object HotDataSync {
             resolved = bundled.isSuccess,
             explicitlyCleared = snapshot?.explicitlyCleared == true,
         )
+    }
+
+    /**
+     * A signed feed older than the one last read is a replay: a genuine old
+     * copy served by someone who can serve files (a mirror, or anyone once
+     * pinning fails), such as a past `cleared: true` that would wipe the
+     * device's rows. A signature proves who made a file, not that it's the
+     * latest. Both stamps have to parse; without one the feed is judged as
+     * before.
+     */
+    internal fun isReplay(
+        generatedAt: String?,
+        lastRead: String?,
+    ): Boolean {
+        val incoming = HotFeedFreshness.publishedAtMillis(generatedAt)
+        val previous = HotFeedFreshness.publishedAtMillis(lastRead)
+        return incoming > 0L && previous > 0L && incoming < previous
     }
 
     internal fun shouldApplyFeed(

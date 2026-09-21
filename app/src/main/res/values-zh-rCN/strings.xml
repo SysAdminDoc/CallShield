@@ -706,6 +706,7 @@
     <string name="protection_test_hot_pass">热点营销号段已加载</string>
     <string name="protection_test_hot_fail">为空 — 将在下次 30 分钟同步时填充</string>
     <string name="protection_test_hot_stalled">可以连接，但热点数据源已有 %1$d 天没有重新生成</string>
+    <string name="protection_test_hot_refused">可以连接，但上次下载未通过签名或时效检查，因此仍在使用之前的数据</string>
     <string name="protection_test_hot_cleared">可以连接。发布方表示目前没有热点条目</string>
     <string name="protection_test_overlay_pass">可显示来电识别悬浮窗</string>
     <string name="protection_test_overlay_fail">未授予 — 悬浮窗不会显示</string>
