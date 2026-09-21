@@ -4,8 +4,8 @@ import android.app.Application
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import com.sysadmindoc.callshield.data.CommunityContributor.ContributeOutcome
 import com.sysadmindoc.callshield.data.CommunityContributor.ContributeResult
-import com.sysadmindoc.callshield.data.SmsContentAnalyzer.SmsReportIndicators
 import com.sysadmindoc.callshield.data.repository.SettingsRepository
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -14,6 +14,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -26,6 +27,7 @@ import java.util.concurrent.TimeUnit
  * Issue #10's report arrived three times minutes apart, and one number
  * arrived 12 times in a day. The day's ledger lives in DataStore, so a
  * repeat is caught across a process death as well as across a double tap.
+ * Every claimed report is either delivered, left in the outbox, or released.
  *
  * Robolectric supplies a real SDK level: on a bare JVM DataStore sees SDK 0
  * and falls back to File.renameTo, which can't replace a file on Windows.
@@ -35,10 +37,13 @@ import java.util.concurrent.TimeUnit
 class CommunityReportSubmitterTest {
     private val directory: File = Files.createTempDirectory("callshield-report-ledger-").toFile()
     private val stores = mutableListOf<Store>()
-    private val sent = mutableListOf<String>()
-    private val queued = mutableListOf<String>()
+    private val sent = mutableListOf<CommunityReport>()
+    private val queued = mutableListOf<CommunityReport>()
+    private val dequeued = mutableListOf<CommunityReport>()
     private var outcome = ContributeOutcome.REPORTED_SPAM
+    private var cancelSend = false
     private var now = 1_790_000_000_000L
+    private var nextId = 0
 
     /** One process's view of the settings files. Closing it is a process death. */
     private inner class Store : AutoCloseable {
@@ -58,18 +63,25 @@ class CommunityReportSubmitterTest {
     private fun submitter(store: Store) =
         CommunityReportSubmitter(
             claim = store.settings::claimCommunityReport,
-            transport = { number, type, _: SmsReportIndicators? ->
-                sent += "$number:$type"
-                ContributeResult(!outcome.isTransient, outcome.name, outcome)
+            release = store.settings::releaseCommunityReport,
+            transport = { report ->
+                sent += report
+                if (cancelSend) throw CancellationException("the screen went away")
+                val delivered = outcome == ContributeOutcome.REPORTED_SPAM || outcome == ContributeOutcome.REPORTED_NOT_SPAM
+                ContributeResult(delivered, outcome.name, outcome)
             },
-            enqueue = { number, type, _ -> queued += "$number:$type" },
+            enqueue = { report -> queued += report },
+            dequeue = { report -> dequeued += report },
             clock = { now },
+            newId = { "report-${++nextId}" },
         )
 
     private fun Store.submit(
         number: String,
         type: String = "spam",
     ) = runBlocking { submitter(this@submit).submit(number, type, null) }
+
+    private fun List<CommunityReport>.keys() = map { "${it.number}:${it.type}" }
 
     @After
     fun tearDown() {
@@ -86,7 +98,19 @@ class CommunityReportSubmitterTest {
 
         assertEquals(ContributeOutcome.ALREADY_SUBMITTED, second.outcome)
         assertTrue(second.success)
-        assertEquals(listOf("+12122340101:spam"), sent)
+        assertEquals(listOf("+12122340101:spam"), sent.keys())
+    }
+
+    @Test
+    fun `a category is not a separate vote`() {
+        // A notification's Block sends "spam" and Number Detail sends the row's
+        // category. Both are one person's spam vote, and the pipeline counts
+        // each type as a report of its own.
+        val store = store()
+        store.submit("+12122340101", "spam")
+
+        assertEquals(ContributeOutcome.ALREADY_SUBMITTED, store.submit("+12122340101", "robocall").outcome)
+        assertEquals(listOf("+12122340101:spam"), sent.keys())
     }
 
     @Test
@@ -113,11 +137,22 @@ class CommunityReportSubmitterTest {
         outcome = ContributeOutcome.REPORTED_SPAM
         now += TimeUnit.HOURS.toMillis(25)
         assertEquals(ContributeOutcome.REPORTED_SPAM, store.submit("+12122340101", "spam").outcome)
-        assertEquals(listOf("+12122340101:spam", "+12122340101:not_spam", "+12122340101:spam"), sent)
+        assertEquals(listOf("+12122340101:spam", "+12122340101:not_spam", "+12122340101:spam"), sent.keys())
     }
 
     @Test
-    fun `a report that can't go out now is queued once and not dropped`() {
+    fun `every report is queued before it is sent, and a delivered one is taken back out`() {
+        val store = store()
+
+        store.submit("+12122340101")
+
+        assertEquals(listOf("report-1"), queued.map { it.id })
+        assertEquals(listOf("report-1"), sent.map { it.id })
+        assertEquals(listOf("report-1"), dequeued.map { it.id })
+    }
+
+    @Test
+    fun `a report that can't go out now stays queued, once, and not dropped`() {
         val store = store()
         outcome = ContributeOutcome.NETWORK_ERROR
 
@@ -127,18 +162,48 @@ class CommunityReportSubmitterTest {
         assertEquals(ContributeOutcome.QUEUED, first.outcome)
         assertTrue(first.success)
         assertEquals(ContributeOutcome.ALREADY_SUBMITTED, retapped.outcome)
-        assertEquals(listOf("+12122340101:spam"), queued)
+        assertEquals(listOf("+12122340101:spam"), queued.keys())
+        assertEquals(emptyList<CommunityReport>(), dequeued)
         assertEquals(1, sent.size)
     }
 
     @Test
-    fun `a refused number is not queued, and an unreadable one is not even recorded`() {
+    fun `a report whose sender is cancelled mid-send is still queued and still claimed`() {
+        val store = store()
+        cancelSend = true
+
+        try {
+            store.submit("+12122340101")
+            fail("the cancellation should reach the caller")
+        } catch (_: CancellationException) {
+            // The Lookup screen went away during the send.
+        }
+
+        assertEquals(listOf("+12122340101:spam"), queued.keys())
+        assertEquals(emptyList<CommunityReport>(), dequeued)
+        cancelSend = false
+        assertEquals(ContributeOutcome.ALREADY_SUBMITTED, store.submit("+12122340101").outcome)
+    }
+
+    @Test
+    fun `a refused report leaves nothing queued and can be made again`() {
         val store = store()
         outcome = ContributeOutcome.INVALID_NUMBER
 
         assertEquals(ContributeOutcome.INVALID_NUMBER, store.submit("+12122340101").outcome)
+        assertEquals(queued.map { it.id }, dequeued.map { it.id })
+
+        // Released, so trying again isn't answered with "already reported".
+        assertEquals(ContributeOutcome.INVALID_NUMBER, store.submit("+12122340101").outcome)
+        assertEquals(2, sent.size)
+    }
+
+    @Test
+    fun `an unreadable number is neither claimed nor queued`() {
+        val store = store()
+
         assertEquals(ContributeOutcome.INVALID_NUMBER, store.submit("12").outcome)
-        assertEquals(emptyList<String>(), queued)
-        assertEquals(listOf("+12122340101:spam"), sent)
+        assertEquals(emptyList<CommunityReport>(), queued)
+        assertEquals(emptyList<CommunityReport>(), sent)
     }
 }

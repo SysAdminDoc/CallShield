@@ -441,7 +441,7 @@
     <string name="lookup_reported">Reported to community</string>
     <string name="lookup_report_failed">Couldn\'t submit the report.</string>
     <string name="lookup_report">Report</string>
-    <string name="lookup_marked_safe_local">Marked as not spam</string>
+    <string name="lookup_marked_safe_with_status">Marked as not spam. %1$s</string>
     <string name="lookup_marked_safe_reported">Marked safe and reported</string>
     <string name="lookup_not_spam">This is not spam</string>
     <string name="lookup_remove_my_rule">Remove my rule</string>

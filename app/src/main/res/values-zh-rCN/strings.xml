@@ -287,7 +287,7 @@
     <string name="lookup_reported">已举报至社区</string>
     <string name="lookup_report_failed">无法提交举报。</string>
     <string name="lookup_report">举报</string>
-    <string name="lookup_marked_safe_local">已标记为非垃圾</string>
+    <string name="lookup_marked_safe_with_status">已标记为非垃圾。%1$s</string>
     <string name="lookup_marked_safe_reported">已标记为安全并举报</string>
     <string name="lookup_open_detail">打开完整详情</string>
     <string name="lookup_spam">垃圾</string>

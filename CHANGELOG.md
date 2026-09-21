@@ -129,6 +129,18 @@ All notable changes to CallShield will be documented in this file.
 - A report made offline, or while the report server is busy, is no longer
   lost. It waits and goes out once the connection is back. That includes the
   Block and Report buttons on notifications, which used to fail silently.
+- Every report now waits in that outbox while it's being sent, so leaving the
+  screen mid-send, or Android closing the app, can't lose it while the app
+  goes on saying you already reported it. Reporting a number as spam and then
+  as a robocall counts as one vote a day, not two. A report the server turns
+  down, or one the outbox gives up on, can be made again the same day. Lookup
+  now says when a report was queued or already made today instead of always
+  saying it was sent. Each report carries an id, so a resend can be told apart
+  from a second report.
+- The app treats the Worker's "already submitted" answer as delivered only when
+  the Worker says it stored the report. The deployed Worker writes that marker
+  before storing, so its bare answer can mean the report was lost, and the app
+  now tries again later instead of calling it sent.
 
 The rest of this section takes effect when the report Worker is next deployed.
 

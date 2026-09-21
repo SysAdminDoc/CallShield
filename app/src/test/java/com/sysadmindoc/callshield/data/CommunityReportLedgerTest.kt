@@ -19,12 +19,41 @@ class CommunityReportLedgerTest {
     }
 
     @Test
-    fun `the vote type and the full number are part of the key`() {
+    fun `the vote and the full number are part of the key`() {
         val entries = CommunityReportLedger.add(emptySet(), "+12122340101", "spam", now)
 
         assertFalse(CommunityReportLedger.contains(entries, "+12122340101", "not_spam"))
         // One number that is a prefix of another is still a different number.
         assertFalse(CommunityReportLedger.contains(entries, "+1212234010", "spam"))
+    }
+
+    @Test
+    fun `every spam category is one vote, and a correction or a text is another`() {
+        listOf("spam", "robocall", "scam", "telemarketer", "debt_collector", "ai_voice", "unknown").forEach {
+            assertEquals(it, "spam", CommunityReportLedger.voteOf(it))
+        }
+        assertEquals("not_spam", CommunityReportLedger.voteOf("not_spam"))
+        assertEquals("sms_spam", CommunityReportLedger.voteOf("sms_spam"))
+    }
+
+    @Test
+    fun `releasing a claim drops only that number and vote`() {
+        var entries = CommunityReportLedger.add(emptySet(), "+12122340101", "spam", now)
+        entries = CommunityReportLedger.add(entries, "+12122340101", "not_spam", now)
+        entries = CommunityReportLedger.add(entries, "+12122340102", "spam", now)
+
+        val released = CommunityReportLedger.remove(entries, "+12122340101", "spam")
+
+        assertFalse(CommunityReportLedger.contains(released, "+12122340101", "spam"))
+        assertTrue(CommunityReportLedger.contains(released, "+12122340101", "not_spam"))
+        assertTrue(CommunityReportLedger.contains(released, "+12122340102", "spam"))
+    }
+
+    @Test
+    fun `the report carries its id to the Worker`() {
+        val json = CommunityContributor.buildReportJson("+12122340101", "spam", null, reportId = "8c0d6e1a-2b4f-4c3d-9e8f-0a1b2c3d4e5f")
+
+        assertTrue(json, "\"report_id\":\"8c0d6e1a-2b4f-4c3d-9e8f-0a1b2c3d4e5f\"" in json)
     }
 
     @Test
@@ -36,7 +65,8 @@ class CommunityReportLedgerTest {
 
     @Test
     fun `the Worker's answers map to delivered, retry later, or give up`() {
-        val duplicate = """{"error":"Duplicate report, already submitted"}"""
+        val stored = """{"error":"Duplicate report, already submitted","already_stored":true}"""
+        val bareDuplicate = """{"error":"Duplicate report, already submitted"}"""
         val limited = """{"error":"Rate limited, please retry later"}"""
 
         assertEquals(CommunityContributor.ContributeOutcome.REPORTED_SPAM, CommunityContributor.resultFor(200, "spam", "", null).outcome)
@@ -45,7 +75,10 @@ class CommunityReportLedgerTest {
             CommunityContributor.resultFor(200, "not_spam", "", null).outcome,
         )
         // An earlier attempt was stored; sending it again would store it twice.
-        assertEquals(CommunityContributor.ContributeOutcome.REPORTED_SPAM, CommunityContributor.resultFor(429, "spam", duplicate, "300").outcome)
+        assertEquals(CommunityContributor.ContributeOutcome.REPORTED_SPAM, CommunityContributor.resultFor(429, "spam", stored, "300").outcome)
+        // The deployed Worker marks a duplicate before storing, so its bare answer
+        // may mean the report was lost: try again later instead of calling it sent.
+        assertTrue(CommunityContributor.resultFor(429, "spam", bareDuplicate, "300").outcome.isTransient)
         val rateLimited = CommunityContributor.resultFor(429, "spam", limited, "120")
         assertEquals(CommunityContributor.ContributeOutcome.RATE_LIMITED, rateLimited.outcome)
         assertEquals(120, rateLimited.retryAfterSeconds)

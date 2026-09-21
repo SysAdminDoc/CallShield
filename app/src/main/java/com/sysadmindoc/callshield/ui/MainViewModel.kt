@@ -1193,6 +1193,9 @@ class MainViewModel
             }
         }
 
+        /** What to tell the user after a community report, by what actually happened to it. */
+        internal fun contributeMessage(result: CommunityContributor.ContributeResult): String = result.toStatusMessage().text
+
         /**
          * Localize the typed outcome. The network layer's `message` field is
          * hardcoded-English diagnostics — showing it verbatim regressed the

@@ -19,10 +19,10 @@ import java.util.concurrent.TimeUnit
  *
  * Supports both spam reports AND false positive reports ("not_spam").
  *
- * A number and vote type is sent at most once a day ([CommunityReportLedger]).
- * A report that can't go out now (offline, rate-limited, server error) is
- * handed to [CommunityReportWorker], which delivers it once the network is
- * back instead of dropping it.
+ * A number and vote is sent at most once a day ([CommunityReportLedger]). Each
+ * report waits in [CommunityReportWorker] while it is sent, so one that can't
+ * go out now (offline, rate-limited, a server error, a cancelled or killed
+ * sender) is delivered once the network is back instead of being dropped.
  */
 object CommunityContributor {
     private const val WORKER_URL = "https://callshield-reports.snafumatthew.workers.dev"
@@ -36,8 +36,13 @@ object CommunityContributor {
     private const val DEFAULT_RETRY_AFTER_SECONDS = 60
     private const val ERROR_BODY_PEEK_BYTES = 1024L
 
-    /** The Worker's answer to a report it already stored, which is not a failure. */
-    private const val WORKER_DUPLICATE_MARKER = "Duplicate report"
+    /**
+     * The Worker's answer to a report it already stored. A Worker older than
+     * this marker wrote its duplicate record before storing the report, so
+     * its bare "Duplicate report" can mean the report was lost; that answer
+     * is retried like any rate limit.
+     */
+    private val alreadyStoredPattern = Regex(""""already_stored"\s*:\s*true""")
 
     private val reportDomainPattern = Regex("^[a-z0-9](?:[a-z0-9.-]{0,251}[a-z0-9])?$")
     private val urlIndicatorPattern = Regex("^[a-z_]{3,40}$")
@@ -92,32 +97,38 @@ object CommunityContributor {
     ): ContributeResult = submitter(context).submit(number, type, smsIndicators)
 
     /**
-     * Report a false positive — this number is NOT spam.
-     * The merge script will subtract votes from this number.
+     * Report a false positive: this number is NOT spam. The merge files it as
+     * a review candidate rather than a vote against the number.
      */
     suspend fun reportNotSpam(
         context: Context,
         number: String,
     ): ContributeResult = submitter(context).submit(number, "not_spam", null)
 
+    /** The network half of a report. Tests replace it to watch what would be sent. */
+    internal var transport: suspend (CommunityReport) -> ContributeResult = ::send
+
+    /** Where the day's ledger lives. Tests point it at an isolated repository. */
+    internal var repositoryFor: (Context) -> SpamRepository = { SpamRepository.getInstance(it) }
+
     private fun submitter(context: Context): CommunityReportSubmitter {
         val appContext = context.applicationContext
+        val repository = repositoryFor(appContext)
         return CommunityReportSubmitter(
-            claim = { number, type, now -> SpamRepository.getInstance(appContext).claimCommunityReport(number, type, now) },
-            transport = ::send,
-            enqueue = { number, type, indicators -> CommunityReportWorker.enqueue(appContext, number, type, indicators) },
+            claim = { number, vote, now -> repository.claimCommunityReport(number, vote, now) },
+            release = { number, vote -> repository.releaseCommunityReport(number, vote) },
+            transport = { report -> transport(report) },
+            enqueue = { report -> CommunityReportWorker.enqueue(appContext, report) },
+            dequeue = { report -> CommunityReportWorker.dequeue(appContext, report) },
         )
     }
 
     /** One attempt to deliver an already-normalized report. Used by the outbox too. */
-    internal suspend fun send(
-        normalized: String,
-        type: String,
-        smsIndicators: SmsContentAnalyzer.SmsReportIndicators? = null,
-    ): ContributeResult =
+    internal suspend fun send(report: CommunityReport): ContributeResult =
         withContext(Dispatchers.IO) {
+            val type = report.type
             try {
-                val json = buildReportJson(normalized, type, smsIndicators)
+                val json = buildReportJson(report.number, type, report.indicators, report.id)
                 val body = json.toRequestBody("application/json".toMediaType())
 
                 val request =
@@ -153,10 +164,10 @@ object CommunityContributor {
         body: String,
         retryAfterHeader: String?,
     ): ContributeResult {
-        // A duplicate answer means an earlier attempt was stored and only its
-        // response was lost. Sending it again after the Worker's window would
-        // store it twice.
-        val duplicate = code == HTTP_TOO_MANY_REQUESTS && WORKER_DUPLICATE_MARKER in body
+        // A duplicate the Worker says it stored means an earlier attempt got
+        // through and only its response was lost. Sending it again would store
+        // it twice.
+        val duplicate = code == HTTP_TOO_MANY_REQUESTS && alreadyStoredPattern.containsMatchIn(body)
         return when {
             code in 200..299 || duplicate -> {
                 if (type == "not_spam") {
@@ -200,12 +211,15 @@ object CommunityContributor {
         normalizedNumber: String,
         type: String,
         smsIndicators: SmsContentAnalyzer.SmsReportIndicators? = null,
+        reportId: String? = null,
     ): String {
         val fields =
             mutableListOf(
                 """"number":"${escapeJson(normalizedNumber)}"""",
                 """"type":"${escapeJson(type)}"""",
             )
+        // The Worker and the pipeline use the id to recognise a resend.
+        reportId?.let { fields += """"report_id":"${escapeJson(it)}"""" }
         val sanitized = sanitizeSmsIndicators(smsIndicators)
         if (!sanitized.isEmpty()) {
             if (sanitized.domains.isNotEmpty()) {

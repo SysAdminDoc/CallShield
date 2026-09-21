@@ -653,15 +653,26 @@ class SettingsRepository(
             preferences[SpamRepository.KEY_FEED_TRUST_NOTICE_VERSION] = version
         }
 
+    /** Drops the day's claim on a report that was refused or given up on ([CommunityReportLedger.remove]). */
+    suspend fun releaseCommunityReport(
+        number: String,
+        vote: String,
+    ) {
+        privateDataStore.edit { preferences ->
+            preferences[SpamRepository.KEY_COMMUNITY_REPORT_LEDGER] =
+                CommunityReportLedger.remove(preferences[SpamRepository.KEY_COMMUNITY_REPORT_LEDGER].orEmpty(), number, vote)
+        }
+    }
+
     /**
-     * Records a community report unless the same number and vote type was
-     * already reported in the last day. One edit does both, so two taps that
-     * race each other can't both claim it. Kept in the no-backup store: it is
-     * a day of this device's activity, not a setting.
+     * Records a community report unless the same number and vote was already
+     * reported in the last day. One edit does both, so two taps that race each
+     * other can't both claim it. Kept in the no-backup store: it is a day of
+     * this device's activity, not a setting.
      */
     suspend fun claimCommunityReport(
         number: String,
-        type: String,
+        vote: String,
         now: Long,
     ): Boolean {
         var claimed = false
@@ -671,9 +682,9 @@ class SettingsRepository(
                     preferences[SpamRepository.KEY_COMMUNITY_REPORT_LEDGER].orEmpty(),
                     now,
                 )
-            claimed = !CommunityReportLedger.contains(live, number, type)
+            claimed = !CommunityReportLedger.contains(live, number, vote)
             preferences[SpamRepository.KEY_COMMUNITY_REPORT_LEDGER] =
-                if (claimed) CommunityReportLedger.add(live, number, type, now) else live
+                if (claimed) CommunityReportLedger.add(live, number, vote, now) else live
         }
         return claimed
     }

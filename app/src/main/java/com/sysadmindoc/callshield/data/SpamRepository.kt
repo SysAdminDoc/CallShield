@@ -671,9 +671,14 @@ class SpamRepository(
     /** False when this number and vote type was already reported in the last day. */
     suspend fun claimCommunityReport(
         number: String,
-        type: String,
+        vote: String,
         now: Long = System.currentTimeMillis(),
-    ): Boolean = settingsRepository.claimCommunityReport(number, type, now)
+    ): Boolean = settingsRepository.claimCommunityReport(number, vote, now)
+
+    suspend fun releaseCommunityReport(
+        number: String,
+        vote: String,
+    ) = settingsRepository.releaseCommunityReport(number, vote)
 
     // ── Blocklist management ───────────────────────────────────────────
     suspend fun blockNumber(
