@@ -639,7 +639,9 @@ not scrape Nomorobo's restricted carrier feed.
   user blocks active before first unlock; the full database and settings remain
   credential-encrypted
 - **Community report abuse controls**. The Worker requires a Cloudflare client
-  identity and separates malformed requests from unavailable or corrupt rate-limit state
+  identity and separates malformed requests from unavailable or corrupt rate-limit state.
+  It counts an IPv6 client by its /64, and by its /48 for trending corroboration, so one
+  subscriber can't pass as many reporters by rotating addresses
 
 ## Privacy
 

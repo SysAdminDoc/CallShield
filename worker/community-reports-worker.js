@@ -175,9 +175,18 @@ export function sanitizeSmsReportFields(body) {
 const RATE_LIMIT_WINDOW_S = 60;
 const RATE_LIMIT_MAX_REQUESTS = 5;
 
-// Per-number dedup window: the same IP cannot re-report the same
-// normalized number within this window. Prevents replay flooding.
+// Per-number dedup window: the same client cannot re-report the same
+// normalized number with the same type within this window. Prevents replay
+// flooding.
 const DEDUP_WINDOW_S = 300;
+
+// An IPv6 subscriber is handed at least a /64, and often a /56 or /48, so
+// keying on the full address let one line act as endless distinct clients.
+// The limiter and dedup key on the /64. The reporter bucket, which the hot
+// list counts as independent corroboration, keys on the /48: a /56 or /48
+// holder could otherwise mint 256 to 65,536 "reporters".
+const LIMITER_PREFIX_BITS = 64;
+const REPORTER_PREFIX_BITS = 48;
 
 function allowsUnlimitedReports(env) {
   return env?.ALLOW_UNLIMITED_REPORTS === "true";
@@ -185,6 +194,47 @@ function allowsUnlimitedReports(env) {
 
 function hasClientIp(ip) {
   return typeof ip === "string" && ip.trim().length > 0 && ip.trim().length <= 128;
+}
+
+/** Eight zero-padded hex groups, or null when the text isn't an IPv6 address. */
+function expandIpv6(address) {
+  let text = address.toLowerCase();
+  const dotted = text.match(/^(.*:)(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+  if (dotted) {
+    const octets = dotted.slice(2).map(Number);
+    if (octets.some((octet) => octet > 255)) return null;
+    text =
+      dotted[1] +
+      ((octets[0] << 8) | octets[1]).toString(16) +
+      ":" +
+      ((octets[2] << 8) | octets[3]).toString(16);
+  }
+  const halves = text.split("::");
+  if (halves.length > 2) return null;
+  const head = halves[0] ? halves[0].split(":") : [];
+  const tail = halves.length === 2 && halves[1] ? halves[1].split(":") : [];
+  const missing = 8 - head.length - tail.length;
+  if (halves.length === 2 ? missing < 1 : missing !== 0) return null;
+  const groups = [...head, ...Array(halves.length === 2 ? missing : 0).fill("0"), ...tail];
+  if (groups.some((group) => !/^[0-9a-f]{1,4}$/.test(group))) return null;
+  return groups.map((group) => group.padStart(4, "0"));
+}
+
+/**
+ * The identity an abuse control keys on: an IPv4 address as it is, an IPv6
+ * address cut to its first `prefixBits` (a multiple of 16). An IPv4 address
+ * written in IPv6-mapped form counts as the IPv4 address.
+ */
+export function clientKey(ip, prefixBits) {
+  const address = ip.trim();
+  if (!address.includes(":")) return address;
+  const groups = expandIpv6(address);
+  if (!groups) return address;
+  if (groups.slice(0, 5).every((group) => group === "0000") && groups[5] === "ffff") {
+    const [high, low] = [parseInt(groups[6], 16), parseInt(groups[7], 16)];
+    return [high >> 8, high & 255, low >> 8, low & 255].join(".");
+  }
+  return `${groups.slice(0, prefixBits / 16).join(":")}::/${prefixBits}`;
 }
 
 /** Return the Cloudflare-provided client identity without a shared fallback. */
@@ -212,7 +262,8 @@ export function validateReportEnvironment(env) {
 /**
  * Produce a daily-rotating, non-reversible reporter bucket. The public report
  * queue can count independent sources without storing an IP address or a
- * stable cross-day identity.
+ * stable cross-day identity. An IPv6 reporter is bucketed by its /48; an IPv4
+ * bucket is the same one this function has always produced.
  */
 export async function deriveReporterBucket(ip, reportedAt, secret) {
   if (typeof secret !== "string" || secret.length < MIN_REPORTER_SECRET_LENGTH) {
@@ -227,7 +278,11 @@ export async function deriveReporterBucket(ip, reportedAt, secret) {
     false,
     ["sign"],
   );
-  const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(`v1:${day}:${ip}`));
+  const signature = await crypto.subtle.sign(
+    "HMAC",
+    key,
+    encoder.encode(`v1:${day}:${clientKey(ip, REPORTER_PREFIX_BITS)}`),
+  );
   return Array.from(new Uint8Array(signature).slice(0, 8), (byte) =>
     byte.toString(16).padStart(2, "0"),
   ).join("");
@@ -251,11 +306,12 @@ export async function checkRateLimit(ip, env) {
   if (!hasClientIp(ip)) {
     return { allowed: false, remaining: 0, retryAfter: 0, identityError: true };
   }
+  const client = clientKey(ip, LIMITER_PREFIX_BITS);
 
   if (env?.REPORT_LIMITER) {
     let outcome;
     try {
-      outcome = await env.REPORT_LIMITER.limit({ key: ip.trim() });
+      outcome = await env.REPORT_LIMITER.limit({ key: client });
     } catch (error) {
       console.error("Unable to evaluate the community report rate limiter", error);
       return { allowed: false, remaining: 0, retryAfter: 0, stateError: true };
@@ -275,7 +331,7 @@ export async function checkRateLimit(ip, env) {
     return { allowed: false, remaining: 0, retryAfter: 0, configurationError: true };
   }
 
-  const key = `rl:${ip.trim()}`;
+  const key = `rl:${client}`;
   let raw;
   try {
     raw = await env.RATE_LIMIT.get(key);
@@ -346,33 +402,40 @@ export async function checkRateLimit(ip, env) {
 }
 
 /**
- * Check per-IP + per-number dedup against KV (read-only).
- * Returns true if this (IP, number) pair was already reported recently.
- * The marker is written by recordDedup ONLY after the report is durably
- * stored — writing it up front turned any failed GitHub PUT into a 5-minute
- * "Duplicate report" lockout that silently dropped the report on retry.
+ * The type is part of the key so a corrective `not_spam` isn't rejected as a
+ * duplicate of the spam report it corrects.
  */
-export async function checkDedup(ip, normalizedNumber, env) {
+function dedupKey(ip, normalizedNumber, type) {
+  return `dedup:${clientKey(ip, LIMITER_PREFIX_BITS)}:${type}:${normalizedNumber}`;
+}
+
+/**
+ * Check per-client + per-number + per-type dedup against KV (read-only).
+ * Returns true if this client already reported the number with this type
+ * recently. The marker is written by recordDedup ONLY after the report is
+ * durably stored — writing it up front turned any failed GitHub PUT into a
+ * 5-minute "Duplicate report" lockout that silently dropped the report on
+ * retry.
+ */
+export async function checkDedup(ip, normalizedNumber, type, env) {
   if (!hasClientIp(ip)) throw new Error("client IP is required");
   if (!env?.RATE_LIMIT) {
     if (allowsUnlimitedReports(env)) return false;
     throw new Error("RATE_LIMIT binding is required");
   }
 
-  const key = `dedup:${ip.trim()}:${normalizedNumber}`;
-  const existing = await env.RATE_LIMIT.get(key);
+  const existing = await env.RATE_LIMIT.get(dedupKey(ip, normalizedNumber, type));
   return existing !== null;
 }
 
-/** Mark this (IP, number) pair as reported. Call after a successful store. */
-export async function recordDedup(ip, normalizedNumber, env) {
+/** Mark this (client, number, type) as reported. Call after a successful store. */
+export async function recordDedup(ip, normalizedNumber, type, env) {
   if (!hasClientIp(ip)) throw new Error("client IP is required");
   if (!env?.RATE_LIMIT) {
     if (allowsUnlimitedReports(env)) return;
     throw new Error("RATE_LIMIT binding is required");
   }
-  const key = `dedup:${ip.trim()}:${normalizedNumber}`;
-  await env.RATE_LIMIT.put(key, "1", { expirationTtl: DEDUP_WINDOW_S });
+  await env.RATE_LIMIT.put(dedupKey(ip, normalizedNumber, type), "1", { expirationTtl: DEDUP_WINDOW_S });
 }
 
 /**
@@ -395,10 +458,11 @@ export async function recordDedup(ip, normalizedNumber, env) {
  * periodically by running scripts/merge_community_reports.py locally (this
  * project builds and publishes from a workstation, not CI).
  *
- * Rate limiting: per-IP burst limit (5 reports/60 s) via the atomic
+ * Rate limiting: per-client burst limit (5 reports/60 s) via the atomic
  * REPORT_LIMITER rate-limiting binding declared in wrangler.toml (KV counter
- * fallback when unbound), plus per-IP+number dedup in KV (same number cannot
- * be re-reported from the same IP within 5 min).
+ * fallback when unbound), plus per-client+number+type dedup in KV (the same
+ * report cannot be repeated from the same client within 5 min). A client is
+ * an IPv4 address or an IPv6 /64.
  */
 
 export default {
@@ -431,7 +495,7 @@ code{background:#252525;padding:2px 6px;border-radius:4px;font-size:12px;color:#
 <p style="margin-top:16px">This endpoint receives anonymous spam number reports from the CallShield Android app.</p>
 <p>When users block a spam call or tap "Contribute to Community Database", the number is submitted here and merged into the open-source spam database on GitHub.</p>
 <p><strong>How it works:</strong><br>
-<code>POST</code> with <code>{"number":"+12125551234","type":"spam"}</code></p>
+<code>POST</code> with <code>{"number":"+442079460018","type":"spam"}</code></p>
 <p>SMS spam reports may include redacted <code>sms_domains</code> and <code>sms_url_indicators</code>; raw SMS bodies are ignored.</p>
 <p><a href="https://github.com/SysAdminDoc/CallShield">View on GitHub</a> &middot; <a href="https://github.com/SysAdminDoc/CallShield/releases">Download APK</a></p>
 <p style="color:#6c7086;font-size:11px;margin-top:16px">No accounts are used. SMS message text is not stored.</p>
@@ -545,8 +609,8 @@ code{background:#252525;padding:2px 6px;border-radius:4px;font-size:12px;color:#
         });
       }
 
-      // Per-IP + per-number dedup (prevents replaying the same report)
-      const isDuplicate = await checkDedup(clientIp, normalized, env);
+      // Per-client + per-number + per-type dedup (prevents replaying the same report)
+      const isDuplicate = await checkDedup(clientIp, normalized, type, env);
       if (isDuplicate) {
         return new Response(JSON.stringify({ error: "Duplicate report, already submitted" }), {
           status: 429,
@@ -616,7 +680,13 @@ code{background:#252525;padding:2px 6px;border-radius:4px;font-size:12px;color:#
       // Only now that the report is durably stored does the dedup marker go
       // in — a failed PUT above leaves the pair unmarked so the client's
       // retry actually retries instead of eating a 5-minute duplicate 429.
-      await recordDedup(clientIp, normalized, env);
+      // The report is committed whatever happens here, so a failed marker
+      // write must not turn into a 500 that makes the client submit it again.
+      try {
+        await recordDedup(clientIp, normalized, type, env);
+      } catch (error) {
+        console.error("Report stored, but its dedup marker could not be written", error);
+      }
 
       return new Response(JSON.stringify({ success: true, number: normalized }), {
         status: 200, headers: { ...responseHeaders, "Content-Type": "application/json" }

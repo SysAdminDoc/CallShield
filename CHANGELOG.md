@@ -89,6 +89,21 @@ All notable changes to CallShield will be documented in this file.
   `data/source-freshness.json`, the file the weekly check trusts. The test
   runner now fails if any suite changes a file under `data/`.
 
+### Community reports
+
+These take effect when the report Worker is next deployed.
+
+- The Worker counts an IPv6 client by its /64 instead of its full address. One
+  subscriber could otherwise rotate through addresses to slip past the rate
+  limit, or pose as enough independent reporters to put any number on the
+  trending list every phone syncs. Corroboration for that list counts by the
+  /48. IPv4 is unchanged.
+- A "not spam" correction is no longer turned away as a duplicate of the report
+  it corrects.
+- A report that was stored no longer comes back as an error when the Worker
+  can't write its duplicate marker, which had the app send it again.
+- The Worker's landing page shows an example number it actually accepts.
+
 ### Documentation
 
 - The README now explains the signing-key rotation. Releases v1.7.26 through
