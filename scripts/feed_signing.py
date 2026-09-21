@@ -56,7 +56,8 @@ SIGNED_FEEDS = (
 # quoted base64 string with this prefix inside FeedSignature.TRUSTED_KEYS is a
 # trusted key.
 _P256_SPKI_PREFIX = "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE"
-# Base64 has no parenthesis, so the first ")" closes the list.
+# Matched only after comments are stripped. Base64 has no parenthesis, so the
+# first ")" then closes the list.
 _TRUSTED_KEYS_BLOCK = re.compile(r"TRUSTED_KEYS\s*=\s*listOf\((.*?)\)", re.S)
 
 
@@ -64,21 +65,63 @@ def signature_path(feed: Path) -> Path:
     return feed.with_name(feed.name + SIGNATURE_SUFFIX)
 
 
+def strip_kotlin_comments(text: str) -> str:
+    """Kotlin source with its comments removed, the way the compiler reads it.
+
+    String and character literals are copied whole, since "//" can occur
+    inside a base64 key. Block comments nest in Kotlin, so "/* /* */ x */" is
+    one comment. Each comment keeps its line breaks, which keeps line numbers.
+    A string template that nests quotes isn't followed. FeedSignature.kt has
+    none, and the one-declaration check below catches a list it would hide.
+    """
+    out: list[str] = []
+    i, n = 0, len(text)
+    while i < n:
+        if text.startswith('"""', i):
+            end = text.find('"""', i + 3)
+            end = n if end == -1 else end + 3
+            out.append(text[i:end])
+            i = end
+        elif text[i] in "\"'":
+            quote, j = text[i], i + 1
+            while j < n and text[j] != quote and text[j] != "\n":
+                j += 2 if text[j] == "\\" else 1
+            out.append(text[i : j + 1])
+            i = j + 1
+        elif text.startswith("//", i):
+            end = text.find("\n", i)
+            i = n if end == -1 else end
+        elif text.startswith("/*", i):
+            depth, j = 1, i + 2
+            while j < n and depth:
+                if text.startswith("/*", j):
+                    depth, j = depth + 1, j + 2
+                elif text.startswith("*/", j):
+                    depth, j = depth - 1, j + 2
+                else:
+                    j += 1
+            out.append("\n" * text.count("\n", i, j))
+            i = j
+        else:
+            out.append(text[i])
+            i += 1
+    return "".join(out)
+
+
 def trusted_public_keys(source: str | None = None) -> list[ec.EllipticCurvePublicKey]:
     """The keys the app accepts, read from the Kotlin list that compiles them in.
 
-    Only the TRUSTED_KEYS list counts, and a key commented out of it (the way
-    a rotation retires one) doesn't: the app no longer trusts it, so signing
-    with it would publish feeds new installs refuse. Base64 has no "*", so a
-    block comment can't start inside a key, and a line comment is only a line
-    whose first characters are "//", since "//" can occur inside a key.
+    Comments are stripped first, the way the compiler reads the file, so a key
+    commented out of the list (the way a rotation retires one), a note beside
+    a key, or an old declaration left in a comment doesn't count. Signing with
+    a key the app no longer trusts would publish feeds new installs refuse.
+    The file must declare the list exactly once.
     """
     text = KOTLIN_KEYS.read_text(encoding="utf-8") if source is None else source
-    block = _TRUSTED_KEYS_BLOCK.search(text)
-    if block is None:
-        raise ValueError("FeedSignature.kt has no TRUSTED_KEYS = listOf(...) list")
-    live = re.sub(r"/\*.*?\*/", "", block.group(1), flags=re.S)
-    live = "\n".join(line for line in live.splitlines() if not line.lstrip().startswith("//"))
+    blocks = _TRUSTED_KEYS_BLOCK.findall(strip_kotlin_comments(text))
+    if len(blocks) != 1:
+        raise ValueError(f"FeedSignature.kt must declare TRUSTED_KEYS = listOf(...) once, found {len(blocks)}")
+    live = blocks[0]
     keys = []
     for encoded in re.findall(rf'"({_P256_SPKI_PREFIX}[A-Za-z0-9+/=]+)"', live):
         key = serialization.load_der_public_key(base64.b64decode(encoded))

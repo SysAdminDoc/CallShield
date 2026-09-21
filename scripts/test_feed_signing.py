@@ -101,6 +101,39 @@ class AppContractTest(unittest.TestCase):
 
         self.assertEqual([feed_signing.public_key_base64(live)], trusted)
 
+    def test_comments_are_stripped_the_way_the_compiler_reads_them(self):
+        # Each shape here used to trust a key the app doesn't, or none at all.
+        live, backup, retired, noted = (ec.generate_private_key(ec.SECP256R1()).public_key() for _ in range(4))
+        b64 = feed_signing.public_key_base64
+        source = (
+            f'// internal val TRUSTED_KEYS = listOf("{b64(retired)}")\n'
+            f'/* internal val TRUSTED_KEYS = listOf("{b64(retired)}") */\n'
+            "internal val TRUSTED_KEYS =\n"
+            "        listOf(\n"
+            "            // Signing key (online)\n"
+            f'            "{b64(live)}", // replaces "{b64(noted)}"\n'
+            f'            /* /* nested */ "{b64(retired)}", */\n'
+            f'            "{b64(backup)}",\n'
+            "        )\n"
+        )
+
+        trusted = [b64(key) for key in feed_signing.trusted_public_keys(source)]
+
+        self.assertEqual([b64(live), b64(backup)], trusted)
+
+    def test_slashes_inside_a_string_are_not_a_comment(self):
+        # Base64 uses "/", so "//" can sit inside a key.
+        self.assertEqual('val k = "ab//cd" ', feed_signing.strip_kotlin_comments('val k = "ab//cd" // note'))
+        self.assertEqual("val c = '\"' + \"x\"", feed_signing.strip_kotlin_comments("val c = '\"' + \"x\""))
+
+    def test_the_list_must_be_declared_exactly_once(self):
+        block = kotlin_key_block(ec.generate_private_key(ec.SECP256R1()).public_key())
+
+        with self.assertRaises(ValueError):
+            feed_signing.trusted_public_keys(block + "\n" + block)
+        with self.assertRaises(ValueError):
+            feed_signing.trusted_public_keys("internal val OTHER_KEYS = listOf()\n")
+
     def test_the_app_trusts_two_keys(self):
         # A primary and a backup, so losing one key doesn't strand every device.
         self.assertEqual(2, len(feed_signing.trusted_public_keys()))
