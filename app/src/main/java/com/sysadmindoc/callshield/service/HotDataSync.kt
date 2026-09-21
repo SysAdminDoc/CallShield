@@ -193,7 +193,11 @@ internal object HotDataSync {
             val hotListApplied = !hotListReplay && shouldApplyFeed(hotNumbers, hotList.explicitlyCleared)
             if (hotList.resolved && hotListApplied) {
                 // A failure means the bundled snapshot stood in for the network.
-                repo.replaceHotList(hotNumbers, recordTrending = hotList.failure == null)
+                repo.replaceHotList(
+                    hotNumbers,
+                    recordTrending = hotList.failure == null,
+                    appliedAt = trendingSince(hotList.generatedAt, System.currentTimeMillis()),
+                )
             }
 
             val hotRanges = loadHotRanges(appContext, source, dependencies.spamHeuristics.hasHotRanges())
@@ -370,6 +374,17 @@ internal object HotDataSync {
             explicitlyCleared = snapshot?.explicitlyCleared == true,
         )
     }
+
+    /**
+     * When a list's numbers started trending: its own `generated` stamp,
+     * never later than [now], or [now] when it has none. The same list read
+     * again every 30 minutes keeps its age, so a stalled publisher's numbers
+     * stop counting as trending once the hot rows' lifetime has passed.
+     */
+    internal fun trendingSince(
+        generatedAt: String?,
+        now: Long,
+    ): Long = HotFeedFreshness.publishedAtMillis(generatedAt).takeIf { it > 0L }?.coerceAtMost(now) ?: now
 
     /**
      * [stamp] as it will be stored: device time when it's later than that, and

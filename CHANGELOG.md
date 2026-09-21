@@ -67,9 +67,10 @@ All notable changes to CallShield will be documented in this file.
   overrides a database match only when that entry's newest evidence,
   community reports included, is more than a year old and the number isn't
   trending right now. A number stays marked as trending until a newer hot list
-  drops it or a week passes, and neither a restart nor a failed download clears
-  the mark. That still protects people whose numbers were spoofed in old
-  complaint data. Your own blocks and allows are unaffected.
+  drops it or a week passes from when the list was made, and neither a restart
+  nor a failed download clears the mark. That still protects people whose
+  numbers were spoofed in old complaint data. Your own blocks and allows are
+  unaffected.
 
 - External blocklist subscriptions now stay current. A list used to be
   fetched only when you added it or switched it back on, so one that changes

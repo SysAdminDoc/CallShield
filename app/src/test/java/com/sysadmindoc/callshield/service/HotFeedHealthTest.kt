@@ -146,6 +146,16 @@ class HotFeedHealthTest {
     }
 
     @Test
+    fun `a list trends from when it was made, never later than now`() {
+        val made = HotFeedFreshness.publishedAtMillis("2026-09-20T12:00:00+00:00")
+
+        assertEquals(made, HotDataSync.trendingSince("2026-09-20T12:00:00+00:00", now))
+        assertEquals(now, HotDataSync.trendingSince("2099-01-01T00:00:00+00:00", now))
+        assertEquals(now, HotDataSync.trendingSince(null, now))
+        assertEquals(now, HotDataSync.trendingSince("yesterday", now))
+    }
+
+    @Test
     fun `a stamp ahead of the device clock is stored as the device's time`() {
         // Kept as is, 2099 would refuse every genuine feed as a replay until 2099.
         val future = currentFeed.replace("2026-09-20T12:00:00.000000+00:00", "2099-01-01T00:00:00+00:00")

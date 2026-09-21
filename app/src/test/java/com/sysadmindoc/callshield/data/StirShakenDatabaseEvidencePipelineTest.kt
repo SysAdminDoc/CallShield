@@ -156,6 +156,28 @@ class StirShakenDatabaseEvidencePipelineTest {
     }
 
     @Test
+    fun `a list made longer ago than the rows' lifetime stops counting, however often it's read`() {
+        // A stalled publisher serves the same list every 30 minutes. Counted from each
+        // read, the mark would never expire; it counts from when the list was made.
+        databaseRow("+12125550151", lastSeen = today.minusDays(900))
+        val made =
+            java.time.Instant
+                .now()
+                .minus(java.time.Duration.ofDays(8))
+                .toString()
+        val feeds = TrendingFeeds(listOf("+12125550151"), bundled = emptyList(), stamp = made)
+
+        runBlocking {
+            HotDataSync.refresh(context, feeds, fixture.repository, fixture.dao)
+            HotDataSync.refresh(context, feeds, fixture.repository, fixture.dao)
+        }
+
+        val result = callFrom("+12125550151", verificationStatus = PASSED)
+        assertFalse(result.isSpam)
+        assertEquals("stir_shaken_trusted", result.matchSource)
+    }
+
+    @Test
     fun `an explicit user block still beats a verified call`() {
         databaseRow("+12125550143", lastSeen = today.minusDays(900), isUserBlocked = true)
 
@@ -197,9 +219,12 @@ class StirShakenDatabaseEvidencePipelineTest {
     private class TrendingFeeds(
         private val numbers: List<String>,
         private val bundled: List<String>,
+        private val stamp: String =
+            java.time.Instant
+                .now()
+                .toString(),
     ) : HotFeedDataSource {
         var offline = false
-        private val stamp = "2026-09-21T10:00:00+00:00"
 
         private fun hot(list: List<String>) = list.map { HotNumber(number = it, type = "robocall", description = "") }
 
