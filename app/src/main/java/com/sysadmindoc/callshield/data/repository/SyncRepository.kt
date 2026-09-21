@@ -24,6 +24,7 @@ import com.sysadmindoc.callshield.data.model.SpamPrefixJson
 import com.sysadmindoc.callshield.data.model.SpamShardDescriptor
 import com.sysadmindoc.callshield.data.model.SpamShardManifest
 import com.sysadmindoc.callshield.data.remote.ExternalBlocklistDataSource
+import com.sysadmindoc.callshield.data.remote.ExternalBlocklistHttpException
 import com.sysadmindoc.callshield.data.remote.GitHubDataSource
 import com.sysadmindoc.callshield.data.remote.GitHubFeedValidationException
 import com.sysadmindoc.callshield.data.remote.HttpClient
@@ -287,13 +288,23 @@ class SyncRepository(
      * list's size is not applied: the last good rows stay and the list is
      * flagged, the way a collapsed database or hot-feed publish is refused.
      */
+    @Suppress("TooGenericExceptionCaught")
     suspend fun refreshDueExternalBlocklists(now: Long = System.currentTimeMillis()): List<ExternalBlocklistRefreshOutcome> =
         withContext(Dispatchers.IO) {
             syncMutex.withLock {
                 settingsRepository
                     .readExternalBlocklistSubscriptions()
                     .filter { ExternalBlocklistRefreshPolicy.isDue(it, now) }
-                    .map { refreshExternalBlocklist(it, now) }
+                    .map { subscription ->
+                        // A storage error on one list must not skip every list after it.
+                        try {
+                            refreshExternalBlocklist(subscription, now)
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            failExternalBlocklist(subscription, now, e)
+                        }
+                    }
             }
         }
 
@@ -722,6 +733,7 @@ class SyncRepository(
         return ExternalBlocklistRefreshOutcome.HELD
     }
 
+    @Suppress("TooGenericExceptionCaught")
     private suspend fun failExternalBlocklist(
         subscription: ExternalBlocklistSubscription,
         now: Long,
@@ -729,8 +741,47 @@ class SyncRepository(
     ): ExternalBlocklistRefreshOutcome {
         // The cause can embed the list's full URL, so it goes to the log only.
         android.util.Log.w("SyncRepository", "External blocklist refresh failed", error)
-        recordExternalBlocklistAttempt(subscription.id, now, context.getString(R.string.external_blocklist_refresh_failed))
+        try {
+            recordExternalBlocklistAttempt(subscription.id, now, externalBlocklistFailureText(error))
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            android.util.Log.w("SyncRepository", "Could not record the failed refresh", e)
+        }
         return ExternalBlocklistRefreshOutcome.FAILED
+    }
+
+    /**
+     * What went wrong, without the URL. A list that moved (HTTP 404) or grew past
+     * the caps reads differently on its row from one that was briefly unreachable.
+     */
+    private fun externalBlocklistFailureText(error: Exception): String {
+        val reason = (error as? ExternalBlocklistValidationException)?.reason
+        return when {
+            error is ExternalBlocklistHttpException -> {
+                context.getString(R.string.external_blocklist_refresh_http, error.code)
+            }
+
+            reason == ExternalBlocklistFailureReason.OVERSIZE -> {
+                context.getString(R.string.external_blocklist_refresh_too_large)
+            }
+
+            reason == ExternalBlocklistFailureReason.ROW_LIMIT -> {
+                context.getString(R.string.external_blocklist_refresh_too_many_rows)
+            }
+
+            reason != null -> {
+                context.getString(R.string.external_blocklist_refresh_unreadable)
+            }
+
+            HttpClient.isCertificateTrustFailure(error) -> {
+                context.getString(R.string.external_blocklist_refresh_certificate)
+            }
+
+            else -> {
+                context.getString(R.string.external_blocklist_refresh_failed)
+            }
+        }
     }
 
     private suspend fun recordExternalBlocklistAttempt(

@@ -727,6 +727,11 @@
     <string name="external_blocklist_applied">Applied %1$s: %2$d numbers, +%3$d / -%4$d</string>
     <string name="external_blocklist_failed_generic">Blocklist operation failed. Check the URL and your connection, then try again.</string>
     <string name="external_blocklist_refresh_failed">The last refresh failed, so the previous copy is still in use.</string>
+    <string name="external_blocklist_refresh_http">The list\'s server answered HTTP %1$d on the last refresh, so the previous copy is still in use.</string>
+    <string name="external_blocklist_refresh_too_large">The list is now over the 1 MB limit, so the previous copy is still in use.</string>
+    <string name="external_blocklist_refresh_too_many_rows">The list now has more than 20,000 rows, so the previous copy is still in use.</string>
+    <string name="external_blocklist_refresh_unreadable">The last download wasn\'t a list CallShield can read, so the previous copy is still in use.</string>
+    <string name="external_blocklist_refresh_certificate">The list\'s server certificate couldn\'t be verified, so the previous copy is still in use.</string>
     <string name="external_blocklist_refresh_held">The last refresh had under half as many numbers (%1$d, down from %2$d), so the previous copy is still in use. Turn the list off and on again to accept it.</string>
     <string name="settings_save">Save</string>
     <string name="settings_about_desc">Open-source spam blocker. No subscriptions, no tracking, no API keys.</string>
@@ -1200,6 +1205,7 @@
         <item quantity="other">Reports: %d</item>
     </plurals>
     <string name="detail_flagged">Flagged</string>
+    <string name="detail_flagged_by_sources">Flagged as spam by %1$s</string>
     <string name="detail_block">Block</string>
     <string name="detail_number_blocked">Number blocked</string>
     <string name="detail_unblock">Unblock</string>

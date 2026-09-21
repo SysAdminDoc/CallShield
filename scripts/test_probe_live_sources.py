@@ -22,10 +22,38 @@ class ConfiguredSourcesTest(unittest.TestCase):
         self.assertIn(f'""""{field}"', PARSER_KT.read_text(encoding="utf-8"))
 
 
+CLEAN_ANSWER = '{"number":"8443218090","is_spam":false,"response_time_ms":0.01}'
+SPAM_ANSWER = '{"number":"8333041447","is_spam":true,"status_code":110,"status_description":"scam"}'
+
+
+def answering(spam_answer):
+    """A source that answers the clean sample normally and the spam sample with `spam_answer`."""
+
+    def fetcher(url):
+        return (200, spam_answer) if url.endswith(SKIPCALLS.spam_sample_digits) else (200, CLEAN_ANSWER)
+
+    return fetcher
+
+
 class CheckTest(unittest.TestCase):
     def test_a_real_answer_passes(self):
-        ok, _ = probe_live_sources.check(SKIPCALLS, lambda url: (200, '{"number":"8443218090","is_spam":false}'))
+        ok, _ = probe_live_sources.check(SKIPCALLS, answering(SPAM_ANSWER))
         self.assertTrue(ok)
+
+    def test_a_known_spam_number_answered_as_clean_fails(self):
+        # The clean sample alone would pass this: the shape is right, the verdict is gone.
+        ok, detail = probe_live_sources.check(SKIPCALLS, answering('{"number":"8333041447","is_spam":false}'))
+        self.assertFalse(ok)
+        self.assertIn("no longer reads as spam", detail)
+
+    def test_a_spam_verdict_moved_to_another_field_fails(self):
+        ok, _ = probe_live_sources.check(SKIPCALLS, answering('{"number":"8333041447","verdict":"spam"}'))
+        self.assertFalse(ok)
+
+    def test_the_spam_marker_is_the_verdict_the_kotlin_parser_reads_as_spam(self):
+        self.assertIsNotNone(SKIPCALLS.marker.search(SPAM_ANSWER))
+        self.assertIsNotNone(SKIPCALLS.spam_marker.search(SPAM_ANSWER))
+        self.assertIsNone(SKIPCALLS.spam_marker.search(CLEAN_ANSWER))
 
     def test_a_parked_page_served_with_200_fails(self):
         ok, detail = probe_live_sources.check(SKIPCALLS, lambda url: (200, PARKED_PAGE))

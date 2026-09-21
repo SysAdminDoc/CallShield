@@ -57,7 +57,10 @@ internal object ExternalBlocklistParser {
 
     private const val EXPIRES_HEADER_LINES = 50
     private val expiresLine = Regex("""^expires\s*:\s*(.+)$""", RegexOption.IGNORE_CASE)
-    private val expiresValue = Regex("""^(\d{1,5})(?!\d)\s*([a-z]*)""", RegexOption.IGNORE_CASE)
+
+    // A decimal such as "1.5 hours" is refused rather than read as "1", which
+    // with no unit after it would mean days.
+    private val expiresValue = Regex("""^(\d{1,5})(?![\d.])\s*([a-z]*)""", RegexOption.IGNORE_CASE)
 
     fun parse(
         rawUrl: String,
@@ -128,7 +131,9 @@ internal object ExternalBlocklistParser {
             if (format == "json") {
                 jsonExpires(body)
             } else {
+                // A byte-order mark survives trim() and would hide a first-line header.
                 body
+                    .removePrefix("\uFEFF")
                     .lineSequence()
                     .map { it.trim() }
                     .filter { it.isNotEmpty() }

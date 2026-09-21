@@ -11,6 +11,7 @@ import com.sysadmindoc.callshield.data.ExternalBlocklistParser
 import com.sysadmindoc.callshield.data.IsolatedRepositoryFixture
 import com.sysadmindoc.callshield.data.model.ExternalBlocklistSubscription
 import com.sysadmindoc.callshield.data.remote.ExternalBlocklistDataSource
+import com.sysadmindoc.callshield.data.remote.ExternalBlocklistHttpException
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -73,6 +74,18 @@ class ExternalBlocklistRefreshWorkerTest {
         assertEquals(4, feed.fetches)
         assertEquals(addedAt + 56 * hour, subscription().lastSyncedAt)
         assertEquals("", subscription().lastError)
+    }
+
+    @Test
+    fun `a list that moved says so on its row instead of a generic failure`() {
+        feed.body = "+12125550101"
+        val addedAt = subscribe()
+
+        feed.failure = ExternalBlocklistHttpException(404)
+        runWorkerAt(addedAt + 25 * hour)
+
+        assertEquals(context.getString(R.string.external_blocklist_refresh_http, 404), subscription().lastError)
+        assertEquals(setOf("+12125550101"), rows())
     }
 
     @Test

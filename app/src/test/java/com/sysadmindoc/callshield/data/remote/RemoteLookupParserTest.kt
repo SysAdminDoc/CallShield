@@ -17,6 +17,8 @@ class RemoteLookupParserTest {
         assertTrue(result.isSpam)
         assertEquals("Flagged as scam", result.detail)
         assertEquals(RemoteLookupStatus.FOUND, result.status)
+        // A verdict, not a count: the answer carries no number of reports.
+        assertEquals(0, result.reports)
     }
 
     @Test

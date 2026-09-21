@@ -29,10 +29,12 @@ internal fun parseSkipCallsBody(body: String): ExternalLookup.SourceResult {
             ?.get(1)
             ?.trim()
             ?.takeUnless { it.isEmpty() || it.equals("unknown", ignoreCase = true) }
+    // SkipCalls gives a verdict and a category, never a count. Reporting one
+    // report would put a made-up "1 report" on the overlay and detail page.
     return ExternalLookup.SourceResult(
         source = "SkipCalls",
         isSpam = true,
-        reports = 1,
+        reports = 0,
         detail = if (description != null) "Flagged as $description" else "Flagged as spam",
         status = RemoteLookupStatus.FOUND,
     )

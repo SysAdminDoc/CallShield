@@ -1,11 +1,14 @@
 package com.sysadmindoc.callshield.data.remote
 
+import com.sysadmindoc.callshield.data.ExternalBlocklistFailureReason
 import com.sysadmindoc.callshield.data.ExternalBlocklistParser
+import com.sysadmindoc.callshield.data.ExternalBlocklistValidationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.Request
+import java.io.IOException
 import java.util.concurrent.TimeUnit
 
 interface ExternalBlocklistDataSource {
@@ -54,32 +57,49 @@ class OkHttpExternalBlocklistDataSource : ExternalBlocklistDataSource {
                         return@use null
                     }
                     if (!response.isSuccessful) {
-                        error("HTTP ${response.code}")
+                        throw ExternalBlocklistHttpException(response.code)
                     }
-                    when (val body = response.body?.readUtf8Bounded(ExternalBlocklistParser.MAX_SUBSCRIPTION_BYTES)) {
-                        is BoundedResponseBody.Text -> {
-                            body.value
-                        }
-
-                        BoundedResponseBody.Empty -> {
-                            error("External blocklist returned an empty body")
-                        }
-
-                        is BoundedResponseBody.Oversized -> {
-                            error("External blocklist exceeded ${body.maxBytes} byte cap")
-                        }
-
-                        BoundedResponseBody.Unreadable,
-                        null,
-                        -> {
-                            error("External blocklist response could not be read")
-                        }
-                    }
+                    externalBlocklistBodyText(response.body.readUtf8Bounded(ExternalBlocklistParser.MAX_SUBSCRIPTION_BYTES))
                 }
             if (bodyText != null) return bodyText
         }
     }
 }
+
+/** The list server answered with an error status; kept apart so the row can say which. */
+internal class ExternalBlocklistHttpException(
+    val code: Int,
+) : IOException("HTTP $code")
+
+/**
+ * A body that arrived but holds nothing is an empty list, the same answer the
+ * parser gives for a list with no numbers, so a background refresh holds the
+ * last good copy instead of recording a failure.
+ */
+internal fun externalBlocklistBodyText(body: BoundedResponseBody): String =
+    when (body) {
+        is BoundedResponseBody.Text -> {
+            body.value
+        }
+
+        BoundedResponseBody.Empty -> {
+            throw ExternalBlocklistValidationException(
+                ExternalBlocklistFailureReason.EMPTY,
+                "External blocklist returned an empty body",
+            )
+        }
+
+        is BoundedResponseBody.Oversized -> {
+            throw ExternalBlocklistValidationException(
+                ExternalBlocklistFailureReason.OVERSIZE,
+                "External blocklist exceeded ${body.maxBytes} byte cap",
+            )
+        }
+
+        BoundedResponseBody.Unreadable -> {
+            throw IOException("External blocklist response could not be read")
+        }
+    }
 
 internal fun validatedExternalBlocklistRedirect(
     originalUrl: HttpUrl,

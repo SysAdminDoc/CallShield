@@ -41,7 +41,9 @@ All notable changes to CallShield will be documented in this file.
   with under half the list's numbers isn't applied in the background, because
   a broken export looks just like a list that cleaned itself up. The list
   keeps its last good copy and says why on its row, which also shows when it
-  last updated.
+  last updated. A list that fails to refresh says what went wrong: the
+  server's HTTP status, the size or row limit, a download that isn't a list,
+  or a certificate that couldn't be verified.
 
 ### Live caller lookup
 
@@ -52,8 +54,12 @@ All notable changes to CallShield will be documented in this file.
   WhoCalledMe as clean on every enriched call.
 - SkipCalls, the one that still works, is now read correctly. It reports spam in
   an `is_spam` field the app never looked for, so every number it flagged showed
-  as clean. A flagged number now shows as flagged, with the category SkipCalls
-  gives (scam, for example).
+  as clean. A flagged number now shows as flagged, and its detail page shows
+  the category SkipCalls gives (scam, for example). SkipCalls never gives a
+  count, so the app no longer shows a made-up "1 report".
+- When SkipCalls can't answer, the caller ID overlay keeps CallShield's own
+  warning and says no source gave a definitive result. It used to switch to a
+  green "Looks Safe".
 - A lookup answer that doesn't look like a lookup result now reads as
   "unavailable", not "clean". The overlay no longer has a caller-name line,
   because nothing free provides one any more, and a spam hit no longer shows as

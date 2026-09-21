@@ -453,15 +453,16 @@ For a locally suspicious call, CallShield can show a real-time overlay when the 
 │ LIKELY SPAM                      │
 │ (212) 555-1234                   │
 │ New York, NY                     │
-│ Spam Score: 50%                  │
-│ ⚠ SkipCalls: Flagged as scam     │
+│ Spam Score: 50% (Flagged)        │
+│ ⚠ SkipCalls: Flagged             │
 │ All sources checked              │
 │ [Search] [Block] [Dismiss]       │
 │ 🔈 Play SIT Tone (anti-dialer)  │
 └──────────────────────────────────┘
 ```
 
-- Shows instantly with the area code, then updates when SkipCalls answers
+- Shows instantly with the area code, then updates when SkipCalls answers. SkipCalls gives a verdict and a category but no report count. The number's detail page shows the category
+- If SkipCalls can't answer, the overlay keeps CallShield's own warning and says no source returned a definitive result
 - **SIT Tone**. ITU-T E.180 three-tone sequence tricks autodialers into removing your number
 - Color-coded: green (safe) → yellow → orange → red (spam)
 
@@ -812,7 +813,7 @@ language in [issue #7](https://github.com/SysAdminDoc/CallShield/issues/7).
 | URL Safety | Local spam-domain data; optional URLhaus (abuse.ch) |
 | Verification | Local Gradle, lint, and release-artifact checks |
 | Tests | 1100 JVM unit tests (JUnit) |
-| Strings | 1416 string resources and 33 plural groups (translation-ready) |
+| Strings | 1422 string resources and 33 plural groups (translation-ready) |
 | Accessibility | 100+ content descriptions, 48dp touch targets |
 | Min SDK | 29 (Android 10) |
 | Target SDK | 36 |

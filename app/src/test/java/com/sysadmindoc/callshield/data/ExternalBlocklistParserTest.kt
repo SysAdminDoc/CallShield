@@ -162,6 +162,13 @@ class ExternalBlocklistParserTest {
         assertEquals(0, declaredHours("# Expires: 0 days\n212-555-0101"))
         assertEquals(0, declaredHours("# Expires: 123456 days\n212-555-0101"))
         assertEquals(0, declaredHours("212-555-0101"))
+        // Not "1" with no unit, which would mean a day.
+        assertEquals(0, declaredHours("# Expires: 1.5 hours\n212-555-0101"))
+    }
+
+    @Test
+    fun aByteOrderMarkDoesNotHideTheHeader() {
+        assertEquals(12, declaredHours("\uFEFF# Expires: 12 hours\n212-555-0101"))
     }
 
     private fun declaredHours(

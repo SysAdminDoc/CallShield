@@ -34,6 +34,12 @@ class Source:
     sample_digits: str
     # Must match what the Kotlin parser treats as "this is a lookup result".
     marker: re.Pattern[str]
+    # A number the source is known to flag, and the verdict the parser reads as
+    # spam. A clean sample alone can't tell a working source from one whose spam
+    # answers moved to a shape the app reads as clean, which is how SkipCalls
+    # verdicts were lost before.
+    spam_sample_digits: str
+    spam_marker: re.Pattern[str]
 
 
 SOURCES = (
@@ -42,6 +48,8 @@ SOURCES = (
         url_prefix="https://spam.skipcalls.app/check/",
         sample_digits="8443218090",
         marker=re.compile(r'"is_spam"\s*:\s*(true|false)'),
+        spam_sample_digits="8333041447",
+        spam_marker=re.compile(r'"is_spam"\s*:\s*true'),
     ),
 )
 
@@ -71,7 +79,16 @@ def check(source: Source, fetcher: Fetch) -> tuple[bool, str]:
         return False, f"HTTP {status}"
     if not source.marker.search(body):
         return False, "answered without the field the app parses; first bytes: " + body[:120].replace("\n", " ")
-    return True, "answers in the shape the app parses"
+    try:
+        status, body = fetcher(source.url_prefix + source.spam_sample_digits)
+    except OSError as error:
+        return False, f"unreachable for the known spam sample: {error}"
+    if status != 200 or not source.spam_marker.search(body):
+        return False, (
+            f"known spam number {source.spam_sample_digits} no longer reads as spam (HTTP {status}); "
+            "first bytes: " + body[:120].replace("\n", " ")
+        )
+    return True, "answers in the shape the app parses, and still flags a known spam number"
 
 
 def main() -> int:

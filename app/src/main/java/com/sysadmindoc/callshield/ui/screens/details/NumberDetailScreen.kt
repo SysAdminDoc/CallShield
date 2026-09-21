@@ -531,6 +531,17 @@ fun NumberDetailScreen(
                             color = CatRed,
                             fontWeight = FontWeight.SemiBold,
                         )
+                    } else if (wr.isSpam) {
+                        // A verdict without a count, which is what SkipCalls gives.
+                        val flaggingSources = wr.sources.count { src -> src.isSpam }
+                        Text(
+                            stringResource(
+                                R.string.detail_flagged_by_sources,
+                                pluralStringResource(R.plurals.detail_sources_count_plural, flaggingSources, flaggingSources),
+                            ),
+                            color = CatRed,
+                            fontWeight = FontWeight.SemiBold,
+                        )
                     } else {
                         val hasDefinitiveSource = wr.sources.any { src -> !src.status.isFallback }
                         Text(
@@ -541,7 +552,8 @@ fun NumberDetailScreen(
                                     R.string.detail_no_definitive_source_result
                                 },
                             ),
-                            color = CatGreen,
+                            // A lookup that failed everywhere isn't a clean result.
+                            color = if (hasDefinitiveSource) CatGreen else CatSubtext,
                             style = MaterialTheme.typography.bodySmall,
                         )
                     }
