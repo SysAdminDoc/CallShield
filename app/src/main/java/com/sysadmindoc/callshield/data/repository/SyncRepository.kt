@@ -2,7 +2,10 @@ package com.sysadmindoc.callshield.data.repository
 
 import android.content.Context
 import com.sysadmindoc.callshield.R
+import com.sysadmindoc.callshield.data.ExternalBlocklistFailureReason
 import com.sysadmindoc.callshield.data.ExternalBlocklistParser
+import com.sysadmindoc.callshield.data.ExternalBlocklistRefreshPolicy
+import com.sysadmindoc.callshield.data.ExternalBlocklistValidationException
 import com.sysadmindoc.callshield.data.ParsedExternalBlocklist
 import com.sysadmindoc.callshield.data.SourceEvidenceCodec
 import com.sysadmindoc.callshield.data.SpamRepository
@@ -10,6 +13,7 @@ import com.sysadmindoc.callshield.data.local.SpamDao
 import com.sysadmindoc.callshield.data.mergeHotListNumbers
 import com.sysadmindoc.callshield.data.model.ExternalBlocklistImportResult
 import com.sysadmindoc.callshield.data.model.ExternalBlocklistPreview
+import com.sysadmindoc.callshield.data.model.ExternalBlocklistRefreshOutcome
 import com.sysadmindoc.callshield.data.model.ExternalBlocklistSubscription
 import com.sysadmindoc.callshield.data.model.SourceEvidenceJson
 import com.sysadmindoc.callshield.data.model.SpamDatabase
@@ -30,6 +34,7 @@ import com.sysadmindoc.callshield.data.remote.spamShardIdFor
 import com.sysadmindoc.callshield.data.sanitizeDatabaseNumbers
 import com.sysadmindoc.callshield.domain.model.SyncResult
 import com.sysadmindoc.callshield.ui.widget.CallShieldWidget
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -272,6 +277,23 @@ class SyncRepository(
                         )
                     }
                 }
+            }
+        }
+
+    /**
+     * Fetches every enabled subscription that is due again (see
+     * [ExternalBlocklistRefreshPolicy]). Nobody reads a preview in the
+     * background, so a download that comes back empty or under half the
+     * list's size is not applied: the last good rows stay and the list is
+     * flagged, the way a collapsed database or hot-feed publish is refused.
+     */
+    suspend fun refreshDueExternalBlocklists(now: Long = System.currentTimeMillis()): List<ExternalBlocklistRefreshOutcome> =
+        withContext(Dispatchers.IO) {
+            syncMutex.withLock {
+                settingsRepository
+                    .readExternalBlocklistSubscriptions()
+                    .filter { ExternalBlocklistRefreshPolicy.isDue(it, now) }
+                    .map { refreshExternalBlocklist(it, now) }
             }
         }
 
@@ -586,7 +608,10 @@ class SyncRepository(
         )
     }
 
-    private suspend fun commitExternalBlocklist(parsed: ParsedExternalBlocklist): ExternalBlocklistImportResult {
+    private suspend fun commitExternalBlocklist(
+        parsed: ParsedExternalBlocklist,
+        now: Long = System.currentTimeMillis(),
+    ): ExternalBlocklistImportResult {
         val preview = buildExternalBlocklistPreview(parsed)
         val candidates = resolveExternalBlocklistCandidates(parsed)
         dao.replaceBySource(parsed.source, candidates.accepted)
@@ -598,11 +623,13 @@ class SyncRepository(
                 label = parsed.label,
                 url = parsed.url,
                 enabled = true,
-                lastSyncedAt = System.currentTimeMillis(),
+                lastSyncedAt = now,
                 lastNumberCount = candidates.accepted.size,
                 lastAdded = preview.added,
                 lastRemoved = preview.removed,
                 lastError = "",
+                declaredRefreshHours = parsed.declaredRefreshHours,
+                lastAttemptAt = now,
             )
         upsertExternalBlocklistSubscription(subscription)
         CallShieldWidget.refreshAll(context)
@@ -652,6 +679,70 @@ class SyncRepository(
                 }
             }
         return ExternalCandidateSet(accepted, blockedByOtherSources)
+    }
+
+    @Suppress("TooGenericExceptionCaught")
+    private suspend fun refreshExternalBlocklist(
+        subscription: ExternalBlocklistSubscription,
+        now: Long,
+    ): ExternalBlocklistRefreshOutcome {
+        val currentRows = dao.getCountBySource(subscription.source)
+        val parsed =
+            try {
+                fetchAndParseExternalBlocklist(subscription.url, subscription.label)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: ExternalBlocklistValidationException) {
+                if (e.reason == ExternalBlocklistFailureReason.EMPTY && currentRows > 0) {
+                    return holdExternalBlocklist(subscription, now, nextRows = 0, currentRows = currentRows)
+                }
+                return failExternalBlocklist(subscription, now, e)
+            } catch (e: Exception) {
+                return failExternalBlocklist(subscription, now, e)
+            }
+        val nextRows = resolveExternalBlocklistCandidates(parsed).accepted.size
+        if (ExternalBlocklistRefreshPolicy.isSuspiciousShrink(currentRows, nextRows)) {
+            return holdExternalBlocklist(subscription, now, nextRows, currentRows)
+        }
+        commitExternalBlocklist(parsed, now)
+        return ExternalBlocklistRefreshOutcome.REFRESHED
+    }
+
+    private suspend fun holdExternalBlocklist(
+        subscription: ExternalBlocklistSubscription,
+        now: Long,
+        nextRows: Int,
+        currentRows: Int,
+    ): ExternalBlocklistRefreshOutcome {
+        recordExternalBlocklistAttempt(
+            subscription.id,
+            now,
+            context.getString(R.string.external_blocklist_refresh_held, nextRows, currentRows),
+        )
+        return ExternalBlocklistRefreshOutcome.HELD
+    }
+
+    private suspend fun failExternalBlocklist(
+        subscription: ExternalBlocklistSubscription,
+        now: Long,
+        error: Exception,
+    ): ExternalBlocklistRefreshOutcome {
+        // The cause can embed the list's full URL, so it goes to the log only.
+        android.util.Log.w("SyncRepository", "External blocklist refresh failed", error)
+        recordExternalBlocklistAttempt(subscription.id, now, context.getString(R.string.external_blocklist_refresh_failed))
+        return ExternalBlocklistRefreshOutcome.FAILED
+    }
+
+    private suspend fun recordExternalBlocklistAttempt(
+        id: String,
+        now: Long,
+        error: String,
+    ) {
+        settingsRepository.saveExternalBlocklistSubscriptions(
+            settingsRepository.readExternalBlocklistSubscriptions().map {
+                if (it.id == id) it.copy(lastAttemptAt = now, lastError = error) else it
+            },
+        )
     }
 
     private suspend fun upsertExternalBlocklistSubscription(subscription: ExternalBlocklistSubscription) {

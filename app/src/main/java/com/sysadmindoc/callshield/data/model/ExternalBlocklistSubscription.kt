@@ -10,6 +10,10 @@ data class ExternalBlocklistSubscription(
     val lastAdded: Int = 0,
     val lastRemoved: Int = 0,
     val lastError: String = "",
+    /** Hours between refreshes that the list declares in an `Expires:` line, or 0 for none. */
+    val declaredRefreshHours: Int = 0,
+    /** The last fetch, successful or not. Paces retries of a list that keeps failing. */
+    val lastAttemptAt: Long = 0L,
 ) {
     val source: String get() = sourceFor(id)
 
@@ -33,6 +37,14 @@ data class ExternalBlocklistPreview(
     val skippedRows: Int,
     val blockedByOtherSources: Int,
 )
+
+enum class ExternalBlocklistRefreshOutcome {
+    REFRESHED,
+
+    /** The download was empty or under half the list's size, so the last good rows stay. */
+    HELD,
+    FAILED,
+}
 
 data class ExternalBlocklistImportResult(
     val success: Boolean,

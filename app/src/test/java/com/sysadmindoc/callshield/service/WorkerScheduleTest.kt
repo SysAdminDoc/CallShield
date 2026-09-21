@@ -36,6 +36,14 @@ class WorkerScheduleTest {
     }
 
     @Test
+    fun externalBlocklistRefreshRunsEverySixHoursOnANetwork() {
+        val spec = ExternalBlocklistRefreshWorker.periodicRequest().workSpec
+
+        assertEquals(TimeUnit.HOURS.toMillis(6), spec.intervalDuration)
+        assertEquals(NetworkType.CONNECTED, spec.constraints.requiredNetworkType)
+    }
+
+    @Test
     fun digestPeriodicRequestKeepsDailyDigestDelay() {
         val spec = DigestWorker.periodicRequest().workSpec
 

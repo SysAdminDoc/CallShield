@@ -279,6 +279,7 @@ dependencies {
     testImplementation(libs.kotlinx.serialization.json)
     testImplementation(libs.robolectric)
     testImplementation(libs.androidx.test.core)
+    testImplementation(libs.androidx.work.testing)
 
     // Instrumentation tests (emulator / device)
     androidTestImplementation(platform(libs.androidx.compose.bom))

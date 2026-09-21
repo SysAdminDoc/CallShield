@@ -76,6 +76,7 @@ import com.sysadmindoc.callshield.ui.AppLanguage
 import com.sysadmindoc.callshield.ui.DurationTtsText
 import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.StatusMessage
+import com.sysadmindoc.callshield.ui.screens.main.relativeTimeText
 import com.sysadmindoc.callshield.ui.theme.*
 import com.sysadmindoc.callshield.util.startActivitySafely
 import java.text.NumberFormat
@@ -1801,6 +1802,16 @@ private fun ExternalBlocklistSubscriptionRow(
                 style = MaterialTheme.typography.labelSmall,
                 color = if (subscription.enabled) CatGreen else CatOverlay,
             )
+            if (subscription.enabled && subscription.lastSyncedAt > 0L) {
+                Text(
+                    stringResource(
+                        R.string.settings_external_blocklist_last_synced,
+                        relativeTimeText(subscription.lastSyncedAt),
+                    ),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = CatSubtext,
+                )
+            }
             if (subscription.lastError.isNotBlank()) {
                 Text(subscription.lastError, style = MaterialTheme.typography.labelSmall, color = CatPeach)
             }

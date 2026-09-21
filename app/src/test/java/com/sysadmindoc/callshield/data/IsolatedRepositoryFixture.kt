@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.room.Room
 import com.sysadmindoc.callshield.data.local.AppDatabase
+import com.sysadmindoc.callshield.data.remote.ExternalBlocklistDataSource
+import com.sysadmindoc.callshield.data.remote.OkHttpExternalBlocklistDataSource
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -15,6 +17,7 @@ import java.nio.file.Files
 /** Owns every persistent resource used by one Robolectric test sandbox. */
 internal class IsolatedRepositoryFixture(
     context: Context,
+    externalBlocklistDataSource: ExternalBlocklistDataSource = OkHttpExternalBlocklistDataSource(),
 ) : AutoCloseable {
     private val storeJob = SupervisorJob()
     private val storeScope = CoroutineScope(storeJob + Dispatchers.IO)
@@ -32,6 +35,7 @@ internal class IsolatedRepositoryFixture(
             database = database,
             settingsDataStore = preferenceStore("settings"),
             privateSettingsDataStore = preferenceStore("private"),
+            externalBlocklistDataSource = externalBlocklistDataSource,
         )
 
     private fun preferenceStore(name: String) =

@@ -717,12 +717,15 @@
     <string name="settings_external_blocklist_preview_skips">%1$d skipped rows, %2$d already owned by stronger sources</string>
     <string name="settings_external_blocklist_commit_preview">Commit preview</string>
     <string name="settings_external_blocklist_subscription_stats">%1$d active, +%2$d / -%3$d last sync</string>
+    <string name="settings_external_blocklist_last_synced">Last updated: %1$s</string>
     <string name="external_blocklist_not_found">External blocklist subscription was not found</string>
     <string name="external_blocklist_disabled">Disabled %1$s: removed %2$d feed-owned numbers</string>
     <string name="external_blocklist_removed">Removed %1$s: rolled back %2$d feed-owned numbers</string>
     <string name="external_blocklist_previewed">Previewed %1$s: %2$d numbers, +%3$d / -%4$d, %5$d already owned by stronger sources</string>
     <string name="external_blocklist_applied">Applied %1$s: %2$d numbers, +%3$d / -%4$d</string>
     <string name="external_blocklist_failed_generic">Blocklist operation failed. Check the URL and your connection, then try again.</string>
+    <string name="external_blocklist_refresh_failed">The last refresh failed, so the previous copy is still in use.</string>
+    <string name="external_blocklist_refresh_held">The last refresh had under half as many numbers (%1$d, down from %2$d), so the previous copy is still in use. Turn the list off and on again to accept it.</string>
     <string name="settings_save">Save</string>
     <string name="settings_about_desc">Open-source spam blocker. No subscriptions, no tracking, no API keys.</string>
 

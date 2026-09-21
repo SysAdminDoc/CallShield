@@ -20,7 +20,9 @@ import com.sysadmindoc.callshield.data.checker.CheckerDependencies
 import com.sysadmindoc.callshield.data.local.AppDatabase
 import com.sysadmindoc.callshield.data.local.SpamDao
 import com.sysadmindoc.callshield.data.model.*
+import com.sysadmindoc.callshield.data.remote.ExternalBlocklistDataSource
 import com.sysadmindoc.callshield.data.remote.GitHubDataSource
+import com.sysadmindoc.callshield.data.remote.OkHttpExternalBlocklistDataSource
 import com.sysadmindoc.callshield.data.remote.SpamDataSource
 import com.sysadmindoc.callshield.data.repository.BlocklistRepository
 import com.sysadmindoc.callshield.data.repository.SettingsRepository
@@ -79,6 +81,7 @@ class SpamRepository(
     privateSettingsDataStore: DataStore<Preferences>? = null,
     private val phoneIdentityCanonicalizer: PhoneIdentityCanonicalizer =
         PhoneIdentityCanonicalizer.fromContext(context.applicationContext),
+    externalBlocklistDataSource: ExternalBlocklistDataSource = OkHttpExternalBlocklistDataSource(),
 ) {
     private val appContext: Context = context.applicationContext
     private val db: AppDatabase = database
@@ -107,6 +110,7 @@ class SpamRepository(
             settingsRepository = settingsRepository,
             normalizeNumber = phoneIdentityCanonicalizer::canonicalizePhone,
             invalidateAllCaches = spamRepositoryImpl::invalidateAllCaches,
+            externalBlocklistDataSource = externalBlocklistDataSource,
         )
     private val blocklistRepository =
         BlocklistRepository(
@@ -645,6 +649,8 @@ class SpamRepository(
     ) = syncRepository.setExternalBlocklistSubscriptionEnabled(id, enabled)
 
     suspend fun removeExternalBlocklistSubscription(id: String) = syncRepository.removeExternalBlocklistSubscription(id)
+
+    suspend fun refreshDueExternalBlocklists(now: Long = System.currentTimeMillis()): List<ExternalBlocklistRefreshOutcome> = syncRepository.refreshDueExternalBlocklists(now)
 
     // ── Blocklist management ───────────────────────────────────────────
     suspend fun blockNumber(

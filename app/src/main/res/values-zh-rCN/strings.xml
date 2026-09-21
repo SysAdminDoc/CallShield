@@ -517,6 +517,9 @@
     <string name="settings_external_blocklist_preview_skips">%1$d 行跳过，%2$d 行已被更强来源占用</string>
     <string name="settings_external_blocklist_commit_preview">提交预览</string>
     <string name="settings_external_blocklist_subscription_stats">%1$d 个活跃，上次同步 +%2$d / -%3$d</string>
+    <string name="settings_external_blocklist_last_synced">上次更新：%1$s</string>
+    <string name="external_blocklist_refresh_failed">上次刷新失败，仍在使用之前的列表。</string>
+    <string name="external_blocklist_refresh_held">上次刷新得到的号码不到原来的一半（%1$d 个，原有 %2$d 个），因此仍在使用之前的列表。关闭后重新开启此列表即可接受新内容。</string>
     <string name="settings_save">保存</string>
     <string name="settings_about_desc">开源垃圾拦截器。无订阅、无追踪、无 API 密钥。</string>
     <string name="stats_calls">通话</string>

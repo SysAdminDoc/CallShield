@@ -144,6 +144,38 @@ class ExternalBlocklistParserTest {
         )
     }
 
+    @Test
+    fun aListDeclaresItsOwnRefreshIntervalInItsHeader() {
+        assertEquals(12, declaredHours("# Expires: 12 hours\n212-555-0101"))
+        assertEquals(96, declaredHours("// Title: Example\n// Expires: 4 days (update frequency)\n212-555-0101"))
+        // A bare number means days, as in uBlock Origin.
+        assertEquals(48, declaredHours("# expires: 2\n212-555-0101"))
+        assertEquals(12, declaredHours("# Expires: 12 hours\nphone,type\n212-555-0101,scam", "block.csv"))
+        assertEquals(6, declaredHours("""{"expires": "6h", "numbers": ["212-555-0101"]}""", "block.json"))
+    }
+
+    @Test
+    fun anExpiresLineOutsideTheHeaderOrInAnUnknownUnitDeclaresNothing() {
+        // Past the first data row it's an ordinary comment, not list metadata.
+        assertEquals(0, declaredHours("212-555-0101\n# Expires: 1 hour\n508-555-0102"))
+        assertEquals(0, declaredHours("# Expires: 2 weeks\n212-555-0101"))
+        assertEquals(0, declaredHours("# Expires: 0 days\n212-555-0101"))
+        assertEquals(0, declaredHours("# Expires: 123456 days\n212-555-0101"))
+        assertEquals(0, declaredHours("212-555-0101"))
+    }
+
+    private fun declaredHours(
+        body: String,
+        file: String = "block.txt",
+    ): Int =
+        ExternalBlocklistParser
+            .parse(
+                rawUrl = "https://lists.example.test/$file",
+                rawLabel = "",
+                body = body,
+                normalizeNumber = ::canonicalizeUs,
+            ).declaredRefreshHours
+
     private fun canonicalizeUs(raw: String): String {
         val digits = raw.filter { it in '0'..'9' }
         return when {

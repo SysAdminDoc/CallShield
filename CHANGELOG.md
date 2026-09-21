@@ -26,6 +26,16 @@ All notable changes to CallShield will be documented in this file.
 - A short but valid international number (the Faroes, Greenland, Andorra, some
   German landlines) is no longer counted as a malformed one by the heuristics.
 
+- External blocklist subscriptions now stay current. A list used to be
+  fetched only when you added it or switched it back on, so one that changes
+  daily went stale on your phone indefinitely. Each list is now fetched again
+  once a day, or on the interval it declares in an `Expires:` header line,
+  never more often than every six hours. A download that comes back empty or
+  with under half the list's numbers isn't applied in the background, because
+  a broken export looks just like a list that cleaned itself up. The list
+  keeps its last good copy and says why on its row, which also shows when it
+  last updated.
+
 ### Live caller lookup
 
 - Three of the four lookup services are gone, so the app no longer asks them.

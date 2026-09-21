@@ -23,6 +23,7 @@ import com.sysadmindoc.callshield.service.AppUpdateWorker
 import com.sysadmindoc.callshield.service.CrashReporter
 import com.sysadmindoc.callshield.service.DigestWorker
 import com.sysadmindoc.callshield.service.DirectBootScreeningStore
+import com.sysadmindoc.callshield.service.ExternalBlocklistRefreshWorker
 import com.sysadmindoc.callshield.service.HotDataSync
 import com.sysadmindoc.callshield.service.HotListSyncWorker
 import com.sysadmindoc.callshield.service.NotificationHelper
@@ -89,6 +90,7 @@ class CallShieldApp :
             SyncWorker.schedule(this)
             HotListSyncWorker.schedule(this)
             DigestWorker.schedule(this)
+            ExternalBlocklistRefreshWorker.schedule(this)
             PendingBlockedCallLogWorker.schedule(this)
             ProtectionHealthWorker.schedule(this)
             ProtectionHealthWorker.checkNow(this)
