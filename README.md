@@ -558,6 +558,7 @@ by locale and message type without shipping personal data:
 - Selective backup/restore for rules, non-secret settings, and opt-in logs; CSV log export; auto-cleanup (7/14/30/90 days)
 - Weekly full sync + scheduled hot list refresh, daily digest notification
 - External blocklist subscriptions (Settings > External blocklists) take HTTPS CSV, TXT or JSON number lists of up to 1 MB and 20,000 rows. Each list is fetched again once a day, or on the interval it declares in its header (`# Expires: 12 hours`, or `"expires": "12h"` in JSON), never more often than every six hours and at least weekly. A download that comes back empty or with under half the list's numbers isn't applied in the background. The list keeps its last good copy and says why on its row
+- If GitHub is blocked where you live, Settings > Feed mirror takes a second address for the protection data. CallShield asks GitHub first, then the mirror, then falls back to the copy bundled with the app. One tap fills in jsDelivr (`https://cdn.jsdelivr.net/gh/SysAdminDoc/CallShield@master/`), which serves the same files and can run up to 12 hours behind. Mirrored files go through the same signature check, so a mirror can't change what you get. [data/README.md](data/README.md#mirrors-and-recovery) covers running your own
 - Quick Settings tile, app shortcuts, home screen widget
 - Protection test validates all layers and permissions, including checker errors and deadline cutoffs
 - Rules surface priority conflicts after sync and edits, with the winning rule and a review path
@@ -816,7 +817,7 @@ language in [issue #7](https://github.com/SysAdminDoc/CallShield/issues/7).
 | URL Safety | Local spam-domain data; optional URLhaus (abuse.ch) |
 | Verification | Local Gradle, lint, and release-artifact checks |
 | Tests | 1100 JVM unit tests (JUnit) |
-| Strings | 1422 string resources and 33 plural groups (translation-ready) |
+| Strings | 1432 string resources and 33 plural groups (translation-ready) |
 | Accessibility | 100+ content descriptions, 48dp touch targets |
 | Min SDK | 29 (Android 10) |
 | Target SDK | 36 |

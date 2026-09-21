@@ -25,7 +25,9 @@ import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.model.ExternalBlocklistSubscription
 import com.sysadmindoc.callshield.data.model.HotDataHealth
 import com.sysadmindoc.callshield.data.model.HotDataHealthUpdate
+import com.sysadmindoc.callshield.data.remote.FeedMirror
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
@@ -219,6 +221,25 @@ class SettingsRepository(
         dataStore.data.map { prefs ->
             decodeExternalBlocklistSubscriptions(prefs[SpamRepository.KEY_EXTERNAL_BLOCKLIST_SUBSCRIPTIONS])
         }
+    val feedMirrorUrl: Flow<String?> = dataStore.data.map { it[SpamRepository.KEY_FEED_MIRROR_URL] }.distinctUntilChanged()
+
+    /**
+     * Saves [url] as the feed mirror in [FeedMirror]'s normal form, or clears
+     * the mirror when [url] is null. Returns false, changing nothing, for an
+     * address [FeedMirror] can't use.
+     */
+    suspend fun setFeedMirrorUrl(url: String?): Boolean {
+        val normalized = url?.let(FeedMirror::normalize)
+        if (url != null && normalized == null) return false
+        dataStore.edit { prefs ->
+            if (normalized == null) {
+                prefs.remove(SpamRepository.KEY_FEED_MIRROR_URL)
+            } else {
+                prefs[SpamRepository.KEY_FEED_MIRROR_URL] = normalized
+            }
+        }
+        return true
+    }
 
     suspend fun setActiveProfileName(name: String?) =
         dataStore.edit { prefs ->

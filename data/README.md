@@ -229,3 +229,28 @@ release. If the signing key is lost, sign with the backup key, which every
 release already trusts, then rotate a new backup in. A leaked key has to come
 out of the app in an urgent release, and installs that don't update keep
 trusting it, which is why the backup key should stay offline.
+
+### Mirrors and recovery
+
+The app downloads from `raw.githubusercontent.com` first. If that host is
+blocked where someone lives, or this repository ever moves, Settings > Feed
+mirror takes a second base URL. The app appends the same paths it asks GitHub
+for (`data/hot_numbers.json`, `data/hot_numbers.json.sig`, the manifest, the
+shards) and tries the mirror only after every GitHub branch has failed. The copy
+bundled in the APK is still the last resort.
+
+Any static HTTPS host can be a mirror if it serves this `data/` tree byte for
+byte, `.sig` files included. It needs no certificate pin. A mirrored feed goes
+through the same signature check as one from GitHub, and a mirrored manifest
+through the same version, date and digest checks, so a mirror can't hand out
+unsigned data or roll a device back to an older database. jsDelivr is the
+quickest mirror, and the app fills it in with one tap:
+
+```
+https://cdn.jsdelivr.net/gh/SysAdminDoc/CallShield@master/
+```
+
+jsDelivr caches files for up to 12 hours, so a phone using it can run half a
+day behind. If the repository moves, the same URL pattern works with the new
+owner and name, and users need the new address in Settings until a release
+changes the default.

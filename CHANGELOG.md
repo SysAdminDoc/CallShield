@@ -22,6 +22,12 @@ All notable changes to CallShield will be documented in this file.
   throws away a download that doesn't carry a valid one and keeps what it
   already has. Until now certificate pinning was the only check, and when it
   broke in August nothing else stood between a phone and a tampered file.
+- If GitHub is blocked where you live, Settings > Feed mirror takes a second
+  address for the protection data. CallShield still asks GitHub first and only
+  then tries the mirror, before falling back to the copy built into the app.
+  One tap fills in jsDelivr, which serves the same files and can lag by up to
+  12 hours. The signature check applies to every mirrored file, so a mirror
+  can't slip in anything the project didn't sign.
 - The ML scorer no longer judges callers outside North America. It treated any
   ten-digit number as a US or Canadian one once the `+` was stripped, so an
   unknown Singapore mobile, or a landline in New Zealand, Belgium, Thailand or

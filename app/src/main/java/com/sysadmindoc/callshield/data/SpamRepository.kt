@@ -261,6 +261,9 @@ class SpamRepository(
         internal val KEY_APP_UPDATE_CHECKSUM_URL = stringPreferencesKey("app_update_checksum_url")
         internal val KEY_APP_UPDATE_CHECKED_AT = longPreferencesKey("app_update_checked_at")
 
+        /** Base URL of the user's feed mirror ([com.sysadmindoc.callshield.data.remote.FeedMirror]); absent means none. */
+        internal val KEY_FEED_MIRROR_URL = stringPreferencesKey("feed_mirror_url")
+
         /** SharedPreferences key for the synchronous theme mirror (cold-start flash fix). */
         private const val KEY_THEME_CACHE = "app_theme"
         private const val KEY_THEME_CACHE_SCHEMA = "app_theme_schema"
@@ -391,8 +394,11 @@ class SpamRepository(
     val appUpdateChecksEnabled: Flow<Boolean> = settingsRepository.appUpdateChecksEnabled
     val appUpdateState: Flow<AppUpdateState> = settingsRepository.appUpdateState
     val externalBlocklistSubscriptions = settingsRepository.externalBlocklistSubscriptions
+    val feedMirrorUrl: Flow<String?> = settingsRepository.feedMirrorUrl
 
     suspend fun setActiveProfileName(name: String?) = settingsRepository.setActiveProfileName(name)
+
+    suspend fun setFeedMirrorUrl(url: String?): Boolean = settingsRepository.setFeedMirrorUrl(url)
 
     suspend fun setAppUpdateChecksEnabled(enabled: Boolean) = settingsRepository.setAppUpdateChecksEnabled(enabled)
 

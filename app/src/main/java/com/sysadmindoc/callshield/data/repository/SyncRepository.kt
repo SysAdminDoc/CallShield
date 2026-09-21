@@ -867,7 +867,8 @@ class SyncRepository(
         }
 
     /**
-     * A download that succeeded proves the pins still match; one that failed
+     * A download that succeeded means feeds are arriving, from GitHub or, once
+     * GitHub has failed, from the user's feed mirror; one that failed
      * certificate verification is recorded so Protection Test and the update
      * notice can say an app update is needed. Other failures say nothing
      * about trust and leave the record alone.

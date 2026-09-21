@@ -63,6 +63,7 @@ import com.sysadmindoc.callshield.data.MessageCapabilityStatus
 import com.sysadmindoc.callshield.data.PortableBackupCrypto
 import com.sysadmindoc.callshield.data.model.ExternalBlocklistPreview
 import com.sysadmindoc.callshield.data.model.ExternalBlocklistSubscription
+import com.sysadmindoc.callshield.data.remote.FeedMirror
 import com.sysadmindoc.callshield.data.repository.ANSWERED_CALLER_THRESHOLD_MAX
 import com.sysadmindoc.callshield.data.repository.ANSWERED_CALLER_THRESHOLD_MIN
 import com.sysadmindoc.callshield.data.repository.ANSWERED_CALLER_WINDOW_DAYS_MAX
@@ -167,6 +168,10 @@ fun SettingsScreen(viewModel: MainViewModel) {
     var showLanguageDialog by rememberSaveable { mutableStateOf(false) }
     var externalBlocklistUrl by rememberSaveable { mutableStateOf("") }
     var externalBlocklistLabel by rememberSaveable { mutableStateOf("") }
+    val feedMirrorUrl by viewModel.feedMirrorUrl.collectAsStateWithLifecycle()
+    val feedMirrorResult by viewModel.feedMirrorResult.collectAsStateWithLifecycle()
+    // Keyed on the stored value so the field shows what was saved, in its normal form.
+    var feedMirrorInput by rememberSaveable(feedMirrorUrl) { mutableStateOf(feedMirrorUrl.orEmpty()) }
 
     val roleManager =
         remember(context) {
@@ -1005,6 +1010,22 @@ fun SettingsScreen(viewModel: MainViewModel) {
             onClearResult = viewModel::clearExternalBlocklistResult,
         )
 
+        FeedMirrorSettings(
+            input = feedMirrorInput,
+            savedUrl = feedMirrorUrl,
+            result = feedMirrorResult,
+            onInputChange = { feedMirrorInput = it },
+            onSave = {
+                hapticTick(context)
+                viewModel.saveFeedMirror(feedMirrorInput)
+            },
+            onRemove = {
+                hapticTick(context)
+                viewModel.removeFeedMirror()
+            },
+            onClearResult = viewModel::clearFeedMirrorResult,
+        )
+
         // About
         PremiumCard {
             Column(modifier = Modifier.padding(16.dp)) {
@@ -1706,6 +1727,95 @@ private fun ExternalBlocklistSettings(
                 )
                 if (index < subscriptions.lastIndex) {
                     GradientDivider()
+                }
+            }
+        }
+    }
+}
+
+@Composable
+@Suppress("FunctionNaming", "LongMethod", "LongParameterList", "ktlint:standard:function-naming")
+private fun FeedMirrorSettings(
+    input: String,
+    savedUrl: String?,
+    result: StatusMessage?,
+    onInputChange: (String) -> Unit,
+    onSave: () -> Unit,
+    onRemove: () -> Unit,
+    onClearResult: () -> Unit,
+) {
+    SettingsCard(stringResource(R.string.settings_feed_mirror)) {
+        Text(
+            stringResource(R.string.settings_feed_mirror_desc),
+            style = MaterialTheme.typography.bodySmall,
+            color = CatSubtext,
+        )
+        Spacer(Modifier.height(10.dp))
+        OutlinedTextField(
+            value = input,
+            onValueChange = onInputChange,
+            label = { Text(stringResource(R.string.settings_feed_mirror_url)) },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+            leadingIcon = { Icon(Icons.Default.Link, contentDescription = null, tint = CatBlue) },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
+            shape = RoundedCornerShape(8.dp),
+            colors =
+                OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = CatBlue,
+                    unfocusedBorderColor = CardBorderAccent,
+                    focusedLabelColor = CatBlue,
+                    cursorColor = CatBlue,
+                ),
+        )
+        Spacer(Modifier.height(10.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+            PremiumActionButton(
+                label = stringResource(R.string.settings_feed_mirror_jsdelivr),
+                icon = Icons.Default.Public,
+                color = CatBlue,
+                onClick = { onInputChange(FeedMirror.JSDELIVR_BASE_URL) },
+                modifier = Modifier.weight(1f),
+                outlined = true,
+            )
+            PremiumActionButton(
+                label = stringResource(R.string.settings_feed_mirror_save),
+                icon = Icons.Default.Save,
+                color = CatGreen,
+                onClick = onSave,
+                enabled = input.isNotBlank(),
+                modifier = Modifier.weight(1f),
+            )
+        }
+        if (savedUrl != null) {
+            Spacer(Modifier.height(8.dp))
+            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    stringResource(R.string.settings_feed_mirror_active, savedUrl),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = CatSubtext,
+                    modifier = Modifier.weight(1f),
+                )
+                TextButton(onClick = onRemove) {
+                    Text(stringResource(R.string.settings_feed_mirror_remove), color = CatPeach)
+                }
+            }
+        }
+        result?.let { status ->
+            Spacer(Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    status.text,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (status.success) CatGreen else CatPeach,
+                    modifier = Modifier.weight(1f).semantics { liveRegion = LiveRegionMode.Polite },
+                )
+                IconButton(onClick = onClearResult) {
+                    Icon(Icons.Default.Close, contentDescription = stringResource(R.string.cd_close), tint = CatOverlay)
                 }
             }
         }

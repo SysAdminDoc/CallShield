@@ -18,6 +18,7 @@ import com.sysadmindoc.callshield.data.SpamHeuristics
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.SystemBlockList
 import com.sysadmindoc.callshield.data.checker.CheckerDependencies
+import com.sysadmindoc.callshield.data.remote.FeedMirror
 import com.sysadmindoc.callshield.di.ApplicationScope
 import com.sysadmindoc.callshield.service.AppUpdateWorker
 import com.sysadmindoc.callshield.service.CrashReporter
@@ -100,6 +101,14 @@ class CallShieldApp :
             }
 
             registerCacheInvalidationObservers()
+
+            appScope.launch {
+                try {
+                    SpamRepository.getInstance(this@CallShieldApp).feedMirrorUrl.collect { FeedMirror.set(it) }
+                } catch (e: Exception) {
+                    Log.w("CallShieldApp", "Failed to follow the feed mirror setting", e)
+                }
+            }
 
             appScope.launch {
                 checkerDependencies.spamMLScorer.loadWeights(this@CallShieldApp)

@@ -720,6 +720,16 @@
     <string name="settings_external_blocklist_commit_preview">Commit preview</string>
     <string name="settings_external_blocklist_subscription_stats">%1$d active, +%2$d / -%3$d last sync</string>
     <string name="settings_external_blocklist_last_synced">Last updated: %1$s</string>
+    <string name="settings_feed_mirror">Feed mirror</string>
+    <string name="settings_feed_mirror_desc">If GitHub is blocked where you are, CallShield can download its protection data from a second address instead. GitHub is always tried first. Every file still has to carry the project\'s signature, so a mirror can\'t change what you get.</string>
+    <string name="settings_feed_mirror_url">Mirror address (https)</string>
+    <string name="settings_feed_mirror_jsdelivr">Use jsDelivr</string>
+    <string name="settings_feed_mirror_save">Save mirror</string>
+    <string name="settings_feed_mirror_active">Used when GitHub can\'t be reached: %1$s</string>
+    <string name="settings_feed_mirror_remove">Remove</string>
+    <string name="settings_feed_mirror_saved">Mirror saved. The next sync uses it if GitHub fails.</string>
+    <string name="settings_feed_mirror_invalid">That address won\'t work. It has to start with https:// and can\'t contain a password or a query string.</string>
+    <string name="settings_feed_mirror_removed">Mirror removed. Protection data comes from GitHub only.</string>
     <string name="external_blocklist_not_found">External blocklist subscription was not found</string>
     <string name="external_blocklist_disabled">Disabled %1$s: removed %2$d feed-owned numbers</string>
     <string name="external_blocklist_removed">Removed %1$s: rolled back %2$d feed-owned numbers</string>

@@ -464,6 +464,7 @@ class MainViewModel
         val externalBlocklistSubscriptions =
             repo.externalBlocklistSubscriptions
                 .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+        val feedMirrorUrl = repo.feedMirrorUrl.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
         private val _syncState = MutableStateFlow<SyncState>(SyncState.Idle)
         val syncState: StateFlow<SyncState> = _syncState
@@ -502,6 +503,9 @@ class MainViewModel
 
         private val _externalBlocklistResult = MutableStateFlow<StatusMessage?>(null)
         val externalBlocklistResult: StateFlow<StatusMessage?> = _externalBlocklistResult
+
+        private val _feedMirrorResult = MutableStateFlow<StatusMessage?>(null)
+        val feedMirrorResult: StateFlow<StatusMessage?> = _feedMirrorResult
 
         fun clearImportResult() {
             _importResult.value = null
@@ -614,6 +618,29 @@ class MainViewModel
                 val result = repo.removeExternalBlocklistSubscription(subscription.id)
                 _externalBlocklistResult.value = StatusMessage(result.message, result.success)
             }
+        }
+
+        fun saveFeedMirror(url: String) {
+            viewModelScope.launch {
+                val saved = repo.setFeedMirrorUrl(url)
+                _feedMirrorResult.value =
+                    if (saved) {
+                        StatusMessage(appContext.getString(R.string.settings_feed_mirror_saved), success = true)
+                    } else {
+                        StatusMessage(appContext.getString(R.string.settings_feed_mirror_invalid), success = false)
+                    }
+            }
+        }
+
+        fun removeFeedMirror() {
+            viewModelScope.launch {
+                repo.setFeedMirrorUrl(null)
+                _feedMirrorResult.value = StatusMessage(appContext.getString(R.string.settings_feed_mirror_removed), success = true)
+            }
+        }
+
+        fun clearFeedMirrorResult() {
+            _feedMirrorResult.value = null
         }
 
         fun scanCallLog() {

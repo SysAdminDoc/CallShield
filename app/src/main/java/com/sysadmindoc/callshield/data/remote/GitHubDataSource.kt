@@ -33,6 +33,12 @@ internal class GitHubFeedValidationException(
     message: String,
 ) : IllegalArgumentException(message)
 
+/** A feed host answered with an HTTP error. SyncRepository reads the "HTTP <code>" message to decide whether to retry. */
+internal class GitHubFeedHttpException(
+    val code: Int,
+    reason: String,
+) : Exception("HTTP $code: $reason")
+
 private fun failFeedValidation(
     reason: GitHubFeedFailureReason,
     message: String,
@@ -554,86 +560,101 @@ class GitHubDataSource internal constructor(
         repo: String,
     ): Result<String> {
         var lastError: Exception? = null
-        val label = rawFeedLabel(path)
-        val maxBytes = rawFeedMaxBytes(path)
-
-        for (branch in resolveCandidateBranches(owner, repo)) {
+        for (source in feedSources(path, owner, repo)) {
             try {
-                val request =
-                    Request
-                        .Builder()
-                        .url(buildRawUrl(owner, repo, branch, path))
-                        .header("Cache-Control", "no-store, max-age=0")
-                        .header("User-Agent", USER_AGENT)
-                        .build()
-
-                client.newCall(request).execute().use { response ->
-                    if (!response.isSuccessful) {
-                        lastError = moreTelling(lastError, Exception("HTTP ${response.code}: ${response.message}"))
-                        return@use
-                    }
-
-                    val body = readLimitedBody(response, label, maxBytes)
-                    if (body != null) {
-                        return Result.success(signatureChecked(path, validateRawFeedBody(path, body), owner, repo, branch))
-                    }
-                    lastError = Exception("Empty response body")
-                }
+                fetchVerified(path, source)?.let { return Result.success(it) }
+                lastError = moreTelling(lastError, Exception("Empty response body"), source.mirror)
             } catch (e: Exception) {
-                lastError = moreTelling(lastError, e)
+                lastError = moreTelling(lastError, e, source.mirror)
             }
         }
-
         return Result.failure(lastError ?: Exception("Unable to fetch $path"))
     }
 
     /**
-     * [body], once a signed feed's signature verifies. The signature comes from
-     * the same branch as the body, so a copy refused on one branch can't borrow
-     * another branch's signature.
+     * Where [path] can come from, in order: each candidate GitHub branch, then
+     * the user's [FeedMirror] when one is set. Every source carries its own
+     * signature URL on the same host and branch, so a copy refused on one
+     * source can't borrow another source's signature.
      */
+    private suspend fun feedSources(
+        path: String,
+        owner: String,
+        repo: String,
+    ): List<FeedSource> {
+        val github =
+            resolveCandidateBranches(owner, repo).map { branch ->
+                FeedSource(buildRawUrl(owner, repo, branch, path), buildRawUrl(owner, repo, branch, "$path.sig"))
+            }
+        val mirror = FeedMirror.urlFor(path)?.let { FeedSource(it, "$it.sig", mirror = true) }
+        return github + listOfNotNull(mirror)
+    }
+
+    /** [path] from [source], size-checked and signature-checked, or null for an empty body. */
+    private fun fetchVerified(
+        path: String,
+        source: FeedSource,
+    ): String? =
+        client.newCall(rawRequest(source.url)).execute().use { response ->
+            if (!response.isSuccessful) throw GitHubFeedHttpException(response.code, response.message)
+            readLimitedBody(response, rawFeedLabel(path), rawFeedMaxBytes(path))?.let { body ->
+                signatureChecked(path, validateRawFeedBody(path, body), source.signatureUrl)
+            }
+        }
+
+    /** [body], once a signed feed's signature from [signatureUrl] verifies. */
     private fun signatureChecked(
         path: String,
         body: String,
-        owner: String,
-        repo: String,
-        branch: String,
+        signatureUrl: String,
     ): String {
-        if (path in SIGNED_FEED_PATHS) requireFeedSignature(path, body, fetchSignature(path, owner, repo, branch))
+        if (path in SIGNED_FEED_PATHS) requireFeedSignature(path, body, fetchSignature(path, signatureUrl))
         return body
     }
 
     /**
-     * A branch that served the file but failed validation (a bad signature, an
-     * oversized body) says more than a fallback branch answering 404, and the
-     * callers treat the two differently.
+     * The failure to report once [next] follows [previous]. A source that
+     * served the file but failed validation (a bad signature, an oversized
+     * body) says more than a later source answering 404, and the callers treat
+     * the two differently. A mirror's failure never hides GitHub's unless the
+     * mirror served a file that was refused: SyncRepository decides whether to
+     * retry from the status code, and the certificate notice fires on a trust
+     * failure, and both are about GitHub.
      */
     private fun moreTelling(
         previous: Exception?,
         next: Exception,
-    ): Exception = if (previous is GitHubFeedValidationException && next !is GitHubFeedValidationException) previous else next
+        nextFromMirror: Boolean,
+    ): Exception {
+        val nextRefused = next is GitHubFeedValidationException
+        val previousRefused = previous is GitHubFeedValidationException
+        return when {
+            previous == null -> next
+            nextFromMirror -> if (nextRefused && !previousRefused && !HttpClient.isCertificateTrustFailure(previous)) next else previous
+            previousRefused && !nextRefused -> previous
+            else -> next
+        }
+    }
 
     private fun fetchSignature(
         path: String,
-        owner: String,
-        repo: String,
-        branch: String,
-    ): String? {
-        val request =
-            Request
-                .Builder()
-                .url(buildRawUrl(owner, repo, branch, "$path.sig"))
-                .header("Cache-Control", "no-store, max-age=0")
-                .header("User-Agent", USER_AGENT)
-                .build()
-        return client.newCall(request).execute().use { response ->
+        signatureUrl: String,
+    ): String? =
+        client.newCall(rawRequest(signatureUrl)).execute().use { response ->
             if (response.isSuccessful) {
                 readLimitedBody(response, "${rawFeedLabel(path)} signature", FeedSignature.MAX_SIGNATURE_BYTES)
             } else {
                 null
             }
         }
-    }
+
+    private fun rawRequest(url: String): Request =
+        Request
+            .Builder()
+            .url(url)
+            .header("Cache-Control", "no-store, max-age=0")
+            .header("User-Agent", USER_AGENT)
+            .build()
 
     private suspend fun resolveCandidateBranches(
         owner: String,
@@ -823,6 +844,13 @@ class GitHubDataSource internal constructor(
     private data class RawFeedSpec(
         val label: String,
         val maxBytes: Long,
+    )
+
+    /** One place a feed can come from, with its detached signature's URL on the same host and branch. */
+    private data class FeedSource(
+        val url: String,
+        val signatureUrl: String,
+        val mirror: Boolean = false,
     )
 
     private data class GitHubReleasePayload(
