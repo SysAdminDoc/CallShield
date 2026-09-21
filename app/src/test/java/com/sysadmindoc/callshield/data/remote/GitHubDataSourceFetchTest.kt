@@ -12,6 +12,7 @@ import okhttp3.ResponseBody.Companion.toResponseBody
 import org.junit.After
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
@@ -29,6 +30,9 @@ class GitHubDataSourceFetchTest {
     private val hotListSignature = file("$HOT_LIST.sig")
     private val requested = mutableListOf<String>()
     private var now = 1_000_000L
+
+    /** Like gitHubFailure, but a test can end it midway. */
+    private var gitHubOutage: IOException? = null
 
     @After
     fun clearMirror() = FeedMirror.resetForTest()
@@ -162,7 +166,7 @@ class GitHubDataSourceFetchTest {
         Interceptor { chain ->
             val url = chain.request().url.toString()
             requested += url
-            if (gitHubFailure != null && url.startsWith(RAW)) throw gitHubFailure
+            (gitHubFailure ?: gitHubOutage)?.let { if (url.startsWith(RAW)) throw it }
             if (apiFailure != null && url.startsWith(API)) throw apiFailure
             val file = url.substringBefore("?")
             val status = if (file.startsWith(MASTER)) masterStatus[file.removePrefix(MASTER)] else null
@@ -334,6 +338,31 @@ class GitHubDataSourceFetchTest {
             val refused = result.exceptionOrNull() as? GitHubFeedValidationException
             assertEquals(impostor, GitHubFeedFailureReason.MISSING_SCHEMA_FIELD, refused?.reason)
         }
+    }
+
+    @Test
+    fun `GitHub's certificate failure stays reported while the mirror serves, until GitHub serves again`() {
+        FeedMirror.set(MIRROR)
+        gitHubOutage = SSLPeerUnverifiedException("pin mismatch")
+        val source = dataSource(signed(HOT_LIST), signed(HOT_LIST))
+
+        assertTrue(runBlocking { source.fetchHotListSnapshot(OWNER, REPO) }.isSuccess)
+        assertTrue("the mirror served, but GitHub's pins still need an update", source.gitHubTrustFailing)
+
+        gitHubOutage = null
+        assertTrue(runBlocking { source.fetchHotListSnapshot(OWNER, REPO) }.isSuccess)
+        assertFalse(source.gitHubTrustFailing)
+    }
+
+    @Test
+    fun `a mirror is accepted only when it serves the signed manifest`() {
+        val html = "<html>not found</html>".toByteArray()
+
+        assertTrue(runBlocking { dataSource(emptyMap(), signed(MANIFEST)).probeMirror(MIRROR) }.isSuccess)
+        assertTrue(runBlocking { dataSource(emptyMap(), emptyMap()).probeMirror(MIRROR) }.isFailure)
+        // A host that answers every path with a page, 200 and all.
+        assertTrue(runBlocking { dataSource(emptyMap(), mapOf(MANIFEST to html, "$MANIFEST.sig" to html)).probeMirror(MIRROR) }.isFailure)
+        assertTrue(runBlocking { dataSource(emptyMap(), signed(MANIFEST)).probeMirror("http://mirror.example.test/callshield/") }.isFailure)
     }
 
     private fun signed(vararg paths: String) = paths.flatMap { path -> listOf(path to file(path), "$path.sig" to file("$path.sig")) }.toMap()

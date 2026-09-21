@@ -49,7 +49,10 @@ All notable changes to CallShield will be documented in this file.
   behind a block doesn't wait out a timeout for every file. One tap fills in
   jsDelivr, which serves the same files and can lag by up to 12 hours. The
   signature check applies to every mirrored file, so a mirror can't slip in
-  anything the project didn't sign, though it can hold back updates.
+  anything the project didn't sign, though it can hold back updates. An
+  address is saved only once it serves a signed copy of the manifest, and a
+  certificate failure on GitHub still brings up the update notice while the
+  mirror is covering for it.
 - The ML scorer no longer judges callers outside North America. It treated any
   ten-digit number as a US or Canadian one once the `+` was stripped, so an
   unknown Singapore mobile, or a landline in New Zealand, Belgium, Thailand or

@@ -230,7 +230,8 @@ internal object HotDataSync {
                 loads.any { HttpClient.isCertificateTrustFailure(it.failure) } -> repo.recordFeedTrust(failed = true)
 
                 // Resolved with no failure means it came from the network, not the bundled snapshot.
-                loads.any { it.resolved && it.failure == null } -> repo.recordFeedTrust(failed = false)
+                // A mirror serving while GitHub's pins fail still leaves them needing an update.
+                loads.any { it.resolved && it.failure == null } -> repo.recordFeedTrust(failed = source.gitHubTrustFailing)
             }
             RefreshOutcome(
                 refreshedAnyFeed = hotListApplied || hotRangesApplied || spamDomainsApplied,

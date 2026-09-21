@@ -732,6 +732,8 @@
     <string name="settings_feed_mirror_saved">Mirror saved. The next sync uses it if GitHub fails.</string>
     <string name="settings_feed_mirror_invalid">That address won\'t work. It has to start with https:// and can\'t contain a password or a query string.</string>
     <string name="settings_feed_mirror_removed">Mirror removed. Protection data comes from GitHub only.</string>
+    <string name="settings_feed_mirror_checking">Checking the mirror…</string>
+    <string name="settings_feed_mirror_unverified">That address didn\'t serve CallShield\'s signed data, so it wasn\'t saved. Check that it points at a copy of the repository.</string>
     <string name="external_blocklist_not_found">External blocklist subscription was not found</string>
     <string name="external_blocklist_disabled">Disabled %1$s: removed %2$d feed-owned numbers</string>
     <string name="external_blocklist_removed">Removed %1$s: rolled back %2$d feed-owned numbers</string>

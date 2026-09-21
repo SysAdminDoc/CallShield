@@ -25,6 +25,7 @@ import com.sysadmindoc.callshield.data.remote.GitHubDataSource
 import com.sysadmindoc.callshield.data.remote.OkHttpExternalBlocklistDataSource
 import com.sysadmindoc.callshield.data.remote.SpamDataSource
 import com.sysadmindoc.callshield.data.repository.BlocklistRepository
+import com.sysadmindoc.callshield.data.repository.FeedMirrorSave
 import com.sysadmindoc.callshield.data.repository.SettingsRepository
 import com.sysadmindoc.callshield.data.repository.SpamRepositoryImpl
 import com.sysadmindoc.callshield.data.repository.SyncRepository
@@ -417,6 +418,8 @@ class SpamRepository(
     suspend fun setActiveProfileName(name: String?) = settingsRepository.setActiveProfileName(name)
 
     suspend fun setFeedMirrorUrl(url: String?): Boolean = settingsRepository.setFeedMirrorUrl(url)
+
+    suspend fun saveFeedMirrorUrl(url: String): FeedMirrorSave = syncRepository.saveFeedMirrorUrl(url)
 
     suspend fun setAppUpdateChecksEnabled(enabled: Boolean) = settingsRepository.setAppUpdateChecksEnabled(enabled)
 

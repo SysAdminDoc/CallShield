@@ -531,6 +531,8 @@
     <string name="settings_feed_mirror_saved">镜像已保存。GitHub 失败时，下次同步会使用它。</string>
     <string name="settings_feed_mirror_invalid">这个地址无法使用。它必须以 https:// 开头，且不能包含密码或查询字符串。</string>
     <string name="settings_feed_mirror_removed">镜像已移除。防护数据只从 GitHub 下载。</string>
+    <string name="settings_feed_mirror_checking">正在检查镜像…</string>
+    <string name="settings_feed_mirror_unverified">这个地址没有提供 CallShield 的签名数据，因此没有保存。请确认它指向本仓库的副本。</string>
     <string name="contribute_already_submitted">你在过去一天内已经举报过这个号码。</string>
     <string name="contribute_queued">已保存，CallShield 会尽快自动发送。</string>
     <string name="external_blocklist_refresh_failed">上次刷新失败，仍在使用之前的列表。</string>

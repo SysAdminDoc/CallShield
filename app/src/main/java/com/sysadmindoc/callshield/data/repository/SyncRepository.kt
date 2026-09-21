@@ -25,6 +25,7 @@ import com.sysadmindoc.callshield.data.model.SpamShardDescriptor
 import com.sysadmindoc.callshield.data.model.SpamShardManifest
 import com.sysadmindoc.callshield.data.remote.ExternalBlocklistDataSource
 import com.sysadmindoc.callshield.data.remote.ExternalBlocklistHttpException
+import com.sysadmindoc.callshield.data.remote.FeedMirror
 import com.sysadmindoc.callshield.data.remote.GitHubDataSource
 import com.sysadmindoc.callshield.data.remote.GitHubFeedValidationException
 import com.sysadmindoc.callshield.data.remote.HttpClient
@@ -226,6 +227,14 @@ class SyncRepository(
             settingsRepository.recordTrendingNumbers(hotNumbers.mapTo(HashSet()) { it.number }, appliedAt)
         }
         // Hot list entries are exact number rows. Prefix/rule caches do not change here.
+    }
+
+    /** Saves [url] as the feed mirror once it serves this project's signed manifest. */
+    suspend fun saveFeedMirrorUrl(url: String): FeedMirrorSave {
+        val normalized = FeedMirror.normalize(url) ?: return FeedMirrorSave.INVALID
+        if (remote.probeMirror(normalized).isFailure) return FeedMirrorSave.UNVERIFIED
+        settingsRepository.setFeedMirrorUrl(normalized)
+        return FeedMirrorSave.SAVED
     }
 
     suspend fun previewExternalBlocklistSubscription(
@@ -929,15 +938,15 @@ class SyncRepository(
         }
 
     /**
-     * A download that succeeded means feeds are arriving, from GitHub or, once
-     * GitHub has failed, from the user's feed mirror; one that failed
-     * certificate verification is recorded so Protection Test and the update
-     * notice can say an app update is needed. Other failures say nothing
-     * about trust and leave the record alone.
+     * A download that failed certificate verification is recorded so
+     * Protection Test and the update notice can say an app update is needed,
+     * and so is one the mirror delivered while GitHub's own pins were
+     * failing, since those pins still need the update. A download GitHub
+     * served clears the record. Other failures say nothing about trust.
      */
     private suspend fun recordFeedTrust(result: Result<*>) {
         when {
-            result.isSuccess -> settingsRepository.recordFeedTrust(failed = false)
+            result.isSuccess -> settingsRepository.recordFeedTrust(failed = remote.gitHubTrustFailing)
             HttpClient.isCertificateTrustFailure(result.exceptionOrNull()) -> settingsRepository.recordFeedTrust(failed = true)
         }
     }
@@ -960,6 +969,17 @@ class SyncRepository(
 }
 
 private const val EXTERNAL_BLOCKLIST_LOOKUP_CHUNK_SIZE = 500
+
+/** How saving a feed mirror went. */
+enum class FeedMirrorSave {
+    SAVED,
+
+    /** Not an https base URL the app can use. */
+    INVALID,
+
+    /** It didn't serve a signed copy of the manifest. */
+    UNVERIFIED,
+}
 
 /** "+", then 3-15 digits: whole-country-code rows are the shortest legitimate prefixes. */
 private val VALID_PREFIX_REGEX = Regex("""\+[0-9]{3,15}""")

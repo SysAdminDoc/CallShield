@@ -44,6 +44,7 @@ import com.sysadmindoc.callshield.data.model.SmsKeywordRule
 import com.sysadmindoc.callshield.data.model.SpamNumber
 import com.sysadmindoc.callshield.data.model.WhitelistEntry
 import com.sysadmindoc.callshield.data.model.WildcardRule
+import com.sysadmindoc.callshield.data.repository.FeedMirrorSave
 import com.sysadmindoc.callshield.domain.model.BlockReasonCode
 import com.sysadmindoc.callshield.domain.model.SpamCheckResult
 import com.sysadmindoc.callshield.domain.usecase.ExportLogsUseCase
@@ -641,12 +642,12 @@ class MainViewModel
 
         fun saveFeedMirror(url: String) {
             viewModelScope.launch {
-                val saved = repo.setFeedMirrorUrl(url)
+                _feedMirrorResult.value = StatusMessage(appContext.getString(R.string.settings_feed_mirror_checking), success = true)
                 _feedMirrorResult.value =
-                    if (saved) {
-                        StatusMessage(appContext.getString(R.string.settings_feed_mirror_saved), success = true)
-                    } else {
-                        StatusMessage(appContext.getString(R.string.settings_feed_mirror_invalid), success = false)
+                    when (repo.saveFeedMirrorUrl(url)) {
+                        FeedMirrorSave.SAVED -> StatusMessage(appContext.getString(R.string.settings_feed_mirror_saved), success = true)
+                        FeedMirrorSave.INVALID -> StatusMessage(appContext.getString(R.string.settings_feed_mirror_invalid), success = false)
+                        FeedMirrorSave.UNVERIFIED -> StatusMessage(appContext.getString(R.string.settings_feed_mirror_unverified), success = false)
                     }
             }
         }

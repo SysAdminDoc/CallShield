@@ -238,7 +238,8 @@ trusting it, which is why the backup key should stay offline.
 
 The app downloads from `raw.githubusercontent.com` first. If that host is
 blocked where someone lives, or this repository ever moves, Settings > Feed
-mirror takes a second base URL. The app appends the same paths it asks GitHub
+mirror takes a second base URL. The app fetches the signed manifest through
+it and saves the address only if that verifies. It appends the same paths it asks GitHub
 for (`data/hot_numbers.json`, `data/hot_numbers.json.sig`, the manifest, the
 shards) and tries the mirror after every GitHub branch has failed. For ten
 minutes after GitHub couldn't be reached at all (a timeout, a refused

@@ -10,6 +10,7 @@ import com.sysadmindoc.callshield.data.model.HotNumber
 import com.sysadmindoc.callshield.data.model.SpamDatabase
 import com.sysadmindoc.callshield.data.model.SpamDatabaseShard
 import com.sysadmindoc.callshield.data.model.SpamShardManifest
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.Interceptor
@@ -117,6 +118,13 @@ class GitHubDataSource internal constructor(
     // GITHUB_OUTAGE_MS after that, fetches ask the mirror first.
     @Volatile
     private var gitHubUnreachableAt: Long? = null
+
+    // Set when GitHub fails certificate verification and cleared when GitHub
+    // serves a file. A mirror serving meanwhile leaves it set: the pins still
+    // need an app update, and the update notice has to hear about it.
+    @Volatile
+    override var gitHubTrustFailing: Boolean = false
+        private set
 
     companion object {
         const val DEFAULT_REPO_OWNER = "SysAdminDoc"
@@ -602,6 +610,26 @@ class GitHubDataSource internal constructor(
         )
     }
 
+    /**
+     * Fetches the manifest and its signature from [baseUrl] the way a sync
+     * would, so a mirror that serves nothing, an error page for every path,
+     * or unsigned copies is caught before it's saved rather than at the
+     * next GitHub outage.
+     */
+    override suspend fun probeMirror(baseUrl: String): Result<Unit> =
+        withContext(Dispatchers.IO) {
+            val base = FeedMirror.normalize(baseUrl) ?: return@withContext Result.failure(IllegalArgumentException("Not a usable mirror address"))
+            val url = base + SHARD_MANIFEST_PATH
+            try {
+                val body = fetchVerifiedOnce(SHARD_MANIFEST_PATH, url, "$url.sig") ?: return@withContext Result.failure(Exception("Empty response body"))
+                parseSpamShardManifestJson(body).map { }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        }
+
     private suspend fun fetchRawText(
         path: String,
         owner: String,
@@ -611,12 +639,16 @@ class GitHubDataSource internal constructor(
         for (source in feedSources(path, owner, repo)) {
             try {
                 fetchVerified(path, source)?.let {
-                    if (!source.mirror) gitHubUnreachableAt = null
+                    if (!source.mirror) {
+                        gitHubUnreachableAt = null
+                        gitHubTrustFailing = false
+                    }
                     return Result.success(it)
                 }
                 lastError = moreTelling(lastError, Exception("Empty response body"), source.mirror)
             } catch (e: Exception) {
                 if (!source.mirror && isUnreachable(e)) gitHubUnreachableAt = clock()
+                if (!source.mirror && HttpClient.isCertificateTrustFailure(e)) gitHubTrustFailing = true
                 lastError = moreTelling(lastError, e, source.mirror)
             }
         }

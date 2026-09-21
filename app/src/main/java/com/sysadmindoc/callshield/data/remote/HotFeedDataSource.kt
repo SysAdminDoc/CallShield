@@ -62,4 +62,7 @@ interface HotFeedDataSource {
     fun parseHotRangesSnapshotJson(body: String): HotFeedSnapshot<List<String>> = HotFeedSnapshot(parseHotRangesJson(body))
 
     fun parseSpamDomainsSnapshotJson(body: String): HotFeedSnapshot<List<String>> = HotFeedSnapshot(parseSpamDomainsJson(body))
+
+    /** True while GitHub itself fails certificate verification, even when a mirror is serving the feeds. */
+    val gitHubTrustFailing: Boolean get() = false
 }
