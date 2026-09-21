@@ -190,37 +190,43 @@ class SyncRepository(
             }
         }
 
-    suspend fun replaceHotList(numbers: List<SpamNumber>) =
-        withContext(Dispatchers.IO) {
-            val hotNumbers =
-                numbers
-                    .filter { it.number.isNotBlank() }
-                    .distinctBy { it.number }
+    suspend fun replaceHotList(
+        numbers: List<SpamNumber>,
+        recordTrending: Boolean = true,
+        appliedAt: Long = System.currentTimeMillis(),
+    ) = withContext(Dispatchers.IO) {
+        val hotNumbers =
+            numbers
+                .filter { it.number.isNotBlank() }
+                .distinctBy { it.number }
 
-            val existingByNumber =
-                if (hotNumbers.isEmpty()) {
-                    emptyMap()
-                } else {
-                    val existingRows = dao.getNumbersByNumbers(hotNumbers.map { it.number })
-                    existingRows.associateBy { it.number }
-                }
+        val existingByNumber =
+            if (hotNumbers.isEmpty()) {
+                emptyMap()
+            } else {
+                val existingRows = dao.getNumbersByNumbers(hotNumbers.map { it.number })
+                existingRows.associateBy { it.number }
+            }
 
-            val mergedHotNumbers =
-                mergeHotListNumbers(
-                    hotNumbers = hotNumbers,
-                    existingByNumber = existingByNumber,
-                )
+        val mergedHotNumbers =
+            mergeHotListNumbers(
+                hotNumbers = hotNumbers,
+                existingByNumber = existingByNumber,
+            )
 
-            // Atomic delete + insert via the DAO's @Transaction helper. A bare
-            // deleteBySource()/insertNumbers() pair left a window where a
-            // concurrent screening lookup (HotListSyncWorker runs every 30 min)
-            // could miss a hot-list number between the two statements.
-            dao.replaceBySource("hot_list", mergedHotNumbers)
-            // mergeHotListNumbers keeps a database row over its hot entry, so the
-            // full list is recorded separately for the STIR/SHAKEN trust allow.
-            settingsRepository.recordTrendingNumbers(hotNumbers.mapTo(HashSet()) { it.number })
-            // Hot list entries are exact number rows. Prefix/rule caches do not change here.
+        // Atomic delete + insert via the DAO's @Transaction helper. A bare
+        // deleteBySource()/insertNumbers() pair left a window where a
+        // concurrent screening lookup (HotListSyncWorker runs every 30 min)
+        // could miss a hot-list number between the two statements.
+        dao.replaceBySource("hot_list", mergedHotNumbers)
+        // mergeHotListNumbers keeps a database row over its hot entry, so the
+        // full list is recorded separately for the STIR/SHAKEN trust allow.
+        // The build-time snapshot isn't trending now, so it's never recorded.
+        if (recordTrending) {
+            settingsRepository.recordTrendingNumbers(hotNumbers.mapTo(HashSet()) { it.number }, appliedAt)
         }
+        // Hot list entries are exact number rows. Prefix/rule caches do not change here.
+    }
 
     suspend fun previewExternalBlocklistSubscription(
         url: String,

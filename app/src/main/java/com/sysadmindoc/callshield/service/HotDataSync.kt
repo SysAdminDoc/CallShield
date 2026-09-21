@@ -139,11 +139,15 @@ internal object HotDataSync {
             }
         }
 
-        if (dao.getCountBySource(HOT_LIST_SOURCE) == 0) {
+        // No rows can also mean the last hot list was all numbers already in
+        // the database, which get no rows of their own. Only a device that has
+        // never applied a hot list gets the build-time snapshot, and that
+        // snapshot never counts as trending.
+        if (dao.getCountBySource(HOT_LIST_SOURCE) == 0 && !repo.hasAppliedHotList()) {
             val bundledHotList = loadBundledHotList(appContext, source)
             val hotNumbers = sanitizeHotNumbers(bundledHotList.data, repo::normalizeNumber)
             if (bundledHotList.resolved && shouldApplyFeed(hotNumbers, bundledHotList.explicitlyCleared)) {
-                repo.replaceHotList(hotNumbers)
+                repo.replaceHotList(hotNumbers, recordTrending = false)
             }
         }
     }
@@ -178,12 +182,14 @@ internal object HotDataSync {
             // build-time asset after a transient fetch failure would delete the
             // freshly synced trending rows and reinstate weeks-old data. Only
             // use it where the corresponding store is still empty.
-            val hotList = loadHotList(appContext, source, dao.getCountBySource(HOT_LIST_SOURCE) > 0)
+            val hotListSeen = dao.getCountBySource(HOT_LIST_SOURCE) > 0 || repo.hasAppliedHotList()
+            val hotList = loadHotList(appContext, source, hotListSeen)
             val hotNumbers = sanitizeHotNumbers(hotList.data, repo::normalizeNumber)
             val hotListReplay = isReplay(hotList.generatedAt, lastRead[HOT_LIST_FEED])
             val hotListApplied = !hotListReplay && shouldApplyFeed(hotNumbers, hotList.explicitlyCleared)
             if (hotList.resolved && hotListApplied) {
-                repo.replaceHotList(hotNumbers)
+                // A failure means the bundled snapshot stood in for the network.
+                repo.replaceHotList(hotNumbers, recordTrending = hotList.failure == null)
             }
 
             val hotRanges = loadHotRanges(appContext, source, dependencies.spamHeuristics.hasHotRanges())
@@ -447,5 +453,5 @@ internal object HotDataSync {
     internal const val HOT_LIST_FEED = "hot_list"
     internal const val HOT_RANGES_FEED = "hot_ranges"
     internal const val SPAM_DOMAINS_FEED = "spam_domains"
-    private const val HOT_LIST_EVIDENCE_TTL_MS = 7L * 24L * 60L * 60L * 1000L
+    private const val HOT_LIST_EVIDENCE_TTL_MS = SpamRepository.HOT_ROW_TTL_MS
 }

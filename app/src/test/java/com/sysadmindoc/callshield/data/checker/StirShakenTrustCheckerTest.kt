@@ -1,9 +1,12 @@
 package com.sysadmindoc.callshield.data.checker
 
+import androidx.datastore.preferences.core.mutablePreferencesOf
 import com.sysadmindoc.callshield.data.SourceEvidenceCodec
+import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.checker.StirShakenTrustChecker.Companion.VERIFICATION_STATUS_PASSED
 import com.sysadmindoc.callshield.data.checker.StirShakenTrustChecker.Companion.decidePure
 import com.sysadmindoc.callshield.data.checker.StirShakenTrustChecker.Companion.isEnabledPure
+import com.sysadmindoc.callshield.data.checker.StirShakenTrustChecker.Companion.isTrendingNow
 import com.sysadmindoc.callshield.data.model.SourceEvidenceJson
 import com.sysadmindoc.callshield.data.model.SpamNumber
 import org.junit.Assert.assertEquals
@@ -27,6 +30,10 @@ import java.time.LocalDate
  *   VERIFICATION_STATUS_FAILED       = 2
  */
 class StirShakenTrustCheckerTest {
+    private companion object {
+        const val NOW = 1_800_000_000_000L
+    }
+
     private val notVerified = 0
     private val failed = 2
 
@@ -47,6 +54,37 @@ class StirShakenTrustCheckerTest {
         // Pre-Android 11 or SMS pipeline — nothing to trust.
         assertFalse(isEnabledPure(settingEnabled = true, verificationStatus = null))
     }
+
+    // ── isTrendingNow ────────────────────────────────────────────────────
+
+    @Test fun `a number on a hot list applied within its rows' lifetime is trending`() {
+        val prefs = trendingPrefs(appliedAt = NOW - SpamRepository.HOT_ROW_TTL_MS, "+12125550144")
+
+        assertTrue(isTrendingNow(prefs, "+12125550144", NOW))
+        assertFalse(isTrendingNow(prefs, "+12125550199", NOW))
+    }
+
+    @Test fun `a trending mark past the rows' lifetime no longer counts`() {
+        // During an outage or a refused feed nothing replaces the set, and a
+        // stale mark would keep overriding the trust allow indefinitely.
+        val prefs = trendingPrefs(appliedAt = NOW - SpamRepository.HOT_ROW_TTL_MS - 1, "+12125550144")
+
+        assertFalse(isTrendingNow(prefs, "+12125550144", NOW))
+    }
+
+    @Test fun `a trending set with no applied time doesn't count`() {
+        val prefs = mutablePreferencesOf(SpamRepository.KEY_TRENDING_NUMBERS to setOf("+12125550144"))
+
+        assertFalse(isTrendingNow(prefs, "+12125550144", NOW))
+    }
+
+    private fun trendingPrefs(
+        appliedAt: Long,
+        vararg numbers: String,
+    ) = mutablePreferencesOf(
+        SpamRepository.KEY_TRENDING_NUMBERS to numbers.toSet(),
+        SpamRepository.KEY_TRENDING_APPLIED_AT to appliedAt,
+    )
 
     // ── decidePure ───────────────────────────────────────────────────────
 

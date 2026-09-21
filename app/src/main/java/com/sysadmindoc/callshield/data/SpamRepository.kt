@@ -269,6 +269,16 @@ class SpamRepository(
          */
         internal val KEY_TRENDING_NUMBERS = stringSetPreferencesKey("hot_trending_numbers")
 
+        /**
+         * When the last hot list from the network was applied, empty or not.
+         * Its presence means one has been; the STIR/SHAKEN allow stops treating
+         * [KEY_TRENDING_NUMBERS] as current [HOT_ROW_TTL_MS] after it.
+         */
+        internal val KEY_TRENDING_APPLIED_AT = longPreferencesKey("hot_trending_applied_at")
+
+        /** How long a hot-list row, and a number's trending mark, count after the list they came on. */
+        internal const val HOT_ROW_TTL_MS = 7L * 24L * 60L * 60L * 1000L
+
         /** Base URL of the user's feed mirror ([com.sysadmindoc.callshield.data.remote.FeedMirror]); absent means none. */
         internal val KEY_FEED_MIRROR_URL = stringPreferencesKey("feed_mirror_url")
 
@@ -949,7 +959,13 @@ class SpamRepository(
     suspend fun dismissRuleConflict(key: String) = settingsRepository.dismissRuleConflict(key)
 
     // ── Hot list (30-minute trending sync) ────────────────────────────
-    suspend fun replaceHotList(numbers: List<SpamNumber>) = syncRepository.replaceHotList(numbers)
+    suspend fun replaceHotList(
+        numbers: List<SpamNumber>,
+        recordTrending: Boolean = true,
+        appliedAt: Long = System.currentTimeMillis(),
+    ) = syncRepository.replaceHotList(numbers, recordTrending, appliedAt)
+
+    internal suspend fun hasAppliedHotList(): Boolean = settingsRepository.hasAppliedHotList()
 
     internal suspend fun readHotDataHealth(): HotDataHealth = settingsRepository.readHotDataHealth()
 

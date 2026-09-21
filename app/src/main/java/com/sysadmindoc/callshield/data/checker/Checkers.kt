@@ -2,6 +2,7 @@ package com.sysadmindoc.callshield.data.checker
 
 import android.content.Context
 import android.content.Intent
+import androidx.datastore.preferences.core.Preferences
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.CallbackDetector
 import com.sysadmindoc.callshield.data.CampaignDetector
@@ -174,6 +175,7 @@ internal class ContactsOnlyChecker(
  */
 internal class StirShakenTrustChecker(
     private val repo: SpamRepositoryImpl,
+    private val wallClock: () -> Long = System::currentTimeMillis,
 ) : IChecker {
     override val priority = CheckerPriority.STIR_SHAKEN_TRUSTED
     override val name = "stir_shaken_trusted"
@@ -186,11 +188,27 @@ internal class StirShakenTrustChecker(
 
     override suspend fun check(ctx: CheckContext): BlockResult? {
         if (ctx.verificationStatus != VERIFICATION_STATUS_PASSED) return null
-        val trending = ctx.prefs[SpamRepository.KEY_TRENDING_NUMBERS]?.contains(ctx.number) == true
+        val trending = isTrendingNow(ctx.prefs, ctx.number, wallClock())
         return decidePure(ctx.verificationStatus, repo.findByNumberInternal(ctx.number), trending = trending)
     }
 
     companion object {
+        /**
+         * Whether [number] was on a hot list applied within
+         * [SpamRepository.HOT_ROW_TTL_MS] of [now]. A list that stopped arriving,
+         * through an outage or a refused feed, stops counting when its rows would
+         * have expired, and a set with no applied time doesn't count at all.
+         */
+        internal fun isTrendingNow(
+            prefs: Preferences,
+            number: String,
+            now: Long,
+        ): Boolean {
+            val appliedAt = prefs[SpamRepository.KEY_TRENDING_APPLIED_AT] ?: return false
+            return now - appliedAt <= SpamRepository.HOT_ROW_TTL_MS &&
+                prefs[SpamRepository.KEY_TRENDING_NUMBERS]?.contains(number) == true
+        }
+
         // android.telecom.Connection.VERIFICATION_STATUS_PASSED == 1 (AOSP).
         // Reproduced here as a plain Int so JVM unit tests can feed the
         // pure helpers without pulling in the android.telecom stub, which

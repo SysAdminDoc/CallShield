@@ -222,15 +222,24 @@ class SettingsRepository(
             decodeExternalBlocklistSubscriptions(prefs[SpamRepository.KEY_EXTERNAL_BLOCKLIST_SUBSCRIPTIONS])
         }
 
-    /** Replaces the set of numbers on the last applied hot list ([SpamRepository.KEY_TRENDING_NUMBERS]). */
-    suspend fun recordTrendingNumbers(numbers: Set<String>) =
-        dataStore.edit { prefs ->
-            if (numbers.isEmpty()) {
-                prefs.remove(SpamRepository.KEY_TRENDING_NUMBERS)
-            } else {
-                prefs[SpamRepository.KEY_TRENDING_NUMBERS] = numbers
-            }
+    /**
+     * Replaces the set of numbers on the last applied hot list
+     * ([SpamRepository.KEY_TRENDING_NUMBERS]) and records when it was applied.
+     */
+    suspend fun recordTrendingNumbers(
+        numbers: Set<String>,
+        appliedAt: Long,
+    ) = dataStore.edit { prefs ->
+        if (numbers.isEmpty()) {
+            prefs.remove(SpamRepository.KEY_TRENDING_NUMBERS)
+        } else {
+            prefs[SpamRepository.KEY_TRENDING_NUMBERS] = numbers
         }
+        prefs[SpamRepository.KEY_TRENDING_APPLIED_AT] = appliedAt
+    }
+
+    /** True once a hot list has come from the network, even an empty one. */
+    suspend fun hasAppliedHotList(): Boolean = dataStore.data.first()[SpamRepository.KEY_TRENDING_APPLIED_AT] != null
 
     val feedMirrorUrl: Flow<String?> = dataStore.data.map { it[SpamRepository.KEY_FEED_MIRROR_URL] }.distinctUntilChanged()
 
