@@ -131,6 +131,10 @@ class SpamRepository(
         internal val KEY_LAST_MANIFEST_DIGEST = stringPreferencesKey("last_data_manifest_digest")
         internal val KEY_HOT_DATA_LAST_GOOD = longPreferencesKey("hot_data_last_good_timestamp")
         internal val KEY_HOT_DATA_UNAVAILABLE = stringSetPreferencesKey("hot_data_unavailable_feeds")
+        internal val KEY_HOT_DATA_UNREACHABLE = stringSetPreferencesKey("hot_data_unreachable_feeds")
+        internal val KEY_HOT_DATA_CLEARED = stringSetPreferencesKey("hot_data_cleared_feeds")
+        internal val KEY_HOT_DATA_GENERATED_AT = stringPreferencesKey("hot_data_feed_generated_at")
+        internal val KEY_HOT_DATA_DIGESTS = stringPreferencesKey("hot_data_feed_digests")
         internal val KEY_DISMISSED_RULE_CONFLICTS = stringSetPreferencesKey("dismissed_rule_conflict_keys")
         val KEY_BLOCK_CALLS = booleanPreferencesKey("block_calls_enabled")
         val KEY_BLOCK_SMS = booleanPreferencesKey("block_sms_enabled")
@@ -913,8 +917,8 @@ class SpamRepository(
 
     internal suspend fun recordHotDataHealth(
         lastGoodTimestamp: Long?,
-        unavailableFeeds: Set<String>,
-    ) = settingsRepository.recordHotDataHealth(lastGoodTimestamp, unavailableFeeds)
+        update: HotDataHealthUpdate,
+    ) = settingsRepository.recordHotDataHealth(lastGoodTimestamp, update)
 
     // ── Auto-cleanup ──────────────────────────────────────────────────
     suspend fun cleanupOldLogs() = blocklistRepository.cleanupOldLogs()

@@ -410,10 +410,14 @@ class GitHubDataSource :
 
     override fun parseHotListSnapshotJson(body: String): HotFeedSnapshot<List<HotNumber>> {
         val trimmedBody = body.trimStart()
+        var generatedAt: String? = null
+        var inputDigest: String? = null
         val (entries, explicitlyCleared) =
             when {
                 trimmedBody.startsWith("{") -> {
                     val payload = hotListEnvelopeAdapter.fromJson(body) ?: error("Failed to parse hot list payload")
+                    generatedAt = payload.generated
+                    inputDigest = payload.inputReportDigest
                     payload.numbers to payload.cleared
                 }
 
@@ -444,6 +448,8 @@ class GitHubDataSource :
                     }
                 },
             explicitlyCleared = explicitlyCleared,
+            generatedAt = generatedAt,
+            inputDigest = inputDigest,
         )
     }
 
@@ -451,10 +457,14 @@ class GitHubDataSource :
 
     override fun parseHotRangesSnapshotJson(body: String): HotFeedSnapshot<List<String>> {
         val trimmedBody = body.trimStart()
+        var generatedAt: String? = null
+        var inputDigest: String? = null
         val (ranges, explicitlyCleared) =
             when {
                 trimmedBody.startsWith("{") -> {
                     val payload = hotRangesEnvelopeAdapter.fromJson(body) ?: error("Failed to parse hot ranges payload")
+                    generatedAt = payload.generated
+                    inputDigest = payload.inputReportDigest
                     payload.ranges.map { it.npanxx } to payload.cleared
                 }
 
@@ -469,17 +479,21 @@ class GitHubDataSource :
         requireFeed(ranges.size <= MAX_HOT_RANGE_ROWS, GitHubFeedFailureReason.ROW_LIMIT) {
             "hot ranges row count ${ranges.size} exceeds cap $MAX_HOT_RANGE_ROWS"
         }
-        return HotFeedSnapshot(ranges, explicitlyCleared)
+        return HotFeedSnapshot(ranges, explicitlyCleared, generatedAt, inputDigest)
     }
 
     override fun parseSpamDomainsJson(body: String): List<String> = parseSpamDomainsSnapshotJson(body).data
 
     override fun parseSpamDomainsSnapshotJson(body: String): HotFeedSnapshot<List<String>> {
         val trimmedBody = body.trimStart()
+        var generatedAt: String? = null
+        var inputDigest: String? = null
         val (domains, explicitlyCleared) =
             when {
                 trimmedBody.startsWith("{") -> {
                     val payload = spamDomainsEnvelopeAdapter.fromJson(body) ?: error("Failed to parse spam domains payload")
+                    generatedAt = payload.generated
+                    inputDigest = payload.inputReportDigest
                     payload.domains to payload.cleared
                 }
 
@@ -497,6 +511,8 @@ class GitHubDataSource :
         return HotFeedSnapshot(
             data = domains.map { it.trim() }.filter { it.isNotBlank() },
             explicitlyCleared = explicitlyCleared,
+            generatedAt = generatedAt,
+            inputDigest = inputDigest,
         )
     }
 
@@ -743,6 +759,8 @@ class GitHubDataSource :
     private data class HotListPayload(
         val numbers: List<HotListEntry> = emptyList(),
         val cleared: Boolean = false,
+        val generated: String? = null,
+        @Json(name = "input_report_digest") val inputReportDigest: String? = null,
     )
 
     private data class HotListEntry(
@@ -754,6 +772,8 @@ class GitHubDataSource :
     private data class HotRangesPayload(
         val ranges: List<HotRangeEntry> = emptyList(),
         val cleared: Boolean = false,
+        val generated: String? = null,
+        @Json(name = "input_report_digest") val inputReportDigest: String? = null,
     )
 
     private data class HotRangeEntry(
@@ -763,5 +783,7 @@ class GitHubDataSource :
     private data class SpamDomainsPayload(
         val domains: List<String> = emptyList(),
         val cleared: Boolean = false,
+        val generated: String? = null,
+        @Json(name = "input_report_digest") val inputReportDigest: String? = null,
     )
 }

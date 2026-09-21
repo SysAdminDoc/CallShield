@@ -4,6 +4,19 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+### Protection
+
+- Protection Test now tells a stalled publisher apart from a feed your phone
+  couldn't reach. It reads the date each trending feed says it was generated.
+  A feed that arrives but hasn't been regenerated in over a week reads as
+  stalled, with no advice to retry a sync that is already working. Only a feed
+  that never arrived counts as unreachable. From 2026-08-24 to 2026-09-05 every
+  phone reported "unavailable" when the real problem was on the publishing side.
+- A feed the publisher empties on purpose now reads as a quiet day ("nothing
+  trending right now") instead of "empty, will populate on the next sync".
+- Feed dates written with a `+00:00` offset, which is what the publisher
+  actually writes, now parse on Android 10 to 13 as well.
+
 ### Documentation
 
 - The README now explains the signing-key rotation. Releases v1.7.26 through

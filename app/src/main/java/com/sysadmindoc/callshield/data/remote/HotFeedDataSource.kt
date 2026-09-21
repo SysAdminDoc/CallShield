@@ -9,6 +9,15 @@ import com.sysadmindoc.callshield.data.model.HotNumber
 data class HotFeedSnapshot<T>(
     val data: T,
     val explicitlyCleared: Boolean = false,
+    /**
+     * The feed's own ISO-8601 `generated` value, when it declares one. This is
+     * what distinguishes a publisher that has stopped producing from a feed the
+     * device could not fetch: both leave the local data unchanged, but only the
+     * first hands over a readable file whose timestamp has not moved.
+     */
+    val generatedAt: String? = null,
+    /** The report-queue digest the publisher generated this feed from. */
+    val inputDigest: String? = null,
 )
 
 interface HotFeedDataSource {

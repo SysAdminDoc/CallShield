@@ -7,6 +7,7 @@ import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.checker.CheckerDependencies
 import com.sysadmindoc.callshield.data.local.AppDatabase
 import com.sysadmindoc.callshield.data.local.SpamDao
+import com.sysadmindoc.callshield.data.model.HotDataHealthUpdate
 import com.sysadmindoc.callshield.data.model.HotNumber
 import com.sysadmindoc.callshield.data.model.SourceEvidenceJson
 import com.sysadmindoc.callshield.data.model.SpamNumber
@@ -29,7 +30,56 @@ internal object HotDataSync {
         val data: T,
         val resolved: Boolean,
         val explicitlyCleared: Boolean = false,
+        /** The feed's own `generated` value, when the publisher declared one. */
+        val generatedAt: String? = null,
+        /** The report-queue digest the publisher generated this feed from. */
+        val inputDigest: String? = null,
+    ) {
+        fun observe(
+            feed: String,
+            applied: Boolean,
+            empty: Boolean,
+        ) = FeedObservation(feed, resolved, applied, empty, generatedAt, inputDigest)
+    }
+
+    /** What one refresh learned about one feed, reduced to what the health record needs. */
+    internal data class FeedObservation(
+        val feed: String,
+        /** The file was read, from the network or the bundled bootstrap. */
+        val resolved: Boolean,
+        /** Its contents replaced the local data. */
+        val applied: Boolean,
+        /** It carried no usable entries after sanitising. */
+        val empty: Boolean,
+        val generatedAt: String? = null,
+        val inputDigest: String? = null,
     )
+
+    /**
+     * Reduce one refresh to a health update.
+     *
+     * A feed that arrived empty without `cleared` is refused so local rows survive,
+     * but it was still reachable: it lands in `unavailableFeeds`, which keeps the
+     * worker retrying, and not in `unreachableFeeds`, so the publisher is judged by
+     * its own `generated` stamp rather than reported as a network failure. An empty
+     * feed that was applied can only have been cleared on purpose.
+     */
+    internal fun healthUpdate(observations: List<FeedObservation>): HotDataHealthUpdate {
+        val resolved = observations.filter { it.resolved }
+        return HotDataHealthUpdate(
+            unavailableFeeds = observations.filterNot { it.resolved && it.applied }.mapTo(mutableSetOf()) { it.feed },
+            unreachableFeeds = observations.filterNot { it.resolved }.mapTo(mutableSetOf()) { it.feed },
+            clearedFeeds = resolved.filter { it.applied && it.empty }.mapTo(mutableSetOf()) { it.feed },
+            resolvedFeeds = resolved.mapTo(mutableSetOf()) { it.feed },
+            feedGeneratedAt = resolved.metadata { it.generatedAt },
+            feedDigests = resolved.metadata { it.inputDigest },
+        )
+    }
+
+    private fun List<FeedObservation>.metadata(value: (FeedObservation) -> String?): Map<String, String> =
+        mapNotNull { observation ->
+            value(observation)?.takeIf { it.isNotBlank() }?.let { observation.feed to it }
+        }.toMap()
 
     suspend fun primeBundled(
         context: Context,
@@ -119,15 +169,18 @@ internal object HotDataSync {
                 dependencies.smsContentAnalyzer.updateSpamDomains(domains)
             }
 
-            val unavailableFeeds =
-                buildSet {
-                    if (!hotList.resolved || !hotListApplied) add(HOT_LIST_FEED)
-                    if (!hotRanges.resolved || !hotRangesApplied) add(HOT_RANGES_FEED)
-                    if (!spamDomains.resolved || !spamDomainsApplied) add(SPAM_DOMAINS_FEED)
-                }
+            val update =
+                healthUpdate(
+                    listOf(
+                        hotList.observe(HOT_LIST_FEED, applied = hotListApplied, empty = hotNumbers.isEmpty()),
+                        hotRanges.observe(HOT_RANGES_FEED, applied = hotRangesApplied, empty = ranges.isEmpty()),
+                        spamDomains.observe(SPAM_DOMAINS_FEED, applied = spamDomainsApplied, empty = domains.isEmpty()),
+                    ),
+                )
+            val unavailableFeeds = update.unavailableFeeds
             repo.recordHotDataHealth(
                 lastGoodTimestamp = System.currentTimeMillis().takeIf { unavailableFeeds.isEmpty() },
-                unavailableFeeds = unavailableFeeds,
+                update = update,
             )
             RefreshOutcome(
                 refreshedAnyFeed = hotListApplied || hotRangesApplied || spamDomainsApplied,
@@ -161,7 +214,13 @@ internal object HotDataSync {
         val remote = source.fetchHotListSnapshot()
         if (remote.isSuccess) {
             val snapshot = remote.getOrThrow()
-            return FeedLoadResult(snapshot.data, resolved = true, explicitlyCleared = snapshot.explicitlyCleared)
+            return FeedLoadResult(
+                snapshot.data,
+                resolved = true,
+                explicitlyCleared = snapshot.explicitlyCleared,
+                generatedAt = snapshot.generatedAt,
+                inputDigest = snapshot.inputDigest,
+            )
         }
         if (!shouldUseBundledFallback(false, hasExistingData)) {
             return FeedLoadResult(emptyList(), resolved = false)
@@ -177,7 +236,13 @@ internal object HotDataSync {
         val remote = source.fetchHotRangesSnapshot()
         if (remote.isSuccess) {
             val snapshot = remote.getOrThrow()
-            return FeedLoadResult(snapshot.data, resolved = true, explicitlyCleared = snapshot.explicitlyCleared)
+            return FeedLoadResult(
+                snapshot.data,
+                resolved = true,
+                explicitlyCleared = snapshot.explicitlyCleared,
+                generatedAt = snapshot.generatedAt,
+                inputDigest = snapshot.inputDigest,
+            )
         }
         if (!shouldUseBundledFallback(false, hasExistingData)) {
             return FeedLoadResult(emptyList(), resolved = false)
@@ -193,7 +258,13 @@ internal object HotDataSync {
         val remote = source.fetchSpamDomainsSnapshot()
         if (remote.isSuccess) {
             val snapshot = remote.getOrThrow()
-            return FeedLoadResult(snapshot.data, resolved = true, explicitlyCleared = snapshot.explicitlyCleared)
+            return FeedLoadResult(
+                snapshot.data,
+                resolved = true,
+                explicitlyCleared = snapshot.explicitlyCleared,
+                generatedAt = snapshot.generatedAt,
+                inputDigest = snapshot.inputDigest,
+            )
         }
         if (!shouldUseBundledFallback(false, hasExistingData)) {
             return FeedLoadResult(emptyList(), resolved = false)
@@ -316,8 +387,8 @@ internal object HotDataSync {
 
     private fun canonicalNumberKey(number: String): String = number.trim()
 
-    private const val HOT_LIST_FEED = "hot_list"
-    private const val HOT_RANGES_FEED = "hot_ranges"
-    private const val SPAM_DOMAINS_FEED = "spam_domains"
+    internal const val HOT_LIST_FEED = "hot_list"
+    internal const val HOT_RANGES_FEED = "hot_ranges"
+    internal const val SPAM_DOMAINS_FEED = "spam_domains"
     private const val HOT_LIST_EVIDENCE_TTL_MS = 7L * 24L * 60L * 60L * 1000L
 }

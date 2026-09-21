@@ -22,6 +22,7 @@ import com.sysadmindoc.callshield.data.RegionRules
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.model.ExternalBlocklistSubscription
 import com.sysadmindoc.callshield.data.model.HotDataHealth
+import com.sysadmindoc.callshield.data.model.HotDataHealthUpdate
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -529,17 +530,42 @@ class SettingsRepository(
         return HotDataHealth(
             lastGoodTimestamp = preferences[SpamRepository.KEY_HOT_DATA_LAST_GOOD] ?: 0L,
             unavailableFeeds = preferences[SpamRepository.KEY_HOT_DATA_UNAVAILABLE].orEmpty(),
+            unreachableFeeds = preferences[SpamRepository.KEY_HOT_DATA_UNREACHABLE],
+            clearedFeeds = preferences[SpamRepository.KEY_HOT_DATA_CLEARED].orEmpty(),
+            feedGeneratedAt = decodeFeedMetadata(preferences[SpamRepository.KEY_HOT_DATA_GENERATED_AT]),
+            feedDigests = decodeFeedMetadata(preferences[SpamRepository.KEY_HOT_DATA_DIGESTS]),
         )
+    }
+
+    private fun decodeFeedMetadata(encoded: String?): Map<String, String> {
+        if (encoded.isNullOrBlank()) return emptyMap()
+        return runCatching { shardHashesAdapter.fromJson(encoded).orEmpty() }.getOrDefault(emptyMap())
     }
 
     suspend fun recordHotDataHealth(
         lastGoodTimestamp: Long?,
-        unavailableFeeds: Set<String>,
+        update: HotDataHealthUpdate,
     ) = dataStore.edit { preferences ->
         if (lastGoodTimestamp != null) {
             preferences[SpamRepository.KEY_HOT_DATA_LAST_GOOD] = lastGoodTimestamp
         }
-        preferences[SpamRepository.KEY_HOT_DATA_UNAVAILABLE] = unavailableFeeds
+        preferences[SpamRepository.KEY_HOT_DATA_UNAVAILABLE] = update.unavailableFeeds
+        preferences[SpamRepository.KEY_HOT_DATA_UNREACHABLE] = update.unreachableFeeds
+        preferences[SpamRepository.KEY_HOT_DATA_CLEARED] = update.clearedFeeds
+        val generatedAt =
+            HotDataHealthUpdate.mergeFeedMetadata(
+                previous = decodeFeedMetadata(preferences[SpamRepository.KEY_HOT_DATA_GENERATED_AT]),
+                resolvedFeeds = update.resolvedFeeds,
+                fresh = update.feedGeneratedAt,
+            )
+        preferences[SpamRepository.KEY_HOT_DATA_GENERATED_AT] = shardHashesAdapter.toJson(generatedAt.toSortedMap())
+        val digests =
+            HotDataHealthUpdate.mergeFeedMetadata(
+                previous = decodeFeedMetadata(preferences[SpamRepository.KEY_HOT_DATA_DIGESTS]),
+                resolvedFeeds = update.resolvedFeeds,
+                fresh = update.feedDigests,
+            )
+        preferences[SpamRepository.KEY_HOT_DATA_DIGESTS] = shardHashesAdapter.toJson(digests.toSortedMap())
     }
 
     suspend fun readExternalBlocklistSubscriptions(): List<ExternalBlocklistSubscription> =
