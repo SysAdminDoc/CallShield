@@ -134,6 +134,22 @@ class AppContractTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             feed_signing.trusted_public_keys("internal val OTHER_KEYS = listOf()\n")
 
+    def test_old_trusted_keys_does_not_match(self):
+        key = ec.generate_private_key(ec.SECP256R1()).public_key()
+        b64 = feed_signing.public_key_base64(key)
+        # A variable named OLD_TRUSTED_KEYS is not the real declaration.
+        source = (
+            f'internal val OLD_TRUSTED_KEYS = listOf("{b64}")\n'
+            f'internal val TRUSTED_KEYS = listOf("{b64}")\n'
+        )
+        self.assertEqual(1, len(feed_signing.trusted_public_keys(source)))
+
+    def test_type_annotation_still_matches(self):
+        key = ec.generate_private_key(ec.SECP256R1()).public_key()
+        b64 = feed_signing.public_key_base64(key)
+        source = f'internal val TRUSTED_KEYS: List<String> = listOf("{b64}")\n'
+        self.assertEqual(1, len(feed_signing.trusted_public_keys(source)))
+
     def test_the_app_trusts_two_keys(self):
         # A primary and a backup, so losing one key doesn't strand every device.
         self.assertEqual(2, len(feed_signing.trusted_public_keys()))

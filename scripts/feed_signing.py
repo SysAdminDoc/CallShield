@@ -58,7 +58,7 @@ SIGNED_FEEDS = (
 _P256_SPKI_PREFIX = "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE"
 # Matched only after comments are stripped. Base64 has no parenthesis, so the
 # first ")" then closes the list.
-_TRUSTED_KEYS_BLOCK = re.compile(r"TRUSTED_KEYS\s*=\s*listOf\((.*?)\)", re.S)
+_TRUSTED_KEYS_BLOCK = re.compile(r"\bTRUSTED_KEYS\b(?:\s*:[^=]*)?\s*=\s*listOf\((.*?)\)", re.S)
 
 
 def signature_path(feed: Path) -> Path:
