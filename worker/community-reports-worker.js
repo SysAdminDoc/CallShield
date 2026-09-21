@@ -447,6 +447,20 @@ export async function checkDedup(ip, normalizedNumber, type, env, reportId = "")
   return (await env.RATE_LIMIT.get(reportIdKey(reportId))) !== null;
 }
 
+/**
+ * True when a report with this id was stored in the last REPORT_ID_DEDUP_S.
+ * Unlike a client-key match, which a household or carrier NAT shares, an id
+ * match means this very report.
+ */
+export async function isStoredReport(reportId, env) {
+  if (!reportId) return false;
+  if (!env?.RATE_LIMIT) {
+    if (allowsUnlimitedReports(env)) return false;
+    throw new Error("RATE_LIMIT binding is required");
+  }
+  return (await env.RATE_LIMIT.get(reportIdKey(reportId))) !== null;
+}
+
 /** Mark this (client, number, type), and the report's id, as reported. Call after a successful store. */
 export async function recordDedup(ip, normalizedNumber, type, env, reportId = "") {
   if (!hasClientIp(ip)) throw new Error("client IP is required");
@@ -632,13 +646,18 @@ code{background:#252525;padding:2px 6px;border-radius:4px;font-size:12px;color:#
         });
       }
 
-      // Per-client + per-number + per-type dedup (prevents replaying the same
-      // report), and the report's own id (catches a resend from another network).
-      // Both markers are written only after a successful store, so this answer
-      // always means the report is already stored, and the app treats it as sent.
-      const isDuplicate = await checkDedup(clientIp, normalized, type, env, reportId);
-      if (isDuplicate) {
-        return new Response(JSON.stringify({ error: "Duplicate report, already submitted", already_stored: true }), {
+      // The report's own id catches a resend, even from another network, and
+      // only that match means this very report is stored, which the app treats
+      // as sent. The per-client + per-number + per-type marker stops a replay,
+      // but a household or carrier NAT shares one client key, so its match can
+      // be someone else's report: that answer is a plain "try later". Both
+      // markers are written only after a successful store.
+      const stored = await isStoredReport(reportId, env);
+      if (stored || (await checkDedup(clientIp, normalized, type, env))) {
+        const answer = stored
+          ? { error: "Duplicate report, already submitted", already_stored: true }
+          : { error: "Duplicate report, try again later" };
+        return new Response(JSON.stringify(answer), {
           status: 429,
           headers: {
             ...responseHeaders,

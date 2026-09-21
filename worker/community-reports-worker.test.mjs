@@ -628,6 +628,75 @@ test("a report resent under its id from another network is a duplicate", async (
   assert.equal(await checkDedup("198.51.100.9", "+12122340101", "spam", env), false);
 });
 
+/** POSTs one report through the whole handler, with GitHub played by `answer`. */
+async function postReports(requests, answer) {
+  const originalFetch = globalThis.fetch;
+  const originalError = console.error;
+  const stored = [];
+  globalThis.fetch = async (_url, options) => {
+    const status = answer(stored.length);
+    if (status === 201) stored.push(JSON.parse(atob(JSON.parse(options.body).content)));
+    return new Response("{}", { status });
+  };
+  console.error = () => {};
+  const env = { RATE_LIMIT: createMockKV(), GITHUB_TOKEN: "test-token", REPORTER_BUCKET_SECRET: "s".repeat(32) };
+  try {
+    const responses = [];
+    for (const { ip, body } of requests) {
+      const response = await worker.fetch(
+        new Request("https://reports.example", {
+          method: "POST",
+          headers: { "content-type": "application/json", "cf-connecting-ip": ip },
+          body: JSON.stringify(body),
+        }),
+        env,
+      );
+      responses.push({ status: response.status, body: await response.json() });
+    }
+    return { responses, stored };
+  } finally {
+    globalThis.fetch = originalFetch;
+    console.error = originalError;
+  }
+}
+
+test("a report whose store failed is stored when it's sent again", async () => {
+  // The markers go in only after the PUT. Written any earlier, the resend would
+  // be answered "already stored" and the app would drop a report GitHub never took.
+  const report = { number: "+12122340101", type: "spam", report_id: "5c1d2e3f-4a5b-4c6d-8e7f-9a0b1c2d3e4f" };
+  let calls = 0;
+  const { responses, stored } = await postReports(
+    [
+      { ip: "203.0.113.70", body: report },
+      { ip: "203.0.113.70", body: report },
+    ],
+    () => (calls++ === 0 ? 500 : 201),
+  );
+
+  assert.equal(responses[0].status, 500);
+  assert.equal(responses[1].status, 200);
+  assert.equal(stored.length, 1);
+  assert.equal(stored[0].report_id, report.report_id);
+});
+
+test("a second report of a number from a shared address isn't answered as already stored", async () => {
+  // A household or carrier NAT shares one client key. Only the report's own id
+  // may say it's stored; anything else is a plain "try later", which the app retries.
+  const report = (id) => ({ number: "+12122340101", type: "spam", report_id: id });
+  const { responses, stored } = await postReports(
+    [
+      { ip: "203.0.113.80", body: report("6d2e3f4a-5b6c-4d7e-8f9a-0b1c2d3e4f5a") },
+      { ip: "203.0.113.80", body: report("7e3f4a5b-6c7d-4e8f-9a0b-1c2d3e4f5a6b") },
+    ],
+    () => 201,
+  );
+
+  assert.equal(responses[0].status, 200);
+  assert.equal(responses[1].status, 429);
+  assert.equal(responses[1].body.already_stored, undefined);
+  assert.equal(stored.length, 1);
+});
+
 test("a stored report keeps its id, and its resend is answered as already stored", async () => {
   const originalFetch = globalThis.fetch;
   const payloads = [];

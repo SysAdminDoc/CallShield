@@ -194,6 +194,10 @@ The rest of this section takes effect when the report Worker is next deployed.
   in different drains. It keeps the ids of reports from the last two weeks in
   `data/merged_report_ids.json`, and a ledger it can't read stops the merge
   instead of counting resends twice.
+- The Worker answers "already stored" only when a report's own id matches one
+  it stored. People sharing one home or carrier address got that answer for
+  their own report of the same number, and the app counted it as sent. They
+  now get a plain "try again later", and the app retries.
 
 ### Documentation
 
