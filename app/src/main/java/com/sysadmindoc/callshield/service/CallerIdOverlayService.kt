@@ -932,7 +932,7 @@ class CallerIdOverlayService : Service() {
                         .getInstance(appContext)
                 repository.blockNumber(number, "spam", description)
                 com.sysadmindoc.callshield.data.CommunityContributor
-                    .contribute(repository.normalizeNumber(number), "spam")
+                    .contribute(appContext, repository.normalizeNumber(number), "spam")
             } catch (e: Exception) {
                 android.util.Log.w("CallerIdOverlay", "Overlay block failed", e)
             }

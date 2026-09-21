@@ -206,6 +206,7 @@ class SpamRepository(
         internal val KEY_AUTO_CLEANUP = booleanPreferencesKey("auto_cleanup_enabled")
         internal val KEY_CLEANUP_DAYS = intPreferencesKey("cleanup_retention_days")
         internal val KEY_ABSTRACT_API_KEY = stringPreferencesKey("abstract_api_key")
+        internal val KEY_COMMUNITY_REPORT_LEDGER = stringSetPreferencesKey("community_report_ledger")
         internal val KEY_EXTERNAL_BLOCKLIST_SUBSCRIPTIONS =
             stringPreferencesKey("external_blocklist_subscriptions")
         val KEY_ML_SCORER = booleanPreferencesKey("ml_scorer_enabled")
@@ -651,6 +652,13 @@ class SpamRepository(
     suspend fun removeExternalBlocklistSubscription(id: String) = syncRepository.removeExternalBlocklistSubscription(id)
 
     suspend fun refreshDueExternalBlocklists(now: Long = System.currentTimeMillis()): List<ExternalBlocklistRefreshOutcome> = syncRepository.refreshDueExternalBlocklists(now)
+
+    /** False when this number and vote type was already reported in the last day. */
+    suspend fun claimCommunityReport(
+        number: String,
+        type: String,
+        now: Long = System.currentTimeMillis(),
+    ): Boolean = settingsRepository.claimCommunityReport(number, type, now)
 
     // ── Blocklist management ───────────────────────────────────────────
     suspend fun blockNumber(

@@ -15,6 +15,7 @@ import com.sysadmindoc.callshield.data.CallCategory
 import com.sysadmindoc.callshield.data.CallbackDetector
 import com.sysadmindoc.callshield.data.CategoryCallAction
 import com.sysadmindoc.callshield.data.CategoryCallPolicy
+import com.sysadmindoc.callshield.data.CommunityReportLedger
 import com.sysadmindoc.callshield.data.ContactGroupCatalog
 import com.sysadmindoc.callshield.data.MessageCapabilitySource
 import com.sysadmindoc.callshield.data.MessageCapabilityStatus
@@ -619,6 +620,31 @@ class SettingsRepository(
         dataStore.edit { preferences ->
             preferences[SpamRepository.KEY_FEED_TRUST_NOTICE_VERSION] = version
         }
+
+    /**
+     * Records a community report unless the same number and vote type was
+     * already reported in the last day. One edit does both, so two taps that
+     * race each other can't both claim it. Kept in the no-backup store: it is
+     * a day of this device's activity, not a setting.
+     */
+    suspend fun claimCommunityReport(
+        number: String,
+        type: String,
+        now: Long,
+    ): Boolean {
+        var claimed = false
+        privateDataStore.edit { preferences ->
+            val live =
+                CommunityReportLedger.prune(
+                    preferences[SpamRepository.KEY_COMMUNITY_REPORT_LEDGER].orEmpty(),
+                    now,
+                )
+            claimed = !CommunityReportLedger.contains(live, number, type)
+            preferences[SpamRepository.KEY_COMMUNITY_REPORT_LEDGER] =
+                if (claimed) CommunityReportLedger.add(live, number, type, now) else live
+        }
+        return claimed
+    }
 
     suspend fun readExternalBlocklistSubscriptions(): List<ExternalBlocklistSubscription> =
         decodeExternalBlocklistSubscriptions(

@@ -1,6 +1,9 @@
 package com.sysadmindoc.callshield.data
 
+import android.content.Context
 import com.sysadmindoc.callshield.data.remote.HttpClient
+import com.sysadmindoc.callshield.service.CommunityReportWorker
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
@@ -15,6 +18,11 @@ import java.util.concurrent.TimeUnit
  * No user account or API key needed from the app side.
  *
  * Supports both spam reports AND false positive reports ("not_spam").
+ *
+ * A number and vote type is sent at most once a day ([CommunityReportLedger]).
+ * A report that can't go out now (offline, rate-limited, server error) is
+ * handed to [CommunityReportWorker], which delivers it once the network is
+ * back instead of dropping it.
  */
 object CommunityContributor {
     private const val WORKER_URL = "https://callshield-reports.snafumatthew.workers.dev"
@@ -23,8 +31,13 @@ object CommunityContributor {
     private const val MIN_SMS_REPORT_DOMAIN_LENGTH = 5
     private const val MAX_SMS_REPORT_DOMAIN_LENGTH = 253
     private const val MAX_SMS_REPORT_DOMAIN_LABEL_LENGTH = 63
+    private const val HTTP_BAD_REQUEST = 400
     private const val HTTP_TOO_MANY_REQUESTS = 429
     private const val DEFAULT_RETRY_AFTER_SECONDS = 60
+    private const val ERROR_BODY_PEEK_BYTES = 1024L
+
+    /** The Worker's answer to a report it already stored, which is not a failure. */
+    private const val WORKER_DUPLICATE_MARKER = "Duplicate report"
 
     private val reportDomainPattern = Regex("^[a-z0-9](?:[a-z0-9.-]{0,251}[a-z0-9])?$")
     private val urlIndicatorPattern = Regex("^[a-z_]{3,40}$")
@@ -48,6 +61,16 @@ object CommunityContributor {
         RATE_LIMITED,
         SERVER_ERROR,
         NETWORK_ERROR,
+
+        /** The same number and vote type went out in the last day; nothing was sent. */
+        ALREADY_SUBMITTED,
+
+        /** Couldn't be sent now; the outbox delivers it when the network allows. */
+        QUEUED,
+        ;
+
+        /** A failure that trying again later can fix. */
+        val isTransient: Boolean get() = this == RATE_LIMITED || this == SERVER_ERROR || this == NETWORK_ERROR
     }
 
     data class ContributeResult(
@@ -62,39 +85,38 @@ object CommunityContributor {
      * Report a number as spam.
      */
     suspend fun contribute(
+        context: Context,
         number: String,
         type: String = "spam",
         smsIndicators: SmsContentAnalyzer.SmsReportIndicators? = null,
-    ): ContributeResult = post(number, type, smsIndicators)
-
-    /**
-     * Report SMS spam with body-free URL/domain indicators only.
-     */
-    suspend fun contributeSmsSpam(
-        number: String,
-        smsBody: String,
-    ): ContributeResult = post(number, "sms_spam", SmsContentAnalyzer.extractReportableIndicators(smsBody))
+    ): ContributeResult = submitter(context).submit(number, type, smsIndicators)
 
     /**
      * Report a false positive — this number is NOT spam.
      * The merge script will subtract votes from this number.
      */
-    suspend fun reportNotSpam(number: String): ContributeResult = post(number, "not_spam")
-
-    private suspend fun post(
+    suspend fun reportNotSpam(
+        context: Context,
         number: String,
+    ): ContributeResult = submitter(context).submit(number, "not_spam", null)
+
+    private fun submitter(context: Context): CommunityReportSubmitter {
+        val appContext = context.applicationContext
+        return CommunityReportSubmitter(
+            claim = { number, type, now -> SpamRepository.getInstance(appContext).claimCommunityReport(number, type, now) },
+            transport = ::send,
+            enqueue = { number, type, indicators -> CommunityReportWorker.enqueue(appContext, number, type, indicators) },
+        )
+    }
+
+    /** One attempt to deliver an already-normalized report. Used by the outbox too. */
+    internal suspend fun send(
+        normalized: String,
         type: String,
         smsIndicators: SmsContentAnalyzer.SmsReportIndicators? = null,
     ): ContributeResult =
         withContext(Dispatchers.IO) {
             try {
-                val normalized =
-                    normalizeForReport(number)
-                        ?: return@withContext ContributeResult(
-                            success = false,
-                            message = "Invalid number",
-                            outcome = ContributeOutcome.INVALID_NUMBER,
-                        )
                 val json = buildReportJson(normalized, type, smsIndicators)
                 val body = json.toRequestBody("application/json".toMediaType())
 
@@ -106,28 +128,15 @@ object CommunityContributor {
                         .build()
 
                 client.newCall(request).execute().use { response ->
-                    if (response.isSuccessful) {
-                        if (type == "not_spam") {
-                            ContributeResult(true, "Reported as not spam", ContributeOutcome.REPORTED_NOT_SPAM)
-                        } else {
-                            ContributeResult(true, "Contributed anonymously", ContributeOutcome.REPORTED_SPAM)
-                        }
-                    } else if (response.code == HTTP_TOO_MANY_REQUESTS) {
-                        val retryAfter = response.header("Retry-After")?.toIntOrNull() ?: DEFAULT_RETRY_AFTER_SECONDS
-                        ContributeResult(
-                            success = false,
-                            message = "Too many reports. Please wait ${retryAfter}s and try again.",
-                            outcome = ContributeOutcome.RATE_LIMITED,
-                            retryAfterSeconds = retryAfter,
-                        )
-                    } else {
-                        ContributeResult(
-                            success = false,
-                            message = "Server error (${response.code})",
-                            outcome = ContributeOutcome.SERVER_ERROR,
-                        )
-                    }
+                    resultFor(
+                        code = response.code,
+                        type = type,
+                        body = if (response.isSuccessful) "" else response.peekBody(ERROR_BODY_PEEK_BYTES).string(),
+                        retryAfterHeader = response.header("Retry-After"),
+                    )
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 ContributeResult(
                     success = false,
@@ -136,6 +145,48 @@ object CommunityContributor {
                 )
             }
         }
+
+    /** How the app reads the Worker's answer to one report. */
+    internal fun resultFor(
+        code: Int,
+        type: String,
+        body: String,
+        retryAfterHeader: String?,
+    ): ContributeResult {
+        // A duplicate answer means an earlier attempt was stored and only its
+        // response was lost. Sending it again after the Worker's window would
+        // store it twice.
+        val duplicate = code == HTTP_TOO_MANY_REQUESTS && WORKER_DUPLICATE_MARKER in body
+        return when {
+            code in 200..299 || duplicate -> {
+                if (type == "not_spam") {
+                    ContributeResult(true, "Reported as not spam", ContributeOutcome.REPORTED_NOT_SPAM)
+                } else {
+                    ContributeResult(true, "Contributed anonymously", ContributeOutcome.REPORTED_SPAM)
+                }
+            }
+
+            code == HTTP_TOO_MANY_REQUESTS -> {
+                val retryAfter = retryAfterHeader?.toIntOrNull() ?: DEFAULT_RETRY_AFTER_SECONDS
+                ContributeResult(
+                    success = false,
+                    message = "Too many reports. Please wait ${retryAfter}s and try again.",
+                    outcome = ContributeOutcome.RATE_LIMITED,
+                    retryAfterSeconds = retryAfter,
+                )
+            }
+
+            // The Worker's plausibility gate refused the number, and sending it
+            // again later gets the same answer.
+            code == HTTP_BAD_REQUEST -> {
+                ContributeResult(false, "Rejected as invalid", ContributeOutcome.INVALID_NUMBER)
+            }
+
+            else -> {
+                ContributeResult(false, "Server error ($code)", ContributeOutcome.SERVER_ERROR)
+            }
+        }
+    }
 
     private fun escapeJson(value: String): String =
         value

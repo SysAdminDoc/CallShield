@@ -459,7 +459,7 @@ fun LookupScreen(viewModel: MainViewModel) {
                                                         withContext(Dispatchers.IO) {
                                                             repo.addToWhitelist(resultNumber, markedSafeDescription)
                                                             val reportResult =
-                                                                CommunityContributor.reportNotSpam(repo.normalizeNumber(resultNumber))
+                                                                CommunityContributor.reportNotSpam(context, repo.normalizeNumber(resultNumber))
                                                             if (reportResult.success) markedSafeReportedMessage else markedSafeLocalMessage
                                                         }
                                                     } catch (_: Exception) {
@@ -537,6 +537,7 @@ fun LookupScreen(viewModel: MainViewModel) {
                                             withContext(Dispatchers.IO) {
                                                 if (lookupResult.isSpam) {
                                                     CommunityContributor.contribute(
+                                                        context,
                                                         repo.normalizeNumber(resultNumber),
                                                         lookupResult.type.ifEmpty { "spam" },
                                                     )
@@ -545,6 +546,7 @@ fun LookupScreen(viewModel: MainViewModel) {
                                                     repo.addToWhitelist(resultNumber, markedSafeDescription)
                                                     val reportResult =
                                                         CommunityContributor.reportNotSpam(
+                                                            context,
                                                             repo.normalizeNumber(resultNumber),
                                                         )
                                                     if (reportResult.success) {

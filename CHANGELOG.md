@@ -91,7 +91,15 @@ All notable changes to CallShield will be documented in this file.
 
 ### Community reports
 
-These take effect when the report Worker is next deployed.
+- Each report goes out once. Reporting the same number the same way again
+  within a day now says you've already reported it instead of sending it
+  again, even after the app restarts. One number had arrived 12 times in a
+  single day, and a double-counted report looks like extra corroboration.
+- A report made offline, or while the report server is busy, is no longer
+  lost. It waits and goes out once the connection is back. That includes the
+  Block and Report buttons on notifications, which used to fail silently.
+
+The rest of this section takes effect when the report Worker is next deployed.
 
 - The Worker counts an IPv6 client by its /64 instead of its full address. One
   subscriber could otherwise rotate through addresses to slip past the rate

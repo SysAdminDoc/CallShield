@@ -546,7 +546,7 @@ by locale and message type without shipping personal data:
 - Quick-access to lookup and protection status
 
 ### Community
-- **One-tap anonymous contribution** via [Cloudflare Worker](https://callshield-reports.snafumatthew.workers.dev)
+- **One-tap anonymous contribution** via [Cloudflare Worker](https://callshield-reports.snafumatthew.workers.dev). Each number and vote goes out at most once a day, and a report made offline is sent when the connection returns
 - False positive reporting subtracts votes
 - Share spam warnings to any app
 
@@ -811,7 +811,7 @@ language in [issue #7](https://github.com/SysAdminDoc/CallShield/issues/7).
 | URL Safety | Local spam-domain data; optional URLhaus (abuse.ch) |
 | Verification | Local Gradle, lint, and release-artifact checks |
 | Tests | 1100 JVM unit tests (JUnit) |
-| Strings | 1414 string resources and 33 plural groups (translation-ready) |
+| Strings | 1416 string resources and 33 plural groups (translation-ready) |
 | Accessibility | 100+ content descriptions, 48dp touch targets |
 | Min SDK | 29 (Android 10) |
 | Target SDK | 36 |

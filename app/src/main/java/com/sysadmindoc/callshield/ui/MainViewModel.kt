@@ -1133,7 +1133,7 @@ class MainViewModel
             type: String = "spam",
         ) {
             viewModelScope.launch {
-                val result = CommunityContributor.contribute(repo.normalizeNumber(number), type)
+                val result = CommunityContributor.contribute(appContext, repo.normalizeNumber(number), type)
                 _contributeResult.value = result.toStatusMessage()
             }
         }
@@ -1142,7 +1142,7 @@ class MainViewModel
             viewModelScope.launch {
                 // Whitelist locally AND report as false positive to community
                 manageBlocklist.addToWhitelist(number, appContext.getString(R.string.desc_reported_not_spam))
-                val result = CommunityContributor.reportNotSpam(repo.normalizeNumber(number))
+                val result = CommunityContributor.reportNotSpam(appContext, repo.normalizeNumber(number))
                 _contributeResult.value = result.toStatusMessage()
             }
         }
@@ -1181,6 +1181,14 @@ class MainViewModel
 
                     CommunityContributor.ContributeOutcome.NETWORK_ERROR -> {
                         appContext.getString(R.string.contribute_network_error)
+                    }
+
+                    CommunityContributor.ContributeOutcome.ALREADY_SUBMITTED -> {
+                        appContext.getString(R.string.contribute_already_submitted)
+                    }
+
+                    CommunityContributor.ContributeOutcome.QUEUED -> {
+                        appContext.getString(R.string.contribute_queued)
                     }
                 }
             return StatusMessage(text, success)

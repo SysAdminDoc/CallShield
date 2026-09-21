@@ -285,6 +285,8 @@
     </plurals>
     <string name="contribute_server_error">The report server is having trouble. Try again later.</string>
     <string name="contribute_network_error">No connection. The report wasn\'t sent.</string>
+    <string name="contribute_already_submitted">You already reported this number in the last day.</string>
+    <string name="contribute_queued">Saved. CallShield will send it as soon as it can.</string>
     <string name="blocklist_empty_keywords">No keyword rules</string>
     <string name="blocklist_empty_keywords_sub">Add phrases like bank alert or claim prize when spam texts reuse the same wording.</string>
     <string name="blocklist_empty_whitelist">No trusted numbers</string>
