@@ -174,6 +174,11 @@ python scripts/train_spam_model.py --output data/spam_model_weights.json
 
 # 5. Evaluate the shipped model before committing (local quality gate)
 python scripts/evaluate_model.py            # exits non-zero if CV F1 regresses
+
+# 6. Sign what devices will download. The app refuses an unsigned or
+#    mismatched feed and keeps its last good copy, and the validation
+#    workflow fails a push that carries one.
+python scripts/feed_signing.py sign
 ```
 
 `train_spam_model.py` prints the learned per-feature weights and writes a
@@ -184,4 +189,43 @@ drift the trainer's sklearn-side metrics hide) and via stratified k-fold
 cross-validation (an honest generalization estimate); it exits non-zero when the
 cross-validated F1 drops below `--min-f1` so it can gate a bad retrain. Bump the
 `version` field in `spam_numbers.json` so clients re-sync, then commit the
-regenerated `data/*.json`.
+regenerated `data/*.json` together with their `.sig` files.
+
+### Feed signatures
+
+Six files carry a detached signature beside them: `spam_numbers.json`,
+`spam_numbers.manifest.json`, `hot_numbers.json`, `hot_ranges.json`,
+`spam_domains.json` and `spam_model_weights.json`. Each `<file>.sig` holds a
+base64 DER ECDSA P-256 (SHA-256) signature over the file's exact bytes, line
+endings included. Shards aren't signed one by one: the signed manifest carries
+each shard's SHA-256, and the app checks every shard against it.
+
+The app compiles in the public keys it accepts
+(`app/src/main/java/com/sysadmindoc/callshield/data/remote/FeedSignature.kt`)
+and refuses a feed whose signature is missing or doesn't verify, keeping the
+data it already has. That makes a feed's integrity independent of TLS pinning,
+which is what failed from 2026-08-02 when GitHub's certificate changed.
+
+Two keys are trusted, both P-256:
+
+| Key | Public key (SubjectPublicKeyInfo, base64) |
+|---|---|
+| Signing key | `MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAESGK0kjIAEM7FP2RBLbWctHhYVP7LcNVJmWiuh6k6hkBGHfVXaqw+TOaSVQtbZLZeN5OThnqd0WTEF/CkBJ2gdA==` |
+| Backup key | `MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE3eBrWqtgDaKc2HFC6EPtENrh8nlCH/bZ5PstgPpIJBVL8ZEf35UfwtbqWKJ/fQDi1pYKLmvMv/0OC3KSug/fxg==` |
+
+The private keys stay on the maintainer's machine and never enter this
+repository. `feed_signing.py` reads the signing key from
+`CALLSHIELD_FEED_SIGNING_KEY`, or from `~/.callshield/feed-signing-key.pem`.
+It refuses to sign with a key the app doesn't list, and it leaves a signature
+alone while it still verifies, so an unchanged feed doesn't get a new `.sig` on
+every run.
+
+**Rotating a key.** Create the new key with
+`python scripts/feed_signing.py generate-key <path>`, add the public key it
+prints to `FeedSignature.kt`, and ship a release. Once that release is the one
+people run, sign with the new key (`sign` re-signs every feed, since the old
+signatures don't verify under it) and drop the old key from the app in a later
+release. If the signing key is lost, sign with the backup key, which every
+release already trusts, then rotate a new backup in. A leaked key has to come
+out of the app in an urgent release, and installs that don't update keep
+trusting it, which is why the backup key should stay offline.

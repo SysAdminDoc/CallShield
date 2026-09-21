@@ -17,6 +17,11 @@ All notable changes to CallShield will be documented in this file.
 - If this ever happens again, Protection Test says so directly and tells you to
   update the app, and you get one notification per app version pointing to the
   latest release. A certificate failure used to look like a successful sync.
+- Protection data is now signed. The spam database, the trending feeds and the
+  ML model each come with a signature from the maintainer's key, and the app
+  throws away a download that doesn't carry a valid one and keeps what it
+  already has. Until now certificate pinning was the only check, and when it
+  broke in August nothing else stood between a phone and a tampered file.
 - The ML scorer no longer judges callers outside North America. It treated any
   ten-digit number as a US or Canadian one once the `+` was stripped, so an
   unknown Singapore mobile, or a landline in New Zealand, Belgium, Thailand or

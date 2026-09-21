@@ -12,6 +12,7 @@ import com.sysadmindoc.callshield.data.model.SpamDatabaseShard
 import com.sysadmindoc.callshield.data.model.SpamShardManifest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import okhttp3.Interceptor
 import okhttp3.Request
 import okhttp3.Response
 import okio.Buffer
@@ -22,6 +23,9 @@ internal enum class GitHubFeedFailureReason {
     ROW_LIMIT,
     MISSING_SCHEMA_FIELD,
     INVALID_SCHEMA,
+
+    /** The feed's `.sig` was missing or didn't verify under a trusted key. */
+    SIGNATURE,
 }
 
 internal class GitHubFeedValidationException(
@@ -48,14 +52,19 @@ private val SHARD_ID_REGEX = Regex("[0-9a-f]{2}")
 private val SHA256_REGEX = Regex("[0-9a-f]{64}")
 private val SHARD_PATH_REGEX = Regex("data/spam_number_shards/[0-9a-f]{2}\\.json")
 
-class GitHubDataSource :
-    SpamDataSource,
+class GitHubDataSource internal constructor(
+    /** Tests serve canned responses through this instead of the network. */
+    testInterceptor: Interceptor?,
+) : SpamDataSource,
     HotFeedDataSource {
+    constructor() : this(null)
+
     // Derived client with longer timeouts for large database downloads;
     // shares the connection pool with other callers via HttpClient.shared.
     private val client =
         HttpClient.shared
             .newBuilder()
+            .apply { testInterceptor?.let(::addInterceptor) }
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
             .build()
@@ -137,6 +146,29 @@ class GitHubDataSource :
                 SPAM_DOMAINS_PATH to RawFeedSpec("spam domains", MAX_SPAM_DOMAINS_BYTES),
                 MODEL_WEIGHTS_PATH to RawFeedSpec("model weights", MAX_MODEL_WEIGHTS_BYTES),
             )
+
+        /**
+         * Feeds refused without a valid detached signature ([FeedSignature]).
+         * Shards need none: the signed manifest carries each shard's SHA-256.
+         * scripts/feed_signing.py signs the same files; its test checks the lists agree.
+         */
+        internal val SIGNED_FEED_PATHS =
+            setOf(DATA_PATH, SHARD_MANIFEST_PATH, HOT_LIST_PATH, HOT_RANGES_PATH, SPAM_DOMAINS_PATH, MODEL_WEIGHTS_PATH)
+
+        /** Throws unless a signed feed arrived with a signature the app accepts. */
+        internal fun requireFeedSignature(
+            path: String,
+            body: String,
+            signatureText: String?,
+        ) {
+            if (path !in SIGNED_FEED_PATHS) return
+            val label = rawFeedLabel(path)
+            requireFeed(signatureText != null, GitHubFeedFailureReason.SIGNATURE) { "$label feed has no signature" }
+            requireFeed(
+                FeedSignature.verifies(body.toByteArray(Charsets.UTF_8), signatureText.orEmpty()),
+                GitHubFeedFailureReason.SIGNATURE,
+            ) { "$label feed signature doesn't verify" }
+        }
 
         fun buildRawUrl(
             owner: String,
@@ -537,22 +569,70 @@ class GitHubDataSource :
 
                 client.newCall(request).execute().use { response ->
                     if (!response.isSuccessful) {
-                        lastError = Exception("HTTP ${response.code}: ${response.message}")
+                        lastError = moreTelling(lastError, Exception("HTTP ${response.code}: ${response.message}"))
                         return@use
                     }
 
                     val body = readLimitedBody(response, label, maxBytes)
                     if (body != null) {
-                        return Result.success(validateRawFeedBody(path, body))
+                        return Result.success(signatureChecked(path, validateRawFeedBody(path, body), owner, repo, branch))
                     }
                     lastError = Exception("Empty response body")
                 }
             } catch (e: Exception) {
-                lastError = e
+                lastError = moreTelling(lastError, e)
             }
         }
 
         return Result.failure(lastError ?: Exception("Unable to fetch $path"))
+    }
+
+    /**
+     * [body], once a signed feed's signature verifies. The signature comes from
+     * the same branch as the body, so a copy refused on one branch can't borrow
+     * another branch's signature.
+     */
+    private fun signatureChecked(
+        path: String,
+        body: String,
+        owner: String,
+        repo: String,
+        branch: String,
+    ): String {
+        if (path in SIGNED_FEED_PATHS) requireFeedSignature(path, body, fetchSignature(path, owner, repo, branch))
+        return body
+    }
+
+    /**
+     * A branch that served the file but failed validation (a bad signature, an
+     * oversized body) says more than a fallback branch answering 404, and the
+     * callers treat the two differently.
+     */
+    private fun moreTelling(
+        previous: Exception?,
+        next: Exception,
+    ): Exception = if (previous is GitHubFeedValidationException && next !is GitHubFeedValidationException) previous else next
+
+    private fun fetchSignature(
+        path: String,
+        owner: String,
+        repo: String,
+        branch: String,
+    ): String? {
+        val request =
+            Request
+                .Builder()
+                .url(buildRawUrl(owner, repo, branch, "$path.sig"))
+                .header("Cache-Control", "no-store, max-age=0")
+                .header("User-Agent", USER_AGENT)
+                .build()
+        return client.newCall(request).execute().use { response ->
+            if (response.isSuccessful) {
+                readLimitedBody(response, "${rawFeedLabel(path)} signature", FeedSignature.MAX_SIGNATURE_BYTES)
+            } else {
+                null
+            }
+        }
     }
 
     private suspend fun resolveCandidateBranches(

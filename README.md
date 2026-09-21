@@ -33,10 +33,13 @@
 CallShield blocks spam calls and texts using a **15+ layer on-device detection engine** with a gradient-boosted tree ML scorer, bounded campaign and churn evidence, conservative carrier identity metadata signals, an RCS notification filter, and real-time caller ID. Its 51,634-number database supports scheduled hot-list updates. There are no accounts or tracking.
 
 The database keeps `data/spam_numbers.json` as a stable legacy GitHub-raw
-endpoint for older clients, while current builds bundle a signed-by-hash
-manifest and 256 content-addressed shards. Devices fetch only changed shards,
-verify every payload before a transactional Room refresh, and fall back to the
-legacy snapshot when the shard service is unavailable.
+endpoint for older clients, while current builds bundle a hash manifest and
+256 content-addressed shards. The manifest, the legacy database, the trending
+feeds and the model weights each carry a detached ECDSA P-256 signature, and the
+app refuses any of them that doesn't verify against a key built into it. Devices
+fetch only changed shards, check every shard against the signed manifest before
+a transactional Room refresh, and fall back to the legacy snapshot when the
+shard service is unavailable.
 
 ## Screenshots
 
