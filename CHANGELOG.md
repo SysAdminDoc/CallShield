@@ -79,10 +79,11 @@ All notable changes to CallShield will be documented in this file.
   last updated. A list that fails to refresh says what went wrong: the
   server's HTTP status, the size or row limit, a download that isn't a list,
   or a certificate that couldn't be verified.
-- Each blocklist row now names just the host a list comes from instead of its
-  whole address, and TalkBack reads the row as one item. Tapping it switches
-  the list off or on, and Remove sits in the TalkBack actions menu. A list you
-  remove can be put back with Undo right afterwards, numbers included, without
+- Each blocklist row now names just the host a list comes from, never its
+  whole address, and TalkBack reads the row as one item that switches the list
+  off or on, with Remove in its actions menu. By touch only the switch does
+  that, so a tap on a list's name can't take its numbers out. A list you remove
+  can be put back with Undo right afterwards, numbers included, without
   downloading it again.
 
 ### Interface

@@ -1,6 +1,6 @@
 package com.sysadmindoc.callshield.data.model
 
-import java.net.URI
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 
 data class ExternalBlocklistSubscription(
     val id: String,
@@ -19,8 +19,13 @@ data class ExternalBlocklistSubscription(
 ) {
     val source: String get() = sourceFor(id)
 
-    /** Only the host the list comes from, which is all a settings row has room for. */
-    val host: String get() = runCatching { URI(url).host }.getOrNull() ?: url
+    /**
+     * Only the host the list comes from, which is all a settings row has room
+     * for. Read with the parser that fetches the list, which accepts addresses
+     * java.net.URI can't read, and never the whole address, which can carry a
+     * token in its query.
+     */
+    val host: String get() = url.toHttpUrlOrNull()?.host.orEmpty()
 
     companion object {
         const val SOURCE_PREFIX = "subscription:"

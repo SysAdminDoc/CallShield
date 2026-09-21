@@ -368,19 +368,16 @@ class SyncRepository(
                         )
                     }
                     lastRemovedExternalBlocklist = null
-                    val claimed =
-                        removed.rows
-                            .map { it.number }
-                            .chunked(EXTERNAL_BLOCKLIST_LOOKUP_CHUNK_SIZE)
-                            .flatMap { dao.getNumbersByNumbers(it) }
-                            .mapTo(HashSet()) { it.number }
-                    val restored = removed.rows.filterNot { it.number in claimed }.map { it.copy(id = 0) }
                     // The list goes back before its rows: a crash in between leaves a list
                     // that refills on its next refresh, never rows that no list owns.
                     settingsRepository.saveExternalBlocklistSubscriptions(
                         subscriptions.toMutableList().apply { add(removed.position.coerceIn(0, size), removed.subscription) },
                     )
-                    dao.insertNumbers(restored)
+                    // A number claimed since the removal (a user block, another list, the
+                    // hot list) keeps its row. Looking first and then replacing left a window
+                    // in which a block, which doesn't take the sync lock, was overwritten.
+                    val restored =
+                        dao.insertNumbersKeepingExisting(removed.rows.map { it.copy(id = 0) }).count { it != -1L }
                     invalidateAllCaches()
                     CallShieldWidget.refreshAll(context)
                     ExternalBlocklistImportResult(
@@ -388,9 +385,9 @@ class SyncRepository(
                         message =
                             context.resources.getQuantityString(
                                 R.plurals.external_blocklist_restored,
-                                restored.size,
+                                restored,
                                 removed.subscription.label,
-                                restored.size,
+                                restored,
                             ),
                         subscription = removed.subscription,
                     )

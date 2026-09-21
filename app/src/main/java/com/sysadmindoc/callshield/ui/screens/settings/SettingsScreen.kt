@@ -47,7 +47,12 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTag
+import androidx.compose.ui.semantics.toggleableState
+import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -1897,6 +1902,8 @@ private fun ExternalBlocklistPreviewPanel(
     }
 }
 
+internal const val EXTERNAL_BLOCKLIST_SWITCH_TAG = "external_blocklist_switch"
+
 @Composable
 @Suppress("FunctionNaming", "LongMethod", "ktlint:standard:function-naming")
 internal fun ExternalBlocklistSubscriptionRow(
@@ -1905,13 +1912,20 @@ internal fun ExternalBlocklistSubscriptionRow(
     onRemove: () -> Unit,
 ) {
     val removeAction = stringResource(R.string.settings_external_blocklist_remove_action, subscription.label)
-    // One TalkBack item per list: the row toggles it, and removing it is an action on the row.
+    // One TalkBack item per list that toggles it, with remove as an action on it.
+    // By touch only the switch toggles: turning a list off deletes its numbers,
+    // and a tap on its name shouldn't do that.
     Row(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .toggleable(value = subscription.enabled, role = Role.Switch, onValueChange = onToggle)
-                .semantics {
+                .semantics(mergeDescendants = true) {
+                    role = Role.Switch
+                    toggleableState = ToggleableState(subscription.enabled)
+                    onClick {
+                        onToggle(!subscription.enabled)
+                        true
+                    }
                     customActions =
                         listOf(
                             CustomAccessibilityAction(removeAction) {
@@ -1958,15 +1972,17 @@ internal fun ExternalBlocklistSubscriptionRow(
         }
         Switch(
             checked = subscription.enabled,
-            // The row handles the toggle, so TalkBack announces the list's name with it.
-            onCheckedChange = null,
+            onCheckedChange = onToggle,
+            // The row carries the switch for accessibility services, with the list's name.
+            modifier = Modifier.clearAndSetSemantics { testTag = EXTERNAL_BLOCKLIST_SWITCH_TAG },
             colors =
                 SwitchDefaults.colors(
                     checkedTrackColor = CatGreen,
                     checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
                 ),
         )
-        // Hidden from TalkBack, which reaches remove through the row's custom action.
+        // Hidden from accessibility services, which reach remove through the row's
+        // custom action. Voice Access has no label for it and needs its grid.
         IconButton(onClick = onRemove, modifier = Modifier.clearAndSetSemantics { }) {
             Icon(Icons.Default.Delete, contentDescription = null, tint = CatPeach)
         }

@@ -71,6 +71,10 @@ interface SpamDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertNumbers(numbers: List<SpamNumber>)
 
+    /** Inserts the numbers not already present; an existing row always wins. Returns -1 for each one skipped. */
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertNumbersKeepingExisting(numbers: List<SpamNumber>): List<Long>
+
     @Delete
     suspend fun deleteNumber(number: SpamNumber)
 

@@ -11,7 +11,10 @@ import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performSemanticsAction
 import com.sysadmindoc.callshield.data.model.ExternalBlocklistSubscription
 import com.sysadmindoc.callshield.ui.runStrictAccessibilityChecks
 import org.junit.Assert.assertEquals
@@ -19,7 +22,11 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
-/** TalkBack reads a subscription row as one item, with removing it as an action on that item. */
+/**
+ * TalkBack reads a subscription row as one item that toggles the list, with
+ * removing it as an action on that item. By touch only the switch toggles:
+ * turning a list off deletes its numbers, and a tap on its name mustn't.
+ */
 class ExternalBlocklistSubscriptionRowTest {
     @get:Rule
     val composeRule = createComposeRule()
@@ -50,8 +57,15 @@ class ExternalBlocklistSubscriptionRowTest {
         row.assertIsOn()
         composeRule.onAllNodesWithText(subscription.url, substring = true).assertCountEquals(0)
 
-        row.performClick()
+        // TalkBack's double tap is the row's click action.
+        row.performSemanticsAction(SemanticsActions.OnClick)
         assertEquals(listOf(false), toggled)
+
+        // A tap on the list's name does nothing; one on the switch toggles.
+        composeRule.onNodeWithText("Daily list", useUnmergedTree = true).performClick()
+        assertEquals(listOf(false), toggled)
+        composeRule.onNodeWithTag(EXTERNAL_BLOCKLIST_SWITCH_TAG, useUnmergedTree = true).performClick()
+        assertEquals(listOf(false, false), toggled)
 
         val remove =
             row
