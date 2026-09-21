@@ -258,6 +258,22 @@ class SpamHeuristicsTest {
         assertFalse(SpamHeuristics.isInvalidFormat("123456"))
     }
 
+    @Test
+    fun `isInvalidFormat leaves valid short E164 numbers from other countries alone`() {
+        // Faroe Islands and Greenland (6-digit national numbers), Andorra, and a
+        // 7-digit German landline: all 7 to 9 digits once the country code is in.
+        assertFalse(SpamHeuristics.isInvalidFormat("+298123456"))
+        assertFalse(SpamHeuristics.isInvalidFormat("+299123456"))
+        assertFalse(SpamHeuristics.isInvalidFormat("+376812345"))
+        assertFalse(SpamHeuristics.isInvalidFormat("+493012345"))
+    }
+
+    @Test
+    fun `isInvalidFormat still flags a truncated North American number`() {
+        assertTrue(SpamHeuristics.isInvalidFormat("+1555123"))
+        assertTrue(SpamHeuristics.isInvalidFormat("5551234"))
+    }
+
     // ── Hot Campaign Range ───────────────────────────────────────────────
 
     @Test

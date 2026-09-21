@@ -121,7 +121,8 @@ def is_scoreable(number: str) -> bool:
     """Mirror the on-device gate in SpamMLScorer.extractFeatures.
 
     The app returns an empty feature vector (score -1.0 → pass) for anything
-    that is not a 10-digit NANP number, so such rows can never be scored at
+    that is not a 10-digit NANP number, including an E.164 number whose
+    country code is not 1 even when it has ten digits, so such rows can never be scored at
     inference time. Training on them is actively harmful: extract_features
     returns an all-zero vector, and because every real row carries the fixed
     reference-hour time_of_day_cos = -1.0 and plus_one_prefix = 1.0, those
@@ -129,13 +130,12 @@ def is_scoreable(number: str) -> bool:
     learn "not the reference hour ⇒ spam", which fires on-device against the
     real device hour and inflates every NANP caller's score at night.
     """
-    digits = (
-        number.replace("-", "")
-        .replace(" ", "")
-        .replace("(", "")
-        .replace(")", "")
-        .replace("+", "")
-    )
+    raw = number.replace("-", "").replace(" ", "").replace("(", "").replace(")", "")
+    # A "+" number is E.164, and only country code 1 is North American. A
+    # 10-digit international number (Singapore, New Zealand...) is not NANP.
+    if raw.startswith("+") and not raw.startswith("+1"):
+        return False
+    digits = raw.replace("+", "")
     if digits.startswith("1") and len(digits) == 11:
         digits = digits[1:]
     return len(digits) == 10
@@ -149,6 +149,8 @@ def extract_features(number: str, hour: int = 12) -> list[float]:
     encoding deterministically.
     """
     raw = number.replace("-", "").replace(" ", "").replace("(", "").replace(")", "")
+    if raw.startswith("+") and not raw.startswith("+1"):
+        return [0.0] * len(FEATURE_NAMES)
     digits = raw.replace("+", "")
     raw_digit_len = len(digits)
 

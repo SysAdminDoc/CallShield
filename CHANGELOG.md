@@ -17,6 +17,14 @@ All notable changes to CallShield will be documented in this file.
 - If this ever happens again, Protection Test says so directly and tells you to
   update the app, and you get one notification per app version pointing to the
   latest release. A certificate failure used to look like a successful sync.
+- The ML scorer no longer judges callers outside North America. It treated any
+  ten-digit number as a US or Canadian one once the `+` was stripped, so an
+  unknown Singapore mobile, or a landline in New Zealand, Belgium, Thailand or
+  Seoul, got scored by a model that has only ever seen North American numbers.
+  About a quarter of random Singapore mobile numbers and a third of New Zealand
+  landlines were being blocked. International numbers now skip the model.
+- A short but valid international number (the Faroes, Greenland, Andorra, some
+  German landlines) is no longer counted as a malformed one by the heuristics.
 
 - Protection Test now tells a stalled publisher apart from a feed your phone
   couldn't reach. It reads the date each trending feed says it was generated.

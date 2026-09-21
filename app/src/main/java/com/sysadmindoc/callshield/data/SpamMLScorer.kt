@@ -466,9 +466,16 @@ class SpamMLScorer
             number: String,
             hourOfDay: Int,
         ): DoubleArray? {
+            // A "+" number is E.164, and only country code 1 is North American.
+            // Stripping the "+" first made any 10-digit international number
+            // (Singapore, New Zealand, Belgium, Thailand, Seoul...) look like a
+            // NANP one and get scored by a model trained only on NANP rows.
+            val trimmed = number.trimStart()
+            if (trimmed.startsWith("+") && !trimmed.startsWith("+1")) return null
+
             // Check raw number properties before normalizing to 10 digits
             val rawDigits = filterAsciiDigits(number)
-            val plusOnePrefix = if (number.trimStart().startsWith("+1")) 1.0 else 0.0
+            val plusOnePrefix = if (trimmed.startsWith("+1")) 1.0 else 0.0
             val shortNumber = if (rawDigits.length in 1..6) 1.0 else 0.0
 
             var digits = rawDigits
