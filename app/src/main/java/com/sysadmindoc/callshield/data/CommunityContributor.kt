@@ -48,9 +48,10 @@ object CommunityContributor {
     private val urlIndicatorPattern = Regex("^[a-z_]{3,40}$")
 
     // The call timeout bounds the whole attempt (DNS, every route tried, the
-    // write, OkHttp's own retry), so it always ends before the outbox's queued
-    // copy is due to go out, and a submission that can't be cancelled can't
-    // hang either.
+    // write, OkHttp's own retry). A submission inside NonCancellable can't be
+    // cancelled, and the timeout keeps it from running indefinitely on a live
+    // connection. A frozen process can stretch wall-clock time past the limit,
+    // but an outbox retry after thaw is harmless.
     internal val client =
         HttpClient.shared
             .newBuilder()
