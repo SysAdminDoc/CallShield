@@ -63,6 +63,11 @@ object HotFeedFreshness {
             OffsetDateTime.parse(value).toInstant().toEpochMilli()
         } catch (_: DateTimeParseException) {
             0L
+        } catch (_: ArithmeticException) {
+            // A parseable year like +999999999 overflows epoch millis. The stamp
+            // is persisted, so throwing here would break Protection Test until a
+            // new one replaced it.
+            0L
         }
     }
 

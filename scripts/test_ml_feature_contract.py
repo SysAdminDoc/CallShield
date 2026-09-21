@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 
 from evaluate_model import score_gbt, score_lr
-from train_spam_model import FEATURE_NAMES, FEATURE_SCHEMA_VERSION, extract_features
+from train_spam_model import FEATURE_NAMES, FEATURE_SCHEMA_VERSION, extract_features, is_scoreable
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -22,6 +22,9 @@ def main() -> None:
     assert model["feature_names"] == FEATURE_NAMES
 
     for case in fixture["cases"]:
+        # is_scoreable picks the training rows, so it must agree with the
+        # on-device gate that the fixture's scoreable flag describes.
+        assert is_scoreable(case["input"]) == case["scoreable"], f"{case['name']} scoreability"
         actual = extract_features(case["input"], case["hour"])
         expected = case["expected"]
         assert len(actual) == len(FEATURE_NAMES), case["name"]

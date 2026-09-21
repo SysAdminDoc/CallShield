@@ -1,5 +1,6 @@
 package com.sysadmindoc.callshield.service
 
+import com.sysadmindoc.callshield.data.repository.feedTrustFailureFor
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -33,6 +34,16 @@ class FeedTrustNoticeTest {
     fun `a newer build that fails again announces again`() {
         // The update the last notice asked for did not fix it, so say so once more.
         assertTrue(FeedTrustNotice.shouldNotify(failedAt, notifiedVersion = 66, currentVersion = 67))
+    }
+
+    @Test
+    fun `a trust failure only counts for the build that recorded it`() {
+        assertEquals(failedAt, feedTrustFailureFor(failedAt, failedVersion = 66, currentVersion = 66))
+        // The update installed fixed pins that have not been tried yet.
+        assertEquals(0L, feedTrustFailureFor(failedAt, failedVersion = 66, currentVersion = 67))
+        // A record written before versions were stored cannot be attributed.
+        assertEquals(0L, feedTrustFailureFor(failedAt, failedVersion = null, currentVersion = 67))
+        assertEquals(0L, feedTrustFailureFor(failedAt = null, failedVersion = 67, currentVersion = 67))
     }
 
     @Test

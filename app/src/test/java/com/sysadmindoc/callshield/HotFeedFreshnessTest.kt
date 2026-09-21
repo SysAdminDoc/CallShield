@@ -98,6 +98,13 @@ class HotFeedFreshnessTest {
     }
 
     @Test
+    fun `a stamp beyond epoch-millis range is no opinion, not a crash`() {
+        // Parses as an OffsetDateTime but overflows toEpochMilli(). The stamp is
+        // persisted, so a throw would break Protection Test until it was replaced.
+        assertEquals(0L, HotFeedFreshness.publishedAtMillis("+999999999-12-31T23:59:59+00:00"))
+    }
+
+    @Test
     fun `the publisher's own offset format parses, not just Z`() {
         // scripts/pipeline_io.py writes Python isoformat(), so every real feed
         // carries "+00:00" and microseconds. Instant.parse only accepts an offset

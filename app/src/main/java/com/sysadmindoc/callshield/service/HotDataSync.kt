@@ -27,7 +27,7 @@ internal object HotDataSync {
         val unavailableFeeds: Set<String>,
     )
 
-    private data class FeedLoadResult<T>(
+    internal data class FeedLoadResult<T>(
         val data: T,
         val resolved: Boolean,
         val explicitlyCleared: Boolean = false,
@@ -42,7 +42,17 @@ internal object HotDataSync {
             feed: String,
             applied: Boolean,
             empty: Boolean,
-        ) = FeedObservation(feed, resolved, applied, empty, generatedAt, inputDigest)
+        ) = FeedObservation(
+            feed = feed,
+            resolved = resolved,
+            applied = applied,
+            empty = empty,
+            generatedAt = generatedAt,
+            inputDigest = inputDigest,
+            // The bundled snapshot resolves a feed after a failed fetch. It is
+            // not evidence the publisher is reachable, current, or cleared.
+            fromNetwork = resolved && failure == null,
+        )
     }
 
     /** What one refresh learned about one feed, reduced to what the health record needs. */
@@ -56,6 +66,8 @@ internal object HotDataSync {
         val empty: Boolean,
         val generatedAt: String? = null,
         val inputDigest: String? = null,
+        /** The file came from the network, not the bundled snapshot. */
+        val fromNetwork: Boolean = resolved,
     )
 
     /**
@@ -66,16 +78,20 @@ internal object HotDataSync {
      * worker retrying, and not in `unreachableFeeds`, so the publisher is judged by
      * its own `generated` stamp rather than reported as a network failure. An empty
      * feed that was applied can only have been cleared on purpose.
+     *
+     * Only network reads say anything about the publisher. A feed the bundled
+     * snapshot filled in after a failed fetch is unreachable, clears nothing, and
+     * leaves the stored stamps alone.
      */
     internal fun healthUpdate(observations: List<FeedObservation>): HotDataHealthUpdate {
-        val resolved = observations.filter { it.resolved }
+        val read = observations.filter { it.fromNetwork }
         return HotDataHealthUpdate(
             unavailableFeeds = observations.filterNot { it.resolved && it.applied }.mapTo(mutableSetOf()) { it.feed },
-            unreachableFeeds = observations.filterNot { it.resolved }.mapTo(mutableSetOf()) { it.feed },
-            clearedFeeds = resolved.filter { it.applied && it.empty }.mapTo(mutableSetOf()) { it.feed },
-            resolvedFeeds = resolved.mapTo(mutableSetOf()) { it.feed },
-            feedGeneratedAt = resolved.metadata { it.generatedAt },
-            feedDigests = resolved.metadata { it.inputDigest },
+            unreachableFeeds = observations.filterNot { it.fromNetwork }.mapTo(mutableSetOf()) { it.feed },
+            clearedFeeds = read.filter { it.applied && it.empty }.mapTo(mutableSetOf()) { it.feed },
+            resolvedFeeds = read.mapTo(mutableSetOf()) { it.feed },
+            feedGeneratedAt = read.metadata { it.generatedAt },
+            feedDigests = read.metadata { it.inputDigest },
         )
     }
 

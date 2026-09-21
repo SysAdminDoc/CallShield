@@ -470,12 +470,14 @@ class SpamMLScorer
             // Stripping the "+" first made any 10-digit international number
             // (Singapore, New Zealand, Belgium, Thailand, Seoul...) look like a
             // NANP one and get scored by a model trained only on NANP rows.
-            val trimmed = number.trimStart()
-            if (trimmed.startsWith("+") && !trimmed.startsWith("+1")) return null
+            // Strip exactly the separators Python's extract_features strips, so
+            // "(+65) 8123 4567" or "+ 1 415 555 1234" read the same on both sides.
+            val compact = number.filterNot { it == ' ' || it == '-' || it == '(' || it == ')' }
+            if (compact.startsWith("+") && !compact.startsWith("+1")) return null
 
             // Check raw number properties before normalizing to 10 digits
             val rawDigits = filterAsciiDigits(number)
-            val plusOnePrefix = if (trimmed.startsWith("+1")) 1.0 else 0.0
+            val plusOnePrefix = if (compact.startsWith("+1")) 1.0 else 0.0
             val shortNumber = if (rawDigits.length in 1..6) 1.0 else 0.0
 
             var digits = rawDigits

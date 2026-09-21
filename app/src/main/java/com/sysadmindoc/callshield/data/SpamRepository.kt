@@ -132,6 +132,7 @@ class SpamRepository(
         internal val KEY_HOT_DATA_LAST_GOOD = longPreferencesKey("hot_data_last_good_timestamp")
         internal val KEY_HOT_DATA_UNAVAILABLE = stringSetPreferencesKey("hot_data_unavailable_feeds")
         internal val KEY_FEED_TRUST_FAILED_AT = longPreferencesKey("feed_trust_failed_at")
+        internal val KEY_FEED_TRUST_FAILED_VERSION = intPreferencesKey("feed_trust_failed_version")
         internal val KEY_FEED_TRUST_NOTICE_VERSION = intPreferencesKey("feed_trust_notice_version")
         internal val KEY_HOT_DATA_UNREACHABLE = stringSetPreferencesKey("hot_data_unreachable_feeds")
         internal val KEY_HOT_DATA_CLEARED = stringSetPreferencesKey("hot_data_cleared_feeds")

@@ -140,6 +140,40 @@ class HotFeedHealthTest {
     }
 
     @Test
+    fun `a bundled snapshot after a failed fetch is unreachable and leaves the stored stamp`() {
+        // Production mapping: the fetch failed, so HotDataSync filled an empty
+        // store from the bundled asset, which today is an empty cleared feed.
+        val bundled =
+            HotDataSync
+                .FeedLoadResult(
+                    data = emptyList<String>(),
+                    resolved = true,
+                    explicitlyCleared = true,
+                    generatedAt = "2026-09-05T12:01:53.867374+00:00",
+                    failure = java.io.IOException("unable to resolve host"),
+                ).observe(HotDataSync.HOT_RANGES_FEED, applied = true, empty = true)
+        val update = HotDataSync.healthUpdate(listOf(bundled))
+
+        assertEquals(setOf(HotDataSync.HOT_RANGES_FEED), update.unreachableFeeds)
+        assertTrue(update.clearedFeeds.isEmpty())
+        assertTrue(update.resolvedFeeds.isEmpty())
+
+        val previous = HotDataHealth(feedGeneratedAt = mapOf(HotDataSync.HOT_RANGES_FEED to "2026-09-20T12:00:00+00:00"))
+        val health = stored(update, previous)
+        assertEquals("2026-09-20T12:00:00+00:00", health.feedGeneratedAt[HotDataSync.HOT_RANGES_FEED])
+        assertEquals(HotFeedFreshness.State.UNREACHABLE, HotFeedFreshness.stateOf(health, now))
+    }
+
+    @Test
+    fun `a feed read from the network is observed as a network read`() {
+        val read =
+            HotDataSync
+                .FeedLoadResult(data = listOf("212555"), resolved = true, generatedAt = "2026-09-20T12:00:00+00:00")
+                .observe(HotDataSync.HOT_RANGES_FEED, applied = true, empty = false)
+        assertTrue(read.fromNetwork)
+    }
+
+    @Test
     fun `an install that has not refreshed since the split reads unavailable as unreachable`() {
         val legacy = HotDataHealth(unavailableFeeds = setOf(HotDataSync.HOT_LIST_FEED), unreachableFeeds = null)
         assertEquals(HotFeedFreshness.State.UNREACHABLE, HotFeedFreshness.stateOf(legacy, now))

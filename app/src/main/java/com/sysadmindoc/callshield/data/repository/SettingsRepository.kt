@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.edit
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.Types
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
+import com.sysadmindoc.callshield.BuildConfig
 import com.sysadmindoc.callshield.data.AppUpdateState
 import com.sysadmindoc.callshield.data.AppUpdateStatus
 import com.sysadmindoc.callshield.data.CallCategory
@@ -30,6 +31,18 @@ import kotlinx.coroutines.flow.map
 private val validAppThemes = setOf("system", "light", "graphite", "amoled")
 
 internal fun sanitizeAppTheme(value: String?): String = value?.takeIf(validAppThemes::contains) ?: "light"
+
+/**
+ * A certificate trust failure only describes the build that saw it: its pins
+ * failed. After an update the new pins have not been tried yet, and a sync that
+ * finds the data unchanged downloads nothing to try them on, so an old record
+ * would otherwise keep telling the updated app to update.
+ */
+internal fun feedTrustFailureFor(
+    failedAt: Long?,
+    failedVersion: Int?,
+    currentVersion: Int,
+): Long = if (failedAt != null && failedVersion == currentVersion) failedAt else 0L
 
 @Suppress("TooManyFunctions")
 class SettingsRepository(
@@ -575,16 +588,29 @@ class SettingsRepository(
     suspend fun recordFeedTrust(
         failed: Boolean,
         now: Long = System.currentTimeMillis(),
+        version: Int = BuildConfig.VERSION_CODE,
     ) = dataStore.edit { preferences ->
         if (failed) {
             preferences[SpamRepository.KEY_FEED_TRUST_FAILED_AT] = now
+            preferences[SpamRepository.KEY_FEED_TRUST_FAILED_VERSION] = version
         } else {
             preferences.remove(SpamRepository.KEY_FEED_TRUST_FAILED_AT)
+            preferences.remove(SpamRepository.KEY_FEED_TRUST_FAILED_VERSION)
         }
     }
 
-    /** When a feed download last failed certificate verification, or 0 when the last one succeeded. */
-    suspend fun readFeedTrustFailedAt(): Long = dataStore.data.first()[SpamRepository.KEY_FEED_TRUST_FAILED_AT] ?: 0L
+    /**
+     * When a feed download last failed certificate verification, or 0 when the
+     * last one succeeded or the failure was recorded by a different build.
+     */
+    suspend fun readFeedTrustFailedAt(currentVersion: Int = BuildConfig.VERSION_CODE): Long {
+        val preferences = dataStore.data.first()
+        return feedTrustFailureFor(
+            failedAt = preferences[SpamRepository.KEY_FEED_TRUST_FAILED_AT],
+            failedVersion = preferences[SpamRepository.KEY_FEED_TRUST_FAILED_VERSION],
+            currentVersion = currentVersion,
+        )
+    }
 
     /** The app version that last showed the update notice for a pin failure. */
     suspend fun readFeedTrustNoticeVersion(): Int? = dataStore.data.first()[SpamRepository.KEY_FEED_TRUST_NOTICE_VERSION]
