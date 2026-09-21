@@ -65,6 +65,12 @@ All notable changes to CallShield will be documented in this file.
   last successful import in `data/source-freshness.json` for it.
 - A validation workflow runs the Worker and pipeline test suites on every push
   that isn't a report commit. It builds nothing and publishes nothing.
+- The pipeline tests no longer write into the real `data/` directory. A test
+  merge had been overwriting the ignored `data/source-snapshot.json` on every
+  run, and one release check passed only because of it. After the liveness
+  change the same merge would also have stamped test imports into
+  `data/source-freshness.json`, the file the weekly check trusts. The test
+  runner now fails if any suite changes a file under `data/`.
 
 ### Documentation
 

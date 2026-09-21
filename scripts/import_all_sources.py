@@ -196,7 +196,7 @@ def save_source_cursors(
     )
 
 
-def load_source_freshness(path: Path = SOURCE_FRESHNESS_FILE) -> dict[str, str]:
+def load_source_freshness(path: Path) -> dict[str, str]:
     if not path.exists():
         return {}
     try:
@@ -228,7 +228,7 @@ def merge_source_freshness(previous: dict[str, str], source_stats: dict) -> dict
     return dict(sorted(merged.items()))
 
 
-def save_source_freshness(last_success: dict[str, str], path: Path = SOURCE_FRESHNESS_FILE) -> None:
+def save_source_freshness(last_success: dict[str, str], path: Path) -> None:
     atomic_write_json(
         path,
         {
@@ -918,11 +918,18 @@ def merge_into_database(
     # Persist source evidence even when the data payload is unchanged. A
     # successful no-op import is still useful: it proves the feeds were
     # reachable and keeps freshness visible to release review tooling.
+    # Both records sit beside DB_FILE, as the shards do, so a caller that
+    # points DB_FILE at a scratch directory cannot overwrite the real ones.
+    output_dir = DB_FILE.parent
     atomic_write_json(
-        SOURCE_SNAPSHOT_FILE,
+        output_dir / SOURCE_SNAPSHOT_FILE.name,
         source_snapshot(manifest, source_stats or {}),
     )
-    save_source_freshness(merge_source_freshness(load_source_freshness(), source_stats or {}))
+    freshness_file = output_dir / SOURCE_FRESHNESS_FILE.name
+    save_source_freshness(
+        merge_source_freshness(load_source_freshness(freshness_file), source_stats or {}),
+        freshness_file,
+    )
 
     # Apply min_reports filter to NEWLY-ADDED entries only. Applying it to the
     # whole merged dict deleted every community-reported row (they are written

@@ -774,7 +774,8 @@ RELEASE_KEY_PASSWORD=...
 ```
 
 Two GitHub workflows run without building the app. **Validation** runs the Worker and
-pipeline suites on every push (`run-pipeline-tests.ps1 -CorrectnessOnly`). **Pipeline
+pipeline suites on every push (`run-pipeline-tests.ps1 -CorrectnessOnly`), and the runner
+fails if any suite changes a file under `data/`. **Pipeline
 liveness** runs weekly: it fails when community reports sit unconsumed for over a week
 or an upstream source misses its `stale_after_days`, and it keeps one issue labelled
 `pipeline-stalled` open until the next passing run.

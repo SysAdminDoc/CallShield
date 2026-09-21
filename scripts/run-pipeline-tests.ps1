@@ -34,6 +34,18 @@ $repoRoot = Split-Path -Parent $PSScriptRoot
 $failures = @()
 $ran = 0
 
+# A suite that writes into the real data/ directory changes what the next one
+# reads, and .gitignore can hide it: a test merge rewrote the ignored
+# data/source-snapshot.json on every run, and the release-drift test passed in
+# CI only because of that leak. Hashing catches rewrites git status cannot see.
+function Get-DataFingerprint {
+    $dataDir = Join-Path $repoRoot 'data'
+    Get-ChildItem -LiteralPath $dataDir -File -Recurse | ForEach-Object {
+        "{0}`t{1}" -f $_.FullName.Substring($dataDir.Length + 1), (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash
+    }
+}
+$dataBefore = @(Get-DataFingerprint)
+
 function Get-Tool {
     param([string[]]$Candidates)
     foreach ($candidate in $Candidates) {
@@ -106,6 +118,15 @@ if ($python) {
         if ($LASTEXITCODE -ne 0) { $failures += 'check_translations.py' }
         $ran++
     }
+}
+
+$dataChanges = @(
+    Compare-Object -ReferenceObject $dataBefore -DifferenceObject @(Get-DataFingerprint) |
+        ForEach-Object { ($_.InputObject -split "`t")[0] } |
+        Sort-Object -Unique
+)
+if ($dataChanges.Count -gt 0) {
+    $failures += "a suite wrote into data/ ($($dataChanges -join ', '))"
 }
 
 if ($ran -eq 0) {
