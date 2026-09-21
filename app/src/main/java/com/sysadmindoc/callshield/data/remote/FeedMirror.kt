@@ -1,5 +1,7 @@
 package com.sysadmindoc.callshield.data.remote
 
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 
 /**
@@ -7,12 +9,13 @@ import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
  * raw.githubusercontent.com is blocked where someone lives or the repository
  * moves. Off unless the user sets it.
  *
- * The mirror is tried only after every GitHub branch has failed, and before
- * the callers fall back to the bundled snapshot. It needs no certificate pins
- * of its own: every signed feed is checked against [FeedSignature] whichever
- * host serves it, so a mirror can't hand a device anything the maintainer
- * didn't sign. The database's rollback checks run on the parsed manifest, so
- * they apply to a mirrored one the same way.
+ * The mirror is tried after every GitHub branch has failed, or first for a
+ * few minutes after GitHub couldn't be reached at all, and before the callers
+ * fall back to the bundled snapshot. It needs no certificate pins of its own:
+ * every signed feed is checked against [FeedSignature] whichever host serves
+ * it, so a mirror can't hand a device anything the maintainer didn't sign.
+ * The database's rollback checks run on the parsed manifest, so they apply to
+ * a mirrored one the same way. A mirror can still hold back updates.
  */
 internal object FeedMirror {
     /**
@@ -27,10 +30,46 @@ internal object FeedMirror {
     var baseUrl: String? = null
         private set
 
+    @Volatile
+    private var loading = false
+
+    @Volatile
+    private var loaded = CompletableDeferred<Unit>()
+
+    /**
+     * Called just before the app starts reading the stored setting. Until
+     * [set] or [loadFailed] follows, [awaitLoaded] holds a fetch briefly, so a
+     * worker that starts in a fresh process doesn't build its source list
+     * before the setting arrives and skip the mirror.
+     */
+    fun startLoading() {
+        loading = true
+    }
+
+    /** The stored setting couldn't be read, so stop holding fetches for it. */
+    fun loadFailed() {
+        loaded.complete(Unit)
+    }
+
+    /** Waits up to [timeoutMs] for the stored setting while the app is still reading it. */
+    suspend fun awaitLoaded(timeoutMs: Long = LOAD_WAIT_MS) {
+        if (loading) withTimeoutOrNull(timeoutMs) { loaded.await() }
+    }
+
     /** Sets the mirror from a stored value; anything that isn't a usable base URL clears it. */
     fun set(raw: String?) {
         baseUrl = raw?.let(::normalize)
+        loaded.complete(Unit)
     }
+
+    /** Back to the state of a fresh process, for tests. */
+    internal fun resetForTest() {
+        baseUrl = null
+        loading = false
+        loaded = CompletableDeferred()
+    }
+
+    private const val LOAD_WAIT_MS = 3_000L
 
     /** The mirror's URL for a repository path such as `data/hot_numbers.json`, or null with no mirror. */
     fun urlFor(path: String): String? = baseUrl?.let { it + path }

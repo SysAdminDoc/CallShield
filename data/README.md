@@ -240,8 +240,11 @@ The app downloads from `raw.githubusercontent.com` first. If that host is
 blocked where someone lives, or this repository ever moves, Settings > Feed
 mirror takes a second base URL. The app appends the same paths it asks GitHub
 for (`data/hot_numbers.json`, `data/hot_numbers.json.sig`, the manifest, the
-shards) and tries the mirror only after every GitHub branch has failed. The copy
-bundled in the APK is still the last resort.
+shards) and tries the mirror after every GitHub branch has failed. For ten
+minutes after GitHub couldn't be reached at all (a timeout, a refused
+connection, a name that won't resolve), the mirror goes first, so a sync
+behind a block doesn't wait out a timeout for every file. The copy bundled in
+the APK is still the last resort.
 
 Any static HTTPS host can be a mirror if it serves this `data/` tree byte for
 byte, `.sig` files included. It needs no certificate pin. A mirrored feed goes
@@ -258,3 +261,8 @@ jsDelivr caches files for up to 12 hours, so a phone using it can run half a
 day behind. If the repository moves, the same URL pattern works with the new
 owner and name, and users need the new address in Settings until a release
 changes the default.
+
+A cache can pair a newly published file with the previous signature. From
+GitHub the app fetches both again at the commit the branch points to, which
+can't mismatch. A mirror gets no second try, so the app refuses the pair and
+keeps what it has until the mirror's cache catches up.

@@ -1,13 +1,21 @@
 package com.sysadmindoc.callshield.data.remote
 
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
+import kotlin.system.measureTimeMillis
 
 class FeedMirrorTest {
     @After
-    fun clear() = FeedMirror.set(null)
+    fun clear() = FeedMirror.resetForTest()
 
     @Test
     fun `a usable base gets a trailing slash so repository paths append cleanly`() {
@@ -43,4 +51,50 @@ class FeedMirrorTest {
 
         assertNull(FeedMirror.baseUrl)
     }
+
+    @Test
+    fun `a fetch that starts before the stored setting arrives waits for it`() =
+        runBlocking {
+            FeedMirror.startLoading()
+            val seen =
+                async(Dispatchers.Default) {
+                    FeedMirror.awaitLoaded(timeoutMs = 10_000)
+                    FeedMirror.baseUrl
+                }
+            delay(100)
+            assertFalse("returned before the setting arrived", seen.isCompleted)
+
+            FeedMirror.set("https://mirror.example.test/")
+
+            assertEquals("https://mirror.example.test/", withTimeout(5_000) { seen.await() })
+        }
+
+    @Test
+    fun `nothing waits when no setting is being read`() =
+        runBlocking {
+            val waited = measureTimeMillis { FeedMirror.awaitLoaded(timeoutMs = 10_000) }
+
+            assertTrue("waited $waited ms", waited < 1_000)
+        }
+
+    @Test
+    fun `a setting that never arrives stops holding fetches after the wait`() =
+        runBlocking {
+            FeedMirror.startLoading()
+
+            val waited = measureTimeMillis { FeedMirror.awaitLoaded(timeoutMs = 200) }
+
+            assertTrue("waited $waited ms", waited in 200..5_000)
+        }
+
+    @Test
+    fun `a failed read stops holding fetches at once`() =
+        runBlocking {
+            FeedMirror.startLoading()
+            FeedMirror.loadFailed()
+
+            val waited = measureTimeMillis { FeedMirror.awaitLoaded(timeoutMs = 10_000) }
+
+            assertTrue("waited $waited ms", waited < 1_000)
+        }
 }

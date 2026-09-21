@@ -25,7 +25,8 @@ All notable changes to CallShield will be documented in this file.
 - A download whose signature arrives damaged or late is handled for what it
   is. Right after a new feed is published, the download network can hand out
   the new file with the old signature for a few minutes, so a mismatch is now
-  fetched once more past its cache before it counts as a failure. A signature
+  fetched again, both files at the exact commit, before it counts as a
+  failure. A signature
   the server fails to send is a network hiccup to retry, not an unsigned feed.
   A trending feed that is refused shows as refused in Protection Test instead
   of "unreachable".
@@ -39,11 +40,13 @@ All notable changes to CallShield will be documented in this file.
   longer hides why. Its "not found" answer used to replace a passing server
   error and stop the app from retrying.
 - If GitHub is blocked where you live, Settings > Feed mirror takes a second
-  address for the protection data. CallShield still asks GitHub first and only
-  then tries the mirror, before falling back to the copy built into the app.
-  One tap fills in jsDelivr, which serves the same files and can lag by up to
-  12 hours. The signature check applies to every mirrored file, so a mirror
-  can't slip in anything the project didn't sign.
+  address for the protection data. CallShield asks GitHub first and then the
+  mirror, before falling back to the copy built into the app. For ten minutes
+  after GitHub couldn't be reached at all, the mirror goes first, so a sync
+  behind a block doesn't wait out a timeout for every file. One tap fills in
+  jsDelivr, which serves the same files and can lag by up to 12 hours. The
+  signature check applies to every mirrored file, so a mirror can't slip in
+  anything the project didn't sign, though it can hold back updates.
 - The ML scorer no longer judges callers outside North America. It treated any
   ten-digit number as a US or Canadian one once the `+` was stripped, so an
   unknown Singapore mobile, or a landline in New Zealand, Belgium, Thailand or

@@ -16,6 +16,11 @@ import okhttp3.Interceptor
 import okhttp3.Request
 import okhttp3.Response
 import okio.Buffer
+import java.io.IOException
+import java.io.InterruptedIOException
+import java.net.ConnectException
+import java.net.NoRouteToHostException
+import java.net.UnknownHostException
 import java.util.concurrent.TimeUnit
 
 internal enum class GitHubFeedFailureReason {
@@ -61,18 +66,23 @@ private val SHARD_PATH_REGEX = Regex("data/spam_number_shards/[0-9a-f]{2}\\.json
 class GitHubDataSource internal constructor(
     /** Tests serve canned responses through this instead of the network. */
     testInterceptor: Interceptor?,
+    /** Tests move time on to end a GitHub outage window. */
+    private val clock: () -> Long = System::currentTimeMillis,
 ) : SpamDataSource,
     HotFeedDataSource {
     constructor() : this(null)
 
     // Derived client with longer timeouts for large database downloads;
     // shares the connection pool with other callers via HttpClient.shared.
+    // The call timeout bounds a whole download: connect and read timeouts
+    // alone let a host that trickles bytes hold a sync open indefinitely.
     private val client =
         HttpClient.shared
             .newBuilder()
             .apply { testInterceptor?.let(::addInterceptor) }
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
+            .callTimeout(CALL_TIMEOUT_MINUTES, TimeUnit.MINUTES)
             .build()
 
     private val moshi =
@@ -100,6 +110,13 @@ class GitHubDataSource internal constructor(
     // Cache of resolved default branch per "owner/repo" → (branch, resolvedAtMs).
     private val defaultBranchLock = Any()
     private val defaultBranchCache = mutableMapOf<String, Pair<String, Long>>()
+    private val defaultBranchFailedAt = mutableMapOf<String, Long>()
+
+    // When a GitHub download last failed without an answer: a timeout, a
+    // refused or unreachable connection, a name that won't resolve. For
+    // GITHUB_OUTAGE_MS after that, fetches ask the mirror first.
+    @Volatile
+    private var gitHubUnreachableAt: Long? = null
 
     companion object {
         const val DEFAULT_REPO_OWNER = "SysAdminDoc"
@@ -144,6 +161,18 @@ class GitHubDataSource internal constructor(
         /** How long a resolved default branch stays cached before re-querying. */
         private const val DEFAULT_BRANCH_TTL_MS = 6L * 60L * 60L * 1000L // 6 hours
         private val FALLBACK_BRANCHES = listOf("main", "master")
+
+        /** How long a failed default-branch lookup stands before GitHub's API is asked again. */
+        private const val DEFAULT_BRANCH_RETRY_MS = 10L * 60L * 1000L
+
+        /** How long the mirror goes first after GitHub couldn't be reached at all. */
+        internal const val GITHUB_OUTAGE_MS = 10L * 60L * 1000L
+
+        /** Bounds one whole download, the 16 MB legacy database included. */
+        private const val CALL_TIMEOUT_MINUTES = 5L
+
+        private val COMMIT_SHA_REGEX = Regex("[0-9a-f]{40}(?:[0-9a-f]{24})?")
+        private const val MAX_COMMIT_SHA_BYTES = 128L
         private val RAW_FEED_SPECS =
             mapOf(
                 DATA_PATH to RawFeedSpec("spam database", MAX_SPAM_DATABASE_BYTES),
@@ -563,9 +592,13 @@ class GitHubDataSource internal constructor(
         var lastError: Exception? = null
         for (source in feedSources(path, owner, repo)) {
             try {
-                fetchVerified(path, source)?.let { return Result.success(it) }
+                fetchVerified(path, source)?.let {
+                    if (!source.mirror) gitHubUnreachableAt = null
+                    return Result.success(it)
+                }
                 lastError = moreTelling(lastError, Exception("Empty response body"), source.mirror)
             } catch (e: Exception) {
+                if (!source.mirror && isUnreachable(e)) gitHubUnreachableAt = clock()
                 lastError = moreTelling(lastError, e, source.mirror)
             }
         }
@@ -577,26 +610,59 @@ class GitHubDataSource internal constructor(
      * the user's [FeedMirror] when one is set. Every source carries its own
      * signature URL on the same host and branch, so a copy refused on one
      * source can't borrow another source's signature.
+     *
+     * For [GITHUB_OUTAGE_MS] after GitHub couldn't be reached at all, the
+     * mirror goes first and the branch lookup is skipped. Behind a GitHub
+     * block every GitHub request costs a full timeout, three of them per file,
+     * so a sync of 256 shards would never end. GitHub stays in the list, after
+     * the mirror, in case the mirror fails too.
      */
     private suspend fun feedSources(
         path: String,
         owner: String,
         repo: String,
     ): List<FeedSource> {
-        val github =
-            resolveCandidateBranches(owner, repo).map { branch ->
-                FeedSource(buildRawUrl(owner, repo, branch, path), buildRawUrl(owner, repo, branch, "$path.sig"))
-            }
+        FeedMirror.awaitLoaded()
         val mirror = FeedMirror.urlFor(path)?.let { FeedSource(it, "$it.sig", mirror = true) }
-        return github + listOfNotNull(mirror)
+        if (mirror != null && gitHubRecentlyUnreachable()) {
+            return listOf(mirror) + gitHubSources(path, owner, repo, knownBranches(owner, repo))
+        }
+        return gitHubSources(path, owner, repo, resolveCandidateBranches(owner, repo)) + listOfNotNull(mirror)
     }
+
+    private fun gitHubSources(
+        path: String,
+        owner: String,
+        repo: String,
+        branches: List<String>,
+    ): List<FeedSource> =
+        branches.map { branch ->
+            FeedSource(
+                url = buildRawUrl(owner, repo, branch, path),
+                signatureUrl = buildRawUrl(owner, repo, branch, "$path.sig"),
+                pin = GitHubPin(owner, repo, branch),
+            )
+        }
+
+    private fun gitHubRecentlyUnreachable(): Boolean = gitHubUnreachableAt?.let { clock() - it < GITHUB_OUTAGE_MS } == true
+
+    /** A GitHub download that got no answer at all, as opposed to one GitHub refused or failed. */
+    private fun isUnreachable(error: Exception): Boolean =
+        error is InterruptedIOException ||
+            error is ConnectException ||
+            error is NoRouteToHostException ||
+            error is UnknownHostException
 
     /**
      * [path] from [source], size-checked and signature-checked, or null for
-     * an empty body. The CDN caches a file and its signature separately, for
-     * minutes, so right after a publish it can pair the new body with the old
-     * signature. A signature refusal gets one more try past the cache, and
-     * stands if that copy doesn't verify either.
+     * an empty body. GitHub's CDN caches a file and its signature separately,
+     * for minutes, and leaves the query string out of its cache key, so right
+     * after a publish it can pair the new body with the old signature and no
+     * `?` gets past that. A signature refusal from a GitHub branch is tried
+     * once more at the commit the branch points to: that path never changes,
+     * so its body and signature come from one publish. The refusal stands if
+     * that copy fails too or the commit can't be resolved. A mirror gets no
+     * second try, since its cache turns over on its own schedule.
      */
     private fun fetchVerified(
         path: String,
@@ -606,12 +672,39 @@ class GitHubDataSource internal constructor(
             fetchVerifiedOnce(path, source.url, source.signatureUrl)
         } catch (refused: GitHubFeedValidationException) {
             if (refused.reason != GitHubFeedFailureReason.SIGNATURE) throw refused
-            val pastCache = "cb=${System.nanoTime()}"
+            val pin = source.pin ?: throw refused
+            val commit = resolveCommit(pin) ?: throw refused
             try {
-                fetchVerifiedOnce(path, "${source.url}?$pastCache", "${source.signatureUrl}?$pastCache")
+                fetchVerifiedOnce(
+                    path,
+                    buildRawUrl(pin.owner, pin.repo, commit, path),
+                    buildRawUrl(pin.owner, pin.repo, commit, "$path.sig"),
+                )
             } catch (_: Exception) {
                 throw refused
             }
+        }
+
+    /** The commit [pin]'s branch points to, or null when GitHub won't say. One small API call, made only after a refusal. */
+    private fun resolveCommit(pin: GitHubPin): String? =
+        try {
+            val request =
+                Request
+                    .Builder()
+                    .url("$GITHUB_API_BASE/${pin.owner}/${pin.repo}/commits/${pin.branch}")
+                    .header("Accept", "application/vnd.github.sha")
+                    .header("User-Agent", USER_AGENT)
+                    .build()
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) return null
+                readLimitedBody(response, "GitHub commit API", MAX_COMMIT_SHA_BYTES)
+                    ?.trim()
+                    ?.takeIf(COMMIT_SHA_REGEX::matches)
+            }
+        } catch (_: IOException) {
+            null
+        } catch (_: GitHubFeedValidationException) {
+            null
         }
 
     private fun fetchVerifiedOnce(
@@ -716,18 +809,36 @@ class GitHubDataSource internal constructor(
         repo: String,
     ): String? {
         val key = "$owner/$repo"
-        val now = System.currentTimeMillis()
+        val now = clock()
         synchronized(defaultBranchLock) {
             val cached = defaultBranchCache[key]
             if (cached != null && now - cached.second < DEFAULT_BRANCH_TTL_MS) {
                 return cached.first
             }
+            // A lookup that just failed isn't repeated for every file in a
+            // sync: behind a GitHub block each attempt costs a full timeout.
+            val failedAt = defaultBranchFailedAt[key]
+            if (failedAt != null && now - failedAt < DEFAULT_BRANCH_RETRY_MS) return cached?.first
         }
-        val resolved = fetchDefaultBranch(owner, repo).getOrNull() ?: return null
+        val resolved = fetchDefaultBranch(owner, repo).getOrNull()
         synchronized(defaultBranchLock) {
+            if (resolved == null) {
+                defaultBranchFailedAt[key] = now
+                return defaultBranchCache[key]?.first
+            }
             defaultBranchCache[key] = resolved to now
+            defaultBranchFailedAt.remove(key)
         }
         return resolved
+    }
+
+    /** The candidate branches without asking the API: the cached default, then the fallbacks. */
+    private fun knownBranches(
+        owner: String,
+        repo: String,
+    ): List<String> {
+        val cached = synchronized(defaultBranchLock) { defaultBranchCache["$owner/$repo"]?.first }
+        return listOfNotNull(cached).plus(FALLBACK_BRANCHES).distinct()
     }
 
     private suspend fun fetchDefaultBranch(
@@ -889,6 +1000,14 @@ class GitHubDataSource internal constructor(
         val url: String,
         val signatureUrl: String,
         val mirror: Boolean = false,
+        /** The GitHub branch a source reads, for the retry at its commit. Null for the mirror. */
+        val pin: GitHubPin? = null,
+    )
+
+    private data class GitHubPin(
+        val owner: String,
+        val repo: String,
+        val branch: String,
     )
 
     private data class GitHubReleasePayload(

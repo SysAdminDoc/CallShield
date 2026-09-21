@@ -522,7 +522,7 @@
     <string name="settings_external_blocklist_remove_action">移除 %1$s</string>
     <string name="external_blocklist_undo_unavailable">现在无法恢复这个列表。请重新添加它。</string>
     <string name="settings_feed_mirror">数据镜像</string>
-    <string name="settings_feed_mirror_desc">如果你所在的地方无法访问 GitHub，CallShield 可以改从另一个地址下载防护数据。始终先尝试 GitHub。每个文件仍须带有本项目的签名，因此镜像无法改动你收到的内容。</string>
+    <string name="settings_feed_mirror_desc">如果你所在的地方无法访问 GitHub，CallShield 可以改从另一个地址下载防护数据。通常先尝试 GitHub，但在 GitHub 无法连接后的几分钟内会先用镜像。每个文件仍须带有本项目的签名，因此镜像无法改动数据，但可能延迟更新。</string>
     <string name="settings_feed_mirror_url">镜像地址（https）</string>
     <string name="settings_feed_mirror_jsdelivr">使用 jsDelivr</string>
     <string name="settings_feed_mirror_save">保存镜像</string>

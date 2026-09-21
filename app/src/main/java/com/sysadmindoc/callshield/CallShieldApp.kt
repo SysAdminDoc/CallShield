@@ -102,10 +102,13 @@ class CallShieldApp :
 
             registerCacheInvalidationObservers()
 
+            // Before the read starts, so a worker that runs first waits for it.
+            FeedMirror.startLoading()
             appScope.launch {
                 try {
                     SpamRepository.getInstance(this@CallShieldApp).feedMirrorUrl.collect { FeedMirror.set(it) }
                 } catch (e: Exception) {
+                    FeedMirror.loadFailed()
                     Log.w("CallShieldApp", "Failed to follow the feed mirror setting", e)
                 }
             }
