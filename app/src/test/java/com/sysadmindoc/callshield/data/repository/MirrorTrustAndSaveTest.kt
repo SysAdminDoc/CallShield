@@ -5,6 +5,8 @@ import androidx.test.core.app.ApplicationProvider
 import com.sysadmindoc.callshield.data.IsolatedRepositoryFixture
 import com.sysadmindoc.callshield.data.model.HotNumber
 import com.sysadmindoc.callshield.data.model.SpamDatabase
+import com.sysadmindoc.callshield.data.model.SpamShardManifest
+import com.sysadmindoc.callshield.data.remote.GitHubDataSource
 import com.sysadmindoc.callshield.data.remote.HotFeedDataSource
 import com.sysadmindoc.callshield.data.remote.HotFeedSnapshot
 import com.sysadmindoc.callshield.data.remote.SpamDataSource
@@ -63,6 +65,41 @@ class MirrorTrustAndSaveTest {
     }
 
     @Test
+    fun `a database the mirror served isn't filed under GitHub's newest commit`() {
+        // A mirror copy can be hours behind; under that id every later sync would call it up to date.
+        remote.headCommit = "c41"
+        remote.mirrorServed += GitHubDataSource.DATA_PATH
+
+        runBlocking { repository.syncFromGitHub(force = true) }
+
+        assertNull(runBlocking { repository.readLastDataSha() })
+    }
+
+    @Test
+    fun `a sharded database the mirror served isn't filed under GitHub's newest commit either`() {
+        remote.headCommit = "c41"
+        remote.sharded = true
+        remote.mirrorServed += GitHubDataSource.SHARD_MANIFEST_PATH
+
+        runBlocking { repository.syncFromGitHub(force = true) }
+
+        assertNull(runBlocking { repository.readLastDataSha() })
+    }
+
+    @Test
+    fun `a database GitHub served is filed under its commit, whatever else the mirror served`() {
+        remote.mirrorServed += GitHubDataSource.HOT_LIST_PATH
+        remote.headCommit = "c41"
+        runBlocking { repository.syncFromGitHub(force = true) }
+        assertEquals("c41", runBlocking { repository.readLastDataSha() })
+
+        remote.headCommit = "c42"
+        remote.sharded = true
+        runBlocking { repository.syncFromGitHub(force = true) }
+        assertEquals("c42", runBlocking { repository.readLastDataSha() })
+    }
+
+    @Test
     fun `a mirror is saved only once it serves the signed manifest`() {
         remote.mirrorServes = false
         assertEquals(FeedMirrorSave.UNVERIFIED, runBlocking { repository.saveFeedMirrorUrl(MIRROR) })
@@ -78,16 +115,32 @@ class MirrorTrustAndSaveTest {
     private class MirrorFedRemote : SpamDataSource {
         override var gitHubTrustFailing = false
         var mirrorServes = true
+        var headCommit: String? = null
+        var sharded = false
+        val mirrorServed = mutableSetOf<String>()
+
+        override fun lastServedByMirror(path: String) = path in mirrorServed
+
+        override suspend fun fetchSpamShardManifest(
+            owner: String,
+            repo: String,
+        ): Result<SpamShardManifest> = if (sharded) Result.success(EMPTY_MANIFEST) else Result.failure(UnsupportedOperationException("legacy only"))
 
         override suspend fun fetchSpamDatabase(
             owner: String,
             repo: String,
-        ) = Result.success(SpamDatabase(version = 2, updated = "2026-09-21", numbers = emptyList(), prefixes = emptyList()))
+        ): Result<SpamDatabase> =
+            if (sharded) {
+                // So a sharded sync that fell back can't pass for one that worked.
+                Result.failure(IllegalStateException("the manifest should have served this sync"))
+            } else {
+                Result.success(SpamDatabase(version = 2, updated = "2026-09-21", numbers = emptyList(), prefixes = emptyList()))
+            }
 
         override suspend fun checkForUpdate(
             owner: String,
             repo: String,
-        ): Result<String> = Result.failure(IOException("offline"))
+        ): Result<String> = headCommit?.let { Result.success(it) } ?: Result.failure(IOException("offline"))
 
         override fun parseSpamDatabaseJson(body: String): Result<SpamDatabase> = Result.failure(UnsupportedOperationException())
 
@@ -139,5 +192,15 @@ class MirrorTrustAndSaveTest {
 
     private companion object {
         const val MIRROR = "https://mirror.example.test/callshield/"
+        val EMPTY_MANIFEST =
+            SpamShardManifest(
+                formatVersion = 1,
+                version = 2,
+                updated = "2026-09-21",
+                legacyPath = GitHubDataSource.DATA_PATH,
+                shardDirectory = "data/spam_number_shards",
+                shardCount = 256,
+                shards = emptyList(),
+            )
     }
 }

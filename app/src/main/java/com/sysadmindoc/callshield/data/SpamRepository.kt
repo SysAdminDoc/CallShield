@@ -996,6 +996,8 @@ class SpamRepository(
 
     internal suspend fun readFeedTrustFailedAt(): Long = settingsRepository.readFeedTrustFailedAt()
 
+    internal suspend fun readLastDataSha(): String? = settingsRepository.readLastDataSha()
+
     internal suspend fun readFeedTrustNoticeVersion(): Int? = settingsRepository.readFeedTrustNoticeVersion()
 
     internal suspend fun recordFeedTrustNoticeVersion(version: Int) = settingsRepository.recordFeedTrustNoticeVersion(version)

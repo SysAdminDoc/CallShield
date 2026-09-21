@@ -36,6 +36,9 @@ interface SpamDataSource {
     /** True while GitHub itself fails certificate verification, even when a mirror is serving the feeds. */
     val gitHubTrustFailing: Boolean get() = false
 
+    /** Whether the last successful fetch of [path] came from the user's mirror rather than GitHub. */
+    fun lastServedByMirror(path: String): Boolean = false
+
     /** Whether [baseUrl] serves this project's signed manifest, checked before a mirror is saved. */
     suspend fun probeMirror(baseUrl: String): Result<Unit> = Result.failure(UnsupportedOperationException("Mirrors are unavailable"))
 }

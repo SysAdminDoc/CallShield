@@ -162,6 +162,7 @@ class GitHubDataSourceFetchTest {
         masterStatus: Map<String, Int> = emptyMap(),
         commitFiles: Map<String, ByteArray>? = null,
         apiFailure: IOException? = null,
+        state: GitHubFetchState = GitHubFetchState(),
     ) = GitHubDataSource(
         Interceptor { chain ->
             val url = chain.request().url.toString()
@@ -191,6 +192,7 @@ class GitHubDataSourceFetchTest {
                 .build()
         },
         clock = { now },
+        state = state,
     )
 
     @Test
@@ -363,6 +365,52 @@ class GitHubDataSourceFetchTest {
         // A host that answers every path with a page, 200 and all.
         assertTrue(runBlocking { dataSource(emptyMap(), mapOf(MANIFEST to html, "$MANIFEST.sig" to html)).probeMirror(MIRROR) }.isFailure)
         assertTrue(runBlocking { dataSource(emptyMap(), signed(MANIFEST)).probeMirror("http://mirror.example.test/callshield/") }.isFailure)
+    }
+
+    @Test
+    fun `a download that stalls after it started doesn't count as an outage`() {
+        // A slow body from a live GitHub is no reason to prefer a mirror that can be hours behind.
+        FeedMirror.set(MIRROR)
+        val source = dataSource(emptyMap(), signed(HOT_LIST), gitHubFailure = SocketTimeoutException("timeout"))
+        runBlocking { source.fetchHotListSnapshot(OWNER, REPO) }
+
+        requested.clear()
+        runBlocking { source.fetchHotListSnapshot(OWNER, REPO) }
+
+        assertTrue(requested.toString(), !requested.first().startsWith(MIRROR))
+    }
+
+    @Test
+    fun `data sources that share state share what they learned about GitHub`() {
+        FeedMirror.set(MIRROR)
+        val shared = GitHubFetchState()
+        val first = dataSource(emptyMap(), signed(HOT_LIST), gitHubFailure = SocketTimeoutException("connect timed out"), state = shared)
+        runBlocking { first.fetchHotListSnapshot(OWNER, REPO) }
+
+        requested.clear()
+        val second = dataSource(emptyMap(), signed(MODEL), state = shared)
+        runBlocking { second.fetchModelWeightsJson() }
+
+        assertTrue(requested.toString(), requested.first().startsWith(MIRROR))
+        assertTrue("production instances share one state", GitHubDataSource().state === GitHubDataSource().state)
+    }
+
+    @Test
+    fun `each file remembers whether the mirror served it`() {
+        // One data source serves every caller, so a hot list the mirror served
+        // mustn't mark a file GitHub served as the mirror's.
+        FeedMirror.set(MIRROR)
+        gitHubOutage = SSLPeerUnverifiedException("pin mismatch")
+        val source = dataSource(signed(HOT_LIST, MODEL), signed(HOT_LIST))
+        runBlocking { source.fetchHotListSnapshot(OWNER, REPO) }
+        gitHubOutage = null
+        runBlocking { source.fetchModelWeightsJson() }
+
+        assertTrue(source.lastServedByMirror(HOT_LIST))
+        assertFalse(source.lastServedByMirror(MODEL))
+
+        runBlocking { source.fetchHotListSnapshot(OWNER, REPO) }
+        assertFalse("GitHub served it this time", source.lastServedByMirror(HOT_LIST))
     }
 
     private fun signed(vararg paths: String) = paths.flatMap { path -> listOf(path to file(path), "$path.sig" to file("$path.sig")) }.toMap()

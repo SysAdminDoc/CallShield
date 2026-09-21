@@ -92,7 +92,7 @@ class SyncRepository(
                         val shardResult =
                             applyShardedDatabase(
                                 manifest = manifestResult.getOrThrow(),
-                                sha = preFetchSha,
+                                sha = commitIdFor(preFetchSha, GitHubDataSource.SHARD_MANIFEST_PATH),
                                 force = force,
                             )
                         if (shardResult.isSuccess) {
@@ -120,7 +120,7 @@ class SyncRepository(
                     recordFeedTrust(result)
                     if (result.isSuccess) {
                         val database = result.getOrThrow()
-                        val newSha = preFetchSha
+                        val newSha = commitIdFor(preFetchSha, GitHubDataSource.DATA_PATH)
                         val (numberCount, prefixCount) =
                             persistSpamDatabase(
                                 database = database,
@@ -950,6 +950,18 @@ class SyncRepository(
             HttpClient.isCertificateTrustFailure(result.exceptionOrNull()) -> settingsRepository.recordFeedTrust(failed = true)
         }
     }
+
+    /**
+     * GitHub's commit id for the copy of [path] just fetched, or null when
+     * the mirror served it. A mirror's copy can be hours behind GitHub's
+     * newest commit, and filed under that commit's id it would read as up to
+     * date from then on. A null id leaves the stored one alone, so the next
+     * sync looks again.
+     */
+    private fun commitIdFor(
+        preFetchSha: String?,
+        path: String,
+    ): String? = preFetchSha.takeUnless { remote.lastServedByMirror(path) }
 
     private fun shouldRetrySync(message: String): Boolean {
         val permanentFailureCodes = listOf("HTTP 400", "HTTP 401", "HTTP 403", "HTTP 404")

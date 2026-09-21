@@ -79,6 +79,9 @@ class CallShieldApp :
             // Install the uncaught-exception handler BEFORE anything else so we
             // capture crashes even during app-startup init.
             CrashReporter.install(this)
+            // Before any worker is scheduled, so one that runs at once waits for
+            // the stored mirror setting instead of building its sources without it.
+            FeedMirror.startLoading()
             try {
                 // A restore journal is normally absent, so this is one indexed
                 // Room read. When present it must reconcile before workers or
@@ -102,8 +105,6 @@ class CallShieldApp :
 
             registerCacheInvalidationObservers()
 
-            // Before the read starts, so a worker that runs first waits for it.
-            FeedMirror.startLoading()
             appScope.launch {
                 try {
                     SpamRepository.getInstance(this@CallShieldApp).feedMirrorUrl.collect { FeedMirror.set(it) }

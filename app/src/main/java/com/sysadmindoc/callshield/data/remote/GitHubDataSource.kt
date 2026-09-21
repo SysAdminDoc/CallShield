@@ -18,10 +18,11 @@ import okhttp3.Request
 import okhttp3.Response
 import okio.Buffer
 import java.io.IOException
-import java.io.InterruptedIOException
 import java.net.ConnectException
 import java.net.NoRouteToHostException
+import java.net.SocketTimeoutException
 import java.net.UnknownHostException
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 
 internal enum class GitHubFeedFailureReason {
@@ -64,26 +65,53 @@ private val SHARD_ID_REGEX = Regex("[0-9a-f]{2}")
 private val SHA256_REGEX = Regex("[0-9a-f]{64}")
 private val SHARD_PATH_REGEX = Regex("data/spam_number_shards/[0-9a-f]{2}\\.json")
 
+/**
+ * What GitHubDataSource has learned about GitHub lately. HotDataSync,
+ * SyncRepository and the model sync each build their own GitHubDataSource,
+ * so production instances share one of these: an outage one of them saw, a
+ * branch lookup that failed, or a pin failure holds for the others. Tests
+ * get their own, so they can't leak state into each other.
+ */
+internal class GitHubFetchState {
+    val lock = Any()
+
+    // Resolved default branch per "owner/repo" -> (branch, resolvedAtMs).
+    val defaultBranchCache = mutableMapOf<String, Pair<String, Long>>()
+    val defaultBranchFailedAt = mutableMapOf<String, Long>()
+
+    @Volatile
+    var gitHubUnreachableAt: Long? = null
+
+    @Volatile
+    var gitHubTrustFailing: Boolean = false
+
+    companion object {
+        val shared = GitHubFetchState()
+    }
+}
+
 class GitHubDataSource internal constructor(
     /** Tests serve canned responses through this instead of the network. */
     testInterceptor: Interceptor?,
     /** Tests move time on to end a GitHub outage window. */
     private val clock: () -> Long = System::currentTimeMillis,
+    /** [GitHubFetchState.shared] in production; tests get their own. */
+    internal val state: GitHubFetchState = GitHubFetchState(),
 ) : SpamDataSource,
     HotFeedDataSource {
-    constructor() : this(null)
+    constructor() : this(null, System::currentTimeMillis, GitHubFetchState.shared)
 
     // Derived client with longer timeouts for large database downloads;
     // shares the connection pool with other callers via HttpClient.shared.
-    // The call timeout bounds a whole download: connect and read timeouts
-    // alone let a host that trickles bytes hold a sync open indefinitely.
+    // No whole-call timeout: the 14.5 MB legacy database needs about five
+    // minutes at 48 KB/s, and a live but slow download must be allowed to
+    // finish. The read timeout already ends one that stops sending.
     private val client =
         HttpClient.shared
             .newBuilder()
             .apply { testInterceptor?.let(::addInterceptor) }
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
-            .callTimeout(CALL_TIMEOUT_MINUTES, TimeUnit.MINUTES)
             .build()
 
     private val moshi =
@@ -108,23 +136,35 @@ class GitHubDataSource internal constructor(
         )
     private val latestReleaseAdapter = moshi.adapter(GitHubReleasePayload::class.java)
 
-    // Cache of resolved default branch per "owner/repo" → (branch, resolvedAtMs).
-    private val defaultBranchLock = Any()
-    private val defaultBranchCache = mutableMapOf<String, Pair<String, Long>>()
-    private val defaultBranchFailedAt = mutableMapOf<String, Long>()
+    private val defaultBranchLock get() = state.lock
+    private val defaultBranchCache get() = state.defaultBranchCache
+    private val defaultBranchFailedAt get() = state.defaultBranchFailedAt
 
-    // When a GitHub download last failed without an answer: a timeout, a
-    // refused or unreachable connection, a name that won't resolve. For
-    // GITHUB_OUTAGE_MS after that, fetches ask the mirror first.
-    @Volatile
-    private var gitHubUnreachableAt: Long? = null
+    // When GitHub last couldn't be connected to at all. For GITHUB_OUTAGE_MS
+    // after that, fetches ask the mirror first.
+    private var gitHubUnreachableAt: Long?
+        get() = state.gitHubUnreachableAt
+        set(value) {
+            state.gitHubUnreachableAt = value
+        }
 
     // Set when GitHub fails certificate verification and cleared when GitHub
     // serves a file. A mirror serving meanwhile leaves it set: the pins still
     // need an app update, and the update notice has to hear about it.
-    @Volatile
-    override var gitHubTrustFailing: Boolean = false
-        private set
+    override var gitHubTrustFailing: Boolean
+        get() = state.gitHubTrustFailing
+        private set(value) {
+            state.gitHubTrustFailing = value
+        }
+
+    // Which files the mirror served the last time each was fetched. A database
+    // the mirror served can be hours older than GitHub's newest commit, so
+    // SyncRepository doesn't file it under that commit's id. Kept per file
+    // because this instance is shared: a hot-list fetch running beside a
+    // sync mustn't answer for the database.
+    private val servedByMirror = ConcurrentHashMap<String, Boolean>()
+
+    override fun lastServedByMirror(path: String): Boolean = servedByMirror[path] == true
 
     companion object {
         const val DEFAULT_REPO_OWNER = "SysAdminDoc"
@@ -175,9 +215,6 @@ class GitHubDataSource internal constructor(
 
         /** How long the mirror goes first after GitHub couldn't be reached at all. */
         internal const val GITHUB_OUTAGE_MS = 10L * 60L * 1000L
-
-        /** Bounds one whole download, the 16 MB legacy database included. */
-        private const val CALL_TIMEOUT_MINUTES = 5L
 
         private val COMMIT_SHA_REGEX = Regex("[0-9a-f]{40}(?:[0-9a-f]{24})?")
         private const val MAX_COMMIT_SHA_BYTES = 128L
@@ -639,6 +676,7 @@ class GitHubDataSource internal constructor(
         for (source in feedSources(path, owner, repo)) {
             try {
                 fetchVerified(path, source)?.let {
+                    servedByMirror[path] = source.mirror
                     if (!source.mirror) {
                         gitHubUnreachableAt = null
                         gitHubTrustFailing = false
@@ -698,10 +736,12 @@ class GitHubDataSource internal constructor(
 
     /** A GitHub download that got no answer at all, as opposed to one GitHub refused or failed. */
     private fun isUnreachable(error: Exception): Boolean =
-        error is InterruptedIOException ||
-            error is ConnectException ||
+        error is ConnectException ||
             error is NoRouteToHostException ||
-            error is UnknownHostException
+            error is UnknownHostException ||
+            // A connect that timed out, not a read that stalled after the body
+            // started: a slow download from a live GitHub isn't an outage.
+            (error is SocketTimeoutException && error.message.orEmpty().contains("connect", ignoreCase = true))
 
     /**
      * [path] from [source], size-checked and signature-checked, or null for
