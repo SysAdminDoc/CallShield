@@ -30,6 +30,10 @@ All notable changes to CallShield will be documented in this file.
   landlines were being blocked. International numbers now skip the model.
 - A short but valid international number (the Faroes, Greenland, Andorra, some
   German landlines) is no longer counted as a malformed one by the heuristics.
+- Contact-group trust now asks the contacts database one simple question per
+  matched contact. Android 17's stricter contacts rules refuse the combined
+  query it used before, and because that refusal was caught, trusting a group
+  would have quietly stopped working once the app targets Android 17.
 - A call your carrier verified no longer rings through automatically when its
   number is on the spam database. Verification proves the caller owns the line,
   not that the call is wanted, and about half of all robocalls carry it. It now
