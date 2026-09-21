@@ -787,6 +787,17 @@ class SpamRepository(
         origid = origid,
     )
 
+    /** Logs a flagged text once, however many screening paths saw it ([BlocklistRepository.logFlaggedText]). */
+    suspend fun logFlaggedText(
+        number: String,
+        smsBody: String?,
+        matchReason: String,
+        confidence: Int,
+        ruleId: Long? = null,
+        pipelineDiagnostic: String? = null,
+        timestamp: Long = System.currentTimeMillis(),
+    ): Boolean = blocklistRepository.logFlaggedText(number, smsBody, matchReason, confidence, ruleId, pipelineDiagnostic, timestamp)
+
     @Suppress("LongParameterList")
     suspend fun logScreeningExemption(
         number: String,

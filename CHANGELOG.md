@@ -102,6 +102,10 @@ All notable changes to CallShield will be documented in this file.
   confidence, and the app and database versions, ready to post, and nothing
   from your messages, contacts or call log. There's no account and nothing is
   stored.
+- A spam text in Google or Samsung Messages is logged and alerted once. The
+  SMS receiver and the notification reader each logged it, so it showed up
+  twice in the log and the statistics. The alert now says the text was
+  flagged, not blocked, since it still reaches your messages app.
 
 ### Live caller lookup
 

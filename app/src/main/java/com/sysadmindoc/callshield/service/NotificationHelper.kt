@@ -291,6 +291,18 @@ object NotificationHelper {
         notificationManager.cancel(PROTECTION_HEALTH_NOTIFICATION_ID)
     }
 
+    /** A call is blocked. A text still reaches the messages app, so it's only flagged. */
+    internal fun blockedAlertTitle(
+        context: Context,
+        isCall: Boolean,
+        typeText: String,
+    ): String =
+        if (isCall) {
+            context.getString(R.string.notif_blocked_title, typeText)
+        } else {
+            context.getString(R.string.notif_flagged_text_title)
+        }
+
     fun notifyBlocked(
         context: Context,
         number: String,
@@ -369,7 +381,7 @@ object NotificationHelper {
             NotificationCompat
                 .Builder(context, CHANNEL_BLOCKED)
                 .setSmallIcon(R.drawable.ic_launcher_monochrome)
-                .setContentTitle(context.getString(R.string.notif_blocked_title, typeText))
+                .setContentTitle(blockedAlertTitle(context, isCall, typeText))
                 .setContentText(
                     context.getString(
                         R.string.notif_blocked_text,

@@ -961,6 +961,7 @@
     <string name="notif_message_screening_generic_reason">可疑消息内容</string>
     <string name="notif_category_policy_reason">%1$s · %2$s 规则</string>
     <string name="notif_blocked_title">已拦截垃圾 %s</string>
+    <string name="notif_flagged_text_title">已标记一条垃圾短信</string>
     <string name="notif_blocked_text">%1$s（%2$s）</string>
     <string name="notif_type_call">来电</string>
     <string name="notif_type_sms">短信</string>
