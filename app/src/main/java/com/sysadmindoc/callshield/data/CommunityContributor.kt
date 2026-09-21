@@ -47,12 +47,19 @@ object CommunityContributor {
     private val reportDomainPattern = Regex("^[a-z0-9](?:[a-z0-9.-]{0,251}[a-z0-9])?$")
     private val urlIndicatorPattern = Regex("^[a-z_]{3,40}$")
 
-    private val client =
+    // The call timeout bounds the whole attempt (DNS, every route tried, the
+    // write, OkHttp's own retry), so it always ends before the outbox's queued
+    // copy is due to go out, and a submission that can't be cancelled can't
+    // hang either.
+    internal val client =
         HttpClient.shared
             .newBuilder()
             .connectTimeout(10, TimeUnit.SECONDS)
             .readTimeout(10, TimeUnit.SECONDS)
+            .callTimeout(REPORT_CALL_TIMEOUT_SECONDS, TimeUnit.SECONDS)
             .build()
+
+    internal const val REPORT_CALL_TIMEOUT_SECONDS = 60L
 
     /**
      * Typed outcome so the UI can localize and color-code without sniffing

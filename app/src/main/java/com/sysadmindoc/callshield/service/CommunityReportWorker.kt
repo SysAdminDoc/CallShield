@@ -75,7 +75,7 @@ class CommunityReportWorker internal constructor(
         private const val KEY_SMS_URL_INDICATORS = "sms_url_indicators"
         private const val BACKOFF_MINUTES = 5L
 
-        /** Longer than the direct attempt's connect and read timeouts together. */
+        /** Longer than the direct attempt's whole-call timeout, so the two never overlap. */
         internal const val QUEUED_DELAY_MINUTES = 2L
 
         /** Attempts that ran with a network; waiting offline doesn't use them up. */

@@ -5,11 +5,14 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import com.sysadmindoc.callshield.data.CommunityContributor.ContributeOutcome
 import com.sysadmindoc.callshield.data.CommunityContributor.ContributeResult
 import com.sysadmindoc.callshield.data.repository.SettingsRepository
+import com.sysadmindoc.callshield.service.CommunityReportWorker
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -184,6 +187,104 @@ class CommunityReportSubmitterTest {
         cancelSend = false
         assertEquals(ContributeOutcome.ALREADY_SUBMITTED, store.submit("+12122340101").outcome)
     }
+
+    @Test
+    fun `a report delivered after its caller was cancelled still takes its queued copy back out`() {
+        // Leaving Lookup mid-send used to throw the Worker's 200 away, and the
+        // outbox then sent the report again two minutes later.
+        val store = store()
+        val sending = CompletableDeferred<Unit>()
+        val answered = CompletableDeferred<Unit>()
+        val submitter =
+            gatedSubmitter(store, transport = { report ->
+                sent += report
+                sending.complete(Unit)
+                answered.await()
+                ContributeResult(true, "stored", ContributeOutcome.REPORTED_SPAM)
+            })
+
+        runBlocking {
+            val job = launch(Dispatchers.Default) { submitter.submit("+12122340101", "spam", null) }
+            sending.await()
+            job.cancel()
+            answered.complete(Unit)
+            job.join()
+        }
+
+        assertEquals(listOf("report-1"), queued.map { it.id })
+        assertEquals(listOf("report-1"), dequeued.map { it.id })
+    }
+
+    @Test
+    fun `a claim is never left without its queued copy when the caller is cancelled`() {
+        val store = store()
+        val claimed = CompletableDeferred<Unit>()
+        val resume = CompletableDeferred<Unit>()
+        val submitter =
+            gatedSubmitter(store, claim = { number, vote, time ->
+                store.settings.claimCommunityReport(number, vote, time).also {
+                    claimed.complete(Unit)
+                    resume.await()
+                }
+            })
+
+        runBlocking {
+            val job = launch(Dispatchers.Default) { submitter.submit("+12122340101", "spam", null) }
+            claimed.await()
+            job.cancel()
+            resume.complete(Unit)
+            job.join()
+        }
+
+        assertEquals(listOf("report-1"), queued.map { it.id })
+        assertEquals(listOf("report-1"), sent.map { it.id })
+    }
+
+    @Test
+    fun `a send torn down with no queued copy gives the claim back`() {
+        val store = store()
+        cancelSend = true
+        val submitter = gatedSubmitter(store, enqueue = { error("WorkManager is unavailable") })
+
+        runBlocking {
+            try {
+                submitter.submit("+12122340101", "spam", null)
+                fail("the cancellation should reach the caller")
+            } catch (_: CancellationException) {
+                // Nothing will deliver it now, so it mustn't read as sent.
+            }
+        }
+
+        cancelSend = false
+        assertEquals(ContributeOutcome.REPORTED_SPAM, store.submit("+12122340101").outcome)
+    }
+
+    @Test
+    fun `the direct attempt always ends before the queued copy is due`() {
+        val callTimeout = TimeUnit.SECONDS.toMillis(CommunityContributor.REPORT_CALL_TIMEOUT_SECONDS)
+
+        assertEquals(callTimeout.toInt(), CommunityContributor.client.callTimeoutMillis)
+        assertTrue(callTimeout < TimeUnit.MINUTES.toMillis(CommunityReportWorker.QUEUED_DELAY_MINUTES))
+    }
+
+    private fun gatedSubmitter(
+        store: Store,
+        claim: suspend (String, String, Long) -> Boolean = store.settings::claimCommunityReport,
+        enqueue: suspend (CommunityReport) -> Unit = { report -> queued += report },
+        transport: suspend (CommunityReport) -> ContributeResult = { report ->
+            sent += report
+            if (cancelSend) throw CancellationException("the send was torn down")
+            ContributeResult(true, "stored", ContributeOutcome.REPORTED_SPAM)
+        },
+    ) = CommunityReportSubmitter(
+        claim = claim,
+        release = store.settings::releaseCommunityReport,
+        transport = transport,
+        enqueue = enqueue,
+        dequeue = { report -> dequeued += report },
+        clock = { now },
+        newId = { "report-${++nextId}" },
+    )
 
     @Test
     fun `a refused report leaves nothing queued and can be made again`() {

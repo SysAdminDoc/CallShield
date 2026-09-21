@@ -27,10 +27,17 @@ internal data class CommunityReport(
  *
  * The claim comes first, so a second tap while the first is in flight is
  * suppressed too. The report goes into the outbox before the direct attempt:
- * if the caller is cancelled or the process dies mid-send, the queued copy
- * still goes out, carrying the same id. A delivered report, or one refused
- * for good, takes its queued copy back out, and a refusal also releases the
- * claim so the user isn't told it was already sent.
+ * if the process dies mid-send, the queued copy still goes out, carrying the
+ * same id. A delivered report, or one refused for good, takes its queued copy
+ * back out, and a refusal also releases the claim so the user isn't told it
+ * was already sent.
+ *
+ * Once started, a submission runs to the end even if its caller is cancelled,
+ * the way a user leaving Lookup mid-send cancels it. Cancelled after the send,
+ * a delivered report would keep its queued copy, and the outbox would send it
+ * again, which a Worker without id dedup stores twice. Cancelled after the
+ * claim, the report would be marked sent for a day with nothing queued. Every
+ * step is bounded, the send by the report client's call timeout.
  */
 internal class CommunityReportSubmitter(
     private val claim: suspend (number: String, vote: String, now: Long) -> Boolean,
@@ -41,8 +48,14 @@ internal class CommunityReportSubmitter(
     private val clock: () -> Long = System::currentTimeMillis,
     private val newId: () -> String = { UUID.randomUUID().toString() },
 ) {
-    @Suppress("TooGenericExceptionCaught")
     suspend fun submit(
+        number: String,
+        type: String,
+        indicators: SmsReportIndicators?,
+    ): ContributeResult = withContext(NonCancellable) { submitToTheEnd(number, type, indicators) }
+
+    @Suppress("TooGenericExceptionCaught")
+    private suspend fun submitToTheEnd(
         number: String,
         type: String,
         indicators: SmsReportIndicators?,
@@ -61,26 +74,29 @@ internal class CommunityReportSubmitter(
             try {
                 enqueue(report)
                 true
-            } catch (e: CancellationException) {
-                withContext(NonCancellable) { release(normalized, vote) }
-                throw e
             } catch (_: Exception) {
                 // WorkManager couldn't take it. The direct attempt below still
                 // runs; it just has no safety net.
                 false
             }
-        val result = transport(report)
+        val result =
+            try {
+                transport(report)
+            } catch (e: CancellationException) {
+                // The send itself was torn down. The queued copy goes out
+                // later with the same id, so the claim stands.
+                if (!queued) release(normalized, vote)
+                throw e
+            }
         return when {
             result.success -> {
-                withContext(NonCancellable) { if (queued) dequeue(report) }
+                if (queued) dequeue(report)
                 result
             }
 
             !result.outcome.isTransient || !queued -> {
-                withContext(NonCancellable) {
-                    if (queued) dequeue(report)
-                    release(normalized, vote)
-                }
+                if (queued) dequeue(report)
+                release(normalized, vote)
                 result
             }
 

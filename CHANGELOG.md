@@ -165,12 +165,14 @@ All notable changes to CallShield will be documented in this file.
   as a robocall counts as one vote a day, not two. A report the server turns
   down, or one the outbox gives up on, can be made again the same day. Lookup
   now says when a report was queued or already made today instead of always
-  saying it was sent. Each report carries an id, so a resend can be told apart
-  from a second report.
+  saying it was sent. Leaving the screen mid-send doesn't send a report twice
+  either, since one that got through takes its queued copy back out. Each
+  report now carries an id, which the updated Worker below uses to tell a
+  resend from a second report.
 - The app treats the Worker's "already submitted" answer as delivered only when
-  the Worker says it stored the report. The deployed Worker writes that marker
-  before storing, so its bare answer can mean the report was lost, and the app
-  now tries again later instead of calling it sent.
+  the Worker says it stored the report. A bare "already submitted" from an
+  older Worker can mean the report was never stored, so the app now tries again
+  later instead of calling it sent.
 - The app's own unit tests no longer send reports. One of them had posted two
   fictional numbers, +1 555-123-4567 and +1 555-987-6543, to the report service
   on every run since July, and each landed in this repository's report queue.
