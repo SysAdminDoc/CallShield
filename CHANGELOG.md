@@ -142,6 +142,10 @@ All notable changes to CallShield will be documented in this file.
   comment could otherwise still sign feeds that new installs refuse. The data
   README also stops telling you to edit the database after signing it, since
   the scripts bump its version themselves.
+- `generate_hot_list.py` refuses the fixed test clock (`CALLSHIELD_NOW`) when it
+  would write the real data directory. A feed published with a past stamp is
+  refused by every phone as a replay, and one stamped in the future would block
+  every genuine feed until that time passed.
 
 ### Community reports
 

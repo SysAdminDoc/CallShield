@@ -37,7 +37,8 @@ from report_dedup import (
     validated_reporter_bucket,
 )
 
-DATA_DIR = Path(os.environ.get("CALLSHIELD_DATA_DIR", Path(__file__).parent.parent / "data"))
+REPO_DATA_DIR = Path(__file__).parent.parent / "data"
+DATA_DIR = Path(os.environ.get("CALLSHIELD_DATA_DIR", REPO_DATA_DIR))
 REPORTS_DIR = Path(os.environ.get("CALLSHIELD_REPORTS_DIR", DATA_DIR / "reports"))
 DB_FILE = DATA_DIR / "spam_numbers.json"
 HOT_LIST_FILE = DATA_DIR / "hot_numbers.json"
@@ -60,6 +61,13 @@ MAX_NEW_CAMPAIGN_RANGES = 5
 def current_time_utc() -> datetime:
     override = os.environ.get("CALLSHIELD_NOW")
     if override:
+        # A fixed clock is for tests. Devices refuse a feed stamped older than
+        # the one they hold, so a publish carrying a past value is refused as
+        # a replay, and a future one blocks every genuine feed until it passes.
+        if DATA_DIR.resolve() == REPO_DATA_DIR.resolve():
+            raise SystemExit(
+                "CALLSHIELD_NOW is for tests. Unset it, or point CALLSHIELD_DATA_DIR at a scratch directory."
+            )
         return datetime.fromisoformat(override.replace("Z", "+00:00")).astimezone(timezone.utc)
     return datetime.now(timezone.utc)
 

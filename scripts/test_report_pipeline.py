@@ -548,7 +548,40 @@ def assert_external_source_parsers() -> None:
         module.time.sleep = original_sleep
 
 
+def assert_fixed_clock_is_for_tests_only() -> None:
+    """A feed stamped by CALLSHIELD_NOW and published would be refused by every
+    device as a replay, or block every later feed until its time passed. So the
+    repository's own data directory refuses the fixed clock. Checked in-process,
+    so nothing here can write to the real data directory."""
+    sys.path.insert(0, str(SCRIPTS_DIR))
+    import generate_hot_list
+
+    original_now = os.environ.get("CALLSHIELD_NOW")
+    original_dir = generate_hot_list.DATA_DIR
+    os.environ["CALLSHIELD_NOW"] = NOW
+    try:
+        generate_hot_list.DATA_DIR = ROOT / "data"
+        try:
+            generate_hot_list.current_time_utc()
+        except SystemExit:
+            pass
+        else:
+            raise AssertionError("CALLSHIELD_NOW was honoured for the repository's own data directory")
+        with tempfile.TemporaryDirectory() as tmp:
+            generate_hot_list.DATA_DIR = Path(tmp)
+            stamp = generate_hot_list.current_time_utc().isoformat()
+            assert stamp == NOW, f"a scratch data directory keeps the fixed clock, got {stamp}"
+    finally:
+        generate_hot_list.DATA_DIR = original_dir
+        if original_now is None:
+            os.environ.pop("CALLSHIELD_NOW", None)
+        else:
+            os.environ["CALLSHIELD_NOW"] = original_now
+
+
 def main() -> None:
+    assert_fixed_clock_is_for_tests_only()
+
     with tempfile.TemporaryDirectory() as tmp:
         assert_collapse_guard(Path(tmp) / "data")
 
