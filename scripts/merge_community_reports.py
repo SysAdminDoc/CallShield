@@ -8,7 +8,7 @@ import argparse
 import json
 import os
 from collections import Counter
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from phone_normalization import is_plausible_number, validated_report_number
 
@@ -32,6 +32,11 @@ DB_FILE = DATA_DIR / "spam_numbers.json"
 REPORTS_DIR = Path(os.environ.get("CALLSHIELD_REPORTS_DIR", DATA_DIR / "reports"))
 NOT_SPAM_REVIEW_FILE = DATA_DIR / "not_spam_review.json"
 SOURCE_SNAPSHOT_FILE = DATA_DIR / "source-snapshot.json"
+MERGED_IDS_FILE = DATA_DIR / "merged_report_ids.json"
+# How long a merged report's id is remembered. The app resends a report whose
+# answer it never saw, and a resend that lands after its original was merged
+# and deleted is invisible to the queue.
+MERGED_ID_RETENTION_DAYS = 14
 
 COMMUNITY_DESCRIPTION = "Community reported"
 COMMUNITY_SOURCE = "community"
@@ -46,6 +51,32 @@ def quarantine(report_file: Path, rejected_dir: Path) -> None:
         report_file.rename(rejected_dir / report_file.name)
     except OSError:
         pass
+
+
+def load_merged_report_ids() -> dict[str, str]:
+    """report_id -> the day it was merged, for reports merged recently.
+
+    An unreadable ledger stops the merge instead of reading as empty, which
+    would count every resend in the queue a second time.
+    """
+    if not MERGED_IDS_FILE.exists():
+        return {}
+    try:
+        ids = json.loads(MERGED_IDS_FILE.read_text(encoding="utf-8"))["ids"]
+        if not isinstance(ids, dict):
+            raise ValueError("ids is not an object")
+    except (OSError, ValueError, KeyError, TypeError) as error:
+        raise SystemExit(f"{MERGED_IDS_FILE.name} can't be read ({error}). Fix or restore it before merging.") from error
+    return {str(report_id): str(day) for report_id, day in ids.items() if validated_report_id(report_id)}
+
+
+def remember_merged_report_ids(merged: dict[str, str], counted: set[str], today: str) -> None:
+    """Add this run's ids and drop those past MERGED_ID_RETENTION_DAYS."""
+    cutoff = (datetime.strptime(today, "%Y-%m-%d") - timedelta(days=MERGED_ID_RETENTION_DAYS)).strftime("%Y-%m-%d")
+    kept = {report_id: day for report_id, day in merged.items() if day >= cutoff}
+    kept.update(dict.fromkeys(counted, today))
+    if kept != merged or MERGED_IDS_FILE.exists():
+        atomic_write_json(MERGED_IDS_FILE, {"retention_days": MERGED_ID_RETENTION_DAYS, "ids": dict(sorted(kept.items()))})
 
 
 def load_review_candidates() -> list[dict]:
@@ -273,6 +304,11 @@ def main(argv: list[str] | None = None):
         (validated_report_id(peek.get("report_id")), parse_reported_at(peek.get("reported_at")), report_file.name)
         for report_file, _, peek in peeked
     )
+    # A resend whose original went in with an earlier drain.
+    merged_ids = load_merged_report_ids()
+    previously_merged = {
+        report_file.name for report_file, _, peek in peeked if validated_report_id(peek.get("report_id")) in merged_ids
+    }
     burst_candidates = []
     identity_duplicates = set()
     seen_reporter_days = set()
@@ -306,6 +342,8 @@ def main(argv: list[str] | None = None):
     # line per file for a burst of the same fictional number.
     implausible: Counter[str] = Counter()
     processed_files = []
+    counted_ids: set[str] = set()
+    already_merged = 0
     not_spam_votes: dict[str, set[str]] = {}
     rejected_dir = REPORTS_DIR / "rejected"
 
@@ -329,6 +367,11 @@ def main(argv: list[str] | None = None):
                 skipped += 1
                 continue
 
+            if report_file.name in previously_merged:
+                processed_files.append(report_file)
+                already_merged += 1
+                continue
+
             if (
                 report_file.name in burst_duplicates
                 or report_file.name in identity_duplicates
@@ -339,6 +382,10 @@ def main(argv: list[str] | None = None):
                 processed_files.append(report_file)
                 collapsed += 1
                 continue
+
+            report_id = validated_report_id(report.get("report_id"))
+            if report_id:
+                counted_ids.add(report_id)
 
             spam_type = report.get("type", "unknown")
             reported_raw = report.get("reported_at")
@@ -456,6 +503,9 @@ def main(argv: list[str] | None = None):
     else:
         print("No changes — database version left at", db["version"])
 
+    # Before the files go, so a resend arriving later is still recognised.
+    remember_merged_report_ids(merged_ids, counted_ids, today)
+
     # Delete processed report files only after DB is safely persisted
     for report_file in processed_files:
         try:
@@ -482,7 +532,8 @@ def main(argv: list[str] | None = None):
 
     print(
         f"\nMerged: {added} new, {updated} updated, {skipped} skipped (implausible), "
-        f"{collapsed} collapsed (duplicate), {unattributed_votes} not_spam votes dropped "
+        f"{collapsed} collapsed (duplicate), {already_merged} already merged in an earlier drain, "
+        f"{unattributed_votes} not_spam votes dropped "
         f"(no reporter identity), {rejected} quarantined, "
         f"{decayed} corrections decayed, {removed} rows removed"
     )

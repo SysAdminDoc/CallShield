@@ -190,7 +190,10 @@ The rest of this section takes effect when the report Worker is next deployed.
   counts it as sent. A report resent after the phone switched networks used
   to be stored again and counted as a second person reporting the number. The
   merge, the trending list and the text-domain feed now count a report stored
-  twice under one id once.
+  twice under one id once, and the merge still does when the two copies land
+  in different drains. It keeps the ids of reports from the last two weeks in
+  `data/merged_report_ids.json`, and a ledger it can't read stops the merge
+  instead of counting resends twice.
 
 ### Documentation
 

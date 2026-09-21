@@ -548,6 +548,54 @@ def assert_external_source_parsers() -> None:
         module.time.sleep = original_sleep
 
 
+def run_drain(data_dir: Path) -> None:
+    # Each drain here leaves the derived feeds empty, which their collapse
+    # guards refuse to publish twice without being told.
+    run_script("extract_spam_domains.py", data_dir, ["--allow-collapse"])
+    run_script("generate_hot_list.py", data_dir, ["--allow-collapse"])
+    run_script("merge_community_reports.py", data_dir)
+
+
+def reports_for(data_dir: Path, number: str) -> int:
+    database = json.loads((data_dir / "spam_numbers.json").read_text(encoding="utf-8"))
+    return next((row["reports"] for row in database["numbers"] if row["number"] == number), 0)
+
+
+def assert_resend_across_drains_counts_once(data_dir: Path) -> None:
+    """A resend that lands after its original was merged and deleted counts
+    once. The queue alone can't see that, so merged ids are kept a while."""
+    write_json(
+        data_dir / "spam_numbers.json",
+        {"version": 1, "updated": "2026-06-11", "sources": ["community_reports"], "numbers": [], "prefixes": []},
+    )
+    number = "+12129460188"
+    report_id = "3f2c1a9e-8b7d-4c6e-9f10-2a3b4c5d6e7f"
+    write_report(data_dir, "original.json", number, BUCKETS[0], TIMES[0], report_type="spam", report_id=report_id)
+    run_drain(data_dir)
+    assert reports_for(data_dir, number) == 1
+
+    write_report(data_dir, "resend.json", number, BUCKETS[1], TIMES[2], report_type="spam", report_id=report_id)
+    run_drain(data_dir)
+    assert reports_for(data_dir, number) == 1, "a resend counted again in a later drain"
+    assert not (data_dir / "reports" / "resend.json").exists(), "the resend was left in the queue"
+
+    other_id = "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d"
+    write_report(data_dir, "other.json", number, BUCKETS[2], TIMES[3], report_type="spam", report_id=other_id)
+    run_drain(data_dir)
+    assert reports_for(data_dir, number) == 2, "a different report of the same number must still count"
+    ledger = json.loads((data_dir / "merged_report_ids.json").read_text(encoding="utf-8"))["ids"]
+    assert {report_id, other_id} <= set(ledger), ledger
+
+    (data_dir / "merged_report_ids.json").write_text("not json", encoding="utf-8")
+    write_report(data_dir, "later.json", number, BUCKETS[3], NOW, report_type="spam")
+    run_script("extract_spam_domains.py", data_dir, ["--allow-collapse"])
+    run_script("generate_hot_list.py", data_dir, ["--allow-collapse"])
+    stopped = run_script_result("merge_community_reports.py", data_dir)
+    assert stopped.returncode != 0, "an unreadable ledger must stop the merge"
+    assert (data_dir / "reports" / "later.json").exists(), "a stopped merge must leave the queue alone"
+    assert reports_for(data_dir, number) == 2
+
+
 def assert_fixed_clock_is_for_tests_only() -> None:
     """A feed stamped by CALLSHIELD_NOW and published would be refused by every
     device as a replay, or block every later feed until its time passed. So the
@@ -602,6 +650,9 @@ def main() -> None:
 
     with tempfile.TemporaryDirectory() as tmp:
         assert_not_spam_requires_review(Path(tmp) / "data")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        assert_resend_across_drains_counts_once(Path(tmp) / "data")
 
 
 if __name__ == "__main__":
