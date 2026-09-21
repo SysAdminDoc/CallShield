@@ -201,13 +201,13 @@ internal object ContactGroupCatalog {
      * Whether any matched contact belongs to a selected group, asked one
      * contact at a time and intersected here.
      *
-     * Apps targeting API 37 get strict column and grammar checks on
-     * ContactsContract.Data, and the composed `IN (?, ?, ...)` selection this
-     * used is the kind of pattern those checks refuse. The refusal would have
-     * been silent: [isNumberInSelectedGroups] catches it and answers false, so
-     * contact-group trust would simply stop working. Equality on column
-     * constants with bound arguments stays inside the grammar. PhoneLookup
-     * caps the contacts at [MAX_PHONE_LOOKUP_MATCHES].
+     * Each read is equality on column constants with bound arguments, so no
+     * value is spliced into the SQL. The MIMETYPE term matters: DATA1 holds
+     * the group id only on membership rows, and on any other row it holds
+     * whatever that row stores. PhoneLookup caps the contacts at
+     * [MAX_PHONE_LOOKUP_MATCHES], so this is a handful of indexed reads.
+     * Android 17's strict CP2 grammar applies only to callers without
+     * READ_CONTACTS, which this path never is, since PhoneLookup needs it.
      */
     private fun hasMembership(
         context: Context,
