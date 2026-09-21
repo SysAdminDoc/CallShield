@@ -65,6 +65,40 @@ class HotDataSyncReplayTest {
         assertEquals(emptySet<String>(), hotRows())
     }
 
+    @Test
+    fun `a read without a stamp can't reset the replay check`() {
+        feeds.hotList = HotFeedSnapshot(listOf(hot("+12125550101")), generatedAt = "2026-09-21T10:00:00+00:00")
+        refresh()
+        feeds.hotList = HotFeedSnapshot(listOf(hot("+12125550101")))
+        refresh()
+
+        feeds.hotList = HotFeedSnapshot(emptyList(), explicitlyCleared = true, generatedAt = "2026-09-05T12:00:00+00:00")
+        refresh()
+
+        assertEquals(setOf("+12125550101"), hotRows())
+    }
+
+    @Test
+    fun `a feed stamped in the future doesn't lock out the genuine ones after it`() {
+        feeds.hotList = HotFeedSnapshot(listOf(hot("+12125550101")), generatedAt = "2099-01-01T00:00:00+00:00")
+        refresh()
+
+        feeds.hotList =
+            HotFeedSnapshot(
+                listOf(hot("+12125550102")),
+                generatedAt =
+                    java.time.Instant
+                        .now()
+                        .plusSeconds(60)
+                        .toString(),
+            )
+        refresh()
+
+        assertEquals(setOf("+12125550102"), hotRows())
+    }
+
+    private fun hot(number: String) = HotNumber(number = number, type = "robocall", description = "")
+
     private fun refresh() =
         runBlocking {
             HotDataSync.refresh(context, feeds, fixture.repository, fixture.dao)

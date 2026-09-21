@@ -19,6 +19,7 @@ import com.sysadmindoc.callshield.util.HotFeedFreshness
 import com.sysadmindoc.callshield.util.isAsciiDigit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.time.Instant
 
 internal object HotDataSync {
     private const val HOT_LIST_SOURCE = "hot_list"
@@ -90,7 +91,10 @@ internal object HotDataSync {
      * snapshot filled in after a failed fetch is unreachable, clears nothing, and
      * leaves the stored stamps alone.
      */
-    internal fun healthUpdate(observations: List<FeedObservation>): HotDataHealthUpdate {
+    internal fun healthUpdate(
+        observations: List<FeedObservation>,
+        now: Long = System.currentTimeMillis(),
+    ): HotDataHealthUpdate {
         // A refused file says nothing trustworthy about the publisher, and its
         // stamp must not replace the newer one a replay check compares against.
         val read = observations.filter { it.fromNetwork && !it.refused }
@@ -100,7 +104,7 @@ internal object HotDataSync {
             refusedFeeds = observations.filter { it.refused }.mapTo(mutableSetOf()) { it.feed },
             clearedFeeds = read.filter { it.applied && it.empty }.mapTo(mutableSetOf()) { it.feed },
             resolvedFeeds = read.mapTo(mutableSetOf()) { it.feed },
-            feedGeneratedAt = read.metadata { it.generatedAt },
+            feedGeneratedAt = read.metadata { observation -> observation.generatedAt?.let { cappedStamp(it, now) } },
             feedDigests = read.metadata { it.inputDigest },
         )
     }
@@ -364,6 +368,21 @@ internal object HotDataSync {
             resolved = bundled.isSuccess,
             explicitlyCleared = snapshot?.explicitlyCleared == true,
         )
+    }
+
+    /**
+     * [stamp] as it will be stored: device time when it's later than that, and
+     * null when it doesn't parse. A future stamp kept as is would refuse every
+     * genuine feed as a replay until that time came, and one that can't be
+     * compared would switch the replay check off.
+     */
+    internal fun cappedStamp(
+        stamp: String,
+        now: Long,
+    ): String? {
+        val published = HotFeedFreshness.publishedAtMillis(stamp)
+        if (published <= 0L) return null
+        return if (published > now) Instant.ofEpochMilli(now).toString() else stamp
     }
 
     /**

@@ -320,7 +320,12 @@ class GitHubDataSource internal constructor(
             if (result.isFailure) {
                 return@withContext Result.failure(result.exceptionOrNull()!!)
             }
-            Result.success(parseHotListSnapshotJson(result.getOrThrow()))
+            // A signed file that isn't this feed is refused, not thrown out of the refresh.
+            try {
+                Result.success(parseHotListSnapshotJson(result.getOrThrow()))
+            } catch (refused: GitHubFeedValidationException) {
+                Result.failure(refused)
+            }
         }
 
     override suspend fun fetchHotRanges(
@@ -337,7 +342,12 @@ class GitHubDataSource internal constructor(
             if (result.isFailure) {
                 return@withContext Result.failure(result.exceptionOrNull()!!)
             }
-            Result.success(parseHotRangesSnapshotJson(result.getOrThrow()))
+            // A signed file that isn't this feed is refused, not thrown out of the refresh.
+            try {
+                Result.success(parseHotRangesSnapshotJson(result.getOrThrow()))
+            } catch (refused: GitHubFeedValidationException) {
+                Result.failure(refused)
+            }
         }
 
     override suspend fun fetchSpamDomains(
@@ -354,7 +364,12 @@ class GitHubDataSource internal constructor(
             if (result.isFailure) {
                 return@withContext Result.failure(result.exceptionOrNull()!!)
             }
-            Result.success(parseSpamDomainsSnapshotJson(result.getOrThrow()))
+            // A signed file that isn't this feed is refused, not thrown out of the refresh.
+            try {
+                Result.success(parseSpamDomainsSnapshotJson(result.getOrThrow()))
+            } catch (refused: GitHubFeedValidationException) {
+                Result.failure(refused)
+            }
         }
 
     suspend fun fetchModelWeightsJson(
@@ -484,9 +499,10 @@ class GitHubDataSource internal constructor(
             when {
                 trimmedBody.startsWith("{") -> {
                     val payload = hotListEnvelopeAdapter.fromJson(body) ?: error("Failed to parse hot list payload")
+                    val numbers = payload.numbers ?: failFeedValidation(GitHubFeedFailureReason.MISSING_SCHEMA_FIELD, "hot list has no numbers")
                     generatedAt = payload.generated
                     inputDigest = payload.inputReportDigest
-                    payload.numbers to payload.cleared
+                    numbers to payload.cleared
                 }
 
                 trimmedBody.startsWith("[") -> {
@@ -531,9 +547,10 @@ class GitHubDataSource internal constructor(
             when {
                 trimmedBody.startsWith("{") -> {
                     val payload = hotRangesEnvelopeAdapter.fromJson(body) ?: error("Failed to parse hot ranges payload")
+                    val ranges = payload.ranges ?: failFeedValidation(GitHubFeedFailureReason.MISSING_SCHEMA_FIELD, "hot ranges has no ranges")
                     generatedAt = payload.generated
                     inputDigest = payload.inputReportDigest
-                    payload.ranges.map { it.npanxx } to payload.cleared
+                    ranges.map { it.npanxx } to payload.cleared
                 }
 
                 trimmedBody.startsWith("[") -> {
@@ -560,9 +577,10 @@ class GitHubDataSource internal constructor(
             when {
                 trimmedBody.startsWith("{") -> {
                     val payload = spamDomainsEnvelopeAdapter.fromJson(body) ?: error("Failed to parse spam domains payload")
+                    val domains = payload.domains ?: failFeedValidation(GitHubFeedFailureReason.MISSING_SCHEMA_FIELD, "spam domains has no domains")
                     generatedAt = payload.generated
                     inputDigest = payload.inputReportDigest
-                    payload.domains to payload.cleared
+                    domains to payload.cleared
                 }
 
                 trimmedBody.startsWith("[") -> {
@@ -1021,8 +1039,11 @@ class GitHubDataSource internal constructor(
         @Json(name = "browser_download_url") val browserDownloadUrl: String = "",
     )
 
+    // Each feed's items key is nullable so a file without it is refused rather
+    // than read as empty. Signatures cover bytes, not paths, so another signed
+    // feed, or the model, served at this path must not parse as this one.
     private data class HotListPayload(
-        val numbers: List<HotListEntry> = emptyList(),
+        val numbers: List<HotListEntry>? = null,
         val cleared: Boolean = false,
         val generated: String? = null,
         @Json(name = "input_report_digest") val inputReportDigest: String? = null,
@@ -1035,7 +1056,7 @@ class GitHubDataSource internal constructor(
     )
 
     private data class HotRangesPayload(
-        val ranges: List<HotRangeEntry> = emptyList(),
+        val ranges: List<HotRangeEntry>? = null,
         val cleared: Boolean = false,
         val generated: String? = null,
         @Json(name = "input_report_digest") val inputReportDigest: String? = null,
@@ -1046,7 +1067,7 @@ class GitHubDataSource internal constructor(
     )
 
     private data class SpamDomainsPayload(
-        val domains: List<String> = emptyList(),
+        val domains: List<String>? = null,
         val cleared: Boolean = false,
         val generated: String? = null,
         @Json(name = "input_report_digest") val inputReportDigest: String? = null,

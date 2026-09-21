@@ -74,8 +74,7 @@ class HotFeedHealthTest {
         unreachableFeeds = update.unreachableFeeds,
         clearedFeeds = update.clearedFeeds,
         refusedFeeds = update.refusedFeeds,
-        feedGeneratedAt =
-            HotDataHealthUpdate.mergeFeedMetadata(previous.feedGeneratedAt, update.resolvedFeeds, update.feedGeneratedAt),
+        feedGeneratedAt = HotDataHealthUpdate.mergeFeedStamps(previous.feedGeneratedAt, update.feedGeneratedAt),
         feedDigests = HotDataHealthUpdate.mergeFeedMetadata(previous.feedDigests, update.resolvedFeeds, update.feedDigests),
     )
 
@@ -118,7 +117,7 @@ class HotFeedHealthTest {
     }
 
     @Test
-    fun `a feed that was read replaces its stamp, and one that was not keeps it`() {
+    fun `a stamp is replaced by a newer one and kept through reads without one`() {
         val previous =
             HotDataHealth(
                 feedGeneratedAt =
@@ -136,10 +135,33 @@ class HotFeedHealthTest {
                 ),
             )
         val merged = stored(update, previous).feedGeneratedAt
-        // A publisher that stops declaring its stamp is no longer judged by the old one.
-        assertFalse(merged.containsKey(HotDataSync.HOT_LIST_FEED))
+        // Dropping it would let a stampless file reset the replay check, and the
+        // next older copy would pass it.
+        assertEquals("2026-08-01T00:00:00+00:00", merged[HotDataSync.HOT_LIST_FEED])
         // A transient failure does not erase what is known about the publisher.
         assertEquals("2026-08-01T00:00:00+00:00", merged[HotDataSync.HOT_RANGES_FEED])
+
+        val newer = HotDataSync.healthUpdate(listOf(rangesObservation(currentFeed)), now)
+        assertEquals("2026-09-20T12:00:00.000000+00:00", stored(newer, previous).feedGeneratedAt[HotDataSync.HOT_RANGES_FEED])
+    }
+
+    @Test
+    fun `a stamp ahead of the device clock is stored as the device's time`() {
+        // Kept as is, 2099 would refuse every genuine feed as a replay until 2099.
+        val future = currentFeed.replace("2026-09-20T12:00:00.000000+00:00", "2099-01-01T00:00:00+00:00")
+
+        val stamp = HotDataSync.healthUpdate(listOf(rangesObservation(future)), now).feedGeneratedAt[HotDataSync.HOT_RANGES_FEED]
+
+        assertEquals(now, HotFeedFreshness.publishedAtMillis(stamp))
+    }
+
+    @Test
+    fun `a stamp that doesn't parse is never stored`() {
+        val garbled = currentFeed.replace("2026-09-20T12:00:00.000000+00:00", "yesterday")
+
+        val update = HotDataSync.healthUpdate(listOf(rangesObservation(garbled)), now)
+
+        assertFalse(update.feedGeneratedAt.containsKey(HotDataSync.HOT_RANGES_FEED))
     }
 
     @Test

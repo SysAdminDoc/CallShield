@@ -610,9 +610,8 @@ class SettingsRepository(
         preferences[SpamRepository.KEY_HOT_DATA_CLEARED] = update.clearedFeeds
         preferences[SpamRepository.KEY_HOT_DATA_REFUSED] = update.refusedFeeds
         val generatedAt =
-            HotDataHealthUpdate.mergeFeedMetadata(
+            HotDataHealthUpdate.mergeFeedStamps(
                 previous = decodeFeedMetadata(preferences[SpamRepository.KEY_HOT_DATA_GENERATED_AT]),
-                resolvedFeeds = update.resolvedFeeds,
                 fresh = update.feedGeneratedAt,
             )
         preferences[SpamRepository.KEY_HOT_DATA_GENERATED_AT] = shardHashesAdapter.toJson(generatedAt.toSortedMap())

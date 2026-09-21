@@ -58,5 +58,17 @@ data class HotDataHealthUpdate(
             resolvedFeeds: Set<String>,
             fresh: Map<String, String>,
         ): Map<String, String> = previous.filterKeys { it !in resolvedFeeds } + fresh
+
+        /**
+         * Per-feed `generated` stamps after a refresh. Unlike the other metadata,
+         * a stamp is only ever replaced, never dropped: a file read without one
+         * would otherwise erase the stamp the replay check compares against, and
+         * the next older copy would pass it. Refused and replayed files never
+         * reach [fresh], so a stamp never goes backwards either.
+         */
+        fun mergeFeedStamps(
+            previous: Map<String, String>,
+            fresh: Map<String, String>,
+        ): Map<String, String> = previous + fresh
     }
 }

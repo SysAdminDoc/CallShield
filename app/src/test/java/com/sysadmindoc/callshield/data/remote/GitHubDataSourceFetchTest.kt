@@ -324,6 +324,18 @@ class GitHubDataSourceFetchTest {
         assertTrue(result.exceptionOrNull()?.toString(), result.isSuccess)
     }
 
+    @Test
+    fun `another signed file served at a hot feed's path is refused, not read as that feed`() {
+        // Signatures cover bytes, not paths. The model has no `numbers`, and the
+        // domain feed has a newer stamp than the hot list and could clear it.
+        for (impostor in listOf(MODEL, GitHubDataSource.SPAM_DOMAINS_PATH)) {
+            val result = fetchHotList(masterFiles = mapOf(HOT_LIST to file(impostor), "$HOT_LIST.sig" to file("$impostor.sig")))
+
+            val refused = result.exceptionOrNull() as? GitHubFeedValidationException
+            assertEquals(impostor, GitHubFeedFailureReason.MISSING_SCHEMA_FIELD, refused?.reason)
+        }
+    }
+
     private fun signed(vararg paths: String) = paths.flatMap { path -> listOf(path to file(path), "$path.sig" to file("$path.sig")) }.toMap()
 
     private fun tampered(bytes: ByteArray) = String(bytes, Charsets.UTF_8).replaceFirst("\"count\"", "\"Count\"").toByteArray(Charsets.UTF_8)
