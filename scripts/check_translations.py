@@ -290,19 +290,34 @@ def check_locale(locale_dir: Path, base_strings, base_untranslatable, base_plura
     return errors, warnings, translated, len(translatable_base)
 
 
+class FloorsFileError(ValueError):
+    """The floors file exists but can't be trusted."""
+
+
 def load_floors() -> dict[str, float]:
-    """Return the recorded per-locale coverage floors."""
+    """Return the recorded per-locale coverage floors.
+
+    A missing file means no floors have been recorded yet. A file that exists
+    but can't be parsed, or holds a floor that isn't a number, raises
+    FloorsFileError. Reading it as empty would switch the gate off (a
+    merge-conflicted file did exactly that) and let --update-floors rewrite
+    every floor from whatever coverage happens to be today.
+    """
+    if not FLOORS_FILE.exists():
+        return {}
     try:
         with FLOORS_FILE.open(encoding="utf-8") as handle:
             recorded = json.load(handle)
-    except (OSError, ValueError):
-        return {}
-    if not isinstance(recorded, dict):
-        return {}
+    except (OSError, ValueError) as error:
+        raise FloorsFileError(f"{FLOORS_FILE.name} can't be read: {error}") from error
+    recorded_floors = recorded.get("floors") if isinstance(recorded, dict) else None
+    if not isinstance(recorded_floors, dict):
+        raise FloorsFileError(f'{FLOORS_FILE.name} has no "floors" object')
     floors = {}
-    for locale, value in recorded.get("floors", {}).items():
-        if isinstance(value, (int, float)):
-            floors[str(locale)] = float(value)
+    for locale, value in recorded_floors.items():
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            raise FloorsFileError(f"{FLOORS_FILE.name}: the floor for {locale} is {value!r}, not a number")
+        floors[str(locale)] = float(value)
     return floors
 
 
@@ -331,8 +346,9 @@ def floor_report(
             report.append(
                 (
                     f"  ERROR:   {locale} coverage fell to {percent:.1f}%, below its "
-                    f"{floor:.1f}% floor. Translate the new strings, or lower the floor "
-                    f"deliberately in {FLOORS_FILE.name} and say why.",
+                    f"{floor:.1f}% floor. Translate the new strings. Lowering a floor is "
+                    f"a hand edit to {FLOORS_FILE.name}, made on purpose and explained "
+                    f"in the commit message.",
                     True,
                 )
             )
@@ -345,7 +361,8 @@ def write_floors(coverage: dict[str, float]) -> None:
     A floor only goes up here. Running --update-floors after adding English
     strings nobody has translated yet used to record the lower coverage, which
     quietly loosened the gate it exists to enforce. Floors for locales this
-    run didn't measure are kept.
+    run didn't measure are kept. An unreadable file raises FloorsFileError
+    and is left alone.
     """
     floors = load_floors()
     for locale, percent in coverage.items():
@@ -353,8 +370,8 @@ def write_floors(coverage: dict[str, float]) -> None:
     payload = {
         "description": (
             "Minimum translated-string coverage per locale, in percent. check_translations.py "
-            "fails when a shipped locale drops below its floor. Raise a floor with --update-floors; "
-            "never lower one by hand."
+            "fails when a shipped locale drops below its floor. --update-floors only raises a floor. "
+            "Lowering one is a hand edit, made on purpose and explained in the commit message."
         ),
         "floors": dict(sorted(floors.items())),
     }
@@ -417,15 +434,22 @@ def main() -> int:
 
     # A floor is only meaningful for a locale that ships from this repo;
     # --dir points at an arbitrary tree (a fork's, pre-merge) that has none.
+    # --update-floors still checks against the floors it found: it can't lower
+    # one, so a locale below its floor stays an error either way.
     if not args.dir:
-        if args.update_floors:
-            write_floors(coverage)
-            print(f"\nRecorded coverage floors in {FLOORS_FILE.name}.")
+        try:
+            floors = load_floors()
+        except FloorsFileError as error:
+            print(f"  ERROR:   {error}. Fix or restore it before checking coverage.")
+            total_errors += 1
         else:
-            for message, is_error in floor_report(coverage, load_floors()):
+            for message, is_error in floor_report(coverage, floors):
                 print(message)
                 if is_error:
                     total_errors += 1
+            if args.update_floors:
+                write_floors(coverage)
+                print(f"\nRecorded coverage floors in {FLOORS_FILE.name}.")
 
     # Only meaningful for locales that actually live in the repo.
     for error in check_locales_config([d for d in locale_dirs if d.parent == RES_DIR]):

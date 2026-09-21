@@ -255,6 +255,10 @@ The rest of this section takes effect when the report Worker is next deployed.
   lower coverage instead, and the Chinese floor slid from 76.1% to 75.6% that
   way. The eight strings behind the slide are translated now, and the floor is
   back up at 76.5%.
+- A floors file that can't be read, such as one left mid-merge, now fails the
+  check. It used to load as empty, which switched the gate off and let
+  `--update-floors` write every floor again from scratch. `--update-floors`
+  also fails when a locale is below its floor, where it used to report success.
 
 ## v1.7.38 (2026-08-29)
 

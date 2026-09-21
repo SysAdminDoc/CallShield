@@ -81,9 +81,12 @@ If you improve a locale, raise its floor in the same change:
 python scripts/check_translations.py --update-floors
 ```
 
-The floor only ever goes up. Lowering one is a deliberate decision that
-belongs in the commit message. A new locale starts with no floor and only
-warns until someone records one.
+`--update-floors` only ever raises a floor, and it still fails when a locale
+is below the floor it had. Lowering a floor means editing
+`scripts/translation_floors.json` by hand, on purpose, with the reason in the
+commit message. A floors file that can't be read fails the check rather than
+switching it off. A new locale starts with no floor and only warns until
+someone records one.
 
 ## Style notes
 
