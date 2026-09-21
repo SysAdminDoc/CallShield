@@ -46,6 +46,7 @@ import random
 import argparse
 from pathlib import Path
 from collections import Counter
+from datetime import datetime, timezone
 
 import numpy as np
 from sklearn.ensemble import GradientBoostingClassifier
@@ -514,6 +515,9 @@ def main():
     output = {
         "version": 3,
         "feature_schema_version": FEATURE_SCHEMA_VERSION,
+        # The app refuses a model older than the one it has (a replayed signed
+        # copy), so every model says when it was made.
+        "generated": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "model_type": "gbt",
         "description": "CallShield GBT spam scorer v3 — 50 trees, 20 features, LR fallback",
         "threshold": calibrated_threshold,

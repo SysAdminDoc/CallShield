@@ -32,6 +32,9 @@ All notable changes to CallShield will be documented in this file.
 - An older signed copy of a trending feed can't replace a newer one any more.
   Someone able to serve files once pinning fails could have replayed an old
   "nothing trending" feed and wiped the trending numbers on your phone.
+- The spam model can't be swapped for an older signed copy either. Each model
+  now records when it was trained, and the app keeps the one it has when a
+  download is older.
 - When the real download branch fails, the backup branch that doesn't exist no
   longer hides why. Its "not found" answer used to replace a passing server
   error and stop the app from retrying.

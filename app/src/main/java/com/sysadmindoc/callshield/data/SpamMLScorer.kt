@@ -4,6 +4,7 @@ import android.content.Context
 import com.sysadmindoc.callshield.data.remote.GitHubDataSource
 import com.sysadmindoc.callshield.domain.model.CallerIdentity
 import com.sysadmindoc.callshield.domain.model.CallerIdentitySignals
+import com.sysadmindoc.callshield.util.HotFeedFreshness
 import com.sysadmindoc.callshield.util.filterAsciiDigits
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -50,6 +51,25 @@ internal fun jsonDeclaresGbt(json: String): Boolean {
     val type = Regex(""""model_type"\s*:\s*"(\w+)"""").find(json)?.groupValues?.get(1) ?: ""
     return version >= 3 && type == "gbt"
 }
+
+/**
+ * True when [candidate] is an older model than [installed], by the `generated`
+ * stamp the trainer writes. A signature proves who made a model, not that it's
+ * the latest, so a genuine older copy (served by a mirror, or by anyone once
+ * pinning fails) must not replace a newer one. Stamps began with this check,
+ * so an unstamped model is older than any stamped one; with no stamp on the
+ * installed model there is nothing to compare against.
+ */
+internal fun isOlderModel(
+    candidate: String,
+    installed: String,
+): Boolean {
+    val installedAt = modelGeneratedAt(installed)
+    if (installedAt <= 0L) return false
+    return modelGeneratedAt(candidate) < installedAt
+}
+
+private fun modelGeneratedAt(json: String): Long = HotFeedFreshness.publishedAtMillis(Regex(""""generated"\s*:\s*"([^"]+)"""").find(json)?.groupValues?.get(1))
 
 /** Classify a load/sync outcome into a [ModelHealth] (pure, for testability). */
 internal fun modelHealthFor(
@@ -316,6 +336,13 @@ class SpamMLScorer
                         // and log the failure instead of degrading silently.
                         _modelHealth = ModelHealth.PARSE_FAILED
                         logDegradedModel("sync")
+                        return@withContext
+                    }
+                    val installed =
+                        File(context.filesDir, "spam_model_weights.json").takeIf { it.exists() }?.readText()
+                            ?: GitHubDataSource.readBundledAsset(context, GitHubDataSource.BUNDLED_MODEL_WEIGHTS_ASSET).getOrNull()
+                    if (installed != null && isOlderModel(json, installed)) {
+                        // Keep the newer model already in use.
                         return@withContext
                     }
                     state = parsed
