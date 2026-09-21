@@ -13,6 +13,7 @@ import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
+import com.sysadmindoc.callshield.BuildConfig
 import com.sysadmindoc.callshield.CallShieldApp
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.AppUpdateState
@@ -26,6 +27,7 @@ import com.sysadmindoc.callshield.data.CommunityContributor
 import com.sysadmindoc.callshield.data.ContactGroup
 import com.sysadmindoc.callshield.data.ContactGroupCatalog
 import com.sysadmindoc.callshield.data.EmergencyNumberFloor
+import com.sysadmindoc.callshield.data.FalsePositiveReport
 import com.sysadmindoc.callshield.data.MessageCapabilitySource
 import com.sysadmindoc.callshield.data.MessageCapabilityStatus
 import com.sysadmindoc.callshield.data.RuleConflictAnalyzer
@@ -1192,6 +1194,21 @@ class MainViewModel
                 val result = CommunityContributor.reportNotSpam(appContext, repo.normalizeNumber(number))
                 _contributeResult.value = result.toStatusMessage()
             }
+        }
+
+        /** The text to share for a number the user thinks was flagged wrongly ([FalsePositiveReport]). */
+        suspend fun falsePositiveReportText(
+            number: String,
+            result: SpamCheckResult,
+        ): String {
+            val database = repo.readAcceptedSpamFeedMetadata()
+            return FalsePositiveReport.text(
+                number = repo.normalizeNumber(number),
+                result = result,
+                appVersion = "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
+                databaseVersion = database.version,
+                databaseUpdated = database.updated,
+            )
         }
 
         /** What to tell the user after a community report, by what actually happened to it. */

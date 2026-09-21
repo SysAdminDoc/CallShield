@@ -681,6 +681,30 @@ fun NumberDetailScreen(
                 outlined = true,
             )
         }
+
+        // A wrongly flagged number, shared without an account and without
+        // anything from messages, contacts or the call log (FalsePositiveReport).
+        liveResult?.takeIf { it.isSpam }?.let { flagged ->
+            PremiumActionButton(
+                label = stringResource(R.string.detail_share_false_alarm),
+                icon = Icons.Default.ReportGmailerrorred,
+                color = CatBlue,
+                onClick = {
+                    hapticTick(context)
+                    coroutineScope.launch {
+                        val text = viewModel.falsePositiveReportText(number, flagged)
+                        val send =
+                            Intent(Intent.ACTION_SEND).apply {
+                                type = "text/plain"
+                                putExtra(Intent.EXTRA_TEXT, text)
+                            }
+                        context.startActivitySafely(Intent.createChooser(send, null))
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+                outlined = true,
+            )
+        }
     }
 }
 

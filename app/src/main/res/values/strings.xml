@@ -1240,6 +1240,7 @@
     <string name="detail_ftc_complaint">File FTC Do Not Call Complaint</string>
     <string name="detail_whitelist">Trust</string>
     <string name="detail_call">Call</string>
+    <string name="detail_share_false_alarm">Share a false-alarm report</string>
     <string name="detail_share">Share</string>
     <string name="detail_block_area_code_description">Block area code %s</string>
     <string name="detail_block_area_code_description_location">Block area code %1$s (%2$s)</string>

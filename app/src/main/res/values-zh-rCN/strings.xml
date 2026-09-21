@@ -861,6 +861,7 @@
     <string name="detail_ftc_complaint">提交 FTC 拒接来电投诉</string>
     <string name="detail_whitelist">信任</string>
     <string name="detail_call">拨打</string>
+    <string name="detail_share_false_alarm">分享误报报告</string>
     <string name="detail_share">分享</string>
     <string name="detail_block_area_code_description">拦截区号 %s</string>
     <string name="detail_block_area_code_description_location">拦截区号 %1$s（%2$s）</string>

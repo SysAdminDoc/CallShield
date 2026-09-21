@@ -97,6 +97,11 @@ All notable changes to CallShield will be documented in this file.
   and SMS permissions from Android 15, until you choose Allow restricted
   settings in App info. A step you were sent to grant that comes back still
   off now says so, with a button that opens App info (issue #21).
+- Number Detail has a Share a false-alarm report button for a number
+  CallShield flagged. It shares the number, the check that decided, its
+  confidence, and the app and database versions, ready to post, and nothing
+  from your messages, contacts or call log. There's no account and nothing is
+  stored.
 
 ### Live caller lookup
 

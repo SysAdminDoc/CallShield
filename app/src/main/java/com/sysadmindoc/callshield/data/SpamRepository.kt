@@ -689,6 +689,9 @@ class SpamRepository(
         now: Long = System.currentTimeMillis(),
     ): Boolean = settingsRepository.claimCommunityReport(number, vote, now)
 
+    /** The database version and date the app last accepted, for a false-alarm report. */
+    internal suspend fun readAcceptedSpamFeedMetadata() = settingsRepository.readAcceptedSpamFeedMetadata()
+
     suspend fun releaseCommunityReport(
         number: String,
         vote: String,
