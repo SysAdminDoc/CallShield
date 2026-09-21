@@ -812,7 +812,7 @@ language in [issue #7](https://github.com/SysAdminDoc/CallShield/issues/7).
 | Language | Kotlin 2.3.21 |
 | UI | Jetpack Compose BOM 2026.06.01 + Material 3 |
 | Theme | System, Light, Graphite, and true-black AMOLED |
-| Database | Room 2.8.4 (SQLite). 8 entities |
+| Database | Room 2.8.5 (SQLite). 8 entities |
 | Networking | OkHttp 5.4.0 + certificate pinning |
 | JSON | Moshi |
 | ML | Pure Kotlin gradient-boosted tree (20 features) |

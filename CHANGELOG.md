@@ -282,6 +282,15 @@ The rest of this section takes effect when the report Worker is next deployed.
   queue was stalled, because each one asked a question about a queue it was
   handed rather than the queue that exists.
 
+### Build
+
+- Took the library updates the current Android build tools can use: Paging
+  3.5.1, Room 2.8.5, AppCompat 1.8.0, KSP 2.3.12, Okio 3.18.2 and
+  Gradle 8.14.5. WorkManager now comes from work-runtime itself, since
+  work-runtime-ktx has been an empty package since 2.9.0. Compose, Navigation
+  and OkHttp stay put until the move to the next build tools, because their
+  current releases need it.
+
 ### Translations
 
 - A shipped locale can no longer decay silently. Each has a coverage floor in

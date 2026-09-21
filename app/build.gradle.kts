@@ -268,12 +268,15 @@ dependencies {
     implementation(libs.androidx.paging.compose)
     ksp(libs.androidx.room.compiler)
     implementation(libs.androidx.datastore.preferences)
-    implementation(libs.androidx.work.runtime.ktx)
+    // work-runtime-ktx has been an empty jar since 2.9.0; its coroutine APIs live in work-runtime.
+    implementation(libs.androidx.work.runtime)
     implementation(libs.androidx.hilt.work)
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
     ksp(libs.androidx.hilt.compiler)
     implementation(libs.okhttp)
+    // Used directly (okio.Buffer), so pinned here rather than left to OkHttp's transitive version.
+    implementation(libs.okio)
     implementation(libs.moshi)
     implementation(libs.moshi.kotlin)
     debugImplementation(libs.kotlinx.serialization.json)
