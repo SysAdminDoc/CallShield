@@ -12,9 +12,9 @@ claim a language so two people don't translate the same 1,103 strings.
 
 The source of truth is `app/src/main/res/values/strings.xml` (1,103 strings and
 30 `<plurals>`). Create `app/src/main/res/values-<locale>/` and put your
-translated `<string>` and `<plurals>` elements there. Either layout works ,
-everything in one `strings.xml`, or split into `strings.xml` + `plurals.xml`;
-resource filenames carry no meaning to the Android build.
+translated `<string>` and `<plurals>` elements there. Either layout works,
+everything in one `strings.xml` or split into `strings.xml` + `plurals.xml`.
+Resource filenames carry no meaning to the Android build.
 
 Locale directory names use Android's qualifier form, not BCP-47:
 
@@ -62,17 +62,17 @@ build time:
   must survive translation with the same count and types. Get this wrong and
   `String.format` throws the moment the string is displayed. Which in this app
   can be the call-screening notification, on a device in a language the
-  maintainer cannot read. Reordering is fine and expected; that is what the
+  maintainer cannot read. Reordering is fine and expected. That's what the
   positional `%1$s` form is for.
-- **Missing plural quantities.** Chinese needs only `other`; Russian and Polish
+- **Missing plural quantities.** Chinese needs only `other`, while Russian and Polish
   need `one/few/many/other`. The checker knows which.
 - **Stale keys** that no longer exist upstream (a warning, not an error).
 - **Locales missing from `locales_config.xml`.**
 
-Missing strings are reported as coverage, never as a failure - with one
+Missing strings are reported as coverage, never as a failure, with one
 exception. Each shipped locale has a recorded coverage floor in
 `scripts/translation_floors.json`, and the checker fails if coverage drops
-below it. A partial translation is fine and expected; a translation quietly
+below it. A partial translation is fine and expected. A translation quietly
 rotting as English strings are added faster than they are translated is not.
 
 If you improve a locale, raise its floor in the same change:
@@ -90,7 +90,7 @@ warns until someone records one.
 - Phone numbers are wrapped in Unicode bidi isolates before display, so you do
   not need to do anything special for RTL languages. But do keep `%1$s`
   placeholders intact rather than substituting a literal example number.
-- "Trusted" is used consistently for allowlisted callers; keep one term for it
+- "Trusted" is used consistently for allowlisted callers. Keep one term for it
   in your language rather than alternating synonyms.
 - Carrier authentication (STIR/SHAKEN) copy deliberately avoids implying the
   caller is *safe*. It says the caller ID is *authenticated*. Please preserve

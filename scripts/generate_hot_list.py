@@ -282,7 +282,7 @@ def main(argv: list[str] | None = None) -> int:
     }
 
     # ── Campaign detection: NPA-NXX clustering ────────────────────────
-    # When 3+ distinct numbers from the same NPA-NXX appear in the hot list,
+    # When CAMPAIGN_THRESHOLD or more qualifying numbers from one NPA-NXX are hot,
     # a robocaller is likely running a campaign across that exchange. Flag the
     # entire range so the Android app can score calls from it even if the
     # specific number hasn't been reported yet.

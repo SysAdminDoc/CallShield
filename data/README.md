@@ -4,18 +4,18 @@ This directory contains the spam number database that the CallShield app pulls f
 
 ## Files
 
-- `spam_numbers.json` - Main spam number database with individual numbers and prefix patterns
-- `hot_numbers.json` - Recent community velocity feed for exact-number protection
-- `hot_ranges.json` - Recent NPA-NXX campaign ranges derived from the hot feed
-- `spam_domains.json` - Maintainer-approved SMS phishing/spam domains
-- `spam_model_weights.json` - Versioned on-device GBT and logistic fallback weights
-- `source-manifest.json` - Feed access, license, geography, attribution, and parser contract
-- `source-snapshot.json` - Per-run source health, checksum, accepted/rejected counts, and failures
-- `source-freshness.json` - Each upstream source's last successful import, kept across runs; the weekly liveness workflow checks daily and weekly sources against `stale_after_days`. A source with an `import_flag` in the manifest only imports with that flag, so it's checked once it has been imported and the failure message names the flag
-- `spam_domains_approved.json` - Optional maintainer approval input for domain candidates
-- `spam_domains_review.json` - Generated domain candidates awaiting approval
-- `not_spam_review.json` - Generated community false-positive review candidates
-- `reports/*.json` - Pending community reports; `reports/rejected/` contains quarantined files
+- `spam_numbers.json`: Main spam number database with individual numbers and prefix patterns
+- `hot_numbers.json`: Recent community velocity feed for exact-number protection
+- `hot_ranges.json`: Recent NPA-NXX campaign ranges derived from the hot feed
+- `spam_domains.json`: Maintainer-approved SMS phishing/spam domains
+- `spam_model_weights.json`: Versioned on-device GBT and logistic fallback weights
+- `source-manifest.json`: Feed access, license, geography, attribution, and parser contract
+- `source-snapshot.json`: Per-run source health, checksum, accepted/rejected counts, and failures
+- `source-freshness.json`: Each upstream source's last successful import, kept across runs. The weekly liveness workflow checks daily and weekly sources against `stale_after_days`. A source with an `import_flag` in the manifest only imports with that flag, so it's checked once it has been imported and the failure message names the flag
+- `spam_domains_approved.json`: Optional maintainer approval input for domain candidates
+- `spam_domains_review.json`: Generated domain candidates awaiting approval
+- `not_spam_review.json`: Generated community false-positive review candidates
+- `reports/*.json`: Pending community reports. `reports/rejected/` holds quarantined files
 
 ## Consuming this data
 
@@ -25,7 +25,7 @@ from outside the app.
 
 ### Compatibility
 
-`spam_numbers.manifest.json` carries `format_version`; it governs the shard
+`spam_numbers.manifest.json` carries `format_version`, which governs the shard
 layout and the legacy snapshot together. Within one `format_version`:
 
 - fields are never removed and never change meaning or type
@@ -35,7 +35,7 @@ layout and the legacy snapshot together. Within one `format_version`:
 
 A breaking change increments `format_version` and ships alongside the old
 version for at least 90 days. `data/spam_numbers.json` is kept as a stable
-legacy endpoint for older clients; current builds should read the manifest and
+legacy endpoint for older clients. Current builds should read the manifest and
 the 256 content-addressed shards under `spam_number_shards/` and fetch only the
 shards whose hashes changed.
 
@@ -79,7 +79,7 @@ delete. That distinction is the whole reason the field exists.
 
 | File | Regenerated | Consumers should poll |
 |---|---|---|
-| `spam_numbers.json` + shards | On merge, roughly daily when reports arrive | Every 6 hours |
+| `spam_numbers.json` + shards | When the maintainer runs a merge | Every 6 hours |
 | `hot_numbers.json`, `hot_ranges.json`, `spam_domains.json` | Same run as the merge | Every 30 minutes |
 | `spam_model_weights.json` | On retrain, irregular | With the database |
 | `source-manifest.json` | On a feed change | With the database |
@@ -96,7 +96,7 @@ is authoritative: every source declares its `license`, `attribution`,
 - **Saracroche** French range data is CC BY-NC-SA 4.0. Attribution must be
   retained and the non-commercial and share-alike terms pass downstream.
 - **PhoneBlock** bulk data is not redistributable and is excluded from shipped
-  builds; only the per-number hashed lookup is used at runtime.
+  builds. The app doesn't call PhoneBlock at runtime either.
 
 Before redistributing any subset, read `redistributable` on every source listed
 in the `sources` array of the rows you are taking.
@@ -121,20 +121,20 @@ in the `sources` array of the rows you are taking.
 ```
 
 ## How the App Uses This Data
-1. On first launch (and periodically), the app fetches `spam_numbers.json` from this repo's raw URL
+1. On first launch (and periodically), the app fetches the signed shard manifest, then only the shards whose hash changed. `spam_numbers.json` stays for older clients and as a fallback
 2. Numbers are cached locally in a SQLite database for instant offline lookup
 3. The app checks the database version number to know when to pull updates
 
 ## Data Sources
-- **FTC Complaint Data** - Bulk imported from FTC Do Not Call Registry reports
-- **FCC Complaints** - From FCC consumer complaint database
-- **Community Reports** - User-submitted via GitHub Issues and PRs
+- **FTC Complaint Data**: Bulk imported from FTC Do Not Call Registry reports
+- **FCC Complaints**: From FCC consumer complaint database
+- **Community Reports**: Anonymous in-app reports, stored through the report Worker
 
 ## Regenerating the Database and Model (local)
 
 The database, hot lists, and on-device ML model are **maintained locally** and
-committed to the repo — there is **no CI/GitHub Actions pipeline** (the app then
-pulls the committed `data/*.json` from this repo's raw URL). Regenerate on a
+committed to the repo. There is **no CI/GitHub Actions pipeline**, and the app
+pulls the committed `data/*.json` from this repo's raw URL. Regenerate on a
 maintainer machine with Python 3.12:
 
 ```bash
@@ -143,11 +143,11 @@ pip install -r scripts/requirements.txt   # requests, scikit-learn, numpy
 # 1. Rebuild the number database from all free public sources
 python scripts/import_all_sources.py                       # writes data/spam_numbers.json
 python scripts/update_ftc.py --max 50000                   # merge recent FTC complaints
-# ToastedSpam serves plain HTTP only (no TLS) — it is skipped by default so a
+# ToastedSpam serves plain HTTP only (no TLS), so it is skipped by default and a
 # poisoned response can't ship hard-blocked numbers. Include it only from a
 # trusted network: python scripts/import_all_sources.py --allow-insecure-sources
 
-# 2. Regenerate the hot lists FIRST — they read data/reports/*.json, which the
+# 2. Regenerate the hot lists FIRST. They read data/reports/*.json, which the
 #    merge step consumes. Each output records the report-queue digest, and the
 #    merge refuses to run until all three derived feeds match that digest.
 python scripts/generate_hot_list.py                        # trending numbers / NPA-NXX ranges
@@ -186,7 +186,7 @@ version-stamped `spam_model_weights.json` (GBT trees + a logistic-regression
 fallback). `evaluate_model.py` reports precision/recall/F1 two ways: with the
 exact **on-device** inference the app runs (so it catches export/inference
 drift the trainer's sklearn-side metrics hide) and via stratified k-fold
-cross-validation (an honest generalization estimate); it exits non-zero when the
+cross-validation (an honest generalization estimate). It exits non-zero when the
 cross-validated F1 drops below `--min-f1` so it can gate a bad retrain. The
 import and merge scripts bump the database `version` themselves, so there's
 nothing to edit by hand. Signing is the last step: a signed file changed after

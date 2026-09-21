@@ -346,7 +346,7 @@ def main(argv: list[str] | None = None):
                 reported_raw = today
             reported_at = reported_raw[:10]
 
-            # Handle false-positive reports — subtract votes.
+            # Handle false-positive reports: collect one vote per reporter for review.
             # SECURITY: anonymous not_spam votes may only weaken COMMUNITY rows.
             # Authoritative FCC/FTC entries are immune to anonymous removal,
             # otherwise a stream of not_spam reports could de-list real spammers.

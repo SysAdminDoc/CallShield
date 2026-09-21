@@ -30,7 +30,7 @@
 
 ---
 
-CallShield blocks spam calls and texts using a **15+ layer on-device detection engine** with a gradient-boosted tree ML scorer, bounded campaign and churn evidence, conservative carrier identity metadata signals, an RCS notification filter, and real-time caller ID. Its 51,634-number database supports scheduled hot-list updates. There are no accounts or tracking.
+CallShield blocks spam calls and texts using a **15+ layer on-device detection engine** with a gradient-boosted tree ML scorer, bounded campaign and churn evidence, conservative carrier identity metadata signals, an RCS notification filter, and real-time caller ID. Its 51,634-number database sits alongside a trending-numbers feed the app checks every 30 minutes. There are no accounts or tracking.
 
 The database keeps `data/spam_numbers.json` as a stable legacy GitHub-raw
 endpoint for older clients, while current builds bundle a hash manifest and
@@ -386,13 +386,13 @@ shard service is unavailable.
 1. **51,634 imported spam numbers.** Sources include FCC consumer complaints (2+ reports each), FTC Do Not Call, ToastedSpam, and community reports.
 2. **15+ layer detection + ML**. Database, heuristics, bounded campaign/churn detection, on-device gradient-boosted tree, SMS content/burst analysis, RCS filter, STIR/SHAKEN, and more
 3. **Real-time caller ID overlay**. An optional SkipCalls spam check for locally suspicious calls, with SIT tone anti-autodialer
-4. **Scheduled hot list**. Trending spam numbers and campaign ranges refresh through the repository data pipeline
+4. **Trending feeds**. The app checks for trending spam numbers and campaign ranges every 30 minutes. The maintainer regenerates them by hand from new community reports
 5. **Callback-aware**. Won't block callbacks from numbers you recently called, answered repeatedly, after a local emergency call, or urgent repeated callers
 6. **Community-driven**. One-tap anonymous contribution via Cloudflare Worker, merged into the database by the maintainer
 
 ## Detection Pipeline (v1.7.38)
 
-All detection layers implement a shared `IChecker` interface and run in priority order via `CheckerPipeline.run`. First non-null result wins, every layer is testable in isolation. Priorities are stable numbers; the ladder below is the live order.
+All detection layers implement a shared `IChecker` interface and run in priority order via `CheckerPipeline.run`. First non-null result wins, every layer is testable in isolation. Priorities are stable numbers, and the ladder below is the live order.
 
 | Priority | Layer | Verdict | How It Works |
 |---------:|-------|---------|-------------|
@@ -407,7 +407,7 @@ All detection layers implement a shared `IChecker` interface and run in priority
 |  5350 | **Temporary Allow** | Allow | One-off false-positive recovery from the Blocked Log. Beats all downloaded data, never your own rules |
 |  5320 | **Prefix Rules** | Block | Downloaded wangiri country codes, US premium rate (+1900), international premium |
 |  5300 | **STIR/SHAKEN Authenticated** | Allow | Carrier-authenticated caller ID allows through heuristic/ML suspicion, and through a database match only when that row's newest evidence, community reports included, is over a year old and the number isn't trending right now. Explicit blocks still win first |
-|  5200 | **Spam Database** | Block | 51,634 imported spam numbers plus scheduled hot-list data |
+|  5200 | **Spam Database** | Block | 51,634 imported spam numbers plus the trending-numbers feed |
 |  5150 | **Database Prefix Expansion** | Block | Auto-blocks last-two-digit siblings of confirmed database entries |
 |  5000 | **Recently Dialed** | Allow | Numbers you called in the last 24h. They're probably calling back |
 |  4980 | **Emergency Callback** | Allow | Unknown callbacks can ring through after a local emergency call during the configured grace window |
@@ -438,14 +438,14 @@ SMS-specific layers (append after the shared chain, in their own priority order)
 
 ### Additional Layers
 - **Caller ID Overlay**. Suspicious calls (heuristic score 30-59) can use an explicit, default-off live enrichment option that checks SkipCalls. Clean calls never trigger it
-- **Region & caller-name rules**. Opt-in offline blocking outside selected US/Canadian regions, plus bounded `*`/`?` trust and block patterns for carrier-presented caller names; explicit number/system/prefix/wildcard blocks and all allow layers keep priority
-- **Opt-in message notification screening**. Google/Samsung Messages are enabled by default; AOSP Messages, SMS Organizer, Signal, WhatsApp, WhatsApp Business, Gmail, Outlook, and Thunderbird can be enabled individually. Private-messenger/email matches show a separate warning without removing the original notification.
-- **URL Safety**. Local spam-domain checks stay on-device; optional URLhaus (abuse.ch) checks default off and disclose only the registrable domain
+- **Region & caller-name rules**. Opt-in offline blocking outside selected US/Canadian regions, plus bounded `*`/`?` trust and block patterns for carrier-presented caller names. Explicit number, system, prefix and wildcard blocks, and all allow layers, keep priority
+- **Opt-in message notification screening**. Google/Samsung Messages are enabled by default. AOSP Messages, SMS Organizer, Signal, WhatsApp, WhatsApp Business, Gmail, Outlook, and Thunderbird can be enabled individually. Private-messenger/email matches show a separate warning without removing the original notification.
+- **URL Safety**. Local spam-domain checks stay on-device. Optional URLhaus (abuse.ch) checks are off by default and disclose only the registrable domain
 - **STIR/SHAKEN**. Blocks calls failing carrier caller ID verification (Android 11+)
 - **After-Call Feedback**. "Was this spam?" notification after suspicious calls, plus an optional Android 11+ post-call screen for block/report and save-contact actions
 
 ### Per-Rule Schedules (A7)
-Any wildcard, range, or SMS keyword rule can be time-gated to specific days of the week and an hour window. The hour picker supports overnight wrap; `daysMask = 0` is the "no gating" sentinel so rules created before v1.6 behave identically.
+Any wildcard, range, or SMS keyword rule can be time-gated to specific days of the week and an hour window. The hour picker supports overnight wrap. `daysMask = 0` is the "no gating" sentinel, so rules created before v1.6 behave identically.
 
 ## Live Caller ID Overlay
 
@@ -493,7 +493,7 @@ On-device **20-feature gradient-boosted tree** model. Pure Kotlin, no TFLite, no
 | subscriber_sequential | Last 4 form ascending/descending run |
 | + 6 additional | Campaign proximity, time-of-day, call frequency, area code density, prefix heat, neighbor spoof score |
 
-Trained weekly from the CallShield database (50K positive + 50K negative samples). Threshold: 0.7 (conservative).
+Trained by hand on the maintainer's machine from the CallShield database (50K positive + 50K negative samples). The scorer uses the threshold stored in the weights file, which is 0.653 for the model that ships today.
 
 SMS content regressions use a separate CC0, CallShield-authored synthetic
 corpus covering seven locales, sender forms, link classes, legitimate messages,
@@ -506,18 +506,18 @@ by locale and message type without shipping personal data:
 ### Number Lookup
 - Instant spam check through all 15+ detection layers, with an animated confidence gauge for probabilistic signals
 - Auto-paste from clipboard, area code lookup (330+ US/CA), haptic feedback
-- Verdict cards lead with the deciding rule or causal signal, reserve confidence for
-  genuinely probabilistic layers, and keep “This is not spam” / “Remove my rule” actions visible
+- Verdict cards lead with the deciding rule or causal signal, show confidence only for
+  probabilistic layers, and keep “This is not spam” / “Remove my rule” actions visible
 - On-request SkipCalls spam lookup
 
 ### Recent Calls & Blocked Log
 - Recent calls with contact names, risk indicators, call type icons, filter chips (All/Missed/Spam)
-- Blocked log with swipe-to-dismiss + undo, grouping with severity-scaled accent bars, filter chips;
-  swipe actions also have equivalent TalkBack/switch-access actions and 48dp touch targets
+- Blocked log with swipe-to-dismiss + undo, grouping with severity-scaled accent bars, filter chips.
+  Swipe actions also have equivalent TalkBack/switch-access actions and 48dp touch targets
 - Staggered entrance animations, shimmer loading skeletons
 
 ### Assistive Telephony
-- RTT calls receive an immediate allow from the screening service; CallShield does not reject,
+- RTT calls receive an immediate allow from the screening service. CallShield doesn't reject,
   silence, or launch the caller-ID overlay for an active RTT session.
 - Block reasons are spoken as complete plain-English sentences, while swipe-only block, delete,
   and unblock actions remain available through accessibility actions.
@@ -551,12 +551,12 @@ by locale and message type without shipping personal data:
 
 ### Community
 - **One-tap anonymous contribution** via [Cloudflare Worker](https://callshield-reports.snafumatthew.workers.dev). Each number and vote goes out at most once a day, and a report made offline is sent when the connection returns
-- False positive reporting subtracts votes
+- "Not spam" reports can put a community-only number up for maintainer review. They never remove a number by themselves
 - Share spam warnings to any app
 
 ### Data & System
-- Selective backup/restore for rules, non-secret settings, and opt-in logs; CSV log export; auto-cleanup (7/14/30/90 days)
-- Weekly full sync + scheduled hot list refresh, daily digest notification
+- Selective backup/restore for rules, non-secret settings, and opt-in logs, plus CSV log export and auto-cleanup (7/14/30/90 days)
+- Database sync every 6 hours, a trending-feed check every 30 minutes, and a daily digest notification
 - External blocklist subscriptions (Settings > External blocklists) take HTTPS CSV, TXT or JSON number lists of up to 1 MB and 20,000 rows. Each list is fetched again once a day, or on the interval it declares in its header (`# Expires: 12 hours`, or `"expires": "12h"` in JSON), never more often than every six hours and at least weekly. A download that comes back empty or with under half the list's numbers isn't applied in the background. The list keeps its last good copy and says why on its row. Each row shows the list's name, the host it comes from, how many numbers it holds and when it last updated, and TalkBack reads it as one item. Tap a row to switch its list off or on. Removing a list takes its numbers out straight away, and Undo puts both back without downloading the list again
 - If GitHub is blocked where you live, Settings > Feed mirror takes a second address for the protection data. CallShield asks GitHub first, then the mirror, then falls back to the copy bundled with the app. One tap fills in jsDelivr (`https://cdn.jsdelivr.net/gh/SysAdminDoc/CallShield@master/`), which serves the same files and can run up to 12 hours behind. Mirrored files go through the same signature check, so a mirror can't change what you get. [data/README.md](data/README.md#mirrors-and-recovery) covers running your own
 - Quick Settings tile, app shortcuts, home screen widget
@@ -564,7 +564,7 @@ by locale and message type without shipping personal data:
 - Rules surface priority conflicts after sync and edits, with the winning rule and a review path
 - Home leads with localized blocked-call/text outcomes and collapses completed setup into a review row
 - Optional weekly GitHub Releases update checks are off by default and only offer release/SHA256 links
-- Maintainer data regeneration uses the gated `scripts/import_all_sources.py` pipeline; legacy direct writers are not supported
+- Maintainer data regeneration uses the gated `scripts/import_all_sources.py` pipeline. Legacy direct writers aren't supported
 - Onboarding wizard with permission requests
 
 ## Data Sources
@@ -584,40 +584,42 @@ The source importer also has optional adapters for **PhoneBlock's** versioned
 bulk list. PhoneBlock requires an account for bulk downloads, so that adapter
 runs only when the maintainer has access, and the app itself no longer contacts
 PhoneBlock. Run `python scripts/import_all_sources.py --include-saracroche` to
-refresh the French ranges; add `--phoneblock-limit 5000` and
+refresh the French ranges. Add `--phoneblock-limit 5000` and
 `PHONEBLOCK_API_KEY` only when the maintainer has bulk-feed access. Saracroche
 range data is published under CC BY-NC-SA 4.0, must retain attribution and
 those downstream restrictions, and is accepted only as a `+33` French
-allocation. A successful non-empty refresh expires removed Saracroche ranges;
-failed or empty responses preserve the last known good set.
+allocation. A successful non-empty refresh expires removed Saracroche ranges.
+A failed or empty response keeps the last known good set.
 
 Every feed is declared in `data/source-manifest.json` with its access mode,
 geography, licence, attribution, parser version, redistribution policy, and
 freshness window. Each importer run writes a local `data/source-snapshot.json`
-for release review; it is intentionally not bundled into the APK. After the
+for release review. It's deliberately left out of the APK. After the
 community merge, its health section adds per-source freshness, accepted and
 quarantine counts, corroboration, and bounded false-positive rates without
 copying phone numbers, contacts, SMS, or call audio. Anonymous `not_spam`
-votes remain review candidates by default; after an operator marks a candidate
-`approved: true`, `python scripts/merge_community_reports.py --apply-reviewed-corrections`
+votes never change the database by themselves. Once they outnumber a
+community-only row's reports, the row becomes a review candidate. After an
+operator marks it `approved: true`,
+`python scripts/merge_community_reports.py --apply-reviewed-corrections`
 can decay or remove only that community-only contribution. FTC and FCC runs
-persist bounded high-water cursors in
-`data/source-cursors.json`, retain caller-ID and callback-business evidence as
-separate roles, and do not promote unverified complaint-only rows without
-independent caller corroboration.
+persist bounded high-water cursors in `data/source-cursors.json`, which the
+importer creates on its first run. They keep caller-ID and callback-business
+evidence as separate roles, and don't promote unverified complaint-only rows
+without independent caller corroboration.
 
 The importer also accepts a carrier-authorized Nomorobo IRS callback-scam CSV
 feed without embedding credentials in the app. Pass the HTTPS URL with
 `--nomorobo-irs-url` (or `NOMOROBO_IRS_FEED_URL`) and, if required by the feed,
 the bearer token with `--nomorobo-irs-token`/`NOMOROBO_IRS_TOKEN`. The adapter
-is disabled unless explicitly configured and rejects cleartext URLs; it does
-not scrape Nomorobo's restricted carrier feed.
+is disabled unless explicitly configured and rejects cleartext URLs. It doesn't
+scrape Nomorobo's restricted carrier feed.
 
-### Hot List (scheduled refresh)
+### Hot List (checked every 30 minutes, regenerated by hand)
 | File | Contents |
 |------|----------|
 | `hot_numbers.json` | Top 500 trending numbers (last 24h) |
-| `hot_ranges.json` | NPA-NXX prefixes with 3+ active campaign numbers |
+| `hot_ranges.json` | NPA-NXX prefixes where at least 4 trending numbers drew reports from at least 6 reporters between them |
 | `spam_domains.json` | Phishing/spam domains from community SMS reports |
 
 ### Real-Time Lookup (overlay only)
@@ -635,13 +637,13 @@ not scrape Nomorobo's restricted carrier feed.
 - **Network security config**. Cleartext traffic disabled in production
 - **Signing credentials**. Stored in `local.properties`, not hardcoded in build files
 - **Restricted FileProvider paths**. Scoped to export directory only
-- **Scoped backup**. Cloud backup includes non-secret settings only; the
+- **Scoped backup**. Cloud backup includes non-secret settings only. The
   sensitive database is limited to direct device transfer and explicit
   user-created portable backups
-- **APK privacy gate**. Builds package only the five runtime protection feeds;
-  raw community submissions and maintainer files are rejected by verification
+- **APK privacy gate**. Builds package only the five runtime protection feeds.
+  Verification rejects raw community submissions and maintainer files
 - **Direct-boot boundary**. A minimal device-encrypted mirror keeps explicit
-  user blocks active before first unlock; the full database and settings remain
+  user blocks active before first unlock. The full database and settings remain
   credential-encrypted
 - **Community report abuse controls**. The Worker requires a Cloudflare client
   identity and separates malformed requests from unavailable or corrupt rate-limit state.
@@ -652,9 +654,9 @@ not scrape Nomorobo's restricted carrier feed.
 
 All detection runs on-device. No personal data is collected. Network requests:
 - Syncing spam database from GitHub (public)
-- Optional live caller enrichment is default-off and runs only for locally suspicious calls; the setting names every destination host before a number is shared
+- Optional live caller enrichment is off by default and runs only for locally suspicious calls. The setting names every destination host before a number is shared
 - Community reports to Cloudflare Worker (phone number only, no identity)
-- Local spam-domain checks do not disclose SMS/RCS links; optional URLhaus checks are explicit opt-in and send only the registrable domain
+- Local spam-domain checks don't disclose SMS/RCS links. Optional URLhaus checks are opt-in and send only the registrable domain
 
 No API keys. None required, none optional, no credential entry anywhere in the app. No accounts. No analytics. No ads.
 
@@ -722,8 +724,8 @@ To lift it:
 Setup points you here too. A step you were sent to grant that comes back still
 off shows this hint, with a button that opens App info.
 
-If the ⋮ menu has no such entry, the permission is genuinely denied rather than
-restricted: grant it from **App info → Permissions**. A permission you denied
+If the ⋮ menu has no such entry, the permission is actually denied rather than
+restricted. Grant it from **App info → Permissions**. A permission you denied
 twice is treated as permanently denied by Android, and CallShield's onboarding
 sends you to App info instead of re-prompting, because the prompt would no
 longer show.
@@ -744,7 +746,7 @@ directly with `python scripts/verify_release_drift.py` when reviewing metadata
 without building an APK.
 
 Requires JDK 17+. With release signing properties configured, the signed APK is
-at `app/build/outputs/apk/release/app-release.apk`; without them, the local
+at `app/build/outputs/apk/release/app-release.apk`. Without them, the local
 verification build emits `app-release-unsigned.apk`.
 Generate the release hash sidecar with:
 
@@ -755,7 +757,7 @@ Generate the release hash sidecar with:
 `verifyReleaseSbom` also writes `<release-apk-stem>.cdx.json`,
 `<release-apk-stem>.provenance.json`, and `<release-apk-stem>.sha256` beside the
 APK. The SBOM contains the exact `releaseRuntimeClasspath` coordinates from
-`app/gradle.lockfile`; the verifier fails if the APK, lockfile, SBOM, or
+`app/gradle.lockfile`, and the verifier fails if the APK, lockfile, SBOM, or
 provenance record drift. CallShield releases are built locally, so the signed APK remains
 governed by the maintainer release key and its SHA-256 sidecar. The local JSON
 provenance is evidence, not a replacement for that signature.

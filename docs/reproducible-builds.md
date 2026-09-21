@@ -100,12 +100,11 @@ Get-Content .\app-release.apk.sha256
 .\scripts\compare-apk-contents.ps1 -ReferenceApk .\app-release.apk -CandidateApk .\app\build\outputs\apk\release\app-release.apk
 ```
 
-Unsigned CI artifacts are useful for dependency and source reproducibility, but
-they are not byte-identical to the locally signed release APK because the CI
-runner does not have the release keystore. Even two local signed builds can
-differ in bytes outside ZIP entries when the APK Signature Scheme v2 signing
-block changes; F-Droid-style reproducible verification handles this with
-signature copying before comparing the resulting APK.
+Releases are built and signed on the maintainer's machine. No CI job builds an
+APK. Even two local signed builds can differ in bytes outside ZIP entries when
+the APK Signature Scheme v2 signing block changes, which is why
+F-Droid-style reproducible verification copies the signature before comparing
+the resulting APK.
 
 For the current F-Droid submission draft, release signer fingerprint, and
 fdroidserver handoff steps, see `docs/fdroid-submission.md`.
