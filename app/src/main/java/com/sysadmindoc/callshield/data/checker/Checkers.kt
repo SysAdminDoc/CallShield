@@ -11,14 +11,19 @@ import com.sysadmindoc.callshield.data.HashWildcardMatcher
 import com.sysadmindoc.callshield.data.RegionRules
 import com.sysadmindoc.callshield.data.SmsContentAnalyzer
 import com.sysadmindoc.callshield.data.SmsContextChecker
+import com.sysadmindoc.callshield.data.SourceEvidenceCodec
 import com.sysadmindoc.callshield.data.SpamHeuristics
 import com.sysadmindoc.callshield.data.SpamMLScorer
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.SystemBlockList
+import com.sysadmindoc.callshield.data.model.SpamNumber
 import com.sysadmindoc.callshield.data.repository.SpamRepositoryImpl
 import com.sysadmindoc.callshield.domain.model.CallerIdentitySignals
 import com.sysadmindoc.callshield.service.CallerIdOverlayService
 import kotlinx.coroutines.withTimeoutOrNull
+import java.time.LocalDate
+import java.time.ZoneOffset
+import java.time.format.DateTimeParseException
 import java.util.Calendar
 
 /** Absolute safety floor for recognized emergency and public-safety codes. */
@@ -157,10 +162,19 @@ internal class ContactsOnlyChecker(
  * do NOT treat C as a sole block signal. We only fire the allow on a
  * positive PASSED signal, never on the absence of one.
  *
+ * A PASSED attestation proves the caller owns the line, not that the call
+ * is wanted: 44% to 51% of robocalls in 2024 carried A-level attestation.
+ * The allow sits above the downloaded database to protect the real owners
+ * of numbers that were spoofed in old complaint data, so it only overrides
+ * a database row whose evidence is stale (see [hasCurrentEvidence]). A row
+ * with current evidence falls through to [DatabaseChecker] and blocks.
+ *
  * Gated on the user setting and the runtime ability to read a
  * verification status (non-null); skipped for historical scans and SMS.
  */
-internal class StirShakenTrustChecker : IChecker {
+internal class StirShakenTrustChecker(
+    private val repo: SpamRepositoryImpl,
+) : IChecker {
     override val priority = CheckerPriority.STIR_SHAKEN_TRUSTED
     override val name = "stir_shaken_trusted"
 
@@ -170,7 +184,10 @@ internal class StirShakenTrustChecker : IChecker {
             verificationStatus = ctx.verificationStatus,
         )
 
-    override suspend fun check(ctx: CheckContext): BlockResult? = decidePure(ctx.verificationStatus)
+    override suspend fun check(ctx: CheckContext): BlockResult? {
+        if (ctx.verificationStatus != VERIFICATION_STATUS_PASSED) return null
+        return decidePure(ctx.verificationStatus, repo.findByNumberInternal(ctx.number))
+    }
 
     companion object {
         // android.telecom.Connection.VERIFICATION_STATUS_PASSED == 1 (AOSP).
@@ -187,12 +204,57 @@ internal class StirShakenTrustChecker : IChecker {
             verificationStatus: Int?,
         ): Boolean = settingEnabled && verificationStatus != null
 
-        /** Pure-logic helper — returns the allow result iff the carrier signed PASSED. */
-        internal fun decidePure(verificationStatus: Int?): BlockResult? =
-            if (verificationStatus == VERIFICATION_STATUS_PASSED) {
-                BlockResult.allow("stir_shaken_trusted")
-            } else {
-                null
+        /** Database evidence at most this old outranks a PASSED attestation. */
+        internal const val CURRENT_EVIDENCE_DAYS = 365L
+
+        private const val COMMUNITY_SOURCE_ID = "community_reports"
+        private const val CORROBORATED_TIER = "corroborated"
+        private const val HOT_LIST_SOURCE = "hot_list"
+        private const val ISO_DATE_LENGTH = 10
+
+        /**
+         * Pure-logic helper. Allows iff the carrier signed PASSED and the
+         * matching database row, if any, has no current evidence against it.
+         */
+        internal fun decidePure(
+            verificationStatus: Int?,
+            row: SpamNumber? = null,
+            today: LocalDate = LocalDate.now(ZoneOffset.UTC),
+        ): BlockResult? =
+            when {
+                verificationStatus != VERIFICATION_STATUS_PASSED -> null
+                row != null && hasCurrentEvidence(row, today) -> null
+                else -> BlockResult.allow("stir_shaken_trusted")
+            }
+
+        /**
+         * Whether a row is recent or corroborated enough to block a caller
+         * the carrier verified: seen within [CURRENT_EVIDENCE_DAYS], trending
+         * on the hot list (which requires three distinct reporters), or
+         * backed by corroborated community reports. A row with none of those
+         * is old complaint data, where the real owners of spoofed numbers sit.
+         */
+        internal fun hasCurrentEvidence(
+            row: SpamNumber,
+            today: LocalDate,
+        ): Boolean {
+            if (row.source == HOT_LIST_SOURCE) return true
+            val cutoff = today.minusDays(CURRENT_EVIDENCE_DAYS)
+            if (seenSince(row.lastSeen, cutoff)) return true
+            val evidence = SourceEvidenceCodec.decode(row.evidenceJson)
+            return evidence.any { seenSince(it.lastSeen, cutoff) } ||
+                evidence.any { it.sourceId == COMMUNITY_SOURCE_ID && it.confidenceTier == CORROBORATED_TIER }
+        }
+
+        /** An undated or unreadable stamp is no evidence of recency. */
+        private fun seenSince(
+            date: String,
+            cutoff: LocalDate,
+        ): Boolean =
+            try {
+                !LocalDate.parse(date.take(ISO_DATE_LENGTH)).isBefore(cutoff)
+            } catch (_: DateTimeParseException) {
+                false
             }
     }
 }

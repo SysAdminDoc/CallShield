@@ -3,6 +3,7 @@ package com.sysadmindoc.callshield.data
 import com.sysadmindoc.callshield.data.model.SourceEvidenceJson
 import com.sysadmindoc.callshield.data.model.SpamNumber
 import com.sysadmindoc.callshield.data.model.SpamNumberJson
+import com.sysadmindoc.callshield.data.remote.GitHubDataSource
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -10,6 +11,32 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class SpamRepositorySyncTest {
+    @Test
+    fun `a community row keeps its community provenance on the device`() {
+        // The shape the pipeline publishes: provenance in `sources`, no
+        // evidence list. The STIR/SHAKEN trust allow reads it back.
+        val shard =
+            GitHubDataSource()
+                .parseSpamShardJson(
+                    """
+                    {"shard_id": "00", "prefixes": [], "numbers": [
+                      {"number": "+18002990523", "type": "spam", "reports": 2, "first_seen": "2026-08-25",
+                       "last_seen": "2026-08-25", "description": "Community reported", "sources": ["community"]},
+                      {"number": "+12012302420", "type": "robocall", "reports": 2, "first_seen": "2016-08-17",
+                       "last_seen": "2016-08-17", "description": "FCC caller ID: Robocalls", "sources": ["legacy_import"]}
+                    ]}
+                    """.trimIndent(),
+                ).getOrThrow()
+
+        val sanitized = sanitizeDatabaseNumbers(shard.numbers, normalizeNumber = { it }, preservedUserBlockedNumbers = emptyMap())
+
+        val community = SourceEvidenceCodec.decode(sanitized[0].evidenceJson)
+        assertEquals(listOf("github_database", "community_reports"), community.map { it.sourceId })
+        assertEquals("corroborated", community.last().confidenceTier)
+        assertEquals("2026-08-25", community.last().lastSeen)
+        assertEquals(listOf("github_database"), SourceEvidenceCodec.decode(sanitized[1].evidenceJson).map { it.sourceId })
+    }
+
     @Test
     fun `sanitizeDatabaseNumbers preserves user block flag for matching remote numbers`() {
         val sanitized =

@@ -1070,21 +1070,7 @@ internal fun sanitizeDatabaseNumbers(
         if (normalizedNumber.isBlank()) {
             null
         } else {
-            val evidence =
-                json.evidence.ifEmpty {
-                    listOf(
-                        SourceEvidenceJson(
-                            sourceId = "github_database",
-                            evidenceType = "aggregate_database",
-                            license = "CallShield database terms",
-                            attribution = "CallShield maintained spam database",
-                            firstSeen = json.firstSeen,
-                            lastSeen = json.lastSeen,
-                            confidenceTier = if (json.reports >= 2) "corroborated" else "unverified",
-                            parserVersion = "legacy-v1",
-                        ),
-                    )
-                }
+            val evidence = json.evidence.ifEmpty { synthesizedDatabaseEvidence(json) }
             SpamNumber(
                 number = normalizedNumber,
                 type = json.type.trim().ifBlank { "unknown" },
@@ -1100,6 +1086,41 @@ internal fun sanitizeDatabaseNumbers(
             )
         }
     }
+
+/**
+ * Evidence for a row the pipeline published without an evidence list of its
+ * own. A row that came from community reports says so, because the
+ * STIR/SHAKEN trust allow treats corroborated community evidence as current
+ * however old the row's date is.
+ */
+private fun synthesizedDatabaseEvidence(json: SpamNumberJson): List<SourceEvidenceJson> {
+    val tier = if (json.reports >= 2) "corroborated" else "unverified"
+    val database =
+        SourceEvidenceJson(
+            sourceId = "github_database",
+            evidenceType = "aggregate_database",
+            license = "CallShield database terms",
+            attribution = "CallShield maintained spam database",
+            firstSeen = json.firstSeen,
+            lastSeen = json.lastSeen,
+            confidenceTier = tier,
+            parserVersion = "legacy-v1",
+        )
+    if (json.sources.none { it == "community" || it == "community_reports" }) return listOf(database)
+    return listOf(
+        database,
+        SourceEvidenceJson(
+            sourceId = "community_reports",
+            evidenceType = "user_report",
+            license = "CallShield community report policy",
+            attribution = "CallShield users",
+            firstSeen = json.firstSeen,
+            lastSeen = json.lastSeen,
+            confidenceTier = tier,
+            parserVersion = "community-v2",
+        ),
+    )
+}
 
 internal fun mergeHotListNumbers(
     hotNumbers: Collection<SpamNumber>,

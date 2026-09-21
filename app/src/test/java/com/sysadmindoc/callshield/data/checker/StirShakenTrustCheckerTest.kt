@@ -1,14 +1,18 @@
 package com.sysadmindoc.callshield.data.checker
 
+import com.sysadmindoc.callshield.data.SourceEvidenceCodec
 import com.sysadmindoc.callshield.data.checker.StirShakenTrustChecker.Companion.VERIFICATION_STATUS_PASSED
 import com.sysadmindoc.callshield.data.checker.StirShakenTrustChecker.Companion.decidePure
 import com.sysadmindoc.callshield.data.checker.StirShakenTrustChecker.Companion.isEnabledPure
+import com.sysadmindoc.callshield.data.model.SourceEvidenceJson
+import com.sysadmindoc.callshield.data.model.SpamNumber
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.time.LocalDate
 
 /**
  * Pure-logic coverage of the v1.7.0 STIR/SHAKEN trust-allow path.
@@ -70,6 +74,71 @@ class StirShakenTrustCheckerTest {
         // Defensive — even though isEnabled() would have rejected this
         // upstream, decide() must still degrade safely.
         assertNull(decidePure(null))
+    }
+
+    // ── Database evidence ────────────────────────────────────────────────
+    // A PASSED attestation proves line ownership, not that the call is
+    // wanted, so it only overrides a database row whose evidence is stale.
+
+    private val today = LocalDate.of(2026, 9, 21)
+
+    private fun row(
+        lastSeen: String,
+        source: String = "github",
+        evidence: List<SourceEvidenceJson> = emptyList(),
+    ) = SpamNumber(
+        number = "+12125550100",
+        type = "robocall",
+        lastSeen = lastSeen,
+        source = source,
+        evidenceJson = SourceEvidenceCodec.encode(evidence),
+    )
+
+    private fun evidence(
+        sourceId: String,
+        lastSeen: String,
+        tier: String = "unverified",
+    ) = SourceEvidenceJson(
+        sourceId = sourceId,
+        evidenceType = "user_report",
+        license = "fixture",
+        attribution = "fixture",
+        lastSeen = lastSeen,
+        confidenceTier = tier,
+    )
+
+    @Test fun `PASSED yields to a database row seen within the last year`() {
+        assertNull(decidePure(VERIFICATION_STATUS_PASSED, row("2026-03-01"), today))
+        // Inclusive at exactly 365 days.
+        assertNull(decidePure(VERIFICATION_STATUS_PASSED, row("2025-09-21"), today))
+    }
+
+    @Test fun `PASSED still rings through a row whose newest evidence is older than a year`() {
+        val result = decidePure(VERIFICATION_STATUS_PASSED, row("2025-09-20"), today)
+        assertNotNull(result)
+        assertFalse(result!!.shouldBlock)
+        assertEquals("stir_shaken_trusted", result.matchSource)
+    }
+
+    @Test fun `a newer evidence record keeps an old row current`() {
+        val recent = evidence("ftc_complaints", lastSeen = "2026-09-01")
+        assertNull(decidePure(VERIFICATION_STATUS_PASSED, row("2016-08-17", evidence = listOf(recent)), today))
+    }
+
+    @Test fun `corroborated community reports keep an old row current and a single report does not`() {
+        val corroborated = evidence("community_reports", lastSeen = "2024-01-01", tier = "corroborated")
+        val single = evidence("community_reports", lastSeen = "2024-01-01")
+        assertNull(decidePure(VERIFICATION_STATUS_PASSED, row("2024-01-01", evidence = listOf(corroborated)), today))
+        assertNotNull(decidePure(VERIFICATION_STATUS_PASSED, row("2024-01-01", evidence = listOf(single)), today))
+    }
+
+    @Test fun `a trending hot-list row counts as current without a date`() {
+        assertNull(decidePure(VERIFICATION_STATUS_PASSED, row("", source = "hot_list"), today))
+    }
+
+    @Test fun `an undated or unreadable row is no evidence of recency`() {
+        assertNotNull(decidePure(VERIFICATION_STATUS_PASSED, row(""), today))
+        assertNotNull(decidePure(VERIFICATION_STATUS_PASSED, row("last tuesday"), today))
     }
 
     // ── Priority ordering sanity ─────────────────────────────────────────

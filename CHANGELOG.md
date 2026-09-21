@@ -25,6 +25,13 @@ All notable changes to CallShield will be documented in this file.
   landlines were being blocked. International numbers now skip the model.
 - A short but valid international number (the Faroes, Greenland, Andorra, some
   German landlines) is no longer counted as a malformed one by the heuristics.
+- A call your carrier verified no longer rings through automatically when its
+  number is on the spam database. Verification proves the caller owns the line,
+  not that the call is wanted, and about half of all robocalls carry it. It now
+  overrides a database match only when that entry's newest evidence is more
+  than a year old, the number isn't trending, and community reports haven't
+  confirmed it. That still protects people whose numbers were spoofed in old
+  complaint data. Your own blocks and allows are unaffected.
 
 - External blocklist subscriptions now stay current. A list used to be
   fetched only when you added it or switched it back on, so one that changes
