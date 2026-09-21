@@ -17,6 +17,12 @@ All notable changes to CallShield will be documented in this file.
 - If this ever happens again, Protection Test says so directly and tells you to
   update the app, and you get one notification per app version pointing to the
   latest release. A certificate failure used to look like a successful sync.
+- The ML model evaluation gate now tests the actual weights that ship, at the
+  threshold that ships, on a held-out split that was never used for training or
+  threshold calibration. Previously it trained a fresh model at sklearn's default
+  threshold, which passed easily while the real operating point didn't. The model
+  itself was retrained on the current database with a three-way split (train,
+  calibrate, evaluate).
 - Protection data is now signed. The spam database, the trending feeds and the
   ML model each come with a signature from the maintainer's key, and the app
   throws away a download that doesn't carry a valid one and keeps what it

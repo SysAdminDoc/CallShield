@@ -422,19 +422,23 @@ def main():
     random.shuffle(combined)
     X, y = [c[0] for c in combined], [c[1] for c in combined]
 
-    split = int(len(X) * 0.8)
-    X_train, X_test = X[:split], X[split:]
-    y_train, y_test = y[:split], y[split:]
+    split_train = int(len(X) * 0.6)
+    split_cal = int(len(X) * 0.8)
+    X_train, X_cal, X_eval = X[:split_train], X[split_train:split_cal], X[split_cal:]
+    y_train, y_cal, y_eval = y[:split_train], y[split_train:split_cal], y[split_cal:]
 
-    print(f"\nTraining on {len(X_train):,} examples, testing on {len(X_test):,}")
+    print(f"\nTraining on {len(X_train):,}, calibrating on {len(X_cal):,}, "
+          f"evaluating on {len(X_eval):,}")
 
     # ── Part 1: Train Gradient-Boosted Tree ensemble ──────────────────
     print("\n--- Gradient-Boosted Trees (n_estimators=50, max_depth=4, lr=0.1) ---\n")
 
     X_train_np = np.array(X_train)
     y_train_np = np.array(y_train)
-    X_test_np  = np.array(X_test)
-    y_test_np  = np.array(y_test)
+    X_cal_np   = np.array(X_cal)
+    y_cal_np   = np.array(y_cal)
+    X_eval_np  = np.array(X_eval)
+    y_eval_np  = np.array(y_eval)
 
     gbt = GradientBoostingClassifier(
         n_estimators=50,
@@ -452,28 +456,37 @@ def main():
     positive_prior = float(np.clip(class_prior[1], 1e-12, 1.0 - 1e-12))
     initial_score = math.log(positive_prior / (1.0 - positive_prior))
 
-    # Calibrate the deployed decision threshold on held-out probabilities.
+    # Calibrate the deployed decision threshold on the CALIBRATION split.
     # CallShield auto-blocks at this layer, so preserve a 0.92 precision guard
-    # while selecting the threshold with the highest available recall.
+    # while selecting the threshold with the highest available recall. The
+    # evaluation split is never used for any training or selection decision.
     y_train_proba = gbt.predict_proba(X_train_np)[:, 1]
-    y_test_proba = gbt.predict_proba(X_test_np)[:, 1]
-    calibrated_threshold, y_test_pred = calibrate_threshold(y_test_np, y_test_proba)
+    y_cal_proba = gbt.predict_proba(X_cal_np)[:, 1]
+    calibrated_threshold, y_cal_pred = calibrate_threshold(y_cal_np, y_cal_proba)
     y_train_pred = y_train_proba >= calibrated_threshold
 
     train_prec = precision_score(y_train_np, y_train_pred)
     train_rec  = recall_score(y_train_np, y_train_pred)
     train_f1   = f1_score(y_train_np, y_train_pred)
 
-    test_prec = precision_score(y_test_np, y_test_pred)
-    test_rec  = recall_score(y_test_np, y_test_pred)
-    test_f1   = f1_score(y_test_np, y_test_pred)
-    test_auc  = roc_auc_score(y_test_np, y_test_proba)
+    cal_prec = precision_score(y_cal_np, y_cal_pred)
+    cal_rec  = recall_score(y_cal_np, y_cal_pred)
+    cal_f1   = f1_score(y_cal_np, y_cal_pred)
+    cal_auc  = roc_auc_score(y_cal_np, y_cal_proba)
+
+    y_eval_proba = gbt.predict_proba(X_eval_np)[:, 1]
+    y_eval_pred = y_eval_proba >= calibrated_threshold
+    eval_prec = precision_score(y_eval_np, y_eval_pred)
+    eval_rec  = recall_score(y_eval_np, y_eval_pred)
+    eval_f1   = f1_score(y_eval_np, y_eval_pred)
+    eval_auc  = roc_auc_score(y_eval_np, y_eval_proba)
 
     print(f"GBT initial raw score: {initial_score:+.6f}")
     print(f"Calibrated threshold: {calibrated_threshold:.6f} "
-          f"(held-out precision floor {CALIBRATION_MIN_PRECISION:.2f})")
-    print(f"GBT Train — prec={train_prec:.3f}  rec={train_rec:.3f}  F1={train_f1:.3f}")
-    print(f"GBT Test  — prec={test_prec:.3f}  rec={test_rec:.3f}  F1={test_f1:.3f}  AUC-ROC={test_auc:.3f}")
+          f"(calibration-split precision floor {CALIBRATION_MIN_PRECISION:.2f})")
+    print(f"GBT Train      — prec={train_prec:.3f}  rec={train_rec:.3f}  F1={train_f1:.3f}")
+    print(f"GBT Calibrate  — prec={cal_prec:.3f}  rec={cal_rec:.3f}  F1={cal_f1:.3f}  AUC-ROC={cal_auc:.3f}")
+    print(f"GBT Evaluate   — prec={eval_prec:.3f}  rec={eval_rec:.3f}  F1={eval_f1:.3f}  AUC-ROC={eval_auc:.3f}")
 
     # Export trees
     trees = []
@@ -487,10 +500,10 @@ def main():
     lr_weights, lr_bias = logistic_regression_train(X_train, y_train, lr=0.05, epochs=300, l2=0.01)
 
     lr_train_m = evaluate_logreg(X_train, y_train, lr_weights, lr_bias)
-    lr_test_m  = evaluate_logreg(X_test, y_test, lr_weights, lr_bias)
+    lr_eval_m  = evaluate_logreg(X_eval, y_eval, lr_weights, lr_bias)
 
     print(f"\nLR Train — acc={lr_train_m['accuracy']:.3f}  prec={lr_train_m['precision']:.3f}  rec={lr_train_m['recall']:.3f}  F1={lr_train_m['f1']:.3f}")
-    print(f"LR Test  — acc={lr_test_m['accuracy']:.3f}  prec={lr_test_m['precision']:.3f}  rec={lr_test_m['recall']:.3f}  F1={lr_test_m['f1']:.3f}")
+    print(f"LR Eval  — acc={lr_eval_m['accuracy']:.3f}  prec={lr_eval_m['precision']:.3f}  rec={lr_eval_m['recall']:.3f}  F1={lr_eval_m['f1']:.3f}")
 
     # ── Neutralize constant-feature coefficients ──────────────────────
     # A feature with zero variance across the training set has an
@@ -530,16 +543,17 @@ def main():
         "fallback_bias": round(lr_bias, 6),
         "gbt_metrics": {
             "train": {"precision": round(train_prec, 4), "recall": round(train_rec, 4), "f1": round(train_f1, 4)},
-            "test": {"precision": round(test_prec, 4), "recall": round(test_rec, 4), "f1": round(test_f1, 4), "auc_roc": round(test_auc, 4)},
+            "calibrate": {"precision": round(cal_prec, 4), "recall": round(cal_rec, 4), "f1": round(cal_f1, 4), "auc_roc": round(cal_auc, 4)},
+            "evaluate": {"precision": round(eval_prec, 4), "recall": round(eval_rec, 4), "f1": round(eval_f1, 4), "auc_roc": round(eval_auc, 4)},
         },
         "threshold_calibration": {
             "method": "maximize_recall_with_precision_floor",
             "minimum_precision": CALIBRATION_MIN_PRECISION,
-            "dataset": "held_out_test_split",
+            "dataset": "calibration_split_20pct",
         },
         "lr_metrics": {
             "train": lr_train_m,
-            "test": lr_test_m,
+            "evaluate": lr_eval_m,
         },
     }
 

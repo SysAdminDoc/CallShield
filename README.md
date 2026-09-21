@@ -493,7 +493,7 @@ On-device **20-feature gradient-boosted tree** model. Pure Kotlin, no TFLite, no
 | subscriber_sequential | Last 4 form ascending/descending run |
 | + 6 additional | Campaign proximity, time-of-day, call frequency, area code density, prefix heat, neighbor spoof score |
 
-Trained by hand on the maintainer's machine from the CallShield database (50K positive + 50K negative samples). The scorer uses the threshold stored in the weights file, which is 0.653 for the model that ships today.
+Trained by hand on the maintainer's machine from the CallShield database (50K positive + 50K negative samples). The scorer uses the threshold stored in the weights file, which is 0.648 for the model that ships today.
 
 SMS content regressions use a separate CC0, CallShield-authored synthetic
 corpus covering seven locales, sender forms, link classes, legitimate messages,

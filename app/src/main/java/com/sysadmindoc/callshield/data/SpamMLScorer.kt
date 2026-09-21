@@ -120,7 +120,7 @@ internal fun modelHealthFor(
  *  19. short_number           — number has fewer than 7 digits (short codes)
  *  20. plus_one_prefix        — number starts with +1 (US/Canada)
  *
- * Threshold: read from the weights file ("threshold", 0.653332 in the model
+ * Threshold: read from the weights file ("threshold", 0.648465 in the model
  * shipped today). 0.7 applies only to the built-in defaults or a file that
  * omits the field.
  */
