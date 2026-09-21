@@ -3,9 +3,15 @@ package com.sysadmindoc.callshield.data.remote
 import okhttp3.CertificatePinner
 import okhttp3.Dns
 import okhttp3.OkHttpClient
+import java.net.ConnectException
 import java.net.InetAddress
+import java.net.InetSocketAddress
+import java.net.Proxy
+import java.net.Socket
+import java.net.SocketAddress
 import java.net.UnknownHostException
 import java.util.concurrent.TimeUnit
+import javax.net.SocketFactory
 import javax.net.ssl.SSLPeerUnverifiedException
 
 /**
@@ -92,6 +98,54 @@ object HttpClient {
      */
     internal const val UNIT_TEST_PROPERTY = "callshield.unitTest"
 
+    /** Sockets that connect only to a loopback address, for unit tests. */
+    private object LoopbackOnlySocketFactory : SocketFactory() {
+        override fun createSocket(): Socket = LoopbackOnlySocket()
+
+        override fun createSocket(
+            host: String,
+            port: Int,
+        ): Socket = LoopbackOnlySocket().apply { connect(InetSocketAddress(host, port)) }
+
+        override fun createSocket(
+            host: String,
+            port: Int,
+            localHost: InetAddress,
+            localPort: Int,
+        ): Socket =
+            LoopbackOnlySocket().apply {
+                bind(InetSocketAddress(localHost, localPort))
+                connect(InetSocketAddress(host, port))
+            }
+
+        override fun createSocket(
+            host: InetAddress,
+            port: Int,
+        ): Socket = LoopbackOnlySocket().apply { connect(InetSocketAddress(host, port)) }
+
+        override fun createSocket(
+            address: InetAddress,
+            port: Int,
+            localAddress: InetAddress,
+            localPort: Int,
+        ): Socket =
+            LoopbackOnlySocket().apply {
+                bind(InetSocketAddress(localAddress, localPort))
+                connect(InetSocketAddress(address, port))
+            }
+    }
+
+    private class LoopbackOnlySocket : Socket() {
+        override fun connect(
+            endpoint: SocketAddress,
+            timeout: Int,
+        ) {
+            val address = (endpoint as? InetSocketAddress)?.address
+            if (address == null || !address.isLoopbackAddress) throw ConnectException("Unit tests must not reach $endpoint")
+            super.connect(endpoint, timeout)
+        }
+    }
+
     private val loopbackOnlyDns =
         object : Dns {
             override fun lookup(hostname: String): List<InetAddress> {
@@ -107,8 +161,15 @@ object HttpClient {
             .connectTimeout(15, TimeUnit.SECONDS)
             .readTimeout(15, TimeUnit.SECONDS)
             .followRedirects(true)
-            .apply { if (System.getProperty(UNIT_TEST_PROPERTY) == "true") dns(loopbackOnlyDns) }
-            .build()
+            .apply {
+                if (System.getProperty(UNIT_TEST_PROPERTY) == "true") {
+                    dns(loopbackOnlyDns)
+                    // An address given as an IP skips DNS, and a proxy would connect
+                    // for the test, so the socket itself refuses anything but loopback.
+                    socketFactory(LoopbackOnlySocketFactory)
+                    proxy(Proxy.NO_PROXY)
+                }
+            }.build()
 
     /**
      * True when [error], or anything in its cause chain, is a TLS peer
