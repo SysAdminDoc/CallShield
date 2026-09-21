@@ -673,25 +673,12 @@ fun NumberDetailScreen(
 }
 
 @Composable
-private fun remoteLookupStatusLabel(source: ExternalLookup.SourceResult): String =
-    stringResource(
-        remoteLookupStatusStringRes(
-            status = source.status,
-            hasDetail = source.detail.isNotBlank(),
-        ),
-    )
+private fun remoteLookupStatusLabel(source: ExternalLookup.SourceResult): String = stringResource(remoteLookupStatusStringRes(source.status))
 
-private fun remoteLookupStatusStringRes(
-    status: RemoteLookupStatus,
-    hasDetail: Boolean,
-): Int =
+private fun remoteLookupStatusStringRes(status: RemoteLookupStatus): Int =
     when (status) {
         RemoteLookupStatus.FOUND -> {
-            if (hasDetail) {
-                R.string.remote_lookup_status_caller_id_found
-            } else {
-                R.string.remote_lookup_status_found
-            }
+            R.string.remote_lookup_status_found
         }
 
         RemoteLookupStatus.CLEAN -> {

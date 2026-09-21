@@ -485,7 +485,7 @@
     <string name="overlay_outgoing_risk_score">Local risk confidence: %1$d%%</string>
     <string name="overlay_score_loading">Checking databases…</string>
     <string name="overlay_spam_score">Spam score: %1$d%% (%2$s)</string>
-    <string name="overlay_status_querying">Querying SkipCalls, PhoneBlock, WhoCalledMe, OpenCNAM…</string>
+    <string name="overlay_status_querying">Querying SkipCalls…</string>
     <string name="overlay_status_fast_hit">Fast hit from %1$s; checking remaining sources…</string>
     <string name="overlay_status_complete">All sources checked</string>
     <string name="overlay_status_failed">Lookup failed</string>
@@ -497,7 +497,6 @@
     <string name="overlay_source_flagged">Flagged</string>
     <string name="overlay_source_result">%1$s %2$s: %3$s</string>
     <string name="remote_lookup_status_found">Found</string>
-    <string name="remote_lookup_status_caller_id_found">Caller ID found</string>
     <string name="remote_lookup_status_clean">Clean / not found</string>
     <string name="remote_lookup_status_disabled">Disabled</string>
     <string name="remote_lookup_status_invalid_input">Invalid input</string>
@@ -1185,7 +1184,7 @@
     <string name="detail_recent_activity">Recent Activity</string>
     <string name="detail_online_lookup">Online Lookup</string>
     <string name="detail_check_sources">Check spam sources</string>
-    <string name="detail_checking_sources">Checking SkipCalls, PhoneBlock, WhoCalledMe, and OpenCNAM…</string>
+    <string name="detail_checking_sources">Checking SkipCalls…</string>
     <string name="detail_check_sources_failed">Couldn\'t reach the lookup sources. Check your connection and try again.</string>
     <string name="detail_reports_across_sources">%1$s across %2$s</string>
     <string name="detail_clean_all_sources">No reports in available sources</string>
@@ -1605,7 +1604,7 @@
     <string name="model_health_loading">Model status pending</string>
     <string name="model_health_loading_detail">No model load has completed yet.</string>
     <string name="settings_live_caller_enrichment">Live caller enrichment</string>
-    <string name="settings_live_caller_enrichment_desc">Optional. For locally suspicious calls only, PhoneBlock receives one-way number hashes; the other enabled lookup services receive the number</string>
+    <string name="settings_live_caller_enrichment_desc">Optional. For locally suspicious calls only, the number is sent to SkipCalls to check it against their spam reports</string>
     <string name="overlay_score_local_clear">Local checks clear</string>
     <string name="overlay_status_local_only">Based on on-device checks; live enrichment is off</string>
 </resources>

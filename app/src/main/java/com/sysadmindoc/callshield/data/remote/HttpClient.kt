@@ -62,31 +62,6 @@ object HttpClient {
                     "sha256/kIdp6NNEd8wsugYyyIYFsi1ylMCED3hZbSR8ZFsa/A4=",
                     "sha256/mEflZT5enoR1FuXLgYYGqnVEoZvmf9c2bVBpiOjYQ0c=",
                 ),
-            // Let's Encrypt roots; the old leaf + E7 pins died in the same
-            // Generation Y rollover as the raw host.
-            "phoneblock.net" to
-                listOf(
-                    // ISRG Root X1
-                    "sha256/C5+lpZ7tcVwmwQIMcRtPbsQtWLABXhQzejna0wHFr8M=",
-                    // ISRG Root X2
-                    "sha256/diGVwiVYbubAI3RW4hB9xU8e/CH2GnkuvVFZE8zmgzI=",
-                    // ISRG Root YE
-                    "sha256/sCkq5UWXjg+7mKu9lMhhYF5bGLsy7VI/UNW3tccdR7w=",
-                    // ISRG Root YR
-                    "sha256/fk6IOKit1ild5647BH06ujSIq5XbCgqlbYl6ANhhi88=",
-                ),
-            "www.whocalledme.com" to
-                listOf(
-                    "sha256/Q97jgORCCdhYcbgtgJzZ2aWimuviu6H8LvWqkCBZTyM=",
-                    "sha256/8Rw90Ej3Ttt8RRkrg+WYDS9n7IS03bk5bjP/UXPtaY8=",
-                    "sha256/Ko8tivDrEjiY90yGasP6ZpBU4jwXvHqVvQI0GS3GNdA=",
-                ),
-            "api.opencnam.com" to
-                listOf(
-                    "sha256/KM+xdFD9/Mj+CYgTGCu45A1uwvPEHWw7kTpeX3zfEEs=",
-                    "sha256/SDG5orEv8iX6MNenIAxa8nQFNpROB/6+llsZdXHZNqs=",
-                    "sha256/i7WTqTvh0OioIruIfFR4kMPnBqrS2rdiVPl/s2uC/CY=",
-                ),
             "urlhaus-api.abuse.ch" to
                 listOf(
                     "sha256/Yz0ts4M9B9b1XBQTQtITniseuxd86RWgvl5+aekJM8Q=",

@@ -191,7 +191,6 @@ class CallerIdOverlayService : Service() {
     private var headerText: TextView? = null
     private var scoreText: TextView? = null
     private var statusText: TextView? = null
-    private var callerNameText: TextView? = null
     private var sourcesContainer: LinearLayout? = null
     private var progressBar: ProgressBar? = null
 
@@ -374,18 +373,6 @@ class CallerIdOverlayService : Service() {
                         setPadding(0, context.overlayDp(6f), 0, 0)
                     }
                 addView(sourcesContainer)
-
-                // Caller name (populated by OpenCNAM lookup)
-                callerNameText =
-                    TextView(context).apply {
-                        text = ""
-                        setTextColor(palette.lavender)
-                        textSize = 13f
-                        typeface = Typeface.DEFAULT_BOLD
-                        visibility = android.view.View.GONE
-                        setPadding(0, context.overlayDp(6f), 0, 0)
-                    }
-                addView(callerNameText)
 
                 // Status text
                 statusText =
@@ -665,7 +652,7 @@ class CallerIdOverlayService : Service() {
         )
 
         val spamSources = ExternalLookup.spamLookupSources()
-        val totalSources = spamSources.size + 1 // spam sources + OpenCNAM
+        val totalSources = spamSources.size
         val stateLock = Any()
         var completed = 0
         var totalReports = 0
@@ -852,18 +839,6 @@ class CallerIdOverlayService : Service() {
                                 }
                             }
                         }
-
-                        launch {
-                            val callerNameResult = ExternalLookup.lookupCallerNameResult(number)
-                            if (callerNameResult.callerName.isNotBlank()) {
-                                handler.post {
-                                    if (!isCurrentSession(sessionId)) return@post
-                                    callerNameText?.text = callerNameResult.callerName
-                                    callerNameText?.visibility = android.view.View.VISIBLE
-                                }
-                            }
-                            addSourceResult(callerNameResult.asSourceResult())
-                        }
                     }
                 } catch (_: CancellationException) {
                     // A newer overlay session replaced this one.
@@ -890,11 +865,7 @@ class CallerIdOverlayService : Service() {
         val statusRes =
             when (result.status) {
                 RemoteLookupStatus.FOUND -> {
-                    if (result.detail.isNotBlank()) {
-                        R.string.remote_lookup_status_caller_id_found
-                    } else {
-                        R.string.remote_lookup_status_found
-                    }
+                    R.string.remote_lookup_status_found
                 }
 
                 RemoteLookupStatus.CLEAN -> {
@@ -1026,7 +997,6 @@ class CallerIdOverlayService : Service() {
         headerText = null
         scoreText = null
         statusText = null
-        callerNameText = null
         sourcesContainer = null
         progressBar = null
         windowManager = null

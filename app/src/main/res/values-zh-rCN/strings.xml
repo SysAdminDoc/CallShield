@@ -316,7 +316,7 @@
     <string name="overlay_outgoing_risk_score">本地风险置信度：%1$d%%</string>
     <string name="overlay_score_loading">正在查询数据库…</string>
     <string name="overlay_spam_score">垃圾评分：%1$d%%（%2$s）</string>
-    <string name="overlay_status_querying">正在查询 SkipCalls、PhoneBlock、WhoCalledMe、OpenCNAM…</string>
+    <string name="overlay_status_querying">正在查询 SkipCalls…</string>
     <string name="overlay_status_fast_hit">来自 %1$s 的快速命中；正在核查其余来源…</string>
     <string name="overlay_status_complete">已核查全部来源</string>
     <string name="overlay_status_failed">查询失败</string>
@@ -328,7 +328,6 @@
     <string name="overlay_source_flagged">已标记</string>
     <string name="overlay_source_result">%1$s %2$s：%3$s</string>
     <string name="remote_lookup_status_found">已找到</string>
-    <string name="remote_lookup_status_caller_id_found">已找到主叫身份</string>
     <string name="remote_lookup_status_clean">干净 / 未找到</string>
     <string name="remote_lookup_status_disabled">已停用</string>
     <string name="remote_lookup_status_invalid_input">输入无效</string>
@@ -812,7 +811,7 @@
     <string name="detail_recent_activity">近期活动</string>
     <string name="detail_online_lookup">在线查询</string>
     <string name="detail_check_sources">查询 4 个来源</string>
-    <string name="detail_checking_sources">正在查询 SkipCalls、PhoneBlock、WhoCalledMe 与 OpenCNAM…</string>
+    <string name="detail_checking_sources">正在查询 SkipCalls…</string>
     <string name="detail_reports_across_sources">%2$s 中 %1$s</string>
     <string name="detail_clean_all_sources">可用来源中无举报</string>
     <string name="detail_no_definitive_source_result">无来源返回明确结果</string>

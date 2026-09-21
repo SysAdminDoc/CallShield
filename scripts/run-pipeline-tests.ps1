@@ -62,7 +62,7 @@ if ($node) {
 # from a non-interactive shell with no console attached (CI-style invocation).
 $python = Get-Tool @('python3', 'python')
 if ($python) {
-    foreach ($test in @('test_phone_normalization.py', 'test_report_dedup.py', 'test_report_pipeline.py', 'test_pipeline_liveness.py', 'test_model_calibration.py', 'test_ml_feature_contract.py', 'test_release_sbom.py', 'test_check_translations.py', 'test_source_registry.py', 'test_spam_shards.py', 'test_incremental_sources.py', 'test_regional_prefixes.py', 'test_release_drift.py', 'test_check_live_pins.py')) {
+    foreach ($test in @('test_phone_normalization.py', 'test_report_dedup.py', 'test_report_pipeline.py', 'test_pipeline_liveness.py', 'test_model_calibration.py', 'test_ml_feature_contract.py', 'test_release_sbom.py', 'test_check_translations.py', 'test_source_registry.py', 'test_spam_shards.py', 'test_incremental_sources.py', 'test_regional_prefixes.py', 'test_release_drift.py', 'test_check_live_pins.py', 'test_probe_live_sources.py')) {
         $path = Join-Path $PSScriptRoot $test
         if (-not (Test-Path $path)) { continue }
         Write-Host "Running $test..."

@@ -26,6 +26,22 @@ All notable changes to CallShield will be documented in this file.
 - A short but valid international number (the Faroes, Greenland, Andorra, some
   German landlines) is no longer counted as a malformed one by the heuristics.
 
+### Live caller lookup
+
+- Three of the four lookup services are gone, so the app no longer asks them.
+  PhoneBlock's hash lookup and OpenCNAM now require accounts, which CallShield
+  never takes, and WhoCalledMe's domain is parked. The parked page came back
+  as a normal web page, so the app read it as "no reports" and showed
+  WhoCalledMe as clean on every enriched call.
+- SkipCalls, the one that still works, is now read correctly. It reports spam in
+  an `is_spam` field the app never looked for, so every number it flagged showed
+  as clean. A flagged number now shows as flagged, with the category SkipCalls
+  gives (scam, for example).
+- A lookup answer that doesn't look like a lookup result now reads as
+  "unavailable", not "clean". The overlay no longer has a caller-name line,
+  because nothing free provides one any more, and a spam hit no longer shows as
+  "Caller ID found".
+
 - Protection Test now tells a stalled publisher apart from a feed your phone
   couldn't reach. It reads the date each trending feed says it was generated.
   A feed that arrives but hasn't been regenerated in over a week reads as

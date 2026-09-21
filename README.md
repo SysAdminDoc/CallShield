@@ -382,7 +382,7 @@ legacy snapshot when the shard service is unavailable.
 
 1. **51,634 imported spam numbers.** Sources include FCC consumer complaints (2+ reports each), FTC Do Not Call, ToastedSpam, and community reports.
 2. **15+ layer detection + ML**. Database, heuristics, bounded campaign/churn detection, on-device gradient-boosted tree, SMS content/burst analysis, RCS filter, STIR/SHAKEN, and more
-3. **Real-time caller ID overlay**. Parallel lookups against SkipCalls, PhoneBlock, WhoCalledMe + OpenCNAM caller name, with SIT tone anti-autodialer
+3. **Real-time caller ID overlay**. An optional SkipCalls spam check for locally suspicious calls, with SIT tone anti-autodialer
 4. **Scheduled hot list**. Trending spam numbers and campaign ranges refresh through the repository data pipeline
 5. **Callback-aware**. Won't block callbacks from numbers you recently called, answered repeatedly, after a local emergency call, or urgent repeated callers
 6. **Community-driven**. One-tap anonymous contribution via Cloudflare Worker, merged into the database by the maintainer
@@ -434,7 +434,7 @@ SMS-specific layers (append after the shared chain, in their own priority order)
 > statistics. It does not delete the message or stop it arriving.
 
 ### Additional Layers
-- **Caller ID Overlay**. Suspicious calls (heuristic score 30-59) can use an explicit, default-off live enrichment option with SkipCalls, PhoneBlock, WhoCalledMe + OpenCNAM caller name; clean calls never trigger these lookups
+- **Caller ID Overlay**. Suspicious calls (heuristic score 30-59) can use an explicit, default-off live enrichment option that checks SkipCalls. Clean calls never trigger it
 - **Region & caller-name rules**. Opt-in offline blocking outside selected US/Canadian regions, plus bounded `*`/`?` trust and block patterns for carrier-presented caller names; explicit number/system/prefix/wildcard blocks and all allow layers keep priority
 - **Opt-in message notification screening**. Google/Samsung Messages are enabled by default; AOSP Messages, SMS Organizer, Signal, WhatsApp, WhatsApp Business, Gmail, Outlook, and Thunderbird can be enabled individually. Private-messenger/email matches show a separate warning without removing the original notification.
 - **URL Safety**. Local spam-domain checks stay on-device; optional URLhaus (abuse.ch) checks default off and disclose only the registrable domain
@@ -446,28 +446,26 @@ Any wildcard, range, or SMS keyword rule can be time-gated to specific days of t
 
 ## Live Caller ID Overlay
 
-For a locally suspicious call, CallShield can show a real-time overlay that queries **4 sources simultaneously** when the default-off **Live caller enrichment** setting is enabled:
+For a locally suspicious call, CallShield can show a real-time overlay when the default-off **Live caller enrichment** setting is on. It checks the number against SkipCalls' spam reports:
 
 ```
 ┌──────────────────────────────────┐
 │ LIKELY SPAM                      │
 │ (212) 555-1234                   │
 │ New York, NY                     │
-│ Spam Score: 80% (17 reports)     │
-│ JOHN DOE (OpenCNAM)             │
-│ ⚠ SkipCalls: Flagged            │
-│ ⚠ PhoneBlock: 5 reports         │
-│ ⚠ WhoCalledMe: 12 reports       │
+│ Spam Score: 50%                  │
+│ ⚠ SkipCalls: Flagged as scam     │
 │ All sources checked              │
 │ [Search] [Block] [Dismiss]       │
 │ 🔈 Play SIT Tone (anti-dialer)  │
 └──────────────────────────────────┘
 ```
 
-- Shows instantly with area code, then updates live as each source responds
-- **OpenCNAM** caller name lookup (free, 60 req/hr)
+- Shows instantly with the area code, then updates when SkipCalls answers
 - **SIT Tone**. ITU-T E.180 three-tone sequence tricks autodialers into removing your number
 - Color-coded: green (safe) → yellow → orange → red (spam)
+
+PhoneBlock, OpenCNAM and WhoCalledMe were dropped in September 2026. PhoneBlock and OpenCNAM now require accounts, which CallShield never asks for, and WhoCalledMe's domain is parked. `scripts/probe_live_sources.py` checks that SkipCalls still answers the way the app reads it.
 
 ## ML Spam Scorer
 
@@ -506,7 +504,7 @@ by locale and message type without shipping personal data:
 - Auto-paste from clipboard, area code lookup (330+ US/CA), haptic feedback
 - Verdict cards lead with the deciding rule or causal signal, reserve confidence for
   genuinely probabilistic layers, and keep “This is not spam” / “Remove my rule” actions visible
-- Multi-source reverse lookup: SkipCalls + PhoneBlock + WhoCalledMe + OpenCNAM
+- On-request SkipCalls spam lookup
 
 ### Recent Calls & Blocked Log
 - Recent calls with contact names, risk indicators, call type icons, filter chips (All/Missed/Spam)
@@ -571,17 +569,15 @@ by locale and message type without shipping personal data:
 | **FCC Consumer Complaints** | Socrata API, 500K records, min 2 reports |
 | **FTC Do Not Call** | `api.ftc.gov` (DEMO_KEY) |
 | **Saracroche** | Daily French telemarketing ranges; imported as compact prefixes |
-| **PhoneBlock** | Optional authenticated bulk snapshot; live lookup sends SHA-1 number/prefix hashes only |
+| **PhoneBlock** | Optional authenticated bulk snapshot, maintainer import only |
 | **Nomorobo IRS** | Optional carrier-authorized callback-scam CSV feed |
 | **ToastedSpam** | Community curated list |
 | **Community Reports** | Anonymous via Cloudflare Worker |
 
 The source importer also has optional adapters for **PhoneBlock's** versioned
-bulk list. PhoneBlock requires an account/API key for bulk downloads on current
-deployments, so the app continues to use its public per-number lookup by
-default. The live PhoneBlock request never uploads the raw number: it sends a
-full SHA-1 plus bounded one- and two-digit prefix hashes and caches the result
-briefly. Run `python scripts/import_all_sources.py --include-saracroche` to
+bulk list. PhoneBlock requires an account for bulk downloads, so that adapter
+runs only when the maintainer has access, and the app itself no longer contacts
+PhoneBlock. Run `python scripts/import_all_sources.py --include-saracroche` to
 refresh the French ranges; add `--phoneblock-limit 5000` and
 `PHONEBLOCK_API_KEY` only when the maintainer has bulk-feed access. Saracroche
 range data is published under CC BY-NC-SA 4.0, must retain attribution and
@@ -621,10 +617,7 @@ not scrape Nomorobo's restricted carrier feed.
 ### Real-Time Lookup (overlay only)
 | Source | What It Returns | Auth |
 |--------|----------------|------|
-| **SkipCalls** | spam flag, 1M+ numbers | None |
-| **PhoneBlock.net** | Votes, rating, blacklist | None |
-| **WhoCalledMe** | Report count, notes | None |
-| **OpenCNAM** | Caller name (CNAM) | None (60/hr) |
+| **SkipCalls** | Spam flag and category | None |
 
 ### URL Safety (post-decision)
 | Source | What It Checks |
@@ -808,7 +801,7 @@ language in [issue #7](https://github.com/SysAdminDoc/CallShield/issues/7).
 | URL Safety | Local spam-domain data; optional URLhaus (abuse.ch) |
 | Verification | Local Gradle, lint, and release-artifact checks |
 | Tests | 1100 JVM unit tests (JUnit) |
-| Strings | 1412 string resources and 33 plural groups (translation-ready) |
+| Strings | 1411 string resources and 33 plural groups (translation-ready) |
 | Accessibility | 100+ content descriptions, 48dp touch targets |
 | Min SDK | 29 (Android 10) |
 | Target SDK | 36 |
