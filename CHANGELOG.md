@@ -114,6 +114,11 @@ All notable changes to CallShield will be documented in this file.
   change the same merge would also have stamped test imports into
   `data/source-freshness.json`, the file the weekly check trusts. The test
   runner now fails if any suite changes a file under `data/`.
+- `feed_signing.py` now trusts only the keys inside the app's `TRUSTED_KEYS`
+  list, and skips any commented out of it. A retired key left behind in a
+  comment could otherwise still sign feeds that new installs refuse. The data
+  README also stops telling you to edit the database after signing it, since
+  the scripts bump its version themselves.
 
 ### Community reports
 

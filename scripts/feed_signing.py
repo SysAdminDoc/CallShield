@@ -53,8 +53,11 @@ SIGNED_FEEDS = (
 )
 
 # The SubjectPublicKeyInfo of every P-256 key starts with these bytes, so a
-# quoted base64 string with this prefix in FeedSignature.kt is a trusted key.
+# quoted base64 string with this prefix inside FeedSignature.TRUSTED_KEYS is a
+# trusted key.
 _P256_SPKI_PREFIX = "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE"
+# Base64 has no parenthesis, so the first ")" closes the list.
+_TRUSTED_KEYS_BLOCK = re.compile(r"TRUSTED_KEYS\s*=\s*listOf\((.*?)\)", re.S)
 
 
 def signature_path(feed: Path) -> Path:
@@ -62,10 +65,22 @@ def signature_path(feed: Path) -> Path:
 
 
 def trusted_public_keys(source: str | None = None) -> list[ec.EllipticCurvePublicKey]:
-    """The keys the app accepts, read from the Kotlin source that compiles them in."""
+    """The keys the app accepts, read from the Kotlin list that compiles them in.
+
+    Only the TRUSTED_KEYS list counts, and a key commented out of it (the way
+    a rotation retires one) doesn't: the app no longer trusts it, so signing
+    with it would publish feeds new installs refuse. Base64 has no "*", so a
+    block comment can't start inside a key, and a line comment is only a line
+    whose first characters are "//", since "//" can occur inside a key.
+    """
     text = KOTLIN_KEYS.read_text(encoding="utf-8") if source is None else source
+    block = _TRUSTED_KEYS_BLOCK.search(text)
+    if block is None:
+        raise ValueError("FeedSignature.kt has no TRUSTED_KEYS = listOf(...) list")
+    live = re.sub(r"/\*.*?\*/", "", block.group(1), flags=re.S)
+    live = "\n".join(line for line in live.splitlines() if not line.lstrip().startswith("//"))
     keys = []
-    for encoded in re.findall(rf'"({_P256_SPKI_PREFIX}[A-Za-z0-9+/=]+)"', text):
+    for encoded in re.findall(rf'"({_P256_SPKI_PREFIX}[A-Za-z0-9+/=]+)"', live):
         key = serialization.load_der_public_key(base64.b64decode(encoded))
         if not isinstance(key, ec.EllipticCurvePublicKey) or key.curve.name != "secp256r1":
             raise ValueError("FeedSignature.kt lists a key that isn't P-256")

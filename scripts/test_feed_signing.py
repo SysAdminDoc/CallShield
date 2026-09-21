@@ -85,6 +85,22 @@ class SigningTest(unittest.TestCase):
 
 
 class AppContractTest(unittest.TestCase):
+    def test_a_key_commented_out_of_the_list_or_outside_it_is_not_trusted(self):
+        live, retired, stray, boxed = (ec.generate_private_key(ec.SECP256R1()).public_key() for _ in range(4))
+        source = (
+            f'/** Example: "{feed_signing.public_key_base64(stray)}" */\n'
+            "internal val TRUSTED_KEYS =\n"
+            "        listOf(\n"
+            f'            "{feed_signing.public_key_base64(live)}",\n'
+            f'            // "{feed_signing.public_key_base64(retired)}",\n'
+            f'            /* "{feed_signing.public_key_base64(boxed)}", */\n'
+            "        )\n"
+        )
+
+        trusted = [feed_signing.public_key_base64(key) for key in feed_signing.trusted_public_keys(source)]
+
+        self.assertEqual([feed_signing.public_key_base64(live)], trusted)
+
     def test_the_app_trusts_two_keys(self):
         # A primary and a backup, so losing one key doesn't strand every device.
         self.assertEqual(2, len(feed_signing.trusted_public_keys()))

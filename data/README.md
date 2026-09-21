@@ -187,9 +187,12 @@ fallback). `evaluate_model.py` reports precision/recall/F1 two ways: with the
 exact **on-device** inference the app runs (so it catches export/inference
 drift the trainer's sklearn-side metrics hide) and via stratified k-fold
 cross-validation (an honest generalization estimate); it exits non-zero when the
-cross-validated F1 drops below `--min-f1` so it can gate a bad retrain. Bump the
-`version` field in `spam_numbers.json` so clients re-sync, then commit the
-regenerated `data/*.json` together with their `.sig` files.
+cross-validated F1 drops below `--min-f1` so it can gate a bad retrain. The
+import and merge scripts bump the database `version` themselves, so there's
+nothing to edit by hand. Signing is the last step: a signed file changed after
+step 6 no longer matches its `.sig`, needs `feed_signing.py sign` again, and
+fails the validation run if it's pushed as it is. Commit the regenerated
+`data/*.json` together with their `.sig` files.
 
 ### Feed signatures
 
