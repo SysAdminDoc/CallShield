@@ -62,6 +62,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -1190,9 +1191,23 @@ class MainViewModel
             }
         }
 
+        private var notSpamUndoJob: Job? = null
+
+        fun scheduleNotSpam(number: String) {
+            notSpamUndoJob?.cancel()
+            notSpamUndoJob = viewModelScope.launch {
+                delay(5000L)
+                reportNotSpam(number)
+            }
+        }
+
+        fun undoNotSpam() {
+            notSpamUndoJob?.cancel()
+            notSpamUndoJob = null
+        }
+
         fun reportNotSpam(number: String) {
             viewModelScope.launch {
-                // Whitelist locally AND report as false positive to community
                 manageBlocklist.addToWhitelist(number, appContext.getString(R.string.desc_reported_not_spam))
                 val result = CommunityContributor.reportNotSpam(appContext, repo.normalizeNumber(number))
                 _contributeResult.value = result.toStatusMessage()

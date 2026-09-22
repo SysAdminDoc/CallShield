@@ -161,9 +161,11 @@ def main() -> int:
 
     # Reproduce the trainer's deterministic 60/20/20 split so we can identify
     # the evaluation slice that was never used for fitting or calibration.
+    # build_dataset calls random.seed(42) internally before generating negatives,
+    # so the RNG state after it returns is deterministic. The trainer shuffles
+    # with whatever state remains (no re-seed), so we must do the same.
     import random as _rand
     combined = list(zip(X, y))
-    _rand.seed(42)
     _rand.shuffle(combined)
     X_all = [c[0] for c in combined]
     y_all = [c[1] for c in combined]

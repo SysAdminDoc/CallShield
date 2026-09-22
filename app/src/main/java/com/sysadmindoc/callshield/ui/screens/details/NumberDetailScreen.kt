@@ -634,14 +634,15 @@ fun NumberDetailScreen(
                 color = CatGreen,
                 onClick = {
                     hapticTick(context)
+                    viewModel.scheduleNotSpam(number)
                     coroutineScope.launch {
                         val result = snackbarHostState.showSnackbar(
                             message = notSpamPending,
                             actionLabel = undoLabel,
                             duration = SnackbarDuration.Short,
                         )
-                        if (result != SnackbarResult.ActionPerformed) {
-                            viewModel.reportNotSpam(number)
+                        if (result == SnackbarResult.ActionPerformed) {
+                            viewModel.undoNotSpam()
                         }
                     }
                 },
