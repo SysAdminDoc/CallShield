@@ -185,6 +185,33 @@ class SmsContentAnalyzer
             return domain.isNotEmpty() && isKnownSpamDomain(domain)
         }
 
+        private data class ImpersonatedBrand(
+            val keywords: List<String>,
+            val realDomains: Set<String>,
+        )
+
+        private val impersonatedBrands =
+            listOf(
+                ImpersonatedBrand(listOf("usps"), setOf("usps.com")),
+                ImpersonatedBrand(listOf("ezpass", "e-zpass"), setOf("e-zpassny.com", "e-zpassiag.com", "e-zpassnj.com", "e-zpassmd.com")),
+                ImpersonatedBrand(listOf("sunpass"), setOf("sunpass.com")),
+                ImpersonatedBrand(listOf("fastrak"), setOf("bayareafastrak.org", "thetollroads.com")),
+                ImpersonatedBrand(listOf("txtag"), setOf("txtag.org")),
+            )
+
+        private val govLikePattern = Regex("(?:^|[.-])gov(?:[.-]|$)", RegexOption.IGNORE_CASE)
+
+        internal fun isLookalikeHost(host: String): Boolean {
+            if (host.isEmpty()) return false
+            val lower = host.lowercase()
+            for (brand in impersonatedBrands) {
+                if (brand.realDomains.any { lower == it || lower.endsWith(".$it") }) continue
+                val hasBrand = brand.keywords.any { kw -> lower.contains(kw) }
+                if (hasBrand && govLikePattern.containsMatchIn(lower)) return true
+            }
+            return false
+        }
+
         /**
          * Score a single extracted host. Returns the added score and the reason
          * tag, or `(0, null)` for a benign / empty host. Comparisons are on the
@@ -195,6 +222,7 @@ class SmsContentAnalyzer
             when {
                 domain.isEmpty() -> 0 to null
                 spamDomains.isNotEmpty() && isKnownSpamDomain(domain) -> 50 to "spam_domain"
+                isLookalikeHost(domain) -> 45 to "lookalike_host"
                 shortenerDomains.any { domain == it || domain.endsWith(".$it") } -> 35 to "shortened_url"
                 suspiciousTlds.any { domain.endsWith(it) } -> 30 to "suspicious_tld"
                 else -> 0 to null
@@ -378,6 +406,8 @@ class SmsContentAnalyzer
             fun isVerificationMessage(body: String): Boolean = shared.isVerificationMessage(body)
 
             fun isKnownSpamDomainUrl(url: String): Boolean = shared.isKnownSpamDomainUrl(url)
+
+            internal fun isLookalikeHost(host: String): Boolean = shared.isLookalikeHost(host)
 
             internal fun normalizeDomainCandidate(rawDomain: String): String? {
                 val normalized =

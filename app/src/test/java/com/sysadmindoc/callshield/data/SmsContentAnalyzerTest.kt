@@ -412,4 +412,38 @@ class SmsContentAnalyzerTest {
 
         assertTrue(result.reasons.contains("spam_domain"))
     }
+
+    // ── Lookalike hostnames ─────────────────────────────────────────────
+
+    @Test
+    fun `lookalike toll and delivery hosts are flagged`() {
+        assertTrue(SmsContentAnalyzer.isLookalikeHost("usps.gov-notice.com"))
+        assertTrue(SmsContentAnalyzer.isLookalikeHost("ezpass-gov.xyz"))
+        assertTrue(SmsContentAnalyzer.isLookalikeHost("sunpass.gov-pay.top"))
+        assertTrue(SmsContentAnalyzer.isLookalikeHost("fastrak.gov-toll.com"))
+        assertTrue(SmsContentAnalyzer.isLookalikeHost("txtag.gov-renewal.com"))
+        assertTrue(SmsContentAnalyzer.isLookalikeHost("gov-usps.claim-notice.xyz"))
+    }
+
+    @Test
+    fun `real brand domains are not flagged as lookalikes`() {
+        assertFalse(SmsContentAnalyzer.isLookalikeHost("usps.com"))
+        assertFalse(SmsContentAnalyzer.isLookalikeHost("tracking.usps.com"))
+        assertFalse(SmsContentAnalyzer.isLookalikeHost("sunpass.com"))
+        assertFalse(SmsContentAnalyzer.isLookalikeHost("bayareafastrak.org"))
+        assertFalse(SmsContentAnalyzer.isLookalikeHost("txtag.org"))
+    }
+
+    @Test
+    fun `hosts without gov-like labels are not flagged`() {
+        assertFalse(SmsContentAnalyzer.isLookalikeHost("usps-tracking.com"))
+        assertFalse(SmsContentAnalyzer.isLookalikeHost("ezpass.claim.com"))
+    }
+
+    @Test
+    fun `lookalike host scores as phishing in analyze`() {
+        val result = SmsContentAnalyzer.analyze("Your toll is unpaid. Pay now: https://ezpass.gov-pay.xyz/pay")
+        assertTrue(result.reasons.contains("lookalike_host"))
+        assertTrue(result.score >= 45)
+    }
 }
