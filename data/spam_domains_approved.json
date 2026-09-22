@@ -1,0 +1,4 @@
+{
+  "description": "Domains reviewed and approved for the published spam domain feed. A domain that passes review here and also clears the automated gates in extract_spam_domains.py is included in spam_domains.json. Domains not in this file remain in spam_domains_review.json until reviewed.",
+  "approved": []
+}

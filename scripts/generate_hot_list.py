@@ -241,18 +241,6 @@ def main(argv: list[str] | None = None) -> int:
                 # trending numbers out of the top-N entirely.
                 if num in velocity:
                     velocity[num]["total_reports"] = entry.get("reports", 0)
-                else:
-                    velocity[num] = {
-                        "number": num,
-                        "type": entry.get("type", "robocall"),
-                        # Seen inside the window, but we cannot know how many of
-                        # its lifetime reports landed there — credit it one.
-                        "reports": 1,
-                        "total_reports": entry.get("reports", 0),
-                        "first_seen": entry.get("first_seen", last_seen),
-                        "last_seen": last_seen,
-                        "description": entry.get("description", "Community reported"),
-                    }
 
     # ── Filter and rank ───────────────────────────────────────────────
     hot_internal = []
