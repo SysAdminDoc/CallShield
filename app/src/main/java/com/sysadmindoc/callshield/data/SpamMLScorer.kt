@@ -198,6 +198,7 @@ class SpamMLScorer
             val weights: DoubleArray?,
             val bias: Double,
             val threshold: Double,
+            val generatedAt: Long = 0L,
         )
 
         /** Result of a single scoring pass — used to avoid double work on the hot path. */
@@ -265,6 +266,8 @@ class SpamMLScorer
                     val json = file.readText()
                     val parsed = parseModel(json)
                     if (parsed != null) {
+                        val current = state
+                        if (current.generatedAt > 0L && parsed.generatedAt < current.generatedAt) return
                         state = parsed
                         recordModelHealth(json, parsed, "cache")
                         return
@@ -276,6 +279,8 @@ class SpamMLScorer
                     val json = bundled.getOrThrow()
                     val parsed = parseModel(json)
                     if (parsed != null) {
+                        val current = state
+                        if (current.generatedAt > 0L && parsed.generatedAt < current.generatedAt) return
                         state = parsed
                         recordModelHealth(json, parsed, "bundled")
                         return
@@ -667,6 +672,7 @@ class SpamMLScorer
                 val modelType = modelTypeMatch?.groupValues?.get(1) ?: ""
                 val parsedThreshold = thresholdMatch?.groupValues?.get(1)?.toDoubleOrNull() ?: 0.7
                 val parsedInitialScore = initialScoreMatch?.groupValues?.get(1)?.toDoubleOrNull() ?: 0.0
+                val generatedAt = modelGeneratedAt(json)
 
                 if (version >= 3 && !modelFeatureSchemaMatches(json)) return null
 
@@ -686,6 +692,7 @@ class SpamMLScorer
                             weights = fallback?.first,
                             bias = fallback?.second ?: -2.5,
                             threshold = parsedThreshold,
+                            generatedAt = generatedAt,
                         )
                     }
                 }
@@ -699,6 +706,7 @@ class SpamMLScorer
                         weights = fallback.first,
                         bias = fallback.second,
                         threshold = parsedThreshold,
+                        generatedAt = generatedAt,
                     )
                 }
 
