@@ -653,7 +653,7 @@
     <string name="settings_silent_voicemail">Silent voicemail mode</string>
     <string name="settings_silent_voicemail_desc">Blocked calls go to voicemail silently. Your phone stays quiet while callers hear normal ringing.</string>
     <string name="settings_answer_hang_up">Answer &amp; hang up blocked calls</string>
-    <string name="settings_answer_hang_up_desc">Instead of rejecting, CallShield answers blocked calls and hangs up so they can\'t leave a voicemail. Silent Voicemail and low-confidence auto-mute still send calls to voicemail. If you\'re already on a call, the blocked call is rejected. Your screen may light up briefly.</string>
+    <string name="settings_answer_hang_up_desc">Instead of rejecting, CallShield answers blocked calls and hangs up so they can\'t leave a voicemail. Silent Voicemail and low-confidence auto-mute still send calls to voicemail. If you\'re already on a call, the blocked call is rejected. Your screen may light up briefly. Trade-offs: answering tells autodialers the number is live, so some callers redial; some carriers need a longer delay to skip voicemail, raise it if spam still lands in voicemail.</string>
     <string name="settings_hang_up_delay">Hang up after</string>
     <string name="settings_quiet_hours">Quiet hours</string>
     <string name="settings_quiet_hours_toggle">Block unknowns during quiet hours</string>
