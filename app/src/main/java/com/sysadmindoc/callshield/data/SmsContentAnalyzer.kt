@@ -110,6 +110,30 @@ class SmsContentAnalyzer
                 Regex("(?i)(congratulations|congrats).{0,20}(won|winner|selected|chosen)"),
                 Regex("(?i)text (yes|y|go|start|ok) to"),
                 Regex("(?i)reply (yes|y|stop|1|2)"),
+                // ── Spanish ────────────────────────────────────────────────
+                Regex("(?i)(has ganado|ganaste|fuiste seleccionado|premio|sorteo)"),
+                Regex("(?i)(reclam[ae]|cobra) (tu|su|el) (premio|regalo|dinero)"),
+                Regex("(?i)(cuenta (suspendida|bloqueada|comprometida))"),
+                Regex("(?i)(verific[ae]|confirm[ae]) (tu|su) (cuenta|identidad|informaci.n)"),
+                Regex("(?i)(paquete|env.o|entrega).{0,20}(retenido|detenido|pendiente)"),
+                Regex("(?i)(transferencia|giro|dep.sito).{0,20}(inmediato|urgente|ahora)"),
+                Regex("(?i)(banco|tarjeta|cr.dito).{0,20}(bloqueado|suspendido|verificar)"),
+                // ── Portuguese ─────────────────────────────────────────────
+                Regex("(?i)(voc. ganhou|parab.ns|sorteio|premiado)"),
+                Regex("(?i)(resgate|retirar) (seu|o) (pr.mio|presente|dinheiro)"),
+                Regex("(?i)(conta (suspensa|bloqueada|comprometida))"),
+                Regex("(?i)(verificar|confirmar) (sua|a) (conta|identidade|informa..o)"),
+                Regex("(?i)(encomenda|pacote|entrega).{0,20}(retido|pendente|parado)"),
+                Regex("(?i)(transfer.ncia|pix|dep.sito).{0,20}(imediato|urgente|agora)"),
+                Regex("(?i)(banco|cart.o|cr.dito).{0,20}(bloqueado|suspenso|verificar)"),
+                // ── Italian ────────────────────────────────────────────────
+                Regex("(?i)(hai vinto|congratulazioni|premio|sorteggio)"),
+                Regex("(?i)(riscuoti|ritira) (il tuo|il) (premio|regalo|denaro)"),
+                Regex("(?i)(conto (sospeso|bloccato|compromesso))"),
+                Regex("(?i)(verifica|conferma) (il tuo|la tua) (conto|identit.|informazioni)"),
+                Regex("(?i)(pacco|spedizione|consegna).{0,20}(trattenuto|in sospeso|bloccato)"),
+                Regex("(?i)(bonifico|trasferimento).{0,20}(immediato|urgente|adesso)"),
+                Regex("(?i)(banca|carta|credito).{0,20}(bloccato|sospeso|verificare)"),
             )
 
         // Phone number in SMS body (common in callback scams)
