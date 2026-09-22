@@ -1610,6 +1610,14 @@
     </plurals>
     <string name="settings_region_cnap_rules">Region &amp; caller-name rules</string>
     <string name="settings_region_cnap_summary">Allowed regions: %1$d · Trusted names: %2$d · Blocked names: %3$d</string>
+    <string name="reg_prefix_spain_400">Block Spain 400 telemarketing</string>
+    <string name="reg_prefix_spain_400_desc">Spain requires commercial calls to use the 400 prefix from October 2026 (RD 2026).</string>
+    <string name="reg_prefix_india_140">Block India 140 promotional</string>
+    <string name="reg_prefix_india_140_desc">India reserves the 140 prefix for promotional and telemarketing calls (TRAI).</string>
+    <string name="reg_prefix_brazil_0303">Block Brazil 0303 telemarketing</string>
+    <string name="reg_prefix_brazil_0303_desc">Brazil\'s 0303 prefix is used for telemarketing calls (ANATEL).</string>
+    <string name="reg_prefix_india_1600_allow">Protect India 1600 series</string>
+    <string name="reg_prefix_india_1600_allow_desc">India\'s 1600 series is used by banks, insurers, and government. TRAI prohibits blocking it.</string>
     <string name="region_rules_title">Region &amp; caller-name rules</string>
     <string name="region_rules_disclosure">These rules run entirely on your device. Region blocking uses the incoming number\'s NANP area code. Caller-name trust uses only a carrier-presented name that Android exposes to the screening service.</string>
     <string name="region_rules_block_outside">Block calls outside allowed regions</string>

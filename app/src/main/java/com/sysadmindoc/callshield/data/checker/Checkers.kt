@@ -449,6 +449,36 @@ internal class PrefixChecker(
     }
 }
 
+internal class RegulatoryPrefixChecker : IChecker {
+    override val priority = CheckerPriority.REGULATORY_PREFIX
+    override val name = "regulatory_prefix"
+
+    override suspend fun check(ctx: CheckContext): BlockResult? {
+        if (ctx.prefs[SpamRepository.KEY_REG_SPAIN_400] == true && ctx.number.startsWith("+34400")) {
+            return BlockResult.block("regulatory_prefix", "telemarketing", "Spain 400 telemarketing (RD 2026)")
+        }
+        if (ctx.prefs[SpamRepository.KEY_REG_INDIA_140] == true && ctx.number.startsWith("+91140")) {
+            return BlockResult.block("regulatory_prefix", "telemarketing", "India 140 promotional (TRAI)")
+        }
+        if (ctx.prefs[SpamRepository.KEY_REG_BRAZIL_0303] == true && ctx.number.startsWith("+550303")) {
+            return BlockResult.block("regulatory_prefix", "telemarketing", "Brazil 0303 telemarketing (ANATEL)")
+        }
+        return null
+    }
+}
+
+internal class RegulatoryAllowChecker : IChecker {
+    override val priority = CheckerPriority.REGULATORY_ALLOW
+    override val name = "regulatory_allow"
+
+    override suspend fun check(ctx: CheckContext): BlockResult? {
+        if (ctx.prefs[SpamRepository.KEY_REG_INDIA_1600_ALLOW] == true && ctx.number.startsWith("+911600")) {
+            return BlockResult.allow("india_1600_protected")
+        }
+        return null
+    }
+}
+
 /**
  * Wildcard / regex rules (Feature 8). Cached list; invalidated on edit.
  * A7 schedule gating: rules may carry a day/hour window that skips the

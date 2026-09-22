@@ -201,6 +201,11 @@ class SpamRepository(
         val KEY_EMERGENCY_CALLBACK_GRACE = booleanPreferencesKey("emergency_callback_grace_enabled")
         val KEY_EMERGENCY_CALLBACK_WINDOW_MINUTES = intPreferencesKey("emergency_callback_grace_window_minutes")
 
+        val KEY_REG_SPAIN_400 = booleanPreferencesKey("reg_spain_400_enabled")
+        val KEY_REG_INDIA_140 = booleanPreferencesKey("reg_india_140_enabled")
+        val KEY_REG_BRAZIL_0303 = booleanPreferencesKey("reg_brazil_0303_enabled")
+        val KEY_REG_INDIA_1600_ALLOW = booleanPreferencesKey("reg_india_1600_allow_enabled")
+
         // Feature 9: Time-based blocking
         val KEY_TIME_BLOCK = booleanPreferencesKey("time_block_enabled")
         val KEY_TIME_BLOCK_START = intPreferencesKey("time_block_start_hour") // 0-23

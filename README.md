@@ -90,7 +90,9 @@ All detection layers implement a shared `IChecker` interface and run in priority
 |  5400 | **Range Patterns** (A5) | Block | Length-locked `#` patterns like `+33162######`, with schedule + coverage safety rail |
 |  5350 | **Temporary Allow** | Allow | One-off false-positive recovery from the Blocked Log. Beats all downloaded data, never your own rules |
 |  5320 | **Prefix Rules** | Block | Downloaded wangiri country codes, US premium rate (+1900), international premium |
+|  5310 | **Regulatory Prefix** | Block | Opt-in country telemarketing blocks: Spain 400 (RD 2026), India 140 (TRAI), Brazil 0303 (ANATEL) |
 |  5300 | **STIR/SHAKEN Authenticated** | Allow | Carrier-authenticated caller ID allows through heuristic/ML suspicion, and through a database match only when that row's newest evidence, community reports included, is over a year old and the number isn't trending right now. Explicit blocks still win first |
+|  5250 | **Regulatory Allow** | Allow | Protected series that must not be blocked. India 1600 (banks, insurers, government per TRAI) |
 |  5200 | **Spam Database** | Block | 51,634 imported spam numbers plus the trending-numbers feed |
 |  5150 | **Database Prefix Expansion** | Block | Auto-blocks last-two-digit siblings of confirmed database entries |
 |  5000 | **Recently Dialed** | Allow | Numbers you called in the last 24h. They're probably calling back |
