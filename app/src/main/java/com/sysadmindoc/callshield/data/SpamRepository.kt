@@ -1008,11 +1008,9 @@ class SpamRepository(
     internal suspend fun readLastDataSha(): String? = settingsRepository.readLastDataSha()
 
     // ── Caller-name screening observation ────────────────────────────
-    internal suspend fun recordCallerNamePresence(hadName: Boolean) =
-        settingsRepository.recordCallerNamePresence(hadName)
+    internal suspend fun recordCallerNamePresence(hadName: Boolean) = settingsRepository.recordCallerNamePresence(hadName)
 
-    suspend fun readCallerNameSupport(): CallerNameSupport =
-        settingsRepository.readCallerNameSupport()
+    suspend fun readCallerNameSupport(): CallerNameSupport = settingsRepository.readCallerNameSupport()
 
     internal suspend fun readFeedTrustNoticeVersion(): Int? = settingsRepository.readFeedTrustNoticeVersion()
 

@@ -13,6 +13,7 @@ import com.sysadmindoc.callshield.data.AppUpdateState
 import com.sysadmindoc.callshield.data.AppUpdateStatus
 import com.sysadmindoc.callshield.data.CallCategory
 import com.sysadmindoc.callshield.data.CallbackDetector
+import com.sysadmindoc.callshield.data.CallerNameSupport
 import com.sysadmindoc.callshield.data.CategoryCallAction
 import com.sysadmindoc.callshield.data.CategoryCallPolicy
 import com.sysadmindoc.callshield.data.CommunityReportLedger
@@ -21,7 +22,6 @@ import com.sysadmindoc.callshield.data.MessageCapabilitySource
 import com.sysadmindoc.callshield.data.MessageCapabilityStatus
 import com.sysadmindoc.callshield.data.NotificationScreeningSources
 import com.sysadmindoc.callshield.data.RegionRules
-import com.sysadmindoc.callshield.data.CallerNameSupport
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.model.ExternalBlocklistSubscription
 import com.sysadmindoc.callshield.data.model.HotDataHealth

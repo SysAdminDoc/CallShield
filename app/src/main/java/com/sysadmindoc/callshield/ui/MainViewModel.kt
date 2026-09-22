@@ -1080,8 +1080,7 @@ class MainViewModel
             }
         }
 
-        suspend fun readCallerNameUnavailable(): Boolean =
-            repo.readCallerNameSupport() == com.sysadmindoc.callshield.data.CallerNameSupport.NOT_PROVIDED
+        suspend fun readCallerNameUnavailable(): Boolean = repo.readCallerNameSupport() == com.sysadmindoc.callshield.data.CallerNameSupport.NOT_PROVIDED
 
         fun saveRegionAndCnapRules(
             regionBlockEnabled: Boolean,
@@ -1195,10 +1194,11 @@ class MainViewModel
 
         fun scheduleNotSpam(number: String) {
             notSpamUndoJob?.cancel()
-            notSpamUndoJob = viewModelScope.launch {
-                delay(5000L)
-                reportNotSpam(number)
-            }
+            notSpamUndoJob =
+                viewModelScope.launch {
+                    delay(5000L)
+                    reportNotSpam(number)
+                }
         }
 
         fun undoNotSpam() {

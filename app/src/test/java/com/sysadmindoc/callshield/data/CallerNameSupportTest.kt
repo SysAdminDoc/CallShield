@@ -23,7 +23,10 @@ class CallerNameSupportTest {
         assertEquals(CallerNameSupport.PROVIDED, derive(withName = 10, withoutName = 40))
     }
 
-    private fun derive(withName: Int, withoutName: Int): CallerNameSupport {
+    private fun derive(
+        withName: Int,
+        withoutName: Int,
+    ): CallerNameSupport {
         val total = withName + withoutName
         return when {
             total < SpamRepository.CNAP_OBSERVATION_THRESHOLD -> CallerNameSupport.UNKNOWN

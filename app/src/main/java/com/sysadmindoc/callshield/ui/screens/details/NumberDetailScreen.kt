@@ -132,620 +132,624 @@ fun NumberDetailScreen(
     val notSpamPending = stringResource(R.string.detail_not_spam_pending)
 
     Box(modifier = Modifier.fillMaxSize()) {
-    Column(
-        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
-    ) {
-        // Header
-        Row(
-            modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
-            verticalAlignment = Alignment.CenterVertically,
+        Column(
+            modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.cd_back), tint = CatText)
+            // Header
+            Row(
+                modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                IconButton(onClick = onBack) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.cd_back), tint = CatText)
+                }
+                Spacer(Modifier.width(4.dp))
+                Text(
+                    stringResource(R.string.detail_number_details),
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = CatText,
+                )
+                // Copy button
+                IconButton(onClick = {
+                    (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager)
+                        .setPrimaryClip(ClipData.newPlainText(clipLabelPhone, number))
+                    Toast.makeText(context, copiedMessage, Toast.LENGTH_SHORT).show()
+                }) { Icon(Icons.Default.ContentCopy, stringResource(R.string.cd_copy), tint = CatSubtext) }
             }
-            Spacer(Modifier.width(4.dp))
+            SectionHeader(stringResource(R.string.detail_phone_number), CatSubtext)
+            contactName?.let { name ->
+                Text(name, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold, color = CatGreen)
+            }
             Text(
-                stringResource(R.string.detail_number_details),
-                modifier = Modifier.weight(1f),
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.SemiBold,
+                PhoneFormatter.formatIsolated(number),
+                style = MaterialTheme.typography.headlineLarge,
+                fontWeight = FontWeight.Bold,
                 color = CatText,
             )
-            // Copy button
-            IconButton(onClick = {
-                (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager)
-                    .setPrimaryClip(ClipData.newPlainText(clipLabelPhone, number))
-                Toast.makeText(context, copiedMessage, Toast.LENGTH_SHORT).show()
-            }) { Icon(Icons.Default.ContentCopy, stringResource(R.string.cd_copy), tint = CatSubtext) }
-        }
-        SectionHeader(stringResource(R.string.detail_phone_number), CatSubtext)
-        contactName?.let { name ->
-            Text(name, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold, color = CatGreen)
-        }
-        Text(
-            PhoneFormatter.formatIsolated(number),
-            style = MaterialTheme.typography.headlineLarge,
-            fontWeight = FontWeight.Bold,
-            color = CatText,
-        )
-        Text(
-            location ?: PhoneFormatter.formatWithCountryCodeIsolated(number),
-            style = MaterialTheme.typography.bodyLarge,
-            color = CatSubtext,
-        )
+            Text(
+                location ?: PhoneFormatter.formatWithCountryCodeIsolated(number),
+                style = MaterialTheme.typography.bodyLarge,
+                color = CatSubtext,
+            )
 
-        // Lead with a concise verdict. The score remains secondary evidence.
-        liveResult?.let { r ->
-            val reasoning =
-                remember(r.reasonCode, r.matchSource, r.description, r.confidence) {
-                    BlockReasoning.explain(
-                        reasonCode = r.reasonCode,
-                        matchSource = r.matchSource,
-                        description = r.description,
-                        confidence = r.confidence,
-                    )
-                }
-            val accent = if (r.isSpam) CatRed else CatGreen
-            PremiumCard(accentColor = accent) {
-                Column(
-                    modifier = Modifier.fillMaxWidth().padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+            // Lead with a concise verdict. The score remains secondary evidence.
+            liveResult?.let { r ->
+                val reasoning =
+                    remember(r.reasonCode, r.matchSource, r.description, r.confidence) {
+                        BlockReasoning.explain(
+                            reasonCode = r.reasonCode,
+                            matchSource = r.matchSource,
+                            description = r.description,
+                            confidence = r.confidence,
+                        )
+                    }
+                val accent = if (r.isSpam) CatRed else CatGreen
+                PremiumCard(accentColor = accent) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth().padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
-                        if (r.isSpam) {
-                            SpamScoreGauge(score = r.confidence, isSpam = true)
-                        } else {
-                            Icon(
-                                imageVector = Icons.Default.VerifiedUser,
-                                contentDescription = null,
-                                tint = accent,
-                                modifier = Modifier.size(72.dp),
-                            )
-                        }
-                        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text(
-                                stringResource(
-                                    if (r.isSpam) R.string.detail_high_risk else R.string.detail_no_risk,
-                                ),
-                                style = MaterialTheme.typography.headlineSmall,
-                                fontWeight = FontWeight.SemiBold,
-                                color = accent,
-                            )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        ) {
                             if (r.isSpam) {
-                                val categoryPolicy =
-                                    remember(r.matchSource) {
-                                        com.sysadmindoc.callshield.data.CategoryCallPolicy
-                                            .parseMatchSource(r.matchSource)
-                                    }
-                                val sourceLabel =
-                                    if (categoryPolicy == null) {
-                                        friendlyMatchReasonLabel(r.reasonCode.wireValue)
-                                    } else {
-                                        stringResource(
-                                            R.string.detail_category_action_source,
-                                            stringResource(categoryPolicy.category.stringResId),
-                                            stringResource(categoryPolicy.action.labelResId),
-                                        )
-                                    }
-                                Text(sourceLabel, style = MaterialTheme.typography.bodyMedium, color = CatSubtext)
-                            }
-                            if (isBlocked) {
-                                Text(
-                                    stringResource(R.string.detail_currently_blocked).uppercase(),
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = CatRed,
+                                SpamScoreGauge(score = r.confidence, isSpam = true)
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.VerifiedUser,
+                                    contentDescription = null,
+                                    tint = accent,
+                                    modifier = Modifier.size(72.dp),
                                 )
+                            }
+                            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Text(
+                                    stringResource(
+                                        if (r.isSpam) R.string.detail_high_risk else R.string.detail_no_risk,
+                                    ),
+                                    style = MaterialTheme.typography.headlineSmall,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = accent,
+                                )
+                                if (r.isSpam) {
+                                    val categoryPolicy =
+                                        remember(r.matchSource) {
+                                            com.sysadmindoc.callshield.data.CategoryCallPolicy
+                                                .parseMatchSource(r.matchSource)
+                                        }
+                                    val sourceLabel =
+                                        if (categoryPolicy == null) {
+                                            friendlyMatchReasonLabel(r.reasonCode.wireValue)
+                                        } else {
+                                            stringResource(
+                                                R.string.detail_category_action_source,
+                                                stringResource(categoryPolicy.category.stringResId),
+                                                stringResource(categoryPolicy.action.labelResId),
+                                            )
+                                        }
+                                    Text(sourceLabel, style = MaterialTheme.typography.bodyMedium, color = CatSubtext)
+                                }
+                                if (isBlocked) {
+                                    Text(
+                                        stringResource(R.string.detail_currently_blocked).uppercase(),
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = CatRed,
+                                    )
+                                }
+                            }
+                        }
+                        if (reasoning.bullets.isNotEmpty()) {
+                            GradientDivider(color = accent)
+                            reasoning.bullets.take(3).forEach { bullet ->
+                                Row(modifier = Modifier.padding(vertical = 2.dp)) {
+                                    Icon(
+                                        Icons.Default.CheckCircle,
+                                        contentDescription = null,
+                                        tint = accent,
+                                        modifier = Modifier.size(16.dp),
+                                    )
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(bullet, style = MaterialTheme.typography.bodySmall, color = CatSubtext)
+                                }
                             }
                         }
                     }
-                    if (reasoning.bullets.isNotEmpty()) {
-                        GradientDivider(color = accent)
-                        reasoning.bullets.take(3).forEach { bullet ->
-                            Row(modifier = Modifier.padding(vertical = 2.dp)) {
+                }
+            }
+
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                PremiumActionButton(
+                    label = stringResource(if (isBlocked) R.string.detail_unblock else R.string.detail_block),
+                    icon = if (isBlocked) Icons.Default.CheckCircle else Icons.Default.Block,
+                    color = CatRed,
+                    onClick = {
+                        if (isBlocked) {
+                            userBlocked.find { it.number == number }?.let { viewModel.unblockNumber(it) }
+                            hapticTick(context)
+                            Toast.makeText(context, numberUnblockedMessage, Toast.LENGTH_SHORT).show()
+                        } else {
+                            viewModel.blockNumber(number, "spam", blockedFromDetail)
+                            hapticConfirm(context)
+                            Toast.makeText(context, numberBlockedMessage, Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    modifier = Modifier.weight(1f),
+                )
+                PremiumActionButton(
+                    label = stringResource(R.string.detail_report),
+                    icon = Icons.Default.Flag,
+                    color = CatRed,
+                    onClick = {
+                        val title = Uri.encode(reportIssueTitle)
+                        val body = Uri.encode(reportIssueBody)
+                        context.launchViewUrlSafely("https://github.com/SysAdminDoc/CallShield/issues/new?title=$title&body=$body&labels=spam-report")
+                    },
+                    modifier = Modifier.weight(1f),
+                    outlined = true,
+                )
+                PremiumActionButton(
+                    label = stringResource(R.string.detail_call),
+                    icon = Icons.Default.Phone,
+                    color = CatText,
+                    onClick = {
+                        context.startActivitySafely(
+                            Intent(Intent.ACTION_DIAL, Uri.parse("tel:$number")).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) },
+                        )
+                    },
+                    modifier = Modifier.weight(1f),
+                    outlined = true,
+                )
+            }
+
+            // Block area code — confirmed first: a ~7.9M-number rule from a stray
+            // tap with zero feedback is exactly what the Dashboard flow fixed in
+            // v1.7.26. Same dialog + toast here.
+            var showAreaBlockConfirm by rememberSaveable { mutableStateOf(false) }
+            if (areaCode != null) {
+                PremiumActionButton(
+                    label = stringResource(R.string.detail_block_area_code, areaCode),
+                    icon = Icons.Default.FilterAlt,
+                    color = CatYellow,
+                    onClick = { showAreaBlockConfirm = true },
+                    modifier = Modifier.fillMaxWidth(),
+                    outlined = true,
+                )
+            }
+            if (showAreaBlockConfirm && areaCode != null) {
+                val areaAddedToast = stringResource(R.string.dashboard_block_area_added, areaCode)
+                AlertDialog(
+                    onDismissRequest = { showAreaBlockConfirm = false },
+                    title = { Text(stringResource(R.string.dashboard_block_area_confirm_title, areaCode)) },
+                    text = {
+                        Text(
+                            stringResource(
+                                R.string.dashboard_block_area_confirm_body,
+                                areaCode,
+                                location ?: stringResource(R.string.detail_unknown_location),
+                            ),
+                        )
+                    },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            viewModel.addWildcardRule("+1$areaCode*", false, blockAreaCodeDescription.orEmpty())
+                            android.widget.Toast
+                                .makeText(context, areaAddedToast, android.widget.Toast.LENGTH_SHORT)
+                                .show()
+                            showAreaBlockConfirm = false
+                        }) {
+                            Text(stringResource(R.string.dashboard_block_area_confirm_action))
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showAreaBlockConfirm = false }) {
+                            Text(stringResource(R.string.dialog_cancel))
+                        }
+                    },
+                )
+            }
+
+            // Stats
+            PremiumCard {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    SectionHeader(stringResource(R.string.detail_statistics), color = CatBlue)
+                    Spacer(Modifier.height(8.dp))
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        StatChip(stringResource(R.string.detail_calls), callCount.toString(), CatRed)
+                        StatChip(stringResource(R.string.detail_sms), smsCount.toString(), CatMauve)
+                        StatChip(stringResource(R.string.detail_total), numberCalls.size.toString(), CatBlue)
+                    }
+                    dbEntry?.let { databaseEntry ->
+                        Spacer(Modifier.height(12.dp))
+                        GradientDivider()
+                        Spacer(Modifier.height(12.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            StatusPill(
+                                text = databaseEntry.type.replaceFirstChar { it.uppercase() },
+                                color = CatRed,
+                                horizontalPadding = 10.dp,
+                                verticalPadding = 6.dp,
+                                textStyle = MaterialTheme.typography.labelSmall,
+                            )
+                            StatusPill(
+                                text =
+                                    pluralStringResource(
+                                        R.plurals.detail_reports_count_plural,
+                                        databaseEntry.reports,
+                                        databaseEntry.reports,
+                                    ),
+                                color = CatPeach,
+                                horizontalPadding = 10.dp,
+                                verticalPadding = 6.dp,
+                                textStyle = MaterialTheme.typography.labelSmall,
+                            )
+                        }
+                        if (databaseEntry.description.isNotEmpty()) {
+                            Spacer(Modifier.height(8.dp))
+                            Text(databaseEntry.description, color = CatSubtext, style = MaterialTheme.typography.bodyMedium)
+                        }
+                    }
+                }
+            }
+
+            // Timeline
+            if (firstSeen != null) {
+                PremiumCard {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        SectionHeader(stringResource(R.string.detail_timeline), color = CatLavender)
+                        Spacer(Modifier.height(8.dp))
+                        TimelineRow(stringResource(R.string.detail_first_seen), dateFormat.format(Date(firstSeen)))
+                        if (lastSeen != null && lastSeen != firstSeen) {
+                            TimelineRow(stringResource(R.string.detail_last_seen), dateFormat.format(Date(lastSeen)))
+                        }
+                        val reasons = numberCalls.map { it.reasonCode }.filterNot { it == com.sysadmindoc.callshield.domain.model.BlockReasonCode.UNKNOWN }.distinct()
+                        if (reasons.isNotEmpty()) {
+                            Spacer(Modifier.height(8.dp))
+                            GradientDivider()
+                            Spacer(Modifier.height(8.dp))
+                            Text(stringResource(R.string.detail_match_reasons), style = MaterialTheme.typography.labelMedium, color = CatOverlay)
+                            reasons.forEach { reasonCode ->
+                                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 1.dp)) {
+                                    Icon(detectionIcon(reasonCode.wireValue), null, tint = CatPeach, modifier = Modifier.size(14.dp))
+                                    Spacer(Modifier.width(6.dp))
+                                    Text(friendlyMatchReasonLabel(reasonCode.wireValue), style = MaterialTheme.typography.bodySmall, color = CatPeach)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Recent activity
+            if (numberCalls.isNotEmpty()) {
+                PremiumCard {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        SectionHeader(stringResource(R.string.detail_recent_activity), color = CatTeal)
+                        Spacer(Modifier.height(8.dp))
+                        numberCalls.take(10).forEach { call ->
+                            Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Icon(
-                                    Icons.Default.CheckCircle,
-                                    contentDescription = null,
-                                    tint = accent,
+                                    if (call.isCall) Icons.Default.Phone else Icons.Default.Sms,
+                                    null,
+                                    tint = if (call.isCall) CatRed else CatMauve,
                                     modifier = Modifier.size(16.dp),
                                 )
                                 Spacer(Modifier.width(8.dp))
-                                Text(bullet, style = MaterialTheme.typography.bodySmall, color = CatSubtext)
+                                Text(dateFormat.format(Date(call.timestamp)), style = MaterialTheme.typography.bodySmall, color = CatSubtext, modifier = Modifier.weight(1f))
+                                if (call.confidence < 100) Text("${call.confidence}%", style = MaterialTheme.typography.labelSmall, color = CatOverlay)
                             }
-                        }
-                    }
-                }
-            }
-        }
-
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            PremiumActionButton(
-                label = stringResource(if (isBlocked) R.string.detail_unblock else R.string.detail_block),
-                icon = if (isBlocked) Icons.Default.CheckCircle else Icons.Default.Block,
-                color = CatRed,
-                onClick = {
-                    if (isBlocked) {
-                        userBlocked.find { it.number == number }?.let { viewModel.unblockNumber(it) }
-                        hapticTick(context)
-                        Toast.makeText(context, numberUnblockedMessage, Toast.LENGTH_SHORT).show()
-                    } else {
-                        viewModel.blockNumber(number, "spam", blockedFromDetail)
-                        hapticConfirm(context)
-                        Toast.makeText(context, numberBlockedMessage, Toast.LENGTH_SHORT).show()
-                    }
-                },
-                modifier = Modifier.weight(1f),
-            )
-            PremiumActionButton(
-                label = stringResource(R.string.detail_report),
-                icon = Icons.Default.Flag,
-                color = CatRed,
-                onClick = {
-                    val title = Uri.encode(reportIssueTitle)
-                    val body = Uri.encode(reportIssueBody)
-                    context.launchViewUrlSafely("https://github.com/SysAdminDoc/CallShield/issues/new?title=$title&body=$body&labels=spam-report")
-                },
-                modifier = Modifier.weight(1f),
-                outlined = true,
-            )
-            PremiumActionButton(
-                label = stringResource(R.string.detail_call),
-                icon = Icons.Default.Phone,
-                color = CatText,
-                onClick = {
-                    context.startActivitySafely(
-                        Intent(Intent.ACTION_DIAL, Uri.parse("tel:$number")).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) },
-                    )
-                },
-                modifier = Modifier.weight(1f),
-                outlined = true,
-            )
-        }
-
-        // Block area code — confirmed first: a ~7.9M-number rule from a stray
-        // tap with zero feedback is exactly what the Dashboard flow fixed in
-        // v1.7.26. Same dialog + toast here.
-        var showAreaBlockConfirm by rememberSaveable { mutableStateOf(false) }
-        if (areaCode != null) {
-            PremiumActionButton(
-                label = stringResource(R.string.detail_block_area_code, areaCode),
-                icon = Icons.Default.FilterAlt,
-                color = CatYellow,
-                onClick = { showAreaBlockConfirm = true },
-                modifier = Modifier.fillMaxWidth(),
-                outlined = true,
-            )
-        }
-        if (showAreaBlockConfirm && areaCode != null) {
-            val areaAddedToast = stringResource(R.string.dashboard_block_area_added, areaCode)
-            AlertDialog(
-                onDismissRequest = { showAreaBlockConfirm = false },
-                title = { Text(stringResource(R.string.dashboard_block_area_confirm_title, areaCode)) },
-                text = {
-                    Text(
-                        stringResource(
-                            R.string.dashboard_block_area_confirm_body,
-                            areaCode,
-                            location ?: stringResource(R.string.detail_unknown_location),
-                        ),
-                    )
-                },
-                confirmButton = {
-                    TextButton(onClick = {
-                        viewModel.addWildcardRule("+1$areaCode*", false, blockAreaCodeDescription.orEmpty())
-                        android.widget.Toast
-                            .makeText(context, areaAddedToast, android.widget.Toast.LENGTH_SHORT)
-                            .show()
-                        showAreaBlockConfirm = false
-                    }) {
-                        Text(stringResource(R.string.dashboard_block_area_confirm_action))
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showAreaBlockConfirm = false }) {
-                        Text(stringResource(R.string.dialog_cancel))
-                    }
-                },
-            )
-        }
-
-        // Stats
-        PremiumCard {
-            Column(modifier = Modifier.padding(16.dp)) {
-                SectionHeader(stringResource(R.string.detail_statistics), color = CatBlue)
-                Spacer(Modifier.height(8.dp))
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    StatChip(stringResource(R.string.detail_calls), callCount.toString(), CatRed)
-                    StatChip(stringResource(R.string.detail_sms), smsCount.toString(), CatMauve)
-                    StatChip(stringResource(R.string.detail_total), numberCalls.size.toString(), CatBlue)
-                }
-                dbEntry?.let { databaseEntry ->
-                    Spacer(Modifier.height(12.dp))
-                    GradientDivider()
-                    Spacer(Modifier.height(12.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        StatusPill(
-                            text = databaseEntry.type.replaceFirstChar { it.uppercase() },
-                            color = CatRed,
-                            horizontalPadding = 10.dp,
-                            verticalPadding = 6.dp,
-                            textStyle = MaterialTheme.typography.labelSmall,
-                        )
-                        StatusPill(
-                            text =
-                                pluralStringResource(
-                                    R.plurals.detail_reports_count_plural,
-                                    databaseEntry.reports,
-                                    databaseEntry.reports,
-                                ),
-                            color = CatPeach,
-                            horizontalPadding = 10.dp,
-                            verticalPadding = 6.dp,
-                            textStyle = MaterialTheme.typography.labelSmall,
-                        )
-                    }
-                    if (databaseEntry.description.isNotEmpty()) {
-                        Spacer(Modifier.height(8.dp))
-                        Text(databaseEntry.description, color = CatSubtext, style = MaterialTheme.typography.bodyMedium)
-                    }
-                }
-            }
-        }
-
-        // Timeline
-        if (firstSeen != null) {
-            PremiumCard {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    SectionHeader(stringResource(R.string.detail_timeline), color = CatLavender)
-                    Spacer(Modifier.height(8.dp))
-                    TimelineRow(stringResource(R.string.detail_first_seen), dateFormat.format(Date(firstSeen)))
-                    if (lastSeen != null && lastSeen != firstSeen) {
-                        TimelineRow(stringResource(R.string.detail_last_seen), dateFormat.format(Date(lastSeen)))
-                    }
-                    val reasons = numberCalls.map { it.reasonCode }.filterNot { it == com.sysadmindoc.callshield.domain.model.BlockReasonCode.UNKNOWN }.distinct()
-                    if (reasons.isNotEmpty()) {
-                        Spacer(Modifier.height(8.dp))
-                        GradientDivider()
-                        Spacer(Modifier.height(8.dp))
-                        Text(stringResource(R.string.detail_match_reasons), style = MaterialTheme.typography.labelMedium, color = CatOverlay)
-                        reasons.forEach { reasonCode ->
-                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 1.dp)) {
-                                Icon(detectionIcon(reasonCode.wireValue), null, tint = CatPeach, modifier = Modifier.size(14.dp))
-                                Spacer(Modifier.width(6.dp))
-                                Text(friendlyMatchReasonLabel(reasonCode.wireValue), style = MaterialTheme.typography.bodySmall, color = CatPeach)
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // Recent activity
-        if (numberCalls.isNotEmpty()) {
-            PremiumCard {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    SectionHeader(stringResource(R.string.detail_recent_activity), color = CatTeal)
-                    Spacer(Modifier.height(8.dp))
-                    numberCalls.take(10).forEach { call ->
-                        Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                if (call.isCall) Icons.Default.Phone else Icons.Default.Sms,
-                                null,
-                                tint = if (call.isCall) CatRed else CatMauve,
-                                modifier = Modifier.size(16.dp),
-                            )
-                            Spacer(Modifier.width(8.dp))
-                            Text(dateFormat.format(Date(call.timestamp)), style = MaterialTheme.typography.bodySmall, color = CatSubtext, modifier = Modifier.weight(1f))
-                            if (call.confidence < 100) Text("${call.confidence}%", style = MaterialTheme.typography.labelSmall, color = CatOverlay)
-                        }
-                        val redactedSmsBody =
-                            remember(call.smsBody) {
-                                SmsBodyRedactor.redactForPreview(call.smsBody)
-                            }
-                        if (redactedSmsBody != null) {
-                            Text(
-                                redactedSmsBody,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = CatSubtext.copy(alpha = 0.7f),
-                                maxLines = 2,
-                                modifier = Modifier.padding(start = 24.dp),
-                            )
-                        }
-                    }
-                }
-            }
-        }
-
-        // Multi-source online lookup
-        PremiumCard {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    SectionHeader(stringResource(R.string.detail_online_lookup), color = CatBlue)
-                    Spacer(Modifier.weight(1f))
-                    if (webResult == null) {
-                        PremiumActionButton(
-                            label = stringResource(R.string.detail_check_sources),
-                            icon = Icons.Default.Search,
-                            color = CatBlue,
-                            onClick = {
-                                webLoading = true
-                                webFailed = false
-                                coroutineScope.launch {
-                                    try {
-                                        webResult = ExternalLookup.lookupAll(number)
-                                    } catch (_: Exception) {
-                                        // Offline / DNS failure used to leave the
-                                        // card looking like it had never run.
-                                        webFailed = true
-                                    }
-                                    webLoading = false
+                            val redactedSmsBody =
+                                remember(call.smsBody) {
+                                    SmsBodyRedactor.redactForPreview(call.smsBody)
                                 }
-                            },
-                            enabled = !webLoading,
-                            loading = webLoading,
-                            outlined = true,
-                        )
+                            if (redactedSmsBody != null) {
+                                Text(
+                                    redactedSmsBody,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = CatSubtext.copy(alpha = 0.7f),
+                                    maxLines = 2,
+                                    modifier = Modifier.padding(start = 24.dp),
+                                )
+                            }
+                        }
                     }
                 }
-                if (webFailed) {
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        stringResource(R.string.detail_check_sources_failed),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = CatPeach,
-                    )
-                }
-                if (webLoading) {
-                    Spacer(Modifier.height(8.dp))
+            }
+
+            // Multi-source online lookup
+            PremiumCard {
+                Column(modifier = Modifier.padding(16.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp, color = CatBlue)
-                        Spacer(Modifier.width(8.dp))
+                        SectionHeader(stringResource(R.string.detail_online_lookup), color = CatBlue)
+                        Spacer(Modifier.weight(1f))
+                        if (webResult == null) {
+                            PremiumActionButton(
+                                label = stringResource(R.string.detail_check_sources),
+                                icon = Icons.Default.Search,
+                                color = CatBlue,
+                                onClick = {
+                                    webLoading = true
+                                    webFailed = false
+                                    coroutineScope.launch {
+                                        try {
+                                            webResult = ExternalLookup.lookupAll(number)
+                                        } catch (_: Exception) {
+                                            // Offline / DNS failure used to leave the
+                                            // card looking like it had never run.
+                                            webFailed = true
+                                        }
+                                        webLoading = false
+                                    }
+                                },
+                                enabled = !webLoading,
+                                loading = webLoading,
+                                outlined = true,
+                            )
+                        }
+                    }
+                    if (webFailed) {
+                        Spacer(Modifier.height(8.dp))
                         Text(
-                            stringResource(R.string.detail_checking_sources),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = CatSubtext,
+                            stringResource(R.string.detail_check_sources_failed),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = CatPeach,
                         )
                     }
-                }
-                Spacer(Modifier.height(6.dp))
-                Text(
-                    stringResource(R.string.detail_lookup_privacy_note),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = CatOverlay,
-                )
-                webResult?.let { wr ->
-                    Spacer(Modifier.height(8.dp))
-                    if (wr.totalReports > 0) {
-                        val reportCount =
-                            pluralStringResource(
-                                R.plurals.detail_reports_count_plural,
-                                wr.totalReports,
-                                wr.totalReports,
-                            )
-                        val sourceCount =
-                            pluralStringResource(
-                                R.plurals.detail_sources_count_plural,
-                                wr.sources.size,
-                                wr.sources.size,
-                            )
-                        Text(
-                            stringResource(R.string.detail_reports_across_sources, reportCount, sourceCount),
-                            color = CatRed,
-                            fontWeight = FontWeight.SemiBold,
-                        )
-                    } else if (wr.isSpam) {
-                        // A verdict without a count, which is what SkipCalls gives.
-                        val flaggingSources = wr.sources.count { src -> src.isSpam }
-                        Text(
-                            stringResource(
-                                R.string.detail_flagged_by_sources,
-                                pluralStringResource(R.plurals.detail_sources_count_plural, flaggingSources, flaggingSources),
-                            ),
-                            color = CatRed,
-                            fontWeight = FontWeight.SemiBold,
-                        )
-                    } else {
-                        val hasDefinitiveSource = wr.sources.any { src -> !src.status.isFallback }
-                        Text(
-                            stringResource(
-                                if (hasDefinitiveSource) {
-                                    R.string.detail_clean_all_sources
-                                } else {
-                                    R.string.detail_no_definitive_source_result
-                                },
-                            ),
-                            // A lookup that failed everywhere isn't a clean result.
-                            color = if (hasDefinitiveSource) CatGreen else CatSubtext,
-                            style = MaterialTheme.typography.bodySmall,
-                        )
-                    }
-                    Spacer(Modifier.height(4.dp))
-                    wr.sources.forEach { src ->
-                        val isFallback = src.status.isFallback
-                        Row(modifier = Modifier.padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                when {
-                                    src.isSpam -> Icons.Default.Warning
-                                    isFallback -> Icons.Default.Info
-                                    else -> Icons.Default.CheckCircle
-                                },
-                                null,
-                                tint =
-                                    when {
-                                        src.isSpam -> CatRed
-                                        isFallback -> CatSubtext
-                                        else -> CatGreen
-                                    },
-                                modifier = Modifier.size(14.dp),
-                            )
-                            Spacer(Modifier.width(6.dp))
-                            Text(src.source, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold, modifier = Modifier.width(90.dp))
+                    if (webLoading) {
+                        Spacer(Modifier.height(8.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp, color = CatBlue)
+                            Spacer(Modifier.width(8.dp))
                             Text(
-                                when {
-                                    src.reports > 0 -> {
-                                        pluralStringResource(
-                                            R.plurals.detail_reports_count_label,
-                                            src.reports,
-                                            src.reports,
-                                        )
-                                    }
-
-                                    src.isSpam -> {
-                                        stringResource(R.string.detail_flagged)
-                                    }
-
-                                    else -> {
-                                        remoteLookupStatusLabel(src)
-                                    }
-                                },
+                                stringResource(R.string.detail_checking_sources),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = CatSubtext,
                             )
                         }
                     }
-                    if (wr.communityNotes.isNotEmpty()) {
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        stringResource(R.string.detail_lookup_privacy_note),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = CatOverlay,
+                    )
+                    webResult?.let { wr ->
+                        Spacer(Modifier.height(8.dp))
+                        if (wr.totalReports > 0) {
+                            val reportCount =
+                                pluralStringResource(
+                                    R.plurals.detail_reports_count_plural,
+                                    wr.totalReports,
+                                    wr.totalReports,
+                                )
+                            val sourceCount =
+                                pluralStringResource(
+                                    R.plurals.detail_sources_count_plural,
+                                    wr.sources.size,
+                                    wr.sources.size,
+                                )
+                            Text(
+                                stringResource(R.string.detail_reports_across_sources, reportCount, sourceCount),
+                                color = CatRed,
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                        } else if (wr.isSpam) {
+                            // A verdict without a count, which is what SkipCalls gives.
+                            val flaggingSources = wr.sources.count { src -> src.isSpam }
+                            Text(
+                                stringResource(
+                                    R.string.detail_flagged_by_sources,
+                                    pluralStringResource(R.plurals.detail_sources_count_plural, flaggingSources, flaggingSources),
+                                ),
+                                color = CatRed,
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                        } else {
+                            val hasDefinitiveSource = wr.sources.any { src -> !src.status.isFallback }
+                            Text(
+                                stringResource(
+                                    if (hasDefinitiveSource) {
+                                        R.string.detail_clean_all_sources
+                                    } else {
+                                        R.string.detail_no_definitive_source_result
+                                    },
+                                ),
+                                // A lookup that failed everywhere isn't a clean result.
+                                color = if (hasDefinitiveSource) CatGreen else CatSubtext,
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                        }
                         Spacer(Modifier.height(4.dp))
-                        wr.communityNotes.take(3).forEach { note ->
-                            Text(note, style = MaterialTheme.typography.labelSmall, color = CatOverlay, maxLines = 1)
+                        wr.sources.forEach { src ->
+                            val isFallback = src.status.isFallback
+                            Row(modifier = Modifier.padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    when {
+                                        src.isSpam -> Icons.Default.Warning
+                                        isFallback -> Icons.Default.Info
+                                        else -> Icons.Default.CheckCircle
+                                    },
+                                    null,
+                                    tint =
+                                        when {
+                                            src.isSpam -> CatRed
+                                            isFallback -> CatSubtext
+                                            else -> CatGreen
+                                        },
+                                    modifier = Modifier.size(14.dp),
+                                )
+                                Spacer(Modifier.width(6.dp))
+                                Text(src.source, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold, modifier = Modifier.width(90.dp))
+                                Text(
+                                    when {
+                                        src.reports > 0 -> {
+                                            pluralStringResource(
+                                                R.plurals.detail_reports_count_label,
+                                                src.reports,
+                                                src.reports,
+                                            )
+                                        }
+
+                                        src.isSpam -> {
+                                            stringResource(R.string.detail_flagged)
+                                        }
+
+                                        else -> {
+                                            remoteLookupStatusLabel(src)
+                                        }
+                                    },
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = CatSubtext,
+                                )
+                            }
+                        }
+                        if (wr.communityNotes.isNotEmpty()) {
+                            Spacer(Modifier.height(4.dp))
+                            wr.communityNotes.take(3).forEach { note ->
+                                Text(note, style = MaterialTheme.typography.labelSmall, color = CatOverlay, maxLines = 1)
+                            }
                         }
                     }
                 }
             }
-        }
 
-        // Community contribution buttons
-        val contributeResult by viewModel.contributeResult.collectAsStateWithLifecycle()
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            PremiumActionButton(
-                label = stringResource(R.string.detail_report_spam),
-                icon = Icons.Default.Flag,
-                color = CatRed,
-                onClick = {
-                    hapticTick(context)
-                    viewModel.contributeToDatabase(number, dbEntry?.type ?: liveResult?.type ?: "spam")
-                },
-                modifier = Modifier.weight(1f),
-            )
-            PremiumActionButton(
-                label = stringResource(R.string.detail_not_spam),
-                icon = Icons.Default.ThumbUp,
-                color = CatGreen,
-                onClick = {
-                    hapticTick(context)
-                    viewModel.scheduleNotSpam(number)
-                    coroutineScope.launch {
-                        val result = snackbarHostState.showSnackbar(
-                            message = notSpamPending,
-                            actionLabel = undoLabel,
-                            duration = SnackbarDuration.Short,
-                        )
-                        if (result == SnackbarResult.ActionPerformed) {
-                            viewModel.undoNotSpam()
+            // Community contribution buttons
+            val contributeResult by viewModel.contributeResult.collectAsStateWithLifecycle()
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                PremiumActionButton(
+                    label = stringResource(R.string.detail_report_spam),
+                    icon = Icons.Default.Flag,
+                    color = CatRed,
+                    onClick = {
+                        hapticTick(context)
+                        viewModel.contributeToDatabase(number, dbEntry?.type ?: liveResult?.type ?: "spam")
+                    },
+                    modifier = Modifier.weight(1f),
+                )
+                PremiumActionButton(
+                    label = stringResource(R.string.detail_not_spam),
+                    icon = Icons.Default.ThumbUp,
+                    color = CatGreen,
+                    onClick = {
+                        hapticTick(context)
+                        viewModel.scheduleNotSpam(number)
+                        coroutineScope.launch {
+                            val result =
+                                snackbarHostState.showSnackbar(
+                                    message = notSpamPending,
+                                    actionLabel = undoLabel,
+                                    duration = SnackbarDuration.Short,
+                                )
+                            if (result == SnackbarResult.ActionPerformed) {
+                                viewModel.undoNotSpam()
+                            }
                         }
-                    }
+                    },
+                    modifier = Modifier.weight(1f),
+                    outlined = true,
+                )
+            }
+            contributeResult?.let {
+                Text(it.text, style = MaterialTheme.typography.bodySmall, color = if (it.success) CatGreen else CatRed)
+                LaunchedEffect(it) {
+                    kotlinx.coroutines.delay(4000)
+                    viewModel.clearContributeResult()
+                }
+            }
+
+            val homeRegion =
+                remember {
+                    com.sysadmindoc.callshield.data.PhoneIdentityCanonicalizer
+                        .cachedFromContext(context)
+                        .homeRegionIso
+                }
+            val nanpRegion = homeRegion != null && homeRegion in NANP_REGIONS
+
+            if (nanpRegion) {
+                PremiumActionButton(
+                    label = stringResource(R.string.detail_report_carrier),
+                    icon = Icons.Default.Sms,
+                    color = CatBlue,
+                    onClick = {
+                        hapticTick(context)
+                        context.startActivitySafely(
+                            Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:7726")).apply {
+                                putExtra("sms_body", number)
+                            },
+                        )
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    outlined = true,
+                )
+            }
+
+            PremiumActionButton(
+                label = stringResource(R.string.detail_ftc_complaint),
+                icon = Icons.Default.Gavel,
+                color = CatPeach,
+                onClick = {
+                    hapticTick(context)
+                    com.sysadmindoc.callshield.data.ReportFraudHelper
+                        .report(context, number)
                 },
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.fillMaxWidth(),
                 outlined = true,
             )
-        }
-        contributeResult?.let {
-            Text(it.text, style = MaterialTheme.typography.bodySmall, color = if (it.success) CatGreen else CatRed)
-            LaunchedEffect(it) {
-                kotlinx.coroutines.delay(4000)
-                viewModel.clearContributeResult()
+
+            // Whitelist and share actions
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                PremiumActionButton(
+                    label = stringResource(R.string.detail_whitelist),
+                    icon = Icons.Default.CheckCircle,
+                    color = CatGreen,
+                    onClick = { viewModel.addToWhitelist(number, whitelistedFromDetail) },
+                    modifier = Modifier.weight(1f),
+                    outlined = true,
+                )
+                PremiumActionButton(
+                    label = stringResource(R.string.detail_share),
+                    icon = Icons.Default.Share,
+                    color = CatYellow,
+                    onClick = {
+                        viewModel.shareAsSpam(number, dbEntry?.type ?: liveResult?.type ?: "")
+                    },
+                    modifier = Modifier.weight(1f),
+                    outlined = true,
+                )
+            }
+
+            // A wrongly flagged number, shared without an account and without
+            // anything from messages, contacts or the call log (FalsePositiveReport).
+            liveResult?.takeIf { it.isSpam }?.let { flagged ->
+                PremiumActionButton(
+                    label = stringResource(R.string.detail_share_false_alarm),
+                    icon = Icons.Default.ReportGmailerrorred,
+                    color = CatBlue,
+                    onClick = {
+                        hapticTick(context)
+                        coroutineScope.launch {
+                            val text = viewModel.falsePositiveReportText(number, flagged)
+                            val send =
+                                Intent(Intent.ACTION_SEND).apply {
+                                    type = "text/plain"
+                                    putExtra(Intent.EXTRA_TEXT, text)
+                                }
+                            context.startActivitySafely(Intent.createChooser(send, null))
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    outlined = true,
+                )
             }
         }
-
-        val homeRegion = remember {
-            com.sysadmindoc.callshield.data.PhoneIdentityCanonicalizer.cachedFromContext(context).homeRegionIso
-        }
-        val nanpRegion = homeRegion != null && homeRegion in NANP_REGIONS
-
-        if (nanpRegion) {
-            PremiumActionButton(
-                label = stringResource(R.string.detail_report_carrier),
-                icon = Icons.Default.Sms,
-                color = CatBlue,
-                onClick = {
-                    hapticTick(context)
-                    context.startActivitySafely(
-                        Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:7726")).apply {
-                            putExtra("sms_body", number)
-                        },
-                    )
-                },
-                modifier = Modifier.fillMaxWidth(),
-                outlined = true,
-            )
-        }
-
-        PremiumActionButton(
-            label = stringResource(R.string.detail_ftc_complaint),
-            icon = Icons.Default.Gavel,
-            color = CatPeach,
-            onClick = {
-                hapticTick(context)
-                com.sysadmindoc.callshield.data.ReportFraudHelper
-                    .report(context, number)
-            },
-            modifier = Modifier.fillMaxWidth(),
-            outlined = true,
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 8.dp),
         )
-
-        // Whitelist and share actions
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            PremiumActionButton(
-                label = stringResource(R.string.detail_whitelist),
-                icon = Icons.Default.CheckCircle,
-                color = CatGreen,
-                onClick = { viewModel.addToWhitelist(number, whitelistedFromDetail) },
-                modifier = Modifier.weight(1f),
-                outlined = true,
-            )
-            PremiumActionButton(
-                label = stringResource(R.string.detail_share),
-                icon = Icons.Default.Share,
-                color = CatYellow,
-                onClick = {
-                    viewModel.shareAsSpam(number, dbEntry?.type ?: liveResult?.type ?: "")
-                },
-                modifier = Modifier.weight(1f),
-                outlined = true,
-            )
-        }
-
-        // A wrongly flagged number, shared without an account and without
-        // anything from messages, contacts or the call log (FalsePositiveReport).
-        liveResult?.takeIf { it.isSpam }?.let { flagged ->
-            PremiumActionButton(
-                label = stringResource(R.string.detail_share_false_alarm),
-                icon = Icons.Default.ReportGmailerrorred,
-                color = CatBlue,
-                onClick = {
-                    hapticTick(context)
-                    coroutineScope.launch {
-                        val text = viewModel.falsePositiveReportText(number, flagged)
-                        val send =
-                            Intent(Intent.ACTION_SEND).apply {
-                                type = "text/plain"
-                                putExtra(Intent.EXTRA_TEXT, text)
-                            }
-                        context.startActivitySafely(Intent.createChooser(send, null))
-                    }
-                },
-                modifier = Modifier.fillMaxWidth(),
-                outlined = true,
-            )
-        }
-    }
-    SnackbarHost(
-        hostState = snackbarHostState,
-        modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 8.dp),
-    )
     }
 }
 
