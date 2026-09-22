@@ -353,8 +353,8 @@ def release_metadata_audit(root: Path, version_name: str, version_code: int) -> 
     fdroid = read_text(required_files["F-Droid metadata"])
     runbook = read_text(required_files["F-Droid runbook"])
     store_changelog = read_text(required_files["Fastlane changelog"]).strip()
-    if f"## v{version_name} Highlights" not in readme:
-        issues.append(f"README has no current-release highlights for v{version_name}.")
+    if f"## v{version_name}" not in changelog:
+        issues.append(f"CHANGELOG has no entry for v{version_name}.")
     if f"## Detection Pipeline (v{version_name})" not in readme:
         issues.append(f"README detection-pipeline heading is not v{version_name}.")
     if "img.shields.io/github/v/release/SysAdminDoc/CallShield" not in readme:
