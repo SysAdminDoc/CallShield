@@ -886,6 +886,7 @@ private fun EmptyStateCard(
     subtitle: String,
     icon: ImageVector,
     accentColor: Color,
+    onRetry: (() -> Unit)? = null,
 ) {
     Box(
         modifier =
@@ -918,6 +919,11 @@ private fun EmptyStateCard(
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth(),
             )
+            if (onRetry != null) {
+                TextButton(onClick = onRetry) {
+                    Text(stringResource(R.string.blocklist_retry), color = accentColor)
+                }
+            }
         }
     }
 }
@@ -1209,10 +1215,11 @@ private fun DatabaseTabContent(viewModel: MainViewModel) {
         }
     } else if (refreshState is LoadState.Error && allSpam.itemCount == 0) {
         EmptyStateCard(
-            title = stringResource(R.string.blocklist_empty_database),
-            subtitle = stringResource(R.string.blocklist_empty_database_sub),
+            title = stringResource(R.string.blocklist_load_error),
+            subtitle = stringResource(R.string.blocklist_load_error_sub),
             icon = Icons.Default.PriorityHigh,
             accentColor = CatRed,
+            onRetry = { allSpam.retry() },
         )
     } else if (allSpam.itemCount == 0) {
         EmptyStateCard(

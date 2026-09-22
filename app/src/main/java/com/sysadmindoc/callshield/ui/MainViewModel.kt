@@ -300,6 +300,19 @@ class MainViewModel
                     if (query.length >= 2) repo.searchNumbers(query) else flowOf(emptyList())
                 }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+        private val _logSearchQuery = MutableStateFlow("")
+        val logSearchQuery: StateFlow<String> = _logSearchQuery
+        val logSearchResults: StateFlow<List<BlockedCall>> =
+            _logSearchQuery
+                .debounce(300)
+                .flatMapLatest { query ->
+                    if (query.length >= 2) repo.searchLog(query) else flowOf(emptyList())
+                }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+        fun setLogSearchQuery(query: String) {
+            _logSearchQuery.value = query
+        }
+
         // Detail navigation
         private val _selectedNumber = MutableStateFlow<String?>(null)
         val selectedNumber: StateFlow<String?> = _selectedNumber

@@ -156,6 +156,9 @@
     <string name="blocked_log_filter_sms">Texts</string>
     <string name="blocked_log_filter_reason">Reason</string>
     <string name="blocked_log_filter_all_reasons">All reasons</string>
+    <string name="blocked_log_search_hint">Search by number</string>
+    <string name="blocked_log_search_empty">No results</string>
+    <string name="blocked_log_search_empty_body">No blocked calls or texts match that number.</string>
     <string name="blocked_log_empty_all_title">No blocked activity</string>
     <string name="blocked_log_empty_all_body">Blocked calls and texts will appear here.</string>
     <string name="blocked_log_empty_filter_title">Nothing matches this filter</string>
@@ -293,6 +296,9 @@
     <string name="blocklist_empty_whitelist_sub">Trusted numbers always pass through screening, even when aggressive protection is active.</string>
     <string name="blocklist_empty_database">No spam database loaded</string>
     <string name="blocklist_empty_database_sub">Run a sync from Home to download the current spam feed before reviewing local database entries here.</string>
+    <string name="blocklist_load_error">Couldn\'t load the database</string>
+    <string name="blocklist_load_error_sub">Something went wrong loading the local spam data. Try again.</string>
+    <string name="blocklist_retry">Retry</string>
     <string name="blocklist_number_blocked">Number blocked</string>
     <string name="blocklist_number_removed">Removed from blocklist</string>
     <string name="blocklist_rule_removed">Rule removed</string>
