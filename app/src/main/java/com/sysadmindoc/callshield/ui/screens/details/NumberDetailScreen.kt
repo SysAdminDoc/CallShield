@@ -125,7 +125,11 @@ fun NumberDetailScreen(
     var webLoading by remember(number) { mutableStateOf(false) }
     var webFailed by remember(number) { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val undoLabel = stringResource(R.string.detail_undo)
+    val notSpamPending = stringResource(R.string.detail_not_spam_pending)
 
+    Box(modifier = Modifier.fillMaxSize()) {
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
@@ -630,7 +634,16 @@ fun NumberDetailScreen(
                 color = CatGreen,
                 onClick = {
                     hapticTick(context)
-                    viewModel.reportNotSpam(number)
+                    coroutineScope.launch {
+                        val result = snackbarHostState.showSnackbar(
+                            message = notSpamPending,
+                            actionLabel = undoLabel,
+                            duration = SnackbarDuration.Short,
+                        )
+                        if (result != SnackbarResult.ActionPerformed) {
+                            viewModel.reportNotSpam(number)
+                        }
+                    }
                 },
                 modifier = Modifier.weight(1f),
                 outlined = true,
@@ -705,6 +718,11 @@ fun NumberDetailScreen(
                 outlined = true,
             )
         }
+    }
+    SnackbarHost(
+        hostState = snackbarHostState,
+        modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 8.dp),
+    )
     }
 }
 
