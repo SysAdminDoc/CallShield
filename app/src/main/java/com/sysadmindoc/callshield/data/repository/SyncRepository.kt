@@ -205,8 +205,11 @@ class SyncRepository(
             if (hotNumbers.isEmpty()) {
                 emptyMap()
             } else {
-                val existingRows = dao.getNumbersByNumbers(hotNumbers.map { it.number })
-                existingRows.associateBy { it.number }
+                hotNumbers
+                    .map { it.number }
+                    .chunked(EXTERNAL_BLOCKLIST_LOOKUP_CHUNK_SIZE)
+                    .flatMap { chunk -> dao.getNumbersByNumbers(chunk) }
+                    .associateBy { it.number }
             }
 
         val mergedHotNumbers =
