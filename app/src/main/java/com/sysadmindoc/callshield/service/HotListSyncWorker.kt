@@ -23,7 +23,7 @@ import java.util.concurrent.TimeUnit
  * Syncs lightweight real-time data from GitHub every 30 minutes:
  *
  *  - hot_numbers.json  — top 500 numbers trending in community reports (last 24h)
- *  - hot_ranges.json   — NPA-NXX prefixes with 3+ hot numbers (active campaigns)
+ *  - hot_ranges.json   — NPA-NXX prefixes with 4+ hot numbers and 6+ reporters (active campaigns)
  *  - spam_domains.json — URL domains reported in SMS spam (phishing blocklist)
  *
  * Hot list numbers go into the Room database (source="hot_list") so they
@@ -54,6 +54,7 @@ class HotListSyncWorker
                         dao = dao,
                         dependencies = checkerDependencies,
                     )
+                FeedTrustNotice.maybeNotify(applicationContext, repo)
                 // Retry whenever nothing was actually refreshed from the remote
                 // feeds. Existing on-device protection no longer counts as
                 // success: the bundled snapshot is not used to repair a stale

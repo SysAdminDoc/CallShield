@@ -15,17 +15,36 @@
     and skips that half rather than failing, so the Gradle `check` task still
     works on a machine without them.
 
+.PARAMETER CorrectnessOnly
+    Skip the check against the live report queue. The validation workflow runs
+    on every push and must be green on a healthy tree; queue liveness has its
+    own weekly workflow, which tracks a stall as a single issue instead.
+
 .EXAMPLE
     pwsh -File scripts/run-pipeline-tests.ps1
 #>
 
 [CmdletBinding()]
-param()
+param(
+    [switch]$CorrectnessOnly
+)
 
 $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $failures = @()
 $ran = 0
+
+# A suite that writes into the real data/ directory changes what the next one
+# reads, and .gitignore can hide it: a test merge rewrote the ignored
+# data/source-snapshot.json on every run, and the release-drift test passed in
+# CI only because of that leak. Hashing catches rewrites git status cannot see.
+function Get-DataFingerprint {
+    $dataDir = Join-Path $repoRoot 'data'
+    Get-ChildItem -LiteralPath $dataDir -File -Recurse | ForEach-Object {
+        "{0}`t{1}" -f $_.FullName.Substring($dataDir.Length + 1), (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash
+    }
+}
+$dataBefore = @(Get-DataFingerprint)
 
 function Get-Tool {
     param([string[]]$Candidates)
@@ -62,7 +81,7 @@ if ($node) {
 # from a non-interactive shell with no console attached (CI-style invocation).
 $python = Get-Tool @('python3', 'python')
 if ($python) {
-    foreach ($test in @('test_phone_normalization.py', 'test_report_dedup.py', 'test_report_pipeline.py', 'test_pipeline_liveness.py', 'test_model_calibration.py', 'test_ml_feature_contract.py', 'test_release_sbom.py', 'test_check_translations.py', 'test_source_registry.py', 'test_spam_shards.py', 'test_incremental_sources.py', 'test_regional_prefixes.py', 'test_release_drift.py')) {
+    foreach ($test in @('test_phone_normalization.py', 'test_report_dedup.py', 'test_report_pipeline.py', 'test_pipeline_liveness.py', 'test_model_calibration.py', 'test_ml_feature_contract.py', 'test_release_sbom.py', 'test_check_translations.py', 'test_source_registry.py', 'test_spam_shards.py', 'test_incremental_sources.py', 'test_regional_prefixes.py', 'test_release_drift.py', 'test_check_live_pins.py', 'test_probe_live_sources.py', 'test_feed_signing.py')) {
         $path = Join-Path $PSScriptRoot $test
         if (-not (Test-Path $path)) { continue }
         Write-Host "Running $test..."
@@ -78,7 +97,7 @@ if ($python) {
 # them notices when the real queue stops being consumed, which is how 267 report
 # files accumulated while every gated test stayed green. This runs the same
 # checks against the live `data/reports/`.
-if ($python) {
+if ($python -and -not $CorrectnessOnly) {
     $livenessCheck = Join-Path $PSScriptRoot 'pipeline_liveness.py'
     if (Test-Path $livenessCheck) {
         Write-Host 'Running pipeline_liveness.py (live report queue)...'
@@ -99,6 +118,15 @@ if ($python) {
         if ($LASTEXITCODE -ne 0) { $failures += 'check_translations.py' }
         $ran++
     }
+}
+
+$dataChanges = @(
+    Compare-Object -ReferenceObject $dataBefore -DifferenceObject @(Get-DataFingerprint) |
+        ForEach-Object { ($_.InputObject -split "`t")[0] } |
+        Sort-Object -Unique
+)
+if ($dataChanges.Count -gt 0) {
+    $failures += "a suite wrote into data/ ($($dataChanges -join ', '))"
 }
 
 if ($ran -eq 0) {

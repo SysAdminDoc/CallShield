@@ -25,6 +25,7 @@ from datetime import datetime, timezone
 
 BURST_DUPLICATE_SECONDS = 60
 REPORTER_BUCKET_RE = re.compile(r"^[a-f0-9]{16}$")
+REPORT_ID_RE = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
 
 
 def validated_reporter_bucket(value: object) -> str:
@@ -33,6 +34,37 @@ def validated_reporter_bucket(value: object) -> str:
         return ""
     normalized = value.strip().lower()
     return normalized if REPORTER_BUCKET_RE.fullmatch(normalized) else ""
+
+
+def validated_report_id(value: object) -> str:
+    """Return the id the app gave a report, lowercased, or an empty string."""
+    if not isinstance(value, str):
+        return ""
+    normalized = value.strip().lower()
+    return normalized if REPORT_ID_RE.fullmatch(normalized) else ""
+
+
+def find_resent_reports(entries) -> set:
+    """Return the tokens of reports that carry an id an earlier report already had.
+
+    The app gives every report an id and keeps it for every attempt, so two
+    stored reports with one id are one report sent twice: its first response
+    was lost, or the phone changed networks mid-send, which also changes its
+    reporter bucket and would otherwise count it as a second reporter.
+
+    `entries` is an iterable of `(report_id, timestamp, token)`. The earliest
+    copy is kept, and a report without an id never matches another.
+    """
+    grouped: dict[str, list] = {}
+    for report_id, timestamp, token in entries:
+        if report_id:
+            grouped.setdefault(report_id, []).append((timestamp, token))
+    epoch = datetime.min.replace(tzinfo=timezone.utc)
+    resent = set()
+    for group in grouped.values():
+        group.sort(key=lambda item: (item[0] is None, item[0] or epoch, str(item[1])))
+        resent.update(token for _, token in group[1:])
+    return resent
 
 
 def reporter_day_key(bucket: str, reported_at: datetime | None) -> tuple[str, str] | None:

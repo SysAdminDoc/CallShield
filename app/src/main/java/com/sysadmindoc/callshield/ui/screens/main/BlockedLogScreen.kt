@@ -69,6 +69,7 @@ import java.util.*
 fun BlockedLogScreen(viewModel: MainViewModel) {
     val context = LocalContext.current
     val resources = LocalResources.current
+    val dateFormat = remember(context) { localizedDateTimeFormat(context) }
     val logCount by viewModel.logCount.collectAsStateWithLifecycle()
     val availableReasonCodes by viewModel.logReasonCodes.collectAsStateWithLifecycle()
     var filterMode by rememberSaveable { mutableIntStateOf(0) }
@@ -216,7 +217,55 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
                 }
             }
 
-            if (activeRefreshState is LoadState.Loading && activeItemCount == 0) {
+            val logSearchQuery by viewModel.logSearchQuery.collectAsStateWithLifecycle()
+            val logSearchResults by viewModel.logSearchResults.collectAsStateWithLifecycle()
+            val isSearching = logSearchQuery.length >= 2
+
+            OutlinedTextField(
+                value = logSearchQuery,
+                onValueChange = viewModel::setLogSearchQuery,
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 4.dp),
+                placeholder = { Text(stringResource(R.string.blocked_log_search_hint)) },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = CatOverlay) },
+                trailingIcon =
+                    if (logSearchQuery.isNotEmpty()) {
+                        {
+                            IconButton(onClick = { viewModel.setLogSearchQuery("") }) {
+                                Icon(Icons.Default.Clear, contentDescription = stringResource(R.string.cd_close_search), tint = CatOverlay)
+                            }
+                        }
+                    } else {
+                        null
+                    },
+                singleLine = true,
+                shape = RoundedCornerShape(12.dp),
+                colors =
+                    OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = CatText,
+                        unfocusedTextColor = CatText,
+                        cursorColor = CatGreen,
+                        focusedBorderColor = CatGreen,
+                        unfocusedBorderColor = CatMuted.copy(alpha = 0.3f),
+                    ),
+            )
+
+            if (isSearching) {
+                if (logSearchResults.isEmpty()) {
+                    BlockedLogEmptyState(
+                        title = stringResource(R.string.blocked_log_search_empty),
+                        subtitle = stringResource(R.string.blocked_log_search_empty_body),
+                        accentColor = CatPeach,
+                    )
+                } else {
+                    LogSearchResultsList(
+                        results = logSearchResults,
+                        viewModel = viewModel,
+                    )
+                }
+            } else if (activeRefreshState is LoadState.Loading && activeItemCount == 0) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(color = CatGreen)
                 }
@@ -859,6 +908,26 @@ fun GroupedCallItem(
             IconButton(onClick = onBlock) {
                 Icon(Icons.Default.Block, stringResource(R.string.cd_block), tint = CatYellow)
             }
+        }
+    }
+}
+
+@Composable
+private fun LogSearchResultsList(
+    results: List<BlockedCall>,
+    viewModel: MainViewModel,
+) {
+    LazyColumn(
+        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 6.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        items(results, key = { it.id }) { call ->
+            BlockedCallItem(
+                call = call,
+                onTap = { viewModel.openNumberDetail(call.number) },
+                onTemporaryAllow = { viewModel.temporaryAllowNumber(call.number, it.durationMillis) },
+                onTemporaryBlock = { viewModel.temporaryBlockNumber(call.number, it.durationMillis) },
+            )
         }
     }
 }

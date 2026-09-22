@@ -55,6 +55,7 @@ fun RegionCnapRulesSheet(
     allowedRegions: Set<String>,
     cnapTrustPatterns: Set<String>,
     cnapBlockPatterns: Set<String>,
+    callerNameUnavailable: Boolean = false,
     onSave: (enabled: Boolean, regions: Set<String>, trustPatterns: Set<String>, blockPatterns: Set<String>) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -131,6 +132,13 @@ fun RegionCnapRulesSheet(
                 )
             }
             HorizontalDivider()
+            if (callerNameUnavailable) {
+                Text(
+                    stringResource(R.string.cnap_device_unavailable_notice),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = CatPeach,
+                )
+            }
             Text(
                 stringResource(R.string.cnap_trust_title),
                 style = MaterialTheme.typography.titleSmall,

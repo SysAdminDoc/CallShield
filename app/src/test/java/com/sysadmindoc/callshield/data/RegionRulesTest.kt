@@ -102,6 +102,43 @@ class RegionRulesTest {
         assertTrue(CheckerPriority.REGION_BLOCK > CheckerPriority.HEURISTIC)
     }
 
+    // ── Country-level region rules ────────────────────────────────────
+
+    @Test
+    fun `country codes are accepted by the region parser`() {
+        assertEquals(linkedSetOf("NY", "CO", "IT"), RegionRules.parseRegionCodes("NY, CO, IT"))
+    }
+
+    @Test
+    fun `Colombian number passes when CO is allowed`() {
+        assertFalse(RegionRules.isOutsideAllowedRegions("+573001234567", setOf("CO")))
+    }
+
+    @Test
+    fun `Italian number passes when IT is allowed`() {
+        assertFalse(RegionRules.isOutsideAllowedRegions("+393381234567", setOf("IT")))
+    }
+
+    @Test
+    fun `Colombian number blocked when only IT is allowed`() {
+        assertTrue(RegionRules.isOutsideAllowedRegions("+573001234567", setOf("IT")))
+    }
+
+    @Test
+    fun `NANP and country codes coexist`() {
+        val allowed = setOf("NY", "CO")
+        assertFalse(RegionRules.isOutsideAllowedRegions("+12125550123", allowed))
+        assertFalse(RegionRules.isOutsideAllowedRegions("+573001234567", allowed))
+        assertTrue(RegionRules.isOutsideAllowedRegions("+393381234567", allowed))
+    }
+
+    @Test
+    fun `countries sharing plus one are differentiated by area code`() {
+        val allowed = setOf("NY")
+        assertFalse(RegionRules.isOutsideAllowedRegions("+12125550123", allowed))
+        assertTrue(RegionRules.isOutsideAllowedRegions("+14165550123", allowed))
+    }
+
     @Test
     fun `caller name block stays below every allow and near the bottom of detection`() {
         assertTrue(CheckerPriority.CALLER_NAME_BLOCK < CheckerPriority.MANUAL_WHITELIST)

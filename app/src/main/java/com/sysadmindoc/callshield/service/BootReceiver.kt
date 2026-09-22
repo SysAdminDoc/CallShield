@@ -45,6 +45,7 @@ private fun reassertProtection(context: Context) {
     SyncWorker.schedule(context)
     HotListSyncWorker.schedule(context)
     DigestWorker.schedule(context)
+    ExternalBlocklistRefreshWorker.schedule(context)
     PendingBlockedCallLogWorker.schedule(context)
     ProtectionHealthWorker.schedule(context)
     ProtectionHealthWorker.checkNow(context)

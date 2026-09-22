@@ -13,6 +13,7 @@ import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
+import com.sysadmindoc.callshield.BuildConfig
 import com.sysadmindoc.callshield.CallShieldApp
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.AppUpdateState
@@ -26,6 +27,7 @@ import com.sysadmindoc.callshield.data.CommunityContributor
 import com.sysadmindoc.callshield.data.ContactGroup
 import com.sysadmindoc.callshield.data.ContactGroupCatalog
 import com.sysadmindoc.callshield.data.EmergencyNumberFloor
+import com.sysadmindoc.callshield.data.FalsePositiveReport
 import com.sysadmindoc.callshield.data.MessageCapabilitySource
 import com.sysadmindoc.callshield.data.MessageCapabilityStatus
 import com.sysadmindoc.callshield.data.RuleConflictAnalyzer
@@ -44,6 +46,7 @@ import com.sysadmindoc.callshield.data.model.SmsKeywordRule
 import com.sysadmindoc.callshield.data.model.SpamNumber
 import com.sysadmindoc.callshield.data.model.WhitelistEntry
 import com.sysadmindoc.callshield.data.model.WildcardRule
+import com.sysadmindoc.callshield.data.repository.FeedMirrorSave
 import com.sysadmindoc.callshield.domain.model.BlockReasonCode
 import com.sysadmindoc.callshield.domain.model.SpamCheckResult
 import com.sysadmindoc.callshield.domain.usecase.ExportLogsUseCase
@@ -60,6 +63,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -297,6 +301,19 @@ class MainViewModel
                     if (query.length >= 2) repo.searchNumbers(query) else flowOf(emptyList())
                 }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+        private val _logSearchQuery = MutableStateFlow("")
+        val logSearchQuery: StateFlow<String> = _logSearchQuery
+        val logSearchResults: StateFlow<List<BlockedCall>> =
+            _logSearchQuery
+                .debounce(300)
+                .flatMapLatest { query ->
+                    if (query.length >= 2) repo.searchLog(query) else flowOf(emptyList())
+                }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+        fun setLogSearchQuery(query: String) {
+            _logSearchQuery.value = query
+        }
+
         // Detail navigation
         private val _selectedNumber = MutableStateFlow<String?>(null)
         val selectedNumber: StateFlow<String?> = _selectedNumber
@@ -472,6 +489,7 @@ class MainViewModel
         val externalBlocklistSubscriptions =
             repo.externalBlocklistSubscriptions
                 .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+        val feedMirrorUrl = repo.feedMirrorUrl.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
         private val _syncState = MutableStateFlow<SyncState>(SyncState.Idle)
         val syncState: StateFlow<SyncState> = _syncState
@@ -511,6 +529,14 @@ class MainViewModel
         private val _externalBlocklistResult = MutableStateFlow<StatusMessage?>(null)
         val externalBlocklistResult: StateFlow<StatusMessage?> = _externalBlocklistResult
 
+        private val _externalBlocklistUndo = MutableStateFlow<ExternalBlocklistSubscription?>(null)
+
+        /** The list just removed, while the status line still offers to put it back. */
+        val externalBlocklistUndo: StateFlow<ExternalBlocklistSubscription?> = _externalBlocklistUndo
+
+        private val _feedMirrorResult = MutableStateFlow<StatusMessage?>(null)
+        val feedMirrorResult: StateFlow<StatusMessage?> = _feedMirrorResult
+
         fun clearImportResult() {
             _importResult.value = null
         }
@@ -526,6 +552,7 @@ class MainViewModel
         fun clearExternalBlocklistResult() {
             _externalBlocklistPreview.value = null
             _externalBlocklistResult.value = null
+            _externalBlocklistUndo.value = null
         }
 
         fun clearContributeResult() {
@@ -589,6 +616,7 @@ class MainViewModel
             url: String,
             label: String = "",
         ) {
+            _externalBlocklistUndo.value = null
             viewModelScope.launch {
                 val result = repo.previewExternalBlocklistSubscription(url, label)
                 _externalBlocklistPreview.value = result.preview
@@ -600,6 +628,7 @@ class MainViewModel
             url: String,
             label: String = "",
         ) {
+            _externalBlocklistUndo.value = null
             viewModelScope.launch {
                 val result = repo.applyExternalBlocklistSubscription(url, label)
                 _externalBlocklistPreview.value = if (result.success) null else result.preview
@@ -611,6 +640,7 @@ class MainViewModel
             subscription: ExternalBlocklistSubscription,
             enabled: Boolean,
         ) {
+            _externalBlocklistUndo.value = null
             viewModelScope.launch {
                 val result = repo.setExternalBlocklistSubscriptionEnabled(subscription.id, enabled)
                 _externalBlocklistResult.value = StatusMessage(result.message, result.success)
@@ -620,8 +650,41 @@ class MainViewModel
         fun removeExternalBlocklist(subscription: ExternalBlocklistSubscription) {
             viewModelScope.launch {
                 val result = repo.removeExternalBlocklistSubscription(subscription.id)
+                _externalBlocklistUndo.value = subscription.takeIf { result.success }
                 _externalBlocklistResult.value = StatusMessage(result.message, result.success)
             }
+        }
+
+        fun undoRemoveExternalBlocklist() {
+            val removed = _externalBlocklistUndo.value ?: return
+            _externalBlocklistUndo.value = null
+            viewModelScope.launch {
+                val result = repo.undoRemoveExternalBlocklistSubscription(removed.id)
+                _externalBlocklistResult.value = StatusMessage(result.message, result.success)
+            }
+        }
+
+        fun saveFeedMirror(url: String) {
+            viewModelScope.launch {
+                _feedMirrorResult.value = StatusMessage(appContext.getString(R.string.settings_feed_mirror_checking), success = true)
+                _feedMirrorResult.value =
+                    when (repo.saveFeedMirrorUrl(url)) {
+                        FeedMirrorSave.SAVED -> StatusMessage(appContext.getString(R.string.settings_feed_mirror_saved), success = true)
+                        FeedMirrorSave.INVALID -> StatusMessage(appContext.getString(R.string.settings_feed_mirror_invalid), success = false)
+                        FeedMirrorSave.UNVERIFIED -> StatusMessage(appContext.getString(R.string.settings_feed_mirror_unverified), success = false)
+                    }
+            }
+        }
+
+        fun removeFeedMirror() {
+            viewModelScope.launch {
+                repo.setFeedMirrorUrl(null)
+                _feedMirrorResult.value = StatusMessage(appContext.getString(R.string.settings_feed_mirror_removed), success = true)
+            }
+        }
+
+        fun clearFeedMirrorResult() {
+            _feedMirrorResult.value = null
         }
 
         fun scanCallLog() {
@@ -1038,6 +1101,8 @@ class MainViewModel
             }
         }
 
+        suspend fun readCallerNameUnavailable(): Boolean = repo.readCallerNameSupport() == com.sysadmindoc.callshield.data.CallerNameSupport.NOT_PROVIDED
+
         fun saveRegionAndCnapRules(
             regionBlockEnabled: Boolean,
             allowedRegions: Set<String>,
@@ -1145,19 +1210,52 @@ class MainViewModel
             type: String = "spam",
         ) {
             viewModelScope.launch {
-                val result = CommunityContributor.contribute(repo.normalizeNumber(number), type)
+                val result = CommunityContributor.contribute(appContext, repo.normalizeNumber(number), type)
                 _contributeResult.value = result.toStatusMessage()
             }
         }
 
+        private var notSpamUndoJob: Job? = null
+
+        fun scheduleNotSpam(number: String) {
+            notSpamUndoJob?.cancel()
+            notSpamUndoJob =
+                viewModelScope.launch {
+                    delay(5000L)
+                    reportNotSpam(number)
+                }
+        }
+
+        fun undoNotSpam() {
+            notSpamUndoJob?.cancel()
+            notSpamUndoJob = null
+        }
+
         fun reportNotSpam(number: String) {
             viewModelScope.launch {
-                // Whitelist locally AND report as false positive to community
                 manageBlocklist.addToWhitelist(number, appContext.getString(R.string.desc_reported_not_spam))
-                val result = CommunityContributor.reportNotSpam(repo.normalizeNumber(number))
+                val result = CommunityContributor.reportNotSpam(appContext, repo.normalizeNumber(number))
                 _contributeResult.value = result.toStatusMessage()
             }
         }
+
+        /** The text to share for a number the user thinks was flagged wrongly ([FalsePositiveReport]). */
+        suspend fun falsePositiveReportText(
+            number: String,
+            result: SpamCheckResult,
+        ): String {
+            val database = repo.readAcceptedSpamFeedMetadata()
+            return FalsePositiveReport.text(
+                number = repo.normalizeNumber(number),
+                result = result,
+                appVersion = "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
+                databaseVersion = database.version,
+                databaseUpdated = database.updated,
+            )
+        }
+
+        /** What to tell the user after a community report, by what actually happened to it. */
+        internal fun contributeMessage(result: CommunityContributor.ContributeResult): String = result.toStatusMessage().text
 
         /**
          * Localize the typed outcome. The network layer's `message` field is
@@ -1193,6 +1291,14 @@ class MainViewModel
 
                     CommunityContributor.ContributeOutcome.NETWORK_ERROR -> {
                         appContext.getString(R.string.contribute_network_error)
+                    }
+
+                    CommunityContributor.ContributeOutcome.ALREADY_SUBMITTED -> {
+                        appContext.getString(R.string.contribute_already_submitted)
+                    }
+
+                    CommunityContributor.ContributeOutcome.QUEUED -> {
+                        appContext.getString(R.string.contribute_queued)
                     }
                 }
             return StatusMessage(text, success)

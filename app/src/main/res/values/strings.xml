@@ -156,6 +156,9 @@
     <string name="blocked_log_filter_sms">Texts</string>
     <string name="blocked_log_filter_reason">Reason</string>
     <string name="blocked_log_filter_all_reasons">All reasons</string>
+    <string name="blocked_log_search_hint">Search by number</string>
+    <string name="blocked_log_search_empty">No results</string>
+    <string name="blocked_log_search_empty_body">No blocked calls or texts match that number.</string>
     <string name="blocked_log_empty_all_title">No blocked activity</string>
     <string name="blocked_log_empty_all_body">Blocked calls and texts will appear here.</string>
     <string name="blocked_log_empty_filter_title">Nothing matches this filter</string>
@@ -285,12 +288,17 @@
     </plurals>
     <string name="contribute_server_error">The report server is having trouble. Try again later.</string>
     <string name="contribute_network_error">No connection. The report wasn\'t sent.</string>
+    <string name="contribute_already_submitted">You already reported this number in the last day.</string>
+    <string name="contribute_queued">Saved. CallShield will send it as soon as it can.</string>
     <string name="blocklist_empty_keywords">No keyword rules</string>
     <string name="blocklist_empty_keywords_sub">Add phrases like bank alert or claim prize when spam texts reuse the same wording.</string>
     <string name="blocklist_empty_whitelist">No trusted numbers</string>
     <string name="blocklist_empty_whitelist_sub">Trusted numbers always pass through screening, even when aggressive protection is active.</string>
     <string name="blocklist_empty_database">No spam database loaded</string>
     <string name="blocklist_empty_database_sub">Run a sync from Home to download the current spam feed before reviewing local database entries here.</string>
+    <string name="blocklist_load_error">Couldn\'t load the database</string>
+    <string name="blocklist_load_error_sub">Something went wrong loading the local spam data. Try again.</string>
+    <string name="blocklist_retry">Retry</string>
     <string name="blocklist_number_blocked">Number blocked</string>
     <string name="blocklist_number_removed">Removed from blocklist</string>
     <string name="blocklist_rule_removed">Rule removed</string>
@@ -439,7 +447,7 @@
     <string name="lookup_reported">Reported to community</string>
     <string name="lookup_report_failed">Couldn\'t submit the report.</string>
     <string name="lookup_report">Report</string>
-    <string name="lookup_marked_safe_local">Marked as not spam</string>
+    <string name="lookup_marked_safe_with_status">Marked as not spam. %1$s</string>
     <string name="lookup_marked_safe_reported">Marked safe and reported</string>
     <string name="lookup_not_spam">This is not spam</string>
     <string name="lookup_remove_my_rule">Remove my rule</string>
@@ -485,7 +493,7 @@
     <string name="overlay_outgoing_risk_score">Local risk confidence: %1$d%%</string>
     <string name="overlay_score_loading">Checking databases…</string>
     <string name="overlay_spam_score">Spam score: %1$d%% (%2$s)</string>
-    <string name="overlay_status_querying">Querying SkipCalls, PhoneBlock, WhoCalledMe, OpenCNAM…</string>
+    <string name="overlay_status_querying">Querying SkipCalls…</string>
     <string name="overlay_status_fast_hit">Fast hit from %1$s; checking remaining sources…</string>
     <string name="overlay_status_complete">All sources checked</string>
     <string name="overlay_status_failed">Lookup failed</string>
@@ -497,7 +505,6 @@
     <string name="overlay_source_flagged">Flagged</string>
     <string name="overlay_source_result">%1$s %2$s: %3$s</string>
     <string name="remote_lookup_status_found">Found</string>
-    <string name="remote_lookup_status_caller_id_found">Caller ID found</string>
     <string name="remote_lookup_status_clean">Clean / not found</string>
     <string name="remote_lookup_status_disabled">Disabled</string>
     <string name="remote_lookup_status_invalid_input">Invalid input</string>
@@ -721,12 +728,39 @@
     <string name="settings_external_blocklist_preview_skips">%1$d skipped rows, %2$d already owned by stronger sources</string>
     <string name="settings_external_blocklist_commit_preview">Commit preview</string>
     <string name="settings_external_blocklist_subscription_stats">%1$d active, +%2$d / -%3$d last sync</string>
+    <string name="settings_external_blocklist_last_synced">Last updated: %1$s</string>
+    <string name="settings_external_blocklist_undo">Undo</string>
+    <string name="settings_external_blocklist_remove_action">Remove %1$s</string>
+    <string name="settings_feed_mirror">Feed mirror</string>
+    <string name="settings_feed_mirror_desc">If GitHub is blocked where you are, CallShield can download its protection data from a second address instead. GitHub goes first, except for a few minutes after it couldn\'t be reached. Every file still has to carry the project\'s signature, so a mirror can\'t alter the data, though it can hold back updates.</string>
+    <string name="settings_feed_mirror_url">Mirror address (https)</string>
+    <string name="settings_feed_mirror_jsdelivr">Use jsDelivr</string>
+    <string name="settings_feed_mirror_save">Save mirror</string>
+    <string name="settings_feed_mirror_active">Used when GitHub can\'t be reached: %1$s</string>
+    <string name="settings_feed_mirror_remove">Remove</string>
+    <string name="settings_feed_mirror_saved">Mirror saved. The next sync uses it if GitHub fails.</string>
+    <string name="settings_feed_mirror_invalid">That address won\'t work. It has to start with https:// and can\'t contain a password or a query string.</string>
+    <string name="settings_feed_mirror_removed">Mirror removed. Protection data comes from GitHub only.</string>
+    <string name="settings_feed_mirror_checking">Checking the mirror…</string>
+    <string name="settings_feed_mirror_unverified">That address didn\'t serve CallShield\'s signed data, so it wasn\'t saved. Check that it points at a copy of the repository.</string>
     <string name="external_blocklist_not_found">External blocklist subscription was not found</string>
     <string name="external_blocklist_disabled">Disabled %1$s: removed %2$d feed-owned numbers</string>
     <string name="external_blocklist_removed">Removed %1$s: rolled back %2$d feed-owned numbers</string>
+    <plurals name="external_blocklist_restored">
+        <item quantity="one">Put %1$s back with %2$d number</item>
+        <item quantity="other">Put %1$s back with %2$d numbers</item>
+    </plurals>
+    <string name="external_blocklist_undo_unavailable">That list can\'t be put back now. Add it again to restore it.</string>
     <string name="external_blocklist_previewed">Previewed %1$s: %2$d numbers, +%3$d / -%4$d, %5$d already owned by stronger sources</string>
     <string name="external_blocklist_applied">Applied %1$s: %2$d numbers, +%3$d / -%4$d</string>
     <string name="external_blocklist_failed_generic">Blocklist operation failed. Check the URL and your connection, then try again.</string>
+    <string name="external_blocklist_refresh_failed">The last refresh failed, so the previous copy is still in use.</string>
+    <string name="external_blocklist_refresh_http">The list\'s server answered HTTP %1$d on the last refresh, so the previous copy is still in use.</string>
+    <string name="external_blocklist_refresh_too_large">The list is now over the 1 MB limit, so the previous copy is still in use.</string>
+    <string name="external_blocklist_refresh_too_many_rows">The list now has more than 20,000 rows, so the previous copy is still in use.</string>
+    <string name="external_blocklist_refresh_unreadable">The last download wasn\'t a list CallShield can read, so the previous copy is still in use.</string>
+    <string name="external_blocklist_refresh_certificate">The list\'s server certificate couldn\'t be verified, so the previous copy is still in use.</string>
+    <string name="external_blocklist_refresh_held">The last refresh had under half as many numbers (%1$d, down from %2$d), so the previous copy is still in use. Turn the list off and on again to accept it.</string>
     <string name="settings_save">Save</string>
     <string name="settings_about_desc">Open-source spam blocker. No subscriptions, no tracking, no API keys.</string>
 
@@ -950,6 +984,11 @@
     <string name="protection_test_fix_database">Run a database sync from the dashboard or More screen so local protection data is available.</string>
     <string name="protection_test_fix_engine">Review detection engine toggles in Settings and rerun this check.</string>
     <string name="protection_test_fix_sync">Wait for the next refresh or run a manual sync if this remains empty.</string>
+    <string name="protection_test_fix_update_app">Install the latest CallShield release. A sync can\'t fix this one.</string>
+    <string name="protection_test_feed_trust">Protection data server</string>
+    <string name="protection_test_feed_trust_fail">This version can\'t verify the server\'s certificate, so no new protection data is arriving</string>
+    <string name="protection_test_caller_name">Caller name availability</string>
+    <string name="protection_test_caller_name_unavailable">This device hasn\'t provided a caller name to any of the last 20 screened calls. Caller Name rules won\'t fire during screening.</string>
     <string name="protection_test_fix_overlay">Allow overlay access if you want floating caller ID alerts on incoming calls.</string>
     <string name="protection_test_fix_notifications">Enable notification or listener access if you want alerts and RCS filtering.</string>
     <string name="protection_test_db_empty">No spam data loaded yet</string>
@@ -972,6 +1011,9 @@
     <string name="protection_test_hot_fail">Empty — will populate on next 30-min sync</string>
     <string name="protection_test_hot_unavailable_age">Hot data unavailable; last good update was %1$d hours ago</string>
     <string name="protection_test_hot_unavailable_never">Hot data unavailable; no successful update yet</string>
+    <string name="protection_test_hot_stalled">Reachable, but the trending feed has not been regenerated in %1$d days</string>
+    <string name="protection_test_hot_refused">Reachable, but the last download failed its signature or freshness check, so the previous copy is still in use</string>
+    <string name="protection_test_hot_cleared">Reachable. The publisher reports nothing trending right now</string>
     <string name="protection_test_overlay_pass">Can display caller ID overlay</string>
     <string name="protection_test_overlay_fail">Not granted — overlay won\'t show</string>
     <string name="protection_test_notif_pass">RCS filter can monitor messages</string>
@@ -1100,6 +1142,8 @@
     <string name="onboarding_overlay_instruction">Turn on Allow display over other apps, then press the system Back button to return to CallShield.</string>
     <string name="onboarding_notification_access_title">Notification access</string>
     <string name="onboarding_notification_access_body">This lets on-device protection recognize suspicious RCS and supported messaging alerts.</string>
+    <string name="onboarding_restricted_settings_hint">Android can block this for apps installed from outside an app store. If it said the setting is restricted, open App info, tap the three-dot menu, choose Allow restricted settings, then try again.</string>
+    <string name="onboarding_open_app_info">Open App info</string>
     <string name="onboarding_notification_access_instruction">Find CallShield, turn access on, confirm the Android warning, then press Back to return here.</string>
     <string name="onboarding_what_happens_next">What to do</string>
     <string name="onboarding_android_verified">Verified by Android</string>
@@ -1183,7 +1227,7 @@
     <string name="detail_recent_activity">Recent Activity</string>
     <string name="detail_online_lookup">Online Lookup</string>
     <string name="detail_check_sources">Check spam sources</string>
-    <string name="detail_checking_sources">Checking SkipCalls, PhoneBlock, WhoCalledMe, and OpenCNAM…</string>
+    <string name="detail_checking_sources">Checking SkipCalls…</string>
     <string name="detail_check_sources_failed">Couldn\'t reach the lookup sources. Check your connection and try again.</string>
     <string name="detail_reports_across_sources">%1$s across %2$s</string>
     <string name="detail_clean_all_sources">No reports in available sources</string>
@@ -1194,6 +1238,7 @@
         <item quantity="other">Reports: %d</item>
     </plurals>
     <string name="detail_flagged">Flagged</string>
+    <string name="detail_flagged_by_sources">Flagged as spam by %1$s</string>
     <string name="detail_block">Block</string>
     <string name="detail_number_blocked">Number blocked</string>
     <string name="detail_unblock">Unblock</string>
@@ -1202,10 +1247,14 @@
     <string name="detail_report">Report</string>
     <string name="detail_report_spam">Report Spam</string>
     <string name="detail_not_spam">Not Spam</string>
+    <string name="detail_not_spam_pending">Marked not spam</string>
+    <string name="detail_undo">Undo</string>
+    <string name="detail_report_carrier">Report to carrier (7726)</string>
     <string name="detail_remove_my_rule">Remove my rule</string>
     <string name="detail_ftc_complaint">File FTC Do Not Call Complaint</string>
     <string name="detail_whitelist">Trust</string>
     <string name="detail_call">Call</string>
+    <string name="detail_share_false_alarm">Share a false-alarm report</string>
     <string name="detail_share">Share</string>
     <string name="detail_block_area_code_description">Block area code %s</string>
     <string name="detail_block_area_code_description_location">Block area code %1$s (%2$s)</string>
@@ -1369,6 +1418,7 @@
     <string name="notif_message_screening_generic_reason">suspicious message content</string>
     <string name="notif_category_policy_reason">%1$s · %2$s rule</string>
     <string name="notif_blocked_title">Blocked spam %s</string>
+    <string name="notif_flagged_text_title">Flagged a spam text</string>
     <string name="notif_blocked_text">%1$s (%2$s)</string>
     <string name="notif_type_call">call</string>
     <string name="notif_type_sms">SMS</string>
@@ -1382,6 +1432,9 @@
     <string name="notif_role_lost_title">Call screening is off</string>
     <string name="notif_role_lost_text">Android is no longer sending incoming calls to CallShield. Restore the call screener to resume protection.</string>
     <string name="notif_role_lost_action">Restore protection</string>
+    <string name="notif_feed_trust_title">CallShield can\'t download new protection data</string>
+    <string name="notif_feed_trust_text">This version can\'t verify the data server\'s certificate. Install the latest release to start getting updates again.</string>
+    <string name="notif_feed_trust_action">Get the latest release</string>
     <string name="notif_sync_title">Refreshing protection</string>
     <string name="notif_sync_text">Updating spam numbers and detection data…</string>
     <string name="notif_repeated_urgent_title">Repeated caller allowed</string>
@@ -1564,6 +1617,14 @@
     </plurals>
     <string name="settings_region_cnap_rules">Region &amp; caller-name rules</string>
     <string name="settings_region_cnap_summary">Allowed regions: %1$d · Trusted names: %2$d · Blocked names: %3$d</string>
+    <string name="reg_prefix_spain_400">Block Spain 400 telemarketing</string>
+    <string name="reg_prefix_spain_400_desc">Spain requires commercial calls to use the 400 prefix from October 2026 (RD 2026).</string>
+    <string name="reg_prefix_india_140">Block India 140 promotional</string>
+    <string name="reg_prefix_india_140_desc">India reserves the 140 prefix for promotional and telemarketing calls (TRAI).</string>
+    <string name="reg_prefix_brazil_0303">Block Brazil 0303 telemarketing</string>
+    <string name="reg_prefix_brazil_0303_desc">Brazil\'s 0303 prefix is used for telemarketing calls (ANATEL).</string>
+    <string name="reg_prefix_india_1600_allow">Protect India 1600 series</string>
+    <string name="reg_prefix_india_1600_allow_desc">India\'s 1600 series is used by banks, insurers, and government. TRAI prohibits blocking it.</string>
     <string name="region_rules_title">Region &amp; caller-name rules</string>
     <string name="region_rules_disclosure">These rules run entirely on your device. Region blocking uses the incoming number\'s NANP area code. Caller-name trust uses only a carrier-presented name that Android exposes to the screening service.</string>
     <string name="region_rules_block_outside">Block calls outside allowed regions</string>
@@ -1575,6 +1636,7 @@
         <item quantity="one">%1$d valid region code</item>
         <item quantity="other">%1$d valid region codes</item>
     </plurals>
+    <string name="cnap_device_unavailable_notice">This device hasn\'t provided a caller name during screening. These rules won\'t take effect until it does.</string>
     <string name="cnap_trust_title">Trust a presented caller name</string>
     <string name="cnap_trust_desc">When the carrier provides a caller name, matching calls can bypass region and statistical blocks.</string>
     <string name="cnap_trust_patterns">Trusted name patterns</string>
@@ -1604,7 +1666,7 @@
     <string name="model_health_loading">Model status pending</string>
     <string name="model_health_loading_detail">No model load has completed yet.</string>
     <string name="settings_live_caller_enrichment">Live caller enrichment</string>
-    <string name="settings_live_caller_enrichment_desc">Optional. For locally suspicious calls only, PhoneBlock receives one-way number hashes; the other enabled lookup services receive the number</string>
+    <string name="settings_live_caller_enrichment_desc">Optional. For locally suspicious calls only, the number is sent to SkipCalls to check it against their spam reports</string>
     <string name="overlay_score_local_clear">Local checks clear</string>
     <string name="overlay_status_local_only">Based on on-device checks; live enrichment is off</string>
 </resources>

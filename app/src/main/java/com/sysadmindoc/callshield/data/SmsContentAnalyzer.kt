@@ -110,6 +110,30 @@ class SmsContentAnalyzer
                 Regex("(?i)(congratulations|congrats).{0,20}(won|winner|selected|chosen)"),
                 Regex("(?i)text (yes|y|go|start|ok) to"),
                 Regex("(?i)reply (yes|y|stop|1|2)"),
+                // ── Spanish ────────────────────────────────────────────────
+                Regex("(?i)(has ganado|ganaste|fuiste seleccionado|premio|sorteo)"),
+                Regex("(?i)(reclam[ae]|cobra) (tu|su|el) (premio|regalo|dinero)"),
+                Regex("(?i)(cuenta (suspendida|bloqueada|comprometida))"),
+                Regex("(?i)(verific[ae]|confirm[ae]) (tu|su) (cuenta|identidad|informaci.n)"),
+                Regex("(?i)(paquete|env.o|entrega).{0,20}(retenido|detenido|pendiente)"),
+                Regex("(?i)(transferencia|giro|dep.sito).{0,20}(inmediato|urgente|ahora)"),
+                Regex("(?i)(banco|tarjeta|cr.dito).{0,20}(bloqueado|suspendido|verificar)"),
+                // ── Portuguese ─────────────────────────────────────────────
+                Regex("(?i)(voc. ganhou|parab.ns|sorteio|premiado)"),
+                Regex("(?i)(resgate|retirar) (seu|o) (pr.mio|presente|dinheiro)"),
+                Regex("(?i)(conta (suspensa|bloqueada|comprometida))"),
+                Regex("(?i)(verificar|confirmar) (sua|a) (conta|identidade|informa..o)"),
+                Regex("(?i)(encomenda|pacote|entrega).{0,20}(retido|pendente|parado)"),
+                Regex("(?i)(transfer.ncia|pix|dep.sito).{0,20}(imediato|urgente|agora)"),
+                Regex("(?i)(banco|cart.o|cr.dito).{0,20}(bloqueado|suspenso|verificar)"),
+                // ── Italian ────────────────────────────────────────────────
+                Regex("(?i)(hai vinto|congratulazioni|premio|sorteggio)"),
+                Regex("(?i)(riscuoti|ritira) (il tuo|il) (premio|regalo|denaro)"),
+                Regex("(?i)(conto (sospeso|bloccato|compromesso))"),
+                Regex("(?i)(verifica|conferma) (il tuo|la tua) (conto|identit.|informazioni)"),
+                Regex("(?i)(pacco|spedizione|consegna).{0,20}(trattenuto|in sospeso|bloccato)"),
+                Regex("(?i)(bonifico|trasferimento).{0,20}(immediato|urgente|adesso)"),
+                Regex("(?i)(banca|carta|credito).{0,20}(bloccato|sospeso|verificare)"),
             )
 
         // Phone number in SMS body (common in callback scams)
@@ -185,6 +209,33 @@ class SmsContentAnalyzer
             return domain.isNotEmpty() && isKnownSpamDomain(domain)
         }
 
+        private data class ImpersonatedBrand(
+            val keywords: List<String>,
+            val realDomains: Set<String>,
+        )
+
+        private val impersonatedBrands =
+            listOf(
+                ImpersonatedBrand(listOf("usps"), setOf("usps.com")),
+                ImpersonatedBrand(listOf("ezpass", "e-zpass"), setOf("e-zpassny.com", "e-zpassiag.com", "e-zpassnj.com", "e-zpassmd.com")),
+                ImpersonatedBrand(listOf("sunpass"), setOf("sunpass.com")),
+                ImpersonatedBrand(listOf("fastrak"), setOf("bayareafastrak.org", "thetollroads.com")),
+                ImpersonatedBrand(listOf("txtag"), setOf("txtag.org")),
+            )
+
+        private val govLikePattern = Regex("(?:^|[.-])gov(?:[.-]|$)", RegexOption.IGNORE_CASE)
+
+        internal fun isLookalikeHost(host: String): Boolean {
+            if (host.isEmpty()) return false
+            val lower = host.lowercase()
+            for (brand in impersonatedBrands) {
+                if (brand.realDomains.any { lower == it || lower.endsWith(".$it") }) continue
+                val hasBrand = brand.keywords.any { kw -> lower.contains(kw) }
+                if (hasBrand && govLikePattern.containsMatchIn(lower)) return true
+            }
+            return false
+        }
+
         /**
          * Score a single extracted host. Returns the added score and the reason
          * tag, or `(0, null)` for a benign / empty host. Comparisons are on the
@@ -195,6 +246,7 @@ class SmsContentAnalyzer
             when {
                 domain.isEmpty() -> 0 to null
                 spamDomains.isNotEmpty() && isKnownSpamDomain(domain) -> 50 to "spam_domain"
+                isLookalikeHost(domain) -> 45 to "lookalike_host"
                 shortenerDomains.any { domain == it || domain.endsWith(".$it") } -> 35 to "shortened_url"
                 suspiciousTlds.any { domain.endsWith(it) } -> 30 to "suspicious_tld"
                 else -> 0 to null
@@ -378,6 +430,8 @@ class SmsContentAnalyzer
             fun isVerificationMessage(body: String): Boolean = shared.isVerificationMessage(body)
 
             fun isKnownSpamDomainUrl(url: String): Boolean = shared.isKnownSpamDomainUrl(url)
+
+            internal fun isLookalikeHost(host: String): Boolean = shared.isLookalikeHost(host)
 
             internal fun normalizeDomainCandidate(rawDomain: String): String? {
                 val normalized =

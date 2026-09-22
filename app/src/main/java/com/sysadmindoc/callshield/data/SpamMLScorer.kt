@@ -4,6 +4,7 @@ import android.content.Context
 import com.sysadmindoc.callshield.data.remote.GitHubDataSource
 import com.sysadmindoc.callshield.domain.model.CallerIdentity
 import com.sysadmindoc.callshield.domain.model.CallerIdentitySignals
+import com.sysadmindoc.callshield.util.HotFeedFreshness
 import com.sysadmindoc.callshield.util.filterAsciiDigits
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -50,6 +51,25 @@ internal fun jsonDeclaresGbt(json: String): Boolean {
     val type = Regex(""""model_type"\s*:\s*"(\w+)"""").find(json)?.groupValues?.get(1) ?: ""
     return version >= 3 && type == "gbt"
 }
+
+/**
+ * True when [candidate] is an older model than [installed], by the `generated`
+ * stamp the trainer writes. A signature proves who made a model, not that it's
+ * the latest, so a genuine older copy (served by a mirror, or by anyone once
+ * pinning fails) must not replace a newer one. Stamps began with this check,
+ * so an unstamped model is older than any stamped one; with no stamp on the
+ * installed model there is nothing to compare against.
+ */
+internal fun isOlderModel(
+    candidate: String,
+    installed: String,
+): Boolean {
+    val installedAt = modelGeneratedAt(installed)
+    if (installedAt <= 0L) return false
+    return modelGeneratedAt(candidate) < installedAt
+}
+
+private fun modelGeneratedAt(json: String): Long = HotFeedFreshness.publishedAtMillis(Regex(""""generated"\s*:\s*"([^"]+)"""").find(json)?.groupValues?.get(1))
 
 /** Classify a load/sync outcome into a [ModelHealth] (pure, for testability). */
 internal fun modelHealthFor(
@@ -100,7 +120,9 @@ internal fun modelHealthFor(
  *  19. short_number           — number has fewer than 7 digits (short codes)
  *  20. plus_one_prefix        — number starts with +1 (US/Canada)
  *
- * Threshold: 0.7 (conservative — avoids false positives).
+ * Threshold: read from the weights file ("threshold", 0.648465 in the model
+ * shipped today). 0.7 applies only to the built-in defaults or a file that
+ * omits the field.
  */
 class SpamMLScorer
     @Inject
@@ -176,6 +198,7 @@ class SpamMLScorer
             val weights: DoubleArray?,
             val bias: Double,
             val threshold: Double,
+            val generatedAt: Long = 0L,
         )
 
         /** Result of a single scoring pass — used to avoid double work on the hot path. */
@@ -243,6 +266,8 @@ class SpamMLScorer
                     val json = file.readText()
                     val parsed = parseModel(json)
                     if (parsed != null) {
+                        val current = state
+                        if (current.generatedAt > 0L && parsed.generatedAt < current.generatedAt) return
                         state = parsed
                         recordModelHealth(json, parsed, "cache")
                         return
@@ -254,6 +279,8 @@ class SpamMLScorer
                     val json = bundled.getOrThrow()
                     val parsed = parseModel(json)
                     if (parsed != null) {
+                        val current = state
+                        if (current.generatedAt > 0L && parsed.generatedAt < current.generatedAt) return
                         state = parsed
                         recordModelHealth(json, parsed, "bundled")
                         return
@@ -316,6 +343,13 @@ class SpamMLScorer
                         // and log the failure instead of degrading silently.
                         _modelHealth = ModelHealth.PARSE_FAILED
                         logDegradedModel("sync")
+                        return@withContext
+                    }
+                    val installed =
+                        File(context.filesDir, "spam_model_weights.json").takeIf { it.exists() }?.readText()
+                            ?: GitHubDataSource.readBundledAsset(context, GitHubDataSource.BUNDLED_MODEL_WEIGHTS_ASSET).getOrNull()
+                    if (installed != null && isOlderModel(json, installed)) {
+                        // Keep the newer model already in use.
                         return@withContext
                     }
                     state = parsed
@@ -466,9 +500,18 @@ class SpamMLScorer
             number: String,
             hourOfDay: Int,
         ): DoubleArray? {
+            // A "+" number is E.164, and only country code 1 is North American.
+            // Stripping the "+" first made any 10-digit international number
+            // (Singapore, New Zealand, Belgium, Thailand, Seoul...) look like a
+            // NANP one and get scored by a model trained only on NANP rows.
+            // Strip exactly the separators Python's extract_features strips, so
+            // "(+65) 8123 4567" or "+ 1 415 555 1234" read the same on both sides.
+            val compact = number.filterNot { it == ' ' || it == '-' || it == '(' || it == ')' }
+            if (compact.startsWith("+") && !compact.startsWith("+1")) return null
+
             // Check raw number properties before normalizing to 10 digits
             val rawDigits = filterAsciiDigits(number)
-            val plusOnePrefix = if (number.trimStart().startsWith("+1")) 1.0 else 0.0
+            val plusOnePrefix = if (compact.startsWith("+1")) 1.0 else 0.0
             val shortNumber = if (rawDigits.length in 1..6) 1.0 else 0.0
 
             var digits = rawDigits
@@ -629,6 +672,7 @@ class SpamMLScorer
                 val modelType = modelTypeMatch?.groupValues?.get(1) ?: ""
                 val parsedThreshold = thresholdMatch?.groupValues?.get(1)?.toDoubleOrNull() ?: 0.7
                 val parsedInitialScore = initialScoreMatch?.groupValues?.get(1)?.toDoubleOrNull() ?: 0.0
+                val generatedAt = modelGeneratedAt(json)
 
                 if (version >= 3 && !modelFeatureSchemaMatches(json)) return null
 
@@ -648,6 +692,7 @@ class SpamMLScorer
                             weights = fallback?.first,
                             bias = fallback?.second ?: -2.5,
                             threshold = parsedThreshold,
+                            generatedAt = generatedAt,
                         )
                     }
                 }
@@ -661,6 +706,7 @@ class SpamMLScorer
                         weights = fallback.first,
                         bias = fallback.second,
                         threshold = parsedThreshold,
+                        generatedAt = generatedAt,
                     )
                 }
 

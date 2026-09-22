@@ -145,6 +145,9 @@ android {
                     "callshield.benchHeadroom",
                     (project.findProperty("benchHeadroom") as String?) ?: "1.0",
                 )
+                // HttpClient.shared resolves only loopback hosts under this, so
+                // no unit test can post to the live report Worker again.
+                it.systemProperty("callshield.unitTest", "true")
             }
         }
     }
@@ -265,12 +268,15 @@ dependencies {
     implementation(libs.androidx.paging.compose)
     ksp(libs.androidx.room.compiler)
     implementation(libs.androidx.datastore.preferences)
-    implementation(libs.androidx.work.runtime.ktx)
+    // work-runtime-ktx has been an empty jar since 2.9.0; its coroutine APIs live in work-runtime.
+    implementation(libs.androidx.work.runtime)
     implementation(libs.androidx.hilt.work)
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
     ksp(libs.androidx.hilt.compiler)
     implementation(libs.okhttp)
+    // Used directly (okio.Buffer), so pinned here rather than left to OkHttp's transitive version.
+    implementation(libs.okio)
     implementation(libs.moshi)
     implementation(libs.moshi.kotlin)
     debugImplementation(libs.kotlinx.serialization.json)
@@ -279,6 +285,7 @@ dependencies {
     testImplementation(libs.kotlinx.serialization.json)
     testImplementation(libs.robolectric)
     testImplementation(libs.androidx.test.core)
+    testImplementation(libs.androidx.work.testing)
 
     // Instrumentation tests (emulator / device)
     androidTestImplementation(platform(libs.androidx.compose.bom))

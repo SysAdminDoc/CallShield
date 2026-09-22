@@ -1,14 +1,21 @@
 package com.sysadmindoc.callshield.data.checker
 
+import androidx.datastore.preferences.core.mutablePreferencesOf
+import com.sysadmindoc.callshield.data.SourceEvidenceCodec
+import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.checker.StirShakenTrustChecker.Companion.VERIFICATION_STATUS_PASSED
 import com.sysadmindoc.callshield.data.checker.StirShakenTrustChecker.Companion.decidePure
 import com.sysadmindoc.callshield.data.checker.StirShakenTrustChecker.Companion.isEnabledPure
+import com.sysadmindoc.callshield.data.checker.StirShakenTrustChecker.Companion.isTrendingNow
+import com.sysadmindoc.callshield.data.model.SourceEvidenceJson
+import com.sysadmindoc.callshield.data.model.SpamNumber
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.time.LocalDate
 
 /**
  * Pure-logic coverage of the v1.7.0 STIR/SHAKEN trust-allow path.
@@ -23,6 +30,10 @@ import org.junit.Test
  *   VERIFICATION_STATUS_FAILED       = 2
  */
 class StirShakenTrustCheckerTest {
+    private companion object {
+        const val NOW = 1_800_000_000_000L
+    }
+
     private val notVerified = 0
     private val failed = 2
 
@@ -43,6 +54,37 @@ class StirShakenTrustCheckerTest {
         // Pre-Android 11 or SMS pipeline — nothing to trust.
         assertFalse(isEnabledPure(settingEnabled = true, verificationStatus = null))
     }
+
+    // ── isTrendingNow ────────────────────────────────────────────────────
+
+    @Test fun `a number on a hot list applied within its rows' lifetime is trending`() {
+        val prefs = trendingPrefs(appliedAt = NOW - SpamRepository.HOT_ROW_TTL_MS, "+12125550144")
+
+        assertTrue(isTrendingNow(prefs, "+12125550144", NOW))
+        assertFalse(isTrendingNow(prefs, "+12125550199", NOW))
+    }
+
+    @Test fun `a trending mark past the rows' lifetime no longer counts`() {
+        // During an outage or a refused feed nothing replaces the set, and a
+        // stale mark would keep overriding the trust allow indefinitely.
+        val prefs = trendingPrefs(appliedAt = NOW - SpamRepository.HOT_ROW_TTL_MS - 1, "+12125550144")
+
+        assertFalse(isTrendingNow(prefs, "+12125550144", NOW))
+    }
+
+    @Test fun `a trending set with no applied time doesn't count`() {
+        val prefs = mutablePreferencesOf(SpamRepository.KEY_TRENDING_NUMBERS to setOf("+12125550144"))
+
+        assertFalse(isTrendingNow(prefs, "+12125550144", NOW))
+    }
+
+    private fun trendingPrefs(
+        appliedAt: Long,
+        vararg numbers: String,
+    ) = mutablePreferencesOf(
+        SpamRepository.KEY_TRENDING_NUMBERS to numbers.toSet(),
+        SpamRepository.KEY_TRENDING_APPLIED_AT to appliedAt,
+    )
 
     // ── decidePure ───────────────────────────────────────────────────────
 
@@ -70,6 +112,79 @@ class StirShakenTrustCheckerTest {
         // Defensive — even though isEnabled() would have rejected this
         // upstream, decide() must still degrade safely.
         assertNull(decidePure(null))
+    }
+
+    // ── Database evidence ────────────────────────────────────────────────
+    // A PASSED attestation proves line ownership, not that the call is
+    // wanted, so it only overrides a database row whose evidence is stale.
+
+    private val today = LocalDate.of(2026, 9, 21)
+
+    private fun row(
+        lastSeen: String,
+        source: String = "github",
+        evidence: List<SourceEvidenceJson> = emptyList(),
+    ) = SpamNumber(
+        number = "+12125550100",
+        type = "robocall",
+        lastSeen = lastSeen,
+        source = source,
+        evidenceJson = SourceEvidenceCodec.encode(evidence),
+    )
+
+    private fun evidence(
+        sourceId: String,
+        lastSeen: String,
+        tier: String = "unverified",
+    ) = SourceEvidenceJson(
+        sourceId = sourceId,
+        evidenceType = "user_report",
+        license = "fixture",
+        attribution = "fixture",
+        lastSeen = lastSeen,
+        confidenceTier = tier,
+    )
+
+    @Test fun `PASSED yields to a database row seen within the last year`() {
+        assertNull(decidePure(VERIFICATION_STATUS_PASSED, row("2026-03-01"), today))
+        // Inclusive at exactly 365 days.
+        assertNull(decidePure(VERIFICATION_STATUS_PASSED, row("2025-09-21"), today))
+    }
+
+    @Test fun `PASSED still rings through a row whose newest evidence is older than a year`() {
+        val result = decidePure(VERIFICATION_STATUS_PASSED, row("2025-09-20"), today)
+        assertNotNull(result)
+        assertFalse(result!!.shouldBlock)
+        assertEquals("stir_shaken_trusted", result.matchSource)
+    }
+
+    @Test fun `a newer evidence record keeps an old row current`() {
+        val recent = evidence("ftc_complaints", lastSeen = "2026-09-01")
+        assertNull(decidePure(VERIFICATION_STATUS_PASSED, row("2016-08-17", evidence = listOf(recent)), today))
+    }
+
+    @Test fun `community reports count by their date, whatever their tier says`() {
+        // The tier comes from the row's total report count, legacy complaints
+        // included, so one community report on a 2015 FCC row reads as
+        // corroborated. It must not keep that row current forever.
+        val oldCorroborated = evidence("community_reports", lastSeen = "2024-01-01", tier = "corroborated")
+        val recentSingle = evidence("community_reports", lastSeen = "2026-06-01")
+        assertNotNull(decidePure(VERIFICATION_STATUS_PASSED, row("2015-03-01", evidence = listOf(oldCorroborated)), today))
+        assertNull(decidePure(VERIFICATION_STATUS_PASSED, row("2015-03-01", evidence = listOf(recentSingle)), today))
+    }
+
+    @Test fun `a number trending right now keeps its stale database row current`() {
+        assertNull(decidePure(VERIFICATION_STATUS_PASSED, row("2016-01-01"), today, trending = true))
+        assertNotNull(decidePure(VERIFICATION_STATUS_PASSED, row("2016-01-01"), today, trending = false))
+    }
+
+    @Test fun `a trending hot-list row counts as current without a date`() {
+        assertNull(decidePure(VERIFICATION_STATUS_PASSED, row("", source = "hot_list"), today))
+    }
+
+    @Test fun `an undated or unreadable row is no evidence of recency`() {
+        assertNotNull(decidePure(VERIFICATION_STATUS_PASSED, row(""), today))
+        assertNotNull(decidePure(VERIFICATION_STATUS_PASSED, row("last tuesday"), today))
     }
 
     // ── Priority ordering sanity ─────────────────────────────────────────

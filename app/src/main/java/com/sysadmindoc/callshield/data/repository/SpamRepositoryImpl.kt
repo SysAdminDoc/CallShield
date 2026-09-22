@@ -39,6 +39,10 @@ class SpamRepositoryImpl(
     // isSpam() is the critical real-time path. Loading all prefixes,
     // wildcard rules, and keyword rules from Room on every call adds
     // avoidable I/O latency, so writes invalidate these process caches.
+    // A generation counter prevents a stale DAO query from overwriting
+    // a null set by a concurrent invalidation.
+    @Volatile private var cacheGeneration = 0L
+
     @Volatile private var cachedPrefixes: List<SpamPrefix>? = null
 
     @Volatile private var cachedWildcardRules: List<WildcardRule>? = null
@@ -48,22 +52,27 @@ class SpamRepositoryImpl(
     @Volatile private var cachedHashWildcardRules: List<HashWildcardRule>? = null
 
     internal fun invalidatePrefixCache() {
+        cacheGeneration++
         cachedPrefixes = null
     }
 
     internal fun invalidateWildcardCache() {
+        cacheGeneration++
         cachedWildcardRules = null
     }
 
     internal fun invalidateKeywordCache() {
+        cacheGeneration++
         cachedKeywordRules = null
     }
 
     internal fun invalidateHashWildcardCache() {
+        cacheGeneration++
         cachedHashWildcardRules = null
     }
 
     internal fun invalidateAllCaches() {
+        cacheGeneration++
         cachedPrefixes = null
         cachedWildcardRules = null
         cachedKeywordRules = null
@@ -82,13 +91,37 @@ class SpamRepositoryImpl(
         return dao.countByPrefix(prefix, System.currentTimeMillis()) > 0
     }
 
-    internal suspend fun getPrefixesCachedInternal(): List<SpamPrefix> = cachedPrefixes ?: dao.getAllPrefixes(System.currentTimeMillis()).also { cachedPrefixes = it }
+    internal suspend fun getPrefixesCachedInternal(): List<SpamPrefix> {
+        cachedPrefixes?.let { return it }
+        val gen = cacheGeneration
+        val result = dao.getAllPrefixes(System.currentTimeMillis())
+        if (cacheGeneration == gen) cachedPrefixes = result
+        return result
+    }
 
-    internal suspend fun getActiveWildcardsCachedInternal(): List<WildcardRule> = cachedWildcardRules ?: dao.getActiveWildcardRules().also { cachedWildcardRules = it }
+    internal suspend fun getActiveWildcardsCachedInternal(): List<WildcardRule> {
+        cachedWildcardRules?.let { return it }
+        val gen = cacheGeneration
+        val result = dao.getActiveWildcardRules()
+        if (cacheGeneration == gen) cachedWildcardRules = result
+        return result
+    }
 
-    internal suspend fun getActiveKeywordsCachedInternal(): List<SmsKeywordRule> = cachedKeywordRules ?: dao.getActiveKeywordRules().also { cachedKeywordRules = it }
+    internal suspend fun getActiveKeywordsCachedInternal(): List<SmsKeywordRule> {
+        cachedKeywordRules?.let { return it }
+        val gen = cacheGeneration
+        val result = dao.getActiveKeywordRules()
+        if (cacheGeneration == gen) cachedKeywordRules = result
+        return result
+    }
 
-    internal suspend fun getActiveHashWildcardsCachedInternal(): List<HashWildcardRule> = cachedHashWildcardRules ?: dao.getActiveHashWildcardRules().also { cachedHashWildcardRules = it }
+    internal suspend fun getActiveHashWildcardsCachedInternal(): List<HashWildcardRule> {
+        cachedHashWildcardRules?.let { return it }
+        val gen = cacheGeneration
+        val result = dao.getActiveHashWildcardRules()
+        if (cacheGeneration == gen) cachedHashWildcardRules = result
+        return result
+    }
 
     internal suspend fun getCallFrequencySinceInternal(
         number: String,

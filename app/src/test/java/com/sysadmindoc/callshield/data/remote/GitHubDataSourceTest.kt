@@ -3,6 +3,7 @@ package com.sysadmindoc.callshield.data.remote
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.File
 
 class GitHubDataSourceTest {
     private val dataSource = GitHubDataSource()
@@ -349,4 +350,30 @@ class GitHubDataSourceTest {
             assertEquals(reason, error.reason)
             error
         }
+
+    @Test
+    fun `a signed feed with no signature or a bad one is refused`() {
+        val missing = runCatching { GitHubDataSource.requireFeedSignature(GitHubDataSource.HOT_LIST_PATH, "{}", null) }
+        val bad = runCatching { GitHubDataSource.requireFeedSignature(GitHubDataSource.HOT_LIST_PATH, "{}", "AAAA") }
+
+        assertEquals(GitHubFeedFailureReason.SIGNATURE, (missing.exceptionOrNull() as GitHubFeedValidationException).reason)
+        assertEquals(GitHubFeedFailureReason.SIGNATURE, (bad.exceptionOrNull() as GitHubFeedValidationException).reason)
+    }
+
+    @Test
+    fun `shards need no signature, because the signed manifest carries their hashes`() {
+        GitHubDataSource.requireFeedSignature("data/spam_number_shards/00.json", "{}", null)
+    }
+
+    @Test
+    fun `the published hot list is accepted with its signature and refused once a byte changes`() {
+        val body = File("..", GitHubDataSource.HOT_LIST_PATH).readText(Charsets.UTF_8)
+        val signature = File("..", GitHubDataSource.HOT_LIST_PATH + ".sig").readText()
+
+        GitHubDataSource.requireFeedSignature(GitHubDataSource.HOT_LIST_PATH, body, signature)
+
+        val tampered = body.replaceFirst("\"count\"", "\"Count\"")
+        val refused = runCatching { GitHubDataSource.requireFeedSignature(GitHubDataSource.HOT_LIST_PATH, tampered, signature) }
+        assertEquals(GitHubFeedFailureReason.SIGNATURE, (refused.exceptionOrNull() as GitHubFeedValidationException).reason)
+    }
 }

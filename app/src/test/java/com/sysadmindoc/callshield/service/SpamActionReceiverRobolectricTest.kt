@@ -5,8 +5,13 @@ import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
 import androidx.test.core.app.ApplicationProvider
+import com.sysadmindoc.callshield.data.CommunityContributor
+import com.sysadmindoc.callshield.data.CommunityContributor.ContributeOutcome
+import com.sysadmindoc.callshield.data.CommunityContributor.ContributeResult
+import org.junit.After
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -21,12 +26,28 @@ import org.robolectric.annotation.Config
  * async repo/community work), so we can assert it deterministically without
  * awaiting the background coroutine. This locks the v1.7.14 fix where the
  * feedback notification was cancelled under the wrong ID.
+ *
+ * That background work reports the number, and with the real transport it
+ * posted to the live Worker on every run, which committed the report to the
+ * public repo. The fake keeps it local, and HttpClient's unit-test DNS refuses
+ * the Worker's host for anything that outlives the swap.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
 class SpamActionReceiverRobolectricTest {
     private val context: Context = ApplicationProvider.getApplicationContext()
     private val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+    private val originalTransport = CommunityContributor.transport
+
+    @Before
+    fun keepReportsLocal() {
+        CommunityContributor.transport = { ContributeResult(true, "faked in test", ContributeOutcome.REPORTED_SPAM) }
+    }
+
+    @After
+    fun restoreTransport() {
+        CommunityContributor.transport = originalTransport
+    }
 
     private fun postFeedbackNotification(number: String): Int {
         val id = NotificationHelper.feedbackNotificationId(number)

@@ -55,6 +55,29 @@ internal fun shouldRunLiveCallerEnrichment(
     optedIn: Boolean,
 ): Boolean = optedIn && confidence > 0
 
+/**
+ * The overlay's live-lookup score, or -1 to leave the local verdict showing:
+ * while sources are still answering, and when every source failed. A failed
+ * lookup is no evidence the caller is safe, and scoring it 0 turned a locally
+ * flagged call into a green "Looks Safe".
+ */
+@Suppress("MagicNumber")
+internal fun liveLookupScore(
+    totalReports: Int,
+    anySpam: Boolean,
+    allFinished: Boolean,
+    definitive: Int,
+): Int =
+    when {
+        totalReports >= 10 -> 95
+        totalReports >= 5 -> 80
+        totalReports >= 3 -> 60
+        anySpam -> 50
+        totalReports > 0 -> 30
+        allFinished && definitive > 0 -> 0
+        else -> -1
+    }
+
 internal fun overlayReasonLabelRes(reason: String): Int? {
     val normalized = reason.trim().lowercase().replace(' ', '_')
     return when (normalized) {
@@ -127,9 +150,9 @@ private fun Context.currentOverlayPalette(): CallerIdOverlayPalette {
 /**
  * Real-time caller ID overlay with live multi-source spam lookup.
  *
- * Shows immediately with area code, then queries SkipCalls, PhoneBlock,
- * and WhoCalledMe in parallel. Updates the overlay in real-time as each
- * source responds. Shows aggregate spam score + Google search button.
+ * Shows immediately with area code, then queries the live lookup sources
+ * (SkipCalls, the one that still answers) in parallel. Updates the overlay
+ * as each source responds. Shows aggregate spam score + Google search button.
  *
  * RTT calls never reach this service: [CallShieldScreeningService] explicitly
  * allows [android.telecom.Call.Details.PROPERTY_RTT] sessions before it can
@@ -191,7 +214,6 @@ class CallerIdOverlayService : Service() {
     private var headerText: TextView? = null
     private var scoreText: TextView? = null
     private var statusText: TextView? = null
-    private var callerNameText: TextView? = null
     private var sourcesContainer: LinearLayout? = null
     private var progressBar: ProgressBar? = null
 
@@ -374,18 +396,6 @@ class CallerIdOverlayService : Service() {
                         setPadding(0, context.overlayDp(6f), 0, 0)
                     }
                 addView(sourcesContainer)
-
-                // Caller name (populated by OpenCNAM lookup)
-                callerNameText =
-                    TextView(context).apply {
-                        text = ""
-                        setTextColor(palette.lavender)
-                        textSize = 13f
-                        typeface = Typeface.DEFAULT_BOLD
-                        visibility = android.view.View.GONE
-                        setPadding(0, context.overlayDp(6f), 0, 0)
-                    }
-                addView(callerNameText)
 
                 // Status text
                 statusText =
@@ -649,10 +659,7 @@ class CallerIdOverlayService : Service() {
         }
     }
 
-    /**
-     * Query all sources in parallel and update the overlay as each responds.
-     * Now includes OpenCNAM caller name lookup as a 4th source.
-     */
+    /** Query all sources in parallel and update the overlay as each responds. */
     private fun runLiveLookups(
         number: String,
         sessionId: Long,
@@ -662,26 +669,26 @@ class CallerIdOverlayService : Service() {
             val completed: Int,
             val totalReports: Int,
             val anySpam: Boolean,
+            /** Sources that answered FOUND or CLEAN, as opposed to failing. */
+            val definitive: Int,
         )
 
         val spamSources = ExternalLookup.spamLookupSources()
-        val totalSources = spamSources.size + 1 // spam sources + OpenCNAM
+        val totalSources = spamSources.size
         val stateLock = Any()
         var completed = 0
         var totalReports = 0
         var anySpam = false
+        var definitive = 0
         var warmHitShown = false
 
         fun scoreFor(snapshot: LookupSnapshot): Int =
-            when {
-                snapshot.totalReports >= 10 -> 95
-                snapshot.totalReports >= 5 -> 80
-                snapshot.totalReports >= 3 -> 60
-                snapshot.anySpam -> 50
-                snapshot.totalReports > 0 -> 30
-                snapshot.completed >= totalSources -> 0
-                else -> -1 // still loading
-            }
+            liveLookupScore(
+                totalReports = snapshot.totalReports,
+                anySpam = snapshot.anySpam,
+                allFinished = snapshot.completed >= totalSources,
+                definitive = snapshot.definitive,
+            )
 
         fun colorFor(score: Int): Int =
             when {
@@ -705,7 +712,12 @@ class CallerIdOverlayService : Service() {
                     this@CallerIdOverlayService.getString(
                         R.string.overlay_spam_score,
                         score,
-                        formatReports(snapshot.totalReports),
+                        if (snapshot.totalReports == 0 && snapshot.anySpam) {
+                            // A verdict without a count, which is all SkipCalls gives.
+                            this@CallerIdOverlayService.getString(R.string.overlay_source_flagged)
+                        } else {
+                            formatReports(snapshot.totalReports)
+                        },
                     )
                 scoreText?.setTextColor(color)
                 headerText?.text =
@@ -718,7 +730,14 @@ class CallerIdOverlayService : Service() {
             }
             if (snapshot.completed >= totalSources) {
                 progressBar?.visibility = android.view.View.GONE
-                statusText?.text = this@CallerIdOverlayService.getString(R.string.overlay_status_complete)
+                statusText?.text =
+                    this@CallerIdOverlayService.getString(
+                        if (snapshot.definitive > 0) {
+                            R.string.overlay_status_complete
+                        } else {
+                            R.string.detail_no_definitive_source_result
+                        },
+                    )
             }
         }
 
@@ -728,8 +747,9 @@ class CallerIdOverlayService : Service() {
                 if (result != null) {
                     totalReports += result.reports
                     if (result.isSpam) anySpam = true
+                    if (!result.status.isFallback) definitive++
                 }
-                LookupSnapshot(completed, totalReports, anySpam)
+                LookupSnapshot(completed, totalReports, anySpam, definitive)
             }
 
         fun addSourceResult(result: ExternalLookup.SourceResult) {
@@ -793,6 +813,7 @@ class CallerIdOverlayService : Service() {
                         completed = totalSources,
                         totalReports = result.reports,
                         anySpam = result.isSpam || result.reports >= 3,
+                        definitive = 1,
                     ),
                 ).coerceAtLeast(50)
             handler.post {
@@ -852,18 +873,6 @@ class CallerIdOverlayService : Service() {
                                 }
                             }
                         }
-
-                        launch {
-                            val callerNameResult = ExternalLookup.lookupCallerNameResult(number)
-                            if (callerNameResult.callerName.isNotBlank()) {
-                                handler.post {
-                                    if (!isCurrentSession(sessionId)) return@post
-                                    callerNameText?.text = callerNameResult.callerName
-                                    callerNameText?.visibility = android.view.View.VISIBLE
-                                }
-                            }
-                            addSourceResult(callerNameResult.asSourceResult())
-                        }
                     }
                 } catch (_: CancellationException) {
                     // A newer overlay session replaced this one.
@@ -890,11 +899,7 @@ class CallerIdOverlayService : Service() {
         val statusRes =
             when (result.status) {
                 RemoteLookupStatus.FOUND -> {
-                    if (result.detail.isNotBlank()) {
-                        R.string.remote_lookup_status_caller_id_found
-                    } else {
-                        R.string.remote_lookup_status_found
-                    }
+                    R.string.remote_lookup_status_found
                 }
 
                 RemoteLookupStatus.CLEAN -> {
@@ -961,7 +966,7 @@ class CallerIdOverlayService : Service() {
                         .getInstance(appContext)
                 repository.blockNumber(number, "spam", description)
                 com.sysadmindoc.callshield.data.CommunityContributor
-                    .contribute(repository.normalizeNumber(number), "spam")
+                    .contribute(appContext, repository.normalizeNumber(number), "spam")
             } catch (e: Exception) {
                 android.util.Log.w("CallerIdOverlay", "Overlay block failed", e)
             }
@@ -1026,7 +1031,6 @@ class CallerIdOverlayService : Service() {
         headerText = null
         scoreText = null
         statusText = null
-        callerNameText = null
         sourcesContainer = null
         progressBar = null
         windowManager = null

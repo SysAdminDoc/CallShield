@@ -8,12 +8,15 @@ import androidx.datastore.preferences.core.edit
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.Types
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
+import com.sysadmindoc.callshield.BuildConfig
 import com.sysadmindoc.callshield.data.AppUpdateState
 import com.sysadmindoc.callshield.data.AppUpdateStatus
 import com.sysadmindoc.callshield.data.CallCategory
 import com.sysadmindoc.callshield.data.CallbackDetector
+import com.sysadmindoc.callshield.data.CallerNameSupport
 import com.sysadmindoc.callshield.data.CategoryCallAction
 import com.sysadmindoc.callshield.data.CategoryCallPolicy
+import com.sysadmindoc.callshield.data.CommunityReportLedger
 import com.sysadmindoc.callshield.data.ContactGroupCatalog
 import com.sysadmindoc.callshield.data.MessageCapabilitySource
 import com.sysadmindoc.callshield.data.MessageCapabilityStatus
@@ -22,14 +25,29 @@ import com.sysadmindoc.callshield.data.RegionRules
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.model.ExternalBlocklistSubscription
 import com.sysadmindoc.callshield.data.model.HotDataHealth
+import com.sysadmindoc.callshield.data.model.HotDataHealthUpdate
+import com.sysadmindoc.callshield.data.remote.FeedMirror
 import com.sysadmindoc.callshield.service.AnswerHangUpController
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
 private val validAppThemes = setOf("system", "light", "graphite", "amoled")
 
 internal fun sanitizeAppTheme(value: String?): String = value?.takeIf(validAppThemes::contains) ?: "light"
+
+/**
+ * A certificate trust failure only describes the build that saw it: its pins
+ * failed. After an update the new pins have not been tried yet, and a sync that
+ * finds the data unchanged downloads nothing to try them on, so an old record
+ * would otherwise keep telling the updated app to update.
+ */
+internal fun feedTrustFailureFor(
+    failedAt: Long?,
+    failedVersion: Int?,
+    currentVersion: Int,
+): Long = if (failedAt != null && failedVersion == currentVersion) failedAt else 0L
 
 @Suppress("TooManyFunctions")
 class SettingsRepository(
@@ -211,6 +229,45 @@ class SettingsRepository(
         dataStore.data.map { prefs ->
             decodeExternalBlocklistSubscriptions(prefs[SpamRepository.KEY_EXTERNAL_BLOCKLIST_SUBSCRIPTIONS])
         }
+
+    /**
+     * Replaces the set of numbers on the last applied hot list
+     * ([SpamRepository.KEY_TRENDING_NUMBERS]) and records when it was applied.
+     */
+    suspend fun recordTrendingNumbers(
+        numbers: Set<String>,
+        appliedAt: Long,
+    ) = dataStore.edit { prefs ->
+        if (numbers.isEmpty()) {
+            prefs.remove(SpamRepository.KEY_TRENDING_NUMBERS)
+        } else {
+            prefs[SpamRepository.KEY_TRENDING_NUMBERS] = numbers
+        }
+        prefs[SpamRepository.KEY_TRENDING_APPLIED_AT] = appliedAt
+    }
+
+    /** True once a hot list has come from the network, even an empty one. */
+    suspend fun hasAppliedHotList(): Boolean = dataStore.data.first()[SpamRepository.KEY_TRENDING_APPLIED_AT] != null
+
+    val feedMirrorUrl: Flow<String?> = dataStore.data.map { it[SpamRepository.KEY_FEED_MIRROR_URL] }.distinctUntilChanged()
+
+    /**
+     * Saves [url] as the feed mirror in [FeedMirror]'s normal form, or clears
+     * the mirror when [url] is null. Returns false, changing nothing, for an
+     * address [FeedMirror] can't use.
+     */
+    suspend fun setFeedMirrorUrl(url: String?): Boolean {
+        val normalized = url?.let(FeedMirror::normalize)
+        if (url != null && normalized == null) return false
+        dataStore.edit { prefs ->
+            if (normalized == null) {
+                prefs.remove(SpamRepository.KEY_FEED_MIRROR_URL)
+            } else {
+                prefs[SpamRepository.KEY_FEED_MIRROR_URL] = normalized
+            }
+        }
+        return true
+    }
 
     suspend fun setActiveProfileName(name: String?) =
         dataStore.edit { prefs ->
@@ -543,17 +600,138 @@ class SettingsRepository(
         return HotDataHealth(
             lastGoodTimestamp = preferences[SpamRepository.KEY_HOT_DATA_LAST_GOOD] ?: 0L,
             unavailableFeeds = preferences[SpamRepository.KEY_HOT_DATA_UNAVAILABLE].orEmpty(),
+            unreachableFeeds = preferences[SpamRepository.KEY_HOT_DATA_UNREACHABLE],
+            clearedFeeds = preferences[SpamRepository.KEY_HOT_DATA_CLEARED].orEmpty(),
+            refusedFeeds = preferences[SpamRepository.KEY_HOT_DATA_REFUSED].orEmpty(),
+            feedGeneratedAt = decodeFeedMetadata(preferences[SpamRepository.KEY_HOT_DATA_GENERATED_AT]),
+            feedDigests = decodeFeedMetadata(preferences[SpamRepository.KEY_HOT_DATA_DIGESTS]),
         )
+    }
+
+    private fun decodeFeedMetadata(encoded: String?): Map<String, String> {
+        if (encoded.isNullOrBlank()) return emptyMap()
+        return runCatching { shardHashesAdapter.fromJson(encoded).orEmpty() }.getOrDefault(emptyMap())
     }
 
     suspend fun recordHotDataHealth(
         lastGoodTimestamp: Long?,
-        unavailableFeeds: Set<String>,
+        update: HotDataHealthUpdate,
     ) = dataStore.edit { preferences ->
         if (lastGoodTimestamp != null) {
             preferences[SpamRepository.KEY_HOT_DATA_LAST_GOOD] = lastGoodTimestamp
         }
-        preferences[SpamRepository.KEY_HOT_DATA_UNAVAILABLE] = unavailableFeeds
+        preferences[SpamRepository.KEY_HOT_DATA_UNAVAILABLE] = update.unavailableFeeds
+        preferences[SpamRepository.KEY_HOT_DATA_UNREACHABLE] = update.unreachableFeeds
+        preferences[SpamRepository.KEY_HOT_DATA_CLEARED] = update.clearedFeeds
+        preferences[SpamRepository.KEY_HOT_DATA_REFUSED] = update.refusedFeeds
+        val generatedAt =
+            HotDataHealthUpdate.mergeFeedStamps(
+                previous = decodeFeedMetadata(preferences[SpamRepository.KEY_HOT_DATA_GENERATED_AT]),
+                fresh = update.feedGeneratedAt,
+            )
+        preferences[SpamRepository.KEY_HOT_DATA_GENERATED_AT] = shardHashesAdapter.toJson(generatedAt.toSortedMap())
+        val digests =
+            HotDataHealthUpdate.mergeFeedMetadata(
+                previous = decodeFeedMetadata(preferences[SpamRepository.KEY_HOT_DATA_DIGESTS]),
+                resolvedFeeds = update.resolvedFeeds,
+                fresh = update.feedDigests,
+            )
+        preferences[SpamRepository.KEY_HOT_DATA_DIGESTS] = shardHashesAdapter.toJson(digests.toSortedMap())
+    }
+
+    /**
+     * Records whether the last feed download could verify the server. A pin
+     * failure is stored with its time; any later verified download clears it.
+     */
+    suspend fun recordFeedTrust(
+        failed: Boolean,
+        now: Long = System.currentTimeMillis(),
+        version: Int = BuildConfig.VERSION_CODE,
+    ) = dataStore.edit { preferences ->
+        if (failed) {
+            preferences[SpamRepository.KEY_FEED_TRUST_FAILED_AT] = now
+            preferences[SpamRepository.KEY_FEED_TRUST_FAILED_VERSION] = version
+        } else {
+            preferences.remove(SpamRepository.KEY_FEED_TRUST_FAILED_AT)
+            preferences.remove(SpamRepository.KEY_FEED_TRUST_FAILED_VERSION)
+        }
+    }
+
+    /**
+     * When a feed download last failed certificate verification, or 0 when the
+     * last one succeeded or the failure was recorded by a different build.
+     */
+    suspend fun readFeedTrustFailedAt(currentVersion: Int = BuildConfig.VERSION_CODE): Long {
+        val preferences = dataStore.data.first()
+        return feedTrustFailureFor(
+            failedAt = preferences[SpamRepository.KEY_FEED_TRUST_FAILED_AT],
+            failedVersion = preferences[SpamRepository.KEY_FEED_TRUST_FAILED_VERSION],
+            currentVersion = currentVersion,
+        )
+    }
+
+    /** The app version that last showed the update notice for a pin failure. */
+    suspend fun readFeedTrustNoticeVersion(): Int? = dataStore.data.first()[SpamRepository.KEY_FEED_TRUST_NOTICE_VERSION]
+
+    suspend fun recordFeedTrustNoticeVersion(version: Int) =
+        dataStore.edit { preferences ->
+            preferences[SpamRepository.KEY_FEED_TRUST_NOTICE_VERSION] = version
+        }
+
+    // ── Caller-name screening observation ────────────────────────────
+    suspend fun recordCallerNamePresence(hadName: Boolean) {
+        privateDataStore.edit { prefs ->
+            val key = if (hadName) SpamRepository.KEY_CNAP_SCREENED_WITH else SpamRepository.KEY_CNAP_SCREENED_WITHOUT
+            prefs[key] = (prefs[key] ?: 0) + 1
+        }
+    }
+
+    suspend fun readCallerNameSupport(): CallerNameSupport {
+        val prefs = privateDataStore.data.first()
+        val withName = prefs[SpamRepository.KEY_CNAP_SCREENED_WITH] ?: 0
+        val withoutName = prefs[SpamRepository.KEY_CNAP_SCREENED_WITHOUT] ?: 0
+        val total = withName + withoutName
+        return when {
+            total < SpamRepository.CNAP_OBSERVATION_THRESHOLD -> CallerNameSupport.UNKNOWN
+            withName > 0 -> CallerNameSupport.PROVIDED
+            else -> CallerNameSupport.NOT_PROVIDED
+        }
+    }
+
+    /** Drops the day's claim on a report that was refused or given up on ([CommunityReportLedger.remove]). */
+    suspend fun releaseCommunityReport(
+        number: String,
+        vote: String,
+    ) {
+        privateDataStore.edit { preferences ->
+            preferences[SpamRepository.KEY_COMMUNITY_REPORT_LEDGER] =
+                CommunityReportLedger.remove(preferences[SpamRepository.KEY_COMMUNITY_REPORT_LEDGER].orEmpty(), number, vote)
+        }
+    }
+
+    /**
+     * Records a community report unless the same number and vote was already
+     * reported in the last day. One edit does both, so two taps that race each
+     * other can't both claim it. Kept in the no-backup store: it is a day of
+     * this device's activity, not a setting.
+     */
+    suspend fun claimCommunityReport(
+        number: String,
+        vote: String,
+        now: Long,
+    ): Boolean {
+        var claimed = false
+        privateDataStore.edit { preferences ->
+            val live =
+                CommunityReportLedger.prune(
+                    preferences[SpamRepository.KEY_COMMUNITY_REPORT_LEDGER].orEmpty(),
+                    now,
+                )
+            claimed = !CommunityReportLedger.contains(live, number, vote)
+            preferences[SpamRepository.KEY_COMMUNITY_REPORT_LEDGER] =
+                if (claimed) CommunityReportLedger.add(live, number, vote, now) else live
+        }
+        return claimed
     }
 
     suspend fun readExternalBlocklistSubscriptions(): List<ExternalBlocklistSubscription> =

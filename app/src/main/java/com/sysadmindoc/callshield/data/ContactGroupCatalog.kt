@@ -197,32 +197,40 @@ internal object ContactGroupCatalog {
                 }
             }.orEmpty()
 
+    /**
+     * Whether any matched contact belongs to a selected group, asked one
+     * contact at a time and intersected here.
+     *
+     * Each read is equality on column constants with bound arguments, so no
+     * value is spliced into the SQL. The MIMETYPE term matters: DATA1 holds
+     * the group id only on membership rows, and on any other row it holds
+     * whatever that row stores. PhoneLookup caps the contacts at
+     * [MAX_PHONE_LOOKUP_MATCHES], so this is a handful of indexed reads.
+     * Android 17's strict CP2 grammar applies only to callers without
+     * READ_CONTACTS, which this path never is, since PhoneLookup needs it.
+     */
     private fun hasMembership(
         context: Context,
         contactIds: Set<Long>,
         groupIds: Set<Long>,
-    ): Boolean {
-        val contactPlaceholders = contactIds.joinToString(",") { "?" }
-        val groupPlaceholders = groupIds.joinToString(",") { "?" }
-        val selection =
-            "${ContactsContract.Data.MIMETYPE}=? AND " +
-                "${ContactsContract.Data.CONTACT_ID} IN ($contactPlaceholders) AND " +
-                "${ContactsContract.CommonDataKinds.GroupMembership.GROUP_ROW_ID} IN ($groupPlaceholders)"
-        val args =
-            buildList {
-                add(ContactsContract.CommonDataKinds.GroupMembership.CONTENT_ITEM_TYPE)
-                contactIds.forEach { add(it.toString()) }
-                groupIds.forEach { add(it.toString()) }
-            }.toTypedArray()
-        return context.contentResolver
-            .query(
-                ContactsContract.Data.CONTENT_URI,
-                arrayOf(ContactsContract.Data._ID),
-                selection,
-                args,
-                null,
-            )?.use { it.moveToFirst() } ?: false
-    }
+    ): Boolean =
+        contactIds.any { contactId ->
+            context.contentResolver
+                .query(
+                    ContactsContract.Data.CONTENT_URI,
+                    arrayOf(ContactsContract.CommonDataKinds.GroupMembership.GROUP_ROW_ID),
+                    MEMBERSHIP_SELECTION,
+                    arrayOf(contactId.toString(), ContactsContract.CommonDataKinds.GroupMembership.CONTENT_ITEM_TYPE),
+                    null,
+                )?.use { cursor ->
+                    val groupIndex = cursor.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.GroupMembership.GROUP_ROW_ID)
+                    var member = false
+                    while (!member && cursor.moveToNext()) member = cursor.getLong(groupIndex) in groupIds
+                    member
+                } ?: false
+        }
+
+    internal const val MEMBERSHIP_SELECTION = "${ContactsContract.Data.CONTACT_ID}=? AND ${ContactsContract.Data.MIMETYPE}=?"
 
     private val GROUP_IDENTITY_PROJECTION =
         arrayOf(

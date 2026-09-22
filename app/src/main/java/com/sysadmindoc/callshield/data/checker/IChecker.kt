@@ -239,12 +239,16 @@ object CheckerPriority {
     // STIR_SHAKEN_TRUSTED: a carrier-signed PASSED attestation is a strong
     // trust signal, but the user's explicit blocklist / wildcard rules AND
     // the categorical prefix feed are authoritative and MUST win against it
-    // (SIM-box fraud can carry A-attestation). It still
-    // beats exact downloaded rows and every statistical layer below.
+    // (SIM-box fraud can carry A-attestation). It beats every statistical
+    // layer below, but an exact downloaded row only when that row's evidence,
+    // community reports included, is older than a year and the number isn't
+    // trending (StirShakenTrustChecker.decidePure).
     // Paired with STIR_SHAKEN (block side) above.
     const val TEMPORARY_ALLOW = 5_350 // one-off false-positive recovery
     const val PREFIX_MATCH = 5_320 // downloaded prefix reputation rows (country/NPA ranges)
+    const val REGULATORY_PREFIX = 5_310 // opt-in country telemarketing prefix blocks
     const val STIR_SHAKEN_TRUSTED = 5_300
+    const val REGULATORY_ALLOW = 5_250 // protected series (India 1600)
     const val GITHUB_DATABASE = 5_200 // downloaded exact reputation rows
     const val DB_PREFIX_EXPANSION = 5_150 // auto-block last-2-digit siblings of DB entries
     const val RECENTLY_DIALED = 5_000 // user just called this number
@@ -442,7 +446,7 @@ object SpamCheckers {
             add(WhitelistChecker(repo))
             add(ContactWhitelistChecker(appContext, dependencies.spamHeuristics))
             add(ContactsOnlyChecker(appContext, dependencies.spamHeuristics))
-            add(StirShakenTrustChecker())
+            add(StirShakenTrustChecker(repo))
             add(StirShakenChecker())
             add(UserBlocklistChecker(repo))
             add(TemporaryAllowChecker(repo))
@@ -450,6 +454,8 @@ object SpamCheckers {
             add(DbPrefixExpansionChecker(repo))
             add(SystemBlockListChecker(appContext))
             add(PrefixChecker(repo))
+            add(RegulatoryPrefixChecker())
+            add(RegulatoryAllowChecker())
             add(WildcardChecker(repo))
             add(HashWildcardChecker(repo, dependencies.hashWildcardMatcher))
             add(RecentlyDialedChecker(appContext, dependencies.callbackDetector))

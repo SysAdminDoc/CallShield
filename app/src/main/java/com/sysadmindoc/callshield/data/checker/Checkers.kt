@@ -2,6 +2,7 @@ package com.sysadmindoc.callshield.data.checker
 
 import android.content.Context
 import android.content.Intent
+import androidx.datastore.preferences.core.Preferences
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.CallbackDetector
 import com.sysadmindoc.callshield.data.CampaignDetector
@@ -11,14 +12,19 @@ import com.sysadmindoc.callshield.data.HashWildcardMatcher
 import com.sysadmindoc.callshield.data.RegionRules
 import com.sysadmindoc.callshield.data.SmsContentAnalyzer
 import com.sysadmindoc.callshield.data.SmsContextChecker
+import com.sysadmindoc.callshield.data.SourceEvidenceCodec
 import com.sysadmindoc.callshield.data.SpamHeuristics
 import com.sysadmindoc.callshield.data.SpamMLScorer
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.SystemBlockList
+import com.sysadmindoc.callshield.data.model.SpamNumber
 import com.sysadmindoc.callshield.data.repository.SpamRepositoryImpl
 import com.sysadmindoc.callshield.domain.model.CallerIdentitySignals
 import com.sysadmindoc.callshield.service.CallerIdOverlayService
 import kotlinx.coroutines.withTimeoutOrNull
+import java.time.LocalDate
+import java.time.ZoneOffset
+import java.time.format.DateTimeParseException
 import java.util.Calendar
 
 /** Absolute safety floor for recognized emergency and public-safety codes. */
@@ -157,10 +163,20 @@ internal class ContactsOnlyChecker(
  * do NOT treat C as a sole block signal. We only fire the allow on a
  * positive PASSED signal, never on the absence of one.
  *
+ * A PASSED attestation proves the caller owns the line, not that the call
+ * is wanted: 44% to 51% of robocalls in 2024 carried A-level attestation.
+ * The allow sits above the downloaded database to protect the real owners
+ * of numbers that were spoofed in old complaint data, so it only overrides
+ * a database row whose evidence is stale (see [hasCurrentEvidence]). A row
+ * with current evidence falls through to [DatabaseChecker] and blocks.
+ *
  * Gated on the user setting and the runtime ability to read a
  * verification status (non-null); skipped for historical scans and SMS.
  */
-internal class StirShakenTrustChecker : IChecker {
+internal class StirShakenTrustChecker(
+    private val repo: SpamRepositoryImpl,
+    private val wallClock: () -> Long = System::currentTimeMillis,
+) : IChecker {
     override val priority = CheckerPriority.STIR_SHAKEN_TRUSTED
     override val name = "stir_shaken_trusted"
 
@@ -170,9 +186,29 @@ internal class StirShakenTrustChecker : IChecker {
             verificationStatus = ctx.verificationStatus,
         )
 
-    override suspend fun check(ctx: CheckContext): BlockResult? = decidePure(ctx.verificationStatus)
+    override suspend fun check(ctx: CheckContext): BlockResult? {
+        if (ctx.verificationStatus != VERIFICATION_STATUS_PASSED) return null
+        val trending = isTrendingNow(ctx.prefs, ctx.number, wallClock())
+        return decidePure(ctx.verificationStatus, repo.findByNumberInternal(ctx.number), trending = trending)
+    }
 
     companion object {
+        /**
+         * Whether [number] was on a hot list applied within
+         * [SpamRepository.HOT_ROW_TTL_MS] of [now]. A list that stopped arriving,
+         * through an outage or a refused feed, stops counting when its rows would
+         * have expired, and a set with no applied time doesn't count at all.
+         */
+        internal fun isTrendingNow(
+            prefs: Preferences,
+            number: String,
+            now: Long,
+        ): Boolean {
+            val appliedAt = prefs[SpamRepository.KEY_TRENDING_APPLIED_AT] ?: return false
+            return now - appliedAt <= SpamRepository.HOT_ROW_TTL_MS &&
+                prefs[SpamRepository.KEY_TRENDING_NUMBERS]?.contains(number) == true
+        }
+
         // android.telecom.Connection.VERIFICATION_STATUS_PASSED == 1 (AOSP).
         // Reproduced here as a plain Int so JVM unit tests can feed the
         // pure helpers without pulling in the android.telecom stub, which
@@ -187,12 +223,60 @@ internal class StirShakenTrustChecker : IChecker {
             verificationStatus: Int?,
         ): Boolean = settingEnabled && verificationStatus != null
 
-        /** Pure-logic helper — returns the allow result iff the carrier signed PASSED. */
-        internal fun decidePure(verificationStatus: Int?): BlockResult? =
-            if (verificationStatus == VERIFICATION_STATUS_PASSED) {
-                BlockResult.allow("stir_shaken_trusted")
-            } else {
-                null
+        /** Database evidence at most this old outranks a PASSED attestation. */
+        internal const val CURRENT_EVIDENCE_DAYS = 365L
+
+        private const val HOT_LIST_SOURCE = "hot_list"
+        private const val ISO_DATE_LENGTH = 10
+
+        /**
+         * Pure-logic helper. Allows iff the carrier signed PASSED and the
+         * matching database row, if any, has no current evidence against it.
+         * [trending] says the number is on the hot list right now, which a
+         * database row can't show itself: the hot sync keeps the database
+         * row and stores no hot row of its own for that number.
+         */
+        internal fun decidePure(
+            verificationStatus: Int?,
+            row: SpamNumber? = null,
+            today: LocalDate = LocalDate.now(ZoneOffset.UTC),
+            trending: Boolean = false,
+        ): BlockResult? =
+            when {
+                verificationStatus != VERIFICATION_STATUS_PASSED -> null
+                row != null && (trending || hasCurrentEvidence(row, today)) -> null
+                else -> BlockResult.allow("stir_shaken_trusted")
+            }
+
+        /**
+         * Whether a row is recent enough to block a caller the carrier
+         * verified: seen within [CURRENT_EVIDENCE_DAYS], by its own date or
+         * any evidence record's, or a hot-list row of its own. Community
+         * reports count by their date like any other evidence. Their tier
+         * can't stand in for a date, because a row's report count mixes
+         * one community report into the old complaint count and so reads
+         * as corroborated forever. A row with none of those is old
+         * complaint data, where the real owners of spoofed numbers sit.
+         */
+        internal fun hasCurrentEvidence(
+            row: SpamNumber,
+            today: LocalDate,
+        ): Boolean {
+            if (row.source == HOT_LIST_SOURCE) return true
+            val cutoff = today.minusDays(CURRENT_EVIDENCE_DAYS)
+            if (seenSince(row.lastSeen, cutoff)) return true
+            return SourceEvidenceCodec.decode(row.evidenceJson).any { seenSince(it.lastSeen, cutoff) }
+        }
+
+        /** An undated or unreadable stamp is no evidence of recency. */
+        private fun seenSince(
+            date: String,
+            cutoff: LocalDate,
+        ): Boolean =
+            try {
+                !LocalDate.parse(date.take(ISO_DATE_LENGTH)).isBefore(cutoff)
+            } catch (_: DateTimeParseException) {
+                false
             }
     }
 }
@@ -360,6 +444,36 @@ internal class PrefixChecker(
             if (ctx.number.startsWith(prefix.prefix)) {
                 return BlockResult.block("prefix", prefix.type, prefix.description)
             }
+        }
+        return null
+    }
+}
+
+internal class RegulatoryPrefixChecker : IChecker {
+    override val priority = CheckerPriority.REGULATORY_PREFIX
+    override val name = "regulatory_prefix"
+
+    override suspend fun check(ctx: CheckContext): BlockResult? {
+        if (ctx.prefs[SpamRepository.KEY_REG_SPAIN_400] == true && ctx.number.startsWith("+34400")) {
+            return BlockResult.block("regulatory_prefix", "telemarketing", "Spain 400 telemarketing (RD 2026)")
+        }
+        if (ctx.prefs[SpamRepository.KEY_REG_INDIA_140] == true && ctx.number.startsWith("+91140")) {
+            return BlockResult.block("regulatory_prefix", "telemarketing", "India 140 promotional (TRAI)")
+        }
+        if (ctx.prefs[SpamRepository.KEY_REG_BRAZIL_0303] == true && ctx.number.startsWith("+550303")) {
+            return BlockResult.block("regulatory_prefix", "telemarketing", "Brazil 0303 telemarketing (ANATEL)")
+        }
+        return null
+    }
+}
+
+internal class RegulatoryAllowChecker : IChecker {
+    override val priority = CheckerPriority.REGULATORY_ALLOW
+    override val name = "regulatory_allow"
+
+    override suspend fun check(ctx: CheckContext): BlockResult? {
+        if (ctx.prefs[SpamRepository.KEY_REG_INDIA_1600_ALLOW] == true && ctx.number.startsWith("+911600")) {
+            return BlockResult.allow("india_1600_protected")
         }
         return null
     }

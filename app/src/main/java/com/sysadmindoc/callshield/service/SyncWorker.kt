@@ -14,6 +14,7 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.sysadmindoc.callshield.data.SpamMLScorer
+import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.domain.usecase.SyncDatabaseUseCase
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
@@ -27,12 +28,17 @@ class SyncWorker
         @Assisted params: WorkerParameters,
         private val syncDatabase: SyncDatabaseUseCase,
         private val spamMLScorer: SpamMLScorer,
+        private val repo: SpamRepository,
     ) : CoroutineWorker(context, params) {
         override suspend fun doWork(): Result {
             val result = syncDatabase()
 
             // Also sync the ML model weights file — lightweight, same GitHub repo
             spamMLScorer.syncWeights(applicationContext)
+
+            // A pin failure still reports success when older data is on the
+            // device, so it is surfaced here rather than through the result.
+            FeedTrustNotice.maybeNotify(applicationContext, repo)
 
             return when {
                 result.success -> Result.success()

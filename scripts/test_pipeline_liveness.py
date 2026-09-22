@@ -11,6 +11,7 @@ from pipeline_liveness import (
     MAX_QUEUE_DEPTH,
     MIN_BUCKET_SAMPLE,
     evaluate_queue_health,
+    evaluate_source_freshness,
     load_database_updated,
     load_queue,
 )
@@ -134,7 +135,117 @@ def main() -> None:
         assert len(loaded) == 1, loaded
         assert unreadable == 2, unreadable
 
+    scheduled_checks()
     print("pipeline_liveness tests passed")
+
+
+def scheduled_checks() -> None:
+    """The --scheduled mode: queue age against the clock, and source freshness."""
+    # ── the 2026-09-05 second stall: invisible to the database-relative check ──
+    # Every report queued after the 09-05 drain is newer than the database, so
+    # the age check measured against it can never fire.
+    queued_since_drain = [report(offset_days=-i * 0.1) for i in range(5)]
+    assert evaluate_queue_health(queued_since_drain, "2026-09-04") == []
+    now = BASE + timedelta(days=16)
+    problems = evaluate_queue_health(queued_since_drain, "2026-09-04", now=now)
+    assert len(problems) == 1 and "has waited 16 days" in problems[0], problems
+
+    # A fresh queue measured against the clock is fine.
+    assert evaluate_queue_health(queued_since_drain, "2026-09-04", now=BASE + timedelta(days=MAX_QUEUE_AGE_DAYS)) == []
+
+    # ── upstream source freshness ────────────────────────────────────────
+    manifest = {
+        "sources": [
+            {"id": "ftc_complaints", "cadence": "daily", "stale_after_days": 14},
+            {"id": "toastedspam", "cadence": "weekly", "stale_after_days": 30},
+            # No timetable, so nothing to fall behind.
+            {"id": "phoneblock_bulk", "cadence": "on demand", "stale_after_days": 30},
+            {"id": "community_reports", "cadence": "continuous", "stale_after_days": 90},
+        ]
+    }
+    fresh = {
+        "last_success": {
+            "ftc_complaints": (BASE - timedelta(days=3)).isoformat(),
+            "toastedspam": (BASE - timedelta(days=29)).isoformat(),
+        }
+    }
+    assert evaluate_source_freshness(manifest, fresh, BASE) == []
+
+    stale = {"last_success": {"ftc_complaints": "2026-08-01T21:51:56-04:00", "toastedspam": fresh["last_success"]["toastedspam"]}}
+    problems = evaluate_source_freshness(manifest, stale, BASE)
+    assert len(problems) == 1 and problems[0].startswith("ftc_complaints was last imported 2026-08-02"), problems
+
+    # A source that has never been recorded is stale, not "unknown and fine".
+    problems = evaluate_source_freshness(manifest, {"last_success": {}}, BASE)
+    assert sorted(p.split(" ")[0] for p in problems) == ["ftc_complaints", "toastedspam"], problems
+    # Nor does a missing or unreadable record file hide it.
+    assert len(evaluate_source_freshness(manifest, None, BASE)) == 2
+    # An unreadable manifest is a failure: passing would switch the check off.
+    problems = evaluate_source_freshness(None, fresh, BASE)
+    assert len(problems) == 1 and "source-manifest.json is missing or unreadable" in problems[0], problems
+
+    # An opt-in source isn't required until it has been imported, and once it
+    # has, the message names the flag that refreshes it.
+    opt_in = {"sources": [{"id": "saracroche_prefixes", "cadence": "daily", "stale_after_days": 14, "import_flag": "--include-saracroche"}]}
+    assert evaluate_source_freshness(opt_in, {"last_success": {}}, BASE) == []
+    problems = evaluate_source_freshness(opt_in, {"last_success": {"saracroche_prefixes": "2026-08-01T00:00:00+00:00"}}, BASE)
+    assert len(problems) == 1 and problems[0].endswith("import_all_sources.py --include-saracroche"), problems
+
+    # A capitalised cadence is still a timetable, and an unusable limit is reported, not skipped.
+    odd = {"sources": [{"id": "a", "cadence": "Daily", "stale_after_days": 14}, {"id": "b", "cadence": "weekly", "stale_after_days": "30"}]}
+    problems = evaluate_source_freshness(odd, {"last_success": {}}, BASE)
+    assert [p.split(" ")[0] for p in problems] == ["a", "b"], problems
+    assert "stale_after_days" in problems[1], problems
+
+    # The real manifest after the documented default import (no opt-in flags)
+    # passes. It used to demand the two opt-in sources and could never go green.
+    real_manifest = json.loads((Path(__file__).resolve().parent.parent / "data" / "source-manifest.json").read_text(encoding="utf-8"))
+    default_import = {"last_success": {"ftc_complaints": BASE.isoformat(), "fcc_complaints": BASE.isoformat()}}
+    assert evaluate_source_freshness(real_manifest, default_import, BASE) == []
+
+    check_scheduled_switch()
+
+
+def check_scheduled_switch() -> None:
+    """Only --scheduled measures the queue against the clock and checks upstream freshness.
+
+    verifyPipelineTests runs main() without the flag inside `check`, where a
+    clock would fail every later build of an old tag.
+    """
+    import contextlib
+    import io
+
+    import pipeline_liveness as liveness
+
+    saved = (liveness.REPORTS_DIR, liveness.DB_FILE, liveness.MANIFEST_FILE, liveness.FRESHNESS_FILE)
+    with tempfile.TemporaryDirectory() as directory:
+        data = Path(directory)
+        (data / "reports").mkdir()
+        month_ago = datetime.now(timezone.utc) - timedelta(days=30)
+        queued = {"number": "+15125550100", "type": "spam", "reported_at": month_ago.isoformat(), "reporter_bucket": BUCKET}
+        (data / "reports" / "15125550100_1.json").write_text(json.dumps(queued), encoding="utf-8")
+        (data / "spam_numbers.json").write_text(json.dumps({"updated": month_ago.date().isoformat()}), encoding="utf-8")
+        (data / "source-manifest.json").write_text(
+            json.dumps({"sources": [{"id": "ftc_complaints", "cadence": "daily", "stale_after_days": 14}]}),
+            encoding="utf-8",
+        )
+        liveness.REPORTS_DIR = data / "reports"
+        liveness.DB_FILE = data / "spam_numbers.json"
+        liveness.MANIFEST_FILE = data / "source-manifest.json"
+        liveness.FRESHNESS_FILE = data / "source-freshness.json"
+        try:
+            quiet = io.StringIO()
+            with contextlib.redirect_stdout(quiet), contextlib.redirect_stderr(quiet):
+                assert liveness.main([]) == 0, quiet.getvalue()
+
+            scheduled = io.StringIO()
+            with contextlib.redirect_stdout(scheduled), contextlib.redirect_stderr(scheduled):
+                assert liveness.main(["--scheduled"]) == 1
+            report = scheduled.getvalue()
+            assert "has waited 30 days" in report, report
+            assert "ftc_complaints (daily source) has no successful import" in report, report
+        finally:
+            liveness.REPORTS_DIR, liveness.DB_FILE, liveness.MANIFEST_FILE, liveness.FRESHNESS_FILE = saved
 
 
 if __name__ == "__main__":

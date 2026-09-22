@@ -350,6 +350,11 @@ class SpamHeuristics
 
         // ── Short Code / Invalid Format ────────────────────────────────────
         fun isInvalidFormat(number: String): Boolean {
+            // Length only says something about NANP numbers. A "+" number with
+            // another country code is E.164, where 7 to 9 digits is ordinary
+            // (the Faroes, Greenland, Andorra, parts of Germany and Luxembourg).
+            val trimmed = number.trimStart()
+            if (trimmed.startsWith("+") && !trimmed.startsWith("+1")) return false
             val digits = filterAsciiDigits(number)
             // Valid US numbers are 10 or 11 digits. Anything else is suspicious.
             // Short codes (5-6 digits) can be legit for 2FA but also spam.

@@ -2,7 +2,10 @@ package com.sysadmindoc.callshield.data.repository
 
 import android.content.Context
 import com.sysadmindoc.callshield.R
+import com.sysadmindoc.callshield.data.ExternalBlocklistFailureReason
 import com.sysadmindoc.callshield.data.ExternalBlocklistParser
+import com.sysadmindoc.callshield.data.ExternalBlocklistRefreshPolicy
+import com.sysadmindoc.callshield.data.ExternalBlocklistValidationException
 import com.sysadmindoc.callshield.data.ParsedExternalBlocklist
 import com.sysadmindoc.callshield.data.SourceEvidenceCodec
 import com.sysadmindoc.callshield.data.SpamRepository
@@ -10,6 +13,7 @@ import com.sysadmindoc.callshield.data.local.SpamDao
 import com.sysadmindoc.callshield.data.mergeHotListNumbers
 import com.sysadmindoc.callshield.data.model.ExternalBlocklistImportResult
 import com.sysadmindoc.callshield.data.model.ExternalBlocklistPreview
+import com.sysadmindoc.callshield.data.model.ExternalBlocklistRefreshOutcome
 import com.sysadmindoc.callshield.data.model.ExternalBlocklistSubscription
 import com.sysadmindoc.callshield.data.model.SourceEvidenceJson
 import com.sysadmindoc.callshield.data.model.SpamDatabase
@@ -20,8 +24,11 @@ import com.sysadmindoc.callshield.data.model.SpamPrefixJson
 import com.sysadmindoc.callshield.data.model.SpamShardDescriptor
 import com.sysadmindoc.callshield.data.model.SpamShardManifest
 import com.sysadmindoc.callshield.data.remote.ExternalBlocklistDataSource
+import com.sysadmindoc.callshield.data.remote.ExternalBlocklistHttpException
+import com.sysadmindoc.callshield.data.remote.FeedMirror
 import com.sysadmindoc.callshield.data.remote.GitHubDataSource
 import com.sysadmindoc.callshield.data.remote.GitHubFeedValidationException
+import com.sysadmindoc.callshield.data.remote.HttpClient
 import com.sysadmindoc.callshield.data.remote.OkHttpExternalBlocklistDataSource
 import com.sysadmindoc.callshield.data.remote.SpamDataSource
 import com.sysadmindoc.callshield.data.remote.sha256Hex
@@ -29,6 +36,7 @@ import com.sysadmindoc.callshield.data.remote.spamShardIdFor
 import com.sysadmindoc.callshield.data.sanitizeDatabaseNumbers
 import com.sysadmindoc.callshield.domain.model.SyncResult
 import com.sysadmindoc.callshield.ui.widget.CallShieldWidget
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -45,6 +53,9 @@ class SyncRepository(
     private val externalBlocklistDataSource: ExternalBlocklistDataSource = OkHttpExternalBlocklistDataSource(),
 ) {
     private val syncMutex = Mutex()
+
+    /** What the last list removal took out, held so the user can undo it. Guarded by [syncMutex]. */
+    private var lastRemovedExternalBlocklist: RemovedExternalBlocklist? = null
 
     /**
      * @param force When true, skips the SHA check and always downloads.
@@ -76,11 +87,12 @@ class SyncRepository(
                     }
 
                     val manifestResult = remote.fetchSpamShardManifest()
+                    recordFeedTrust(manifestResult)
                     if (manifestResult.isSuccess) {
                         val shardResult =
                             applyShardedDatabase(
                                 manifest = manifestResult.getOrThrow(),
-                                sha = preFetchSha,
+                                sha = commitIdFor(preFetchSha, GitHubDataSource.SHARD_MANIFEST_PATH),
                                 force = force,
                             )
                         if (shardResult.isSuccess) {
@@ -105,9 +117,10 @@ class SyncRepository(
                     }
 
                     val result = remote.fetchSpamDatabase()
+                    recordFeedTrust(result)
                     if (result.isSuccess) {
                         val database = result.getOrThrow()
-                        val newSha = preFetchSha
+                        val newSha = commitIdFor(preFetchSha, GitHubDataSource.DATA_PATH)
                         val (numberCount, prefixCount) =
                             persistSpamDatabase(
                                 database = database,
@@ -178,34 +191,54 @@ class SyncRepository(
             }
         }
 
-    suspend fun replaceHotList(numbers: List<SpamNumber>) =
-        withContext(Dispatchers.IO) {
-            val hotNumbers =
-                numbers
-                    .filter { it.number.isNotBlank() }
-                    .distinctBy { it.number }
+    suspend fun replaceHotList(
+        numbers: List<SpamNumber>,
+        recordTrending: Boolean = true,
+        appliedAt: Long = System.currentTimeMillis(),
+    ) = withContext(Dispatchers.IO) {
+        val hotNumbers =
+            numbers
+                .filter { it.number.isNotBlank() }
+                .distinctBy { it.number }
 
-            val existingByNumber =
-                if (hotNumbers.isEmpty()) {
-                    emptyMap()
-                } else {
-                    val existingRows = dao.getNumbersByNumbers(hotNumbers.map { it.number })
-                    existingRows.associateBy { it.number }
-                }
+        val existingByNumber =
+            if (hotNumbers.isEmpty()) {
+                emptyMap()
+            } else {
+                hotNumbers
+                    .map { it.number }
+                    .chunked(EXTERNAL_BLOCKLIST_LOOKUP_CHUNK_SIZE)
+                    .flatMap { chunk -> dao.getNumbersByNumbers(chunk) }
+                    .associateBy { it.number }
+            }
 
-            val mergedHotNumbers =
-                mergeHotListNumbers(
-                    hotNumbers = hotNumbers,
-                    existingByNumber = existingByNumber,
-                )
+        val mergedHotNumbers =
+            mergeHotListNumbers(
+                hotNumbers = hotNumbers,
+                existingByNumber = existingByNumber,
+            )
 
-            // Atomic delete + insert via the DAO's @Transaction helper. A bare
-            // deleteBySource()/insertNumbers() pair left a window where a
-            // concurrent screening lookup (HotListSyncWorker runs every 30 min)
-            // could miss a hot-list number between the two statements.
-            dao.replaceBySource("hot_list", mergedHotNumbers)
-            // Hot list entries are exact number rows. Prefix/rule caches do not change here.
+        // Atomic delete + insert via the DAO's @Transaction helper. A bare
+        // deleteBySource()/insertNumbers() pair left a window where a
+        // concurrent screening lookup (HotListSyncWorker runs every 30 min)
+        // could miss a hot-list number between the two statements.
+        dao.replaceBySource("hot_list", mergedHotNumbers)
+        // mergeHotListNumbers keeps a database row over its hot entry, so the
+        // full list is recorded separately for the STIR/SHAKEN trust allow.
+        // The build-time snapshot isn't trending now, so it's never recorded.
+        if (recordTrending) {
+            settingsRepository.recordTrendingNumbers(hotNumbers.mapTo(HashSet()) { it.number }, appliedAt)
         }
+        // Hot list entries are exact number rows. Prefix/rule caches do not change here.
+    }
+
+    /** Saves [url] as the feed mirror once it serves this project's signed manifest. */
+    suspend fun saveFeedMirrorUrl(url: String): FeedMirrorSave {
+        val normalized = FeedMirror.normalize(url) ?: return FeedMirrorSave.INVALID
+        if (remote.probeMirror(normalized).isFailure) return FeedMirrorSave.UNVERIFIED
+        settingsRepository.setFeedMirrorUrl(normalized)
+        return FeedMirrorSave.SAVED
+    }
 
     suspend fun previewExternalBlocklistSubscription(
         url: String,
@@ -272,6 +305,33 @@ class SyncRepository(
             }
         }
 
+    /**
+     * Fetches every enabled subscription that is due again (see
+     * [ExternalBlocklistRefreshPolicy]). Nobody reads a preview in the
+     * background, so a download that comes back empty or under half the
+     * list's size is not applied: the last good rows stay and the list is
+     * flagged, the way a collapsed database or hot-feed publish is refused.
+     */
+    @Suppress("TooGenericExceptionCaught")
+    suspend fun refreshDueExternalBlocklists(now: Long = System.currentTimeMillis()): List<ExternalBlocklistRefreshOutcome> =
+        withContext(Dispatchers.IO) {
+            syncMutex.withLock {
+                settingsRepository
+                    .readExternalBlocklistSubscriptions()
+                    .filter { ExternalBlocklistRefreshPolicy.isDue(it, now) }
+                    .map { subscription ->
+                        // A storage error on one list must not skip every list after it.
+                        try {
+                            refreshExternalBlocklist(subscription, now)
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            failExternalBlocklist(subscription, now, e)
+                        }
+                    }
+            }
+        }
+
     suspend fun removeExternalBlocklistSubscription(id: String): ExternalBlocklistImportResult =
         withContext(Dispatchers.IO) {
             syncMutex.withLock {
@@ -284,14 +344,64 @@ class SyncRepository(
                                 message = context.getString(R.string.external_blocklist_not_found),
                             )
                     val before = dao.getCountBySource(subscription.source)
+                    // deleteBySource keeps user-blocked rows, so these are all an undo puts back.
+                    val removedRows = dao.getNumbersBySource(subscription.source).filterNot { it.isUserBlocked }
                     dao.deleteBySource(subscription.source)
                     settingsRepository.saveExternalBlocklistSubscriptions(subscriptions.filterNot { it.id == id })
+                    lastRemovedExternalBlocklist =
+                        RemovedExternalBlocklist(subscription, subscriptions.indexOfFirst { it.id == id }, removedRows)
                     invalidateAllCaches()
                     CallShieldWidget.refreshAll(context)
                     ExternalBlocklistImportResult(
                         success = true,
                         message = context.getString(R.string.external_blocklist_removed, subscription.label, before),
                         subscription = subscription.copy(enabled = false, lastRemoved = before),
+                    )
+                }
+            }
+        }
+
+    /**
+     * Puts back the list [removeExternalBlocklistSubscription] last took out,
+     * in its old place and with its numbers, without downloading it again. A
+     * number another source has claimed since keeps that row. Only the latest
+     * removal can be undone, once, and not after the same list was added again.
+     */
+    suspend fun undoRemoveExternalBlocklistSubscription(id: String): ExternalBlocklistImportResult =
+        withContext(Dispatchers.IO) {
+            syncMutex.withLock {
+                runExternalBlocklistOperation {
+                    val removed = lastRemovedExternalBlocklist?.takeIf { it.subscription.id == id }
+                    val subscriptions = settingsRepository.readExternalBlocklistSubscriptions()
+                    if (removed == null || subscriptions.any { it.id == id }) {
+                        return@runExternalBlocklistOperation ExternalBlocklistImportResult(
+                            success = false,
+                            message = context.getString(R.string.external_blocklist_undo_unavailable),
+                        )
+                    }
+                    lastRemovedExternalBlocklist = null
+                    // The list goes back before its rows: a crash in between leaves a list
+                    // that refills on its next refresh, never rows that no list owns.
+                    settingsRepository.saveExternalBlocklistSubscriptions(
+                        subscriptions.toMutableList().apply { add(removed.position.coerceIn(0, size), removed.subscription) },
+                    )
+                    // A number claimed since the removal (a user block, another list, the
+                    // hot list) keeps its row. Looking first and then replacing left a window
+                    // in which a block, which doesn't take the sync lock, was overwritten.
+                    val restored =
+                        dao.insertNumbersKeepingExisting(removed.rows.map { it.copy(id = 0) }).count { it != -1L }
+                    invalidateAllCaches()
+                    CallShieldWidget.refreshAll(context)
+                    ExternalBlocklistImportResult(
+                        success = true,
+                        message =
+                            context.resources.getQuantityString(
+                                R.plurals.external_blocklist_restored,
+                                restored,
+                                removed.subscription.label,
+                                restored,
+                            ),
+                        subscription = removed.subscription,
                     )
                 }
             }
@@ -583,7 +693,10 @@ class SyncRepository(
         )
     }
 
-    private suspend fun commitExternalBlocklist(parsed: ParsedExternalBlocklist): ExternalBlocklistImportResult {
+    private suspend fun commitExternalBlocklist(
+        parsed: ParsedExternalBlocklist,
+        now: Long = System.currentTimeMillis(),
+    ): ExternalBlocklistImportResult {
         val preview = buildExternalBlocklistPreview(parsed)
         val candidates = resolveExternalBlocklistCandidates(parsed)
         dao.replaceBySource(parsed.source, candidates.accepted)
@@ -595,11 +708,13 @@ class SyncRepository(
                 label = parsed.label,
                 url = parsed.url,
                 enabled = true,
-                lastSyncedAt = System.currentTimeMillis(),
+                lastSyncedAt = now,
                 lastNumberCount = candidates.accepted.size,
                 lastAdded = preview.added,
                 lastRemoved = preview.removed,
                 lastError = "",
+                declaredRefreshHours = parsed.declaredRefreshHours,
+                lastAttemptAt = now,
             )
         upsertExternalBlocklistSubscription(subscription)
         CallShieldWidget.refreshAll(context)
@@ -649,6 +764,110 @@ class SyncRepository(
                 }
             }
         return ExternalCandidateSet(accepted, blockedByOtherSources)
+    }
+
+    @Suppress("TooGenericExceptionCaught")
+    private suspend fun refreshExternalBlocklist(
+        subscription: ExternalBlocklistSubscription,
+        now: Long,
+    ): ExternalBlocklistRefreshOutcome {
+        val currentRows = dao.getCountBySource(subscription.source)
+        val parsed =
+            try {
+                fetchAndParseExternalBlocklist(subscription.url, subscription.label)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: ExternalBlocklistValidationException) {
+                if (e.reason == ExternalBlocklistFailureReason.EMPTY && currentRows > 0) {
+                    return holdExternalBlocklist(subscription, now, nextRows = 0, currentRows = currentRows)
+                }
+                return failExternalBlocklist(subscription, now, e)
+            } catch (e: Exception) {
+                return failExternalBlocklist(subscription, now, e)
+            }
+        val nextRows = resolveExternalBlocklistCandidates(parsed).accepted.size
+        if (ExternalBlocklistRefreshPolicy.isSuspiciousShrink(currentRows, nextRows)) {
+            return holdExternalBlocklist(subscription, now, nextRows, currentRows)
+        }
+        commitExternalBlocklist(parsed, now)
+        return ExternalBlocklistRefreshOutcome.REFRESHED
+    }
+
+    private suspend fun holdExternalBlocklist(
+        subscription: ExternalBlocklistSubscription,
+        now: Long,
+        nextRows: Int,
+        currentRows: Int,
+    ): ExternalBlocklistRefreshOutcome {
+        recordExternalBlocklistAttempt(
+            subscription.id,
+            now,
+            context.getString(R.string.external_blocklist_refresh_held, nextRows, currentRows),
+        )
+        return ExternalBlocklistRefreshOutcome.HELD
+    }
+
+    @Suppress("TooGenericExceptionCaught")
+    private suspend fun failExternalBlocklist(
+        subscription: ExternalBlocklistSubscription,
+        now: Long,
+        error: Exception,
+    ): ExternalBlocklistRefreshOutcome {
+        // The cause can embed the list's full URL, so it goes to the log only.
+        android.util.Log.w("SyncRepository", "External blocklist refresh failed", error)
+        try {
+            recordExternalBlocklistAttempt(subscription.id, now, externalBlocklistFailureText(error))
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            android.util.Log.w("SyncRepository", "Could not record the failed refresh", e)
+        }
+        return ExternalBlocklistRefreshOutcome.FAILED
+    }
+
+    /**
+     * What went wrong, without the URL. A list that moved (HTTP 404) or grew past
+     * the caps reads differently on its row from one that was briefly unreachable.
+     */
+    private fun externalBlocklistFailureText(error: Exception): String {
+        val reason = (error as? ExternalBlocklistValidationException)?.reason
+        return when {
+            error is ExternalBlocklistHttpException -> {
+                context.getString(R.string.external_blocklist_refresh_http, error.code)
+            }
+
+            reason == ExternalBlocklistFailureReason.OVERSIZE -> {
+                context.getString(R.string.external_blocklist_refresh_too_large)
+            }
+
+            reason == ExternalBlocklistFailureReason.ROW_LIMIT -> {
+                context.getString(R.string.external_blocklist_refresh_too_many_rows)
+            }
+
+            reason != null -> {
+                context.getString(R.string.external_blocklist_refresh_unreadable)
+            }
+
+            HttpClient.isCertificateTrustFailure(error) -> {
+                context.getString(R.string.external_blocklist_refresh_certificate)
+            }
+
+            else -> {
+                context.getString(R.string.external_blocklist_refresh_failed)
+            }
+        }
+    }
+
+    private suspend fun recordExternalBlocklistAttempt(
+        id: String,
+        now: Long,
+        error: String,
+    ) {
+        settingsRepository.saveExternalBlocklistSubscriptions(
+            settingsRepository.readExternalBlocklistSubscriptions().map {
+                if (it.id == id) it.copy(lastAttemptAt = now, lastError = error) else it
+            },
+        )
     }
 
     private suspend fun upsertExternalBlocklistSubscription(subscription: ExternalBlocklistSubscription) {
@@ -721,10 +940,42 @@ class SyncRepository(
             )
         }
 
+    /**
+     * A download that failed certificate verification is recorded so
+     * Protection Test and the update notice can say an app update is needed,
+     * and so is one the mirror delivered while GitHub's own pins were
+     * failing, since those pins still need the update. A download GitHub
+     * served clears the record. Other failures say nothing about trust.
+     */
+    private suspend fun recordFeedTrust(result: Result<*>) {
+        when {
+            result.isSuccess -> settingsRepository.recordFeedTrust(failed = remote.gitHubTrustFailing)
+            HttpClient.isCertificateTrustFailure(result.exceptionOrNull()) -> settingsRepository.recordFeedTrust(failed = true)
+        }
+    }
+
+    /**
+     * GitHub's commit id for the copy of [path] just fetched, or null when
+     * the mirror served it. A mirror's copy can be hours behind GitHub's
+     * newest commit, and filed under that commit's id it would read as up to
+     * date from then on. A null id leaves the stored one alone, so the next
+     * sync looks again.
+     */
+    private fun commitIdFor(
+        preFetchSha: String?,
+        path: String,
+    ): String? = preFetchSha.takeUnless { remote.lastServedByMirror(path) }
+
     private fun shouldRetrySync(message: String): Boolean {
         val permanentFailureCodes = listOf("HTTP 400", "HTTP 401", "HTTP 403", "HTTP 404")
         return permanentFailureCodes.none { code -> message.contains(code) }
     }
+
+    private class RemovedExternalBlocklist(
+        val subscription: ExternalBlocklistSubscription,
+        val position: Int,
+        val rows: List<SpamNumber>,
+    )
 
     private data class ExternalCandidateSet(
         val accepted: List<SpamNumber>,
@@ -733,6 +984,17 @@ class SyncRepository(
 }
 
 private const val EXTERNAL_BLOCKLIST_LOOKUP_CHUNK_SIZE = 500
+
+/** How saving a feed mirror went. */
+enum class FeedMirrorSave {
+    SAVED,
+
+    /** Not an https base URL the app can use. */
+    INVALID,
+
+    /** It didn't serve a signed copy of the manifest. */
+    UNVERIFIED,
+}
 
 /** "+", then 3-15 digits: whole-country-code rows are the shortest legitimate prefixes. */
 private val VALID_PREFIX_REGEX = Regex("""\+[0-9]{3,15}""")

@@ -10,11 +10,19 @@ import com.sysadmindoc.callshield.data.model.HotNumber
 import com.sysadmindoc.callshield.data.model.SpamDatabase
 import com.sysadmindoc.callshield.data.model.SpamDatabaseShard
 import com.sysadmindoc.callshield.data.model.SpamShardManifest
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import okhttp3.Interceptor
 import okhttp3.Request
 import okhttp3.Response
 import okio.Buffer
+import java.io.IOException
+import java.net.ConnectException
+import java.net.NoRouteToHostException
+import java.net.SocketTimeoutException
+import java.net.UnknownHostException
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 
 internal enum class GitHubFeedFailureReason {
@@ -22,12 +30,21 @@ internal enum class GitHubFeedFailureReason {
     ROW_LIMIT,
     MISSING_SCHEMA_FIELD,
     INVALID_SCHEMA,
+
+    /** The feed's `.sig` was missing or didn't verify under a trusted key. */
+    SIGNATURE,
 }
 
 internal class GitHubFeedValidationException(
     val reason: GitHubFeedFailureReason,
     message: String,
 ) : IllegalArgumentException(message)
+
+/** A feed host answered with an HTTP error. SyncRepository reads the "HTTP <code>" message to decide whether to retry. */
+internal class GitHubFeedHttpException(
+    val code: Int,
+    reason: String,
+) : Exception("HTTP $code: $reason")
 
 private fun failFeedValidation(
     reason: GitHubFeedFailureReason,
@@ -48,14 +65,51 @@ private val SHARD_ID_REGEX = Regex("[0-9a-f]{2}")
 private val SHA256_REGEX = Regex("[0-9a-f]{64}")
 private val SHARD_PATH_REGEX = Regex("data/spam_number_shards/[0-9a-f]{2}\\.json")
 
-class GitHubDataSource :
-    SpamDataSource,
+/**
+ * What GitHubDataSource has learned about GitHub lately. HotDataSync,
+ * SyncRepository and the model sync each build their own GitHubDataSource,
+ * so production instances share one of these: an outage one of them saw, a
+ * branch lookup that failed, or a pin failure holds for the others. Tests
+ * get their own, so they can't leak state into each other.
+ */
+internal class GitHubFetchState {
+    val lock = Any()
+
+    // Resolved default branch per "owner/repo" -> (branch, resolvedAtMs).
+    val defaultBranchCache = mutableMapOf<String, Pair<String, Long>>()
+    val defaultBranchFailedAt = mutableMapOf<String, Long>()
+
+    @Volatile
+    var gitHubUnreachableAt: Long? = null
+
+    @Volatile
+    var gitHubTrustFailing: Boolean = false
+
+    companion object {
+        val shared = GitHubFetchState()
+    }
+}
+
+class GitHubDataSource internal constructor(
+    /** Tests serve canned responses through this instead of the network. */
+    testInterceptor: Interceptor?,
+    /** Tests move time on to end a GitHub outage window. */
+    private val clock: () -> Long = System::currentTimeMillis,
+    /** [GitHubFetchState.shared] in production; tests get their own. */
+    internal val state: GitHubFetchState = GitHubFetchState(),
+) : SpamDataSource,
     HotFeedDataSource {
+    constructor() : this(null, System::currentTimeMillis, GitHubFetchState.shared)
+
     // Derived client with longer timeouts for large database downloads;
     // shares the connection pool with other callers via HttpClient.shared.
+    // No whole-call timeout: the 14.5 MB legacy database needs about five
+    // minutes at 48 KB/s, and a live but slow download must be allowed to
+    // finish. The read timeout already ends one that stops sending.
     private val client =
         HttpClient.shared
             .newBuilder()
+            .apply { testInterceptor?.let(::addInterceptor) }
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
             .build()
@@ -82,9 +136,35 @@ class GitHubDataSource :
         )
     private val latestReleaseAdapter = moshi.adapter(GitHubReleasePayload::class.java)
 
-    // Cache of resolved default branch per "owner/repo" → (branch, resolvedAtMs).
-    private val defaultBranchLock = Any()
-    private val defaultBranchCache = mutableMapOf<String, Pair<String, Long>>()
+    private val defaultBranchLock get() = state.lock
+    private val defaultBranchCache get() = state.defaultBranchCache
+    private val defaultBranchFailedAt get() = state.defaultBranchFailedAt
+
+    // When GitHub last couldn't be connected to at all. For GITHUB_OUTAGE_MS
+    // after that, fetches ask the mirror first.
+    private var gitHubUnreachableAt: Long?
+        get() = state.gitHubUnreachableAt
+        set(value) {
+            state.gitHubUnreachableAt = value
+        }
+
+    // Set when GitHub fails certificate verification and cleared when GitHub
+    // serves a file. A mirror serving meanwhile leaves it set: the pins still
+    // need an app update, and the update notice has to hear about it.
+    override var gitHubTrustFailing: Boolean
+        get() = state.gitHubTrustFailing
+        private set(value) {
+            state.gitHubTrustFailing = value
+        }
+
+    // Which files the mirror served the last time each was fetched. A database
+    // the mirror served can be hours older than GitHub's newest commit, so
+    // SyncRepository doesn't file it under that commit's id. Kept per file
+    // because this instance is shared: a hot-list fetch running beside a
+    // sync mustn't answer for the database.
+    private val servedByMirror = ConcurrentHashMap<String, Boolean>()
+
+    override fun lastServedByMirror(path: String): Boolean = servedByMirror[path] == true
 
     companion object {
         const val DEFAULT_REPO_OWNER = "SysAdminDoc"
@@ -124,10 +204,20 @@ class GitHubDataSource :
         private const val USER_AGENT = "CallShield/1.0"
         private const val MAX_GITHUB_API_BYTES = 256L * 1024L
         private const val READ_CHUNK_BYTES = 8192L
+        private const val HTTP_NOT_FOUND = 404
 
         /** How long a resolved default branch stays cached before re-querying. */
         private const val DEFAULT_BRANCH_TTL_MS = 6L * 60L * 60L * 1000L // 6 hours
         private val FALLBACK_BRANCHES = listOf("main", "master")
+
+        /** How long a failed default-branch lookup stands before GitHub's API is asked again. */
+        private const val DEFAULT_BRANCH_RETRY_MS = 10L * 60L * 1000L
+
+        /** How long the mirror goes first after GitHub couldn't be reached at all. */
+        internal const val GITHUB_OUTAGE_MS = 10L * 60L * 1000L
+
+        private val COMMIT_SHA_REGEX = Regex("[0-9a-f]{40}(?:[0-9a-f]{24})?")
+        private const val MAX_COMMIT_SHA_BYTES = 128L
         private val RAW_FEED_SPECS =
             mapOf(
                 DATA_PATH to RawFeedSpec("spam database", MAX_SPAM_DATABASE_BYTES),
@@ -137,6 +227,29 @@ class GitHubDataSource :
                 SPAM_DOMAINS_PATH to RawFeedSpec("spam domains", MAX_SPAM_DOMAINS_BYTES),
                 MODEL_WEIGHTS_PATH to RawFeedSpec("model weights", MAX_MODEL_WEIGHTS_BYTES),
             )
+
+        /**
+         * Feeds refused without a valid detached signature ([FeedSignature]).
+         * Shards need none: the signed manifest carries each shard's SHA-256.
+         * scripts/feed_signing.py signs the same files; its test checks the lists agree.
+         */
+        internal val SIGNED_FEED_PATHS =
+            setOf(DATA_PATH, SHARD_MANIFEST_PATH, HOT_LIST_PATH, HOT_RANGES_PATH, SPAM_DOMAINS_PATH, MODEL_WEIGHTS_PATH)
+
+        /** Throws unless a signed feed arrived with a signature the app accepts. */
+        internal fun requireFeedSignature(
+            path: String,
+            body: String,
+            signatureText: String?,
+        ) {
+            if (path !in SIGNED_FEED_PATHS) return
+            val label = rawFeedLabel(path)
+            requireFeed(signatureText != null, GitHubFeedFailureReason.SIGNATURE) { "$label feed has no signature" }
+            requireFeed(
+                FeedSignature.verifies(body.toByteArray(Charsets.UTF_8), signatureText.orEmpty()),
+                GitHubFeedFailureReason.SIGNATURE,
+            ) { "$label feed signature doesn't verify" }
+        }
 
         fun buildRawUrl(
             owner: String,
@@ -252,7 +365,12 @@ class GitHubDataSource :
             if (result.isFailure) {
                 return@withContext Result.failure(result.exceptionOrNull()!!)
             }
-            Result.success(parseHotListSnapshotJson(result.getOrThrow()))
+            // A signed file that isn't this feed is refused, not thrown out of the refresh.
+            try {
+                Result.success(parseHotListSnapshotJson(result.getOrThrow()))
+            } catch (refused: GitHubFeedValidationException) {
+                Result.failure(refused)
+            }
         }
 
     override suspend fun fetchHotRanges(
@@ -269,7 +387,12 @@ class GitHubDataSource :
             if (result.isFailure) {
                 return@withContext Result.failure(result.exceptionOrNull()!!)
             }
-            Result.success(parseHotRangesSnapshotJson(result.getOrThrow()))
+            // A signed file that isn't this feed is refused, not thrown out of the refresh.
+            try {
+                Result.success(parseHotRangesSnapshotJson(result.getOrThrow()))
+            } catch (refused: GitHubFeedValidationException) {
+                Result.failure(refused)
+            }
         }
 
     override suspend fun fetchSpamDomains(
@@ -286,7 +409,12 @@ class GitHubDataSource :
             if (result.isFailure) {
                 return@withContext Result.failure(result.exceptionOrNull()!!)
             }
-            Result.success(parseSpamDomainsSnapshotJson(result.getOrThrow()))
+            // A signed file that isn't this feed is refused, not thrown out of the refresh.
+            try {
+                Result.success(parseSpamDomainsSnapshotJson(result.getOrThrow()))
+            } catch (refused: GitHubFeedValidationException) {
+                Result.failure(refused)
+            }
         }
 
     suspend fun fetchModelWeightsJson(
@@ -410,11 +538,16 @@ class GitHubDataSource :
 
     override fun parseHotListSnapshotJson(body: String): HotFeedSnapshot<List<HotNumber>> {
         val trimmedBody = body.trimStart()
+        var generatedAt: String? = null
+        var inputDigest: String? = null
         val (entries, explicitlyCleared) =
             when {
                 trimmedBody.startsWith("{") -> {
                     val payload = hotListEnvelopeAdapter.fromJson(body) ?: error("Failed to parse hot list payload")
-                    payload.numbers to payload.cleared
+                    val numbers = payload.numbers ?: failFeedValidation(GitHubFeedFailureReason.MISSING_SCHEMA_FIELD, "hot list has no numbers")
+                    generatedAt = payload.generated
+                    inputDigest = payload.inputReportDigest
+                    numbers to payload.cleared
                 }
 
                 trimmedBody.startsWith("[") -> {
@@ -444,6 +577,8 @@ class GitHubDataSource :
                     }
                 },
             explicitlyCleared = explicitlyCleared,
+            generatedAt = generatedAt,
+            inputDigest = inputDigest,
         )
     }
 
@@ -451,11 +586,16 @@ class GitHubDataSource :
 
     override fun parseHotRangesSnapshotJson(body: String): HotFeedSnapshot<List<String>> {
         val trimmedBody = body.trimStart()
+        var generatedAt: String? = null
+        var inputDigest: String? = null
         val (ranges, explicitlyCleared) =
             when {
                 trimmedBody.startsWith("{") -> {
                     val payload = hotRangesEnvelopeAdapter.fromJson(body) ?: error("Failed to parse hot ranges payload")
-                    payload.ranges.map { it.npanxx } to payload.cleared
+                    val ranges = payload.ranges ?: failFeedValidation(GitHubFeedFailureReason.MISSING_SCHEMA_FIELD, "hot ranges has no ranges")
+                    generatedAt = payload.generated
+                    inputDigest = payload.inputReportDigest
+                    ranges.map { it.npanxx } to payload.cleared
                 }
 
                 trimmedBody.startsWith("[") -> {
@@ -469,18 +609,23 @@ class GitHubDataSource :
         requireFeed(ranges.size <= MAX_HOT_RANGE_ROWS, GitHubFeedFailureReason.ROW_LIMIT) {
             "hot ranges row count ${ranges.size} exceeds cap $MAX_HOT_RANGE_ROWS"
         }
-        return HotFeedSnapshot(ranges, explicitlyCleared)
+        return HotFeedSnapshot(ranges, explicitlyCleared, generatedAt, inputDigest)
     }
 
     override fun parseSpamDomainsJson(body: String): List<String> = parseSpamDomainsSnapshotJson(body).data
 
     override fun parseSpamDomainsSnapshotJson(body: String): HotFeedSnapshot<List<String>> {
         val trimmedBody = body.trimStart()
+        var generatedAt: String? = null
+        var inputDigest: String? = null
         val (domains, explicitlyCleared) =
             when {
                 trimmedBody.startsWith("{") -> {
                     val payload = spamDomainsEnvelopeAdapter.fromJson(body) ?: error("Failed to parse spam domains payload")
-                    payload.domains to payload.cleared
+                    val domains = payload.domains ?: failFeedValidation(GitHubFeedFailureReason.MISSING_SCHEMA_FIELD, "spam domains has no domains")
+                    generatedAt = payload.generated
+                    inputDigest = payload.inputReportDigest
+                    domains to payload.cleared
                 }
 
                 trimmedBody.startsWith("[") -> {
@@ -497,8 +642,32 @@ class GitHubDataSource :
         return HotFeedSnapshot(
             data = domains.map { it.trim() }.filter { it.isNotBlank() },
             explicitlyCleared = explicitlyCleared,
+            generatedAt = generatedAt,
+            inputDigest = inputDigest,
         )
     }
+
+    /**
+     * Fetches the manifest and its signature from [baseUrl] the way a sync
+     * would, so a mirror that serves nothing, an error page for every path,
+     * or unsigned copies is caught before it's saved rather than at the
+     * next GitHub outage. Only the manifest pair is probed: it validates
+     * the signature and JSON shape, which is enough to confirm the mirror
+     * serves real, signed data. Individual feeds are verified at sync time.
+     */
+    override suspend fun probeMirror(baseUrl: String): Result<Unit> =
+        withContext(Dispatchers.IO) {
+            val base = FeedMirror.normalize(baseUrl) ?: return@withContext Result.failure(IllegalArgumentException("Not a usable mirror address"))
+            val url = base + SHARD_MANIFEST_PATH
+            try {
+                val body = fetchVerifiedOnce(SHARD_MANIFEST_PATH, url, "$url.sig") ?: return@withContext Result.failure(Exception("Empty response body"))
+                parseSpamShardManifestJson(body).map { }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        }
 
     private suspend fun fetchRawText(
         path: String,
@@ -506,38 +675,209 @@ class GitHubDataSource :
         repo: String,
     ): Result<String> {
         var lastError: Exception? = null
-        val label = rawFeedLabel(path)
-        val maxBytes = rawFeedMaxBytes(path)
-
-        for (branch in resolveCandidateBranches(owner, repo)) {
+        for (source in feedSources(path, owner, repo)) {
             try {
-                val request =
-                    Request
-                        .Builder()
-                        .url(buildRawUrl(owner, repo, branch, path))
-                        .header("Cache-Control", "no-store, max-age=0")
-                        .header("User-Agent", USER_AGENT)
-                        .build()
-
-                client.newCall(request).execute().use { response ->
-                    if (!response.isSuccessful) {
-                        lastError = Exception("HTTP ${response.code}: ${response.message}")
-                        return@use
+                fetchVerified(path, source)?.let {
+                    servedByMirror[path] = source.mirror
+                    if (!source.mirror) {
+                        gitHubUnreachableAt = null
+                        gitHubTrustFailing = false
                     }
-
-                    val body = readLimitedBody(response, label, maxBytes)
-                    if (body != null) {
-                        return Result.success(validateRawFeedBody(path, body))
-                    }
-                    lastError = Exception("Empty response body")
+                    return Result.success(it)
                 }
+                lastError = moreTelling(lastError, Exception("Empty response body"), source.mirror)
             } catch (e: Exception) {
-                lastError = e
+                if (!source.mirror && isUnreachable(e)) gitHubUnreachableAt = clock()
+                if (!source.mirror && HttpClient.isCertificateTrustFailure(e)) gitHubTrustFailing = true
+                lastError = moreTelling(lastError, e, source.mirror)
+            }
+        }
+        return Result.failure(lastError ?: Exception("Unable to fetch $path"))
+    }
+
+    /**
+     * Where [path] can come from, in order: each candidate GitHub branch, then
+     * the user's [FeedMirror] when one is set. Every source carries its own
+     * signature URL on the same host and branch, so a copy refused on one
+     * source can't borrow another source's signature.
+     *
+     * For [GITHUB_OUTAGE_MS] after GitHub couldn't be reached at all, the
+     * mirror goes first and the branch lookup is skipped. Behind a GitHub
+     * block every GitHub request costs a full timeout, three of them per file,
+     * so a sync of 256 shards would never end. GitHub stays in the list, after
+     * the mirror, in case the mirror fails too.
+     */
+    private suspend fun feedSources(
+        path: String,
+        owner: String,
+        repo: String,
+    ): List<FeedSource> {
+        FeedMirror.awaitLoaded()
+        val mirror = FeedMirror.urlFor(path)?.let { FeedSource(it, "$it.sig", mirror = true) }
+        if (mirror != null && gitHubRecentlyUnreachable()) {
+            return listOf(mirror) + gitHubSources(path, owner, repo, knownBranches(owner, repo))
+        }
+        return gitHubSources(path, owner, repo, resolveCandidateBranches(owner, repo)) + listOfNotNull(mirror)
+    }
+
+    private fun gitHubSources(
+        path: String,
+        owner: String,
+        repo: String,
+        branches: List<String>,
+    ): List<FeedSource> =
+        branches.map { branch ->
+            FeedSource(
+                url = buildRawUrl(owner, repo, branch, path),
+                signatureUrl = buildRawUrl(owner, repo, branch, "$path.sig"),
+                pin = GitHubPin(owner, repo, branch),
+            )
+        }
+
+    private fun gitHubRecentlyUnreachable(): Boolean = gitHubUnreachableAt?.let { clock() - it < GITHUB_OUTAGE_MS } == true
+
+    /** A GitHub download that got no answer at all, as opposed to one GitHub refused or failed. */
+    private fun isUnreachable(error: Exception): Boolean =
+        error is ConnectException ||
+            error is NoRouteToHostException ||
+            error is UnknownHostException ||
+            // A connect that timed out, not a read that stalled after the body
+            // started: a slow download from a live GitHub isn't an outage.
+            (error is SocketTimeoutException && error.message.orEmpty().contains("connect", ignoreCase = true))
+
+    /**
+     * [path] from [source], size-checked and signature-checked, or null for
+     * an empty body. GitHub's CDN caches a file and its signature separately,
+     * for minutes, and leaves the query string out of its cache key, so right
+     * after a publish it can pair the new body with the old signature and no
+     * `?` gets past that. A signature refusal from a GitHub branch is tried
+     * once more at the commit the branch points to: that path never changes,
+     * so its body and signature come from one publish. The refusal stands if
+     * that copy fails too or the commit can't be resolved. A mirror gets no
+     * second try, since its cache turns over on its own schedule.
+     */
+    private fun fetchVerified(
+        path: String,
+        source: FeedSource,
+    ): String? =
+        try {
+            fetchVerifiedOnce(path, source.url, source.signatureUrl)
+        } catch (refused: GitHubFeedValidationException) {
+            if (refused.reason != GitHubFeedFailureReason.SIGNATURE) throw refused
+            val pin = source.pin ?: throw refused
+            val commit = resolveCommit(pin) ?: throw refused
+            try {
+                fetchVerifiedOnce(
+                    path,
+                    buildRawUrl(pin.owner, pin.repo, commit, path),
+                    buildRawUrl(pin.owner, pin.repo, commit, "$path.sig"),
+                )
+            } catch (_: Exception) {
+                throw refused
             }
         }
 
-        return Result.failure(lastError ?: Exception("Unable to fetch $path"))
+    /** The commit [pin]'s branch points to, or null when GitHub won't say. One small API call, made only after a refusal. */
+    private fun resolveCommit(pin: GitHubPin): String? =
+        try {
+            val request =
+                Request
+                    .Builder()
+                    .url("$GITHUB_API_BASE/${pin.owner}/${pin.repo}/commits/${pin.branch}")
+                    .header("Accept", "application/vnd.github.sha")
+                    .header("User-Agent", USER_AGENT)
+                    .build()
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) return null
+                readLimitedBody(response, "GitHub commit API", MAX_COMMIT_SHA_BYTES)
+                    ?.trim()
+                    ?.takeIf(COMMIT_SHA_REGEX::matches)
+            }
+        } catch (_: IOException) {
+            null
+        } catch (_: GitHubFeedValidationException) {
+            null
+        }
+
+    private fun fetchVerifiedOnce(
+        path: String,
+        url: String,
+        signatureUrl: String,
+    ): String? =
+        client.newCall(rawRequest(url)).execute().use { response ->
+            if (!response.isSuccessful) throw GitHubFeedHttpException(response.code, response.message)
+            readLimitedBody(response, rawFeedLabel(path), rawFeedMaxBytes(path))?.let { body ->
+                signatureChecked(path, validateRawFeedBody(path, body), signatureUrl)
+            }
+        }
+
+    /** [body], once a signed feed's signature from [signatureUrl] verifies. */
+    private fun signatureChecked(
+        path: String,
+        body: String,
+        signatureUrl: String,
+    ): String {
+        if (path in SIGNED_FEED_PATHS) requireFeedSignature(path, body, fetchSignature(path, signatureUrl))
+        return body
     }
+
+    /**
+     * The failure to report once [next] follows [previous]. A source that
+     * served the file but failed validation (a bad signature, an oversized
+     * body) says more than a later source answering 404, and the callers treat
+     * the two differently. A later 404 never hides an earlier failure either:
+     * the fallback branch that doesn't exist says nothing about why the real
+     * one failed, and SyncRepository stops retrying on a 404. A mirror's
+     * failure never hides GitHub's unless the
+     * mirror served a file that was refused: SyncRepository decides whether to
+     * retry from the status code, and the certificate notice fires on a trust
+     * failure, and both are about GitHub.
+     */
+    private fun moreTelling(
+        previous: Exception?,
+        next: Exception,
+        nextFromMirror: Boolean,
+    ): Exception {
+        val nextRefused = next is GitHubFeedValidationException
+        val previousRefused = previous is GitHubFeedValidationException
+        return when {
+            previous == null -> next
+            nextFromMirror -> if (nextRefused && !previousRefused && !HttpClient.isCertificateTrustFailure(previous)) next else previous
+            previousRefused && !nextRefused -> previous
+            next is GitHubFeedHttpException && next.code == HTTP_NOT_FOUND -> previous
+            else -> next
+        }
+    }
+
+    private fun fetchSignature(
+        path: String,
+        signatureUrl: String,
+    ): String? =
+        client.newCall(rawRequest(signatureUrl)).execute().use { response ->
+            when {
+                response.isSuccessful -> {
+                    readLimitedBody(response, "${rawFeedLabel(path)} signature", FeedSignature.MAX_SIGNATURE_BYTES)
+                }
+
+                // Only a missing file means unsigned. A busy or failing host says
+                // nothing about the feed, and reads as a network failure instead.
+                response.code == HTTP_NOT_FOUND -> {
+                    null
+                }
+
+                else -> {
+                    throw GitHubFeedHttpException(response.code, response.message)
+                }
+            }
+        }
+
+    private fun rawRequest(url: String): Request =
+        Request
+            .Builder()
+            .url(url)
+            .header("Cache-Control", "no-store, max-age=0")
+            .header("User-Agent", USER_AGENT)
+            .build()
 
     private suspend fun resolveCandidateBranches(
         owner: String,
@@ -561,18 +901,36 @@ class GitHubDataSource :
         repo: String,
     ): String? {
         val key = "$owner/$repo"
-        val now = System.currentTimeMillis()
+        val now = clock()
         synchronized(defaultBranchLock) {
             val cached = defaultBranchCache[key]
             if (cached != null && now - cached.second < DEFAULT_BRANCH_TTL_MS) {
                 return cached.first
             }
+            // A lookup that just failed isn't repeated for every file in a
+            // sync: behind a GitHub block each attempt costs a full timeout.
+            val failedAt = defaultBranchFailedAt[key]
+            if (failedAt != null && now - failedAt < DEFAULT_BRANCH_RETRY_MS) return cached?.first
         }
-        val resolved = fetchDefaultBranch(owner, repo).getOrNull() ?: return null
+        val resolved = fetchDefaultBranch(owner, repo).getOrNull()
         synchronized(defaultBranchLock) {
+            if (resolved == null) {
+                defaultBranchFailedAt[key] = now
+                return defaultBranchCache[key]?.first
+            }
             defaultBranchCache[key] = resolved to now
+            defaultBranchFailedAt.remove(key)
         }
         return resolved
+    }
+
+    /** The candidate branches without asking the API: the cached default, then the fallbacks. */
+    private fun knownBranches(
+        owner: String,
+        repo: String,
+    ): List<String> {
+        val cached = synchronized(defaultBranchLock) { defaultBranchCache["$owner/$repo"]?.first }
+        return listOfNotNull(cached).plus(FALLBACK_BRANCHES).distinct()
     }
 
     private suspend fun fetchDefaultBranch(
@@ -729,6 +1087,21 @@ class GitHubDataSource :
         val maxBytes: Long,
     )
 
+    /** One place a feed can come from, with its detached signature's URL on the same host and branch. */
+    private data class FeedSource(
+        val url: String,
+        val signatureUrl: String,
+        val mirror: Boolean = false,
+        /** The GitHub branch a source reads, for the retry at its commit. Null for the mirror. */
+        val pin: GitHubPin? = null,
+    )
+
+    private data class GitHubPin(
+        val owner: String,
+        val repo: String,
+        val branch: String,
+    )
+
     private data class GitHubReleasePayload(
         @Json(name = "tag_name") val tagName: String = "",
         @Json(name = "html_url") val htmlUrl: String = "",
@@ -740,9 +1113,14 @@ class GitHubDataSource :
         @Json(name = "browser_download_url") val browserDownloadUrl: String = "",
     )
 
+    // Each feed's items key is nullable so a file without it is refused rather
+    // than read as empty. Signatures cover bytes, not paths, so another signed
+    // feed, or the model, served at this path must not parse as this one.
     private data class HotListPayload(
-        val numbers: List<HotListEntry> = emptyList(),
+        val numbers: List<HotListEntry>? = null,
         val cleared: Boolean = false,
+        val generated: String? = null,
+        @Json(name = "input_report_digest") val inputReportDigest: String? = null,
     )
 
     private data class HotListEntry(
@@ -752,8 +1130,10 @@ class GitHubDataSource :
     )
 
     private data class HotRangesPayload(
-        val ranges: List<HotRangeEntry> = emptyList(),
+        val ranges: List<HotRangeEntry>? = null,
         val cleared: Boolean = false,
+        val generated: String? = null,
+        @Json(name = "input_report_digest") val inputReportDigest: String? = null,
     )
 
     private data class HotRangeEntry(
@@ -761,7 +1141,9 @@ class GitHubDataSource :
     )
 
     private data class SpamDomainsPayload(
-        val domains: List<String> = emptyList(),
+        val domains: List<String>? = null,
         val cleared: Boolean = false,
+        val generated: String? = null,
+        @Json(name = "input_report_digest") val inputReportDigest: String? = null,
     )
 }

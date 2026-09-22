@@ -10,6 +10,7 @@ import unittest
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+import source_registry
 import verify_release_drift
 
 
@@ -18,15 +19,21 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class ReleaseDriftTest(unittest.TestCase):
     def test_checkout_is_synchronized(self) -> None:
-        snapshot = json.loads((ROOT / "data/source-snapshot.json").read_text(encoding="utf-8"))
-        snapshot_time = verify_release_drift.parse_iso_timestamp(snapshot["generated_at"])
-        report = verify_release_drift.audit(
-            ROOT,
-            # Keep the checkout assertion deterministic relative to the generated
-            # fixture. A wall-clock value from an earlier release made a healthy
-            # snapshot appear to be in the future after the pipeline refreshed it.
-            now=snapshot_time + timedelta(minutes=1),
-        )
+        # data/source-snapshot.json is gitignored importer output, so a fresh
+        # checkout has none. This test used to read it anyway and passed in CI
+        # only because test_report_pipeline.py leaked one into data/ earlier in
+        # the same run. Audit the tracked files against the snapshot the
+        # importer builds from the tracked manifest instead.
+        manifest = source_registry.load_source_manifest(ROOT / "data/source-manifest.json")
+        snapshot = source_registry.source_snapshot(manifest, {})
+        with tempfile.TemporaryDirectory() as directory:
+            snapshot_path = Path(directory) / "source-snapshot.json"
+            snapshot_path.write_text(json.dumps(snapshot), encoding="utf-8")
+            report = verify_release_drift.audit(
+                ROOT,
+                now=verify_release_drift.parse_iso_timestamp(snapshot["generated_at"]) + timedelta(minutes=1),
+                snapshot_path=snapshot_path,
+            )
         self.assertEqual([], report["issues"], report)
         self.assertEqual("1.7.38", report["version_name"])
         self.assertEqual(66, report["version_code"])

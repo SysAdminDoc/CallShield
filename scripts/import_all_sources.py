@@ -55,6 +55,11 @@ DB_FILE = DATA_DIR / "spam_numbers.json"
 SOURCE_MANIFEST_FILE = DATA_DIR / "source-manifest.json"
 SOURCE_SNAPSHOT_FILE = DATA_DIR / "source-snapshot.json"
 SOURCE_CURSOR_FILE = DATA_DIR / "source-cursors.json"
+# Tracked, unlike the snapshot: the weekly liveness workflow reads it to tell
+# when an upstream source has not been imported for longer than its manifest
+# stale_after_days allows.
+SOURCE_FRESHNESS_FILE = DATA_DIR / "source-freshness.json"
+SOURCE_FRESHNESS_SCHEMA_VERSION = 1
 
 PHONEBLOCK_BLOCKLIST_URL = "https://phoneblock.net/phoneblock/api/blocklist"
 SARACROCHE_PREFIX_URL = "https://saracroche.org/api/v1/lists/french-list-arcep-operators"
@@ -187,6 +192,48 @@ def save_source_cursors(
         {
             "schema_version": SOURCE_CURSOR_SCHEMA_VERSION,
             "sources": dict(sorted(cursors.items())),
+        },
+    )
+
+
+def load_source_freshness(path: Path) -> dict[str, str]:
+    if not path.exists():
+        return {}
+    try:
+        with path.open(encoding="utf-8") as freshness_file:
+            payload = json.load(freshness_file)
+        if payload.get("schema_version") != SOURCE_FRESHNESS_SCHEMA_VERSION:
+            return {}
+        return {
+            key: value
+            for key, value in payload.get("last_success", {}).items()
+            if isinstance(key, str) and isinstance(value, str) and value.strip()
+        }
+    except (OSError, ValueError, AttributeError):
+        return {}
+
+
+def merge_source_freshness(previous: dict[str, str], source_stats: dict) -> dict[str, str]:
+    """Each source's most recent successful import time.
+
+    A source that was skipped or failed on this run keeps its earlier time: a
+    run that did not fetch a source says nothing about how stale it is, and
+    forgetting the time would make it look never imported.
+    """
+    merged = dict(previous)
+    for source_id, stats in source_stats.items():
+        success = stats.get("last_success_at") if isinstance(stats, dict) else None
+        if isinstance(source_id, str) and isinstance(success, str) and success.strip():
+            merged[source_id] = success
+    return dict(sorted(merged.items()))
+
+
+def save_source_freshness(last_success: dict[str, str], path: Path) -> None:
+    atomic_write_json(
+        path,
+        {
+            "schema_version": SOURCE_FRESHNESS_SCHEMA_VERSION,
+            "last_success": dict(sorted(last_success.items())),
         },
     )
 
@@ -871,9 +918,17 @@ def merge_into_database(
     # Persist source evidence even when the data payload is unchanged. A
     # successful no-op import is still useful: it proves the feeds were
     # reachable and keeps freshness visible to release review tooling.
+    # Both records sit beside DB_FILE, as the shards do, so a caller that
+    # points DB_FILE at a scratch directory cannot overwrite the real ones.
+    output_dir = DB_FILE.parent
     atomic_write_json(
-        SOURCE_SNAPSHOT_FILE,
+        output_dir / SOURCE_SNAPSHOT_FILE.name,
         source_snapshot(manifest, source_stats or {}),
+    )
+    freshness_file = output_dir / SOURCE_FRESHNESS_FILE.name
+    save_source_freshness(
+        merge_source_freshness(load_source_freshness(freshness_file), source_stats or {}),
+        freshness_file,
     )
 
     # Apply min_reports filter to NEWLY-ADDED entries only. Applying it to the

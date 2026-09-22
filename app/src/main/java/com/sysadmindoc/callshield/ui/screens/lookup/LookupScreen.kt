@@ -151,7 +151,14 @@ fun LookupScreen(viewModel: MainViewModel) {
     val numberBlockedMessage = stringResource(R.string.lookup_number_blocked)
     val reportedMessage = stringResource(R.string.lookup_reported)
     val markedSafeReportedMessage = stringResource(R.string.lookup_marked_safe_reported)
-    val markedSafeLocalMessage = stringResource(R.string.lookup_marked_safe_local)
+    // Says what happened to the not-spam report too: sent, queued, or already made today.
+    val markedSafeMessage: (CommunityContributor.ContributeResult) -> String = { report ->
+        if (report.outcome == CommunityContributor.ContributeOutcome.REPORTED_NOT_SPAM) {
+            markedSafeReportedMessage
+        } else {
+            resources.getString(R.string.lookup_marked_safe_with_status, viewModel.contributeMessage(report))
+        }
+    }
     val markedSafeDescription = stringResource(R.string.desc_marked_safe_from_lookup)
 
     fun clearLookup() {
@@ -458,9 +465,9 @@ fun LookupScreen(viewModel: MainViewModel) {
                                                         val repo = SpamRepository.getInstance(context)
                                                         withContext(Dispatchers.IO) {
                                                             repo.addToWhitelist(resultNumber, markedSafeDescription)
-                                                            val reportResult =
-                                                                CommunityContributor.reportNotSpam(repo.normalizeNumber(resultNumber))
-                                                            if (reportResult.success) markedSafeReportedMessage else markedSafeLocalMessage
+                                                            markedSafeMessage(
+                                                                CommunityContributor.reportNotSpam(context, repo.normalizeNumber(resultNumber)),
+                                                            )
                                                         }
                                                     } catch (_: Exception) {
                                                         resources.getString(R.string.lookup_report_failed)
@@ -536,22 +543,25 @@ fun LookupScreen(viewModel: MainViewModel) {
                                             val repo = SpamRepository.getInstance(context)
                                             withContext(Dispatchers.IO) {
                                                 if (lookupResult.isSpam) {
-                                                    CommunityContributor.contribute(
-                                                        repo.normalizeNumber(resultNumber),
-                                                        lookupResult.type.ifEmpty { "spam" },
-                                                    )
-                                                    reportedMessage
+                                                    val report =
+                                                        CommunityContributor.contribute(
+                                                            context,
+                                                            repo.normalizeNumber(resultNumber),
+                                                            lookupResult.type.ifEmpty { "spam" },
+                                                        )
+                                                    if (report.outcome == CommunityContributor.ContributeOutcome.REPORTED_SPAM) {
+                                                        reportedMessage
+                                                    } else {
+                                                        viewModel.contributeMessage(report)
+                                                    }
                                                 } else {
                                                     repo.addToWhitelist(resultNumber, markedSafeDescription)
-                                                    val reportResult =
+                                                    markedSafeMessage(
                                                         CommunityContributor.reportNotSpam(
+                                                            context,
                                                             repo.normalizeNumber(resultNumber),
-                                                        )
-                                                    if (reportResult.success) {
-                                                        markedSafeReportedMessage
-                                                    } else {
-                                                        markedSafeLocalMessage
-                                                    }
+                                                        ),
+                                                    )
                                                 }
                                             }
                                         } catch (_: Exception) {

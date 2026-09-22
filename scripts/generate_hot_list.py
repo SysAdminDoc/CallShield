@@ -30,12 +30,15 @@ from pipeline_io import (
 from report_dedup import (
     BURST_DUPLICATE_SECONDS,
     find_burst_duplicates,
+    find_resent_reports,
     parse_reported_at,
     reporter_day_key,
+    validated_report_id,
     validated_reporter_bucket,
 )
 
-DATA_DIR = Path(os.environ.get("CALLSHIELD_DATA_DIR", Path(__file__).parent.parent / "data"))
+REPO_DATA_DIR = Path(__file__).parent.parent / "data"
+DATA_DIR = Path(os.environ.get("CALLSHIELD_DATA_DIR", REPO_DATA_DIR))
 REPORTS_DIR = Path(os.environ.get("CALLSHIELD_REPORTS_DIR", DATA_DIR / "reports"))
 DB_FILE = DATA_DIR / "spam_numbers.json"
 HOT_LIST_FILE = DATA_DIR / "hot_numbers.json"
@@ -58,6 +61,13 @@ MAX_NEW_CAMPAIGN_RANGES = 5
 def current_time_utc() -> datetime:
     override = os.environ.get("CALLSHIELD_NOW")
     if override:
+        # A fixed clock is for tests. Devices refuse a feed stamped older than
+        # the one they hold, so a publish carrying a past value is refused as
+        # a replay, and a future one blocks every genuine feed until it passes.
+        if DATA_DIR.resolve() == REPO_DATA_DIR.resolve():
+            raise SystemExit(
+                "CALLSHIELD_NOW is for tests. Unset it, or point CALLSHIELD_DATA_DIR at a scratch directory."
+            )
         return datetime.fromisoformat(override.replace("Z", "+00:00")).astimezone(timezone.utc)
     return datetime.now(timezone.utc)
 
@@ -113,6 +123,7 @@ def main(argv: list[str] | None = None) -> int:
     # to be recognised against the other reports for the same number rather than
     # in file-glob order.
     pending: list[tuple[str, datetime, str, str, str, str]] = []
+    report_ids: list[tuple[str, datetime, str]] = []
 
     if REPORTS_DIR.exists():
         for report_file in REPORTS_DIR.glob("*.json"):
@@ -136,8 +147,16 @@ def main(argv: list[str] | None = None) -> int:
                 pending.append(
                     (number, reported_at, reported_at_str, spam_type, report_file.name, reporter_bucket)
                 )
+                report_ids.append((validated_report_id(report.get("report_id")), reported_at, report_file.name))
             except Exception as e:
                 print(f"  Skipping {report_file.name}: {e}")
+
+    # A report the app sent twice under one id is one reporter, even when the
+    # resend came from another network and so from another reporter bucket.
+    resent_reports = find_resent_reports(report_ids)
+    if resent_reports:
+        print(f"  Collapsed {len(resent_reports)} resent report(s) carrying an id already counted")
+        pending = [entry for entry in pending if entry[4] not in resent_reports]
 
     # Repeat submissions for the same number seconds apart are one reporter, not
     # velocity — see report_dedup for why the Worker cannot be relied on here.
@@ -222,18 +241,6 @@ def main(argv: list[str] | None = None) -> int:
                 # trending numbers out of the top-N entirely.
                 if num in velocity:
                     velocity[num]["total_reports"] = entry.get("reports", 0)
-                else:
-                    velocity[num] = {
-                        "number": num,
-                        "type": entry.get("type", "robocall"),
-                        # Seen inside the window, but we cannot know how many of
-                        # its lifetime reports landed there — credit it one.
-                        "reports": 1,
-                        "total_reports": entry.get("reports", 0),
-                        "first_seen": entry.get("first_seen", last_seen),
-                        "last_seen": last_seen,
-                        "description": entry.get("description", "Community reported"),
-                    }
 
     # ── Filter and rank ───────────────────────────────────────────────
     hot_internal = []
@@ -271,7 +278,7 @@ def main(argv: list[str] | None = None) -> int:
     }
 
     # ── Campaign detection: NPA-NXX clustering ────────────────────────
-    # When 3+ distinct numbers from the same NPA-NXX appear in the hot list,
+    # When CAMPAIGN_THRESHOLD or more qualifying numbers from one NPA-NXX are hot,
     # a robocaller is likely running a campaign across that exchange. Flag the
     # entire range so the Android app can score calls from it even if the
     # specific number hasn't been reported yet.

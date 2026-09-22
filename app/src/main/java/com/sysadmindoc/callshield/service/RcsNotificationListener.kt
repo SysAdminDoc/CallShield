@@ -259,11 +259,11 @@ class RcsNotificationListener : NotificationListenerService() {
 
         if (isSpam && source.category == NotificationScreeningCategory.RCS && result?.isSpam == true) {
             cancelNotification(sbn.key)
-            repo.logBlockedCall(
-                number = senderDigits,
-                isCall = false,
-                smsBody = effectiveBody,
-                matchReason = "rcs_${result.matchSource}",
+            logFlaggedNotification(
+                repo = repo,
+                senderDigits = senderDigits,
+                body = effectiveBody,
+                matchSource = result.matchSource,
                 confidence = confidence,
                 ruleId = result.ruleId,
                 pipelineDiagnostic = result.screeningDiagnostics?.toWireValue(),
@@ -360,6 +360,22 @@ class RcsNotificationListener : NotificationListenerService() {
     }
 
     companion object {
+        /**
+         * Logs a message this listener flagged. The SMS receiver has usually
+         * logged an SMS already, and [SpamRepository.logFlaggedText] logs only
+         * what it didn't see: RCS, or a broadcast it missed. The reason keeps
+         * an `rcs_` prefix so the log shows which path saw the message.
+         */
+        internal suspend fun logFlaggedNotification(
+            repo: SpamRepository,
+            senderDigits: String,
+            body: String?,
+            matchSource: String,
+            confidence: Int,
+            ruleId: Long?,
+            pipelineDiagnostic: String?,
+        ): Boolean = repo.logFlaggedText(senderDigits, body, "rcs_$matchSource", confidence, ruleId, pipelineDiagnostic)
+
         /**
          * Prefer the structured conversation sender URI (normally `tel:`)
          * over display text. Titles remain a conservative fallback for

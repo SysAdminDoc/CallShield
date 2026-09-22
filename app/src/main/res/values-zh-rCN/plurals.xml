@@ -126,4 +126,8 @@
         <item quantity="one">近期已拦截 %d 个垃圾项</item>
         <item quantity="other">近期已拦截 %d 个垃圾项</item>
     </plurals>
+    <plurals name="external_blocklist_restored">
+        <item quantity="one">已恢复 %1$s，共 %2$d 个号码</item>
+        <item quantity="other">已恢复 %1$s，共 %2$d 个号码</item>
+    </plurals>
 </resources>

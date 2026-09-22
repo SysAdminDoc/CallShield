@@ -67,7 +67,6 @@ def test_successful_refresh_expires_only_saracroche_ranges():
     with tempfile.TemporaryDirectory() as directory:
         directory = Path(directory)
         db_path = directory / "spam_numbers.json"
-        snapshot_path = directory / "source-snapshot.json"
         db_path.write_text(
             json.dumps(
                 {
@@ -97,7 +96,6 @@ def test_successful_refresh_expires_only_saracroche_ranges():
             encoding="utf-8",
         )
         module.DB_FILE = db_path
-        module.SOURCE_SNAPSHOT_FILE = snapshot_path
         module.merge_into_database(
             [],
             min_reports=1,

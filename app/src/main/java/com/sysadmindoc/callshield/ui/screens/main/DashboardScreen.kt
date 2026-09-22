@@ -1653,7 +1653,7 @@ internal fun rememberNowTick(): Long {
 }
 
 @Composable
-private fun relativeTimeText(timestamp: Long): String {
+internal fun relativeTimeText(timestamp: Long): String {
     val ago = rememberNowTick() - timestamp
     return when {
         ago < 60_000 -> stringResource(R.string.dashboard_time_just_now)

@@ -18,11 +18,13 @@ import com.sysadmindoc.callshield.data.SpamHeuristics
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.SystemBlockList
 import com.sysadmindoc.callshield.data.checker.CheckerDependencies
+import com.sysadmindoc.callshield.data.remote.FeedMirror
 import com.sysadmindoc.callshield.di.ApplicationScope
 import com.sysadmindoc.callshield.service.AppUpdateWorker
 import com.sysadmindoc.callshield.service.CrashReporter
 import com.sysadmindoc.callshield.service.DigestWorker
 import com.sysadmindoc.callshield.service.DirectBootScreeningStore
+import com.sysadmindoc.callshield.service.ExternalBlocklistRefreshWorker
 import com.sysadmindoc.callshield.service.HotDataSync
 import com.sysadmindoc.callshield.service.HotListSyncWorker
 import com.sysadmindoc.callshield.service.NotificationHelper
@@ -77,6 +79,9 @@ class CallShieldApp :
             // Install the uncaught-exception handler BEFORE anything else so we
             // capture crashes even during app-startup init.
             CrashReporter.install(this)
+            // Before any worker is scheduled, so one that runs at once waits for
+            // the stored mirror setting instead of building its sources without it.
+            FeedMirror.startLoading()
             try {
                 // A restore journal is normally absent, so this is one indexed
                 // Room read. When present it must reconcile before workers or
@@ -89,6 +94,7 @@ class CallShieldApp :
             SyncWorker.schedule(this)
             HotListSyncWorker.schedule(this)
             DigestWorker.schedule(this)
+            ExternalBlocklistRefreshWorker.schedule(this)
             PendingBlockedCallLogWorker.schedule(this)
             ProtectionHealthWorker.schedule(this)
             ProtectionHealthWorker.checkNow(this)
@@ -98,6 +104,15 @@ class CallShieldApp :
             }
 
             registerCacheInvalidationObservers()
+
+            appScope.launch {
+                try {
+                    SpamRepository.getInstance(this@CallShieldApp).feedMirrorUrl.collect { FeedMirror.set(it) }
+                } catch (e: Exception) {
+                    FeedMirror.loadFailed()
+                    Log.w("CallShieldApp", "Failed to follow the feed mirror setting", e)
+                }
+            }
 
             appScope.launch {
                 checkerDependencies.spamMLScorer.loadWeights(this@CallShieldApp)

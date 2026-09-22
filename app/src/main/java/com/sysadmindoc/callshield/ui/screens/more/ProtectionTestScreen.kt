@@ -36,12 +36,15 @@ import com.sysadmindoc.callshield.data.MessageCapabilityStatus
 import com.sysadmindoc.callshield.data.ModelHealth
 import com.sysadmindoc.callshield.data.SpamMLScorer
 import com.sysadmindoc.callshield.data.SpamRepository
+import com.sysadmindoc.callshield.data.model.HotDataHealth
 import com.sysadmindoc.callshield.permissions.CallShieldPermissions
 import com.sysadmindoc.callshield.permissions.PermissionCapabilityPriority
 import com.sysadmindoc.callshield.permissions.PermissionCapabilityStatus
+import com.sysadmindoc.callshield.service.HotDataSync
 import com.sysadmindoc.callshield.service.WorkerDiagnostic
 import com.sysadmindoc.callshield.service.WorkerDiagnostics
 import com.sysadmindoc.callshield.ui.theme.*
+import com.sysadmindoc.callshield.util.HotFeedFreshness
 import com.sysadmindoc.callshield.util.startActivitySafely
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -703,28 +706,79 @@ private suspend fun runTests(context: Context): List<TestResult> =
             com.sysadmindoc.callshield.data.SpamHeuristics
                 .hasHotRanges()
         val hotDataHealth = repo.readHotDataHealth()
-        val hotDataUnavailable = hotDataHealth.unavailableFeeds.isNotEmpty()
+        val hotDataNow = System.currentTimeMillis()
+        val hotDataState = HotFeedFreshness.stateOf(hotDataHealth, hotDataNow)
+        // An empty ranges feed the publisher cleared on purpose is a quiet day,
+        // not missing protection.
+        val hotRangesCleared = HotDataSync.HOT_RANGES_FEED in hotDataHealth.clearedFeeds
+        val hotDataHealthy = hotDataState == HotFeedFreshness.State.CURRENT && (hotRangesLoaded || hotRangesCleared)
+        // Downloads failing certificate verification are not a network hiccup:
+        // this build's pins no longer match, and only an app update fixes that.
+        val feedTrustFailed = repo.readFeedTrustFailedAt() > 0L
+        if (feedTrustFailed) {
+            results.add(
+                TestResult(
+                    name = context.getString(R.string.protection_test_feed_trust),
+                    passed = false,
+                    detail = context.getString(R.string.protection_test_feed_trust_fail),
+                    recoveryHint = context.getString(R.string.protection_test_fix_update_app),
+                ),
+            )
+        }
         results.add(
             TestResult(
                 name = context.getString(R.string.protection_test_hot_list_data),
-                passed = hotRangesLoaded && !hotDataUnavailable,
+                passed = hotDataHealthy,
                 detail =
-                    if (hotDataUnavailable) {
-                        hotDataHealthDetail(context, hotDataHealth.lastGoodTimestamp)
-                    } else if (hotRangesLoaded) {
-                        context.getString(R.string.protection_test_hot_pass)
-                    } else {
-                        context.getString(R.string.protection_test_hot_fail)
+                    when (hotDataState) {
+                        HotFeedFreshness.State.UNREACHABLE -> {
+                            hotDataHealthDetail(context, hotDataHealth.lastGoodTimestamp)
+                        }
+
+                        HotFeedFreshness.State.STALLED -> {
+                            hotDataStalledDetail(context, hotDataHealth, hotDataNow)
+                        }
+
+                        HotFeedFreshness.State.REFUSED -> {
+                            context.getString(R.string.protection_test_hot_refused)
+                        }
+
+                        HotFeedFreshness.State.CURRENT -> {
+                            when {
+                                hotRangesLoaded -> context.getString(R.string.protection_test_hot_pass)
+                                hotRangesCleared -> context.getString(R.string.protection_test_hot_cleared)
+                                else -> context.getString(R.string.protection_test_hot_fail)
+                            }
+                        }
                     },
                 priority = TestPriority.Recommended,
                 recoveryHint =
-                    if (hotRangesLoaded && !hotDataUnavailable) {
-                        null
-                    } else {
-                        context.getString(R.string.protection_test_fix_sync)
+                    when {
+                        hotDataHealthy -> null
+
+                        // A stalled publisher is not something the device can
+                        // sync its way out of, so do not tell the user to retry.
+                        hotDataState == HotFeedFreshness.State.STALLED -> null
+
+                        // Retrying a sync cannot get past a pin mismatch.
+                        feedTrustFailed -> context.getString(R.string.protection_test_fix_update_app)
+
+                        else -> context.getString(R.string.protection_test_fix_sync)
                     },
             ),
         )
+
+        val callerNameSupport = repo.readCallerNameSupport()
+        if (callerNameSupport == com.sysadmindoc.callshield.data.CallerNameSupport.NOT_PROVIDED) {
+            results.add(
+                TestResult(
+                    name = context.getString(R.string.protection_test_caller_name),
+                    passed = false,
+                    detail = context.getString(R.string.protection_test_caller_name_unavailable),
+                    priority = TestPriority.Informational,
+                ),
+            )
+        }
 
         val activeCampaigns =
             com.sysadmindoc.callshield.data.CampaignDetector
@@ -855,6 +909,27 @@ private fun messageCapabilityTestResult(
         priority = if (status.isDegraded) TestPriority.Recommended else TestPriority.Informational,
         recoveryHint = if (status.isDegraded) context.getString(R.string.protection_test_capability_hint) else null,
     )
+}
+
+private fun hotDataStalledDetail(
+    context: Context,
+    health: HotDataHealth,
+    now: Long,
+): String {
+    // STALLED is only ever derived from a parseable stamp, so one exists; the
+    // fallback keeps a hand-edited store from crashing the screen.
+    val oldest =
+        health.feedGeneratedAt.values
+            .map(HotFeedFreshness::publishedAtMillis)
+            .filter { it > 0L }
+            .minOrNull()
+            ?: return hotDataHealthDetail(context, health.lastGoodTimestamp)
+    val ageDays =
+        (now - oldest)
+            .coerceAtLeast(0L)
+            .div(TimeUnit.DAYS.toMillis(1))
+            .coerceAtLeast(1L)
+    return context.getString(R.string.protection_test_hot_stalled, ageDays)
 }
 
 private fun hotDataHealthDetail(

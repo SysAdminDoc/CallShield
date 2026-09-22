@@ -1,5 +1,7 @@
 package com.sysadmindoc.callshield.data.model
 
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
+
 data class ExternalBlocklistSubscription(
     val id: String,
     val label: String,
@@ -10,8 +12,20 @@ data class ExternalBlocklistSubscription(
     val lastAdded: Int = 0,
     val lastRemoved: Int = 0,
     val lastError: String = "",
+    /** Hours between refreshes that the list declares in an `Expires:` line, or 0 for none. */
+    val declaredRefreshHours: Int = 0,
+    /** The last fetch, successful or not. Paces retries of a list that keeps failing. */
+    val lastAttemptAt: Long = 0L,
 ) {
     val source: String get() = sourceFor(id)
+
+    /**
+     * Only the host the list comes from, which is all a settings row has room
+     * for. Read with the parser that fetches the list, which accepts addresses
+     * java.net.URI can't read, and never the whole address, which can carry a
+     * token in its query.
+     */
+    val host: String get() = url.toHttpUrlOrNull()?.host.orEmpty()
 
     companion object {
         const val SOURCE_PREFIX = "subscription:"
@@ -33,6 +47,14 @@ data class ExternalBlocklistPreview(
     val skippedRows: Int,
     val blockedByOtherSources: Int,
 )
+
+enum class ExternalBlocklistRefreshOutcome {
+    REFRESHED,
+
+    /** The download was empty or under half the list's size, so the last good rows stay. */
+    HELD,
+    FAILED,
+}
 
 data class ExternalBlocklistImportResult(
     val success: Boolean,

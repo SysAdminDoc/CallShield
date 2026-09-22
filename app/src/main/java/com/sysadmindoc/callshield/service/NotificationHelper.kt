@@ -74,6 +74,7 @@ object NotificationHelper {
     internal const val SYNC_NOTIFICATION_ID = 3
     internal const val PROTECTION_HEALTH_NOTIFICATION_ID = 4
     internal const val APP_UPDATE_NOTIFICATION_ID = 5
+    internal const val FEED_TRUST_NOTIFICATION_ID = 6
 
     /**
      * Notification ID for the after-call "Was this spam?" feedback notice.
@@ -252,10 +253,55 @@ object NotificationHelper {
         return safeNotify(context, PROTECTION_HEALTH_NOTIFICATION_ID, builder)
     }
 
+    /**
+     * This build's certificate pins no longer match the data server, so no
+     * sync can succeed until the app is updated. Opens the releases page;
+     * checking for the release itself would be another network call to a
+     * host this build may not trust either.
+     */
+    fun notifyFeedTrustFailure(
+        context: Context,
+        releasesUrl: String,
+    ): Boolean {
+        val openIntent =
+            PendingIntent.getActivity(
+                context,
+                FEED_TRUST_NOTIFICATION_ID,
+                Intent(Intent.ACTION_VIEW, Uri.parse(releasesUrl)),
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            )
+        val text = context.getString(R.string.notif_feed_trust_text)
+        val builder =
+            NotificationCompat
+                .Builder(context, CHANNEL_PROTECTION_HEALTH)
+                .setSmallIcon(R.drawable.ic_launcher_monochrome)
+                .setContentTitle(context.getString(R.string.notif_feed_trust_title))
+                .setContentText(text)
+                .setStyle(NotificationCompat.BigTextStyle().bigText(text))
+                .setContentIntent(openIntent)
+                .addAction(0, context.getString(R.string.notif_feed_trust_action), openIntent)
+                .setCategory(NotificationCompat.CATEGORY_ERROR)
+                .setAutoCancel(true)
+                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+        return safeNotify(context, FEED_TRUST_NOTIFICATION_ID, builder)
+    }
+
     fun dismissCallScreeningRoleLost(context: Context) {
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         notificationManager.cancel(PROTECTION_HEALTH_NOTIFICATION_ID)
     }
+
+    /** A call is blocked. A text still reaches the messages app, so it's only flagged. */
+    internal fun blockedAlertTitle(
+        context: Context,
+        isCall: Boolean,
+        typeText: String,
+    ): String =
+        if (isCall) {
+            context.getString(R.string.notif_blocked_title, typeText)
+        } else {
+            context.getString(R.string.notif_flagged_text_title)
+        }
 
     fun notifyBlocked(
         context: Context,
@@ -335,7 +381,7 @@ object NotificationHelper {
             NotificationCompat
                 .Builder(context, CHANNEL_BLOCKED)
                 .setSmallIcon(R.drawable.ic_launcher_monochrome)
-                .setContentTitle(context.getString(R.string.notif_blocked_title, typeText))
+                .setContentTitle(blockedAlertTitle(context, isCall, typeText))
                 .setContentText(
                     context.getString(
                         R.string.notif_blocked_text,

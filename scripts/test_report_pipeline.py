@@ -61,10 +61,13 @@ def write_report(
     reported_at: str,
     report_type: str = "phishing",
     domains: list[str] | None = None,
+    report_id: str | None = None,
 ) -> None:
     report = {"number": number, "type": report_type, "reported_at": reported_at}
     if bucket is not None:
         report["reporter_bucket"] = bucket
+    if report_id is not None:
+        report["report_id"] = report_id
     if domains:
         report["sms_domains"] = domains
     write_json(data_dir / "reports" / filename, report)
@@ -135,6 +138,20 @@ def seed_reports(data_dir: Path) -> None:
     # Legacy files remain mergeable but are not independent promotion evidence.
     write_report(data_dir, "legacy.json", "+12122340888", None, TIMES[0])
 
+    # One report resent under its id after the phone changed networks arrives
+    # from a second reporter bucket. Counted twice, these four files would make
+    # the number trend (4 reports, 4 reporters); counted once, they can't.
+    resent = "3f1c9a52-7d4e-4b8a-9c1d-2e5f6a7b8c9d"
+    for index, (bucket, reported_at, report_id) in enumerate(
+        [
+            (BUCKETS[0], TIMES[0], resent),
+            (BUCKETS[1], TIMES[1], resent),
+            (BUCKETS[2], TIMES[2], "a0b1c2d3-e4f5-4a6b-8c7d-9e0f1a2b3c4d"),
+            (BUCKETS[3], TIMES[3], "b1c2d3e4-f5a6-4b7c-9d8e-0f1a2b3c4d5e"),
+        ]
+    ):
+        write_report(data_dir, f"resent_{index}.json", "+13129870777", bucket, reported_at, report_id=report_id)
+
 
 def assert_derived_outputs(data_dir: Path) -> None:
     hot_numbers = json.loads((data_dir / "hot_numbers.json").read_text(encoding="utf-8"))
@@ -184,6 +201,8 @@ def assert_merge_cleanup(data_dir: Path) -> None:
         raise AssertionError(f"same-reporter daily reports were not collapsed: {merged_numbers}")
     if merged_numbers["+12122340888"]["reports"] != 1:
         raise AssertionError(f"legacy report was not preserved: {merged_numbers}")
+    if merged_numbers["+13129870777"]["reports"] != 3:
+        raise AssertionError(f"a report resent under its id was counted twice: {merged_numbers['+13129870777']}")
     if any(entry.get("sources") != ["community"] for entry in merged_numbers.values()):
         raise AssertionError(f"community provenance missing: {merged_numbers}")
 
@@ -529,7 +548,156 @@ def assert_external_source_parsers() -> None:
         module.time.sleep = original_sleep
 
 
+def run_drain(data_dir: Path) -> None:
+    # Each drain here leaves the derived feeds empty, which their collapse
+    # guards refuse to publish twice without being told.
+    run_script("extract_spam_domains.py", data_dir, ["--allow-collapse"])
+    run_script("generate_hot_list.py", data_dir, ["--allow-collapse"])
+    run_script("merge_community_reports.py", data_dir)
+
+
+def reports_for(data_dir: Path, number: str) -> int:
+    database = json.loads((data_dir / "spam_numbers.json").read_text(encoding="utf-8"))
+    return next((row["reports"] for row in database["numbers"] if row["number"] == number), 0)
+
+
+def assert_resend_across_drains_counts_once(data_dir: Path) -> None:
+    """A resend that lands after its original was merged and deleted counts
+    once. The queue alone can't see that, so merged ids are kept a while."""
+    write_json(
+        data_dir / "spam_numbers.json",
+        {"version": 1, "updated": "2026-06-11", "sources": ["community_reports"], "numbers": [], "prefixes": []},
+    )
+    number = "+12129460188"
+    report_id = "3f2c1a9e-8b7d-4c6e-9f10-2a3b4c5d6e7f"
+    write_report(data_dir, "original.json", number, BUCKETS[0], TIMES[0], report_type="spam", report_id=report_id)
+    run_drain(data_dir)
+    assert reports_for(data_dir, number) == 1
+
+    write_report(data_dir, "resend.json", number, BUCKETS[1], TIMES[2], report_type="spam", report_id=report_id)
+    run_drain(data_dir)
+    assert reports_for(data_dir, number) == 1, "a resend counted again in a later drain"
+    assert not (data_dir / "reports" / "resend.json").exists(), "the resend was left in the queue"
+
+    other_id = "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d"
+    write_report(data_dir, "other.json", number, BUCKETS[2], TIMES[3], report_type="spam", report_id=other_id)
+    run_drain(data_dir)
+    assert reports_for(data_dir, number) == 2, "a different report of the same number must still count"
+    ledger = json.loads((data_dir / "merged_report_ids.json").read_text(encoding="utf-8"))["ids"]
+    assert {report_id, other_id} <= set(ledger), ledger
+
+    (data_dir / "merged_report_ids.json").write_text("not json", encoding="utf-8")
+    write_report(data_dir, "later.json", number, BUCKETS[3], NOW, report_type="spam")
+    run_script("extract_spam_domains.py", data_dir, ["--allow-collapse"])
+    run_script("generate_hot_list.py", data_dir, ["--allow-collapse"])
+    stopped = run_script_result("merge_community_reports.py", data_dir)
+    assert stopped.returncode != 0, "an unreadable ledger must stop the merge"
+    assert (data_dir / "reports" / "later.json").exists(), "a stopped merge must leave the queue alone"
+    assert reports_for(data_dir, number) == 2
+
+
+def assert_ledger_retention(data_dir: Path) -> None:
+    """Past, future, and non-date entries in the ledger are handled.
+
+    Past entries older than the retention window are dropped on the next
+    drain. Non-date strings and future dates never expire under plain
+    string comparison, so the fix validates every day value.
+    """
+    from datetime import datetime as dt
+    number = "+12124567890"
+    seed_reports(data_dir)
+    ledger_path = data_dir / "merged_report_ids.json"
+    # merge_community_reports uses datetime.now(), not CALLSHIELD_NOW,
+    # so "today" is the real system date. The good entry must be within
+    # the 14-day retention window of today.
+    real_today = dt.now().strftime("%Y-%m-%d")
+    old_uuid = "00000000-0000-4000-8000-000000000001"
+    garbage_uuid = "00000000-0000-4000-8000-000000000002"
+    future_uuid = "00000000-0000-4000-8000-000000000003"
+    good_uuid = "00000000-0000-4000-8000-000000000004"
+    write_json(ledger_path, {
+        "retention_days": 14,
+        "ids": {
+            old_uuid: "2020-01-01",
+            garbage_uuid: "zzzz",
+            future_uuid: "2099-12-31",
+            good_uuid: real_today,
+        },
+    })
+    write_report(data_dir, "one.json", number, BUCKETS[0], NOW)
+    run_script("extract_spam_domains.py", data_dir)
+    run_script("generate_hot_list.py", data_dir)
+    run_script("merge_community_reports.py", data_dir)
+
+    ledger = json.loads(ledger_path.read_text(encoding="utf-8"))["ids"]
+    assert old_uuid not in ledger, "expired entry was kept"
+    assert garbage_uuid not in ledger, "non-date entry was kept"
+    assert future_uuid not in ledger, "future-date entry was kept"
+    assert good_uuid in ledger, "recent valid entry was dropped"
+
+
+def assert_not_spam_id_not_recorded(data_dir: Path) -> None:
+    """A not_spam vote's report id must not be remembered as merged.
+
+    The id was previously recorded before the spam/not_spam branch, so a
+    quarantined report that later re-entered the queue as spam would be
+    silently skipped as "already merged".
+    """
+    number = "+12125553333"
+    vote_id = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
+    seed_reports(data_dir)
+    # Ensure the number exists as a community row so the vote has a target.
+    write_report(data_dir, "spam.json", number, BUCKETS[0], TIMES[0], report_type="spam")
+    run_script("extract_spam_domains.py", data_dir)
+    run_script("generate_hot_list.py", data_dir)
+    run_script("merge_community_reports.py", data_dir)
+
+    # Now submit a not_spam vote with a report_id.
+    write_report(data_dir, "vote.json", number, BUCKETS[1], TIMES[1], report_type="not_spam", report_id=vote_id)
+    run_script("extract_spam_domains.py", data_dir, ["--allow-collapse"])
+    run_script("generate_hot_list.py", data_dir, ["--allow-collapse"])
+    run_script("merge_community_reports.py", data_dir)
+
+    ledger_path = data_dir / "merged_report_ids.json"
+    if ledger_path.exists():
+        ledger = json.loads(ledger_path.read_text(encoding="utf-8"))["ids"]
+        assert vote_id not in ledger, f"not_spam vote id was recorded: {ledger}"
+
+
+def assert_fixed_clock_is_for_tests_only() -> None:
+    """A feed stamped by CALLSHIELD_NOW and published would be refused by every
+    device as a replay, or block every later feed until its time passed. So the
+    repository's own data directory refuses the fixed clock. Checked in-process,
+    so nothing here can write to the real data directory."""
+    sys.path.insert(0, str(SCRIPTS_DIR))
+    import generate_hot_list
+
+    original_now = os.environ.get("CALLSHIELD_NOW")
+    original_dir = generate_hot_list.DATA_DIR
+    os.environ["CALLSHIELD_NOW"] = NOW
+    try:
+        generate_hot_list.DATA_DIR = ROOT / "data"
+        try:
+            generate_hot_list.current_time_utc()
+        except SystemExit:
+            pass
+        else:
+            raise AssertionError("CALLSHIELD_NOW was honoured for the repository's own data directory")
+        with tempfile.TemporaryDirectory() as tmp:
+            generate_hot_list.DATA_DIR = Path(tmp)
+            stamp = generate_hot_list.current_time_utc().isoformat()
+            assert stamp == NOW, f"a scratch data directory keeps the fixed clock, got {stamp}"
+    finally:
+        generate_hot_list.DATA_DIR = original_dir
+        if original_now is None:
+            os.environ.pop("CALLSHIELD_NOW", None)
+        else:
+            os.environ["CALLSHIELD_NOW"] = original_now
+
+
 def main() -> None:
+    assert_fixed_clock_is_for_tests_only()
+
     with tempfile.TemporaryDirectory() as tmp:
         assert_collapse_guard(Path(tmp) / "data")
 
@@ -550,6 +718,15 @@ def main() -> None:
 
     with tempfile.TemporaryDirectory() as tmp:
         assert_not_spam_requires_review(Path(tmp) / "data")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        assert_resend_across_drains_counts_once(Path(tmp) / "data")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        assert_ledger_retention(Path(tmp) / "data")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        assert_not_spam_id_not_recorded(Path(tmp) / "data")
 
 
 if __name__ == "__main__":

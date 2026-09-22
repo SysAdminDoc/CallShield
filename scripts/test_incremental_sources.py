@@ -172,12 +172,61 @@ def test_cursors_and_snapshot_are_durable_and_attributed():
     assert fcc_row["cursor"]["id"] == "fcc-2"
 
 
+def test_source_freshness_keeps_what_a_run_did_not_fetch():
+    module = load_importer()
+    previous = {"ftc_complaints": "2026-08-01T00:00:00+00:00", "toastedspam": "2026-08-10T00:00:00+00:00"}
+    stats = {
+        "ftc_complaints": {"status": "ok", "last_success_at": "2026-09-21T12:00:00+00:00"},
+        # Skipped or failed this run: its earlier success must survive.
+        "toastedspam": {"status": "not_requested", "last_success_at": None},
+        "fcc_complaints": {"status": "error", "last_success_at": None},
+    }
+    merged = module.merge_source_freshness(previous, stats)
+    assert merged == {
+        "ftc_complaints": "2026-09-21T12:00:00+00:00",
+        "toastedspam": "2026-08-10T00:00:00+00:00",
+    }, merged
+
+    with tempfile.TemporaryDirectory() as directory:
+        path = Path(directory) / "source-freshness.json"
+        assert module.load_source_freshness(path) == {}
+        module.save_source_freshness(merged, path)
+        assert module.load_source_freshness(path) == merged
+        # The liveness gate reads the same file under the same key.
+        assert json.loads(path.read_text(encoding="utf-8"))["last_success"] == merged
+        path.write_text(json.dumps({"schema_version": 99, "last_success": merged}), encoding="utf-8")
+        assert module.load_source_freshness(path) == {}
+
+
+def test_merge_writes_its_records_beside_the_database():
+    # The snapshot and the freshness record went to the real data/ directory
+    # whatever DB_FILE said, so every test merge overwrote them. A merge that
+    # carries stats would stamp fake successful imports into the record the
+    # weekly liveness check reads, hiding a source that had really gone stale.
+    module = load_importer()
+    with tempfile.TemporaryDirectory() as directory:
+        directory = Path(directory)
+        db_path = directory / "spam_numbers.json"
+        db_path.write_text(
+            json.dumps({"version": 1, "updated": "2026-08-10", "numbers": [], "prefixes": []}),
+            encoding="utf-8",
+        )
+        module.DB_FILE = db_path
+        stats = {"ftc_complaints": {"status": "ok", "accepted": 0, "last_success_at": "2026-09-21T12:00:00+00:00"}}
+        module.merge_into_database([], min_reports=1, source_names={"ftc_complaints"}, source_stats=stats)
+
+        snapshot = json.loads((directory / "source-snapshot.json").read_text(encoding="utf-8"))
+        statuses = {row["id"]: row["status"] for row in snapshot["sources"]}
+        assert statuses["ftc_complaints"] == "ok", statuses
+        freshness = module.load_source_freshness(directory / "source-freshness.json")
+        assert freshness == {"ftc_complaints": "2026-09-21T12:00:00+00:00"}, freshness
+
+
 def test_new_complaints_require_independent_caller_corroboration():
     module = load_importer()
     with tempfile.TemporaryDirectory() as directory:
         directory = Path(directory)
         db_path = directory / "spam_numbers.json"
-        snapshot_path = directory / "source-snapshot.json"
         db_path.write_text(
             json.dumps(
                 {
@@ -190,7 +239,6 @@ def test_new_complaints_require_independent_caller_corroboration():
             encoding="utf-8",
         )
         module.DB_FILE = db_path
-        module.SOURCE_SNAPSHOT_FILE = snapshot_path
         entries = [
             {
                 "number": "+12125561211",
@@ -258,6 +306,8 @@ def main():
     test_fcc_retains_roles_and_spoof_signals()
     test_incremental_window_retries_and_advances_cursor()
     test_cursors_and_snapshot_are_durable_and_attributed()
+    test_source_freshness_keeps_what_a_run_did_not_fetch()
+    test_merge_writes_its_records_beside_the_database()
     test_new_complaints_require_independent_caller_corroboration()
     print("incremental source tests: OK")
 

@@ -192,13 +192,20 @@ def source_audit(
     root: Path,
     now: datetime,
     max_age_days: int = MAX_SNAPSHOT_AGE_DAYS,
+    snapshot_path: Path | None = None,
 ) -> tuple[dict[str, Any], list[str]]:
     issues: list[str] = []
     manifest_path = root / "data/source-manifest.json"
-    snapshot_path = root / "data/source-snapshot.json"
+    # The snapshot is gitignored importer output, so a checkout only has one
+    # where the importer ran. Tests pass their own rather than depend on that.
+    snapshot_path = snapshot_path or root / "data/source-snapshot.json"
     report: dict[str, Any] = {"generated_at": None, "source_count": 0, "statuses": {}}
     if not manifest_path.is_file() or not snapshot_path.is_file():
-        missing = [str(path.relative_to(root)) for path in (manifest_path, snapshot_path) if not path.is_file()]
+        missing = [
+            str(path.relative_to(root)) if path.is_relative_to(root) else str(path)
+            for path in (manifest_path, snapshot_path)
+            if not path.is_file()
+        ]
         return report, [f"Missing source provenance input: {', '.join(missing)}"]
     try:
         manifest = json.loads(read_text(manifest_path))
@@ -346,8 +353,8 @@ def release_metadata_audit(root: Path, version_name: str, version_code: int) -> 
     fdroid = read_text(required_files["F-Droid metadata"])
     runbook = read_text(required_files["F-Droid runbook"])
     store_changelog = read_text(required_files["Fastlane changelog"]).strip()
-    if f"## v{version_name} Highlights" not in readme:
-        issues.append(f"README has no current-release highlights for v{version_name}.")
+    if f"## v{version_name}" not in changelog:
+        issues.append(f"CHANGELOG has no entry for v{version_name}.")
     if f"## Detection Pipeline (v{version_name})" not in readme:
         issues.append(f"README detection-pipeline heading is not v{version_name}.")
     if "img.shields.io/github/v/release/SysAdminDoc/CallShield" not in readme:
@@ -427,6 +434,7 @@ def audit(
     *,
     now: datetime | None = None,
     max_snapshot_age_days: int = MAX_SNAPSHOT_AGE_DAYS,
+    snapshot_path: Path | None = None,
 ) -> dict[str, Any]:
     current_time = now or datetime.now(timezone.utc)
     issues: list[str] = []
@@ -437,7 +445,7 @@ def audit(
         version_name, version_code = "unknown", -1
         issues.append(f"Application release version could not be parsed: {error}")
     dependency_report, dependency_issues = dependency_audit(root)
-    source_report, source_issues = source_audit(root, current_time, max_snapshot_age_days)
+    source_report, source_issues = source_audit(root, current_time, max_snapshot_age_days, snapshot_path)
     advisories, advisory_issues = advisory_audit(root, dependency_report)
     issues.extend(release_metadata_audit(root, version_name, version_code))
     issues.extend(dependency_issues)

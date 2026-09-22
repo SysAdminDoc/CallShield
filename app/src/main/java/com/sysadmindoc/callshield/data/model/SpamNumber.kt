@@ -156,6 +156,8 @@ data class SpamNumberJson(
     @param:Json(name = "last_seen") val lastSeen: String = "",
     val description: String = "",
     val evidence: List<SourceEvidenceJson> = emptyList(),
+    /** Where the pipeline got the row, such as `legacy_import` or `community`. */
+    val sources: List<String> = emptyList(),
 )
 
 /** Independent source evidence retained on an imported database row. */

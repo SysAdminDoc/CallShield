@@ -27,6 +27,23 @@ class SmsReceiver : BroadcastReceiver() {
     lateinit var applicationScope: CoroutineScope
 
     companion object {
+        internal const val CARRIER_REPORT_SHORT_CODE = "7726"
+
+        /**
+         * Logs a text this receiver flagged. For Google and Samsung Messages the
+         * notification listener sees the same text, and
+         * [SpamRepository.logFlaggedText] keeps one row and one alert for it.
+         */
+        internal suspend fun logFlaggedSms(
+            repo: SpamRepository,
+            sender: String,
+            body: String?,
+            matchReason: String,
+            confidence: Int,
+            ruleId: Long?,
+            pipelineDiagnostic: String?,
+        ): Boolean = repo.logFlaggedText(sender, body, matchReason, confidence, ruleId, pipelineDiagnostic)
+
         /** Hard cap on reassembled multipart body length (16 KB). */
         internal const val MAX_REASSEMBLED_BODY = 16_384
 
@@ -97,6 +114,9 @@ class SmsReceiver : BroadcastReceiver() {
                 }
 
                 sender = messages[0].originatingAddress?.takeIf { it.isNotBlank() } ?: return@launch
+                if (sender == CARRIER_REPORT_SHORT_CODE || sender.endsWith(CARRIER_REPORT_SHORT_CODE)) {
+                    return@launch
+                }
                 body = reassembleBody(messages.map { it.messageBody })
 
                 // Spam classification + block logging is gated behind the
@@ -105,10 +125,10 @@ class SmsReceiver : BroadcastReceiver() {
                 if (blockSmsEnabled) {
                     val result = checkSpamSms(sender, body, prefsSnapshot = prefs)
                     if (result.isSpam) {
-                        repo.logBlockedCall(
-                            number = sender,
-                            isCall = false,
-                            smsBody = body,
+                        logFlaggedSms(
+                            repo = repo,
+                            sender = sender,
+                            body = body,
                             matchReason = result.matchSource,
                             confidence = result.confidence,
                             ruleId = result.ruleId,

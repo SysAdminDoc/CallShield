@@ -40,11 +40,19 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTag
+import androidx.compose.ui.semantics.toggleableState
+import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -63,6 +71,7 @@ import com.sysadmindoc.callshield.data.MessageCapabilityStatus
 import com.sysadmindoc.callshield.data.PortableBackupCrypto
 import com.sysadmindoc.callshield.data.model.ExternalBlocklistPreview
 import com.sysadmindoc.callshield.data.model.ExternalBlocklistSubscription
+import com.sysadmindoc.callshield.data.remote.FeedMirror
 import com.sysadmindoc.callshield.data.repository.ANSWERED_CALLER_THRESHOLD_MAX
 import com.sysadmindoc.callshield.data.repository.ANSWERED_CALLER_THRESHOLD_MIN
 import com.sysadmindoc.callshield.data.repository.ANSWERED_CALLER_WINDOW_DAYS_MAX
@@ -77,6 +86,7 @@ import com.sysadmindoc.callshield.ui.AppLanguage
 import com.sysadmindoc.callshield.ui.DurationTtsText
 import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.StatusMessage
+import com.sysadmindoc.callshield.ui.screens.main.relativeTimeText
 import com.sysadmindoc.callshield.ui.theme.*
 import com.sysadmindoc.callshield.util.startActivitySafely
 import java.text.NumberFormat
@@ -159,6 +169,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
     val externalBlocklists by viewModel.externalBlocklistSubscriptions.collectAsStateWithLifecycle()
     val externalBlocklistPreview by viewModel.externalBlocklistPreview.collectAsStateWithLifecycle()
     val externalBlocklistResult by viewModel.externalBlocklistResult.collectAsStateWithLifecycle()
+    val externalBlocklistUndo by viewModel.externalBlocklistUndo.collectAsStateWithLifecycle()
     var showPushAlertSources by rememberSaveable { mutableStateOf(false) }
     var showNotificationScreeningSources by rememberSaveable { mutableStateOf(false) }
     var showRegionCnapRules by rememberSaveable { mutableStateOf(false) }
@@ -169,6 +180,10 @@ fun SettingsScreen(viewModel: MainViewModel) {
     var showLanguageDialog by rememberSaveable { mutableStateOf(false) }
     var externalBlocklistUrl by rememberSaveable { mutableStateOf("") }
     var externalBlocklistLabel by rememberSaveable { mutableStateOf("") }
+    val feedMirrorUrl by viewModel.feedMirrorUrl.collectAsStateWithLifecycle()
+    val feedMirrorResult by viewModel.feedMirrorResult.collectAsStateWithLifecycle()
+    // Keyed on the stored value so the field shows what was saved, in its normal form.
+    var feedMirrorInput by rememberSaveable(feedMirrorUrl) { mutableStateOf(feedMirrorUrl.orEmpty()) }
 
     val roleManager =
         remember(context) {
@@ -1057,7 +1072,28 @@ fun SettingsScreen(viewModel: MainViewModel) {
                 hapticTick(context)
                 viewModel.removeExternalBlocklist(subscription)
             },
+            canUndo = externalBlocklistUndo != null,
+            onUndo = {
+                hapticTick(context)
+                viewModel.undoRemoveExternalBlocklist()
+            },
             onClearResult = viewModel::clearExternalBlocklistResult,
+        )
+
+        FeedMirrorSettings(
+            input = feedMirrorInput,
+            savedUrl = feedMirrorUrl,
+            result = feedMirrorResult,
+            onInputChange = { feedMirrorInput = it },
+            onSave = {
+                hapticTick(context)
+                viewModel.saveFeedMirror(feedMirrorInput)
+            },
+            onRemove = {
+                hapticTick(context)
+                viewModel.removeFeedMirror()
+            },
+            onClearResult = viewModel::clearFeedMirrorResult,
         )
 
         // About
@@ -1090,11 +1126,15 @@ fun SettingsScreen(viewModel: MainViewModel) {
     }
 
     if (showRegionCnapRules) {
+        val cnapUnavailable by produceState(initialValue = false) {
+            value = viewModel.readCallerNameUnavailable()
+        }
         RegionCnapRulesSheet(
             regionBlockEnabled = regionBlockEnabled,
             allowedRegions = allowedRegions,
             cnapTrustPatterns = cnapTrustPatterns,
             cnapBlockPatterns = cnapBlockPatterns,
+            callerNameUnavailable = cnapUnavailable,
             onSave = viewModel::saveRegionAndCnapRules,
             onDismiss = { showRegionCnapRules = false },
         )
@@ -1657,6 +1697,8 @@ private fun ExternalBlocklistSettings(
     onApplyPreview: (ExternalBlocklistPreview) -> Unit,
     onToggle: (ExternalBlocklistSubscription, Boolean) -> Unit,
     onRemove: (ExternalBlocklistSubscription) -> Unit,
+    canUndo: Boolean,
+    onUndo: () -> Unit,
     onClearResult: () -> Unit,
 ) {
     SettingsCard(stringResource(R.string.settings_external_blocklists)) {
@@ -1742,8 +1784,13 @@ private fun ExternalBlocklistSettings(
                         } else {
                             CatPeach
                         },
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f).semantics { liveRegion = LiveRegionMode.Polite },
                 )
+                if (canUndo) {
+                    TextButton(onClick = onUndo) {
+                        Text(stringResource(R.string.settings_external_blocklist_undo), color = CatBlue)
+                    }
+                }
                 IconButton(onClick = onClearResult) {
                     Icon(Icons.Default.Close, contentDescription = stringResource(R.string.cd_close), tint = CatOverlay)
                 }
@@ -1761,6 +1808,95 @@ private fun ExternalBlocklistSettings(
                 )
                 if (index < subscriptions.lastIndex) {
                     GradientDivider()
+                }
+            }
+        }
+    }
+}
+
+@Composable
+@Suppress("FunctionNaming", "LongMethod", "LongParameterList", "ktlint:standard:function-naming")
+private fun FeedMirrorSettings(
+    input: String,
+    savedUrl: String?,
+    result: StatusMessage?,
+    onInputChange: (String) -> Unit,
+    onSave: () -> Unit,
+    onRemove: () -> Unit,
+    onClearResult: () -> Unit,
+) {
+    SettingsCard(stringResource(R.string.settings_feed_mirror)) {
+        Text(
+            stringResource(R.string.settings_feed_mirror_desc),
+            style = MaterialTheme.typography.bodySmall,
+            color = CatSubtext,
+        )
+        Spacer(Modifier.height(10.dp))
+        OutlinedTextField(
+            value = input,
+            onValueChange = onInputChange,
+            label = { Text(stringResource(R.string.settings_feed_mirror_url)) },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+            leadingIcon = { Icon(Icons.Default.Link, contentDescription = null, tint = CatBlue) },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
+            shape = RoundedCornerShape(8.dp),
+            colors =
+                OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = CatBlue,
+                    unfocusedBorderColor = CardBorderAccent,
+                    focusedLabelColor = CatBlue,
+                    cursorColor = CatBlue,
+                ),
+        )
+        Spacer(Modifier.height(10.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+            PremiumActionButton(
+                label = stringResource(R.string.settings_feed_mirror_jsdelivr),
+                icon = Icons.Default.Public,
+                color = CatBlue,
+                onClick = { onInputChange(FeedMirror.JSDELIVR_BASE_URL) },
+                modifier = Modifier.weight(1f),
+                outlined = true,
+            )
+            PremiumActionButton(
+                label = stringResource(R.string.settings_feed_mirror_save),
+                icon = Icons.Default.Save,
+                color = CatGreen,
+                onClick = onSave,
+                enabled = input.isNotBlank(),
+                modifier = Modifier.weight(1f),
+            )
+        }
+        if (savedUrl != null) {
+            Spacer(Modifier.height(8.dp))
+            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    stringResource(R.string.settings_feed_mirror_active, savedUrl),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = CatSubtext,
+                    modifier = Modifier.weight(1f),
+                )
+                TextButton(onClick = onRemove) {
+                    Text(stringResource(R.string.settings_feed_mirror_remove), color = CatPeach)
+                }
+            }
+        }
+        result?.let { status ->
+            Spacer(Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    status.text,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (status.success) CatGreen else CatPeach,
+                    modifier = Modifier.weight(1f).semantics { liveRegion = LiveRegionMode.Polite },
+                )
+                IconButton(onClick = onClearResult) {
+                    Icon(Icons.Default.Close, contentDescription = stringResource(R.string.cd_close), tint = CatOverlay)
                 }
             }
         }
@@ -1826,15 +1962,38 @@ private fun ExternalBlocklistPreviewPanel(
     }
 }
 
+internal const val EXTERNAL_BLOCKLIST_SWITCH_TAG = "external_blocklist_switch"
+
 @Composable
-@Suppress("FunctionNaming", "ktlint:standard:function-naming")
-private fun ExternalBlocklistSubscriptionRow(
+@Suppress("FunctionNaming", "LongMethod", "ktlint:standard:function-naming")
+internal fun ExternalBlocklistSubscriptionRow(
     subscription: ExternalBlocklistSubscription,
     onToggle: (Boolean) -> Unit,
     onRemove: () -> Unit,
 ) {
+    val removeAction = stringResource(R.string.settings_external_blocklist_remove_action, subscription.label)
+    // One TalkBack item per list that toggles it, with remove as an action on it.
+    // By touch only the switch toggles: turning a list off deletes its numbers,
+    // and a tap on its name shouldn't do that.
     Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .semantics(mergeDescendants = true) {
+                    role = Role.Switch
+                    toggleableState = ToggleableState(subscription.enabled)
+                    onClick {
+                        onToggle(!subscription.enabled)
+                        true
+                    }
+                    customActions =
+                        listOf(
+                            CustomAccessibilityAction(removeAction) {
+                                onRemove()
+                                true
+                            },
+                        )
+                }.padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
@@ -1846,7 +2005,7 @@ private fun ExternalBlocklistSubscriptionRow(
         )
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
             Text(subscription.label, style = MaterialTheme.typography.bodyMedium, color = CatText)
-            Text(subscription.url, style = MaterialTheme.typography.labelSmall, color = CatSubtext)
+            Text(subscription.host, style = MaterialTheme.typography.labelSmall, color = CatSubtext)
             Text(
                 stringResource(
                     R.string.settings_external_blocklist_subscription_stats,
@@ -1857,6 +2016,16 @@ private fun ExternalBlocklistSubscriptionRow(
                 style = MaterialTheme.typography.labelSmall,
                 color = if (subscription.enabled) CatGreen else CatOverlay,
             )
+            if (subscription.enabled && subscription.lastSyncedAt > 0L) {
+                Text(
+                    stringResource(
+                        R.string.settings_external_blocklist_last_synced,
+                        relativeTimeText(subscription.lastSyncedAt),
+                    ),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = CatSubtext,
+                )
+            }
             if (subscription.lastError.isNotBlank()) {
                 Text(subscription.lastError, style = MaterialTheme.typography.labelSmall, color = CatPeach)
             }
@@ -1864,17 +2033,18 @@ private fun ExternalBlocklistSubscriptionRow(
         Switch(
             checked = subscription.enabled,
             onCheckedChange = onToggle,
-            // Associate the switch with its feed — enabling or disabling a whole
-            // blocklist subscription should never be announced without a target.
-            modifier = Modifier.semantics { contentDescription = subscription.label },
+            // The row carries the switch for accessibility services, with the list's name.
+            modifier = Modifier.clearAndSetSemantics { testTag = EXTERNAL_BLOCKLIST_SWITCH_TAG },
             colors =
                 SwitchDefaults.colors(
                     checkedTrackColor = CatGreen,
                     checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
                 ),
         )
-        IconButton(onClick = onRemove) {
-            Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.cd_delete), tint = CatPeach)
+        // Hidden from accessibility services, which reach remove through the row's
+        // custom action. Voice Access has no label for it and needs its grid.
+        IconButton(onClick = onRemove, modifier = Modifier.clearAndSetSemantics { }) {
+            Icon(Icons.Default.Delete, contentDescription = null, tint = CatPeach)
         }
     }
 }

@@ -25,6 +25,11 @@ import com.sysadmindoc.callshield.util.filterAsciiDigits
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+
+/** Both screening paths see one text within seconds; a minute covers a slow listener. */
+internal const val TEXT_DUPLICATE_WINDOW_MS = 60_000L
 
 @Suppress("TooManyFunctions", "LongParameterList")
 class BlocklistRepository(
@@ -245,6 +250,44 @@ class BlocklistRepository(
         CallShieldWidget.refreshAll(context)
         NotificationHelper.notifyBlocked(context, number, matchReason, isCall, smsBody)
     }
+
+    private val textLogLock = Mutex()
+
+    /**
+     * Logs a flagged text once. Google Messages and Samsung Messages are read
+     * by both the SMS receiver and the notification listener, so one text
+     * arrives twice, by paths that see it differently: a notification
+     * truncates the body, number formats differ, and the listener's reason
+     * carries an rcs_ prefix. So the key is the canonical sender inside
+     * [TEXT_DUPLICATE_WINDOW_MS], never the body. The lock stops two
+     * sightings that arrive together from both passing the check.
+     *
+     * @return true when this sighting was logged, false when it repeated one.
+     */
+    suspend fun logFlaggedText(
+        number: String,
+        smsBody: String?,
+        matchReason: String,
+        confidence: Int,
+        ruleId: Long? = null,
+        pipelineDiagnostic: String? = null,
+        timestamp: Long = System.currentTimeMillis(),
+    ): Boolean =
+        textLogLock.withLock {
+            val sender = normalizeLogIdentity(number)
+            if (dao.countFlaggedTextsSince(sender, timestamp - TEXT_DUPLICATE_WINDOW_MS) > 0) return@withLock false
+            logBlockedCall(
+                number = number,
+                isCall = false,
+                smsBody = smsBody,
+                matchReason = matchReason,
+                confidence = confidence,
+                timestamp = timestamp,
+                ruleId = ruleId,
+                pipelineDiagnostic = pipelineDiagnostic,
+            )
+            true
+        }
 
     /**
      * Retain an allowed safety-floor decision for auditability without

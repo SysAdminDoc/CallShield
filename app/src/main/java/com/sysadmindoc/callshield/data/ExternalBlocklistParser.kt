@@ -28,6 +28,8 @@ internal data class ParsedExternalBlocklist(
     val format: String,
     val numbers: List<SpamNumber>,
     val skippedRows: Int,
+    /** Hours between refreshes the list declares for itself, or 0 for none. */
+    val declaredRefreshHours: Int = 0,
 )
 
 private data class ExternalBlocklistRow(
@@ -52,6 +54,13 @@ internal object ExternalBlocklistParser {
     private val typeFields = setOf("type", "category", "label")
     private val descriptionFields = setOf("description", "comment", "name", "reason")
     private val arrayFields = setOf("numbers", "blocklist", "entries", "data")
+
+    private const val EXPIRES_HEADER_LINES = 50
+    private val expiresLine = Regex("""^expires\s*:\s*(.+)$""", RegexOption.IGNORE_CASE)
+
+    // A decimal such as "1.5 hours" is refused rather than read as "1", which
+    // with no unit after it would mean days.
+    private val expiresValue = Regex("""^(\d{1,5})(?![\d.])\s*([a-z]*)""", RegexOption.IGNORE_CASE)
 
     fun parse(
         rawUrl: String,
@@ -104,8 +113,64 @@ internal object ExternalBlocklistParser {
             format = format,
             numbers = numbers,
             skippedRows = skippedRows,
+            declaredRefreshHours = declaredRefreshHours(format, body) ?: 0,
         )
     }
+
+    /**
+     * The refresh interval, in hours, that a list declares for itself, or null
+     * when it declares none. This is uBlock Origin's `Expires:` convention:
+     * text and CSV lists put it in a header comment (`# Expires: 12 hours`),
+     * JSON lists in a top-level `"expires"` value. A bare number means days.
+     */
+    fun declaredRefreshHours(
+        format: String,
+        body: String,
+    ): Int? {
+        val declared =
+            if (format == "json") {
+                jsonExpires(body)
+            } else {
+                // A byte-order mark survives trim() and would hide a first-line header.
+                body
+                    .removePrefix("\uFEFF")
+                    .lineSequence()
+                    .map { it.trim() }
+                    .filter { it.isNotEmpty() }
+                    .take(EXPIRES_HEADER_LINES)
+                    .takeWhile { it.startsWith("#") || it.startsWith("//") }
+                    .map { it.removePrefix("//").removePrefix("#").trim() }
+                    .firstNotNullOfOrNull { expiresLine.find(it)?.groupValues?.get(1) }
+            }
+        return declared?.let(::expiresHours)
+    }
+
+    fun expiresHours(value: String): Int? {
+        val match = expiresValue.find(value.trim()) ?: return null
+        val amount = match.groupValues[1].toInt()
+        if (amount <= 0) return null
+        return when (match.groupValues[2].lowercase()) {
+            "h", "hr", "hrs", "hour", "hours" -> amount
+            "", "d", "day", "days" -> amount * 24
+            else -> null
+        }
+    }
+
+    private fun jsonExpires(body: String): String? =
+        try {
+            val reader = JsonReader.of(Buffer().writeUtf8(body))
+            var value: String? = null
+            if (reader.peek() == JsonReader.Token.BEGIN_OBJECT) {
+                reader.beginObject()
+                while (value == null && reader.hasNext()) {
+                    if (reader.nextName() == "expires") value = reader.nextScalarString() else reader.skipValue()
+                }
+            }
+            value
+        } catch (e: Exception) {
+            // The declaration is optional metadata; never fail a list over it.
+            null
+        }
 
     fun validateHttpUrl(rawUrl: String): String {
         val url =

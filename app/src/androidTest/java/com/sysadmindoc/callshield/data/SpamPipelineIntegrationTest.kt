@@ -21,6 +21,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.time.LocalDate
+import java.time.ZoneOffset
 
 @RunWith(AndroidJUnit4::class)
 class SpamPipelineIntegrationTest {
@@ -127,6 +129,44 @@ class SpamPipelineIntegrationTest {
 
             assertTrue(result.isSpam)
             assertEquals("user_blocklist", result.matchSource)
+        }
+
+    @Test
+    fun trustedStirSignalYieldsToACurrentDatabaseRow() =
+        runBlocking {
+            val number = "+12125550104"
+            dao.insertNumber(
+                SpamNumber(
+                    number = number,
+                    type = "robocall",
+                    lastSeen = LocalDate.now(ZoneOffset.UTC).minusDays(30).toString(),
+                    source = "github",
+                ),
+            )
+
+            val result = repo.isSpam(number = number, callerIdentity = CallerIdentity(verificationStatus = 1))
+
+            assertTrue(result.isSpam)
+            assertEquals("database", result.matchSource)
+        }
+
+    @Test
+    fun trustedStirSignalOverridesAStaleDatabaseRow() =
+        runBlocking {
+            val number = "+12125550105"
+            dao.insertNumber(
+                SpamNumber(
+                    number = number,
+                    type = "robocall",
+                    lastSeen = LocalDate.now(ZoneOffset.UTC).minusDays(900).toString(),
+                    source = "github",
+                ),
+            )
+
+            val result = repo.isSpam(number = number, callerIdentity = CallerIdentity(verificationStatus = 1))
+
+            assertFalse(result.isSpam)
+            assertEquals("stir_shaken_trusted", result.matchSource)
         }
 
     @Test

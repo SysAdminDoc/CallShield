@@ -51,7 +51,8 @@
       "evidence_type": "curated_range",
       "confidence_tier": "curated",
       "redistributable": true,
-      "stale_after_days": 14
+      "stale_after_days": 14,
+      "import_flag": "--include-saracroche"
     },
     {
       "id": "nomorobo_irs",
@@ -77,7 +78,8 @@
       "evidence_type": "community_curated",
       "confidence_tier": "unverified",
       "redistributable": false,
-      "stale_after_days": 30
+      "stale_after_days": 30,
+      "import_flag": "--allow-insecure-sources"
     },
     {
       "id": "community_reports",

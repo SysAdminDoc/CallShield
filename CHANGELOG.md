@@ -4,19 +4,245 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+### Protection
+
+- **Protection data downloads work again.** GitHub moved its certificates to a
+  new set of Let's Encrypt roots around 2026-08-02. The certificate pins in
+  v1.7.36 through v1.7.38 matched only the old ones, so every download of the
+  spam database, trending feeds and ML model has been refused since then. Your
+  phone kept protecting you with the database built into the app, but nothing
+  new arrived. Pins are now set on the Let's Encrypt roots themselves, plus a
+  second CA as a backup, and every release is checked against the live
+  certificate chain before it ships.
+- If this ever happens again, Protection Test says so directly and tells you to
+  update the app, and you get one notification per app version pointing to the
+  latest release. A certificate failure used to look like a successful sync.
+- The ML model evaluation gate now tests the actual weights that ship, at the
+  threshold that ships, on a held-out split that was never used for training or
+  threshold calibration. Previously it trained a fresh model at sklearn's default
+  threshold, which passed easily while the real operating point didn't. The model
+  itself was retrained on the current database with a three-way split (train,
+  calibrate, evaluate).
+- Protection data is now signed. The spam database, the trending feeds and the
+  ML model each come with a signature from the maintainer's key, and the app
+  throws away a download that doesn't carry a valid one and keeps what it
+  already has. Until now certificate pinning was the only check, and when it
+  broke in August nothing else stood between a phone and a tampered file.
+- A download whose signature arrives damaged or late is handled for what it
+  is. Right after a new feed is published, the download network can hand out
+  the new file with the old signature for a few minutes, so a mismatch from
+  GitHub is fetched again at the branch's pinned commit, before it counts as
+  a failure. A signature
+  the server fails to send is a network hiccup to retry, not an unsigned feed.
+  A trending feed that is refused shows as refused in Protection Test instead
+  of "unreachable".
+- An older signed copy of a trending feed can't replace a newer one any more.
+  Someone able to serve files once pinning fails could have replayed an old
+  "nothing trending" feed and wiped the trending numbers on your phone. A
+  trending feed also has to be the feed it says it is, so another signed file
+  served in its place is refused, and one dated in the future can't lock out
+  the genuine feeds after it.
+- The spam model can't be swapped for an older signed copy either. Each model
+  now records when it was trained, and the app keeps the one it has when a
+  download is older.
+- When the real download branch fails, the backup branch that doesn't exist no
+  longer hides why. Its "not found" answer used to replace a passing server
+  error and stop the app from retrying.
+- If GitHub is blocked where you live, Settings > Feed mirror takes a second
+  address for the protection data. CallShield asks GitHub first and then the
+  mirror, falling back to the copy built into the app when neither has data
+  yet. For ten minutes
+  after GitHub couldn't be reached at all, the mirror goes first, so a sync
+  behind a block doesn't wait out a timeout for every file. One tap fills in
+  jsDelivr, which serves the same files and can lag by up to 12 hours. The
+  signature check applies to every mirrored file, so a mirror can't slip in
+  anything the project didn't sign, though it can hold back updates. An
+  address is saved only once it serves a signed copy of the manifest, and a
+  certificate failure on GitHub still brings up the update notice while the
+  mirror is covering for it.
+- The ML scorer no longer judges callers outside North America. It treated any
+  ten-digit number as a US or Canadian one once the `+` was stripped, so an
+  unknown Singapore mobile, or a landline in New Zealand, Belgium, Thailand or
+  Seoul, got scored by a model that has only ever seen North American numbers.
+  About a quarter of random Singapore mobile numbers and a third of New Zealand
+  landlines were being blocked. International numbers now skip the model.
+- A short but valid international number (the Faroes, Greenland, Andorra, some
+  German landlines) is no longer counted as a malformed one by the heuristics.
+- A call your carrier verified no longer rings through automatically when its
+  number is on the spam database. Verification proves the caller owns the line,
+  not that the call is wanted, and about half of all robocalls carry it. It now
+  overrides a database match only when that entry's newest evidence,
+  community reports included, is more than a year old and the number isn't
+  trending right now. A number stays marked as trending until a newer hot list
+  drops it or a week passes from when the list was made, and neither a restart
+  nor a failed download clears the mark. That still protects people whose
+  numbers were spoofed in old complaint data. Your own blocks and allows are
+  unaffected.
+
+- External blocklist subscriptions now stay current. A list used to be
+  fetched only when you added it or switched it back on, so one that changes
+  daily went stale on your phone indefinitely. Each list is now fetched again
+  once a day, or on the interval it declares in an `Expires:` header line,
+  never more often than every six hours. A download that comes back empty or
+  with under half the list's numbers isn't applied in the background, because
+  a broken export looks just like a list that cleaned itself up. The list
+  keeps its last good copy and says why on its row, which also shows when it
+  last updated. A list that fails to refresh says what went wrong: the
+  server's HTTP status, the size or row limit, a download that isn't a list,
+  or a certificate that couldn't be verified.
+- Each blocklist row now names just the host a list comes from, never its
+  whole address, and TalkBack reads the row as one item that switches the list
+  off or on, with Remove in its actions menu. By touch only the switch does
+  that, so a tap on a list's name can't take its numbers out. A list you remove
+  can be put back with Undo right afterwards, numbers included, without
+  downloading it again.
+
+### Interface
+
+- Setup now says what to do when Android won't let a permission through. Apps
+  installed outside an app store run into Android's restricted settings. The
+  grant screen refuses notification access from Android 13, and the overlay
+  and SMS permissions from Android 15, until you choose Allow restricted
+  settings in App info. A step you were sent to grant that comes back still
+  off now says so, with a button that opens App info (issue #21).
+- Number Detail has a Share a false-alarm report button for a number
+  CallShield flagged. It shares the number, the check that decided, its
+  confidence, and the app and database versions, ready to post, and nothing
+  from your messages, contacts or call log. There's no account and nothing is
+  stored.
+- A spam text in Google or Samsung Messages is logged and alerted once. The
+  SMS receiver and the notification reader each logged it, so it showed up
+  twice in the log and the statistics. The alert now says the text was
+  flagged, not blocked, since it still reaches your messages app.
+
+### Live caller lookup
+
+- Three of the four lookup services are gone, so the app no longer asks them.
+  PhoneBlock's hash lookup and OpenCNAM now require accounts, which CallShield
+  never takes, and WhoCalledMe's domain is parked. The parked page came back
+  as a normal web page, so the app read it as "no reports" and showed
+  WhoCalledMe as clean on every enriched call.
+- SkipCalls, the one that still works, is now read correctly. It reports spam in
+  an `is_spam` field the app never looked for, so every number it flagged showed
+  as clean. A flagged number now shows as flagged, and its detail page shows
+  the category SkipCalls gives (scam, for example). SkipCalls never gives a
+  count, so the app no longer shows a made-up "1 report".
+- When SkipCalls can't answer, the caller ID overlay keeps CallShield's own
+  warning and says no source gave a definitive result. It used to switch to a
+  green "Looks Safe".
+- A lookup answer that doesn't look like a lookup result now reads as
+  "unavailable", not "clean". The overlay no longer has a caller-name line,
+  because nothing free provides one any more, and a spam hit no longer shows as
+  "Caller ID found".
+
+- Protection Test now tells a stalled publisher apart from a feed your phone
+  couldn't reach. It reads the date each trending feed says it was generated.
+  A feed that arrives but hasn't been regenerated in over a week reads as
+  stalled, with no advice to retry a sync that is already working. Only a feed
+  that never arrived counts as unreachable. From 2026-08-24 to 2026-09-05 every
+  phone reported "unavailable" when the real problem was on the publishing side.
+- A feed the publisher empties on purpose now reads as a quiet day ("nothing
+  trending right now") instead of "empty, will populate on the next sync".
+- Feed dates written with a `+00:00` offset, which is what the publisher
+  actually writes, now parse on Android 10 to 13 as well.
+
+### Data pipeline
+
+- The pipeline check now notices a stall in the weeks right after a drain. It
+  used to measure the oldest queued report against the database's date, and
+  every report queued after a drain is newer than that, so a second stall ran
+  from 2026-09-05 without it firing. A weekly workflow now measures against the
+  calendar, also flags upstream sources that have gone longer than their
+  `stale_after_days` without an import, and keeps a single `pipeline-stalled`
+  issue open until the next passing run. The importer records each source's
+  last successful import in `data/source-freshness.json` for it.
+- A validation workflow runs the Worker and pipeline test suites on every push
+  that isn't a report commit. It builds nothing and publishes nothing.
+- The pipeline tests no longer write into the real `data/` directory. A test
+  merge had been overwriting the ignored `data/source-snapshot.json` on every
+  run, and one release check passed only because of it. After the liveness
+  change the same merge would also have stamped test imports into
+  `data/source-freshness.json`, the file the weekly check trusts. The test
+  runner now fails if any suite changes a file under `data/`.
+- `feed_signing.py` now trusts only the keys inside the app's `TRUSTED_KEYS`
+  list, read the way the compiler reads it. A key commented out of the list, a
+  note beside a key, or an old declaration left in a comment doesn't count, and
+  the file has to declare the list exactly once. A retired key left behind in a
+  comment could otherwise still sign feeds that new installs refuse. The data
+  README also stops telling you to edit the database after signing it, since
+  the scripts bump its version themselves.
+- `generate_hot_list.py` refuses the fixed test clock (`CALLSHIELD_NOW`) when it
+  would write the real data directory. A feed published with a past stamp is
+  refused by every phone as a replay, and one stamped in the future would block
+  every genuine feed until that time passed.
+
+### Community reports
+
+- Each report goes out once. Reporting the same number the same way again
+  within a day now says you've already reported it instead of sending it
+  again, even after the app restarts. One number had arrived 12 times in a
+  single day, and a double-counted report looks like extra corroboration.
+- A report made offline, or while the report server is busy, is no longer
+  lost. It waits and goes out once the connection is back. That includes the
+  Block and Report buttons on notifications, which used to fail silently.
+- Every report now waits in that outbox while it's being sent, so leaving the
+  screen mid-send, or Android closing the app, can't lose it while the app
+  goes on saying you already reported it. Reporting a number as spam and then
+  as a robocall counts as one vote a day, not two. A report the server turns
+  down, or one the outbox gives up on, can be made again the same day. Lookup
+  now says when a report was queued or already made today instead of always
+  saying it was sent. Leaving the screen mid-send doesn't send a report twice
+  either, since one that got through takes its queued copy back out. Each
+  report now carries an id, which the updated Worker below uses to tell a
+  resend from a second report.
+- The app treats the Worker's "already submitted" answer as delivered only when
+  the Worker says it stored the report. A bare "already submitted" from an
+  older Worker can mean the report was never stored, so the app now tries again
+  later instead of calling it sent.
+- The app's own unit tests no longer send reports. One of them had posted two
+  fictional numbers, +1 555-123-4567 and +1 555-987-6543, to the report service
+  on every run since July, and each landed in this repository's report queue.
+  The merge always rejected both as fictional, so the database never took them.
+
+The rest of this section takes effect when the report Worker is next deployed.
+
+- The Worker counts an IPv6 client by its /64 instead of its full address. One
+  subscriber could otherwise rotate through addresses to slip past the rate
+  limit, or pose as enough independent reporters to put any number on the
+  trending list every phone syncs. Corroboration for that list counts by the
+  /48. IPv4 is unchanged.
+- A "not spam" correction is no longer turned away as a duplicate of the report
+  it corrects.
+- A report that was stored no longer comes back as an error when the Worker
+  can't write its duplicate marker, which had the app send it again.
+- The Worker's landing page shows an example number it actually accepts.
+- The Worker keeps the id each report now carries, remembers it for a week,
+  and answers a resend of a stored report with "already stored", so the app
+  counts it as sent. A report resent after the phone switched networks used
+  to be stored again and counted as a second person reporting the number. The
+  merge, the trending list and the text-domain feed now count a report stored
+  twice under one id once, and the merge still does when the two copies land
+  in different drains. It keeps the ids of reports from the last two weeks in
+  `data/merged_report_ids.json`, and a ledger it can't read stops the merge
+  instead of counting resends twice.
+- The Worker answers "already stored" only when a report's own id matches one
+  it stored. People sharing one home or carrier address got that answer for
+  their own report of the same number, and the app counted it as sent. They
+  now get a plain "try again later", and the app retries.
+
 ### Documentation
 
 - The README now explains the signing-key rotation. Releases v1.7.26 through
   v1.7.29 shipped unsigned and the original keystore password was lost, so the
   key was rotated at v1.7.37. Upgrading over an older install can fail with a
-  signature mismatch; the new Installing section covers exporting a backup
+  signature mismatch. The new Installing section covers exporting a backup
   first and gives the signer certificate SHA-256 to check an APK against. That
   caveat had only ever appeared in a comment on a closed issue.
 - New sideload troubleshooting for GrapheneOS, CalyxOS and stock Android 13+.
   A sideloaded app is put behind restricted settings, so the SMS role and
   notification access are hidden and the permission dialog either never appears
   or appears and changes nothing. The README names the "Allow restricted
-  settings" path and distinguishes it from a genuinely denied permission.
+  settings" path and tells it apart from a permission that's really denied.
 - The detection-pipeline section states that a blocked text still reaches your
   inbox, and why: only the default SMS app controls delivery.
 - `data/README.md` now carries a contract for anything reading the published
@@ -27,13 +253,21 @@ All notable changes to CallShield will be documented in this file.
 - Corrected the string, plural and database-size counts, and gated all three so
   they cannot drift again. The database figure moves on every community merge
   and was the only count nothing checked.
+- Corrected README claims that had drifted from the code. The trending feeds
+  and the ML model are regenerated by hand, not on a schedule, and the full
+  database syncs every 6 hours rather than weekly. The model's threshold comes
+  from its weights file (0.653 today, not 0.7). A "not spam" report can only
+  put a community-only number up for review, a campaign range needs 4
+  trending numbers and 6 reporters, and the app doesn't call PhoneBlock at all.
+- The v1.7.36 notes had lost their heading and sat under v1.7.37. They have
+  their own section again.
 
 ### Data
 
 - Drained a 280-file community report backlog that had been accumulating since
-  the 2026-08-24 merge. Database version 40 adds 132 numbers and updates 31,
-  bringing the total to 51,634. Coverage outside North America grew most:
-  Colombia to 71 rows, Mexico to 36, Russia to 6.
+  the 2026-08-24 merge. Database versions 40 and 41 add 132 numbers and update
+  31 between them, bringing the total to 51,634. Coverage outside North America
+  grew most: Colombia to 71 rows, Mexico to 36, Russia to 6.
 - The merge now lists every submission it rejects as implausible, and reports
   how many were collapsed as duplicates, so a drain that dropped a third of the
   queue no longer reads the same as one that dropped nothing. Votes dropped for
@@ -54,12 +288,30 @@ All notable changes to CallShield will be documented in this file.
   queue was stalled, because each one asked a question about a queue it was
   handed rather than the queue that exists.
 
+### Build
+
+- Took the library updates the current Android build tools can use: Paging
+  3.5.1, Room 2.8.5, AppCompat 1.8.0, KSP 2.3.12, Okio 3.18.2 and
+  Gradle 8.14.5. WorkManager now comes from work-runtime itself, since
+  work-runtime-ktx has been an empty package since 2.9.0. Compose, Navigation
+  and OkHttp stay put until the move to the next build tools, because their
+  current releases need it.
+
 ### Translations
 
 - A shipped locale can no longer decay silently. Each has a coverage floor in
-  `scripts/translation_floors.json` and dropping below it fails the build;
+  `scripts/translation_floors.json`, and dropping below it fails the build.
   zh-rCN starts at 76.1%. A locale with no recorded floor warns instead, so
   adding a translation does not break the build before anyone sets one.
+- `check_translations.py --update-floors` now only ever raises a floor. Run
+  after adding English strings that had no translation yet, it wrote down the
+  lower coverage instead, and the Chinese floor slid from 76.1% to 75.6% that
+  way. The eight strings behind the slide are translated now, and the floor is
+  back up at 76.5%.
+- A floors file that can't be read, such as one left mid-merge, now fails the
+  check. It used to load as empty, which switched the gate off and let
+  `--update-floors` write every floor again from scratch. `--update-floors`
+  also fails when a locale is below its floor, where it used to report success.
 
 ## v1.7.38 (2026-08-29)
 
@@ -103,6 +355,8 @@ All notable changes to CallShield will be documented in this file.
 
 - Blocked +8651667456713, an audiobook-course robocall reported through the
   in-app flow and the issue tracker (issue #20). Database version 38.
+
+## v1.7.36 (2026-08-12)
 
 ### Interface
 

@@ -20,6 +20,16 @@ class CallerIdOverlayPrivacyTest {
     }
 
     @Test
+    fun `a lookup that failed everywhere leaves the local verdict instead of calling the caller safe`() {
+        // SkipCalls is the only source, so its failure used to score 0: "Looks Safe".
+        assertEquals(-1, liveLookupScore(totalReports = 0, anySpam = false, allFinished = true, definitive = 0))
+        assertEquals(0, liveLookupScore(totalReports = 0, anySpam = false, allFinished = true, definitive = 1))
+        assertEquals(-1, liveLookupScore(totalReports = 0, anySpam = false, allFinished = false, definitive = 1))
+        // A verdict without a count still scores as flagged.
+        assertEquals(50, liveLookupScore(totalReports = 0, anySpam = true, allFinished = true, definitive = 1))
+    }
+
+    @Test
     fun `live caller enrichment accepts opted in locally suspicious calls`() {
         assertTrue(shouldRunLiveCallerEnrichment(confidence = 45, optedIn = true))
     }

@@ -20,9 +20,12 @@ import com.sysadmindoc.callshield.data.checker.CheckerDependencies
 import com.sysadmindoc.callshield.data.local.AppDatabase
 import com.sysadmindoc.callshield.data.local.SpamDao
 import com.sysadmindoc.callshield.data.model.*
+import com.sysadmindoc.callshield.data.remote.ExternalBlocklistDataSource
 import com.sysadmindoc.callshield.data.remote.GitHubDataSource
+import com.sysadmindoc.callshield.data.remote.OkHttpExternalBlocklistDataSource
 import com.sysadmindoc.callshield.data.remote.SpamDataSource
 import com.sysadmindoc.callshield.data.repository.BlocklistRepository
+import com.sysadmindoc.callshield.data.repository.FeedMirrorSave
 import com.sysadmindoc.callshield.data.repository.SettingsRepository
 import com.sysadmindoc.callshield.data.repository.SpamRepositoryImpl
 import com.sysadmindoc.callshield.data.repository.SyncRepository
@@ -37,6 +40,12 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
+
+enum class CallerNameSupport {
+    UNKNOWN,
+    PROVIDED,
+    NOT_PROVIDED,
+}
 
 internal fun replaceCorruptPreferences() = ReplaceFileCorruptionHandler<Preferences> { emptyPreferences() }
 
@@ -79,6 +88,7 @@ class SpamRepository(
     privateSettingsDataStore: DataStore<Preferences>? = null,
     private val phoneIdentityCanonicalizer: PhoneIdentityCanonicalizer =
         PhoneIdentityCanonicalizer.fromContext(context.applicationContext),
+    externalBlocklistDataSource: ExternalBlocklistDataSource = OkHttpExternalBlocklistDataSource(),
 ) {
     private val appContext: Context = context.applicationContext
     private val db: AppDatabase = database
@@ -107,6 +117,7 @@ class SpamRepository(
             settingsRepository = settingsRepository,
             normalizeNumber = phoneIdentityCanonicalizer::canonicalizePhone,
             invalidateAllCaches = spamRepositoryImpl::invalidateAllCaches,
+            externalBlocklistDataSource = externalBlocklistDataSource,
         )
     private val blocklistRepository =
         BlocklistRepository(
@@ -131,6 +142,14 @@ class SpamRepository(
         internal val KEY_LAST_MANIFEST_DIGEST = stringPreferencesKey("last_data_manifest_digest")
         internal val KEY_HOT_DATA_LAST_GOOD = longPreferencesKey("hot_data_last_good_timestamp")
         internal val KEY_HOT_DATA_UNAVAILABLE = stringSetPreferencesKey("hot_data_unavailable_feeds")
+        internal val KEY_FEED_TRUST_FAILED_AT = longPreferencesKey("feed_trust_failed_at")
+        internal val KEY_FEED_TRUST_FAILED_VERSION = intPreferencesKey("feed_trust_failed_version")
+        internal val KEY_FEED_TRUST_NOTICE_VERSION = intPreferencesKey("feed_trust_notice_version")
+        internal val KEY_HOT_DATA_UNREACHABLE = stringSetPreferencesKey("hot_data_unreachable_feeds")
+        internal val KEY_HOT_DATA_CLEARED = stringSetPreferencesKey("hot_data_cleared_feeds")
+        internal val KEY_HOT_DATA_REFUSED = stringSetPreferencesKey("hot_data_refused_feeds")
+        internal val KEY_HOT_DATA_GENERATED_AT = stringPreferencesKey("hot_data_feed_generated_at")
+        internal val KEY_HOT_DATA_DIGESTS = stringPreferencesKey("hot_data_feed_digests")
         internal val KEY_DISMISSED_RULE_CONFLICTS = stringSetPreferencesKey("dismissed_rule_conflict_keys")
         val KEY_BLOCK_CALLS = booleanPreferencesKey("block_calls_enabled")
         val KEY_BLOCK_SMS = booleanPreferencesKey("block_sms_enabled")
@@ -170,6 +189,9 @@ class SpamRepository(
         val KEY_ALLOWED_REGIONS = stringSetPreferencesKey("allowed_call_regions")
         val KEY_CNAP_TRUST_PATTERNS = stringSetPreferencesKey("cnap_trust_patterns")
         val KEY_CNAP_BLOCK_PATTERNS = stringSetPreferencesKey("cnap_block_patterns")
+        internal val KEY_CNAP_SCREENED_WITH = intPreferencesKey("cnap_screened_with_name")
+        internal val KEY_CNAP_SCREENED_WITHOUT = intPreferencesKey("cnap_screened_without_name")
+        internal const val CNAP_OBSERVATION_THRESHOLD = 20
         val KEY_CATEGORY_CALL_ACTIONS = stringSetPreferencesKey("category_call_actions")
         val KEY_DB_PREFIX_EXPANSION = booleanPreferencesKey("db_prefix_expansion_enabled")
         val KEY_AGGRESSIVE_MODE = booleanPreferencesKey("aggressive_mode_enabled")
@@ -178,6 +200,11 @@ class SpamRepository(
         val KEY_ANSWERED_CALLER_WINDOW_DAYS = intPreferencesKey("answered_caller_trust_window_days")
         val KEY_EMERGENCY_CALLBACK_GRACE = booleanPreferencesKey("emergency_callback_grace_enabled")
         val KEY_EMERGENCY_CALLBACK_WINDOW_MINUTES = intPreferencesKey("emergency_callback_grace_window_minutes")
+
+        val KEY_REG_SPAIN_400 = booleanPreferencesKey("reg_spain_400_enabled")
+        val KEY_REG_INDIA_140 = booleanPreferencesKey("reg_india_140_enabled")
+        val KEY_REG_BRAZIL_0303 = booleanPreferencesKey("reg_brazil_0303_enabled")
+        val KEY_REG_INDIA_1600_ALLOW = booleanPreferencesKey("reg_india_1600_allow_enabled")
 
         // Feature 9: Time-based blocking
         val KEY_TIME_BLOCK = booleanPreferencesKey("time_block_enabled")
@@ -195,6 +222,7 @@ class SpamRepository(
         internal val KEY_AUTO_CLEANUP = booleanPreferencesKey("auto_cleanup_enabled")
         internal val KEY_CLEANUP_DAYS = intPreferencesKey("cleanup_retention_days")
         internal val KEY_ABSTRACT_API_KEY = stringPreferencesKey("abstract_api_key")
+        internal val KEY_COMMUNITY_REPORT_LEDGER = stringSetPreferencesKey("community_report_ledger")
         internal val KEY_EXTERNAL_BLOCKLIST_SUBSCRIPTIONS =
             stringPreferencesKey("external_blocklist_subscriptions")
         val KEY_ML_SCORER = booleanPreferencesKey("ml_scorer_enabled")
@@ -250,6 +278,26 @@ class SpamRepository(
         internal val KEY_APP_UPDATE_RELEASE_URL = stringPreferencesKey("app_update_release_url")
         internal val KEY_APP_UPDATE_CHECKSUM_URL = stringPreferencesKey("app_update_checksum_url")
         internal val KEY_APP_UPDATE_CHECKED_AT = longPreferencesKey("app_update_checked_at")
+
+        /**
+         * Every number on the last applied hot list, including the ones already
+         * in the database, which get no hot row of their own. The STIR/SHAKEN
+         * trust allow reads it from the screening snapshot.
+         */
+        internal val KEY_TRENDING_NUMBERS = stringSetPreferencesKey("hot_trending_numbers")
+
+        /**
+         * When the last hot list from the network was applied, empty or not.
+         * Its presence means one has been; the STIR/SHAKEN allow stops treating
+         * [KEY_TRENDING_NUMBERS] as current [HOT_ROW_TTL_MS] after it.
+         */
+        internal val KEY_TRENDING_APPLIED_AT = longPreferencesKey("hot_trending_applied_at")
+
+        /** How long a hot-list row, and a number's trending mark, count after the list they came on. */
+        internal const val HOT_ROW_TTL_MS = 7L * 24L * 60L * 60L * 1000L
+
+        /** Base URL of the user's feed mirror ([com.sysadmindoc.callshield.data.remote.FeedMirror]); absent means none. */
+        internal val KEY_FEED_MIRROR_URL = stringPreferencesKey("feed_mirror_url")
 
         /** SharedPreferences key for the synchronous theme mirror (cold-start flash fix). */
         private const val KEY_THEME_CACHE = "app_theme"
@@ -383,8 +431,13 @@ class SpamRepository(
     val appUpdateChecksEnabled: Flow<Boolean> = settingsRepository.appUpdateChecksEnabled
     val appUpdateState: Flow<AppUpdateState> = settingsRepository.appUpdateState
     val externalBlocklistSubscriptions = settingsRepository.externalBlocklistSubscriptions
+    val feedMirrorUrl: Flow<String?> = settingsRepository.feedMirrorUrl
 
     suspend fun setActiveProfileName(name: String?) = settingsRepository.setActiveProfileName(name)
+
+    suspend fun setFeedMirrorUrl(url: String?): Boolean = settingsRepository.setFeedMirrorUrl(url)
+
+    suspend fun saveFeedMirrorUrl(url: String): FeedMirrorSave = syncRepository.saveFeedMirrorUrl(url)
 
     suspend fun setAppUpdateChecksEnabled(enabled: Boolean) = settingsRepository.setAppUpdateChecksEnabled(enabled)
 
@@ -647,6 +700,25 @@ class SpamRepository(
 
     suspend fun removeExternalBlocklistSubscription(id: String) = syncRepository.removeExternalBlocklistSubscription(id)
 
+    suspend fun undoRemoveExternalBlocklistSubscription(id: String) = syncRepository.undoRemoveExternalBlocklistSubscription(id)
+
+    suspend fun refreshDueExternalBlocklists(now: Long = System.currentTimeMillis()): List<ExternalBlocklistRefreshOutcome> = syncRepository.refreshDueExternalBlocklists(now)
+
+    /** False when this number and vote type was already reported in the last day. */
+    suspend fun claimCommunityReport(
+        number: String,
+        vote: String,
+        now: Long = System.currentTimeMillis(),
+    ): Boolean = settingsRepository.claimCommunityReport(number, vote, now)
+
+    /** The database version and date the app last accepted, for a false-alarm report. */
+    internal suspend fun readAcceptedSpamFeedMetadata() = settingsRepository.readAcceptedSpamFeedMetadata()
+
+    suspend fun releaseCommunityReport(
+        number: String,
+        vote: String,
+    ) = settingsRepository.releaseCommunityReport(number, vote)
+
     // ── Blocklist management ───────────────────────────────────────────
     suspend fun blockNumber(
         number: String,
@@ -736,6 +808,17 @@ class SpamRepository(
         pipelineDiagnostic = pipelineDiagnostic,
         origid = origid,
     )
+
+    /** Logs a flagged text once, however many screening paths saw it ([BlocklistRepository.logFlaggedText]). */
+    suspend fun logFlaggedText(
+        number: String,
+        smsBody: String?,
+        matchReason: String,
+        confidence: Int,
+        ruleId: Long? = null,
+        pipelineDiagnostic: String? = null,
+        timestamp: Long = System.currentTimeMillis(),
+    ): Boolean = blocklistRepository.logFlaggedText(number, smsBody, matchReason, confidence, ruleId, pipelineDiagnostic, timestamp)
 
     @Suppress("LongParameterList")
     suspend fun logScreeningExemption(
@@ -915,14 +998,36 @@ class SpamRepository(
     suspend fun dismissRuleConflict(key: String) = settingsRepository.dismissRuleConflict(key)
 
     // ── Hot list (30-minute trending sync) ────────────────────────────
-    suspend fun replaceHotList(numbers: List<SpamNumber>) = syncRepository.replaceHotList(numbers)
+    suspend fun replaceHotList(
+        numbers: List<SpamNumber>,
+        recordTrending: Boolean = true,
+        appliedAt: Long = System.currentTimeMillis(),
+    ) = syncRepository.replaceHotList(numbers, recordTrending, appliedAt)
+
+    internal suspend fun hasAppliedHotList(): Boolean = settingsRepository.hasAppliedHotList()
 
     internal suspend fun readHotDataHealth(): HotDataHealth = settingsRepository.readHotDataHealth()
 
     internal suspend fun recordHotDataHealth(
         lastGoodTimestamp: Long?,
-        unavailableFeeds: Set<String>,
-    ) = settingsRepository.recordHotDataHealth(lastGoodTimestamp, unavailableFeeds)
+        update: HotDataHealthUpdate,
+    ) = settingsRepository.recordHotDataHealth(lastGoodTimestamp, update)
+
+    // ── Feed transport trust (certificate pins) ───────────────────────
+    internal suspend fun recordFeedTrust(failed: Boolean) = settingsRepository.recordFeedTrust(failed)
+
+    internal suspend fun readFeedTrustFailedAt(): Long = settingsRepository.readFeedTrustFailedAt()
+
+    internal suspend fun readLastDataSha(): String? = settingsRepository.readLastDataSha()
+
+    // ── Caller-name screening observation ────────────────────────────
+    internal suspend fun recordCallerNamePresence(hadName: Boolean) = settingsRepository.recordCallerNamePresence(hadName)
+
+    suspend fun readCallerNameSupport(): CallerNameSupport = settingsRepository.readCallerNameSupport()
+
+    internal suspend fun readFeedTrustNoticeVersion(): Int? = settingsRepository.readFeedTrustNoticeVersion()
+
+    internal suspend fun recordFeedTrustNoticeVersion(version: Int) = settingsRepository.recordFeedTrustNoticeVersion(version)
 
     // ── Auto-cleanup ──────────────────────────────────────────────────
     suspend fun cleanupOldLogs() = blocklistRepository.cleanupOldLogs()
@@ -1056,21 +1161,7 @@ internal fun sanitizeDatabaseNumbers(
         if (normalizedNumber.isBlank()) {
             null
         } else {
-            val evidence =
-                json.evidence.ifEmpty {
-                    listOf(
-                        SourceEvidenceJson(
-                            sourceId = "github_database",
-                            evidenceType = "aggregate_database",
-                            license = "CallShield database terms",
-                            attribution = "CallShield maintained spam database",
-                            firstSeen = json.firstSeen,
-                            lastSeen = json.lastSeen,
-                            confidenceTier = if (json.reports >= 2) "corroborated" else "unverified",
-                            parserVersion = "legacy-v1",
-                        ),
-                    )
-                }
+            val evidence = json.evidence.ifEmpty { synthesizedDatabaseEvidence(json) }
             SpamNumber(
                 number = normalizedNumber,
                 type = json.type.trim().ifBlank { "unknown" },
@@ -1086,6 +1177,41 @@ internal fun sanitizeDatabaseNumbers(
             )
         }
     }
+
+/**
+ * Evidence for a row the pipeline published without an evidence list of its
+ * own. A row that came from community reports says so. Its tier comes from
+ * the row's total report count, which includes legacy complaint counts, so
+ * it describes the row, not independent community corroboration.
+ */
+private fun synthesizedDatabaseEvidence(json: SpamNumberJson): List<SourceEvidenceJson> {
+    val tier = if (json.reports >= 2) "corroborated" else "unverified"
+    val database =
+        SourceEvidenceJson(
+            sourceId = "github_database",
+            evidenceType = "aggregate_database",
+            license = "CallShield database terms",
+            attribution = "CallShield maintained spam database",
+            firstSeen = json.firstSeen,
+            lastSeen = json.lastSeen,
+            confidenceTier = tier,
+            parserVersion = "legacy-v1",
+        )
+    if (json.sources.none { it == "community" || it == "community_reports" }) return listOf(database)
+    return listOf(
+        database,
+        SourceEvidenceJson(
+            sourceId = "community_reports",
+            evidenceType = "user_report",
+            license = "CallShield community report policy",
+            attribution = "CallShield users",
+            firstSeen = json.firstSeen,
+            lastSeen = json.lastSeen,
+            confidenceTier = tier,
+            parserVersion = "community-v2",
+        ),
+    )
+}
 
 internal fun mergeHotListNumbers(
     hotNumbers: Collection<SpamNumber>,

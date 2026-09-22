@@ -412,4 +412,134 @@ class SmsContentAnalyzerTest {
 
         assertTrue(result.reasons.contains("spam_domain"))
     }
+
+    // ── Lookalike hostnames ─────────────────────────────────────────────
+
+    @Test
+    fun `lookalike toll and delivery hosts are flagged`() {
+        assertTrue(SmsContentAnalyzer.isLookalikeHost("usps.gov-notice.com"))
+        assertTrue(SmsContentAnalyzer.isLookalikeHost("ezpass-gov.xyz"))
+        assertTrue(SmsContentAnalyzer.isLookalikeHost("sunpass.gov-pay.top"))
+        assertTrue(SmsContentAnalyzer.isLookalikeHost("fastrak.gov-toll.com"))
+        assertTrue(SmsContentAnalyzer.isLookalikeHost("txtag.gov-renewal.com"))
+        assertTrue(SmsContentAnalyzer.isLookalikeHost("gov-usps.claim-notice.xyz"))
+    }
+
+    @Test
+    fun `real brand domains are not flagged as lookalikes`() {
+        assertFalse(SmsContentAnalyzer.isLookalikeHost("usps.com"))
+        assertFalse(SmsContentAnalyzer.isLookalikeHost("tracking.usps.com"))
+        assertFalse(SmsContentAnalyzer.isLookalikeHost("sunpass.com"))
+        assertFalse(SmsContentAnalyzer.isLookalikeHost("bayareafastrak.org"))
+        assertFalse(SmsContentAnalyzer.isLookalikeHost("txtag.org"))
+    }
+
+    @Test
+    fun `hosts without gov-like labels are not flagged`() {
+        assertFalse(SmsContentAnalyzer.isLookalikeHost("usps-tracking.com"))
+        assertFalse(SmsContentAnalyzer.isLookalikeHost("ezpass.claim.com"))
+    }
+
+    @Test
+    fun `lookalike host scores as phishing in analyze`() {
+        val result = SmsContentAnalyzer.analyze("Your toll is unpaid. Pay now: https://ezpass.gov-pay.xyz/pay")
+        assertTrue(result.reasons.contains("lookalike_host"))
+        assertTrue(result.score >= 45)
+    }
+
+    // ── Spanish patterns ────────────────────────────────────────────────
+
+    @Test
+    fun `Spanish prize scam is detected`() {
+        val result = SmsContentAnalyzer.analyze("Has ganado un premio de 5000 USD. Reclama tu regalo ahora.")
+        assertTrue(result.reasons.contains("spam_keywords"))
+    }
+
+    @Test
+    fun `Spanish account lock scam is detected`() {
+        val result = SmsContentAnalyzer.analyze("Su cuenta ha sido suspendida. Verifica tu identidad inmediatamente.")
+        assertTrue(result.reasons.contains("spam_keywords"))
+    }
+
+    @Test
+    fun `Spanish package scam is detected`() {
+        val result = SmsContentAnalyzer.analyze("Su paquete esta retenido en la aduana. Pague el impuesto para liberar.")
+        assertTrue(result.reasons.contains("spam_keywords"))
+    }
+
+    @Test
+    fun `Spanish bank scam is detected`() {
+        val result = SmsContentAnalyzer.analyze("Su tarjeta de credito ha sido bloqueado. Verificar su cuenta ahora.")
+        assertTrue(result.reasons.contains("spam_keywords"))
+    }
+
+    @Test
+    fun `normal Spanish text is not flagged`() {
+        assertEquals(0, SmsContentAnalyzer.analyze("Hola, te espero a las 3 para el almuerzo.").score)
+        assertEquals(0, SmsContentAnalyzer.analyze("Tu cita con el doctor es a las 10 de la manana.").score)
+    }
+
+    // ── Portuguese patterns ─────────────────────────────────────────────
+
+    @Test
+    fun `Portuguese prize scam is detected`() {
+        val result = SmsContentAnalyzer.analyze("Parabens! Voce ganhou um premio especial. Resgate seu presente agora.")
+        assertTrue(result.reasons.contains("spam_keywords"))
+    }
+
+    @Test
+    fun `Portuguese account lock scam is detected`() {
+        val result = SmsContentAnalyzer.analyze("Sua conta foi suspensa. Verificar sua identidade para restaurar.")
+        assertTrue(result.reasons.contains("spam_keywords"))
+    }
+
+    @Test
+    fun `Portuguese package scam is detected`() {
+        val result = SmsContentAnalyzer.analyze("Sua encomenda esta retido na alfandega. Pague a taxa para liberar.")
+        assertTrue(result.reasons.contains("spam_keywords"))
+    }
+
+    @Test
+    fun `Portuguese Pix scam is detected`() {
+        val result = SmsContentAnalyzer.analyze("Deposito via Pix urgente de R$ 2.500. Confirme agora.")
+        assertTrue(result.reasons.contains("spam_keywords"))
+    }
+
+    @Test
+    fun `normal Portuguese text is not flagged`() {
+        assertEquals(0, SmsContentAnalyzer.analyze("Oi, tudo bem? Vamos nos encontrar amanha?").score)
+        assertEquals(0, SmsContentAnalyzer.analyze("Seu pedido foi enviado e chegara em 3 dias.").score)
+    }
+
+    // ── Italian patterns ────────────────────────────────────────────────
+
+    @Test
+    fun `Italian prize scam is detected`() {
+        val result = SmsContentAnalyzer.analyze("Congratulazioni! Hai vinto un premio di 1000 EUR. Riscuoti il tuo regalo.")
+        assertTrue(result.reasons.contains("spam_keywords"))
+    }
+
+    @Test
+    fun `Italian account lock scam is detected`() {
+        val result = SmsContentAnalyzer.analyze("Il tuo conto e stato sospeso. Verifica la tua identita per riattivarlo.")
+        assertTrue(result.reasons.contains("spam_keywords"))
+    }
+
+    @Test
+    fun `Italian package scam is detected`() {
+        val result = SmsContentAnalyzer.analyze("Il tuo pacco e stato trattenuto alla dogana. Paga la tassa di sdoganamento.")
+        assertTrue(result.reasons.contains("spam_keywords"))
+    }
+
+    @Test
+    fun `Italian bank scam is detected`() {
+        val result = SmsContentAnalyzer.analyze("La tua carta di credito e stata bloccato. Verificare il tuo conto.")
+        assertTrue(result.reasons.contains("spam_keywords"))
+    }
+
+    @Test
+    fun `normal Italian text is not flagged`() {
+        assertEquals(0, SmsContentAnalyzer.analyze("Ciao, ci vediamo alle 15 per il pranzo.").score)
+        assertEquals(0, SmsContentAnalyzer.analyze("Il tuo appuntamento dal medico e alle 10.").score)
+    }
 }

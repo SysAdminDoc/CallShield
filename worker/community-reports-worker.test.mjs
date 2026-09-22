@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { createHmac } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import worker, {
@@ -11,11 +12,13 @@ import worker, {
   sanitizeSmsReportFields,
   sanitizeSmsUrlIndicators,
   checkRateLimit,
+  clientKey,
   getClientIp,
   checkDedup,
   deriveReporterBucket,
   recordDedup,
   validateReportEnvironment,
+  validatedReportId,
 } from "./community-reports-worker.js";
 
 const FIXTURES = JSON.parse(
@@ -287,16 +290,16 @@ test("dedup rejects same IP + number only after the report is recorded", async (
   const kv = createMockKV();
   const env = { RATE_LIMIT: kv };
 
-  const first = await checkDedup("1.2.3.4", "+12125551234", env);
+  const first = await checkDedup("1.2.3.4", "+12125551234", "spam", env);
   assert.equal(first, false, "first report should not be a duplicate");
 
   // checkDedup is read-only: until recordDedup runs (i.e. the GitHub PUT
   // succeeded), a retry after a failed store must NOT be treated as a dupe.
-  const retryAfterFailedStore = await checkDedup("1.2.3.4", "+12125551234", env);
+  const retryAfterFailedStore = await checkDedup("1.2.3.4", "+12125551234", "spam", env);
   assert.equal(retryAfterFailedStore, false, "unrecorded report must be retryable");
 
-  await recordDedup("1.2.3.4", "+12125551234", env);
-  const second = await checkDedup("1.2.3.4", "+12125551234", env);
+  await recordDedup("1.2.3.4", "+12125551234", "spam", env);
+  const second = await checkDedup("1.2.3.4", "+12125551234", "spam", env);
   assert.equal(second, true, "same IP + number should be a duplicate once recorded");
 });
 
@@ -304,8 +307,8 @@ test("dedup allows same number from different IP", async () => {
   const kv = createMockKV();
   const env = { RATE_LIMIT: kv };
 
-  await recordDedup("1.2.3.4", "+12125551234", env);
-  const result = await checkDedup("5.6.7.8", "+12125551234", env);
+  await recordDedup("1.2.3.4", "+12125551234", "spam", env);
+  const result = await checkDedup("5.6.7.8", "+12125551234", "spam", env);
   assert.equal(result, false, "different IP should not be a duplicate");
 });
 
@@ -313,21 +316,102 @@ test("dedup allows same IP for different numbers", async () => {
   const kv = createMockKV();
   const env = { RATE_LIMIT: kv };
 
-  await recordDedup("1.2.3.4", "+12125551234", env);
-  const result = await checkDedup("1.2.3.4", "+14155551234", env);
+  await recordDedup("1.2.3.4", "+12125551234", "spam", env);
+  const result = await checkDedup("1.2.3.4", "+14155551234", "spam", env);
   assert.equal(result, false, "different number should not be a duplicate");
+});
+
+test("a corrective not_spam report is not a duplicate of the report it corrects", async () => {
+  const env = { RATE_LIMIT: createMockKV() };
+
+  await recordDedup("1.2.3.4", "+12125551234", "spam", env);
+
+  assert.equal(await checkDedup("1.2.3.4", "+12125551234", "spam", env), true);
+  assert.equal(await checkDedup("1.2.3.4", "+12125551234", "not_spam", env), false);
+});
+
+test("dedup covers every address in one IPv6 /64 and no other /64", async () => {
+  const env = { RATE_LIMIT: createMockKV() };
+
+  await recordDedup("2001:db8:1:2::a", "+12125551234", "spam", env);
+
+  assert.equal(await checkDedup("2001:db8:1:2:ffff::b", "+12125551234", "spam", env), true);
+  assert.equal(await checkDedup("2001:db8:1:3::a", "+12125551234", "spam", env), false);
 });
 
 test("dedup only permits missing KV behind the explicit local flag", async () => {
   const localEnv = { ALLOW_UNLIMITED_REPORTS: "true" };
-  await recordDedup("1.2.3.4", "+12125551234", localEnv);
-  const result = await checkDedup("1.2.3.4", "+12125551234", localEnv);
+  await recordDedup("1.2.3.4", "+12125551234", "spam", localEnv);
+  const result = await checkDedup("1.2.3.4", "+12125551234", "spam", localEnv);
   assert.equal(result, false);
 });
 
 test("dedup fails closed when KV is not bound", async () => {
-  await assert.rejects(checkDedup("1.2.3.4", "+12125551234", {}), /RATE_LIMIT/);
-  await assert.rejects(recordDedup("1.2.3.4", "+12125551234", {}), /RATE_LIMIT/);
+  await assert.rejects(checkDedup("1.2.3.4", "+12125551234", "spam", {}), /RATE_LIMIT/);
+  await assert.rejects(recordDedup("1.2.3.4", "+12125551234", "spam", {}), /RATE_LIMIT/);
+});
+
+// ── IPv6 prefix keying ────────────────────────────────────────────────
+// One IPv6 subscriber holds a /64 at least, so a full-address key let one
+// line act as endless distinct clients and "reporters".
+
+test("an IPv6 client is keyed by its /64 and bucketed by its /48", () => {
+  assert.equal(clientKey("2001:db8:abcd:12::1", 64), clientKey("2001:0DB8:abcd:0012:ffff:ffff:ffff:ffff", 64));
+  assert.notEqual(clientKey("2001:db8:abcd:12::1", 64), clientKey("2001:db8:abcd:13::1", 64));
+  assert.equal(clientKey("2001:db8:abcd:12::1", 48), clientKey("2001:db8:abcd:ff00::1", 48));
+  assert.notEqual(clientKey("2001:db8:abcd::1", 48), clientKey("2001:db8:abce::1", 48));
+  assert.equal(clientKey("2001:db8::", 64), clientKey("2001:0db8:0000:0000:0000:0000:0000:0000", 64));
+  assert.equal(clientKey("2001:db8:abcd:12::1", 64), "2001:0db8:abcd:0012::/64");
+});
+
+test("IPv4 keys are unchanged, including an IPv4 address in IPv6-mapped form", () => {
+  assert.equal(clientKey("203.0.113.7", 64), "203.0.113.7");
+  assert.equal(clientKey(" 203.0.113.7 ", 48), "203.0.113.7");
+  assert.equal(clientKey("::ffff:203.0.113.7", 64), "203.0.113.7");
+  assert.equal(clientKey("::ffff:cb00:7107", 64), "203.0.113.7");
+});
+
+test("two addresses in one IPv6 /64 share a rate-limit key", async () => {
+  const calls = [];
+  const limiterEnv = {
+    REPORT_LIMITER: {
+      async limit({ key }) {
+        calls.push(key);
+        return { success: true };
+      },
+    },
+  };
+  await checkRateLimit("2001:db8:1:2::a", limiterEnv);
+  await checkRateLimit("2001:db8:1:2:ffff:ffff:ffff:b", limiterEnv);
+  assert.equal(calls.length, 2);
+  assert.equal(calls[0], calls[1]);
+
+  // The KV fallback counts them together too.
+  const kvEnv = { RATE_LIMIT: createMockKV() };
+  for (let i = 1; i <= 5; i++) {
+    assert.equal((await checkRateLimit(`2001:db8:1:2::${i}`, kvEnv)).allowed, true);
+  }
+  assert.equal((await checkRateLimit("2001:db8:1:2::99", kvEnv)).allowed, false);
+  assert.equal((await checkRateLimit("2001:db8:1:3::1", kvEnv)).allowed, true);
+});
+
+test("two /64s in one /48 share a reporter bucket and another /48 does not", async () => {
+  const secret = "s".repeat(32);
+  const at = "2026-08-01T08:00:00Z";
+  const first = await deriveReporterBucket("2001:db8:abcd:1::1", at, secret);
+  const second = await deriveReporterBucket("2001:db8:abcd:2::1", at, secret);
+  const elsewhere = await deriveReporterBucket("2001:db8:abce:1::1", at, secret);
+
+  assert.equal(first, second);
+  assert.notEqual(first, elsewhere);
+});
+
+test("an IPv4 reporter bucket is the one it has always been", async () => {
+  // A deploy that changed IPv4 buckets would split one day's reporters in two.
+  const secret = "s".repeat(32);
+  const expected = createHmac("sha256", secret).update("v1:2026-08-01:203.0.113.7").digest("hex").slice(0, 16);
+
+  assert.equal(await deriveReporterBucket("203.0.113.7", "2026-08-01T08:00:00Z", secret), expected);
 });
 
 test("report environment requires every production abuse-control binding", () => {
@@ -449,6 +533,51 @@ test("POST returns 503 for corrupt KV state and 400 for malformed JSON", async (
   assert.equal(malformedRequest.status, 400);
 });
 
+test("a dedup-write failure after the report is stored still returns success", async () => {
+  // The report is already committed, so a 500 would make the app submit it again.
+  const kv = createMockKV();
+  const put = kv.put.bind(kv);
+  kv.put = async (key, value, options) => {
+    if (key.startsWith("dedup:")) throw new Error("KV write failed");
+    return put(key, value, options);
+  };
+  const originalFetch = globalThis.fetch;
+  const originalError = console.error;
+  let commits = 0;
+  const errors = [];
+  globalThis.fetch = async () => {
+    commits += 1;
+    return new Response("{}", { status: 201 });
+  };
+  console.error = (...args) => errors.push(args.join(" "));
+  try {
+    const response = await worker.fetch(
+      new Request("https://reports.example", {
+        method: "POST",
+        headers: { "content-type": "application/json", "cf-connecting-ip": "203.0.113.60" },
+        body: JSON.stringify({ number: "+12122340101", type: "spam" }),
+      }),
+      { RATE_LIMIT: kv, GITHUB_TOKEN: "test-token", REPORTER_BUCKET_SECRET: "s".repeat(32) },
+    );
+    assert.equal(response.status, 200);
+    assert.equal(commits, 1);
+    assert.equal(errors.some((line) => line.includes("dedup marker")), true);
+  } finally {
+    globalThis.fetch = originalFetch;
+    console.error = originalError;
+  }
+});
+
+test("the landing page example is a number the plausibility check accepts", async () => {
+  // A copied 555 example is refused as invalid, and the fictional 555-01XX
+  // range is refused with every other 555 exchange.
+  const page = await (await worker.fetch(new Request("https://reports.example"), {})).text();
+  const example = page.match(/"number":"(\+\d+)"/)?.[1];
+
+  assert.ok(example, "the landing page shows an example request");
+  assert.equal(isPlausibleReportNumber(normalizePhoneNumberForReport(example)), true);
+});
+
 test("stored reports carry only a daily reporter bucket, never an IP", async () => {
   const originalFetch = globalThis.fetch;
   let githubPayload;
@@ -476,6 +605,124 @@ test("stored reports carry only a daily reporter bucket, never an IP", async () 
     const report = JSON.parse(atob(githubPayload.content));
     assert.match(report.reporter_bucket, /^[a-f0-9]{16}$/);
     assert.equal(JSON.stringify(report).includes("203.0.113.7"), false);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("report ids are checked and lowercased", () => {
+  assert.equal(validatedReportId("3F1C9A52-7D4E-4B8A-9C1D-2E5F6A7B8C9D"), "3f1c9a52-7d4e-4b8a-9c1d-2e5f6a7b8c9d");
+  assert.equal(validatedReportId("not-an-id"), "");
+  assert.equal(validatedReportId(42), "");
+});
+
+test("a report resent under its id from another network is a duplicate", async () => {
+  const env = { RATE_LIMIT: createMockKV() };
+  const id = "3f1c9a52-7d4e-4b8a-9c1d-2e5f6a7b8c9d";
+
+  await recordDedup("2001:db8:1:2::a", "+12122340101", "spam", env, id);
+
+  // Wi-Fi to cellular is another /64, so only the id can recognise the resend.
+  assert.equal(await checkDedup("198.51.100.9", "+12122340101", "spam", env, id), true);
+  assert.equal(await checkDedup("198.51.100.9", "+12122340101", "spam", env, "0b1c2d3e-4f5a-4b6c-8d7e-9f0a1b2c3d4e"), false);
+  assert.equal(await checkDedup("198.51.100.9", "+12122340101", "spam", env), false);
+});
+
+/** POSTs one report through the whole handler, with GitHub played by `answer`. */
+async function postReports(requests, answer) {
+  const originalFetch = globalThis.fetch;
+  const originalError = console.error;
+  const stored = [];
+  globalThis.fetch = async (_url, options) => {
+    const status = answer(stored.length);
+    if (status === 201) stored.push(JSON.parse(atob(JSON.parse(options.body).content)));
+    return new Response("{}", { status });
+  };
+  console.error = () => {};
+  const env = { RATE_LIMIT: createMockKV(), GITHUB_TOKEN: "test-token", REPORTER_BUCKET_SECRET: "s".repeat(32) };
+  try {
+    const responses = [];
+    for (const { ip, body } of requests) {
+      const response = await worker.fetch(
+        new Request("https://reports.example", {
+          method: "POST",
+          headers: { "content-type": "application/json", "cf-connecting-ip": ip },
+          body: JSON.stringify(body),
+        }),
+        env,
+      );
+      responses.push({ status: response.status, body: await response.json() });
+    }
+    return { responses, stored };
+  } finally {
+    globalThis.fetch = originalFetch;
+    console.error = originalError;
+  }
+}
+
+test("a report whose store failed is stored when it's sent again", async () => {
+  // The markers go in only after the PUT. Written any earlier, the resend would
+  // be answered "already stored" and the app would drop a report GitHub never took.
+  const report = { number: "+12122340101", type: "spam", report_id: "5c1d2e3f-4a5b-4c6d-8e7f-9a0b1c2d3e4f" };
+  let calls = 0;
+  const { responses, stored } = await postReports(
+    [
+      { ip: "203.0.113.70", body: report },
+      { ip: "203.0.113.70", body: report },
+    ],
+    () => (calls++ === 0 ? 500 : 201),
+  );
+
+  assert.equal(responses[0].status, 500);
+  assert.equal(responses[1].status, 200);
+  assert.equal(stored.length, 1);
+  assert.equal(stored[0].report_id, report.report_id);
+});
+
+test("a second report of a number from a shared address isn't answered as already stored", async () => {
+  // A household or carrier NAT shares one client key. Only the report's own id
+  // may say it's stored; anything else is a plain "try later", which the app retries.
+  const report = (id) => ({ number: "+12122340101", type: "spam", report_id: id });
+  const { responses, stored } = await postReports(
+    [
+      { ip: "203.0.113.80", body: report("6d2e3f4a-5b6c-4d7e-8f9a-0b1c2d3e4f5a") },
+      { ip: "203.0.113.80", body: report("7e3f4a5b-6c7d-4e8f-9a0b-1c2d3e4f5a6b") },
+    ],
+    () => 201,
+  );
+
+  assert.equal(responses[0].status, 200);
+  assert.equal(responses[1].status, 429);
+  assert.equal(responses[1].body.already_stored, undefined);
+  assert.equal(stored.length, 1);
+});
+
+test("a stored report keeps its id, and its resend is answered as already stored", async () => {
+  const originalFetch = globalThis.fetch;
+  const payloads = [];
+  globalThis.fetch = async (_url, options) => {
+    payloads.push(JSON.parse(options.body));
+    return new Response("{}", { status: 201 });
+  };
+  const env = { RATE_LIMIT: createMockKV(), GITHUB_TOKEN: "test-token", REPORTER_BUCKET_SECRET: "s".repeat(32) };
+  const send = (ip) =>
+    worker.fetch(
+      new Request("https://reports.example", {
+        method: "POST",
+        headers: { "content-type": "application/json", "cf-connecting-ip": ip },
+        body: JSON.stringify({ number: "+12122340101", type: "spam", report_id: "3f1c9a52-7d4e-4b8a-9c1d-2e5f6a7b8c9d" }),
+      }),
+      env,
+    );
+  try {
+    const first = await send("203.0.113.7");
+    const resend = await send("198.51.100.9");
+
+    assert.equal(first.status, 200);
+    assert.equal(JSON.parse(atob(payloads[0].content)).report_id, "3f1c9a52-7d4e-4b8a-9c1d-2e5f6a7b8c9d");
+    assert.equal(resend.status, 429);
+    assert.equal((await resend.json()).already_stored, true);
+    assert.equal(payloads.length, 1, "the resend is not stored again");
   } finally {
     globalThis.fetch = originalFetch;
   }

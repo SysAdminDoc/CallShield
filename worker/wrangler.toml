@@ -9,15 +9,17 @@ compatibility_date = "2024-01-01"
 # ALLOW_UNLIMITED_REPORTS is intentionally absent. It is a local-test escape
 # hatch only; setting it in a deployed environment disables the KV guard.
 
-# Rate-limit KV namespace (per-IP+number dedup markers, and the fallback
-# burst counter when the limiter binding below is unavailable). Create with:
+# Rate-limit KV namespace (per-client+number+type dedup markers, and the
+# fallback burst counter when the limiter binding below is unavailable). A
+# client is an IPv4 address or an IPv6 /64. Create with:
 #   wrangler kv namespace create RATE_LIMIT
 # then paste the returned id below.
 [[kv_namespaces]]
 binding = "RATE_LIMIT"
 id = "REPLACE_WITH_KV_NAMESPACE_ID"
 
-# Atomic per-IP burst control. The Workers rate-limiting binding evaluates its
+# Atomic per-client burst control, keyed like the dedup markers above (an IPv4
+# address or an IPv6 /64). The Workers rate-limiting binding evaluates its
 # counter atomically per key, so a burst of concurrent requests cannot slip
 # past the cap the way it can between the KV counter's read and write. The
 # namespace_id is an arbitrary account-unique integer (no dashboard
