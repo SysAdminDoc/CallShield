@@ -31,7 +31,7 @@ def atomic_write_json(path: Path, payload: Any, indent: int = 2) -> None:
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(path.suffix + ".tmp")
-    with open(tmp, "w", encoding="utf-8") as f:
+    with open(tmp, "w", encoding="utf-8", newline="\n") as f:
         json.dump(payload, f, indent=indent)
     with open(tmp, encoding="utf-8") as f:  # validate before swapping into place
         json.load(f)
