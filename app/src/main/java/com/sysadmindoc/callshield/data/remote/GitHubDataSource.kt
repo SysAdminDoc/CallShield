@@ -651,7 +651,9 @@ class GitHubDataSource internal constructor(
      * Fetches the manifest and its signature from [baseUrl] the way a sync
      * would, so a mirror that serves nothing, an error page for every path,
      * or unsigned copies is caught before it's saved rather than at the
-     * next GitHub outage.
+     * next GitHub outage. Only the manifest pair is probed: it validates
+     * the signature and JSON shape, which is enough to confirm the mirror
+     * serves real, signed data. Individual feeds are verified at sync time.
      */
     override suspend fun probeMirror(baseUrl: String): Result<Unit> =
         withContext(Dispatchers.IO) {

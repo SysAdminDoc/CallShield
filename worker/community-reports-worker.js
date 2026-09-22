@@ -443,6 +443,9 @@ export async function checkDedup(ip, normalizedNumber, type, env, reportId = "")
 
   const existing = await env.RATE_LIMIT.get(dedupKey(ip, normalizedNumber, type));
   if (existing !== null) return true;
+  // The handler calls isStoredReport(reportId) first, so when the handler
+  // reaches checkDedup the reportId is always empty (its default). The
+  // branch below is retained for direct callers and test coverage.
   if (!reportId) return false;
   return (await env.RATE_LIMIT.get(reportIdKey(reportId))) !== null;
 }
