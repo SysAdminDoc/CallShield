@@ -27,6 +27,8 @@ class SmsReceiver : BroadcastReceiver() {
     lateinit var applicationScope: CoroutineScope
 
     companion object {
+        internal const val CARRIER_REPORT_SHORT_CODE = "7726"
+
         /**
          * Logs a text this receiver flagged. For Google and Samsung Messages the
          * notification listener sees the same text, and
@@ -112,6 +114,9 @@ class SmsReceiver : BroadcastReceiver() {
                 }
 
                 sender = messages[0].originatingAddress?.takeIf { it.isNotBlank() } ?: return@launch
+                if (sender == CARRIER_REPORT_SHORT_CODE || sender.endsWith(CARRIER_REPORT_SHORT_CODE)) {
+                    return@launch
+                }
                 body = reassembleBody(messages.map { it.messageBody })
 
                 // Spam classification + block logging is gated behind the

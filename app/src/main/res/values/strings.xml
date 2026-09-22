@@ -1240,6 +1240,7 @@
     <string name="detail_not_spam">Not Spam</string>
     <string name="detail_not_spam_pending">Marked not spam</string>
     <string name="detail_undo">Undo</string>
+    <string name="detail_report_carrier">Report to carrier (7726)</string>
     <string name="detail_remove_my_rule">Remove my rule</string>
     <string name="detail_ftc_complaint">File FTC Do Not Call Complaint</string>
     <string name="detail_whitelist">Trust</string>

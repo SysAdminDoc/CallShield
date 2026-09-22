@@ -52,6 +52,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.*
 
+private val NANP_REGIONS = setOf("US", "CA", "PR", "VI", "GU", "AS", "MP")
+
 @Composable
 fun NumberDetailScreen(
     number: String,
@@ -658,9 +660,29 @@ fun NumberDetailScreen(
             }
         }
 
-        // FTC fraud report — copies the number + opens reportfraud.ftc.gov.
-        // The FTC form doesn't accept URL params, so we do the next-best
-        // thing: clipboard-seed the number and tell the user to paste.
+        val homeRegion = remember {
+            com.sysadmindoc.callshield.data.PhoneIdentityCanonicalizer.cachedFromContext(context).homeRegionIso
+        }
+        val nanpRegion = homeRegion != null && homeRegion in NANP_REGIONS
+
+        if (nanpRegion) {
+            PremiumActionButton(
+                label = stringResource(R.string.detail_report_carrier),
+                icon = Icons.Default.Sms,
+                color = CatBlue,
+                onClick = {
+                    hapticTick(context)
+                    context.startActivitySafely(
+                        Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:7726")).apply {
+                            putExtra("sms_body", number)
+                        },
+                    )
+                },
+                modifier = Modifier.fillMaxWidth(),
+                outlined = true,
+            )
+        }
+
         PremiumActionButton(
             label = stringResource(R.string.detail_ftc_complaint),
             icon = Icons.Default.Gavel,
