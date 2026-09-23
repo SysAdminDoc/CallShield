@@ -191,6 +191,10 @@ All notable changes to CallShield will be documented in this file.
 
 - Tapping the "blocked recently" notification opens the Blocked log now. It
   used to do nothing at all.
+- Blocking a number with the Block button at the bottom of Lookup saved the
+  name of the check that flagged it ("prefix", "database") as the block's
+  note, and Lookup then showed that under Details. It saves the result's
+  own description now, the same as the other Block button on that screen.
 - After the screen rotated or the font size changed, the next tap on an app
   shortcut or on that notification could be ignored. It opens its tab every
   time now, and it closes an open search, which used to cover the tab.

@@ -511,7 +511,9 @@ fun LookupScreen(viewModel: MainViewModel) {
                                             try {
                                                 val blocked =
                                                     withContext(Dispatchers.IO) {
-                                                        repo.blockNumber(resultNumber, lookupResult.type, lookupResult.matchSource)
+                                                        // The description becomes the block's note, which Lookup and
+                                                        // the block log show; the checker id is no note.
+                                                        repo.blockNumber(resultNumber, lookupResult.type.ifEmpty { "spam" }, lookupResult.description)
                                                     }
                                                 if (blocked) {
                                                     hapticConfirm(context)
