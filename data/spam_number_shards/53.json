@@ -112,6 +112,17 @@
       ]
     },
     {
+      "number": "+12068000733",
+      "type": "spam",
+      "reports": 1,
+      "first_seen": "2026-09-14",
+      "last_seen": "2026-09-14",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
+    },
+    {
       "number": "+12069469656",
       "type": "robocall",
       "reports": 7,

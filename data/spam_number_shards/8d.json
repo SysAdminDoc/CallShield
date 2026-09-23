@@ -772,6 +772,17 @@
       ]
     },
     {
+      "number": "+14252172260",
+      "type": "spam",
+      "reports": 1,
+      "first_seen": "2026-09-08",
+      "last_seen": "2026-09-08",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
+    },
+    {
       "number": "+14256593880",
       "type": "robocall",
       "reports": 4,

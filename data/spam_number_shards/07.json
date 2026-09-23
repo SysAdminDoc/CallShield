@@ -409,6 +409,17 @@
       ]
     },
     {
+      "number": "+13058097266",
+      "type": "spam",
+      "reports": 1,
+      "first_seen": "2026-09-18",
+      "last_seen": "2026-09-18",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
+    },
+    {
       "number": "+13104395843",
       "type": "robocall",
       "reports": 2,

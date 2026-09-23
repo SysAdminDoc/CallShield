@@ -563,6 +563,17 @@
       ]
     },
     {
+      "number": "+13607402388",
+      "type": "spam",
+      "reports": 1,
+      "first_seen": "2026-09-14",
+      "last_seen": "2026-09-14",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
+    },
+    {
       "number": "+14044187196",
       "type": "robocall",
       "reports": 9,
@@ -1033,6 +1044,17 @@
       "description": "FCC: Telemarketing (inclu",
       "sources": [
         "legacy_import"
+      ]
+    },
+    {
+      "number": "+16104675874",
+      "type": "spam",
+      "reports": 1,
+      "first_seen": "2026-09-19",
+      "last_seen": "2026-09-19",
+      "description": "Community reported",
+      "sources": [
+        "community"
       ]
     },
     {
@@ -2295,6 +2317,17 @@
       "reports": 1,
       "first_seen": "2026-07-14",
       "last_seen": "2026-07-14",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
+    },
+    {
+      "number": "+573219041497",
+      "type": "spam",
+      "reports": 1,
+      "first_seen": "2026-09-08",
+      "last_seen": "2026-09-08",
       "description": "Community reported",
       "sources": [
         "community"

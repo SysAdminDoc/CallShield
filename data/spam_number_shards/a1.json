@@ -1914,6 +1914,17 @@
       "sources": [
         "legacy_import"
       ]
+    },
+    {
+      "number": "+573248605380",
+      "type": "spam",
+      "reports": 1,
+      "first_seen": "2026-09-11",
+      "last_seen": "2026-09-11",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
     }
   ],
   "prefixes": [

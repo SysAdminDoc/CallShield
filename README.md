@@ -6,12 +6,12 @@
 
 <p align="center">
   <strong>Open-source spam call and text blocker for Android</strong><br>
-  15+ layer detection + Gradient-Boosted Tree ML | 51,634 spam numbers | Real-time caller ID | RCS filter | No required API keys
+  15+ layer detection + Gradient-Boosted Tree ML | 51,755 spam numbers | Real-time caller ID | RCS filter | No required API keys
 </p>
 
 <p align="center">
   <a href="https://github.com/SysAdminDoc/CallShield/releases/latest"><img src="https://img.shields.io/github/v/release/SysAdminDoc/CallShield?style=flat-square&color=a6e3a1" alt="Release"></a>
-  <img src="https://img.shields.io/badge/Spam%20Numbers-51%2C634-f38ba8?style=flat-square" alt="51,634 Numbers">
+  <img src="https://img.shields.io/badge/Spam%20Numbers-51%2C755-f38ba8?style=flat-square" alt="51,755 Numbers">
   <img src="https://img.shields.io/badge/Tests-1100-94e2d5?style=flat-square" alt="1100 Tests">
   <img src="https://img.shields.io/badge/Android-10%2B-89b4fa?style=flat-square" alt="Android 10+">
   <img src="https://img.shields.io/badge/License-MIT-cba6f7?style=flat-square" alt="MIT License">
@@ -30,7 +30,7 @@
 
 ---
 
-CallShield blocks spam calls and texts using a **15+ layer on-device detection engine** with a gradient-boosted tree ML scorer, bounded campaign and churn evidence, conservative carrier identity metadata signals, an RCS notification filter, and real-time caller ID. Its 51,634-number database sits alongside a trending-numbers feed the app checks every 30 minutes. There are no accounts or tracking.
+CallShield blocks spam calls and texts using a **15+ layer on-device detection engine** with a gradient-boosted tree ML scorer, bounded campaign and churn evidence, conservative carrier identity metadata signals, an RCS notification filter, and real-time caller ID. Its 51,755-number database sits alongside a trending-numbers feed the app checks every 30 minutes. There are no accounts or tracking.
 
 The database keeps `data/spam_numbers.json` as a stable legacy GitHub-raw
 endpoint for older clients, while current builds bundle a hash manifest and
@@ -67,7 +67,7 @@ Version highlights for each release are in [CHANGELOG.md](CHANGELOG.md).
 
 ## How It Works
 
-1. **51,634 imported spam numbers.** Sources include FCC consumer complaints (2+ reports each), FTC Do Not Call, ToastedSpam, and community reports.
+1. **51,755 imported spam numbers.** Sources include FCC consumer complaints (2+ reports each), FTC Do Not Call, ToastedSpam, and community reports.
 2. **15+ layer detection + ML**. Database, heuristics, bounded campaign/churn detection, on-device gradient-boosted tree, SMS content/burst analysis, RCS filter, STIR/SHAKEN, and more
 3. **Real-time caller ID overlay**. An optional SkipCalls spam check for locally suspicious calls, with SIT tone anti-autodialer
 4. **Trending feeds**. The app checks for trending spam numbers and campaign ranges every 30 minutes. The maintainer regenerates them by hand from new community reports
@@ -93,7 +93,7 @@ All detection layers implement a shared `IChecker` interface and run in priority
 |  5310 | **Regulatory Prefix** | Block | Opt-in (Settings > Telemarketing ranges) blocks for ranges regulators set aside for sales calls: Spain 400 (from 17 October 2026), India 140 (TRAI), Brazil 0303 (ANATEL). Matches the number with its country code, and without it on a phone from that country |
 |  5300 | **STIR/SHAKEN Authenticated** | Allow | Carrier-authenticated caller ID allows through heuristic/ML suspicion, and through a database match only when that row's newest evidence, community reports included, is over a year old and the number isn't trending right now. Explicit blocks still win first |
 |  5250 | **Regulatory Allow** | Allow | Opt-in protected series that rings through past the database and statistics. India 1600 (banks, insurers and government offices, per TRAI) |
-|  5200 | **Spam Database** | Block | 51,634 imported spam numbers plus the trending-numbers feed |
+|  5200 | **Spam Database** | Block | 51,755 imported spam numbers plus the trending-numbers feed |
 |  5150 | **Database Prefix Expansion** | Block | Auto-blocks last-two-digit siblings of confirmed database entries |
 |  5000 | **Recently Dialed** | Allow | Numbers you called in the last 24h. They're probably calling back |
 |  4980 | **Emergency Callback** | Allow | Unknown callbacks can ring through after a local emergency call during the configured grace window |
@@ -256,7 +256,7 @@ by locale and message type without shipping personal data:
 
 ## Data Sources
 
-### Database (51,634 numbers + 431 range prefixes, locally maintained)
+### Database (51,755 numbers + 431 range prefixes, locally maintained)
 | Source | Method |
 |--------|--------|
 | **FCC Consumer Complaints** | Socrata API, 500K records, min 2 reports |

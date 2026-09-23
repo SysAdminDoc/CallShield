@@ -2488,6 +2488,17 @@
       ]
     },
     {
+      "number": "+393447609886",
+      "type": "spam",
+      "reports": 1,
+      "first_seen": "2026-09-22",
+      "last_seen": "2026-09-22",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
+    },
+    {
       "number": "+523389828506",
       "type": "spam",
       "reports": 1,

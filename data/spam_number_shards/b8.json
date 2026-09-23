@@ -299,6 +299,17 @@
       ]
     },
     {
+      "number": "+12147542418",
+      "type": "unknown",
+      "reports": 1,
+      "first_seen": "2026-09-22",
+      "last_seen": "2026-09-22",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
+    },
+    {
       "number": "+12149886800",
       "type": "robocall",
       "reports": 3,
@@ -2364,6 +2375,17 @@
       "description": "FCC: Telemarketing (inclu",
       "sources": [
         "legacy_import"
+      ]
+    },
+    {
+      "number": "+35799511250",
+      "type": "spam",
+      "reports": 1,
+      "first_seen": "2026-09-17",
+      "last_seen": "2026-09-17",
+      "description": "Community reported",
+      "sources": [
+        "community"
       ]
     }
   ],

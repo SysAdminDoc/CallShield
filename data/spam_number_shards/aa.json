@@ -376,6 +376,17 @@
       ]
     },
     {
+      "number": "+13052003499",
+      "type": "spam",
+      "reports": 2,
+      "first_seen": "2026-09-18",
+      "last_seen": "2026-09-18",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
+    },
+    {
       "number": "+13052030712",
       "type": "robocall",
       "reports": 4,

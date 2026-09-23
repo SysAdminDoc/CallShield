@@ -68,6 +68,17 @@
       ]
     },
     {
+      "number": "+12068870539",
+      "type": "spam",
+      "reports": 1,
+      "first_seen": "2026-09-15",
+      "last_seen": "2026-09-15",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
+    },
+    {
       "number": "+12104567901",
       "type": "robocall",
       "reports": 3,

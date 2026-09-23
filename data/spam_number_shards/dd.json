@@ -717,6 +717,17 @@
       ]
     },
     {
+      "number": "+15025672884",
+      "type": "spam",
+      "reports": 1,
+      "first_seen": "2026-09-14",
+      "last_seen": "2026-09-14",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
+    },
+    {
       "number": "+15088480673",
       "type": "robocall",
       "reports": 3,

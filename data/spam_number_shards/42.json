@@ -2213,6 +2213,17 @@
       ]
     },
     {
+      "number": "+390230619882",
+      "type": "spam",
+      "reports": 1,
+      "first_seen": "2026-09-21",
+      "last_seen": "2026-09-21",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
+    },
+    {
       "number": "+523399160123",
       "type": "spam",
       "reports": 2,

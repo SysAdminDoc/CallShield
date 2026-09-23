@@ -497,6 +497,17 @@
       ]
     },
     {
+      "number": "+13059219361",
+      "type": "spam",
+      "reports": 1,
+      "first_seen": "2026-09-18",
+      "last_seen": "2026-09-18",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
+    },
+    {
       "number": "+13105041707",
       "type": "robocall",
       "reports": 5,
@@ -758,6 +769,17 @@
       "description": "FCC caller ID: Robocalls",
       "sources": [
         "legacy_import"
+      ]
+    },
+    {
+      "number": "+14039495812",
+      "type": "spam",
+      "reports": 1,
+      "first_seen": "2026-09-22",
+      "last_seen": "2026-09-22",
+      "description": "Community reported",
+      "sources": [
+        "community"
       ]
     },
     {
@@ -2581,6 +2603,17 @@
       "reports": 1,
       "first_seen": "2026-07-31",
       "last_seen": "2026-07-31",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
+    },
+    {
+      "number": "+51965909635",
+      "type": "spam",
+      "reports": 1,
+      "first_seen": "2026-09-08",
+      "last_seen": "2026-09-08",
       "description": "Community reported",
       "sources": [
         "community"

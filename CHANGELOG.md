@@ -357,6 +357,14 @@ The rest of this section takes effect when the report Worker is next deployed.
 
 ### Data
 
+- Drained the 204 community reports queued since the 2026-09-05 merge.
+  Database version 42 adds 121 numbers, bringing the total to 51,755. After
+  North America, most of the new numbers are from Colombia, Italy and Mexico.
+  32 submissions were rejected as implausible, nearly all of them the fictional
+  +1 555 numbers the app's own unit tests used to send. 29 "not spam" votes
+  were dropped because the live report Worker doesn't attach a reporter
+  identity yet.
+
 - Drained a 280-file community report backlog that had been accumulating since
   the 2026-08-24 merge. Database versions 40 and 41 add 132 numbers and update
   31 between them, bringing the total to 51,634. Coverage outside North America

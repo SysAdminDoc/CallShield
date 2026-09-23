@@ -387,6 +387,17 @@
       ]
     },
     {
+      "number": "+13058422191",
+      "type": "spam",
+      "reports": 1,
+      "first_seen": "2026-09-21",
+      "last_seen": "2026-09-21",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
+    },
+    {
       "number": "+13072024077",
       "type": "robocall",
       "reports": 2,

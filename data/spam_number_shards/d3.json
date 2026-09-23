@@ -178,6 +178,17 @@
       ]
     },
     {
+      "number": "+12188000842",
+      "type": "spam",
+      "reports": 2,
+      "first_seen": "2026-09-11",
+      "last_seen": "2026-09-11",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
+    },
+    {
       "number": "+12246490146",
       "type": "robocall",
       "reports": 3,
@@ -1990,6 +2001,17 @@
       "description": "FCC: Unwanted Calls",
       "sources": [
         "legacy_import"
+      ]
+    },
+    {
+      "number": "+493022011647",
+      "type": "spam",
+      "reports": 1,
+      "first_seen": "2026-09-07",
+      "last_seen": "2026-09-07",
+      "description": "Community reported",
+      "sources": [
+        "community"
       ]
     }
   ],

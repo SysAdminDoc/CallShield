@@ -2202,6 +2202,17 @@
       ]
     },
     {
+      "number": "+573180492646",
+      "type": "spam",
+      "reports": 2,
+      "first_seen": "2026-09-19",
+      "last_seen": "2026-09-21",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
+    },
+    {
       "number": "+79866110755",
       "type": "spam",
       "reports": 1,

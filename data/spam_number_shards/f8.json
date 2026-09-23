@@ -2541,6 +2541,17 @@
       "sources": [
         "legacy_import"
       ]
+    },
+    {
+      "number": "+2347080634453",
+      "type": "spam",
+      "reports": 1,
+      "first_seen": "2026-09-22",
+      "last_seen": "2026-09-22",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
     }
   ],
   "prefixes": []

@@ -2070,11 +2070,33 @@
       ]
     },
     {
+      "number": "+2347080634451",
+      "type": "spam",
+      "reports": 1,
+      "first_seen": "2026-09-22",
+      "last_seen": "2026-09-22",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
+    },
+    {
       "number": "+573204107091",
       "type": "unknown",
       "reports": 1,
       "first_seen": "2026-08-31",
       "last_seen": "2026-08-31",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
+    },
+    {
+      "number": "+573219040736",
+      "type": "spam",
+      "reports": 1,
+      "first_seen": "2026-09-10",
+      "last_seen": "2026-09-10",
       "description": "Community reported",
       "sources": [
         "community"

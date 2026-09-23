@@ -2180,6 +2180,17 @@
       ]
     },
     {
+      "number": "+393477683137",
+      "type": "spam",
+      "reports": 1,
+      "first_seen": "2026-09-21",
+      "last_seen": "2026-09-21",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
+    },
+    {
       "number": "+573102944263",
       "type": "spam",
       "reports": 1,

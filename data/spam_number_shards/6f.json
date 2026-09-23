@@ -398,6 +398,17 @@
       ]
     },
     {
+      "number": "+13057482918",
+      "type": "spam",
+      "reports": 1,
+      "first_seen": "2026-09-18",
+      "last_seen": "2026-09-18",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
+    },
+    {
       "number": "+13102838578",
       "type": "robocall",
       "reports": 2,

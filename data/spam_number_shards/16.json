@@ -2167,6 +2167,28 @@
       "sources": [
         "community"
       ]
+    },
+    {
+      "number": "+573204063183",
+      "type": "spam",
+      "reports": 1,
+      "first_seen": "2026-09-21",
+      "last_seen": "2026-09-21",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
+    },
+    {
+      "number": "+573219031249",
+      "type": "spam",
+      "reports": 1,
+      "first_seen": "2026-09-10",
+      "last_seen": "2026-09-10",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
     }
   ],
   "prefixes": [

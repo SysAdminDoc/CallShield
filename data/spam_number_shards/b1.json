@@ -1938,6 +1938,17 @@
       ]
     },
     {
+      "number": "+18253600608",
+      "type": "spam",
+      "reports": 1,
+      "first_seen": "2026-09-10",
+      "last_seen": "2026-09-10",
+      "description": "Community reported",
+      "sources": [
+        "community"
+      ]
+    },
+    {
       "number": "+18324263978",
       "type": "robocall",
       "reports": 3,
