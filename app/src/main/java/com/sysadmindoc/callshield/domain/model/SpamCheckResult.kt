@@ -9,4 +9,6 @@ data class SpamCheckResult(
     val reasonCode: BlockReasonCode = BlockReasonCode.fromMatchSource(matchSource),
     val ruleId: Long? = null,
     val screeningDiagnostics: ScreeningDiagnostics? = null,
+    /** Raw signal tokens behind a scored block; [description] is display text. */
+    val signals: List<String> = emptyList(),
 )

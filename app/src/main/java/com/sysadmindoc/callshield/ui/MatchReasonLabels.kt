@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.domain.model.BlockReasonCode
+import com.sysadmindoc.callshield.service.overlayReasonLabelRes
 
 /**
  * Resource id for a spam `type` token, or null when it is not one we know.
@@ -49,6 +50,34 @@ fun friendlySpamTypeLabel(type: String): String =
     spamTypeLabelRes(type)
         ?.let { stringResource(it) }
         ?: stringResource(R.string.spam_type_other)
+
+/**
+ * Resource id for a heuristic or message-content signal token, or null when
+ * it is not one we know. Tokens a call can raise share the overlay's wording.
+ */
+fun signalLabelRes(signal: String): Int? =
+    when (signal.trim().lowercase().replace(' ', '_')) {
+        "oversized_body" -> R.string.signal_oversized_body
+        "excessive_caps" -> R.string.signal_excessive_caps
+        "callback_number" -> R.string.signal_callback_number
+        "special_chars" -> R.string.signal_special_chars
+        "short_msg_with_url" -> R.string.signal_short_message_with_link
+        "spam_domain" -> R.string.signal_spam_domain
+        "lookalike_host" -> R.string.signal_lookalike_host
+        else -> overlayReasonLabelRes(signal)
+    }
+
+/** A signal in the app language; a token without a label still reads as words. */
+fun signalLabel(
+    context: android.content.Context,
+    signal: String,
+): String = signalLabelRes(signal)?.let(context::getString) ?: signal.replace('_', ' ')
+
+/**
+ * Joins signal labels for a block description, each once: two risky links
+ * or a shortened link next to a suspicious one would otherwise repeat.
+ */
+fun List<String>.joinSignalLabels(context: android.content.Context): String = distinct().joinToString(context.getString(R.string.signal_list_separator))
 
 /** Resource id for a stable, user-facing pipeline checker label. */
 fun pipelineCheckerLabelRes(checkerName: String): Int =

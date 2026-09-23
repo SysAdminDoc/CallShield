@@ -3,6 +3,7 @@ package com.sysadmindoc.callshield.service
 import android.app.Notification
 import android.app.Person
 import android.content.ComponentName
+import android.content.Context
 import android.os.Build
 import android.os.Bundle
 import android.service.notification.NotificationListenerService
@@ -18,7 +19,11 @@ import com.sysadmindoc.callshield.data.SmsContentAnalyzer
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.remote.UrlSafetyChecker
 import com.sysadmindoc.callshield.data.repository.SpamRepositoryAdapter
+import com.sysadmindoc.callshield.domain.model.SpamCheckResult
 import com.sysadmindoc.callshield.domain.usecase.CheckSpamSmsUseCase
+import com.sysadmindoc.callshield.ui.joinSignalLabels
+import com.sysadmindoc.callshield.ui.reasonCodeLabelRes
+import com.sysadmindoc.callshield.ui.signalLabel
 import com.sysadmindoc.callshield.util.filterAsciiDigits
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -255,11 +260,7 @@ class RcsNotificationListener : NotificationListenerService() {
             }
         val isSpam = result?.isSpam == true || contentVerdict?.isSpam == true
         val confidence = maxOf(result?.confidence ?: 0, contentVerdict?.confidence ?: 0)
-        val reason =
-            result
-                ?.takeIf { it.isSpam }
-                ?.matchSource
-                ?: contentVerdict?.reason.orEmpty()
+        val reason = screenedMessageReason(applicationContext, result, contentVerdict)
 
         if (isSpam && source.category == NotificationScreeningCategory.RCS && result?.isSpam == true) {
             cancelNotification(sbn.key)
@@ -431,7 +432,8 @@ class RcsNotificationListener : NotificationListenerService() {
         internal data class ContentVerdict(
             val isSpam: Boolean,
             val confidence: Int,
-            val reason: String,
+            /** Raw signal tokens; the notification labels them in the app language. */
+            val signals: List<String>,
         )
 
         internal fun contentVerdict(
@@ -439,15 +441,35 @@ class RcsNotificationListener : NotificationListenerService() {
             enabled: Boolean,
             aggressive: Boolean,
         ): ContentVerdict {
-            if (!enabled) return ContentVerdict(false, 0, "")
+            if (!enabled) return ContentVerdict(false, 0, emptyList())
             val analysis = SmsContentAnalyzer.analyze(body)
             val threshold = if (aggressive) AGGRESSIVE_CONTENT_THRESHOLD else DEFAULT_CONTENT_THRESHOLD
             return ContentVerdict(
                 isSpam = analysis.score >= threshold,
                 confidence = analysis.score,
-                reason = analysis.reasons.joinToString(", ") { it.replace('_', ' ') },
+                signals = analysis.reasons,
             )
         }
+
+        /**
+         * The "why" line of a screened-message notification, in the app
+         * language: the deciding check's label, or the content signals.
+         * Both used to reach the notification as internal tokens
+         * ("heuristic", "spam keywords, shortened url").
+         */
+        internal fun screenedMessageReason(
+            context: Context,
+            result: SpamCheckResult?,
+            contentVerdict: ContentVerdict?,
+        ): String =
+            result
+                ?.takeIf { it.isSpam }
+                ?.let { context.getString(reasonCodeLabelRes(it.reasonCode)) }
+                ?: contentVerdict
+                    ?.signals
+                    ?.map { signalLabel(context, it) }
+                    ?.joinSignalLabels(context)
+                    .orEmpty()
 
         /** Return real content only; encrypted/empty placeholders stay sender-only. */
         internal fun bodyForAnalysis(body: String): String? = body.takeIf { it.isNotBlank() && !isEncryptedPlaceholder(it) }

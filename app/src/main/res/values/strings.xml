@@ -503,6 +503,15 @@
     <string name="overlay_reason_spam_keywords">Spam wording detected</string>
     <string name="overlay_reason_risky_link">Risky link pattern</string>
     <string name="overlay_reason_suspicious_pattern">Suspicious calling pattern</string>
+    <string name="signal_oversized_body">Unusually long message</string>
+    <string name="signal_excessive_caps">Mostly capital letters</string>
+    <string name="signal_callback_number">Contains a callback number</string>
+    <string name="signal_special_chars">Heavy use of symbols</string>
+    <string name="signal_short_message_with_link">Short message with a link</string>
+    <string name="signal_spam_domain">Link to a known spam site</string>
+    <string name="signal_lookalike_host">Link imitating a real site</string>
+    <!-- Joins the signals that fired. Labels never contain it, so the log can split them again. -->
+    <string name="signal_list_separator">", "</string>
     <string name="overlay_header_safe">Looks Safe</string>
     <string name="overlay_initial_score">Score: %1$d%%</string>
     <string name="overlay_outgoing_risk_score">Local risk confidence: %1$d%%</string>

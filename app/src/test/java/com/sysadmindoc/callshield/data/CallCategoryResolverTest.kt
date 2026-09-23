@@ -1,5 +1,6 @@
 package com.sysadmindoc.callshield.data
 
+import com.sysadmindoc.callshield.data.checker.BlockResult
 import com.sysadmindoc.callshield.domain.model.SpamCheckResult
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -78,6 +79,25 @@ class CallCategoryResolverTest {
                 confidence = 70,
             )
         assertEquals(CallCategory.Scam, CallCategoryResolver.resolve(result))
+    }
+
+    @Test
+    fun `a live heuristic block resolves from its signals, not its description`() {
+        // What HeuristicChecker writes now: labels in the app language plus
+        // the raw tokens. The labels never carried the underscored tokens.
+        fun live(
+            type: String,
+            description: String,
+            vararg signals: String,
+        ) = BlockResult
+            .block("heuristic", type = type, description = description, confidence = 70, signals = signals.toList())
+            .toSpamCheckResult()
+
+        assertEquals(CallCategory.Scam, CallCategoryResolver.resolve(live("spoofed", "可能是邻近伪装", "neighbor_spoof")))
+        assertEquals(CallCategory.Scam, CallCategoryResolver.resolve(live("spoofed", "Possible neighbor spoofing", "neighbor_spoof")))
+        assertEquals(CallCategory.Robocall, CallCategoryResolver.resolve(live("suspicious", "正在进行的骚扰活动", "hot_campaign_range")))
+        assertEquals(CallCategory.Telemarketer, CallCategoryResolver.resolve(live("suspicious", "Toll-free caller", "toll_free")))
+        assertEquals(CallCategory.Unknown, CallCategoryResolver.resolve(live("suspicious", "号码格式异常", "invalid_format")))
     }
 
     @Test

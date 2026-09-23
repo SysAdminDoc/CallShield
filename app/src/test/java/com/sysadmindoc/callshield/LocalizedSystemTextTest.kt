@@ -7,18 +7,24 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.preferencesOf
 import androidx.test.core.app.ApplicationProvider
+import com.sysadmindoc.callshield.data.BlockReasoning
+import com.sysadmindoc.callshield.data.IsolatedRepositoryFixture
 import com.sysadmindoc.callshield.data.SmsContentAnalyzer
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.checker.CheckContext
 import com.sysadmindoc.callshield.data.checker.EmergencyNumberFloorChecker
+import com.sysadmindoc.callshield.data.checker.SmsContentChecker
 import com.sysadmindoc.callshield.data.checker.StirShakenChecker
 import com.sysadmindoc.callshield.data.checker.TimeBlockChecker
 import com.sysadmindoc.callshield.data.checker.VerificationMessageFloorChecker
+import com.sysadmindoc.callshield.domain.model.SpamCheckResult
 import com.sysadmindoc.callshield.service.CallShieldTileService
 import com.sysadmindoc.callshield.service.RcsNotificationListener
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -93,6 +99,52 @@ class LocalizedSystemTextTest {
             )
             assertNotEquals("Blocked during quiet hours", context.getString(R.string.block_reason_quiet_hours))
         }
+
+    @Test
+    fun `signal descriptions follow the app language`() =
+        runBlocking {
+            val sms =
+                SmsContentChecker(SmsContentAnalyzer())
+                    .check(ctx(smsBody = "Congratulations, you won a prize! Claim it now at bit.ly/x9Qk2"))
+            val description = requireNotNull(sms).description
+
+            assertEquals(listOf("shortened_url", "spam_keywords"), sms.signals)
+            assertTrue(description.contains(context.getString(R.string.overlay_reason_risky_link)))
+            assertTrue(description.contains(context.getString(R.string.overlay_reason_spam_keywords)))
+            assertFalse("raw token in \"$description\"", description.contains("shortened") || description.contains("keywords"))
+            // The "why" panel still gets one bullet per signal from a Chinese list.
+            val bullets = BlockReasoning.explain("sms_content", description, sms.confidence).bullets
+            assertEquals(2, bullets.count { it.startsWith("• ") })
+        }
+
+    @Test
+    fun `a heuristic block through the pipeline is described in the app language`() =
+        runBlocking {
+            val fixture = IsolatedRepositoryFixture(context)
+            try {
+                // Turks and Caicos: a one-ring callback-scam area code and nothing else.
+                val result = fixture.repository.isSpam("+16495550123")
+
+                assertEquals("heuristic", result.matchSource)
+                assertEquals(listOf("wangiri_country"), result.signals)
+                assertEquals(context.getString(R.string.overlay_reason_wangiri), result.description)
+            } finally {
+                fixture.close()
+            }
+        }
+
+    @Test
+    fun `the screened-message notification gives its reason in the app language`() {
+        val verdict = RcsNotificationListener.contentVerdict("Claim your prize now at bit.ly/example", enabled = true, aggressive = true)
+        val fromContent = RcsNotificationListener.screenedMessageReason(context, null, verdict)
+        val fromPipeline =
+            RcsNotificationListener.screenedMessageReason(context, SpamCheckResult(isSpam = true, matchSource = "database"), null)
+
+        assertTrue(fromContent.contains(context.getString(R.string.overlay_reason_risky_link)))
+        assertFalse(fromContent.contains("shortened"))
+        assertEquals(context.getString(R.string.stats_reason_spam_database), fromPipeline)
+        assertNotEquals("database", fromPipeline)
+    }
 
     @Test
     fun `the Chinese digest keeps its line breaks`() {

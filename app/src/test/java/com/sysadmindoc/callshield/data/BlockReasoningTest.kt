@@ -136,6 +136,15 @@ class BlockReasoningTest {
     }
 
     @Test
+    fun `a signal list in Chinese still becomes one bullet per signal`() {
+        val enumerationComma = BlockReasoning.explain("heuristic", "可能是邻近伪装、重复来电模式", 78)
+        val fullWidthComma = BlockReasoning.explain("sms_content", "风险链接模式，检测到垃圾信息用语", 60)
+
+        assertEquals(listOf("• 可能是邻近伪装", "• 重复来电模式"), enumerationComma.bullets.filter { it.startsWith("• ") })
+        assertEquals(listOf("• 风险链接模式", "• 检测到垃圾信息用语"), fullWidthComma.bullets.filter { it.startsWith("• ") })
+    }
+
+    @Test
     fun `campaign_burst explanation mentions NPA-NXX burst threshold`() {
         val r = BlockReasoning.explain("campaign_burst", "", 75)
         assertTrue(r.headline.contains("active spam campaign"))

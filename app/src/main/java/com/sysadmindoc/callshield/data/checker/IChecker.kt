@@ -169,6 +169,12 @@ data class BlockResult(
     val reasonCode: BlockReasonCode = BlockReasonCode.fromMatchSource(matchSource),
     /** User-authored rule/row id when the deciding checker has one. */
     val ruleId: Long? = null,
+    /**
+     * Raw signal tokens behind a scored block ("neighbor_spoof", "toll_free"…).
+     * [description] is display text in the app language, so code that
+     * classifies a result reads these instead.
+     */
+    val signals: List<String> = emptyList(),
 ) {
     companion object {
         fun block(
@@ -177,7 +183,8 @@ data class BlockResult(
             description: String = "",
             confidence: Int = 100,
             ruleId: Long? = null,
-        ) = BlockResult(true, matchSource, type, description, confidence, BlockReasonCode.fromMatchSource(matchSource), ruleId)
+            signals: List<String> = emptyList(),
+        ) = BlockResult(true, matchSource, type, description, confidence, BlockReasonCode.fromMatchSource(matchSource), ruleId, signals)
 
         fun allow(
             matchSource: String,

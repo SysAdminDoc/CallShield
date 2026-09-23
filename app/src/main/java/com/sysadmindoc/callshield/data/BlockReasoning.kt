@@ -473,9 +473,11 @@ object BlockReasoning {
         suffix: String = "",
     ): String? = takeIf { it.isNotBlank() }?.let { "$prefix$it$suffix" }
 
+    // Signal lists are joined with the app language's separator, so a
+    // Chinese row uses "、" (or a full-width comma) rather than ",".
     private fun listed(description: String): List<String> =
         description
-            .split(",")
+            .split(',', '，', '、')
             .map { it.trim().replace("_", " ") }
             .filter { it.isNotBlank() }
             .map { "• $it" }

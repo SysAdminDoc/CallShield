@@ -24,6 +24,13 @@ All notable changes to CallShield will be documented in this file.
   payslip, a part-time shift rate, a house-cleaning job or a cashback offer
   stays clean.
 
+- Your call category rules now reach more suspicious-pattern blocks. A call
+  flagged as possible neighbor spoofing counts as a scam, one from an active
+  campaign range as a robocall, and a toll-free one as a telemarketer, so
+  the action you picked for that category applies. Those mappings existed
+  but never matched, because they looked for internal names the block
+  description had already turned into plain words.
+
 - CallShield starts faster when a call wakes it. Looking for an interrupted
   backup restore held the main thread about 0.7 seconds on every start
   (measured on an Android 10 emulator), out of the five seconds Android gives
@@ -454,6 +461,14 @@ The rest of this section takes effect when the report Worker is next deployed.
   notification, and the explanation each detection layer gives in Lookup and
   the block log. Chinese has all of it. The Chinese daily summary also keeps
   its line breaks now, where before it ran together on one line.
+- The signals behind a suspicious-pattern or message-content block are
+  translated too. The block log and the "why" panel listed internal names
+  like "neighbor spoof" or "shortened url". The screened-message
+  notification and two Protection Test results named the deciding check by
+  its code name ("heuristic", "sms_content"). Each signal now reads as a
+  phrase in the app language ("Possible neighbor spoofing", "Risky link
+  pattern"), listed once even when several links trip it, and each check
+  goes by the name the block log uses.
 
 - A shipped locale can no longer decay silently. Each has a coverage floor in
   `scripts/translation_floors.json`, and dropping below it fails the build.

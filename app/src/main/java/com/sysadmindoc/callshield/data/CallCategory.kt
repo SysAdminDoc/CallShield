@@ -114,16 +114,20 @@ object CallCategoryResolver {
         // Campaign burst = coordinated robocall wave, by definition.
         if (result.reasonCode == BlockReasonCode.CAMPAIGN_BURST) return CallCategory.Robocall
 
-        // Heuristic reasons: map the strongest signals.
+        // Heuristic reasons: map the strongest signals. A live result carries
+        // the raw tokens in `signals`; its description is display text in the
+        // app language (and always had the underscores replaced), so it only
+        // helps callers that still pass tokens there.
         if (result.reasonCode == BlockReasonCode.HEURISTIC) {
+            val evidence = (result.signals + desc).joinToString(" ")
             when {
-                "wangiri" in desc -> return CallCategory.Wangiri
-                "premium" in desc -> return CallCategory.Scam
-                "neighbor_spoof" in desc -> return CallCategory.Scam
-                "rapid_fire" in desc -> return CallCategory.Robocall
-                "voip_spam_range" in desc -> return CallCategory.Robocall
-                "hot_campaign_range" in desc -> return CallCategory.Robocall
-                "toll_free" in desc -> return CallCategory.Telemarketer
+                "wangiri" in evidence -> return CallCategory.Wangiri
+                "premium" in evidence -> return CallCategory.Scam
+                "neighbor_spoof" in evidence -> return CallCategory.Scam
+                "rapid_fire" in evidence -> return CallCategory.Robocall
+                "voip_spam_range" in evidence -> return CallCategory.Robocall
+                "hot_campaign_range" in evidence -> return CallCategory.Robocall
+                "toll_free" in evidence -> return CallCategory.Telemarketer
             }
         }
 

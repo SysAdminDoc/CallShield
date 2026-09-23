@@ -1171,6 +1171,7 @@ internal fun BlockResult.toSpamCheckResult(diagnostics: ScreeningDiagnostics?): 
         reasonCode = reasonCode,
         ruleId = ruleId,
         screeningDiagnostics = diagnostics,
+        signals = signals,
     )
 
 internal fun sanitizeDatabaseNumbers(

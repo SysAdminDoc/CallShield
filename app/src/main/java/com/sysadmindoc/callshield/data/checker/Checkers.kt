@@ -23,6 +23,8 @@ import com.sysadmindoc.callshield.data.model.SpamNumber
 import com.sysadmindoc.callshield.data.repository.SpamRepositoryImpl
 import com.sysadmindoc.callshield.domain.model.CallerIdentitySignals
 import com.sysadmindoc.callshield.service.CallerIdOverlayService
+import com.sysadmindoc.callshield.ui.joinSignalLabels
+import com.sysadmindoc.callshield.ui.signalLabel
 import kotlinx.coroutines.withTimeoutOrNull
 import java.time.LocalDate
 import java.time.ZoneOffset
@@ -916,29 +918,31 @@ internal class HeuristicChecker(
                 matchSource = "heuristic",
                 type = classifyHeuristicReasons(hResult.reasons),
                 description =
-                    hResult.reasons.joinToString(", ") { reason ->
-                        when (reason) {
-                            "sender_provenance_unverified" -> {
-                                appContext.getString(
-                                    R.string.block_reason_sender_provenance_unverified,
-                                    ctx.senderProvenance?.regionIso.orEmpty(),
-                                )
-                            }
+                    hResult.reasons
+                        .map { reason ->
+                            when (reason) {
+                                "sender_provenance_unverified" -> {
+                                    appContext.getString(
+                                        R.string.block_reason_sender_provenance_unverified,
+                                        ctx.senderProvenance?.regionIso.orEmpty(),
+                                    )
+                                }
 
-                            "sender_provenance_unassigned" -> {
-                                appContext.getString(
-                                    R.string.block_reason_sender_provenance_unassigned,
-                                    ctx.senderProvenance?.matchedPrefix.orEmpty(),
-                                    ctx.senderProvenance?.regionIso.orEmpty(),
-                                )
-                            }
+                                "sender_provenance_unassigned" -> {
+                                    appContext.getString(
+                                        R.string.block_reason_sender_provenance_unassigned,
+                                        ctx.senderProvenance?.matchedPrefix.orEmpty(),
+                                        ctx.senderProvenance?.regionIso.orEmpty(),
+                                    )
+                                }
 
-                            else -> {
-                                reason.replace("_", " ")
+                                else -> {
+                                    signalLabel(appContext, reason)
+                                }
                             }
-                        }
-                    },
+                        }.joinSignalLabels(appContext),
                 confidence = hResult.score,
+                signals = hResult.reasons,
             )
         }
 
@@ -1176,8 +1180,9 @@ internal class SmsContentChecker(
             BlockResult.block(
                 matchSource = "sms_content",
                 type = "sms_spam",
-                description = result.reasons.joinToString(", ") { it.replace("_", " ") },
+                description = result.reasons.map { signalLabel(ctx.appContext, it) }.joinSignalLabels(ctx.appContext),
                 confidence = result.score,
+                signals = result.reasons,
             )
         } else {
             null

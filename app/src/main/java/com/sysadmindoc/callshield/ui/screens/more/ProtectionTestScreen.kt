@@ -43,6 +43,7 @@ import com.sysadmindoc.callshield.permissions.PermissionCapabilityStatus
 import com.sysadmindoc.callshield.service.HotDataSync
 import com.sysadmindoc.callshield.service.WorkerDiagnostic
 import com.sysadmindoc.callshield.service.WorkerDiagnostics
+import com.sysadmindoc.callshield.ui.reasonCodeLabelRes
 import com.sysadmindoc.callshield.ui.theme.*
 import com.sysadmindoc.callshield.util.HotFeedFreshness
 import com.sysadmindoc.callshield.util.startActivitySafely
@@ -603,7 +604,7 @@ private suspend fun runTests(context: Context): List<TestResult> =
                 passed = testResult.isSpam,
                 detail =
                     if (testResult.isSpam) {
-                        context.getString(R.string.protection_test_prefix_pass, testResult.matchSource)
+                        context.getString(R.string.protection_test_prefix_pass, context.getString(reasonCodeLabelRes(testResult.reasonCode)))
                     } else {
                         context.getString(R.string.protection_test_prefix_fail)
                     },
@@ -633,7 +634,7 @@ private suspend fun runTests(context: Context): List<TestResult> =
                 passed = smsResult.isSpam,
                 detail =
                     if (smsResult.isSpam) {
-                        context.getString(R.string.protection_test_sms_pass, smsResult.matchSource)
+                        context.getString(R.string.protection_test_sms_pass, context.getString(reasonCodeLabelRes(smsResult.reasonCode)))
                     } else {
                         context.getString(R.string.protection_test_sms_fail)
                     },
