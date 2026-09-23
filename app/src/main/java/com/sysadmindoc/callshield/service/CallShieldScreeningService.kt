@@ -154,10 +154,20 @@ class CallShieldScreeningService : CallScreeningService() {
                         val number = repository.normalizeNumber(handle?.schemeSpecificPart.orEmpty())
 
                         if (number.isEmpty()) {
-                            if (prefs[SpamRepository.KEY_BLOCK_UNKNOWN] ?: false) {
-                                respondBlock(callDetails, responseGate, number, "hidden_number", prefs = prefs)
-                            } else {
-                                respondAllow(responseGate)
+                            // A withheld number never reaches the checkers, so meeting
+                            // mode is applied here; "block unknown" still rejects first.
+                            when {
+                                prefs[SpamRepository.KEY_BLOCK_UNKNOWN] ?: false -> {
+                                    respondBlock(callDetails, responseGate, number, "hidden_number", prefs = prefs)
+                                }
+
+                                MeetingModeChecker.meetingAppInUse(prefs) != null -> {
+                                    respondBlock(callDetails, responseGate, number, MeetingModeChecker.MATCH_SOURCE, prefs = prefs)
+                                }
+
+                                else -> {
+                                    respondAllow(responseGate)
+                                }
                             }
                             return@withTimeoutOrNull
                         }

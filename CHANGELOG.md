@@ -113,7 +113,9 @@ All notable changes to CallShield will be documented in this file.
   604 area code, so allowing British Columbia let it ring. On a phone outside
   North America, a number Android couldn't put in international form is now
   read as a number from your own country instead of a North American one, so
-  allowing your country's code lets it ring.
+  allowing your country's code lets it ring. One that starts with your
+  country's international prefix (00 in most of Europe, 011 in North America)
+  counts as the country dialed after it.
 - Settings has a Telemarketing ranges card for number ranges regulators set
   aside for sales calls. It can block Spain's 400 range (required for
   commercial calls from 17 October 2026), India's 140 promotional series and
@@ -129,7 +131,11 @@ All notable changes to CallShield will be documented in this file.
   voicemail. Contacts and callers you trust still ring, spam is still blocked
   as spam, and Android still lists the missed call. It works from the
   notification access CallShield already asks for and never needs your
-  calendar.
+  calendar. A withheld number goes to voicemail too, unless you already block
+  those outright. WhatsApp, Signal, Telegram and Messenger count only while a
+  call is on screen, since they keep other notifications up for hours. A call
+  silenced for a meeting isn't held against the caller afterwards, so it can't
+  make them look like a repeat or rapid-fire spammer.
 
 ### Interface
 

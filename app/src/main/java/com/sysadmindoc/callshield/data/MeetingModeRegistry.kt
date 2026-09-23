@@ -37,19 +37,34 @@ object MeetingModeRegistry {
             "com.facebook.orca" to "Messenger",
         )
 
-    /** Notification key to package, for the ongoing notifications of catalog apps. */
+    /**
+     * Messengers that also keep non-call ongoing notifications up for hours
+     * (Signal's background connection without Google push, Telegram's
+     * keep-alive, WhatsApp backups and live location, Messenger chat heads).
+     * For these only a call-category notification means a call.
+     */
+    private val CALL_CATEGORY_ONLY =
+        setOf("com.whatsapp", "org.thoughtcrime.securesms", "org.telegram.messenger", "com.facebook.orca")
+
+    /** Notification key to package, for the notifications that currently mean a meeting. */
     private val ongoing = ConcurrentHashMap<String, String>()
 
     fun displayName(packageName: String): String = MEETING_APPS[packageName] ?: packageName
 
-    /** A notification was posted or updated. An update that drops the ongoing flag ends that meeting. */
+    /**
+     * A notification was posted or updated. It marks a meeting when it is
+     * ongoing and, for the messengers above, a call. An update that stops
+     * qualifying ends that meeting.
+     */
     fun onPosted(
         key: String,
         packageName: String,
         isOngoing: Boolean,
+        category: String? = null,
     ) {
         if (packageName !in MEETING_APPS) return
-        if (isOngoing) ongoing[key] = packageName else ongoing.remove(key)
+        val meansMeeting = isOngoing && (packageName !in CALL_CATEGORY_ONLY || category == CALL_CATEGORY)
+        if (meansMeeting) ongoing[key] = packageName else ongoing.remove(key)
     }
 
     fun onRemoved(key: String) {
@@ -59,7 +74,7 @@ object MeetingModeRegistry {
     /** Rebuilds the state from the listener's active notifications after it (re)connects. */
     fun replaceAll(active: List<ActiveNotification>) {
         ongoing.clear()
-        active.forEach { onPosted(it.key, it.packageName, it.isOngoing) }
+        active.forEach { onPosted(it.key, it.packageName, it.isOngoing, it.category) }
     }
 
     fun clear() {
@@ -73,5 +88,9 @@ object MeetingModeRegistry {
         val key: String,
         val packageName: String,
         val isOngoing: Boolean,
+        val category: String? = null,
     )
+
+    /** [android.app.Notification.CATEGORY_CALL], kept as a literal so this object stays JVM-testable. */
+    private const val CALL_CATEGORY = "call"
 }

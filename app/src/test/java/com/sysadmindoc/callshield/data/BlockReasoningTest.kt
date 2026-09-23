@@ -1,5 +1,6 @@
 package com.sysadmindoc.callshield.data
 
+import com.sysadmindoc.callshield.data.checker.CheckerPriority
 import com.sysadmindoc.callshield.domain.model.BlockReasonCode
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -71,7 +72,34 @@ class BlockReasoningTest {
         val r = BlockReasoning.explain("regulatory_allow", "", 100)
         assertTrue(r.headline.contains("regulator protects"))
         assertTrue(r.bullets.any { it.contains("quiet hours and region rules") })
-        assertTrue(r.bullets.any { it.contains("blocklist, wildcard and range rules still win") })
+        assertTrue(r.bullets.any { it.contains("downloaded prefix list still win") })
+    }
+
+    @Test
+    fun `each allow names the layers that outrank it on the priority ladder`() {
+        val allows =
+            mapOf(
+                BlockReasonCode.TEMPORARY_ALLOW to CheckerPriority.TEMPORARY_ALLOW,
+                BlockReasonCode.REGULATORY_ALLOW to CheckerPriority.REGULATORY_ALLOW,
+                BlockReasonCode.RECENTLY_DIALED to CheckerPriority.RECENTLY_DIALED,
+                BlockReasonCode.EMERGENCY_CALLBACK to CheckerPriority.EMERGENCY_CALLBACK,
+                BlockReasonCode.ANSWERED_CALLER to CheckerPriority.ANSWERED_CALLER,
+                BlockReasonCode.CALLER_NAME_TRUST to CheckerPriority.CALLER_NAME_TRUST,
+                BlockReasonCode.PUSH_ALERT to CheckerPriority.PUSH_ALERT_BRIDGE,
+            )
+        allows.forEach { (code, priority) ->
+            val text = BlockReasoning.explain(reasonCode = code, description = "", confidence = 0).bullets.joinToString(" ")
+            assertEquals("$code vs database", priority < CheckerPriority.GITHUB_DATABASE, text.contains("spam database still win"))
+            assertEquals("$code vs prefix list", priority < CheckerPriority.PREFIX_MATCH, text.contains("downloaded prefix list"))
+            assertEquals("$code vs contacts-only", priority < CheckerPriority.CONTACTS_ONLY, text.contains("Contacts-only mode"))
+            assertEquals(
+                "$code vs Android block list",
+                priority < CheckerPriority.SYSTEM_BLOCK_LIST,
+                text.contains("numbers you blocked in Android"),
+            )
+            // Region rules, quiet hours and caller-name blocks sit below every allow here.
+            assertFalse("$code claims all your rules win", text.contains("own block rules"))
+        }
     }
 
     @Test

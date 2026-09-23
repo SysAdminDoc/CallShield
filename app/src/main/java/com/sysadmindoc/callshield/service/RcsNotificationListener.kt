@@ -122,7 +122,7 @@ class RcsNotificationListener : NotificationListenerService() {
     override fun onNotificationPosted(sbn: StatusBarNotification) {
         // Meeting mode reads exactly the ongoing notifications skipped below:
         // a meeting or VoIP call holds one for as long as it lasts.
-        MeetingModeRegistry.onPosted(sbn.key, sbn.packageName, sbn.isOngoing)
+        MeetingModeRegistry.onPosted(sbn.key, sbn.packageName, sbn.isOngoing, sbn.notification?.category)
         if (sbn.isOngoing) return // skip ongoing (media controls, etc.)
 
         // A3: Feed the push-alert registry for any allowlisted source app the
@@ -369,7 +369,7 @@ class RcsNotificationListener : NotificationListenerService() {
                 emptyArray<StatusBarNotification>()
             }
         MeetingModeRegistry.replaceAll(
-            active.map { MeetingModeRegistry.ActiveNotification(it.key, it.packageName, it.isOngoing) },
+            active.map { MeetingModeRegistry.ActiveNotification(it.key, it.packageName, it.isOngoing, it.notification?.category) },
         )
     }
 

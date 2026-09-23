@@ -204,6 +204,36 @@ class RegionRulesTest {
     }
 
     @Test
+    fun `a bare number dialed with the home international prefix is read as international`() {
+        // "0044..." on an Italian phone is a UK number, so the user's +39 entry doesn't cover it.
+        assertTrue(RegionRules.isOutsideAllowedRegions("00442079460000", setOf("+39"), homeRegionIso = "IT"))
+        assertFalse(RegionRules.isOutsideAllowedRegions("00442079460000", setOf("+44"), homeRegionIso = "IT"))
+        assertTrue(RegionBlockChecker.decidePure("00442079460000", setOf("+39"), homeRegionIso = "IT")?.shouldBlock == true)
+        // Russia dials out with 810, Japan with 010 and North America with 011.
+        assertTrue(RegionRules.isOutsideAllowedRegions("810442079460000", setOf("+7"), homeRegionIso = "RU"))
+        assertTrue(RegionRules.isOutsideAllowedRegions("010442079460000", setOf("+81"), homeRegionIso = "JP"))
+        assertFalse(RegionRules.isOutsideAllowedRegions("011442079460000", setOf("+44"), homeRegionIso = "US"))
+        assertTrue(RegionRules.isOutsideAllowedRegions("011442079460000", setOf("NY"), homeRegionIso = "US"))
+        // A national number with a leading trunk 0 stays at home.
+        assertFalse(RegionRules.isOutsideAllowedRegions("0612345678", setOf("+39"), homeRegionIso = "IT"))
+        assertFalse(RegionRules.isOutsideAllowedRegions("0312345678", setOf("+81"), homeRegionIso = "JP"))
+    }
+
+    @Test
+    fun `international prefixes follow libphonenumber`() {
+        assertEquals("442079460000", RegionCallingCodes.afterInternationalPrefix("00442079460000", "it"))
+        assertEquals("442079460000", RegionCallingCodes.afterInternationalPrefix("0011442079460000", "AU"))
+        assertEquals("442079460000", RegionCallingCodes.afterInternationalPrefix("011442079460000", null))
+        // The Marshall Islands dial out with 011 without being on +1.
+        assertEquals("442079460000", RegionCallingCodes.afterInternationalPrefix("011442079460000", "MH"))
+        assertNull(RegionCallingCodes.afterInternationalPrefix("00442079460000", "US"))
+        assertNull(RegionCallingCodes.afterInternationalPrefix("0612345678", "IT"))
+        // A calling code never starts with 0, and a prefix alone is no number.
+        assertNull(RegionCallingCodes.afterInternationalPrefix("000123", "IT"))
+        assertNull(RegionCallingCodes.afterInternationalPrefix("00", "IT"))
+    }
+
+    @Test
     fun `a bare number is NANP on a phone that uses +1 or has no known region`() {
         assertEquals("NY", RegionRules.regionCode("2125550123", homeRegionIso = "US"))
         assertEquals("NY", RegionRules.regionCode("2125550123", homeRegionIso = "DO"))

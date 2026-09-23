@@ -45,12 +45,42 @@ class MeetingModeRegistryTest {
 
     @Test
     fun `an app stays in a meeting while any of its ongoing notifications remains`() {
-        MeetingModeRegistry.onPosted("call-1", "com.whatsapp", isOngoing = true)
-        MeetingModeRegistry.onPosted("call-2", "com.whatsapp", isOngoing = true)
+        MeetingModeRegistry.onPosted("call-1", "com.whatsapp", isOngoing = true, category = "call")
+        MeetingModeRegistry.onPosted("call-2", "com.whatsapp", isOngoing = true, category = "call")
 
         MeetingModeRegistry.onRemoved("call-1")
 
         assertEquals(setOf("com.whatsapp"), MeetingModeRegistry.activePackages())
+    }
+
+    @Test
+    fun `a messenger's ongoing notification counts only when it is a call`() {
+        // Signal's background connection, a WhatsApp backup and Telegram's keep-alive stay up for hours.
+        MeetingModeRegistry.onPosted("signal-service", "org.thoughtcrime.securesms", isOngoing = true)
+        MeetingModeRegistry.onPosted("whatsapp-backup", "com.whatsapp", isOngoing = true, category = "progress")
+        MeetingModeRegistry.onPosted("telegram-service", "org.telegram.messenger", isOngoing = true, category = "service")
+        MeetingModeRegistry.onPosted("messenger-heads", "com.facebook.orca", isOngoing = true)
+        assertTrue(MeetingModeRegistry.activePackages().isEmpty())
+
+        MeetingModeRegistry.onPosted("telegram-call", "org.telegram.messenger", isOngoing = true, category = "call")
+        assertEquals(setOf("org.telegram.messenger"), MeetingModeRegistry.activePackages())
+    }
+
+    @Test
+    fun `a messenger call that turns into another ongoing notification ends the meeting`() {
+        MeetingModeRegistry.onPosted("whatsapp-1", "com.whatsapp", isOngoing = true, category = "call")
+
+        MeetingModeRegistry.onPosted("whatsapp-1", "com.whatsapp", isOngoing = true, category = null)
+
+        assertTrue(MeetingModeRegistry.activePackages().isEmpty())
+    }
+
+    @Test
+    fun `a dedicated meeting app counts on any ongoing notification`() {
+        // Zoom and Teams keep an ongoing notification only while a meeting or call runs.
+        MeetingModeRegistry.onPosted("zoom", "us.zoom.videomeetings", isOngoing = true, category = null)
+
+        assertEquals(setOf("us.zoom.videomeetings"), MeetingModeRegistry.activePackages())
     }
 
     @Test
@@ -61,10 +91,12 @@ class MeetingModeRegistryTest {
             listOf(
                 MeetingModeRegistry.ActiveNotification("meet", "com.google.android.apps.tachyon", isOngoing = true),
                 MeetingModeRegistry.ActiveNotification("chat", "com.Slack", isOngoing = false),
+                MeetingModeRegistry.ActiveNotification("signal-service", "org.thoughtcrime.securesms", isOngoing = true),
+                MeetingModeRegistry.ActiveNotification("whatsapp-call", "com.whatsapp", isOngoing = true, category = "call"),
             ),
         )
 
-        assertEquals(setOf("com.google.android.apps.tachyon"), MeetingModeRegistry.activePackages())
+        assertEquals(setOf("com.google.android.apps.tachyon", "com.whatsapp"), MeetingModeRegistry.activePackages())
     }
 
     @Test

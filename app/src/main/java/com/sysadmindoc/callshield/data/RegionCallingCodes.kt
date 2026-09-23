@@ -1,12 +1,13 @@
 package com.sysadmindoc.callshield.data
 
 import java.util.Locale
+import java.util.concurrent.ConcurrentHashMap
 
 /**
- * ITU-T calling code of each ISO 3166 region. Android leaves a caller ID in
- * national form when it can't validate it for the phone's home region, and
- * region rules read such a number in that region's numbering, so they need
- * the region's code.
+ * ITU-T calling code and international prefix of each ISO 3166 region.
+ * Android leaves a caller ID in national form when it can't validate it for
+ * the phone's home region, and region rules read such a number in that
+ * region's numbering, so they need both.
  *
  * Generated from libphonenumber's metadata (Python `phonenumbers` 9.0.39,
  * `country_code_for_region` over `SUPPORTED_REGIONS`, 245 regions).
@@ -39,4 +40,85 @@ internal object RegionCallingCodes {
 
     /** Calling code digits (no `+`) for [regionIso], or null for an unknown region. */
     fun forRegion(regionIso: String?): String? = regionIso?.let { codes[it.uppercase(Locale.ROOT)] }
+
+    /**
+     * [digits] after [regionIso]'s international prefix (`00`, `011`, `810`,
+     * `010`...), or null when they don't start with one. An unknown region
+     * dials like +1, matching how the rest of the bare-number handling reads
+     * it. A calling code never starts with 0, so a prefix followed by 0
+     * doesn't count, which is libphonenumber's rule.
+     */
+    fun afterInternationalPrefix(
+        digits: String,
+        regionIso: String?,
+    ): String? {
+        val region = regionIso?.uppercase(Locale.ROOT)
+        val code = region?.let { codes[it] }
+        val pattern = region?.let { internationalPrefixOverrides[it] } ?: if (code == null || code == NANP) NANP_PREFIX else ITU_PREFIX
+        val prefix = prefixRegexes.getOrPut(pattern) { Regex("^(?:$pattern)") }.find(digits) ?: return null
+        return digits.substring(prefix.value.length).takeIf { it.isNotEmpty() && it[0] != '0' }
+    }
+
+    private const val NANP = "1"
+    private const val NANP_PREFIX = "011"
+    private const val ITU_PREFIX = "00"
+    private val prefixRegexes = ConcurrentHashMap<String, Regex>()
+
+    /**
+     * International prefixes of the regions that don't dial out with `011`
+     * (+1) or `00` (everyone else), as libphonenumber's patterns
+     * (`international_prefix` from the same metadata, 49 regions).
+     */
+    private val internationalPrefixOverrides: Map<String, String> =
+        mapOf(
+            "AU" to """001[14-689]|14(?:1[14]|34|4[17]|[56]6|7[47]|88)0011""",
+            "AX" to """00|99(?:[01469]|5(?:[14]1|3[23]|5[59]|77|88|9[09]))""",
+            "BO" to """00(?:1\d)?""",
+            "BR" to """00(?:1[245]|2[1-35]|31|4[13]|[56]5|99)""",
+            "BY" to """810""",
+            "CC" to """001[14-689]|14(?:1[14]|34|4[17]|[56]6|7[47]|88)0011""",
+            "CL" to """(?:0|1(?:1[0-69]|2[02-5]|5[13-58]|69|7[0167]|8[018]))0""",
+            "CN" to """00|1(?:[12]\d|79)\d\d00""",
+            "CO" to """00(?:4(?:[14]4|56)|[579])""",
+            "CU" to """119""",
+            "CV" to """0""",
+            "CX" to """001[14-689]|14(?:1[14]|34|4[17]|[56]6|7[47]|88)0011""",
+            "FI" to """00|99(?:[01469]|5(?:[14]1|3[23]|5[59]|77|88|9[09]))""",
+            "FJ" to """0(?:0|52)""",
+            "GY" to """001""",
+            "HK" to """00(?:30|5[09]|[126-9]?)""",
+            "ID" to """00[89]""",
+            "IL" to """0(?:0|1(?:05|[2-9]))""",
+            "IS" to """00|1(?:0(?:01|[12]0)|100)""",
+            "JP" to """010""",
+            "KE" to """000""",
+            "KH" to """00[14-9]""",
+            "KP" to """00|99""",
+            "KR" to """00(?:[125689]|3(?:[46]5|91)|7(?:00|27|3|55|6[126]))""",
+            "KZ" to """810""",
+            "MH" to """011""",
+            "MN" to """001""",
+            "MU" to """0(?:0|[24-7]0|3[03])""",
+            "MV" to """0(?:0|19)""",
+            "MX" to """0[09]""",
+            "NG" to """009""",
+            "NZ" to """0(?:0|161)""",
+            "PE" to """00|19(?:1[124]|77|90)00""",
+            "PG" to """00|140[1-3]""",
+            "PW" to """01[12]""",
+            "RU" to """810""",
+            "SB" to """0[01]""",
+            "SC" to """010|0[0-2]""",
+            "SG" to """0[0-3]\d""",
+            "SI" to """00|10(?:22|66|88|99)""",
+            "TD" to """00|16""",
+            "TH" to """00[1-9]""",
+            "TJ" to """810""",
+            "TM" to """810""",
+            "TW" to """0(?:0[25-79]|19)""",
+            "TZ" to """00[056]""",
+            "UG" to """00[057]""",
+            "UY" to """0(?:0|1[3-9]\d)""",
+            "WS" to """0""",
+        )
 }

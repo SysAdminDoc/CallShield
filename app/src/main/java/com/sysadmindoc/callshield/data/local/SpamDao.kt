@@ -410,7 +410,8 @@ interface SpamDao {
     @Delete
     suspend fun deleteBlockedCall(call: BlockedCall)
 
-    @Query("SELECT * FROM call_log WHERE timestamp > :since ORDER BY timestamp DESC")
+    // Meeting-mode silences are not evidence against a caller; rapid-fire must not count them.
+    @Query("SELECT * FROM call_log WHERE timestamp > :since AND reasonCode != 'meeting_mode' ORDER BY timestamp DESC")
     suspend fun getRecentBlockedNumbers(since: Long): List<BlockedCall>
 
     // Local campaign evidence
@@ -453,8 +454,9 @@ interface SpamDao {
 
     // Feature 10: Frequency tracking — count how many times a number appears in
     // the log within a time window. Unbounded counts caused false positives for
-    // legitimate callers with 3+ calls spread over months.
-    @Query("SELECT COUNT(*) FROM call_log WHERE number = :number AND isCall = 1 AND timestamp > :since")
+    // legitimate callers with 3+ calls spread over months. Meeting-mode silences
+    // are left out: someone who keeps calling during your meetings is not spam.
+    @Query("SELECT COUNT(*) FROM call_log WHERE number = :number AND isCall = 1 AND timestamp > :since AND reasonCode != 'meeting_mode'")
     suspend fun getCallFrequencySince(
         number: String,
         since: Long,

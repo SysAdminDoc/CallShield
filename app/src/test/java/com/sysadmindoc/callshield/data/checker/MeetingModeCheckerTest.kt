@@ -117,6 +117,20 @@ class MeetingModeCheckerTest {
         }
 
     @Test
+    fun `the withheld-caller decision uses the same setting and picked apps`() {
+        // The screening service asks this for a withheld number, which never reaches the checkers.
+        assertEquals(zoom, MeetingModeChecker.meetingAppInUse(zoomPicked, activeMeetingApps = setOf(teams, zoom)))
+        assertNull(MeetingModeChecker.meetingAppInUse(zoomPicked, activeMeetingApps = setOf(teams)))
+        assertNull(MeetingModeChecker.meetingAppInUse(zoomPicked, activeMeetingApps = emptySet()))
+        val switchedOff =
+            preferencesOf(
+                SpamRepository.KEY_MEETING_MODE to false,
+                SpamRepository.KEY_MEETING_MODE_APPS to setOf(zoom),
+            )
+        assertNull(MeetingModeChecker.meetingAppInUse(switchedOff, activeMeetingApps = setOf(zoom)))
+    }
+
+    @Test
     fun `meeting mode is the last checker in the production call chain`() {
         IsolatedRepositoryFixture(context).use { fixture ->
             val entries = runBlocking { fixture.repository.traceRules("+12125550123") }.entries

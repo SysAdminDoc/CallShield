@@ -1,6 +1,7 @@
 package com.sysadmindoc.callshield.data.checker
 
 import android.content.Context
+import androidx.datastore.preferences.core.Preferences
 import com.sysadmindoc.callshield.data.MeetingModeRegistry
 import com.sysadmindoc.callshield.data.SpamHeuristics
 import com.sysadmindoc.callshield.data.SpamRepository
@@ -33,8 +34,7 @@ internal class MeetingModeChecker(
             !ctx.prefs[SpamRepository.KEY_MEETING_MODE_APPS].isNullOrEmpty()
 
     override suspend fun check(ctx: CheckContext): BlockResult? {
-        val selected = ctx.prefs[SpamRepository.KEY_MEETING_MODE_APPS].orEmpty()
-        val meetingApp = activeMeetingApps().firstOrNull { it in selected } ?: return null
+        val meetingApp = meetingAppInUse(ctx.prefs, activeMeetingApps()) ?: return null
         if (isContact(appContext, ctx.number)) return null
         return BlockResult.block(
             matchSource = MATCH_SOURCE,
@@ -44,5 +44,19 @@ internal class MeetingModeChecker(
 
     companion object {
         const val MATCH_SOURCE = "meeting_mode"
+
+        /**
+         * The picked app holding a meeting right now, or null when meeting
+         * mode is off or no picked app is in one. The screening service also
+         * uses it for a withheld number, which never reaches the checkers.
+         */
+        fun meetingAppInUse(
+            prefs: Preferences,
+            activeMeetingApps: Set<String> = MeetingModeRegistry.activePackages(),
+        ): String? {
+            if (prefs[SpamRepository.KEY_MEETING_MODE] != true) return null
+            val selected = prefs[SpamRepository.KEY_MEETING_MODE_APPS].orEmpty()
+            return activeMeetingApps.firstOrNull { it in selected }
+        }
     }
 }

@@ -123,7 +123,7 @@ object BlockReasoning {
                 reasoning(
                     "You allowed this number for a while.",
                     "It rings until the temporary allow runs out.",
-                    "Your blocklist, wildcard and range rules still win.",
+                    STILL_WIN_OVER_TEMPORARY_ALLOW,
                 )
             }
 
@@ -139,14 +139,15 @@ object BlockReasoning {
                 reasoning(
                     "This number is in a series the regulator protects.",
                     "Banks, insurers and government offices call from it, so it rings through past the spam database, the heuristics, quiet hours and region rules.",
-                    "Your blocklist, wildcard and range rules still win, and so do numbers you blocked in Android.",
+                    STILL_WIN_OVER_PROTECTED_SERIES,
                 )
             }
 
             BlockReasonCode.RECENTLY_DIALED -> {
                 reasoning(
                     "You called this number recently, so the callback rang through.",
-                    "Any number you called in the last 24 hours rings through, even when it's in the spam database.",
+                    "Any number you called in the last 24 hours gets past region rules, quiet hours and the spam heuristics.",
+                    STILL_WIN_OVER_TRUST_SIGNALS,
                 )
             }
 
@@ -154,7 +155,7 @@ object BlockReasoning {
                 reasoning(
                     "Emergency callback grace is active.",
                     "A local emergency call was placed recently, so unknown callbacks can ring through.",
-                    EXPLICIT_BLOCKS_STILL_WIN,
+                    STILL_WIN_OVER_TRUST_SIGNALS,
                 )
             }
 
@@ -162,7 +163,7 @@ object BlockReasoning {
                 reasoning(
                     "You've answered this caller repeatedly.",
                     "This number has recent answered calls on this phone.",
-                    EXPLICIT_BLOCKS_STILL_WIN,
+                    STILL_WIN_OVER_TRUST_SIGNALS,
                 )
             }
 
@@ -176,8 +177,8 @@ object BlockReasoning {
             BlockReasonCode.CALLER_NAME_TRUST -> {
                 reasoning(
                     "The caller's name matched one of your trusted names.",
-                    "The name comes from your carrier's caller ID. It gets a caller past region rules, quiet hours and the spam heuristics.",
-                    "The spam database and your own block rules still win.",
+                    "The name comes from your carrier's caller ID. It gets a caller past region rules, quiet hours, caller-name blocks and the spam heuristics.",
+                    STILL_WIN_OVER_TRUST_SIGNALS,
                 )
             }
 
@@ -185,7 +186,7 @@ object BlockReasoning {
                 reasoning(
                     "An app you use said this call was coming.",
                     "A recent notification from a delivery, ride or messaging app mentioned this number or an arriving driver.",
-                    "The spam database and your own block rules still win.",
+                    STILL_WIN_OVER_TRUST_SIGNALS,
                 )
             }
 
@@ -479,8 +480,18 @@ object BlockReasoning {
 
     internal const val UNRECOGNIZED_HEADLINE = "Blocked by an unrecognized protection rule."
 
-    private const val EXPLICIT_BLOCKS_STILL_WIN =
-        "Explicit blocklist, wildcard, range, STIR-failed, and system block rules still win first."
+    // What still outranks an allow, by band of the CheckerPriority ladder.
+    // BlockReasoningTest checks each sentence against the priorities.
+    private const val STILL_WIN_OVER_TEMPORARY_ALLOW =
+        "Contacts-only mode, a failed carrier check, your blocklist, wildcard and range rules, and numbers you blocked in Android still win."
+
+    private const val STILL_WIN_OVER_PROTECTED_SERIES =
+        "Contacts-only mode, a failed carrier check, your blocklist, wildcard and range rules, numbers you blocked in Android " +
+            "and the downloaded prefix list still win."
+
+    private const val STILL_WIN_OVER_TRUST_SIGNALS =
+        "Contacts-only mode, a failed carrier check, your blocklist, wildcard and range rules, numbers you blocked in Android, " +
+            "the downloaded prefix list, telemarketing ranges you block and the spam database still win."
 
     private fun explainCategoryPolicy(
         policy: CategoryPolicyMatch,
