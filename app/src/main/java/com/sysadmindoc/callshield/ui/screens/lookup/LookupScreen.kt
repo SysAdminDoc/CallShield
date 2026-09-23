@@ -141,7 +141,6 @@ fun LookupScreen(viewModel: MainViewModel) {
     // rotation, and so the verdict stays bound to the number that was actually
     // checked rather than to whatever is currently typed in the field.
     val outcome by viewModel.lookupOutcome.collectAsStateWithLifecycle()
-    val userBlocked by viewModel.userBlockedNumbers.collectAsStateWithLifecycle()
     val result = outcome?.result
     val trace = outcome?.trace
     val checkedNumber = outcome?.number
@@ -338,7 +337,6 @@ fun LookupScreen(viewModel: MainViewModel) {
                         }
                     val probabilistic = lookupResult.isSpam && BlockReasoning.isProbabilistic(lookupResult.reasonCode)
                     val userRule = BlockReasoning.isUserRule(lookupResult.reasonCode)
-                    val userRuleEntry = userBlocked.firstOrNull { it.number == resultNumber }
 
                     SectionHeader(
                         stringResource(R.string.lookup_risk_assessment),
@@ -451,8 +449,8 @@ fun LookupScreen(viewModel: MainViewModel) {
                                 onClick = {
                                     when {
                                         userRule -> {
-                                            userRuleEntry?.let { viewModel.unblockNumber(it) }
-                                                ?: viewModel.unblockByNumber(resultNumber)
+                                            // By number, so a block saved in another spelling of it goes too.
+                                            viewModel.unblockByNumber(resultNumber)
                                             hapticTick(context)
                                             scope.launch {
                                                 snackbarHostState.showSnackbar(resources.getString(R.string.lookup_rule_removed))

@@ -134,19 +134,19 @@ data class CheckContext(
     /** Region-scoped sender-ID/numbering evidence for SMS only. */
     val senderProvenance: SenderProvenance? = null,
     /**
-     * The +1 form of [number] when it is a national-format NANP number that
-     * canonicalization left without "+" (see
-     * [com.sysadmindoc.callshield.data.PhoneIdentityCanonicalizer.nanpE164Fallback]).
+     * Other spellings the same line may be stored under: the +1 and national
+     * forms of a NANP number libphonenumber rejects (see
+     * [com.sysadmindoc.callshield.data.PhoneIdentityCanonicalizer.equivalentForms]).
      */
-    val e164Fallback: String? = null,
+    val alternateForms: List<String> = emptyList(),
 ) {
     /**
      * Forms to try when matching stored numbers exactly, canonical first.
-     * Allow and block lookups both use it, so a number saved in either form
+     * Allow and block lookups both use it, so a number saved in any form
      * is recognized the same way on both sides.
      */
     val lookupForms: List<String>
-        get() = listOfNotNull(number, e164Fallback)
+        get() = listOf(number) + alternateForms
 
     /**
      * Milliseconds remaining before the 5-second Android CallScreeningService

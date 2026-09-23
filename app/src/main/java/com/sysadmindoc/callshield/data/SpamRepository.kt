@@ -108,6 +108,7 @@ class SpamRepository(
             normalizePhone = phoneIdentityCanonicalizer::canonicalizePhone,
             normalizeSenderIdentity = phoneIdentityCanonicalizer::canonicalizeIdentity,
             senderRegionIso = phoneIdentityCanonicalizer.homeRegionIso,
+            equivalentForms = phoneIdentityCanonicalizer::equivalentForms,
         )
     private val syncRepository =
         SyncRepository(
@@ -126,6 +127,7 @@ class SpamRepository(
             settingsRepository = settingsRepository,
             normalizeNumber = phoneIdentityCanonicalizer::canonicalizePhone,
             normalizeLogIdentity = phoneIdentityCanonicalizer::canonicalizeIdentity,
+            equivalentForms = phoneIdentityCanonicalizer::equivalentForms,
             invalidateWildcardCache = spamRepositoryImpl::invalidateWildcardCache,
             invalidateKeywordCache = spamRepositoryImpl::invalidateKeywordCache,
             invalidateHashWildcardCache = spamRepositoryImpl::invalidateHashWildcardCache,
@@ -635,7 +637,7 @@ class SpamRepository(
     internal suspend fun findExactSpamNumber(normalized: String) = spamRepositoryImpl.findByNumberInternal(normalized)
 
     /** Forms of a normalized number to match stored rows against, as the screening pipeline does. */
-    internal fun lookupForms(normalized: String): List<String> = listOfNotNull(normalized, PhoneIdentityCanonicalizer.nanpE164Fallback(normalized, phoneIdentityCanonicalizer.homeRegionIso))
+    internal fun lookupForms(normalized: String): List<String> = phoneIdentityCanonicalizer.equivalentForms(normalized)
 
     internal suspend fun warmScreeningCaches() = spamRepositoryImpl.warmScreeningCaches()
 

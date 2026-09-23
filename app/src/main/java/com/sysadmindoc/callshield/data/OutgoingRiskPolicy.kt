@@ -33,11 +33,14 @@ internal object OutgoingRiskPolicy {
         nowElapsed: Long = SystemClock.elapsedRealtime(),
     ): OutgoingRiskWarning? {
         val normalized = repository.normalizeNumber(rawNumber)
-        val match = normalized.takeIf(String::isNotBlank)?.let { repository.findExactSpamNumber(it) }
+        // Every stored spelling, the way screening matches them, for the row
+        // and for the allow alike.
+        val forms = normalized.takeIf(String::isNotBlank)?.let(repository::lookupForms).orEmpty()
+        val match = forms.firstNotNullOfOrNull { repository.findExactSpamNumber(it) }
         // A whitelist entry is the user's standing false-positive correction —
         // the community DB row usually still exists for exactly those numbers,
         // and warning on every dial would re-litigate a decision already made.
-        if (match != null && repository.hasActiveWhitelistEntry(normalized)) return null
+        if (match != null && forms.any { repository.hasActiveWhitelistEntry(it) }) return null
         val warning = match?.toOutgoingWarning(normalized)
         return warning?.takeIf { shouldShow(normalized, nowElapsed) }
     }

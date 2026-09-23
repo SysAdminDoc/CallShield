@@ -46,6 +46,23 @@ class PhoneIdentityCanonicalizerTest {
     }
 
     @Test
+    fun `equivalent forms list only the spellings a number can be stored under`() {
+        // libphonenumber accepts 212 555 0101, so it's always stored as +1.
+        val us = canonicalizer("US", mapOf("2125550101" to "+12125550101", "12125550101" to "+12125550101"))
+        assertEquals(listOf("+12125550101"), us.equivalentForms("+12125550101"))
+
+        // It rejects 649 555 0123, so every spelling can be on file.
+        assertEquals(listOf("6495550123", "+16495550123", "16495550123"), us.equivalentForms("6495550123"))
+        assertEquals(listOf("+16495550123", "6495550123", "16495550123"), us.equivalentForms("+16495550123"))
+        assertEquals(listOf("16495550123", "+16495550123", "6495550123"), us.equivalentForms("16495550123"))
+
+        // Outside the NANP, or for anything not NANP-shaped, there's just the one.
+        assertEquals(listOf("6495550123"), canonicalizer("GB", emptyMap()).equivalentForms("6495550123"))
+        assertEquals(listOf("+442079460018"), us.equivalentForms("+442079460018"))
+        assertEquals(listOf("5550123"), us.equivalentForms("5550123"))
+    }
+
+    @Test
     fun `existing E164 numbers and short codes bypass regional formatting`() {
         var formatterCalls = 0
         val canonicalizer =

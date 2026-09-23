@@ -33,8 +33,10 @@ All notable changes to CallShield will be documented in this file.
   When Android's number library didn't recognize the exchange or the area
   code (a made-up number, or an area code newer than the phone's copy of the
   library), the number kept its bare form and slipped past both. Numbers you
-  blocked or allowed match either form too, and so does the outgoing call
-  hold.
+  blocked or allowed match every spelling too, and so does the outgoing call
+  hold. Blocking, allowing and removing a block also work across spellings:
+  a newer block of 649 555 0123 replaces an older allow of +1 649 555 0123,
+  and Remove my rule clears the block however it was saved.
 
 - Your call category rules now reach more suspicious-pattern blocks. A call
   flagged as possible neighbor spoofing counts as a scam, one from an active

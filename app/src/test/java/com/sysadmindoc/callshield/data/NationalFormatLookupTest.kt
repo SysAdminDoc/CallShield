@@ -10,6 +10,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -44,8 +45,66 @@ class NationalFormatLookupTest {
         // Without this the other cases would pass for the wrong reason.
         assertEquals("6495550123", fixture.repository.normalizeNumber("649-555-0123"))
         assertEquals("16495550123", fixture.repository.normalizeNumber("1 649 555 0123"))
-        assertEquals(listOf("6495550123", "+16495550123"), fixture.repository.lookupForms("6495550123"))
+        assertEquals(listOf("6495550123", "+16495550123", "16495550123"), fixture.repository.lookupForms("6495550123"))
+        assertEquals("5552345678", fixture.repository.normalizeNumber("555-234-5678"))
     }
+
+    @Test
+    fun `a newer block beats an older allow saved in another spelling`() =
+        runBlocking {
+            // 555 isn't an area code, so none of the heuristics fire either way.
+            fixture.repository.addToWhitelist("+15552345678")
+            fixture.repository.blockNumber("5552345678")
+            assertEquals("user_blocklist", fixture.repository.isSpam("5552345678").matchSource)
+
+            fixture.repository.addToWhitelist("6495550199")
+            fixture.repository.blockNumber("+16495550199")
+            assertEquals("user_blocklist", fixture.repository.isSpam("6495550199").matchSource)
+        }
+
+    @Test
+    fun `a newer allow beats an older block saved in another spelling`() =
+        runBlocking {
+            fixture.repository.blockNumber("+15552345678")
+            fixture.repository.addToWhitelist("5552345678")
+
+            val result = fixture.repository.isSpam("5552345678")
+            assertFalse(result.isSpam)
+            assertEquals("manual_whitelist", result.matchSource)
+            // The allow outranks the block anyway; the point is the stale block is gone.
+            assertNull(fixture.dao.findByNumber("+15552345678"))
+        }
+
+    @Test
+    fun `removing a block by any spelling removes it`() =
+        runBlocking {
+            fixture.repository.blockNumber("+15552345678")
+            assertEquals("user_blocklist", fixture.repository.isSpam("5552345678").matchSource)
+
+            fixture.repository.unblockByNumber("5552345678")
+
+            assertFalse(fixture.repository.isSpam("5552345678").isSpam)
+            assertFalse(fixture.repository.isSpam("+15552345678").isSpam)
+        }
+
+    @Test
+    fun `a temporary allow is refused against a permanent block in another spelling`() =
+        runBlocking {
+            fixture.repository.blockNumber("+15552345678")
+
+            // The +1 spelling was already refused; the national one used to be
+            // accepted while calls stayed blocked.
+            assertFalse(fixture.repository.temporaryAllowNumber("5552345678", System.currentTimeMillis() + 3_600_000L))
+            assertEquals("user_blocklist", fixture.repository.isSpam("5552345678").matchSource)
+        }
+
+    @Test
+    fun `a +1 caller matches a block saved in national form`() =
+        runBlocking {
+            fixture.repository.blockNumber("5552345678")
+
+            assertEquals("user_blocklist", fixture.repository.isSpam("+15552345678").matchSource)
+        }
 
     @Test
     fun `a national-format number matches its E164 database row`() =

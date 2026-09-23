@@ -237,6 +237,9 @@ class MainViewModel
 
         fun observeSpamNumber(number: String): Flow<SpamNumber?> = repo.observeNumber(number)
 
+        /** Every stored spelling of [number], the way screening matches it. */
+        fun lookupForms(number: String): List<String> = repo.lookupForms(number)
+
         val userBlockedNumbers: StateFlow<List<SpamNumber>> =
             repo
                 .getUserBlockedNumbers()

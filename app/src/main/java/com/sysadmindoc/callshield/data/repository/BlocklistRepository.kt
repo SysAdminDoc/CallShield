@@ -38,6 +38,12 @@ class BlocklistRepository(
     private val settingsRepository: SettingsRepository,
     private val normalizeNumber: (String) -> String,
     private val normalizeLogIdentity: (String) -> String,
+    /**
+     * Every stored spelling of a canonical number, canonical first. Screening
+     * matches all of them, so an edit that only touched one form could leave
+     * an older allow beating a newer block, or a removed block still in force.
+     */
+    private val equivalentForms: (String) -> List<String> = { listOf(it) },
     private val invalidateWildcardCache: () -> Unit,
     private val invalidateKeywordCache: () -> Unit,
     private val invalidateHashWildcardCache: () -> Unit,
@@ -74,10 +80,10 @@ class BlocklistRepository(
         var blocked = false
         runInTransaction {
             if (cleanupExpired) cleanupExpiredTemporaryDecisions()
-            val existingWhitelist = dao.findWhitelistEntry(normalized)
-            val permanentAllowExists = expiresAt != null && existingWhitelist != null && existingWhitelist.expiresAt == null
+            val existingWhitelist = equivalentForms(normalized).mapNotNull { dao.findWhitelistEntry(it) }
+            val permanentAllowExists = expiresAt != null && existingWhitelist.any { it.expiresAt == null }
             if (!permanentAllowExists) {
-                existingWhitelist?.let { dao.deleteWhitelistEntry(it) }
+                existingWhitelist.forEach { dao.deleteWhitelistEntry(it) }
                 when (val existing = dao.findByNumber(normalized)) {
                     null -> {
                         dao.insertNumber(
@@ -143,7 +149,11 @@ class BlocklistRepository(
     /** Undo a block by number string (e.g. an accidental blocked-log swipe). */
     suspend fun unblockByNumber(number: String) {
         val normalized = normalizeNumber(number)
-        dao.findByNumber(normalized)?.let { unblockNumber(it) }
+        if (normalized.isBlank()) return
+        equivalentForms(normalized)
+            .mapNotNull { dao.findByNumber(it) }
+            .filter { it.isUserBlocked }
+            .forEach { unblockNumber(it) }
     }
 
     fun getAllWildcardRules(): Flow<List<WildcardRule>> = dao.getAllWildcardRules()
@@ -571,16 +581,18 @@ class BlocklistRepository(
         var whitelisted = false
         runInTransaction {
             cleanupExpiredTemporaryDecisions()
-            val existingSpam = dao.findByNumber(normalized)
-            val permanentUserBlock = existingSpam?.isUserBlocked == true && existingSpam.expiresAt == null
+            val existingSpam = equivalentForms(normalized).mapNotNull { dao.findByNumber(it) }
+            val permanentUserBlock = existingSpam.any { it.isUserBlocked && it.expiresAt == null }
             if (!(expiresAt != null && permanentUserBlock)) {
-                if (expiresAt == null || existingSpam?.expiresAt != null) {
-                    when (val resolution = resolveSpamNumberForWhitelist(existingSpam)) {
-                        SpamNumberWhitelistResolution.None -> Unit
-                        is SpamNumberWhitelistResolution.Update -> dao.insertNumber(resolution.number)
-                        is SpamNumberWhitelistResolution.Delete -> dao.deleteNumber(resolution.number)
+                existingSpam
+                    .filter { expiresAt == null || it.expiresAt != null }
+                    .forEach { row ->
+                        when (val resolution = resolveSpamNumberForWhitelist(row)) {
+                            SpamNumberWhitelistResolution.None -> Unit
+                            is SpamNumberWhitelistResolution.Update -> dao.insertNumber(resolution.number)
+                            is SpamNumberWhitelistResolution.Delete -> dao.deleteNumber(resolution.number)
+                        }
                     }
-                }
                 dao.insertWhitelistEntry(
                     WhitelistEntry(
                         number = normalized,

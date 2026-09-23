@@ -34,6 +34,21 @@ class PhoneIdentityCanonicalizer internal constructor(
             ?: normalized
     }
 
+    /**
+     * Every spelling under which this phone may have stored the line behind
+     * [canonical], [canonical] first. For a NANP number on a NANP home region
+     * that's its +1 form plus whichever national spellings canonicalization
+     * leaves without a "+" (only numbers libphonenumber rejects stay
+     * national, so a valid number has just the one form). Lookups and edits
+     * both go through this, so a block, an allow and its removal all see the
+     * same set of rows.
+     */
+    fun equivalentForms(canonical: String): List<String> {
+        val national = nanpNational(canonical, homeRegionIso) ?: return listOf(canonical)
+        val storedNational = listOf(national, "1$national").filter { canonicalizePhone(it) == it }
+        return (listOf(canonical, "+1$national") + storedNational).distinct()
+    }
+
     fun canonicalizeIdentity(raw: String): String {
         val trimmed = raw.trim()
         if (trimmed.any(Char::isLetter)) {
@@ -123,7 +138,8 @@ class PhoneIdentityCanonicalizer internal constructor(
          * number without "+" whenever libphonenumber rejects it (a fictional
          * exchange, an unassigned area code, or one newer than the phone's
          * metadata), while the spam database and prefix list are keyed by
-         * E.164. Lookups try this form too; stored identities keep theirs.
+         * E.164. It names one key for every spelling (the outgoing hold's
+         * Call anyway pass); lookups use [equivalentForms].
          */
         fun nanpE164Fallback(
             canonical: String,
@@ -136,9 +152,23 @@ class PhoneIdentityCanonicalizer internal constructor(
                 else -> null
             }
 
+        /** The ten national digits of a NANP number on a NANP home region, whichever way it's spelled. */
+        private fun nanpNational(
+            canonical: String,
+            homeRegionIso: String?,
+        ): String? =
+            when {
+                normalizeRegion(homeRegionIso) !in NANP_REGIONS -> null
+                NANP_E164.matches(canonical) -> canonical.substring(2)
+                NANP_NATIONAL.matches(canonical) -> canonical
+                NANP_WITH_TRUNK_PREFIX.matches(canonical) -> canonical.substring(1)
+                else -> null
+            }
+
         // Every region that shares country code 1.
         private val NANP_REGIONS =
             setOf("US", "CA", "AG", "AI", "AS", "BB", "BM", "BS", "DM", "DO", "GD", "GU", "JM", "KN", "KY", "LC", "MP", "MS", "PR", "SX", "TC", "TT", "VC", "VG", "VI")
+        private val NANP_E164 = Regex("\\+1[2-9][0-9]{9}")
         private val NANP_NATIONAL = Regex("[2-9][0-9]{9}")
         private val NANP_WITH_TRUNK_PREFIX = Regex("1[2-9][0-9]{9}")
     }

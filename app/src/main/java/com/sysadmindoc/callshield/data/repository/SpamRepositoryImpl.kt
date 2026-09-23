@@ -3,7 +3,6 @@ package com.sysadmindoc.callshield.data.repository
 import android.content.Context
 import androidx.datastore.preferences.core.Preferences
 import com.sysadmindoc.callshield.data.CategoryCallPolicy
-import com.sysadmindoc.callshield.data.PhoneIdentityCanonicalizer
 import com.sysadmindoc.callshield.data.SenderProvenance
 import com.sysadmindoc.callshield.data.SenderProvenanceResolver
 import com.sysadmindoc.callshield.data.checker.CheckContext
@@ -36,6 +35,8 @@ class SpamRepositoryImpl(
     private val normalizeSenderIdentity: (String) -> String,
     private val senderProvenanceResolver: SenderProvenanceResolver = SenderProvenanceResolver(),
     private val senderRegionIso: String? = null,
+    /** Every stored spelling of a canonical number, canonical first. */
+    private val equivalentForms: (String) -> List<String> = { listOf(it) },
 ) {
     // isSpam() is the critical real-time path. Loading all prefixes,
     // wildcard rules, and keyword rules from Room on every call adds
@@ -175,7 +176,7 @@ class SpamRepositoryImpl(
                 callerIdentity = callerIdentity,
                 smsContextTrusted = smsContextTrusted,
                 senderProvenance = senderProvenance,
-                e164Fallback = PhoneIdentityCanonicalizer.nanpE164Fallback(normalized, senderRegionIso),
+                alternateForms = equivalentForms(normalized).drop(1),
             )
 
         val pipelineRun = CheckerPipeline.runWithDiagnostics(callChain, ctx)
@@ -265,7 +266,7 @@ class SpamRepositoryImpl(
                 number = normalized,
                 realtimeCall = false,
                 prefs = prefs,
-                e164Fallback = PhoneIdentityCanonicalizer.nanpE164Fallback(normalized, senderRegionIso),
+                alternateForms = equivalentForms(normalized).drop(1),
             )
         return CheckerPipeline.traceAll(callChain, ctx)
     }

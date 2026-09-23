@@ -70,7 +70,8 @@ fun NumberDetailScreen(
             .collectAsStateWithLifecycle(initialValue = null)
     val userBlocked by viewModel.userBlockedNumbers.collectAsStateWithLifecycle()
 
-    val isBlocked = userBlocked.any { it.number == number }
+    val forms = remember(number) { viewModel.lookupForms(number) }
+    val isBlocked = userBlocked.any { it.number in forms }
     val callCount = numberCalls.count { it.isCall }
     val smsCount = numberCalls.count { !it.isCall }
     val firstSeen = numberCalls.minByOrNull { it.timestamp }?.timestamp
@@ -270,7 +271,8 @@ fun NumberDetailScreen(
                     color = CatRed,
                     onClick = {
                         if (isBlocked) {
-                            userBlocked.find { it.number == number }?.let { viewModel.unblockNumber(it) }
+                            // By number, so a block saved in another spelling of it goes too.
+                            viewModel.unblockByNumber(number)
                             hapticTick(context)
                             Toast.makeText(context, numberUnblockedMessage, Toast.LENGTH_SHORT).show()
                         } else {
