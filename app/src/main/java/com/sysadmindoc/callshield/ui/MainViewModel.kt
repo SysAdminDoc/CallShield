@@ -30,6 +30,7 @@ import com.sysadmindoc.callshield.data.EmergencyNumberFloor
 import com.sysadmindoc.callshield.data.FalsePositiveReport
 import com.sysadmindoc.callshield.data.MessageCapabilitySource
 import com.sysadmindoc.callshield.data.MessageCapabilityStatus
+import com.sysadmindoc.callshield.data.RegulatoryPrefix
 import com.sysadmindoc.callshield.data.RuleConflictAnalyzer
 import com.sysadmindoc.callshield.data.SpamHeuristics
 import com.sysadmindoc.callshield.data.SpamRepository
@@ -397,6 +398,15 @@ class MainViewModel
         val regionBlockEnabled =
             repo.regionBlockEnabled
                 .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+        val enabledRegulatoryPrefixes =
+            repo.enabledRegulatoryPrefixes
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
+        val meetingModeEnabled =
+            repo.meetingModeEnabled
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+        val meetingModeApps =
+            repo.meetingModeApps
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
         val allowedRegions =
             repo.allowedRegions
                 .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
@@ -1077,6 +1087,25 @@ class MainViewModel
             viewModelScope.launch {
                 repo.setOutgoingRiskWarning(enabled)
             }
+
+        fun setRegulatoryPrefix(
+            prefix: RegulatoryPrefix,
+            enabled: Boolean,
+        ) = viewModelScope.launch {
+            repo.setRegulatoryPrefix(prefix, enabled)
+        }
+
+        fun setMeetingMode(enabled: Boolean) =
+            viewModelScope.launch {
+                repo.setMeetingMode(enabled)
+            }
+
+        fun setMeetingModeApp(
+            packageName: String,
+            selected: Boolean,
+        ) = viewModelScope.launch {
+            repo.setMeetingModeApp(packageName, selected)
+        }
 
         fun refreshContactGroups() {
             viewModelScope.launch {

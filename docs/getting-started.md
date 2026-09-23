@@ -77,7 +77,9 @@ Every user-facing toggle with its DataStore key and default value.
 | Time-based blocking | `time_block_enabled` | off |
 | Quiet hours start | `time_block_start_hour` | 22 |
 | Quiet hours end | `time_block_end_hour` | 7 |
-| Frequency escalation | `freq_escalation_enabled` | off |
+| Meeting mode | `meeting_mode_enabled` | off |
+| Meeting apps | `meeting_mode_packages` | empty |
+| Frequency escalation | `freq_escalation_enabled` | on |
 
 ### Enrichment and lookup
 
@@ -96,3 +98,14 @@ Every user-facing toggle with its DataStore key and default value.
 | Allowed regions | `allowed_call_regions` | empty |
 | Caller-name trust patterns | `cnap_trust_patterns` | empty |
 | Caller-name block patterns | `cnap_block_patterns` | empty |
+
+Allowed regions take two-letter US state and Canadian province codes (`NY`, `ON`), `TF` for toll-free, and `+` with a calling code for a country (`+39`). A Caribbean country that shares +1 goes in by each of its area codes, so the Dominican Republic is `+1809`, `+1829` and `+1849`. A bare `+1` isn't accepted.
+
+### Telemarketing ranges
+
+| Setting | Key | Default |
+|---------|-----|---------|
+| Block Spain 400 telemarketing | `reg_spain_400_enabled` | off |
+| Block India 140 promotional | `reg_india_140_enabled` | off |
+| Block Brazil 0303 telemarketing | `reg_brazil_0303_enabled` | off |
+| Protect India 1600 series | `reg_india_1600_allow_enabled` | off |

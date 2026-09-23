@@ -90,9 +90,9 @@ All detection layers implement a shared `IChecker` interface and run in priority
 |  5400 | **Range Patterns** (A5) | Block | Length-locked `#` patterns like `+33162######`, with schedule + coverage safety rail |
 |  5350 | **Temporary Allow** | Allow | One-off false-positive recovery from the Blocked Log. Beats all downloaded data, never your own rules |
 |  5320 | **Prefix Rules** | Block | Downloaded wangiri country codes, US premium rate (+1900), international premium |
-|  5310 | **Regulatory Prefix** | Block | Opt-in country telemarketing blocks: Spain 400 (RD 2026), India 140 (TRAI), Brazil 0303 (ANATEL) |
+|  5310 | **Regulatory Prefix** | Block | Opt-in (Settings > Telemarketing ranges) blocks for ranges regulators set aside for sales calls: Spain 400 (from 17 October 2026), India 140 (TRAI), Brazil 0303 (ANATEL). Matches the number with its country code, and without it on a phone from that country |
 |  5300 | **STIR/SHAKEN Authenticated** | Allow | Carrier-authenticated caller ID allows through heuristic/ML suspicion, and through a database match only when that row's newest evidence, community reports included, is over a year old and the number isn't trending right now. Explicit blocks still win first |
-|  5250 | **Regulatory Allow** | Allow | Protected series that must not be blocked. India 1600 (banks, insurers, government per TRAI) |
+|  5250 | **Regulatory Allow** | Allow | Opt-in protected series that rings through past the database and statistics. India 1600 (banks, insurers and government offices, per TRAI) |
 |  5200 | **Spam Database** | Block | 51,634 imported spam numbers plus the trending-numbers feed |
 |  5150 | **Database Prefix Expansion** | Block | Auto-blocks last-two-digit siblings of confirmed database entries |
 |  5000 | **Recently Dialed** | Allow | Numbers you called in the last 24h. They're probably calling back |
@@ -102,13 +102,14 @@ All detection layers implement a shared `IChecker` interface and run in priority
 |  4850 | **Caller Name Trust** | Allow | Carrier-presented name matches one of your trust patterns (requires the device to provide a name during screening) |
 |  4700 | **Push-Alert Bridge** (A3) | Allow | Uber/DoorDash/Amazon/Gmail notification about an arriving call? Let it through |
 |  4500 | *Campaign Recorder* |. | Side-effect only; feeds burst detection below |
-|  4300 | **Region Rules** | Block | Opt-in offline blocking outside your selected US/Canadian regions |
+|  4300 | **Region Rules** | Block | Opt-in offline blocking outside the US/Canadian regions and country calling codes you allow |
 |  4000 | **Quiet Hours** | Block | Block all non-contact calls during configurable hours (calls only) |
 |  3500 | **Frequency Auto-Block** | Block | Numbers that call 3+ times in 7 days get auto-blocked |
 |  3000 | **Heuristic Engine** | Block | VoIP ranges, neighbor spoofing, rapid-fire detection, 30+ rules |
 |  2500 | **Campaign Burst** | Block | NPA-NXX prefix clustering detects coordinated spam waves |
 |  2250 | **Caller Name Rules** | Block | Carrier-presented names can match bounded, user-defined `*`/`?` patterns after every allow layer (requires the device to provide a name during screening) |
 |  2000 | **ML Spam Scorer** | Block | 20-feature on-device gradient-boosted tree model |
+|  1500 | **Meeting Mode** | Silence | Opt-in. While a meeting app you pick shows a call in progress, calls from outside your contacts go quietly to voicemail. Runs on notification access, with no calendar permission |
 
 SMS-specific layers (append after the shared chain, in their own priority order): **SMS Keyword Rules** (5400, with schedule) → **SMS Context Trust** (4700, trusted-sender allow) → **SMS Burst Protection** (4650) → **SMS Content Analysis** (1900. 30+ regex patterns, URL shorteners, suspicious TLDs, spam domain blocklist).
 
@@ -124,7 +125,7 @@ SMS-specific layers (append after the shared chain, in their own priority order)
 
 ### Additional Layers
 - **Caller ID Overlay**. Suspicious calls (heuristic score 30-59) can use an explicit, default-off live enrichment option that checks SkipCalls. Clean calls never trigger it
-- **Region & caller-name rules**. Opt-in offline blocking outside selected US/Canadian regions, plus bounded `*`/`?` trust and block patterns for carrier-presented caller names. Explicit number, system, prefix and wildcard blocks, and all allow layers, keep priority
+- **Region & caller-name rules**. Opt-in offline blocking outside the US states, Canadian provinces, area codes (`+1809`) and country calling codes (`+39`) you allow, plus bounded `*`/`?` trust and block patterns for carrier-presented caller names. Explicit number, system, prefix and wildcard blocks, and all allow layers, keep priority
 - **Opt-in message notification screening**. Google/Samsung Messages are enabled by default. AOSP Messages, SMS Organizer, Signal, WhatsApp, WhatsApp Business, Gmail, Outlook, and Thunderbird can be enabled individually. Private-messenger/email matches show a separate warning without removing the original notification.
 - **URL Safety**. Local spam-domain checks stay on-device. Optional URLhaus (abuse.ch) checks are off by default and disclose only the registrable domain
 - **STIR/SHAKEN**. Blocks calls failing carrier caller ID verification (Android 11+)

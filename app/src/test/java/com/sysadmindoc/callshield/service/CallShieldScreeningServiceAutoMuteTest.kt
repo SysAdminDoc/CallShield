@@ -38,6 +38,23 @@ class CallShieldScreeningServiceAutoMuteTest {
         }
     }
 
+    @Test fun `a silence-only verdict is never a hard reject`() {
+        // Meeting mode says nothing against the caller; even a category BLOCK
+        // rule or every delivery setting off must not turn it into a reject.
+        for (categoryAction in CategoryCallAction.entries) {
+            assertTrue(
+                "silenceOnly should silence under $categoryAction",
+                shouldSilence(
+                    silentVoicemailEnabled = false,
+                    autoMuteLowConfidenceEnabled = false,
+                    confidence = 100,
+                    categoryAction = categoryAction,
+                    silenceOnly = true,
+                ),
+            )
+        }
+    }
+
     // ── 2) autoMute gate at the threshold ────────────────────────────────
 
     @Test fun `autoMute silences when confidence is below the threshold`() {

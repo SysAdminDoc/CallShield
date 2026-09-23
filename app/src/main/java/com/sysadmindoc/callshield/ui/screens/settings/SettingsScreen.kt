@@ -69,6 +69,7 @@ import com.sysadmindoc.callshield.data.CategoryCallAction
 import com.sysadmindoc.callshield.data.MessageCapabilityState
 import com.sysadmindoc.callshield.data.MessageCapabilityStatus
 import com.sysadmindoc.callshield.data.PortableBackupCrypto
+import com.sysadmindoc.callshield.data.RegulatoryPrefix
 import com.sysadmindoc.callshield.data.model.ExternalBlocklistPreview
 import com.sysadmindoc.callshield.data.model.ExternalBlocklistSubscription
 import com.sysadmindoc.callshield.data.remote.FeedMirror
@@ -100,6 +101,8 @@ internal const val SETTINGS_BACKUP_PASSPHRASE_TAG = "settings_backup_passphrase"
 internal const val SETTINGS_BACKUP_CONFIRM_TAG = "settings_backup_confirm"
 internal const val SETTINGS_RESTORE_PASSPHRASE_TAG = "settings_restore_passphrase"
 internal const val SETTINGS_CONTACT_SCOPE_TAG = "settings_contact_scope"
+internal const val SETTINGS_REGULATORY_PREFIX_TAG_PREFIX = "settings_regulatory_prefix:"
+internal const val SETTINGS_MEETING_MODE_TOGGLE_TAG = "settings_meeting_mode_toggle"
 
 private val backupSectionOrder =
     listOf(
@@ -137,6 +140,10 @@ fun SettingsScreen(viewModel: MainViewModel) {
     val contactGroups by viewModel.contactGroups.collectAsStateWithLifecycle()
     val contactGroupsLoading by viewModel.contactGroupsLoading.collectAsStateWithLifecycle()
     val regionBlockEnabled by viewModel.regionBlockEnabled.collectAsStateWithLifecycle()
+    val enabledRegulatoryPrefixes by viewModel.enabledRegulatoryPrefixes.collectAsStateWithLifecycle()
+    val meetingModeEnabled by viewModel.meetingModeEnabled.collectAsStateWithLifecycle()
+    val meetingModeApps by viewModel.meetingModeApps.collectAsStateWithLifecycle()
+    var showMeetingApps by rememberSaveable { mutableStateOf(false) }
     val allowedRegions by viewModel.allowedRegions.collectAsStateWithLifecycle()
     val cnapTrustPatterns by viewModel.cnapTrustPatterns.collectAsStateWithLifecycle()
     val cnapBlockPatterns by viewModel.cnapBlockPatterns.collectAsStateWithLifecycle()
@@ -200,6 +207,9 @@ fun SettingsScreen(viewModel: MainViewModel) {
     }
     var notificationsGranted by remember(context) { mutableStateOf(CallShieldPermissions.hasNotificationPermission(context)) }
     var overlayGranted by remember(context) { mutableStateOf(CallShieldPermissions.canDrawOverlays(context)) }
+    var notificationAccessGranted by remember(context) {
+        mutableStateOf(CallShieldPermissions.hasNotificationListenerAccess(context))
+    }
     var screenerGranted by remember(roleManager) { mutableStateOf(CallShieldPermissions.hasCallScreeningRole(roleManager)) }
     var contactsPermissionGranted by remember(context) {
         mutableStateOf(CallShieldPermissions.isPermissionGranted(context, Manifest.permission.READ_CONTACTS))
@@ -267,6 +277,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
                         )
                     notificationsGranted = CallShieldPermissions.hasNotificationPermission(context)
                     overlayGranted = CallShieldPermissions.canDrawOverlays(context)
+                    notificationAccessGranted = CallShieldPermissions.hasNotificationListenerAccess(context)
                     screenerGranted = CallShieldPermissions.hasCallScreeningRole(roleManager)
                     contactsPermissionGranted =
                         CallShieldPermissions.isPermissionGranted(context, Manifest.permission.READ_CONTACTS)
@@ -589,6 +600,11 @@ fun SettingsScreen(viewModel: MainViewModel) {
             )
         }
 
+        RegulatoryPrefixSettings(
+            enabled = enabledRegulatoryPrefixes,
+            onToggle = viewModel::setRegulatoryPrefix,
+        )
+
         // Detection engines
         SettingsCard(stringResource(R.string.settings_detection_engines)) {
             SettingsToggle(stringResource(R.string.settings_stir_shaken), stringResource(R.string.settings_stir_shaken_desc), Icons.Default.VerifiedUser, stirShaken) { viewModel.setStirShaken(it) }
@@ -828,6 +844,19 @@ fun SettingsScreen(viewModel: MainViewModel) {
             onEnabledChange = { viewModel.setTimeBlock(it) },
             onStartChange = { viewModel.setTimeBlockStart(it) },
             onEndChange = { viewModel.setTimeBlockEnd(it) },
+        )
+
+        MeetingModeSettings(
+            enabled = meetingModeEnabled,
+            selectedCount = meetingModeApps.size,
+            notificationAccessGranted = notificationAccessGranted,
+            onEnabledChange = { enabled ->
+                viewModel.setMeetingMode(enabled)
+                // Nothing happens until an app is picked, so ask right away.
+                if (enabled && meetingModeApps.isEmpty()) showMeetingApps = true
+            },
+            onChooseApps = { showMeetingApps = true },
+            onGrantAccess = { context.startActivitySafely(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) },
         )
 
         // Power mode
@@ -1103,6 +1132,14 @@ fun SettingsScreen(viewModel: MainViewModel) {
                 Text(stringResource(R.string.settings_about_desc), style = MaterialTheme.typography.labelSmall, color = CatSubtext)
             }
         }
+    }
+
+    if (showMeetingApps) {
+        MeetingAppsSheet(
+            selectedPackages = meetingModeApps,
+            onToggle = viewModel::setMeetingModeApp,
+            onDismiss = { showMeetingApps = false },
+        )
     }
 
     // A3 allowlist editor — modal sheet only mounts when requested so
@@ -2150,6 +2187,89 @@ private fun SettingsNumberStepper(
 private const val EMERGENCY_CALLBACK_WINDOW_MINUTES_STEP = 15
 private const val HOURS_PER_DAY = 24
 private const val SECONDS_PER_HOUR = 3_600
+
+@Composable
+internal fun MeetingModeSettings(
+    enabled: Boolean,
+    selectedCount: Int,
+    notificationAccessGranted: Boolean,
+    onEnabledChange: (Boolean) -> Unit,
+    onChooseApps: () -> Unit,
+    onGrantAccess: () -> Unit,
+) {
+    SettingsCard(stringResource(R.string.settings_meeting_mode)) {
+        SettingsToggle(
+            stringResource(R.string.settings_meeting_mode_toggle),
+            stringResource(R.string.settings_meeting_mode_desc),
+            Icons.Default.VideoCall,
+            enabled,
+            toggleTag = SETTINGS_MEETING_MODE_TOGGLE_TAG,
+            onCheckedChange = onEnabledChange,
+        )
+        if (enabled) {
+            Spacer(Modifier.height(4.dp))
+            PremiumActionButton(
+                label = stringResource(R.string.settings_meeting_mode_apps),
+                icon = Icons.Default.Tune,
+                color = CatMauve,
+                onClick = onChooseApps,
+                modifier = Modifier.fillMaxWidth(),
+                outlined = true,
+            )
+            Text(
+                if (selectedCount == 0) {
+                    stringResource(R.string.settings_meeting_mode_apps_none)
+                } else {
+                    pluralStringResource(R.plurals.settings_meeting_mode_apps_count, selectedCount, selectedCount)
+                },
+                style = MaterialTheme.typography.labelSmall,
+                color = if (selectedCount == 0) CatPeach else CatSubtext,
+                modifier = Modifier.padding(start = 4.dp),
+            )
+            if (!notificationAccessGranted) {
+                Text(
+                    stringResource(R.string.settings_meeting_mode_needs_access),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = CatPeach,
+                    modifier = Modifier.padding(start = 4.dp, top = 4.dp),
+                )
+                PremiumActionButton(
+                    label = stringResource(R.string.settings_grant_notification_access),
+                    icon = Icons.Default.NotificationsActive,
+                    color = CatMauve,
+                    onClick = onGrantAccess,
+                    modifier = Modifier.fillMaxWidth(),
+                    outlined = true,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+internal fun RegulatoryPrefixSettings(
+    enabled: Set<RegulatoryPrefix>,
+    onToggle: (RegulatoryPrefix, Boolean) -> Unit,
+) {
+    SettingsCard(stringResource(R.string.settings_regulatory_prefixes)) {
+        Text(
+            stringResource(R.string.settings_regulatory_prefixes_desc),
+            style = MaterialTheme.typography.bodySmall,
+            color = CatSubtext,
+            modifier = Modifier.padding(start = 4.dp, bottom = 4.dp),
+        )
+        RegulatoryPrefix.entries.forEachIndexed { index, prefix ->
+            if (index > 0) GradientDivider()
+            SettingsToggle(
+                stringResource(prefix.titleRes),
+                stringResource(prefix.summaryRes),
+                if (prefix.allows) Icons.Default.VerifiedUser else Icons.Default.Campaign,
+                prefix in enabled,
+                toggleTag = "$SETTINGS_REGULATORY_PREFIX_TAG_PREFIX${prefix.name}",
+            ) { onToggle(prefix, it) }
+        }
+    }
+}
 
 @Composable
 internal fun QuietHoursSettings(

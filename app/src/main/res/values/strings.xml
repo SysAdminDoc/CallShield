@@ -420,6 +420,8 @@
     <string name="lookup_checker_database">Spam database</string>
     <string name="lookup_checker_db_prefix_expansion">Spam database prefix</string>
     <string name="lookup_checker_prefix">Prefix rules</string>
+    <string name="lookup_checker_regulatory_prefix">Telemarketing range</string>
+    <string name="lookup_checker_regulatory_allow">Protected series</string>
     <string name="lookup_checker_wildcard">Wildcard rules</string>
     <string name="lookup_checker_hash_wildcard">Number-pattern rules</string>
     <string name="lookup_checker_recently_dialed">Recently dialed</string>
@@ -435,6 +437,7 @@
     <string name="lookup_checker_heuristic">Behavior analysis</string>
     <string name="lookup_checker_campaign_burst">Spam campaign</string>
     <string name="lookup_checker_ml_scorer">On-device spam model</string>
+    <string name="lookup_checker_meeting_mode">Meeting mode</string>
     <string name="lookup_checker_sms_context">Message trust</string>
     <string name="lookup_checker_sms_burst">Message burst</string>
     <string name="lookup_checker_keyword">Keyword rules</string>
@@ -665,6 +668,21 @@
     <string name="settings_quiet_hours">Quiet hours</string>
     <string name="settings_quiet_hours_toggle">Block unknowns during quiet hours</string>
     <string name="settings_quiet_hours_desc">Block all non-contact calls during set hours</string>
+    <string name="settings_meeting_mode">Meeting mode</string>
+    <string name="settings_meeting_mode_toggle">Silence unknown callers in meetings</string>
+    <string name="settings_meeting_mode_desc">While a meeting app you pick shows a call in progress, calls from outside your contacts go quietly to voicemail.</string>
+    <string name="settings_meeting_mode_apps">Choose meeting apps</string>
+    <string name="settings_meeting_mode_apps_none">Pick at least one app. Meeting mode does nothing until you do.</string>
+    <plurals name="settings_meeting_mode_apps_count">
+        <item quantity="one">%1$d app picked</item>
+        <item quantity="other">%1$d apps picked</item>
+    </plurals>
+    <string name="settings_meeting_mode_needs_access">Meeting mode needs notification access to see when a meeting starts.</string>
+    <string name="meeting_apps_title">Meeting apps</string>
+    <string name="meeting_apps_body">Pick the apps you meet or take calls in. CallShield only checks whether one is showing a call in progress. It never reads what that notification says.</string>
+    <string name="meeting_apps_in_call">In a call now</string>
+    <string name="meeting_apps_not_installed">Not installed</string>
+    <string name="meeting_apps_done">Done</string>
     <string name="settings_time_start">Start</string>
     <string name="settings_time_end">End</string>
     <string name="settings_quiet_hours_all_day_warning">Start and end match, so quiet-hours blocking runs all day.</string>
@@ -1553,6 +1571,8 @@
     <string name="accessibility_reason_database_prefix">This item was blocked because it matches a known spam number range.</string>
     <string name="accessibility_reason_prefix">This item was blocked because it matches a known spam number range.</string>
     <string name="accessibility_reason_saved_pattern">This item was blocked because it matches one of your saved number patterns.</string>
+    <string name="accessibility_reason_regulatory_prefix">This item was blocked because it comes from a telemarketing number range you chose to block.</string>
+    <string name="accessibility_reason_regulatory_allow">This item was allowed because it comes from a number series the regulator protects.</string>
     <string name="accessibility_reason_recently_dialed">This item was allowed because you called it recently.</string>
     <string name="accessibility_reason_answered_caller">This item was allowed because you have answered this caller before.</string>
     <string name="accessibility_reason_emergency_callback">This item was allowed because it may be an emergency callback.</string>
@@ -1564,6 +1584,7 @@
     <string name="accessibility_reason_frequency">This item was blocked because the caller tried too often.</string>
     <string name="accessibility_reason_suspicious_patterns">This item was blocked because it matched several suspicious calling patterns.</string>
     <string name="accessibility_reason_on_device_analysis">This item was blocked because on-device protection found it likely to be spam.</string>
+    <string name="accessibility_reason_meeting_mode">This call was silenced because you were in a meeting.</string>
     <string name="accessibility_reason_recent_reports">This item was blocked because recent reports identified the number as spam.</string>
     <string name="accessibility_reason_spam_website">This item was blocked because the message contained a website linked to spam.</string>
     <string name="accessibility_reason_push_alert">This item was blocked because a trusted alert identified it as spam.</string>
@@ -1617,24 +1638,26 @@
     </plurals>
     <string name="settings_region_cnap_rules">Region &amp; caller-name rules</string>
     <string name="settings_region_cnap_summary">Allowed regions: %1$d · Trusted names: %2$d · Blocked names: %3$d</string>
+    <string name="settings_regulatory_prefixes">Telemarketing ranges</string>
+    <string name="settings_regulatory_prefixes_desc">Some countries make sales calls come from a set number range. Block the ranges that reach you.</string>
     <string name="reg_prefix_spain_400">Block Spain 400 telemarketing</string>
-    <string name="reg_prefix_spain_400_desc">Spain requires commercial calls to use the 400 prefix from October 2026 (RD 2026).</string>
+    <string name="reg_prefix_spain_400_desc">Spain requires commercial calls to come from a 400 number from 17 October 2026.</string>
     <string name="reg_prefix_india_140">Block India 140 promotional</string>
-    <string name="reg_prefix_india_140_desc">India reserves the 140 prefix for promotional and telemarketing calls (TRAI).</string>
+    <string name="reg_prefix_india_140_desc">India reserves the 140 series for promotional and telemarketing calls (TRAI).</string>
     <string name="reg_prefix_brazil_0303">Block Brazil 0303 telemarketing</string>
-    <string name="reg_prefix_brazil_0303_desc">Brazil\'s 0303 prefix is used for telemarketing calls (ANATEL).</string>
+    <string name="reg_prefix_brazil_0303_desc">Telemarketers in Brazil call from the 0303 code that ANATEL set aside for them.</string>
     <string name="reg_prefix_india_1600_allow">Protect India 1600 series</string>
-    <string name="reg_prefix_india_1600_allow_desc">India\'s 1600 series is used by banks, insurers, and government. TRAI prohibits blocking it.</string>
+    <string name="reg_prefix_india_1600_allow_desc">India\'s 1600 series belongs to banks, insurers and government offices, so calls from it ring through past the spam database.</string>
     <string name="region_rules_title">Region &amp; caller-name rules</string>
-    <string name="region_rules_disclosure">These rules run entirely on your device. Region blocking uses the incoming number\'s NANP area code. Caller-name trust uses only a carrier-presented name that Android exposes to the screening service.</string>
+    <string name="region_rules_disclosure">These rules run entirely on your device. Region blocking reads the area code of a North American number and the country code of any other. Caller-name trust uses only a carrier-presented name that Android exposes to the screening service.</string>
     <string name="region_rules_block_outside">Block calls outside allowed regions</string>
-    <string name="region_rules_block_outside_desc">Allow selected US states, Canadian provinces, and territories; block other and international numbers.</string>
+    <string name="region_rules_block_outside_desc">Only the regions and countries you list can ring. Calls from anywhere else are blocked.</string>
     <string name="region_rules_allowed_regions">Allowed region codes</string>
-    <string name="region_rules_regions_hint">Comma-separated two-letter codes, for example NY, NJ, ON. Use TF for toll-free.</string>
-    <string name="region_rules_regions_required">Add at least one valid two-letter region code.</string>
+    <string name="region_rules_regions_hint">Separate with commas. Use two letters for a US state or Canadian province (NY, ON) and TF for toll-free. Use + and the calling code for a country, like +39 for Italy. A Caribbean country that shares +1 goes in by each of its area codes, like +1809, +1829 and +1849 for the Dominican Republic.</string>
+    <string name="region_rules_regions_required">Add at least one valid region or country code.</string>
     <plurals name="region_rules_regions_count">
-        <item quantity="one">%1$d valid region code</item>
-        <item quantity="other">%1$d valid region codes</item>
+        <item quantity="one">%1$d valid code</item>
+        <item quantity="other">%1$d valid codes</item>
     </plurals>
     <string name="cnap_device_unavailable_notice">This device hasn\'t provided a caller name during screening. These rules won\'t take effect until it does.</string>
     <string name="cnap_trust_title">Trust a presented caller name</string>

@@ -18,10 +18,12 @@ import com.sysadmindoc.callshield.data.CategoryCallAction
 import com.sysadmindoc.callshield.data.CategoryCallPolicy
 import com.sysadmindoc.callshield.data.CommunityReportLedger
 import com.sysadmindoc.callshield.data.ContactGroupCatalog
+import com.sysadmindoc.callshield.data.MeetingModeRegistry
 import com.sysadmindoc.callshield.data.MessageCapabilitySource
 import com.sysadmindoc.callshield.data.MessageCapabilityStatus
 import com.sysadmindoc.callshield.data.NotificationScreeningSources
 import com.sysadmindoc.callshield.data.RegionRules
+import com.sysadmindoc.callshield.data.RegulatoryPrefix
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.model.ExternalBlocklistSubscription
 import com.sysadmindoc.callshield.data.model.HotDataHealth
@@ -119,6 +121,13 @@ class SettingsRepository(
         dataStore.data.map { it[SpamRepository.KEY_OUTGOING_RISK_WARNING] ?: false }
     val regionBlockEnabled: Flow<Boolean> =
         dataStore.data.map { it[SpamRepository.KEY_REGION_BLOCK] ?: false }
+    val enabledRegulatoryPrefixes: Flow<Set<RegulatoryPrefix>> =
+        dataStore.data.map { prefs -> RegulatoryPrefix.entries.filterTo(mutableSetOf()) { prefs[it.key] == true } }
+    val meetingModeEnabled: Flow<Boolean> = dataStore.data.map { it[SpamRepository.KEY_MEETING_MODE] ?: false }
+    val meetingModeApps: Flow<Set<String>> =
+        dataStore.data.map { prefs ->
+            prefs[SpamRepository.KEY_MEETING_MODE_APPS].orEmpty().filterTo(linkedSetOf()) { it in MeetingModeRegistry.MEETING_APPS }
+        }
     val allowedRegions: Flow<Set<String>> =
         dataStore.data.map { RegionRules.normalizeRegionCodes(it[SpamRepository.KEY_ALLOWED_REGIONS].orEmpty()) }
     val cnapTrustPatterns: Flow<Set<String>> =
@@ -478,6 +487,27 @@ class SettingsRepository(
         }
 
     suspend fun setRegionBlock(enabled: Boolean) = dataStore.edit { it[SpamRepository.KEY_REGION_BLOCK] = enabled }
+
+    suspend fun setRegulatoryPrefix(
+        prefix: RegulatoryPrefix,
+        enabled: Boolean,
+    ) = dataStore.edit { it[prefix.key] = enabled }
+
+    suspend fun setMeetingMode(enabled: Boolean) = dataStore.edit { it[SpamRepository.KEY_MEETING_MODE] = enabled }
+
+    suspend fun setMeetingModeApp(
+        packageName: String,
+        selected: Boolean,
+    ) = dataStore.edit { prefs ->
+        if (packageName !in MeetingModeRegistry.MEETING_APPS) return@edit
+        val current = prefs[SpamRepository.KEY_MEETING_MODE_APPS].orEmpty()
+        val next = if (selected) current + packageName else current - packageName
+        if (next.isEmpty()) {
+            prefs.remove(SpamRepository.KEY_MEETING_MODE_APPS)
+        } else {
+            prefs[SpamRepository.KEY_MEETING_MODE_APPS] = next
+        }
+    }
 
     suspend fun setAllowedRegions(regions: Set<String>) =
         dataStore.edit { prefs ->

@@ -43,6 +43,15 @@ class CategoryCallPolicyTest {
     }
 
     @Test
+    fun `a telemarketing range the user turned on is not undone by a category rule`() {
+        // Turning a range on is an explicit rule, like a prefix or wildcard block.
+        val result = SpamCheckResult(true, matchSource = "regulatory_prefix", type = "telemarketer")
+        val prefs = mutablePreferencesOf(SpamRepository.KEY_CATEGORY_CALL_ACTIONS to setOf("telemarketer=allow"))
+
+        assertSame(result, CategoryCallPolicy.apply(result, prefs))
+    }
+
+    @Test
     fun `configured action decorates a categorized reputation verdict`() {
         val result = SpamCheckResult(true, matchSource = "database", type = "scam")
         val prefs = mutablePreferencesOf(SpamRepository.KEY_CATEGORY_CALL_ACTIONS to setOf("scam=silence"))

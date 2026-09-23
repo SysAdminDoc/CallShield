@@ -1,6 +1,9 @@
 package com.sysadmindoc.callshield.data
 
 import com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup
+import com.sysadmindoc.callshield.util.countryCallingCodeOf
+import com.sysadmindoc.callshield.util.filterAsciiDigits
+import com.sysadmindoc.callshield.util.isAsciiDigit
 import java.util.Locale
 
 /** Pure, bounded matching helpers for the regional and carrier-name rules. */
@@ -8,6 +11,11 @@ object RegionRules {
     const val MAX_ALLOWED_REGIONS = 64
     const val MAX_NAME_PATTERNS = 30
     const val MAX_NAME_PATTERN_LENGTH = 60
+    private const val NANP_NATIONAL_LENGTH = 10
+    private const val NANP_CALLING_CODE = "1"
+
+    /** `1` plus a three-digit area code, as in `+1809`. */
+    private const val NANP_AREA_CODE_ENTRY_LENGTH = 4
 
     val supportedRegionCodes: Set<String> =
         setOf(
@@ -76,103 +84,35 @@ object RegionRules {
             "TF",
         )
 
-    private val countryCallingCodes: Map<String, String> =
-        mapOf(
-            "AF" to "+93",
-            "AL" to "+355",
-            "DZ" to "+213",
-            "AR" to "+54",
-            "AU" to "+61",
-            "AT" to "+43",
-            "BD" to "+880",
-            "BE" to "+32",
-            "BR" to "+55",
-            "BG" to "+359",
-            "KH" to "+855",
-            "CM" to "+237",
-            "CL" to "+56",
-            "CN" to "+86",
-            "CO" to "+57",
-            "HR" to "+385",
-            "CZ" to "+420",
-            "DK" to "+45",
-            "EG" to "+20",
-            "FI" to "+358",
-            "FR" to "+33",
-            "DE" to "+49",
-            "GH" to "+233",
-            "GR" to "+30",
-            "HK" to "+852",
-            "HU" to "+36",
-            "IN" to "+91",
-            "ID" to "+62",
-            "IR" to "+98",
-            "IQ" to "+964",
-            "IE" to "+353",
-            "IL" to "+972",
-            "IT" to "+39",
-            "JP" to "+81",
-            "JO" to "+962",
-            "KE" to "+254",
-            "KR" to "+82",
-            "KW" to "+965",
-            "MY" to "+60",
-            "MX" to "+52",
-            "MA" to "+212",
-            "NL" to "+31",
-            "NZ" to "+64",
-            "NG" to "+234",
-            "NO" to "+47",
-            "PK" to "+92",
-            "PE" to "+51",
-            "PH" to "+63",
-            "PL" to "+48",
-            "PT" to "+351",
-            "RO" to "+40",
-            "RU" to "+7",
-            "SA" to "+966",
-            "SG" to "+65",
-            "ZA" to "+27",
-            "ES" to "+34",
-            "SE" to "+46",
-            "CH" to "+41",
-            "TW" to "+886",
-            "TH" to "+66",
-            "TR" to "+90",
-            "UA" to "+380",
-            "AE" to "+971",
-            "GB" to "+44",
-            "VN" to "+84",
-            "EC" to "+593",
-            "VE" to "+58",
-            "UY" to "+598",
-            "PY" to "+595",
-            "BO" to "+591",
-            "PA" to "+507",
-            "CR" to "+506",
-            "GT" to "+502",
-            "HN" to "+504",
-            "SV" to "+503",
-            "NI" to "+505",
-            "DO" to "+1809",
-            "JM" to "+1876",
-            "TT" to "+1868",
-        )
-
-    fun countryCallingCodeFor(isoCode: String): String? = countryCallingCodes[isoCode.uppercase(Locale.ROOT)]
-
-    val supportedCountryCodes: Set<String> = countryCallingCodes.keys
-
-    fun parseRegionCodes(raw: String): Set<String> = normalizeRegionCodes(raw.split(',', ';', '\n', '\t', ' '))
+    // "+1 809", "+1 (809)" and "+1-809" name one area code; join them before splitting.
+    fun parseRegionCodes(raw: String): Set<String> = normalizeRegionCodes(raw.replace(SPACED_NANP_AREA_CODE, "+1$1").split(',', ';', '\n', '\t', ' '))
 
     fun normalizeRegionCodes(regions: Iterable<String>): Set<String> =
         regions
             .asSequence()
             .map { it.trim().uppercase(Locale.ROOT) }
-            .filter { it in supportedRegionCodes || it in supportedCountryCodes }
+            .mapNotNull { code -> code.takeIf { it in supportedRegionCodes } ?: normalizeDialingCode(code) }
             .distinct()
             .take(MAX_ALLOWED_REGIONS)
             .toCollection(linkedSetOf())
+
+    /**
+     * A country is allowed by its calling code (`+57`), never by a two-letter
+     * ISO code: CO, IN, PA, SK and many more ISO codes are also US state or
+     * Canadian province codes, and a two-letter entry keeps meaning the state
+     * or province. A Caribbean country that shares +1 is listed by its area
+     * codes (`+1809`, `+1829`, `+1849`). A bare `+1` is refused: it would
+     * allow all of North America, and it is what's left when "+1 (809)" or a
+     * pasted number splits apart. Returns [code] when it is one of the
+     * accepted forms.
+     */
+    fun normalizeDialingCode(code: String): String? {
+        if (!code.startsWith("+")) return null
+        val digits = code.substring(1)
+        if (digits.isEmpty() || digits == "1" || digits[0] == '0' || !digits.all { it.isAsciiDigit() }) return null
+        val isNanpAreaCode = digits.length == NANP_AREA_CODE_ENTRY_LENGTH && digits[0] == '1' && digits[1] in '2'..'9'
+        return code.takeIf { isNanpAreaCode || countryCallingCodeOf(digits) == digits }
+    }
 
     fun parseNamePatterns(raw: String): Set<String> = normalizeNamePatterns(raw.split('\n', ',', ';'))
 
@@ -186,22 +126,57 @@ object RegionRules {
             .take(MAX_NAME_PATTERNS)
             .toCollection(linkedSetOf())
 
-    fun regionCode(number: String): String? = AreaCodeLookup.getRegionCode(number)
+    /**
+     * The NANP state, province or territory code of [number], or null. A `+`
+     * number outside +1 is never NANP, even when it has ten digits: Penang's
+     * +60 4 would otherwise read as Vancouver's 604. A bare number is NANP
+     * only on a phone whose home region uses +1 or is unknown.
+     */
+    fun regionCode(
+        number: String,
+        homeRegionIso: String? = null,
+    ): String? =
+        when {
+            number.startsWith("+") && !number.startsWith("+1") -> null
+            !number.startsWith("+") && !homeUsesNanp(homeRegionIso) -> null
+            else -> AreaCodeLookup.getRegionCode(number)
+        }
 
     fun isOutsideAllowedRegions(
         number: String,
         allowedRegions: Set<String>,
+        homeRegionIso: String? = null,
     ): Boolean {
         val normalized = normalizeRegionCodes(allowedRegions)
         if (normalized.isEmpty()) return false
-        val nanpRegion = regionCode(number)
+        val nanpRegion = regionCode(number, homeRegionIso)
         if (nanpRegion != null && nanpRegion in normalized) return false
-        for (code in normalized) {
-            val prefix = countryCallingCodeFor(code) ?: continue
-            if (number.startsWith(prefix)) return false
-        }
-        return true
+        val international = internationalForm(number, homeRegionIso) ?: return true
+        return normalized.none { it.startsWith("+") && international.startsWith(it) }
     }
+
+    /**
+     * [number] as `+<digits>`. Android leaves a number it can't validate in
+     * national form, so a bare number is read in the phone's home region:
+     * ten or eleven digits as NANP where that region uses +1 (or is unknown),
+     * and with the home region's calling code anywhere else.
+     */
+    private fun internationalForm(
+        number: String,
+        homeRegionIso: String?,
+    ): String? {
+        if (number.startsWith("+")) return number
+        val digits = filterAsciiDigits(number)
+        val homeCode = RegionCallingCodes.forRegion(homeRegionIso)
+        if (homeCode != null && homeCode != NANP_CALLING_CODE) return digits.takeIf { it.isNotEmpty() }?.let { "+$homeCode$it" }
+        return when {
+            digits.length == NANP_NATIONAL_LENGTH -> "+1$digits"
+            digits.length == NANP_NATIONAL_LENGTH + 1 && digits.startsWith("1") -> "+$digits"
+            else -> null
+        }
+    }
+
+    private fun homeUsesNanp(homeRegionIso: String?): Boolean = RegionCallingCodes.forRegion(homeRegionIso)?.let { it == NANP_CALLING_CODE } ?: true
 
     fun matchesPresentedName(
         presentedName: String?,
@@ -257,4 +232,5 @@ object RegionRules {
     }
 
     private val WHITESPACE = Regex("\\s+")
+    private val SPACED_NANP_AREA_CODE = Regex("""\+1[ \t().-]*([2-9][0-9]{2})\)?""")
 }

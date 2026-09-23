@@ -96,6 +96,34 @@ All notable changes to CallShield will be documented in this file.
   that, so a tap on a list's name can't take its numbers out. A list you remove
   can be put back with Undo right afterwards, numbers included, without
   downloading it again.
+- Region rules can allow countries outside North America. Add a country by
+  its calling code, like +39 for Italy or +57 for Colombia, next to the
+  two-letter state and province codes. A Caribbean country that shares +1
+  goes in by each of its area codes, so the Dominican Republic is +1809,
+  +1829 and +1849. Two-letter codes always mean the state or province, and CO
+  is Colorado, never Colombia.
+- Region rules no longer mistake a ten-digit number from outside North America
+  for a North American one. A Penang landline (+60 4) counted as Vancouver's
+  604 area code, so allowing British Columbia let it ring. On a phone outside
+  North America, a number Android couldn't put in international form is now
+  read as a number from your own country instead of a North American one, so
+  allowing your country's code lets it ring.
+- Settings has a Telemarketing ranges card for number ranges regulators set
+  aside for sales calls. It can block Spain's 400 range (required for
+  commercial calls from 17 October 2026), India's 140 promotional series and
+  Brazil's 0303 telemarketing code. It can also let India's 1600 series, which
+  belongs to banks, insurers and government offices, ring through past the
+  spam database. Each one is off until you turn it on. Each matches the
+  number with its country code, and on a phone from that country it also
+  matches the number written without one.
+- Meeting mode keeps unknown callers from ringing through your meetings. Pick
+  the apps you meet or take calls in (Zoom, Teams, Google Meet, Webex, Slack,
+  WhatsApp and a few more) and turn it on in Settings. While one of them shows
+  a call in progress, a caller from outside your contacts goes quietly to
+  voicemail. Contacts and callers you trust still ring, spam is still blocked
+  as spam, and Android still lists the missed call. It works from the
+  notification access CallShield already asks for and never needs your
+  calendar.
 
 ### Interface
 
@@ -114,6 +142,18 @@ All notable changes to CallShield will be documented in this file.
   SMS receiver and the notification reader each logged it, so it showed up
   twice in the log and the statistics. The alert now says the text was
   flagged, not blocked, since it still reaches your messages app.
+- The "why was this blocked" panel now explains every decision. A region
+  block, a contacts-only block, a temporary block or allow, a number from your
+  phone's own block list, a range pattern, a caller-name rule and a push-alert
+  allow all used to read "Blocked by an unrecognized protection rule." Each now
+  says what happened and what still outranks it, and the panel no longer cites
+  layer numbers left over from an older detection ladder.
+- The trusted-source and message-screening pickers in Settings now see your
+  installed apps on Android 11 and later. Android hides other apps from an app
+  unless its manifest names them, and CallShield's named none, so every source
+  showed as "Not installed", Google Messages included, and a trusted source
+  couldn't be switched off. The manifest now names the apps on those two lists
+  and nothing else.
 
 ### Live caller lookup
 

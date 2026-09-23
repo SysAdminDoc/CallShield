@@ -102,34 +102,134 @@ class RegionRulesTest {
         assertTrue(CheckerPriority.REGION_BLOCK > CheckerPriority.HEURISTIC)
     }
 
-    // ── Country-level region rules ────────────────────────────────────
+    // ── Countries by calling code ─────────────────────────────────────
 
     @Test
-    fun `country codes are accepted by the region parser`() {
-        assertEquals(linkedSetOf("NY", "CO", "IT"), RegionRules.parseRegionCodes("NY, CO, IT"))
+    fun `countries are entered by calling code`() {
+        assertEquals(
+            linkedSetOf("NY", "+57", "+39", "+1809"),
+            RegionRules.parseRegionCodes("NY, +57, +39, +1809"),
+        )
     }
 
     @Test
-    fun `Colombian number passes when CO is allowed`() {
-        assertFalse(RegionRules.isOutsideAllowedRegions("+573001234567", setOf("CO")))
+    fun `Colombian number passes when +57 is allowed`() {
+        assertFalse(RegionRules.isOutsideAllowedRegions("+573001234567", setOf("+57")))
     }
 
     @Test
-    fun `Italian number passes when IT is allowed`() {
-        assertFalse(RegionRules.isOutsideAllowedRegions("+393381234567", setOf("IT")))
+    fun `Italian number passes when +39 is allowed`() {
+        assertFalse(RegionRules.isOutsideAllowedRegions("+393381234567", setOf("+39")))
     }
 
     @Test
-    fun `Colombian number blocked when only IT is allowed`() {
-        assertTrue(RegionRules.isOutsideAllowedRegions("+573001234567", setOf("IT")))
+    fun `Colombian number blocked when only +39 is allowed`() {
+        assertTrue(RegionRules.isOutsideAllowedRegions("+573001234567", setOf("+39")))
     }
 
     @Test
     fun `NANP and country codes coexist`() {
-        val allowed = setOf("NY", "CO")
+        val allowed = setOf("NY", "+57")
         assertFalse(RegionRules.isOutsideAllowedRegions("+12125550123", allowed))
         assertFalse(RegionRules.isOutsideAllowedRegions("+573001234567", allowed))
         assertTrue(RegionRules.isOutsideAllowedRegions("+393381234567", allowed))
+    }
+
+    @Test
+    fun `two letter codes keep their state meaning where they are also ISO country codes`() {
+        // CO, IN and PA are Colombia, India and Panama in ISO 3166.
+        assertTrue(RegionRules.isOutsideAllowedRegions("+573001234567", setOf("CO")))
+        assertTrue(RegionRules.isOutsideAllowedRegions("+919876543210", setOf("IN")))
+        assertTrue(RegionRules.isOutsideAllowedRegions("+50761234567", setOf("PA")))
+        assertFalse(RegionRules.isOutsideAllowedRegions("+13035550123", setOf("CO")))
+        assertFalse(RegionRules.isOutsideAllowedRegions("+13175550123", setOf("IN")))
+        assertFalse(RegionRules.isOutsideAllowedRegions("+12155550123", setOf("PA")))
+    }
+
+    @Test
+    fun `a calling code allows its country and not the state sharing its ISO code`() {
+        assertFalse(RegionRules.isOutsideAllowedRegions("+573001234567", setOf("+57")))
+        assertFalse(RegionRules.isOutsideAllowedRegions("+919876543210", setOf("+91")))
+        assertFalse(RegionRules.isOutsideAllowedRegions("+50761234567", setOf("+507")))
+        assertTrue(RegionRules.isOutsideAllowedRegions("+13035550123", setOf("+57")))
+        assertTrue(RegionRules.isOutsideAllowedRegions("+13175550123", setOf("+91")))
+        assertTrue(RegionRules.isOutsideAllowedRegions("+12155550123", setOf("+507")))
+    }
+
+    @Test
+    fun `calling codes must be whole assigned codes`() {
+        // 35x are three-digit codes, so +3 and +35 are not codes; +391 runs past Italy's +39.
+        assertEquals(
+            linkedSetOf("+353"),
+            RegionRules.parseRegionCodes("+3, +35, +353, +391, +0, +1089, +18090, 57"),
+        )
+    }
+
+    @Test
+    fun `a NANP area code entry allows only that area code`() {
+        // The Dominican Republic also uses 829 and 849; each area code is its own entry.
+        val allowed = setOf("+1809")
+        assertFalse(RegionRules.isOutsideAllowedRegions("+18095550123", allowed))
+        assertFalse(RegionRules.isOutsideAllowedRegions("8095550123", allowed))
+        assertTrue(RegionRules.isOutsideAllowedRegions("+18295550123", allowed))
+        assertTrue(RegionRules.isOutsideAllowedRegions("+12125550123", allowed))
+    }
+
+    @Test
+    fun `however an area code is typed after +1 it stays one area code`() {
+        assertEquals(linkedSetOf("+1809", "NY"), RegionRules.parseRegionCodes("+1 809, NY"))
+        assertEquals(linkedSetOf("+1809", "NY"), RegionRules.parseRegionCodes("+1 (809), NY"))
+        assertEquals(linkedSetOf("+1809", "NY"), RegionRules.parseRegionCodes("+1-809, NY"))
+        assertEquals(linkedSetOf("+1809", "NY"), RegionRules.parseRegionCodes("+1 (809) 555-0123, NY"))
+    }
+
+    @Test
+    fun `nothing typed can leave a bare +1 that allows all of North America`() {
+        assertEquals(linkedSetOf("NY"), RegionRules.parseRegionCodes("+1, NY"))
+        assertEquals(linkedSetOf("NY"), RegionRules.parseRegionCodes("+1 8095550123, NY"))
+        assertTrue(RegionRules.isOutsideAllowedRegions("+14165550123", RegionRules.parseRegionCodes("+1 8095550123, NY")))
+        assertNull(RegionRules.normalizeDialingCode("+1"))
+    }
+
+    @Test
+    fun `a bare number on a phone outside North America is read in that country`() {
+        // Android leaves a number it can't validate in national form.
+        assertFalse(RegionRules.isOutsideAllowedRegions("0612345678", setOf("+39"), homeRegionIso = "IT"))
+        assertTrue(RegionRules.isOutsideAllowedRegions("0612345678", setOf("+44"), homeRegionIso = "IT"))
+        // Ten digits shaped like a New York number are still an Italian number on an Italian phone.
+        assertNull(RegionRules.regionCode("2125550123", homeRegionIso = "IT"))
+        assertTrue(RegionRules.isOutsideAllowedRegions("2125550123", setOf("NY"), homeRegionIso = "IT"))
+        assertTrue(RegionBlockChecker.decidePure("0612345678", setOf("+44"), homeRegionIso = "IT")?.shouldBlock == true)
+        assertNull(RegionBlockChecker.decidePure("0612345678", setOf("+39"), homeRegionIso = "IT"))
+    }
+
+    @Test
+    fun `a bare number is NANP on a phone that uses +1 or has no known region`() {
+        assertEquals("NY", RegionRules.regionCode("2125550123", homeRegionIso = "US"))
+        assertEquals("NY", RegionRules.regionCode("2125550123", homeRegionIso = "DO"))
+        assertEquals("NY", RegionRules.regionCode("2125550123"))
+        assertFalse(RegionRules.isOutsideAllowedRegions("8095550123", setOf("+1809"), homeRegionIso = "DO"))
+        assertFalse(RegionRules.isOutsideAllowedRegions("2125550123", setOf("NY"), homeRegionIso = "ZZ"))
+    }
+
+    @Test
+    fun `calling code table covers the NANP and reads regions case-insensitively`() {
+        listOf("US", "CA", "PR", "DO", "JM").forEach { assertEquals(it, "1", RegionCallingCodes.forRegion(it)) }
+        assertEquals("39", RegionCallingCodes.forRegion("it"))
+        assertEquals("44", RegionCallingCodes.forRegion("GB"))
+        assertNull(RegionCallingCodes.forRegion("ZZ"))
+        assertNull(RegionCallingCodes.forRegion(null))
+    }
+
+    @Test
+    fun `ten digit international numbers are not read as NANP area codes`() {
+        // Penang (+60 4) and Hamilton, New Zealand (+64 7) have ten digits after
+        // the plus, which the area-code table reads as Vancouver 604 and Toronto 647.
+        assertNull(RegionRules.regionCode("+6041234567"))
+        assertNull(RegionRules.regionCode("+6471234567"))
+        assertTrue(RegionRules.isOutsideAllowedRegions("+6041234567", setOf("BC")))
+        assertTrue(RegionRules.isOutsideAllowedRegions("+6471234567", setOf("ON")))
+        assertEquals("BC", RegionRules.regionCode("6045550123"))
     }
 
     @Test
