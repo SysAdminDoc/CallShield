@@ -78,12 +78,7 @@ class MainActivity : AppCompatActivity() {
         // deep link / shortcut was handled in a previous incarnation and must
         // not re-run a scan, re-open a closed detail screen, or yank the
         // user's tab back to the shortcut target.
-        launchRequest =
-            if (savedInstanceState?.getBoolean(KEY_LAUNCH_CONSUMED) == true) {
-                LaunchRequest(id = 0)
-            } else {
-                intent.toLaunchRequest(nextId = 1)
-            }
+        launchRequest = launchRequestFor(intent, savedInstanceState)
         consumeLaunchIntent()
 
         setContent { CallShieldRoot(launchRequest = launchRequest) }
@@ -91,7 +86,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
-        outState.putBoolean(KEY_LAUNCH_CONSUMED, true)
+        outState.putLaunchState(launchRequest)
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -104,15 +99,11 @@ class MainActivity : AppCompatActivity() {
     /**
      * Strip the consumed launch payload (deep-link number, shortcut action)
      * after it has been folded into [launchRequest]. Defense-in-depth next to
-     * the [KEY_LAUNCH_CONSUMED] saved-state flag (which is what actually
-     * survives recreation — see onCreate).
+     * the saved-state flag (which is what actually survives recreation, see
+     * [launchRequestFor]).
      */
     private fun consumeLaunchIntent() {
         intent = Intent(this, MainActivity::class.java)
-    }
-
-    private companion object {
-        const val KEY_LAUNCH_CONSUMED = "callshield_launch_consumed"
     }
 
     override fun onResume() {
@@ -220,6 +211,12 @@ fun CallShieldApp(
         if (tabRequestId != null && tabRequestId != handledTabRequest) {
             handledTabRequest = tabRequestId
             selectedTab = startTab
+            // A search left open would cover the tab this request asked for,
+            // and switching to the tab already selected doesn't close it.
+            if (showSearch) {
+                showSearch = false
+                viewModel.setSearchQuery("")
+            }
         }
     }
 
@@ -873,6 +870,30 @@ internal fun launchTab(shortcutAction: String?): Int =
 
 /** This request's id when it asks for the blocked log, so Activity can switch to it once. */
 internal fun LaunchRequest.blockedLogRequestId(): Int? = id.takeIf { shortcutAction == ACTION_OPEN_BLOCKED_LOG }
+
+private const val KEY_LAUNCH_CONSUMED = "callshield_launch_consumed"
+private const val KEY_LAUNCH_REQUEST_ID = "callshield_launch_request_id"
+
+/**
+ * The request a (re)created activity starts with. A recreation keeps the id
+ * it had instead of restarting the count: the tab and Blocked-log guards saved
+ * the ids they already handled, and a later tap numbered from scratch could
+ * land on one of those and be ignored.
+ */
+internal fun launchRequestFor(
+    intent: Intent?,
+    savedInstanceState: Bundle?,
+): LaunchRequest =
+    if (savedInstanceState?.getBoolean(KEY_LAUNCH_CONSUMED) == true) {
+        LaunchRequest(id = savedInstanceState.getInt(KEY_LAUNCH_REQUEST_ID))
+    } else {
+        intent.toLaunchRequest(nextId = 1)
+    }
+
+internal fun Bundle.putLaunchState(request: LaunchRequest) {
+    putBoolean(KEY_LAUNCH_CONSUMED, true)
+    putInt(KEY_LAUNCH_REQUEST_ID, request.id)
+}
 
 private val KNOWN_SHORTCUT_ACTIONS =
     setOf(

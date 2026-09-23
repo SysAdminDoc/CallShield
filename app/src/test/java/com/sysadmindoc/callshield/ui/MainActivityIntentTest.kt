@@ -2,6 +2,7 @@ package com.sysadmindoc.callshield.ui
 
 import android.content.Intent
 import android.net.Uri
+import android.os.Bundle
 import com.sysadmindoc.callshield.ui.screens.activity.ACTIVITY_BLOCKED
 import com.sysadmindoc.callshield.ui.screens.activity.ACTIVITY_RECENT
 import com.sysadmindoc.callshield.ui.screens.activity.initialActivityView
@@ -79,6 +80,24 @@ class MainActivityIntentTest {
         assertEquals(1, launchTab(request.shortcutAction))
         assertEquals(7, request.blockedLogRequestId())
         assertEquals(ACTIVITY_BLOCKED, initialActivityView(request.blockedLogRequestId()))
+    }
+
+    @Test
+    fun `a recreated activity keeps counting request ids instead of starting over`() {
+        // Three summary taps: the first launch, then two onNewIntent calls.
+        val first = launchRequestFor(Intent(ACTION_OPEN_BLOCKED_LOG), savedInstanceState = null)
+        val third = Intent(ACTION_OPEN_BLOCKED_LOG).toLaunchRequest(nextId = first.id + 2)
+
+        // Rotation or a theme change replays the original intent into onCreate.
+        val saved = Bundle().apply { putLaunchState(third) }
+        val recreated = launchRequestFor(Intent(ACTION_OPEN_BLOCKED_LOG), saved)
+
+        assertEquals(3, recreated.id)
+        assertNull(recreated.shortcutAction)
+        assertNull(recreated.deepLinkNumber)
+        // The tab and Blocked-log guards saved ids 1 to 3, so the next tap must get 4.
+        val next = Intent(ACTION_OPEN_BLOCKED_LOG).toLaunchRequest(nextId = recreated.id + 1)
+        assertEquals(4, next.blockedLogRequestId())
     }
 
     @Test

@@ -176,6 +176,9 @@ All notable changes to CallShield will be documented in this file.
 
 - Tapping the "blocked recently" notification opens the Blocked log now. It
   used to do nothing at all.
+- After the screen rotated or the font size changed, the next tap on an app
+  shortcut or on that notification could be ignored. It opens its tab every
+  time now, and it closes an open search, which used to cover the tab.
 
 - Setup now says what to do when Android won't let a permission through. Apps
   installed outside an app store run into Android's restricted settings. The
