@@ -137,6 +137,24 @@
             android:name=".service.CallerIdOverlayService"
             android:exported="false" />
 
+        <!-- Opt-in (call redirection role): holds an outgoing call to a flagged number. -->
+        <service
+            android:name=".service.CallShieldRedirectionService"
+            android:permission="android.permission.BIND_CALL_REDIRECTION_SERVICE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.telecom.CallRedirectionService" />
+            </intent-filter>
+        </service>
+
+        <activity
+            android:name=".ui.CallAnywayActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.NoDisplay" />
+
         <receiver
             android:name=".service.SmsReceiver"
             android:permission="android.permission.BROADCAST_SMS"

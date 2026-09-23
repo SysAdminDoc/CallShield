@@ -6,6 +6,15 @@ All notable changes to CallShield will be documented in this file.
 
 ### Protection
 
+- CallShield can stop a call you're about to make to a number it already
+  flags. Callback scams only pay once you dial out, so that's where this
+  catches them. It's off by default and uses Android's call redirection role,
+  which the new Settings switch asks for. A call to a number on your
+  blocklist, in the spam database, on a premium-rate line or on a
+  callback-scam country code is held, and a notification says why and offers
+  Call anyway. Contacts and numbers you trust ring through, and if the check
+  runs slow the call goes ahead rather than being dropped.
+
 - Work-from-home job offers are caught now, in English, Spanish, Portuguese
   and Italian. A text that promises pay by the day or hour for working from
   home or liking videos ("gane 300 EUR al día desde casa", "ganhe R$ 500 por

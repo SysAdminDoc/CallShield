@@ -607,6 +607,11 @@
     <string name="settings_outgoing_risk_warning">Warn before known-risk outgoing calls</string>
     <string name="settings_outgoing_risk_warning_desc">Show a local warning for exact matches in your spam database</string>
     <string name="settings_outgoing_risk_warning_overlay_required">Allow overlay access to see outgoing warnings.</string>
+    <string name="settings_outgoing_call_hold">Stop calls to flagged numbers</string>
+    <string name="settings_outgoing_call_hold_desc">Holds calls to blocked, spam or premium numbers until you tap Call anyway.</string>
+    <string name="settings_outgoing_call_hold_unavailable">This phone doesn\'t let apps hold outgoing calls.</string>
+    <string name="settings_outgoing_call_hold_role_missing">Set CallShield as the call redirection app to use this.</string>
+    <string name="settings_outgoing_call_hold_not_granted">Call redirection wasn\'t allowed, so calls won\'t be held.</string>
     <string name="settings_db_prefix_expansion">Database prefix expansion</string>
     <string name="settings_db_prefix_expansion_desc">Block campaign numbers sharing a known spam prefix</string>
     <string name="settings_detection_engines">Detection engines</string>
@@ -1429,6 +1434,15 @@
     <string name="notif_app_update_body">Release %1$s is available. Open GitHub to review it.</string>
     <string name="notif_app_update_body_checksum">Release %1$s is available with a published SHA-256 checksum.</string>
     <string name="notif_app_update_open">Open release</string>
+    <string name="notif_channel_outgoing_hold">Stopped outgoing calls</string>
+    <string name="notif_channel_outgoing_hold_desc">Why CallShield stopped a call you started, with a way to call anyway</string>
+    <string name="notif_outgoing_held_title">Call to %1$s stopped</string>
+    <string name="notif_outgoing_held_big_text">%1$s Tap Call anyway if you meant to call it.</string>
+    <string name="notif_outgoing_call_anyway">Call anyway</string>
+    <string name="outgoing_hold_reason_blocklist">It\'s on your blocklist.</string>
+    <string name="outgoing_hold_reason_database">It\'s in the spam database.</string>
+    <string name="outgoing_hold_reason_premium">It\'s a premium-rate number that can charge you by the minute.</string>
+    <string name="outgoing_hold_reason_wangiri">Its code is common in scams that get you to call back at your cost.</string>
     <string name="notif_message_screening_title">Possible spam in %1$s</string>
     <string name="notif_message_screening_text">From %1$s · %2$d%% confidence</string>
     <string name="notif_message_screening_big_text">CallShield flagged a %1$s notification from %2$s at %3$d%% confidence. Signal: %4$s. The original notification was not removed.</string>

@@ -286,6 +286,15 @@ object CallShieldPermissions {
         roleManager: RoleManager?,
     ): Boolean = roleManager?.isRoleAvailable(RoleManager.ROLE_CALL_SCREENING) == true
 
+    /** The opt-in role that lets CallShield hold an outgoing call before it rings. */
+    fun hasCallRedirectionRole(
+        roleManager: RoleManager?,
+    ): Boolean = roleManager?.isRoleHeld(RoleManager.ROLE_CALL_REDIRECTION) == true
+
+    fun isCallRedirectionRoleAvailable(
+        roleManager: RoleManager?,
+    ): Boolean = roleManager?.isRoleAvailable(RoleManager.ROLE_CALL_REDIRECTION) == true
+
     fun hasNotificationListenerAccess(context: Context): Boolean =
         // Compare unflattened package names, not a substring of the whole
         // setting. The value is a ':'-separated list of flattened

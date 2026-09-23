@@ -185,6 +185,7 @@ class SpamRepository(
         val KEY_CONTACTS_ONLY = booleanPreferencesKey("contacts_only_mode_enabled")
         val KEY_SELECTED_CONTACT_GROUPS = stringSetPreferencesKey("selected_contact_group_keys")
         val KEY_OUTGOING_RISK_WARNING = booleanPreferencesKey("outgoing_risk_warning_enabled")
+        val KEY_OUTGOING_CALL_HOLD = booleanPreferencesKey("outgoing_call_hold_enabled")
         val KEY_REGION_BLOCK = booleanPreferencesKey("region_block_enabled")
         val KEY_ALLOWED_REGIONS = stringSetPreferencesKey("allowed_call_regions")
         val KEY_CNAP_TRUST_PATTERNS = stringSetPreferencesKey("cnap_trust_patterns")
@@ -390,6 +391,7 @@ class SpamRepository(
     val contactsOnlyEnabled: Flow<Boolean> = settingsRepository.contactsOnlyEnabled
     val selectedContactGroups: Flow<Set<String>> = settingsRepository.selectedContactGroups
     val outgoingRiskWarningEnabled: Flow<Boolean> = settingsRepository.outgoingRiskWarningEnabled
+    val outgoingCallHoldEnabled: Flow<Boolean> = settingsRepository.outgoingCallHoldEnabled
     val regionBlockEnabled: Flow<Boolean> = settingsRepository.regionBlockEnabled
     val enabledRegulatoryPrefixes: Flow<Set<RegulatoryPrefix>> = settingsRepository.enabledRegulatoryPrefixes
     val meetingModeEnabled: Flow<Boolean> = settingsRepository.meetingModeEnabled
@@ -571,6 +573,8 @@ class SpamRepository(
     suspend fun setSelectedContactGroups(groupKeys: Set<String>) = settingsRepository.setSelectedContactGroups(groupKeys)
 
     suspend fun setOutgoingRiskWarning(enabled: Boolean) = settingsRepository.setOutgoingRiskWarning(enabled)
+
+    suspend fun setOutgoingCallHold(enabled: Boolean) = settingsRepository.setOutgoingCallHold(enabled)
 
     suspend fun setRegionBlock(enabled: Boolean) = settingsRepository.setRegionBlock(enabled)
 

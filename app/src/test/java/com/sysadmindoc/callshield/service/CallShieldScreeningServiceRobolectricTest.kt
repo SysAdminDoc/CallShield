@@ -1,7 +1,9 @@
 package com.sysadmindoc.callshield.service
 
+import android.app.role.RoleManager
 import android.content.Context
 import android.net.Uri
+import android.os.Process
 import android.os.UserManager
 import android.telecom.Call
 import android.telecom.CallScreeningService
@@ -41,6 +43,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.shadow.api.Shadow
 import org.robolectric.shadows.ShadowCallScreeningService
+import org.robolectric.shadows.ShadowRoleManager
 import org.robolectric.shadows.ShadowUserManager
 import org.robolectric.util.ReflectionHelpers
 import javax.inject.Provider
@@ -564,6 +567,34 @@ class CallShieldScreeningServiceRobolectricTest {
                     .isEmpty()
             },
         )
+    }
+
+    @Test
+    fun `outgoing overlay stands down while the call hold is active`() {
+        val withoutRole = "+12125550191"
+        val withRole = "+12125550192"
+        runBlocking {
+            listOf(withoutRole, withRole).forEach { number ->
+                fixture.dao.insertNumber(
+                    SpamNumber(number = number, type = "scam", reports = 12, description = "Impersonation scam"),
+                )
+            }
+            repository.setOutgoingRiskWarning(true)
+            repository.setOutgoingCallHold(true)
+        }
+        // The hold is switched on, but without the role nothing stopped the call,
+        // so the after-the-fact warning is still the only one.
+        service.onScreenCall(callDetails(withoutRole, Call.Details.DIRECTION_OUTGOING))
+        awaitScopeIdle()
+        ShadowRoleManager.addRoleHolder(RoleManager.ROLE_CALL_REDIRECTION, context.packageName, Process.myUserHandle())
+        try {
+            service.onScreenCall(callDetails(withRole, Call.Details.DIRECTION_OUTGOING))
+            awaitScopeIdle()
+        } finally {
+            ShadowRoleManager.removeRoleHolder(RoleManager.ROLE_CALL_REDIRECTION, context.packageName, Process.myUserHandle())
+        }
+
+        assertEquals(listOf(withoutRole), outgoingWarnings.map { it.number })
     }
 
     @Test

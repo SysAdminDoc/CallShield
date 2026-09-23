@@ -118,6 +118,8 @@ class SettingsRepository(
         }
     val outgoingRiskWarningEnabled: Flow<Boolean> =
         dataStore.data.map { it[SpamRepository.KEY_OUTGOING_RISK_WARNING] ?: false }
+    val outgoingCallHoldEnabled: Flow<Boolean> =
+        dataStore.data.map { it[SpamRepository.KEY_OUTGOING_CALL_HOLD] ?: false }
     val regionBlockEnabled: Flow<Boolean> =
         dataStore.data.map { it[SpamRepository.KEY_REGION_BLOCK] ?: false }
     val enabledRegulatoryPrefixes: Flow<Set<RegulatoryPrefix>> =
@@ -470,6 +472,11 @@ class SettingsRepository(
     suspend fun setOutgoingRiskWarning(enabled: Boolean) =
         dataStore.edit {
             it[SpamRepository.KEY_OUTGOING_RISK_WARNING] = enabled
+        }
+
+    suspend fun setOutgoingCallHold(enabled: Boolean) =
+        dataStore.edit {
+            it[SpamRepository.KEY_OUTGOING_CALL_HOLD] = enabled
         }
 
     suspend fun setRegionBlock(enabled: Boolean) = dataStore.edit { it[SpamRepository.KEY_REGION_BLOCK] = enabled }

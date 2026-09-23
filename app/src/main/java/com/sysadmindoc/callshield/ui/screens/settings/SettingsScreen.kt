@@ -9,6 +9,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
@@ -102,6 +103,7 @@ internal const val SETTINGS_RESTORE_PASSPHRASE_TAG = "settings_restore_passphras
 internal const val SETTINGS_CONTACT_SCOPE_TAG = "settings_contact_scope"
 internal const val SETTINGS_REGULATORY_PREFIX_TAG_PREFIX = "settings_regulatory_prefix:"
 internal const val SETTINGS_MEETING_MODE_TOGGLE_TAG = "settings_meeting_mode_toggle"
+internal const val SETTINGS_OUTGOING_CALL_HOLD_TAG = "settings_outgoing_call_hold_toggle"
 
 private val backupSectionOrder =
     listOf(
@@ -136,6 +138,8 @@ fun SettingsScreen(viewModel: MainViewModel) {
     val contactsOnly by viewModel.contactsOnlyEnabled.collectAsStateWithLifecycle()
     val selectedContactGroups by viewModel.selectedContactGroups.collectAsStateWithLifecycle()
     val outgoingRiskWarning by viewModel.outgoingRiskWarningEnabled.collectAsStateWithLifecycle()
+    val outgoingCallHold by viewModel.outgoingCallHoldEnabled.collectAsStateWithLifecycle()
+    val callHoldNotGranted = stringResource(R.string.settings_outgoing_call_hold_not_granted)
     val contactGroups by viewModel.contactGroups.collectAsStateWithLifecycle()
     val contactGroupsLoading by viewModel.contactGroupsLoading.collectAsStateWithLifecycle()
     val regionBlockEnabled by viewModel.regionBlockEnabled.collectAsStateWithLifecycle()
@@ -208,6 +212,8 @@ fun SettingsScreen(viewModel: MainViewModel) {
         mutableStateOf(CallShieldPermissions.hasNotificationListenerAccess(context))
     }
     var screenerGranted by remember(roleManager) { mutableStateOf(CallShieldPermissions.hasCallScreeningRole(roleManager)) }
+    var redirectionRoleHeld by remember(roleManager) { mutableStateOf(CallShieldPermissions.hasCallRedirectionRole(roleManager)) }
+    val redirectionRoleAvailable = remember(roleManager) { CallShieldPermissions.isCallRedirectionRoleAvailable(roleManager) }
     var contactsPermissionGranted by remember(context) {
         mutableStateOf(CallShieldPermissions.isPermissionGranted(context, Manifest.permission.READ_CONTACTS))
     }
@@ -235,6 +241,15 @@ fun SettingsScreen(viewModel: MainViewModel) {
         rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
             screenerGranted = CallShieldPermissions.hasCallScreeningRole(roleManager)
         }
+    val redirectionLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+            redirectionRoleHeld = CallShieldPermissions.hasCallRedirectionRole(roleManager)
+            if (redirectionRoleHeld) {
+                viewModel.setOutgoingCallHold(true)
+            } else {
+                Toast.makeText(context, callHoldNotGranted, Toast.LENGTH_SHORT).show()
+            }
+        }
     val contactsPermissionLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
             contactsPermissionGranted = granted
@@ -260,6 +275,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
                     overlayGranted = CallShieldPermissions.canDrawOverlays(context)
                     notificationAccessGranted = CallShieldPermissions.hasNotificationListenerAccess(context)
                     screenerGranted = CallShieldPermissions.hasCallScreeningRole(roleManager)
+                    redirectionRoleHeld = CallShieldPermissions.hasCallRedirectionRole(roleManager)
                     contactsPermissionGranted =
                         CallShieldPermissions.isPermissionGranted(context, Manifest.permission.READ_CONTACTS)
                 }
@@ -546,6 +562,43 @@ fun SettingsScreen(viewModel: MainViewModel) {
             if (outgoingRiskWarning && !overlayGranted) {
                 Text(
                     stringResource(R.string.settings_outgoing_risk_warning_overlay_required),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = CatPeach,
+                    modifier = Modifier.padding(start = 44.dp, end = 4.dp, bottom = 4.dp),
+                )
+            }
+            GradientDivider()
+            SettingsToggle(
+                stringResource(R.string.settings_outgoing_call_hold),
+                stringResource(
+                    if (redirectionRoleAvailable) {
+                        R.string.settings_outgoing_call_hold_desc
+                    } else {
+                        R.string.settings_outgoing_call_hold_unavailable
+                    },
+                ),
+                Icons.Default.PhonePaused,
+                outgoingCallHold && redirectionRoleHeld,
+                toggleTag = SETTINGS_OUTGOING_CALL_HOLD_TAG,
+                onCheckedChange = { enable ->
+                    when {
+                        !enable -> {
+                            viewModel.setOutgoingCallHold(false)
+                        }
+
+                        redirectionRoleHeld -> {
+                            viewModel.setOutgoingCallHold(true)
+                        }
+
+                        redirectionRoleAvailable && roleManager != null -> {
+                            redirectionLauncher.launch(roleManager.createRequestRoleIntent(RoleManager.ROLE_CALL_REDIRECTION))
+                        }
+                    }
+                },
+            )
+            if (outgoingCallHold && !redirectionRoleHeld && redirectionRoleAvailable) {
+                Text(
+                    stringResource(R.string.settings_outgoing_call_hold_role_missing),
                     style = MaterialTheme.typography.labelSmall,
                     color = CatPeach,
                     modifier = Modifier.padding(start = 44.dp, end = 4.dp, bottom = 4.dp),

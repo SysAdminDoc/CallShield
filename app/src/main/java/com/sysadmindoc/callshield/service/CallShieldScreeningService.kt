@@ -1,5 +1,6 @@
 package com.sysadmindoc.callshield.service
 
+import android.app.role.RoleManager
 import android.os.Build
 import android.os.UserManager
 import android.telecom.Call
@@ -21,6 +22,7 @@ import com.sysadmindoc.callshield.data.local.AppDatabase
 import com.sysadmindoc.callshield.di.ApplicationScope
 import com.sysadmindoc.callshield.domain.model.CallerIdentity
 import com.sysadmindoc.callshield.domain.usecase.CheckSpamUseCase
+import com.sysadmindoc.callshield.permissions.CallShieldPermissions
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -331,6 +333,9 @@ class CallShieldScreeningService : CallScreeningService() {
                 val repository = repository()
                 val prefs = repository.readPrefsSnapshot()
                 if (!(prefs[SpamRepository.KEY_OUTGOING_RISK_WARNING] ?: false)) return@launch
+                // With the hold on, CallShieldRedirectionService already stopped this
+                // call or let it through on purpose. A second warning would repeat it.
+                if (outgoingHoldActive(prefs)) return@launch
 
                 val warning =
                     OutgoingRiskPolicy.evaluate(
@@ -345,6 +350,10 @@ class CallShieldScreeningService : CallScreeningService() {
             }
         }
     }
+
+    private fun outgoingHoldActive(prefs: androidx.datastore.preferences.core.Preferences): Boolean =
+        prefs[SpamRepository.KEY_OUTGOING_CALL_HOLD] == true &&
+            CallShieldPermissions.hasCallRedirectionRole(getSystemService(RoleManager::class.java))
 
     private suspend fun respondBlock(
         callDetails: Call.Details,

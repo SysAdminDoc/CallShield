@@ -390,6 +390,9 @@ class MainViewModel
         val outgoingRiskWarningEnabled =
             repo.outgoingRiskWarningEnabled
                 .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+        val outgoingCallHoldEnabled =
+            repo.outgoingCallHoldEnabled
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
         private val _contactGroups = MutableStateFlow<List<ContactGroup>>(emptyList())
         val contactGroups: StateFlow<List<ContactGroup>> = _contactGroups
         private val _contactGroupsLoading = MutableStateFlow(false)
@@ -1078,6 +1081,11 @@ class MainViewModel
         fun setOutgoingRiskWarning(enabled: Boolean) =
             viewModelScope.launch {
                 repo.setOutgoingRiskWarning(enabled)
+            }
+
+        fun setOutgoingCallHold(enabled: Boolean) =
+            viewModelScope.launch {
+                repo.setOutgoingCallHold(enabled)
             }
 
         fun setRegulatoryPrefix(

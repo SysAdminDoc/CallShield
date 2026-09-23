@@ -15,11 +15,13 @@ import androidx.core.app.NotificationManagerCompat
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.AppUpdateRelease
 import com.sysadmindoc.callshield.data.CategoryCallPolicy
+import com.sysadmindoc.callshield.data.OutgoingCallGuard
 import com.sysadmindoc.callshield.data.PhoneFormatter
 import com.sysadmindoc.callshield.data.SmsContentAnalyzer
 import com.sysadmindoc.callshield.domain.model.BlockReasonCode
 import com.sysadmindoc.callshield.permissions.CallShieldPermissions
 import com.sysadmindoc.callshield.ui.ACTION_OPEN_BLOCKED_LOG
+import com.sysadmindoc.callshield.ui.CallAnywayActivity
 import com.sysadmindoc.callshield.ui.MainActivity
 import com.sysadmindoc.callshield.util.filterAsciiDigits
 import com.sysadmindoc.callshield.util.filterAsciiDigitsLast
@@ -54,6 +56,7 @@ object NotificationHelper {
     const val CHANNEL_SYNC = "database_sync"
     const val CHANNEL_PROTECTION_HEALTH = "protection_health"
     const val CHANNEL_APP_UPDATES = "app_updates"
+    const val CHANNEL_OUTGOING_HOLD = "outgoing_call_hold"
     const val ACTION_BLOCK = "com.sysadmindoc.callshield.ACTION_BLOCK"
     const val ACTION_REPORT = "com.sysadmindoc.callshield.ACTION_REPORT"
     const val ACTION_SAFE = "com.sysadmindoc.callshield.ACTION_SAFE"
@@ -71,6 +74,9 @@ object NotificationHelper {
     private const val SMS_SAFE_ACTION_SALT = 30
     private const val FEEDBACK_ID_SALT = 62
     private const val AFTER_CALL_OPEN_SALT = 63
+    private const val OUTGOING_HOLD_ID_SALT = 80
+    private const val OUTGOING_HOLD_CALL_SALT = 81
+    private const val OUTGOING_HOLD_OPEN_SALT = 82
     private const val PROGRESS_TOTAL = 100
     internal const val SYNC_NOTIFICATION_ID = 3
     internal const val PROTECTION_HEALTH_NOTIFICATION_ID = 4
@@ -177,6 +183,60 @@ object NotificationHelper {
                 description = context.getString(R.string.notif_channel_app_updates_desc)
             },
         )
+        // High importance: the user just watched a call fail to start and needs
+        // to see why, and where to call anyway, right away.
+        nm.createNotificationChannel(
+            NotificationChannel(
+                CHANNEL_OUTGOING_HOLD,
+                context.getString(R.string.notif_channel_outgoing_hold),
+                NotificationManager.IMPORTANCE_HIGH,
+            ).apply {
+                description = context.getString(R.string.notif_channel_outgoing_hold_desc)
+            },
+        )
+    }
+
+    /** A held outgoing call: why it was stopped, and a way to call anyway. */
+    internal fun notifyOutgoingCallHeld(
+        context: Context,
+        number: String,
+        reason: OutgoingCallGuard.Reason,
+    ): Boolean {
+        val notificationId = stableId(number, OUTGOING_HOLD_ID_SALT)
+        val callAnyway =
+            PendingIntent.getActivity(
+                context,
+                stableId(number, OUTGOING_HOLD_CALL_SALT),
+                Intent(context, CallAnywayActivity::class.java).apply {
+                    putExtra(CallAnywayActivity.EXTRA_NUMBER, number)
+                    putExtra(CallAnywayActivity.EXTRA_NOTIFICATION_ID, notificationId)
+                },
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            )
+        val openNumber =
+            PendingIntent.getActivity(
+                context,
+                stableId(number, OUTGOING_HOLD_OPEN_SALT),
+                Intent(context, MainActivity::class.java).apply {
+                    putExtra("open_number", number)
+                    flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
+                },
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            )
+        val reasonText = context.getString(reason.textRes)
+        val builder =
+            NotificationCompat
+                .Builder(context, CHANNEL_OUTGOING_HOLD)
+                .setSmallIcon(R.drawable.ic_launcher_monochrome)
+                .setContentTitle(context.getString(R.string.notif_outgoing_held_title, PhoneFormatter.formatIsolated(number)))
+                .setContentText(reasonText)
+                .setStyle(NotificationCompat.BigTextStyle().bigText(context.getString(R.string.notif_outgoing_held_big_text, reasonText)))
+                .setContentIntent(openNumber)
+                .addAction(0, context.getString(R.string.notif_outgoing_call_anyway), callAnyway)
+                .setAutoCancel(true)
+                .setCategory(NotificationCompat.CATEGORY_STATUS)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+        return safeNotify(context, notificationId, builder)
     }
 
     fun notifyAppUpdate(

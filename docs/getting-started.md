@@ -89,6 +89,7 @@ Every user-facing toggle with its DataStore key and default value.
 | URLhaus strip query | `urlhaus_strip_query_enabled` | on |
 | URLhaus remote lookup | `urlhaus_remote_lookup_enabled` | off |
 | Outgoing risk warning | `outgoing_risk_warning_enabled` | off |
+| Stop calls to flagged numbers | `outgoing_call_hold_enabled` | off (needs the call redirection role) |
 
 ### Region and caller-name rules
 
