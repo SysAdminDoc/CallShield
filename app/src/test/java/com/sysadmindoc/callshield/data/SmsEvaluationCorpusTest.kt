@@ -1,5 +1,13 @@
 package com.sysadmindoc.callshield.data
 
+import com.sysadmindoc.callshield.data.SmsCorpusCategory.HARD_NEGATIVE
+import com.sysadmindoc.callshield.data.SmsCorpusCategory.LEGITIMATE
+import com.sysadmindoc.callshield.data.SmsCorpusCategory.SCAM
+import com.sysadmindoc.callshield.data.SmsCorpusCategory.SPAM
+import com.sysadmindoc.callshield.data.SmsCorpusLinkKind.BENIGN_DOMAIN
+import com.sysadmindoc.callshield.data.SmsCorpusLinkKind.NONE
+import com.sysadmindoc.callshield.data.SmsCorpusLinkKind.SHORTENER
+import com.sysadmindoc.callshield.data.SmsCorpusLinkKind.SUSPICIOUS_TLD
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -64,10 +72,15 @@ private data class SmsCorpusMetrics(
 private data class SmsCorpusReport(
     val byLanguage: Map<String, SmsCorpusMetrics>,
     val byCategory: Map<SmsCorpusCategory, SmsCorpusMetrics>,
+    /** Ids of spam the analyzer missed and of clean messages it flagged. */
+    val missed: List<String> = emptyList(),
+    val falseAlarms: List<String> = emptyList(),
 ) {
     fun format(): String =
         buildString {
             appendLine("SMS evaluation corpus ${SmsEvaluationCorpus.manifest.version}")
+            appendLine("missed=${missed.joinToString(",")}")
+            appendLine("false_alarms=${falseAlarms.joinToString(",")}")
             byLanguage.forEach { (language, metrics) ->
                 appendMetrics("language=$language", metrics)
             }
@@ -297,6 +310,75 @@ private object SmsEvaluationCorpus {
                 linkKind = SmsCorpusLinkKind.BENIGN_DOMAIN,
                 body = "Seu pacote chegou. Acompanhe em https://loja.example.invalid/rastreio.",
             ),
+            // ── Spanish, Portuguese and Italian: 20+ examples each ─────────────
+            // Authored in the style of the scams that circulate in each market
+            // (parcel fees, bank alerts, "new number" family texts, fines, tax
+            // refunds, jobs, crypto) next to the ordinary texts they resemble.
+            spanish(SCAM, SUSPICIOUS_TLD, "parcel_customs_fee", "Su envío está retenido en aduanas. Pague 1,99 EUR de tasas para liberarlo en https://envios-es.example.xyz/pago"),
+            spanish(SCAM, SUSPICIOUS_TLD, "bank_unauthorized_access", "Hemos detectado un acceso no autorizado a su cuenta. Si no ha sido usted, confirme sus datos en https://seguridad-banco.example.xyz/acceso"),
+            spanish(SCAM, NONE, "family_new_number", "Hola mamá, se me ha roto el móvil y este es mi número nuevo. Escríbeme por WhatsApp, necesito un favor urgente."),
+            spanish(SCAM, SUSPICIOUS_TLD, "traffic_fine", "Tiene una multa de tráfico pendiente de pago. Evite el recargo abonándola hoy en https://multas.example.xyz/pagar"),
+            spanish(SCAM, SUSPICIOUS_TLD, "tax_refund", "Agencia tributaria: tiene un reembolso de 245,60 EUR pendiente. Solicítelo antes de 48 horas en https://reembolso.example.xyz/solicitud"),
+            spanish(SPAM, NONE, "job_offer", "Oferta de empleo: gane 300 EUR al día desde casa trabajando solo una hora. Escríbanos por WhatsApp para empezar."),
+            spanish(SCAM, SUSPICIOUS_TLD, "crypto_investment", "Invierta 250 EUR en bitcoin hoy y reciba ganancias garantizadas cada semana. Plazas limitadas en https://inversion.example.xyz/registro"),
+            spanish(SCAM, SUSPICIOUS_TLD, "power_cut", "Aviso: su suministro eléctrico será cortado hoy por una factura impagada. Regularice el pago en https://luz-pagos.example.xyz/factura"),
+            spanish(SCAM, SHORTENER, "subscription_payment", "Su suscripción ha sido suspendida por un problema con el pago. Actualice su tarjeta en https://bit.ly/example"),
+            spanish(SPAM, SUSPICIOUS_TLD, "preapproved_loan", "Préstamo preaprobado de hasta 5.000 EUR sin papeleo ni aval. Consígalo en 10 minutos en https://prestamo.example.xyz/solicitar"),
+            spanish(SCAM, NONE, "card_blocked_call", "Su tarjeta ha sido bloqueada por seguridad. Llame hoy mismo al servicio de atención para desbloquearla."),
+            spanish(LEGITIMATE, NONE, "appointment", "Recordatorio: tiene cita con su médico mañana a las 10:30 en el centro de salud. Para cancelar, llame al centro."),
+            spanish(LEGITIMATE, NONE, "order_delivered", "Su pedido ha sido entregado en su buzón. Gracias por comprar con nosotros."),
+            spanish(LEGITIMATE, NONE, "family_running_late", "Llego un poco tarde, empezad a cenar sin mí."),
+            spanish(LEGITIMATE, NONE, "pharmacy_ready", "Su receta está lista para recoger en la farmacia a partir de las 17:00."),
+            spanish(LEGITIMATE, NONE, "restaurant_booking", "Reserva confirmada para 4 personas el sábado a las 21:00. Le esperamos."),
+            spanish(LEGITIMATE, NONE, "login_code", "Código para iniciar sesión: [CODE]. Caduca en 5 minutos."),
+            spanish(HARD_NEGATIVE, NONE, "card_purchase_alert", "Compra de 23,40 EUR con su tarjeta terminada en 4821. Si no la reconoce, contacte con su banco desde la app."),
+            spanish(HARD_NEGATIVE, NONE, "parcel_out_for_delivery", "Su paquete está pendiente de entrega. El repartidor pasará mañana entre las 9:00 y las 14:00."),
+            spanish(HARD_NEGATIVE, NONE, "school_meeting", "El colegio informa: la reunión de padres es el jueves a las 18:00. Confirme su asistencia respondiendo a este mensaje."),
+            spanish(HARD_NEGATIVE, NONE, "bank_safety_notice", "Su banco le recuerda que nunca le pedirá claves ni códigos por SMS."),
+            spanish(HARD_NEGATIVE, BENIGN_DOMAIN, "store_order_tracking", "Su pedido ya está en camino. Puede seguirlo en https://tienda.example.invalid/pedido"),
+            portuguese(SCAM, SUSPICIOUS_TLD, "parcel_customs_fee", "Sua encomenda está retida na alfândega. Pague a taxa de R$ 12,90 para liberar a entrega em https://rastreio-br.example.xyz/taxa"),
+            portuguese(SCAM, SUSPICIOUS_TLD, "bank_unauthorized_access", "Detectamos um acesso suspeito na sua conta. Se não foi você, confirme seus dados em https://seguranca-banco.example.xyz/acesso"),
+            portuguese(SCAM, NONE, "family_new_number", "Oi mãe, troquei de número. Salva esse aqui e me chama no WhatsApp, preciso de ajuda urgente."),
+            portuguese(SCAM, SUSPICIOUS_TLD, "tax_id_irregular", "Seu CPF está irregular e será bloqueado hoje. Regularize a situação em https://cpf-regular.example.xyz/consulta"),
+            portuguese(SPAM, NONE, "job_offer", "Vaga de emprego: ganhe R$ 500 por dia trabalhando de casa curtindo vídeos. Chame no WhatsApp para começar."),
+            portuguese(SCAM, SHORTENER, "pix_confirmation", "Você recebeu um Pix de R$ 1.250,00 que precisa ser confirmado. Acesse https://bit.ly/example para liberar."),
+            portuguese(SCAM, SUSPICIOUS_TLD, "crypto_investment", "Invista R$ 200 em criptomoedas e receba lucro garantido toda semana. Vagas limitadas em https://invest.example.xyz/cadastro"),
+            portuguese(SCAM, SUSPICIOUS_TLD, "traffic_fine", "Você possui uma multa de trânsito pendente com 40% de desconto só hoje. Pague em https://multas-br.example.xyz/pagar"),
+            portuguese(SCAM, NONE, "card_blocked_call", "Seu cartão foi bloqueado por segurança. Ligue para a central ainda hoje para desbloquear."),
+            portuguese(SPAM, SUSPICIOUS_TLD, "preapproved_loan", "Empréstimo pré-aprovado de até R$ 5.000 sem consulta. Libere agora em https://credito.example.xyz/simular"),
+            portuguese(SCAM, SUSPICIOUS_TLD, "points_expiring", "Seus pontos do cartão vencem hoje. Resgate agora seus prêmios em https://pontos.example.xyz/resgate"),
+            portuguese(LEGITIMATE, NONE, "appointment", "Lembrete: sua consulta está marcada para amanhã às 14h. Para remarcar, ligue para a clínica."),
+            portuguese(LEGITIMATE, NONE, "order_delivered", "Seu pedido foi entregue. Obrigado por comprar conosco!"),
+            portuguese(LEGITIMATE, NONE, "family_running_late", "Chego em casa por volta das 19h, pode ir jantando."),
+            portuguese(LEGITIMATE, NONE, "pharmacy_ready", "Seu medicamento já está disponível para retirada na farmácia."),
+            portuguese(LEGITIMATE, NONE, "school_meeting", "A escola informa: a reunião de pais será na quinta-feira às 18h."),
+            portuguese(LEGITIMATE, NONE, "login_code", "Código de acesso: [CODE]. Ele expira em 5 minutos."),
+            portuguese(HARD_NEGATIVE, NONE, "birthday_greeting", "Parabéns pelo seu aniversário! Aproveite 10% de desconto na loja durante todo o mês."),
+            portuguese(HARD_NEGATIVE, NONE, "insurance_premium_due", "Seguro auto: o prêmio da sua apólice vence dia 10. O boleto está disponível no aplicativo."),
+            portuguese(HARD_NEGATIVE, NONE, "card_purchase_alert", "Compra aprovada de R$ 58,90 no cartão final 4821. Não reconhece? Fale com o seu banco pelo aplicativo."),
+            portuguese(HARD_NEGATIVE, NONE, "parcel_out_for_delivery", "Sua entrega está pendente: o entregador tentará novamente amanhã entre 8h e 12h."),
+            italian(SCAM, SUSPICIOUS_TLD, "parcel_customs_fee", "Il tuo pacco è in giacenza. Paga 1,99 EUR di spese di spedizione per riceverlo su https://spedizioni-it.example.xyz/pagamento"),
+            italian(SCAM, SUSPICIOUS_TLD, "bank_unusual_access", "Abbiamo rilevato un accesso anomalo al tuo conto. Se non sei stato tu, verifica i tuoi dati su https://sicurezza-banca.example.xyz/accesso"),
+            italian(SCAM, NONE, "family_new_number", "Ciao mamma, ho cambiato numero perché il telefono si è rotto. Scrivimi su WhatsApp, ho bisogno di un favore urgente."),
+            italian(SCAM, SUSPICIOUS_TLD, "tax_refund", "Agenzia delle entrate: hai diritto a un rimborso di 214,50 EUR. Richiedilo entro oggi su https://rimborso.example.xyz/richiesta"),
+            italian(SPAM, SHORTENER, "prize_selected", "Congratulazioni! Sei stato selezionato per vincere un nuovo smartphone. Ritira il premio su https://bit.ly/example"),
+            italian(SPAM, NONE, "job_offer", "Offerta di lavoro: guadagna 300 EUR al giorno da casa con un'ora di impegno. Contattaci su WhatsApp."),
+            italian(SCAM, SUSPICIOUS_TLD, "crypto_investment", "Investi 250 EUR in bitcoin oggi e ricevi rendimenti garantiti ogni settimana. Posti limitati su https://investimenti.example.xyz/iscrizione"),
+            italian(SCAM, SUSPICIOUS_TLD, "traffic_fine", "Hai una multa non pagata. Evita la maggiorazione pagando oggi su https://multe.example.xyz/paga"),
+            italian(SCAM, NONE, "card_blocked_call", "La tua carta è stata bloccata per motivi di sicurezza. Chiama subito il servizio clienti per sbloccarla."),
+            italian(SCAM, SUSPICIOUS_TLD, "account_suspended", "Il tuo account è stato sospeso per attività sospetta. Conferma la tua identità entro 24 ore su https://verifica-account.example.xyz/login"),
+            italian(SCAM, SUSPICIOUS_TLD, "power_cut", "Avviso: la fornitura di luce sarà sospesa oggi per una bolletta non pagata. Regolarizza su https://bollette.example.xyz/paga"),
+            italian(SPAM, SUSPICIOUS_TLD, "preapproved_loan", "Prestito pre-approvato fino a 5.000 EUR senza garanzie. Ottienilo in 10 minuti su https://prestiti.example.xyz/richiedi"),
+            italian(LEGITIMATE, NONE, "verification_code", "Il tuo codice di verifica è [CODE]. Non condividerlo con nessuno."),
+            italian(LEGITIMATE, NONE, "appointment", "Promemoria: domani alle 10:30 hai un appuntamento dal dentista. Per disdire chiama lo studio."),
+            italian(LEGITIMATE, NONE, "order_delivered", "Il tuo ordine è stato consegnato. Grazie per aver acquistato da noi."),
+            italian(LEGITIMATE, NONE, "family_running_late", "Arrivo tra venti minuti, iniziate pure a cenare."),
+            italian(LEGITIMATE, NONE, "pharmacy_ready", "La tua ricetta è pronta per il ritiro in farmacia."),
+            italian(LEGITIMATE, NONE, "school_meeting", "La scuola informa: il colloquio con i genitori è giovedì alle 17:00."),
+            italian(HARD_NEGATIVE, NONE, "insurance_premium_due", "Il premio della tua polizza auto scade il 15. Puoi pagarlo dall'app o in agenzia."),
+            italian(HARD_NEGATIVE, BENIGN_DOMAIN, "parcel_out_for_delivery", "Il tuo pacco è in consegna oggi. Traccia la spedizione su https://negozio.example.invalid/traccia"),
+            italian(HARD_NEGATIVE, NONE, "card_payment_alert", "Pagamento di 32,10 EUR con carta terminante 4821 autorizzato. Se non lo riconosci, contatta la tua banca dall'app."),
+            italian(HARD_NEGATIVE, NONE, "bank_safety_notice", "La tua banca ti ricorda: non ti chiederemo mai codici o password via SMS."),
             example(
                 id = "ar_scam_account_no_link",
                 languageTag = "ar",
@@ -377,6 +459,18 @@ private object SmsEvaluationCorpus {
             .distinct()
             .associateWith { 0.10 }
 
+    /**
+     * Recall each full-size language set must keep, measured on this corpus
+     * at the evaluator threshold (2026-09-22: es and pt 12 of 13, it 11 of 12;
+     * the misses are the work-from-home job offers). A floor only moves up.
+     */
+    val recallFloorByLanguage =
+        mapOf(
+            "es" to 0.92,
+            "pt" to 0.92,
+            "it" to 0.91,
+        )
+
     val falsePositiveBudgetByCategory =
         mapOf(
             SmsCorpusCategory.LEGITIMATE to 0.0,
@@ -391,6 +485,8 @@ private object SmsEvaluationCorpus {
         return SmsCorpusReport(
             byLanguage = examples.groupMetrics(predictions) { it.languageTag },
             byCategory = examples.groupMetrics(predictions) { it.category },
+            missed = examples.filter { it.expectedSpam && !predictions.getValue(it.id) }.map { it.id },
+            falseAlarms = examples.filter { !it.expectedSpam && predictions.getValue(it.id) }.map { it.id },
         )
     }
 
@@ -422,6 +518,45 @@ private object SmsEvaluationCorpus {
                 falseNegatives = falseNegatives,
             )
         }
+
+    private fun spanish(
+        category: SmsCorpusCategory,
+        linkKind: SmsCorpusLinkKind,
+        name: String,
+        body: String,
+    ) = localized("es", "ES", category, linkKind, name, body)
+
+    private fun portuguese(
+        category: SmsCorpusCategory,
+        linkKind: SmsCorpusLinkKind,
+        name: String,
+        body: String,
+    ) = localized("pt", "BR", category, linkKind, name, body)
+
+    private fun italian(
+        category: SmsCorpusCategory,
+        linkKind: SmsCorpusLinkKind,
+        name: String,
+        body: String,
+    ) = localized("it", "IT", category, linkKind, name, body)
+
+    @Suppress("LongParameterList")
+    private fun localized(
+        languageTag: String,
+        region: String,
+        category: SmsCorpusCategory,
+        linkKind: SmsCorpusLinkKind,
+        name: String,
+        body: String,
+    ) = example(
+        id = "${languageTag}_${category.name.lowercase(Locale.ROOT)}_$name",
+        languageTag = languageTag,
+        category = category,
+        region = region,
+        senderForm = if (category == SCAM || category == SPAM) SmsCorpusSenderForm.PHONE_NUMBER else SmsCorpusSenderForm.ALPHANUMERIC,
+        linkKind = linkKind,
+        body = body,
+    )
 
     private fun example(
         id: String,
@@ -474,6 +609,28 @@ class SmsEvaluationCorpusTest {
             } else {
                 assertTrue(example.body.contains("http", ignoreCase = true))
             }
+        }
+    }
+
+    @Test
+    fun `Spanish Portuguese and Italian each carry at least twenty distinct examples`() {
+        val counts =
+            SmsEvaluationCorpus.examples
+                .groupingBy { it.languageTag }
+                .eachCount()
+        SmsEvaluationCorpus.recallFloorByLanguage.keys.forEach { language ->
+            assertTrue("$language has ${counts[language]} examples", (counts[language] ?: 0) >= 20)
+        }
+        val ids = SmsEvaluationCorpus.examples.map { it.id }
+        assertEquals("example ids must be unique", ids.size, ids.toSet().size)
+    }
+
+    @Test
+    fun `Spanish Portuguese and Italian recall stays at or above its floor`() {
+        val report = SmsEvaluationCorpus.evaluate()
+        SmsEvaluationCorpus.recallFloorByLanguage.forEach { (language, floor) ->
+            val recall = requireNotNull(report.byLanguage.getValue(language).recall)
+            assertTrue("$language recall $recall fell below its floor $floor", recall >= floor)
         }
     }
 

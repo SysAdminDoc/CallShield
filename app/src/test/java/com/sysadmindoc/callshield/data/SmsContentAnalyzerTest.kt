@@ -542,4 +542,43 @@ class SmsContentAnalyzerTest {
         assertEquals(0, SmsContentAnalyzer.analyze("Ciao, ci vediamo alle 15 per il pranzo.").score)
         assertEquals(0, SmsContentAnalyzer.analyze("Il tuo appuntamento dal medico e alle 10.").score)
     }
+
+    // ── Gender agreement and look-alike legitimate texts ────────────────
+    // A card (tarjeta, carta) and a parcel (encomenda, spedizione) are
+    // feminine, so the scam says bloqueada, bloccata, retida, trattenuta.
+
+    @Test
+    fun `feminine blocked and held forms are detected`() {
+        listOf(
+            "Su tarjeta ha sido bloqueada por seguridad. Llame hoy mismo.",
+            "Sua encomenda está retida na alfândega. Pague a taxa para liberar.",
+            "La tua carta è stata bloccata per motivi di sicurezza.",
+            "La spedizione è stata trattenuta in dogana. Paga le spese per riceverla.",
+        ).forEach { body ->
+            assertTrue(body, SmsContentAnalyzer.analyze(body).reasons.contains("spam_keywords"))
+        }
+    }
+
+    @Test
+    fun `payment wording still flags a pending parcel`() {
+        listOf(
+            "Su envío está pendiente de pago. Abone las tasas hoy.",
+            "Sua encomenda está pendente de pagamento da taxa de importação.",
+            "Parabéns! Você foi sorteado para receber um prêmio.",
+        ).forEach { body ->
+            assertTrue(body, SmsContentAnalyzer.analyze(body).reasons.contains("spam_keywords"))
+        }
+    }
+
+    @Test
+    fun `ordinary delivery birthday and insurance texts are not spam keywords`() {
+        listOf(
+            "Su paquete está pendiente de entrega. El repartidor pasará mañana.",
+            "Sua entrega está pendente: o entregador tentará novamente amanhã.",
+            "Parabéns pelo seu aniversário! Aproveite 10% de desconto na loja.",
+            "Il premio della tua polizza auto scade il 15. Puoi pagarlo dall'app.",
+        ).forEach { body ->
+            assertFalse(body, SmsContentAnalyzer.analyze(body).reasons.contains("spam_keywords"))
+        }
+    }
 }

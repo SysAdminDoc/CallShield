@@ -142,6 +142,13 @@ All notable changes to CallShield will be documented in this file.
   SMS receiver and the notification reader each logged it, so it showed up
   twice in the log and the statistics. The alert now says the text was
   flagged, not blocked, since it still reaches your messages app.
+- Spanish, Portuguese and Italian scam texts are judged more accurately. A
+  blocked card or a held parcel is feminine in these languages (tarjeta
+  bloqueada, carta bloccata, encomenda retida), and the patterns only knew
+  the masculine forms, so "su tarjeta ha sido bloqueada" slipped through. In
+  aggressive mode, a parcel "pending delivery", a Brazilian birthday greeting
+  ("Parabéns pelo seu aniversário") and an Italian insurance reminder ("il
+  premio della polizza") no longer read as scams.
 - The "why was this blocked" panel now explains every decision. A region
   block, a contacts-only block, a temporary block or allow, a number from your
   phone's own block list, a range pattern, a caller-name rule and a push-alert
