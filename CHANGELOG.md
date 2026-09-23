@@ -194,6 +194,12 @@ All notable changes to CallShield will be documented in this file.
 
 ### Interface
 
+- Undo after swiping a number in the block log to block it now takes back
+  that block and nothing else. It used to remove every block of the number,
+  including one you'd saved earlier under a different spelling (+1 649 555
+  0123 against 649 555 0123), and it didn't bring back the note on your
+  earlier block or an allow the swipe had replaced. Now all of that returns
+  as it was.
 - The Database tab has filters now. One row of chips picks a type (robocall,
   telemarketer, spam, spam text or anything else), and another picks where a
   number came from: the spam database, trending numbers, a list you

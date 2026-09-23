@@ -11,6 +11,7 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -145,5 +146,46 @@ class NationalFormatLookupTest {
 
             assertFalse(result.isSpam)
             assertEquals("manual_whitelist", result.matchSource)
+        }
+
+    @Test
+    fun `undoing a block from the log keeps the user's earlier block in another spelling`() =
+        runBlocking {
+            // Blocked earlier in +1 form; the block log shows the caller nationally.
+            fixture.repository.blockNumber("+16495550123", "spam", "my note")
+
+            val undo = requireNotNull(fixture.repository.blockNumberUndoable("6495550123", "spam", "swiped"))
+            fixture.repository.undoBlock(undo)
+
+            assertNull(fixture.dao.findByNumber("6495550123"))
+            val earlier = requireNotNull(fixture.dao.findByNumber("+16495550123"))
+            assertTrue(earlier.isUserBlocked)
+            assertEquals("my note", earlier.description)
+            assertEquals("user_blocklist", fixture.repository.isSpam("6495550123").matchSource)
+        }
+
+    @Test
+    fun `undoing a block puts back the allow it removed and the note it replaced`() =
+        runBlocking {
+            fixture.repository.addToWhitelist("+15552345678", "pharmacy")
+            val first = requireNotNull(fixture.repository.blockNumberUndoable("5552345678", "spam", "swiped"))
+            assertNull(fixture.dao.findWhitelistEntry("+15552345678"))
+
+            fixture.repository.undoBlock(first)
+
+            assertEquals("pharmacy", fixture.dao.findWhitelistEntry("+15552345678")?.description)
+            assertNull(fixture.dao.findByNumber("5552345678"))
+            assertEquals("manual_whitelist", fixture.repository.isSpam("5552345678").matchSource)
+
+            // In the same spelling the swipe's note replaces the user's; Undo brings theirs back.
+            fixture.repository.blockNumber("5552345678", "spam", "their note")
+            val second = requireNotNull(fixture.repository.blockNumberUndoable("5552345678", "spam", "swiped"))
+            assertEquals("swiped", fixture.dao.findByNumber("5552345678")?.description)
+
+            fixture.repository.undoBlock(second)
+
+            val restored = requireNotNull(fixture.dao.findByNumber("5552345678"))
+            assertTrue(restored.isUserBlocked)
+            assertEquals("their note", restored.description)
         }
 }

@@ -377,7 +377,7 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
                             }
 
                             fun blockEntryWithUndo() {
-                                viewModel.blockNumber(call.number, "spam", blockedFromSwipeDescription)
+                                val block = viewModel.blockNumberUndoable(call.number, "spam", blockedFromSwipeDescription) ?: return
                                 hapticConfirm(context)
                                 scope.launch {
                                     // Offer Undo for assistive actions as well as the gesture.
@@ -388,7 +388,7 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
                                             duration = SnackbarDuration.Short,
                                         )
                                     if (result == SnackbarResult.ActionPerformed) {
-                                        viewModel.unblockByNumber(call.number)
+                                        viewModel.undoBlock(block)
                                     }
                                 }
                             }

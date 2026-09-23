@@ -150,7 +150,7 @@ class BlocklistRepository(
         return true
     }
 
-    /** Undo a block by number string (e.g. an accidental blocked-log swipe). */
+    /** Remove the user's block of a number, in every spelling it could be saved under. */
     suspend fun unblockByNumber(number: String) {
         val normalized = normalizeNumber(number)
         if (normalized.isBlank()) return
@@ -158,6 +158,52 @@ class BlocklistRepository(
             .mapNotNull { dao.findByNumber(it) }
             .filter { it.isUserBlocked }
             .forEach { unblockNumber(it) }
+    }
+
+    /** What one block replaced: the row it created or changed, and the allows it removed. */
+    data class BlockUndo(
+        val number: String,
+        val previous: SpamNumber?,
+        val removedAllows: List<WhitelistEntry>,
+    )
+
+    /**
+     * Block the way [blockNumber] does and return what the block replaced, so
+     * an Undo puts back exactly that. Removing the block by number instead
+     * would also clear the user's own earlier block in another spelling, drop
+     * a note they'd saved on it, and leave the allows it removed deleted.
+     */
+    suspend fun blockNumberUndoable(
+        number: String,
+        type: String = "unknown",
+        description: String = "",
+    ): BlockUndo? {
+        val normalized = normalizeNumber(number)
+        if (normalized.isBlank()) return null
+        var undo: BlockUndo? = null
+        runInTransaction {
+            val previous = dao.findByNumber(normalized)
+            val now = System.currentTimeMillis()
+            val allows =
+                equivalentForms(normalized)
+                    .mapNotNull { dao.findWhitelistEntry(it) }
+                    .filter { it.expiresAt == null || it.expiresAt > now }
+            if (blockNumber(number, type, description)) undo = BlockUndo(normalized, previous, allows)
+        }
+        return undo
+    }
+
+    /** Put back what [blockNumberUndoable] replaced. */
+    suspend fun undoBlock(undo: BlockUndo) {
+        runInTransaction {
+            val previous = undo.previous
+            if (previous != null) {
+                dao.insertNumber(previous)
+            } else {
+                dao.findByNumber(undo.number)?.takeIf { it.isUserBlocked }?.let { unblockNumber(it) }
+            }
+            undo.removedAllows.forEach { dao.insertWhitelistEntry(it) }
+        }
     }
 
     fun getAllWildcardRules(): Flow<List<WildcardRule>> = dao.getAllWildcardRules()

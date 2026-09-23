@@ -773,6 +773,14 @@ class SpamRepository(
 
     suspend fun unblockByNumber(number: String) = blocklistRepository.unblockByNumber(number)
 
+    suspend fun blockNumberUndoable(
+        number: String,
+        type: String,
+        description: String,
+    ) = blocklistRepository.blockNumberUndoable(number, type, description)
+
+    suspend fun undoBlock(undo: BlocklistRepository.BlockUndo) = blocklistRepository.undoBlock(undo)
+
     // ── Wildcard rules (Feature 8) ─────────────────────────────────────
     fun getAllWildcardRules(): Flow<List<WildcardRule>> = blocklistRepository.getAllWildcardRules()
 

@@ -49,6 +49,7 @@ import com.sysadmindoc.callshield.data.model.SmsKeywordRule
 import com.sysadmindoc.callshield.data.model.SpamNumber
 import com.sysadmindoc.callshield.data.model.WhitelistEntry
 import com.sysadmindoc.callshield.data.model.WildcardRule
+import com.sysadmindoc.callshield.data.repository.BlocklistRepository
 import com.sysadmindoc.callshield.data.repository.FeedMirrorSave
 import com.sysadmindoc.callshield.domain.model.BlockReasonCode
 import com.sysadmindoc.callshield.domain.model.SpamCheckResult
@@ -63,9 +64,11 @@ import com.sysadmindoc.callshield.ui.theme.AppThemeMode
 import com.sysadmindoc.callshield.ui.theme.syncApplicationNightMode
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -837,6 +840,32 @@ class MainViewModel
         /** Undo a block created by number string (e.g. an accidental log swipe). */
         fun unblockByNumber(number: String) {
             viewModelScope.launch { repo.unblockByNumber(number) }
+        }
+
+        /**
+         * Block from a swipe in the block log. [undoBlock] with the result
+         * reverses this block alone: removing the number's blocks would also
+         * clear one the user saved earlier in another spelling.
+         */
+        fun blockNumberUndoable(
+            number: String,
+            type: String,
+            description: String,
+        ): Deferred<BlocklistRepository.BlockUndo?>? {
+            if (EmergencyNumberFloor.isProtected(number)) {
+                Toast
+                    .makeText(
+                        appContext,
+                        appContext.getString(R.string.emergency_number_block_refused),
+                        Toast.LENGTH_LONG,
+                    ).show()
+                return null
+            }
+            return viewModelScope.async { repo.blockNumberUndoable(number, type, description) }
+        }
+
+        fun undoBlock(block: Deferred<BlocklistRepository.BlockUndo?>) {
+            viewModelScope.launch { block.await()?.let { repo.undoBlock(it) } }
         }
 
         fun deleteLogEntry(call: BlockedCall) {
