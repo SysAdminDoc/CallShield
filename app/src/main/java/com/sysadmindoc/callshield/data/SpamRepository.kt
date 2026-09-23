@@ -377,6 +377,9 @@ class SpamRepository(
 
     // Settings
     val blockCallsEnabled: Flow<Boolean> = settingsRepository.blockCallsEnabled
+
+    /** The numbers on the hot list applied within [HOT_ROW_TTL_MS]; empty once it's stale. */
+    val trendingNumbers: Flow<Set<String>> = settingsRepository.trendingNumbers
     val blockSmsEnabled: Flow<Boolean> = settingsRepository.blockSmsEnabled
     val blockUnknownEnabled: Flow<Boolean> = settingsRepository.blockUnknownEnabled
     val stirShakenEnabled: Flow<Boolean> = settingsRepository.stirShakenEnabled
@@ -980,7 +983,8 @@ class SpamRepository(
     fun pageSpamNumbers(
         type: DatabaseTypeFilter,
         source: DatabaseSourceFilter,
-    ): PagingSource<Int, SpamNumber> = blocklistRepository.pageSpamNumbers(type.key, source.key)
+        trending: Collection<String> = emptyList(),
+    ): PagingSource<Int, SpamNumber> = blocklistRepository.pageSpamNumbers(type.key, source.key, trending)
 
     fun getUserBlockedNumbers(): Flow<List<SpamNumber>> = blocklistRepository.getUserBlockedNumbers()
 

@@ -121,6 +121,7 @@ import com.sysadmindoc.callshield.data.model.WhitelistEntry
 import com.sysadmindoc.callshield.data.model.WildcardRule
 import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.accessibleSwipeActions
+import com.sysadmindoc.callshield.ui.spamTypeLabelRes
 import com.sysadmindoc.callshield.ui.theme.CatBlue
 import com.sysadmindoc.callshield.ui.theme.CatGreen
 import com.sysadmindoc.callshield.ui.theme.CatMauve
@@ -1378,7 +1379,8 @@ fun DatabaseItem(number: SpamNumber) {
                 Text(PhoneFormatter.formatIsolated(number.number), fontWeight = FontWeight.SemiBold, color = CatText)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     StatusPill(
-                        text = number.type.replaceFirstChar { it.uppercase() },
+                        // A type the app knows reads in the app language; a list's own label reads as written.
+                        text = spamTypeLabelRes(number.type)?.let { stringResource(it) } ?: number.type.replace('_', ' ').replaceFirstChar { it.uppercase() },
                         color = typeColor,
                         horizontalPadding = 8.dp,
                         verticalPadding = 4.dp,

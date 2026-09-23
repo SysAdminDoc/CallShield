@@ -57,6 +57,10 @@ class BlocklistRepository(
         const val PENDING_LOG_BATCH_LIMIT = 50
         const val PENDING_LOG_RETRY_DELAY_MS = 60_000L
         const val MIN_SEARCH_DIGITS = 4
+
+        // One SQL variable each, and older Android allows 999; the published hot
+        // list stops at 500.
+        const val MAX_TRENDING_FILTER = 900
     }
 
     /** @return true when the number is blocked afterwards; false when refused (invalid input or a permanent allow wins). */
@@ -519,7 +523,8 @@ class BlocklistRepository(
     fun pageSpamNumbers(
         type: String,
         source: String,
-    ): PagingSource<Int, SpamNumber> = dao.pageSpamNumbers(type, source)
+        trending: Collection<String> = emptyList(),
+    ): PagingSource<Int, SpamNumber> = dao.pageSpamNumbers(type, source, trending.take(MAX_TRENDING_FILTER))
 
     fun getUserBlockedNumbers(): Flow<List<SpamNumber>> =
         dao.getUserBlockedNumbers().map { rows ->

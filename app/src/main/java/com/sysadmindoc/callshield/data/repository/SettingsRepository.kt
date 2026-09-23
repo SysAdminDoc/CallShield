@@ -89,6 +89,15 @@ class SettingsRepository(
             )
 
     val blockCallsEnabled: Flow<Boolean> = dataStore.data.map { it[SpamRepository.KEY_BLOCK_CALLS] ?: true }
+    val trendingNumbers: Flow<Set<String>> =
+        dataStore.data.map { prefs ->
+            val appliedAt = prefs[SpamRepository.KEY_TRENDING_APPLIED_AT]
+            if (appliedAt != null && System.currentTimeMillis() - appliedAt <= SpamRepository.HOT_ROW_TTL_MS) {
+                prefs[SpamRepository.KEY_TRENDING_NUMBERS].orEmpty()
+            } else {
+                emptySet()
+            }
+        }
     val blockSmsEnabled: Flow<Boolean> = dataStore.data.map { it[SpamRepository.KEY_BLOCK_SMS] ?: true }
     val blockUnknownEnabled: Flow<Boolean> = dataStore.data.map { it[SpamRepository.KEY_BLOCK_UNKNOWN] ?: false }
     val stirShakenEnabled: Flow<Boolean> = dataStore.data.map { it[SpamRepository.KEY_STIR_SHAKEN] ?: true }

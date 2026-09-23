@@ -79,7 +79,7 @@ class RoomPagingAggregateTest {
 
             val databasePage =
                 dao
-                    .pageSpamNumbers(type = "", source = "")
+                    .pageSpamNumbers(type = "", source = "", trending = emptyList())
                     .refreshPage(loadSize = 2)
             assertEquals(listOf("+15551230001", "+15551230002"), databasePage.data.map { it.number })
             assertNotNull(databasePage.nextKey)
@@ -170,8 +170,8 @@ class RoomPagingAggregateTest {
                 },
             )
 
-            val firstPage = dao.pageSpamNumbers(type = "", source = "").refreshPage(loadSize = 50)
-            val secondPage = dao.pageSpamNumbers(type = "", source = "").appendPage(firstPage.nextKey!!, loadSize = 50)
+            val firstPage = dao.pageSpamNumbers(type = "", source = "", trending = emptyList()).refreshPage(loadSize = 50)
+            val secondPage = dao.pageSpamNumbers(type = "", source = "", trending = emptyList()).appendPage(firstPage.nextKey!!, loadSize = 50)
             assertEquals(50, firstPage.data.size)
             assertEquals(50, secondPage.data.size)
             val firstIds = firstPage.data.map { it.id }.toSet()

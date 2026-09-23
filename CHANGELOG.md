@@ -195,6 +195,10 @@ All notable changes to CallShield will be documented in this file.
   telemarketer, spam, spam text or anything else), and another picks where a
   number came from: the spam database, trending numbers, a list you
   subscribed to, or your own blocks.
+  Numbers from a subscribed list land under the right type chip whatever
+  capitalization the list uses, each number's type reads in the app
+  language, and Trending also shows trending numbers that were already in
+  the database.
 - Search no longer stops at 100 results. It keeps loading as you scroll, and
   the count shows every match.
 

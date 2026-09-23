@@ -205,10 +205,17 @@ class MainViewModel
         fun spamNumbersPager(
             type: DatabaseTypeFilter,
             source: DatabaseSourceFilter,
-        ): Flow<PagingData<SpamNumber>> =
-            Pager(PagingConfig(pageSize = DATABASE_PAGE_SIZE, initialLoadSize = DATABASE_PAGE_SIZE * 2, enablePlaceholders = false)) {
-                repo.pageSpamNumbers(type, source)
-            }.flow.cachedIn(viewModelScope)
+        ): Flow<PagingData<SpamNumber>> {
+            // The Trending chip also matches the current hot list, so it pages
+            // again when a new one is applied; other chips don't need it.
+            val trending = if (source == DatabaseSourceFilter.TRENDING) repo.trendingNumbers.distinctUntilChanged() else flowOf(emptySet())
+            return trending
+                .flatMapLatest { numbers ->
+                    Pager(PagingConfig(pageSize = DATABASE_PAGE_SIZE, initialLoadSize = DATABASE_PAGE_SIZE * 2, enablePlaceholders = false)) {
+                        repo.pageSpamNumbers(type, source, numbers)
+                    }.flow
+                }.cachedIn(viewModelScope)
+        }
 
         fun blockedCallsPager(
             isCall: Int?,

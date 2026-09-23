@@ -33,12 +33,54 @@ class DatabaseFilterPagingTest {
     private suspend fun numbers(
         type: DatabaseTypeFilter,
         source: DatabaseSourceFilter,
+        trending: Set<String> = emptySet(),
     ): List<String> =
         fixture.repository
-            .pageSpamNumbers(type, source)
+            .pageSpamNumbers(type, source, trending)
             .refresh(loadSize = 500)
             .data
             .map { it.number }
+
+    @Test
+    fun `a subscribed list's capitalized types land under their own chips`() =
+        runBlocking {
+            // External lists store the type as written.
+            fixture.dao.insertNumbers(
+                listOf(
+                    SpamNumber(number = "+12125550111", type = "Robocall", reports = 3, source = "subscription:acme"),
+                    SpamNumber(number = "+12125550112", type = "SPAM", reports = 2, source = "subscription:acme"),
+                    SpamNumber(number = "+12125550113", type = "Debt Collection", reports = 1, source = "subscription:acme"),
+                ),
+            )
+
+            assertEquals(listOf("+12125550111"), numbers(DatabaseTypeFilter.ROBOCALL, DatabaseSourceFilter.ALL))
+            assertEquals(listOf("+12125550112"), numbers(DatabaseTypeFilter.SPAM, DatabaseSourceFilter.ALL))
+            assertEquals(listOf("+12125550113"), numbers(DatabaseTypeFilter.OTHER, DatabaseSourceFilter.ALL))
+        }
+
+    @Test
+    fun `the trending chip also shows trending numbers that were already in the database`() =
+        runBlocking {
+            // The hot list keeps an existing database row rather than adding a trending one.
+            fixture.dao.insertNumbers(
+                listOf(
+                    SpamNumber(number = "+12125550121", type = "robocall", reports = 9, source = "github"),
+                    SpamNumber(number = "+12125550122", type = "robocall", reports = 8, source = "hot_list"),
+                    SpamNumber(number = "+12125550123", type = "robocall", reports = 7, source = "github"),
+                ),
+            )
+
+            assertEquals(
+                listOf("+12125550121", "+12125550122"),
+                numbers(DatabaseTypeFilter.ALL, DatabaseSourceFilter.TRENDING, trending = setOf("+12125550121", "+12125550122")),
+            )
+            assertEquals(listOf("+12125550122"), numbers(DatabaseTypeFilter.ALL, DatabaseSourceFilter.TRENDING))
+            assertEquals(
+                "the trending set only widens the Trending chip",
+                listOf("+12125550121", "+12125550123"),
+                numbers(DatabaseTypeFilter.ALL, DatabaseSourceFilter.DATABASE, trending = setOf("+12125550121")),
+            )
+        }
 
     @Test
     fun `type and source chips narrow the list and All clears them`() =

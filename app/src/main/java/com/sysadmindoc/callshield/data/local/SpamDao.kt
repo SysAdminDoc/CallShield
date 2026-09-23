@@ -46,13 +46,17 @@ interface SpamDao {
     // The Database tab's chips. An empty key matches every row. "other" is any
     // type without a chip of its own (DatabaseTypeFilter names them), "lists"
     // is every subscribed external blocklist, and "mine" is the user's blocks.
+    // Types compare case-insensitively because subscribed lists store theirs as
+    // written ("Robocall", "SPAM"). Trending also takes the numbers on the
+    // current hot list: one already in the database keeps its database row.
     @Query(
         """SELECT * FROM spam_numbers
               WHERE (:type = ''
-                     OR type = :type
-                     OR (:type = 'other' AND type NOT IN ('robocall', 'telemarketer', 'spam', 'sms_spam')))
+                     OR LOWER(type) = :type
+                     OR (:type = 'other' AND LOWER(type) NOT IN ('robocall', 'telemarketer', 'spam', 'sms_spam')))
                 AND (:source = ''
                      OR source = :source
+                     OR (:source = 'hot_list' AND number IN (:trending))
                      OR (:source = 'lists' AND source LIKE 'subscription:%')
                      OR (:source = 'mine' AND isUserBlocked = 1))
               ORDER BY reports DESC, id DESC""",
@@ -60,6 +64,7 @@ interface SpamDao {
     fun pageSpamNumbers(
         type: String,
         source: String,
+        trending: List<String>,
     ): PagingSource<Int, SpamNumber>
 
     @Query("SELECT * FROM spam_numbers WHERE isUserBlocked = 1 ORDER BY number")
