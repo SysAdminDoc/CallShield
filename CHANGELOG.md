@@ -46,10 +46,12 @@ All notable changes to CallShield will be documented in this file.
   campaign range as a robocall, and a toll-free one as a telemarketer, so
   the action you picked for that category applies. Those mappings existed
   but never matched, because they looked for internal names the block
-  description had already turned into plain words. They only apply to a
-  block as confident as the default setting requires, so a lone
-  neighbor-spoof match that only aggressive mode blocks stays uncategorized
-  and no category rule can let it through.
+  description had already turned into plain words. A suspicious-pattern
+  block only gets a category when it's as confident as the default setting
+  requires. One that only aggressive mode blocks, such as a lone
+  neighbor-spoof or VoIP-range match, stays uncategorized, so no category
+  rule can let it through. Before, a weak match that the block had typed as
+  a robocall still counted as one.
 
 - CallShield starts faster when a call wakes it. Looking for an interrupted
   backup restore held the main thread about 0.7 seconds on every start

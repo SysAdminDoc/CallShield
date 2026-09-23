@@ -81,6 +81,16 @@ object CallCategoryResolver {
         if (!result.isSpam) return CallCategory.Unknown
         CategoryCallPolicy.parseMatchSource(result.matchSource)?.let { return it.category }
 
+        // A heuristic block names a category only at the score the default
+        // setting blocks at. Its type comes from the same signals, so this
+        // goes before the type tags: aggressive mode blocks a lone 30-point
+        // VoIP-range match typed "robocall", and a lone 50-point neighbor-spoof
+        // match also fires on local banks and schools. Naming either would let
+        // a category rule decide the call on that alone.
+        if (result.reasonCode == BlockReasonCode.HEURISTIC && result.confidence < HEURISTIC_CATEGORY_MIN_CONFIDENCE) {
+            return CallCategory.Unknown
+        }
+
         // (1) Database type tags are authoritative — they came from
         //     labeled community/FCC/FTC data, not heuristics.
         when (result.type.lowercase().trim()) {
@@ -120,11 +130,8 @@ object CallCategoryResolver {
         // Heuristic reasons: map the strongest signals. A live result carries
         // the raw tokens in `signals`; its description is display text in the
         // app language (and always had the underscores replaced), so it only
-        // helps callers that still pass tokens there. Only at the confidence
-        // the default setting blocks at: aggressive mode blocks on a single
-        // 50-point neighbor-spoof match, which also fires on local banks and
-        // schools, and naming that Scam would let a Scam rule decide it.
-        if (result.reasonCode == BlockReasonCode.HEURISTIC && result.confidence >= HEURISTIC_CATEGORY_MIN_CONFIDENCE) {
+        // helps callers that still pass tokens there.
+        if (result.reasonCode == BlockReasonCode.HEURISTIC) {
             val evidence = (result.signals + desc).joinToString(" ")
             when {
                 "wangiri" in evidence -> return CallCategory.Wangiri

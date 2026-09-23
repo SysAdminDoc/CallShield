@@ -114,6 +114,29 @@ class CallCategoryResolverTest {
     }
 
     @Test
+    fun `a weak heuristic block's type names no category either`() {
+        // HeuristicChecker types its blocks from the same signals: a lone
+        // VoIP-range match (30) or rapid-fire match (40) is typed "robocall",
+        // and aggressive mode blocks both.
+        fun heuristic(
+            type: String,
+            confidence: Int,
+            vararg signals: String,
+        ) = BlockResult
+            .block("heuristic", type = type, description = "", confidence = confidence, signals = signals.toList())
+            .toSpamCheckResult()
+
+        assertEquals(CallCategory.Unknown, CallCategoryResolver.resolve(heuristic("robocall", 30, "voip_spam_range")))
+        assertEquals(CallCategory.Unknown, CallCategoryResolver.resolve(heuristic("robocall", 40, "rapid_fire")))
+        assertEquals(CallCategory.Robocall, CallCategoryResolver.resolve(heuristic("robocall", 70, "rapid_fire", "voip_spam_range")))
+        // The same type from the database is authoritative at any confidence.
+        assertEquals(
+            CallCategory.Robocall,
+            CallCategoryResolver.resolve(SpamCheckResult(isSpam = true, matchSource = "database", type = "robocall", confidence = 30)),
+        )
+    }
+
+    @Test
     fun `heuristic with rapid_fire resolves to Robocall`() {
         val result =
             SpamCheckResult(
