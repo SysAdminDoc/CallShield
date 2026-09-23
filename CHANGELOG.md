@@ -114,6 +114,12 @@ All notable changes to CallShield will be documented in this file.
   SMS receiver and the notification reader each logged it, so it showed up
   twice in the log and the statistics. The alert now says the text was
   flagged, not blocked, since it still reaches your messages app.
+- The trusted-source and message-screening pickers in Settings now see your
+  installed apps on Android 11 and later. Android hides other apps from an app
+  unless its manifest names them, and CallShield's named none, so every source
+  showed as "Not installed", Google Messages included, and a trusted source
+  couldn't be switched off. The manifest now names the apps on those two lists
+  and nothing else.
 
 ### Live caller lookup
 
