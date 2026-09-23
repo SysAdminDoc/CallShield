@@ -104,7 +104,10 @@ All notable changes to CallShield will be documented in this file.
   is Colorado, never Colombia.
 - Region rules no longer mistake a ten-digit number from outside North America
   for a North American one. A Penang landline (+60 4) counted as Vancouver's
-  604 area code, so allowing British Columbia let it ring.
+  604 area code, so allowing British Columbia let it ring. On a phone outside
+  North America, a number Android couldn't put in international form is now
+  read as a number from your own country instead of a North American one, so
+  allowing your country's code lets it ring.
 - Settings has a Telemarketing ranges card for number ranges regulators set
   aside for sales calls. It can block Spain's 400 range (required for
   commercial calls from 17 October 2026), India's 140 promotional series and

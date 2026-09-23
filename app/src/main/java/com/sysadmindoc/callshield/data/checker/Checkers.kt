@@ -701,8 +701,10 @@ internal class CallerNameBlockChecker : IChecker {
     }
 }
 
-/** Blocks calls whose NANP state/province is not in the user's allowlist. */
-internal class RegionBlockChecker : IChecker {
+/** Blocks calls from outside the NANP regions and country calling codes the user allows. */
+internal class RegionBlockChecker(
+    private val homeRegion: (Context) -> String? = phoneHomeRegion,
+) : IChecker {
     override val priority = CheckerPriority.REGION_BLOCK
     override val name = "region_block"
 
@@ -722,6 +724,8 @@ internal class RegionBlockChecker : IChecker {
                     ctx.appContext.getString(R.string.block_reason_out_of_region, region)
                 }
             },
+            // Only a bare (national-form) number needs the phone's home region.
+            homeRegionIso = if (ctx.number.startsWith("+")) null else homeRegion(ctx.appContext),
         )
 
     companion object {
@@ -731,9 +735,10 @@ internal class RegionBlockChecker : IChecker {
             descriptionForRegion: (String?) -> String = { region ->
                 "Blocked — ${region ?: "international or unknown"} is outside allowed regions"
             },
+            homeRegionIso: String? = null,
         ): BlockResult? {
-            if (!RegionRules.isOutsideAllowedRegions(number, allowedRegions)) return null
-            val region = RegionRules.regionCode(number)
+            if (!RegionRules.isOutsideAllowedRegions(number, allowedRegions, homeRegionIso)) return null
+            val region = RegionRules.regionCode(number, homeRegionIso)
             return BlockResult.block(
                 matchSource = "region_block",
                 type = "out_of_region",

@@ -192,6 +192,36 @@ class RegionRulesTest {
     }
 
     @Test
+    fun `a bare number on a phone outside North America is read in that country`() {
+        // Android leaves a number it can't validate in national form.
+        assertFalse(RegionRules.isOutsideAllowedRegions("0612345678", setOf("+39"), homeRegionIso = "IT"))
+        assertTrue(RegionRules.isOutsideAllowedRegions("0612345678", setOf("+44"), homeRegionIso = "IT"))
+        // Ten digits shaped like a New York number are still an Italian number on an Italian phone.
+        assertNull(RegionRules.regionCode("2125550123", homeRegionIso = "IT"))
+        assertTrue(RegionRules.isOutsideAllowedRegions("2125550123", setOf("NY"), homeRegionIso = "IT"))
+        assertTrue(RegionBlockChecker.decidePure("0612345678", setOf("+44"), homeRegionIso = "IT")?.shouldBlock == true)
+        assertNull(RegionBlockChecker.decidePure("0612345678", setOf("+39"), homeRegionIso = "IT"))
+    }
+
+    @Test
+    fun `a bare number is NANP on a phone that uses +1 or has no known region`() {
+        assertEquals("NY", RegionRules.regionCode("2125550123", homeRegionIso = "US"))
+        assertEquals("NY", RegionRules.regionCode("2125550123", homeRegionIso = "DO"))
+        assertEquals("NY", RegionRules.regionCode("2125550123"))
+        assertFalse(RegionRules.isOutsideAllowedRegions("8095550123", setOf("+1809"), homeRegionIso = "DO"))
+        assertFalse(RegionRules.isOutsideAllowedRegions("2125550123", setOf("NY"), homeRegionIso = "ZZ"))
+    }
+
+    @Test
+    fun `calling code table covers the NANP and reads regions case-insensitively`() {
+        listOf("US", "CA", "PR", "DO", "JM").forEach { assertEquals(it, "1", RegionCallingCodes.forRegion(it)) }
+        assertEquals("39", RegionCallingCodes.forRegion("it"))
+        assertEquals("44", RegionCallingCodes.forRegion("GB"))
+        assertNull(RegionCallingCodes.forRegion("ZZ"))
+        assertNull(RegionCallingCodes.forRegion(null))
+    }
+
+    @Test
     fun `ten digit international numbers are not read as NANP area codes`() {
         // Penang (+60 4) and Hamilton, New Zealand (+64 7) have ten digits after
         // the plus, which the area-code table reads as Vancouver 604 and Toronto 647.

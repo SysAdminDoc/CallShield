@@ -12,6 +12,7 @@ object RegionRules {
     const val MAX_NAME_PATTERNS = 30
     const val MAX_NAME_PATTERN_LENGTH = 60
     private const val NANP_NATIONAL_LENGTH = 10
+    private const val NANP_CALLING_CODE = "1"
 
     /** `1` plus a three-digit area code, as in `+1809`. */
     private const val NANP_AREA_CODE_ENTRY_LENGTH = 4
@@ -128,32 +129,54 @@ object RegionRules {
     /**
      * The NANP state, province or territory code of [number], or null. A `+`
      * number outside +1 is never NANP, even when it has ten digits: Penang's
-     * +60 4 would otherwise read as Vancouver's 604.
+     * +60 4 would otherwise read as Vancouver's 604. A bare number is NANP
+     * only on a phone whose home region uses +1 or is unknown.
      */
-    fun regionCode(number: String): String? = if (number.startsWith("+") && !number.startsWith("+1")) null else AreaCodeLookup.getRegionCode(number)
+    fun regionCode(
+        number: String,
+        homeRegionIso: String? = null,
+    ): String? =
+        when {
+            number.startsWith("+") && !number.startsWith("+1") -> null
+            !number.startsWith("+") && !homeUsesNanp(homeRegionIso) -> null
+            else -> AreaCodeLookup.getRegionCode(number)
+        }
 
     fun isOutsideAllowedRegions(
         number: String,
         allowedRegions: Set<String>,
+        homeRegionIso: String? = null,
     ): Boolean {
         val normalized = normalizeRegionCodes(allowedRegions)
         if (normalized.isEmpty()) return false
-        val nanpRegion = regionCode(number)
+        val nanpRegion = regionCode(number, homeRegionIso)
         if (nanpRegion != null && nanpRegion in normalized) return false
-        val international = internationalForm(number) ?: return true
+        val international = internationalForm(number, homeRegionIso) ?: return true
         return normalized.none { it.startsWith("+") && international.startsWith(it) }
     }
 
-    /** [number] as `+<digits>`, reading a bare ten- or eleven-digit number as NANP. */
-    private fun internationalForm(number: String): String? {
+    /**
+     * [number] as `+<digits>`. Android leaves a number it can't validate in
+     * national form, so a bare number is read in the phone's home region:
+     * ten or eleven digits as NANP where that region uses +1 (or is unknown),
+     * and with the home region's calling code anywhere else.
+     */
+    private fun internationalForm(
+        number: String,
+        homeRegionIso: String?,
+    ): String? {
         if (number.startsWith("+")) return number
         val digits = filterAsciiDigits(number)
+        val homeCode = RegionCallingCodes.forRegion(homeRegionIso)
+        if (homeCode != null && homeCode != NANP_CALLING_CODE) return digits.takeIf { it.isNotEmpty() }?.let { "+$homeCode$it" }
         return when {
             digits.length == NANP_NATIONAL_LENGTH -> "+1$digits"
             digits.length == NANP_NATIONAL_LENGTH + 1 && digits.startsWith("1") -> "+$digits"
             else -> null
         }
     }
+
+    private fun homeUsesNanp(homeRegionIso: String?): Boolean = RegionCallingCodes.forRegion(homeRegionIso)?.let { it == NANP_CALLING_CODE } ?: true
 
     fun matchesPresentedName(
         presentedName: String?,
