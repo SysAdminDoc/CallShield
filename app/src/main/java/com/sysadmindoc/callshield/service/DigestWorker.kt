@@ -53,7 +53,9 @@ class DigestWorker
                         .eachCount()
                         .entries
                         .sortedByDescending { it.value }
-                        .joinToString(" · ") { "${it.value} ${it.key}" }
+                        .joinToString(applicationContext.getString(R.string.digest_source_separator)) {
+                            applicationContext.getString(bucketLabelRes(it.key), it.value)
+                        }
 
                 if (!CallShieldPermissions.hasNotificationPermission(applicationContext)) {
                     // User has not granted POST_NOTIFICATIONS on API 33+; skip quietly.
@@ -121,6 +123,17 @@ class DigestWorker
                     BlockReasonCode.SMS_CONTENT, BlockReasonCode.KEYWORD -> "content"
                     BlockReasonCode.RCS_FILTER -> "RCS filter"
                     else -> "other"
+                }
+
+            /** The digest's "count + source" label for a [matchReasonBucket] key. */
+            internal fun bucketLabelRes(bucket: String): Int =
+                when (bucket) {
+                    "database" -> R.string.digest_source_database
+                    "heuristic" -> R.string.digest_source_heuristic
+                    "ML" -> R.string.digest_source_ml
+                    "content" -> R.string.digest_source_content
+                    "RCS filter" -> R.string.digest_source_rcs_filter
+                    else -> R.string.digest_source_other
                 }
 
             fun schedule(context: Context) {

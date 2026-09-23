@@ -19,6 +19,7 @@ import com.sysadmindoc.callshield.data.PhoneFormatter
 import com.sysadmindoc.callshield.data.SmsContentAnalyzer
 import com.sysadmindoc.callshield.domain.model.BlockReasonCode
 import com.sysadmindoc.callshield.permissions.CallShieldPermissions
+import com.sysadmindoc.callshield.ui.ACTION_OPEN_BLOCKED_LOG
 import com.sysadmindoc.callshield.ui.MainActivity
 import com.sysadmindoc.callshield.util.filterAsciiDigits
 import com.sysadmindoc.callshield.util.filterAsciiDigitsLast
@@ -499,6 +500,7 @@ object NotificationHelper {
                 .setGroup(GROUP_BLOCKED)
                 .setGroupSummary(true)
                 .setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_SUMMARY)
+                .setContentIntent(blockedLogIntent(context))
                 .setAutoCancel(true)
                 // Zero the per-process counter when the user dismisses the group,
                 // so the next block starts counting from that block instead of
@@ -506,6 +508,18 @@ object NotificationHelper {
                 .setDeleteIntent(summaryDeleteIntent(context))
         safeNotify(context, SUMMARY_ID, summary)
     }
+
+    /** The summary counts blocks, so tapping it opens the Blocked log that lists them. */
+    private fun blockedLogIntent(context: Context): PendingIntent =
+        PendingIntent.getActivity(
+            context,
+            SUMMARY_ID,
+            Intent(context, MainActivity::class.java).apply {
+                action = ACTION_OPEN_BLOCKED_LOG
+                flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            },
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
 
     private fun summaryDeleteIntent(context: Context): PendingIntent =
         PendingIntent.getBroadcast(

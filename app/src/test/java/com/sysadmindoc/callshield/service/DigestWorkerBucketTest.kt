@@ -1,5 +1,6 @@
 package com.sysadmindoc.callshield.service
 
+import com.sysadmindoc.callshield.R
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -66,5 +67,15 @@ class DigestWorkerBucketTest {
         assertEquals(2, counts["database"])
         assertEquals(1, counts["heuristic"])
         assertEquals(3, counts["ML"])
+    }
+
+    @Test
+    fun `every bucket shows through its own translatable label`() {
+        val buckets = listOf("database", "heuristic", "ML", "content", "RCS filter", "other")
+        val labels = buckets.map(DigestWorker::bucketLabelRes)
+
+        assertEquals("each bucket needs its own label", buckets.size, labels.toSet().size)
+        assertEquals(R.string.digest_source_rcs_filter, DigestWorker.bucketLabelRes("RCS filter"))
+        assertEquals(R.string.digest_source_other, DigestWorker.bucketLabelRes("not a bucket"))
     }
 }

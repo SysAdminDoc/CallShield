@@ -155,6 +155,9 @@ All notable changes to CallShield will be documented in this file.
 
 ### Interface
 
+- Tapping the "blocked recently" notification opens the Blocked log now. It
+  used to do nothing at all.
+
 - Setup now says what to do when Android won't let a permission through. Apps
   installed outside an app store run into Android's restricted settings. The
   grant screen refuses notification access from Android 13, and the overlay
@@ -422,6 +425,13 @@ The rest of this section takes effect when the report Worker is next deployed.
   light-theme contrast problems fixed above.
 
 ### Translations
+
+- The last of the system text is translatable. That covers the Quick Settings
+  tile and notification-access labels, the source breakdown in the daily
+  summary, the note saved when you block or trust a number from a
+  notification, and the explanation each detection layer gives in Lookup and
+  the block log. Chinese has all of it. The Chinese daily summary also keeps
+  its line breaks now, where before it ran together on one line.
 
 - A shipped locale can no longer decay silently. Each has a coverage floor in
   `scripts/translation_floors.json`, and dropping below it fails the build.

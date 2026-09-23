@@ -31,7 +31,7 @@ class SpamActionReceiver : BroadcastReceiver() {
                     notificationManager.cancel(NotificationHelper.feedbackNotificationId(number))
                     Toast.makeText(appContext, appContext.getString(R.string.feedback_blocked), Toast.LENGTH_SHORT).show()
                     suspend {
-                        repo.blockNumber(number, "spam", "Blocked from after-call feedback")
+                        repo.blockNumber(number, "spam", appContext.getString(R.string.desc_blocked_from_after_call_feedback))
                         CommunityContributor.contribute(appContext, repo.normalizeNumber(number), "spam")
                     }
                 }
@@ -41,7 +41,7 @@ class SpamActionReceiver : BroadcastReceiver() {
                     notificationManager.cancel(NotificationHelper.feedbackNotificationId(number))
                     Toast.makeText(appContext, appContext.getString(R.string.feedback_whitelisted), Toast.LENGTH_SHORT).show()
                     suspend {
-                        repo.addToWhitelist(number, "Marked safe from after-call feedback")
+                        repo.addToWhitelist(number, appContext.getString(R.string.desc_marked_safe_from_after_call_feedback))
                         CommunityContributor.reportNotSpam(appContext, repo.normalizeNumber(number))
                     }
                 }
@@ -55,7 +55,7 @@ class SpamActionReceiver : BroadcastReceiver() {
                         notificationManager.cancel(notifId)
                     }
                     suspend {
-                        repo.blockNumber(number, reportType, "Blocked from notification")
+                        repo.blockNumber(number, reportType, appContext.getString(R.string.desc_blocked_from_notification))
                         CommunityContributor.contribute(appContext, repo.normalizeNumber(number), reportType, smsIndicators)
                     }
                 }
@@ -88,7 +88,7 @@ class SpamActionReceiver : BroadcastReceiver() {
                         notificationManager.cancel(notifId)
                     }
                     suspend {
-                        repo.addToWhitelist(number, "Reported as not spam from notification")
+                        repo.addToWhitelist(number, appContext.getString(R.string.desc_reported_not_spam_from_notification))
                         CommunityContributor.reportNotSpam(appContext, repo.normalizeNumber(number))
                     }
                 }

@@ -2,6 +2,9 @@ package com.sysadmindoc.callshield.ui
 
 import android.content.Intent
 import android.net.Uri
+import com.sysadmindoc.callshield.ui.screens.activity.ACTIVITY_BLOCKED
+import com.sysadmindoc.callshield.ui.screens.activity.ACTIVITY_RECENT
+import com.sysadmindoc.callshield.ui.screens.activity.initialActivityView
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -66,5 +69,27 @@ class MainActivityIntentTest {
         val request = Intent("com.sysadmindoc.callshield.LOOKUP").toLaunchRequest(nextId = 1)
 
         assertEquals("com.sysadmindoc.callshield.LOOKUP", request.shortcutAction)
+    }
+
+    @Test
+    fun `the blocked-log action opens Activity on its Blocked tab`() {
+        val request = Intent(ACTION_OPEN_BLOCKED_LOG).toLaunchRequest(nextId = 7)
+
+        assertEquals(ACTION_OPEN_BLOCKED_LOG, request.shortcutAction)
+        assertEquals(1, launchTab(request.shortcutAction))
+        assertEquals(7, request.blockedLogRequestId())
+        assertEquals(ACTIVITY_BLOCKED, initialActivityView(request.blockedLogRequestId()))
+    }
+
+    @Test
+    fun `other launches leave Activity on Recent`() {
+        val lookup = Intent("com.sysadmindoc.callshield.LOOKUP").toLaunchRequest(nextId = 2)
+        val launcher = Intent(Intent.ACTION_MAIN).toLaunchRequest(nextId = 3)
+
+        assertEquals(2, launchTab(lookup.shortcutAction))
+        assertEquals(0, launchTab(launcher.shortcutAction))
+        assertNull(lookup.blockedLogRequestId())
+        assertNull(launcher.blockedLogRequestId())
+        assertEquals(ACTIVITY_RECENT, initialActivityView(null))
     }
 }

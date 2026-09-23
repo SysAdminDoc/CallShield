@@ -203,6 +203,10 @@
     <string name="desc_reported_not_spam">已举报为非垃圾</string>
     <string name="desc_blocked_from_log_swipe">从日志滑动拦截</string>
     <string name="desc_blocked_post_call_local">从通话后核查拦截</string>
+    <string name="desc_blocked_from_after_call_feedback">从通话后反馈拦截</string>
+    <string name="desc_marked_safe_from_after_call_feedback">从通话后反馈标记为安全</string>
+    <string name="desc_blocked_from_notification">从通知拦截</string>
+    <string name="desc_reported_not_spam_from_notification">从通知举报为非垃圾</string>
     <string name="blocklist_empty_keywords">无关键词规则</string>
     <string name="blocklist_empty_keywords_sub">当垃圾短信复用相同措辞时，添加如“银行提醒”或“领取奖品”等短语。</string>
     <string name="blocklist_empty_whitelist">无可信号码</string>
@@ -998,9 +1002,14 @@
     <string name="notif_repeated_urgent_action_safe">标记为安全</string>
     <string name="digest_title">CallShield 每日摘要</string>
     <string name="digest_text">今日拦截：%1$d | 通话：%2$d | 短信：%3$d</string>
-    <string name="digest_big_text">今日拦截：%1$d
-通话：%2$d | 短信：%3$d
-%4$s</string>
+    <string name="digest_big_text">今日拦截：%1$d\n通话：%2$d | 短信：%3$d\n%4$s</string>
+    <string name="digest_source_database">%1$d 号码库</string>
+    <string name="digest_source_heuristic">%1$d 启发式</string>
+    <string name="digest_source_ml">%1$d ML</string>
+    <string name="digest_source_content">%1$d 内容</string>
+    <string name="digest_source_rcs_filter">%1$d RCS 过滤器</string>
+    <string name="digest_source_other">%1$d 其他</string>
+    <string name="digest_source_separator">、</string>
     <string name="feedback_title">这是垃圾电话吗？</string>
     <string name="feedback_text">你接到来自 %s 的来电</string>
     <string name="feedback_spam">垃圾</string>
@@ -1117,6 +1126,30 @@
     <string name="block_reason_caller_name">主叫姓名“%1$s”匹配你的姓名规则。</string>
     <string name="block_reason_out_of_region">%1$s 在你允许的地区之外。</string>
     <string name="block_reason_out_of_region_unknown">号码来自国际或未知地区，在你允许的地区之外。</string>
+    <string name="block_reason_emergency_floor">紧急与公共安全号码永不拦截</string>
+    <string name="block_reason_verification_floor">验证码短信不会被拦截</string>
+    <string name="block_reason_contacts_only">已拦截，因为仅联系人模式已开启</string>
+    <string name="block_reason_carrier_unverified">运营商无法验证来电者身份</string>
+    <string name="block_reason_system_block_list">已通过系统拦截名单拦截</string>
+    <string name="block_reason_temporary_block">临时拦截</string>
+    <string name="block_reason_db_prefix">号码与已知垃圾号码的前缀相同</string>
+    <string name="block_reason_quiet_hours">在勿扰时段内拦截</string>
+    <plurals name="block_reason_frequency">
+        <item quantity="other">7 天内来电 %1$d 次，已自动拦截</item>
+    </plurals>
+    <string name="block_reason_campaign">活跃营销活动：%1$s</string>
+    <string name="block_reason_campaign_neighbors">%2$d 次来电中有 %1$d 个相邻号码</string>
+    <plurals name="block_reason_campaign_repeats">
+        <item quantity="other">%1$d 个重复号码表明存在回拨复用</item>
+    </plurals>
+    <plurals name="block_reason_campaign_sources">
+        <item quantity="other">%1$d 个来源信号一致</item>
+    </plurals>
+    <string name="block_reason_detail_separator">；</string>
+    <string name="block_reason_ml">ML 模型：垃圾来电概率 %1$d%%</string>
+    <string name="block_reason_sentence_separator">。</string>
+    <string name="block_reason_keyword">关键词：%1$s</string>
+    <string name="notification_listener_label">CallShield RCS 过滤器</string>
     <string name="model_health_title">ML 模型健康度</string>
     <string name="model_health_gbt_active">梯度提升模型已激活</string>
     <string name="model_health_gbt_active_detail">最高质量的设备端模型已成功加载。</string>

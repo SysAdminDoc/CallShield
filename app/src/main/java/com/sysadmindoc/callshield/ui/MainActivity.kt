@@ -135,16 +135,16 @@ fun CallShieldRoot(
     // from the request — computing it inside the effect raced the child's
     // LaunchedEffect(tabRequestId), which captured the pre-update startTab and
     // never re-ran, so the Lookup shortcut landed on Home.
-    val initialTab =
-        when (launchRequest.shortcutAction) {
-            "com.sysadmindoc.callshield.LOOKUP" -> 2
-            else -> 0
-        }
+    val initialTab = launchTab(launchRequest.shortcutAction)
     LaunchedEffect(launchRequest.id) {
         launchRequest.deepLinkNumber?.let { viewModel.openNumberDetail(it) }
         when (launchRequest.shortcutAction) {
             "com.sysadmindoc.callshield.SCAN" -> viewModel.scanCallLog()
+
             "com.sysadmindoc.callshield.SCAN_SMS" -> viewModel.scanSmsInbox()
+
+            // An open number detail replaces the tab shell, which would hide the log.
+            ACTION_OPEN_BLOCKED_LOG -> viewModel.closeNumberDetail()
         }
     }
 
@@ -184,6 +184,7 @@ fun CallShieldRoot(
                         viewModel = viewModel,
                         startTab = initialTab,
                         tabRequestId = launchRequest.id.takeIf { launchRequest.shortcutAction != null },
+                        blockedLogRequestId = launchRequest.blockedLogRequestId(),
                     )
                 }
             }
@@ -198,6 +199,7 @@ fun CallShieldApp(
     viewModel: MainViewModel,
     startTab: Int = 0,
     tabRequestId: Int? = null,
+    blockedLogRequestId: Int? = null,
 ) {
     var selectedTab by rememberSaveable { mutableIntStateOf(startTab) }
     var showSearch by rememberSaveable { mutableStateOf(false) }
@@ -357,7 +359,7 @@ fun CallShieldApp(
                             }
 
                             1 -> {
-                                ActivityScreen(viewModel)
+                                ActivityScreen(viewModel, blockedLogRequestId = blockedLogRequestId)
                             }
 
                             2 -> {
@@ -843,11 +845,26 @@ internal fun Intent?.toLaunchRequest(nextId: Int): LaunchRequest {
     )
 }
 
+/** Opens Activity on its Blocked tab. The blocked-summary notification sends it. */
+internal const val ACTION_OPEN_BLOCKED_LOG = "com.sysadmindoc.callshield.BLOCKED_LOG"
+
+/** The bottom-bar tab a launch opens on: Lookup, Activity for the blocked log, else Home. */
+internal fun launchTab(shortcutAction: String?): Int =
+    when (shortcutAction) {
+        "com.sysadmindoc.callshield.LOOKUP" -> 2
+        ACTION_OPEN_BLOCKED_LOG -> 1
+        else -> 0
+    }
+
+/** This request's id when it asks for the blocked log, so Activity can switch to it once. */
+internal fun LaunchRequest.blockedLogRequestId(): Int? = id.takeIf { shortcutAction == ACTION_OPEN_BLOCKED_LOG }
+
 private val KNOWN_SHORTCUT_ACTIONS =
     setOf(
         "com.sysadmindoc.callshield.LOOKUP",
         "com.sysadmindoc.callshield.SCAN",
         "com.sysadmindoc.callshield.SCAN_SMS",
+        ACTION_OPEN_BLOCKED_LOG,
     )
 
 // Stable SaveableStateHolder keys for the two top-level branches. They must not

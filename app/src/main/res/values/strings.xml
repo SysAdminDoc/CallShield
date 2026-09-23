@@ -279,6 +279,10 @@
     <string name="desc_blocked_post_call_local">Blocked from post-call review</string>
     <string name="desc_blocked_from_overlay">Blocked from caller ID overlay</string>
     <string name="desc_marked_safe_from_lookup">Marked safe from lookup</string>
+    <string name="desc_blocked_from_after_call_feedback">Blocked from after-call feedback</string>
+    <string name="desc_marked_safe_from_after_call_feedback">Marked safe from after-call feedback</string>
+    <string name="desc_blocked_from_notification">Blocked from notification</string>
+    <string name="desc_reported_not_spam_from_notification">Reported as not spam from notification</string>
     <string name="contribute_reported_spam">Contributed anonymously</string>
     <string name="contribute_reported_not_spam">Reported as not spam</string>
     <string name="contribute_invalid_number">This number can\'t be reported</string>
@@ -1459,6 +1463,13 @@
     <string name="digest_title">CallShield Daily Summary</string>
     <string name="digest_text">Today blocked: %1$d | Calls: %2$d | Texts: %3$d</string>
     <string name="digest_big_text">Today blocked: %1$d\nCalls: %2$d | Texts: %3$d\n%4$s</string>
+    <string name="digest_source_database">%1$d database</string>
+    <string name="digest_source_heuristic">%1$d heuristic</string>
+    <string name="digest_source_ml">%1$d ML</string>
+    <string name="digest_source_content">%1$d content</string>
+    <string name="digest_source_rcs_filter">%1$d RCS filter</string>
+    <string name="digest_source_other">%1$d other</string>
+    <string name="digest_source_separator">" · "</string>
 
     <!-- After-call feedback -->
     <string name="feedback_title">Was this call spam?</string>
@@ -1670,6 +1681,33 @@
     <string name="block_reason_out_of_region_unknown">The number is international or from an unknown region, outside your allowed regions.</string>
     <string name="block_reason_sender_provenance_unverified">Sender ID is not registered in the %1$s sender registry</string>
     <string name="block_reason_sender_provenance_unassigned">Number prefix %1$s is unassigned in the %2$s numbering plan</string>
+    <string name="block_reason_emergency_floor">Emergency and public-safety numbers are never blocked</string>
+    <string name="block_reason_verification_floor">Verification messages are exempt from blocking</string>
+    <string name="block_reason_contacts_only">Blocked because contacts-only mode is on</string>
+    <string name="block_reason_carrier_unverified">Carrier could not verify caller identity</string>
+    <string name="block_reason_system_block_list">Blocked via system block list</string>
+    <string name="block_reason_temporary_block">Temporarily blocked</string>
+    <string name="block_reason_db_prefix">Number shares prefix with a known spam entry</string>
+    <string name="block_reason_quiet_hours">Blocked during quiet hours</string>
+    <plurals name="block_reason_frequency">
+        <item quantity="one">Called %1$d time in 7 days, blocked automatically</item>
+        <item quantity="other">Called %1$d times in 7 days, blocked automatically</item>
+    </plurals>
+    <string name="block_reason_campaign">Active campaign: %1$s</string>
+    <string name="block_reason_campaign_neighbors">%1$d neighbor numbers in %2$d calls</string>
+    <plurals name="block_reason_campaign_repeats">
+        <item quantity="one">%1$d repeated number suggests callback reuse</item>
+        <item quantity="other">%1$d repeated numbers suggest callback reuse</item>
+    </plurals>
+    <plurals name="block_reason_campaign_sources">
+        <item quantity="one">%1$d source signal agrees</item>
+        <item quantity="other">%1$d source signals agree</item>
+    </plurals>
+    <string name="block_reason_detail_separator">"; "</string>
+    <string name="block_reason_ml">ML model: %1$d%% spam probability</string>
+    <string name="block_reason_sentence_separator">". "</string>
+    <string name="block_reason_keyword">Keyword: %1$s</string>
+    <string name="notification_listener_label">CallShield RCS Filter</string>
     <string name="model_health_title">ML model health</string>
     <string name="model_health_gbt_active">Gradient-boosted model active</string>
     <string name="model_health_gbt_active_detail">The highest-quality on-device model loaded successfully.</string>

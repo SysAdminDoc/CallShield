@@ -14,8 +14,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
@@ -33,10 +35,25 @@ import com.sysadmindoc.callshield.ui.theme.Black
 import com.sysadmindoc.callshield.ui.theme.CatGreen
 import com.sysadmindoc.callshield.ui.theme.CatSubtext
 
-/** One activity workspace keeps call history and blocked outcomes together. */
+/**
+ * One activity workspace keeps call history and blocked outcomes together.
+ * [blockedLogRequestId] is a launch request (the blocked-summary notification)
+ * that wants the Blocked tab. Each id switches the tab once, so a later
+ * recomposition or recreation doesn't pull the user back to it.
+ */
 @Composable
-fun ActivityScreen(viewModel: MainViewModel) {
-    var selectedView by rememberSaveable { mutableIntStateOf(ACTIVITY_RECENT) }
+fun ActivityScreen(
+    viewModel: MainViewModel,
+    blockedLogRequestId: Int? = null,
+) {
+    var selectedView by rememberSaveable { mutableIntStateOf(initialActivityView(blockedLogRequestId)) }
+    var handledBlockedLogRequest by rememberSaveable { mutableStateOf(blockedLogRequestId) }
+    LaunchedEffect(blockedLogRequestId) {
+        if (blockedLogRequestId != null && blockedLogRequestId != handledBlockedLogRequest) {
+            handledBlockedLogRequest = blockedLogRequestId
+            selectedView = ACTIVITY_BLOCKED
+        }
+    }
     val stateHolder = rememberSaveableStateHolder()
 
     Column(modifier = Modifier.fillMaxSize().background(Black)) {
@@ -96,5 +113,8 @@ internal fun RowScope.ActivityTab(
     )
 }
 
-private const val ACTIVITY_RECENT = 0
-private const val ACTIVITY_BLOCKED = 1
+/** The tab ActivityScreen opens on: Blocked when a launch asked for the log. */
+internal fun initialActivityView(blockedLogRequestId: Int?): Int = if (blockedLogRequestId != null) ACTIVITY_BLOCKED else ACTIVITY_RECENT
+
+internal const val ACTIVITY_RECENT = 0
+internal const val ACTIVITY_BLOCKED = 1

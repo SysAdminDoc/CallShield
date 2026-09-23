@@ -39,7 +39,7 @@ internal class EmergencyNumberFloorChecker : IChecker {
         return BlockResult.allow(
             matchSource = name,
             type = "safety_floor",
-            description = "Emergency and public-safety numbers are never blocked",
+            description = ctx.appContext.getString(R.string.block_reason_emergency_floor),
         )
     }
 }
@@ -57,7 +57,7 @@ internal class VerificationMessageFloorChecker(
         return BlockResult.allow(
             matchSource = name,
             type = "safety_floor",
-            description = "Verification messages are exempt from blocking",
+            description = ctx.appContext.getString(R.string.block_reason_verification_floor),
         )
     }
 }
@@ -136,7 +136,7 @@ internal class ContactsOnlyChecker(
 
     override suspend fun check(ctx: CheckContext): BlockResult? =
         if (!spamHeuristics.isInContacts(appContext, ctx.number)) {
-            BlockResult.block("contacts_only", description = "Blocked — contacts-only mode is active")
+            BlockResult.block("contacts_only", description = appContext.getString(R.string.block_reason_contacts_only))
         } else {
             null
         }
@@ -313,7 +313,7 @@ internal class StirShakenChecker : IChecker {
             BlockResult.block(
                 matchSource = "stir_shaken_failed",
                 type = "spoofed",
-                description = "Carrier could not verify caller identity",
+                description = ctx.appContext.getString(R.string.block_reason_carrier_unverified),
             )
         } else {
             null
@@ -358,7 +358,7 @@ internal class SystemBlockListChecker(
             BlockResult.block(
                 matchSource = "system_block_list",
                 type = "user_blocked",
-                description = "Blocked via system block list",
+                description = appContext.getString(R.string.block_reason_system_block_list),
             )
         } else {
             null
@@ -383,7 +383,7 @@ internal class UserBlocklistChecker(
                 if (entry.expiresAt == null) {
                     entry.description
                 } else {
-                    entry.description.ifBlank { "Temporarily blocked" }
+                    entry.description.ifBlank { ctx.appContext.getString(R.string.block_reason_temporary_block) }
                 }
             BlockResult.block(source, entry.type, description, ruleId = entry.id)
         } else {
@@ -425,7 +425,7 @@ internal class DbPrefixExpansionChecker(
         if (!repo.hasDbPrefixMatch(ctx.number)) return null
         return BlockResult.block(
             "db_prefix_expansion",
-            description = "Number shares prefix with a known spam entry",
+            description = ctx.appContext.getString(R.string.block_reason_db_prefix),
             confidence = 50,
         )
     }
@@ -816,7 +816,7 @@ internal class TimeBlockChecker : IChecker {
 
         val now = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
         return if (isInQuietWindow(now, start, end)) {
-            BlockResult.block("time_block", "unknown", "Blocked during quiet hours")
+            BlockResult.block("time_block", "unknown", ctx.appContext.getString(R.string.block_reason_quiet_hours))
         } else {
             null
         }
@@ -866,7 +866,11 @@ internal class FrequencyEscalationChecker(
         val freq = repo.getCallFrequencySinceInternal(ctx.number, System.currentTimeMillis() - windowMs)
         val threshold = (ctx.prefs[SpamRepository.KEY_FREQ_THRESHOLD] ?: 3).coerceAtLeast(2)
         return if (freq >= threshold) {
-            BlockResult.block("frequency", "repeat_caller", "Called $freq times in 7 days - auto-blocked")
+            BlockResult.block(
+                "frequency",
+                "repeat_caller",
+                ctx.appContext.resources.getQuantityString(R.plurals.block_reason_frequency, freq, freq),
+            )
         } else {
             null
         }
@@ -1008,20 +1012,39 @@ internal class CampaignBurstChecker(
                 campaignDetector.getCampaignEvidence(ctx.number)
             } ?: return null
         if (!evidence.isActive) return null
+        val resources = ctx.appContext.resources
         val details =
             buildList {
-                add("${evidence.distinctNumberCount} neighbor numbers in ${evidence.observationCount} calls")
+                add(
+                    resources.getString(
+                        R.string.block_reason_campaign_neighbors,
+                        evidence.distinctNumberCount,
+                        evidence.observationCount,
+                    ),
+                )
                 if (evidence.repeatedNumberCount > 0) {
-                    add("${evidence.repeatedNumberCount} repeated number(s) suggest callback reuse")
+                    add(
+                        resources.getQuantityString(
+                            R.plurals.block_reason_campaign_repeats,
+                            evidence.repeatedNumberCount,
+                            evidence.repeatedNumberCount,
+                        ),
+                    )
                 }
                 if (evidence.sourceAgreementCount > 0) {
-                    add("${evidence.sourceAgreementCount} source signal(s) agree")
+                    add(
+                        resources.getQuantityString(
+                            R.plurals.block_reason_campaign_sources,
+                            evidence.sourceAgreementCount,
+                            evidence.sourceAgreementCount,
+                        ),
+                    )
                 }
-            }.joinToString("; ")
+            }.joinToString(resources.getString(R.string.block_reason_detail_separator))
         return BlockResult.block(
             matchSource = "campaign_burst",
             type = "robocall",
-            description = "Active campaign: $details",
+            description = resources.getString(R.string.block_reason_campaign, details),
             confidence = 75,
         )
     }
@@ -1047,9 +1070,9 @@ internal class MlScorerChecker(
                 type = "robocall",
                 description =
                     listOfNotNull(
-                        "ML model: ${verdict.confidence}% spam probability",
+                        ctx.appContext.getString(R.string.block_reason_ml, verdict.confidence),
                         CallerIdentitySignals.describe(ctx.callerIdentity).takeIf { it.isNotBlank() },
-                    ).joinToString(". "),
+                    ).joinToString(ctx.appContext.getString(R.string.block_reason_sentence_separator)),
                 confidence = verdict.confidence,
             )
         } else {
@@ -1122,7 +1145,12 @@ internal class SmsKeywordChecker(
         val now = java.util.Calendar.getInstance()
         for (rule in rules) {
             if (rule.matchesNow(body, now)) {
-                return BlockResult.block("keyword", "sms_spam", "Keyword: ${rule.keyword}", ruleId = rule.id)
+                return BlockResult.block(
+                    "keyword",
+                    "sms_spam",
+                    ctx.appContext.getString(R.string.block_reason_keyword, rule.keyword),
+                    ruleId = rule.id,
+                )
             }
         }
         return null
