@@ -355,6 +355,11 @@ The rest of this section takes effect when the report Worker is next deployed.
   work-runtime-ktx has been an empty package since 2.9.0. Compose, Navigation
   and OkHttp stay put until the move to the next build tools, because their
   current releases need it.
+- The unit tests now upgrade a database from every schema version CallShield
+  has exported (9 through 18) using the migrations that ship, and fail if
+  the result doesn't match what the app expects or a table loses rows. The
+  migration test that would have caught the August database lockout ran only
+  on an emulator, and nothing ran it.
 
 ### Translations
 

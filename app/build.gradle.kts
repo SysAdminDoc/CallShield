@@ -148,6 +148,14 @@ android {
                 // HttpClient.shared resolves only loopback hosts under this, so
                 // no unit test can post to the live report Worker again.
                 it.systemProperty("callshield.unitTest", "true")
+                // ExportedSchemaMigrationTest migrates a database built from every
+                // exported Room schema; a schema change has to rerun it.
+                val roomSchemas = file("schemas/com.sysadmindoc.callshield.data.local.AppDatabase")
+                it.systemProperty("callshield.roomSchemas", roomSchemas.absolutePath)
+                it.inputs
+                    .dir(roomSchemas)
+                    .withPropertyName("roomSchemas")
+                    .withPathSensitivity(PathSensitivity.RELATIVE)
             }
         }
     }

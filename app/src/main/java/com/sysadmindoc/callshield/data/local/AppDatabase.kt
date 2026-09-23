@@ -335,38 +335,44 @@ abstract class AppDatabase : RoomDatabase() {
 
         fun getInstance(context: Context): AppDatabase =
             instance ?: synchronized(this) {
-                instance ?: Room
-                    .databaseBuilder(
-                        context.applicationContext,
-                        AppDatabase::class.java,
-                        "callshield.db",
-                    )
-                    // Destructive migration is restricted to legacy schema versions (1–4)
-                    // whose schemas were never exported, so retroactive Migration objects
-                    // cannot be written. From DB_VERSION 5 onward EVERY version bump
-                    // REQUIRES an explicit Migration — Room will throw
-                    // IllegalStateException at startup if one is missing instead of
-                    // silently wiping user data.
-                    .fallbackToDestructiveMigrationFrom(true, 1, 2, 3, 4)
-                    .addMigrations(
-                        MIGRATION_5_6,
-                        MIGRATION_6_7,
-                        MIGRATION_7_8,
-                        MIGRATION_8_9,
-                        MIGRATION_9_10,
-                        MIGRATION_10_11,
-                        phoneIdentityMigration(
-                            PhoneIdentityCanonicalizer.fromContext(context.applicationContext),
-                        ),
-                        MIGRATION_12_13,
-                        MIGRATION_13_14,
-                        MIGRATION_14_15,
-                        MIGRATION_15_16,
-                        MIGRATION_16_17,
-                        MIGRATION_17_18,
-                    ).build()
+                instance ?: builder(context.applicationContext, "callshield.db")
+                    .build()
                     .also { instance = it }
             }
+
+        /**
+         * The database configuration that ships. `ExportedSchemaMigrationTest`
+         * opens a database built from every exported schema through it, so the
+         * JVM test gate checks this exact migration chain.
+         */
+        internal fun builder(
+            context: Context,
+            name: String,
+        ): RoomDatabase.Builder<AppDatabase> =
+            Room
+                .databaseBuilder(context, AppDatabase::class.java, name)
+                // Destructive migration is restricted to legacy schema versions (1–4)
+                // whose schemas were never exported, so retroactive Migration objects
+                // cannot be written. From DB_VERSION 5 onward EVERY version bump
+                // REQUIRES an explicit Migration — Room will throw
+                // IllegalStateException at startup if one is missing instead of
+                // silently wiping user data.
+                .fallbackToDestructiveMigrationFrom(true, 1, 2, 3, 4)
+                .addMigrations(
+                    MIGRATION_5_6,
+                    MIGRATION_6_7,
+                    MIGRATION_7_8,
+                    MIGRATION_8_9,
+                    MIGRATION_9_10,
+                    MIGRATION_10_11,
+                    phoneIdentityMigration(PhoneIdentityCanonicalizer.fromContext(context)),
+                    MIGRATION_12_13,
+                    MIGRATION_13_14,
+                    MIGRATION_14_15,
+                    MIGRATION_15_16,
+                    MIGRATION_16_17,
+                    MIGRATION_17_18,
+                )
 
         /** SQLite corruption messages that a rebuild can recover from. */
         private val CORRUPTION_MESSAGES =
