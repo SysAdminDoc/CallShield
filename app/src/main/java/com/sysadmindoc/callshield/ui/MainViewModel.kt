@@ -26,6 +26,8 @@ import com.sysadmindoc.callshield.data.CategoryCallAction
 import com.sysadmindoc.callshield.data.CommunityContributor
 import com.sysadmindoc.callshield.data.ContactGroup
 import com.sysadmindoc.callshield.data.ContactGroupCatalog
+import com.sysadmindoc.callshield.data.DatabaseSourceFilter
+import com.sysadmindoc.callshield.data.DatabaseTypeFilter
 import com.sysadmindoc.callshield.data.EmergencyNumberFloor
 import com.sysadmindoc.callshield.data.FalsePositiveReport
 import com.sysadmindoc.callshield.data.MessageCapabilitySource
@@ -95,6 +97,7 @@ class MainViewModel
     ) : ViewModel() {
         private companion object {
             const val DATABASE_PAGE_SIZE = 50
+            const val SEARCH_PAGE_SIZE = 50
             const val LOG_PAGE_SIZE = 50
             const val DASHBOARD_RECENT_LOG_LIMIT = 50
             const val STATS_TOP_LIMIT = 10
@@ -199,9 +202,12 @@ class MainViewModel
                     repo.getBlockedCountBetween(windows.lastWeekStart, windows.lastWeekEnd)
                 }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
-        val allSpamNumbers: Flow<PagingData<SpamNumber>> =
+        fun spamNumbersPager(
+            type: DatabaseTypeFilter,
+            source: DatabaseSourceFilter,
+        ): Flow<PagingData<SpamNumber>> =
             Pager(PagingConfig(pageSize = DATABASE_PAGE_SIZE, initialLoadSize = DATABASE_PAGE_SIZE * 2, enablePlaceholders = false)) {
-                repo.pageAllSpamNumbers()
+                repo.pageSpamNumbers(type, source)
             }.flow.cachedIn(viewModelScope)
 
         fun blockedCallsPager(
@@ -294,12 +300,25 @@ class MainViewModel
         // Search
         private val _searchQuery = MutableStateFlow("")
         val searchQuery: StateFlow<String> = _searchQuery
-        val searchResults: StateFlow<List<SpamNumber>> =
-            _searchQuery
-                .debounce(300)
+        private val debouncedSearchQuery = _searchQuery.debounce(300)
+        val searchResults: Flow<PagingData<SpamNumber>> =
+            debouncedSearchQuery
                 .flatMapLatest { query ->
-                    if (query.length >= 2) repo.searchNumbers(query) else flowOf(emptyList())
-                }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+                    if (query.length >= 2) {
+                        Pager(PagingConfig(pageSize = SEARCH_PAGE_SIZE, enablePlaceholders = false)) {
+                            repo.pageSearchNumbers(query)
+                        }.flow
+                    } else {
+                        flowOf(PagingData.empty())
+                    }
+                }.cachedIn(viewModelScope)
+
+        /** Every match, not just the pages loaded so far. */
+        val searchResultCount: StateFlow<Int> =
+            debouncedSearchQuery
+                .flatMapLatest { query ->
+                    if (query.length >= 2) repo.observeSearchCount(query) else flowOf(0)
+                }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
         private val _logSearchQuery = MutableStateFlow("")
         val logSearchQuery: StateFlow<String> = _logSearchQuery

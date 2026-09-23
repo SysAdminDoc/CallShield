@@ -9,7 +9,6 @@ import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -34,6 +33,10 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.paging.LoadState
+import androidx.paging.compose.LazyPagingItems
+import androidx.paging.compose.collectAsLazyPagingItems
+import androidx.paging.compose.itemKey
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.service.ProtectionHealthWorker
 import com.sysadmindoc.callshield.ui.screens.activity.ActivityScreen
@@ -205,7 +208,8 @@ fun CallShieldApp(
     var showSearch by rememberSaveable { mutableStateOf(false) }
     var moreView by rememberSaveable { mutableIntStateOf(0) }
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
-    val searchResults by viewModel.searchResults.collectAsStateWithLifecycle()
+    val searchResults = viewModel.searchResults.collectAsLazyPagingItems()
+    val searchResultCount by viewModel.searchResultCount.collectAsStateWithLifecycle()
 
     // Apply a shortcut's target tab once per request. Without the handled-id
     // guard this re-fires whenever CallShieldApp re-enters composition (e.g.
@@ -323,6 +327,7 @@ fun CallShieldApp(
                 if (searchQuery.trim().length >= 2) {
                     SearchResultsView(
                         results = searchResults,
+                        total = searchResultCount,
                         onTap = {
                             showSearch = false
                             viewModel.setSearchQuery("")
@@ -381,12 +386,21 @@ fun CallShieldApp(
     }
 }
 
+/**
+ * Search results, paged from Room so a broad search keeps loading as it
+ * scrolls. [total] counts every match, not just the pages loaded so far.
+ */
 @Composable
 fun SearchResultsView(
-    results: List<com.sysadmindoc.callshield.data.model.SpamNumber>,
+    results: LazyPagingItems<com.sysadmindoc.callshield.data.model.SpamNumber>,
+    total: Int,
     onTap: (com.sysadmindoc.callshield.data.model.SpamNumber) -> Unit,
 ) {
-    if (results.isEmpty()) {
+    if (results.itemCount == 0 && results.loadState.refresh is LoadState.Loading) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator(color = CatBlue)
+        }
+    } else if (results.itemCount == 0) {
         Column(
             modifier =
                 Modifier
@@ -432,17 +446,18 @@ fun SearchResultsView(
                     text =
                         pluralStringResource(
                             R.plurals.search_results_count,
-                            results.size,
-                            results.size,
+                            total,
+                            total,
                         ),
                     color = CatBlue,
                     modifier = Modifier.padding(bottom = 4.dp),
                 )
             }
             items(
-                items = results,
-                key = { it.number },
-            ) { number ->
+                count = results.itemCount,
+                key = results.itemKey { it.number },
+            ) { index ->
+                val number = results[index] ?: return@items
                 PremiumCard(
                     onClick = { onTap(number) },
                     cornerRadius = 12.dp,

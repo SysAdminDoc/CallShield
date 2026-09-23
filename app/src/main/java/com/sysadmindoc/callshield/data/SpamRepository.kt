@@ -972,7 +972,10 @@ class SpamRepository(
 
     fun observeNumber(number: String): Flow<SpamNumber?> = blocklistRepository.observeNumber(number)
 
-    fun pageAllSpamNumbers(): PagingSource<Int, SpamNumber> = blocklistRepository.pageAllSpamNumbers()
+    fun pageSpamNumbers(
+        type: DatabaseTypeFilter,
+        source: DatabaseSourceFilter,
+    ): PagingSource<Int, SpamNumber> = blocklistRepository.pageSpamNumbers(type.key, source.key)
 
     fun getUserBlockedNumbers(): Flow<List<SpamNumber>> = blocklistRepository.getUserBlockedNumbers()
 
@@ -987,7 +990,9 @@ class SpamRepository(
     suspend fun insertBlockedCall(call: BlockedCall) = blocklistRepository.insertBlockedCall(call)
 
     // ── Search ─────────────────────────────────────────────────────────
-    fun searchNumbers(query: String): Flow<List<SpamNumber>> = blocklistRepository.searchNumbers(query)
+    fun pageSearchNumbers(query: String): PagingSource<Int, SpamNumber> = blocklistRepository.pageSearchNumbers(query)
+
+    fun observeSearchCount(query: String): Flow<Int> = blocklistRepository.observeSearchCount(query)
 
     // ── Whitelist management ───────────────────────────────────────────
     fun getAllWhitelist(): Flow<List<WhitelistEntry>> = blocklistRepository.getAllWhitelist()

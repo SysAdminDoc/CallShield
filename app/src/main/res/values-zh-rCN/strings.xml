@@ -213,6 +213,14 @@
     <string name="blocklist_empty_whitelist_sub">即使激进防护开启，可信号码也始终通过筛查。</string>
     <string name="blocklist_empty_database">尚未加载垃圾号码库</string>
     <string name="blocklist_empty_database_sub">从主页运行同步以下载当前垃圾数据，再在此查看本地数据库条目。</string>
+    <string name="database_filter_all_types">所有类型</string>
+    <string name="database_filter_all_sources">所有来源</string>
+    <string name="database_filter_source_database">垃圾号码库</string>
+    <string name="database_filter_source_trending">热点</string>
+    <string name="database_filter_source_lists">订阅的列表</string>
+    <string name="database_filter_source_mine">我的拦截</string>
+    <string name="database_filter_empty_title">没有匹配项</string>
+    <string name="database_filter_empty_body">没有号码符合这些筛选条件。选择“所有类型”和“所有来源”即可查看全部。</string>
     <string name="blocklist_number_blocked">号码已拦截</string>
     <string name="blocklist_number_removed">已从拦截列表移除</string>
     <string name="blocklist_undo">撤销</string>

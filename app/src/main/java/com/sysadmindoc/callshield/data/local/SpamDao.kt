@@ -43,8 +43,24 @@ interface SpamDao {
     @Query("SELECT * FROM spam_numbers ORDER BY reports DESC")
     fun getAllSpamNumbers(): Flow<List<SpamNumber>>
 
-    @Query("SELECT * FROM spam_numbers ORDER BY reports DESC, id DESC")
-    fun pageAllSpamNumbers(): PagingSource<Int, SpamNumber>
+    // The Database tab's chips. An empty key matches every row. "other" is any
+    // type without a chip of its own (DatabaseTypeFilter names them), "lists"
+    // is every subscribed external blocklist, and "mine" is the user's blocks.
+    @Query(
+        """SELECT * FROM spam_numbers
+              WHERE (:type = ''
+                     OR type = :type
+                     OR (:type = 'other' AND type NOT IN ('robocall', 'telemarketer', 'spam', 'sms_spam')))
+                AND (:source = ''
+                     OR source = :source
+                     OR (:source = 'lists' AND source LIKE 'subscription:%')
+                     OR (:source = 'mine' AND isUserBlocked = 1))
+              ORDER BY reports DESC, id DESC""",
+    )
+    fun pageSpamNumbers(
+        type: String,
+        source: String,
+    ): PagingSource<Int, SpamNumber>
 
     @Query("SELECT * FROM spam_numbers WHERE isUserBlocked = 1 ORDER BY number")
     fun getUserBlockedNumbers(): Flow<List<SpamNumber>>
@@ -508,18 +524,30 @@ interface SpamDao {
 
     // Search — repository pre-escapes `%`, `_`, and `\` in the user query
     // so typing a literal `%` doesn't silently become a wildcard and a
-    // blank search doesn't return the whole table.
+    // blank search doesn't return the whole table. Paged, so a broad search
+    // keeps loading as the list scrolls instead of stopping at a fixed cap.
     @Query(
         """SELECT * FROM spam_numbers
               WHERE number LIKE '%' || :query || '%' ESCAPE '\'
                  OR description LIKE '%' || :query || '%' ESCAPE '\'
                  OR (:digitsQuery != '' AND number LIKE '%' || :digitsQuery || '%' ESCAPE '\')
-              ORDER BY reports DESC LIMIT 100""",
+              ORDER BY reports DESC, id DESC""",
     )
-    fun searchNumbers(
+    fun pageSearchNumbers(
         query: String,
         digitsQuery: String,
-    ): Flow<List<SpamNumber>>
+    ): PagingSource<Int, SpamNumber>
+
+    @Query(
+        """SELECT COUNT(*) FROM spam_numbers
+              WHERE number LIKE '%' || :query || '%' ESCAPE '\'
+                 OR description LIKE '%' || :query || '%' ESCAPE '\'
+                 OR (:digitsQuery != '' AND number LIKE '%' || :digitsQuery || '%' ESCAPE '\')""",
+    )
+    fun observeSearchCount(
+        query: String,
+        digitsQuery: String,
+    ): Flow<Int>
 
     // Whitelist
     @Query("SELECT * FROM whitelist ORDER BY isEmergency DESC, addedTimestamp DESC")

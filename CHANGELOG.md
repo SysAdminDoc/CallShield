@@ -167,6 +167,13 @@ All notable changes to CallShield will be documented in this file.
 
 ### Interface
 
+- The Database tab has filters now. One row of chips picks a type (robocall,
+  telemarketer, spam, spam text or anything else), and another picks where a
+  number came from: the spam database, trending numbers, a list you
+  subscribed to, or your own blocks.
+- Search no longer stops at 100 results. It keeps loading as you scroll, and
+  the count shows every match.
+
 - Tapping the "blocked recently" notification opens the Blocked log now. It
   used to do nothing at all.
 

@@ -4,6 +4,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,6 +19,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -46,6 +48,8 @@ import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -98,6 +102,8 @@ import androidx.paging.LoadState
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
 import com.sysadmindoc.callshield.R
+import com.sysadmindoc.callshield.data.DatabaseSourceFilter
+import com.sysadmindoc.callshield.data.DatabaseTypeFilter
 import com.sysadmindoc.callshield.data.ExistingBlockRules
 import com.sysadmindoc.callshield.data.HashWildcardMatcher
 import com.sysadmindoc.callshield.data.PhoneFormatter
@@ -1207,54 +1213,144 @@ fun WhitelistItem(
 
 @Composable
 private fun DatabaseTabContent(viewModel: MainViewModel) {
-    val allSpam = viewModel.allSpamNumbers.collectAsLazyPagingItems()
-    val refreshState = allSpam.loadState.refresh
-    if (refreshState is LoadState.Loading && allSpam.itemCount == 0) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator(color = CatBlue)
-        }
-    } else if (refreshState is LoadState.Error && allSpam.itemCount == 0) {
-        EmptyStateCard(
-            title = stringResource(R.string.blocklist_load_error),
-            subtitle = stringResource(R.string.blocklist_load_error_sub),
-            icon = Icons.Default.PriorityHigh,
-            accentColor = CatRed,
-            onRetry = { allSpam.retry() },
+    var typeFilter by rememberSaveable { mutableStateOf(DatabaseTypeFilter.ALL) }
+    var sourceFilter by rememberSaveable { mutableStateOf(DatabaseSourceFilter.ALL) }
+    val numbers =
+        remember(typeFilter, sourceFilter) {
+            viewModel.spamNumbersPager(typeFilter, sourceFilter)
+        }.collectAsLazyPagingItems()
+    val filtered = typeFilter != DatabaseTypeFilter.ALL || sourceFilter != DatabaseSourceFilter.ALL
+    val refreshState = numbers.loadState.refresh
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        DatabaseFilterRow(
+            options = DatabaseTypeFilter.entries,
+            selected = typeFilter,
+            label = { databaseTypeLabel(it) },
+            onSelect = { typeFilter = it },
         )
-    } else if (allSpam.itemCount == 0) {
-        EmptyStateCard(
-            title = stringResource(R.string.blocklist_empty_database),
-            subtitle = stringResource(R.string.blocklist_empty_database_sub),
-            icon = Icons.Default.Storage,
-            accentColor = CatBlue,
+        DatabaseFilterRow(
+            options = DatabaseSourceFilter.entries,
+            selected = sourceFilter,
+            label = { databaseSourceLabel(it) },
+            onSelect = { sourceFilter = it },
         )
-    } else {
-        LazyColumn(
-            contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 32.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            items(
-                count = allSpam.itemCount,
-                key = allSpam.itemKey { it.id },
-            ) { index ->
-                allSpam[index]?.let { number -> DatabaseItem(number) }
-            }
-            when (allSpam.loadState.append) {
-                LoadState.Loading -> {
-                    item {
-                        Box(modifier = Modifier.fillMaxWidth().padding(12.dp), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator(color = CatBlue, modifier = Modifier.size(24.dp))
+        Box(modifier = Modifier.weight(1f)) {
+            if (refreshState is LoadState.Loading && numbers.itemCount == 0) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = CatBlue)
+                }
+            } else if (refreshState is LoadState.Error && numbers.itemCount == 0) {
+                EmptyStateCard(
+                    title = stringResource(R.string.blocklist_load_error),
+                    subtitle = stringResource(R.string.blocklist_load_error_sub),
+                    icon = Icons.Default.PriorityHigh,
+                    accentColor = CatRed,
+                    onRetry = { numbers.retry() },
+                )
+            } else if (numbers.itemCount == 0 && filtered) {
+                EmptyStateCard(
+                    title = stringResource(R.string.database_filter_empty_title),
+                    subtitle = stringResource(R.string.database_filter_empty_body),
+                    icon = Icons.Default.FilterAlt,
+                    accentColor = CatBlue,
+                )
+            } else if (numbers.itemCount == 0) {
+                EmptyStateCard(
+                    title = stringResource(R.string.blocklist_empty_database),
+                    subtitle = stringResource(R.string.blocklist_empty_database_sub),
+                    icon = Icons.Default.Storage,
+                    accentColor = CatBlue,
+                )
+            } else {
+                LazyColumn(
+                    contentPadding = PaddingValues(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 32.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    items(
+                        count = numbers.itemCount,
+                        key = numbers.itemKey { it.id },
+                    ) { index ->
+                        numbers[index]?.let { number -> DatabaseItem(number) }
+                    }
+                    when (numbers.loadState.append) {
+                        LoadState.Loading -> {
+                            item {
+                                Box(modifier = Modifier.fillMaxWidth().padding(12.dp), contentAlignment = Alignment.Center) {
+                                    CircularProgressIndicator(color = CatBlue, modifier = Modifier.size(24.dp))
+                                }
+                            }
+                        }
+
+                        else -> {
+                            Unit
                         }
                     }
-                }
-
-                else -> {
-                    Unit
                 }
             }
         }
     }
 }
+
+/** A row of chips that scrolls sideways, with exactly one selected. */
+@Composable
+private fun <T> DatabaseFilterRow(
+    options: List<T>,
+    selected: T,
+    label: @Composable (T) -> String,
+    onSelect: (T) -> Unit,
+) {
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        options.forEach { option ->
+            FilterChip(
+                selected = option == selected,
+                onClick = { onSelect(option) },
+                label = { Text(label(option)) },
+                shape = RoundedCornerShape(8.dp),
+                colors =
+                    FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = SurfaceBright,
+                        selectedLabelColor = CatGreen,
+                        containerColor = Color.Transparent,
+                        labelColor = CatSubtext,
+                    ),
+                border = null,
+            )
+        }
+    }
+}
+
+@Composable
+private fun databaseTypeLabel(filter: DatabaseTypeFilter): String =
+    stringResource(
+        when (filter) {
+            DatabaseTypeFilter.ALL -> R.string.database_filter_all_types
+            DatabaseTypeFilter.ROBOCALL -> R.string.spam_type_robocall
+            DatabaseTypeFilter.TELEMARKETER -> R.string.spam_type_telemarketer
+            DatabaseTypeFilter.SPAM -> R.string.spam_type_spam
+            DatabaseTypeFilter.SPAM_TEXT -> R.string.spam_type_sms_spam
+            DatabaseTypeFilter.OTHER -> R.string.spam_type_other
+        },
+    )
+
+@Composable
+private fun databaseSourceLabel(filter: DatabaseSourceFilter): String =
+    stringResource(
+        when (filter) {
+            DatabaseSourceFilter.ALL -> R.string.database_filter_all_sources
+            DatabaseSourceFilter.DATABASE -> R.string.database_filter_source_database
+            DatabaseSourceFilter.TRENDING -> R.string.database_filter_source_trending
+            DatabaseSourceFilter.LISTS -> R.string.database_filter_source_lists
+            DatabaseSourceFilter.MINE -> R.string.database_filter_source_mine
+        },
+    )
 
 @Composable
 fun DatabaseItem(number: SpamNumber) {

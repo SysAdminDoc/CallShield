@@ -506,7 +506,10 @@ class BlocklistRepository(
 
     fun observeNumber(number: String): Flow<SpamNumber?> = dao.observeNumber(number)
 
-    fun pageAllSpamNumbers(): PagingSource<Int, SpamNumber> = dao.pageAllSpamNumbers()
+    fun pageSpamNumbers(
+        type: String,
+        source: String,
+    ): PagingSource<Int, SpamNumber> = dao.pageSpamNumbers(type, source)
 
     fun getUserBlockedNumbers(): Flow<List<SpamNumber>> =
         dao.getUserBlockedNumbers().map { rows ->
@@ -522,14 +525,24 @@ class BlocklistRepository(
 
     suspend fun deleteBlockedCall(call: BlockedCall) = dao.deleteBlockedCall(call)
 
-    fun searchNumbers(query: String): Flow<List<SpamNumber>> {
+    fun pageSearchNumbers(query: String): PagingSource<Int, SpamNumber> {
+        val (escaped, digitsQuery) = searchArguments(query)
+        return dao.pageSearchNumbers(escaped, digitsQuery)
+    }
+
+    fun observeSearchCount(query: String): Flow<Int> {
+        val (escaped, digitsQuery) = searchArguments(query)
+        return dao.observeSearchCount(escaped, digitsQuery)
+    }
+
+    private fun searchArguments(query: String): Pair<String, String> {
         // Numbers are stored canonical (+E.164). Also search the digit-stripped
         // form so a user-typed "555-123-4567" / "(555) 123-4567" matches the
         // stored "+15551234567". Only when the query is meaningfully phone-like,
         // to avoid a stray digit in a text query widening results.
         val digits = filterAsciiDigits(query)
         val digitsQuery = if (digits.length >= MIN_SEARCH_DIGITS) digits else ""
-        return dao.searchNumbers(escapeLikeQuery(query), digitsQuery)
+        return escapeLikeQuery(query) to digitsQuery
     }
 
     fun getAllWhitelist(): Flow<List<WhitelistEntry>> =

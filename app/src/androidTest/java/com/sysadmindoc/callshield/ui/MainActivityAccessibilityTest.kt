@@ -10,8 +10,12 @@ import androidx.compose.material3.Surface
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.paging.PagingData
+import androidx.paging.compose.collectAsLazyPagingItems
+import com.sysadmindoc.callshield.data.model.SpamNumber
 import com.sysadmindoc.callshield.ui.screens.activity.ActivityTab
 import com.sysadmindoc.callshield.ui.theme.CatGreen
+import kotlinx.coroutines.flow.flowOf
 import org.junit.Rule
 import org.junit.Test
 
@@ -33,7 +37,11 @@ class MainActivityAccessibilityTest {
                         ActivityTab(selected = true, label = "Recent calls", onClick = {})
                         ActivityTab(selected = false, label = "Blocked", onClick = {})
                     }
-                    SearchResultsView(results = emptyList(), onTap = {})
+                    SearchResultsView(
+                        results = flowOf(PagingData.empty<SpamNumber>()).collectAsLazyPagingItems(),
+                        total = 0,
+                        onTap = {},
+                    )
                 }
             }
         }
