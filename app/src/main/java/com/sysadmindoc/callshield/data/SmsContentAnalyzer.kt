@@ -111,7 +111,16 @@ class SmsContentAnalyzer
                 Regex("(?i)text (yes|y|go|start|ok) to"),
                 Regex("(?i)reply (yes|y|stop|1|2)"),
                 // ── Spanish ────────────────────────────────────────────────
-                Regex("(?i)(ha(s)? ganado|ganaste|(fuiste|ha sido|has sido) seleccionad[oa]|sorteo)"),
+                // "Ha ganado" and "ha sido seleccionada" are ordinary formal Spanish (a
+                // match result, loyalty points, a job application), so they count only
+                // with a prize after them.
+                Regex(
+                    "(?i)(has ganado|ganaste|(le|te) ha tocado|ganador(a)? del (sorteo|premio)|sorteo" +
+                        "|premio (de|por valor de) \\d" +
+                        "|ha(s)? ganado (un|una) (premio|regalo|iphone|viaje|cheque|coche|m.vil|tel.fono|tarjeta regalo|bono)" +
+                        "|ha(s)? ganado \\d[\\d.,]* ?(€|eur|euros|d.lares)" +
+                        "|(fuiste|ha sido|has sido) (seleccionad[oa]|elegid[oa]) (para (recibir|ganar|un premio|el premio)|como ganador))",
+                ),
                 Regex("(?i)(reclam[ae]|cobra) (tu|su|el) (premio|regalo|dinero)"),
                 Regex("(?i)(cuenta (suspendida|bloqueada|comprometida))"),
                 Regex("(?i)(verific[ae]|confirm[ae]) (tu|su) (cuenta|identidad|informaci.n)"),
@@ -127,7 +136,11 @@ class SmsContentAnalyzer
                 Regex("(?i)(transfer.ncia|pix|dep.sito).{0,20}(imediato|urgente|agora)"),
                 Regex("(?i)(banco|cart.o|cr.dito).{0,20}(bloqueado|suspenso|verificar)"),
                 // ── Italian ────────────────────────────────────────────────
-                Regex("(?i)(hai vinto|congratulazioni|sorteggio)"),
+                // A bare "premio" is also an insurance premium, so a prize needs its context.
+                Regex(
+                    "(?i)(hai vinto|congratulazioni|sorteggio|vinto un premio|premio in denaro" +
+                        "|premio (ti|vi) aspetta|premio . (pronto|disponibile|in attesa)|premio da (ritirare|riscuotere|reclamare))",
+                ),
                 Regex("(?i)(riscuoti|ritira) (il tuo|il) (premio|regalo|denaro)"),
                 Regex("(?i)(conto (sospeso|bloccato|compromesso))"),
                 Regex("(?i)(verifica|conferma) (il tuo|la tua) (conto|identit.|informazioni)"),

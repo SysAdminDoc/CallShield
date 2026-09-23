@@ -115,7 +115,10 @@ All notable changes to CallShield will be documented in this file.
   read as a number from your own country instead of a North American one, so
   allowing your country's code lets it ring. One that starts with your
   country's international prefix (00 in most of Europe, 011 in North America)
-  counts as the country dialed after it.
+  counts as the country dialed after it. Domestic numbers that happen to start
+  with 00, like Bulgaria's 00800 toll-free range, still count as domestic, and
+  a prefix followed by digits no country code starts with is blocked instead
+  of passing as a local call.
 - Settings has a Telemarketing ranges card for number ranges regulators set
   aside for sales calls. It can block Spain's 400 range (required for
   commercial calls from 17 October 2026), India's 140 promotional series and
@@ -160,7 +163,9 @@ All notable changes to CallShield will be documented in this file.
   the masculine forms, so "su tarjeta ha sido bloqueada" slipped through. In
   aggressive mode, a parcel "pending delivery", a Brazilian birthday greeting
   ("Parabéns pelo seu aniversário") and an Italian insurance reminder ("il
-  premio della polizza") no longer read as scams.
+  premio della polizza") no longer read as scams. Formal Spanish like "ha
+  ganado" or "ha sido seleccionada" counts only when a prize follows, so a
+  match result or a job application isn't flagged.
 - The "why was this blocked" panel now explains every decision. A region
   block, a contacts-only block, a temporary block or allow, a number from your
   phone's own block list, a range pattern, a caller-name rule and a push-alert

@@ -80,16 +80,23 @@ class BlockReasoningTest {
         val allows =
             mapOf(
                 BlockReasonCode.TEMPORARY_ALLOW to CheckerPriority.TEMPORARY_ALLOW,
+                BlockReasonCode.STIR_SHAKEN_TRUSTED to CheckerPriority.STIR_SHAKEN_TRUSTED,
                 BlockReasonCode.REGULATORY_ALLOW to CheckerPriority.REGULATORY_ALLOW,
                 BlockReasonCode.RECENTLY_DIALED to CheckerPriority.RECENTLY_DIALED,
                 BlockReasonCode.EMERGENCY_CALLBACK to CheckerPriority.EMERGENCY_CALLBACK,
                 BlockReasonCode.ANSWERED_CALLER to CheckerPriority.ANSWERED_CALLER,
+                BlockReasonCode.REPEATED_URGENT to CheckerPriority.REPEATED_URGENT,
                 BlockReasonCode.CALLER_NAME_TRUST to CheckerPriority.CALLER_NAME_TRUST,
                 BlockReasonCode.PUSH_ALERT to CheckerPriority.PUSH_ALERT_BRIDGE,
             )
         allows.forEach { (code, priority) ->
             val text = BlockReasoning.explain(reasonCode = code, description = "", confidence = 0).bullets.joinToString(" ")
             assertEquals("$code vs database", priority < CheckerPriority.GITHUB_DATABASE, text.contains("spam database still win"))
+            assertEquals(
+                "$code vs prefix expansion",
+                priority < CheckerPriority.DB_PREFIX_EXPANSION,
+                text.contains("database prefix expansion"),
+            )
             assertEquals("$code vs prefix list", priority < CheckerPriority.PREFIX_MATCH, text.contains("downloaded prefix list"))
             assertEquals("$code vs contacts-only", priority < CheckerPriority.CONTACTS_ONLY, text.contains("Contacts-only mode"))
             assertEquals(
@@ -100,6 +107,15 @@ class BlockReasoningTest {
             // Region rules, quiet hours and caller-name blocks sit below every allow here.
             assertFalse("$code claims all your rules win", text.contains("own block rules"))
         }
+    }
+
+    @Test
+    fun `sms context trust says the sender checks and keyword rules come first`() {
+        // It runs in the SMS extensions, after the whole number chain found nothing,
+        // and below SMS keyword rules (5400).
+        val text = BlockReasoning.explain("sms_context", "", 0).bullets.joinToString(" ")
+        assertTrue(text.contains("passed every check on the sender's number"))
+        assertTrue(text.contains("SMS keyword rules still win"))
     }
 
     @Test
@@ -166,7 +182,8 @@ class BlockReasoningTest {
 
         assertTrue(r.headline.contains("authentication passed"))
         assertTrue(text.contains("not a verdict"))
-        assertTrue(text.contains("explicit user and system block rules"))
+        // The trusted allow also yields to a database entry with recent reports.
+        assertTrue(text.contains("spam database entry with recent reports"))
         assertTrue(!text.contains("safe"))
         assertTrue(!text.contains("trusted"))
     }

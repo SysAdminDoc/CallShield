@@ -1114,9 +1114,9 @@
     <string name="cnap_block_patterns">拦截姓名模式</string>
     <string name="cnap_block_patterns_hint">每行一个模式。用 * 表示任意文本，用 ? 表示单个字符，例如 MEDICARE BENEFITS*。</string>
     <string name="cnap_block_priority_notice">联系人、白名单条目、最近通话、紧急回拨与可信姓名规则仍会响铃。</string>
-    <string name="block_reason_caller_name">已拦截 — 主叫姓名“%1$s”匹配你的姓名规则</string>
-    <string name="block_reason_out_of_region">已拦截 — %1$s 在允许地区之外</string>
-    <string name="block_reason_out_of_region_unknown">已拦截 — 国际或未知地区在允许地区之外</string>
+    <string name="block_reason_caller_name">主叫姓名“%1$s”匹配你的姓名规则。</string>
+    <string name="block_reason_out_of_region">%1$s 在你允许的地区之外。</string>
+    <string name="block_reason_out_of_region_unknown">号码来自国际或未知地区，在你允许的地区之外。</string>
     <string name="model_health_title">ML 模型健康度</string>
     <string name="model_health_gbt_active">梯度提升模型已激活</string>
     <string name="model_health_gbt_active_detail">最高质量的设备端模型已成功加载。</string>

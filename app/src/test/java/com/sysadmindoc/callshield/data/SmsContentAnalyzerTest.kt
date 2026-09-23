@@ -581,4 +581,32 @@ class SmsContentAnalyzerTest {
             assertFalse(body, SmsContentAnalyzer.analyze(body).reasons.contains("spam_keywords"))
         }
     }
+
+    @Test
+    fun `formal Spanish wins and selections count only with a prize`() {
+        listOf(
+            "Su candidatura ha sido seleccionada para la segunda fase del proceso.",
+            "Enhorabuena, ha ganado 50 puntos en su tarjeta de cliente.",
+            "El Real Madrid ha ganado 2-1 al Sevilla en el último minuto.",
+        ).forEach { body ->
+            assertFalse(body, SmsContentAnalyzer.analyze(body).reasons.contains("spam_keywords"))
+        }
+        listOf(
+            "Enhorabuena, le ha tocado un premio de 500 EUR. Llame hoy para recibirlo.",
+            "Usted ha ganado un iPhone 15. Confirme sus datos para el envío.",
+            "Ha sido seleccionado para recibir un cheque de 300 euros.",
+        ).forEach { body ->
+            assertTrue(body, SmsContentAnalyzer.analyze(body).reasons.contains("spam_keywords"))
+        }
+    }
+
+    @Test
+    fun `an Italian prize without a link is still a prize scam`() {
+        listOf(
+            "Il tuo premio ti aspetta! Ritiralo entro oggi.",
+            "Hai un premio da ritirare: rispondi con il tuo nome e indirizzo.",
+        ).forEach { body ->
+            assertTrue(body, SmsContentAnalyzer.analyze(body).reasons.contains("spam_keywords"))
+        }
+    }
 }

@@ -171,6 +171,7 @@ object BlockReasoning {
                 reasoning(
                     "Likely urgent. The same number called twice in under five minutes.",
                     "Robocallers rarely retry right away. People with an emergency do.",
+                    STILL_WIN_OVER_TRUST_SIGNALS,
                 )
             }
 
@@ -194,6 +195,7 @@ object BlockReasoning {
                 reasoning(
                     "You've had a real conversation with this number.",
                     "You've sent it a message, or it has written to you on two or more different days.",
+                    "It only helps a text that passed every check on the sender's number, and your SMS keyword rules still win.",
                 )
             }
 
@@ -491,7 +493,7 @@ object BlockReasoning {
 
     private const val STILL_WIN_OVER_TRUST_SIGNALS =
         "Contacts-only mode, a failed carrier check, your blocklist, wildcard and range rules, numbers you blocked in Android, " +
-            "the downloaded prefix list, telemarketing ranges you block and the spam database still win."
+            "the downloaded prefix list, telemarketing ranges you block, database prefix expansion and the spam database still win."
 
     private fun explainCategoryPolicy(
         policy: CategoryPolicyMatch,

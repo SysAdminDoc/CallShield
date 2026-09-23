@@ -9,6 +9,13 @@ import com.sysadmindoc.callshield.domain.model.ParsedPassport
  * it is not a verdict that the caller is wanted, lawful, or non-spam.
  */
 object StirShakenSemantics {
+    // Everything above STIR_SHAKEN_TRUSTED on the checker ladder that can block, plus the
+    // current-evidence rule in StirShakenTrustChecker.decidePure.
+    private const val PRECEDENCE =
+        "Contacts-only mode, your blocklist, wildcard and range rules, numbers you blocked in Android, " +
+            "the downloaded prefix list and telemarketing ranges you block stay ahead of this signal, " +
+            "and so does a spam database entry with recent reports."
+
     const val VERIFICATION_STATUS_NOT_VERIFIED = 0
     const val VERIFICATION_STATUS_PASSED = 1
     const val VERIFICATION_STATUS_FAILED = 2
@@ -22,7 +29,7 @@ object StirShakenSemantics {
                         listOf(
                             "Android exposes PASS/FAIL status, not the full A/B/C PASSporT attestation details.",
                             "This is caller ID authentication, not a verdict that the call is wanted or lawful.",
-                            "Explicit user and system block rules stay ahead of this signal.",
+                            PRECEDENCE,
                         ),
                 )
             }
@@ -62,8 +69,8 @@ object StirShakenSemantics {
                     bullets =
                         listOf(
                             "The originating provider attested the caller is known and authorized to use this number.",
-                            "This confirms caller ID metadata; it is not a verdict that the call is wanted or lawful.",
-                            "Explicit user and system block rules stay ahead of this signal.",
+                            "This confirms caller ID metadata. It is not a verdict that the call is wanted or lawful.",
+                            PRECEDENCE,
                         ),
                 )
             }
@@ -75,7 +82,7 @@ object StirShakenSemantics {
                         listOf(
                             "The provider knows the caller but did not fully attest their right to use this number.",
                             "CallShield should show this as partial authentication, not as caller approval.",
-                            "Explicit user and system block rules stay ahead of this signal.",
+                            PRECEDENCE,
                         ),
                 )
             }
@@ -87,7 +94,7 @@ object StirShakenSemantics {
                         listOf(
                             "The provider could identify the gateway that accepted the call, not the caller or number.",
                             "This is weak authentication and should not override local detection.",
-                            "Explicit user and system block rules stay ahead of this signal.",
+                            PRECEDENCE,
                         ),
                 )
             }

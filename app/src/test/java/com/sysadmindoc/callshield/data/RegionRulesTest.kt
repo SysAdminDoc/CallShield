@@ -220,17 +220,48 @@ class RegionRulesTest {
     }
 
     @Test
-    fun `international prefixes follow libphonenumber`() {
-        assertEquals("442079460000", RegionCallingCodes.afterInternationalPrefix("00442079460000", "it"))
-        assertEquals("442079460000", RegionCallingCodes.afterInternationalPrefix("0011442079460000", "AU"))
-        assertEquals("442079460000", RegionCallingCodes.afterInternationalPrefix("011442079460000", null))
+    fun `bare numbers read the way libphonenumber reads them`() {
+        val uk = RegionCallingCodes.BareNumber.International("442079460000")
+        assertEquals(uk, RegionCallingCodes.readBareNumber("00442079460000", "it"))
+        assertEquals(uk, RegionCallingCodes.readBareNumber("0011442079460000", "AU"))
+        assertEquals(uk, RegionCallingCodes.readBareNumber("011442079460000", null))
         // The Marshall Islands dial out with 011 without being on +1.
-        assertEquals("442079460000", RegionCallingCodes.afterInternationalPrefix("011442079460000", "MH"))
-        assertNull(RegionCallingCodes.afterInternationalPrefix("00442079460000", "US"))
-        assertNull(RegionCallingCodes.afterInternationalPrefix("0612345678", "IT"))
+        assertEquals(uk, RegionCallingCodes.readBareNumber("011442079460000", "MH"))
+        // Where the own prefix is 011, 010 or 810, the ITU 00 still reads as international.
+        assertEquals(uk, RegionCallingCodes.readBareNumber("00442079460000", "US"))
+        assertEquals(uk, RegionCallingCodes.readBareNumber("00442079460000", "JP"))
+        assertEquals(uk, RegionCallingCodes.readBareNumber("00442079460000", "RU"))
+        assertEquals(RegionCallingCodes.BareNumber.National, RegionCallingCodes.readBareNumber("0612345678", "IT"))
         // A calling code never starts with 0, and a prefix alone is no number.
-        assertNull(RegionCallingCodes.afterInternationalPrefix("000123", "IT"))
-        assertNull(RegionCallingCodes.afterInternationalPrefix("00", "IT"))
+        assertEquals(RegionCallingCodes.BareNumber.Unreadable, RegionCallingCodes.readBareNumber("000123", "IT"))
+        assertEquals(RegionCallingCodes.BareNumber.Unreadable, RegionCallingCodes.readBareNumber("00", "IT"))
+    }
+
+    @Test
+    fun `domestic numbers that start with 00 stay domestic`() {
+        // Toll-free ranges libphonenumber lists as national numbers.
+        listOf(
+            "BG" to "008001234567",
+            "PA" to "00800123456",
+            "QA" to "00800123456",
+            "TH" to "0018001234567",
+            "IN" to "0008001234567",
+            "JP" to "0037123456",
+            "UY" to "000412345",
+        ).forEach { (region, number) ->
+            assertEquals("$region $number", RegionCallingCodes.BareNumber.National, RegionCallingCodes.readBareNumber(number, region))
+        }
+        assertFalse(RegionRules.isOutsideAllowedRegions("008001234567", setOf("+359"), homeRegionIso = "BG"))
+        assertFalse(RegionRules.isOutsideAllowedRegions("0018001234567", setOf("+66"), homeRegionIso = "TH"))
+    }
+
+    @Test
+    fun `a bare number that can't be read never passes as the home country`() {
+        // "000..." on an Italian phone is neither Italian nor international.
+        assertTrue(RegionRules.isOutsideAllowedRegions("00012345678", setOf("+39"), homeRegionIso = "IT"))
+        // Japan dials out with 010, but a caller ID written with 00 is still foreign.
+        assertTrue(RegionRules.isOutsideAllowedRegions("00442079460000", setOf("+81"), homeRegionIso = "JP"))
+        assertFalse(RegionRules.isOutsideAllowedRegions("00442079460000", setOf("+44"), homeRegionIso = "JP"))
     }
 
     @Test

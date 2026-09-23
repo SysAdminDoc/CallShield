@@ -156,12 +156,14 @@ object RegionRules {
     }
 
     /**
-     * [number] as `+<digits>`. Android leaves a number it can't validate in
-     * national form, so a bare number is read in the phone's home region.
-     * One that starts with that region's international prefix (`00`, `011`,
-     * `810`...) is already international. Otherwise it's ten or eleven digits
-     * as NANP where the region uses +1 (or is unknown), and gets the home
-     * region's calling code anywhere else.
+     * [number] as `+<digits>`, or null when it can't be read. Android leaves a
+     * number it can't validate in national form, so a bare number is read in
+     * the phone's home region ([RegionCallingCodes.readBareNumber]). One
+     * dialed with an international prefix is already international, and one
+     * whose prefix leads nowhere is unreadable, which blocks it rather than
+     * letting the home code through. A national number is ten or eleven
+     * digits as NANP where the region uses +1 (or is unknown), and gets the
+     * home region's calling code anywhere else.
      */
     private fun internationalForm(
         number: String,
@@ -169,7 +171,11 @@ object RegionRules {
     ): String? {
         if (number.startsWith("+")) return number
         val digits = filterAsciiDigits(number)
-        RegionCallingCodes.afterInternationalPrefix(digits, homeRegionIso)?.let { return "+$it" }
+        when (val reading = RegionCallingCodes.readBareNumber(digits, homeRegionIso)) {
+            is RegionCallingCodes.BareNumber.International -> return "+${reading.digits}"
+            RegionCallingCodes.BareNumber.Unreadable -> return null
+            RegionCallingCodes.BareNumber.National -> Unit
+        }
         val homeCode = RegionCallingCodes.forRegion(homeRegionIso)
         if (homeCode != null && homeCode != NANP_CALLING_CODE) return digits.takeIf { it.isNotEmpty() }?.let { "+$homeCode$it" }
         return when {

@@ -41,28 +41,77 @@ internal object RegionCallingCodes {
     /** Calling code digits (no `+`) for [regionIso], or null for an unknown region. */
     fun forRegion(regionIso: String?): String? = regionIso?.let { codes[it.uppercase(Locale.ROOT)] }
 
+    /** How a caller ID without a `+` reads on a phone from a given region. */
+    sealed interface BareNumber {
+        /** It was dialed with an international prefix; [digits] follow the prefix. */
+        data class International(
+            val digits: String,
+        ) : BareNumber
+
+        /** A number of the home region itself. */
+        data object National : BareNumber
+
+        /** An international prefix followed by nothing a calling code starts with. */
+        data object Unreadable : BareNumber
+    }
+
     /**
-     * [digits] after [regionIso]'s international prefix (`00`, `011`, `810`,
-     * `010`...), or null when they don't start with one. An unknown region
-     * dials like +1, matching how the rest of the bare-number handling reads
-     * it. A calling code never starts with 0, so a prefix followed by 0
-     * doesn't count, which is libphonenumber's rule.
+     * Reads bare [digits] the way libphonenumber would on a phone from
+     * [regionIso]. A few regions have domestic numbers that start with 00
+     * (toll-free 00800 in Bulgaria, for one), and those stay national. Then
+     * the region's own international prefix (`011`, `810`, `010`...), or the
+     * ITU `00` that most networks also accept, marks an international number.
+     * A calling code never starts with 0, so a prefix followed by 0 can't be
+     * read either way. An unknown region dials like +1, matching how the rest
+     * of the bare-number handling reads it.
      */
-    fun afterInternationalPrefix(
+    fun readBareNumber(
         digits: String,
         regionIso: String?,
-    ): String? {
+    ): BareNumber {
         val region = regionIso?.uppercase(Locale.ROOT)
+        val nationalWithPrefix = region?.let { nationalNumbersStartingWith00[it] }
+        if (nationalWithPrefix != null && regex("^(?:$nationalWithPrefix)$").matches(digits)) return BareNumber.National
         val code = region?.let { codes[it] }
-        val pattern = region?.let { internationalPrefixOverrides[it] } ?: if (code == null || code == NANP) NANP_PREFIX else ITU_PREFIX
-        val prefix = prefixRegexes.getOrPut(pattern) { Regex("^(?:$pattern)") }.find(digits) ?: return null
-        return digits.substring(prefix.value.length).takeIf { it.isNotEmpty() && it[0] != '0' }
+        val ownPrefix = region?.let { internationalPrefixOverrides[it] } ?: if (code == null || code == NANP) NANP_PREFIX else ITU_PREFIX
+        var sawPrefix = false
+        for (pattern in listOf(ownPrefix, ITU_PREFIX).distinct()) {
+            val prefix = regex("^(?:$pattern)").find(digits) ?: continue
+            sawPrefix = true
+            val rest = digits.substring(prefix.value.length)
+            if (rest.isNotEmpty() && rest[0] != '0') return BareNumber.International(rest)
+        }
+        return if (sawPrefix) BareNumber.Unreadable else BareNumber.National
     }
+
+    private fun regex(pattern: String) = compiled.getOrPut(pattern) { Regex(pattern) }
 
     private const val NANP = "1"
     private const val NANP_PREFIX = "011"
     private const val ITU_PREFIX = "00"
-    private val prefixRegexes = ConcurrentHashMap<String, Regex>()
+    private val compiled = ConcurrentHashMap<String, Regex>()
+
+    /**
+     * National numbers that start with 00, as the alternatives of
+     * libphonenumber's national-number patterns (every number type) that begin
+     * with 00, per region (phonenumbers 9.0.39). Android can't put these in
+     * international form, so they arrive bare, and in BG, PA, QA and TH they
+     * also start with the international prefix.
+     */
+    private val nationalNumbersStartingWith00: Map<String, String> =
+        mapOf(
+            "BG" to """(?:00800\d\d|800)\d{5}""",
+            "ID" to """00(?:1803\d{5,11}|7803\d{7})|001803\d{5,11}|(?:007803\d|8071)\d{6}""",
+            "IN" to """000800\d{7}|(?:000800|18(?:03\d\d|6(?:0|[12]\d\d)))\d{7}""",
+            "JP" to
+                """00777(?:[01]|5\d)\d\d|(?:00(?:7778|882[1245])|(?:120|800\d)\d\d)\d{4}|00(?:37|66|78)\d{6,13}""" +
+                """|00(?:777(?:[01]|(?:5|8\d)\d)|882[1245]\d\d)\d\d""",
+            "KR" to """00(?:308\d{6,7}|798\d{7,9})|(?:00368|[38]0)\d{7}|00(?:3(?:08\d{6,7}|68\d{7})|798\d{7,9})""",
+            "PA" to """(?:00800|800\d)\d{6}""",
+            "QA" to """(?:0080[01]|800)\d{6}""",
+            "TH" to """(?:001800\d|1800)\d{6}""",
+            "UY" to """0004\d{2,9}""",
+        )
 
     /**
      * International prefixes of the regions that don't dial out with `011`

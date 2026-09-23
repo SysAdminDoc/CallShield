@@ -635,6 +635,20 @@ class SmsEvaluationCorpusTest {
     }
 
     @Test
+    fun `Spanish Portuguese and Italian raise no false alarms`() {
+        // Every clean es/pt/it example passes today. The 10% budgets below would
+        // still let one new false alarm through per language, so these are pinned.
+        val byId = SmsEvaluationCorpus.examples.associateBy { it.id }
+        val flagged =
+            SmsEvaluationCorpus
+                .evaluate()
+                .falseAlarms
+                .filter { byId.getValue(it).languageTag in SmsEvaluationCorpus.recallFloorByLanguage.keys }
+
+        assertEquals(emptyList<String>(), flagged)
+    }
+
+    @Test
     fun `evaluator reports locale and message type metrics within false positive budgets`() {
         val report = SmsEvaluationCorpus.evaluate()
         println(report.format())

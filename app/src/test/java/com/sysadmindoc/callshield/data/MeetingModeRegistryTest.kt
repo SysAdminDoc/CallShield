@@ -67,6 +67,20 @@ class MeetingModeRegistryTest {
     }
 
     @Test
+    fun `a Telegram call counts by the notification id its call service uses`() {
+        // Telegram's in-call notification (VoIPService id 201) is ongoing but has no category.
+        MeetingModeRegistry.onPosted("telegram-keepalive", "org.telegram.messenger", isOngoing = true, notificationId = 5)
+        assertTrue(MeetingModeRegistry.activePackages().isEmpty())
+
+        MeetingModeRegistry.onPosted("telegram-call", "org.telegram.messenger", isOngoing = true, notificationId = 201)
+        assertEquals(setOf("org.telegram.messenger"), MeetingModeRegistry.activePackages())
+
+        // The id only identifies Telegram's calls, not another messenger's.
+        MeetingModeRegistry.onPosted("whatsapp-201", "com.whatsapp", isOngoing = true, notificationId = 201)
+        assertEquals(setOf("org.telegram.messenger"), MeetingModeRegistry.activePackages())
+    }
+
+    @Test
     fun `a messenger call that turns into another ongoing notification ends the meeting`() {
         MeetingModeRegistry.onPosted("whatsapp-1", "com.whatsapp", isOngoing = true, category = "call")
 
@@ -93,10 +107,14 @@ class MeetingModeRegistryTest {
                 MeetingModeRegistry.ActiveNotification("chat", "com.Slack", isOngoing = false),
                 MeetingModeRegistry.ActiveNotification("signal-service", "org.thoughtcrime.securesms", isOngoing = true),
                 MeetingModeRegistry.ActiveNotification("whatsapp-call", "com.whatsapp", isOngoing = true, category = "call"),
+                MeetingModeRegistry.ActiveNotification("telegram-call", "org.telegram.messenger", isOngoing = true, notificationId = 201),
             ),
         )
 
-        assertEquals(setOf("com.google.android.apps.tachyon", "com.whatsapp"), MeetingModeRegistry.activePackages())
+        assertEquals(
+            setOf("com.google.android.apps.tachyon", "com.whatsapp", "org.telegram.messenger"),
+            MeetingModeRegistry.activePackages(),
+        )
     }
 
     @Test

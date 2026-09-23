@@ -41,10 +41,13 @@ object MeetingModeRegistry {
      * Messengers that also keep non-call ongoing notifications up for hours
      * (Signal's background connection without Google push, Telegram's
      * keep-alive, WhatsApp backups and live location, Messenger chat heads).
-     * For these only a call-category notification means a call.
+     * For these only a call notification means a call: the call category, or
+     * for Telegram, whose in-call notification has no category, the fixed IDs
+     * its VoIPService posts calls under (201 ongoing, 202 incoming).
      */
     private val CALL_CATEGORY_ONLY =
-        setOf("com.whatsapp", "org.thoughtcrime.securesms", "org.telegram.messenger", "com.facebook.orca")
+        setOf("com.whatsapp", "org.thoughtcrime.securesms", TELEGRAM, "com.facebook.orca")
+    private val TELEGRAM_CALL_NOTIFICATION_IDS = setOf(201, 202)
 
     /** Notification key to package, for the notifications that currently mean a meeting. */
     private val ongoing = ConcurrentHashMap<String, String>()
@@ -61,11 +64,18 @@ object MeetingModeRegistry {
         packageName: String,
         isOngoing: Boolean,
         category: String? = null,
+        notificationId: Int? = null,
     ) {
         if (packageName !in MEETING_APPS) return
-        val meansMeeting = isOngoing && (packageName !in CALL_CATEGORY_ONLY || category == CALL_CATEGORY)
+        val meansMeeting = isOngoing && (packageName !in CALL_CATEGORY_ONLY || isCall(packageName, category, notificationId))
         if (meansMeeting) ongoing[key] = packageName else ongoing.remove(key)
     }
+
+    private fun isCall(
+        packageName: String,
+        category: String?,
+        notificationId: Int?,
+    ): Boolean = category == CALL_CATEGORY || (packageName == TELEGRAM && notificationId in TELEGRAM_CALL_NOTIFICATION_IDS)
 
     fun onRemoved(key: String) {
         ongoing.remove(key)
@@ -74,7 +84,7 @@ object MeetingModeRegistry {
     /** Rebuilds the state from the listener's active notifications after it (re)connects. */
     fun replaceAll(active: List<ActiveNotification>) {
         ongoing.clear()
-        active.forEach { onPosted(it.key, it.packageName, it.isOngoing, it.category) }
+        active.forEach { onPosted(it.key, it.packageName, it.isOngoing, it.category, it.notificationId) }
     }
 
     fun clear() {
@@ -89,8 +99,10 @@ object MeetingModeRegistry {
         val packageName: String,
         val isOngoing: Boolean,
         val category: String? = null,
+        val notificationId: Int? = null,
     )
 
     /** [android.app.Notification.CATEGORY_CALL], kept as a literal so this object stays JVM-testable. */
     private const val CALL_CATEGORY = "call"
+    private const val TELEGRAM = "org.telegram.messenger"
 }
