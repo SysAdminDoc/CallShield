@@ -3,6 +3,7 @@ package com.sysadmindoc.callshield.data
 import android.content.Context
 import com.sysadmindoc.callshield.data.remote.HttpClient
 import com.sysadmindoc.callshield.service.CommunityReportWorker
+import com.sysadmindoc.callshield.util.countryCallingCodeOf
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -310,34 +311,12 @@ object CommunityContributor {
      * in step so app reports and issue-filed reports land on the same key.
      */
     internal fun stripNationalTrunkPrefix(digits: String): String {
-        val countryCode =
-            when {
-                digits.isEmpty() -> return digits
-                digits.take(1) in ONE_DIGIT_COUNTRY_CODES -> digits.take(1)
-                digits.take(2) in TWO_DIGIT_COUNTRY_CODES -> digits.take(2)
-                digits.length >= 3 -> digits.take(3)
-                else -> return digits
-            }
+        val countryCode = countryCallingCodeOf(digits) ?: return digits
         if (countryCode in TRUNK_ZERO_SIGNIFICANT_COUNTRY_CODES) return digits
         val national = digits.drop(countryCode.length).trimStart('0')
         // An all-zero national part is junk; leave it for the length check to reject.
         return if (national.isEmpty()) digits else countryCode + national
     }
-
-    /** Every assigned one/two-digit ITU-T E.164 country calling code. Calling codes are
-     *  prefix-free, so anything not matching these is a three-digit code. */
-    private val ONE_DIGIT_COUNTRY_CODES = setOf("1", "7")
-
-    private val TWO_DIGIT_COUNTRY_CODES =
-        (
-            "20 27 " +
-                "30 31 32 33 34 36 39 " +
-                "40 41 43 44 45 46 47 48 49 " +
-                "51 52 53 54 55 56 57 58 " +
-                "60 61 62 63 64 65 66 " +
-                "81 82 84 86 " +
-                "90 91 92 93 94 95 98"
-        ).split(" ").toSet()
 
     /** Countries whose national significant numbers genuinely keep a leading 0 in
      *  E.164 — stripping it there would corrupt the number, not repair it:

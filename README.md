@@ -102,7 +102,7 @@ All detection layers implement a shared `IChecker` interface and run in priority
 |  4850 | **Caller Name Trust** | Allow | Carrier-presented name matches one of your trust patterns (requires the device to provide a name during screening) |
 |  4700 | **Push-Alert Bridge** (A3) | Allow | Uber/DoorDash/Amazon/Gmail notification about an arriving call? Let it through |
 |  4500 | *Campaign Recorder* |. | Side-effect only; feeds burst detection below |
-|  4300 | **Region Rules** | Block | Opt-in offline blocking outside your selected US/Canadian regions |
+|  4300 | **Region Rules** | Block | Opt-in offline blocking outside the US/Canadian regions and country calling codes you allow |
 |  4000 | **Quiet Hours** | Block | Block all non-contact calls during configurable hours (calls only) |
 |  3500 | **Frequency Auto-Block** | Block | Numbers that call 3+ times in 7 days get auto-blocked |
 |  3000 | **Heuristic Engine** | Block | VoIP ranges, neighbor spoofing, rapid-fire detection, 30+ rules |

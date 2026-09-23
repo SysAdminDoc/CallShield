@@ -1076,12 +1076,12 @@
     <string name="settings_region_cnap_rules">地区与主叫姓名规则</string>
     <string name="settings_region_cnap_summary">%1$d 个允许地区 · %2$d 个可信姓名 · %3$d 个拦截姓名</string>
     <string name="region_rules_title">地区与主叫姓名规则</string>
-    <string name="region_rules_disclosure">这些规则完全在你的设备上运行。地区拦截使用来电号码的 NANP 区号。主叫姓名信任仅使用 Android 暴露给筛查服务的运营商呈现姓名。</string>
+    <string name="region_rules_disclosure">这些规则完全在你的设备上运行。地区拦截对北美号码读取区号，对其他号码读取国家代码。主叫姓名信任仅使用 Android 暴露给筛查服务的运营商呈现姓名。</string>
     <string name="region_rules_block_outside">拦截允许地区之外的来电</string>
-    <string name="region_rules_block_outside_desc">允许所选美国各州、加拿大各省与领地；拦截其他及国际号码。</string>
+    <string name="region_rules_block_outside_desc">只有你列出的地区和国家的来电会响铃，其他来电都会被拦截。</string>
     <string name="region_rules_allowed_regions">允许的地区代码</string>
-    <string name="region_rules_regions_hint">逗号分隔的两字母代码，例如 NY, NJ, ON。用 TF 表示免费电话。</string>
-    <string name="region_rules_regions_required">请至少添加一个有效的两字母地区代码。</string>
+    <string name="region_rules_regions_hint">用逗号分隔。美国州或加拿大省用两个字母（NY、ON），免费电话用 TF。国家用 + 加国际区号，例如意大利 +39，多米尼加共和国 +1809。</string>
+    <string name="region_rules_regions_required">请至少添加一个有效的地区或国家代码。</string>
     <string name="cnap_trust_title">信任呈现的主叫姓名</string>
     <string name="cnap_trust_desc">当运营商提供主叫姓名时，匹配的来电可绕过地区与统计拦截。</string>
     <string name="cnap_trust_patterns">可信姓名模式</string>

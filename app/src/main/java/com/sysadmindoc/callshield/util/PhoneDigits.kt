@@ -89,6 +89,21 @@ fun hasMinAsciiDigits(
     minimum: Int = MIN_CONFIRMABLE_PHONE_DIGITS,
 ): Boolean = filterAsciiDigits(value).length >= minimum
 
+/**
+ * The ITU-T E.164 country calling code that [digits] (no `+`) starts with, or
+ * null when there are too few digits to hold one. Calling codes are
+ * prefix-free: 1 and 7 are the only one-digit codes, the two-digit ones are
+ * listed in [TWO_DIGIT_CALLING_CODES], and every other code has three digits.
+ */
+fun countryCallingCodeOf(digits: String): String? =
+    when {
+        digits.isEmpty() -> null
+        digits.take(1) in ONE_DIGIT_CALLING_CODES -> digits.take(1)
+        digits.take(2) in TWO_DIGIT_CALLING_CODES -> digits.take(2)
+        digits.length >= 3 -> digits.take(3)
+        else -> null
+    }
+
 private fun Char.isPhoneFormatControl(): Boolean =
     when (code) {
         ZERO_WIDTH_SPACE,
@@ -101,6 +116,20 @@ private fun Char.isPhoneFormatControl(): Boolean =
 
         else -> false
     }
+
+/** Every assigned one- and two-digit ITU-T E.164 country calling code. */
+private val ONE_DIGIT_CALLING_CODES = setOf("1", "7")
+
+private val TWO_DIGIT_CALLING_CODES =
+    (
+        "20 27 " +
+            "30 31 32 33 34 36 39 " +
+            "40 41 43 44 45 46 47 48 49 " +
+            "51 52 53 54 55 56 57 58 " +
+            "60 61 62 63 64 65 66 " +
+            "81 82 84 86 " +
+            "90 91 92 93 94 95 98"
+    ).split(" ").toSet()
 
 private const val DEFAULT_PHONE_INPUT_LENGTH = 24
 private const val MAX_PHONE_INPUT_SCAN_LENGTH = 256

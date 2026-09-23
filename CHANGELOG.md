@@ -96,6 +96,14 @@ All notable changes to CallShield will be documented in this file.
   that, so a tap on a list's name can't take its numbers out. A list you remove
   can be put back with Undo right afterwards, numbers included, without
   downloading it again.
+- Region rules can allow countries outside North America. Add a country by
+  its calling code, like +39 for Italy or +57 for Colombia, next to the
+  two-letter state and province codes. A Caribbean country that shares +1
+  goes in by area code, so the Dominican Republic is +1809. Two-letter codes
+  always mean the state or province, and CO is Colorado, never Colombia.
+- Region rules no longer mistake a ten-digit number from outside North America
+  for a North American one. A Penang landline (+60 4) counted as Vancouver's
+  604 area code, so allowing British Columbia let it ring.
 
 ### Interface
 

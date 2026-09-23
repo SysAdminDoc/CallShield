@@ -1619,15 +1619,15 @@
     <string name="reg_prefix_india_1600_allow">Protect India 1600 series</string>
     <string name="reg_prefix_india_1600_allow_desc">India\'s 1600 series is used by banks, insurers, and government. TRAI prohibits blocking it.</string>
     <string name="region_rules_title">Region &amp; caller-name rules</string>
-    <string name="region_rules_disclosure">These rules run entirely on your device. Region blocking uses the incoming number\'s NANP area code. Caller-name trust uses only a carrier-presented name that Android exposes to the screening service.</string>
+    <string name="region_rules_disclosure">These rules run entirely on your device. Region blocking reads the area code of a North American number and the country code of any other. Caller-name trust uses only a carrier-presented name that Android exposes to the screening service.</string>
     <string name="region_rules_block_outside">Block calls outside allowed regions</string>
-    <string name="region_rules_block_outside_desc">Allow selected US states, Canadian provinces, and territories; block other and international numbers.</string>
+    <string name="region_rules_block_outside_desc">Only the regions and countries you list can ring. Calls from anywhere else are blocked.</string>
     <string name="region_rules_allowed_regions">Allowed region codes</string>
-    <string name="region_rules_regions_hint">Comma-separated two-letter codes, for example NY, NJ, ON. Use TF for toll-free.</string>
-    <string name="region_rules_regions_required">Add at least one valid two-letter region code.</string>
+    <string name="region_rules_regions_hint">Separate with commas. Use two letters for a US state or Canadian province (NY, ON) and TF for toll-free. Use + and the calling code for a country, like +39 for Italy or +1809 for the Dominican Republic.</string>
+    <string name="region_rules_regions_required">Add at least one valid region or country code.</string>
     <plurals name="region_rules_regions_count">
-        <item quantity="one">%1$d valid region code</item>
-        <item quantity="other">%1$d valid region codes</item>
+        <item quantity="one">%1$d valid code</item>
+        <item quantity="other">%1$d valid codes</item>
     </plurals>
     <string name="cnap_device_unavailable_notice">This device hasn\'t provided a caller name during screening. These rules won\'t take effect until it does.</string>
     <string name="cnap_trust_title">Trust a presented caller name</string>
