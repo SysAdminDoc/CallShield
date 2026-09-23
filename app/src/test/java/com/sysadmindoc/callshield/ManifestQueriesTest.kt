@@ -1,5 +1,6 @@
 package com.sysadmindoc.callshield
 
+import com.sysadmindoc.callshield.data.MeetingModeRegistry
 import com.sysadmindoc.callshield.data.NotificationScreeningSources
 import com.sysadmindoc.callshield.data.PushAlertRegistry
 import org.junit.Assert.assertEquals
@@ -20,7 +21,8 @@ class ManifestQueriesTest {
         val declared = declaredQueryPackages()
         val expected =
             PushAlertRegistry.ALERT_SOURCE_PACKAGES +
-                NotificationScreeningSources.catalog.map { it.packageName }
+                NotificationScreeningSources.catalog.map { it.packageName } +
+                MeetingModeRegistry.MEETING_APPS.keys
 
         assertEquals("catalog packages missing from <queries>", emptySet<String>(), expected - declared)
         assertEquals("<queries> packages no catalog uses", emptySet<String>(), declared - expected)

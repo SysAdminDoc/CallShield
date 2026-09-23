@@ -16,6 +16,7 @@ import com.sysadmindoc.callshield.data.SpamHeuristics
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.StirShakenParser
 import com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup
+import com.sysadmindoc.callshield.data.checker.MeetingModeChecker
 import com.sysadmindoc.callshield.data.local.AppDatabase
 import com.sysadmindoc.callshield.di.ApplicationScope
 import com.sysadmindoc.callshield.domain.model.CallerIdentity
@@ -371,7 +372,13 @@ class CallShieldScreeningService : CallScreeningService() {
         val categoryAction =
             CategoryCallPolicy.parseMatchSource(reason)?.action
                 ?: CategoryCallAction.INHERIT
-        val response = buildBlockResponse(prefs, confidence, categoryAction)
+        val response =
+            buildBlockResponse(
+                prefs = prefs,
+                confidence = confidence,
+                categoryAction = categoryAction,
+                silenceOnly = reason == MeetingModeChecker.MATCH_SOURCE,
+            )
         responseGate.respond(response)
 
         applicationScope.launch {
@@ -444,10 +451,11 @@ class CallShieldScreeningService : CallScreeningService() {
         prefs: androidx.datastore.preferences.core.Preferences,
         confidence: Int,
         categoryAction: CategoryCallAction,
+        silenceOnly: Boolean,
     ): CallResponse {
         val silentVoicemail = prefs[SpamRepository.KEY_SILENT_VOICEMAIL] ?: false
         val autoMuteLowConf = prefs[SpamRepository.KEY_AUTOMUTE_LOW_CONFIDENCE] ?: false
-        return if (shouldSilence(silentVoicemail, autoMuteLowConf, confidence, categoryAction)) {
+        return if (shouldSilence(silentVoicemail, autoMuteLowConf, confidence, categoryAction, silenceOnly)) {
             CallResponse
                 .Builder()
                 .setSilenceCall(true)
@@ -582,6 +590,8 @@ class CallShieldScreeningService : CallScreeningService() {
          * Pure decision: should a block arrive as a silent voicemail
          * drop (true) or as a hard reject (false)?
          *
+         * - `silenceOnly` (meeting mode) is always a silence: that verdict says
+         *   nothing against the caller, it only asks for quiet.
          * - `silentVoicemailEnabled` wins unconditionally when on.
          * - A category SILENCE or BLOCK action overrides the global delivery
          *   mode. Category ALLOW is handled before a block response is built.
@@ -598,23 +608,25 @@ class CallShieldScreeningService : CallScreeningService() {
             autoMuteLowConfidenceEnabled: Boolean,
             confidence: Int,
             categoryAction: CategoryCallAction = CategoryCallAction.INHERIT,
+            silenceOnly: Boolean = false,
         ): Boolean =
-            when (categoryAction) {
-                CategoryCallAction.SILENCE -> {
-                    true
-                }
+            silenceOnly ||
+                when (categoryAction) {
+                    CategoryCallAction.SILENCE -> {
+                        true
+                    }
 
-                CategoryCallAction.BLOCK -> {
-                    false
-                }
+                    CategoryCallAction.BLOCK -> {
+                        false
+                    }
 
-                CategoryCallAction.INHERIT,
-                CategoryCallAction.ALLOW,
-                -> {
-                    silentVoicemailEnabled ||
-                        (autoMuteLowConfidenceEnabled && confidence < AUTO_MUTE_CONFIDENCE_THRESHOLD)
+                    CategoryCallAction.INHERIT,
+                    CategoryCallAction.ALLOW,
+                    -> {
+                        silentVoicemailEnabled ||
+                            (autoMuteLowConfidenceEnabled && confidence < AUTO_MUTE_CONFIDENCE_THRESHOLD)
+                    }
                 }
-            }
 
         fun shouldSuppressAfterCallFeedback(matchSource: String): Boolean = matchSource == "emergency_callback"
     }

@@ -48,6 +48,17 @@
         <package android:name="com.whatsapp.w4b" />
         <package android:name="net.thunderbird.android" />
         <package android:name="org.thoughtcrime.securesms" />
+        <!-- Meeting-mode apps (MeetingModeRegistry.MEETING_APPS); WhatsApp and Signal are listed above -->
+        <package android:name="com.Slack" />
+        <package android:name="com.cisco.wx2.android" />
+        <package android:name="com.discord" />
+        <package android:name="com.facebook.orca" />
+        <package android:name="com.google.android.apps.tachyon" />
+        <package android:name="com.logmein.gotoconnect" />
+        <package android:name="com.microsoft.teams" />
+        <package android:name="org.jitsi.meet" />
+        <package android:name="org.telegram.messenger" />
+        <package android:name="us.zoom.videomeetings" />
     </queries>
 
     <application

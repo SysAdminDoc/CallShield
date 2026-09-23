@@ -111,6 +111,14 @@ All notable changes to CallShield will be documented in this file.
   belongs to banks, insurers and government offices, ring through past the
   spam database. Each one is off until you turn it on, and each works whether
   your phone shows the number with its country code or without.
+- Meeting mode keeps unknown callers from ringing through your meetings. Pick
+  the apps you meet or take calls in (Zoom, Teams, Google Meet, Webex, Slack,
+  WhatsApp and a few more) and turn it on in Settings. While one of them shows
+  a call in progress, a caller from outside your contacts goes quietly to
+  voicemail. Contacts and callers you trust still ring, spam is still blocked
+  as spam, and Android still lists the missed call. It works from the
+  notification access CallShield already asks for and never needs your
+  calendar.
 
 ### Interface
 

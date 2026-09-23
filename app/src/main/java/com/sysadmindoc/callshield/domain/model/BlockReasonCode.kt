@@ -42,6 +42,7 @@ enum class BlockReasonCode(
     HEURISTIC("heuristic"),
     CAMPAIGN_BURST("campaign_burst"),
     ML_SCORER("ml_scorer"),
+    MEETING_MODE("meeting_mode"),
     HOT_LIST("hot_list"),
     SPAM_DOMAIN("spam_domain"),
     PUSH_ALERT("push_alert"),

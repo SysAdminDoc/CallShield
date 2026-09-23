@@ -400,6 +400,12 @@ class MainViewModel
         val enabledRegulatoryPrefixes =
             repo.enabledRegulatoryPrefixes
                 .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
+        val meetingModeEnabled =
+            repo.meetingModeEnabled
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+        val meetingModeApps =
+            repo.meetingModeApps
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
         val allowedRegions =
             repo.allowedRegions
                 .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
@@ -1079,6 +1085,18 @@ class MainViewModel
             enabled: Boolean,
         ) = viewModelScope.launch {
             repo.setRegulatoryPrefix(prefix, enabled)
+        }
+
+        fun setMeetingMode(enabled: Boolean) =
+            viewModelScope.launch {
+                repo.setMeetingMode(enabled)
+            }
+
+        fun setMeetingModeApp(
+            packageName: String,
+            selected: Boolean,
+        ) = viewModelScope.launch {
+            repo.setMeetingModeApp(packageName, selected)
         }
 
         fun refreshContactGroups() {

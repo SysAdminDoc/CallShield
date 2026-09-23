@@ -456,6 +456,17 @@
     <string name="settings_quiet_hours">勿扰时段</string>
     <string name="settings_quiet_hours_toggle">勿扰时段内拦截未知来电</string>
     <string name="settings_quiet_hours_desc">在设定时段内拦截所有非联系人来电</string>
+    <string name="settings_meeting_mode">会议模式</string>
+    <string name="settings_meeting_mode_toggle">会议期间静音未知来电</string>
+    <string name="settings_meeting_mode_desc">当你选择的会议应用显示通话进行中时，联系人以外的来电会静默转入语音信箱。</string>
+    <string name="settings_meeting_mode_apps">选择会议应用</string>
+    <string name="settings_meeting_mode_apps_none">请至少选择一个应用。选择之前会议模式不会生效。</string>
+    <string name="settings_meeting_mode_needs_access">会议模式需要通知使用权才能知道会议何时开始。</string>
+    <string name="meeting_apps_title">会议应用</string>
+    <string name="meeting_apps_body">选择你用来开会或通话的应用。CallShield 只检查应用是否显示通话进行中，从不读取通知内容。</string>
+    <string name="meeting_apps_in_call">正在通话</string>
+    <string name="meeting_apps_not_installed">未安装</string>
+    <string name="meeting_apps_done">完成</string>
     <string name="settings_time_start">开始</string>
     <string name="settings_time_end">结束</string>
     <string name="settings_quiet_hours_all_day_warning">开始与结束时间相同，勿扰拦截将全天运行。</string>

@@ -77,7 +77,9 @@ Every user-facing toggle with its DataStore key and default value.
 | Time-based blocking | `time_block_enabled` | off |
 | Quiet hours start | `time_block_start_hour` | 22 |
 | Quiet hours end | `time_block_end_hour` | 7 |
-| Frequency escalation | `freq_escalation_enabled` | off |
+| Meeting mode | `meeting_mode_enabled` | off |
+| Meeting apps | `meeting_mode_packages` | empty |
+| Frequency escalation | `freq_escalation_enabled` | on |
 
 ### Enrichment and lookup
 

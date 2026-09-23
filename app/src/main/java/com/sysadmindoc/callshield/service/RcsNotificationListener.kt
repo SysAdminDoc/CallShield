@@ -8,6 +8,7 @@ import android.os.Bundle
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import androidx.datastore.preferences.core.Preferences
+import com.sysadmindoc.callshield.data.MeetingModeRegistry
 import com.sysadmindoc.callshield.data.MessageCapabilityDetector
 import com.sysadmindoc.callshield.data.NotificationScreeningCategory
 import com.sysadmindoc.callshield.data.NotificationScreeningSource
@@ -119,6 +120,9 @@ class RcsNotificationListener : NotificationListenerService() {
 
     @Suppress("ReturnCount")
     override fun onNotificationPosted(sbn: StatusBarNotification) {
+        // Meeting mode reads exactly the ongoing notifications skipped below:
+        // a meeting or VoIP call holds one for as long as it lasts.
+        MeetingModeRegistry.onPosted(sbn.key, sbn.packageName, sbn.isOngoing)
         if (sbn.isOngoing) return // skip ongoing (media controls, etc.)
 
         // A3: Feed the push-alert registry for any allowlisted source app the
@@ -333,8 +337,15 @@ class RcsNotificationListener : NotificationListenerService() {
      * next reboot or a manual Settings → Notification Access toggle. Ask
      * the framework to rebind so protection self-heals.
      */
+    override fun onNotificationRemoved(sbn: StatusBarNotification) {
+        MeetingModeRegistry.onRemoved(sbn.key)
+    }
+
     override fun onListenerDisconnected() {
         super.onListenerDisconnected()
+        // No removal callbacks arrive while disconnected; a meeting remembered
+        // from before would keep silencing calls after it ended.
+        MeetingModeRegistry.clear()
         try {
             requestRebind(ComponentName(this, RcsNotificationListener::class.java))
         } catch (_: Exception) {
@@ -344,17 +355,26 @@ class RcsNotificationListener : NotificationListenerService() {
     }
 
     /**
-     * After a rebind the framework may deliver an empty active-notification
-     * set before the messaging app re-posts; nothing to seed, so this is a
-     * defensive no-op that documents the handled edge.
+     * After a (re)bind, meeting mode is rebuilt from what is on screen now: a
+     * meeting that started while the listener was down is still in progress.
+     * The push-alert registry needs no priming; it rebuilds from live posts.
      */
     override fun onListenerConnected() {
         super.onListenerConnected()
-        // getActiveNotifications() can legitimately be empty post-rebind.
-        // No priming needed: the registry rebuilds from live onNotificationPosted.
+        val active =
+            try {
+                activeNotifications.orEmpty()
+            } catch (_: RuntimeException) {
+                // Access revoked between the bind and this call.
+                emptyArray<StatusBarNotification>()
+            }
+        MeetingModeRegistry.replaceAll(
+            active.map { MeetingModeRegistry.ActiveNotification(it.key, it.packageName, it.isOngoing) },
+        )
     }
 
     override fun onDestroy() {
+        MeetingModeRegistry.clear()
         scope.cancel()
         super.onDestroy()
     }

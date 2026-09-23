@@ -137,6 +137,13 @@ object BlockReasoning {
                 bullets += "Your contacts and whitelisted numbers still ring through during quiet hours."
             }
 
+            reasonCode == BlockReasonCode.MEETING_MODE -> {
+                headline = "Silenced while you were in a meeting."
+                bullets += "Meeting mode sends calls from outside your contacts to voicemail while a meeting app you picked shows a call in progress."
+                if (description.isNotBlank()) bullets += "Meeting app: $description"
+                bullets += "The call wasn't marked as spam, and Android still lists it as missed."
+            }
+
             reasonCode == BlockReasonCode.FREQUENCY -> {
                 headline = "This number has called you too often."
                 bullets += "Matched at detection layer 10 (frequency auto-block — 3+ calls)."

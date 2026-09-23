@@ -45,6 +45,14 @@ class BlockReasoningTest {
     }
 
     @Test
+    fun `meeting mode explanation says the call was silenced, not judged`() {
+        val r = BlockReasoning.explain("meeting_mode", "Zoom", 100)
+        assertTrue(r.headline.contains("meeting"))
+        assertTrue(r.bullets.any { it.contains("Zoom") })
+        assertTrue(r.bullets.any { it.contains("wasn't marked as spam") })
+    }
+
+    @Test
     fun `heuristic explanation expands comma-separated reasons into bullets`() {
         val r = BlockReasoning.explain("heuristic", "high_spam_npa, voip_spam_range, neighbor_spoof", 78)
         assertTrue(r.headline.contains("78%"))

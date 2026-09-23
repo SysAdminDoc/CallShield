@@ -507,7 +507,7 @@ class BackupRestoreTest {
                 SpamRepository.KEY_REG_INDIA_1600_ALLOW to true,
                 SpamRepository.KEY_REG_SPAIN_400 to false,
             )
-        val settings = with(BackupRestore) { source.toBackupSettings() }
+        val settings = source.toBackupSettings()
         assertEquals(
             listOf("reg_brazil_0303_enabled", "reg_india_1600_allow_enabled"),
             settings.enabledRegulatoryPrefixes,
@@ -517,12 +517,41 @@ class BackupRestoreTest {
         val restoredSettings = checkNotNull((validation as BackupRestore.RestoreValidation.Valid).payload.settings)
         // A rule the device has on but the backup had off goes off, like every other setting.
         val target = mutablePreferencesOf(SpamRepository.KEY_REG_INDIA_140 to true)
-        with(BackupRestore) { restoredSettings.writeTo(target) }
+        restoredSettings.writeTo(target)
 
         assertEquals(true, target[SpamRepository.KEY_REG_BRAZIL_0303])
         assertEquals(true, target[SpamRepository.KEY_REG_INDIA_1600_ALLOW])
         assertEquals(false, target[SpamRepository.KEY_REG_SPAIN_400])
         assertEquals(false, target[SpamRepository.KEY_REG_INDIA_140])
+    }
+
+    @Test
+    fun `meeting mode and its apps survive a settings round trip`() {
+        val source =
+            mutablePreferencesOf(
+                SpamRepository.KEY_MEETING_MODE to true,
+                SpamRepository.KEY_MEETING_MODE_APPS to setOf("com.microsoft.teams", "us.zoom.videomeetings"),
+            )
+        val settings = source.toBackupSettings()
+
+        val validation = BackupRestore.validateBackupJson(BackupRestore.backupToJson(Backup(settings = settings)))
+        val restoredSettings = checkNotNull((validation as BackupRestore.RestoreValidation.Valid).payload.settings)
+        val target = mutablePreferencesOf()
+        restoredSettings.writeTo(target)
+
+        assertEquals(true, target[SpamRepository.KEY_MEETING_MODE])
+        assertEquals(setOf("com.microsoft.teams", "us.zoom.videomeetings"), target[SpamRepository.KEY_MEETING_MODE_APPS])
+    }
+
+    @Test
+    fun `a meeting app outside the catalog in a backup is dropped`() {
+        val validation =
+            BackupRestore.validateBackupForRestore(
+                Backup(settings = BackupSettings(meetingModeApps = listOf(" com.Slack ", "com.example.recorder"))),
+            )
+
+        val payload = (validation as BackupRestore.RestoreValidation.Valid).payload
+        assertEquals(listOf("com.Slack"), payload.settings?.meetingModeApps)
     }
 
     @Test

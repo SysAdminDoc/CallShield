@@ -47,6 +47,7 @@ class MatchReasonLabelsTest {
                 "heuristic",
                 "campaign_burst",
                 "ml_scorer",
+                "meeting_mode",
                 "sms_context",
                 "sms_burst",
                 "keyword",

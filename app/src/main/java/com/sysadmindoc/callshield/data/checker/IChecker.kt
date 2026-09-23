@@ -269,6 +269,12 @@ object CheckerPriority {
     const val CALLER_NAME_BLOCK = 2_250 // late CNAP-name block; every explicit and behavioral allow wins
     const val ML_SCORER = 2_000
 
+    // ── Last word for calls that would otherwise ring ────────────────
+    // Meeting mode silences (never rejects) a non-contact call during a
+    // meeting. Below every allow and every spam layer: spam keeps its real
+    // verdict and a trusted caller is never held back.
+    const val MEETING_MODE = 1_500
+
     // ── SMS-only extension chain ─────────────────────────────────────
     // These run in a separate pipeline (`smsExtensions`) after the shared
     // chain passes, so they never compete with the call ladder at runtime.
@@ -472,6 +478,7 @@ object SpamCheckers {
             add(CampaignBurstChecker(dependencies.campaignDetector))
             add(CallerNameBlockChecker())
             add(MlScorerChecker(dependencies.spamMLScorer))
+            add(MeetingModeChecker(appContext, dependencies.spamHeuristics))
         }.sortedByDescending { it.priority }
 
     /** SMS-specific extensions appended after the shared chain returns null. */

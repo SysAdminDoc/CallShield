@@ -206,6 +206,10 @@ class SpamRepository(
         val KEY_REG_BRAZIL_0303 = booleanPreferencesKey("reg_brazil_0303_enabled")
         val KEY_REG_INDIA_1600_ALLOW = booleanPreferencesKey("reg_india_1600_allow_enabled")
 
+        // Meeting mode: silence non-contacts while a picked meeting app holds an ongoing notification.
+        val KEY_MEETING_MODE = booleanPreferencesKey("meeting_mode_enabled")
+        val KEY_MEETING_MODE_APPS = stringSetPreferencesKey("meeting_mode_packages")
+
         // Feature 9: Time-based blocking
         val KEY_TIME_BLOCK = booleanPreferencesKey("time_block_enabled")
         val KEY_TIME_BLOCK_START = intPreferencesKey("time_block_start_hour") // 0-23
@@ -388,6 +392,8 @@ class SpamRepository(
     val outgoingRiskWarningEnabled: Flow<Boolean> = settingsRepository.outgoingRiskWarningEnabled
     val regionBlockEnabled: Flow<Boolean> = settingsRepository.regionBlockEnabled
     val enabledRegulatoryPrefixes: Flow<Set<RegulatoryPrefix>> = settingsRepository.enabledRegulatoryPrefixes
+    val meetingModeEnabled: Flow<Boolean> = settingsRepository.meetingModeEnabled
+    val meetingModeApps: Flow<Set<String>> = settingsRepository.meetingModeApps
     val allowedRegions: Flow<Set<String>> = settingsRepository.allowedRegions
     val cnapTrustPatterns: Flow<Set<String>> = settingsRepository.cnapTrustPatterns
     val cnapBlockPatterns: Flow<Set<String>> = settingsRepository.cnapBlockPatterns
@@ -572,6 +578,13 @@ class SpamRepository(
         prefix: RegulatoryPrefix,
         enabled: Boolean,
     ) = settingsRepository.setRegulatoryPrefix(prefix, enabled)
+
+    suspend fun setMeetingMode(enabled: Boolean) = settingsRepository.setMeetingMode(enabled)
+
+    suspend fun setMeetingModeApp(
+        packageName: String,
+        selected: Boolean,
+    ) = settingsRepository.setMeetingModeApp(packageName, selected)
 
     suspend fun setAllowedRegions(regions: Set<String>) = settingsRepository.setAllowedRegions(regions)
 

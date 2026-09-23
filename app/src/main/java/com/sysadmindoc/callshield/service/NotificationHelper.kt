@@ -310,6 +310,9 @@ object NotificationHelper {
         isCall: Boolean,
         smsBody: String? = null,
     ) {
+        // A meeting-mode silence says nothing against the caller, so no "blocked"
+        // alert with Block and Report. Android's own missed-call notice covers it.
+        if (BlockReasonCode.fromMatchSource(reason) == BlockReasonCode.MEETING_MODE) return
         val now = System.currentTimeMillis()
         val nid = stableId(number, if (isCall) 1 else 2)
         val smsIndicators = reportableSmsIndicators(isCall, smsBody)

@@ -437,6 +437,7 @@
     <string name="lookup_checker_heuristic">Behavior analysis</string>
     <string name="lookup_checker_campaign_burst">Spam campaign</string>
     <string name="lookup_checker_ml_scorer">On-device spam model</string>
+    <string name="lookup_checker_meeting_mode">Meeting mode</string>
     <string name="lookup_checker_sms_context">Message trust</string>
     <string name="lookup_checker_sms_burst">Message burst</string>
     <string name="lookup_checker_keyword">Keyword rules</string>
@@ -664,6 +665,21 @@
     <string name="settings_quiet_hours">Quiet hours</string>
     <string name="settings_quiet_hours_toggle">Block unknowns during quiet hours</string>
     <string name="settings_quiet_hours_desc">Block all non-contact calls during set hours</string>
+    <string name="settings_meeting_mode">Meeting mode</string>
+    <string name="settings_meeting_mode_toggle">Silence unknown callers in meetings</string>
+    <string name="settings_meeting_mode_desc">While a meeting app you pick shows a call in progress, calls from outside your contacts go quietly to voicemail.</string>
+    <string name="settings_meeting_mode_apps">Choose meeting apps</string>
+    <string name="settings_meeting_mode_apps_none">Pick at least one app. Meeting mode does nothing until you do.</string>
+    <plurals name="settings_meeting_mode_apps_count">
+        <item quantity="one">%1$d app picked</item>
+        <item quantity="other">%1$d apps picked</item>
+    </plurals>
+    <string name="settings_meeting_mode_needs_access">Meeting mode needs notification access to see when a meeting starts.</string>
+    <string name="meeting_apps_title">Meeting apps</string>
+    <string name="meeting_apps_body">Pick the apps you meet or take calls in. CallShield only checks whether one is showing a call in progress. It never reads what that notification says.</string>
+    <string name="meeting_apps_in_call">In a call now</string>
+    <string name="meeting_apps_not_installed">Not installed</string>
+    <string name="meeting_apps_done">Done</string>
     <string name="settings_time_start">Start</string>
     <string name="settings_time_end">End</string>
     <string name="settings_quiet_hours_all_day_warning">Start and end match, so quiet-hours blocking runs all day.</string>
@@ -1561,6 +1577,7 @@
     <string name="accessibility_reason_frequency">This item was blocked because the caller tried too often.</string>
     <string name="accessibility_reason_suspicious_patterns">This item was blocked because it matched several suspicious calling patterns.</string>
     <string name="accessibility_reason_on_device_analysis">This item was blocked because on-device protection found it likely to be spam.</string>
+    <string name="accessibility_reason_meeting_mode">This call was silenced because you were in a meeting.</string>
     <string name="accessibility_reason_recent_reports">This item was blocked because recent reports identified the number as spam.</string>
     <string name="accessibility_reason_spam_website">This item was blocked because the message contained a website linked to spam.</string>
     <string name="accessibility_reason_push_alert">This item was blocked because a trusted alert identified it as spam.</string>

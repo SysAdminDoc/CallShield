@@ -83,6 +83,7 @@ fun pipelineCheckerLabelRes(checkerName: String): Int =
         "heuristic" -> R.string.lookup_checker_heuristic
         "campaign_burst" -> R.string.lookup_checker_campaign_burst
         "ml_scorer" -> R.string.lookup_checker_ml_scorer
+        "meeting_mode" -> R.string.lookup_checker_meeting_mode
         "sms_context" -> R.string.lookup_checker_sms_context
         "sms_burst" -> R.string.lookup_checker_sms_burst
         "keyword" -> R.string.lookup_checker_keyword
@@ -160,6 +161,7 @@ fun blockReasonAccessibilityLabelRes(reasonCode: BlockReasonCode): Int =
         BlockReasonCode.FREQUENCY -> R.string.accessibility_reason_frequency
         BlockReasonCode.HEURISTIC -> R.string.accessibility_reason_suspicious_patterns
         BlockReasonCode.ML_SCORER -> R.string.accessibility_reason_on_device_analysis
+        BlockReasonCode.MEETING_MODE -> R.string.accessibility_reason_meeting_mode
         BlockReasonCode.HOT_LIST -> R.string.accessibility_reason_recent_reports
         BlockReasonCode.SPAM_DOMAIN -> R.string.accessibility_reason_spam_website
         BlockReasonCode.PUSH_ALERT -> R.string.accessibility_reason_push_alert
