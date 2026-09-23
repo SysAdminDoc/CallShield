@@ -205,36 +205,54 @@ class MainViewModel
                     repo.getBlockedCountBetween(windows.lastWeekStart, windows.lastWeekEnd)
                 }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
-        fun spamNumbersPager(
+        // Each paged list keeps one pager that follows its filter (see pagedWith).
+        private val _databaseFilter = MutableStateFlow(DatabaseTypeFilter.ALL to DatabaseSourceFilter.ALL)
+
+        /** The Database tab's type and source chips. */
+        val databaseFilter: StateFlow<Pair<DatabaseTypeFilter, DatabaseSourceFilter>> = _databaseFilter
+
+        fun setDatabaseFilter(
             type: DatabaseTypeFilter,
             source: DatabaseSourceFilter,
-        ): Flow<PagingData<SpamNumber>> {
-            // The Trending chip also matches the current hot list, so it pages
-            // again when a new one is applied; other chips don't need it.
-            val trending = if (source == DatabaseSourceFilter.TRENDING) repo.trendingNumbers.distinctUntilChanged() else flowOf(emptySet())
-            return trending
-                .flatMapLatest { numbers ->
+        ) {
+            _databaseFilter.value = type to source
+        }
+
+        val spamNumbers: Flow<PagingData<SpamNumber>> =
+            _databaseFilter.pagedWith(viewModelScope) { (type, source) ->
+                // The Trending chip also matches the current hot list, so it pages
+                // again when a new one is applied; other chips don't need it.
+                val trending = if (source == DatabaseSourceFilter.TRENDING) repo.trendingNumbers.distinctUntilChanged() else flowOf(emptySet())
+                trending.flatMapLatest { numbers ->
                     Pager(PagingConfig(pageSize = DATABASE_PAGE_SIZE, initialLoadSize = DATABASE_PAGE_SIZE * 2, enablePlaceholders = false)) {
                         repo.pageSpamNumbers(type, source, numbers)
                     }.flow
-                }.cachedIn(viewModelScope)
+                }
+            }
+
+        // The block log's media and reason filter; both of its lists follow it.
+        private val logFilter = MutableStateFlow<Pair<Int?, String?>>(null to null)
+
+        fun setLogFilter(
+            isCall: Int?,
+            reasonCode: String?,
+        ) {
+            logFilter.value = isCall to reasonCode
         }
 
-        fun blockedCallsPager(
-            isCall: Int?,
-            reasonCode: String?,
-        ): Flow<PagingData<BlockedCall>> =
-            Pager(PagingConfig(pageSize = LOG_PAGE_SIZE, initialLoadSize = LOG_PAGE_SIZE * 2, enablePlaceholders = false)) {
-                repo.pageBlockedCalls(isCall, reasonCode)
-            }.flow.cachedIn(viewModelScope)
+        val blockedCalls: Flow<PagingData<BlockedCall>> =
+            logFilter.pagedWith(viewModelScope) { (isCall, reasonCode) ->
+                Pager(PagingConfig(pageSize = LOG_PAGE_SIZE, initialLoadSize = LOG_PAGE_SIZE * 2, enablePlaceholders = false)) {
+                    repo.pageBlockedCalls(isCall, reasonCode)
+                }.flow
+            }
 
-        fun groupedBlockedCallsPager(
-            isCall: Int?,
-            reasonCode: String?,
-        ): Flow<PagingData<BlockedCallGroup>> =
-            Pager(PagingConfig(pageSize = LOG_PAGE_SIZE, initialLoadSize = LOG_PAGE_SIZE * 2, enablePlaceholders = false)) {
-                repo.pageGroupedBlockedCalls(isCall, reasonCode)
-            }.flow.cachedIn(viewModelScope)
+        val groupedBlockedCalls: Flow<PagingData<BlockedCallGroup>> =
+            logFilter.pagedWith(viewModelScope) { (isCall, reasonCode) ->
+                Pager(PagingConfig(pageSize = LOG_PAGE_SIZE, initialLoadSize = LOG_PAGE_SIZE * 2, enablePlaceholders = false)) {
+                    repo.pageGroupedBlockedCalls(isCall, reasonCode)
+                }.flow
+            }
 
         fun observeLogDayCounts(since: Long): Flow<List<LogAggregate>> = repo.observeLogDayCounts(since)
 

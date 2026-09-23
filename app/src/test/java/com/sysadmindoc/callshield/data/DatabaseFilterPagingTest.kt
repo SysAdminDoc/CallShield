@@ -42,6 +42,19 @@ class DatabaseFilterPagingTest {
             .map { it.number }
 
     @Test
+    fun `a hot list over the query limit pages the same whatever order it arrives in`() =
+        runBlocking {
+            fixture.dao.insertNumbers(listOf(SpamNumber(number = "+12025550100", type = "robocall", reports = 4, source = "github")))
+            // 1,000 numbers, more than one query takes; the one in the database first or last.
+            val filler = (0 until 999).map { "+1999555" + it.toString().padStart(4, '0') }
+            val forward = LinkedHashSet(listOf("+12025550100") + filler)
+            val backward = LinkedHashSet(forward.reversed())
+
+            assertEquals(listOf("+12025550100"), numbers(DatabaseTypeFilter.ALL, DatabaseSourceFilter.TRENDING, forward))
+            assertEquals(listOf("+12025550100"), numbers(DatabaseTypeFilter.ALL, DatabaseSourceFilter.TRENDING, backward))
+        }
+
+    @Test
     fun `a subscribed list's capitalized types land under their own chips`() =
         runBlocking {
             // External lists store the type as written.

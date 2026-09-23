@@ -14,6 +14,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -87,14 +88,15 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
             else -> null
         }
     val reasonFilter = selectedReasonCode?.wireValue
-    val pagedCalls =
-        remember(filterMode, selectedReasonCodeWire) {
-            viewModel.blockedCallsPager(mediaFilter, reasonFilter)
-        }.collectAsLazyPagingItems()
-    val groupedCalls =
-        remember(filterMode, selectedReasonCodeWire) {
-            viewModel.groupedBlockedCallsPager(mediaFilter, reasonFilter)
-        }.collectAsLazyPagingItems()
+    // One pager per list in the view model follows these chips. The tab's
+    // saved state and the view model live alike, so they only differ after
+    // process death, when this sets the filter before the lists first load.
+    SideEffect { viewModel.setLogFilter(mediaFilter, reasonFilter) }
+    val pagedCalls = viewModel.blockedCalls.collectAsLazyPagingItems()
+    val groupedCalls = viewModel.groupedBlockedCalls.collectAsLazyPagingItems()
+    // A new filter starts at the top of its list.
+    val listState = rememberSaveable(filterMode, selectedReasonCodeWire, saver = LazyListState.Saver) { LazyListState() }
+    val groupedListState = rememberSaveable(filterMode, selectedReasonCodeWire, saver = LazyListState.Saver) { LazyListState() }
     val activeItemCount = if (grouped) groupedCalls.itemCount else pagedCalls.itemCount
     val activeRefreshState = if (grouped) groupedCalls.loadState.refresh else pagedCalls.loadState.refresh
 
@@ -310,6 +312,7 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
             } else if (grouped) {
                 // Grouped view
                 LazyColumn(
+                    state = groupedListState,
                     contentPadding = PaddingValues(horizontal = 20.dp, vertical = 6.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
@@ -330,6 +333,7 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
             } else {
                 // Swipe-to-dismiss list
                 LazyColumn(
+                    state = listState,
                     contentPadding = PaddingValues(horizontal = 20.dp, vertical = 6.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {

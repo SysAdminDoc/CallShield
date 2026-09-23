@@ -196,6 +196,13 @@ All notable changes to CallShield will be documented in this file.
 
 ### Interface
 
+- Switching filters in the Database tab or the block log no longer leaves
+  the old list running in the background. Every chip you tried kept its own
+  copy until the app closed, and each one ran its query again whenever the
+  database changed, which happens all through a sync. Each list now keeps
+  one. The
+  Database tab also keeps its chips when you switch to another rules tab and
+  back, and a new filter starts at the top of its list.
 - Undo after swiping a number in the block log to block it now takes back
   that block and nothing else. It used to remove every block of the number,
   including one you'd saved earlier under a different spelling (+1 649 555

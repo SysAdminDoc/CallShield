@@ -570,7 +570,9 @@ class BlocklistRepository(
         type: String,
         source: String,
         trending: Collection<String> = emptyList(),
-    ): PagingSource<Int, SpamNumber> = dao.pageSpamNumbers(type, source, trending.take(MAX_TRENDING_FILTER))
+    ): PagingSource<Int, SpamNumber> =
+        // Sorted first, so a list over the limit keeps the same numbers whatever order its set iterates in.
+        dao.pageSpamNumbers(type, source, trending.sorted().take(MAX_TRENDING_FILTER))
 
     fun getUserBlockedNumbers(): Flow<List<SpamNumber>> =
         dao.getUserBlockedNumbers().map { rows ->

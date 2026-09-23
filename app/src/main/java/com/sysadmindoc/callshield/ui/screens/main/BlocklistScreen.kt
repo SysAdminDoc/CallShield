@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -1214,27 +1215,27 @@ fun WhitelistItem(
 
 @Composable
 private fun DatabaseTabContent(viewModel: MainViewModel) {
-    var typeFilter by rememberSaveable { mutableStateOf(DatabaseTypeFilter.ALL) }
-    var sourceFilter by rememberSaveable { mutableStateOf(DatabaseSourceFilter.ALL) }
-    val numbers =
-        remember(typeFilter, sourceFilter) {
-            viewModel.spamNumbersPager(typeFilter, sourceFilter)
-        }.collectAsLazyPagingItems()
+    // The chips live in the view model with the one pager that follows them.
+    val filter by viewModel.databaseFilter.collectAsStateWithLifecycle()
+    val (typeFilter, sourceFilter) = filter
+    val numbers = viewModel.spamNumbers.collectAsLazyPagingItems()
     val filtered = typeFilter != DatabaseTypeFilter.ALL || sourceFilter != DatabaseSourceFilter.ALL
     val refreshState = numbers.loadState.refresh
+    // A new filter starts at the top of its list.
+    val listState = rememberSaveable(filter, saver = LazyListState.Saver) { LazyListState() }
 
     Column(modifier = Modifier.fillMaxSize()) {
         DatabaseFilterRow(
             options = DatabaseTypeFilter.entries,
             selected = typeFilter,
             label = { databaseTypeLabel(it) },
-            onSelect = { typeFilter = it },
+            onSelect = { viewModel.setDatabaseFilter(it, sourceFilter) },
         )
         DatabaseFilterRow(
             options = DatabaseSourceFilter.entries,
             selected = sourceFilter,
             label = { databaseSourceLabel(it) },
-            onSelect = { sourceFilter = it },
+            onSelect = { viewModel.setDatabaseFilter(typeFilter, it) },
         )
         Box(modifier = Modifier.weight(1f)) {
             if (refreshState is LoadState.Loading && numbers.itemCount == 0) {
@@ -1265,6 +1266,7 @@ private fun DatabaseTabContent(viewModel: MainViewModel) {
                 )
             } else {
                 LazyColumn(
+                    state = listState,
                     contentPadding = PaddingValues(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 32.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
