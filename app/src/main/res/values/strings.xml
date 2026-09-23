@@ -1646,7 +1646,7 @@
     <string name="region_rules_block_outside">Block calls outside allowed regions</string>
     <string name="region_rules_block_outside_desc">Only the regions and countries you list can ring. Calls from anywhere else are blocked.</string>
     <string name="region_rules_allowed_regions">Allowed region codes</string>
-    <string name="region_rules_regions_hint">Separate with commas. Use two letters for a US state or Canadian province (NY, ON) and TF for toll-free. Use + and the calling code for a country, like +39 for Italy or +1809 for the Dominican Republic.</string>
+    <string name="region_rules_regions_hint">Separate with commas. Use two letters for a US state or Canadian province (NY, ON) and TF for toll-free. Use + and the calling code for a country, like +39 for Italy. A Caribbean country that shares +1 goes in by each of its area codes, like +1809, +1829 and +1849 for the Dominican Republic.</string>
     <string name="region_rules_regions_required">Add at least one valid region or country code.</string>
     <plurals name="region_rules_regions_count">
         <item quantity="one">%1$d valid code</item>

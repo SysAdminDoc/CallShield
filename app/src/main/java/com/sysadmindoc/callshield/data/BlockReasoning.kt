@@ -121,8 +121,8 @@ object BlockReasoning {
 
             reasonCode == BlockReasonCode.REGULATORY_ALLOW -> {
                 headline = "This number is in a series the regulator protects."
-                bullets += "Banks, insurers and government offices call from it, so it rings through past the spam database and the heuristics."
-                bullets += "Your own block rules still win."
+                bullets += "Banks, insurers and government offices call from it, so it rings through past the spam database, the heuristics, quiet hours and region rules."
+                bullets += "Your blocklist, wildcard and range rules still win, and so do numbers you blocked in Android."
             }
 
             reasonCode == BlockReasonCode.WILDCARD -> {

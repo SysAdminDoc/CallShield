@@ -35,6 +35,7 @@ object CategoryCallPolicy {
             "wildcard",
             "hash_wildcard",
             "prefix",
+            "regulatory_prefix",
         )
 
     val configurableCategories: List<CallCategory> = CallCategory.entries.filterNot { it == CallCategory.Unknown }

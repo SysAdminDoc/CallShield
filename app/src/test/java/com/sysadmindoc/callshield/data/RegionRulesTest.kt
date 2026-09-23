@@ -166,7 +166,8 @@ class RegionRulesTest {
     }
 
     @Test
-    fun `a NANP area code entry allows one Caribbean country`() {
+    fun `a NANP area code entry allows only that area code`() {
+        // The Dominican Republic also uses 829 and 849; each area code is its own entry.
         val allowed = setOf("+1809")
         assertFalse(RegionRules.isOutsideAllowedRegions("+18095550123", allowed))
         assertFalse(RegionRules.isOutsideAllowedRegions("8095550123", allowed))
@@ -175,9 +176,19 @@ class RegionRulesTest {
     }
 
     @Test
-    fun `a spaced plus one area code stays one area code`() {
+    fun `however an area code is typed after +1 it stays one area code`() {
         assertEquals(linkedSetOf("+1809", "NY"), RegionRules.parseRegionCodes("+1 809, NY"))
-        assertEquals(linkedSetOf("+1", "NY"), RegionRules.parseRegionCodes("+1, NY"))
+        assertEquals(linkedSetOf("+1809", "NY"), RegionRules.parseRegionCodes("+1 (809), NY"))
+        assertEquals(linkedSetOf("+1809", "NY"), RegionRules.parseRegionCodes("+1-809, NY"))
+        assertEquals(linkedSetOf("+1809", "NY"), RegionRules.parseRegionCodes("+1 (809) 555-0123, NY"))
+    }
+
+    @Test
+    fun `nothing typed can leave a bare +1 that allows all of North America`() {
+        assertEquals(linkedSetOf("NY"), RegionRules.parseRegionCodes("+1, NY"))
+        assertEquals(linkedSetOf("NY"), RegionRules.parseRegionCodes("+1 8095550123, NY"))
+        assertTrue(RegionRules.isOutsideAllowedRegions("+14165550123", RegionRules.parseRegionCodes("+1 8095550123, NY")))
+        assertNull(RegionRules.normalizeDialingCode("+1"))
     }
 
     @Test

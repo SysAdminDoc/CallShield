@@ -99,8 +99,9 @@ All notable changes to CallShield will be documented in this file.
 - Region rules can allow countries outside North America. Add a country by
   its calling code, like +39 for Italy or +57 for Colombia, next to the
   two-letter state and province codes. A Caribbean country that shares +1
-  goes in by area code, so the Dominican Republic is +1809. Two-letter codes
-  always mean the state or province, and CO is Colorado, never Colombia.
+  goes in by each of its area codes, so the Dominican Republic is +1809,
+  +1829 and +1849. Two-letter codes always mean the state or province, and CO
+  is Colorado, never Colombia.
 - Region rules no longer mistake a ten-digit number from outside North America
   for a North American one. A Penang landline (+60 4) counted as Vancouver's
   604 area code, so allowing British Columbia let it ring.
@@ -109,8 +110,9 @@ All notable changes to CallShield will be documented in this file.
   commercial calls from 17 October 2026), India's 140 promotional series and
   Brazil's 0303 telemarketing code. It can also let India's 1600 series, which
   belongs to banks, insurers and government offices, ring through past the
-  spam database. Each one is off until you turn it on, and each works whether
-  your phone shows the number with its country code or without.
+  spam database. Each one is off until you turn it on. Each matches the
+  number with its country code, and on a phone from that country it also
+  matches the number written without one.
 - Meeting mode keeps unknown callers from ringing through your meetings. Pick
   the apps you meet or take calls in (Zoom, Teams, Google Meet, Webex, Slack,
   WhatsApp and a few more) and turn it on in Settings. While one of them shows

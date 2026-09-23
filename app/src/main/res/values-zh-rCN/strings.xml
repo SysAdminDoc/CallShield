@@ -1101,7 +1101,7 @@
     <string name="region_rules_block_outside">拦截允许地区之外的来电</string>
     <string name="region_rules_block_outside_desc">只有你列出的地区和国家的来电会响铃，其他来电都会被拦截。</string>
     <string name="region_rules_allowed_regions">允许的地区代码</string>
-    <string name="region_rules_regions_hint">用逗号分隔。美国州或加拿大省用两个字母（NY、ON），免费电话用 TF。国家用 + 加国际区号，例如意大利 +39，多米尼加共和国 +1809。</string>
+    <string name="region_rules_regions_hint">用逗号分隔。美国州或加拿大省用两个字母（NY、ON），免费电话用 TF。国家用 + 加国际区号，例如意大利 +39。与北美共用 +1 的加勒比国家需按区号逐个添加，例如多米尼加共和国的 +1809、+1829 和 +1849。</string>
     <string name="region_rules_regions_required">请至少添加一个有效的地区或国家代码。</string>
     <string name="cnap_trust_title">信任呈现的主叫姓名</string>
     <string name="cnap_trust_desc">当运营商提供主叫姓名时，匹配的来电可绕过地区与统计拦截。</string>

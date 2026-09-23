@@ -99,7 +99,7 @@ Every user-facing toggle with its DataStore key and default value.
 | Caller-name trust patterns | `cnap_trust_patterns` | empty |
 | Caller-name block patterns | `cnap_block_patterns` | empty |
 
-Allowed regions take two-letter US state and Canadian province codes (`NY`, `ON`), `TF` for toll-free, and `+` with a calling code for a country (`+39`, or `+1809` for a Caribbean country that shares +1).
+Allowed regions take two-letter US state and Canadian province codes (`NY`, `ON`), `TF` for toll-free, and `+` with a calling code for a country (`+39`). A Caribbean country that shares +1 goes in by each of its area codes, so the Dominican Republic is `+1809`, `+1829` and `+1849`. A bare `+1` isn't accepted.
 
 ### Telemarketing ranges
 

@@ -112,12 +112,42 @@ class RegulatoryCheckerTest {
                     SpamRepository.KEY_REG_INDIA_140 to true,
                     SpamRepository.KEY_REG_BRAZIL_0303 to true,
                 )
-            assertNotNull(RegulatoryPrefixChecker().check(ctx("400123456", allOn)))
-            assertNotNull(RegulatoryPrefixChecker().check(ctx("1401234567", allOn)))
-            assertNotNull(RegulatoryPrefixChecker().check(ctx("03031234567", allOn)))
+            assertNotNull(RegulatoryPrefixChecker(homeRegion = { "ES" }).check(ctx("400123456", allOn)))
+            assertNotNull(RegulatoryPrefixChecker(homeRegion = { "IN" }).check(ctx("1401234567", allOn)))
+            assertNotNull(RegulatoryPrefixChecker(homeRegion = { "BR" }).check(ctx("03031234567", allOn)))
             // Same leading digits at another length are some other number.
-            assertNull(RegulatoryPrefixChecker().check(ctx("4001234567", allOn)))
-            assertNull(RegulatoryPrefixChecker().check(ctx("030312345678", allOn)))
+            assertNull(RegulatoryPrefixChecker(homeRegion = { "ES" }).check(ctx("4001234567", allOn)))
+            assertNull(RegulatoryPrefixChecker(homeRegion = { "BR" }).check(ctx("030312345678", allOn)))
+        }
+
+    @Test
+    fun `a national form only means that country on a phone from that country`() =
+        runBlocking {
+            val allOn = preferencesOf(*RegulatoryPrefix.entries.map { it.key to true }.toTypedArray())
+            val usPhone = { _: Context -> "US" }
+            // A malformed caller ID shaped like an Indian bank's must not ring through on a US phone.
+            assertNull(RegulatoryAllowChecker(homeRegion = usPhone).check(ctx("1600123456", allOn)))
+            assertNull(RegulatoryPrefixChecker(homeRegion = usPhone).check(ctx("400123456", allOn)))
+            assertNull(RegulatoryPrefixChecker(homeRegion = { null }).check(ctx("03031234567", allOn)))
+            // E.164 needs no home region.
+            assertNotNull(RegulatoryAllowChecker(homeRegion = usPhone).check(ctx("+911600123456", allOn)))
+        }
+
+    @Test
+    fun `nothing runs until a range is turned on`() =
+        runBlocking {
+            val none = emptyPreferences()
+            assertTrue(!RegulatoryPrefixChecker().isEnabled(ctx("+34400123456", none)))
+            assertTrue(!RegulatoryAllowChecker().isEnabled(ctx("+911600123456", none)))
+            assertTrue(
+                RegulatoryPrefixChecker().isEnabled(ctx("+34400123456", preferencesOf(SpamRepository.KEY_REG_SPAIN_400 to true))),
+            )
+            // The allow's switch doesn't enable the block checker, and the reverse.
+            assertTrue(
+                !RegulatoryPrefixChecker().isEnabled(
+                    ctx("+34400123456", preferencesOf(SpamRepository.KEY_REG_INDIA_1600_ALLOW to true)),
+                ),
+            )
         }
 
     @Test
@@ -147,7 +177,7 @@ class RegulatoryCheckerTest {
             assertEquals(BlockReasonCode.REGULATORY_ALLOW, result.reasonCode)
             assertTrue(!result.shouldBlock)
             assertNotNull(
-                RegulatoryAllowChecker().check(
+                RegulatoryAllowChecker(homeRegion = { "IN" }).check(
                     ctx("1600123456", preferencesOf(SpamRepository.KEY_REG_INDIA_1600_ALLOW to true)),
                 ),
             )
@@ -186,6 +216,16 @@ class RegulatoryCheckerTest {
         val allow = RegulatoryAllowChecker()
         assertTrue(allow.priority > CheckerPriority.GITHUB_DATABASE)
         assertTrue(allow.priority > CheckerPriority.HEURISTIC)
+    }
+
+    @Test
+    fun `the protected series outranks quiet hours and region rules but not explicit blocks`() {
+        assertTrue(CheckerPriority.REGULATORY_ALLOW > CheckerPriority.TIME_BLOCK)
+        assertTrue(CheckerPriority.REGULATORY_ALLOW > CheckerPriority.REGION_BLOCK)
+        assertTrue(CheckerPriority.REGULATORY_ALLOW < CheckerPriority.USER_BLOCKLIST)
+        assertTrue(CheckerPriority.REGULATORY_ALLOW < CheckerPriority.SYSTEM_BLOCK_LIST)
+        assertTrue(CheckerPriority.REGULATORY_ALLOW < CheckerPriority.WILDCARD_RULE)
+        assertTrue(CheckerPriority.REGULATORY_ALLOW < CheckerPriority.HASH_WILDCARD_RULE)
     }
 
     @Test

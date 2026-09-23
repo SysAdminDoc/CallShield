@@ -9,6 +9,7 @@ import com.sysadmindoc.callshield.data.CampaignDetector
 import com.sysadmindoc.callshield.data.ContactGroupCatalog
 import com.sysadmindoc.callshield.data.EmergencyNumberFloor
 import com.sysadmindoc.callshield.data.HashWildcardMatcher
+import com.sysadmindoc.callshield.data.PhoneIdentityCanonicalizer
 import com.sysadmindoc.callshield.data.RegionRules
 import com.sysadmindoc.callshield.data.RegulatoryPrefix
 import com.sysadmindoc.callshield.data.SmsContentAnalyzer
@@ -450,24 +451,35 @@ internal class PrefixChecker(
     }
 }
 
+/** The phone's home region, which decides what a number in national form means. */
+private val phoneHomeRegion: (Context) -> String? = { PhoneIdentityCanonicalizer.cachedFromContext(it).homeRegionIso }
+
 /** Opt-in blocks for sales-call ranges a regulator set aside ([RegulatoryPrefix]). */
-internal class RegulatoryPrefixChecker : IChecker {
+internal class RegulatoryPrefixChecker(
+    private val homeRegion: (Context) -> String? = phoneHomeRegion,
+) : IChecker {
     override val priority = CheckerPriority.REGULATORY_PREFIX
     override val name = "regulatory_prefix"
 
+    override suspend fun isEnabled(ctx: CheckContext): Boolean = RegulatoryPrefix.entries.any { !it.allows && ctx.prefs[it.key] == true }
+
     override suspend fun check(ctx: CheckContext): BlockResult? =
-        RegulatoryPrefix.enabledMatch(ctx.prefs, ctx.number, allows = false)?.let { range ->
+        RegulatoryPrefix.enabledMatch(ctx.prefs, ctx.number, allows = false) { homeRegion(ctx.appContext) }?.let { range ->
             BlockResult.block(name, "telemarketer", range.description)
         }
 }
 
 /** Opt-in allow for a protected series ([RegulatoryPrefix]), above the downloaded data and statistics. */
-internal class RegulatoryAllowChecker : IChecker {
+internal class RegulatoryAllowChecker(
+    private val homeRegion: (Context) -> String? = phoneHomeRegion,
+) : IChecker {
     override val priority = CheckerPriority.REGULATORY_ALLOW
     override val name = "regulatory_allow"
 
+    override suspend fun isEnabled(ctx: CheckContext): Boolean = RegulatoryPrefix.entries.any { it.allows && ctx.prefs[it.key] == true }
+
     override suspend fun check(ctx: CheckContext): BlockResult? =
-        RegulatoryPrefix.enabledMatch(ctx.prefs, ctx.number, allows = true)?.let { series ->
+        RegulatoryPrefix.enabledMatch(ctx.prefs, ctx.number, allows = true) { homeRegion(ctx.appContext) }?.let { series ->
             BlockResult.allow(name, description = series.description)
         }
 }

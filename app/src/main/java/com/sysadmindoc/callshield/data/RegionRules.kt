@@ -83,8 +83,8 @@ object RegionRules {
             "TF",
         )
 
-    // "+1 809" names one area code. Split on the space, it would allow all of +1.
-    fun parseRegionCodes(raw: String): Set<String> = normalizeRegionCodes(raw.replace(SPACED_NANP_AREA_CODE, "+1").split(',', ';', '\n', '\t', ' '))
+    // "+1 809", "+1 (809)" and "+1-809" name one area code; join them before splitting.
+    fun parseRegionCodes(raw: String): Set<String> = normalizeRegionCodes(raw.replace(SPACED_NANP_AREA_CODE, "+1$1").split(',', ';', '\n', '\t', ' '))
 
     fun normalizeRegionCodes(regions: Iterable<String>): Set<String> =
         regions
@@ -99,13 +99,16 @@ object RegionRules {
      * A country is allowed by its calling code (`+57`), never by a two-letter
      * ISO code: CO, IN, PA, SK and many more ISO codes are also US state or
      * Canadian province codes, and a two-letter entry keeps meaning the state
-     * or province. An area code (`+1809`) names one of the Caribbean countries
-     * that share +1. Returns [code] when it is one of those forms.
+     * or province. A Caribbean country that shares +1 is listed by its area
+     * codes (`+1809`, `+1829`, `+1849`). A bare `+1` is refused: it would
+     * allow all of North America, and it is what's left when "+1 (809)" or a
+     * pasted number splits apart. Returns [code] when it is one of the
+     * accepted forms.
      */
     fun normalizeDialingCode(code: String): String? {
         if (!code.startsWith("+")) return null
         val digits = code.substring(1)
-        if (digits.isEmpty() || digits[0] == '0' || !digits.all { it.isAsciiDigit() }) return null
+        if (digits.isEmpty() || digits == "1" || digits[0] == '0' || !digits.all { it.isAsciiDigit() }) return null
         val isNanpAreaCode = digits.length == NANP_AREA_CODE_ENTRY_LENGTH && digits[0] == '1' && digits[1] in '2'..'9'
         return code.takeIf { isNanpAreaCode || countryCallingCodeOf(digits) == digits }
     }
@@ -206,5 +209,5 @@ object RegionRules {
     }
 
     private val WHITESPACE = Regex("\\s+")
-    private val SPACED_NANP_AREA_CODE = Regex("""\+1[ \t]+(?=[2-9][0-9]{2}(?![0-9]))""")
+    private val SPACED_NANP_AREA_CODE = Regex("""\+1[ \t().-]*([2-9][0-9]{2})\)?""")
 }

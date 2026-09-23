@@ -38,10 +38,13 @@ class BlockReasoningTest {
     }
 
     @Test
-    fun `regulatory allow explanation says the user's own blocks still win`() {
+    fun `regulatory allow explanation names what it overrides and what still wins`() {
+        // REGULATORY_ALLOW (5250) sits above quiet hours and region rules but
+        // below the blocklist, wildcard, range and Android block-list layers.
         val r = BlockReasoning.explain("regulatory_allow", "", 100)
         assertTrue(r.headline.contains("regulator protects"))
-        assertTrue(r.bullets.any { it.contains("own block rules") })
+        assertTrue(r.bullets.any { it.contains("quiet hours and region rules") })
+        assertTrue(r.bullets.any { it.contains("blocklist, wildcard and range rules still win") })
     }
 
     @Test
