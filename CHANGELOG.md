@@ -369,11 +369,12 @@ The rest of this section takes effect when the report Worker is next deployed.
   the result doesn't match what the app expects or a table loses rows. The
   migration test that would have caught the August database lockout ran only
   on an emulator, and nothing ran it.
-- The on-device sync tests keep their settings to themselves. They used the
-  app's own saved settings, so once the app had loaded its built-in database
-  on the test phone, every older test feed was refused as a rollback and the
-  tests failed. The dashboard tests now check the labels and buttons from the
-  August redesign.
+- The on-device tests keep their settings to themselves. They used the app's
+  own saved settings, so once the app had loaded its built-in database on the
+  test phone, every older test feed was refused as a rollback and the sync
+  tests failed, and the backup and screening tests wrote test settings into
+  the installed app. The dashboard tests now check the labels and buttons from
+  the August redesign.
 - The on-device accessibility checks draw each screen in the app's theme on
   its own background. They measured colors against the bare white test window
   instead, which failed 20 screens for colors nobody sees and hid the real

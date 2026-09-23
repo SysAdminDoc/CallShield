@@ -45,6 +45,7 @@ class BackupRestoreIntegrationTest {
     private lateinit var db: AppDatabase
     private lateinit var dao: SpamDao
     private lateinit var repo: SpamRepository
+    private lateinit var stores: TestSettingsStores
 
     @Before
     fun setUp() {
@@ -52,12 +53,14 @@ class BackupRestoreIntegrationTest {
         val builder = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java)
         db = builder.allowMainThreadQueries().build()
         dao = db.spamDao()
-        repo = SpamRepository(context, db)
+        stores = TestSettingsStores(context)
+        repo = stores.repository(context, db)
     }
 
     @After
     fun tearDown() {
         db.close()
+        stores.close()
     }
 
     @Test

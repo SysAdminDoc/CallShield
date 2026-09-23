@@ -30,6 +30,7 @@ class SpamPipelineIntegrationTest {
     private lateinit var db: AppDatabase
     private lateinit var dao: SpamDao
     private lateinit var repo: SpamRepository
+    private lateinit var stores: TestSettingsStores
 
     @Before
     fun setUp() =
@@ -41,13 +42,15 @@ class SpamPipelineIntegrationTest {
                     .allowMainThreadQueries()
                     .build()
             dao = db.spamDao()
-            repo = SpamRepository(context, db)
+            stores = TestSettingsStores(context)
+            repo = stores.repository(context, db)
             resetHotPathSettings()
         }
 
     @After
     fun tearDown() {
         db.close()
+        stores.close()
     }
 
     @Test
@@ -176,12 +179,7 @@ class SpamPipelineIntegrationTest {
                 PhoneIdentityCanonicalizer("GB") { number, _ ->
                     if (number == "02079460018") "+442079460018" else null
                 }
-            val regionalRepo =
-                SpamRepository(
-                    context = context,
-                    database = db,
-                    phoneIdentityCanonicalizer = canonicalizer,
-                )
+            val regionalRepo = stores.repository(context, db, phoneIdentityCanonicalizer = canonicalizer)
             regionalRepo.blockNumber("020 7946 0018", type = "test")
 
             val result = regionalRepo.isSpam("+44 20 7946 0018")

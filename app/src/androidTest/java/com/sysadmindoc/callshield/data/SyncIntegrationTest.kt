@@ -49,14 +49,7 @@ class SyncIntegrationTest {
 
     // The feed policy refuses a feed older than the last one accepted, which
     // the app's own settings remember on the device, so each test starts empty.
-    private fun repository(remote: SpamDataSource) =
-        SpamRepository(
-            context = context,
-            database = db,
-            remote = remote,
-            settingsDataStore = stores.settings,
-            privateSettingsDataStore = stores.privateSettings,
-        )
+    private fun repository(remote: SpamDataSource) = stores.repository(context, db, remote)
 
     @Test
     fun syncFromGitHubPopulatesInMemoryRoomDatabaseFromRemoteSnapshot() =

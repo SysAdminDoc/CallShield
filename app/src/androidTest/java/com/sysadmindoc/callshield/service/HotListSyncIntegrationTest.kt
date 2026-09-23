@@ -7,6 +7,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.sysadmindoc.callshield.data.SmsContentAnalyzer
 import com.sysadmindoc.callshield.data.SpamHeuristics
 import com.sysadmindoc.callshield.data.SpamRepository
+import com.sysadmindoc.callshield.data.TestSettingsStores
 import com.sysadmindoc.callshield.data.local.AppDatabase
 import com.sysadmindoc.callshield.data.model.HotNumber
 import com.sysadmindoc.callshield.data.model.SpamNumber
@@ -26,6 +27,7 @@ class HotListSyncIntegrationTest {
     private lateinit var context: Context
     private lateinit var db: AppDatabase
     private lateinit var repo: SpamRepository
+    private lateinit var stores: TestSettingsStores
 
     @Before
     fun setUp() {
@@ -35,7 +37,8 @@ class HotListSyncIntegrationTest {
                 .inMemoryDatabaseBuilder(context, AppDatabase::class.java)
                 .allowMainThreadQueries()
                 .build()
-        repo = SpamRepository(context, db)
+        stores = TestSettingsStores(context)
+        repo = stores.repository(context, db)
         SpamHeuristics.updateHotRanges(emptyList())
         SmsContentAnalyzer.updateSpamDomains(emptyList())
     }
@@ -45,6 +48,7 @@ class HotListSyncIntegrationTest {
         SpamHeuristics.updateHotRanges(emptyList())
         SmsContentAnalyzer.updateSpamDomains(emptyList())
         db.close()
+        stores.close()
     }
 
     @Test

@@ -4,6 +4,9 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
+import com.sysadmindoc.callshield.data.local.AppDatabase
+import com.sysadmindoc.callshield.data.remote.GitHubDataSource
+import com.sysadmindoc.callshield.data.remote.SpamDataSource
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -26,6 +29,21 @@ internal class TestSettingsStores(
 
     val settings: DataStore<Preferences> = store("settings")
     val privateSettings: DataStore<Preferences> = store("private")
+
+    /** A repository on [database] that keeps its settings in these stores. */
+    fun repository(
+        context: Context,
+        database: AppDatabase,
+        remote: SpamDataSource = GitHubDataSource(),
+        phoneIdentityCanonicalizer: PhoneIdentityCanonicalizer = PhoneIdentityCanonicalizer.fromContext(context.applicationContext),
+    ) = SpamRepository(
+        context = context,
+        database = database,
+        remote = remote,
+        settingsDataStore = settings,
+        privateSettingsDataStore = privateSettings,
+        phoneIdentityCanonicalizer = phoneIdentityCanonicalizer,
+    )
 
     private fun store(name: String) =
         PreferenceDataStoreFactory.create(

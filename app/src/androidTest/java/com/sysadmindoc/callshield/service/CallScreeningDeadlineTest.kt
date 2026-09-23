@@ -32,7 +32,9 @@ class CallScreeningDeadlineTest {
                 assertEquals(CallShieldScreeningService::class.java.name, component?.className)
 
                 // A new facade leaves checker/prefix/rule caches cold while using
-                // the same Room/DataStore path as onScreenCall.
+                // the same Room/DataStore path as onScreenCall. Unlike the other
+                // repository tests it keeps the app's own stores on purpose: the
+                // cold path through them is what this test times.
                 val repository = SpamRepository(context)
                 val checkSpam = CheckSpamUseCase(SpamRepositoryAdapter(repository))
                 val number = "+12125550199"
