@@ -508,6 +508,12 @@ The rest of this section takes effect when the report Worker is next deployed.
   category the way the category settings do ("Debt Collector", "Wangiri
   Scam"), and an RCS block names its underlying check the way the block log
   does.
+- A few English words still showed up in that panel on a Chinese phone. A
+  block by one of the country telemarketing ranges named the range in
+  English ("Spain 400 commercial call range"), and Lookup's list of checks
+  used the English check names. Both are Chinese now. The Chinese line for
+  an unverified PASSporT attestation also said verification had failed, when
+  all CallShield knows is that the carrier didn't report a pass.
 
 - A shipped locale can no longer decay silently. Each has a coverage floor in
   `scripts/translation_floors.json`, and dropping below it fails the build.

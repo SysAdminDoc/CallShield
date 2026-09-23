@@ -13,6 +13,8 @@ import com.sysadmindoc.callshield.data.SmsContentAnalyzer
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.checker.CheckContext
 import com.sysadmindoc.callshield.data.checker.EmergencyNumberFloorChecker
+import com.sysadmindoc.callshield.data.checker.RegulatoryAllowChecker
+import com.sysadmindoc.callshield.data.checker.RegulatoryPrefixChecker
 import com.sysadmindoc.callshield.data.checker.SmsContentChecker
 import com.sysadmindoc.callshield.data.checker.StirShakenChecker
 import com.sysadmindoc.callshield.data.checker.TimeBlockChecker
@@ -168,7 +170,7 @@ class LocalizedSystemTextTest {
         val description = requireNotNull(describeIdentityEvidence(context, identity))
 
         assertEquals(
-            "身份证据：PASSporT B 级认证元数据（运营商验证未通过）；来电号码尚未分配；线路类型：付费电话；富来电数据元数据（并非垃圾来电判定）",
+            "身份证据：PASSporT B 级认证元数据（运营商状态不是“通过”）；来电号码尚未分配；线路类型：付费电话；富来电数据元数据（并非垃圾来电判定）",
             description,
         )
         for (english in listOf("Identity evidence", "metadata", "origin", "line type", "verdict", "carrier status")) {
@@ -177,26 +179,64 @@ class LocalizedSystemTextTest {
     }
 
     @Test
-    fun `the why-was-this-blocked panel has no English sentence in Chinese`() {
-        // Three lowercase Latin words in a row is an English sentence; acronyms
-        // and names the translation keeps (RCS, ML, NPA-NXX, PASSporT) are not.
-        val englishRun = Regex("""\b[a-z]{2,}\s+[a-z]{2,}\s+[a-z]{2,}\b""")
+    fun `the why-was-this-blocked panel has no English word in Chinese`() {
+        // Names and acronyms the translation keeps. Any other Latin word, even a
+        // single one like "range" or "spam", is English leaking into the panel.
+        val kept = setOf("Android", "CallShield", "PASSporT", "VoIP")
+
+        fun englishWords(text: String) =
+            Regex("[A-Za-z]+")
+                .findAll(text)
+                .map { it.value }
+                .filterNot { it in kept || it.all(Char::isUpperCase) }
+                .toList()
+
+        // A Chinese description renders the labeled bullets (note, range, rule)
+        // without adding English of its own.
+        val description = "测试"
         val explanations =
-            BlockReasonCode.entries.map { BlockReasoning.explain(context, reasonCode = it, description = "", confidence = 50) } +
-                BlockReasoning.explain(context, "category_policy:scam:silence:database", "", 100) +
-                BlockReasoning.explain(context, "rcs_database", "", 100) +
+            BlockReasonCode.entries.flatMap { code ->
+                listOf("", description).map { BlockReasoning.explain(context, reasonCode = code, description = it, confidence = 50) }
+            } +
+                BlockReasoning.explain(context, "category_policy:scam:silence:database", description, 100) +
+                BlockReasoning.explain(context, "rcs_database", description, 100) +
                 BlockReasoning.explain(context, "", "", 0)
 
         for (reasoning in explanations) {
             val text = (listOf(reasoning.headline) + reasoning.bullets).joinToString("\n")
-            assertFalse(text, englishRun.containsMatchIn(text))
+            assertEquals(text, emptyList<String>(), englishWords(text))
             assertTrue(text, text.any { it in '一'..'鿿' })
         }
+        assertTrue(explanations.any { reasoning -> reasoning.bullets.any { it.contains(description) } })
         assertEquals(
             context.getString(R.string.reasoning_category_silenced, context.getString(R.string.call_category_scam)),
             explanations[explanations.size - 3].headline,
         )
+        // The detector itself flags a lone English word.
+        assertEquals(listOf("range"), englishWords("号段：range"))
     }
+
+    @Test
+    fun `a regulatory range decision names the range in the app language`() =
+        runBlocking {
+            val block =
+                requireNotNull(
+                    RegulatoryPrefixChecker().check(ctx(number = "+34400123456", prefs = preferencesOf(SpamRepository.KEY_REG_SPAIN_400 to true))),
+                )
+            val allow =
+                requireNotNull(
+                    RegulatoryAllowChecker().check(
+                        ctx(number = "+911600123456", prefs = preferencesOf(SpamRepository.KEY_REG_INDIA_1600_ALLOW to true)),
+                    ),
+                )
+
+            assertEquals(context.getString(R.string.reg_prefix_spain_400_match), block.description)
+            assertEquals(context.getString(R.string.reg_prefix_india_1600_allow_match), allow.description)
+            assertFalse(block.description, block.description.contains("Spain"))
+            assertFalse(allow.description, allow.description.contains("India"))
+            val panel = BlockReasoning.explain(context, block.matchSource, block.description, block.confidence)
+            assertTrue(panel.bullets.toString(), panel.bullets.any { it.contains(block.description) })
+        }
 
     @Test
     fun `unsafe links are named by kind, never by a feed's code`() {

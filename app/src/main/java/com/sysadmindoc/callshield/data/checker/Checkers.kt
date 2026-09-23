@@ -470,7 +470,7 @@ internal class RegulatoryPrefixChecker(
 
     override suspend fun check(ctx: CheckContext): BlockResult? =
         RegulatoryPrefix.enabledMatch(ctx.prefs, ctx.number, allows = false) { homeRegion(ctx.appContext) }?.let { range ->
-            BlockResult.block(name, "telemarketer", range.description)
+            BlockResult.block(name, "telemarketer", ctx.appContext.getString(range.descriptionRes))
         }
 }
 
@@ -485,7 +485,7 @@ internal class RegulatoryAllowChecker(
 
     override suspend fun check(ctx: CheckContext): BlockResult? =
         RegulatoryPrefix.enabledMatch(ctx.prefs, ctx.number, allows = true) { homeRegion(ctx.appContext) }?.let { series ->
-            BlockResult.allow(name, description = series.description)
+            BlockResult.allow(name, description = ctx.appContext.getString(series.descriptionRes))
         }
 }
 

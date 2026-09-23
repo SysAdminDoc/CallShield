@@ -1586,6 +1586,10 @@
     <string name="reg_prefix_brazil_0303_desc">Telemarketers in Brazil call from the 0303 code that ANATEL set aside for them.</string>
     <string name="reg_prefix_india_1600_allow">Protect India 1600 series</string>
     <string name="reg_prefix_india_1600_allow_desc">India\'s 1600 series belongs to banks, insurers and government offices, so calls from it ring through past the spam database.</string>
+    <string name="reg_prefix_spain_400_match">Spain 400 commercial call range</string>
+    <string name="reg_prefix_india_140_match">India 140 promotional call series</string>
+    <string name="reg_prefix_brazil_0303_match">Brazil 0303 telemarketing code</string>
+    <string name="reg_prefix_india_1600_allow_match">India 1600 series for banks, insurers and government offices</string>
     <string name="region_rules_title">Region &amp; caller-name rules</string>
     <string name="region_rules_disclosure">These rules run entirely on your device. Region blocking reads the area code of a North American number and the country code of any other. Caller-name trust uses only a carrier-presented name that Android exposes to the screening service.</string>
     <string name="region_rules_block_outside">Block calls outside allowed regions</string>
