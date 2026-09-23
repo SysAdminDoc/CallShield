@@ -13,7 +13,11 @@ All notable changes to CallShield will be documented in this file.
   blocklist, in the spam database, on a premium-rate line or on a
   callback-scam country code is held, and a notification says why and offers
   Call anyway. Contacts and numbers you trust ring through, and if the check
-  runs slow the call goes ahead rather than being dropped.
+  runs slow the call goes ahead rather than being dropped, unless it's a
+  premium-rate or callback-scam number, which is held on that rule alone.
+  The hold never happens where you couldn't see the notification: in car
+  mode, or with CallShield's notifications turned off, the call goes
+  through. One Call anyway covers the number however the dialer spells it.
 
 - Work-from-home job offers now count as spam content, in English, Spanish,
   Portuguese and Italian. That's a text promising pay by the day or hour for

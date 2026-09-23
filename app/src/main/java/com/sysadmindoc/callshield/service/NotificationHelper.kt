@@ -196,6 +196,20 @@ object NotificationHelper {
         )
     }
 
+    /**
+     * Whether a held-call notification would actually reach the user. A post
+     * to a disabled app or a blocked channel is dropped without an error, and
+     * a hold nobody sees is a call that silently fails, so the redirection
+     * service places the call when this is false.
+     */
+    internal fun canShowOutgoingHold(context: Context): Boolean {
+        if (!CallShieldPermissions.hasNotificationPermission(context)) return false
+        val manager = NotificationManagerCompat.from(context)
+        if (!manager.areNotificationsEnabled()) return false
+        val channel = manager.getNotificationChannel(CHANNEL_OUTGOING_HOLD) ?: return false
+        return channel.importance != NotificationManager.IMPORTANCE_NONE
+    }
+
     /** A held outgoing call: why it was stopped, and a way to call anyway. */
     internal fun notifyOutgoingCallHeld(
         context: Context,

@@ -90,6 +90,10 @@ class PhoneIdentityCanonicalizer internal constructor(
             return fromContext(context.applicationContext).also { cachedInstance = now to it }
         }
 
+        internal fun resetCacheForTests() {
+            cachedInstance = null
+        }
+
         internal fun resolveRegion(context: Context): String? {
             val telephony = context.getSystemService(Context.TELEPHONY_SERVICE) as? TelephonyManager
             // SIM region first: it is the user's home region for interpreting

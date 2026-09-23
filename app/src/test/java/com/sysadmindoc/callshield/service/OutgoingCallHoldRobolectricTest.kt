@@ -3,6 +3,7 @@ package com.sysadmindoc.callshield.service
 import android.Manifest
 import android.app.Application
 import android.app.Notification
+import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.ComponentName
 import android.content.Context
@@ -10,12 +11,15 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.SystemClock
 import android.telecom.CallRedirectionService
+import android.telephony.TelephonyManager
 import androidx.test.core.app.ApplicationProvider
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.OutgoingCallGuard
+import com.sysadmindoc.callshield.data.PhoneIdentityCanonicalizer
 import com.sysadmindoc.callshield.ui.CallAnywayActivity
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -44,6 +48,7 @@ class OutgoingCallHoldRobolectricTest {
     fun tearDown() {
         notificationManager.cancelAll()
         OutgoingCallGuard.resetForTests()
+        PhoneIdentityCanonicalizer.resetCacheForTests()
     }
 
     @Test
@@ -75,6 +80,38 @@ class OutgoingCallHoldRobolectricTest {
         assertEquals(Intent.ACTION_DIAL, dial.action)
         assertEquals(number, dial.data?.schemeSpecificPart)
         assertTrue(activity.isFinishing)
+    }
+
+    @Test
+    fun `a hold only happens when its notification can reach the user`() {
+        assertTrue(NotificationHelper.canShowOutgoingHold(context))
+
+        shadowOf(notificationManager).setNotificationsEnabled(false)
+        assertFalse("app notifications off", NotificationHelper.canShowOutgoingHold(context))
+        shadowOf(notificationManager).setNotificationsEnabled(true)
+
+        val channel = notificationManager.getNotificationChannel(NotificationHelper.CHANNEL_OUTGOING_HOLD)
+        notificationManager.deleteNotificationChannel(NotificationHelper.CHANNEL_OUTGOING_HOLD)
+        notificationManager.createNotificationChannel(NotificationChannel(channel.id, channel.name, NotificationManager.IMPORTANCE_NONE))
+        assertFalse("hold channel blocked", NotificationHelper.canShowOutgoingHold(context))
+        NotificationHelper.createChannels(context)
+
+        shadowOf(context.applicationContext as Application).denyPermissions(Manifest.permission.POST_NOTIFICATIONS)
+        assertFalse("permission denied", NotificationHelper.canShowOutgoingHold(context))
+    }
+
+    @Test
+    fun `call anyway on a national-format number also covers its plus-one redial`() {
+        shadowOf(context.getSystemService(TelephonyManager::class.java)).setSimCountryIso("us")
+        PhoneIdentityCanonicalizer.resetCacheForTests()
+        val intent =
+            Intent(context, CallAnywayActivity::class.java)
+                .putExtra(CallAnywayActivity.EXTRA_NUMBER, "6495550123")
+        Robolectric.buildActivity(CallAnywayActivity::class.java, intent).create().get()
+
+        val now = SystemClock.elapsedRealtime()
+        assertTrue(OutgoingCallGuard.isBypassed(OutgoingCallGuard.bypassKey("+16495550123", "US"), now))
+        assertTrue(OutgoingCallGuard.isBypassed(OutgoingCallGuard.bypassKey("16495550123", "US"), now))
     }
 
     @Test

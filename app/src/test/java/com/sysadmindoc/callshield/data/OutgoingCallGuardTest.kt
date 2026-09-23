@@ -97,7 +97,7 @@ class OutgoingCallGuardTest {
             val started = System.nanoTime()
             val decision =
                 OutgoingCallGuard.decide(
-                    number = "+19005550123",
+                    number = "+12125550101",
                     nowElapsed = now,
                     trusted = { false },
                     listed = {
@@ -111,6 +111,60 @@ class OutgoingCallGuardTest {
             assertEquals(Decision.Proceed, decision)
             assertTrue("gave up after ${elapsedMs}ms", elapsedMs < 2_000L)
         }
+
+    @Test
+    fun `a premium or callback-scam number is held even when the lookups run over`() =
+        runBlocking {
+            // Its rule needs no lookup, so a slow contacts query must not wave it through.
+            val slowContacts =
+                OutgoingCallGuard.decide(
+                    number = "+18765550199",
+                    nowElapsed = now,
+                    trusted = {
+                        delay(10_000L)
+                        false
+                    },
+                    listed = { null },
+                    budgetMs = 100L,
+                )
+            val slowDatabase =
+                OutgoingCallGuard.decide(
+                    number = "+19005550124",
+                    nowElapsed = now,
+                    trusted = { false },
+                    listed = {
+                        delay(10_000L)
+                        null
+                    },
+                    budgetMs = 100L,
+                )
+
+            assertEquals(Decision.Hold(Reason.WANGIRI), slowContacts)
+            assertEquals(Decision.Hold(Reason.PREMIUM_RATE), slowDatabase)
+        }
+
+    @Test
+    fun `one call anyway pass covers every spelling of a NANP number`() {
+        val key = OutgoingCallGuard.bypassKey("6495550123", "US")
+        assertEquals("+16495550123", key)
+        assertEquals(key, OutgoingCallGuard.bypassKey("16495550123", "US"))
+        assertEquals(key, OutgoingCallGuard.bypassKey("+16495550123", "US"))
+        assertEquals("6495550123", OutgoingCallGuard.bypassKey("6495550123", "GB"))
+
+        OutgoingCallGuard.allow(key, nowElapsed = now)
+        val redial =
+            runBlocking {
+                OutgoingCallGuard.decide(
+                    number = "+16495550123",
+                    nowElapsed = now + 1_000L,
+                    trusted = { false },
+                    listed = { Reason.USER_BLOCKLIST },
+                    bypassKey = OutgoingCallGuard.bypassKey("+16495550123", "US"),
+                )
+            }
+
+        assertEquals(Decision.Proceed, redial)
+    }
 
     @Test
     fun `the lookup budget leaves room inside Telecom's five seconds`() {

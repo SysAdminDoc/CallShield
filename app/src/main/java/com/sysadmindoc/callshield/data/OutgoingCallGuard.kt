@@ -54,7 +54,11 @@ internal object OutgoingCallGuard {
     /**
      * [trusted] covers contacts and the user's allow list, which outrank every
      * flag the way they do for incoming calls. [listed] reports a blocklist or
-     * database row. Both run inside [budgetMs]; running over places the call.
+     * database row. Both run inside [budgetMs]. Running over places the call,
+     * unless the number matches a premium-rate or callback-scam rule: those
+     * need no lookup, so a slow contacts query can't wave one through, and
+     * the user still has Call anyway. [bypassKey] is where a Call anyway pass
+     * for this number would be stored (see [bypassKey]).
      */
     suspend fun decide(
         number: String,
@@ -62,34 +66,47 @@ internal object OutgoingCallGuard {
         trusted: suspend (String) -> Boolean,
         listed: suspend (String) -> Reason?,
         budgetMs: Long = DECISION_BUDGET_MS,
+        bypassKey: String = number,
     ): Decision {
-        if (number.isBlank() || EmergencyNumberFloor.isProtected(number) || isBypassed(number, nowElapsed)) {
+        if (number.isBlank() || EmergencyNumberFloor.isProtected(number) || isBypassed(bypassKey, nowElapsed)) {
             return Decision.Proceed
         }
+        val rule = ruleReason(number)
         return withTimeoutOrNull(budgetMs) {
             if (trusted(number)) {
                 Decision.Proceed
             } else {
-                (listed(number) ?: ruleReason(number))?.let(Decision::Hold) ?: Decision.Proceed
+                (listed(number) ?: rule)?.let(Decision::Hold) ?: Decision.Proceed
             }
-        } ?: Decision.Proceed
+        } ?: rule?.let(Decision::Hold) ?: Decision.Proceed
     }
 
-    /** The user chose "Call anyway": the next calls to [number] go straight through for a while. */
+    /**
+     * One key for every spelling of a number, so a Call anyway pass for
+     * 649 555 0123 also covers +1 649 555 0123. The hold matches both
+     * forms (see [PhoneIdentityCanonicalizer.nanpE164Fallback]), and a pass
+     * that covered only one sent the redial into another hold.
+     */
+    fun bypassKey(
+        canonical: String,
+        homeRegionIso: String?,
+    ): String = PhoneIdentityCanonicalizer.nanpE164Fallback(canonical, homeRegionIso) ?: canonical
+
+    /** The user chose "Call anyway": the next calls under [key] go straight through for a while. */
     fun allow(
-        number: String,
+        key: String,
         nowElapsed: Long,
     ) {
-        bypassUntil[number] = nowElapsed + BYPASS_WINDOW_MS
+        bypassUntil[key] = nowElapsed + BYPASS_WINDOW_MS
     }
 
     fun isBypassed(
-        number: String,
+        key: String,
         nowElapsed: Long,
     ): Boolean {
-        val until = bypassUntil[number] ?: return false
+        val until = bypassUntil[key] ?: return false
         if (until > nowElapsed) return true
-        bypassUntil.remove(number, until)
+        bypassUntil.remove(key, until)
         return false
     }
 

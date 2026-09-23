@@ -7,6 +7,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.SystemClock
 import com.sysadmindoc.callshield.data.OutgoingCallGuard
+import com.sysadmindoc.callshield.data.PhoneIdentityCanonicalizer
 import com.sysadmindoc.callshield.util.startActivitySafely
 
 /**
@@ -20,7 +21,9 @@ class CallAnywayActivity : Activity() {
         super.onCreate(savedInstanceState)
         val number = intent.getStringExtra(EXTRA_NUMBER)
         if (!number.isNullOrBlank()) {
-            OutgoingCallGuard.allow(number, SystemClock.elapsedRealtime())
+            // Keyed for every spelling, since the dialer may redial it with or without +1.
+            val key = OutgoingCallGuard.bypassKey(number, PhoneIdentityCanonicalizer.cachedFromContext(this).homeRegionIso)
+            OutgoingCallGuard.allow(key, SystemClock.elapsedRealtime())
             val notificationId = intent.getIntExtra(EXTRA_NOTIFICATION_ID, -1)
             if (notificationId >= 0) {
                 getSystemService(NotificationManager::class.java)?.cancel(notificationId)

@@ -9,6 +9,7 @@ import android.util.Log
 import com.sysadmindoc.callshield.CallShieldApp
 import com.sysadmindoc.callshield.data.EmergencyNumberFloor
 import com.sysadmindoc.callshield.data.OutgoingCallGuard
+import com.sysadmindoc.callshield.data.PhoneIdentityCanonicalizer
 import com.sysadmindoc.callshield.data.SpamHeuristics
 import com.sysadmindoc.callshield.data.SpamRepository
 import kotlinx.coroutines.CancellationException
@@ -24,11 +25,18 @@ import java.util.concurrent.atomic.AtomicBoolean
  * given CallShield the call-redirection role and turned the setting on.
  *
  * Telecom cancels a call it hasn't heard back about within five seconds, so
- * every path answers, and anything that fails or runs long places the call.
+ * every path answers. Anything that fails or runs long places the call,
+ * except a premium-rate or callback-scam number, which is held on its rule
+ * alone, and a hold happens only when its notification can reach the user.
  */
 class CallShieldRedirectionService : CallRedirectionService() {
     private val answered = AtomicBoolean(false)
     private var pending: Job? = null
+
+    // A premium-rate or callback-scam number is known to need a hold before
+    // any lookup runs. If the lookups outlast the deadline, this is the answer
+    // instead of letting the call through.
+    @Volatile private var provisional: Outcome? = null
 
     override fun onPlaceCall(
         handle: Uri,
@@ -36,13 +44,14 @@ class CallShieldRedirectionService : CallRedirectionService() {
         allowInteractiveResponse: Boolean,
     ) {
         answered.set(false)
+        provisional = null
         val appContext = applicationContext
         val rawNumber = handle.schemeSpecificPart.orEmpty()
         val scope = CallShieldApp.appScope
         // Not a child of the coroutine that answers: a contacts query blocks and
         // can't be cancelled, so a slow check is left behind at the deadline
         // rather than holding the answer until it returns.
-        val check = scope.async { check(appContext, rawNumber) }
+        val check = scope.async { check(appContext, rawNumber, allowInteractiveResponse) }
         pending =
             scope.launch {
                 val outcome =
@@ -54,7 +63,7 @@ class CallShieldRedirectionService : CallRedirectionService() {
                         Log.w(TAG, "Outgoing call check failed, placing the call", e)
                         null
                     }
-                answer(appContext, outcome ?: Outcome(rawNumber, OutgoingCallGuard.Decision.Proceed))
+                answer(appContext, outcome ?: provisional ?: Outcome(rawNumber, OutgoingCallGuard.Decision.Proceed))
             }
     }
 
@@ -72,17 +81,35 @@ class CallShieldRedirectionService : CallRedirectionService() {
     private suspend fun check(
         context: Context,
         rawNumber: String,
+        allowInteractiveResponse: Boolean,
     ): Outcome {
         val repository = SpamRepository.getInstance(context)
         val number = repository.normalizeNumber(rawNumber).ifBlank { rawNumber }
         val prefs = repository.readPrefsSnapshot()
-        if (prefs[SpamRepository.KEY_OUTGOING_CALL_HOLD] != true || EmergencyNumberFloor.isProtected(rawNumber)) {
-            return Outcome(number, OutgoingCallGuard.Decision.Proceed)
+        val proceed = Outcome(number, OutgoingCallGuard.Decision.Proceed)
+        if (prefs[SpamRepository.KEY_OUTGOING_CALL_HOLD] != true ||
+            EmergencyNumberFloor.isProtected(rawNumber) ||
+            EmergencyNumberFloor.isProtected(number)
+        ) {
+            return proceed
+        }
+        // A hold is a cancelled call plus a notification. With no way to show
+        // the notification (car mode, which Telecom signals by refusing an
+        // interactive response, or notifications turned off) it would be a
+        // call that silently fails, so the call goes through.
+        if (!allowInteractiveResponse || !NotificationHelper.canShowOutgoingHold(context)) {
+            return proceed
+        }
+        val now = SystemClock.elapsedRealtime()
+        val bypassKey = OutgoingCallGuard.bypassKey(number, PhoneIdentityCanonicalizer.cachedFromContext(context).homeRegionIso)
+        if (!OutgoingCallGuard.isBypassed(bypassKey, now)) {
+            OutgoingCallGuard.ruleReason(number)?.let { provisional = Outcome(number, OutgoingCallGuard.Decision.Hold(it)) }
         }
         val decision =
             OutgoingCallGuard.decide(
                 number = number,
-                nowElapsed = SystemClock.elapsedRealtime(),
+                nowElapsed = now,
+                bypassKey = bypassKey,
                 trusted = { n ->
                     repository.lookupForms(n).any { repository.hasActiveWhitelistEntry(it) } || SpamHeuristics.isInContacts(context, n)
                 },
@@ -107,8 +134,13 @@ class CallShieldRedirectionService : CallRedirectionService() {
                 }
 
                 is OutgoingCallGuard.Decision.Hold -> {
-                    cancelCall()
-                    NotificationHelper.notifyOutgoingCallHeld(context, outcome.number, decision.reason)
+                    // Post first: if the notification can't go up after all, the
+                    // call goes through rather than vanishing without a word.
+                    if (NotificationHelper.notifyOutgoingCallHeld(context, outcome.number, decision.reason)) {
+                        cancelCall()
+                    } else {
+                        placeCallUnmodified()
+                    }
                 }
             }
         } catch (e: RuntimeException) {
