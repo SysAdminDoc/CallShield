@@ -83,9 +83,11 @@ class CallShieldRedirectionService : CallRedirectionService() {
             OutgoingCallGuard.decide(
                 number = number,
                 nowElapsed = SystemClock.elapsedRealtime(),
-                trusted = { n -> repository.hasActiveWhitelistEntry(n) || SpamHeuristics.isInContacts(context, n) },
+                trusted = { n ->
+                    repository.lookupForms(n).any { repository.hasActiveWhitelistEntry(it) } || SpamHeuristics.isInContacts(context, n)
+                },
                 listed = { n ->
-                    repository.findExactSpamNumber(n)?.let { row ->
+                    repository.lookupForms(n).firstNotNullOfOrNull { repository.findExactSpamNumber(it) }?.let { row ->
                         if (row.isUserBlocked) OutgoingCallGuard.Reason.USER_BLOCKLIST else OutgoingCallGuard.Reason.DATABASE
                     }
                 },

@@ -80,7 +80,7 @@ internal class WhitelistChecker(
     override val name = "manual_whitelist"
 
     override suspend fun check(ctx: CheckContext): BlockResult? {
-        val entry = repo.findWhitelistEntryInternal(ctx.number) ?: return null
+        val entry = ctx.lookupForms.firstNotNullOfOrNull { repo.findWhitelistEntryInternal(it) } ?: return null
         return BlockResult.allow(
             matchSource = if (entry.isEmergency) "emergency_contact" else "manual_whitelist",
             ruleId = entry.id,
@@ -192,8 +192,10 @@ internal class StirShakenTrustChecker(
 
     override suspend fun check(ctx: CheckContext): BlockResult? {
         if (ctx.verificationStatus != VERIFICATION_STATUS_PASSED) return null
-        val trending = isTrendingNow(ctx.prefs, ctx.number, wallClock())
-        return decidePure(ctx.verificationStatus, repo.findByNumberInternal(ctx.number), trending = trending)
+        val now = wallClock()
+        val trending = ctx.lookupForms.any { isTrendingNow(ctx.prefs, it, now) }
+        val entry = ctx.lookupForms.firstNotNullOfOrNull { repo.findByNumberInternal(it) }
+        return decidePure(ctx.verificationStatus, entry, trending = trending)
     }
 
     companion object {
@@ -338,7 +340,7 @@ internal class TemporaryAllowChecker(
     override val name = "temporary_allow"
 
     override suspend fun check(ctx: CheckContext): BlockResult? {
-        repo.findTemporaryWhitelistEntryInternal(ctx.number) ?: return null
+        ctx.lookupForms.firstNotNullOfOrNull { repo.findTemporaryWhitelistEntryInternal(it) } ?: return null
         return BlockResult.allow("temporary_allow")
     }
 }
@@ -378,8 +380,8 @@ internal class UserBlocklistChecker(
     override val name = "user_blocklist"
 
     override suspend fun check(ctx: CheckContext): BlockResult? {
-        val entry = repo.findByNumberInternal(ctx.number)
-        return if (entry?.isUserBlocked == true) {
+        val entry = ctx.lookupForms.firstNotNullOfOrNull { form -> repo.findByNumberInternal(form)?.takeIf { it.isUserBlocked } }
+        return if (entry != null) {
             val source = if (entry.expiresAt == null) "user_blocklist" else "temporary_block"
             val description =
                 if (entry.expiresAt == null) {
@@ -401,8 +403,8 @@ internal class DatabaseChecker(
     override val name = "database"
 
     override suspend fun check(ctx: CheckContext): BlockResult? {
-        val entry = repo.findByNumberInternal(ctx.number)
-        return if (entry != null && !entry.isUserBlocked) {
+        val entry = ctx.lookupForms.firstNotNullOfOrNull { form -> repo.findByNumberInternal(form)?.takeUnless { it.isUserBlocked } }
+        return if (entry != null) {
             BlockResult.block("database", entry.type, entry.description)
         } else {
             null
@@ -424,7 +426,7 @@ internal class DbPrefixExpansionChecker(
     override suspend fun isEnabled(ctx: CheckContext): Boolean = ctx.prefs[SpamRepository.KEY_DB_PREFIX_EXPANSION] ?: false
 
     override suspend fun check(ctx: CheckContext): BlockResult? {
-        if (!repo.hasDbPrefixMatch(ctx.number)) return null
+        if (ctx.lookupForms.none { repo.hasDbPrefixMatch(it) }) return null
         return BlockResult.block(
             "db_prefix_expansion",
             description = ctx.appContext.getString(R.string.block_reason_db_prefix),
@@ -444,8 +446,9 @@ internal class PrefixChecker(
     override val name = "prefix"
 
     override suspend fun check(ctx: CheckContext): BlockResult? {
+        val forms = ctx.lookupForms
         for (prefix in repo.getPrefixesCachedInternal()) {
-            if (ctx.number.startsWith(prefix.prefix)) {
+            if (forms.any { it.startsWith(prefix.prefix) }) {
                 return BlockResult.block("prefix", prefix.type, prefix.description)
             }
         }

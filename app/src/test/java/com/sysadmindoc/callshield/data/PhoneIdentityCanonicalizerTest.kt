@@ -2,6 +2,7 @@ package com.sysadmindoc.callshield.data
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -25,6 +26,23 @@ class PhoneIdentityCanonicalizerTest {
         val canonicalizer = canonicalizer(null, emptyMap())
 
         assertEquals("2125551234", canonicalizer.canonicalizePhone("212-555-1234"))
+    }
+
+    @Test
+    fun `a national NANP number gets a +1 lookup form only on a NANP home region`() {
+        assertEquals("+16495550123", PhoneIdentityCanonicalizer.nanpE164Fallback("6495550123", "US"))
+        assertEquals("+16495550123", PhoneIdentityCanonicalizer.nanpE164Fallback("16495550123", "ca"))
+        assertEquals("+18765550123", PhoneIdentityCanonicalizer.nanpE164Fallback("8765550123", "JM"))
+
+        // Already E.164, not NANP-shaped (area codes start 2-9), wrong length,
+        // or a home region outside the NANP: nothing to add.
+        assertNull(PhoneIdentityCanonicalizer.nanpE164Fallback("+16495550123", "US"))
+        assertNull(PhoneIdentityCanonicalizer.nanpE164Fallback("0495550123", "US"))
+        assertNull(PhoneIdentityCanonicalizer.nanpE164Fallback("10495550123", "US"))
+        assertNull(PhoneIdentityCanonicalizer.nanpE164Fallback("5550123", "US"))
+        assertNull(PhoneIdentityCanonicalizer.nanpE164Fallback("116495550123", "US"))
+        assertNull(PhoneIdentityCanonicalizer.nanpE164Fallback("6495550123", "GB"))
+        assertNull(PhoneIdentityCanonicalizer.nanpE164Fallback("6495550123", null))
     }
 
     @Test

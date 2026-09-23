@@ -24,6 +24,14 @@ All notable changes to CallShield will be documented in this file.
   payslip, a part-time shift rate, a house-cleaning job or a cashback offer
   stays clean.
 
+- A caller ID that arrives without its +1, such as 649 555 0123, now matches
+  the spam database and the prefix list, which store numbers in +1 form.
+  When Android's number library didn't recognize the exchange or the area
+  code (a made-up number, or an area code newer than the phone's copy of the
+  library), the number kept its bare form and slipped past both. Numbers you
+  blocked or allowed match either form too, and so does the outgoing call
+  hold.
+
 - Your call category rules now reach more suspicious-pattern blocks. A call
   flagged as possible neighbor spoofing counts as a scam, one from an active
   campaign range as a robocall, and a toll-free one as a telemarketer, so

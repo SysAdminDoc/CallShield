@@ -3,6 +3,7 @@ package com.sysadmindoc.callshield.data.repository
 import android.content.Context
 import androidx.datastore.preferences.core.Preferences
 import com.sysadmindoc.callshield.data.CategoryCallPolicy
+import com.sysadmindoc.callshield.data.PhoneIdentityCanonicalizer
 import com.sysadmindoc.callshield.data.SenderProvenance
 import com.sysadmindoc.callshield.data.SenderProvenanceResolver
 import com.sysadmindoc.callshield.data.checker.CheckContext
@@ -174,6 +175,7 @@ class SpamRepositoryImpl(
                 callerIdentity = callerIdentity,
                 smsContextTrusted = smsContextTrusted,
                 senderProvenance = senderProvenance,
+                e164Fallback = PhoneIdentityCanonicalizer.nanpE164Fallback(normalized, senderRegionIso),
             )
 
         val pipelineRun = CheckerPipeline.runWithDiagnostics(callChain, ctx)
@@ -263,6 +265,7 @@ class SpamRepositoryImpl(
                 number = normalized,
                 realtimeCall = false,
                 prefs = prefs,
+                e164Fallback = PhoneIdentityCanonicalizer.nanpE164Fallback(normalized, senderRegionIso),
             )
         return CheckerPipeline.traceAll(callChain, ctx)
     }

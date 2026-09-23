@@ -112,5 +112,30 @@ class PhoneIdentityCanonicalizer internal constructor(
                 ?.trim()
                 ?.uppercase(Locale.ROOT)
                 ?.takeIf { it.length == 2 && it.all { character -> character in 'A'..'Z' } }
+
+        /**
+         * The +1 form of a national-format NANP number on a phone whose home
+         * region is in the NANP, or null. [canonicalizePhone] leaves such a
+         * number without "+" whenever libphonenumber rejects it (a fictional
+         * exchange, an unassigned area code, or one newer than the phone's
+         * metadata), while the spam database and prefix list are keyed by
+         * E.164. Lookups try this form too; stored identities keep theirs.
+         */
+        fun nanpE164Fallback(
+            canonical: String,
+            homeRegionIso: String?,
+        ): String? =
+            when {
+                normalizeRegion(homeRegionIso) !in NANP_REGIONS -> null
+                NANP_NATIONAL.matches(canonical) -> "+1$canonical"
+                NANP_WITH_TRUNK_PREFIX.matches(canonical) -> "+$canonical"
+                else -> null
+            }
+
+        // Every region that shares country code 1.
+        private val NANP_REGIONS =
+            setOf("US", "CA", "AG", "AI", "AS", "BB", "BM", "BS", "DM", "DO", "GD", "GU", "JM", "KN", "KY", "LC", "MP", "MS", "PR", "SX", "TC", "TT", "VC", "VG", "VI")
+        private val NANP_NATIONAL = Regex("[2-9][0-9]{9}")
+        private val NANP_WITH_TRUNK_PREFIX = Regex("1[2-9][0-9]{9}")
     }
 }

@@ -634,6 +634,9 @@ class SpamRepository(
 
     internal suspend fun findExactSpamNumber(normalized: String) = spamRepositoryImpl.findByNumberInternal(normalized)
 
+    /** Forms of a normalized number to match stored rows against, as the screening pipeline does. */
+    internal fun lookupForms(normalized: String): List<String> = listOfNotNull(normalized, PhoneIdentityCanonicalizer.nanpE164Fallback(normalized, phoneIdentityCanonicalizer.homeRegionIso))
+
     internal suspend fun warmScreeningCaches() = spamRepositoryImpl.warmScreeningCaches()
 
     internal suspend fun hasActiveWhitelistEntry(normalized: String): Boolean =
