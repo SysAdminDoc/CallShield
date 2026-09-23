@@ -139,6 +139,12 @@ All notable changes to CallShield will be documented in this file.
   SMS receiver and the notification reader each logged it, so it showed up
   twice in the log and the statistics. The alert now says the text was
   flagged, not blocked, since it still reaches your messages app.
+- The "why was this blocked" panel now explains every decision. A region
+  block, a contacts-only block, a temporary block or allow, a number from your
+  phone's own block list, a range pattern, a caller-name rule and a push-alert
+  allow all used to read "Blocked by an unrecognized protection rule." Each now
+  says what happened and what still outranks it, and the panel no longer cites
+  layer numbers left over from an older detection ladder.
 - The trusted-source and message-screening pickers in Settings now see your
   installed apps on Android 11 and later. Android hides other apps from an app
   unless its manifest names them, and CallShield's named none, so every source

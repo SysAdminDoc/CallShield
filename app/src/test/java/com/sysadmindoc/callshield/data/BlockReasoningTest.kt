@@ -1,8 +1,14 @@
 package com.sysadmindoc.callshield.data
 
+import com.sysadmindoc.callshield.domain.model.BlockReasonCode
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+
+private const val EN_DASH = 0x2013
+private const val EM_DASH = 0x2014
 
 class BlockReasoningTest {
     @Test
@@ -23,11 +29,32 @@ class BlockReasoningTest {
     }
 
     @Test
-    fun `user_blocklist explanation names the layer and includes note`() {
+    fun `user_blocklist explanation names the personal blocklist and includes note`() {
         val r = BlockReasoning.explain("user_blocklist", "Spammer, blocked manually", 100)
         assertTrue(r.headline.contains("You blocked"))
-        assertTrue(r.bullets.any { it.contains("layer 5") })
+        assertTrue(r.bullets.any { it.contains("personal blocklist") })
         assertTrue(r.bullets.any { it.contains("Spammer") })
+    }
+
+    @Test
+    fun `every reason code but UNKNOWN has its own explanation`() {
+        BlockReasonCode.entries.filter { it != BlockReasonCode.UNKNOWN }.forEach { code ->
+            val r = BlockReasoning.explain(reasonCode = code, description = "", confidence = 50)
+            assertNotEquals(code.wireValue, BlockReasoning.UNRECOGNIZED_HEADLINE, r.headline)
+        }
+    }
+
+    @Test
+    fun `no explanation cites a layer number or uses a dash as punctuation`() {
+        // The ladder uses priorities, and old "layer 5" style numbers no longer match anything.
+        val staleLayer = Regex("""layer \d""")
+        val dashes = setOf(EN_DASH, EM_DASH)
+        BlockReasonCode.entries.forEach { code ->
+            val r = BlockReasoning.explain(reasonCode = code, description = "", confidence = 50)
+            val text = (listOf(r.headline) + r.bullets).joinToString("\n")
+            assertFalse("${code.wireValue}: $text", staleLayer.containsMatchIn(text))
+            assertFalse("${code.wireValue}: $text", text.any { it.code in dashes })
+        }
     }
 
     @Test

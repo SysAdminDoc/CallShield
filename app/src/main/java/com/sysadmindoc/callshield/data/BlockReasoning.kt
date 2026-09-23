@@ -67,7 +67,6 @@ object BlockReasoning {
         )
 
     /** Explain a decision using its stable code; matchSource is only retained for structured metadata. */
-    @Suppress("CyclomaticComplexMethod")
     fun explain(
         reasonCode: BlockReasonCode,
         description: String,
@@ -78,230 +77,410 @@ object BlockReasoning {
         CategoryCallPolicy.parseMatchSource(matchSource.orEmpty())?.let { policy ->
             return explainCategoryPolicy(policy, description, confidence)
         }
-        val rcsMatchSource = matchSource.orEmpty()
-        val bullets = mutableListOf<String>()
-        val headline: String
+        return explainAllow(reasonCode, description)
+            ?: explainPersonalRule(reasonCode, description)
+            ?: explainReputation(reasonCode, description, confidence)
+            ?: explainMessage(reasonCode, description, confidence, matchSource.orEmpty())
+            ?: explainOther(reasonCode, description, confidence, matchSource.orEmpty(), preserveUnknownSourceForLegacyTest)
+    }
 
-        when {
-            reasonCode == BlockReasonCode.USER_BLOCKLIST -> {
-                headline = "You blocked this number."
-                bullets += "Matched your personal blocklist at detection layer 5."
-                if (description.isNotBlank()) bullets += "Note: \"$description\""
+    /** Safety floors and every layer that lets a call or message through. */
+    private fun explainAllow(
+        reasonCode: BlockReasonCode,
+        description: String,
+    ): Reasoning? =
+        when (reasonCode) {
+            BlockReasonCode.EMERGENCY_FLOOR -> {
+                reasoning(
+                    "Emergency and public-safety numbers always ring.",
+                    "No rule, list or setting in CallShield can block them.",
+                )
             }
 
-            reasonCode == BlockReasonCode.DATABASE -> {
-                headline = "This number is in CallShield's community spam database."
-                bullets += "Matched at detection layer 6 (database lookup)."
-                if (description.isNotBlank()) bullets += "Type on file: $description"
+            BlockReasonCode.OTP_FLOOR -> {
+                reasoning(
+                    "This looked like a verification code, so it was let through.",
+                    "Short messages carrying a one-time code are never blocked, so sign-ins keep working.",
+                )
             }
 
-            reasonCode == BlockReasonCode.DB_PREFIX_EXPANSION -> {
-                headline = "This number matches a known spam database prefix."
-                bullets += "Matched at detection layer 6 (database prefix expansion)."
-                if (description.isNotBlank()) bullets += "Prefix tag: $description"
+            BlockReasonCode.EMERGENCY_CONTACT -> {
+                reasoning(
+                    "This is one of your emergency contacts.",
+                    "Always rings through. It bypasses your blocklist, quiet hours and aggressive mode.",
+                )
             }
 
-            reasonCode == BlockReasonCode.HOT_LIST -> {
-                headline = "This number is on CallShield's active spam hot list."
-                bullets += "Matched the short-lived hot-list layer for recently reported activity."
-                if (description.isNotBlank()) bullets += description
+            BlockReasonCode.MANUAL_WHITELIST -> {
+                reasoning("You added this number to your whitelist.", "Whitelisted numbers always ring.")
             }
 
-            reasonCode == BlockReasonCode.PREFIX -> {
-                headline = "This number's prefix is a known spam range."
-                bullets += "Matched at detection layer 7 (prefix rules — premium-rate / wangiri country codes)."
-                if (description.isNotBlank()) bullets += "Prefix tag: $description"
+            BlockReasonCode.CONTACT_WHITELIST -> {
+                reasoning("This number is in your phone's contacts.", "Contacts always ring.")
             }
 
-            reasonCode == BlockReasonCode.REGULATORY_PREFIX -> {
-                headline = "This number is in a telemarketing range you chose to block."
-                bullets += "Some regulators make sales calls come from a set number range, so they're easy to tell apart."
-                if (description.isNotBlank()) bullets += "Range: $description"
+            BlockReasonCode.TEMPORARY_ALLOW -> {
+                reasoning(
+                    "You allowed this number for a while.",
+                    "It rings until the temporary allow runs out.",
+                    "Your blocklist, wildcard and range rules still win.",
+                )
             }
 
-            reasonCode == BlockReasonCode.REGULATORY_ALLOW -> {
-                headline = "This number is in a series the regulator protects."
-                bullets += "Banks, insurers and government offices call from it, so it rings through past the spam database, the heuristics, quiet hours and region rules."
-                bullets += "Your blocklist, wildcard and range rules still win, and so do numbers you blocked in Android."
+            BlockReasonCode.STIR_SHAKEN_TRUSTED -> {
+                val display = StirShakenSemantics.forAndroidVerificationStatus(StirShakenSemantics.VERIFICATION_STATUS_PASSED)
+                Reasoning(
+                    headline = display?.headline ?: "Carrier caller ID authentication passed.",
+                    bullets = display?.bullets.orEmpty() + listOfNotNull(description.takeIf { it.isNotBlank() }),
+                )
             }
 
-            reasonCode == BlockReasonCode.WILDCARD -> {
-                headline = "This number matched one of your wildcard / regex rules."
-                bullets += "Matched at detection layer 8 (wildcard rules)."
-                if (description.isNotBlank()) bullets += "Rule: $description"
+            BlockReasonCode.REGULATORY_ALLOW -> {
+                reasoning(
+                    "This number is in a series the regulator protects.",
+                    "Banks, insurers and government offices call from it, so it rings through past the spam database, the heuristics, quiet hours and region rules.",
+                    "Your blocklist, wildcard and range rules still win, and so do numbers you blocked in Android.",
+                )
             }
 
-            reasonCode == BlockReasonCode.TIME_BLOCK -> {
-                headline = "Blocked during your quiet hours."
-                bullets += "Matched at detection layer 9 (quiet-hours time window)."
-                bullets += "Your contacts and whitelisted numbers still ring through during quiet hours."
+            BlockReasonCode.RECENTLY_DIALED -> {
+                reasoning(
+                    "You called this number recently, so the callback rang through.",
+                    "Any number you called in the last 24 hours rings through, even when it's in the spam database.",
+                )
             }
 
-            reasonCode == BlockReasonCode.MEETING_MODE -> {
-                headline = "Silenced while you were in a meeting."
-                bullets += "Meeting mode sends calls from outside your contacts to voicemail while a meeting app you picked shows a call in progress."
-                if (description.isNotBlank()) bullets += "Meeting app: $description"
-                bullets += "The call wasn't marked as spam, and Android still lists it as missed."
+            BlockReasonCode.EMERGENCY_CALLBACK -> {
+                reasoning(
+                    "Emergency callback grace is active.",
+                    "A local emergency call was placed recently, so unknown callbacks can ring through.",
+                    EXPLICIT_BLOCKS_STILL_WIN,
+                )
             }
 
-            reasonCode == BlockReasonCode.FREQUENCY -> {
-                headline = "This number has called you too often."
-                bullets += "Matched at detection layer 10 (frequency auto-block — 3+ calls)."
-                if (description.isNotBlank()) bullets += description
+            BlockReasonCode.ANSWERED_CALLER -> {
+                reasoning(
+                    "You've answered this caller repeatedly.",
+                    "This number has recent answered calls on this phone.",
+                    EXPLICIT_BLOCKS_STILL_WIN,
+                )
             }
 
-            reasonCode == BlockReasonCode.HEURISTIC -> {
-                headline = "Flagged by the heuristic engine at $confidence% confidence."
-                bullets += "Matched at detection layer 11 (heuristics)."
-                description.split(",").map { it.trim().replace("_", " ") }.filter { it.isNotBlank() }.forEach {
-                    bullets += "• $it"
-                }
+            BlockReasonCode.REPEATED_URGENT -> {
+                reasoning(
+                    "Likely urgent. The same number called twice in under five minutes.",
+                    "Robocallers rarely retry right away. People with an emergency do.",
+                )
             }
 
-            reasonCode == BlockReasonCode.CAMPAIGN_BURST -> {
-                headline = "This prefix is running an active spam campaign."
-                bullets += "Matched at detection layer 11.5 (campaign burst detector)."
-                bullets += "5+ distinct numbers from this NPA-NXX prefix have called in the last hour."
-                if (description.isNotBlank()) bullets += description
-                bullets += "Campaign confidence: $confidence%."
+            BlockReasonCode.CALLER_NAME_TRUST -> {
+                reasoning(
+                    "The caller's name matched one of your trusted names.",
+                    "The name comes from your carrier's caller ID. It gets a caller past region rules, quiet hours and the spam heuristics.",
+                    "The spam database and your own block rules still win.",
+                )
             }
 
-            reasonCode == BlockReasonCode.ML_SCORER -> {
-                headline = "The on-device ML model flagged this number as $confidence% likely spam."
-                bullets += "Matched at detection layer 15 (gradient-boosted tree spam scorer)."
-                bullets += "The model runs entirely on your device — no data sent anywhere."
-                if (description.isNotBlank()) bullets += description
+            BlockReasonCode.PUSH_ALERT -> {
+                reasoning(
+                    "An app you use said this call was coming.",
+                    "A recent notification from a delivery, ride or messaging app mentioned this number or an arriving driver.",
+                    "The spam database and your own block rules still win.",
+                )
             }
 
-            reasonCode == BlockReasonCode.KEYWORD -> {
-                headline = "The SMS matched one of your keyword rules."
-                bullets += "Matched at detection layer 13 (SMS keyword rules)."
-                if (description.isNotBlank()) bullets += "Rule: $description"
-            }
-
-            reasonCode == BlockReasonCode.SPAM_DOMAIN -> {
-                headline = "The message included a known spam domain."
-                bullets += "Matched at the spam-domain protection layer."
-                if (description.isNotBlank()) bullets += "Domain signal: $description"
-            }
-
-            reasonCode == BlockReasonCode.SMS_CONTENT -> {
-                headline = "The SMS content looked like spam ($confidence% confidence)."
-                bullets += "Matched at detection layer 14 (SMS content analysis)."
-                description.split(",").map { it.trim().replace("_", " ") }.filter { it.isNotBlank() }.forEach {
-                    bullets += "• $it"
-                }
-            }
-
-            reasonCode == BlockReasonCode.SMS_BURST -> {
-                headline = "This sender matched SMS burst protection."
-                bullets += "Multiple unknown SMS arrived from this sender or prefix in a short window."
-                bullets += "Use the notification actions to mark the sender safe or report the burst."
-                if (description.isNotBlank()) bullets += description
-            }
-
-            reasonCode == BlockReasonCode.RCS_FILTER -> {
-                val inner = rcsMatchSource.removePrefix("rcs_").ifBlank { "filtered content" }
-                headline = "RCS message blocked via notification filter."
-                bullets += "Matched via the RCS Filter (NotificationListener bridge)."
-                bullets += "Underlying reason: $inner."
-                if (description.isNotBlank()) bullets += description
-            }
-
-            reasonCode == BlockReasonCode.STIR_SHAKEN_FAILED -> {
-                val display =
-                    StirShakenSemantics.forAndroidVerificationStatus(
-                        StirShakenSemantics.VERIFICATION_STATUS_FAILED,
-                    )
-                headline = display?.headline ?: "Carrier caller ID authentication failed."
-                bullets += display?.bullets.orEmpty()
-            }
-
-            reasonCode == BlockReasonCode.STIR_SHAKEN_TRUSTED -> {
-                val display =
-                    StirShakenSemantics.forAndroidVerificationStatus(
-                        StirShakenSemantics.VERIFICATION_STATUS_PASSED,
-                    )
-                headline = display?.headline ?: "Carrier caller ID authentication passed."
-                bullets += display?.bullets.orEmpty()
-                if (description.isNotBlank()) bullets += description
-            }
-
-            reasonCode == BlockReasonCode.HIDDEN_NUMBER -> {
-                headline = "Call came in with no phone number attached."
-                bullets += "Blocked by your \"block unknown numbers\" setting."
-            }
-
-            // Allow-through sources (shown only on NumberDetail for allowed calls)
-            reasonCode == BlockReasonCode.EMERGENCY_CONTACT -> {
-                headline = "This is one of your emergency contacts."
-                bullets += "Always rings through — bypasses blocklist, quiet hours, and aggressive mode."
-            }
-
-            reasonCode == BlockReasonCode.MANUAL_WHITELIST -> {
-                headline = "You added this number to your whitelist."
-                bullets += "Always allowed — matched layer 1 (manual whitelist)."
-            }
-
-            reasonCode == BlockReasonCode.CONTACT_WHITELIST -> {
-                headline = "This number is in your phone's contacts."
-                bullets += "Always allowed — matched layer 2 (contact whitelist)."
-            }
-
-            reasonCode == BlockReasonCode.RECENTLY_DIALED -> {
-                headline = "You called this number recently, so we let the callback through."
-                bullets += "Matched layer 3 (callback detection) — any number you've dialed in the last 24h rings through even if it's in a spam database."
-            }
-
-            reasonCode == BlockReasonCode.ANSWERED_CALLER -> {
-                headline = "You've answered this caller repeatedly."
-                bullets +=
-                    "Matched answered-caller trust — this number has recent answered-call history on this device."
-                bullets += "Explicit blocklist, wildcard, range, STIR-failed, and system block rules still win first."
-            }
-
-            reasonCode == BlockReasonCode.EMERGENCY_CALLBACK -> {
-                headline = "Emergency callback grace is active."
-                bullets += "A local emergency call was placed recently, so unknown callbacks can ring through."
-                bullets += "Explicit blocklist, wildcard, range, STIR-failed, and system block rules still win first."
-            }
-
-            reasonCode == BlockReasonCode.REPEATED_URGENT -> {
-                headline = "Likely urgent — same number called twice in under 5 minutes."
-                bullets += "Matched layer 4 (repeated-urgent-caller allow-through)."
-                bullets += "Robocallers don't usually retry immediately; humans with an emergency do."
-            }
-
-            reasonCode == BlockReasonCode.SMS_CONTEXT -> {
-                headline = "You've had a real conversation with this number."
-                bullets += "Matched SMS context trust — you've sent a message to this number, or received from it on 2+ distinct days."
-            }
-
-            reasonCode == BlockReasonCode.PIPELINE_DIAGNOSTIC -> {
-                headline = "Protection ran in degraded mode for this decision."
-                bullets += "CallShield allowed the activity while one or more detection stages were not evaluated."
-                if (description.isNotBlank()) bullets += description
-            }
-
-            reasonCode == BlockReasonCode.UNKNOWN && rcsMatchSource.isBlank() -> {
-                headline = "No block — this number was allowed through."
-                bullets += "None of the 15+ detection layers matched."
+            BlockReasonCode.SMS_CONTEXT -> {
+                reasoning(
+                    "You've had a real conversation with this number.",
+                    "You've sent it a message, or it has written to you on two or more different days.",
+                )
             }
 
             else -> {
-                headline =
-                    if (preserveUnknownSourceForLegacyTest && reasonCode == BlockReasonCode.UNKNOWN) {
-                        "Blocked at layer: $rcsMatchSource"
-                    } else {
-                        "Blocked by an unrecognized protection rule."
-                    }
-                if (description.isNotBlank()) bullets += description
-                if (confidence in 1..99) bullets += "Confidence: $confidence%."
+                null
             }
         }
 
-        return Reasoning(headline = headline, bullets = bullets)
-    }
+    /** Blocks and silences that come from a rule or setting the user chose. */
+    private fun explainPersonalRule(
+        reasonCode: BlockReasonCode,
+        description: String,
+    ): Reasoning? =
+        when (reasonCode) {
+            BlockReasonCode.USER_BLOCKLIST -> {
+                reasoning("You blocked this number.", "It's on your personal blocklist.", description.labeled("Note: \"", "\""))
+            }
+
+            BlockReasonCode.TEMPORARY_BLOCK -> {
+                reasoning("You blocked this number for a while.", "The block ends when its timer runs out.")
+            }
+
+            BlockReasonCode.SYSTEM_BLOCK_LIST -> {
+                reasoning(
+                    "This number is on your phone's blocked-numbers list.",
+                    "CallShield follows the numbers you block in your phone or messages app.",
+                )
+            }
+
+            BlockReasonCode.CONTACTS_ONLY -> {
+                reasoning(
+                    "Blocked because contacts-only mode is on.",
+                    "Only your contacts and numbers you've allowed can ring while it's on.",
+                )
+            }
+
+            BlockReasonCode.WILDCARD -> {
+                reasoning("This number matched one of your wildcard or regex rules.", description.labeled("Rule: "))
+            }
+
+            BlockReasonCode.HASH_WILDCARD -> {
+                reasoning("This number matched one of your range patterns.", description.labeled("Pattern: "))
+            }
+
+            BlockReasonCode.REGULATORY_PREFIX -> {
+                reasoning(
+                    "This number is in a telemarketing range you chose to block.",
+                    "Some regulators make sales calls come from a set number range, so they're easy to tell apart.",
+                    description.labeled("Range: "),
+                )
+            }
+
+            BlockReasonCode.REGION_BLOCK -> {
+                reasoning(
+                    "This number is outside the regions you allow.",
+                    description.takeIf { it.isNotBlank() },
+                    "Region rules are in Settings under Region & caller-name rules.",
+                )
+            }
+
+            BlockReasonCode.TIME_BLOCK -> {
+                reasoning(
+                    "Blocked during your quiet hours.",
+                    "Your contacts and whitelisted numbers still ring through during quiet hours.",
+                )
+            }
+
+            BlockReasonCode.MEETING_MODE -> {
+                reasoning(
+                    "Silenced while you were in a meeting.",
+                    "Meeting mode sends calls from outside your contacts to voicemail while a meeting app you picked shows a call in progress.",
+                    description.labeled("Meeting app: "),
+                    "The call wasn't marked as spam, and Android still lists it as missed.",
+                )
+            }
+
+            BlockReasonCode.CALLER_NAME_BLOCK -> {
+                reasoning(
+                    "The caller's name matched one of your blocked names.",
+                    description.takeIf { it.isNotBlank() },
+                    "Every allow rule, contacts included, still wins.",
+                )
+            }
+
+            BlockReasonCode.HIDDEN_NUMBER -> {
+                reasoning("Call came in with no phone number attached.", "Blocked by your \"block unknown numbers\" setting.")
+            }
+
+            else -> {
+                null
+            }
+        }
+
+    /** Downloaded reputation data, carrier verdicts and statistical layers. */
+    private fun explainReputation(
+        reasonCode: BlockReasonCode,
+        description: String,
+        confidence: Int,
+    ): Reasoning? =
+        when (reasonCode) {
+            BlockReasonCode.DATABASE -> {
+                reasoning("This number is in CallShield's community spam database.", description.labeled("Type on file: "))
+            }
+
+            BlockReasonCode.DB_PREFIX_EXPANSION -> {
+                reasoning(
+                    "This number sits next to confirmed spam numbers.",
+                    "It shares all but its last two digits with numbers in the spam database, and database prefix expansion is on.",
+                    description.labeled("Prefix tag: "),
+                )
+            }
+
+            BlockReasonCode.HOT_LIST -> {
+                reasoning(
+                    "This number is on CallShield's active spam hot list.",
+                    "Recent reports put it on the short-lived trending list.",
+                    description.takeIf { it.isNotBlank() },
+                )
+            }
+
+            BlockReasonCode.PREFIX -> {
+                reasoning(
+                    "This number's prefix is a known spam range.",
+                    "It matched the downloaded list of premium-rate and callback-scam prefixes.",
+                    description.labeled("Prefix tag: "),
+                )
+            }
+
+            BlockReasonCode.STIR_SHAKEN_FAILED -> {
+                val display = StirShakenSemantics.forAndroidVerificationStatus(StirShakenSemantics.VERIFICATION_STATUS_FAILED)
+                Reasoning(
+                    headline = display?.headline ?: "Carrier caller ID authentication failed.",
+                    bullets = display?.bullets.orEmpty(),
+                )
+            }
+
+            BlockReasonCode.FREQUENCY -> {
+                reasoning(
+                    "This number has called you too often.",
+                    "It called more times in a week than your repeat-caller limit allows.",
+                    description.takeIf { it.isNotBlank() },
+                )
+            }
+
+            BlockReasonCode.HEURISTIC -> {
+                Reasoning(
+                    headline = "Flagged by the heuristic engine at $confidence% confidence.",
+                    bullets = listOf("Signals that fired:") + listed(description),
+                )
+            }
+
+            BlockReasonCode.CAMPAIGN_BURST -> {
+                reasoning(
+                    "This prefix is running an active spam campaign.",
+                    "5+ distinct numbers from this NPA-NXX prefix have called in the last hour.",
+                    description.takeIf { it.isNotBlank() },
+                    "Campaign confidence: $confidence%.",
+                )
+            }
+
+            BlockReasonCode.CAMPAIGN_RECORDER -> {
+                reasoning(
+                    "Counted toward spam-wave detection.",
+                    "This step only records the call. It never blocks or allows one on its own.",
+                )
+            }
+
+            BlockReasonCode.ML_SCORER -> {
+                reasoning(
+                    "The on-device ML model flagged this number as $confidence% likely spam.",
+                    "The gradient-boosted tree model runs entirely on your device, and nothing is sent anywhere.",
+                    description.takeIf { it.isNotBlank() },
+                )
+            }
+
+            else -> {
+                null
+            }
+        }
+
+    /** Text and notification screening. */
+    private fun explainMessage(
+        reasonCode: BlockReasonCode,
+        description: String,
+        confidence: Int,
+        matchSource: String,
+    ): Reasoning? =
+        when (reasonCode) {
+            BlockReasonCode.KEYWORD -> {
+                reasoning("The SMS matched one of your keyword rules.", description.labeled("Rule: "))
+            }
+
+            BlockReasonCode.SPAM_DOMAIN -> {
+                reasoning("The message included a known spam domain.", description.labeled("Domain signal: "))
+            }
+
+            BlockReasonCode.SMS_CONTENT -> {
+                Reasoning(
+                    headline = "The SMS content looked like spam ($confidence% confidence).",
+                    bullets = listOf("Signals that fired:") + listed(description),
+                )
+            }
+
+            BlockReasonCode.SMS_BURST -> {
+                reasoning(
+                    "This sender matched SMS burst protection.",
+                    "Multiple unknown SMS arrived from this sender or prefix in a short window.",
+                    "Use the notification actions to mark the sender safe or report the burst.",
+                    description.takeIf { it.isNotBlank() },
+                )
+            }
+
+            BlockReasonCode.RCS_FILTER -> {
+                reasoning(
+                    "RCS message blocked via notification filter.",
+                    "Matched through the notification filter for RCS messages.",
+                    "Underlying reason: ${matchSource.removePrefix("rcs_").ifBlank { "filtered content" }}.",
+                    description.takeIf { it.isNotBlank() },
+                )
+            }
+
+            else -> {
+                null
+            }
+        }
+
+    private fun explainOther(
+        reasonCode: BlockReasonCode,
+        description: String,
+        confidence: Int,
+        matchSource: String,
+        preserveUnknownSourceForLegacyTest: Boolean,
+    ): Reasoning =
+        when {
+            reasonCode == BlockReasonCode.PIPELINE_DIAGNOSTIC -> {
+                reasoning(
+                    "Protection ran in degraded mode for this decision.",
+                    "CallShield allowed the activity while one or more detection stages were not evaluated.",
+                    description.takeIf { it.isNotBlank() },
+                )
+            }
+
+            reasonCode == BlockReasonCode.CATEGORY_POLICY -> {
+                reasoning(
+                    "Handled by one of your category rules.",
+                    "You chose how calls in this category are handled in Settings.",
+                    description.takeIf { it.isNotBlank() },
+                )
+            }
+
+            reasonCode == BlockReasonCode.UNKNOWN && matchSource.isBlank() -> {
+                reasoning("No block. This number was allowed through.", "None of CallShield's checks matched it.")
+            }
+
+            else -> {
+                reasoning(
+                    if (preserveUnknownSourceForLegacyTest && reasonCode == BlockReasonCode.UNKNOWN) {
+                        "Blocked at layer: $matchSource"
+                    } else {
+                        UNRECOGNIZED_HEADLINE
+                    },
+                    description.takeIf { it.isNotBlank() },
+                    "Confidence: $confidence%.".takeIf { confidence in 1..99 },
+                )
+            }
+        }
+
+    private fun reasoning(
+        headline: String,
+        vararg bullets: String?,
+    ): Reasoning = Reasoning(headline = headline, bullets = bullets.filterNotNull())
+
+    private fun String.labeled(
+        prefix: String,
+        suffix: String = "",
+    ): String? = takeIf { it.isNotBlank() }?.let { "$prefix$it$suffix" }
+
+    private fun listed(description: String): List<String> =
+        description
+            .split(",")
+            .map { it.trim().replace("_", " ") }
+            .filter { it.isNotBlank() }
+            .map { "• $it" }
+
+    internal const val UNRECOGNIZED_HEADLINE = "Blocked by an unrecognized protection rule."
+
+    private const val EXPLICIT_BLOCKS_STILL_WIN =
+        "Explicit blocklist, wildcard, range, STIR-failed, and system block rules still win first."
 
     private fun explainCategoryPolicy(
         policy: CategoryPolicyMatch,
