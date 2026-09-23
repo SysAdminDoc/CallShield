@@ -365,6 +365,10 @@ The rest of this section takes effect when the report Worker is next deployed.
   on the test phone, every older test feed was refused as a rollback and the
   tests failed. The dashboard tests now check the labels and buttons from the
   August redesign.
+- The on-device accessibility checks draw each screen in the app's theme on
+  its own background. They measured colors against the bare white test window
+  instead, which failed 20 screens for colors nobody sees and hid the real
+  light-theme contrast problems fixed above.
 
 ### Translations
 

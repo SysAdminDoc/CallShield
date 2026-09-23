@@ -10,6 +10,7 @@ import androidx.compose.ui.test.performScrollTo
 import com.sysadmindoc.callshield.data.CallCategory
 import com.sysadmindoc.callshield.data.CategoryCallAction
 import com.sysadmindoc.callshield.ui.runStrictAccessibilityChecks
+import com.sysadmindoc.callshield.ui.setThemedContent
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -21,7 +22,7 @@ class CategoryCallActionsSheetTest {
     @Test
     fun showsPrecedenceAndChangesOneCategoryAction() {
         var changed: Pair<CallCategory, CategoryCallAction>? = null
-        composeRule.setContent {
+        composeRule.setThemedContent {
             CategoryCallActionsSheet(
                 actions = mapOf(CallCategory.Robocall to CategoryCallAction.SILENCE),
                 onActionChange = { category, action -> changed = category to action },

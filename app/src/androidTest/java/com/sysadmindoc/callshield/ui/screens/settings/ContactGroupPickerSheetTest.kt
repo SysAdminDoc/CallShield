@@ -11,6 +11,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import com.sysadmindoc.callshield.data.ContactGroup
 import com.sysadmindoc.callshield.ui.runStrictAccessibilityChecks
+import com.sysadmindoc.callshield.ui.setThemedContent
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -23,7 +24,7 @@ class ContactGroupPickerSheetTest {
     fun togglesGroupsAndSupportsTheExplicitAllContactsScope() {
         val groupKey = "a".repeat(64)
         var selectedKeys by mutableStateOf(emptySet<String>())
-        composeRule.setContent {
+        composeRule.setThemedContent {
             ContactGroupPickerSheet(
                 groups = listOf(ContactGroup(groupKey, "Family", "Local", 4)),
                 selectedKeys = selectedKeys,

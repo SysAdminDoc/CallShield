@@ -16,6 +16,7 @@ import com.sysadmindoc.callshield.data.TimeSchedule
 import com.sysadmindoc.callshield.data.model.SpamNumber
 import com.sysadmindoc.callshield.data.model.WhitelistEntry
 import com.sysadmindoc.callshield.ui.runStrictAccessibilityChecks
+import com.sysadmindoc.callshield.ui.setThemedContent
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -27,7 +28,7 @@ class BlocklistTest {
 
     @Test
     fun blocklistScreenPassesAutomatedAccessibilityChecks() {
-        composeRule.setContent {
+        composeRule.setThemedContent {
             SwipeToRemoveBlocklistItem(
                 number = manualSpamNumber(),
                 onRemove = {},

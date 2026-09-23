@@ -12,6 +12,7 @@ import androidx.compose.ui.test.performClick
 import com.sysadmindoc.callshield.permissions.BackgroundExecutionRisk
 import com.sysadmindoc.callshield.ui.SyncState
 import com.sysadmindoc.callshield.ui.runStrictAccessibilityChecks
+import com.sysadmindoc.callshield.ui.setThemedContent
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -34,7 +35,7 @@ class DashboardTest {
                 overlayGranted = true,
                 notificationsGranted = true,
             )
-        composeRule.setContent {
+        composeRule.setThemedContent {
             DashboardHeroCard(
                 dashboardStatus = status,
                 heroTitle = "Protection Active",

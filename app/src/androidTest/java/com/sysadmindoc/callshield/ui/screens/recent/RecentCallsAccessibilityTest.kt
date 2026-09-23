@@ -3,6 +3,7 @@ package com.sysadmindoc.callshield.ui.screens.recent
 import android.provider.CallLog
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import com.sysadmindoc.callshield.ui.runStrictAccessibilityChecks
+import com.sysadmindoc.callshield.ui.setThemedContent
 import org.junit.Rule
 import org.junit.Test
 
@@ -12,7 +13,7 @@ class RecentCallsAccessibilityTest {
 
     @Test
     fun recentCallRowSpeaksDirectionRiskAndActions() {
-        composeRule.setContent {
+        composeRule.setThemedContent {
             RecentCallItem(
                 call =
                     RecentCall(

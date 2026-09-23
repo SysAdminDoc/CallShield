@@ -11,6 +11,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import com.sysadmindoc.callshield.ui.runStrictAccessibilityChecks
+import com.sysadmindoc.callshield.ui.setThemedContent
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -126,7 +127,7 @@ class OnboardingTest {
         setupState: OnboardingSetupState,
         onComplete: () -> Unit = {},
     ) {
-        composeRule.setContent {
+        composeRule.setThemedContent {
             OnboardingScreenContent(
                 setupState = setupState,
                 onRequestRuntimePermissions = {},

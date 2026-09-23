@@ -1,9 +1,6 @@
 package com.sysadmindoc.callshield.ui.screens.settings
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasTestTag
@@ -12,8 +9,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import com.sysadmindoc.callshield.ui.runStrictAccessibilityChecks
-import com.sysadmindoc.callshield.ui.theme.Black
-import com.sysadmindoc.callshield.ui.theme.CallShieldTheme
+import com.sysadmindoc.callshield.ui.setThemedContent
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -23,13 +19,7 @@ class MeetingModeSettingsTest {
     @get:Rule
     val composeRule = createComposeRule()
 
-    private fun themed(content: @Composable () -> Unit) {
-        composeRule.setContent {
-            CallShieldTheme {
-                Column(Modifier.background(Black)) { content() }
-            }
-        }
-    }
+    private fun themed(content: @Composable () -> Unit) = composeRule.setThemedContent(content)
 
     @Test
     fun toggleTurnsMeetingModeOn() {

@@ -21,7 +21,7 @@ class MainActivityAccessibilityTest {
 
     @Test
     fun appShellNavigationAndActivityTabsPassStrictAccessibilityChecks() {
-        composeRule.setContent {
+        composeRule.setThemedContent {
             Surface {
                 Column {
                     Row {

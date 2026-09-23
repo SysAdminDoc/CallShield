@@ -9,6 +9,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextReplacement
 import com.sysadmindoc.callshield.ui.runStrictAccessibilityChecks
+import com.sysadmindoc.callshield.ui.setThemedContent
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -20,7 +21,7 @@ class RegionCnapRulesSheetTest {
     @Test
     fun editsRegionAndNameRulesAsOneSavedPolicy() {
         var saved: SavedPolicy? = null
-        composeRule.setContent {
+        composeRule.setThemedContent {
             RegionCnapRulesSheet(
                 regionBlockEnabled = true,
                 allowedRegions = setOf("NY"),

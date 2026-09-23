@@ -5,6 +5,7 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import com.sysadmindoc.callshield.ui.runStrictAccessibilityChecks
+import com.sysadmindoc.callshield.ui.setThemedContent
 import com.sysadmindoc.callshield.ui.theme.CatBlue
 import com.sysadmindoc.callshield.ui.theme.CatGreen
 import org.junit.Rule
@@ -16,7 +17,7 @@ class MoreAccessibilityTest {
 
     @Test
     fun moreNavigationAndExternalLinksPassStrictAccessibilityChecks() {
-        composeRule.setContent {
+        composeRule.setThemedContent {
             MoreNavCard(
                 icon = Icons.Default.Settings,
                 title = "Settings",

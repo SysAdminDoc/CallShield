@@ -1,9 +1,6 @@
 package com.sysadmindoc.callshield.ui.screens.settings
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
@@ -15,8 +12,7 @@ import androidx.compose.ui.test.performTextInput
 import com.sysadmindoc.callshield.data.BackupRestore
 import com.sysadmindoc.callshield.data.RegulatoryPrefix
 import com.sysadmindoc.callshield.ui.runStrictAccessibilityChecks
-import com.sysadmindoc.callshield.ui.theme.Black
-import com.sysadmindoc.callshield.ui.theme.CallShieldTheme
+import com.sysadmindoc.callshield.ui.setThemedContent
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -28,7 +24,7 @@ class SettingsTest {
 
     @Test
     fun settingsScreenPassesAutomatedAccessibilityChecks() {
-        composeRule.setContent {
+        composeRule.setThemedContent {
             QuietHoursSettings(
                 enabled = true,
                 startHour = 22,
@@ -86,15 +82,11 @@ class SettingsTest {
     @Test
     fun regulatoryPrefixCardListsEveryRangeAndPersistsToggles() {
         val changes = mutableListOf<Pair<RegulatoryPrefix, Boolean>>()
-        composeRule.setContent {
-            CallShieldTheme {
-                Column(Modifier.background(Black)) {
-                    RegulatoryPrefixSettings(
-                        enabled = setOf(RegulatoryPrefix.INDIA_1600),
-                        onToggle = { prefix, enabled -> changes += prefix to enabled },
-                    )
-                }
-            }
+        composeRule.setThemedContent {
+            RegulatoryPrefixSettings(
+                enabled = setOf(RegulatoryPrefix.INDIA_1600),
+                onToggle = { prefix, enabled -> changes += prefix to enabled },
+            )
         }
 
         // Section headers render uppercased.
@@ -115,12 +107,8 @@ class SettingsTest {
 
     @Test
     fun regulatoryPrefixCardPassesAutomatedAccessibilityChecks() {
-        composeRule.setContent {
-            CallShieldTheme {
-                Column(Modifier.background(Black)) {
-                    RegulatoryPrefixSettings(enabled = emptySet(), onToggle = { _, _ -> })
-                }
-            }
+        composeRule.setThemedContent {
+            RegulatoryPrefixSettings(enabled = emptySet(), onToggle = { _, _ -> })
         }
 
         composeRule.runStrictAccessibilityChecks()

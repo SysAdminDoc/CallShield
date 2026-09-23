@@ -10,6 +10,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import com.sysadmindoc.callshield.data.NotificationScreeningSources
 import com.sysadmindoc.callshield.ui.runStrictAccessibilityChecks
+import com.sysadmindoc.callshield.ui.setThemedContent
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -21,7 +22,7 @@ class NotificationScreeningSourcesSheetTest {
     @Test
     fun defaultsShowPrivateSourceOffAndMessagesOn() {
         var toggled: Pair<String, Boolean>? = null
-        composeRule.setContent {
+        composeRule.setThemedContent {
             NotificationScreeningSourcesSheet(
                 enabledPackages = NotificationScreeningSources.defaultEnabledPackages,
                 onToggle = { packageName, enabled -> toggled = packageName to enabled },

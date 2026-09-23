@@ -17,6 +17,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performSemanticsAction
 import com.sysadmindoc.callshield.data.model.ExternalBlocklistSubscription
 import com.sysadmindoc.callshield.ui.runStrictAccessibilityChecks
+import com.sysadmindoc.callshield.ui.setThemedContent
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -43,7 +44,7 @@ class ExternalBlocklistSubscriptionRowTest {
     fun eachRowIsOneNodeThatTogglesAndOffersRemove() {
         val toggled = mutableListOf<Boolean>()
         var removed = false
-        composeRule.setContent {
+        composeRule.setThemedContent {
             ExternalBlocklistSubscriptionRow(
                 subscription = subscription,
                 onToggle = { toggled += it },

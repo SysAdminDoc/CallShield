@@ -4,6 +4,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import com.sysadmindoc.callshield.ui.runStrictAccessibilityChecks
+import com.sysadmindoc.callshield.ui.setThemedContent
 import org.junit.Rule
 import org.junit.Test
 
@@ -13,7 +14,7 @@ class PushAlertSourcesSheetTest {
 
     @Test
     fun pushAlertSourceSheetPassesStrictAccessibilityChecks() {
-        composeRule.setContent {
+        composeRule.setThemedContent {
             PushAlertSourcesSheet(
                 disabledPackages = emptySet(),
                 onToggle = { _, _ -> },

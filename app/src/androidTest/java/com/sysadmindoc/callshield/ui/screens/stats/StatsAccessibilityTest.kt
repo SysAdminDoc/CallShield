@@ -5,6 +5,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import com.sysadmindoc.callshield.domain.model.BlockReasonCode
 import com.sysadmindoc.callshield.ui.runStrictAccessibilityChecks
+import com.sysadmindoc.callshield.ui.setThemedContent
 import com.sysadmindoc.callshield.ui.theme.CatGreen
 import org.junit.Rule
 import org.junit.Test
@@ -21,7 +22,7 @@ class StatsAccessibilityTest {
                 BlockReasonCode.HEURISTIC to 3,
                 BlockReasonCode.USER_BLOCKLIST to 1,
             )
-        composeRule.setContent {
+        composeRule.setThemedContent {
             Column {
                 MiniStat(modifier = Modifier, label = "Total blocked", value = "12", color = CatGreen)
                 WeeklyBarChart(

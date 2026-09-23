@@ -7,6 +7,7 @@ import com.sysadmindoc.callshield.data.model.BlockedCall
 import com.sysadmindoc.callshield.domain.model.BlockReasonCode
 import com.sysadmindoc.callshield.ui.TemporaryDecisionDuration
 import com.sysadmindoc.callshield.ui.runStrictAccessibilityChecks
+import com.sysadmindoc.callshield.ui.setThemedContent
 import org.junit.Rule
 import org.junit.Test
 
@@ -16,7 +17,7 @@ class BlockedLogAccessibilityTest {
 
     @Test
     fun blockedLogRowSpeaksReasonAndExposesNonSwipeActions() {
-        composeRule.setContent {
+        composeRule.setThemedContent {
             BlockedCallItem(
                 call =
                     BlockedCall(
