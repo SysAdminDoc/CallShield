@@ -101,6 +101,19 @@ class CallCategoryResolverTest {
     }
 
     @Test
+    fun `a weak heuristic block names no category, so no category rule can wave it through`() {
+        // Aggressive mode blocks a lone neighbor-spoof match at 50. With Scam
+        // set to Allow, naming it Scam let the call ring.
+        val weak =
+            BlockResult
+                .block("heuristic", type = "spoofed", description = "Possible neighbor spoofing", confidence = 50, signals = listOf("neighbor_spoof"))
+                .toSpamCheckResult()
+
+        assertEquals(CallCategory.Unknown, CallCategoryResolver.resolve(weak))
+        assertEquals(CallCategory.Scam, CallCategoryResolver.resolve(weak.copy(confidence = 60)))
+    }
+
+    @Test
     fun `heuristic with rapid_fire resolves to Robocall`() {
         val result =
             SpamCheckResult(

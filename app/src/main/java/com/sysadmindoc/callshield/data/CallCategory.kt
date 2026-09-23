@@ -39,6 +39,9 @@ enum class CallCategory(
 }
 
 object CallCategoryResolver {
+    /** The heuristic score the default setting blocks at; below it a signal is too weak to name a category. */
+    private const val HEURISTIC_CATEGORY_MIN_CONFIDENCE = 60
+
     /** Convenience overload for callers holding a persisted `BlockedCall`
      *  (which doesn't carry a SpamCheckResult type field but does carry
      *  matchReason, description, and confidence). */
@@ -117,8 +120,11 @@ object CallCategoryResolver {
         // Heuristic reasons: map the strongest signals. A live result carries
         // the raw tokens in `signals`; its description is display text in the
         // app language (and always had the underscores replaced), so it only
-        // helps callers that still pass tokens there.
-        if (result.reasonCode == BlockReasonCode.HEURISTIC) {
+        // helps callers that still pass tokens there. Only at the confidence
+        // the default setting blocks at: aggressive mode blocks on a single
+        // 50-point neighbor-spoof match, which also fires on local banks and
+        // schools, and naming that Scam would let a Scam rule decide it.
+        if (result.reasonCode == BlockReasonCode.HEURISTIC && result.confidence >= HEURISTIC_CATEGORY_MIN_CONFIDENCE) {
             val evidence = (result.signals + desc).joinToString(" ")
             when {
                 "wangiri" in evidence -> return CallCategory.Wangiri
