@@ -370,10 +370,12 @@ The rest of this section takes effect when the report Worker is next deployed.
   and OkHttp stay put until the move to the next build tools, because their
   current releases need it.
 - The unit tests now upgrade a database from every schema version CallShield
-  has exported (9 through 18) using the migrations that ship, and fail if
-  the result doesn't match what the app expects or a table loses rows. The
-  migration test that would have caught the August database lockout ran only
-  on an emulator, and nothing ran it.
+  has shipped, 5 through 18, using the migrations that ship, and fail if the
+  result doesn't match what the app expects or a table loses rows. Each test
+  database carries a row with every optional field empty, and a schema that
+  has already shipped can't change without a version bump. The migration test
+  that would have caught the August database lockout ran only on an emulator,
+  and nothing ran it.
 - The on-device tests keep their settings to themselves. They used the app's
   own saved settings, so once the app had loaded its built-in database on the
   test phone, every older test feed was refused as a rollback and the sync

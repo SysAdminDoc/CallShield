@@ -116,6 +116,10 @@ android {
             // allowlist instead of recursively packaging that directory.
             assets.srcDir(layout.buildDirectory.dir("generated/callshieldAssets"))
         }
+        // Test fixtures both suites use, such as the hand-built pre-export
+        // databases the JVM and instrumented migration tests both upgrade.
+        getByName("test").java.srcDir("src/sharedTest/java")
+        getByName("androidTest").java.srcDir("src/sharedTest/java")
     }
 
     lint {
@@ -230,6 +234,7 @@ detekt {
         "src/main/java",
         "src/test/java",
         "src/androidTest/java",
+        "src/sharedTest/java",
     )
     basePath = rootDir.absolutePath
 }

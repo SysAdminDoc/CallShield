@@ -86,24 +86,30 @@ class ExportedSchemaMigrationTest {
         try {
             val sqlite = database.openHelper.writableDatabase
             check(sqlite.version == DB_VERSION) { "ended at version ${sqlite.version}" }
-            // A v11 database holds a number twice (national and E.164); the identity
-            // migration merges them, so every table ends with exactly one row.
+            // Every table holds a filled row and a row with NULL in each nullable
+            // column. A v11 database also holds the filled number twice (national and
+            // E.164), which the identity migration merges, so two rows remain.
             tables.forEach { table ->
-                check(sqlite.single("SELECT COUNT(*) FROM `$table`") == "1") { "$table doesn't hold exactly one row" }
+                check(sqlite.single("SELECT COUNT(*) FROM `$table`") == "2") { "$table doesn't hold its two rows" }
             }
             if (version < IDENTITY_MIGRATION_TARGET) {
-                check(sqlite.single("SELECT number FROM spam_numbers") == CANONICAL_NUMBER) { "spam_numbers kept the national form" }
-                check(sqlite.single("SELECT number FROM whitelist") == CANONICAL_NUMBER) { "whitelist kept the national form" }
+                IDENTITY_TABLES.forEach { table ->
+                    check(sqlite.single("SELECT COUNT(*) FROM $table WHERE number = '$CANONICAL_NUMBER'") == "1") {
+                        "$table didn't merge the national form into $CANONICAL_NUMBER"
+                    }
+                }
             }
             if (version < REASON_CODE_VERSION) {
-                check(sqlite.single("SELECT reasonCode FROM call_log") == SEEDED_MATCH_REASON) { "call_log reasonCode wasn't backfilled" }
+                check(sqlite.single("SELECT COUNT(*) FROM call_log WHERE reasonCode = '$SEEDED_MATCH_REASON'") == "2") {
+                    "call_log reasonCode wasn't backfilled"
+                }
             }
         } finally {
             database.close()
         }
     }
 
-    /** Creates [version] from its schema with one row in each table, and returns the table names. */
+    /** Creates [version] from its schema with two rows in each table, and returns the table names. */
     private fun createFromSchema(
         version: Int,
         schema: JsonObject,
@@ -129,6 +135,7 @@ class ExportedSchemaMigrationTest {
                         }
                     db.insertOrThrow(table, null, twin)
                 }
+                db.insertOrThrow(table, null, seedRow(entity, nullsWherePossible = true))
             }
             database.getValue("setupQueries").jsonArray.forEach { db.execSQL(it.jsonPrimitive.content) }
             db.version = version
@@ -136,28 +143,38 @@ class ExportedSchemaMigrationTest {
         return entities.map { it.string("tableName") }
     }
 
-    private fun seedRow(entity: JsonObject) =
-        ContentValues().apply {
-            entity.getValue("fields").jsonArray.map { it.jsonObject }.forEach { field ->
-                val column = field.string("columnName")
-                when (field.string("affinity")) {
-                    "INTEGER" -> put(column, 1L)
-                    "REAL" -> put(column, 1.0)
-                    "BLOB" -> put(column, byteArrayOf(1))
-                    else -> put(column, textSeed(column))
-                }
+    /**
+     * One row for [entity]. The second row per table leaves every nullable column
+     * NULL and uses different keys (id 3, other text) so unique indexes hold.
+     */
+    private fun seedRow(
+        entity: JsonObject,
+        nullsWherePossible: Boolean = false,
+    ) = ContentValues().apply {
+        entity.getValue("fields").jsonArray.map { it.jsonObject }.forEach { field ->
+            val column = field.string("columnName")
+            val nullable = field["notNull"]?.jsonPrimitive?.content != "true"
+            when {
+                nullsWherePossible && nullable -> putNull(column)
+                field.string("affinity") == "INTEGER" -> put(column, if (nullsWherePossible) 3L else 1L)
+                field.string("affinity") == "REAL" -> put(column, 1.0)
+                field.string("affinity") == "BLOB" -> put(column, byteArrayOf(1))
+                else -> put(column, textSeed(column, second = nullsWherePossible))
             }
         }
+    }
 
     // A national-format number makes the phone-identity migration rewrite the row,
     // and a real match reason gives the reason-code backfill something to map.
-    private fun textSeed(column: String) =
-        when {
-            column.endsWith("Json") -> "[]"
-            column == "number" || column == "pattern" -> "212-555-0123"
-            column == "matchReason" -> SEEDED_MATCH_REASON
-            else -> "seed"
-        }
+    private fun textSeed(
+        column: String,
+        second: Boolean,
+    ) = when {
+        column.endsWith("Json") -> "[]"
+        column == "number" || column == "pattern" -> if (second) "212-555-0199" else "212-555-0123"
+        column == "matchReason" -> SEEDED_MATCH_REASON
+        else -> if (second) "seed-2" else "seed"
+    }
 
     private fun SupportSQLiteDatabase.single(sql: String): String? = query(sql).use { cursor -> if (cursor.moveToFirst()) cursor.getString(0) else null }
 
