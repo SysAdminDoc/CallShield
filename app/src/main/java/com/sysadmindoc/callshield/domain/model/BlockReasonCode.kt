@@ -25,6 +25,8 @@ enum class BlockReasonCode(
     DATABASE("database"),
     DB_PREFIX_EXPANSION("db_prefix_expansion"),
     PREFIX("prefix"),
+    REGULATORY_PREFIX("regulatory_prefix"),
+    REGULATORY_ALLOW("regulatory_allow"),
     WILDCARD("wildcard"),
     HASH_WILDCARD("hash_wildcard"),
     RECENTLY_DIALED("recently_dialed"),

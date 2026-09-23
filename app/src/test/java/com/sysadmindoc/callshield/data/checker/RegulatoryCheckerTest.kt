@@ -4,7 +4,9 @@ import android.content.Context
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.preferencesOf
 import androidx.test.core.app.ApplicationProvider
+import com.sysadmindoc.callshield.data.RegulatoryPrefix
 import com.sysadmindoc.callshield.data.SpamRepository
+import com.sysadmindoc.callshield.domain.model.BlockReasonCode
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -80,12 +82,15 @@ class RegulatoryCheckerTest {
     @Test
     fun `Brazil 0303 blocks when enabled`() =
         runBlocking {
+            // E.164 drops the national trunk 0, so 0303 123 4567 is +55 303 123 4567.
             val result =
                 RegulatoryPrefixChecker().check(
-                    ctx("+5503031234567", preferencesOf(SpamRepository.KEY_REG_BRAZIL_0303 to true)),
+                    ctx("+553031234567", preferencesOf(SpamRepository.KEY_REG_BRAZIL_0303 to true)),
                 )
             assertNotNull(result)
             assertEquals("regulatory_prefix", result!!.matchSource)
+            assertEquals(BlockReasonCode.REGULATORY_PREFIX, result.reasonCode)
+            assertEquals("telemarketer", result.type)
         }
 
     @Test
@@ -93,9 +98,41 @@ class RegulatoryCheckerTest {
         runBlocking {
             assertNull(
                 RegulatoryPrefixChecker().check(
-                    ctx("+5503031234567", preferencesOf(SpamRepository.KEY_REG_BRAZIL_0303 to false)),
+                    ctx("+553031234567", preferencesOf(SpamRepository.KEY_REG_BRAZIL_0303 to false)),
                 ),
             )
+        }
+
+    @Test
+    fun `a number Android left in national form still matches its range`() =
+        runBlocking {
+            val allOn =
+                preferencesOf(
+                    SpamRepository.KEY_REG_SPAIN_400 to true,
+                    SpamRepository.KEY_REG_INDIA_140 to true,
+                    SpamRepository.KEY_REG_BRAZIL_0303 to true,
+                )
+            assertNotNull(RegulatoryPrefixChecker().check(ctx("400123456", allOn)))
+            assertNotNull(RegulatoryPrefixChecker().check(ctx("1401234567", allOn)))
+            assertNotNull(RegulatoryPrefixChecker().check(ctx("03031234567", allOn)))
+            // Same leading digits at another length are some other number.
+            assertNull(RegulatoryPrefixChecker().check(ctx("4001234567", allOn)))
+            assertNull(RegulatoryPrefixChecker().check(ctx("030312345678", allOn)))
+        }
+
+    @Test
+    fun `a range only matches its own country`() =
+        runBlocking {
+            val allOn =
+                preferencesOf(
+                    SpamRepository.KEY_REG_SPAIN_400 to true,
+                    SpamRepository.KEY_REG_INDIA_140 to true,
+                    SpamRepository.KEY_REG_BRAZIL_0303 to true,
+                )
+            // Hyderabad (+91 40) and a Sao Paulo mobile (+55 11) share digits with the ranges.
+            assertNull(RegulatoryPrefixChecker().check(ctx("+914012345678", allOn)))
+            assertNull(RegulatoryPrefixChecker().check(ctx("+5511930312345", allOn)))
+            assertNull(RegulatoryPrefixChecker().check(ctx("+14001234567", allOn)))
         }
 
     @Test
@@ -103,11 +140,17 @@ class RegulatoryCheckerTest {
         runBlocking {
             val result =
                 RegulatoryAllowChecker().check(
-                    ctx("+9116001234567", preferencesOf(SpamRepository.KEY_REG_INDIA_1600_ALLOW to true)),
+                    ctx("+911600123456", preferencesOf(SpamRepository.KEY_REG_INDIA_1600_ALLOW to true)),
                 )
             assertNotNull(result)
-            assertEquals("india_1600_protected", result!!.matchSource)
+            assertEquals("regulatory_allow", result!!.matchSource)
+            assertEquals(BlockReasonCode.REGULATORY_ALLOW, result.reasonCode)
             assertTrue(!result.shouldBlock)
+            assertNotNull(
+                RegulatoryAllowChecker().check(
+                    ctx("1600123456", preferencesOf(SpamRepository.KEY_REG_INDIA_1600_ALLOW to true)),
+                ),
+            )
         }
 
     @Test
@@ -115,9 +158,17 @@ class RegulatoryCheckerTest {
         runBlocking {
             assertNull(
                 RegulatoryAllowChecker().check(
-                    ctx("+9116001234567", preferencesOf(SpamRepository.KEY_REG_INDIA_1600_ALLOW to false)),
+                    ctx("+911600123456", preferencesOf(SpamRepository.KEY_REG_INDIA_1600_ALLOW to false)),
                 ),
             )
+        }
+
+    @Test
+    fun `the allow never fires on a blocking range and the block never fires on the allow`() =
+        runBlocking {
+            val everything = preferencesOf(*RegulatoryPrefix.entries.map { it.key to true }.toTypedArray())
+            assertNull(RegulatoryAllowChecker().check(ctx("+34400123456", everything)))
+            assertNull(RegulatoryPrefixChecker().check(ctx("+911600123456", everything)))
         }
 
     @Test

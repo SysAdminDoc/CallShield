@@ -22,6 +22,7 @@ import com.sysadmindoc.callshield.data.MessageCapabilitySource
 import com.sysadmindoc.callshield.data.MessageCapabilityStatus
 import com.sysadmindoc.callshield.data.NotificationScreeningSources
 import com.sysadmindoc.callshield.data.RegionRules
+import com.sysadmindoc.callshield.data.RegulatoryPrefix
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.model.ExternalBlocklistSubscription
 import com.sysadmindoc.callshield.data.model.HotDataHealth
@@ -118,6 +119,8 @@ class SettingsRepository(
         dataStore.data.map { it[SpamRepository.KEY_OUTGOING_RISK_WARNING] ?: false }
     val regionBlockEnabled: Flow<Boolean> =
         dataStore.data.map { it[SpamRepository.KEY_REGION_BLOCK] ?: false }
+    val enabledRegulatoryPrefixes: Flow<Set<RegulatoryPrefix>> =
+        dataStore.data.map { prefs -> RegulatoryPrefix.entries.filterTo(mutableSetOf()) { prefs[it.key] == true } }
     val allowedRegions: Flow<Set<String>> =
         dataStore.data.map { RegionRules.normalizeRegionCodes(it[SpamRepository.KEY_ALLOWED_REGIONS].orEmpty()) }
     val cnapTrustPatterns: Flow<Set<String>> =
@@ -464,6 +467,11 @@ class SettingsRepository(
         }
 
     suspend fun setRegionBlock(enabled: Boolean) = dataStore.edit { it[SpamRepository.KEY_REGION_BLOCK] = enabled }
+
+    suspend fun setRegulatoryPrefix(
+        prefix: RegulatoryPrefix,
+        enabled: Boolean,
+    ) = dataStore.edit { it[prefix.key] = enabled }
 
     suspend fun setAllowedRegions(regions: Set<String>) =
         dataStore.edit { prefs ->

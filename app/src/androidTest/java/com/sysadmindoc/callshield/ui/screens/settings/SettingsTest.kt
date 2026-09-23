@@ -1,6 +1,9 @@
 package com.sysadmindoc.callshield.ui.screens.settings
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
@@ -10,7 +13,10 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import com.sysadmindoc.callshield.data.BackupRestore
+import com.sysadmindoc.callshield.data.RegulatoryPrefix
 import com.sysadmindoc.callshield.ui.runStrictAccessibilityChecks
+import com.sysadmindoc.callshield.ui.theme.Black
+import com.sysadmindoc.callshield.ui.theme.CallShieldTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -75,6 +81,49 @@ class SettingsTest {
         composeRule.onNodeWithText("End").assertIsDisplayed()
         composeRule.onAllNodesWithText("10 PM").assertCountEquals(2)
         composeRule.onNodeWithText("Start and end match, so quiet-hours blocking runs all day.").assertIsDisplayed()
+    }
+
+    @Test
+    fun regulatoryPrefixCardListsEveryRangeAndPersistsToggles() {
+        val changes = mutableListOf<Pair<RegulatoryPrefix, Boolean>>()
+        composeRule.setContent {
+            CallShieldTheme {
+                Column(Modifier.background(Black)) {
+                    RegulatoryPrefixSettings(
+                        enabled = setOf(RegulatoryPrefix.INDIA_1600),
+                        onToggle = { prefix, enabled -> changes += prefix to enabled },
+                    )
+                }
+            }
+        }
+
+        // Section headers render uppercased.
+        composeRule.onNodeWithText("Telemarketing ranges", ignoreCase = true).assertIsDisplayed()
+        RegulatoryPrefix.entries.forEach { prefix ->
+            composeRule.onNodeWithTag("$SETTINGS_REGULATORY_PREFIX_TAG_PREFIX${prefix.name}").assertExists()
+        }
+        composeRule.onNodeWithTag("${SETTINGS_REGULATORY_PREFIX_TAG_PREFIX}BRAZIL_0303").performClick()
+        composeRule.onNodeWithTag("${SETTINGS_REGULATORY_PREFIX_TAG_PREFIX}INDIA_1600").performClick()
+
+        composeRule.runOnIdle {
+            assertEquals(
+                listOf(RegulatoryPrefix.BRAZIL_0303 to true, RegulatoryPrefix.INDIA_1600 to false),
+                changes,
+            )
+        }
+    }
+
+    @Test
+    fun regulatoryPrefixCardPassesAutomatedAccessibilityChecks() {
+        composeRule.setContent {
+            CallShieldTheme {
+                Column(Modifier.background(Black)) {
+                    RegulatoryPrefixSettings(enabled = emptySet(), onToggle = { _, _ -> })
+                }
+            }
+        }
+
+        composeRule.runStrictAccessibilityChecks()
     }
 
     @Test

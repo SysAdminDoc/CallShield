@@ -113,6 +113,18 @@ object BlockReasoning {
                 if (description.isNotBlank()) bullets += "Prefix tag: $description"
             }
 
+            reasonCode == BlockReasonCode.REGULATORY_PREFIX -> {
+                headline = "This number is in a telemarketing range you chose to block."
+                bullets += "Some regulators make sales calls come from a set number range, so they're easy to tell apart."
+                if (description.isNotBlank()) bullets += "Range: $description"
+            }
+
+            reasonCode == BlockReasonCode.REGULATORY_ALLOW -> {
+                headline = "This number is in a series the regulator protects."
+                bullets += "Banks, insurers and government offices call from it, so it rings through past the spam database and the heuristics."
+                bullets += "Your own block rules still win."
+            }
+
             reasonCode == BlockReasonCode.WILDCARD -> {
                 headline = "This number matched one of your wildcard / regex rules."
                 bullets += "Matched at detection layer 8 (wildcard rules)."

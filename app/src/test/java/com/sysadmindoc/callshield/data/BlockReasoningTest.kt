@@ -31,6 +31,20 @@ class BlockReasoningTest {
     }
 
     @Test
+    fun `regulatory prefix explanation names the matched range`() {
+        val r = BlockReasoning.explain("regulatory_prefix", "Spain 400 commercial call range", 100)
+        assertTrue(r.headline.contains("telemarketing range"))
+        assertTrue(r.bullets.any { it.contains("Spain 400 commercial call range") })
+    }
+
+    @Test
+    fun `regulatory allow explanation says the user's own blocks still win`() {
+        val r = BlockReasoning.explain("regulatory_allow", "", 100)
+        assertTrue(r.headline.contains("regulator protects"))
+        assertTrue(r.bullets.any { it.contains("own block rules") })
+    }
+
+    @Test
     fun `heuristic explanation expands comma-separated reasons into bullets`() {
         val r = BlockReasoning.explain("heuristic", "high_spam_npa, voip_spam_range, neighbor_spoof", 78)
         assertTrue(r.headline.contains("78%"))

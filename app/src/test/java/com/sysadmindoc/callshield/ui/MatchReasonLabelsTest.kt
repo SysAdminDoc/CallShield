@@ -30,6 +30,8 @@ class MatchReasonLabelsTest {
                 "database",
                 "db_prefix_expansion",
                 "prefix",
+                "regulatory_prefix",
+                "regulatory_allow",
                 "wildcard",
                 "hash_wildcard",
                 "recently_dialed",

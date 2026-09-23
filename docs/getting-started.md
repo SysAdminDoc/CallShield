@@ -96,3 +96,14 @@ Every user-facing toggle with its DataStore key and default value.
 | Allowed regions | `allowed_call_regions` | empty |
 | Caller-name trust patterns | `cnap_trust_patterns` | empty |
 | Caller-name block patterns | `cnap_block_patterns` | empty |
+
+Allowed regions take two-letter US state and Canadian province codes (`NY`, `ON`), `TF` for toll-free, and `+` with a calling code for a country (`+39`, or `+1809` for a Caribbean country that shares +1).
+
+### Telemarketing ranges
+
+| Setting | Key | Default |
+|---------|-----|---------|
+| Block Spain 400 telemarketing | `reg_spain_400_enabled` | off |
+| Block India 140 promotional | `reg_india_140_enabled` | off |
+| Block Brazil 0303 telemarketing | `reg_brazil_0303_enabled` | off |
+| Protect India 1600 series | `reg_india_1600_allow_enabled` | off |

@@ -1075,6 +1075,16 @@
     <string name="tile_protection_off">防护已关闭</string>
     <string name="settings_region_cnap_rules">地区与主叫姓名规则</string>
     <string name="settings_region_cnap_summary">%1$d 个允许地区 · %2$d 个可信姓名 · %3$d 个拦截姓名</string>
+    <string name="settings_regulatory_prefixes">电话营销号段</string>
+    <string name="settings_regulatory_prefixes_desc">有些国家要求推销电话从指定号段拨出。拦截会打给你的号段。</string>
+    <string name="reg_prefix_spain_400">拦截西班牙 400 电话营销</string>
+    <string name="reg_prefix_spain_400_desc">自 2026 年 10 月 17 日起，西班牙要求商业电话从 400 号码拨出。</string>
+    <string name="reg_prefix_india_140">拦截印度 140 推广来电</string>
+    <string name="reg_prefix_india_140_desc">印度将 140 号段保留给推广和电话营销来电（TRAI）。</string>
+    <string name="reg_prefix_brazil_0303">拦截巴西 0303 电话营销</string>
+    <string name="reg_prefix_brazil_0303_desc">巴西的电话营销来电使用 ANATEL 为其指定的 0303 代码。</string>
+    <string name="reg_prefix_india_1600_allow">保护印度 1600 号段</string>
+    <string name="reg_prefix_india_1600_allow_desc">印度 1600 号段专供银行、保险公司和政府机构使用，来自该号段的来电不会被垃圾号码库拦截。</string>
     <string name="region_rules_title">地区与主叫姓名规则</string>
     <string name="region_rules_disclosure">这些规则完全在你的设备上运行。地区拦截对北美号码读取区号，对其他号码读取国家代码。主叫姓名信任仅使用 Android 暴露给筛查服务的运营商呈现姓名。</string>
     <string name="region_rules_block_outside">拦截允许地区之外的来电</string>

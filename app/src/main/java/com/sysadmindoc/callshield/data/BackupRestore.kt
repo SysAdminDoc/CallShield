@@ -194,6 +194,8 @@ object BackupRestore {
         val outgoingRiskWarningEnabled: Boolean = false,
         val activeProfileName: String? = null,
         val notificationScreeningPackages: List<String>? = null,
+        /** Preference key names of the [RegulatoryPrefix] rules that are on. */
+        val enabledRegulatoryPrefixes: List<String> = emptyList(),
     )
 
     @Suppress("LongParameterList")
@@ -1107,7 +1109,7 @@ object BackupRestore {
     }
 
     @Suppress("LongMethod")
-    private fun Preferences.toBackupSettings(): BackupSettings =
+    internal fun Preferences.toBackupSettings(): BackupSettings =
         BackupSettings(
             blockCallsEnabled = this[SpamRepository.KEY_BLOCK_CALLS] ?: true,
             blockSmsEnabled = this[SpamRepository.KEY_BLOCK_SMS] ?: true,
@@ -1173,6 +1175,11 @@ object BackupRestore {
             notificationScreeningPackages =
                 this[SpamRepository.KEY_NOTIFICATION_SCREENING_PACKAGES]
                     ?.let { NotificationScreeningSources.enabledPackages(it).sorted() },
+            enabledRegulatoryPrefixes =
+                RegulatoryPrefix.entries
+                    .filter { this[it.key] == true }
+                    .map { it.key.name }
+                    .sorted(),
         )
 
     private fun BackupSettings.sanitized(): BackupSettings =
@@ -1202,6 +1209,12 @@ object BackupRestore {
                     ?.filter { NotificationScreeningSources.sourceFor(it) != null }
                     ?.distinct()
                     ?.sorted(),
+            enabledRegulatoryPrefixes =
+                enabledRegulatoryPrefixes
+                    .map { it.trim() }
+                    .filter { name -> RegulatoryPrefix.entries.any { it.key.name == name } }
+                    .distinct()
+                    .sorted(),
         )
 
     @Suppress("LongMethod")
@@ -1213,7 +1226,7 @@ object BackupRestore {
     }
 
     @Suppress("LongMethod")
-    private fun BackupSettings.writeTo(preferences: MutablePreferences) {
+    internal fun BackupSettings.writeTo(preferences: MutablePreferences) {
         preferences[SpamRepository.KEY_BLOCK_CALLS] = blockCallsEnabled
         preferences[SpamRepository.KEY_BLOCK_SMS] = blockSmsEnabled
         preferences[SpamRepository.KEY_BLOCK_UNKNOWN] = blockUnknownEnabled
@@ -1260,6 +1273,7 @@ object BackupRestore {
             preferences[SpamRepository.KEY_ALLOWED_REGIONS] = allowedRegions.toSet()
         }
         preferences[SpamRepository.KEY_REGION_BLOCK] = regionBlockEnabled && allowedRegions.isNotEmpty()
+        RegulatoryPrefix.entries.forEach { preferences[it.key] = it.key.name in enabledRegulatoryPrefixes }
         if (cnapTrustPatterns.isEmpty()) {
             preferences.remove(SpamRepository.KEY_CNAP_TRUST_PATTERNS)
         } else {

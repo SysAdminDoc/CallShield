@@ -1,5 +1,6 @@
 package com.sysadmindoc.callshield.data
 
+import androidx.datastore.preferences.core.mutablePreferencesOf
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import com.sysadmindoc.callshield.data.BackupRestore.Backup
@@ -496,5 +497,47 @@ class BackupRestoreTest {
 
         assertNotNull("round-trip must not produce null", restored)
         assertEquals(original, restored)
+    }
+
+    @Test
+    fun `regulatory prefix toggles survive a settings round trip`() {
+        val source =
+            mutablePreferencesOf(
+                SpamRepository.KEY_REG_BRAZIL_0303 to true,
+                SpamRepository.KEY_REG_INDIA_1600_ALLOW to true,
+                SpamRepository.KEY_REG_SPAIN_400 to false,
+            )
+        val settings = with(BackupRestore) { source.toBackupSettings() }
+        assertEquals(
+            listOf("reg_brazil_0303_enabled", "reg_india_1600_allow_enabled"),
+            settings.enabledRegulatoryPrefixes,
+        )
+
+        val validation = BackupRestore.validateBackupJson(BackupRestore.backupToJson(Backup(settings = settings)))
+        val restoredSettings = checkNotNull((validation as BackupRestore.RestoreValidation.Valid).payload.settings)
+        // A rule the device has on but the backup had off goes off, like every other setting.
+        val target = mutablePreferencesOf(SpamRepository.KEY_REG_INDIA_140 to true)
+        with(BackupRestore) { restoredSettings.writeTo(target) }
+
+        assertEquals(true, target[SpamRepository.KEY_REG_BRAZIL_0303])
+        assertEquals(true, target[SpamRepository.KEY_REG_INDIA_1600_ALLOW])
+        assertEquals(false, target[SpamRepository.KEY_REG_SPAIN_400])
+        assertEquals(false, target[SpamRepository.KEY_REG_INDIA_140])
+    }
+
+    @Test
+    fun `an unknown regulatory rule name in a backup is dropped`() {
+        val validation =
+            BackupRestore.validateBackupForRestore(
+                Backup(
+                    settings =
+                        BackupSettings(
+                            enabledRegulatoryPrefixes = listOf(" reg_spain_400_enabled ", "reg_mars_999_enabled"),
+                        ),
+                ),
+            )
+
+        val payload = (validation as BackupRestore.RestoreValidation.Valid).payload
+        assertEquals(listOf("reg_spain_400_enabled"), payload.settings?.enabledRegulatoryPrefixes)
     }
 }

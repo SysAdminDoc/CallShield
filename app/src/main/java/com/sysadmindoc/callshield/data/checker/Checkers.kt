@@ -10,6 +10,7 @@ import com.sysadmindoc.callshield.data.ContactGroupCatalog
 import com.sysadmindoc.callshield.data.EmergencyNumberFloor
 import com.sysadmindoc.callshield.data.HashWildcardMatcher
 import com.sysadmindoc.callshield.data.RegionRules
+import com.sysadmindoc.callshield.data.RegulatoryPrefix
 import com.sysadmindoc.callshield.data.SmsContentAnalyzer
 import com.sysadmindoc.callshield.data.SmsContextChecker
 import com.sysadmindoc.callshield.data.SourceEvidenceCodec
@@ -449,34 +450,26 @@ internal class PrefixChecker(
     }
 }
 
+/** Opt-in blocks for sales-call ranges a regulator set aside ([RegulatoryPrefix]). */
 internal class RegulatoryPrefixChecker : IChecker {
     override val priority = CheckerPriority.REGULATORY_PREFIX
     override val name = "regulatory_prefix"
 
-    override suspend fun check(ctx: CheckContext): BlockResult? {
-        if (ctx.prefs[SpamRepository.KEY_REG_SPAIN_400] == true && ctx.number.startsWith("+34400")) {
-            return BlockResult.block("regulatory_prefix", "telemarketing", "Spain 400 telemarketing (RD 2026)")
+    override suspend fun check(ctx: CheckContext): BlockResult? =
+        RegulatoryPrefix.enabledMatch(ctx.prefs, ctx.number, allows = false)?.let { range ->
+            BlockResult.block(name, "telemarketer", range.description)
         }
-        if (ctx.prefs[SpamRepository.KEY_REG_INDIA_140] == true && ctx.number.startsWith("+91140")) {
-            return BlockResult.block("regulatory_prefix", "telemarketing", "India 140 promotional (TRAI)")
-        }
-        if (ctx.prefs[SpamRepository.KEY_REG_BRAZIL_0303] == true && ctx.number.startsWith("+550303")) {
-            return BlockResult.block("regulatory_prefix", "telemarketing", "Brazil 0303 telemarketing (ANATEL)")
-        }
-        return null
-    }
 }
 
+/** Opt-in allow for a protected series ([RegulatoryPrefix]), above the downloaded data and statistics. */
 internal class RegulatoryAllowChecker : IChecker {
     override val priority = CheckerPriority.REGULATORY_ALLOW
     override val name = "regulatory_allow"
 
-    override suspend fun check(ctx: CheckContext): BlockResult? {
-        if (ctx.prefs[SpamRepository.KEY_REG_INDIA_1600_ALLOW] == true && ctx.number.startsWith("+911600")) {
-            return BlockResult.allow("india_1600_protected")
+    override suspend fun check(ctx: CheckContext): BlockResult? =
+        RegulatoryPrefix.enabledMatch(ctx.prefs, ctx.number, allows = true)?.let { series ->
+            BlockResult.allow(name, description = series.description)
         }
-        return null
-    }
 }
 
 /**

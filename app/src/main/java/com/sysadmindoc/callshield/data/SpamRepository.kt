@@ -387,6 +387,7 @@ class SpamRepository(
     val selectedContactGroups: Flow<Set<String>> = settingsRepository.selectedContactGroups
     val outgoingRiskWarningEnabled: Flow<Boolean> = settingsRepository.outgoingRiskWarningEnabled
     val regionBlockEnabled: Flow<Boolean> = settingsRepository.regionBlockEnabled
+    val enabledRegulatoryPrefixes: Flow<Set<RegulatoryPrefix>> = settingsRepository.enabledRegulatoryPrefixes
     val allowedRegions: Flow<Set<String>> = settingsRepository.allowedRegions
     val cnapTrustPatterns: Flow<Set<String>> = settingsRepository.cnapTrustPatterns
     val cnapBlockPatterns: Flow<Set<String>> = settingsRepository.cnapBlockPatterns
@@ -566,6 +567,11 @@ class SpamRepository(
     suspend fun setOutgoingRiskWarning(enabled: Boolean) = settingsRepository.setOutgoingRiskWarning(enabled)
 
     suspend fun setRegionBlock(enabled: Boolean) = settingsRepository.setRegionBlock(enabled)
+
+    suspend fun setRegulatoryPrefix(
+        prefix: RegulatoryPrefix,
+        enabled: Boolean,
+    ) = settingsRepository.setRegulatoryPrefix(prefix, enabled)
 
     suspend fun setAllowedRegions(regions: Set<String>) = settingsRepository.setAllowedRegions(regions)
 

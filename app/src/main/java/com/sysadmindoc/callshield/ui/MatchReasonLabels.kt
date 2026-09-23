@@ -66,6 +66,8 @@ fun pipelineCheckerLabelRes(checkerName: String): Int =
         "database" -> R.string.lookup_checker_database
         "db_prefix_expansion" -> R.string.lookup_checker_db_prefix_expansion
         "prefix" -> R.string.lookup_checker_prefix
+        "regulatory_prefix" -> R.string.lookup_checker_regulatory_prefix
+        "regulatory_allow" -> R.string.lookup_checker_regulatory_allow
         "wildcard" -> R.string.lookup_checker_wildcard
         "hash_wildcard" -> R.string.lookup_checker_hash_wildcard
         "recently_dialed" -> R.string.lookup_checker_recently_dialed
@@ -144,6 +146,8 @@ fun blockReasonAccessibilityLabelRes(reasonCode: BlockReasonCode): Int =
         BlockReasonCode.DATABASE -> R.string.accessibility_reason_database
         BlockReasonCode.DB_PREFIX_EXPANSION -> R.string.accessibility_reason_database_prefix
         BlockReasonCode.PREFIX, BlockReasonCode.REGION_BLOCK -> R.string.accessibility_reason_prefix
+        BlockReasonCode.REGULATORY_PREFIX -> R.string.accessibility_reason_regulatory_prefix
+        BlockReasonCode.REGULATORY_ALLOW -> R.string.accessibility_reason_regulatory_allow
         BlockReasonCode.WILDCARD, BlockReasonCode.HASH_WILDCARD -> R.string.accessibility_reason_saved_pattern
         BlockReasonCode.RECENTLY_DIALED -> R.string.accessibility_reason_recently_dialed
         BlockReasonCode.ANSWERED_CALLER -> R.string.accessibility_reason_answered_caller
