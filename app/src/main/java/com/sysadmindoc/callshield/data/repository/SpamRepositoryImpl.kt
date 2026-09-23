@@ -123,6 +123,18 @@ class SpamRepositoryImpl(
         return result
     }
 
+    /**
+     * Loads the rule caches the first screened call would otherwise load inside
+     * its five-second budget. Runs when the process starts, which covers boot
+     * and app updates.
+     */
+    internal suspend fun warmScreeningCaches() {
+        getPrefixesCachedInternal()
+        getActiveWildcardsCachedInternal()
+        getActiveHashWildcardsCachedInternal()
+        getActiveKeywordsCachedInternal()
+    }
+
     internal suspend fun getCallFrequencySinceInternal(
         number: String,
         since: Long,

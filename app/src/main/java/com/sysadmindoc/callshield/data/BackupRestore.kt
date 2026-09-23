@@ -580,7 +580,9 @@ object BackupRestore {
     suspend fun reconcilePendingRestore(context: Context): Boolean =
         withContext(Dispatchers.IO) {
             val dao = AppDatabase.getInstance(context).spamDao()
-            reconcilePendingRestore(dao, SpamRepository.getInstance(context))
+            reconcilePendingRestore(dao, SpamRepository.getInstance(context)).also {
+                RestoreSentinel.markClean(context)
+            }
         }
 
     internal suspend fun reconcilePendingRestore(
@@ -673,6 +675,7 @@ object BackupRestore {
             val desiredSettings = payload.settings?.sanitized()
             val settingsBeforeRestore = desiredSettings?.let { repo.readPrefsSnapshot().toBackupSettings() }
             if (desiredSettings != null && settingsBeforeRestore != null) {
+                RestoreSentinel.markDirty(context)
                 dao.upsertRestoreJournal(
                     RestoreJournal(
                         phase = RestoreJournal.PHASE_PREPARED,

@@ -630,6 +630,8 @@ class SpamRepository(
 
     internal suspend fun findExactSpamNumber(normalized: String) = spamRepositoryImpl.findByNumberInternal(normalized)
 
+    internal suspend fun warmScreeningCaches() = spamRepositoryImpl.warmScreeningCaches()
+
     internal suspend fun hasActiveWhitelistEntry(normalized: String): Boolean =
         spamRepositoryImpl.findWhitelistEntryInternal(normalized) != null ||
             spamRepositoryImpl.findTemporaryWhitelistEntryInternal(normalized) != null

@@ -6,6 +6,13 @@ All notable changes to CallShield will be documented in this file.
 
 ### Protection
 
+- CallShield starts faster when a call wakes it. Looking for an interrupted
+  backup restore held the main thread about 0.7 seconds on every start
+  (measured on an Android 10 emulator), out of the five seconds Android gives
+  a call. A marker file now proves there's nothing to finish, so startup takes
+  about 60 ms, and only the first start after an install, an update or a
+  restore still looks. The blocking rules also load as the app starts, which
+  includes after a reboot or an update, instead of during the first call.
 - Updating from an older version no longer leaves CallShield unable to open
   its database. An August change set up two database indexes the app itself
   didn't expect, so on a phone whose data came from a release before August

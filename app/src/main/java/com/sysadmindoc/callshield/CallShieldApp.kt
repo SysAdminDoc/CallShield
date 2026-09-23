@@ -7,6 +7,7 @@ import android.database.ContentObserver
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.os.UserManager
 import android.provider.BlockedNumberContract
 import android.provider.ContactsContract
@@ -14,6 +15,7 @@ import android.util.Log
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import com.sysadmindoc.callshield.data.BackupRestore
+import com.sysadmindoc.callshield.data.RestoreSentinel
 import com.sysadmindoc.callshield.data.SpamHeuristics
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.SystemBlockList
@@ -76,19 +78,38 @@ class CallShieldApp :
         if (getSystemService(UserManager::class.java)?.isUserUnlocked == false || unlockedInitializationComplete) return
         synchronized(this) {
             if (unlockedInitializationComplete) return
+            val initStartedAt = SystemClock.elapsedRealtime()
             // Install the uncaught-exception handler BEFORE anything else so we
             // capture crashes even during app-startup init.
             CrashReporter.install(this)
             // Before any worker is scheduled, so one that runs at once waits for
             // the stored mirror setting instead of building its sources without it.
             FeedMirror.startLoading()
+            val restoreCheckStartedAt = SystemClock.elapsedRealtime()
+            val lookedForRestore = !RestoreSentinel.isClean(this)
             try {
-                // A restore journal is normally absent, so this is one indexed
-                // Room read. When present it must reconcile before workers or
-                // screening components can observe cross-store partial state.
-                runBlocking { BackupRestore.reconcilePendingRestore(this@CallShieldApp) }
+                // A pending restore must reconcile before workers or screening
+                // components can observe cross-store partial state. The sentinel
+                // proves there's none without opening Room or initializing
+                // BackupRestore (its reflective Moshi adapter alone took about
+                // 500 ms), which together held the main thread 640 ms on every
+                // start (API 29 emulator).
+                if (lookedForRestore) {
+                    runBlocking { BackupRestore.reconcilePendingRestore(this@CallShieldApp) }
+                }
             } catch (e: Exception) {
                 Log.e("CallShieldApp", "Failed to reconcile an interrupted restore", e)
+            }
+            val restoreCheckMillis = SystemClock.elapsedRealtime() - restoreCheckStartedAt
+            // After the restore check, so the caches hold the restored rules.
+            // Boot and app updates start the process here too, so the first
+            // screened call no longer loads them inside its five-second budget.
+            appScope.launch {
+                try {
+                    SpamRepository.getInstance(this@CallShieldApp).warmScreeningCaches()
+                } catch (e: Exception) {
+                    Log.w("CallShieldApp", "Failed to warm the screening caches", e)
+                }
             }
             NotificationHelper.createChannels(this)
             SyncWorker.schedule(this)
@@ -155,6 +176,13 @@ class CallShieldApp :
                 }
             }
             unlockedInitializationComplete = true
+            startupTimings =
+                StartupTimings(
+                    initMillis = SystemClock.elapsedRealtime() - initStartedAt,
+                    restoreCheckMillis = restoreCheckMillis,
+                    readyAtElapsedRealtime = SystemClock.elapsedRealtime(),
+                    lookedForRestore = lookedForRestore,
+                ).also { Log.i("CallShieldApp", "Startup held the main thread ${it.initMillis}ms (restore check ${it.restoreCheckMillis}ms)") }
         }
     }
 
@@ -226,5 +254,23 @@ class CallShieldApp :
          */
         lateinit var appScope: CoroutineScope
             private set
+
+        /** What the last unlocked initialization cost, read by the cold-start test. */
+        @Volatile
+        internal var startupTimings: StartupTimings? = null
+            private set
     }
 }
+
+/**
+ * Main-thread cost of [CallShieldApp.initializeAfterUserUnlock]. The restore
+ * check is part of [initMillis]; [readyAtElapsedRealtime] is when it finished.
+ * [lookedForRestore] is true on the one start after an install, an update or a
+ * restore that had to open Room because [RestoreSentinel] had no proof yet.
+ */
+internal data class StartupTimings(
+    val initMillis: Long,
+    val restoreCheckMillis: Long,
+    val readyAtElapsedRealtime: Long,
+    val lookedForRestore: Boolean,
+)
