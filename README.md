@@ -129,7 +129,7 @@ SMS-specific layers (append after the shared chain, in their own priority order)
 - **Opt-in message notification screening**. Google/Samsung Messages are enabled by default. AOSP Messages, SMS Organizer, Signal, WhatsApp, WhatsApp Business, Gmail, Outlook, and Thunderbird can be enabled individually. Private-messenger/email matches show a separate warning without removing the original notification.
 - **URL Safety**. Local spam-domain checks stay on-device. Optional URLhaus (abuse.ch) checks are off by default and disclose only the registrable domain
 - **STIR/SHAKEN**. Blocks calls failing carrier caller ID verification (Android 11+)
-- **Outgoing call check**. Opt-in, through Android's call redirection role. A call you start to a number on your blocklist, in the spam database, on a premium-rate line or on a callback-scam country code is held, and a notification tells you why and offers Call anyway. Contacts and trusted numbers ring through, and a slow check never delays the call.
+- **Outgoing call check**. Opt-in, through Android's call redirection role. A call you start to a number on your blocklist, in the spam database, on a premium-rate line or on a callback-scam country code is held, and a notification tells you why and offers Call anyway. Contacts and trusted numbers ring through, and a slow check never delays the call. If you wouldn't see the notification, in car mode or under Do Not Disturb for example, the call goes through.
 - **After-Call Feedback**. "Was this spam?" notification after suspicious calls, plus an optional Android 11+ post-call screen for block/report and save-contact actions
 
 ### Per-Rule Schedules (A7)

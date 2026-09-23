@@ -15,9 +15,12 @@ All notable changes to CallShield will be documented in this file.
   Call anyway. Contacts and numbers you trust ring through, and if the check
   runs slow the call goes ahead rather than being dropped, unless it's a
   premium-rate or callback-scam number, which is held on that rule alone.
-  The hold never happens where you couldn't see the notification: in car
-  mode, or with CallShield's notifications turned off, the call goes
-  through. One Call anyway covers the number however the dialer spells it.
+  The hold never happens where you wouldn't see the notification. In car
+  mode, under Do Not Disturb, or with CallShield's notifications turned off
+  or turned down so they no longer pop up, the call goes through. One Call
+  anyway covers the number however the dialer spells it. If you start a
+  second call before CallShield has answered for the first, the second one
+  is checked on its own and never gets the first call's answer.
 
 - Work-from-home job offers now count as spam content, in English, Spanish,
   Portuguese and Italian. That's a text promising pay by the day or hour for

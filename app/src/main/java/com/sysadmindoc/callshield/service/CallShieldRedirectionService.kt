@@ -13,9 +13,12 @@ import com.sysadmindoc.callshield.data.PhoneIdentityCanonicalizer
 import com.sysadmindoc.callshield.data.SpamHeuristics
 import com.sysadmindoc.callshield.data.SpamRepository
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -30,29 +33,42 @@ import java.util.concurrent.atomic.AtomicBoolean
  * alone, and a hold happens only when its notification can reach the user.
  */
 class CallShieldRedirectionService : CallRedirectionService() {
-    private val answered = AtomicBoolean(false)
-    private var pending: Job? = null
+    // Tests supply an isolated repository and scope; production uses the app's.
+    internal var repository: SpamRepository? = null
+    internal var scope: CoroutineScope? = null
 
-    // A premium-rate or callback-scam number is known to need a hold before
-    // any lookup runs. If the lookups outlast the deadline, this is the answer
-    // instead of letting the call through.
-    @Volatile private var provisional: Outcome? = null
+    // Telecom keeps one reply channel per service, and a second call placed
+    // before the first is answered takes it over. Only the call Telecom is
+    // waiting on may answer, so a slow check from an earlier call can't
+    // hold or place the next one. Set and read on the main thread.
+    private var current: PendingCall? = null
+
+    private class PendingCall {
+        val answered = AtomicBoolean(false)
+
+        @Volatile var job: Job? = null
+
+        // A premium-rate or callback-scam number is known to need a hold before
+        // any lookup runs. If the lookups outlast the deadline, this is the answer
+        // instead of letting the call through.
+        @Volatile var provisional: Outcome? = null
+    }
 
     override fun onPlaceCall(
         handle: Uri,
         initialPhoneAccount: PhoneAccountHandle,
         allowInteractiveResponse: Boolean,
     ) {
-        answered.set(false)
-        provisional = null
+        val call = PendingCall()
+        current = call
         val appContext = applicationContext
         val rawNumber = handle.schemeSpecificPart.orEmpty()
-        val scope = CallShieldApp.appScope
+        val scope = this.scope ?: CallShieldApp.appScope
         // Not a child of the coroutine that answers: a contacts query blocks and
         // can't be cancelled, so a slow check is left behind at the deadline
         // rather than holding the answer until it returns.
-        val check = scope.async { check(appContext, rawNumber, allowInteractiveResponse) }
-        pending =
+        val check = scope.async { check(appContext, rawNumber, allowInteractiveResponse, call) }
+        call.job =
             scope.launch {
                 val outcome =
                     try {
@@ -63,14 +79,20 @@ class CallShieldRedirectionService : CallRedirectionService() {
                         Log.w(TAG, "Outgoing call check failed, placing the call", e)
                         null
                     }
-                answer(appContext, outcome ?: provisional ?: Outcome(rawNumber, OutgoingCallGuard.Decision.Proceed))
+                // On the main thread, where Telecom hands over each call's reply
+                // channel, so no new call can take it between the check and the answer.
+                withContext(Dispatchers.Main) {
+                    answer(appContext, call, outcome ?: call.provisional ?: Outcome(rawNumber, OutgoingCallGuard.Decision.Proceed))
+                }
             }
     }
 
     override fun onRedirectionTimeout() {
         // Telecom has already given up on this call; a late answer would only fail.
-        answered.set(true)
-        pending?.cancel()
+        current?.let { call ->
+            call.answered.set(true)
+            call.job?.cancel()
+        }
     }
 
     private data class Outcome(
@@ -82,8 +104,9 @@ class CallShieldRedirectionService : CallRedirectionService() {
         context: Context,
         rawNumber: String,
         allowInteractiveResponse: Boolean,
+        call: PendingCall,
     ): Outcome {
-        val repository = SpamRepository.getInstance(context)
+        val repository = this.repository ?: SpamRepository.getInstance(context)
         val number = repository.normalizeNumber(rawNumber).ifBlank { rawNumber }
         val prefs = repository.readPrefsSnapshot()
         val proceed = Outcome(number, OutgoingCallGuard.Decision.Proceed)
@@ -103,7 +126,7 @@ class CallShieldRedirectionService : CallRedirectionService() {
         val now = SystemClock.elapsedRealtime()
         val bypassKey = OutgoingCallGuard.bypassKey(number, PhoneIdentityCanonicalizer.cachedFromContext(context).homeRegionIso)
         if (!OutgoingCallGuard.isBypassed(bypassKey, now)) {
-            OutgoingCallGuard.ruleReason(number)?.let { provisional = Outcome(number, OutgoingCallGuard.Decision.Hold(it)) }
+            OutgoingCallGuard.ruleReason(number)?.let { call.provisional = Outcome(number, OutgoingCallGuard.Decision.Hold(it)) }
         }
         val decision =
             OutgoingCallGuard.decide(
@@ -124,9 +147,11 @@ class CallShieldRedirectionService : CallRedirectionService() {
 
     private fun answer(
         context: Context,
+        call: PendingCall,
         outcome: Outcome,
     ) {
-        if (!answered.compareAndSet(false, true)) return
+        // A later call owns the reply channel now; this answer would land on it.
+        if (current !== call || !call.answered.compareAndSet(false, true)) return
         try {
             when (val decision = outcome.decision) {
                 OutgoingCallGuard.Decision.Proceed -> {
