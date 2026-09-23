@@ -6,6 +6,12 @@ All notable changes to CallShield will be documented in this file.
 
 ### Protection
 
+- Updating from an older version no longer leaves CallShield unable to open
+  its database. An August change set up two database indexes the app itself
+  didn't expect, so on a phone whose data came from a release before August
+  2026 the database check failed on every launch and the update never
+  finished. It now completes cleanly.
+
 - **Protection data downloads work again.** GitHub moved its certificates to a
   new set of Let's Encrypt roots around 2026-08-02. The certificate pins in
   v1.7.36 through v1.7.38 matched only the old ones, so every download of the

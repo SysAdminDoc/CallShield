@@ -196,7 +196,14 @@ val MIGRATION_12_13 =
         }
     }
 
-/** v13 -> v14: retain source evidence and independent feed freshness. */
+/**
+ * v13 -> v14: retain source evidence and independent feed freshness.
+ *
+ * Until 2026-09-22 this also created indexes on `evidenceExpiresAt`, which no
+ * entity declares. Room's post-migration check then failed and rolled back on
+ * every launch, so no database ever committed them and dropping the two
+ * statements needs no version bump.
+ */
 val MIGRATION_13_14 =
     object : Migration(DB_VERSION_13, DB_VERSION_14) {
         override fun migrate(db: SupportSQLiteDatabase) {
@@ -204,14 +211,6 @@ val MIGRATION_13_14 =
             db.execSQL("ALTER TABLE spam_numbers ADD COLUMN evidenceExpiresAt INTEGER")
             db.execSQL("ALTER TABLE spam_prefixes ADD COLUMN evidenceJson TEXT NOT NULL DEFAULT '[]'")
             db.execSQL("ALTER TABLE spam_prefixes ADD COLUMN evidenceExpiresAt INTEGER")
-            db.execSQL(
-                "CREATE INDEX IF NOT EXISTS `index_spam_numbers_evidenceExpiresAt` " +
-                    "ON `spam_numbers`(`evidenceExpiresAt`)",
-            )
-            db.execSQL(
-                "CREATE INDEX IF NOT EXISTS `index_spam_prefixes_evidenceExpiresAt` " +
-                    "ON `spam_prefixes`(`evidenceExpiresAt`)",
-            )
         }
     }
 
