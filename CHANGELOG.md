@@ -6,6 +6,12 @@ All notable changes to CallShield will be documented in this file.
 
 ### Protection
 
+- Work-from-home job offers are caught now, in English, Spanish, Portuguese
+  and Italian. A text that promises pay by the day or hour for working from
+  home or liking videos ("gane 300 EUR al día desde casa", "ganhe R$ 500 por
+  dia curtindo vídeos") counts as spam. It takes both halves, so an interview
+  reminder, a payslip notice or a shift pay update stays clean.
+
 - CallShield starts faster when a call wakes it. Looking for an interrupted
   backup restore held the main thread about 0.7 seconds on every start
   (measured on an Android 10 emulator), out of the five seconds Android gives

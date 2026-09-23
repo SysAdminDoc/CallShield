@@ -167,6 +167,33 @@ private object SmsEvaluationCorpus {
                 body = "Your package has arrived. Track it at https://store.example.invalid/track.",
             ),
             example(
+                id = "en_spam_job_offer",
+                languageTag = "en",
+                category = SmsCorpusCategory.SPAM,
+                region = "US",
+                senderForm = SmsCorpusSenderForm.PHONE_NUMBER,
+                linkKind = SmsCorpusLinkKind.NONE,
+                body = "Job offer: earn \$300 a day from home with just one hour of work. Message us on WhatsApp to start.",
+            ),
+            example(
+                id = "en_legitimate_job_interview",
+                languageTag = "en",
+                category = SmsCorpusCategory.LEGITIMATE,
+                region = "US",
+                senderForm = SmsCorpusSenderForm.ALPHANUMERIC,
+                linkKind = SmsCorpusLinkKind.NONE,
+                body = "Reminder: your job interview is tomorrow at 10:00 at our Main Street office. Please bring a photo ID.",
+            ),
+            example(
+                id = "en_legitimate_payslip",
+                languageTag = "en",
+                category = SmsCorpusCategory.LEGITIMATE,
+                region = "US",
+                senderForm = SmsCorpusSenderForm.ALPHANUMERIC,
+                linkKind = SmsCorpusLinkKind.NONE,
+                body = "Your payslip for September is now available in the employee portal.",
+            ),
+            example(
                 id = "es_scam_account_no_link",
                 languageTag = "es",
                 category = SmsCorpusCategory.SCAM,
@@ -336,6 +363,8 @@ private object SmsEvaluationCorpus {
             spanish(HARD_NEGATIVE, NONE, "school_meeting", "El colegio informa: la reunión de padres es el jueves a las 18:00. Confirme su asistencia respondiendo a este mensaje."),
             spanish(HARD_NEGATIVE, NONE, "bank_safety_notice", "Su banco le recuerda que nunca le pedirá claves ni códigos por SMS."),
             spanish(HARD_NEGATIVE, BENIGN_DOMAIN, "store_order_tracking", "Su pedido ya está en camino. Puede seguirlo en https://tienda.example.invalid/pedido"),
+            spanish(LEGITIMATE, NONE, "job_interview", "Recordatorio: su entrevista de trabajo es mañana a las 10:00 en nuestras oficinas. Traiga su documento de identidad."),
+            spanish(LEGITIMATE, NONE, "payslip", "Su nómina de septiembre ya está disponible en el portal del empleado."),
             portuguese(SCAM, SUSPICIOUS_TLD, "parcel_customs_fee", "Sua encomenda está retida na alfândega. Pague a taxa de R$ 12,90 para liberar a entrega em https://rastreio-br.example.xyz/taxa"),
             portuguese(SCAM, SUSPICIOUS_TLD, "bank_unauthorized_access", "Detectamos um acesso suspeito na sua conta. Se não foi você, confirme seus dados em https://seguranca-banco.example.xyz/acesso"),
             portuguese(SCAM, NONE, "family_new_number", "Oi mãe, troquei de número. Salva esse aqui e me chama no WhatsApp, preciso de ajuda urgente."),
@@ -357,6 +386,8 @@ private object SmsEvaluationCorpus {
             portuguese(HARD_NEGATIVE, NONE, "insurance_premium_due", "Seguro auto: o prêmio da sua apólice vence dia 10. O boleto está disponível no aplicativo."),
             portuguese(HARD_NEGATIVE, NONE, "card_purchase_alert", "Compra aprovada de R$ 58,90 no cartão final 4821. Não reconhece? Fale com o seu banco pelo aplicativo."),
             portuguese(HARD_NEGATIVE, NONE, "parcel_out_for_delivery", "Sua entrega está pendente: o entregador tentará novamente amanhã entre 8h e 12h."),
+            portuguese(LEGITIMATE, NONE, "job_interview", "Lembrete: sua entrevista de emprego é amanhã às 10h no nosso escritório. Leve um documento com foto."),
+            portuguese(LEGITIMATE, NONE, "payslip", "Seu holerite de setembro já está disponível no portal do colaborador."),
             italian(SCAM, SUSPICIOUS_TLD, "parcel_customs_fee", "Il tuo pacco è in giacenza. Paga 1,99 EUR di spese di spedizione per riceverlo su https://spedizioni-it.example.xyz/pagamento"),
             italian(SCAM, SUSPICIOUS_TLD, "bank_unusual_access", "Abbiamo rilevato un accesso anomalo al tuo conto. Se non sei stato tu, verifica i tuoi dati su https://sicurezza-banca.example.xyz/accesso"),
             italian(SCAM, NONE, "family_new_number", "Ciao mamma, ho cambiato numero perché il telefono si è rotto. Scrivimi su WhatsApp, ho bisogno di un favore urgente."),
@@ -379,6 +410,8 @@ private object SmsEvaluationCorpus {
             italian(HARD_NEGATIVE, BENIGN_DOMAIN, "parcel_out_for_delivery", "Il tuo pacco è in consegna oggi. Traccia la spedizione su https://negozio.example.invalid/traccia"),
             italian(HARD_NEGATIVE, NONE, "card_payment_alert", "Pagamento di 32,10 EUR con carta terminante 4821 autorizzato. Se non lo riconosci, contatta la tua banca dall'app."),
             italian(HARD_NEGATIVE, NONE, "bank_safety_notice", "La tua banca ti ricorda: non ti chiederemo mai codici o password via SMS."),
+            italian(LEGITIMATE, NONE, "job_interview", "Promemoria: il tuo colloquio di lavoro è domani alle 10:00 nella nostra sede. Porta un documento d'identità."),
+            italian(LEGITIMATE, NONE, "payslip", "La tua busta paga di settembre è disponibile nel portale dipendenti."),
             example(
                 id = "ar_scam_account_no_link",
                 languageTag = "ar",
@@ -461,14 +494,14 @@ private object SmsEvaluationCorpus {
 
     /**
      * Recall each full-size language set must keep, measured on this corpus
-     * at the evaluator threshold (2026-09-22: es and pt 12 of 13, it 11 of 12;
-     * the misses are the work-from-home job offers). A floor only moves up.
+     * at the evaluator threshold (2026-09-23: es and pt 13 of 13, it 12 of 12,
+     * once the work-from-home job offers were caught). A floor only moves up.
      */
     val recallFloorByLanguage =
         mapOf(
-            "es" to 0.92,
-            "pt" to 0.92,
-            "it" to 0.91,
+            "es" to 1.0,
+            "pt" to 1.0,
+            "it" to 1.0,
         )
 
     val falsePositiveBudgetByCategory =

@@ -609,4 +609,51 @@ class SmsContentAnalyzerTest {
             assertTrue(body, SmsContentAnalyzer.analyze(body).reasons.contains("spam_keywords"))
         }
     }
+
+    // ── Work-from-home job offers ───────────────────────────────────────
+
+    @Test
+    fun `work-from-home job offers are detected in four languages`() {
+        listOf(
+            "Make \$250 per day working from home, no experience needed. Message us to apply.",
+            "Get paid 40 USD hourly for liking videos on your phone at home.",
+            "Gana 200 euros al día desde casa dando me gusta a vídeos. Escríbenos por WhatsApp.",
+            "Trabajo desde casa: ganarás 300 euros diarios con tu móvil.",
+            "Ganhe R$ 300 por dia em casa assistindo vídeos. Chame no WhatsApp.",
+            "Guadagna 150 euro al giorno da casa mettendo like ai video.",
+        ).forEach { body ->
+            assertTrue(body, SmsContentAnalyzer.analyze(body).reasons.contains("spam_keywords"))
+        }
+    }
+
+    @Test
+    fun `a pay rate or home work alone is not a job offer scam`() {
+        listOf(
+            // A rate with no home work: an employer's shift and pay notices.
+            "Shift update: you'll earn 18 USD an hour for Sunday shifts at the store from next month.",
+            "A partir de octubre ganará 12 EUR por hora en el turno de noche.",
+            // Home or remote work with no pay rate.
+            "The office is closed tomorrow for maintenance, so please work from home.",
+            "Hoy estoy en casa, llámame cuando salgas del trabajo.",
+            "Chego em casa por volta das 19h, pode ir jantando.",
+            "Domani lavoro da casa, ci sentiamo per telefono.",
+            // A discount per day is not pay.
+            "Ganhe 10% de desconto por dia de compra. Aproveite em casa!",
+        ).forEach { body ->
+            assertFalse(body, SmsContentAnalyzer.analyze(body).reasons.contains("spam_keywords"))
+        }
+    }
+
+    @Test
+    fun `interview and payslip texts stay clean`() {
+        listOf(
+            "Reminder: your job interview is tomorrow at 10:00 at our Main Street office. Please bring a photo ID.",
+            "Your payslip for September is now available in the employee portal.",
+            "Recordatorio: su entrevista de trabajo es mañana a las 10:00 en nuestras oficinas.",
+            "Seu holerite de setembro já está disponível no portal do colaborador.",
+            "La tua busta paga di settembre è disponibile nel portale dipendenti.",
+        ).forEach { body ->
+            assertEquals(body, 0, SmsContentAnalyzer.analyze(body).score)
+        }
+    }
 }

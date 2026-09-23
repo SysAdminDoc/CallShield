@@ -147,6 +147,30 @@ class SmsContentAnalyzer
                 Regex("(?i)(pacco|spedizione|consegna).{0,20}(trattenut[oa]|in sospeso|bloccat[oa])"),
                 Regex("(?i)(bonifico|trasferimento).{0,20}(immediato|urgente|adesso)"),
                 Regex("(?i)(banca|carta|credito).{0,20}(bloccat[oa]|sospes[oa]|verificare)"),
+                // ── Work-from-home job offers (en, es, pt, it) ─────────────
+                // Pay per day or hour quoted in money, plus work from home or
+                // liking videos, in either order. It takes both halves: a shift
+                // or payslip text quotes a rate, and "en casa" is everyday
+                // speech. Word edges are \p{L} lookarounds rather than \b,
+                // which treats accented letters differently on the JVM and on
+                // Android's ICU engine.
+                Regex(
+                    "(?is)^(?=.*?" +
+                        "(?<![\\p{L}\\p{N}])(?:earn|make|get paid|gan(?:a|e|ar(?:.s?)?)|ganh(?:a|e|ar(?:.s?)?)|guadagn(?:a|are|i|erai)|recib[ae]|receb[ae]|ricevi)(?![\\p{L}\\p{N}])" +
+                        ".{0,40}?(?:(?:\\p{Sc}|r\\\$)\\s?\\d|\\d[\\d.,]*\\s?(?:\\p{Sc}|(?:usd|eur|euros?|reais|d.lares|dollars?|pounds?|gbp)(?![\\p{L}\\p{N}])))" +
+                        ".{0,25}?(?:(?:/\\s?|(?<![\\p{L}\\p{N}])(?:a|an|per|each|every|al|por|ao|cada|ogni|all')\\s?)" +
+                        "(?:day|hour|hr|week|d.a|hora|semana|giorno|ora|settimana)" +
+                        "|(?<![\\p{L}\\p{N}])(?:daily|hourly|weekly|diari[oa]s?|di.rios?|giornalier[oi]))(?![\\p{L}\\p{N}])" +
+                        ")(?=.*?(?<![\\p{L}\\p{N}])(?:" +
+                        "(?:work(?:ing)?|jobs?)\\s(?:from|at)\\s(?:home|your phone)|from home|at home|part[- ]time" +
+                        "|(?:liking|like|rating|reviewing|watching)\\s(?:videos|posts|products|reviews)" +
+                        "|desde (?:tu |su )?casa|en casa|teletrabajo|a distancia|media jornada" +
+                        "|(?:dando|dar|poniendo) (?:me gusta|likes?)|(?:viendo|ver) v.deos" +
+                        "|de casa|em casa|home office|(?:curtindo|curtir) (?:v.deos|posts|fotos)" +
+                        "|(?:assistindo|assistir) (?:a )?v.deos|meio per.odo" +
+                        "|da casa|a casa|da remoto|smart working|(?:mettendo|mettere) (?:like|mi piace)|(?:guardando|guardare) video" +
+                        "))",
+                ),
             )
 
         // Phone number in SMS body (common in callback scams)
