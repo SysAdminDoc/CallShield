@@ -47,6 +47,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import androidx.core.view.WindowCompat
 
 enum class AppThemeMode(
@@ -580,6 +581,16 @@ fun SheetDragHandle() {
         BottomSheetDefaults.DragHandle()
     }
 }
+
+/**
+ * Goes on sheet content that scrolls from right under [SheetDragHandle]. A
+ * clickable scrolled partway past the top of a scroll area still reports touch
+ * bounds up to 24dp above it, and Compose gives overlapping accessibility space
+ * to the node drawn later, so a row sliding under the top edge took the bottom
+ * of the handle and TalkBack reported a 32dp handle. Drawing the content first
+ * leaves the handle its full 48dp. Touches always reached the handle.
+ */
+fun Modifier.underSheetDragHandle(): Modifier = zIndex(-1f)
 
 private val MinTouchTarget = 48.dp
 

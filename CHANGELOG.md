@@ -188,6 +188,12 @@ All notable changes to CallShield will be documented in this file.
   each action belongs to, so "Allow" in the scam row can't be mistaken for
   "Allow" in the robocall row, and the selected action reads in dark text on
   its green tint.
+- In the region and caller-name rules sheet, TalkBack reported the drag
+  handle as 32dp tall whenever a setting had scrolled partway under the top
+  of the sheet, which happens as soon as the keyboard opens. Compose let that
+  setting's touch area claim the bottom of the handle. The sheet's content
+  now sits under the handle, so it keeps its full 48dp. Taps always reached
+  the handle.
 - The trusted-source and message-screening pickers in Settings now see your
   installed apps on Android 11 and later. Android hides other apps from an app
   unless its manifest names them, and CallShield's named none, so every source

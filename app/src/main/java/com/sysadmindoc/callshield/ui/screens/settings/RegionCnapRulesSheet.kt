@@ -42,6 +42,7 @@ import com.sysadmindoc.callshield.ui.theme.PremiumActionButton
 import com.sysadmindoc.callshield.ui.theme.SheetDragHandle
 import com.sysadmindoc.callshield.ui.theme.StatusPill
 import com.sysadmindoc.callshield.ui.theme.SurfaceBright
+import com.sysadmindoc.callshield.ui.theme.underSheetDragHandle
 
 internal const val REGION_RULES_ENABLED_TAG = "region_rules_enabled"
 internal const val REGION_RULES_CODES_TAG = "region_rules_codes"
@@ -79,6 +80,7 @@ fun RegionCnapRulesSheet(
         Column(
             modifier =
                 Modifier
+                    .underSheetDragHandle()
                     .fillMaxWidth()
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = 20.dp, vertical = 8.dp),
