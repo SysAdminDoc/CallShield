@@ -1,12 +1,22 @@
 package com.sysadmindoc.callshield.data
 
+import android.content.Context
+import androidx.test.core.app.ApplicationProvider
 import com.sysadmindoc.callshield.domain.model.ParsedPassport
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
+// Robolectric because the Android status copy comes from string resources.
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [34])
 class StirShakenSemanticsTest {
+    private val context: Context = ApplicationProvider.getApplicationContext()
+
     @Test
     fun `passport A wording authenticates metadata without caller approval language`() {
         val display = StirShakenSemantics.forPassportAttestation("A")
@@ -41,6 +51,7 @@ class StirShakenSemanticsTest {
     fun `android passed wording notes full attestation details are unavailable`() {
         val display =
             StirShakenSemantics.forAndroidVerificationStatus(
+                context,
                 StirShakenSemantics.VERIFICATION_STATUS_PASSED,
             )
 
@@ -52,7 +63,7 @@ class StirShakenSemanticsTest {
 
     @Test
     fun `unknown android verification status has no display copy`() {
-        val display = StirShakenSemantics.forAndroidVerificationStatus(-1)
+        val display = StirShakenSemantics.forAndroidVerificationStatus(context, -1)
 
         assertNull(display)
     }

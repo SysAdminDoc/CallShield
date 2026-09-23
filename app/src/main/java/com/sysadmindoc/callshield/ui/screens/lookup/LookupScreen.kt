@@ -327,8 +327,9 @@ fun LookupScreen(viewModel: MainViewModel) {
                     val resultNumber = checkedNumber ?: normalizedNumber
                     val resultAccent = if (lookupResult.isSpam) CatRed else CatGreen
                     val reasoning =
-                        remember(lookupResult.reasonCode, lookupResult.matchSource, lookupResult.description, lookupResult.confidence) {
+                        remember(context, lookupResult.reasonCode, lookupResult.matchSource, lookupResult.description, lookupResult.confidence) {
                             BlockReasoning.explain(
+                                context = context,
                                 reasonCode = lookupResult.reasonCode,
                                 matchSource = lookupResult.matchSource,
                                 description = lookupResult.description,

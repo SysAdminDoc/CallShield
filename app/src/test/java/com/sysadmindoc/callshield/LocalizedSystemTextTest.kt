@@ -17,6 +17,7 @@ import com.sysadmindoc.callshield.data.checker.SmsContentChecker
 import com.sysadmindoc.callshield.data.checker.StirShakenChecker
 import com.sysadmindoc.callshield.data.checker.TimeBlockChecker
 import com.sysadmindoc.callshield.data.checker.VerificationMessageFloorChecker
+import com.sysadmindoc.callshield.domain.model.BlockReasonCode
 import com.sysadmindoc.callshield.domain.model.CallerIdentity
 import com.sysadmindoc.callshield.domain.model.DnoStatus
 import com.sysadmindoc.callshield.domain.model.LineType
@@ -119,7 +120,7 @@ class LocalizedSystemTextTest {
             assertTrue(description.contains(context.getString(R.string.overlay_reason_spam_keywords)))
             assertFalse("raw token in \"$description\"", description.contains("shortened") || description.contains("keywords"))
             // The "why" panel still gets one bullet per signal from a Chinese list.
-            val bullets = BlockReasoning.explain("sms_content", description, sms.confidence).bullets
+            val bullets = BlockReasoning.explain(context, "sms_content", description, sms.confidence).bullets
             assertEquals(2, bullets.count { it.startsWith("• ") })
         }
 
@@ -170,6 +171,28 @@ class LocalizedSystemTextTest {
         for (english in listOf("Identity evidence", "metadata", "origin", "line type", "verdict", "carrier status")) {
             assertFalse("\"$english\" in $description", description.contains(english, ignoreCase = true))
         }
+    }
+
+    @Test
+    fun `the why-was-this-blocked panel has no English sentence in Chinese`() {
+        // Three lowercase Latin words in a row is an English sentence; acronyms
+        // and names the translation keeps (RCS, ML, NPA-NXX, PASSporT) are not.
+        val englishRun = Regex("""\b[a-z]{2,}\s+[a-z]{2,}\s+[a-z]{2,}\b""")
+        val explanations =
+            BlockReasonCode.entries.map { BlockReasoning.explain(context, reasonCode = it, description = "", confidence = 50) } +
+                BlockReasoning.explain(context, "category_policy:scam:silence:database", "", 100) +
+                BlockReasoning.explain(context, "rcs_database", "", 100) +
+                BlockReasoning.explain(context, "", "", 0)
+
+        for (reasoning in explanations) {
+            val text = (listOf(reasoning.headline) + reasoning.bullets).joinToString("\n")
+            assertFalse(text, englishRun.containsMatchIn(text))
+            assertTrue(text, text.any { it in '一'..'鿿' })
+        }
+        assertEquals(
+            context.getString(R.string.reasoning_category_silenced, context.getString(R.string.call_category_scam)),
+            explanations[explanations.size - 3].headline,
+        )
     }
 
     private fun passport(attestation: String) =

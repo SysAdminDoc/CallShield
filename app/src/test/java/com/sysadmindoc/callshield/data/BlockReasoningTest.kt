@@ -1,5 +1,8 @@
 package com.sysadmindoc.callshield.data
 
+import android.content.Context
+import androidx.test.core.app.ApplicationProvider
+import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.checker.CheckerPriority
 import com.sysadmindoc.callshield.domain.model.BlockReasonCode
 import org.junit.Assert.assertEquals
@@ -7,11 +10,19 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
 private const val EN_DASH = 0x2013
 private const val EM_DASH = 0x2014
 
+// Robolectric because every sentence now comes from string resources.
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [34])
 class BlockReasoningTest {
+    private val context: Context = ApplicationProvider.getApplicationContext()
+
     @Test
     fun `only probabilistic layers expose confidence as a probability`() {
         assertTrue(BlockReasoning.isProbabilistic(com.sysadmindoc.callshield.domain.model.BlockReasonCode.HEURISTIC))
@@ -31,7 +42,7 @@ class BlockReasoningTest {
 
     @Test
     fun `user_blocklist explanation names the personal blocklist and includes note`() {
-        val r = BlockReasoning.explain("user_blocklist", "Spammer, blocked manually", 100)
+        val r = BlockReasoning.explain(context, "user_blocklist", "Spammer, blocked manually", 100)
         assertTrue(r.headline.contains("You blocked"))
         assertTrue(r.bullets.any { it.contains("personal blocklist") })
         assertTrue(r.bullets.any { it.contains("Spammer") })
@@ -40,8 +51,8 @@ class BlockReasoningTest {
     @Test
     fun `every reason code but UNKNOWN has its own explanation`() {
         BlockReasonCode.entries.filter { it != BlockReasonCode.UNKNOWN }.forEach { code ->
-            val r = BlockReasoning.explain(reasonCode = code, description = "", confidence = 50)
-            assertNotEquals(code.wireValue, BlockReasoning.UNRECOGNIZED_HEADLINE, r.headline)
+            val r = BlockReasoning.explain(context, reasonCode = code, description = "", confidence = 50)
+            assertNotEquals(code.wireValue, context.getString(R.string.reasoning_unrecognized), r.headline)
         }
     }
 
@@ -51,7 +62,7 @@ class BlockReasoningTest {
         val staleLayer = Regex("""layer \d""")
         val dashes = setOf(EN_DASH, EM_DASH)
         BlockReasonCode.entries.forEach { code ->
-            val r = BlockReasoning.explain(reasonCode = code, description = "", confidence = 50)
+            val r = BlockReasoning.explain(context, reasonCode = code, description = "", confidence = 50)
             val text = (listOf(r.headline) + r.bullets).joinToString("\n")
             assertFalse("${code.wireValue}: $text", staleLayer.containsMatchIn(text))
             assertFalse("${code.wireValue}: $text", text.any { it.code in dashes })
@@ -60,7 +71,7 @@ class BlockReasoningTest {
 
     @Test
     fun `regulatory prefix explanation names the matched range`() {
-        val r = BlockReasoning.explain("regulatory_prefix", "Spain 400 commercial call range", 100)
+        val r = BlockReasoning.explain(context, "regulatory_prefix", "Spain 400 commercial call range", 100)
         assertTrue(r.headline.contains("telemarketing range"))
         assertTrue(r.bullets.any { it.contains("Spain 400 commercial call range") })
     }
@@ -69,7 +80,7 @@ class BlockReasoningTest {
     fun `regulatory allow explanation names what it overrides and what still wins`() {
         // REGULATORY_ALLOW (5250) sits above quiet hours and region rules but
         // below the blocklist, wildcard, range and Android block-list layers.
-        val r = BlockReasoning.explain("regulatory_allow", "", 100)
+        val r = BlockReasoning.explain(context, "regulatory_allow", "", 100)
         assertTrue(r.headline.contains("regulator protects"))
         assertTrue(r.bullets.any { it.contains("quiet hours and region rules") })
         assertTrue(r.bullets.any { it.contains("downloaded prefix list still win") })
@@ -90,7 +101,7 @@ class BlockReasoningTest {
                 BlockReasonCode.PUSH_ALERT to CheckerPriority.PUSH_ALERT_BRIDGE,
             )
         allows.forEach { (code, priority) ->
-            val text = BlockReasoning.explain(reasonCode = code, description = "", confidence = 0).bullets.joinToString(" ")
+            val text = BlockReasoning.explain(context, reasonCode = code, description = "", confidence = 0).bullets.joinToString(" ")
             assertEquals("$code vs database", priority < CheckerPriority.GITHUB_DATABASE, text.contains("spam database still win"))
             assertEquals(
                 "$code vs prefix expansion",
@@ -113,14 +124,14 @@ class BlockReasoningTest {
     fun `sms context trust says the sender checks and keyword rules come first`() {
         // It runs in the SMS extensions, after the whole number chain found nothing,
         // and below SMS keyword rules (5400).
-        val text = BlockReasoning.explain("sms_context", "", 0).bullets.joinToString(" ")
+        val text = BlockReasoning.explain(context, "sms_context", "", 0).bullets.joinToString(" ")
         assertTrue(text.contains("passed every check on the sender's number"))
         assertTrue(text.contains("SMS keyword rules still win"))
     }
 
     @Test
     fun `meeting mode explanation says the call was silenced, not judged`() {
-        val r = BlockReasoning.explain("meeting_mode", "Zoom", 100)
+        val r = BlockReasoning.explain(context, "meeting_mode", "Zoom", 100)
         assertTrue(r.headline.contains("meeting"))
         assertTrue(r.bullets.any { it.contains("Zoom") })
         assertTrue(r.bullets.any { it.contains("wasn't marked as spam") })
@@ -128,7 +139,7 @@ class BlockReasoningTest {
 
     @Test
     fun `heuristic explanation expands comma-separated reasons into bullets`() {
-        val r = BlockReasoning.explain("heuristic", "high_spam_npa, voip_spam_range, neighbor_spoof", 78)
+        val r = BlockReasoning.explain(context, "heuristic", "high_spam_npa, voip_spam_range, neighbor_spoof", 78)
         assertTrue(r.headline.contains("78%"))
         assertTrue(r.bullets.any { it.contains("high spam npa") })
         assertTrue(r.bullets.any { it.contains("voip spam range") })
@@ -137,8 +148,8 @@ class BlockReasoningTest {
 
     @Test
     fun `a signal list in Chinese still becomes one bullet per signal`() {
-        val enumerationComma = BlockReasoning.explain("heuristic", "可能是邻近伪装、重复来电模式", 78)
-        val fullWidthComma = BlockReasoning.explain("sms_content", "风险链接模式，检测到垃圾信息用语", 60)
+        val enumerationComma = BlockReasoning.explain(context, "heuristic", "可能是邻近伪装、重复来电模式", 78)
+        val fullWidthComma = BlockReasoning.explain(context, "sms_content", "风险链接模式，检测到垃圾信息用语", 60)
 
         assertEquals(listOf("• 可能是邻近伪装", "• 重复来电模式"), enumerationComma.bullets.filter { it.startsWith("• ") })
         assertEquals(listOf("• 风险链接模式", "• 检测到垃圾信息用语"), fullWidthComma.bullets.filter { it.startsWith("• ") })
@@ -146,7 +157,7 @@ class BlockReasoningTest {
 
     @Test
     fun `campaign_burst explanation mentions NPA-NXX burst threshold`() {
-        val r = BlockReasoning.explain("campaign_burst", "", 75)
+        val r = BlockReasoning.explain(context, "campaign_burst", "", 75)
         assertTrue(r.headline.contains("active spam campaign"))
         assertTrue(r.bullets.any { it.contains("5+ distinct numbers") })
     }
@@ -155,6 +166,7 @@ class BlockReasoningTest {
     fun `campaign_burst explanation includes measured evidence`() {
         val r =
             BlockReasoning.explain(
+                context,
                 "campaign_burst",
                 "Active campaign: 5 neighbor numbers in 6 calls; 1 repeated number(s) suggest callback reuse",
                 75,
@@ -165,28 +177,28 @@ class BlockReasoningTest {
 
     @Test
     fun `ml_scorer explanation reassures the user that inference is on-device`() {
-        val r = BlockReasoning.explain("ml_scorer", "", 84)
+        val r = BlockReasoning.explain(context, "ml_scorer", "", 84)
         assertTrue(r.headline.contains("84%"))
         assertTrue(r.bullets.any { it.contains("on your device") })
     }
 
     @Test
     fun `emergency_contact explanation is an allow-through headline, not a block`() {
-        val r = BlockReasoning.explain("emergency_contact", "", 0)
+        val r = BlockReasoning.explain(context, "emergency_contact", "", 0)
         assertTrue(r.headline.contains("emergency"))
         assertTrue(r.bullets.any { it.contains("bypasses") })
     }
 
     @Test
     fun `rcs prefix explanation strips the rcs underscore`() {
-        val r = BlockReasoning.explain("rcs_database", "", 100)
+        val r = BlockReasoning.explain(context, "rcs_database", "", 100)
         assertTrue(r.headline.contains("RCS"))
         assertTrue(r.bullets.any { it.contains("database") })
     }
 
     @Test
     fun `stir passed explanation avoids safe caller framing`() {
-        val r = BlockReasoning.explain("stir_shaken_trusted", "", 0)
+        val r = BlockReasoning.explain(context, "stir_shaken_trusted", "", 0)
         val text = "${r.headline} ${r.bullets.joinToString(" ")}".lowercase()
 
         assertTrue(r.headline.contains("authentication passed"))
@@ -199,7 +211,7 @@ class BlockReasoningTest {
 
     @Test
     fun `stir failed explanation uses authentication failure language`() {
-        val r = BlockReasoning.explain("stir_shaken_failed", "", 100)
+        val r = BlockReasoning.explain(context, "stir_shaken_failed", "", 100)
 
         assertTrue(r.headline.contains("authentication failed"))
         assertTrue(r.bullets.any { it.contains("could not authenticate") })
@@ -208,7 +220,7 @@ class BlockReasoningTest {
 
     @Test
     fun `unknown match reason falls back to a safe default`() {
-        val r = BlockReasoning.explain("something_new", "ad-hoc desc", 42)
+        val r = BlockReasoning.explain(context, "something_new", "ad-hoc desc", 42)
         assertTrue(r.headline.contains("something_new"))
         assertTrue(r.bullets.any { it.contains("ad-hoc desc") })
         assertTrue(r.bullets.any { it.contains("42%") })
@@ -216,7 +228,7 @@ class BlockReasoningTest {
 
     @Test
     fun `blank match reason reads as allowed, not blocked`() {
-        val r = BlockReasoning.explain("", "", 0)
+        val r = BlockReasoning.explain(context, "", "", 0)
         assertTrue(r.headline.contains("allowed"))
         assertEquals(1, r.bullets.size)
     }
@@ -225,6 +237,7 @@ class BlockReasoningTest {
     fun `category policy explains the selected action and precedence`() {
         val result =
             BlockReasoning.explain(
+                context,
                 "category_policy:scam:silence:database",
                 "Reported fraud",
                 100,

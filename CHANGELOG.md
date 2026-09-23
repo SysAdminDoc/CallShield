@@ -480,6 +480,14 @@ The rest of this section takes effect when the report Worker is next deployed.
 - The caller-identity evidence an ML block can carry ("PASSporT attestation
   A metadata; DNO-listed origin") is translated as well, so a Chinese block
   log no longer switches to English halfway through an ML entry.
+- The "why was this blocked" panel in Lookup and Number Detail is
+  translatable, and Chinese has every line of it. It was written straight
+  into the code in English, so a Chinese phone showed "Flagged by the
+  heuristic engine at 80% confidence." under Chinese labels. The English
+  wording hasn't changed, except that a category rule now names its
+  category the way the category settings do ("Debt Collector", "Wangiri
+  Scam"), and an RCS block names its underlying check the way the block log
+  does.
 
 - A shipped locale can no longer decay silently. Each has a coverage floor in
   `scripts/translation_floors.json`, and dropping below it fails the build.

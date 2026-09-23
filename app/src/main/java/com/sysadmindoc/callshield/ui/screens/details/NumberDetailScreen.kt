@@ -178,8 +178,9 @@ fun NumberDetailScreen(
             // Lead with a concise verdict. The score remains secondary evidence.
             liveResult?.let { r ->
                 val reasoning =
-                    remember(r.reasonCode, r.matchSource, r.description, r.confidence) {
+                    remember(context, r.reasonCode, r.matchSource, r.description, r.confidence) {
                         BlockReasoning.explain(
+                            context = context,
                             reasonCode = r.reasonCode,
                             matchSource = r.matchSource,
                             description = r.description,

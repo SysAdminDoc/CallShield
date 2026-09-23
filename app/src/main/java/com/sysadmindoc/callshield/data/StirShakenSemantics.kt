@@ -1,5 +1,7 @@
 package com.sysadmindoc.callshield.data
 
+import android.content.Context
+import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.domain.model.ParsedPassport
 
 /**
@@ -9,6 +11,8 @@ import com.sysadmindoc.callshield.domain.model.ParsedPassport
  * it is not a verdict that the caller is wanted, lawful, or non-spam.
  */
 object StirShakenSemantics {
+    // English copy for the PASSporT helpers below, which nothing in the app shows yet; the
+    // Android status copy above them uses R.string.stir_precedence, the same sentence.
     // Everything above STIR_SHAKEN_TRUSTED on the checker ladder that can block, plus the
     // current-evidence rule in StirShakenTrustChecker.decidePure.
     private const val PRECEDENCE =
@@ -20,38 +24,42 @@ object StirShakenSemantics {
     const val VERIFICATION_STATUS_PASSED = 1
     const val VERIFICATION_STATUS_FAILED = 2
 
-    fun forAndroidVerificationStatus(status: Int): StirShakenDisplay? =
+    /** The copy for Android's PASS/FAIL result, in the app language; the block log shows it. */
+    fun forAndroidVerificationStatus(
+        context: Context,
+        status: Int,
+    ): StirShakenDisplay? =
         when (status) {
             VERIFICATION_STATUS_PASSED -> {
                 StirShakenDisplay(
-                    headline = "Carrier caller ID authentication passed.",
+                    headline = context.getString(R.string.stir_passed_headline),
                     bullets =
                         listOf(
-                            "Android exposes PASS/FAIL status, not the full A/B/C PASSporT attestation details.",
-                            "This is caller ID authentication, not a verdict that the call is wanted or lawful.",
-                            PRECEDENCE,
+                            context.getString(R.string.stir_passed_android_scope),
+                            context.getString(R.string.stir_not_a_verdict),
+                            context.getString(R.string.stir_precedence),
                         ),
                 )
             }
 
             VERIFICATION_STATUS_FAILED -> {
                 StirShakenDisplay(
-                    headline = "Carrier caller ID authentication failed.",
+                    headline = context.getString(R.string.stir_failed_headline),
                     bullets =
                         listOf(
-                            "The carrier could not authenticate this call's caller ID.",
-                            "This usually means the displayed number may have been spoofed.",
+                            context.getString(R.string.stir_failed_detail),
+                            context.getString(R.string.stir_failed_spoofed),
                         ),
                 )
             }
 
             VERIFICATION_STATUS_NOT_VERIFIED -> {
                 StirShakenDisplay(
-                    headline = "Carrier caller ID authentication was not available.",
+                    headline = context.getString(R.string.stir_unavailable_headline),
                     bullets =
                         listOf(
-                            "The carrier did not provide a PASS/FAIL authentication result for this call.",
-                            "CallShield keeps evaluating the normal local rules.",
+                            context.getString(R.string.stir_unavailable_detail),
+                            context.getString(R.string.stir_unavailable_local_rules),
                         ),
                 )
             }
