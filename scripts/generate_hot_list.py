@@ -29,12 +29,14 @@ from pipeline_io import (
 )
 from report_dedup import (
     BURST_DUPLICATE_SECONDS,
+    MAX_DEVICES_PER_GROUP,
+    capped_reporter_count,
     find_burst_duplicates,
     find_resent_reports,
     parse_reported_at,
     reporter_day_key,
+    reporter_identity,
     validated_report_id,
-    validated_reporter_bucket,
 )
 
 REPO_DATA_DIR = Path(__file__).parent.parent / "data"
@@ -122,7 +124,7 @@ def main(argv: list[str] | None = None) -> int:
     # Collected first, then collapsed, because near-simultaneous duplicates have
     # to be recognised against the other reports for the same number rather than
     # in file-glob order.
-    pending: list[tuple[str, datetime, str, str, str, str]] = []
+    pending: list[tuple[str, datetime, str, str, str, tuple[str, str]]] = []
     report_ids: list[tuple[str, datetime, str]] = []
 
     if REPORTS_DIR.exists():
@@ -138,15 +140,13 @@ def main(argv: list[str] | None = None) -> int:
 
                 reported_at_str = report.get("reported_at", "")
                 reported_at = parse_reported_at(reported_at_str)
-                reporter_bucket = validated_reporter_bucket(report.get("reporter_bucket"))
-                if not reporter_bucket:
+                identity = reporter_identity(report)
+                if identity is None:
                     continue
                 if reported_at is None or reported_at < cutoff or reported_at > now + timedelta(minutes=5):
                     continue
 
-                pending.append(
-                    (number, reported_at, reported_at_str, spam_type, report_file.name, reporter_bucket)
-                )
+                pending.append((number, reported_at, reported_at_str, spam_type, report_file.name, identity))
                 report_ids.append((validated_report_id(report.get("report_id")), reported_at, report_file.name))
             except Exception as e:
                 print(f"  Skipping {report_file.name}: {e}")
@@ -167,15 +167,23 @@ def main(argv: list[str] | None = None) -> int:
     velocity: dict[str, dict] = {}
     seen_reporter_days: set[tuple[str, str, str]] = set()
     collapsed_identity = 0
-    for number, reported_at, reported_at_str, spam_type, token, reporter_bucket in sorted(
+    collapsed_group = 0
+    for number, reported_at, reported_at_str, spam_type, token, identity in sorted(
         pending, key=lambda entry: (entry[1], entry[4])
     ):
         if token in burst_duplicates:
             continue
-        day_key = reporter_day_key(reporter_bucket, reported_at)
+        group, device = identity
+        day_key = reporter_day_key(device, reported_at)
         identity_key = (number, *day_key) if day_key is not None else None
         if identity_key is None or identity_key in seen_reporter_days:
             collapsed_identity += 1
+            continue
+        # A /48 counts for at most MAX_DEVICES_PER_GROUP devices per number, so a
+        # delegated prefix rotating /64s can't pose as a crowd.
+        counted_devices = velocity.get(number, {}).get("_devices_by_group", {}).get(group, set())
+        if device not in counted_devices and len(counted_devices) >= MAX_DEVICES_PER_GROUP:
+            collapsed_group += 1
             continue
         seen_reporter_days.add(identity_key)
         entry = velocity.get(number)
@@ -190,12 +198,14 @@ def main(argv: list[str] | None = None) -> int:
                 "first_seen": reported_at_str,
                 "last_seen": reported_at_str,
                 "description": "Trending community report",
-                "_reporters": {reporter_bucket},
+                "_reporters": {identity},
+                "_devices_by_group": {group: {device}},
                 "_times": [reported_at],
             }
         else:
             entry["reports"] += 1
-            entry["_reporters"].add(reporter_bucket)
+            entry["_reporters"].add(identity)
+            entry["_devices_by_group"].setdefault(group, set()).add(device)
             entry["_times"].append(reported_at)
             if reported_at_str > entry["last_seen"]:
                 entry["last_seen"] = reported_at_str
@@ -209,6 +219,8 @@ def main(argv: list[str] | None = None) -> int:
         )
     if collapsed_identity:
         print(f"  Collapsed {collapsed_identity} same-reporter daily duplicate(s)")
+    if collapsed_group:
+        print(f"  Collapsed {collapsed_group} report(s) past {MAX_DEVICES_PER_GROUP} devices from one /48 for a number")
 
     # ── Also include high-velocity numbers from main DB with recent last_seen ──
     if DB_FILE.exists():
@@ -250,7 +262,7 @@ def main(argv: list[str] | None = None) -> int:
         if not times:
             continue
         span_minutes = int((max(times) - min(times)).total_seconds() // 60)
-        entry["distinct_reporters"] = len(reporters)
+        entry["distinct_reporters"] = capped_reporter_count(reporters)
         entry["report_span_minutes"] = span_minutes
         if (
             entry["reports"] >= MIN_REPORTS_HOT
@@ -286,7 +298,7 @@ def main(argv: list[str] | None = None) -> int:
     for entry in hot_internal:
         if (
             entry["reports"] < CAMPAIGN_REPORTS_PER_NUMBER
-            or len(entry["_reporters"]) < CAMPAIGN_REPORTERS_PER_NUMBER
+            or capped_reporter_count(entry["_reporters"]) < CAMPAIGN_REPORTERS_PER_NUMBER
             or entry["report_span_minutes"] < CAMPAIGN_MIN_SPAN_MINUTES
         ):
             continue
@@ -296,14 +308,15 @@ def main(argv: list[str] | None = None) -> int:
 
     hot_ranges = []
     for npanxx, entries in sorted(npanxx_entries.items(), key=lambda item: -len(item[1])):
-        union_reporters = set().union(*(entry["_reporters"] for entry in entries))
-        if len(entries) < CAMPAIGN_THRESHOLD or len(union_reporters) < CAMPAIGN_MIN_UNION_REPORTERS:
+        # The cap applies across the range too, so one /48 can't fill the union.
+        union_reporters = capped_reporter_count(set().union(*(entry["_reporters"] for entry in entries)))
+        if len(entries) < CAMPAIGN_THRESHOLD or union_reporters < CAMPAIGN_MIN_UNION_REPORTERS:
             continue
         hot_ranges.append(
             {
                 "npanxx": npanxx,
                 "count": len(entries),
-                "distinct_reporters": len(union_reporters),
+                "distinct_reporters": union_reporters,
             }
         )
         if len(hot_ranges) >= MAX_NEW_CAMPAIGN_RANGES:

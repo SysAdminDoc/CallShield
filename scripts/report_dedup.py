@@ -36,6 +36,34 @@ def validated_reporter_bucket(value: object) -> str:
     return normalized if REPORTER_BUCKET_RE.fullmatch(normalized) else ""
 
 
+# Mobile carriers hand each device its own /64 out of a shared /48, so one
+# carrier's customers are separate reporters. A home line with a delegated /56
+# or /48 could rotate /64s, so no /48 counts for more than this many.
+MAX_DEVICES_PER_GROUP = 2
+
+
+def reporter_identity(report: dict) -> tuple[str, str] | None:
+    """Return a report's (group, device) buckets, or None without a valid group.
+
+    `reporter_bucket` is the Worker's daily HMAC of the reporter's /48 (or IPv4
+    address) and `reporter_device` the same for the /64. A report stored before
+    the device bucket existed counts as a single device of its group, which is
+    how it was counted then.
+    """
+    group = validated_reporter_bucket(report.get("reporter_bucket"))
+    if not group:
+        return None
+    return group, validated_reporter_bucket(report.get("reporter_device")) or group
+
+
+def capped_reporter_count(identities) -> int:
+    """Count distinct devices, at most MAX_DEVICES_PER_GROUP from any one group."""
+    devices_by_group: dict[str, set[str]] = {}
+    for group, device in identities:
+        devices_by_group.setdefault(group, set()).add(device)
+    return sum(min(len(devices), MAX_DEVICES_PER_GROUP) for devices in devices_by_group.values())
+
+
 def validated_report_id(value: object) -> str:
     """Return the id the app gave a report, lowercased, or an empty string."""
     if not isinstance(value, str):

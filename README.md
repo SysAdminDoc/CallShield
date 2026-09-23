@@ -334,7 +334,7 @@ scrape Nomorobo's restricted carrier feed.
   credential-encrypted
 - **Community report abuse controls**. The Worker requires a Cloudflare client
   identity and separates malformed requests from unavailable or corrupt rate-limit state.
-  It counts an IPv6 client by its /64, and by its /48 for trending corroboration, so one
+  It counts an IPv6 client by its /64, and trending corroboration takes at most two /64s from one /48, so one
   subscriber can't pass as many reporters by rotating addresses
 
 ## Privacy

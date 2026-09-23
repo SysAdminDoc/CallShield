@@ -3,12 +3,16 @@
 
 from datetime import datetime, timedelta, timezone
 
+from generate_hot_list import CAMPAIGN_MIN_UNION_REPORTERS, CAMPAIGN_REPORTERS_PER_NUMBER, MIN_REPORTERS_HOT
 from report_dedup import (
     BURST_DUPLICATE_SECONDS,
+    MAX_DEVICES_PER_GROUP,
+    capped_reporter_count,
     find_burst_duplicates,
     find_resent_reports,
     parse_reported_at,
     reporter_day_key,
+    reporter_identity,
     validated_report_id,
     validated_reporter_bucket,
 )
@@ -151,6 +155,24 @@ def main() -> None:
         ]
     )
     assert resent == {"resend"}, resent
+
+    # ── reporters count per /64 device, at most two per /48 group ─────────
+    group, device = "00000000000a0001", "00000000000d0001"
+    assert reporter_identity({"reporter_bucket": group, "reporter_device": device}) == (group, device)
+    # A report stored before device buckets is one device of its group.
+    assert reporter_identity({"reporter_bucket": group}) == (group, group)
+    assert reporter_identity({"reporter_bucket": group, "reporter_device": "junk"}) == (group, group)
+    assert reporter_identity({"reporter_device": device}) is None
+    # Two phones on one carrier /48 are two reporters.
+    assert capped_reporter_count([(group, "00000000000d0001"), (group, "00000000000d0002")]) == 2
+    # A delegated /48 rotating /64s counts for MAX_DEVICES_PER_GROUP at most.
+    rotating = [(group, f"{index:016x}") for index in range(1, 50)]
+    assert capped_reporter_count(rotating) == MAX_DEVICES_PER_GROUP == 2
+    assert capped_reporter_count(rotating + [("00000000000a0002", "00000000000d00ff")]) == 3
+    assert capped_reporter_count([(group, device), (group, device)]) == 1
+    # So one /48 must never meet a hot-list reporter minimum on its own.
+    for minimum in (MIN_REPORTERS_HOT, CAMPAIGN_REPORTERS_PER_NUMBER, CAMPAIGN_MIN_UNION_REPORTERS):
+        assert minimum > MAX_DEVICES_PER_GROUP, minimum
 
     print("report_dedup tests passed")
 

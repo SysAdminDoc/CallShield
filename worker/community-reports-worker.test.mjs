@@ -16,6 +16,7 @@ import worker, {
   getClientIp,
   checkDedup,
   deriveReporterBucket,
+  deriveReporterDevice,
   recordDedup,
   validateReportEnvironment,
   validatedReportId,
@@ -406,6 +407,36 @@ test("two /64s in one /48 share a reporter bucket and another /48 does not", asy
   assert.notEqual(first, elsewhere);
 });
 
+test("devices on one carrier /48 get their own device bucket but share the group", async () => {
+  const secret = "s".repeat(32);
+  const at = "2026-08-01T08:00:00Z";
+  const phone = await deriveReporterDevice("2001:db8:abcd:1::1", at, secret);
+  const samePhone = await deriveReporterDevice("2001:db8:abcd:1::ff", at, secret);
+  const otherPhone = await deriveReporterDevice("2001:db8:abcd:2::1", at, secret);
+
+  assert.match(phone, /^[a-f0-9]{16}$/);
+  assert.equal(phone, samePhone);
+  assert.notEqual(phone, otherPhone);
+  assert.equal(
+    await deriveReporterBucket("2001:db8:abcd:1::1", at, secret),
+    await deriveReporterBucket("2001:db8:abcd:2::1", at, secret),
+  );
+});
+
+test("a device bucket never equals a group bucket, even for an IPv4 address", async () => {
+  const secret = "s".repeat(32);
+  const at = "2026-08-01T08:00:00Z";
+  assert.notEqual(await deriveReporterDevice("203.0.113.7", at, secret), await deriveReporterBucket("203.0.113.7", at, secret));
+  assert.notEqual(
+    await deriveReporterDevice("2001:db8:abcd:1::1", at, secret),
+    await deriveReporterBucket("2001:db8:abcd:1::1", at, secret),
+  );
+  assert.notEqual(
+    await deriveReporterDevice("203.0.113.7", at, secret),
+    await deriveReporterDevice("203.0.113.7", "2026-08-02T08:00:00Z", secret),
+  );
+});
+
 test("an IPv4 reporter bucket is the one it has always been", async () => {
   // A deploy that changed IPv4 buckets would split one day's reporters in two.
   const secret = "s".repeat(32);
@@ -604,6 +635,7 @@ test("stored reports carry only a daily reporter bucket, never an IP", async () 
     assert.equal(response.status, 200);
     const report = JSON.parse(atob(githubPayload.content));
     assert.match(report.reporter_bucket, /^[a-f0-9]{16}$/);
+    assert.match(report.reporter_device, /^[a-f0-9]{16}$/);
     assert.equal(JSON.stringify(report).includes("203.0.113.7"), false);
   } finally {
     globalThis.fetch = originalFetch;

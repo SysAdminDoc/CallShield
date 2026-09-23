@@ -164,6 +164,9 @@ def main(argv: list[str] | None = None) -> int:
     # the same number could otherwise manufacture the MIN_REPORTS quorum for an
     # arbitrary domain and have it flagged malicious on every device.
     domain_numbers: dict[str, set[str]] = {}
+    # Reporters count per /48 group here, not per /64 device as on the hot list:
+    # with MIN_REPORTERS at 2, the hot list's two-devices-per-/48 cap would let
+    # one /48 meet the quorum alone.
     domain_reporters: dict[str, set[str]] = {}
     # A report the app resent under the same id (from another network, so from
     # another reporter bucket) must not count as a second reporter.

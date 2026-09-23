@@ -62,10 +62,13 @@ def write_report(
     report_type: str = "phishing",
     domains: list[str] | None = None,
     report_id: str | None = None,
+    device: str | None = None,
 ) -> None:
     report = {"number": number, "type": report_type, "reported_at": reported_at}
     if bucket is not None:
         report["reporter_bucket"] = bucket
+    if device is not None:
+        report["reporter_device"] = device
     if report_id is not None:
         report["report_id"] = report_id
     if domains:
@@ -548,6 +551,42 @@ def assert_external_source_parsers() -> None:
         module.time.sleep = original_sleep
 
 
+def assert_reporters_count_per_device_with_group_cap(data_dir: Path) -> None:
+    """Phones sharing a carrier /48 are separate reporters; a rotating /48 counts twice at most."""
+    carrier_a, carrier_b, delegated = "00000000000a0001", "00000000000a0002", "00000000000a0003"
+    carrier_number, delegated_number = "+12122340201", "+12122340202"
+    # Four phones on two carrier /48s, two per /48.
+    for index, (group, reported_at) in enumerate(zip([carrier_a, carrier_a, carrier_b, carrier_b], TIMES), start=1):
+        write_report(
+            data_dir,
+            f"carrier-{index}.json",
+            carrier_number,
+            group,
+            reported_at,
+            device=f"00000000000d{index:04x}",
+        )
+    # One delegated /48 rotating through five /64s.
+    for index, reported_at in enumerate(TIMES, start=1):
+        write_report(
+            data_dir,
+            f"delegated-{index}.json",
+            delegated_number,
+            delegated,
+            reported_at,
+            device=f"00000000000e{index:04x}",
+        )
+
+    # An empty feed is allowed here so a counting regression reports itself below
+    # instead of tripping the collapse guard.
+    run_script("generate_hot_list.py", data_dir, ["--allow-collapse"])
+    hot = {entry["number"]: entry for entry in json.loads((data_dir / "hot_numbers.json").read_text(encoding="utf-8"))["numbers"]}
+    carrier = hot.get(carrier_number)
+    if carrier is None or carrier["distinct_reporters"] != 4 or carrier["reports"] != 4:
+        raise AssertionError(f"four phones on two carrier /48s should be four reporters: {carrier}")
+    if delegated_number in hot:
+        raise AssertionError(f"one /48 rotating /64s must count as two reporters at most: {hot[delegated_number]}")
+
+
 def run_drain(data_dir: Path) -> None:
     # Each drain here leaves the derived feeds empty, which their collapse
     # guards refuse to publish twice without being told.
@@ -727,6 +766,9 @@ def main() -> None:
 
     with tempfile.TemporaryDirectory() as tmp:
         assert_not_spam_id_not_recorded(Path(tmp) / "data")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        assert_reporters_count_per_device_with_group_cap(Path(tmp) / "data")
 
 
 if __name__ == "__main__":

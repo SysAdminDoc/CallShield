@@ -188,11 +188,14 @@ const REPORT_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{
 
 // An IPv6 subscriber is handed at least a /64, and often a /56 or /48, so
 // keying on the full address let one line act as endless distinct clients.
-// The limiter and dedup key on the /64. The reporter bucket, which the hot
-// list counts as independent corroboration, keys on the /48: a /56 or /48
-// holder could otherwise mint 256 to 65,536 "reporters".
+// The limiter and dedup key on the /64. Each report carries two reporter
+// buckets for the hot list: the /48 group and the /64 device. Mobile carriers
+// give each device its own /64 out of a shared /48, so the hot list counts
+// devices, but at most two per group, because a /56 or /48 holder could
+// otherwise mint 256 to 65,536 "reporters".
 const LIMITER_PREFIX_BITS = 64;
 const REPORTER_PREFIX_BITS = 48;
+const REPORTER_DEVICE_PREFIX_BITS = 64;
 
 function allowsUnlimitedReports(env) {
   return env?.ALLOW_UNLIMITED_REPORTS === "true";
@@ -272,10 +275,26 @@ export function validateReportEnvironment(env) {
  * bucket is the same one this function has always produced.
  */
 export async function deriveReporterBucket(ip, reportedAt, secret) {
+  return hmacBucket(`v1:${reportDay(reportedAt)}:${clientKey(ip, REPORTER_PREFIX_BITS)}`, secret);
+}
+
+/**
+ * The device bucket stored beside the group bucket: the same daily HMAC over
+ * the reporter's /64, under its own label so it never equals a group bucket.
+ * An IPv4 reporter has one device per address.
+ */
+export async function deriveReporterDevice(ip, reportedAt, secret) {
+  return hmacBucket(`device-v1:${reportDay(reportedAt)}:${clientKey(ip, REPORTER_DEVICE_PREFIX_BITS)}`, secret);
+}
+
+function reportDay(reportedAt) {
+  return new Date(reportedAt).toISOString().slice(0, 10);
+}
+
+async function hmacBucket(message, secret) {
   if (typeof secret !== "string" || secret.length < MIN_REPORTER_SECRET_LENGTH) {
     throw new Error("REPORTER_BUCKET_SECRET is missing or too short");
   }
-  const day = new Date(reportedAt).toISOString().slice(0, 10);
   const encoder = new TextEncoder();
   const key = await crypto.subtle.importKey(
     "raw",
@@ -284,11 +303,7 @@ export async function deriveReporterBucket(ip, reportedAt, secret) {
     false,
     ["sign"],
   );
-  const signature = await crypto.subtle.sign(
-    "HMAC",
-    key,
-    encoder.encode(`v1:${day}:${clientKey(ip, REPORTER_PREFIX_BITS)}`),
-  );
+  const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(message));
   return Array.from(new Uint8Array(signature).slice(0, 8), (byte) =>
     byte.toString(16).padStart(2, "0"),
   ).join("");
@@ -677,6 +692,11 @@ code{background:#252525;padding:2px 6px;border-radius:4px;font-size:12px;color:#
         timestamp,
         env.REPORTER_BUCKET_SECRET,
       );
+      const reporterDevice = await deriveReporterDevice(
+        clientIp,
+        timestamp,
+        env.REPORTER_BUCKET_SECRET,
+      );
       const rand = crypto.randomUUID().substring(0, 8);
       const filename = `${normalized.replace("+", "")}_${Date.now()}_${rand}.json`;
       const report = {
@@ -685,6 +705,7 @@ code{background:#252525;padding:2px 6px;border-radius:4px;font-size:12px;color:#
         reported_at: timestamp,
         source: "community_app",
         reporter_bucket: reporterBucket,
+        reporter_device: reporterDevice,
       };
       if (reportId) {
         report.report_id = reportId;
