@@ -196,6 +196,11 @@ All notable changes to CallShield will be documented in this file.
 
 ### Interface
 
+- Blocking a number from Lookup no longer saves Lookup's own wording as the
+  block's note. Making a temporary block permanent wrote "Temporarily
+  blocked" into it, and blocking a number Lookup had let through saved the
+  reason it was allowed, like the name of India's 1600 series. The block
+  keeps whatever note the number already had.
 - Switching filters in the Database tab or the block log no longer leaves
   the old list running in the background. Every chip you tried kept its own
   copy until the app closed, and each one ran its query again whenever the

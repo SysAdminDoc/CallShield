@@ -477,7 +477,7 @@ fun LookupScreen(viewModel: MainViewModel) {
                                         }
 
                                         else -> {
-                                            viewModel.blockNumber(resultNumber, lookupResult.type.ifEmpty { "spam" }, lookupResult.description)
+                                            viewModel.blockNumber(resultNumber, lookupResult.type.ifEmpty { "spam" }, lookupBlockNote(lookupResult))
                                             hapticConfirm(context)
                                             scope.launch { snackbarHostState.showSnackbar(numberBlockedMessage) }
                                         }
@@ -510,8 +510,8 @@ fun LookupScreen(viewModel: MainViewModel) {
                                                 val blocked =
                                                     withContext(Dispatchers.IO) {
                                                         // The description becomes the block's note, which Lookup and
-                                                        // the block log show; the checker id is no note.
-                                                        repo.blockNumber(resultNumber, lookupResult.type.ifEmpty { "spam" }, lookupResult.description)
+                                                        // the block log show; see lookupBlockNote for what isn't one.
+                                                        repo.blockNumber(resultNumber, lookupResult.type.ifEmpty { "spam" }, lookupBlockNote(lookupResult))
                                                     }
                                                 if (blocked) {
                                                     hapticConfirm(context)
