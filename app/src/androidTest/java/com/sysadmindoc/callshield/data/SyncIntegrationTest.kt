@@ -91,7 +91,7 @@ class SyncIntegrationTest {
             val result = repo.syncFromGitHub(force = true)
 
             assertTrue(result.message, result.success)
-            assertEquals("Sync complete — numbers: 2, prefixes: 1", result.message)
+            assertEquals("Sync complete. Numbers: 2, prefixes: 1", result.message)
             assertEquals(1, remote.fetchCount)
             assertEquals(1, remote.updateCheckCount)
 

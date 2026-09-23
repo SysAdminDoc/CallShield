@@ -143,7 +143,7 @@
     <string name="dashboard_spam_from_area">Spam count: %1$s | %2$s (%3$s)</string>
     <string name="dashboard_block_area">Block %s</string>
     <string name="dashboard_block_area_confirm_title">Block area code %s?</string>
-    <string name="dashboard_block_area_confirm_body">This adds a rule that blocks every call and text from a +1 %1$s number (%2$s) — roughly 7.9 million numbers. You can remove it later from the blocklist.</string>
+    <string name="dashboard_block_area_confirm_body">This adds a rule that blocks every call and text from a +1 %1$s number (%2$s). That\'s roughly 7.9 million numbers. You can remove it later from the blocklist.</string>
     <string name="dashboard_block_area_confirm_action">Block area code</string>
     <string name="dashboard_block_area_description">Area code %1$s (%2$s)</string>
     <string name="dashboard_block_area_added">Blocked area code %s</string>
@@ -630,7 +630,7 @@
     <string name="settings_urlhaus_privacy">Threat-feed privacy mode</string>
     <string name="settings_urlhaus_privacy_desc">Hide link query parameters in local evidence; remote checks always use the domain only</string>
     <string name="settings_urlhaus_remote_lookup">Share link domains with threat feeds</string>
-    <string name="settings_urlhaus_remote_lookup_desc">Optional. Send only the registrable domain—not message text—to enabled threat feeds</string>
+    <string name="settings_urlhaus_remote_lookup_desc">Optional. Only the registrable domain goes to the threat feeds you turn on, never the message text.</string>
     <string name="settings_sms_burst">SMS burst protection</string>
     <string name="settings_sms_burst_desc">Detect repeated unknown senders and message floods</string>
     <string name="settings_repeat_caller">Repeat caller auto-block</string>
@@ -697,7 +697,7 @@
     <string name="settings_export_csv">Export blocked log as CSV</string>
     <string name="settings_export_csv_desc">Export blocked calls/SMS as a CSV file. SMS message bodies are redacted by default.</string>
     <string name="settings_export_redress_csv">Export blocked calls for redress</string>
-    <string name="settings_export_redress_csv_desc">Date, time, calling number, and reason only — no message bodies or contacts.</string>
+    <string name="settings_export_redress_csv_desc">Date, time, calling number and reason only. No message bodies or contacts.</string>
     <string name="settings_export_raw_sms_csv">Export raw SMS bodies</string>
     <string name="settings_export_raw_sms_csv_desc">Creates a separate CSV that includes original blocked SMS text.</string>
     <string name="settings_export_raw_sms_confirm_title">Export raw SMS text?</string>
@@ -892,7 +892,7 @@
     <string name="more_star_github">Star on GitHub</string>
     <string name="more_report_spam_number">Report Spam Number</string>
     <string name="more_share_crash_log">Share crash log</string>
-    <string name="more_no_crash_logs">No crashes logged — CallShield hasn\'t recorded an uncaught exception.</string>
+    <string name="more_no_crash_logs">No crashes logged. CallShield hasn\'t recorded an uncaught exception.</string>
     <string name="more_section_tools">Protection Tools</string>
     <string name="more_section_release">Release &amp; Diagnostics</string>
     <string name="more_section_support">Project &amp; Support</string>
@@ -908,7 +908,7 @@
     <string name="link_no_browser">No browser available to open this link.</string>
     <string name="link_no_activity">This device can\'t open that screen.</string>
     <!-- Emergency contacts (Feature E) -->
-    <string name="emergency_contacts_subtitle">Always ring through — bypasses blocklist, quiet hours, and aggressive mode.</string>
+    <string name="emergency_contacts_subtitle">They always ring, even past your blocklist, quiet hours and aggressive mode.</string>
     <string name="emergency_contacts_add">Add Emergency Contact</string>
     <string name="emergency_contacts_added">Emergency contact added</string>
     <string name="emergency_contacts_mark_as">Mark as Emergency</string>
@@ -952,7 +952,7 @@
         <item quantity="other">Issues needing attention: %d</item>
     </plurals>
     <string name="protection_test_run_failed_title">Couldn\'t finish the tests</string>
-    <string name="protection_test_run_failed_body">Something went wrong while running the checks. Try again — if it keeps failing, restart CallShield.</string>
+    <string name="protection_test_run_failed_body">Something went wrong while running the checks. Try again, and if it keeps failing, restart CallShield.</string>
     <string name="protection_test_intro_title">What this checks</string>
     <string name="protection_test_intro_body">Runs locally without sending call or message data.</string>
     <string name="protection_test_intro_permissions">Required permissions and Android roles.</string>
@@ -1010,9 +1010,9 @@
     <string name="protection_test_fix_notifications">Enable notification or listener access if you want alerts and RCS filtering.</string>
     <string name="protection_test_db_empty">No spam data loaded yet</string>
     <string name="protection_test_perm_granted">Granted</string>
-    <string name="protection_test_perm_not_granted">Not granted — feature may not work</string>
+    <string name="protection_test_perm_not_granted">Not granted, so this feature may not work</string>
     <string name="protection_test_screener_yes">CallShield is the default call screener</string>
-    <string name="protection_test_screener_no">Not set — go to Settings to enable</string>
+    <string name="protection_test_screener_no">Not set. Turn it on in Settings.</string>
     <string name="protection_test_db_count">Numbers loaded: %d</string>
     <string name="protection_test_prefix_pass">Correctly blocked +1900 prefix (%s)</string>
     <string name="protection_test_prefix_fail">Failed to detect premium rate number</string>
@@ -1023,18 +1023,18 @@
     <string name="protection_test_ml_pass">Correctly flagged 555-0000 pattern</string>
     <string name="protection_test_ml_fail">ML scorer may be disabled or weights not loaded</string>
     <string name="protection_test_ml_fp_pass">Normal number correctly passed</string>
-    <string name="protection_test_ml_fp_fail">False positive — threshold may be too low</string>
+    <string name="protection_test_ml_fp_fail">False positive. The threshold may be too low.</string>
     <string name="protection_test_hot_pass">Hot campaign ranges loaded</string>
-    <string name="protection_test_hot_fail">Empty — will populate on next 30-min sync</string>
+    <string name="protection_test_hot_fail">Empty until the next sync, which runs every 30 minutes</string>
     <string name="protection_test_hot_unavailable_age">Hot data unavailable; last good update was %1$d hours ago</string>
     <string name="protection_test_hot_unavailable_never">Hot data unavailable; no successful update yet</string>
     <string name="protection_test_hot_stalled">Reachable, but the trending feed has not been regenerated in %1$d days</string>
     <string name="protection_test_hot_refused">Reachable, but the last download failed its signature or freshness check, so the previous copy is still in use</string>
     <string name="protection_test_hot_cleared">Reachable. The publisher reports nothing trending right now</string>
     <string name="protection_test_overlay_pass">Can display caller ID overlay</string>
-    <string name="protection_test_overlay_fail">Not granted — overlay won\'t show</string>
+    <string name="protection_test_overlay_fail">Not granted, so the overlay won\'t show</string>
     <string name="protection_test_notif_pass">RCS filter can monitor messages</string>
-    <string name="protection_test_notif_fail">Not granted — RCS filter won\'t work</string>
+    <string name="protection_test_notif_fail">Not granted, so the RCS filter won\'t work</string>
     <string name="protection_test_perm_name_call_log">Call Log Permission</string>
     <string name="protection_test_perm_name_contacts">Contacts Permission</string>
     <string name="protection_test_perm_name_sms">SMS Permission</string>
@@ -1077,7 +1077,7 @@
     <string name="permission_contract_degraded_overlay">Floating caller ID and live enrichment cards stay hidden until overlay access is allowed.</string>
     <string name="permission_contract_degraded_notification_access">RCS filtering and push-alert caller trust cannot read trusted message notifications until listener access is enabled.</string>
     <string name="permission_contract_post_notifications_name">Notification Permission</string>
-    <string name="permission_contract_post_notifications_denied">Denied — alerts and review actions may be hidden</string>
+    <string name="permission_contract_post_notifications_denied">Denied, so alerts and review actions may be hidden</string>
     <string name="permission_contract_degraded_post_notifications">Blocked-call/SMS alerts, review actions, and daily summaries may be suppressed until notification permission is granted.</string>
     <string name="permission_contract_post_notifications_not_required">Not required on this Android version</string>
 
@@ -1330,7 +1330,7 @@
 
     <!-- Sync results -->
     <string name="sync_database_up_to_date">Database is up to date</string>
-    <string name="sync_success_counts">Sync complete — numbers: %1$d, prefixes: %2$d</string>
+    <string name="sync_success_counts">Sync complete. Numbers: %1$d, prefixes: %2$d</string>
     <string name="sync_unknown_error">Unknown sync error</string>
     <string name="sync_remote_unavailable_existing">GitHub sync unavailable (%s). Your existing spam database is still active.</string>
     <string name="sync_bundled_snapshot_loaded">Loaded bundled protection snapshot with %1$d numbers and %2$d prefixes while GitHub was unavailable.</string>
@@ -1467,10 +1467,10 @@
     <string name="feedback_not_spam">Not Spam</string>
     <string name="feedback_blocked">Number blocked and reported</string>
     <string name="feedback_whitelisted">Number marked as safe</string>
-    <string name="notification_action_failed">Action failed — try again from the app</string>
-    <string name="export_share_failed">Couldn\'t create the export file — storage may be full</string>
-    <string name="export_log_empty">Nothing to export yet — no blocked calls or messages</string>
-    <string name="export_redress_empty">Nothing to export yet — no blocked calls</string>
+    <string name="notification_action_failed">That didn\'t work. Try again from the app.</string>
+    <string name="export_share_failed">Couldn\'t create the export file. Storage may be full.</string>
+    <string name="export_log_empty">Nothing to export yet. No calls or messages have been blocked.</string>
+    <string name="export_redress_empty">Nothing to export yet. No calls have been blocked.</string>
     <string name="backup_restore_not_protected">This file isn\'t a passphrase-protected backup. Clear the passphrase field to restore it as-is.</string>
     <string name="settings_post_call_screen">Android post-call screen</string>
     <string name="settings_post_call_screen_desc">Optionally open CallShield after eligible calls with spam and save-contact actions. Off by default; rating notifications stay enabled.</string>
@@ -1601,8 +1601,8 @@
     <string name="test_after_call_feedback">After-Call Feedback</string>
     <string name="test_feedback_ready">Spam rating notifications ready</string>
     <string name="test_security_patch">Device Security Patch</string>
-    <string name="test_security_patch_current">Patch level %1$s — current</string>
-    <string name="test_security_patch_stale">Patch level %1$s — over 90 days old</string>
+    <string name="test_security_patch_current">Patch level %1$s, current</string>
+    <string name="test_security_patch_stale">Patch level %1$s, over 90 days old</string>
     <string name="test_security_patch_hint">Check for system updates in Settings → System → Software update</string>
 
     <!-- Widget -->
