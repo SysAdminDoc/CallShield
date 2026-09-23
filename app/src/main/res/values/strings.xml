@@ -566,6 +566,8 @@
     <string name="settings_category_actions_title">Category call actions</string>
     <string name="settings_category_actions_desc">Choose how confidently categorized calls are handled. Inherit keeps your global blocking and voicemail settings.</string>
     <string name="settings_category_actions_precedence">Emergency contacts and manually trusted numbers always ring. Explicit personal block rules always block.</string>
+    <!-- Spoken label of one action chip in the category actions sheet: category, then action. -->
+    <string name="settings_category_action_option">%1$s: %2$s</string>
     <string name="settings_block_spam_calls">Block spam calls</string>
     <string name="settings_block_spam_calls_desc">Reject calls from known spam numbers</string>
     <string name="settings_block_spam_sms">Analyze spam SMS</string>

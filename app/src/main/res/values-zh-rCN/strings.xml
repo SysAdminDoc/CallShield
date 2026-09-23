@@ -380,6 +380,7 @@
     <string name="settings_category_actions_title">分类来电动作</string>
     <string name="settings_category_actions_desc">选择已分类来电的处理方式。继承将保留你的全局拦截与语音信箱设置。</string>
     <string name="settings_category_actions_precedence">紧急联系人和手动白名单始终响铃；明确的个人拦截规则始终拦截。</string>
+    <string name="settings_category_action_option">%1$s：%2$s</string>
     <string name="settings_block_spam_calls">拦截垃圾电话</string>
     <string name="settings_block_spam_calls_desc">拒接来自已知垃圾号码的来电</string>
     <string name="settings_block_spam_sms">拦截垃圾短信</string>

@@ -45,6 +45,7 @@ import com.sysadmindoc.callshield.ui.theme.CatPeach
 import com.sysadmindoc.callshield.ui.theme.CatSubtext
 import com.sysadmindoc.callshield.ui.theme.CatText
 import com.sysadmindoc.callshield.ui.theme.PremiumActionButton
+import com.sysadmindoc.callshield.ui.theme.SheetDragHandle
 import com.sysadmindoc.callshield.ui.theme.SurfaceBright
 
 internal const val CONTACT_SCOPE_ALL_TAG = "contact_scope_all"
@@ -68,6 +69,7 @@ fun ContactGroupPickerSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         containerColor = SurfaceBright,
+        dragHandle = { SheetDragHandle() },
     ) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),

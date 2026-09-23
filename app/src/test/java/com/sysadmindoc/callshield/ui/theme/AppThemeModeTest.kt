@@ -1,6 +1,7 @@
 package com.sysadmindoc.callshield.ui.theme
 
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.luminance
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -52,6 +53,37 @@ class AppThemeModeTest {
             assertTrue("$mode text", contrastRatio(palette.text, palette.background) >= 4.5f)
             assertTrue("$mode secondary text", contrastRatio(palette.subtext, palette.background) >= 4.5f)
             assertTrue("$mode primary action", contrastRatio(palette.onPrimary, palette.primary) >= 4.5f)
+        }
+    }
+
+    @Test
+    fun `state and secondary text colors keep AA on every surface under a row tint`() {
+        listOf(AppThemeMode.Light, AppThemeMode.Graphite, AppThemeMode.Amoled).forEach { mode ->
+            val palette = paletteFor(mode, systemDark = false)
+            val surfaces =
+                listOf(palette.background, palette.surface, palette.surfaceVariant, palette.surfaceBright, palette.surfaceElevated)
+            // Rows tint themselves 6% with their state color and show it as text on top.
+            val stateColors =
+                mapOf(
+                    "primary" to palette.primary,
+                    "error" to palette.error,
+                    "blue" to palette.blue,
+                    "warning" to palette.warning,
+                    "mauve" to palette.mauve,
+                    "peach" to palette.peach,
+                    "teal" to palette.teal,
+                    "lavender" to palette.lavender,
+                    "subtext" to palette.subtext,
+                )
+            surfaces.forEachIndexed { index, surface ->
+                stateColors.forEach { (name, color) ->
+                    val ratio = contrastRatio(color, color.copy(alpha = 0.06f).compositeOver(surface))
+                    assertTrue("$mode $name on surface #$index: $ratio", ratio >= 4.5f)
+                }
+                // Muted rows (a source that isn't installed) tint 3% with overlay.
+                val overlay = contrastRatio(palette.overlay, palette.overlay.copy(alpha = 0.03f).compositeOver(surface))
+                assertTrue("$mode overlay on surface #$index: $overlay", overlay >= 4.5f)
+            }
         }
     }
 

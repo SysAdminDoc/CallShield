@@ -27,6 +27,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.sysadmindoc.callshield.R
@@ -39,6 +41,7 @@ import com.sysadmindoc.callshield.ui.theme.CatOverlay
 import com.sysadmindoc.callshield.ui.theme.CatSubtext
 import com.sysadmindoc.callshield.ui.theme.CatText
 import com.sysadmindoc.callshield.ui.theme.PremiumActionButton
+import com.sysadmindoc.callshield.ui.theme.SheetDragHandle
 import com.sysadmindoc.callshield.ui.theme.SurfaceBright
 
 internal const val CATEGORY_CALL_ACTION_TAG_PREFIX = "category_call_action:"
@@ -56,6 +59,7 @@ fun CategoryCallActionsSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         containerColor = SurfaceBright,
+        dragHandle = { SheetDragHandle() },
     ) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
@@ -117,12 +121,13 @@ private fun CategoryActionRow(
         color = CatOverlay.copy(alpha = 0.05f),
         border = BorderStroke(1.dp, CatOverlay.copy(alpha = 0.16f)),
     ) {
+        val categoryName = stringResource(category.stringResId)
         Column(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             Text(
-                stringResource(category.stringResId),
+                categoryName,
                 style = MaterialTheme.typography.bodyMedium,
                 color = CatText,
                 fontWeight = FontWeight.SemiBold,
@@ -132,6 +137,10 @@ private fun CategoryActionRow(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 CategoryCallAction.entries.forEach { action ->
+                    val actionLabel = stringResource(action.labelResId)
+                    // Every row offers the same four actions, so TalkBack needs
+                    // the category in each chip's label to tell them apart.
+                    val spokenLabel = stringResource(R.string.settings_category_action_option, categoryName, actionLabel)
                     FilterChip(
                         selected = selectedAction == action,
                         onClick = { onActionChange(action) },
@@ -139,18 +148,21 @@ private fun CategoryActionRow(
                             // Allow wrapping instead of clipping — at large font
                             // scales "Voicemail"/"Inherit" truncated to "Voicem…".
                             Text(
-                                stringResource(action.labelResId),
+                                actionLabel,
                                 style = MaterialTheme.typography.labelSmall,
                             )
                         },
                         modifier =
                             Modifier
                                 .weight(1f)
+                                .semantics { contentDescription = spokenLabel }
                                 .testTag("$CATEGORY_CALL_ACTION_TAG_PREFIX${category.storageKey}:${action.storageKey}"),
+                        // The tint marks the selection; green text on the green
+                        // tint fell to 3.41:1 in the light theme.
                         colors =
                             FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = CatGreen.copy(alpha = 0.18f),
-                                selectedLabelColor = CatGreen,
+                                selectedLabelColor = CatText,
                             ),
                     )
                 }

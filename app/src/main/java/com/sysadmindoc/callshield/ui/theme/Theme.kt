@@ -195,19 +195,23 @@ private val LightPalette =
         surfaceVariant = Color(0xFFF1F4F0),
         surfaceBright = Color(0xFFE9EEEA),
         surfaceElevated = Color(0xFFFFFFFF),
-        primary = Color(0xFF087A55),
+        // State colors double as text on rows tinted 6% with themselves, over
+        // surfaceBright at worst, and keep AA there (the previous primary and
+        // error fell to 4.21:1; warning missed 4.5:1 even on white).
+        primary = Color(0xFF076F4D),
         onPrimary = Color(0xFFFFFFFF),
-        error = Color(0xFFC62D4D),
+        error = Color(0xFFB42946),
         blue = Color(0xFF2A63B7),
-        warning = Color(0xFFA66F00),
+        warning = Color(0xFF855900),
         mauve = Color(0xFF7641B5),
         peach = Color(0xFF98552D),
         teal = Color(0xFF126B66),
         lavender = Color(0xFF4E5F9E),
         text = Color(0xFF0A1932),
         subtext = Color(0xFF536176),
-        // AA against surfaceBright too (was 3.97:1).
-        overlay = Color(0xFF627083),
+        // AA on surfaceBright under the 3% tint muted rows use (the previous
+        // value reached only 4.29:1 on plain surfaceBright).
+        overlay = Color(0xFF5B697A),
         muted = Color(0xFFD9E0DA),
         isLight = true,
     )
@@ -560,6 +564,24 @@ fun LedgerCard(
         )
     }
 }
+
+/**
+ * Bottom-sheet drag handle with a 48dp touch target. The sheet makes its
+ * handle clickable (expand, collapse, dismiss), and Material's default handle
+ * is only 32dp wide, under the accessibility minimum.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SheetDragHandle() {
+    Box(
+        modifier = Modifier.sizeIn(minWidth = MinTouchTarget, minHeight = MinTouchTarget),
+        contentAlignment = Alignment.Center,
+    ) {
+        BottomSheetDefaults.DragHandle()
+    }
+}
+
+private val MinTouchTarget = 48.dp
 
 /**
  * Status badge. Despite the legacy name, this MUST NOT render with a pill /

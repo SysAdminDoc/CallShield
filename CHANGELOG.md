@@ -167,6 +167,15 @@ All notable changes to CallShield will be documented in this file.
   allow all used to read "Blocked by an unrecognized protection rule." Each now
   says what happened and what still outranks it, and the panel no longer cites
   layer numbers left over from an older detection ladder.
+- The light theme is easier to read. Green, red and amber text and the
+  faintest gray labels dropped below the WCAG contrast minimum on tinted rows
+  and cards, and amber missed it even on white. They're a shade darker now,
+  and every text color is checked against every surface in all three themes.
+- The drag handle on Settings sheets is a full 48dp touch target (it was
+  32dp wide). In the call category sheet TalkBack now says which category
+  each action belongs to, so "Allow" in the scam row can't be mistaken for
+  "Allow" in the robocall row, and the selected action reads in dark text on
+  its green tint.
 - The trusted-source and message-screening pickers in Settings now see your
   installed apps on Android 11 and later. Android hides other apps from an app
   unless its manifest names them, and CallShield's named none, so every source
