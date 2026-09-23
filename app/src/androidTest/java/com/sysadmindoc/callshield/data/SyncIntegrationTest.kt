@@ -28,6 +28,7 @@ import org.junit.runner.RunWith
 class SyncIntegrationTest {
     private lateinit var context: Context
     private lateinit var db: AppDatabase
+    private lateinit var stores: TestSettingsStores
 
     @Before
     fun setUp() {
@@ -37,12 +38,25 @@ class SyncIntegrationTest {
                 .inMemoryDatabaseBuilder(context, AppDatabase::class.java)
                 .allowMainThreadQueries()
                 .build()
+        stores = TestSettingsStores(context)
     }
 
     @After
     fun tearDown() {
         db.close()
+        stores.close()
     }
+
+    // The feed policy refuses a feed older than the last one accepted, which
+    // the app's own settings remember on the device, so each test starts empty.
+    private fun repository(remote: SpamDataSource) =
+        SpamRepository(
+            context = context,
+            database = db,
+            remote = remote,
+            settingsDataStore = stores.settings,
+            privateSettingsDataStore = stores.privateSettings,
+        )
 
     @Test
     fun syncFromGitHubPopulatesInMemoryRoomDatabaseFromRemoteSnapshot() =
@@ -79,11 +93,11 @@ class SyncIntegrationTest {
                                 ),
                         ),
                 )
-            val repo = SpamRepository(context, db, remote)
+            val repo = repository(remote)
 
             val result = repo.syncFromGitHub(force = true)
 
-            assertTrue(result.success)
+            assertTrue(result.message, result.success)
             assertEquals("Sync complete — numbers: 2, prefixes: 1", result.message)
             assertEquals(1, remote.fetchCount)
             assertEquals(1, remote.updateCheckCount)
@@ -135,11 +149,11 @@ class SyncIntegrationTest {
                             prefixes = emptyList(),
                         ),
                 )
-            val repo = SpamRepository(context, db, remote)
+            val repo = repository(remote)
 
             val result = repo.syncFromGitHub(force = true)
 
-            assertTrue(result.success)
+            assertTrue(result.message, result.success)
             val refreshed = dao.findByNumber("+15085550103")
             assertEquals("github", refreshed?.source)
             assertTrue(refreshed?.isUserBlocked == true)
@@ -163,16 +177,16 @@ class SyncIntegrationTest {
                     sha = "sharded-v1",
                     initialShards = listOf(firstShard, secondShard),
                 )
-            val repo = SpamRepository(context, db, remote)
+            val repo = repository(remote)
 
             val initial = repo.syncFromGitHub(force = true)
 
-            assertTrue(initial.success)
+            assertTrue(initial.message, initial.success)
             assertEquals(2, remote.fetchShardCount)
             assertEquals(2, db.spamDao().getCountBySource("github"))
 
             val unchanged = repo.syncFromGitHub()
-            assertTrue(unchanged.success)
+            assertTrue(unchanged.message, unchanged.success)
             assertEquals(2, remote.fetchShardCount)
 
             val changedFirst = shardFixture(firstId, firstNumber, "Updated first shard")
@@ -181,7 +195,7 @@ class SyncIntegrationTest {
             remote.replaceShards(listOf(changedFirst, secondShard))
             val incremental = repo.syncFromGitHub()
 
-            assertTrue(incremental.success)
+            assertTrue(incremental.message, incremental.success)
             assertEquals(3, remote.fetchShardCount)
             assertEquals("Updated first shard", db.spamDao().findByNumber(firstNumber)?.description)
             assertEquals("Initial second shard", db.spamDao().findByNumber(secondNumber)?.description)
@@ -192,7 +206,7 @@ class SyncIntegrationTest {
             remote.replaceShards(listOf(changedFirst.copy(hashOverride = "0".repeat(64)), secondShard))
             val failed = repo.syncFromGitHub()
 
-            assertTrue(failed.success)
+            assertTrue(failed.message, failed.success)
             assertTrue(failed.warning)
             assertEquals(beforeFailedUpdate, db.spamDao().findByNumber(firstNumber))
         }
@@ -208,12 +222,12 @@ class SyncIntegrationTest {
                     sha = "sharded-policy-v1",
                     initialShards = listOf(initialShard),
                 )
-            val repo = SpamRepository(context, db, remote)
+            val repo = repository(remote)
 
-            assertTrue(repo.syncFromGitHub(force = true).success)
+            repo.syncFromGitHub(force = true).let { assertTrue(it.message, it.success) }
             remote.version = 2
             remote.sha = "sharded-policy-v2"
-            assertTrue(repo.syncFromGitHub(force = true).success)
+            repo.syncFromGitHub(force = true).let { assertTrue(it.message, it.success) }
             val accepted = db.spamDao().findByNumber(number)
             val fetchCountAfterInitialSync = remote.fetchShardCount
 
@@ -221,7 +235,7 @@ class SyncIntegrationTest {
             remote.replaceShards(listOf(shardFixture(id, number, "Replayed content")))
             val sameVersion = repo.syncFromGitHub(force = true)
 
-            assertTrue(sameVersion.success)
+            assertTrue(sameVersion.message, sameVersion.success)
             assertTrue(sameVersion.warning)
             assertEquals(fetchCountAfterInitialSync, remote.fetchShardCount)
             assertEquals(accepted, db.spamDao().findByNumber(number))
@@ -230,7 +244,7 @@ class SyncIntegrationTest {
             remote.version = 1
             val downgraded = repo.syncFromGitHub(force = true)
 
-            assertTrue(downgraded.success)
+            assertTrue(downgraded.message, downgraded.success)
             assertTrue(downgraded.warning)
             assertEquals(fetchCountAfterInitialSync, remote.fetchShardCount)
             assertEquals(accepted, db.spamDao().findByNumber(number))

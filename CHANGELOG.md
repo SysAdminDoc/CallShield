@@ -360,6 +360,11 @@ The rest of this section takes effect when the report Worker is next deployed.
   the result doesn't match what the app expects or a table loses rows. The
   migration test that would have caught the August database lockout ran only
   on an emulator, and nothing ran it.
+- The on-device sync tests keep their settings to themselves. They used the
+  app's own saved settings, so once the app had loaded its built-in database
+  on the test phone, every older test feed was refused as a rollback and the
+  tests failed. The dashboard tests now check the labels and buttons from the
+  August redesign.
 
 ### Translations
 

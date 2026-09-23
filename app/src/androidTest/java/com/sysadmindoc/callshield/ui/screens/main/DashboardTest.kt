@@ -6,6 +6,7 @@ import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import com.sysadmindoc.callshield.permissions.BackgroundExecutionRisk
@@ -85,17 +86,19 @@ class DashboardTest {
                         icon = Icons.Default.Sync,
                         onClick = { syncRequests++ },
                     ),
+                databaseCount = 1_234,
             )
         }
 
         composeRule.onNodeWithText("Protection Active").assertIsDisplayed()
         composeRule.onNodeWithText("Calls and texts are actively protected.").assertIsDisplayed()
-        composeRule.onNodeWithText("Core setup").assertIsDisplayed()
+        composeRule.onNodeWithText("Synced just now").assertIsDisplayed()
+        composeRule.onNodeWithText("Setup").assertIsDisplayed()
         composeRule.onNodeWithText("3/3").assertIsDisplayed()
         composeRule.onNodeWithText("Engines").assertIsDisplayed()
         composeRule.onNodeWithText("8").assertIsDisplayed()
-        composeRule.onNodeWithText("Database").assertIsDisplayed()
-        composeRule.onNodeWithText("Ready").assertIsDisplayed()
+        composeRule.onNodeWithText("Numbers").assertIsDisplayed()
+        composeRule.onNodeWithText("1,234").assertIsDisplayed()
         composeRule.onNodeWithText("Sync Database").performClick()
 
         composeRule.runOnIdle {
@@ -132,15 +135,15 @@ class DashboardTest {
             )
         }
 
-        composeRule.onNodeWithText("Blocked this week").assertIsDisplayed()
+        composeRule.onNodeWithText("This week", ignoreCase = true).assertIsDisplayed()
         composeRule.onNodeWithText("1,234").assertIsDisplayed()
         composeRule.onNodeWithText("56").assertIsDisplayed()
-        composeRule.onNodeWithText("Calls").assertIsDisplayed()
-        composeRule.onNodeWithText("Texts").assertIsDisplayed()
+        composeRule.onNodeWithText("Calls blocked").assertIsDisplayed()
+        composeRule.onNodeWithText("Texts blocked").assertIsDisplayed()
     }
 
     @Test
-    fun completedSetupCollapsesToOneReviewableSummaryRow() {
+    fun completedSetupShowsEveryCheckReadyWithNoActions() {
         val status =
             buildDashboardStatusModel(
                 blockCallsEnabled = true,
@@ -173,11 +176,13 @@ class DashboardTest {
             )
         }
 
-        composeRule.onNodeWithText("Setup Checklist").assertIsDisplayed()
-        composeRule.onNodeWithText("Required permissions, database, and call screening are ready.").assertIsDisplayed()
-        composeRule.onNodeWithText("Review").performClick()
+        composeRule.onNodeWithText("Protection checks", ignoreCase = true).assertIsDisplayed()
         composeRule.onNodeWithText("Core permissions are granted.").assertIsDisplayed()
-        composeRule.onAllNodesWithText("Required permissions, database, and call screening are ready.").assertCountEquals(0)
+        composeRule.onNodeWithText("Ready for live call blocking.").assertIsDisplayed()
+        composeRule.onNodeWithText("Spam numbers loaded: 1,234").assertIsDisplayed()
+        listOf("Review", "Enable Call Screening", "Sync", "Optional extras", "Enable Overlay", "Enable Notifications").forEach { action ->
+            composeRule.onAllNodesWithText(action).assertCountEquals(0)
+        }
     }
 
     @Test
@@ -215,7 +220,7 @@ class DashboardTest {
             )
         }
 
-        composeRule.onNodeWithText("Setup Checklist").assertIsDisplayed()
+        composeRule.onNodeWithText("Protection checks", ignoreCase = true).assertIsDisplayed()
         composeRule.onNodeWithText("Call screener").assertIsDisplayed()
         composeRule.onNodeWithText("Required for live call blocking.").assertIsDisplayed()
         composeRule.onNodeWithText("Enable Call Screening").performClick()
@@ -241,8 +246,8 @@ class DashboardTest {
         }
 
         composeRule.onNodeWithText("Background activity is restricted").assertIsDisplayed()
-        composeRule.onNodeWithText("Open battery settings").performClick()
-        composeRule.onNodeWithText("Dismiss").performClick()
+        composeRule.onNodeWithContentDescription("Open battery settings").performClick()
+        composeRule.onNodeWithContentDescription("Dismiss").performClick()
 
         composeRule.runOnIdle {
             assertEquals(1, batterySettingsRequests)
