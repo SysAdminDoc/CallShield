@@ -130,6 +130,9 @@ android {
         // hard-fails the build for every string a contributor has not
         // translated yet, which would block any partial translation landing.
         disable += "MissingTranslation"
+        // A string nothing references still goes to translators and counts in
+        // the zh-rCN coverage figure; the August redesign left 101 behind.
+        error += "UnusedResources"
     }
 
     testOptions {

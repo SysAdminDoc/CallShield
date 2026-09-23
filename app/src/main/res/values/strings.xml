@@ -19,7 +19,6 @@
     <string name="dashboard_outcome_title">This week</string>
     <string name="dashboard_outcome_calls">Calls blocked</string>
     <string name="dashboard_outcome_texts">Texts blocked</string>
-    <string name="dashboard_outcome_window">This calendar week · on-device blocked activity</string>
     <string name="dashboard_calls_and_texts_protected">Calls and texts are actively protected.</string>
     <string name="dashboard_calls_protected">Calls are actively protected.</string>
     <string name="dashboard_texts_protected">Texts are actively protected.</string>
@@ -37,18 +36,9 @@
     <string name="dashboard_sync_database">Sync Database</string>
     <string name="dashboard_metric_core_setup">Setup</string>
     <string name="dashboard_metric_engines">Engines</string>
-    <string name="dashboard_metric_database">Database</string>
     <string name="dashboard_metric_numbers">Numbers</string>
-    <string name="dashboard_metric_ready">Ready</string>
-    <string name="dashboard_setup_checklist">Setup Checklist</string>
     <string name="dashboard_protection_checks">Protection checks</string>
     <string name="dashboard_setup_phone_messages_title">Phone &amp; messages</string>
-    <string name="dashboard_setup_complete">Setup complete</string>
-    <string name="dashboard_setup_needs_attention">Needs attention</string>
-    <string name="dashboard_setup_collapsed_detail">Required permissions, database, and call screening are ready.</string>
-    <string name="dashboard_setup_review">Review</string>
-    <string name="dashboard_setup_hide_details">Hide details</string>
-    <string name="dashboard_setup_permissions_title">Permissions</string>
     <string name="dashboard_setup_database_title">Spam database</string>
     <string name="dashboard_setup_call_screener_title">Call screener</string>
     <string name="dashboard_setup_overlay_title">Caller ID overlay</string>
@@ -64,9 +54,7 @@
     <string name="dashboard_screener_ready_short">Ready for live call blocking.</string>
     <string name="dashboard_screener_needed_short">Required for live call blocking.</string>
     <string name="dashboard_screener_optional_short">Off while call blocking is disabled.</string>
-    <string name="dashboard_overlay_ready_short">Floating caller ID is ready.</string>
     <string name="dashboard_overlay_needed_short">Floating caller ID alerts.</string>
-    <string name="dashboard_notifications_ready_short">Alerts and reminders are ready.</string>
     <string name="dashboard_notifications_needed_short">Blocking alerts and reminders.</string>
     <string name="dashboard_enable_overlay">Enable Overlay</string>
     <string name="dashboard_enable_notifications">Enable Notifications</string>
@@ -388,12 +376,8 @@
     <string name="dialog_keyword_note">SMS containing this keyword will be flagged in the CallShield log.</string>
 
     <!-- Lookup Screen -->
-    <string name="lookup_title">Number lookup</string>
-    <string name="lookup_subtitle">Check every detection layer locally.</string>
     <string name="lookup_phone_number">Phone number</string>
-    <string name="lookup_phone_placeholder">+12125551234</string>
     <string name="lookup_paste_clipboard">Paste</string>
-    <string name="lookup_clear">Clear</string>
     <string name="lookup_supporting_location">%1$s · %2$s</string>
     <string name="lookup_supporting_number">%s</string>
     <string name="lookup_check_number">Check number</string>
@@ -403,9 +387,6 @@
     <string name="lookup_trace_off">OFF</string>
     <string name="lookup_trace_pass">PASS</string>
     <string name="lookup_trace_error">ERROR</string>
-    <string name="lookup_spam_detected">SPAM DETECTED</string>
-    <string name="lookup_clean">CLEAN</string>
-    <string name="lookup_verdict_confidence">Probabilistic signal</string>
     <string name="lookup_risk_assessment">Risk assessment</string>
     <string name="lookup_verdict_suspected_spam">Suspected spam</string>
     <string name="lookup_verdict_no_risk">No risk detected</string>
@@ -471,10 +452,7 @@
     <string name="lookup_open_detail">Open Full Detail</string>
     <string name="lookup_spam">SPAM</string>
     <string name="lookup_safe">SAFE</string>
-    <string name="lookup_badge_layers">All layers + ML</string>
-    <string name="lookup_badge_clipboard">Clipboard ready</string>
     <string name="lookup_idle_title">Private · on-device · no account</string>
-    <string name="lookup_idle_body">Local checks run before any optional lookup.</string>
     <string name="lookup_idle_signal_title">Explainable results</string>
     <string name="lookup_idle_signal_body">See why a number looks risky.</string>
     <string name="lookup_idle_trusted_title">Save trusted numbers</string>
@@ -482,8 +460,6 @@
     <string name="lookup_progress_title">Checking this number now</string>
     <string name="lookup_progress_body">Running local database, heuristics, and ML checks before we classify the result.</string>
     <string name="lookup_error_title">Lookup couldn\'t finish</string>
-    <string name="lookup_result_high_risk">High risk</string>
-    <string name="lookup_result_clear">No spam match</string>
     <string name="lookup_mark_trusted">Mark trusted</string>
 
     <!-- Caller ID Overlay -->
@@ -544,19 +520,9 @@
     <!-- Settings Screen -->
     <string name="settings_permissions_access">Access status</string>
     <string name="settings_setup_progress">%1$s of %2$s required checks ready</string>
-    <string name="settings_setup_progress_note">This count covers the two required access rows below; database readiness is shown on Home.</string>
     <string name="settings_setup_ready_summary">Everything connected</string>
     <string name="settings_setup_attention_summary">Finish setup</string>
-    <string name="settings_permissions_needed">Permissions needed</string>
-    <string name="settings_call_screener_needed">Call screener needed</string>
-    <string name="settings_overlay_enabled">Overlay ready</string>
-    <string name="settings_overlay_optional">Overlay optional</string>
     <string name="settings_notifications">Notifications</string>
-    <string name="settings_notifications_enabled">Notifications ready</string>
-    <string name="settings_notifications_optional">Notifications optional</string>
-    <string name="settings_open_app_settings">Open app settings</string>
-    <string name="settings_open_app_settings_subtitle">Android permission details and special access</string>
-    <string name="settings_overlay">Overlay</string>
     <string name="settings_access_calls_messages">Phone &amp; messages</string>
     <string name="settings_access_call_screening">Call screening</string>
     <string name="settings_access_caller_id">Caller ID overlay</string>
@@ -653,8 +619,6 @@
     <string name="settings_heuristic_analysis_desc">VoIP ranges, premium rate, wangiri, rapid-fire</string>
     <string name="settings_sms_content">SMS content analysis</string>
     <string name="settings_sms_content_desc">Spam keywords, phishing links, scam patterns</string>
-    <string name="settings_urlhaus_privacy">Threat-feed privacy mode</string>
-    <string name="settings_urlhaus_privacy_desc">Hide link query parameters in local evidence; remote checks always use the domain only</string>
     <string name="settings_urlhaus_remote_lookup">Share link domains with threat feeds</string>
     <string name="settings_urlhaus_remote_lookup_desc">Optional. Only the registrable domain goes to the threat feeds you turn on, never the message text.</string>
     <string name="settings_sms_burst">SMS burst protection</string>
@@ -837,7 +801,6 @@
     <string name="stats_previous_week_more">%1$d more than the previous 7 days.</string>
     <string name="stats_previous_week_fewer">%1$d fewer than the previous 7 days.</string>
     <string name="stats_previous_week_same">Same as the previous 7 days.</string>
-    <string name="stats_overview_subtitle">A quick read on what CallShield has intercepted recently.</string>
     <string name="stats_overview_week">This Week</string>
     <string name="stats_overview_change">Weekly Change</string>
     <string name="stats_overview_top_source">Top Source</string>
@@ -887,7 +850,6 @@
     <string name="more_settings">Settings</string>
     <string name="more_whats_new">What\'s new</string>
     <string name="more_protection_test">Protection test</string>
-    <string name="more_snapshot_title">Protection</string>
     <string name="more_snapshot_calls_texts">Protected</string>
     <string name="more_snapshot_calls">Calls protected</string>
     <string name="more_snapshot_texts">Texts protected</string>
@@ -941,7 +903,6 @@
     <string name="emergency_contacts_unmark">Remove Emergency Status</string>
     <string name="emergency_contacts_badge">EMERGENCY</string>
     <!-- Block reasoning (Feature D) -->
-    <string name="block_reasoning_title">Why was this blocked?</string>
     <string name="detail_category_action_source">%1$s rule · %2$s</string>
     <!-- Smart call labels (Feature A) -->
     <string name="call_category_debt_collector">Debt Collector</string>
@@ -972,11 +933,6 @@
     <string name="protection_test_run_all">Run All Tests</string>
     <string name="protection_test_run_again">Run all tests again</string>
     <string name="protection_test_summary">Progress: %1$d/%2$d passed (%3$d%%)</string>
-    <string name="protection_test_all_ok">All systems operational</string>
-    <plurals name="protection_test_issues">
-        <item quantity="one">Issue needing attention: %d</item>
-        <item quantity="other">Issues needing attention: %d</item>
-    </plurals>
     <string name="protection_test_run_failed_title">Couldn\'t finish the tests</string>
     <string name="protection_test_run_failed_body">Something went wrong while running the checks. Try again, and if it keeps failing, restart CallShield.</string>
     <string name="protection_test_intro_title">What this checks</string>
@@ -984,7 +940,6 @@
     <string name="protection_test_intro_permissions">Required permissions and Android roles.</string>
     <string name="protection_test_intro_engines">Spam engines, ML scoring, and local data.</string>
     <string name="protection_test_intro_integrations">Caller ID overlay and RCS monitoring.</string>
-    <string name="protection_test_summary_body_ok">Everything needed for day-to-day protection is connected and responding normally.</string>
     <string name="protection_test_summary_body_attention">Review the checks below to restore full protection and premium extras.</string>
     <string name="protection_test_action_needed">Action Needed</string>
     <string name="protection_test_working">Working As Expected</string>
@@ -1113,53 +1068,11 @@
     <string name="changelog_release_history">Release history</string>
 
     <!-- Onboarding Screen -->
-    <string name="onboarding_welcome_title">Welcome to CallShield</string>
-    <string name="onboarding_welcome_subtitle">Private call and text protection, entirely on-device.</string>
-    <string name="onboarding_permissions_title">Grant Permissions</string>
-    <string name="onboarding_permissions_subtitle">CallShield needs access to your call log, contacts, and SMS to detect spam. Your default SMS app controls delivery.</string>
-    <string name="onboarding_screener_title">Set as Call Screener</string>
-    <string name="onboarding_screener_subtitle">CallShield needs to be your default call screening app to block spam calls.</string>
-    <string name="onboarding_sync_title">Stay Updated</string>
-    <string name="onboarding_sync_subtitle">CallShield ships with a built-in protection snapshot and refreshes from GitHub when available. Hot data refreshes every 30 minutes.</string>
-    <string name="onboarding_permissions_granted">Permissions granted</string>
-    <string name="onboarding_grant_permissions">Grant Permissions</string>
     <string name="onboarding_enable_notifications">Enable Notifications</string>
-    <string name="onboarding_enable_overlay">Enable Caller ID Overlay</string>
-    <string name="onboarding_screening_enabled">Call screening enabled</string>
-    <string name="onboarding_set_screener">Set as Call Screener</string>
     <string name="onboarding_step">Step %1$d of %2$d</string>
-    <string name="onboarding_progress_required_badge">%1$d/%2$d required</string>
-    <string name="onboarding_trust_no_account">No account</string>
-    <string name="onboarding_trust_on_device">On-device</string>
-    <string name="onboarding_trust_open_source">Open source</string>
-    <string name="onboarding_feature_private_title">Private by default</string>
-    <string name="onboarding_feature_private_body">No accounts, subscriptions, or tracking.</string>
-    <string name="onboarding_feature_local_title">On-device protection</string>
-    <string name="onboarding_feature_local_body">Screening decisions stay on your phone.</string>
-    <string name="onboarding_feature_updates_title">Fresh spam data</string>
-    <string name="onboarding_feature_updates_body">Protected immediately; updates improve coverage.</string>
-    <string name="onboarding_permissions_required">Required</string>
-    <string name="onboarding_permissions_optional">Optional</string>
-    <string name="onboarding_core_permissions_detail">Needed for scanning calls, checking contacts, and analyzing SMS spam. Your SMS app remains responsible for delivery.</string>
-    <string name="onboarding_notification_detail">Lets CallShield show alert notifications and monitor RCS spam when enabled.</string>
-    <string name="onboarding_overlay_detail">Shows a floating caller ID card on top of incoming calls.</string>
-    <string name="onboarding_screener_ready_detail">Android will route incoming calls through CallShield before they ring.</string>
-    <string name="onboarding_screener_pending_detail">This is the switch that turns on live call screening for unknown callers.</string>
-    <string name="onboarding_screener_unavailable">Call screening unavailable on this device</string>
     <string name="onboarding_screener_unavailable_detail">You can still use blocklists, scans, and lookup tools, but Android is not exposing the native screening role here.</string>
-    <string name="onboarding_screener_error">Android could not open the call screening setup screen on this device.</string>
-    <string name="onboarding_sync_card_title">How protection stays fresh</string>
-    <string name="onboarding_sync_bundled">CallShield starts with a bundled protection snapshot, so you are not waiting on a first sync.</string>
-    <string name="onboarding_sync_refresh">GitHub-backed updates refresh local spam data whenever a newer bundle is available.</string>
-    <string name="onboarding_sync_hot">Hot campaign ranges refresh separately, helping short-lived robocall spikes get caught faster.</string>
-    <string name="onboarding_finish_ready_title">Core setup is ready</string>
-    <string name="onboarding_finish_ready_subtitle">You can finish onboarding now and start using CallShield with live screening enabled.</string>
-    <string name="onboarding_finish_later_title">You can finish now and tighten things later</string>
-    <string name="onboarding_finish_later_subtitle">CallShield will still open, and you can come back in Settings to complete any missing setup items.</string>
-    <string name="onboarding_continue_anyway">Continue Anyway</string>
     <string name="onboarding_finish_setup">Finish Setup</string>
     <string name="onboarding_back">Back</string>
-    <string name="onboarding_next">Next</string>
     <string name="onboarding_setup_label">GUIDED SETUP</string>
     <string name="onboarding_ready_count">%1$d of %2$d ready</string>
     <string name="onboarding_guided_title">Set up protection</string>
@@ -1216,17 +1129,12 @@
     <string name="recent_filter_outgoing">Outgoing (%d)</string>
     <string name="recent_filter_missed">Missed (%d)</string>
     <string name="recent_filter_spam">Spam (%d)</string>
-    <string name="recent_summary_title">Recent calls</string>
-    <string name="recent_summary_subtitle">Review calls and suspicious numbers.</string>
     <string name="recent_summary_total">Total</string>
     <string name="recent_summary_spam">Spam</string>
     <string name="recent_summary_missed">Missed</string>
     <string name="recent_summary_known">Known</string>
     <string name="recent_permission_title">Recent calls need access</string>
     <string name="recent_permission_body">Allow call log access to review recent calls and spam matches.</string>
-    <string name="recent_permission_hint_private_title">Private recent-call review</string>
-    <string name="recent_permission_hint_private_body">CallShield reads call history on-device so you can understand spam matches without leaving your recent-call view.</string>
-    <string name="recent_permission_hint_recovery_body">If you skip this for now, the app still works. You can turn on recent-call review from system settings whenever you need it.</string>
     <string name="recent_permission_cta">Open settings</string>
     <string name="recent_no_calls">No recent calls</string>
     <string name="recent_no_calls_desc">New calls will appear here.</string>
@@ -1252,8 +1160,6 @@
 
     <!-- Number Detail Screen -->
     <string name="detail_copied">Copied</string>
-    <string name="detail_verdict_confidence">Probabilistic signal</string>
-    <string name="detail_verdict_probabilistic_note">This confidence comes from on-device analysis and is shown only for probabilistic signals.</string>
     <string name="detail_block_area_code">Block all %s numbers</string>
     <string name="detail_statistics">Statistics</string>
     <string name="detail_calls">Calls</string>
@@ -1293,7 +1199,6 @@
     <string name="detail_not_spam_pending">Marked not spam</string>
     <string name="detail_undo">Undo</string>
     <string name="detail_report_carrier">Report to carrier (7726)</string>
-    <string name="detail_remove_my_rule">Remove my rule</string>
     <string name="detail_ftc_complaint">File FTC Do Not Call Complaint</string>
     <string name="detail_whitelist">Trust</string>
     <string name="detail_call">Call</string>
@@ -1321,19 +1226,12 @@
 
     <!-- MainActivity / Navigation -->
     <string name="nav_home">Home</string>
-    <string name="nav_recent">Recent</string>
-    <string name="nav_log">Log</string>
     <string name="nav_activity">Activity</string>
     <string name="activity_tab_recent">Recent</string>
     <string name="activity_tab_blocked">Blocked</string>
     <string name="nav_lookup">Lookup</string>
     <string name="nav_blocklist">Rules</string>
     <string name="nav_more">More</string>
-    <string name="app_shell_status_calls_texts">Calls + SMS on</string>
-    <string name="app_shell_status_calls">Calls on</string>
-    <string name="app_shell_status_texts">SMS on</string>
-    <string name="app_shell_status_paused">Protection paused</string>
-    <string name="app_shell_status_setup_needed">Setup needed</string>
     <string name="search_placeholder">Search numbers, reasons…</string>
     <string name="search_idle_title">Search the protection database</string>
     <string name="search_idle_subtitle">Use search to jump directly into known spam entries without leaving the current tab.</string>
@@ -1548,15 +1446,12 @@
     <string name="cd_collapse">Collapse details</string>
     <string name="cd_block">Block number</string>
     <string name="cd_unblock">Unblock number</string>
-    <string name="cd_delete">Delete</string>
     <string name="cd_delete_rule">Delete rule</string>
     <string name="cd_remove">Remove from trusted</string>
     <string name="cd_back">Go back</string>
     <string name="cd_no_items">No blocked items</string>
     <string name="cd_empty_list">Empty list</string>
-    <string name="cd_add">Add new entry</string>
     <string name="cd_phone_input">Phone number input</string>
-    <string name="cd_spam_detected">Spam detected</string>
     <string name="cd_number_clean">Number is clean</string>
     <string name="cd_no_recent_calls">No recent calls</string>
     <string name="cd_incoming_call">Incoming call</string>

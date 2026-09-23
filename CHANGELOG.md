@@ -487,6 +487,10 @@ The rest of this section takes effect when the report Worker is next deployed.
   lower coverage instead, and the Chinese floor slid from 76.1% to 75.6% that
   way. The eight strings behind the slide are translated now, and the floor is
   back up at 76.5%.
+- Translators no longer get 101 strings the app stopped using when the August
+  redesign replaced the old dashboard and onboarding screens. The build now
+  fails when a string goes unused, and with the dead ones gone the Chinese
+  floor is recomputed at 77%.
 - A floors file that can't be read, such as one left mid-merge, now fails the
   check. It used to load as empty, which switched the gate off and let
   `--update-floors` write every floor again from scratch. `--update-floors`

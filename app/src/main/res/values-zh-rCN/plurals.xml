@@ -52,10 +52,6 @@
         <item quantity="one">%d 个所选群组不可用。请选择“全部联系人”以重置范围。</item>
         <item quantity="other">%d 个所选群组不可用。请选择“全部联系人”以重置范围。</item>
     </plurals>
-    <plurals name="protection_test_issues">
-        <item quantity="one">需要处理的问题：%d</item>
-        <item quantity="other">需要处理的问题：%d</item>
-    </plurals>
     <plurals name="detail_reports_count_label">
         <item quantity="one">举报：%d</item>
         <item quantity="other">举报：%d</item>
