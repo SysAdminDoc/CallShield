@@ -12,6 +12,7 @@ import com.sysadmindoc.callshield.data.remote.UrlSafetyChecker
 import com.sysadmindoc.callshield.data.repository.SpamRepositoryAdapter
 import com.sysadmindoc.callshield.di.ApplicationScope
 import com.sysadmindoc.callshield.domain.usecase.CheckSpamSmsUseCase
+import com.sysadmindoc.callshield.ui.urlThreatLabels
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -184,8 +185,7 @@ class SmsReceiver : BroadcastReceiver() {
                             allowRemoteLookup = remoteUrlLookupEnabled,
                         )
                     if (maliciousUrls.isNotEmpty()) {
-                        val threats = maliciousUrls.joinToString(", ") { it.threat.ifEmpty { "malware" } }
-                        NotificationHelper.notifyPhishingUrl(appContext, sender, threats)
+                        NotificationHelper.notifyPhishingUrl(appContext, sender, urlThreatLabels(appContext, maliciousUrls))
                     }
                 } catch (_: Exception) {
                     // URL check is best-effort

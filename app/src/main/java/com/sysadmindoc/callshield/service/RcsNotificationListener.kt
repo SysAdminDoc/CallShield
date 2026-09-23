@@ -9,6 +9,7 @@ import android.os.Bundle
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import androidx.datastore.preferences.core.Preferences
+import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.MeetingModeRegistry
 import com.sysadmindoc.callshield.data.MessageCapabilityDetector
 import com.sysadmindoc.callshield.data.NotificationScreeningCategory
@@ -24,6 +25,7 @@ import com.sysadmindoc.callshield.domain.usecase.CheckSpamSmsUseCase
 import com.sysadmindoc.callshield.ui.joinSignalLabels
 import com.sysadmindoc.callshield.ui.reasonCodeLabelRes
 import com.sysadmindoc.callshield.ui.signalLabel
+import com.sysadmindoc.callshield.ui.urlThreatLabels
 import com.sysadmindoc.callshield.util.filterAsciiDigits
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -315,7 +317,7 @@ class RcsNotificationListener : NotificationListenerService() {
                     allowRemoteLookup = allowRemoteLookup,
                 )
             if (malicious.isNotEmpty()) {
-                val threats = malicious.joinToString(", ") { it.threat.ifEmpty { "malware" } }
+                val threats = urlThreatLabels(applicationContext, malicious)
                 if (source.category == NotificationScreeningCategory.RCS && filterAsciiDigits(sender).length >= 7) {
                     NotificationHelper.notifyPhishingUrl(applicationContext, sender, threats)
                 } else {
@@ -324,7 +326,7 @@ class RcsNotificationListener : NotificationListenerService() {
                         sourceName = source.stableName,
                         sender = sender,
                         confidence = 100,
-                        reason = threats,
+                        reason = applicationContext.getString(R.string.url_threat_signal, threats),
                     )
                 }
             }

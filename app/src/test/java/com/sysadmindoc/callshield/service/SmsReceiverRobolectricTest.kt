@@ -22,6 +22,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -94,12 +95,10 @@ class SmsReceiverRobolectricTest {
             context.getString(com.sysadmindoc.callshield.R.string.notif_phishing_title),
             notification.extras.getString(Notification.EXTRA_TITLE),
         )
-        assertTrue(
-            notification.extras
-                .getString(Notification.EXTRA_TEXT)
-                .orEmpty()
-                .contains("known_spam_domain"),
-        )
+        // Named by kind in the app language, never by the feed's own code.
+        val text = notification.extras.getString(Notification.EXTRA_TEXT).orEmpty()
+        assertTrue(text, text.contains(context.getString(com.sysadmindoc.callshield.R.string.url_threat_spam)))
+        assertFalse(text, text.contains("known_spam_domain"))
     }
 
     private fun awaitPhishingNotification(): Notification =

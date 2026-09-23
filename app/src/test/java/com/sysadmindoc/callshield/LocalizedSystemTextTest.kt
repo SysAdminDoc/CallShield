@@ -17,6 +17,8 @@ import com.sysadmindoc.callshield.data.checker.SmsContentChecker
 import com.sysadmindoc.callshield.data.checker.StirShakenChecker
 import com.sysadmindoc.callshield.data.checker.TimeBlockChecker
 import com.sysadmindoc.callshield.data.checker.VerificationMessageFloorChecker
+import com.sysadmindoc.callshield.data.remote.UrlSafetyChecker
+import com.sysadmindoc.callshield.data.remote.UrlThreatCategory
 import com.sysadmindoc.callshield.domain.model.BlockReasonCode
 import com.sysadmindoc.callshield.domain.model.CallerIdentity
 import com.sysadmindoc.callshield.domain.model.DnoStatus
@@ -27,6 +29,7 @@ import com.sysadmindoc.callshield.domain.model.SpamCheckResult
 import com.sysadmindoc.callshield.service.CallShieldTileService
 import com.sysadmindoc.callshield.service.RcsNotificationListener
 import com.sysadmindoc.callshield.ui.describeIdentityEvidence
+import com.sysadmindoc.callshield.ui.urlThreatLabels
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -193,6 +196,28 @@ class LocalizedSystemTextTest {
             context.getString(R.string.reasoning_category_silenced, context.getString(R.string.call_category_scam)),
             explanations[explanations.size - 3].headline,
         )
+    }
+
+    @Test
+    fun `unsafe links are named by kind, never by a feed's code`() {
+        fun link(
+            threat: String,
+            category: UrlThreatCategory = UrlThreatCategory.UNKNOWN,
+        ) = UrlSafetyChecker.UrlCheckResult(url = "https://$threat.example", isMalicious = true, threat = threat, category = category)
+
+        val labels =
+            urlThreatLabels(
+                context,
+                listOf(
+                    link("verified_phish", UrlThreatCategory.PHISHING),
+                    link(UrlSafetyChecker.KNOWN_SPAM_DOMAIN_THREAT),
+                    link("malware_download", UrlThreatCategory.MALWARE),
+                    link("feed_domain_match"),
+                    link("unverified_phish", UrlThreatCategory.PHISHING),
+                ),
+            )
+
+        assertEquals("钓鱼、垃圾信息、恶意软件、危险", labels)
     }
 
     private fun passport(attestation: String) =

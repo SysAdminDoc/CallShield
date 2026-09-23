@@ -3,6 +3,8 @@ package com.sysadmindoc.callshield.ui
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import com.sysadmindoc.callshield.R
+import com.sysadmindoc.callshield.data.remote.UrlSafetyChecker
+import com.sysadmindoc.callshield.data.remote.UrlThreatCategory
 import com.sysadmindoc.callshield.domain.model.BlockReasonCode
 import com.sysadmindoc.callshield.domain.model.CallerIdentity
 import com.sysadmindoc.callshield.domain.model.CallerIdentitySignals
@@ -81,6 +83,28 @@ fun signalLabel(
  * or a shortened link next to a suspicious one would otherwise repeat.
  */
 fun List<String>.joinSignalLabels(context: android.content.Context): String = distinct().joinToString(context.getString(R.string.signal_list_separator))
+
+/**
+ * What the unsafe links in a message are, in the app language, each kind
+ * once ("phishing, malware"). It fills the "contains a %s link" slot of the
+ * phishing notification. The feeds' own detail codes ("verified_phish",
+ * "feed_domain_match") never reach the user.
+ */
+fun urlThreatLabels(
+    context: android.content.Context,
+    results: List<UrlSafetyChecker.UrlCheckResult>,
+): String =
+    results
+        .map { result ->
+            context.getString(
+                when {
+                    result.threat == UrlSafetyChecker.KNOWN_SPAM_DOMAIN_THREAT -> R.string.url_threat_spam
+                    result.category == UrlThreatCategory.PHISHING -> R.string.url_threat_phishing
+                    result.category == UrlThreatCategory.MALWARE -> R.string.url_threat_malware
+                    else -> R.string.url_threat_dangerous
+                },
+            )
+        }.joinSignalLabels(context)
 
 /**
  * The carrier identity evidence behind an ML verdict, in the app language, or

@@ -15,6 +15,9 @@ import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
  * service can never add latency to call or SMS interception.
  */
 object UrlSafetyChecker {
+    /** The threat a link on the downloaded spam-domain list carries. */
+    internal const val KNOWN_SPAM_DOMAIN_THREAT = "known_spam_domain"
+
     data class UrlCheckResult(
         val url: String,
         val isMalicious: Boolean,
@@ -155,7 +158,7 @@ object UrlSafetyChecker {
         return UrlCheckResult(
             url = normalizeLocalResultUrl(url, stripQuery),
             isMalicious = true,
-            threat = "known_spam_domain",
+            threat = KNOWN_SPAM_DOMAIN_THREAT,
             tags = listOf("local_spam_domain"),
             source = UrlThreatSource.LOCAL_SPAM_DOMAINS,
             sourceVersion = UrlThreatSource.LOCAL_SPAM_DOMAINS.defaultVersion,

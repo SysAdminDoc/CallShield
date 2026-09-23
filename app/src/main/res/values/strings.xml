@@ -1370,6 +1370,12 @@
     <string name="notif_type_sms">SMS</string>
     <string name="notif_action_block_forever">Block forever</string>
     <string name="notif_action_report">Report</string>
+    <!-- Kinds of unsafe link; each fills "contains a %s link" and "flagged as %s". -->
+    <string name="url_threat_phishing">phishing</string>
+    <string name="url_threat_malware">malware</string>
+    <string name="url_threat_spam">spam</string>
+    <string name="url_threat_dangerous">dangerous</string>
+    <string name="url_threat_signal">%1$s link</string>
     <string name="notif_phishing_title">Phishing URL detected</string>
     <string name="notif_phishing_text">SMS from %1$s contains a %2$s link</string>
     <string name="notif_phishing_big_text">An SMS from %1$s contains a URL flagged by a threat feed as %2$s. Do not tap any links in this message.</string>
