@@ -1632,6 +1632,16 @@
     <string name="block_reason_detail_separator">"; "</string>
     <string name="block_reason_ml">ML model: %1$d%% spam probability</string>
     <string name="block_reason_sentence_separator">". "</string>
+    <string name="identity_evidence_summary">Identity evidence: %1$s</string>
+    <string name="identity_evidence_separator">"; "</string>
+    <string name="identity_evidence_attestation">PASSporT attestation %1$s metadata</string>
+    <string name="identity_evidence_attestation_unverified">PASSporT attestation %1$s metadata (carrier status not PASS)</string>
+    <string name="identity_evidence_dno_listed">DNO-listed origin</string>
+    <string name="identity_evidence_unassigned_origin">unassigned origin</string>
+    <string name="identity_evidence_line_voip">line type VoIP</string>
+    <string name="identity_evidence_line_prepaid">line type prepaid</string>
+    <string name="identity_evidence_line_premium">line type premium-rate</string>
+    <string name="identity_evidence_rich_call_data">rich caller-data metadata (not a spam verdict)</string>
     <string name="block_reason_keyword">Keyword: %1$s</string>
     <string name="notification_listener_label">CallShield RCS Filter</string>
     <string name="model_health_title">ML model health</string>

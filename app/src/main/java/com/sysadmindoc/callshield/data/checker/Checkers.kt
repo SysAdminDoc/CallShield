@@ -21,8 +21,8 @@ import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.SystemBlockList
 import com.sysadmindoc.callshield.data.model.SpamNumber
 import com.sysadmindoc.callshield.data.repository.SpamRepositoryImpl
-import com.sysadmindoc.callshield.domain.model.CallerIdentitySignals
 import com.sysadmindoc.callshield.service.CallerIdOverlayService
+import com.sysadmindoc.callshield.ui.describeIdentityEvidence
 import com.sysadmindoc.callshield.ui.joinSignalLabels
 import com.sysadmindoc.callshield.ui.signalLabel
 import kotlinx.coroutines.withTimeoutOrNull
@@ -1078,7 +1078,7 @@ internal class MlScorerChecker(
                 description =
                     listOfNotNull(
                         ctx.appContext.getString(R.string.block_reason_ml, verdict.confidence),
-                        CallerIdentitySignals.describe(ctx.callerIdentity).takeIf { it.isNotBlank() },
+                        describeIdentityEvidence(ctx.appContext, ctx.callerIdentity),
                     ).joinToString(ctx.appContext.getString(R.string.block_reason_sentence_separator)),
                 confidence = verdict.confidence,
             )

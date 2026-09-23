@@ -1,12 +1,24 @@
 package com.sysadmindoc.callshield.domain.model
 
+import android.content.Context
+import androidx.test.core.app.ApplicationProvider
 import com.sysadmindoc.callshield.data.checker.CheckerPriority
+import com.sysadmindoc.callshield.ui.describeIdentityEvidence
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
+// Robolectric because the evidence is worded from string resources.
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [34])
 class CallerIdentitySignalsTest {
+    private val context: Context = ApplicationProvider.getApplicationContext()
+
     @Test
     fun `A lowers risk only with Android carrier PASS and C raises it`() {
         val a = CallerIdentity(verificationStatus = 1, passport = passport("A"))
@@ -48,7 +60,7 @@ class CallerIdentitySignalsTest {
                 dnoStatus = DnoStatus.LISTED,
                 lineType = LineType.VOIP,
             )
-        val description = CallerIdentitySignals.describe(identity).lowercase()
+        val description = describeIdentityEvidence(context, identity).orEmpty().lowercase()
 
         assertTrue(description.contains("identity evidence"))
         assertTrue(description.contains("not a spam verdict"))
@@ -56,6 +68,29 @@ class CallerIdentitySignalsTest {
         assertFalse(description.contains("trusted"))
         assertTrue(CheckerPriority.CAMPAIGN_BURST > CheckerPriority.ML_SCORER)
         assertTrue(CheckerPriority.EMERGENCY_FLOOR > CheckerPriority.ML_SCORER)
+    }
+
+    @Test
+    fun `the English evidence reads as it did before it moved to resources`() {
+        val identity =
+            CallerIdentity(
+                verificationStatus = 1,
+                passport = passport("A").copy(richCallData = RichCallData(name = "Bank")),
+                dnoStatus = DnoStatus.LISTED,
+                lineType = LineType.VOIP,
+            )
+
+        assertEquals(
+            "Identity evidence: PASSporT attestation A metadata; DNO-listed origin; line type VoIP; " +
+                "rich caller-data metadata (not a spam verdict)",
+            describeIdentityEvidence(context, identity),
+        )
+        assertEquals(
+            "Identity evidence: PASSporT attestation A metadata (carrier status not PASS)",
+            describeIdentityEvidence(context, CallerIdentity(verificationStatus = 0, passport = passport("A"))),
+        )
+        assertNull(describeIdentityEvidence(context, null))
+        assertNull(describeIdentityEvidence(context, CallerIdentity(verificationStatus = 1)))
     }
 
     private fun passport(attestation: String?): ParsedPassport =

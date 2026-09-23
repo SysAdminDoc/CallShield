@@ -82,10 +82,35 @@ data class ParsedPassport(
     val signaturePresent: Boolean = true,
 )
 
-/** A bounded risk adjustment and neutral labels for explainability. */
+/**
+ * One piece of carrier identity evidence behind a risk adjustment. The
+ * domain layer names it; whoever shows it words it in the app language.
+ */
+sealed interface IdentityEvidence {
+    /** A PASSporT attestation level, and whether the carrier's own check passed. */
+    data class Attestation(
+        val level: String,
+        val carrierPassed: Boolean,
+    ) : IdentityEvidence
+
+    data object DnoListed : IdentityEvidence
+
+    data object UnassignedOrigin : IdentityEvidence
+
+    data object VoipLine : IdentityEvidence
+
+    data object PrepaidLine : IdentityEvidence
+
+    data object PremiumRateLine : IdentityEvidence
+
+    /** Rich call data was present; neutral, never a verdict by itself. */
+    data object RichCallData : IdentityEvidence
+}
+
+/** A bounded risk adjustment and the neutral evidence behind it. */
 data class IdentityRiskAssessment(
     val probabilityAdjustment: Double,
-    val evidenceLabels: List<String>,
+    val evidence: List<IdentityEvidence>,
 )
 
 /**
@@ -102,38 +127,38 @@ object CallerIdentitySignals {
         if (identity == null) return IdentityRiskAssessment(0.0, emptyList())
 
         var adjustment = 0.0
-        val labels = mutableListOf<String>()
+        val evidence = mutableListOf<IdentityEvidence>()
         val attestation = identity.passport?.attestation
         if (identity.verificationStatus == VERIFICATION_STATUS_PASSED) {
             when (attestation) {
                 "A" -> {
                     adjustment -= 0.10
-                    labels += "PASSporT attestation A metadata"
+                    evidence += IdentityEvidence.Attestation("A", carrierPassed = true)
                 }
 
                 "B" -> {
                     adjustment -= 0.03
-                    labels += "PASSporT attestation B metadata"
+                    evidence += IdentityEvidence.Attestation("B", carrierPassed = true)
                 }
 
                 "C" -> {
                     adjustment += 0.05
-                    labels += "PASSporT attestation C metadata"
+                    evidence += IdentityEvidence.Attestation("C", carrierPassed = true)
                 }
             }
         } else if (attestation != null) {
-            labels += "PASSporT attestation $attestation metadata (carrier status not PASS)"
+            evidence += IdentityEvidence.Attestation(attestation, carrierPassed = false)
         }
 
         when (identity.dnoStatus) {
             DnoStatus.LISTED -> {
                 adjustment += 0.22
-                labels += "DNO-listed origin"
+                evidence += IdentityEvidence.DnoListed
             }
 
             DnoStatus.UNASSIGNED -> {
                 adjustment += 0.14
-                labels += "unassigned origin"
+                evidence += IdentityEvidence.UnassignedOrigin
             }
 
             else -> {
@@ -144,17 +169,17 @@ object CallerIdentitySignals {
         when (identity.lineType) {
             LineType.VOIP -> {
                 adjustment += 0.04
-                labels += "line type VoIP"
+                evidence += IdentityEvidence.VoipLine
             }
 
             LineType.PREPAID -> {
                 adjustment += 0.03
-                labels += "line type prepaid"
+                evidence += IdentityEvidence.PrepaidLine
             }
 
             LineType.PREMIUM_RATE -> {
                 adjustment += 0.06
-                labels += "line type premium-rate"
+                evidence += IdentityEvidence.PremiumRateLine
             }
 
             else -> {
@@ -163,12 +188,12 @@ object CallerIdentitySignals {
         }
 
         if (identity.passport?.richCallData != null) {
-            labels += "rich caller-data metadata (not a spam verdict)"
+            evidence += IdentityEvidence.RichCallData
         }
 
         return IdentityRiskAssessment(
             probabilityAdjustment = adjustment.coerceIn(MIN_ADJUSTMENT, MAX_ADJUSTMENT),
-            evidenceLabels = labels,
+            evidence = evidence,
         )
     }
 
@@ -179,13 +204,4 @@ object CallerIdentitySignals {
         if (baseProbability < 0.0) return baseProbability
         return (baseProbability + assess(identity).probabilityAdjustment).coerceIn(0.0, 1.0)
     }
-
-    fun describe(identity: CallerIdentity?): String =
-        assess(identity)
-            .evidenceLabels
-            .joinToString(
-                prefix = "Identity evidence: ",
-                separator = "; ",
-            ).takeIf { identity != null && assess(identity).evidenceLabels.isNotEmpty() }
-            .orEmpty()
 }

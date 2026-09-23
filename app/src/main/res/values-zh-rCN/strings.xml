@@ -1098,6 +1098,16 @@
     <string name="block_reason_detail_separator">；</string>
     <string name="block_reason_ml">ML 模型：垃圾来电概率 %1$d%%</string>
     <string name="block_reason_sentence_separator">。</string>
+    <string name="identity_evidence_summary">身份证据：%1$s</string>
+    <string name="identity_evidence_separator">；</string>
+    <string name="identity_evidence_attestation">PASSporT %1$s 级认证元数据</string>
+    <string name="identity_evidence_attestation_unverified">PASSporT %1$s 级认证元数据（运营商验证未通过）</string>
+    <string name="identity_evidence_dno_listed">来电号码在禁止呼出（DNO）名单中</string>
+    <string name="identity_evidence_unassigned_origin">来电号码尚未分配</string>
+    <string name="identity_evidence_line_voip">线路类型：网络电话</string>
+    <string name="identity_evidence_line_prepaid">线路类型：预付费</string>
+    <string name="identity_evidence_line_premium">线路类型：付费电话</string>
+    <string name="identity_evidence_rich_call_data">富来电数据元数据（并非垃圾来电判定）</string>
     <string name="block_reason_keyword">关键词：%1$s</string>
     <string name="block_reason_sender_provenance_unverified">发件人 ID 未在 %1$s 发件人登记中注册</string>
     <string name="block_reason_sender_provenance_unassigned">号码前缀 %1$s 在 %2$s 编号计划中未分配</string>

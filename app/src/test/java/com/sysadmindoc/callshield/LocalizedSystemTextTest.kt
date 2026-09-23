@@ -17,9 +17,15 @@ import com.sysadmindoc.callshield.data.checker.SmsContentChecker
 import com.sysadmindoc.callshield.data.checker.StirShakenChecker
 import com.sysadmindoc.callshield.data.checker.TimeBlockChecker
 import com.sysadmindoc.callshield.data.checker.VerificationMessageFloorChecker
+import com.sysadmindoc.callshield.domain.model.CallerIdentity
+import com.sysadmindoc.callshield.domain.model.DnoStatus
+import com.sysadmindoc.callshield.domain.model.LineType
+import com.sysadmindoc.callshield.domain.model.ParsedPassport
+import com.sysadmindoc.callshield.domain.model.RichCallData
 import com.sysadmindoc.callshield.domain.model.SpamCheckResult
 import com.sysadmindoc.callshield.service.CallShieldTileService
 import com.sysadmindoc.callshield.service.RcsNotificationListener
+import com.sysadmindoc.callshield.ui.describeIdentityEvidence
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -145,6 +151,38 @@ class LocalizedSystemTextTest {
         assertEquals(context.getString(R.string.stats_reason_spam_database), fromPipeline)
         assertNotEquals("database", fromPipeline)
     }
+
+    @Test
+    fun `identity evidence in an ML block is worded in the app language`() {
+        val identity =
+            CallerIdentity(
+                verificationStatus = 0,
+                passport = passport("B").copy(richCallData = RichCallData(name = "Bank")),
+                dnoStatus = DnoStatus.UNASSIGNED,
+                lineType = LineType.PREMIUM_RATE,
+            )
+        val description = requireNotNull(describeIdentityEvidence(context, identity))
+
+        assertEquals(
+            "身份证据：PASSporT B 级认证元数据（运营商验证未通过）；来电号码尚未分配；线路类型：付费电话；富来电数据元数据（并非垃圾来电判定）",
+            description,
+        )
+        for (english in listOf("Identity evidence", "metadata", "origin", "line type", "verdict", "carrier status")) {
+            assertFalse("\"$english\" in $description", description.contains(english, ignoreCase = true))
+        }
+    }
+
+    private fun passport(attestation: String) =
+        ParsedPassport(
+            typ = "passport",
+            algorithm = "ES256",
+            certificateUrl = "https://example.com/cert",
+            issuedAtEpochSeconds = 1_700_000_000L,
+            originTelephoneNumber = "+12125550100",
+            destinationTelephoneNumbers = listOf("+12125550101"),
+            destinationUris = emptyList(),
+            attestation = attestation,
+        )
 
     @Test
     fun `the Chinese digest keeps its line breaks`() {

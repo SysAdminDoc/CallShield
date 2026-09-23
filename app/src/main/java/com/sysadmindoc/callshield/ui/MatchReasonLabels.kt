@@ -4,6 +4,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.domain.model.BlockReasonCode
+import com.sysadmindoc.callshield.domain.model.CallerIdentity
+import com.sysadmindoc.callshield.domain.model.CallerIdentitySignals
+import com.sysadmindoc.callshield.domain.model.IdentityEvidence
 import com.sysadmindoc.callshield.service.overlayReasonLabelRes
 
 /**
@@ -78,6 +81,52 @@ fun signalLabel(
  * or a shortened link next to a suspicious one would otherwise repeat.
  */
 fun List<String>.joinSignalLabels(context: android.content.Context): String = distinct().joinToString(context.getString(R.string.signal_list_separator))
+
+/**
+ * The carrier identity evidence behind an ML verdict, in the app language, or
+ * null when the call carried none.
+ */
+fun describeIdentityEvidence(
+    context: android.content.Context,
+    identity: CallerIdentity?,
+): String? {
+    val evidence = CallerIdentitySignals.assess(identity).evidence
+    if (evidence.isEmpty()) return null
+    val labels =
+        evidence.map { item ->
+            when (item) {
+                is IdentityEvidence.Attestation -> {
+                    val res = if (item.carrierPassed) R.string.identity_evidence_attestation else R.string.identity_evidence_attestation_unverified
+                    context.getString(res, item.level)
+                }
+
+                IdentityEvidence.DnoListed -> {
+                    context.getString(R.string.identity_evidence_dno_listed)
+                }
+
+                IdentityEvidence.UnassignedOrigin -> {
+                    context.getString(R.string.identity_evidence_unassigned_origin)
+                }
+
+                IdentityEvidence.VoipLine -> {
+                    context.getString(R.string.identity_evidence_line_voip)
+                }
+
+                IdentityEvidence.PrepaidLine -> {
+                    context.getString(R.string.identity_evidence_line_prepaid)
+                }
+
+                IdentityEvidence.PremiumRateLine -> {
+                    context.getString(R.string.identity_evidence_line_premium)
+                }
+
+                IdentityEvidence.RichCallData -> {
+                    context.getString(R.string.identity_evidence_rich_call_data)
+                }
+            }
+        }
+    return context.getString(R.string.identity_evidence_summary, labels.joinToString(context.getString(R.string.identity_evidence_separator)))
+}
 
 /** Resource id for a stable, user-facing pipeline checker label. */
 fun pipelineCheckerLabelRes(checkerName: String): Int =

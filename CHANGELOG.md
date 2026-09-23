@@ -477,6 +477,9 @@ The rest of this section takes effect when the report Worker is next deployed.
   phrase in the app language ("Possible neighbor spoofing", "Risky link
   pattern"), listed once even when several links trip it, and each check
   goes by the name the block log uses.
+- The caller-identity evidence an ML block can carry ("PASSporT attestation
+  A metadata; DNO-listed origin") is translated as well, so a Chinese block
+  log no longer switches to English halfway through an ML entry.
 
 - A shipped locale can no longer decay silently. Each has a coverage floor in
   `scripts/translation_floors.json`, and dropping below it fails the build.
