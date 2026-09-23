@@ -15,11 +15,14 @@ All notable changes to CallShield will be documented in this file.
   Call anyway. Contacts and numbers you trust ring through, and if the check
   runs slow the call goes ahead rather than being dropped.
 
-- Work-from-home job offers are caught now, in English, Spanish, Portuguese
-  and Italian. A text that promises pay by the day or hour for working from
-  home or liking videos ("gane 300 EUR al día desde casa", "ganhe R$ 500 por
-  dia curtindo vídeos") counts as spam. It takes both halves, so an interview
-  reminder, a payslip notice or a shift pay update stays clean.
+- Work-from-home job offers now count as spam content, in English, Spanish,
+  Portuguese and Italian. That's a text promising pay by the day or hour for
+  working from home or liking videos ("gane 300 EUR al día desde casa",
+  "ganhe R$ 500 por dia curtindo vídeos"). On its own it's blocked in
+  aggressive mode. With a shortened or suspicious link it's blocked at the
+  default setting too. It takes both halves, so an interview reminder, a
+  payslip, a part-time shift rate, a house-cleaning job or a cashback offer
+  stays clean.
 
 - CallShield starts faster when a call wakes it. Looking for an interrupted
   backup restore held the main thread about 0.7 seconds on every start

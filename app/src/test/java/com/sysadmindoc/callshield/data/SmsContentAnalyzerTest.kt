@@ -621,9 +621,34 @@ class SmsContentAnalyzerTest {
             "Trabajo desde casa: ganarás 300 euros diarios con tu móvil.",
             "Ganhe R$ 300 por dia em casa assistindo vídeos. Chame no WhatsApp.",
             "Guadagna 150 euro al giorno da casa mettendo like ai video.",
+            "Earn \$300 a day just by liking YouTube videos.",
+            "Earn \$300 a day from the comfort of your home.",
+            "Start earning \$300 a day working from home.",
+            "We pay \$300 per day for liking videos from home.",
+            "Gana 300 € al día desde tu celular.",
+            "Estoy ganando 300 euros al día desde casa, escríbeme.",
+            "Guadagna 15 €/h da casa.",
+            "Gana 20 euros la hora desde casa.",
         ).forEach { body ->
             assertTrue(body, SmsContentAnalyzer.analyze(body).reasons.contains("spam_keywords"))
         }
+    }
+
+    @Test
+    fun `a no-break space before the currency matches the same way on every engine`() {
+        // Formatted amounts often carry U+00A0. Android's ICU \s matches it and
+        // the JVM's doesn't, so the pattern spells the space out itself.
+        val body = "Guadagna 300" + Char(0x00A0) + "€ al giorno da casa."
+
+        assertTrue(SmsContentAnalyzer.analyze(body).reasons.contains("spam_keywords"))
+    }
+
+    @Test
+    fun `a job offer with a shortened link is blocked at the default setting`() {
+        val result = SmsContentAnalyzer.analyze("Earn \$300 a day from home, apply here: https://bit.ly/jobs")
+
+        assertTrue(result.reasons.contains("spam_keywords"))
+        assertTrue("default SMS threshold is 50", result.score >= 50)
     }
 
     @Test
@@ -639,9 +664,30 @@ class SmsContentAnalyzerTest {
             "Domani lavoro da casa, ci sentiamo per telefono.",
             // A discount per day is not pay.
             "Ganhe 10% de desconto por dia de compra. Aproveite em casa!",
+            // Part-time work with an hourly rate is an ordinary job.
+            "HR update: starting Oct 1, all part-time associates will earn \$16 an hour.",
+            // Cleaning houses, not working from home.
+            "Limpieza de casas en Madrid: ganará 12 euros por hora, llame al despacho.",
+            "Vaga de faxina em casas de família: ganhar R$ 150 por dia, fale com a agência.",
+            // "per ora" is "for now", and a cashback or bonus amount isn't pay.
+            "Ricevi 50 euro di bonus: per ora l'offerta vale solo da casa.",
+            "Ganhe R$ 10 de cashback por semana sem sair de casa!",
         ).forEach { body ->
             assertFalse(body, SmsContentAnalyzer.analyze(body).reasons.contains("spam_keywords"))
         }
+    }
+
+    @Test
+    fun `a staffing text with a pay rate stays under the default block threshold`() {
+        // Its opt-out lines already count as spam keywords (40). The pay rate
+        // must not add a job-offer hit and push it to 55, a block by default.
+        val result =
+            SmsContentAnalyzer.analyze(
+                "Hi, this is Dana from Acme Staffing. Part-time front desk role in Tampa, you'd make \$17/hr. " +
+                    "Reply YES if interested. Reply STOP to opt out.",
+            )
+
+        assertTrue(result.score.toString(), result.score < 50)
     }
 
     @Test

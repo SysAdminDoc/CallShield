@@ -147,30 +147,8 @@ class SmsContentAnalyzer
                 Regex("(?i)(pacco|spedizione|consegna).{0,20}(trattenut[oa]|in sospeso|bloccat[oa])"),
                 Regex("(?i)(bonifico|trasferimento).{0,20}(immediato|urgente|adesso)"),
                 Regex("(?i)(banca|carta|credito).{0,20}(bloccat[oa]|sospes[oa]|verificare)"),
-                // ── Work-from-home job offers (en, es, pt, it) ─────────────
-                // Pay per day or hour quoted in money, plus work from home or
-                // liking videos, in either order. It takes both halves: a shift
-                // or payslip text quotes a rate, and "en casa" is everyday
-                // speech. Word edges are \p{L} lookarounds rather than \b,
-                // which treats accented letters differently on the JVM and on
-                // Android's ICU engine.
-                Regex(
-                    "(?is)^(?=.*?" +
-                        "(?<![\\p{L}\\p{N}])(?:earn|make|get paid|gan(?:a|e|ar(?:.s?)?)|ganh(?:a|e|ar(?:.s?)?)|guadagn(?:a|are|i|erai)|recib[ae]|receb[ae]|ricevi)(?![\\p{L}\\p{N}])" +
-                        ".{0,40}?(?:(?:\\p{Sc}|r\\\$)\\s?\\d|\\d[\\d.,]*\\s?(?:\\p{Sc}|(?:usd|eur|euros?|reais|d.lares|dollars?|pounds?|gbp)(?![\\p{L}\\p{N}])))" +
-                        ".{0,25}?(?:(?:/\\s?|(?<![\\p{L}\\p{N}])(?:a|an|per|each|every|al|por|ao|cada|ogni|all')\\s?)" +
-                        "(?:day|hour|hr|week|d.a|hora|semana|giorno|ora|settimana)" +
-                        "|(?<![\\p{L}\\p{N}])(?:daily|hourly|weekly|diari[oa]s?|di.rios?|giornalier[oi]))(?![\\p{L}\\p{N}])" +
-                        ")(?=.*?(?<![\\p{L}\\p{N}])(?:" +
-                        "(?:work(?:ing)?|jobs?)\\s(?:from|at)\\s(?:home|your phone)|from home|at home|part[- ]time" +
-                        "|(?:liking|like|rating|reviewing|watching)\\s(?:videos|posts|products|reviews)" +
-                        "|desde (?:tu |su )?casa|en casa|teletrabajo|a distancia|media jornada" +
-                        "|(?:dando|dar|poniendo) (?:me gusta|likes?)|(?:viendo|ver) v.deos" +
-                        "|de casa|em casa|home office|(?:curtindo|curtir) (?:v.deos|posts|fotos)" +
-                        "|(?:assistindo|assistir) (?:a )?v.deos|meio per.odo" +
-                        "|da casa|a casa|da remoto|smart working|(?:mettendo|mettere) (?:like|mi piace)|(?:guardando|guardare) video" +
-                        "))",
-                ),
+                // Work-from-home job offers (en, es, pt, it). See JOB_OFFER_PATTERN.
+                Regex(JOB_OFFER_PATTERN),
             )
 
         // Phone number in SMS body (common in callback scams)
@@ -448,6 +426,58 @@ class SmsContentAnalyzer
             private const val MIN_REPORT_DOMAIN_LENGTH = 5
             private const val MAX_REPORT_DOMAIN_LENGTH = 253
             private const val MAX_REPORT_DOMAIN_LABEL_LENGTH = 63
+
+            // ── Work-from-home job offers ─────────────────────────────────
+            // Pay by the day or hour quoted in money, and work from home or
+            // liking videos, in either order. It takes both halves: a shift or
+            // payslip text quotes a rate, and "en casa" is everyday speech.
+            // Word edges are \p{L} lookarounds, not \b, and a space is spelled
+            // out with \p{Zs}: the JVM's regex engine and Android's ICU engine
+            // disagree about accented letters in \b and no-break spaces in \s.
+            private const val WORD_START = "(?<![\\p{L}\\p{N}])"
+            private const val WORD_END = "(?![\\p{L}\\p{N}])"
+            private const val SPACE = "[\\s\\p{Zs}]"
+            private const val JOB_VERB =
+                "(?:earn(?:s|ing)?|mak(?:e|ing)|get${SPACE}paid|getting${SPACE}paid|pa(?:y|ys|ying)|receiv(?:e|ing)" +
+                    "|gan(?:a|e|ar(?:.s?)?|ando)|ganh(?:a|e|ar(?:.s?)?|ando)|recib(?:e|a|ir|iendo)|receb(?:a|e|er|endo)" +
+                    "|guadagn(?:a|are|i|erai|ando)|ricev(?:i|ere|erai|endo))"
+            private const val JOB_MONEY =
+                "(?:(?:\\p{Sc}|r\\\$)$SPACE?\\d" +
+                    "|\\d[\\d.,]*$SPACE?(?:\\p{Sc}|(?:usd|eur|euros?|reais|d.lares|dollars?|bucks|pounds?|gbp)$WORD_END))"
+
+            // An amount next to one of these is a discount or a bonus, not pay.
+            private const val JOB_NOT_PAY =
+                "(?:cashback|desconto|descuento|sconto|discount|b.nus|bonus|pontos|puntos|punti|points|off$WORD_END)"
+
+            // "per ora" is Italian for "for now", so the hourly forms there are
+            // all'ora, l'ora, ogni ora and /ora.
+            private const val JOB_RATE =
+                "(?:/$SPACE?(?:day|d.a|giorno|hour|hora|ora|hr|h|week|semana|settimana)" +
+                    "|$WORD_START(?:a|an|per|each|every)$SPACE(?:day|hour|hr|week)" +
+                    "|$WORD_START(?:al|por|cada|la)$SPACE(?:d.a|hora|semana)" +
+                    "|$WORD_START(?:ao|por|cada)$SPACE(?:dia|hora|semana)" +
+                    "|$WORD_START(?:al|ogni)$SPACE(?:giorno|settimana)" +
+                    "|$WORD_START(?:all'|l'|ogni$SPACE)ora" +
+                    "|$WORD_START(?:daily|hourly|weekly|diari[oa]s?|di.rios?|giornalier[oi]))$WORD_END"
+            private const val JOB_WORK =
+                "$WORD_START(?:" +
+                    "(?:work(?:ing)?|jobs?)$SPACE(?:from|at)$SPACE(?:home|your${SPACE}phone)" +
+                    "|from$SPACE(?:home|your${SPACE}phone|the${SPACE}comfort${SPACE}of$SPACE(?:your|their)(?:${SPACE}own)?${SPACE}home)" +
+                    "|at${SPACE}home" +
+                    "|(?:liking|like|rating|reviewing|watching)$SPACE(?:[^\\s\\p{Zs}]+$SPACE){0,2}?(?:videos|posts|products|reviews)" +
+                    "|desde(?:$SPACE(?:tu|su))?$SPACE(?:casa|celular|m.vil|tel.fono)|en(?:$SPACE(?:tu|su))?${SPACE}casa|teletrabajo" +
+                    "|(?:dando|dar|poniendo)$SPACE(?:me${SPACE}gusta|likes?)|(?:viendo|ver)${SPACE}v.deos" +
+                    "|de${SPACE}casa|em${SPACE}casa|(?:do|pelo)(?:${SPACE}seu)?${SPACE}celular|home${SPACE}office" +
+                    "|(?:curtindo|curtir)$SPACE(?:[^\\s\\p{Zs}]+$SPACE)?(?:v.deos|posts|fotos)" +
+                    "|(?:assistindo|assistir)$SPACE(?:a$SPACE)?v.deos" +
+                    "|da${SPACE}casa|a${SPACE}casa|dal(?:${SPACE}tuo)?$SPACE(?:telefono|cellulare)" +
+                    "|(?:mettendo|mettere)$SPACE(?:like|mi${SPACE}piace)|(?:guardando|guardare)${SPACE}video" +
+                    ")$WORD_END"
+
+            /** Both halves anywhere in the body, each checked from the start. */
+            internal const val JOB_OFFER_PATTERN =
+                "(?is)^(?=.*?$WORD_START$JOB_VERB$WORD_END(?:(?!$JOB_NOT_PAY).){0,40}?$JOB_MONEY" +
+                    "(?:(?!$JOB_NOT_PAY).){0,25}?$JOB_RATE)(?=.*?$JOB_WORK)"
 
             private val verificationPhrasePattern =
                 Regex(
