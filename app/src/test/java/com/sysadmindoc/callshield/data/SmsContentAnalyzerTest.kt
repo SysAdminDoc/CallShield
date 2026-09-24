@@ -601,6 +601,30 @@ class SmsContentAnalyzerTest {
     }
 
     @Test
+    fun `informal Spanish wins count only with a prize or an amount`() {
+        listOf(
+            "Te ha tocado el turno de noche del sábado. Avísame si quieres cambiarlo.",
+            "¡Has ganado 50 puntos en tu tarjeta! Consulta tu saldo en la app.",
+            "Ganaste el partido de pádel, enhorabuena.",
+        ).forEach { body ->
+            assertFalse(body, SmsContentAnalyzer.analyze(body).reasons.contains("spam_keywords"))
+        }
+        listOf(
+            "¡Te ha tocado la lotería! Llama hoy para cobrarla.",
+            "Ganaste 500 euros en nuestro sorteo semanal.",
+            "Has ganado un viaje a Cancún para dos personas.",
+        ).forEach { body ->
+            assertTrue(body, SmsContentAnalyzer.analyze(body).reasons.contains("spam_keywords"))
+        }
+    }
+
+    @Test
+    fun `an Italian premium waiting for payment is not a prize`() {
+        assertFalse(SmsContentAnalyzer.analyze("Il premio è in attesa di pagamento. Puoi saldarlo dall'app.").reasons.contains("spam_keywords"))
+        assertTrue(SmsContentAnalyzer.analyze("Il tuo premio è in attesa di essere ritirato. Rispondi entro oggi.").reasons.contains("spam_keywords"))
+    }
+
+    @Test
     fun `an Italian prize without a link is still a prize scam`() {
         listOf(
             "Il tuo premio ti aspetta! Ritiralo entro oggi.",

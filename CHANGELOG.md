@@ -258,9 +258,11 @@ All notable changes to CallShield will be documented in this file.
   the masculine forms, so "su tarjeta ha sido bloqueada" slipped through. In
   aggressive mode, a parcel "pending delivery", a Brazilian birthday greeting
   ("Parabéns pelo seu aniversário") and an Italian insurance reminder ("il
-  premio della polizza") no longer read as scams. Formal Spanish like "ha
-  ganado" or "ha sido seleccionada" counts only when a prize follows, so a
-  match result or a job application isn't flagged.
+  premio della polizza") no longer read as scams. Spanish "ha ganado", "has
+  ganado", "te ha tocado" and "ha sido seleccionada" count only when a prize
+  or an amount follows, so a match result, loyalty points, a work shift or a
+  job application isn't flagged. An Italian premium "in attesa di pagamento"
+  is a bill, not a prize.
 - The "why was this blocked" panel now explains every decision. A region
   block, a contacts-only block, a temporary block or allow, a number from your
   phone's own block list, a range pattern, a caller-name rule and a push-alert

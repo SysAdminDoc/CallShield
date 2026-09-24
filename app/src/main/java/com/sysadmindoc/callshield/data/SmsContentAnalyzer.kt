@@ -111,14 +111,15 @@ class SmsContentAnalyzer
                 Regex("(?i)text (yes|y|go|start|ok) to"),
                 Regex("(?i)reply (yes|y|stop|1|2)"),
                 // ── Spanish ────────────────────────────────────────────────
-                // "Ha ganado" and "ha sido seleccionada" are ordinary formal Spanish (a
-                // match result, loyalty points, a job application), so they count only
-                // with a prize after them.
+                // "Has ganado", "te ha tocado" and "ha sido seleccionada" are ordinary
+                // Spanish (a match result, loyalty points, a work shift, a job
+                // application), so they count only with a prize or an amount after them.
                 Regex(
-                    "(?i)(has ganado|ganaste|(le|te) ha tocado|ganador(a)? del (sorteo|premio)|sorteo" +
+                    "(?i)(ganador(a)? del (sorteo|premio)|sorteo" +
                         "|premio (de|por valor de) \\d" +
-                        "|ha(s)? ganado (un|una) (premio|regalo|iphone|viaje|cheque|coche|m.vil|tel.fono|tarjeta regalo|bono)" +
-                        "|ha(s)? ganado \\d[\\d.,]* ?(€|eur|euros|d.lares)" +
+                        "|(ha(s)? ganado|ganaste|(le|te) ha tocado) (un|una|el|la) " +
+                        "(premio|regalo|iphone|viaje|cheque|coche|m.vil|tel.fono|tarjeta regalo|bono|loter.a|sorteo)" +
+                        "|(ha(s)? ganado|ganaste|(le|te) ha tocado) \\d[\\d.,]* ?(€|eur|euros|d.lares)" +
                         "|(fuiste|ha sido|has sido) (seleccionad[oa]|elegid[oa]) (para (recibir|ganar|un premio|el premio)|como ganador))",
                 ),
                 Regex("(?i)(reclam[ae]|cobra) (tu|su|el) (premio|regalo|dinero)"),
@@ -136,10 +137,13 @@ class SmsContentAnalyzer
                 Regex("(?i)(transfer.ncia|pix|dep.sito).{0,20}(imediato|urgente|agora)"),
                 Regex("(?i)(banco|cart.o|cr.dito).{0,20}(bloqueado|suspenso|verificar)"),
                 // ── Italian ────────────────────────────────────────────────
-                // A bare "premio" is also an insurance premium, so a prize needs its context.
+                // A bare "premio" is also an insurance premium, so a prize needs its
+                // context. An insurance premium can wait for payment too, so "in
+                // attesa" counts only when the premio is waiting to be collected.
                 Regex(
                     "(?i)(hai vinto|congratulazioni|sorteggio|vinto un premio|premio in denaro" +
-                        "|premio (ti|vi) aspetta|premio . (pronto|disponibile|in attesa)|premio da (ritirare|riscuotere|reclamare))",
+                        "|premio (ti|vi) aspetta|premio . (pronto|disponibile)" +
+                        "|premio . in attesa di (essere )?(ritir|riscoss|reclam)|premio da (ritirare|riscuotere|reclamare))",
                 ),
                 Regex("(?i)(riscuoti|ritira) (il tuo|il) (premio|regalo|denaro)"),
                 Regex("(?i)(conto (sospeso|bloccato|compromesso))"),
