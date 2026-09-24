@@ -187,6 +187,18 @@ class OutgoingCallHoldRobolectricTest {
     }
 
     @Test
+    fun `total silence and alarms only hide the hold even from a channel that may break through`() {
+        notificationManager.getNotificationChannel(NotificationHelper.CHANNEL_OUTGOING_HOLD).setBypassDnd(true)
+        notificationManager.setInterruptionFilter(NotificationManager.INTERRUPTION_FILTER_PRIORITY)
+        assertTrue(NotificationHelper.canShowOutgoingHold(context))
+
+        notificationManager.setInterruptionFilter(NotificationManager.INTERRUPTION_FILTER_NONE)
+        assertFalse("total silence", NotificationHelper.canShowOutgoingHold(context))
+        notificationManager.setInterruptionFilter(NotificationManager.INTERRUPTION_FILTER_ALARMS)
+        assertFalse("alarms only", NotificationHelper.canShowOutgoingHold(context))
+    }
+
+    @Test
     fun `a held call says why and offers call anyway`() {
         assertTrue(NotificationHelper.notifyOutgoingCallHeld(context, number, OutgoingCallGuard.Reason.PREMIUM_RATE))
 

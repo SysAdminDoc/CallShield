@@ -200,9 +200,13 @@ object NotificationHelper {
      * Whether a held-call notification would actually reach the user. A post
      * to a disabled app or a blocked channel is dropped without an error. A
      * channel turned down below high importance no longer pops up over the
-     * dialer, and Do Not Disturb hides it unless the channel may break
-     * through. A hold nobody sees is a call that silently fails, so the
-     * redirection service places the call when this is false.
+     * dialer. Do Not Disturb hides it unless the channel may break through,
+     * and a channel breaks through only in priority mode: total silence and
+     * alarms-only hide it whatever the channel says. Android 15 also lets a
+     * mode block priority channels, but an app can't read the policy of a
+     * mode it doesn't own, so that case can't be seen here. A hold nobody
+     * sees is a call that silently fails, so the redirection service places
+     * the call when this is false.
      */
     internal fun canShowOutgoingHold(context: Context): Boolean {
         if (!CallShieldPermissions.hasNotificationPermission(context)) return false
@@ -210,9 +214,11 @@ object NotificationHelper {
         if (!manager.areNotificationsEnabled()) return false
         val channel = manager.getNotificationChannel(CHANNEL_OUTGOING_HOLD) ?: return false
         if (channel.importance < NotificationManager.IMPORTANCE_HIGH) return false
-        val filter = context.getSystemService(NotificationManager::class.java)?.currentInterruptionFilter
-        val doNotDisturb = filter != null && filter != NotificationManager.INTERRUPTION_FILTER_ALL && filter != NotificationManager.INTERRUPTION_FILTER_UNKNOWN
-        return !doNotDisturb || channel.canBypassDnd()
+        return when (context.getSystemService(NotificationManager::class.java)?.currentInterruptionFilter) {
+            null, NotificationManager.INTERRUPTION_FILTER_ALL, NotificationManager.INTERRUPTION_FILTER_UNKNOWN -> true
+            NotificationManager.INTERRUPTION_FILTER_PRIORITY -> channel.canBypassDnd()
+            else -> false
+        }
     }
 
     /** A held outgoing call: why it was stopped, and a way to call anyway. */

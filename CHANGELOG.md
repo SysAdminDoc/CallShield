@@ -17,7 +17,9 @@ All notable changes to CallShield will be documented in this file.
   premium-rate or callback-scam number, which is held on that rule alone.
   The hold never happens where you wouldn't see the notification. In car
   mode, under Do Not Disturb, or with CallShield's notifications turned off
-  or turned down so they no longer pop up, the call goes through. One Call
+  or turned down so they no longer pop up, the call goes through. Letting
+  CallShield override Do Not Disturb only helps in priority mode, since total
+  silence and alarms-only hide every notification. One Call
   anyway covers the number however the dialer spells it. If you start a
   second call before CallShield has answered for the first, the second one
   is checked on its own and never gets the first call's answer.
