@@ -170,9 +170,11 @@ All notable changes to CallShield will be documented in this file.
   allowing your country's code lets it ring. One that starts with your
   country's international prefix (00 in most of Europe, 011 in North America)
   counts as the country dialed after it. Domestic numbers that happen to start
-  with 00, like Bulgaria's 00800 toll-free range, still count as domestic, and
-  a prefix followed by digits no country code starts with is blocked instead
-  of passing as a local call.
+  the same way still count as domestic. That covers Bulgaria's 00800
+  toll-free range, Tajik mobiles that begin with 00, Chile's 1230 toll-free
+  numbers, and Belarusian, Russian and Kazakh ranges that begin with 810. A
+  prefix followed by digits no country code starts with is blocked instead of
+  passing as a local call.
 - Settings has a Telemarketing ranges card for number ranges regulators set
   aside for sales calls. It can block Spain's 400 range (required for
   commercial calls from 17 October 2026), India's 140 promotional series and

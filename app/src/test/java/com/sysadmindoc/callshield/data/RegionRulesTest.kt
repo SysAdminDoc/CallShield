@@ -256,6 +256,26 @@ class RegionRulesTest {
     }
 
     @Test
+    fun `domestic numbers that start like an international prefix stay domestic`() {
+        val national = RegionCallingCodes.BareNumber.National
+        // Tajik mobiles from 00 (TJ dials out with 810, so 00 is only the ITU fallback).
+        assertEquals(national, RegionCallingCodes.readBareNumber("004104761", "TJ"))
+        assertEquals(national, RegionCallingCodes.readBareNumber("000845221", "TJ"))
+        // Chilean toll-free 1230 0xx xxxx, which begins with Chile's own prefix 1230 and a 0.
+        assertEquals(national, RegionCallingCodes.readBareNumber("12300201234", "CL"))
+        // Belarusian premium numbers from 810, Belarus's own prefix.
+        assertEquals(national, RegionCallingCodes.readBareNumber("8101234567", "BY"))
+        assertFalse(RegionRules.isOutsideAllowedRegions("004104761", setOf("+992"), homeRegionIso = "TJ"))
+        assertFalse(RegionRules.isOutsideAllowedRegions("12300201234", setOf("+56"), homeRegionIso = "CL"))
+        // Dialing out still reads as international in those regions.
+        val uk = RegionCallingCodes.BareNumber.International("442079460000")
+        assertEquals(uk, RegionCallingCodes.readBareNumber("00442079460000", "TJ"))
+        assertEquals(uk, RegionCallingCodes.readBareNumber("810442079460000", "TJ"))
+        assertEquals(uk, RegionCallingCodes.readBareNumber("1230442079460000", "CL"))
+        assertEquals(uk, RegionCallingCodes.readBareNumber("810442079460000", "BY"))
+    }
+
+    @Test
     fun `a bare number that can't be read never passes as the home country`() {
         // "000..." on an Italian phone is neither Italian nor international.
         assertTrue(RegionRules.isOutsideAllowedRegions("00012345678", setOf("+39"), homeRegionIso = "IT"))

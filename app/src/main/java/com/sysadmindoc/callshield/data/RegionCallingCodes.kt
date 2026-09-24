@@ -57,8 +57,9 @@ internal object RegionCallingCodes {
 
     /**
      * Reads bare [digits] the way libphonenumber would on a phone from
-     * [regionIso]. A few regions have domestic numbers that start with 00
-     * (toll-free 00800 in Bulgaria, for one), and those stay national. Then
+     * [regionIso]. A few regions have domestic numbers that start with 00 or
+     * with their own international prefix (toll-free 00800 in Bulgaria, Tajik
+     * mobiles from 00, toll-free 1230 in Chile), and those stay national. Then
      * the region's own international prefix (`011`, `810`, `010`...), or the
      * ITU `00` that most networks also accept, marks an international number.
      * A calling code never starts with 0, so a prefix followed by 0 can't be
@@ -70,7 +71,7 @@ internal object RegionCallingCodes {
         regionIso: String?,
     ): BareNumber {
         val region = regionIso?.uppercase(Locale.ROOT)
-        val nationalWithPrefix = region?.let { nationalNumbersStartingWith00[it] }
+        val nationalWithPrefix = region?.let { nationalNumbersStartingWithPrefix[it] }
         if (nationalWithPrefix != null && regex("^(?:$nationalWithPrefix)$").matches(digits)) return BareNumber.National
         val code = region?.let { codes[it] }
         val ownPrefix = region?.let { internationalPrefixOverrides[it] } ?: if (code == null || code == NANP) NANP_PREFIX else ITU_PREFIX
@@ -92,25 +93,38 @@ internal object RegionCallingCodes {
     private val compiled = ConcurrentHashMap<String, Regex>()
 
     /**
-     * National numbers that start with 00, as the alternatives of
-     * libphonenumber's national-number patterns (every number type) that begin
-     * with 00, per region (phonenumbers 9.0.39). Android can't put these in
-     * international form, so they arrive bare, and in BG, PA, QA and TH they
-     * also start with the international prefix.
+     * National numbers that start with a prefix the reader strips: the
+     * region's own international prefix or the ITU 00. These are the
+     * libphonenumber national-number patterns (phonenumbers 9.0.39, every
+     * number type) whose language intersects "that prefix, then digits",
+     * found by intersecting the two as automata rather than by looking for a
+     * literal leading 00, which missed Tajik mobiles (`0[0-57-9]...`) and
+     * Chilean toll-free numbers (`1230...`). Android can't put these in
+     * international form, so they arrive bare.
      */
-    private val nationalNumbersStartingWith00: Map<String, String> =
+    private val nationalNumbersStartingWithPrefix: Map<String, String> =
         mapOf(
             "BG" to """(?:00800\d\d|800)\d{5}""",
-            "ID" to """00(?:1803\d{5,11}|7803\d{7})|001803\d{5,11}|(?:007803\d|8071)\d{6}""",
-            "IN" to """000800\d{7}|(?:000800|18(?:03\d\d|6(?:0|[12]\d\d)))\d{7}""",
+            "BY" to """(?:810|902)\d{7}|800\d{3,7}|(?:8(?:0[13]|10|20\d)|902)\d{7}""",
+            "CL" to """(?:123|8)00\d{6}""",
+            "ID" to
+                """00(?:1803\d{5,11}|7803\d{7})|(?:177\d|800)\d{5,7}|001803\d{5,11}|(?:007803\d|8071)\d{6}""",
+            "IN" to
+                """000800\d{7}|180(?:0\d{4,9}|3\d{9})|1800\d{4,9}|(?:000800|18(?:03\d\d|6(?:0|[12]\d\d)))\d{7}""",
             "JP" to
                 """00777(?:[01]|5\d)\d\d|(?:00(?:7778|882[1245])|(?:120|800\d)\d\d)\d{4}|00(?:37|66|78)\d{6,13}""" +
-                """|00(?:777(?:[01]|(?:5|8\d)\d)|882[1245]\d\d)\d\d""",
-            "KR" to """00(?:308\d{6,7}|798\d{7,9})|(?:00368|[38]0)\d{7}|00(?:3(?:08\d{6,7}|68\d{7})|798\d{7,9})""",
-            "PA" to """(?:00800|800\d)\d{6}""",
-            "QA" to """(?:0080[01]|800)\d{6}""",
+                """|00(?:777(?:[01]|(?:5|8\d)\d)|882[1245]\d\d)\d\d|00(?:37|66|78)\d{6,13}""",
+            "KR" to
+                """00(?:308\d{6,7}|798\d{7,9})|(?:00368|[38]0)\d{7}|00(?:3(?:08\d{6,7}|68\d{7})|798\d{7,9})""",
+            "KZ" to """8(?:00|108\d{3})\d{7}""",
+            "PA" to """800\d{4,5}|(?:00800|800\d)\d{6}""",
+            "QA" to """800\d{4}|(?:0080[01]|800)\d{6}""",
+            "RU" to """8(?:0[04]|108\d{3})\d{7}""",
             "TH" to """(?:001800\d|1800)\d{6}""",
-            "UY" to """0004\d{2,9}""",
+            "TJ" to
+                """(?:33[03-9]|4(?:1[18]|4[02-479])|81[1-9])\d{6}""" +
+                """|(?:[09]\d|1[0-27-9]|2[0-27]|3[08]|40|5[05]|66|7[0157-9]|8[07-9])\d{7}""",
+            "UY" to """0004\d{2,9}|(?:405|80[05])\d{4}""",
         )
 
     /**
