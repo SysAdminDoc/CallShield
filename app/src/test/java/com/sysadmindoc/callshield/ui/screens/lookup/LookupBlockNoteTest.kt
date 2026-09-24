@@ -64,6 +64,27 @@ class LookupBlockNoteTest {
         }
 
     @Test
+    fun `a label from a check above the user's own rule doesn't replace their note`() =
+        runBlocking {
+            fixture.repository.blockNumber(number, "spam", "landlord's old line")
+            fixture.repository.setContactsOnly(true)
+            val result = fixture.repository.isSpam(number)
+            // Contacts-only mode answers before the user's block does.
+            assertEquals("contacts_only", result.matchSource)
+
+            blockFromLookup(result)
+
+            assertEquals("landlord's old line", fixture.dao.findByNumber(number)?.description)
+        }
+
+    @Test
+    fun `app-written labels are never saved as a note`() {
+        listOf("contacts_only", "region_block", "heuristic", "ml_scorer", "campaign_burst", "frequency", "db_prefix_expansion").forEach { source ->
+            assertEquals(source, "", lookupBlockNote(SpamCheckResult(isSpam = true, matchSource = source, description = "a label")))
+        }
+    }
+
+    @Test
     fun `a match describes the number, an allowed result does not`() {
         assertEquals(
             "IRS impersonation",
