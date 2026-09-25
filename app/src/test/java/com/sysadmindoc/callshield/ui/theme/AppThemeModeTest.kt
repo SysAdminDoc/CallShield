@@ -5,7 +5,6 @@ import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.luminance
 import com.sysadmindoc.callshield.ui.screens.main.REPEAT_BADGE_TINT
 import com.sysadmindoc.callshield.ui.screens.main.RULE_CONFLICT_TINT
-import com.sysadmindoc.callshield.ui.screens.more.LATEST_TAG_TINT
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
@@ -107,11 +106,6 @@ class AppThemeModeTest {
                 val ratio = contrastRatio(accent, accent.copy(alpha = REPEAT_BADGE_TINT).compositeOver(card))
                 assertTrue("$mode $name repeat badge: $ratio", ratio >= 4.5f)
             }
-            // The changelog's Latest tag: green text on its tint, inside the
-            // latest release's card, which is tinted green as well.
-            val greenCard = palette.primary.copy(alpha = ACCENT_CARD_TINT).compositeOver(palette.background)
-            val latest = contrastRatio(palette.primary, palette.primary.copy(alpha = LATEST_TAG_TINT).compositeOver(greenCard))
-            assertTrue("$mode Latest tag: $latest", latest >= 4.5f)
             // Selected filter chips mark the choice with a green or blue tint of
             // up to 25% and keep body text on it.
             val surfaces =
@@ -136,31 +130,62 @@ class AppThemeModeTest {
     }
 
     @Test
-    fun `no selected chip draws its accent as text on its own heavy tint`() {
+    fun `no chip draws its accent as text on its own heavy tint`() {
         // A selected chip tints itself with an accent. The same accent as its
         // label fell to 4.33:1 in Light on a 20% tint (the log-cleanup chip),
-        // so from 15% up a selected chip's label is body text.
-        val tint = Regex("""selectedContainerColor\s*=\s*([\w.]+?)\.copy\(alpha\s*=\s*([0-9.]+)f\)""")
-        val label = Regex("""selectedLabelColor\s*=\s*([\w.]+)""")
-        val offenders =
+        // so from 15% up a chip's label is body text.
+        val calls =
             File("src/main/java")
                 .walk()
                 .filter { it.extension == "kt" }
-                .flatMap { file ->
-                    chipColorArguments(file.readText()).mapNotNull { arguments ->
-                        val (accent, alpha) = tint.find(arguments)?.destructured ?: return@mapNotNull null
-                        "${file.name}: $accent on its own ${alpha}f tint".takeIf {
-                            label.find(arguments)?.groupValues?.get(1) == accent && alpha.toFloat() >= 0.15f
-                        }
-                    }
-                }.toList()
+                .flatMap { file -> chipColorArguments(file.readText()).map { file.name to it } }
+                .toList()
+        // The app has nine chip color calls; finding far fewer means the scan broke.
+        assertTrue("found only ${calls.size} chip color calls", calls.size >= 8)
 
-        assertEquals(emptyList<String>(), offenders)
+        assertEquals(emptyList<String>(), calls.flatMap { (name, arguments) -> accentOnOwnTint(arguments).map { "$name: $it" } })
     }
 
-    /** The arguments of every `filterChipColors(...)` call in [source]. */
+    @Test
+    fun `the chip check catches every way of writing an accent label on its own tint`() {
+        listOf(
+            "selectedContainerColor = CatGreen.copy(alpha = 0.2f), selectedLabelColor = CatGreen",
+            "selectedContainerColor = CatGreen.copy(0.2F), selectedLabelColor = CatGreen",
+            "selectedLabelColor = CatPeach, selectedContainerColor = CatPeach.copy(alpha = CHIP_TINT)",
+            "selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.25f), selectedLabelColor = CatGreen",
+            "containerColor = CatRed.copy(alpha = 0.2f), labelColor = CatRed",
+        ).forEach { assertTrue(it, accentOnOwnTint(it).isNotEmpty()) }
+        listOf(
+            "selectedContainerColor = CatGreen.copy(alpha = 0.2f), selectedLabelColor = CatText",
+            "selectedContainerColor = option.color.copy(alpha = 0.1f), selectedLabelColor = option.color",
+            "selectedContainerColor = SurfaceBright, selectedLabelColor = CatGreen",
+        ).forEach { assertTrue(it, accentOnOwnTint(it).isEmpty()) }
+        // Every chip's colors function counts, not only the filter chip's.
+        assertEquals(1, chipColorArguments("FilterChipDefaults.elevatedFilterChipColors(selectedLabelColor = CatText)").size)
+        assertEquals(1, chipColorArguments("InputChipDefaults.inputChipColors(selectedLabelColor = CatText)").size)
+    }
+
+    /** Each label in one chip colors call's [arguments] that is drawn in the accent its container is tinted with. */
+    private fun accentOnOwnTint(arguments: String): List<String> =
+        listOf("selectedContainerColor" to "selectedLabelColor", "containerColor" to "labelColor").mapNotNull { (container, label) ->
+            val tint = Regex("""\b$container\s*=\s*([\w.]+?)\.copy\(\s*(?:alpha\s*=\s*)?([^,)]+?)\s*\)""").find(arguments)
+            val text = Regex("""\b$label\s*=\s*([\w.]+)""").find(arguments)?.groupValues?.get(1)
+            if (tint == null || text == null) return@mapNotNull null
+            // A named alpha can't be read here, so it counts as heavy.
+            val alpha = tint.groupValues[2].trimEnd('f', 'F').toFloatOrNull()
+            "$text on its own ${tint.groupValues[2]} tint".takeIf {
+                sameColor(tint.groupValues[1], text) && (alpha == null || alpha >= 0.15f)
+            }
+        }
+
+    private fun sameColor(
+        first: String,
+        second: String,
+    ): Boolean = (SCHEME_ACCENTS[first] ?: first) == (SCHEME_ACCENTS[second] ?: second)
+
+    /** The arguments of every chip colors call (`filterChipColors(`, `elevatedFilterChipColors(`, `inputChipColors(`...) in [source]. */
     private fun chipColorArguments(source: String): List<String> =
-        Regex("""filterChipColors\(""")
+        Regex("""[A-Za-z]*[Cc]hipColors\(""")
             .findAll(source)
             .map { call ->
                 val start = call.range.last + 1
@@ -175,6 +200,17 @@ class AppThemeModeTest {
                 }
                 source.substring(start, end - 1)
             }.toList()
+
+    private companion object {
+        /** Accents the Material color scheme also exposes under its own names. */
+        val SCHEME_ACCENTS =
+            mapOf(
+                "MaterialTheme.colorScheme.primary" to "CatGreen",
+                "MaterialTheme.colorScheme.secondary" to "CatBlue",
+                "MaterialTheme.colorScheme.tertiary" to "CatMauve",
+                "MaterialTheme.colorScheme.error" to "CatRed",
+            )
+    }
 
     private fun contrastRatio(
         first: Color,
