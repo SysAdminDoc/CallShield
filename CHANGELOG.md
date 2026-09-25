@@ -4,6 +4,8 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+## v1.8.0 (2026-09-25)
+
 ### Protection
 
 - Blocked calls can be answered and hung up instead of rejected, so a spam
@@ -353,6 +355,15 @@ All notable changes to CallShield will be documented in this file.
 
 ### Data pipeline
 
+- The FTC import stays inside the budget of api.data.gov's shared DEMO_KEY,
+  which allows 30 requests an hour. A run used to ask for 5,000 records, hit
+  the limit part way through and record nothing, so the weekly check has read
+  FTC as never imported since the freshness record began. Without a key of
+  its own a run now fetches 1,250 records, records the import and carries on
+  from its cursor next time. Set `FTC_API_KEY` for a full window.
+- The importer's summary no longer counts numbers the corroboration filter
+  dropped as added. The 2026-09-25 refresh printed "Added: 294,619" while the
+  database total stood still.
 - The pipeline check now notices a stall in the weeks right after a drain. It
   used to measure the oldest queued report against the database's date, and
   every report queued after a drain is newer than that, so a second stall ran
@@ -475,6 +486,15 @@ The rest of this section takes effect when the report Worker is next deployed.
   their own section again.
 
 ### Data
+
+- Drained the 70 community reports queued since the 2026-09-23 merge. Database
+  version 44 adds 51 numbers, bringing the total to 51,806. Ten reports were
+  duplicates of one already in the queue, and eight "not spam" votes were
+  dropped because the live report Worker still attaches no reporter identity.
+  The same release refreshes the FCC complaint data, which updated 8,036
+  existing rows and brought no new numbers through the two-source
+  corroboration rule, and the Saracroche French telemarketing ranges, which
+  grow from 431 to 653 prefixes.
 
 - Drained the 204 community reports queued since the 2026-09-05 merge.
   Database version 42 adds 121 numbers, bringing the total to 51,755. After

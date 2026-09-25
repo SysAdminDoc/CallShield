@@ -6,13 +6,13 @@
 
 <p align="center">
   <strong>Open-source spam call and text blocker for Android</strong><br>
-  15+ layer detection + Gradient-Boosted Tree ML | 51,755 spam numbers | Real-time caller ID | RCS filter | No required API keys
+  15+ layer detection + Gradient-Boosted Tree ML | 51,806 spam numbers | Real-time caller ID | RCS filter | No required API keys
 </p>
 
 <p align="center">
   <a href="https://github.com/SysAdminDoc/CallShield/releases/latest"><img src="https://img.shields.io/github/v/release/SysAdminDoc/CallShield?style=flat-square&color=a6e3a1" alt="Release"></a>
-  <img src="https://img.shields.io/badge/Spam%20Numbers-51%2C755-f38ba8?style=flat-square" alt="51,755 Numbers">
-  <img src="https://img.shields.io/badge/Tests-1100-94e2d5?style=flat-square" alt="1100 Tests">
+  <img src="https://img.shields.io/badge/Spam%20Numbers-51%2C806-f38ba8?style=flat-square" alt="51,806 Numbers">
+  <img src="https://img.shields.io/badge/Tests-1523-94e2d5?style=flat-square" alt="1523 Tests">
   <img src="https://img.shields.io/badge/Android-10%2B-89b4fa?style=flat-square" alt="Android 10+">
   <img src="https://img.shields.io/badge/License-MIT-cba6f7?style=flat-square" alt="MIT License">
   <img src="https://img.shields.io/badge/API%20Keys-None-fab387?style=flat-square" alt="No required API keys">
@@ -67,14 +67,24 @@ Version highlights for each release are in [CHANGELOG.md](CHANGELOG.md).
 
 ## How It Works
 
-1. **51,755 imported spam numbers.** Sources include FCC consumer complaints (2+ reports each), FTC Do Not Call, ToastedSpam, and community reports.
+1. **51,806 imported spam numbers.** Sources include FCC consumer complaints (2+ reports each), FTC Do Not Call, ToastedSpam, and community reports.
 2. **15+ layer detection + ML**. Database, heuristics, bounded campaign/churn detection, on-device gradient-boosted tree, SMS content/burst analysis, RCS filter, STIR/SHAKEN, and more
 3. **Real-time caller ID overlay**. An optional SkipCalls spam check for locally suspicious calls, with SIT tone anti-autodialer
 4. **Trending feeds**. The app checks for trending spam numbers and campaign ranges every 30 minutes. The maintainer regenerates them by hand from new community reports
 5. **Callback-aware**. Won't block callbacks from numbers you recently called, answered repeatedly, after a local emergency call, or urgent repeated callers
 6. **Community-driven**. One-tap anonymous contribution via Cloudflare Worker, merged into the database by the maintainer
 
-## Detection Pipeline (v1.7.38)
+## v1.8.0 Highlights
+
+- **Answer & hang up** takes a blocked call and drops it straight away, so spam can't leave a voicemail. Off by default. Contributed by tikkamasalla.
+- **Outgoing call check** holds a call you dial to a number CallShield already flags and tells you why before it connects.
+- **Meeting mode** sends unknown callers quietly to voicemail while a meeting app you pick has a call up.
+- **Signed protection data.** Every feed the app downloads now carries the maintainer's signature, the certificate pins that had refused downloads since August are fixed, and a feed mirror covers places where GitHub is blocked.
+- **Region rules** reach outside North America, and Settings gains telemarketing ranges for Spain, India and Brazil.
+- **Chinese** now covers every line of system text, and the block log, Lookup and the "why was this blocked" panel are translatable.
+- **Community reports** go out once and wait for a connection when you're offline. The database grows to 51,806 numbers.
+
+## Detection Pipeline (v1.8.0)
 
 All detection layers implement a shared `IChecker` interface and run in priority order via `CheckerPipeline.run`. First non-null result wins, every layer is testable in isolation. Priorities are stable numbers, and the ladder below is the live order.
 
@@ -93,7 +103,7 @@ All detection layers implement a shared `IChecker` interface and run in priority
 |  5310 | **Regulatory Prefix** | Block | Opt-in (Settings > Telemarketing ranges) blocks for ranges regulators set aside for sales calls: Spain 400 (from 17 October 2026), India 140 (TRAI), Brazil 0303 (ANATEL). Matches the number with its country code, and without it on a phone from that country |
 |  5300 | **STIR/SHAKEN Authenticated** | Allow | Carrier-authenticated caller ID allows through heuristic/ML suspicion, and through a database match only when that row's newest evidence, community reports included, is over a year old and the number isn't trending right now. Explicit blocks still win first |
 |  5250 | **Regulatory Allow** | Allow | Opt-in protected series that rings through past the database and statistics. India 1600 (banks, insurers and government offices, per TRAI) |
-|  5200 | **Spam Database** | Block | 51,755 imported spam numbers plus the trending-numbers feed |
+|  5200 | **Spam Database** | Block | 51,806 imported spam numbers plus the trending-numbers feed |
 |  5150 | **Database Prefix Expansion** | Block | Auto-blocks last-two-digit siblings of confirmed database entries |
 |  5000 | **Recently Dialed** | Allow | Numbers you called in the last 24h. They're probably calling back |
 |  4980 | **Emergency Callback** | Allow | Unknown callbacks can ring through after a local emergency call during the configured grace window |
@@ -258,7 +268,7 @@ by locale and message type without shipping personal data:
 
 ## Data Sources
 
-### Database (51,755 numbers + 431 range prefixes, locally maintained)
+### Database (51,806 numbers + 653 range prefixes, locally maintained)
 | Source | Method |
 |--------|--------|
 | **FCC Consumer Complaints** | Socrata API, 500K records, min 2 reports |
@@ -470,10 +480,12 @@ RELEASE_KEY_PASSWORD=...
 ## Testing
 
 ```bash
-./gradlew testDebugUnitTest   # 1100 tests
+./gradlew testDebugUnitTest   # 1523 tests
 ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.sysadmindoc.callshield.platform.TargetSdkBehaviorSmokeTest
 ./gradlew verifyPipelineTests # Cloudflare Worker (node) + data-pipeline and translation checks (python)
 ```
+
+The suite is **1523 total JVM unit tests**, run with Robolectric wherever a screen, a service or the database is involved.
 
 Two GitHub workflows run without building the app. **Validation** runs the Worker and
 pipeline suites on every push except report-only ones (`run-pipeline-tests.ps1 -CorrectnessOnly`),
@@ -510,8 +522,8 @@ language in [issue #7](https://github.com/SysAdminDoc/CallShield/issues/7).
 | Community API | Cloudflare Workers |
 | URL Safety | Local spam-domain data; optional URLhaus (abuse.ch) |
 | Verification | Local Gradle, lint, and release-artifact checks |
-| Tests | 1100 JVM unit tests (JUnit) |
-| Strings | 1572 string resources and 37 plural groups (translation-ready) |
+| Tests | 1523 JVM unit tests (JUnit) |
+| Strings | 1577 string resources and 38 plural groups (translation-ready) |
 | Accessibility | 100+ content descriptions, 48dp touch targets |
 | Min SDK | 29 (Android 10) |
 | Target SDK | 36 |

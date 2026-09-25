@@ -30,9 +30,26 @@ fun ChangelogScreen() {
         SectionHeader(stringResource(R.string.changelog_latest_release), CatGreen)
         Spacer(Modifier.height(12.dp))
         VersionEntry(
+            "1.8.0",
+            "Answer & hang up, outgoing call check and signed protection data",
+            isLatest = true,
+            date = "September 25, 2026",
+            summary = "New ways to stop spam before it rings and after, plus protection data the app can verify.",
+            changes =
+                listOf(
+                    "Answer & hang up drops a blocked call before it reaches voicemail (opt-in)",
+                    "A call you dial to a flagged number is held with a notification first",
+                    "Meeting mode, telemarketing ranges, and region rules outside North America",
+                    "Signed protection feeds, a feed mirror, and fixed certificate pins",
+                    "Chinese covers every line of system text",
+                ),
+        )
+        Spacer(Modifier.height(14.dp))
+        SectionHeader(stringResource(R.string.changelog_release_history), CatGreen)
+        Spacer(Modifier.height(12.dp))
+        VersionEntry(
             "1.7.38",
             "A clearer CallShield",
-            isLatest = true,
             date = "August 29, 2026",
             summary = "Every core screen now shares one calm, readable protection system.",
             changes =
@@ -42,9 +59,6 @@ fun ChangelogScreen() {
                     "Settings and diagnostics are less dense",
                 ),
         )
-        Spacer(Modifier.height(14.dp))
-        SectionHeader(stringResource(R.string.changelog_release_history), CatGreen)
-        Spacer(Modifier.height(12.dp))
         VersionEntry(
             "1.7.37",
             "Simplified Chinese translation and installable signed releases",
