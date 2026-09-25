@@ -15,13 +15,9 @@ import worker, {
   clientKey,
   getClientIp,
   checkDedup,
-  commitReports,
   deriveReporterBucket,
   deriveReporterDevice,
-  flushQueuedReports,
-  nextFlushTime,
   recordDedup,
-  ReportQueue,
   validateReportEnvironment,
   validatedReportId,
 } from "./community-reports-worker.js";
@@ -153,64 +149,6 @@ function createMockKV() {
   };
 }
 
-/** In-memory Durable Object storage covering the calls ReportQueue makes. */
-function createMockStorage() {
-  const data = new Map();
-  let alarm = null;
-  return {
-    data,
-    get alarm() {
-      return alarm;
-    },
-    async put(key, value) {
-      data.set(key, value);
-    },
-    async list({ prefix = "", limit = Infinity } = {}) {
-      const keys = [...data.keys()].filter((key) => key.startsWith(prefix)).sort().slice(0, limit);
-      return new Map(keys.map((key) => [key, data.get(key)]));
-    },
-    async delete(keys) {
-      if (keys.length > 128) throw new Error("Durable Object storage deletes at most 128 keys per call");
-      for (const key of keys) data.delete(key);
-      return keys.length;
-    },
-    async getAlarm() {
-      return alarm;
-    },
-    async setAlarm(time) {
-      alarm = time;
-    },
-  };
-}
-
-/** A REPORT_QUEUE binding whose one instance is a real ReportQueue over mock storage. */
-function createMockQueue(env = { GITHUB_TOKEN: "test-token" }) {
-  const storage = createMockStorage();
-  const instance = new ReportQueue({ storage }, env);
-  return {
-    storage,
-    instance,
-    idFromName: (name) => name,
-    get: () => ({ fetch: (url, init) => instance.fetch(new Request(url, init)) }),
-  };
-}
-
-/** The reports a mock queue is holding, oldest key first. */
-function queuedReports(queue) {
-  return [...queue.storage.data.values()].map((content) => JSON.parse(content));
-}
-
-/** Bindings that pass validateReportEnvironment. */
-function readyEnv(overrides = {}) {
-  return {
-    RATE_LIMIT: createMockKV(),
-    GITHUB_TOKEN: "test-token",
-    REPORTER_BUCKET_SECRET: "s".repeat(32),
-    REPORT_QUEUE: createMockQueue(),
-    ...overrides,
-  };
-}
-
 test("rate limiter allows requests within burst window", async () => {
   const kv = createMockKV();
   const env = { RATE_LIMIT: kv };
@@ -325,7 +263,12 @@ test("POST returns 429 when the atomic limiter refuses the request", async () =>
       },
       body: JSON.stringify({ number: "+12122340101", type: "spam" }),
     }),
-    readyEnv({ REPORT_LIMITER: { async limit() { return { success: false }; } } }),
+    {
+      RATE_LIMIT: createMockKV(),
+      REPORT_LIMITER: { async limit() { return { success: false }; } },
+      GITHUB_TOKEN: "test-token",
+      REPORTER_BUCKET_SECRET: "s".repeat(32),
+    },
   );
   assert.equal(response.status, 429);
   assert.ok(Number(response.headers.get("retry-after")) > 0);
@@ -505,9 +448,14 @@ test("an IPv4 reporter bucket is the one it has always been", async () => {
 test("report environment requires every production abuse-control binding", () => {
   const missing = validateReportEnvironment({});
   assert.equal(missing.ready, false);
-  assert.deepEqual(missing.missing, ["RATE_LIMIT", "GITHUB_TOKEN", "REPORTER_BUCKET_SECRET", "REPORT_QUEUE"]);
+  assert.deepEqual(missing.missing, ["RATE_LIMIT", "GITHUB_TOKEN", "REPORTER_BUCKET_SECRET"]);
 
-  assert.deepEqual(validateReportEnvironment(readyEnv()), { ready: true, missing: [] });
+  const ready = validateReportEnvironment({
+    RATE_LIMIT: createMockKV(),
+    GITHUB_TOKEN: "test-token",
+    REPORTER_BUCKET_SECRET: "s".repeat(32),
+  });
+  assert.deepEqual(ready, { ready: true, missing: [] });
 });
 
 test("reporter buckets are stable within a day and rotate across days", async () => {
@@ -571,7 +519,11 @@ test("POST rejects missing client identity before touching KV", async () => {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ number: "+12122340101", type: "spam" }),
     }),
-    readyEnv({ RATE_LIMIT: kv }),
+    {
+      RATE_LIMIT: kv,
+      GITHUB_TOKEN: "test-token",
+      REPORTER_BUCKET_SECRET: "s".repeat(32),
+    },
   );
   assert.equal(response.status, 400);
   assert.equal(kv._store.size, 0);
@@ -580,7 +532,11 @@ test("POST rejects missing client identity before touching KV", async () => {
 test("POST returns 503 for corrupt KV state and 400 for malformed JSON", async () => {
   const kv = createMockKV();
   kv._store.set("rl:203.0.113.41", { value: "not-json" });
-  const env = readyEnv({ RATE_LIMIT: kv });
+  const env = {
+    RATE_LIMIT: kv,
+    GITHUB_TOKEN: "test-token",
+    REPORTER_BUCKET_SECRET: "s".repeat(32),
+  };
   const stateFailure = await worker.fetch(
     new Request("https://reports.example", {
       method: "POST",
@@ -609,16 +565,21 @@ test("POST returns 503 for corrupt KV state and 400 for malformed JSON", async (
 });
 
 test("a dedup-write failure after the report is stored still returns success", async () => {
-  // The report is already queued, so a 500 would make the app submit it again.
+  // The report is already committed, so a 500 would make the app submit it again.
   const kv = createMockKV();
   const put = kv.put.bind(kv);
   kv.put = async (key, value, options) => {
     if (key.startsWith("dedup:")) throw new Error("KV write failed");
     return put(key, value, options);
   };
-  const queue = createMockQueue();
+  const originalFetch = globalThis.fetch;
   const originalError = console.error;
+  let commits = 0;
   const errors = [];
+  globalThis.fetch = async () => {
+    commits += 1;
+    return new Response("{}", { status: 201 });
+  };
   console.error = (...args) => errors.push(args.join(" "));
   try {
     const response = await worker.fetch(
@@ -627,12 +588,13 @@ test("a dedup-write failure after the report is stored still returns success", a
         headers: { "content-type": "application/json", "cf-connecting-ip": "203.0.113.60" },
         body: JSON.stringify({ number: "+12122340101", type: "spam" }),
       }),
-      readyEnv({ RATE_LIMIT: kv, REPORT_QUEUE: queue }),
+      { RATE_LIMIT: kv, GITHUB_TOKEN: "test-token", REPORTER_BUCKET_SECRET: "s".repeat(32) },
     );
     assert.equal(response.status, 200);
-    assert.equal(queuedReports(queue).length, 1);
+    assert.equal(commits, 1);
     assert.equal(errors.some((line) => line.includes("dedup marker")), true);
   } finally {
+    globalThis.fetch = originalFetch;
     console.error = originalError;
   }
 });
@@ -648,23 +610,36 @@ test("the landing page example is a number the plausibility check accepts", asyn
 });
 
 test("stored reports carry only a daily reporter bucket, never an IP", async () => {
-  const queue = createMockQueue();
-  const response = await worker.fetch(
-    new Request("https://reports.example", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        "cf-connecting-ip": "203.0.113.7",
+  const originalFetch = globalThis.fetch;
+  let githubPayload;
+  globalThis.fetch = async (_url, options) => {
+    githubPayload = JSON.parse(options.body);
+    return new Response("{}", { status: 201 });
+  };
+  try {
+    const response = await worker.fetch(
+      new Request("https://reports.example", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "cf-connecting-ip": "203.0.113.7",
+        },
+        body: JSON.stringify({ number: "+12122340101", type: "spam" }),
+      }),
+      {
+        RATE_LIMIT: createMockKV(),
+        GITHUB_TOKEN: "test-token",
+        REPORTER_BUCKET_SECRET: "s".repeat(32),
       },
-      body: JSON.stringify({ number: "+12122340101", type: "spam" }),
-    }),
-    readyEnv({ REPORT_QUEUE: queue }),
-  );
-  assert.equal(response.status, 200);
-  const [report] = queuedReports(queue);
-  assert.match(report.reporter_bucket, /^[a-f0-9]{16}$/);
-  assert.match(report.reporter_device, /^[a-f0-9]{16}$/);
-  assert.equal([...queue.storage.data.values()].join("").includes("203.0.113.7"), false);
+    );
+    assert.equal(response.status, 200);
+    const report = JSON.parse(atob(githubPayload.content));
+    assert.match(report.reporter_bucket, /^[a-f0-9]{16}$/);
+    assert.match(report.reporter_device, /^[a-f0-9]{16}$/);
+    assert.equal(JSON.stringify(report).includes("203.0.113.7"), false);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
 
 test("report ids are checked and lowercased", () => {
@@ -685,20 +660,18 @@ test("a report resent under its id from another network is a duplicate", async (
   assert.equal(await checkDedup("198.51.100.9", "+12122340101", "spam", env), false);
 });
 
-/** POSTs reports through the whole handler; `answer` says whether each queue write works (201) or fails. */
+/** POSTs one report through the whole handler, with GitHub played by `answer`. */
 async function postReports(requests, answer) {
+  const originalFetch = globalThis.fetch;
   const originalError = console.error;
-  const queue = createMockQueue();
-  let attempts = 0;
-  const flakyQueue = {
-    ...queue,
-    get: (id) => ({
-      fetch: async (url, init) =>
-        answer(attempts++) === 201 ? queue.get(id).fetch(url, init) : new Response("queue failed", { status: 500 }),
-    }),
+  const stored = [];
+  globalThis.fetch = async (_url, options) => {
+    const status = answer(stored.length);
+    if (status === 201) stored.push(JSON.parse(atob(JSON.parse(options.body).content)));
+    return new Response("{}", { status });
   };
   console.error = () => {};
-  const env = readyEnv({ REPORT_QUEUE: flakyQueue });
+  const env = { RATE_LIMIT: createMockKV(), GITHUB_TOKEN: "test-token", REPORTER_BUCKET_SECRET: "s".repeat(32) };
   try {
     const responses = [];
     for (const { ip, body } of requests) {
@@ -712,16 +685,16 @@ async function postReports(requests, answer) {
       );
       responses.push({ status: response.status, body: await response.json() });
     }
-    return { responses, stored: queuedReports(queue) };
+    return { responses, stored };
   } finally {
+    globalThis.fetch = originalFetch;
     console.error = originalError;
   }
 }
 
 test("a report whose store failed is stored when it's sent again", async () => {
-  // The markers go in only after the report is queued. Written any earlier, the
-  // resend would be answered "already stored" and the app would drop a report
-  // the queue never took.
+  // The markers go in only after the PUT. Written any earlier, the resend would
+  // be answered "already stored" and the app would drop a report GitHub never took.
   const report = { number: "+12122340101", type: "spam", report_id: "5c1d2e3f-4a5b-4c6d-8e7f-9a0b1c2d3e4f" };
   let calls = 0;
   const { responses, stored } = await postReports(
@@ -757,8 +730,13 @@ test("a second report of a number from a shared address isn't answered as alread
 });
 
 test("a stored report keeps its id, and its resend is answered as already stored", async () => {
-  const queue = createMockQueue();
-  const env = readyEnv({ REPORT_QUEUE: queue });
+  const originalFetch = globalThis.fetch;
+  const payloads = [];
+  globalThis.fetch = async (_url, options) => {
+    payloads.push(JSON.parse(options.body));
+    return new Response("{}", { status: 201 });
+  };
+  const env = { RATE_LIMIT: createMockKV(), GITHUB_TOKEN: "test-token", REPORTER_BUCKET_SECRET: "s".repeat(32) };
   const send = (ip) =>
     worker.fetch(
       new Request("https://reports.example", {
@@ -768,255 +746,16 @@ test("a stored report keeps its id, and its resend is answered as already stored
       }),
       env,
     );
-  const first = await send("203.0.113.7");
-  const resend = await send("198.51.100.9");
-
-  assert.equal(first.status, 200);
-  assert.equal(queuedReports(queue)[0].report_id, "3f1c9a52-7d4e-4b8a-9c1d-2e5f6a7b8c9d");
-  assert.equal(resend.status, 429);
-  assert.equal((await resend.json()).already_stored, true);
-  assert.equal(queuedReports(queue).length, 1, "the resend is not stored again");
-});
-
-// ── Daily batch commit ────────────────────────────────────────────────
-
-const json = (value) => new Response(JSON.stringify(value), { status: 200 });
-
-/**
- * Plays GitHub's Git Data API for one repo whose master starts at "c0".
- * `fail(call)` may return a status to fail that call; `treeSha(body)` may
- * decide the sha a new tree gets.
- */
-function mockGitHub({ fail = () => 0, treeSha } = {}) {
-  const originalFetch = globalThis.fetch;
-  const calls = [];
-  let head = "c0";
-  globalThis.fetch = async (url, options = {}) => {
-    const method = options.method ?? "GET";
-    const path = new URL(url).pathname.replace("/repos/SysAdminDoc/CallShield/", "");
-    const call = { method, path, body: options.body ? JSON.parse(options.body) : undefined, auth: options.headers?.Authorization };
-    calls.push(call);
-    const status = fail(call, calls);
-    if (status) return new Response("refused", { status });
-    if (method === "GET" && path === "git/ref/heads/master") return json({ object: { sha: head } });
-    if (method === "GET" && path.startsWith("git/commits/")) return json({ tree: { sha: `tree-of-${path.slice(12)}` } });
-    if (method === "POST" && path === "git/trees") return json({ sha: treeSha?.(call.body) ?? `t${calls.length}` });
-    if (method === "POST" && path === "git/commits") return json({ sha: `c${calls.length}` });
-    if (method === "PATCH" && path === "git/refs/heads/master") {
-      head = call.body.sha;
-      return json({ object: { sha: head } });
-    }
-    return new Response("unexpected call", { status: 404 });
-  };
-  return {
-    calls,
-    get head() {
-      return head;
-    },
-    moveHead(sha) {
-      head = sha;
-    },
-    restore() {
-      globalThis.fetch = originalFetch;
-    },
-  };
-}
-
-/** Fire the queue's alarm the way the runtime does: the alarm is cleared first. */
-async function fireAlarm(queue) {
-  await queue.storage.setAlarm(null);
-  await queue.instance.alarm();
-}
-
-/** Queue `count` reports straight into a mock queue, as the handler would. */
-async function queueReports(queue, count, start = 0) {
-  for (let i = start; i < start + count; i += 1) {
-    const number = `1212234${String(i).padStart(4, "0")}`;
-    const response = await queue.get().fetch("https://report-queue/", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        filename: `${number}_17588000000${String(i % 100).padStart(2, "0")}_0badf00d.json`,
-        content: JSON.stringify({ number: `+${number}`, type: "spam" }),
-      }),
-    });
-    assert.equal(response.status, 204);
-  }
-}
-
-test("the daily flush is the next 06:00 UTC", () => {
-  assert.equal(nextFlushTime(Date.parse("2026-09-25T16:30:00Z")), Date.parse("2026-09-26T06:00:00Z"));
-  assert.equal(nextFlushTime(Date.parse("2026-09-25T05:59:59Z")), Date.parse("2026-09-25T06:00:00Z"));
-  assert.equal(nextFlushTime(Date.parse("2026-09-25T06:00:00Z")), Date.parse("2026-09-26T06:00:00Z"));
-  assert.equal(nextFlushTime(Date.parse("2026-12-31T23:00:00Z")), Date.parse("2027-01-01T06:00:00Z"));
-});
-
-test("a queued report sets the daily alarm once, and later reports leave it alone", async () => {
-  const queue = createMockQueue();
-  const before = Date.now();
-  await queueReports(queue, 1);
-  const alarm = queue.storage.alarm;
-  assert.equal(alarm, nextFlushTime(before));
-
-  queue.storage.setAlarm(alarm + 1); // tell a re-set alarm apart from the original
-  await queueReports(queue, 3, 1);
-  assert.equal(queue.storage.alarm, alarm + 1);
-  assert.equal(queue.storage.data.size, 4);
-});
-
-test("the queue refuses entries that aren't a report file", async () => {
-  const queue = createMockQueue();
-  for (const body of [
-    { filename: "../../README.md", content: "{}" },
-    { filename: "data/reports/12122340101_1758800000000_0badf00d.json", content: "{}" },
-    { filename: "12122340101_1758800000000_0badf00d.json", content: 42 },
-    "not json",
-  ]) {
-    const response = await queue.get().fetch("https://report-queue/", {
-      method: "POST",
-      body: typeof body === "string" ? body : JSON.stringify(body),
-    });
-    assert.equal(response.status, 400, JSON.stringify(body));
-  }
-  assert.equal(queue.storage.data.size, 0);
-  assert.equal(queue.storage.alarm, null);
-});
-
-test("the alarm commits every queued report as one commit and empties the queue", async () => {
-  const queue = createMockQueue();
-  await queueReports(queue, 200);
-  const github = mockGitHub();
   try {
-    await fireAlarm(queue);
+    const first = await send("203.0.113.7");
+    const resend = await send("198.51.100.9");
+
+    assert.equal(first.status, 200);
+    assert.equal(JSON.parse(atob(payloads[0].content)).report_id, "3f1c9a52-7d4e-4b8a-9c1d-2e5f6a7b8c9d");
+    assert.equal(resend.status, 429);
+    assert.equal((await resend.json()).already_stored, true);
+    assert.equal(payloads.length, 1, "the resend is not stored again");
   } finally {
-    github.restore();
+    globalThis.fetch = originalFetch;
   }
-
-  const writes = github.calls.filter((call) => call.method !== "GET");
-  assert.deepEqual(writes.map((call) => `${call.method} ${call.path}`), [
-    "POST git/trees",
-    "POST git/commits",
-    "PATCH git/refs/heads/master",
-  ]);
-  const [tree, commit, ref] = writes;
-  assert.equal(tree.body.base_tree, "tree-of-c0");
-  assert.equal(tree.body.tree.length, 200);
-  assert.ok(tree.body.tree.every((entry) => /^data\/reports\/\d+_\d{13}_[0-9a-f]{8}\.json$/.test(entry.path)));
-  assert.deepEqual(JSON.parse(tree.body.tree[0].content), { number: "+12122340000", type: "spam" });
-  assert.deepEqual(commit.body.parents, ["c0"]);
-  assert.match(commit.body.message, /^Community reports: 200 new\n\n\+12122340000\n/);
-  assert.equal(ref.body.force, false);
-  assert.ok(github.calls.every((call) => call.auth === "Bearer test-token"));
-  assert.notEqual(github.head, "c0");
-  assert.equal(ref.body.sha, github.head);
-  assert.equal(queue.storage.data.size, 0);
-  assert.equal(queue.storage.alarm, null, "an empty queue needs no alarm");
-});
-
-test("an empty queue makes no commit", async () => {
-  const github = mockGitHub();
-  try {
-    assert.deepEqual(await flushQueuedReports(createMockStorage(), "test-token"), { committed: 0, full: false, more: false });
-  } finally {
-    github.restore();
-  }
-  assert.equal(github.calls.length, 0);
-});
-
-test("a failed commit keeps every report queued and retries in an hour", async () => {
-  const queue = createMockQueue();
-  await queueReports(queue, 3);
-  const github = mockGitHub({ fail: (call) => (call.path === "git/trees" ? 502 : 0) });
-  const originalError = console.error;
-  const errors = [];
-  console.error = (...args) => errors.push(args.join(" "));
-  const before = Date.now();
-  try {
-    await fireAlarm(queue);
-  } finally {
-    github.restore();
-    console.error = originalError;
-  }
-
-  assert.equal(queue.storage.data.size, 3);
-  assert.ok(queue.storage.alarm >= before + 60 * 60 * 1000 && queue.storage.alarm <= Date.now() + 60 * 60 * 1000);
-  assert.equal(errors.some((line) => line.includes("HTTP 502")), true);
-});
-
-test("a commit beaten to master by another push is rebuilt on the new head", async () => {
-  let refused = false;
-  const github = mockGitHub({
-    fail: (call) => {
-      if (call.method === "PATCH" && !refused) {
-        refused = true;
-        github.moveHead("pushed-meanwhile");
-        return 422;
-      }
-      return 0;
-    },
-  });
-  try {
-    const sha = await commitReports([{ filename: "12122340101_1758800000000_0badf00d.json", content: "{}" }], "test-token");
-    assert.equal(sha, github.head);
-  } finally {
-    github.restore();
-  }
-  const commits = github.calls.filter((call) => call.path === "git/commits");
-  assert.deepEqual(commits.map((call) => call.body.parents), [["c0"], ["pushed-meanwhile"]]);
-});
-
-test("reports an earlier flush already committed are not committed twice", async () => {
-  // The tree comes back unchanged when every file is already on master.
-  const github = mockGitHub({ treeSha: (body) => body.base_tree });
-  try {
-    const storage = createMockStorage();
-    await storage.put("report:12122340101_1758800000000_0badf00d.json", "{}");
-    const result = await flushQueuedReports(storage, "test-token");
-    assert.equal(result.committed, 1);
-    assert.equal(storage.data.size, 0);
-  } finally {
-    github.restore();
-  }
-  assert.equal(github.calls.some((call) => call.path === "git/commits" && call.method === "POST"), false);
-});
-
-test("more than one commit's worth goes out in batches a minute apart", async () => {
-  const queue = createMockQueue();
-  await queueReports(queue, 1001);
-  const github = mockGitHub();
-  const before = Date.now();
-  try {
-    await fireAlarm(queue);
-    assert.equal(queue.storage.data.size, 1);
-    assert.ok(queue.storage.alarm >= before + 60 * 1000 && queue.storage.alarm <= Date.now() + 60 * 1000);
-
-    await fireAlarm(queue);
-    assert.equal(queue.storage.data.size, 0);
-  } finally {
-    github.restore();
-  }
-  assert.deepEqual(
-    github.calls.filter((call) => call.path === "git/trees").map((call) => call.body.tree.length),
-    [1000, 1],
-  );
-});
-
-test("a report queued while a commit is in flight waits for the next day's commit", async () => {
-  const queue = createMockQueue();
-  await queueReports(queue, 2);
-  const github = mockGitHub({
-    fail: (call) => {
-      // The report arrives between the tree and the commit.
-      if (call.path === "git/trees") void queue.storage.put("report:19998887777_1758800000000_0badf00d.json", "{}");
-      return 0;
-    },
-  });
-  try {
-    await fireAlarm(queue);
-  } finally {
-    github.restore();
-  }
-  assert.deepEqual([...queue.storage.data.keys()], ["report:19998887777_1758800000000_0badf00d.json"]);
-  assert.equal(queue.storage.alarm, nextFlushTime(Date.now()));
-  assert.equal(github.calls.filter((call) => call.method === "PATCH").length, 1);
 });

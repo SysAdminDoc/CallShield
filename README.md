@@ -238,7 +238,7 @@ by locale and message type without shipping personal data:
 - Quick-access to lookup and protection status
 
 ### Community
-- **One-tap anonymous contribution** via [Cloudflare Worker](https://callshield-reports.snafumatthew.workers.dev). Each number and vote goes out at most once a day, and a report made offline is sent when the connection returns. The Worker commits the day's reports to this repository together, once a day
+- **One-tap anonymous contribution** via [Cloudflare Worker](https://callshield-reports.snafumatthew.workers.dev). Each number and vote goes out at most once a day, and a report made offline is sent when the connection returns
 - "Not spam" reports can put a community-only number up for maintainer review. They never remove a number by themselves
 - Share spam warnings to any app
 

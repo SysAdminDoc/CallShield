@@ -265,7 +265,6 @@ export function validateReportEnvironment(env) {
   ) {
     missing.push("REPORTER_BUCKET_SECRET");
   }
-  if (!env?.REPORT_QUEUE) missing.push("REPORT_QUEUE");
   return { ready: missing.length === 0, missing };
 }
 
@@ -446,7 +445,7 @@ export function validatedReportId(value) {
  * Check per-client + per-number + per-type dedup against KV (read-only).
  * Returns true if this client already reported the number with this type
  * recently. The marker is written by recordDedup ONLY after the report is
- * durably queued — writing it up front turned any failed store into a
+ * durably stored — writing it up front turned any failed GitHub PUT into a
  * 5-minute "Duplicate report" lockout that silently dropped the report on
  * retry.
  */
@@ -493,187 +492,24 @@ export async function recordDedup(ip, normalizedNumber, type, env, reportId = ""
   }
 }
 
-// ── Report queue ───────────────────────────────────────────────────────
-
-// Reports used to be committed to GitHub one at a time, which put a commit on
-// master every few minutes. They now wait in the ReportQueue Durable Object and
-// go to GitHub together, one commit a day at FLUSH_HOUR_UTC. The queue in
-// data/reports/ is only read when the maintainer runs a merge, so the wait
-// costs nothing.
-const GITHUB_REPO = "SysAdminDoc/CallShield";
-const GITHUB_BRANCH = "master";
-const REPORTS_DIR = "data/reports";
-const FLUSH_HOUR_UTC = 6;
-const FLUSH_RETRY_MS = 60 * 60 * 1000;
-const NEXT_BATCH_DELAY_MS = 60 * 1000;
-const MAX_REPORTS_PER_COMMIT = 1000;
-// Durable Object storage takes at most 128 keys per get/put/delete call.
-const STORAGE_KEY_BATCH = 128;
-const QUEUE_NAME = "reports";
-const QUEUE_PREFIX = "report:";
-const REPORT_FILENAME_RE = /^\d{1,15}_\d{13}_[0-9a-f]{8}\.json$/;
-
-/** The next FLUSH_HOUR_UTC strictly after `now` (ms since epoch). */
-export function nextFlushTime(now) {
-  const next = new Date(now);
-  next.setUTCHours(FLUSH_HOUR_UTC, 0, 0, 0);
-  if (next.getTime() <= now) next.setUTCDate(next.getUTCDate() + 1);
-  return next.getTime();
-}
-
-export class GitHubError extends Error {
-  constructor(status, message) {
-    super(message);
-    this.status = status;
-  }
-}
-
-async function github(path, token, body, method = body ? "POST" : "GET") {
-  const response = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/${path}`, {
-    method,
-    headers: {
-      "Accept": "application/vnd.github+json",
-      "Authorization": `Bearer ${token}`,
-      "Content-Type": "application/json",
-      "User-Agent": "CallShield-Worker",
-    },
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  if (!response.ok) {
-    throw new GitHubError(response.status, `GitHub ${method} ${path}: HTTP ${response.status} ${await response.text()}`);
-  }
-  return response.json();
-}
-
-/**
- * Commit every report file to data/reports/ as one commit on master, through
- * the Git Data API (the contents API takes one file per commit). Returns the
- * commit sha, or null when every file was already there.
- */
-export async function commitReports(reports, token) {
-  const tree = reports.map(({ filename, content }) => ({
-    path: `${REPORTS_DIR}/${filename}`,
-    mode: "100644",
-    type: "blob",
-    content,
-  }));
-  const numbers = reports.map(({ filename }) => `+${filename.split("_")[0]}`);
-  const message = `Community reports: ${reports.length} new\n\n${numbers.join("\n")}\n`;
-
-  for (let attempt = 1; ; attempt += 1) {
-    const head = await github(`git/ref/heads/${GITHUB_BRANCH}`, token);
-    const parent = await github(`git/commits/${head.object.sha}`, token);
-    const newTree = await github("git/trees", token, { base_tree: parent.tree.sha, tree });
-    // An earlier flush committed these and then failed to clear its queue.
-    if (newTree.sha === parent.tree.sha) return null;
-    const commit = await github("git/commits", token, { message, tree: newTree.sha, parents: [head.object.sha] });
-    try {
-      await github(`git/refs/heads/${GITHUB_BRANCH}`, token, { sha: commit.sha, force: false }, "PATCH");
-      return commit.sha;
-    } catch (error) {
-      // 422: master moved while the commit was built. Build it again on the new head.
-      if (!(error instanceof GitHubError) || error.status !== 422 || attempt >= 3) throw error;
-    }
-  }
-}
-
-/**
- * Commit up to MAX_REPORTS_PER_COMMIT queued reports, then drop them from the
- * queue. `full` says the batch hit the cap; `more` says reports are still
- * waiting (the rest of a full batch, or ones queued while this one committed).
- */
-export async function flushQueuedReports(storage, token) {
-  const queued = await storage.list({ prefix: QUEUE_PREFIX, limit: MAX_REPORTS_PER_COMMIT });
-  const keys = [...queued.keys()];
-  if (keys.length > 0) {
-    await commitReports(
-      [...queued].map(([key, content]) => ({ filename: key.slice(QUEUE_PREFIX.length), content })),
-      token,
-    );
-    for (let i = 0; i < keys.length; i += STORAGE_KEY_BATCH) {
-      await storage.delete(keys.slice(i, i + STORAGE_KEY_BATCH));
-    }
-  }
-  const rest = await storage.list({ prefix: QUEUE_PREFIX, limit: 1 });
-  return { committed: keys.length, full: keys.length >= MAX_REPORTS_PER_COMMIT, more: rest.size > 0 };
-}
-
-/**
- * Holds accepted reports until the daily commit. Every request goes to the one
- * instance named QUEUE_NAME, so its storage is the whole queue and two flushes
- * can never race each other.
- */
-export class ReportQueue {
-  constructor(state, env) {
-    this.storage = state.storage;
-    this.env = env;
-  }
-
-  async fetch(request) {
-    let entry = null;
-    try {
-      entry = await request.json();
-    } catch (_error) {
-      // Answered below.
-    }
-    if (!entry || !REPORT_FILENAME_RE.test(entry.filename) || typeof entry.content !== "string") {
-      return new Response("Malformed queue entry", { status: 400 });
-    }
-    await this.storage.put(QUEUE_PREFIX + entry.filename, entry.content);
-    if ((await this.storage.getAlarm()) === null) {
-      await this.storage.setAlarm(nextFlushTime(Date.now()));
-    }
-    return new Response(null, { status: 204 });
-  }
-
-  async alarm() {
-    let result;
-    try {
-      result = await flushQueuedReports(this.storage, this.env.GITHUB_TOKEN);
-    } catch (error) {
-      // Nothing is lost: the reports stay queued until a commit goes through.
-      console.error("Queued reports could not be committed, retrying in an hour", error);
-      await this.storage.setAlarm(Date.now() + FLUSH_RETRY_MS);
-      return;
-    }
-    if (result.more) {
-      await this.storage.setAlarm(result.full ? Date.now() + NEXT_BATCH_DELAY_MS : nextFlushTime(Date.now()));
-    }
-  }
-}
-
-/** Hand a report file to the queue. Throws unless the queue has stored it. */
-export async function queueReport(env, filename, content) {
-  const queue = env.REPORT_QUEUE.get(env.REPORT_QUEUE.idFromName(QUEUE_NAME));
-  const response = await queue.fetch("https://report-queue/", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ filename, content }),
-  });
-  if (!response.ok) {
-    throw new Error(`Report queue answered HTTP ${response.status}: ${await response.text()}`);
-  }
-}
-
 /**
  * CallShield Community Reports Worker
  * Deploy to Cloudflare Workers (free tier: 100K requests/day)
  *
  * Setup:
  *   1. Create a Cloudflare account (free)
- *   2. npm install (in this directory) for wrangler
- *   3. npx wrangler login
+ *   2. Install wrangler: npm install -g wrangler
+ *   3. wrangler login
  *   4. Create a fine-grained GitHub PAT with ONLY "Contents: Read and write" on this repo
- *   5. npx wrangler secret put GITHUB_TOKEN (paste the PAT)
- *   6. npx wrangler secret put REPORTER_BUCKET_SECRET (32+ random characters)
- *   7. npx wrangler deploy. The first deploy creates the RATE_LIMIT KV
- *      namespace and the ReportQueue Durable Object.
+ *   5. wrangler secret put GITHUB_TOKEN (paste the PAT)
+ *   6. wrangler secret put REPORTER_BUCKET_SECRET (32+ random characters)
+ *   7. Create a KV namespace: wrangler kv namespace create RATE_LIMIT
+ *   8. Update wrangler.toml with the returned namespace ID
+ *   9. wrangler deploy
  *
- * The worker receives anonymous spam reports and queues them in the
- * ReportQueue Durable Object, which commits everything queued to data/reports/
- * once a day as a single commit via the GitHub API. The maintainer merges
- * them into the main database periodically by running
- * scripts/merge_community_reports.py locally (this
+ * The worker receives anonymous spam reports and creates files in data/reports/
+ * via the GitHub API. The maintainer merges them into the main database
+ * periodically by running scripts/merge_community_reports.py locally (this
  * project builds and publishes from a workstation, not CI).
  *
  * Rate limiting: per-client burst limit (5 reports/60 s) via the atomic
@@ -882,20 +718,41 @@ code{background:#252525;padding:2px 6px;border-radius:4px;font-size:12px;color:#
       }
       const content = JSON.stringify(report, null, 2);
 
-      // The report reaches data/reports/ in the queue's next daily commit.
-      try {
-        await queueReport(env, filename, content);
-      } catch (error) {
-        console.error("Report could not be queued", error);
+      const githubResponse = await fetch(
+        `https://api.github.com/repos/SysAdminDoc/CallShield/contents/data/reports/${filename}`,
+        {
+          method: "PUT",
+          headers: {
+            "Authorization": `Bearer ${env.GITHUB_TOKEN}`,
+            "Content-Type": "application/json",
+            "User-Agent": "CallShield-Worker",
+          },
+          body: JSON.stringify({
+            message: `Community report: ${normalized}`,
+            content: btoa(content),
+            branch: "master"
+          })
+        }
+      );
+
+      if (!githubResponse.ok) {
+        const err = await githubResponse.text();
+        console.error("GitHub API error:", err);
+        // Surface rate limiting to the client so it can back off
+        if (githubResponse.status === 403 || githubResponse.status === 429) {
+          return new Response(JSON.stringify({ error: "Rate limited, please retry later" }), {
+            status: 429, headers: { ...responseHeaders, "Content-Type": "application/json", "Retry-After": "60" }
+          });
+        }
         return new Response(JSON.stringify({ error: "Failed to submit report" }), {
           status: 500, headers: { ...responseHeaders, "Content-Type": "application/json" }
         });
       }
 
-      // Only now that the report is durably queued does the dedup marker go
-      // in — a failed store above leaves the pair unmarked so the client's
+      // Only now that the report is durably stored does the dedup marker go
+      // in — a failed PUT above leaves the pair unmarked so the client's
       // retry actually retries instead of eating a 5-minute duplicate 429.
-      // The report is stored whatever happens here, so a failed marker
+      // The report is committed whatever happens here, so a failed marker
       // write must not turn into a 500 that makes the client submit it again.
       try {
         await recordDedup(clientIp, normalized, type, env, reportId);
