@@ -2,6 +2,7 @@ package com.sysadmindoc.callshield
 
 import android.content.ComponentName
 import android.content.Context
+import android.content.res.Configuration
 import android.telecom.Connection
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.emptyPreferences
@@ -31,6 +32,7 @@ import com.sysadmindoc.callshield.domain.model.SpamCheckResult
 import com.sysadmindoc.callshield.service.CallShieldTileService
 import com.sysadmindoc.callshield.service.RcsNotificationListener
 import com.sysadmindoc.callshield.ui.describeIdentityEvidence
+import com.sysadmindoc.callshield.ui.pipelineCheckerLabelRes
 import com.sysadmindoc.callshield.ui.urlThreatLabels
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -41,6 +43,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import java.util.Locale
 
 /**
  * Text the system shows (Settings labels, block descriptions, the digest)
@@ -215,6 +218,34 @@ class LocalizedSystemTextTest {
         // The detector itself flags a lone English word.
         assertEquals(listOf("range"), englishWords("号段：range"))
     }
+
+    @Test
+    fun `every checker has a Chinese name of its own`() =
+        runBlocking {
+            val english = context.createConfigurationContext(Configuration(context.resources.configuration).apply { setLocale(Locale.ENGLISH) })
+            // Every checker the call chain runs, from a trace, so a new checker is covered.
+            val traced =
+                IsolatedRepositoryFixture(context).use {
+                    it.repository
+                        .traceRules("+12122340101")
+                        .entries
+                        .map { entry -> entry.checkerName }
+                }
+            assertTrue(traced.toString(), traced.size >= 30)
+            traced.forEach { name -> assertNotEquals(name, R.string.lookup_checker_other, pipelineCheckerLabelRes(name)) }
+            // And every checker name the app has, the SMS-only ones included.
+            val names =
+                R.string::class.java.fields
+                    .filter { it.name.startsWith("lookup_checker_") }
+                    .map { it.getInt(null) }
+            assertTrue(traced.map(::pipelineCheckerLabelRes).toSet().all { it in names })
+
+            for (res in names) {
+                val zh = context.getString(res)
+                assertNotEquals(context.resources.getResourceEntryName(res), english.getString(res), zh)
+                assertTrue(zh, zh.any { it in '一'..'鿿' })
+            }
+        }
 
     @Test
     fun `a regulatory range decision names the range in the app language`() =

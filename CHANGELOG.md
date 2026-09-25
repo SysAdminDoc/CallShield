@@ -55,6 +55,9 @@ All notable changes to CallShield will be documented in this file.
 - The contrast test also covers the changelog's Latest tag, which sits on two
   green tints, and fails when a selected chip draws its label in its own
   accent on a tint of 15% or more.
+- A unit test checks that every check in the pipeline has a Chinese name of
+  its own. The Chinese sweep reached only one of the 37, so a missing or
+  untranslated name passed.
 
 ### Translations
 
