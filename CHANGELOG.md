@@ -69,6 +69,8 @@ All notable changes to CallShield will be documented in this file.
   with another, or merged a number's two spellings without keeping the
   higher report count and the user's block now fails the build. The oldest
   hand-built databases also carry a logged message and a prefix now.
+- The dashboard test checks each protection row's Ready or Needed badge, not
+  only the checklist's headline.
 
 ### Translations
 

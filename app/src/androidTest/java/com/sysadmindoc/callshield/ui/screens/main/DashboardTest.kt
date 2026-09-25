@@ -4,6 +4,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -14,6 +15,7 @@ import com.sysadmindoc.callshield.ui.SyncState
 import com.sysadmindoc.callshield.ui.runStrictAccessibilityChecks
 import com.sysadmindoc.callshield.ui.setThemedContent
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
@@ -184,6 +186,54 @@ class DashboardTest {
         listOf("Review", "Enable Call Screening", "Sync", "Optional extras", "Enable Overlay", "Enable Notifications").forEach { action ->
             composeRule.onAllNodesWithText(action).assertCountEquals(0)
         }
+        // Every row carries its own Ready badge, and none says Needed.
+        composeRule.onAllNodesWithText("Ready").assertCountEquals(3)
+        composeRule.onAllNodesWithText("Needed").assertCountEquals(0)
+    }
+
+    @Test
+    fun aMissingCheckWithNoActionSaysNeededOnItsOwnRow() {
+        val status =
+            buildDashboardStatusModel(
+                blockCallsEnabled = true,
+                blockSmsEnabled = true,
+                callPermissionsReady = true,
+                smsPermissionsReady = true,
+                permissionsReady = true,
+                spamDatabaseReady = true,
+                callScreenerReady = false,
+                overlayGranted = true,
+                notificationsGranted = true,
+            )
+
+        composeRule.setContent {
+            DashboardSetupChecklistCard(
+                dashboardStatus = status,
+                corePermissionsReady = true,
+                syncState = SyncState.Idle,
+                spamDatabaseReady = true,
+                spamCount = 1_234,
+                blockCallsEnabled = true,
+                callScreenerReady = false,
+                overlayGranted = true,
+                notificationsGranted = true,
+                onReviewPermissions = {},
+                onSyncDatabase = {},
+                // The phone can't be asked for the role, so the row can only say what's missing.
+                onEnableCallScreener = null,
+                onEnableOverlay = {},
+                onEnableNotifications = {},
+            )
+        }
+
+        composeRule.onAllNodesWithText("Ready").assertCountEquals(2)
+        composeRule.onAllNodesWithText("Needed").assertCountEquals(1)
+        // The badge sits on the call screener's row, level with its title and detail.
+        val needed = composeRule.onNodeWithText("Needed").getUnclippedBoundsInRoot()
+        val title = composeRule.onNodeWithText("Call screener").getUnclippedBoundsInRoot()
+        val detail = composeRule.onNodeWithText("Required for live call blocking.").getUnclippedBoundsInRoot()
+        val badgeMiddle = (needed.top + needed.bottom) / 2
+        assertTrue("badge at $needed, row from ${title.top} to ${detail.bottom}", badgeMiddle > title.top && badgeMiddle < detail.bottom)
     }
 
     @Test
