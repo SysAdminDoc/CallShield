@@ -30,9 +30,26 @@ fun ChangelogScreen() {
         SectionHeader(stringResource(R.string.changelog_latest_release), CatGreen)
         Spacer(Modifier.height(12.dp))
         VersionEntry(
+            "1.8.1",
+            "Fixes for category rules, filters and contrast",
+            isLatest = true,
+            date = "September 25, 2026",
+            summary = "A round of fixes a review turned up after 1.8.0.",
+            changes =
+                listOf(
+                    "Category rules no longer act on a weak ML block",
+                    "Database filters survive Android closing the app, and a new filter never shows the last one's rows",
+                    "When two outgoing calls overlap, the second one is no longer dropped",
+                    "Clearer contrast on the log cleanup chips, repeat counts and rule warnings in the light theme",
+                    "Telemarketing range names follow the app's language",
+                ),
+        )
+        Spacer(Modifier.height(14.dp))
+        SectionHeader(stringResource(R.string.changelog_release_history), CatGreen)
+        Spacer(Modifier.height(12.dp))
+        VersionEntry(
             "1.8.0",
             "Answer & hang up, outgoing call check and signed protection data",
-            isLatest = true,
             date = "September 25, 2026",
             summary = "New ways to stop spam before it rings and after, plus protection data the app can verify.",
             changes =
@@ -44,9 +61,6 @@ fun ChangelogScreen() {
                     "Chinese covers every line of system text",
                 ),
         )
-        Spacer(Modifier.height(14.dp))
-        SectionHeader(stringResource(R.string.changelog_release_history), CatGreen)
-        Spacer(Modifier.height(12.dp))
         VersionEntry(
             "1.7.38",
             "A clearer CallShield",

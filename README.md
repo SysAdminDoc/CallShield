@@ -12,7 +12,7 @@
 <p align="center">
   <a href="https://github.com/SysAdminDoc/CallShield/releases/latest"><img src="https://img.shields.io/github/v/release/SysAdminDoc/CallShield?style=flat-square&color=a6e3a1" alt="Release"></a>
   <img src="https://img.shields.io/badge/Spam%20Numbers-51%2C806-f38ba8?style=flat-square" alt="51,806 Numbers">
-  <img src="https://img.shields.io/badge/Tests-1523-94e2d5?style=flat-square" alt="1523 Tests">
+  <img src="https://img.shields.io/badge/Tests-1541-94e2d5?style=flat-square" alt="1541 Tests">
   <img src="https://img.shields.io/badge/Android-10%2B-89b4fa?style=flat-square" alt="Android 10+">
   <img src="https://img.shields.io/badge/License-MIT-cba6f7?style=flat-square" alt="MIT License">
   <img src="https://img.shields.io/badge/API%20Keys-None-fab387?style=flat-square" alt="No required API keys">
@@ -74,6 +74,16 @@ Version highlights for each release are in [CHANGELOG.md](CHANGELOG.md).
 5. **Callback-aware**. Won't block callbacks from numbers you recently called, answered repeatedly, after a local emergency call, or urgent repeated callers
 6. **Community-driven**. One-tap anonymous contribution via Cloudflare Worker, merged into the database by the maintainer
 
+## v1.8.1 Highlights
+
+A fix release, from a review of the work that went into 1.8.0.
+
+- **Category rules** no longer act on a weak ML block. An ML score under 80 doesn't count as a robocall any more.
+- **Filters** on the Database tab and in the Blocked log keep their chips when Android closes the app, and a new filter never shows the last one's rows while it loads.
+- **Outgoing call check** no longer drops the second of two overlapping calls.
+- **Light theme contrast** meets the AA minimum on the log cleanup chips, the repeat counts and the rule-conflict warning.
+- **Telemarketing range names** in the "why was this blocked" panel follow the app's language.
+
 ## v1.8.0 Highlights
 
 - **Answer & hang up** takes a blocked call and drops it straight away, so spam can't leave a voicemail. Off by default. Contributed by tikkamasalla.
@@ -84,7 +94,7 @@ Version highlights for each release are in [CHANGELOG.md](CHANGELOG.md).
 - **Chinese** now covers every line of system text, and the block log, Lookup and the "why was this blocked" panel are translatable.
 - **Community reports** go out once and wait for a connection when you're offline. The database grows to 51,806 numbers.
 
-## Detection Pipeline (v1.8.0)
+## Detection Pipeline (v1.8.1)
 
 All detection layers implement a shared `IChecker` interface and run in priority order via `CheckerPipeline.run`. First non-null result wins, every layer is testable in isolation. Priorities are stable numbers, and the ladder below is the live order.
 
@@ -480,12 +490,12 @@ RELEASE_KEY_PASSWORD=...
 ## Testing
 
 ```bash
-./gradlew testDebugUnitTest   # 1523 tests
+./gradlew testDebugUnitTest   # 1541 tests
 ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.sysadmindoc.callshield.platform.TargetSdkBehaviorSmokeTest
 ./gradlew verifyPipelineTests # Cloudflare Worker (node) + data-pipeline and translation checks (python)
 ```
 
-The suite is **1523 total JVM unit tests**, run with Robolectric wherever a screen, a service or the database is involved.
+The suite is **1541 total JVM unit tests**, run with Robolectric wherever a screen, a service or the database is involved.
 
 Two GitHub workflows run without building the app. **Validation** runs the Worker and
 pipeline suites on every push except report-only ones (`run-pipeline-tests.ps1 -CorrectnessOnly`),
@@ -522,7 +532,7 @@ language in [issue #7](https://github.com/SysAdminDoc/CallShield/issues/7).
 | Community API | Cloudflare Workers |
 | URL Safety | Local spam-domain data; optional URLhaus (abuse.ch) |
 | Verification | Local Gradle, lint, and release-artifact checks |
-| Tests | 1523 JVM unit tests (JUnit) |
+| Tests | 1541 JVM unit tests (JUnit) |
 | Strings | 1577 string resources and 38 plural groups (translation-ready) |
 | Accessibility | 100+ content descriptions, 48dp touch targets |
 | Min SDK | 29 (Android 10) |

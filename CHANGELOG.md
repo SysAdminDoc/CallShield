@@ -4,6 +4,8 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+## v1.8.1 (2026-09-25)
+
 ### Protection
 
 - Call handling by category no longer acts on a weak ML block. The on-device
@@ -20,8 +22,9 @@ All notable changes to CallShield will be documented in this file.
 
 - The release history under More and the weekday schedule label read as
   plain English now. They used em and en dashes in 37 places, and the
-  weekday preset read "Mon–Fri" where it now says "Mon to Fri". A unit test
-  keeps dashes out of the English strings and the release history.
+  weekday preset now says "Mon to Fri" instead of joining the days with a
+  dash. A unit test keeps dashes out of the English strings and the release
+  history.
 - The selected Keep for chip under Log cleanup and the red repeat count in
   the grouped Blocked log now meet the AA contrast minimum in the light
   theme. The chip's green text on its green tint came to 4.33:1 and the red
