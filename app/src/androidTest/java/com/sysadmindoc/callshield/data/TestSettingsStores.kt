@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
+import com.sysadmindoc.callshield.data.checker.CheckerDependencies
 import com.sysadmindoc.callshield.data.local.AppDatabase
 import com.sysadmindoc.callshield.data.remote.GitHubDataSource
 import com.sysadmindoc.callshield.data.remote.SpamDataSource
@@ -16,9 +17,13 @@ import java.io.File
 import java.util.UUID
 
 /**
- * Empty settings stores for one test. The app's own stores stay on the device
- * between runs, and state kept there, such as the feed version and date the
- * sync last accepted, makes a test depend on whatever ran before it.
+ * Empty settings stores and detectors for one test. The app's own stores stay
+ * on the device between runs, and state kept there, such as the feed version
+ * and date the sync last accepted, makes a test depend on whatever ran before
+ * it. The shared detectors are the app's too: Hilt attaches
+ * `CampaignDetector.shared` to the installed app's database, so calls a test
+ * screened landed in its campaign_observations and came back as a burst on
+ * later runs.
  */
 internal class TestSettingsStores(
     context: Context,
@@ -30,7 +35,15 @@ internal class TestSettingsStores(
     val settings: DataStore<Preferences> = store("settings")
     val privateSettings: DataStore<Preferences> = store("private")
 
-    /** A repository on [database] that keeps its settings in these stores. */
+    /** Hot ranges, spam domains and campaign observations of this test's own. */
+    val checkerDependencies =
+        CheckerDependencies(
+            spamHeuristics = SpamHeuristics(),
+            smsContentAnalyzer = SmsContentAnalyzer(),
+            campaignDetector = CampaignDetector(),
+        )
+
+    /** A repository on [database] that keeps its settings in these stores and uses these detectors. */
     fun repository(
         context: Context,
         database: AppDatabase,
@@ -40,6 +53,7 @@ internal class TestSettingsStores(
         context = context,
         database = database,
         remote = remote,
+        checkerDependencies = checkerDependencies,
         settingsDataStore = settings,
         privateSettingsDataStore = privateSettings,
         phoneIdentityCanonicalizer = phoneIdentityCanonicalizer,

@@ -28,6 +28,8 @@ class HotListSyncIntegrationTest {
     private lateinit var db: AppDatabase
     private lateinit var repo: SpamRepository
     private lateinit var stores: TestSettingsStores
+    private val heuristics get() = stores.checkerDependencies.spamHeuristics
+    private val analyzer get() = stores.checkerDependencies.smsContentAnalyzer
 
     @Before
     fun setUp() {
@@ -39,14 +41,10 @@ class HotListSyncIntegrationTest {
                 .build()
         stores = TestSettingsStores(context)
         repo = stores.repository(context, db)
-        SpamHeuristics.updateHotRanges(emptyList())
-        SmsContentAnalyzer.updateSpamDomains(emptyList())
     }
 
     @After
     fun tearDown() {
-        SpamHeuristics.updateHotRanges(emptyList())
-        SmsContentAnalyzer.updateSpamDomains(emptyList())
         db.close()
         stores.close()
     }
@@ -77,7 +75,7 @@ class HotListSyncIntegrationTest {
                     spamDomains = listOf("https://www.Bad.Example/path", "", "clean.example:443", "bad.example"),
                 )
 
-            val outcome = HotDataSync.refresh(context, source, repo, dao)
+            val outcome = HotDataSync.refresh(context, source, repo, dao, stores.checkerDependencies)
 
             assertTrue(outcome.refreshedAnyFeed)
             assertTrue(outcome.hasAnyHotProtection)
@@ -91,12 +89,16 @@ class HotListSyncIntegrationTest {
             assertEquals("github", strongerExisting?.source)
             assertEquals(99, strongerExisting?.reports)
 
-            assertTrue(SpamHeuristics.isHotCampaignRange("+12125550123"))
-            assertTrue(SpamHeuristics.isHotCampaignRange("+15085550123"))
-            assertFalse(SpamHeuristics.isHotCampaignRange("+19995550123"))
+            assertTrue(heuristics.isHotCampaignRange("+12125550123"))
+            assertTrue(heuristics.isHotCampaignRange("+15085550123"))
+            assertFalse(heuristics.isHotCampaignRange("+19995550123"))
 
-            val smsResult = SmsContentAnalyzer.analyze("Claim now at https://bad.example/login")
+            val smsResult = analyzer.analyze("Claim now at https://bad.example/login")
             assertTrue(smsResult.reasons.contains("spam_domain"))
+
+            // The installed app's detectors never saw the fake feeds.
+            assertFalse(SpamHeuristics.isHotCampaignRange("+15085550123"))
+            assertFalse(SmsContentAnalyzer.analyze("Claim now at https://bad.example/login").reasons.contains("spam_domain"))
         }
 
     @Test
@@ -109,22 +111,22 @@ class HotListSyncIntegrationTest {
                     hotRanges = listOf("508555"),
                     spamDomains = listOf("bad.example"),
                 )
-            HotDataSync.refresh(context, freshSource, repo, dao)
+            HotDataSync.refresh(context, freshSource, repo, dao, stores.checkerDependencies)
             assertEquals(1, dao.getCountBySource("hot_list"))
 
             // Transient outage: every feed fails. The bundled build-time snapshot
             // must NOT be applied — replaceHotList is delete-then-insert, so
             // resolving it would wipe the fresher rows synced above.
             val failingSource = FakeHotFeedDataSource(failure = IllegalStateException("offline"))
-            val outcome = HotDataSync.refresh(context, failingSource, repo, dao)
+            val outcome = HotDataSync.refresh(context, failingSource, repo, dao, stores.checkerDependencies)
 
             assertFalse(outcome.refreshedAnyFeed)
             assertEquals(3, outcome.unavailableFeeds.size)
             assertEquals(1, dao.getCountBySource("hot_list"))
             assertEquals("Fresh hot row", dao.findByNumber(repo.normalizeNumber("508-555-0102"))?.description)
-            assertTrue(SpamHeuristics.isHotCampaignRange("+15085550123"))
+            assertTrue(heuristics.isHotCampaignRange("+15085550123"))
             assertTrue(
-                SmsContentAnalyzer
+                analyzer
                     .analyze("Claim now at https://bad.example/login")
                     .reasons
                     .contains("spam_domain"),
@@ -144,15 +146,16 @@ class HotListSyncIntegrationTest {
                 ),
                 repo,
                 dao,
+                stores.checkerDependencies,
             )
 
-            val outcome = HotDataSync.refresh(context, FakeHotFeedDataSource(), repo, dao)
+            val outcome = HotDataSync.refresh(context, FakeHotFeedDataSource(), repo, dao, stores.checkerDependencies)
 
             assertFalse(outcome.refreshedAnyFeed)
             assertEquals(setOf("hot_list", "hot_ranges", "spam_domains"), outcome.unavailableFeeds)
             assertEquals(1, dao.getCountBySource("hot_list"))
-            assertTrue(SpamHeuristics.isHotCampaignRange("+15085550123"))
-            assertTrue(SmsContentAnalyzer.analyze("Claim now at https://bad.example/login").reasons.contains("spam_domain"))
+            assertTrue(heuristics.isHotCampaignRange("+15085550123"))
+            assertTrue(analyzer.analyze("Claim now at https://bad.example/login").reasons.contains("spam_domain"))
         }
 
     @Test
@@ -168,6 +171,7 @@ class HotListSyncIntegrationTest {
                 ),
                 repo,
                 dao,
+                stores.checkerDependencies,
             )
 
             val outcome =
@@ -176,13 +180,14 @@ class HotListSyncIntegrationTest {
                     FakeHotFeedDataSource(explicitlyCleared = true),
                     repo,
                     dao,
+                    stores.checkerDependencies,
                 )
 
             assertTrue(outcome.refreshedAnyFeed)
             assertTrue(outcome.unavailableFeeds.isEmpty())
             assertEquals(0, dao.getCountBySource("hot_list"))
-            assertFalse(SpamHeuristics.hasHotRanges())
-            assertFalse(SmsContentAnalyzer.analyze("Claim now at https://bad.example/login").reasons.contains("spam_domain"))
+            assertFalse(heuristics.hasHotRanges())
+            assertFalse(analyzer.analyze("Claim now at https://bad.example/login").reasons.contains("spam_domain"))
         }
 
     @Test
@@ -194,6 +199,7 @@ class HotListSyncIntegrationTest {
                     FakeHotFeedDataSource(failure = IllegalStateException("offline")),
                     repo,
                     db.spamDao(),
+                    stores.checkerDependencies,
                 )
 
             assertFalse(outcome.refreshedAnyFeed)

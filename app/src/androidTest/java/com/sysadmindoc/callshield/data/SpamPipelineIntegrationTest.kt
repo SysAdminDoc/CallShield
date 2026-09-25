@@ -316,6 +316,20 @@ class SpamPipelineIntegrationTest {
         }
 
     @Test
+    fun screenedCallsStayOutOfTheInstalledAppsCampaignDetector() =
+        runBlocking {
+            // Five distinct numbers from one exchange inside the hour is an active campaign.
+            val numbers = (171..175).map { "+19075550$it" }
+            numbers.forEach { repo.isSpam(it) }
+
+            val own = stores.checkerDependencies.campaignDetector.getCampaignEvidence(numbers.first())
+            assertEquals(numbers.size, own?.distinctNumberCount)
+            assertTrue(own?.isActive == true)
+            // CampaignDetector.shared is the app's, attached to its real database.
+            assertEquals(0, CampaignDetector.shared.getCampaignEvidence(numbers.first())?.distinctNumberCount)
+        }
+
+    @Test
     fun expiredTemporaryAllowFallsBackToDownloadedDatabase() =
         runBlocking {
             val number = "+12125550129"

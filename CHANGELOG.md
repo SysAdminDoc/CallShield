@@ -28,6 +28,14 @@ All notable changes to CallShield will be documented in this file.
   once the oldest has waited more than 7 days. The cap still covers files it
   can't date, and applies in full to the local gate run right after a drain.
 
+### Build
+
+- The on-device repository tests use detectors of their own. They screened
+  calls through the app's shared campaign detector, which saves what it sees
+  to the installed app's database, so test numbers from earlier runs could add
+  up to a campaign burst and fail a later test. The hot-list tests also
+  cleared the app's live hot ranges and spam domains around every test.
+
 ## v1.8.0 (2026-09-25)
 
 ### Protection
