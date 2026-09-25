@@ -223,17 +223,12 @@ class LocalizedSystemTextTest {
     fun `every checker has a Chinese name of its own`() =
         runBlocking {
             val english = context.createConfigurationContext(Configuration(context.resources.configuration).apply { setLocale(Locale.ENGLISH) })
-            // Every checker the call chain runs, from a trace, so a new checker is covered.
-            val traced =
-                IsolatedRepositoryFixture(context).use {
-                    it.repository
-                        .traceRules("+12122340101")
-                        .entries
-                        .map { entry -> entry.checkerName }
-                }
-            assertTrue(traced.toString(), traced.size >= 30)
+            // Every checker in the call chain and the SMS extensions, from the
+            // repository itself, so a new checker in either is covered.
+            val traced = IsolatedRepositoryFixture(context).use { it.repository.checkerNames }
+            assertTrue(traced.toString(), traced.size >= 34 && "sms_burst" in traced && "heuristic" in traced)
             traced.forEach { name -> assertNotEquals(name, R.string.lookup_checker_other, pipelineCheckerLabelRes(name)) }
-            // And every checker name the app has, the SMS-only ones included.
+            // And every checker name the app has.
             val names =
                 R.string::class.java.fields
                     .filter { it.name.startsWith("lookup_checker_") }

@@ -256,6 +256,9 @@ class SpamRepositoryImpl(
 
     fun normalizeNumber(number: String): String = normalizePhone(number)
 
+    /** The name of every checker in the call chain and the SMS extensions. */
+    internal val checkerNames: List<String> get() = (callChain + smsExtensions).map { it.name }
+
     suspend fun traceRules(number: String): PipelineTrace {
         val normalized = normalizeNumber(number)
         if (normalized.isBlank()) return PipelineTrace(emptyList(), false)

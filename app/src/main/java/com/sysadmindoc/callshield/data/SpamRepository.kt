@@ -708,6 +708,9 @@ class SpamRepository(
     // ── Pipeline trace (diagnostic) ─────────────────────────────────────
     suspend fun traceRules(number: String): com.sysadmindoc.callshield.data.checker.PipelineTrace = spamRepositoryImpl.traceRules(number)
 
+    /** The name of every checker in the call chain and the SMS extensions. */
+    internal val checkerNames: List<String> get() = spamRepositoryImpl.checkerNames
+
     // ── Sync ───────────────────────────────────────────────────────────
 
     /**

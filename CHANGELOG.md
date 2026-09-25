@@ -60,9 +60,9 @@ All notable changes to CallShield will be documented in this file.
   they time, but no longer add the calls they screen to it.
 - The contrast test fails when any chip draws its label in the accent its
   container is tinted with at 15% or more, however the colors are written.
-- A unit test checks that every check in the pipeline has a Chinese name of
-  its own. The Chinese sweep reached only one of the 37, so a missing or
-  untranslated name passed.
+- A unit test checks that every check in the pipeline, the SMS-only ones
+  included, has a Chinese name of its own. The Chinese sweep reached only one
+  of the 37, so a missing or untranslated name passed.
 - The database upgrade tests check what each upgrade does to empty fields,
   not only how many rows survive. An upgrade that turned a permanent allow
   into an expired one, dropped a logged call because it shared an empty key
