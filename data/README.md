@@ -144,6 +144,10 @@ pip install -r scripts/requirements.txt   # requests, scikit-learn, numpy
 # 1. Rebuild the number database from all free public sources
 python scripts/import_all_sources.py                       # writes data/spam_numbers.json
 python scripts/update_ftc.py --max 50000                   # merge recent FTC complaints
+# The FTC API is read with api.data.gov's shared DEMO_KEY unless FTC_API_KEY is
+# set. DEMO_KEY allows 30 requests an hour, so a run without a key fetches 1,250
+# records (2,500 for update_ftc.py), records the import and carries on from its
+# cursor next time. A free key from api.data.gov lifts that to the full window.
 # ToastedSpam serves plain HTTP only (no TLS), so it is skipped by default and a
 # poisoned response can't ship hard-blocked numbers. Include it only from a
 # trusted network: python scripts/import_all_sources.py --allow-insecure-sources

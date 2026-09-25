@@ -10,6 +10,21 @@
       "description": "FCC: Telemarketing (inclu",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2015-06-22",
+          "last_seen": "2015-11-02",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -21,6 +36,21 @@
       "description": "FCC: Telemarketing (inclu",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2015-01-08",
+          "last_seen": "2015-01-09",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -32,6 +62,21 @@
       "description": "FCC caller ID: Robocalls; FCC caller ID: Telemarketing (including do not call and spoofing)",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2015-11-06",
+          "last_seen": "2015-11-06",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -43,6 +88,21 @@
       "description": "FCC caller ID: Robocalls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2016-07-02",
+          "last_seen": "2016-07-05",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -51,9 +111,54 @@
       "reports": 6,
       "first_seen": "2024-10-23",
       "last_seen": "2024-10-29",
-      "description": "FCC: Unwanted Calls",
+      "description": "FCC: Unwanted Calls; FCC caller_id: Unwanted Calls (Text Message); FCC callback_business: Unwanted Calls (Text Message)",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "fcc_complaints",
+          "evidence_type": "unverified_complaint",
+          "license": "US government public data",
+          "attribution": "US Federal Communications Commission unwanted calls dataset",
+          "first_seen": "2024-10-23",
+          "last_seen": "2024-10-27",
+          "retrieved_at": "2026-09-25T17:03:23+00:00",
+          "geography": "US",
+          "confidence_tier": "unverified",
+          "parser_version": "fcc-v3",
+          "expires_at_epoch_ms": 1791565403000,
+          "complaint_role": "callback_business",
+          "spoof_signal": "callback_number_only"
+        },
+        {
+          "source_id": "fcc_complaints",
+          "evidence_type": "unverified_complaint",
+          "license": "US government public data",
+          "attribution": "US Federal Communications Commission unwanted calls dataset",
+          "first_seen": "2024-10-23",
+          "last_seen": "2024-10-29",
+          "retrieved_at": "2026-09-25T17:03:23+00:00",
+          "geography": "US",
+          "confidence_tier": "unverified",
+          "parser_version": "fcc-v3",
+          "expires_at_epoch_ms": 1791565403000,
+          "complaint_role": "caller_id",
+          "spoof_signal": "unverified_caller_id"
+        },
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2024-10-23",
+          "last_seen": "2024-10-29",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -65,6 +170,21 @@
       "description": "FCC caller ID: Robocalls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2015-10-08",
+          "last_seen": "2015-10-08",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -73,20 +193,110 @@
       "reports": 34,
       "first_seen": "2024-06-29",
       "last_seen": "2024-07-23",
-      "description": "FCC: Unwanted Calls",
+      "description": "FCC: Unwanted Calls; FCC caller_id: Unwanted Calls (Prerecorded Voice); FCC caller_id: Unwanted Calls (Text Message); FCC callback_business: Unwanted Calls (Text Message); FCC callback_business: Unwanted Calls (Prerecorded Voice)",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "fcc_complaints",
+          "evidence_type": "unverified_complaint",
+          "license": "US government public data",
+          "attribution": "US Federal Communications Commission unwanted calls dataset",
+          "first_seen": "2024-07-01",
+          "last_seen": "2024-07-18",
+          "retrieved_at": "2026-09-25T17:03:23+00:00",
+          "geography": "US",
+          "confidence_tier": "unverified",
+          "parser_version": "fcc-v3",
+          "expires_at_epoch_ms": 1791565403000,
+          "complaint_role": "callback_business",
+          "spoof_signal": "callback_number_only"
+        },
+        {
+          "source_id": "fcc_complaints",
+          "evidence_type": "unverified_complaint",
+          "license": "US government public data",
+          "attribution": "US Federal Communications Commission unwanted calls dataset",
+          "first_seen": "2024-06-29",
+          "last_seen": "2024-07-23",
+          "retrieved_at": "2026-09-25T17:03:23+00:00",
+          "geography": "US",
+          "confidence_tier": "unverified",
+          "parser_version": "fcc-v3",
+          "expires_at_epoch_ms": 1791565403000,
+          "complaint_role": "caller_id",
+          "spoof_signal": "unverified_caller_id"
+        },
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2024-06-29",
+          "last_seen": "2024-07-23",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
       "number": "+12026951058",
       "type": "robocall",
       "reports": 4,
-      "first_seen": "2024-06-20",
+      "first_seen": "2024-06-10",
       "last_seen": "2024-06-20",
-      "description": "FCC: Unwanted Calls",
+      "description": "FCC: Unwanted Calls; FCC caller_id: Unwanted Calls (Text Message); FCC caller_id: Unwanted Calls (Prerecorded Voice); FCC callback_business: Unwanted Calls (Text Message); FCC callback_business: Unwanted Calls (Prerecorded Voice)",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "fcc_complaints",
+          "evidence_type": "unverified_complaint",
+          "license": "US government public data",
+          "attribution": "US Federal Communications Commission unwanted calls dataset",
+          "first_seen": "2024-06-10",
+          "last_seen": "2024-06-10",
+          "retrieved_at": "2026-09-25T17:03:23+00:00",
+          "geography": "US",
+          "confidence_tier": "unverified",
+          "parser_version": "fcc-v3",
+          "expires_at_epoch_ms": 1791565403000,
+          "complaint_role": "callback_business",
+          "spoof_signal": "callback_number_only"
+        },
+        {
+          "source_id": "fcc_complaints",
+          "evidence_type": "unverified_complaint",
+          "license": "US government public data",
+          "attribution": "US Federal Communications Commission unwanted calls dataset",
+          "first_seen": "2024-06-20",
+          "last_seen": "2024-06-20",
+          "retrieved_at": "2026-09-25T17:03:23+00:00",
+          "geography": "US",
+          "confidence_tier": "unverified",
+          "parser_version": "fcc-v3",
+          "expires_at_epoch_ms": 1791565403000,
+          "complaint_role": "caller_id",
+          "spoof_signal": "unverified_caller_id"
+        },
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2024-06-20",
+          "last_seen": "2024-06-20",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -98,6 +308,21 @@
       "description": "FCC caller ID: Robocalls; FCC advertiser: Telemarketing (including do not call and spoofing)",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2015-12-12",
+          "last_seen": "2015-12-12",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -109,6 +334,21 @@
       "description": "FCC caller ID: Robocalls; FCC caller ID: Telemarketing (including do not call and spoofing)",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2016-07-20",
+          "last_seen": "2016-07-20",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -117,9 +357,54 @@
       "reports": 9,
       "first_seen": "2023-03-09",
       "last_seen": "2025-03-27",
-      "description": "FCC: Unwanted Calls",
+      "description": "FCC: Unwanted Calls; FCC caller_id: Unwanted Calls (Live Voice); FCC callback_business: Unwanted Calls (Live Voice)",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "fcc_complaints",
+          "evidence_type": "unverified_complaint",
+          "license": "US government public data",
+          "attribution": "US Federal Communications Commission unwanted calls dataset",
+          "first_seen": "2023-03-09",
+          "last_seen": "2023-12-04",
+          "retrieved_at": "2026-09-25T17:03:23+00:00",
+          "geography": "US",
+          "confidence_tier": "unverified",
+          "parser_version": "fcc-v3",
+          "expires_at_epoch_ms": 1791565403000,
+          "complaint_role": "callback_business",
+          "spoof_signal": "callback_number_only"
+        },
+        {
+          "source_id": "fcc_complaints",
+          "evidence_type": "unverified_complaint",
+          "license": "US government public data",
+          "attribution": "US Federal Communications Commission unwanted calls dataset",
+          "first_seen": "2023-03-09",
+          "last_seen": "2025-03-27",
+          "retrieved_at": "2026-09-25T17:03:23+00:00",
+          "geography": "US",
+          "confidence_tier": "unverified",
+          "parser_version": "fcc-v3",
+          "expires_at_epoch_ms": 1791565403000,
+          "complaint_role": "caller_id",
+          "spoof_signal": "unverified_caller_id"
+        },
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2023-03-09",
+          "last_seen": "2025-03-27",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -131,6 +416,21 @@
       "description": "FCC: Robocalls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2015-05-18",
+          "last_seen": "2015-07-10",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -142,6 +442,21 @@
       "description": "FCC advertiser: Robocalls; FCC caller ID: Telemarketing (including do not call and spoofing)",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2016-09-20",
+          "last_seen": "2016-09-22",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -153,6 +468,21 @@
       "description": "FCC advertiser: Unwanted Calls; FCC caller ID: Unwanted Calls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2020-07-14",
+          "last_seen": "2020-09-07",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -164,6 +494,21 @@
       "description": "FCC: Telemarketing (inclu",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2015-11-06",
+          "last_seen": "2015-11-06",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -175,6 +520,21 @@
       "description": "FCC caller ID: Telemarketing (including do not call and spoofing); FCC advertiser: Telemarketing (including do not call and spoofing)",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2016-01-13",
+          "last_seen": "2016-02-10",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -186,6 +546,21 @@
       "description": "FCC: Unwanted Calls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2017-04-04",
+          "last_seen": "2017-04-04",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -197,6 +572,21 @@
       "description": "Community reported",
       "sources": [
         "community"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2026-09-15",
+          "last_seen": "2026-09-15",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -208,6 +598,21 @@
       "description": "FCC advertiser: Robocalls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2014-12-10",
+          "last_seen": "2014-12-18",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -216,9 +621,54 @@
       "reports": 2,
       "first_seen": "2022-08-19",
       "last_seen": "2022-09-23",
-      "description": "FCC caller ID: Unwanted Calls; FCC advertiser: Unwanted Calls",
+      "description": "FCC caller ID: Unwanted Calls; FCC advertiser: Unwanted Calls; FCC callback_business: Unwanted Calls (Live Voice); FCC caller_id: Unwanted Calls (Live Voice)",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "fcc_complaints",
+          "evidence_type": "unverified_complaint",
+          "license": "US government public data",
+          "attribution": "US Federal Communications Commission unwanted calls dataset",
+          "first_seen": "2022-08-19",
+          "last_seen": "2022-09-23",
+          "retrieved_at": "2026-09-25T17:03:23+00:00",
+          "geography": "US",
+          "confidence_tier": "unverified",
+          "parser_version": "fcc-v3",
+          "expires_at_epoch_ms": 1791565403000,
+          "complaint_role": "callback_business",
+          "spoof_signal": "callback_number_only"
+        },
+        {
+          "source_id": "fcc_complaints",
+          "evidence_type": "unverified_complaint",
+          "license": "US government public data",
+          "attribution": "US Federal Communications Commission unwanted calls dataset",
+          "first_seen": "2022-08-19",
+          "last_seen": "2022-08-19",
+          "retrieved_at": "2026-09-25T17:03:23+00:00",
+          "geography": "US",
+          "confidence_tier": "unverified",
+          "parser_version": "fcc-v3",
+          "expires_at_epoch_ms": 1791565403000,
+          "complaint_role": "caller_id",
+          "spoof_signal": "unverified_caller_id"
+        },
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2022-08-19",
+          "last_seen": "2022-09-23",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -230,6 +680,21 @@
       "description": "FCC caller ID: Robocalls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2016-09-02",
+          "last_seen": "2016-09-02",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -241,6 +706,21 @@
       "description": "FCC: Telemarketing (inclu",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2014-11-16",
+          "last_seen": "2015-01-07",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -252,6 +732,21 @@
       "description": "FCC: Robocalls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2016-05-18",
+          "last_seen": "2016-06-01",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -259,10 +754,55 @@
       "type": "robocall",
       "reports": 3,
       "first_seen": "2023-07-23",
-      "last_seen": "2025-07-21",
-      "description": "FCC: Unwanted Calls",
+      "last_seen": "2026-09-03",
+      "description": "FCC: Unwanted Calls; FCC caller_id: Unwanted Calls (Live Voice); FCC callback_business: Unwanted Calls (Live Voice)",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "fcc_complaints",
+          "evidence_type": "unverified_complaint",
+          "license": "US government public data",
+          "attribution": "US Federal Communications Commission unwanted calls dataset",
+          "first_seen": "2026-09-03",
+          "last_seen": "2026-09-03",
+          "retrieved_at": "2026-09-25T17:03:23+00:00",
+          "geography": "US",
+          "confidence_tier": "unverified",
+          "parser_version": "fcc-v3",
+          "expires_at_epoch_ms": 1791565403000,
+          "complaint_role": "callback_business",
+          "spoof_signal": "callback_number_only"
+        },
+        {
+          "source_id": "fcc_complaints",
+          "evidence_type": "unverified_complaint",
+          "license": "US government public data",
+          "attribution": "US Federal Communications Commission unwanted calls dataset",
+          "first_seen": "2023-07-23",
+          "last_seen": "2026-09-03",
+          "retrieved_at": "2026-09-25T17:03:23+00:00",
+          "geography": "US",
+          "confidence_tier": "unverified",
+          "parser_version": "fcc-v3",
+          "expires_at_epoch_ms": 1791565403000,
+          "complaint_role": "caller_id",
+          "spoof_signal": "unverified_caller_id"
+        },
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2023-07-23",
+          "last_seen": "2025-07-21",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -274,6 +814,21 @@
       "description": "FCC: Robocalls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2015-03-13",
+          "last_seen": "2015-03-13",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -285,6 +840,21 @@
       "description": "FCC: Telemarketing (inclu",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2016-05-12",
+          "last_seen": "2016-06-02",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -296,6 +866,21 @@
       "description": "FCC: Robocalls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2016-01-01",
+          "last_seen": "2016-06-16",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -304,9 +889,39 @@
       "reports": 4,
       "first_seen": "2024-02-16",
       "last_seen": "2024-02-17",
-      "description": "FCC: Unwanted Calls",
+      "description": "FCC: Unwanted Calls; FCC caller_id: Unwanted Calls (Text Message)",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "fcc_complaints",
+          "evidence_type": "unverified_complaint",
+          "license": "US government public data",
+          "attribution": "US Federal Communications Commission unwanted calls dataset",
+          "first_seen": "2024-02-16",
+          "last_seen": "2024-02-17",
+          "retrieved_at": "2026-09-25T17:03:23+00:00",
+          "geography": "US",
+          "confidence_tier": "unverified",
+          "parser_version": "fcc-v3",
+          "expires_at_epoch_ms": 1791565403000,
+          "complaint_role": "caller_id",
+          "spoof_signal": "unverified_caller_id"
+        },
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2024-02-16",
+          "last_seen": "2024-02-17",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -318,6 +933,21 @@
       "description": "FCC caller ID: Unwanted Calls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2020-10-01",
+          "last_seen": "2020-10-01",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -329,6 +959,21 @@
       "description": "FCC: Unwanted Calls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2020-12-17",
+          "last_seen": "2021-05-11",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -340,6 +985,21 @@
       "description": "FCC caller ID: Robocalls; FCC caller ID: Telemarketing (including do not call and spoofing)",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2016-05-17",
+          "last_seen": "2016-05-17",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -351,6 +1011,21 @@
       "description": "FCC advertiser: Robocalls; FCC caller ID: Telemarketing (including do not call and spoofing)",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2016-07-11",
+          "last_seen": "2016-07-11",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -362,6 +1037,21 @@
       "description": "FCC advertiser: Unwanted Calls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2020-10-05",
+          "last_seen": "2020-10-05",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -373,6 +1063,21 @@
       "description": "FCC: Unwanted Calls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2019-10-15",
+          "last_seen": "2019-10-18",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -384,6 +1089,21 @@
       "description": "FCC caller ID: Unwanted Calls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2020-11-18",
+          "last_seen": "2020-11-18",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -395,6 +1115,21 @@
       "description": "FCC caller ID: Robocalls; FCC caller ID: Telemarketing (including do not call and spoofing)",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2016-03-08",
+          "last_seen": "2016-03-08",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -406,6 +1141,21 @@
       "description": "FCC: Unwanted Calls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2018-02-13",
+          "last_seen": "2018-10-11",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -417,6 +1167,21 @@
       "description": "FCC: Unwanted Calls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2016-09-22",
+          "last_seen": "2016-12-05",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -428,6 +1193,21 @@
       "description": "FCC: Telemarketing (inclu",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2015-06-26",
+          "last_seen": "2015-09-19",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -436,9 +1216,39 @@
       "reports": 4,
       "first_seen": "2024-04-12",
       "last_seen": "2024-04-13",
-      "description": "FCC: Unwanted Calls",
+      "description": "FCC: Unwanted Calls; FCC caller_id: Unwanted Calls (Live Voice)",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "fcc_complaints",
+          "evidence_type": "unverified_complaint",
+          "license": "US government public data",
+          "attribution": "US Federal Communications Commission unwanted calls dataset",
+          "first_seen": "2024-04-12",
+          "last_seen": "2024-04-13",
+          "retrieved_at": "2026-09-25T17:03:23+00:00",
+          "geography": "US",
+          "confidence_tier": "unverified",
+          "parser_version": "fcc-v3",
+          "expires_at_epoch_ms": 1791565403000,
+          "complaint_role": "caller_id",
+          "spoof_signal": "unverified_caller_id"
+        },
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2024-04-12",
+          "last_seen": "2024-04-13",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -450,6 +1260,21 @@
       "description": "FCC: Robocalls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2015-10-19",
+          "last_seen": "2015-10-23",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -461,6 +1286,21 @@
       "description": "FCC: Robocalls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2015-08-11",
+          "last_seen": "2015-09-29",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -472,6 +1312,21 @@
       "description": "FCC advertiser: Unwanted Calls; FCC caller ID: Unwanted Calls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2020-06-16",
+          "last_seen": "2020-06-16",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -480,9 +1335,39 @@
       "reports": 3,
       "first_seen": "2024-06-29",
       "last_seen": "2024-10-06",
-      "description": "FCC: Unwanted Calls",
+      "description": "FCC: Unwanted Calls; FCC caller_id: Unwanted Calls (Text Message)",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "fcc_complaints",
+          "evidence_type": "unverified_complaint",
+          "license": "US government public data",
+          "attribution": "US Federal Communications Commission unwanted calls dataset",
+          "first_seen": "2024-06-29",
+          "last_seen": "2024-10-06",
+          "retrieved_at": "2026-09-25T17:03:23+00:00",
+          "geography": "US",
+          "confidence_tier": "unverified",
+          "parser_version": "fcc-v3",
+          "expires_at_epoch_ms": 1791565403000,
+          "complaint_role": "caller_id",
+          "spoof_signal": "unverified_caller_id"
+        },
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2024-06-29",
+          "last_seen": "2024-10-06",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -494,6 +1379,21 @@
       "description": "FCC caller ID: Telemarketing (including do not call and spoofing)",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2015-11-02",
+          "last_seen": "2015-11-20",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -505,6 +1405,21 @@
       "description": "FCC: Telemarketing (inclu",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2015-12-01",
+          "last_seen": "2015-12-05",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -516,6 +1431,21 @@
       "description": "FCC: Unwanted Calls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2019-12-12",
+          "last_seen": "2019-12-17",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -527,6 +1457,21 @@
       "description": "FCC caller ID: Robocalls; FCC advertiser: Telemarketing (including do not call and spoofing)",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2015-06-25",
+          "last_seen": "2015-07-30",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -538,6 +1483,21 @@
       "description": "FCC: Telemarketing (inclu",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2016-09-19",
+          "last_seen": "2016-09-19",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -549,6 +1509,21 @@
       "description": "FCC caller ID: Robocalls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2016-09-14",
+          "last_seen": "2016-09-14",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -560,6 +1535,21 @@
       "description": "FCC: Robocalls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2016-08-25",
+          "last_seen": "2016-08-25",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -568,9 +1558,39 @@
       "reports": 2,
       "first_seen": "2022-07-11",
       "last_seen": "2022-07-26",
-      "description": "FCC caller ID: Unwanted Calls",
+      "description": "FCC caller ID: Unwanted Calls; FCC caller_id: Unwanted Calls (Prerecorded Voice)",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "fcc_complaints",
+          "evidence_type": "unverified_complaint",
+          "license": "US government public data",
+          "attribution": "US Federal Communications Commission unwanted calls dataset",
+          "first_seen": "2022-07-26",
+          "last_seen": "2022-07-26",
+          "retrieved_at": "2026-09-25T17:03:23+00:00",
+          "geography": "US",
+          "confidence_tier": "unverified",
+          "parser_version": "fcc-v3",
+          "expires_at_epoch_ms": 1791565403000,
+          "complaint_role": "caller_id",
+          "spoof_signal": "unverified_caller_id"
+        },
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2022-07-11",
+          "last_seen": "2022-07-26",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -582,6 +1602,21 @@
       "description": "FCC: Telemarketing (inclu",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2015-01-22",
+          "last_seen": "2015-02-20",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -593,6 +1628,21 @@
       "description": "FCC: Unwanted Calls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2018-07-02",
+          "last_seen": "2018-07-02",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -601,9 +1651,54 @@
       "reports": 4,
       "first_seen": "2023-04-14",
       "last_seen": "2023-04-14",
-      "description": "FCC: Unwanted Calls",
+      "description": "FCC: Unwanted Calls; FCC caller_id: Unwanted Calls (Prerecorded Voice); FCC callback_business: Unwanted Calls (Prerecorded Voice)",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "fcc_complaints",
+          "evidence_type": "unverified_complaint",
+          "license": "US government public data",
+          "attribution": "US Federal Communications Commission unwanted calls dataset",
+          "first_seen": "2023-04-14",
+          "last_seen": "2023-04-14",
+          "retrieved_at": "2026-09-25T17:03:23+00:00",
+          "geography": "US",
+          "confidence_tier": "unverified",
+          "parser_version": "fcc-v3",
+          "expires_at_epoch_ms": 1791565403000,
+          "complaint_role": "callback_business",
+          "spoof_signal": "callback_number_only"
+        },
+        {
+          "source_id": "fcc_complaints",
+          "evidence_type": "unverified_complaint",
+          "license": "US government public data",
+          "attribution": "US Federal Communications Commission unwanted calls dataset",
+          "first_seen": "2023-04-14",
+          "last_seen": "2023-04-14",
+          "retrieved_at": "2026-09-25T17:03:23+00:00",
+          "geography": "US",
+          "confidence_tier": "unverified",
+          "parser_version": "fcc-v3",
+          "expires_at_epoch_ms": 1791565403000,
+          "complaint_role": "caller_id",
+          "spoof_signal": "unverified_caller_id"
+        },
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2023-04-14",
+          "last_seen": "2023-04-14",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -615,17 +1710,62 @@
       "description": "FCC advertiser: Robocalls; FCC advertiser: Telemarketing (including do not call and spoofing)",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2016-03-11",
+          "last_seen": "2016-05-10",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
       "number": "+13474063519",
       "type": "robocall",
       "reports": 2,
-      "first_seen": "2022-07-19",
+      "first_seen": "2022-07-16",
       "last_seen": "2022-07-19",
-      "description": "FCC advertiser: Unwanted Calls",
+      "description": "FCC advertiser: Unwanted Calls; FCC callback_business: Unwanted Calls (Prerecorded Voice)",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "fcc_complaints",
+          "evidence_type": "unverified_complaint",
+          "license": "US government public data",
+          "attribution": "US Federal Communications Commission unwanted calls dataset",
+          "first_seen": "2022-07-16",
+          "last_seen": "2022-07-19",
+          "retrieved_at": "2026-09-25T17:03:23+00:00",
+          "geography": "US",
+          "confidence_tier": "unverified",
+          "parser_version": "fcc-v3",
+          "expires_at_epoch_ms": 1791565403000,
+          "complaint_role": "callback_business",
+          "spoof_signal": "callback_number_only"
+        },
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2022-07-19",
+          "last_seen": "2022-07-19",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -637,6 +1777,21 @@
       "description": "FCC advertiser: Unwanted Calls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2021-05-27",
+          "last_seen": "2021-05-27",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -648,6 +1803,21 @@
       "description": "FCC: Unwanted Calls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2017-11-13",
+          "last_seen": "2018-01-04",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -659,6 +1829,21 @@
       "description": "FCC: Telemarketing (inclu",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2015-10-08",
+          "last_seen": "2016-08-04",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -670,6 +1855,21 @@
       "description": "FCC caller ID: Robocalls; FCC advertiser: Robocalls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2016-09-09",
+          "last_seen": "2016-09-09",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -678,9 +1878,54 @@
       "reports": 14,
       "first_seen": "2023-03-01",
       "last_seen": "2023-12-01",
-      "description": "FCC: Unwanted Calls",
+      "description": "FCC: Unwanted Calls; FCC caller_id: Unwanted Calls (Live Voice); FCC caller_id: Unwanted Calls (Prerecorded Voice); FCC callback_business: Unwanted Calls (Live Voice)",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "fcc_complaints",
+          "evidence_type": "unverified_complaint",
+          "license": "US government public data",
+          "attribution": "US Federal Communications Commission unwanted calls dataset",
+          "first_seen": "2023-11-30",
+          "last_seen": "2023-11-30",
+          "retrieved_at": "2026-09-25T17:03:23+00:00",
+          "geography": "US",
+          "confidence_tier": "unverified",
+          "parser_version": "fcc-v3",
+          "expires_at_epoch_ms": 1791565403000,
+          "complaint_role": "callback_business",
+          "spoof_signal": "callback_number_only"
+        },
+        {
+          "source_id": "fcc_complaints",
+          "evidence_type": "unverified_complaint",
+          "license": "US government public data",
+          "attribution": "US Federal Communications Commission unwanted calls dataset",
+          "first_seen": "2023-03-01",
+          "last_seen": "2023-12-01",
+          "retrieved_at": "2026-09-25T17:03:23+00:00",
+          "geography": "US",
+          "confidence_tier": "unverified",
+          "parser_version": "fcc-v3",
+          "expires_at_epoch_ms": 1791565403000,
+          "complaint_role": "caller_id",
+          "spoof_signal": "unverified_caller_id"
+        },
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2023-03-01",
+          "last_seen": "2023-12-01",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -692,6 +1937,21 @@
       "description": "FCC: Robocalls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2015-07-28",
+          "last_seen": "2015-07-30",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -703,6 +1963,21 @@
       "description": "FCC advertiser: Robocalls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2016-06-17",
+          "last_seen": "2016-06-17",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -714,6 +1989,21 @@
       "description": "FCC: Robocalls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2015-11-18",
+          "last_seen": "2015-11-19",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -725,6 +2015,21 @@
       "description": "FCC: Telemarketing (inclu",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2016-07-15",
+          "last_seen": "2016-07-15",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -736,6 +2041,21 @@
       "description": "FCC advertiser: Unwanted Calls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2021-05-26",
+          "last_seen": "2021-06-01",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -747,6 +2067,21 @@
       "description": "FCC caller ID: Robocalls; FCC advertiser: Telemarketing (including do not call and spoofing)",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2016-10-18",
+          "last_seen": "2016-10-18",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -758,6 +2093,21 @@
       "description": "FCC: Telemarketing (inclu",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2014-11-18",
+          "last_seen": "2015-10-20",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -766,9 +2116,54 @@
       "reports": 6,
       "first_seen": "2023-04-30",
       "last_seen": "2023-05-14",
-      "description": "FCC: Unwanted Calls",
+      "description": "FCC: Unwanted Calls; FCC caller_id: Unwanted Calls (Prerecorded Voice); FCC callback_business: Unwanted Calls (Prerecorded Voice)",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "fcc_complaints",
+          "evidence_type": "unverified_complaint",
+          "license": "US government public data",
+          "attribution": "US Federal Communications Commission unwanted calls dataset",
+          "first_seen": "2023-04-30",
+          "last_seen": "2023-05-14",
+          "retrieved_at": "2026-09-25T17:03:23+00:00",
+          "geography": "US",
+          "confidence_tier": "unverified",
+          "parser_version": "fcc-v3",
+          "expires_at_epoch_ms": 1791565403000,
+          "complaint_role": "callback_business",
+          "spoof_signal": "callback_number_only"
+        },
+        {
+          "source_id": "fcc_complaints",
+          "evidence_type": "unverified_complaint",
+          "license": "US government public data",
+          "attribution": "US Federal Communications Commission unwanted calls dataset",
+          "first_seen": "2023-04-30",
+          "last_seen": "2023-05-14",
+          "retrieved_at": "2026-09-25T17:03:23+00:00",
+          "geography": "US",
+          "confidence_tier": "unverified",
+          "parser_version": "fcc-v3",
+          "expires_at_epoch_ms": 1791565403000,
+          "complaint_role": "caller_id",
+          "spoof_signal": "unverified_caller_id"
+        },
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2023-04-30",
+          "last_seen": "2023-05-14",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -780,6 +2175,21 @@
       "description": "FCC caller ID: Unwanted Calls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2020-10-16",
+          "last_seen": "2020-10-16",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -791,6 +2201,21 @@
       "description": "FCC: Telemarketing (inclu",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2016-08-11",
+          "last_seen": "2016-10-26",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -802,6 +2227,21 @@
       "description": "FCC caller ID: Unwanted Calls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2022-05-25",
+          "last_seen": "2022-05-25",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -813,6 +2253,21 @@
       "description": "FCC: Telemarketing (inclu",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2014-12-17",
+          "last_seen": "2014-12-19",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -824,6 +2279,21 @@
       "description": "FCC caller ID: Robocalls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2016-08-05",
+          "last_seen": "2016-08-05",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -835,6 +2305,21 @@
       "description": "FCC caller ID: Telemarketing (including do not call and spoofing)",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2016-07-15",
+          "last_seen": "2016-07-15",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -846,6 +2331,21 @@
       "description": "FCC: Unwanted Calls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2018-08-01",
+          "last_seen": "2018-10-18",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -857,6 +2357,21 @@
       "description": "FCC: Unwanted Calls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2018-08-15",
+          "last_seen": "2018-08-16",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -868,6 +2383,21 @@
       "description": "FCC: Telemarketing (inclu",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2015-04-15",
+          "last_seen": "2015-08-26",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -879,6 +2409,21 @@
       "description": "FCC: Unwanted Calls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2022-04-26",
+          "last_seen": "2022-05-05",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -890,6 +2435,21 @@
       "description": "FCC: Telemarketing (inclu",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2016-01-21",
+          "last_seen": "2016-05-20",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -901,6 +2461,21 @@
       "description": "FCC caller ID: Robocalls; FCC caller ID: Telemarketing (including do not call and spoofing)",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2016-08-15",
+          "last_seen": "2016-08-15",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -912,6 +2487,21 @@
       "description": "FCC: Unwanted Calls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2018-08-13",
+          "last_seen": "2018-08-15",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -923,6 +2513,21 @@
       "description": "FCC: Robocalls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2014-11-10",
+          "last_seen": "2018-02-19",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -934,6 +2539,21 @@
       "description": "FCC caller ID: Unwanted Calls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2021-01-10",
+          "last_seen": "2021-01-10",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -945,6 +2565,21 @@
       "description": "FCC caller ID: Unwanted Calls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2021-08-09",
+          "last_seen": "2021-08-10",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -956,6 +2591,21 @@
       "description": "FCC: Robocalls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2016-09-12",
+          "last_seen": "2016-09-12",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -967,6 +2617,21 @@
       "description": "FCC: Telemarketing (inclu",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2015-02-01",
+          "last_seen": "2016-01-27",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -978,6 +2643,21 @@
       "description": "FCC caller ID: Robocalls; FCC caller ID: Telemarketing (including do not call and spoofing)",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2016-05-15",
+          "last_seen": "2016-05-15",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -989,6 +2669,21 @@
       "description": "FCC: Unwanted Calls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2019-09-19",
+          "last_seen": "2019-11-20",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1000,6 +2695,21 @@
       "description": "FCC: Unwanted Calls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2017-05-04",
+          "last_seen": "2017-05-08",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1008,9 +2718,54 @@
       "reports": 4,
       "first_seen": "2024-03-08",
       "last_seen": "2024-03-20",
-      "description": "FCC: Unwanted Calls",
+      "description": "FCC: Unwanted Calls; FCC caller_id: Unwanted Calls (Text Message); FCC callback_business: Unwanted Calls (Text Message)",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "fcc_complaints",
+          "evidence_type": "unverified_complaint",
+          "license": "US government public data",
+          "attribution": "US Federal Communications Commission unwanted calls dataset",
+          "first_seen": "2024-03-20",
+          "last_seen": "2024-03-20",
+          "retrieved_at": "2026-09-25T17:03:23+00:00",
+          "geography": "US",
+          "confidence_tier": "unverified",
+          "parser_version": "fcc-v3",
+          "expires_at_epoch_ms": 1791565403000,
+          "complaint_role": "callback_business",
+          "spoof_signal": "callback_number_only"
+        },
+        {
+          "source_id": "fcc_complaints",
+          "evidence_type": "unverified_complaint",
+          "license": "US government public data",
+          "attribution": "US Federal Communications Commission unwanted calls dataset",
+          "first_seen": "2024-03-08",
+          "last_seen": "2024-03-20",
+          "retrieved_at": "2026-09-25T17:03:23+00:00",
+          "geography": "US",
+          "confidence_tier": "unverified",
+          "parser_version": "fcc-v3",
+          "expires_at_epoch_ms": 1791565403000,
+          "complaint_role": "caller_id",
+          "spoof_signal": "unverified_caller_id"
+        },
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2024-03-08",
+          "last_seen": "2024-03-20",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1022,6 +2777,21 @@
       "description": "FCC caller ID: Robocalls; FCC caller ID: Telemarketing (including do not call and spoofing)",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2015-08-10",
+          "last_seen": "2015-08-10",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1033,6 +2803,21 @@
       "description": "FCC: Robocalls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2016-01-28",
+          "last_seen": "2016-01-30",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1044,6 +2829,21 @@
       "description": "FCC: Telemarketing (inclu",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2016-02-19",
+          "last_seen": "2016-03-05",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1052,9 +2852,54 @@
       "reports": 4,
       "first_seen": "2022-12-20",
       "last_seen": "2022-12-20",
-      "description": "FCC: Unwanted Calls",
+      "description": "FCC: Unwanted Calls; FCC caller_id: Unwanted Calls (Live Voice); FCC callback_business: Unwanted Calls (Live Voice)",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "fcc_complaints",
+          "evidence_type": "unverified_complaint",
+          "license": "US government public data",
+          "attribution": "US Federal Communications Commission unwanted calls dataset",
+          "first_seen": "2022-12-20",
+          "last_seen": "2022-12-20",
+          "retrieved_at": "2026-09-25T17:03:23+00:00",
+          "geography": "US",
+          "confidence_tier": "unverified",
+          "parser_version": "fcc-v3",
+          "expires_at_epoch_ms": 1791565403000,
+          "complaint_role": "callback_business",
+          "spoof_signal": "callback_number_only"
+        },
+        {
+          "source_id": "fcc_complaints",
+          "evidence_type": "unverified_complaint",
+          "license": "US government public data",
+          "attribution": "US Federal Communications Commission unwanted calls dataset",
+          "first_seen": "2022-12-20",
+          "last_seen": "2022-12-20",
+          "retrieved_at": "2026-09-25T17:03:23+00:00",
+          "geography": "US",
+          "confidence_tier": "unverified",
+          "parser_version": "fcc-v3",
+          "expires_at_epoch_ms": 1791565403000,
+          "complaint_role": "caller_id",
+          "spoof_signal": "unverified_caller_id"
+        },
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2022-12-20",
+          "last_seen": "2022-12-20",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1066,6 +2911,21 @@
       "description": "FCC advertiser: Robocalls; FCC advertiser: Telemarketing (including do not call and spoofing); FCC caller ID: Telemarketing (including do not call and spoofing)",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2015-11-02",
+          "last_seen": "2015-11-02",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1077,6 +2937,21 @@
       "description": "FCC: Unwanted Calls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2018-07-23",
+          "last_seen": "2018-07-27",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1088,6 +2963,21 @@
       "description": "FCC: Unwanted Calls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2018-08-22",
+          "last_seen": "2018-08-27",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1099,17 +2989,77 @@
       "description": "FCC: Unwanted Calls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2019-04-17",
+          "last_seen": "2019-05-08",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
       "number": "+15614623838",
       "type": "robocall",
       "reports": 6,
-      "first_seen": "2024-04-02",
-      "last_seen": "2024-07-15",
-      "description": "FCC: Unwanted Calls",
+      "first_seen": "2024-03-04",
+      "last_seen": "2024-09-11",
+      "description": "FCC: Unwanted Calls; FCC callback_business: Unwanted Calls (Text Message); FCC caller_id: Unwanted Calls (Text Message)",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "fcc_complaints",
+          "evidence_type": "unverified_complaint",
+          "license": "US government public data",
+          "attribution": "US Federal Communications Commission unwanted calls dataset",
+          "first_seen": "2024-03-04",
+          "last_seen": "2024-09-11",
+          "retrieved_at": "2026-09-25T17:03:23+00:00",
+          "geography": "US",
+          "confidence_tier": "unverified",
+          "parser_version": "fcc-v3",
+          "expires_at_epoch_ms": 1791565403000,
+          "complaint_role": "callback_business",
+          "spoof_signal": "callback_number_only"
+        },
+        {
+          "source_id": "fcc_complaints",
+          "evidence_type": "unverified_complaint",
+          "license": "US government public data",
+          "attribution": "US Federal Communications Commission unwanted calls dataset",
+          "first_seen": "2024-04-02",
+          "last_seen": "2024-07-15",
+          "retrieved_at": "2026-09-25T17:03:23+00:00",
+          "geography": "US",
+          "confidence_tier": "unverified",
+          "parser_version": "fcc-v3",
+          "expires_at_epoch_ms": 1791565403000,
+          "complaint_role": "caller_id",
+          "spoof_signal": "unverified_caller_id"
+        },
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2024-04-02",
+          "last_seen": "2024-07-15",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1121,6 +3071,21 @@
       "description": "FCC: Unwanted Calls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2016-10-26",
+          "last_seen": "2016-12-12",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1132,6 +3097,21 @@
       "description": "FCC caller ID: Robocalls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2016-04-08",
+          "last_seen": "2016-04-09",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1143,6 +3123,21 @@
       "description": "FCC advertiser: Unwanted Calls; FCC caller ID: Unwanted Calls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2020-11-05",
+          "last_seen": "2020-11-05",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1151,9 +3146,39 @@
       "reports": 4,
       "first_seen": "2023-06-13",
       "last_seen": "2023-08-15",
-      "description": "FCC: Unwanted Calls",
+      "description": "FCC: Unwanted Calls; FCC caller_id: Unwanted Calls (Prerecorded Voice); FCC caller_id: Unwanted Calls (Live Voice)",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "fcc_complaints",
+          "evidence_type": "unverified_complaint",
+          "license": "US government public data",
+          "attribution": "US Federal Communications Commission unwanted calls dataset",
+          "first_seen": "2023-06-13",
+          "last_seen": "2023-08-15",
+          "retrieved_at": "2026-09-25T17:03:23+00:00",
+          "geography": "US",
+          "confidence_tier": "unverified",
+          "parser_version": "fcc-v3",
+          "expires_at_epoch_ms": 1791565403000,
+          "complaint_role": "caller_id",
+          "spoof_signal": "unverified_caller_id"
+        },
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2023-06-13",
+          "last_seen": "2023-08-15",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1165,6 +3190,21 @@
       "description": "FCC caller ID: Robocalls; FCC caller ID: Telemarketing (including do not call and spoofing)",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2016-03-24",
+          "last_seen": "2016-03-24",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1176,6 +3216,21 @@
       "description": "FCC: Robocalls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2015-03-11",
+          "last_seen": "2015-03-23",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1187,6 +3242,21 @@
       "description": "FCC: Unwanted Calls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2020-05-11",
+          "last_seen": "2020-06-15",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1198,6 +3268,21 @@
       "description": "FCC: Unwanted Calls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2019-03-27",
+          "last_seen": "2019-04-30",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1209,6 +3294,21 @@
       "description": "FCC: Telemarketing (inclu",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2016-02-06",
+          "last_seen": "2016-02-08",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1220,6 +3320,21 @@
       "description": "FCC: Robocalls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2015-01-20",
+          "last_seen": "2015-01-28",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1231,6 +3346,21 @@
       "description": "FCC: Unwanted Calls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2019-09-03",
+          "last_seen": "2019-10-04",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1242,6 +3372,21 @@
       "description": "FCC caller ID: Robocalls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2016-09-14",
+          "last_seen": "2016-09-29",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1253,6 +3398,21 @@
       "description": "FCC: Unwanted Calls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2018-06-22",
+          "last_seen": "2018-09-28",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1264,6 +3424,21 @@
       "description": "FCC caller ID: Unwanted Calls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2019-10-07",
+          "last_seen": "2020-07-20",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1275,6 +3450,21 @@
       "description": "FCC: Telemarketing (inclu",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2015-09-23",
+          "last_seen": "2015-09-23",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1286,6 +3476,21 @@
       "description": "FCC: Unwanted Calls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2019-02-11",
+          "last_seen": "2019-08-12",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1297,6 +3502,21 @@
       "description": "FCC: Telemarketing (inclu",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2016-03-24",
+          "last_seen": "2016-04-25",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1305,9 +3525,54 @@
       "reports": 3,
       "first_seen": "2024-09-04",
       "last_seen": "2024-09-04",
-      "description": "FCC: Unwanted Calls",
+      "description": "FCC: Unwanted Calls; FCC caller_id: Unwanted Calls (Live Voice); FCC caller_id: Unwanted Calls (Text Message); FCC callback_business: Unwanted Calls (Live Voice); FCC callback_business: Unwanted Calls (Text Message)",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "fcc_complaints",
+          "evidence_type": "unverified_complaint",
+          "license": "US government public data",
+          "attribution": "US Federal Communications Commission unwanted calls dataset",
+          "first_seen": "2024-09-04",
+          "last_seen": "2024-09-04",
+          "retrieved_at": "2026-09-25T17:03:23+00:00",
+          "geography": "US",
+          "confidence_tier": "unverified",
+          "parser_version": "fcc-v3",
+          "expires_at_epoch_ms": 1791565403000,
+          "complaint_role": "callback_business",
+          "spoof_signal": "callback_number_only"
+        },
+        {
+          "source_id": "fcc_complaints",
+          "evidence_type": "unverified_complaint",
+          "license": "US government public data",
+          "attribution": "US Federal Communications Commission unwanted calls dataset",
+          "first_seen": "2024-09-04",
+          "last_seen": "2024-09-04",
+          "retrieved_at": "2026-09-25T17:03:23+00:00",
+          "geography": "US",
+          "confidence_tier": "unverified",
+          "parser_version": "fcc-v3",
+          "expires_at_epoch_ms": 1791565403000,
+          "complaint_role": "caller_id",
+          "spoof_signal": "unverified_caller_id"
+        },
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2024-09-04",
+          "last_seen": "2024-09-04",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1319,6 +3584,21 @@
       "description": "FCC advertiser: Unwanted Calls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2020-07-13",
+          "last_seen": "2020-07-13",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1327,9 +3607,39 @@
       "reports": 4,
       "first_seen": "2024-05-01",
       "last_seen": "2024-05-01",
-      "description": "FCC: Unwanted Calls",
+      "description": "FCC: Unwanted Calls; FCC caller_id: Unwanted Calls (Prerecorded Voice)",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "fcc_complaints",
+          "evidence_type": "unverified_complaint",
+          "license": "US government public data",
+          "attribution": "US Federal Communications Commission unwanted calls dataset",
+          "first_seen": "2024-05-01",
+          "last_seen": "2024-05-01",
+          "retrieved_at": "2026-09-25T17:03:23+00:00",
+          "geography": "US",
+          "confidence_tier": "unverified",
+          "parser_version": "fcc-v3",
+          "expires_at_epoch_ms": 1791565403000,
+          "complaint_role": "caller_id",
+          "spoof_signal": "unverified_caller_id"
+        },
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2024-05-01",
+          "last_seen": "2024-05-01",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1341,6 +3651,21 @@
       "description": "FCC caller ID: Robocalls; FCC advertiser: Robocalls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2016-08-16",
+          "last_seen": "2016-08-18",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1352,6 +3677,21 @@
       "description": "FCC: Robocalls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2016-07-05",
+          "last_seen": "2016-07-07",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1363,6 +3703,21 @@
       "description": "FCC caller ID: Unwanted Calls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2020-08-24",
+          "last_seen": "2020-08-29",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1374,6 +3729,21 @@
       "description": "FCC: Telemarketing (inclu",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2016-03-29",
+          "last_seen": "2016-04-06",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1382,9 +3752,54 @@
       "reports": 4,
       "first_seen": "2022-10-07",
       "last_seen": "2022-10-07",
-      "description": "FCC: Unwanted Calls",
+      "description": "FCC: Unwanted Calls; FCC caller_id: Unwanted Calls (Live Voice); FCC callback_business: Unwanted Calls (Live Voice)",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "fcc_complaints",
+          "evidence_type": "unverified_complaint",
+          "license": "US government public data",
+          "attribution": "US Federal Communications Commission unwanted calls dataset",
+          "first_seen": "2022-10-07",
+          "last_seen": "2022-10-07",
+          "retrieved_at": "2026-09-25T17:03:23+00:00",
+          "geography": "US",
+          "confidence_tier": "unverified",
+          "parser_version": "fcc-v3",
+          "expires_at_epoch_ms": 1791565403000,
+          "complaint_role": "callback_business",
+          "spoof_signal": "callback_number_only"
+        },
+        {
+          "source_id": "fcc_complaints",
+          "evidence_type": "unverified_complaint",
+          "license": "US government public data",
+          "attribution": "US Federal Communications Commission unwanted calls dataset",
+          "first_seen": "2022-10-07",
+          "last_seen": "2022-10-07",
+          "retrieved_at": "2026-09-25T17:03:23+00:00",
+          "geography": "US",
+          "confidence_tier": "unverified",
+          "parser_version": "fcc-v3",
+          "expires_at_epoch_ms": 1791565403000,
+          "complaint_role": "caller_id",
+          "spoof_signal": "unverified_caller_id"
+        },
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2022-10-07",
+          "last_seen": "2022-10-07",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1396,6 +3811,21 @@
       "description": "FCC: Telemarketing (inclu",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2015-01-05",
+          "last_seen": "2015-05-08",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1404,9 +3834,54 @@
       "reports": 3,
       "first_seen": "2022-09-06",
       "last_seen": "2023-06-09",
-      "description": "FCC: Unwanted Calls",
+      "description": "FCC: Unwanted Calls; FCC caller_id: Unwanted Calls (Live Voice); FCC callback_business: Unwanted Calls (Live Voice)",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "fcc_complaints",
+          "evidence_type": "unverified_complaint",
+          "license": "US government public data",
+          "attribution": "US Federal Communications Commission unwanted calls dataset",
+          "first_seen": "2022-09-06",
+          "last_seen": "2023-06-09",
+          "retrieved_at": "2026-09-25T17:03:23+00:00",
+          "geography": "US",
+          "confidence_tier": "unverified",
+          "parser_version": "fcc-v3",
+          "expires_at_epoch_ms": 1791565403000,
+          "complaint_role": "callback_business",
+          "spoof_signal": "callback_number_only"
+        },
+        {
+          "source_id": "fcc_complaints",
+          "evidence_type": "unverified_complaint",
+          "license": "US government public data",
+          "attribution": "US Federal Communications Commission unwanted calls dataset",
+          "first_seen": "2022-09-06",
+          "last_seen": "2023-06-09",
+          "retrieved_at": "2026-09-25T17:03:23+00:00",
+          "geography": "US",
+          "confidence_tier": "unverified",
+          "parser_version": "fcc-v3",
+          "expires_at_epoch_ms": 1791565403000,
+          "complaint_role": "caller_id",
+          "spoof_signal": "unverified_caller_id"
+        },
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2022-09-06",
+          "last_seen": "2023-06-09",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1418,6 +3893,21 @@
       "description": "FCC caller ID: Unwanted Calls; FCC advertiser: Unwanted Calls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2021-05-09",
+          "last_seen": "2021-05-09",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1426,9 +3916,54 @@
       "reports": 2,
       "first_seen": "2022-07-23",
       "last_seen": "2022-07-23",
-      "description": "FCC caller ID: Unwanted Calls",
+      "description": "FCC caller ID: Unwanted Calls; FCC caller_id: Unwanted Calls (Live Voice); FCC callback_business: Unwanted Calls (Live Voice)",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "fcc_complaints",
+          "evidence_type": "unverified_complaint",
+          "license": "US government public data",
+          "attribution": "US Federal Communications Commission unwanted calls dataset",
+          "first_seen": "2022-07-23",
+          "last_seen": "2022-07-23",
+          "retrieved_at": "2026-09-25T17:03:23+00:00",
+          "geography": "US",
+          "confidence_tier": "unverified",
+          "parser_version": "fcc-v3",
+          "expires_at_epoch_ms": 1791565403000,
+          "complaint_role": "callback_business",
+          "spoof_signal": "callback_number_only"
+        },
+        {
+          "source_id": "fcc_complaints",
+          "evidence_type": "unverified_complaint",
+          "license": "US government public data",
+          "attribution": "US Federal Communications Commission unwanted calls dataset",
+          "first_seen": "2022-07-23",
+          "last_seen": "2022-07-23",
+          "retrieved_at": "2026-09-25T17:03:23+00:00",
+          "geography": "US",
+          "confidence_tier": "unverified",
+          "parser_version": "fcc-v3",
+          "expires_at_epoch_ms": 1791565403000,
+          "complaint_role": "caller_id",
+          "spoof_signal": "unverified_caller_id"
+        },
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2022-07-23",
+          "last_seen": "2022-07-23",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1440,6 +3975,21 @@
       "description": "FCC advertiser: Robocalls; FCC caller ID: Robocalls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2014-12-15",
+          "last_seen": "2014-12-16",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1447,10 +3997,40 @@
       "type": "robocall",
       "reports": 3,
       "first_seen": "2015-02-20",
-      "last_seen": "2016-02-10",
-      "description": "FCC: Telemarketing (inclu",
+      "last_seen": "2026-09-25",
+      "description": "FCC: Telemarketing (inclu; FCC callback_business: Telemarketing (including do not call and spoofing) (Prerecorded Voice)",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "fcc_complaints",
+          "evidence_type": "unverified_complaint",
+          "license": "US government public data",
+          "attribution": "US Federal Communications Commission unwanted calls dataset",
+          "first_seen": "2026-09-25",
+          "last_seen": "2026-09-25",
+          "retrieved_at": "2026-09-25T17:03:23+00:00",
+          "geography": "US",
+          "confidence_tier": "unverified",
+          "parser_version": "fcc-v3",
+          "expires_at_epoch_ms": 1791565403000,
+          "complaint_role": "callback_business",
+          "spoof_signal": "callback_number_only"
+        },
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2015-02-20",
+          "last_seen": "2016-02-10",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1462,6 +4042,21 @@
       "description": "FCC: Unwanted Calls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2018-07-24",
+          "last_seen": "2018-07-25",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1470,9 +4065,39 @@
       "reports": 3,
       "first_seen": "2024-03-27",
       "last_seen": "2025-01-29",
-      "description": "FCC: Unwanted Calls",
+      "description": "FCC: Unwanted Calls; FCC caller_id: Unwanted Calls (Live Voice)",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "fcc_complaints",
+          "evidence_type": "unverified_complaint",
+          "license": "US government public data",
+          "attribution": "US Federal Communications Commission unwanted calls dataset",
+          "first_seen": "2024-03-27",
+          "last_seen": "2025-01-29",
+          "retrieved_at": "2026-09-25T17:03:23+00:00",
+          "geography": "US",
+          "confidence_tier": "unverified",
+          "parser_version": "fcc-v3",
+          "expires_at_epoch_ms": 1791565403000,
+          "complaint_role": "caller_id",
+          "spoof_signal": "unverified_caller_id"
+        },
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2024-03-27",
+          "last_seen": "2025-01-29",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1484,6 +4109,21 @@
       "description": "FCC: Unwanted Calls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2020-01-03",
+          "last_seen": "2020-03-30",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1495,6 +4135,21 @@
       "description": "FCC caller ID: Robocalls; FCC advertiser: Robocalls; FCC caller ID: Telemarketing (including do not call and spoofing); FCC advertiser: Telemarketing (including do not call and spoofing)",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2015-11-19",
+          "last_seen": "2016-03-22",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1506,6 +4161,21 @@
       "description": "FCC: Robocalls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2015-12-14",
+          "last_seen": "2015-12-16",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1517,6 +4187,21 @@
       "description": "FCC: Telemarketing (inclu",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2015-03-16",
+          "last_seen": "2015-04-17",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1528,6 +4213,21 @@
       "description": "FCC: Telemarketing (inclu",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2015-12-22",
+          "last_seen": "2018-05-23",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1539,6 +4239,21 @@
       "description": "FCC caller ID: Unwanted Calls; FCC advertiser: Unwanted Calls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2020-02-12",
+          "last_seen": "2020-02-12",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1550,6 +4265,21 @@
       "description": "FCC: Telemarketing (inclu",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2015-06-27",
+          "last_seen": "2016-03-29",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1561,6 +4291,21 @@
       "description": "FCC: Unwanted Calls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2020-02-28",
+          "last_seen": "2020-04-10",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1572,6 +4317,21 @@
       "description": "FCC: Unwanted Calls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2019-04-24",
+          "last_seen": "2019-09-03",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1580,9 +4340,54 @@
       "reports": 5,
       "first_seen": "2015-07-08",
       "last_seen": "2023-10-05",
-      "description": "FCC: Unwanted Calls",
+      "description": "FCC: Unwanted Calls; FCC caller_id: Unwanted Calls (Live Voice); FCC callback_business: Unwanted Calls (Live Voice)",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "fcc_complaints",
+          "evidence_type": "unverified_complaint",
+          "license": "US government public data",
+          "attribution": "US Federal Communications Commission unwanted calls dataset",
+          "first_seen": "2023-10-05",
+          "last_seen": "2023-10-05",
+          "retrieved_at": "2026-09-25T17:03:23+00:00",
+          "geography": "US",
+          "confidence_tier": "unverified",
+          "parser_version": "fcc-v3",
+          "expires_at_epoch_ms": 1791565403000,
+          "complaint_role": "callback_business",
+          "spoof_signal": "callback_number_only"
+        },
+        {
+          "source_id": "fcc_complaints",
+          "evidence_type": "unverified_complaint",
+          "license": "US government public data",
+          "attribution": "US Federal Communications Commission unwanted calls dataset",
+          "first_seen": "2023-10-05",
+          "last_seen": "2023-10-05",
+          "retrieved_at": "2026-09-25T17:03:23+00:00",
+          "geography": "US",
+          "confidence_tier": "unverified",
+          "parser_version": "fcc-v3",
+          "expires_at_epoch_ms": 1791565403000,
+          "complaint_role": "caller_id",
+          "spoof_signal": "unverified_caller_id"
+        },
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2015-07-08",
+          "last_seen": "2023-10-05",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1594,6 +4399,21 @@
       "description": "FCC: Unwanted Calls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2017-11-13",
+          "last_seen": "2017-11-14",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1605,6 +4425,21 @@
       "description": "FCC: Robocalls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2016-01-23",
+          "last_seen": "2016-01-23",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1616,6 +4451,21 @@
       "description": "FCC caller ID: Unwanted Calls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2020-03-09",
+          "last_seen": "2020-03-09",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1627,6 +4477,21 @@
       "description": "FCC advertiser: Unwanted Calls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2020-03-16",
+          "last_seen": "2020-03-16",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1638,6 +4503,21 @@
       "description": "FCC caller ID: Telemarketing (including do not call and spoofing)",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2015-03-09",
+          "last_seen": "2015-03-09",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1649,6 +4529,21 @@
       "description": "FCC: Unwanted Calls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2018-02-16",
+          "last_seen": "2018-03-29",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1660,6 +4555,21 @@
       "description": "FCC: Unwanted Calls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2019-01-28",
+          "last_seen": "2019-02-06",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1671,6 +4581,21 @@
       "description": "FCC caller ID: Unwanted Calls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2020-11-20",
+          "last_seen": "2020-11-20",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1682,6 +4607,21 @@
       "description": "FCC caller ID: Robocalls; FCC caller ID: Telemarketing (including do not call and spoofing)",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2015-04-07",
+          "last_seen": "2015-04-07",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1693,6 +4633,21 @@
       "description": "FCC: Unwanted Calls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2018-05-15",
+          "last_seen": "2018-05-15",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1704,6 +4659,21 @@
       "description": "FCC: Unwanted Calls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2020-03-05",
+          "last_seen": "2020-06-25",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1715,6 +4685,21 @@
       "description": "FCC: Telemarketing (inclu",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2015-05-29",
+          "last_seen": "2015-08-12",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1726,6 +4711,21 @@
       "description": "FCC caller ID: Robocalls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2016-07-20",
+          "last_seen": "2016-07-20",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1737,6 +4737,21 @@
       "description": "FCC: Unwanted Calls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2018-02-27",
+          "last_seen": "2018-06-20",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1748,6 +4763,21 @@
       "description": "FCC advertiser: Unwanted Calls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2021-09-03",
+          "last_seen": "2021-10-15",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1759,6 +4789,21 @@
       "description": "FCC: Robocalls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2015-10-01",
+          "last_seen": "2016-01-05",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1766,10 +4811,40 @@
       "type": "robocall",
       "reports": 2,
       "first_seen": "2015-01-13",
-      "last_seen": "2015-01-21",
-      "description": "FCC caller ID: Robocalls; FCC caller ID: Telemarketing (including do not call and spoofing)",
+      "last_seen": "2025-07-24",
+      "description": "FCC caller ID: Robocalls; FCC caller ID: Telemarketing (including do not call and spoofing); FCC callback_business: Unwanted Calls (Live Voice); FCC callback_business: Unwanted Calls (Text Message)",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "fcc_complaints",
+          "evidence_type": "unverified_complaint",
+          "license": "US government public data",
+          "attribution": "US Federal Communications Commission unwanted calls dataset",
+          "first_seen": "2024-02-07",
+          "last_seen": "2025-07-24",
+          "retrieved_at": "2026-09-25T17:03:23+00:00",
+          "geography": "US",
+          "confidence_tier": "unverified",
+          "parser_version": "fcc-v3",
+          "expires_at_epoch_ms": 1791565403000,
+          "complaint_role": "callback_business",
+          "spoof_signal": "callback_number_only"
+        },
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2015-01-13",
+          "last_seen": "2015-01-21",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1781,6 +4856,21 @@
       "description": "FCC: Unwanted Calls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2021-01-26",
+          "last_seen": "2021-02-11",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1792,6 +4882,21 @@
       "description": "FCC advertiser: Unwanted Calls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2021-09-29",
+          "last_seen": "2021-09-29",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1803,6 +4908,21 @@
       "description": "FCC: Unwanted Calls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2018-07-26",
+          "last_seen": "2018-07-29",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1811,9 +4931,39 @@
       "reports": 7,
       "first_seen": "2024-10-09",
       "last_seen": "2024-11-12",
-      "description": "FCC: Unwanted Calls",
+      "description": "FCC: Unwanted Calls; FCC caller_id: Unwanted Calls (Live Voice)",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "fcc_complaints",
+          "evidence_type": "unverified_complaint",
+          "license": "US government public data",
+          "attribution": "US Federal Communications Commission unwanted calls dataset",
+          "first_seen": "2024-10-09",
+          "last_seen": "2024-11-12",
+          "retrieved_at": "2026-09-25T17:03:23+00:00",
+          "geography": "US",
+          "confidence_tier": "unverified",
+          "parser_version": "fcc-v3",
+          "expires_at_epoch_ms": 1791565403000,
+          "complaint_role": "caller_id",
+          "spoof_signal": "unverified_caller_id"
+        },
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2024-10-09",
+          "last_seen": "2024-11-12",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1825,6 +4975,21 @@
       "description": "FCC: Unwanted Calls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2018-04-16",
+          "last_seen": "2018-04-16",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1836,6 +5001,21 @@
       "description": "FCC: Telemarketing (inclu",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2015-04-07",
+          "last_seen": "2015-05-10",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1844,9 +5024,39 @@
       "reports": 4,
       "first_seen": "2024-07-02",
       "last_seen": "2024-07-02",
-      "description": "FCC: Unwanted Calls",
+      "description": "FCC: Unwanted Calls; FCC caller_id: Unwanted Calls (Live Voice)",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "fcc_complaints",
+          "evidence_type": "unverified_complaint",
+          "license": "US government public data",
+          "attribution": "US Federal Communications Commission unwanted calls dataset",
+          "first_seen": "2024-07-02",
+          "last_seen": "2024-07-02",
+          "retrieved_at": "2026-09-25T17:03:23+00:00",
+          "geography": "US",
+          "confidence_tier": "unverified",
+          "parser_version": "fcc-v3",
+          "expires_at_epoch_ms": 1791565403000,
+          "complaint_role": "caller_id",
+          "spoof_signal": "unverified_caller_id"
+        },
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2024-07-02",
+          "last_seen": "2024-07-02",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1858,6 +5068,21 @@
       "description": "FCC caller ID: Telemarketing (including do not call and spoofing)",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2016-06-23",
+          "last_seen": "2016-06-23",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1866,9 +5091,39 @@
       "reports": 6,
       "first_seen": "2023-03-25",
       "last_seen": "2023-03-28",
-      "description": "FCC: Unwanted Calls",
+      "description": "FCC: Unwanted Calls; FCC caller_id: Unwanted Calls (Prerecorded Voice)",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "fcc_complaints",
+          "evidence_type": "unverified_complaint",
+          "license": "US government public data",
+          "attribution": "US Federal Communications Commission unwanted calls dataset",
+          "first_seen": "2023-03-25",
+          "last_seen": "2023-03-28",
+          "retrieved_at": "2026-09-25T17:03:23+00:00",
+          "geography": "US",
+          "confidence_tier": "unverified",
+          "parser_version": "fcc-v3",
+          "expires_at_epoch_ms": 1791565403000,
+          "complaint_role": "caller_id",
+          "spoof_signal": "unverified_caller_id"
+        },
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2023-03-25",
+          "last_seen": "2023-03-28",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1880,6 +5135,21 @@
       "description": "FCC: Unwanted Calls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2018-05-08",
+          "last_seen": "2019-03-29",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1891,6 +5161,21 @@
       "description": "FCC caller ID: Unwanted Calls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2020-12-05",
+          "last_seen": "2020-12-05",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1902,6 +5187,21 @@
       "description": "FCC: Telemarketing (inclu",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2015-07-14",
+          "last_seen": "2015-09-28",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1913,6 +5213,21 @@
       "description": "FCC: Telemarketing (inclu",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2015-09-30",
+          "last_seen": "2015-10-05",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1924,6 +5239,21 @@
       "description": "FCC: Unwanted Calls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2015-04-16",
+          "last_seen": "2018-02-26",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1935,6 +5265,21 @@
       "description": "FCC caller ID: Unwanted Calls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2022-01-10",
+          "last_seen": "2022-01-10",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1946,6 +5291,21 @@
       "description": "FCC caller ID: Telemarketing (including do not call and spoofing)",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2016-01-22",
+          "last_seen": "2016-01-22",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1957,6 +5317,21 @@
       "description": "FCC advertiser: Telemarketing (including do not call and spoofing); FCC caller ID: Unwanted Calls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2015-07-14",
+          "last_seen": "2020-02-16",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1968,6 +5343,21 @@
       "description": "FCC advertiser: Telemarketing (including do not call and spoofing)",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2015-03-05",
+          "last_seen": "2015-03-05",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1979,6 +5369,21 @@
       "description": "FCC caller ID: Telemarketing (including do not call and spoofing)",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2016-06-21",
+          "last_seen": "2016-08-17",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -1990,6 +5395,21 @@
       "description": "FCC: Unwanted Calls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2019-05-13",
+          "last_seen": "2019-06-21",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -2001,6 +5421,21 @@
       "description": "FCC advertiser: Robocalls; FCC caller ID: Robocalls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2015-05-15",
+          "last_seen": "2015-05-15",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -2012,6 +5447,21 @@
       "description": "FCC: Telemarketing (inclu",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2016-08-16",
+          "last_seen": "2016-08-17",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -2023,6 +5473,21 @@
       "description": "FCC: Unwanted Calls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2014-12-08",
+          "last_seen": "2021-03-22",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -2034,6 +5499,21 @@
       "description": "FCC: Unwanted Calls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2018-07-12",
+          "last_seen": "2018-07-25",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -2045,6 +5525,21 @@
       "description": "FCC: Telemarketing (inclu",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2014-11-18",
+          "last_seen": "2014-12-19",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -2056,6 +5551,21 @@
       "description": "FCC caller ID: Telemarketing (including do not call and spoofing)",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2015-04-17",
+          "last_seen": "2015-04-17",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -2067,6 +5577,21 @@
       "description": "FCC: Unwanted Calls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2018-06-18",
+          "last_seen": "2018-06-19",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -2078,6 +5603,21 @@
       "description": "FCC: Unwanted Calls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2018-08-01",
+          "last_seen": "2018-08-03",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -2089,6 +5629,21 @@
       "description": "FCC caller ID: Telemarketing (including do not call and spoofing)",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2016-05-23",
+          "last_seen": "2016-05-23",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -2100,6 +5655,21 @@
       "description": "FCC: Robocalls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2015-03-10",
+          "last_seen": "2015-03-17",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -2111,6 +5681,21 @@
       "description": "FCC: Unwanted Calls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2018-04-11",
+          "last_seen": "2019-05-23",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -2122,6 +5707,21 @@
       "description": "FCC: Unwanted Calls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2022-05-02",
+          "last_seen": "2022-05-05",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -2133,6 +5733,21 @@
       "description": "FCC: Unwanted Calls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2020-02-17",
+          "last_seen": "2020-10-23",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -2144,6 +5759,21 @@
       "description": "FCC: Telemarketing (inclu",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2014-01-03",
+          "last_seen": "2016-05-18",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -2155,6 +5785,21 @@
       "description": "FCC: Unwanted Calls",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2019-08-17",
+          "last_seen": "2019-08-22",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -2166,6 +5811,21 @@
       "description": "FCC: Telemarketing (inclu",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2014-12-02",
+          "last_seen": "2015-12-15",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -2174,9 +5834,39 @@
       "reports": 3,
       "first_seen": "2022-06-03",
       "last_seen": "2022-08-10",
-      "description": "FCC: Unwanted Calls",
+      "description": "FCC: Unwanted Calls; FCC caller_id: Unwanted Calls (Live Voice)",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "fcc_complaints",
+          "evidence_type": "unverified_complaint",
+          "license": "US government public data",
+          "attribution": "US Federal Communications Commission unwanted calls dataset",
+          "first_seen": "2022-08-10",
+          "last_seen": "2022-08-10",
+          "retrieved_at": "2026-09-25T17:03:23+00:00",
+          "geography": "US",
+          "confidence_tier": "unverified",
+          "parser_version": "fcc-v3",
+          "expires_at_epoch_ms": 1791565403000,
+          "complaint_role": "caller_id",
+          "spoof_signal": "unverified_caller_id"
+        },
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2022-06-03",
+          "last_seen": "2022-08-10",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     },
     {
@@ -2188,14 +5878,64 @@
       "description": "FCC: Telemarketing (inclu",
       "sources": [
         "legacy_import"
+      ],
+      "evidence": [
+        {
+          "source_id": "github_database",
+          "evidence_type": "aggregate_database",
+          "license": "CallShield database terms",
+          "attribution": "CallShield maintained spam database",
+          "first_seen": "2014-11-20",
+          "last_seen": "2015-08-18",
+          "retrieved_at": "2026-09-23T00:00:00+00:00",
+          "geography": "global",
+          "confidence_tier": "unverified",
+          "parser_version": "legacy-v1",
+          "expires_at_epoch_ms": 1792713600000
+        }
       ]
     }
   ],
   "prefixes": [
     {
-      "prefix": "+33353769",
+      "prefix": "+33525456",
       "type": "telemarketer",
-      "description": "Saracroche: Idline"
+      "description": "Saracroche: Iagility",
+      "evidence": [
+        {
+          "source_id": "saracroche_prefixes",
+          "evidence_type": "curated_range",
+          "license": "CC BY-NC-SA",
+          "attribution": "Saracroche French telemarketing range list",
+          "first_seen": "",
+          "last_seen": "",
+          "retrieved_at": "2026-09-25T17:03:23+00:00",
+          "geography": "FR",
+          "confidence_tier": "curated",
+          "parser_version": "saracroche-v2",
+          "expires_at_epoch_ms": 1791565403000
+        }
+      ]
+    },
+    {
+      "prefix": "+337482",
+      "type": "telemarketer",
+      "description": "Saracroche: Syma",
+      "evidence": [
+        {
+          "source_id": "saracroche_prefixes",
+          "evidence_type": "curated_range",
+          "license": "CC BY-NC-SA",
+          "attribution": "Saracroche French telemarketing range list",
+          "first_seen": "",
+          "last_seen": "",
+          "retrieved_at": "2026-09-25T17:03:23+00:00",
+          "geography": "FR",
+          "confidence_tier": "curated",
+          "parser_version": "saracroche-v2",
+          "expires_at_epoch_ms": 1791565403000
+        }
+      ]
     }
   ]
 }
