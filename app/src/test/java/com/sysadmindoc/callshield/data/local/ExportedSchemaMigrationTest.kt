@@ -87,10 +87,12 @@ class ExportedSchemaMigrationTest {
             val sqlite = database.openHelper.writableDatabase
             check(sqlite.version == DB_VERSION) { "ended at version ${sqlite.version}" }
             // Every table holds a filled row and two rows with NULL in each nullable
-            // column. A v11 database also holds the filled number twice (national and
-            // E.164), which the identity migration merges, so three rows remain.
+            // column. Before v12 the identity tables also hold the filled number twice
+            // (national and E.164), which the identity migration merges, and
+            // spam_numbers a second, reversed pair, so it keeps four rows.
             tables.forEach { table ->
-                check(sqlite.single("SELECT COUNT(*) FROM `${table.name}`") == "3") { "${table.name} doesn't hold its three rows" }
+                val expected = if (version < IDENTITY_MIGRATION_TARGET && table.name == "spam_numbers") 4 else 3
+                check(sqlite.single("SELECT COUNT(*) FROM `${table.name}`") == "$expected") { "${table.name} doesn't hold its $expected rows" }
                 // A NULL means something: a permanent allow or block has no expiresAt,
                 // and a logged call without a key has no logKey. Both NULL rows keep them.
                 val columns = sqlite.columns(table.name)
@@ -107,12 +109,18 @@ class ExportedSchemaMigrationTest {
                         "$table didn't merge the national form into $CANONICAL_NUMBER"
                     }
                 }
-                // The national twin has more reports, the E.164 twin the user's block.
-                check(sqlite.single("SELECT reports FROM spam_numbers WHERE number = '$CANONICAL_NUMBER'") == "$NATIONAL_TWIN_REPORTS") {
-                    "the merged spam_numbers row didn't keep the higher report count"
-                }
-                check(sqlite.single("SELECT isUserBlocked FROM spam_numbers WHERE number = '$CANONICAL_NUMBER'") == "1") {
-                    "the merged spam_numbers row lost the user's block"
+                // One pair has the reports on the national row and the block on the E.164
+                // row, the other the reverse, so keeping either row whole fails a check.
+                listOf(CANONICAL_NUMBER, REVERSED_CANONICAL_NUMBER).forEach { number ->
+                    check(sqlite.single("SELECT COUNT(*) FROM spam_numbers WHERE number = '$number'") == "1") {
+                        "spam_numbers didn't merge the national form into $number"
+                    }
+                    check(sqlite.single("SELECT reports FROM spam_numbers WHERE number = '$number'") == "$HIGHER_TWIN_REPORTS") {
+                        "the merged spam_numbers row for $number didn't keep the higher report count"
+                    }
+                    check(sqlite.single("SELECT isUserBlocked FROM spam_numbers WHERE number = '$number'") == "1") {
+                        "the merged spam_numbers row for $number lost the user's block"
+                    }
                 }
             }
             if (version < REASON_CODE_VERSION) {
@@ -158,7 +166,7 @@ class ExportedSchemaMigrationTest {
                             null,
                             seedRow(entity).apply {
                                 if (identityTwin && table == "spam_numbers") {
-                                    put("reports", NATIONAL_TWIN_REPORTS)
+                                    put("reports", HIGHER_TWIN_REPORTS)
                                     put("isUserBlocked", 0L)
                                 }
                             },
@@ -174,6 +182,23 @@ class ExportedSchemaMigrationTest {
                                     }
                                 }
                             db.insertOrThrow(table, null, twin)
+                        }
+                        if (identityTwin && table == "spam_numbers") {
+                            // The reverse pair: the block on the national row, the higher count on
+                            // the E.164 row, which the merge keeps as its survivor.
+                            listOf(
+                                Triple(5L, REVERSED_NATIONAL_NUMBER, 2L to 1L),
+                                Triple(6L, REVERSED_CANONICAL_NUMBER, HIGHER_TWIN_REPORTS to 0L),
+                            ).forEach { (id, number, reportsAndBlock) ->
+                                val row =
+                                    seedRow(entity).apply {
+                                        put("id", id)
+                                        put("number", number)
+                                        put("reports", reportsAndBlock.first)
+                                        put("isUserBlocked", reportsAndBlock.second)
+                                    }
+                                db.insertOrThrow(table, null, row)
+                            }
                         }
                         // Two rows with every nullable column NULL, so a unique index on a
                         // nullable column (call_log.logKey) holds two NULLs, the way a
@@ -271,7 +296,9 @@ class ExportedSchemaMigrationTest {
         const val IDENTITY_MIGRATION_TARGET = 12
         val IDENTITY_TABLES = setOf("spam_numbers", "whitelist")
         const val CANONICAL_NUMBER = "+12125550123"
-        const val NATIONAL_TWIN_REPORTS = 9L
+        const val HIGHER_TWIN_REPORTS = 9L
+        const val REVERSED_NATIONAL_NUMBER = "212-555-0144"
+        const val REVERSED_CANONICAL_NUMBER = "+12125550144"
 
         const val FILLED_ROW = 0
         const val NULL_ROW_A = 1
