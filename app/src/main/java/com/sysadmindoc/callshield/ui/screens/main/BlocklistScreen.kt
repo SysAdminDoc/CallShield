@@ -122,6 +122,7 @@ import com.sysadmindoc.callshield.data.model.WhitelistEntry
 import com.sysadmindoc.callshield.data.model.WildcardRule
 import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.accessibleSwipeActions
+import com.sysadmindoc.callshield.ui.firstPageFailed
 import com.sysadmindoc.callshield.ui.isStaleFor
 import com.sysadmindoc.callshield.ui.spamTypeLabelRes
 import com.sysadmindoc.callshield.ui.theme.CatBlue
@@ -1241,11 +1242,7 @@ private fun DatabaseTabContent(viewModel: MainViewModel) {
             onSelect = { viewModel.setDatabaseFilter(typeFilter, it) },
         )
         Box(modifier = Modifier.weight(1f)) {
-            if (stale || (refreshState is LoadState.Loading && numbers.itemCount == 0)) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = CatBlue)
-                }
-            } else if (refreshState is LoadState.Error && numbers.itemCount == 0) {
+            if (firstPageFailed(refreshState, stale, numbers.itemCount)) {
                 EmptyStateCard(
                     title = stringResource(R.string.blocklist_load_error),
                     subtitle = stringResource(R.string.blocklist_load_error_sub),
@@ -1253,6 +1250,10 @@ private fun DatabaseTabContent(viewModel: MainViewModel) {
                     accentColor = CatRed,
                     onRetry = { numbers.retry() },
                 )
+            } else if (stale || (refreshState is LoadState.Loading && numbers.itemCount == 0)) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = CatBlue)
+                }
             } else if (numbers.itemCount == 0 && filtered) {
                 EmptyStateCard(
                     title = stringResource(R.string.database_filter_empty_title),

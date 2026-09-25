@@ -1,5 +1,6 @@
 package com.sysadmindoc.callshield.ui
 
+import androidx.paging.LoadState
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
@@ -24,8 +25,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.IOException
 import java.util.concurrent.atomic.AtomicInteger
 
 class FilteredPagingTest {
@@ -96,11 +99,13 @@ class FilteredPagingTest {
     private class RowsSource(
         private val rows: List<String>,
         private val gate: CompletableDeferred<Unit>?,
+        private val failure: Throwable? = null,
     ) : PagingSource<Int, String>() {
         override fun getRefreshKey(state: PagingState<Int, String>): Int? = null
 
         override suspend fun load(params: LoadParams<Int>): LoadResult<Int, String> {
             gate?.await()
+            failure?.let { return LoadResult.Error(it) }
             return LoadResult.Page(rows, prevKey = null, nextKey = null)
         }
     }
@@ -138,6 +143,37 @@ class FilteredPagingTest {
                 spamLoads.complete(Unit)
                 withTimeout(5_000L) { while (!screen.shows("spam")) delay(10L) }
                 assertEquals(listOf("spam-1", "spam-2"), screen.snapshot().items.map { it.item })
+            } finally {
+                scope.cancel()
+            }
+        }
+
+    @Test
+    fun `a new filter whose first page fails shows its error, not the last filter's rows`() =
+        runBlocking {
+            val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+            val filter = MutableStateFlow("robocall")
+            val screen = Screen()
+            try {
+                val paged =
+                    filter.pagedWith(scope) { f ->
+                        Pager(PagingConfig(pageSize = 2, enablePlaceholders = false)) {
+                            RowsSource(listOf("$f-1", "$f-2"), gate = null, failure = IOException("offline").takeIf { f == "spam" })
+                        }.flow
+                    }
+                scope.launch { paged.collectLatest { screen.collectFrom(it) } }
+                withTimeout(5_000L) { while (!screen.shows("robocall")) delay(10L) }
+
+                filter.value = "spam"
+                withTimeout(5_000L) { while (screen.loadStateFlow.value?.refresh !is LoadState.Error) delay(10L) }
+
+                // Paging still holds robocall's rows, so without the error check the
+                // stale spinner would never end.
+                assertEquals(Filtered("robocall", "robocall-1"), screen.peek(0))
+                val refresh = requireNotNull(screen.loadStateFlow.value).refresh
+                assertTrue(firstPageFailed(refresh, isStale("spam", screen.peek(0)), screen.size))
+                // A refresh that fails under the same filter keeps its rows.
+                assertFalse(firstPageFailed(refresh, stale = false, itemCount = screen.size))
             } finally {
                 scope.cancel()
             }

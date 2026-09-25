@@ -56,6 +56,7 @@ import com.sysadmindoc.callshield.ui.TemporaryDecisionMenu
 import com.sysadmindoc.callshield.ui.accessibleSwipeActions
 import com.sysadmindoc.callshield.ui.blockReasonAccessibilityLabelRes
 import com.sysadmindoc.callshield.ui.expandableStateSemantics
+import com.sysadmindoc.callshield.ui.firstPageFailed
 import com.sysadmindoc.callshield.ui.friendlyMatchReasonLabel
 import com.sysadmindoc.callshield.ui.isStaleFor
 import com.sysadmindoc.callshield.ui.rememberTemporaryDecisionDurations
@@ -270,11 +271,7 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
                         viewModel = viewModel,
                     )
                 }
-            } else if (stale || (activeRefreshState is LoadState.Loading && activeItemCount == 0)) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = CatGreen)
-                }
-            } else if (activeRefreshState is LoadState.Error && activeItemCount == 0) {
+            } else if (firstPageFailed(activeRefreshState, stale, activeItemCount)) {
                 BlockedLogEmptyState(
                     title = stringResource(R.string.blocked_log_empty_filter_title),
                     subtitle = stringResource(R.string.blocked_log_empty_filter_body),
@@ -286,6 +283,10 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
                         if (grouped) groupedCalls.retry() else pagedCalls.retry()
                     },
                 )
+            } else if (stale || (activeRefreshState is LoadState.Loading && activeItemCount == 0)) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = CatGreen)
+                }
             } else if (activeItemCount == 0) {
                 BlockedLogEmptyState(
                     title =

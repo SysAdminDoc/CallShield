@@ -1,5 +1,6 @@
 package com.sysadmindoc.callshield.ui
 
+import androidx.paging.LoadState
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import androidx.paging.compose.LazyPagingItems
@@ -37,6 +38,17 @@ internal fun <F> isStale(
     filter: F,
     first: Filtered<F, *>?,
 ): Boolean = first != null && first.filter != filter
+
+/**
+ * Whether a list shows its load error: its first page failed, whether the list
+ * is empty or Paging still holds the last filter's rows. A refresh that fails
+ * under the same filter keeps its rows on screen.
+ */
+internal fun firstPageFailed(
+    refresh: LoadState,
+    stale: Boolean,
+    itemCount: Int,
+): Boolean = refresh is LoadState.Error && (stale || itemCount == 0)
 
 /** Whether the rows on screen still belong to the filter before [filter]. */
 internal fun <F, T : Any> LazyPagingItems<Filtered<F, T>>.isStaleFor(filter: F): Boolean = itemCount > 0 && isStale(filter, peek(0))
