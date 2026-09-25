@@ -16,7 +16,7 @@ This directory contains the spam number database that the CallShield app pulls f
 - `spam_domains_review.json`: Generated domain candidates awaiting approval
 - `not_spam_review.json`: Generated community false-positive review candidates
 - `merged_report_ids.json`: Ids of reports merged in the last 14 days, so a report the app resends after its original was merged counts once. The ids are random and already appear in the report files
-- `reports/*.json`: Pending community reports. `reports/rejected/` holds quarantined files
+- `reports/*.json`: Pending community reports. The report Worker adds each day's reports in a single commit at 06:00 UTC. `reports/rejected/` holds quarantined files
 
 ## Consuming this data
 

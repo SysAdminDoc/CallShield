@@ -417,6 +417,15 @@ The rest of this section takes effect when the report Worker is next deployed.
   it stored. People sharing one home or carrier address got that answer for
   their own report of the same number, and the app counted it as sent. They
   now get a plain "try again later", and the app retries.
+- Reports reach this repository in one commit a day instead of one commit
+  each. The Worker used to commit every report the moment it arrived, which
+  put a new commit on master every few minutes. It now holds them in a
+  Durable Object and commits whatever is waiting at 06:00 UTC, and a day with
+  no reports adds no commit. The files in `data/reports/` are the same as
+  before, so the merge doesn't change.
+- The Worker can be deployed straight from the repository. `wrangler.toml`
+  had a placeholder KV namespace id that made every deploy fail. The first
+  deploy now creates the namespace itself.
 
 ### Documentation
 

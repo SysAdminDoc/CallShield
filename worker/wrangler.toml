@@ -11,12 +11,21 @@ compatibility_date = "2024-01-01"
 
 # Rate-limit KV namespace (per-client+number+type dedup markers, and the
 # fallback burst counter when the limiter binding below is unavailable). A
-# client is an IPv4 address or an IPv6 /64. Create with:
-#   wrangler kv namespace create RATE_LIMIT
-# then paste the returned id below.
+# client is an IPv4 address or an IPv6 /64. There is no id on purpose:
+# wrangler 4.45+ creates the namespace on the first deploy and keeps it linked
+# on later ones.
 [[kv_namespaces]]
 binding = "RATE_LIMIT"
-id = "REPLACE_WITH_KV_NAMESPACE_ID"
+
+# Accepted reports wait here and go to GitHub as one commit a day, instead of
+# one commit per report (see ReportQueue in the worker).
+[[durable_objects.bindings]]
+name = "REPORT_QUEUE"
+class_name = "ReportQueue"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["ReportQueue"]
 
 # Atomic per-client burst control, keyed like the dedup markers above (an IPv4
 # address or an IPv6 /64). The Workers rate-limiting binding evaluates its
