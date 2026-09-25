@@ -83,6 +83,7 @@ class CallbackDetector
             windowMinutes: Int = 5,
             threshold: Int = 2,
             minRetryIntervalMillis: Long = MIN_URGENT_RETRY_INTERVAL_MILLIS,
+            minIncomingDurationSeconds: Int = 0,
         ): Boolean =
             withContext(Dispatchers.IO) {
                 val digits = filterAsciiDigitsLast(number, 10)
@@ -90,7 +91,13 @@ class CallbackDetector
                 val last7 = digits.takeLast(7)
 
                 try {
-                    val query = buildRepeatedUrgentCallQuery(System.currentTimeMillis(), windowMinutes, last7)
+                    val query =
+                        buildRepeatedUrgentCallQuery(
+                            nowMillis = System.currentTimeMillis(),
+                            windowMinutes = windowMinutes,
+                            last7Digits = last7,
+                            minIncomingDurationSeconds = minIncomingDurationSeconds,
+                        )
                     val cursor =
                         context.contentResolver.query(
                             CallLog.Calls.CONTENT_URI,
@@ -251,15 +258,32 @@ class CallbackDetector
             nowMillis: Long,
             windowMinutes: Int,
             last7Digits: String,
+            minIncomingDurationSeconds: Int = 0,
         ): CallLogQuery {
             val safeWindowMinutes = windowMinutes.coerceAtLeast(1)
             val cutoff = (nowMillis - safeWindowMinutes * 60_000L).toString()
+            if (minIncomingDurationSeconds <= 0) {
+                return CallLogQuery(
+                    selection = "${CallLog.Calls.TYPE} IN (?, ?) AND ${CallLog.Calls.DATE} > ? AND ${CallLog.Calls.NUMBER} LIKE ?",
+                    selectionArgs =
+                        arrayOf(
+                            CallLog.Calls.INCOMING_TYPE.toString(),
+                            CallLog.Calls.MISSED_TYPE.toString(),
+                            cutoff,
+                            "%$last7Digits",
+                        ),
+                )
+            }
             return CallLogQuery(
-                selection = "${CallLog.Calls.TYPE} IN (?, ?) AND ${CallLog.Calls.DATE} > ? AND ${CallLog.Calls.NUMBER} LIKE ?",
+                selection =
+                    "(${CallLog.Calls.TYPE} = ? OR (${CallLog.Calls.TYPE} = ? AND " +
+                        "${CallLog.Calls.DURATION} >= ?)) AND ${CallLog.Calls.DATE} > ? " +
+                        "AND ${CallLog.Calls.NUMBER} LIKE ?",
                 selectionArgs =
                     arrayOf(
-                        CallLog.Calls.INCOMING_TYPE.toString(),
                         CallLog.Calls.MISSED_TYPE.toString(),
+                        CallLog.Calls.INCOMING_TYPE.toString(),
+                        minIncomingDurationSeconds.toString(),
                         cutoff,
                         "%$last7Digits",
                     ),
@@ -320,6 +344,9 @@ class CallbackDetector
             const val DEFAULT_ANSWERED_CALLER_THRESHOLD = 2
             const val DEFAULT_EMERGENCY_CALLBACK_WINDOW_MINUTES = 240
             const val MIN_ANSWERED_CALL_DURATION_SECONDS = 1
+
+            // Answer-and-hang-up creates 1-11 second incoming rows; SpamBlocker's trust rule uses this 15-second floor.
+            const val AUTO_ANSWER_MIN_TRUSTED_SECONDS = 15
             const val MIN_URGENT_RETRY_INTERVAL_MILLIS = 15_000L
             private const val MILLIS_PER_DAY = 86_400_000L
             private const val MILLIS_PER_MINUTE = 60_000L
@@ -341,6 +368,7 @@ class CallbackDetector
                 windowMinutes: Int = 5,
                 threshold: Int = 2,
                 minRetryIntervalMillis: Long = MIN_URGENT_RETRY_INTERVAL_MILLIS,
+                minIncomingDurationSeconds: Int = 0,
             ): Boolean =
                 shared.isRepeatedUrgentCall(
                     context,
@@ -348,6 +376,7 @@ class CallbackDetector
                     windowMinutes,
                     threshold,
                     minRetryIntervalMillis,
+                    minIncomingDurationSeconds,
                 )
 
             suspend fun wasAnsweredRepeatedly(
@@ -373,7 +402,14 @@ class CallbackDetector
                 nowMillis: Long,
                 windowMinutes: Int,
                 last7Digits: String,
-            ): CallLogQuery = shared.buildRepeatedUrgentCallQuery(nowMillis, windowMinutes, last7Digits)
+                minIncomingDurationSeconds: Int = 0,
+            ): CallLogQuery =
+                shared.buildRepeatedUrgentCallQuery(
+                    nowMillis,
+                    windowMinutes,
+                    last7Digits,
+                    minIncomingDurationSeconds,
+                )
 
             internal fun hasUrgentRetrySpacing(
                 timestamps: List<Long>,

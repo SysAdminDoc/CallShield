@@ -3,11 +3,18 @@ package com.sysadmindoc.callshield.data
 import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
 import com.sysadmindoc.callshield.data.BackupRestore.BackupSettings
+import com.sysadmindoc.callshield.service.AnswerHangUpController
 
 // Settings half of a backup: reading the DataStore snapshot into a
 // BackupSettings, bounding what a (possibly hostile) backup carries, and
 // writing it back. Pure functions over Preferences, kept out of BackupRestore
 // so each file stays readable.
+
+internal fun clampHangUpDelaySeconds(value: Int?): Int =
+    value?.coerceIn(
+        AnswerHangUpController.MIN_DELAY_SECONDS,
+        AnswerHangUpController.MAX_DELAY_SECONDS,
+    ) ?: AnswerHangUpController.DEFAULT_DELAY_SECONDS
 
 @Suppress("LongMethod")
 internal fun Preferences.toBackupSettings(): BackupSettings =
@@ -51,6 +58,8 @@ internal fun Preferences.toBackupSettings(): BackupSettings =
         rcsFilterEnabled = this[SpamRepository.KEY_RCS_FILTER] ?: true,
         postCallScreenEnabled = this[SpamRepository.KEY_POST_CALL_SCREEN] ?: false,
         silentVoicemailEnabled = this[SpamRepository.KEY_SILENT_VOICEMAIL] ?: false,
+        answerHangUpEnabled = this[SpamRepository.KEY_ANSWER_HANG_UP] ?: false,
+        hangUpDelaySeconds = clampHangUpDelaySeconds(this[SpamRepository.KEY_HANG_UP_DELAY_SECONDS]),
         pushAlertEnabled = this[SpamRepository.KEY_PUSH_ALERT] ?: true,
         pushAlertDisabledPackages = (this[SpamRepository.KEY_PUSH_ALERT_DISABLED] ?: emptySet()).sorted(),
         regionBlockEnabled = this[SpamRepository.KEY_REGION_BLOCK] ?: false,
@@ -94,6 +103,7 @@ internal fun BackupSettings.sanitized(): BackupSettings =
         timeBlockEndHour = BackupRestore.sanitizeScheduleHour(timeBlockEndHour),
         frequencyThreshold = frequencyThreshold.coerceIn(1, 25),
         cleanupDays = cleanupDays.coerceIn(1, 365),
+        hangUpDelaySeconds = clampHangUpDelaySeconds(hangUpDelaySeconds),
         pushAlertDisabledPackages =
             pushAlertDisabledPackages
                 .map { it.trim() }
@@ -162,6 +172,8 @@ internal fun BackupSettings.writeTo(preferences: MutablePreferences) {
     preferences[SpamRepository.KEY_RCS_FILTER] = rcsFilterEnabled
     preferences[SpamRepository.KEY_POST_CALL_SCREEN] = postCallScreenEnabled
     preferences[SpamRepository.KEY_SILENT_VOICEMAIL] = silentVoicemailEnabled
+    preferences[SpamRepository.KEY_ANSWER_HANG_UP] = answerHangUpEnabled
+    preferences[SpamRepository.KEY_HANG_UP_DELAY_SECONDS] = hangUpDelaySeconds
     preferences[SpamRepository.KEY_PUSH_ALERT] = pushAlertEnabled
     if (pushAlertDisabledPackages.isEmpty()) {
         preferences.remove(SpamRepository.KEY_PUSH_ALERT_DISABLED)

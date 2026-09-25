@@ -29,6 +29,7 @@ import com.sysadmindoc.callshield.data.model.ExternalBlocklistSubscription
 import com.sysadmindoc.callshield.data.model.HotDataHealth
 import com.sysadmindoc.callshield.data.model.HotDataHealthUpdate
 import com.sysadmindoc.callshield.data.remote.FeedMirror
+import com.sysadmindoc.callshield.service.AnswerHangUpController
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
@@ -193,6 +194,12 @@ class SettingsRepository(
         }
     val silentVoicemailEnabled: Flow<Boolean> =
         dataStore.data.map { it[SpamRepository.KEY_SILENT_VOICEMAIL] ?: false }
+    val answerHangUpEnabled: Flow<Boolean> =
+        dataStore.data.map { it[SpamRepository.KEY_ANSWER_HANG_UP] ?: false }
+    val hangUpDelaySeconds: Flow<Int> =
+        dataStore.data.map {
+            AnswerHangUpController.clampDelaySeconds(it[SpamRepository.KEY_HANG_UP_DELAY_SECONDS])
+        }
     val pushAlertEnabled: Flow<Boolean> = dataStore.data.map { it[SpamRepository.KEY_PUSH_ALERT] ?: true }
     val pushAlertDisabledPackages: Flow<Set<String>> =
         dataStore.data.map { it[SpamRepository.KEY_PUSH_ALERT_DISABLED] ?: emptySet() }
@@ -362,6 +369,13 @@ class SettingsRepository(
         }
 
     suspend fun setSilentVoicemail(enabled: Boolean) = dataStore.edit { it[SpamRepository.KEY_SILENT_VOICEMAIL] = enabled }
+
+    suspend fun setAnswerHangUpEnabled(enabled: Boolean) = dataStore.edit { it[SpamRepository.KEY_ANSWER_HANG_UP] = enabled }
+
+    suspend fun setHangUpDelaySeconds(seconds: Int) =
+        dataStore.edit {
+            it[SpamRepository.KEY_HANG_UP_DELAY_SECONDS] = AnswerHangUpController.clampDelaySeconds(seconds)
+        }
 
     suspend fun setPushAlert(enabled: Boolean) = dataStore.edit { it[SpamRepository.KEY_PUSH_ALERT] = enabled }
 

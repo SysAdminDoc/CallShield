@@ -11,11 +11,20 @@ import org.junit.Test
 class CallShieldPermissionsTest {
     @Test
     fun `first-run runtime bundle covers core and compatibility grants`() {
+        // ANSWER_PHONE_CALLS is requested only when "Answer & hang up
+        // blocked calls" is enabled in Settings, never during onboarding.
         assertEquals(
-            (CallShieldPermissions.corePermissions + CallShieldPermissions.compatibilityPermissions).toSet(),
+            (
+                CallShieldPermissions.corePermissions +
+                    listOf(android.Manifest.permission.READ_PHONE_STATE)
+            ).toSet(),
             CallShieldPermissions.onboardingRuntimePermissions.toSet(),
         )
-        assertEquals(6, CallShieldPermissions.onboardingRuntimePermissions.size)
+        assertEquals(5, CallShieldPermissions.onboardingRuntimePermissions.size)
+        assertFalse(
+            android.Manifest.permission.ANSWER_PHONE_CALLS in
+                CallShieldPermissions.onboardingRuntimePermissions,
+        )
     }
 
     @Test

@@ -103,6 +103,7 @@ class CallShieldScreeningService : CallScreeningService() {
         // feedback, or respond to an outgoing call.
         when (callDetails.callDirection) {
             Call.Details.DIRECTION_OUTGOING -> {
+                AnswerHangUpController.onOutgoingCallStarted()
                 handleOutgoingCall(callDetails)
                 return
             }
@@ -120,6 +121,8 @@ class CallShieldScreeningService : CallScreeningService() {
                 return
             }
         }
+
+        AnswerHangUpController.onIncomingScreeningStarted()
 
         // Run on the process-wide appScope instead of a service-scoped one.
         // CallScreeningService is frequently unbound moments after we reply,
@@ -391,14 +394,74 @@ class CallShieldScreeningService : CallScreeningService() {
         val categoryAction =
             CategoryCallPolicy.parseMatchSource(reason)?.action
                 ?: CategoryCallAction.INHERIT
-        val response =
-            buildBlockResponse(
-                prefs = prefs,
+        val silenceWins =
+            shouldSilence(
+                silentVoicemailEnabled = prefs[SpamRepository.KEY_SILENT_VOICEMAIL] ?: false,
+                autoMuteLowConfidenceEnabled = prefs[SpamRepository.KEY_AUTOMUTE_LOW_CONFIDENCE] ?: false,
                 confidence = confidence,
                 categoryAction = categoryAction,
-                silenceOnly = reason == MeetingModeChecker.MATCH_SOURCE,
             )
-        responseGate.respond(response)
+        val answerHangUpEnabled = prefs[SpamRepository.KEY_ANSWER_HANG_UP] ?: false
+        val answerAndHangUp =
+            if (answerHangUpEnabled && !silenceWins) {
+                try {
+                    val permissionsGranted = hasAnswerHangUpPermissions()
+                    shouldAnswerAndHangUp(
+                        enabled = true,
+                        silenceWins = false,
+                        permissionsGranted = permissionsGranted,
+                        busy = !permissionsGranted || isAnswerHangUpBusy(),
+                    )
+                } catch (_: RuntimeException) {
+                    false
+                }
+            } else {
+                false
+            }
+        val response =
+            if (answerAndHangUp) {
+                buildBlockResponse(
+                    prefs = prefs,
+                    confidence = confidence,
+                    categoryAction = categoryAction,
+                    silenceOnly = true,
+                )
+            } else {
+                // Keep the existing response construction untouched for every setting-off path.
+                buildBlockResponse(
+                    prefs = prefs,
+                    confidence = confidence,
+                    categoryAction = categoryAction,
+                    silenceOnly = reason == MeetingModeChecker.MATCH_SOURCE,
+                )
+            }
+        if (answerAndHangUp) {
+            AnswerHangUpController.configure(applicationContext)
+            val armed =
+                AnswerHangUpController.tryArm(
+                    rawNumber = number,
+                    delaySeconds =
+                        AnswerHangUpController.clampDelaySeconds(
+                            prefs[SpamRepository.KEY_HANG_UP_DELAY_SECONDS],
+                        ),
+                )
+            if (armed && responseGate.hasResponded) {
+                AnswerHangUpController.disarm()
+            } else if (armed) {
+                responseGate.respond(response)
+            } else {
+                responseGate.respond(
+                    buildBlockResponse(
+                        prefs = prefs,
+                        confidence = confidence,
+                        categoryAction = categoryAction,
+                        silenceOnly = reason == MeetingModeChecker.MATCH_SOURCE,
+                    ),
+                )
+            }
+        } else {
+            responseGate.respond(response)
+        }
 
         applicationScope.launch {
             try {
@@ -491,6 +554,31 @@ class CallShieldScreeningService : CallScreeningService() {
                 .build()
         }
     }
+
+    private fun hasAnswerHangUpPermissions(): Boolean =
+        listOf(
+            android.Manifest.permission.ANSWER_PHONE_CALLS,
+            android.Manifest.permission.READ_PHONE_STATE,
+            android.Manifest.permission.READ_CALL_LOG,
+        ).all { permission ->
+            checkSelfPermission(permission) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        }
+
+    private fun isAnswerHangUpBusy(): Boolean =
+        try {
+            @Suppress("DEPRECATION")
+            val callState = getSystemService(android.telephony.TelephonyManager::class.java)?.callState
+            val telephonyBusy = callState == android.telephony.TelephonyManager.CALL_STATE_OFFHOOK
+            if (telephonyBusy || AnswerHangUpController.isBusy()) {
+                true
+            } else {
+                val audioMode = getSystemService(android.media.AudioManager::class.java)?.mode
+                audioMode == android.media.AudioManager.MODE_IN_CALL ||
+                    audioMode == android.media.AudioManager.MODE_IN_COMMUNICATION
+            }
+        } catch (_: SecurityException) {
+            true
+        }
 
     private fun handleDirectBootCall(
         callDetails: Call.Details,
@@ -646,6 +734,13 @@ class CallShieldScreeningService : CallScreeningService() {
                             (autoMuteLowConfidenceEnabled && confidence < AUTO_MUTE_CONFIDENCE_THRESHOLD)
                     }
                 }
+
+        internal fun shouldAnswerAndHangUp(
+            enabled: Boolean,
+            silenceWins: Boolean,
+            permissionsGranted: Boolean,
+            busy: Boolean,
+        ): Boolean = enabled && !silenceWins && permissionsGranted && !busy
 
         fun shouldSuppressAfterCallFeedback(matchSource: String): Boolean = matchSource == "emergency_callback"
     }

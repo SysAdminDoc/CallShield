@@ -104,8 +104,14 @@ object CallShieldPermissions {
      * Runtime grants requested during first-run setup. Keeping this list next
      * to the capability contract prevents onboarding from silently omitting a
      * permission that the live call path expects on some Android builds.
+     *
+     * ANSWER_PHONE_CALLS is deliberately NOT requested here: it is asked for
+     * only when the user enables "Answer & hang up blocked calls" in
+     * Settings, so users who never enable that feature are never prompted
+     * for it.
      */
-    val onboardingRuntimePermissions = (corePermissions + compatibilityPermissions).distinct()
+    val onboardingRuntimePermissions =
+        (corePermissions + listOf(Manifest.permission.READ_PHONE_STATE)).distinct()
 
     val permissionCapabilityContracts =
         listOf(

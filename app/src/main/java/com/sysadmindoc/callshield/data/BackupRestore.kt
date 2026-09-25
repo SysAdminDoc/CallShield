@@ -16,6 +16,7 @@ import com.sysadmindoc.callshield.data.model.RestoreJournal
 import com.sysadmindoc.callshield.data.model.SmsKeywordRule
 import com.sysadmindoc.callshield.data.model.WildcardRule
 import com.sysadmindoc.callshield.domain.model.BlockReasonCode
+import com.sysadmindoc.callshield.service.AnswerHangUpController
 import com.sysadmindoc.callshield.util.filterAsciiDigits
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -181,6 +182,8 @@ object BackupRestore {
         val rcsFilterEnabled: Boolean = true,
         val postCallScreenEnabled: Boolean = false,
         val silentVoicemailEnabled: Boolean = false,
+        val answerHangUpEnabled: Boolean = false,
+        val hangUpDelaySeconds: Int = AnswerHangUpController.DEFAULT_DELAY_SECONDS,
         val pushAlertEnabled: Boolean = true,
         val pushAlertDisabledPackages: List<String> = emptyList(),
         val regionBlockEnabled: Boolean = false,
