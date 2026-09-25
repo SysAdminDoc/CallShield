@@ -39,6 +39,7 @@ import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import java.lang.reflect.Method
 import java.lang.reflect.Proxy
+import java.time.Duration
 import java.util.concurrent.CopyOnWriteArrayList
 
 @RunWith(RobolectricTestRunner::class)
@@ -101,6 +102,11 @@ class OutgoingCallHoldRobolectricTest {
         val binder = onBind(Intent(CallRedirectionService.SERVICE_INTERFACE))
         val account = PhoneAccountHandle(ComponentName(context, "Telecom"), "sim")
         PLACE_CALL.invoke(binder, call.adapter, Uri.fromParts("tel", dialed, null), account, interactive)
+    }
+
+    /** Telecom giving up on a call, which it does without naming the call. */
+    private fun CallShieldRedirectionService.timeOut() {
+        NOTIFY_TIMEOUT.invoke(onBind(Intent(CallRedirectionService.SERVICE_INTERFACE)))
     }
 
     private fun TelecomCall.awaitAnswers(): List<String> {
@@ -167,6 +173,54 @@ class OutgoingCallHoldRobolectricTest {
         assertEquals(listOf("cancelCall"), second.answers)
         assertEquals(emptyList<String>(), first.answers)
         assertEquals(1, shadowOf(notificationManager).allNotifications.size)
+    }
+
+    @Test
+    fun `an earlier call's timeout leaves the call placed after it alone`() {
+        val service = redirectionService()
+        val first = TelecomCall()
+        val second = TelecomCall()
+        // The second call takes the first call's reply channel before the first
+        // answers, so Telecom times the first one out while the second checks.
+        service.place("+12125550123", first, interactive = false)
+        service.place(number, second)
+        service.timeOut()
+
+        assertEquals(listOf("cancelCall"), second.awaitAnswers())
+        settle()
+        assertEquals(emptyList<String>(), first.answers)
+    }
+
+    @Test
+    fun `a call that times out is never answered late`() {
+        val service = redirectionService()
+        val call = TelecomCall()
+        service.place(number, call)
+        service.timeOut()
+
+        settle()
+        assertEquals(emptyList<String>(), call.answers)
+    }
+
+    @Test
+    fun `a call long past Telecom's timeout doesn't take a newer call's timeout`() {
+        val service = redirectionService()
+        val stranded = TelecomCall()
+        val next = TelecomCall()
+        // The first call loses its reply channel to the next one and is never
+        // timed out (it ended some other way)...
+        service.place("+12125550123", stranded, interactive = false)
+        service.place("+12125550124", next, interactive = false)
+        assertEquals(listOf("placeCallUnmodified"), next.awaitAnswers())
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMinutes(1))
+        // ...so a timeout a minute later belongs to the call placed then.
+        val late = TelecomCall()
+        service.place(number, late)
+        service.timeOut()
+
+        settle()
+        assertEquals(emptyList<String>(), late.answers)
+        assertEquals(emptyList<String>(), stranded.answers)
     }
 
     @Test
@@ -287,5 +341,9 @@ class OutgoingCallHoldRobolectricTest {
             Class
                 .forName("com.android.internal.telecom.ICallRedirectionService")
                 .getMethod("placeCall", ADAPTER, Uri::class.java, PhoneAccountHandle::class.java, Boolean::class.javaPrimitiveType)
+        val NOTIFY_TIMEOUT: Method =
+            Class
+                .forName("com.android.internal.telecom.ICallRedirectionService")
+                .getMethod("notifyTimeout")
     }
 }

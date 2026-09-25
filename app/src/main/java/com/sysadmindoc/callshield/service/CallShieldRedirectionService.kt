@@ -43,7 +43,16 @@ class CallShieldRedirectionService : CallRedirectionService() {
     // hold or place the next one. Set and read on the main thread.
     private var current: PendingCall? = null
 
-    private class PendingCall {
+    // Calls Telecom may still time out, oldest first. Its timeout names no
+    // call, but every call waits the same time, so a timeout belongs to the
+    // oldest call that hasn't answered: a call whose reply channel a later
+    // call took over never answers, and times out while the later call
+    // checks. Main thread only.
+    private val waiting = ArrayDeque<PendingCall>()
+
+    private class PendingCall(
+        val placedAt: Long,
+    ) {
         val answered = AtomicBoolean(false)
 
         @Volatile var job: Job? = null
@@ -59,7 +68,9 @@ class CallShieldRedirectionService : CallRedirectionService() {
         initialPhoneAccount: PhoneAccountHandle,
         allowInteractiveResponse: Boolean,
     ) {
-        val call = PendingCall()
+        val call = PendingCall(SystemClock.elapsedRealtime())
+        forgetStale(call.placedAt)
+        waiting.addLast(call)
         current = call
         val appContext = applicationContext
         val rawNumber = handle.schemeSpecificPart.orEmpty()
@@ -89,9 +100,17 @@ class CallShieldRedirectionService : CallRedirectionService() {
 
     override fun onRedirectionTimeout() {
         // Telecom has already given up on this call; a late answer would only fail.
-        current?.let { call ->
+        forgetStale(SystemClock.elapsedRealtime())
+        waiting.removeFirstOrNull()?.let { call ->
             call.answered.set(true)
             call.job?.cancel()
+        }
+    }
+
+    /** Drops calls older than any Telecom timeout: they answered or ended some other way. */
+    private fun forgetStale(now: Long) {
+        while (waiting.firstOrNull()?.let { now - it.placedAt > STALE_AFTER_MS } == true) {
+            waiting.removeFirst()
         }
     }
 
@@ -152,6 +171,7 @@ class CallShieldRedirectionService : CallRedirectionService() {
     ) {
         // A later call owns the reply channel now; this answer would land on it.
         if (current !== call || !call.answered.compareAndSet(false, true)) return
+        waiting.remove(call)
         try {
             when (val decision = outcome.decision) {
                 OutgoingCallGuard.Decision.Proceed -> {
@@ -179,5 +199,8 @@ class CallShieldRedirectionService : CallRedirectionService() {
 
         /** The whole answer, settings read included, stays well inside Telecom's five seconds. */
         const val DEADLINE_MS = 3_000L
+
+        /** Well past Telecom's redirection timeout (five seconds by default). */
+        const val STALE_AFTER_MS = 30_000L
     }
 }

@@ -11,6 +11,10 @@ All notable changes to CallShield will be documented in this file.
   Allow or Silence decided calls it scored from 65 to 79, where CallShield
   otherwise names no category. An ML block now counts as a robocall from a
   score of 80, and the Blocked log labels it the same way.
+- When two outgoing calls overlap, Android giving up on the first one no
+  longer stops CallShield answering for the second. Android's timeout
+  doesn't say which call it's for, and it was applied to the newest call,
+  which Android would then cancel as well.
 
 ### Interface
 
