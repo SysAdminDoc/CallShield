@@ -11,6 +11,15 @@ All notable changes to CallShield will be documented in this file.
   weekday preset read "Mon–Fri" where it now says "Mon to Fri". A unit test
   keeps dashes out of the English strings and the release history.
 
+### Data pipeline
+
+- The weekly pipeline check no longer fails just because reports piled up
+  since the last drain. About twenty arrive a day and drains are run by hand,
+  so its 20-report cap tripped within a day of every drain while nothing was
+  stuck. The weekly run now leaves dated reports to its age check, which fails
+  once the oldest has waited more than 7 days. The cap still covers files it
+  can't date, and applies in full to the local gate run right after a drain.
+
 ## v1.8.0 (2026-09-25)
 
 ### Protection

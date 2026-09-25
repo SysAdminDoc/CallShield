@@ -153,6 +153,24 @@ def scheduled_checks() -> None:
     # A fresh queue measured against the clock is fine.
     assert evaluate_queue_health(queued_since_drain, "2026-09-04", now=BASE + timedelta(days=MAX_QUEUE_AGE_DAYS)) == []
 
+    # ── depth between manual drains (issue #25) ──────────────────────────
+    # About twenty reports arrive a day, so three days after a drain the queue
+    # is deep without being stuck. Against the clock, age is the stall signal;
+    # the depth cap stays for the gate run right after a drain.
+    busy = [report(offset_days=3 - i * 0.05) for i in range(60)]
+    assert evaluate_queue_health(busy, "2026-09-01", now=BASE) == []
+    problems = evaluate_queue_health(busy, "2026-09-01")
+    assert len(problems) == 1 and "report queue holds 60 files," in problems[0], problems
+
+    # Files the clock can't date are the one thing depth still covers there.
+    undated = [dict(report(), reported_at="") for _ in range(MAX_QUEUE_DEPTH)]
+    assert evaluate_queue_health(undated, "2026-09-01", now=BASE) == []
+    problems = evaluate_queue_health(undated, "2026-09-01", unreadable=1, now=BASE)
+    assert len(problems) == 1, problems
+    assert f"holds {MAX_QUEUE_DEPTH + 1} files with no readable report time" in problems[0], problems
+    # Dated reports beside them don't add to it.
+    assert evaluate_queue_health(undated + busy, "2026-09-01", now=BASE) == []
+
     # ── upstream source freshness ────────────────────────────────────────
     manifest = {
         "sources": [

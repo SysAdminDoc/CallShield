@@ -34,6 +34,14 @@ every later build of an old tag. Measured against the database date, the age
 check cannot fire in the weeks after a drain, because every report queued since
 is newer than the database; that is how a second stall ran from 2026-09-05
 without the gate noticing.
+
+Measured against the clock, age catches a stall on its own, so the weekly run
+leaves every dated report out of the depth count. Reports arrive at about
+twenty a day and drains are manual, so the depth cap failed the weekly run
+within a day of any drain while nothing was stuck. Files the clock can't date
+(unreadable, or no parseable `reported_at`) still count toward depth there,
+and the cap stays whole for `verifyPipelineTests`, which is run right after a
+drain.
 """
 
 from __future__ import annotations
@@ -109,20 +117,23 @@ def evaluate_queue_health(
     on the next run anyway. `database_updated` is the published database's
     `updated` field in whatever shape it was read, so an unreadable or missing
     date degrades to "cannot judge age" rather than raising. With `now`, age is
-    measured against the clock instead of the database date.
+    measured against the clock instead of the database date, and only the
+    files the clock can't date count toward depth.
     """
     problems: list[str] = []
     total = len(reports) + unreadable
     if not total:
         return problems
 
-    if total > MAX_QUEUE_DEPTH:
+    timestamps = [ts for ts in (parse_reported_at(r.get("reported_at")) for r in reports) if ts is not None]
+    depth = total if now is None else total - len(timestamps)
+    if depth > MAX_QUEUE_DEPTH:
+        undated = "" if now is None else " with no readable report time"
         problems.append(
-            f"report queue holds {total} files, more than the {MAX_QUEUE_DEPTH} "
+            f"report queue holds {depth} files{undated}, more than the {MAX_QUEUE_DEPTH} "
             "expected between merges - run the documented pipeline order to drain it"
         )
 
-    timestamps = [ts for ts in (parse_reported_at(r.get("reported_at")) for r in reports) if ts is not None]
     updated = _parse_updated(database_updated)
     if now is not None:
         if timestamps:
