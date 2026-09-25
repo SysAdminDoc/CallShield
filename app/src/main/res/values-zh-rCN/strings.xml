@@ -844,7 +844,6 @@
     <string name="detail_block_area_code_description_location">拦截区号 %1$s（%2$s）</string>
     <string name="detail_blocked_from_detail">从详情拦截</string>
     <string name="detail_whitelisted_from_detail">从详情加入白名单</string>
-    <string name="detail_report_issue_title">[垃圾] %s</string>
     <string name="confidence_suffix">（%d%%）</string>
     <string name="nav_home">主页</string>
     <string name="nav_lookup">查询</string>

@@ -238,6 +238,11 @@ All notable changes to CallShield will be documented in this file.
 
 - Tapping the "blocked recently" notification opens the Blocked log now. It
   used to do nothing at all.
+- The Report button on a number's detail page no longer opens a GitHub issue
+  saying the number was "Seen 0 times" when you looked it up by hand. It says
+  the number isn't in the app's log yet. The issue title and body also stay
+  in English whatever language the app runs in, since they go to the
+  English-language tracker (issues #24 and #27 arrived this way).
 - Blocking a number with the Block button at the bottom of Lookup saved the
   name of the check that flagged it ("prefix", "database") as the block's
   note, and Lookup then showed that under Details. It saves the result's

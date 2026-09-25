@@ -94,13 +94,7 @@ fun NumberDetailScreen(
             }
         }
     val reportIssueTitle = stringResource(R.string.detail_report_issue_title, number)
-    val reportIssueBody =
-        pluralStringResource(
-            R.plurals.detail_report_issue_body,
-            numberCalls.size,
-            number,
-            numberCalls.size,
-        )
+    val reportIssueBody = reportIssueBody(context.resources, number, numberCalls.size)
 
     // Contact name resolution
     var contactName by remember(number) { mutableStateOf<String?>(null) }

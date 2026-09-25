@@ -1210,11 +1210,13 @@
     <string name="detail_unknown_location">Unknown region</string>
     <string name="detail_blocked_from_detail">Blocked from detail</string>
     <string name="detail_whitelisted_from_detail">Trusted from detail screen</string>
-    <string name="detail_report_issue_title">[SPAM] %s</string>
+    <!-- The report title and body open a GitHub issue on the English-language tracker, so they stay in English in every locale. -->
+    <string name="detail_report_issue_title" translatable="false">[SPAM] %s</string>
     <plurals name="detail_report_issue_body">
         <item quantity="one">## Phone Number\n%1$s\n\n## Type\nReported from CallShield\n\n## Description\nSeen %2$d time</item>
         <item quantity="other">## Phone Number\n%1$s\n\n## Type\nReported from CallShield\n\n## Description\nSeen %2$d times</item>
     </plurals>
+    <string name="detail_report_issue_body_unseen" translatable="false">## Phone Number\n%1$s\n\n## Type\nReported from CallShield\n\n## Description\nLooked up in CallShield. No calls or texts from this number are in the app\'s log yet.</string>
     <string name="confidence_suffix"> (%d%%)</string>
     <plurals name="detail_reports_count_plural">
         <item quantity="one">%d report</item>
