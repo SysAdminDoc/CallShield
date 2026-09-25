@@ -155,7 +155,7 @@ fun ChangelogScreen() {
                     "One person can no longer push a number onto the trending list by reporting it repeatedly",
                     "Repeated \"not spam\" votes from one reporter can't remove a genuine entry",
                     "Removed 145 unused text resources, including 70 stray accessibility labels",
-                    "Translations are now welcome and checked automatically — see docs/TRANSLATING.md",
+                    "Translations are now welcome and checked automatically. See docs/TRANSLATING.md",
                 ),
         )
         VersionEntry(
@@ -224,7 +224,7 @@ fun ChangelogScreen() {
             "Deep-audit hardening across screening, backups, and accessibility",
             changes =
                 listOf(
-                    "Fixed roaming corrupting number matching — identities now canonicalize under the SIM's home region",
+                    "Fixed roaming corrupting number matching. Identities now canonicalize under the SIM's home region",
                     "Hardened screening edge cases: unknown-direction calls, duplicate-row urgency, and lettered SMS sender IDs",
                     "Made exports crash-free, blocklist imports transactional, and passphrase restores reject plaintext files",
                     "Fixed the caller ID overlay leaking telephony watchers and the role-loss alert lingering after recovery",
@@ -311,7 +311,7 @@ fun ChangelogScreen() {
             "Fully free and keyless: the optional API key entry is gone",
             changes =
                 listOf(
-                    "Removed the optional AbstractAPI key field from Settings — CallShield now needs no API keys at all",
+                    "Removed the optional AbstractAPI key field from Settings, so CallShield now needs no API keys at all",
                     "Every lookup and enrichment source the app uses is free and requires no sign-up or credentials",
                     "Any key stored by an earlier version is purged from the device on first launch",
                     "Dropped the unused carrier/line-type network checker and its certificate pin",
@@ -424,11 +424,11 @@ fun ChangelogScreen() {
             "Smart labels, silent voicemail, FTC report, emergency contacts, block reasoning",
             changes =
                 listOf(
-                    "Smart call labels — Debt Collector / Political / Robocall / Scam / Phishing / Telemarketer / Wangiri / Survey / Business / Unknown, shown on the Number Detail hero and in the blocked log",
-                    "Silent voicemail mode — blocked calls reach voicemail silently instead of hard-rejecting, so your phone doesn't ring. Off by default; opt-in from Settings → Detection",
-                    "One-tap FTC fraud report — any Number Detail screen now has a \"Report to FTC\" button that copies the number and opens reportfraud.ftc.gov",
-                    "Emergency contacts — whitelist entries can be flagged as emergency, bypassing blocklist, quiet hours, and aggressive mode with a distinct red badge in the Trusted tab (formerly Whitelist)",
-                    "\"Why was this blocked?\" — Number Detail now shows a plain-English narrative of which detection layer fired, what heuristic reasons contributed, and the model's confidence",
+                    "Smart call labels (Debt Collector / Political / Robocall / Scam / Phishing / Telemarketer / Wangiri / Survey / Business / Unknown), shown on the Number Detail hero and in the blocked log",
+                    "Silent voicemail mode sends blocked calls to voicemail silently instead of rejecting them, so your phone doesn't ring. It's off by default and turns on in Settings → Detection",
+                    "One-tap FTC fraud report. Any Number Detail screen now has a \"Report to FTC\" button that copies the number and opens reportfraud.ftc.gov",
+                    "Emergency contacts. Whitelist entries can be flagged as emergency, bypassing blocklist, quiet hours, and aggressive mode with a distinct red badge in the Trusted tab (formerly Whitelist)",
+                    "\"Why was this blocked?\" Number Detail now shows a plain-English narrative of which detection layer fired, what heuristic reasons contributed, and the model's confidence",
                 ),
         )
         VersionEntry(
@@ -436,7 +436,7 @@ fun ChangelogScreen() {
             "Crash reporter, instrumented tests, benchmark ceilings",
             changes =
                 listOf(
-                    "Local crash reporter captures uncaught exceptions to filesDir/crashes/ — share the latest log via the new \"Share Last Crash Log\" Quick Link in More (no telemetry phoned home)",
+                    "Local crash reporter captures uncaught exceptions to filesDir/crashes/. Share the latest log with the new \"Share Last Crash Log\" Quick Link in More (no telemetry phoned home)",
                     "Instrumented test suite: Compose UI tests for PremiumCard/SectionHeader/accentGlow, end-to-end CrashReporter IO, and the DashboardStatusModel state machine",
                     "GitHub Actions emulator workflow runs connected tests on every PR + master push",
                     "Hot-path microbenchmarks as unit tests enforce regression ceilings on WildcardRule.matches, CampaignDetector record/check, SpamMLScorer.score, and SpamHeuristics pure checks",
@@ -445,75 +445,75 @@ fun ChangelogScreen() {
         )
         VersionEntry(
             "1.2.15",
-            "Audit Round 9 — Contact cache perf",
+            "Audit Round 9: contact cache perf",
             changes =
                 listOf(
-                    "Contact whitelist lookups are now cached for 60 seconds — eliminates up to 4 redundant ContactsContract queries per incoming call on large contact lists (10–200 ms saved per call)",
+                    "Contact whitelist lookups are now cached for 60 seconds, which removes up to 4 redundant ContactsContract queries per incoming call on large contact lists (10 to 200 ms saved per call)",
                 ),
         )
         VersionEntry(
             "1.2.14",
-            "Audit Round 8 — Stats drift, wildcard SMS match, trusted-sender perf",
+            "Audit Round 8: stats drift, wildcard SMS match, trusted-sender perf",
             changes =
                 listOf(
                     "Stats screen daily chart and monthly trend now recompute at midnight (was frozen until new blocks arrived)",
                     "Wildcard area-code rules (e.g. +1212*) now match SMS senders without the +1 prefix via multi-normalization",
-                    "Trusted-sender SMS check uses SQL WHERE pre-filter — no longer scans the entire sent/inbox folder in memory",
+                    "Trusted-sender SMS check uses a SQL WHERE pre-filter and no longer scans the entire sent/inbox folder in memory",
                     "New unit tests for wildcard multi-normalization (glob + E.164 + raw 10-digit + wrong-area-code rejection)",
                 ),
         )
         VersionEntry(
             "1.2.13",
-            "Audit Round 7 — UI campaign pollution + backup rules",
+            "Audit Round 7: UI campaign pollution + backup rules",
             changes =
                 listOf(
-                    "All UI spam checks (Lookup, Number Detail, Protection Test, Recent Calls) now use realtimeCall=false — no longer poison the campaign burst detector or pop caller-ID overlays",
+                    "All UI spam checks (Lookup, Number Detail, Protection Test, Recent Calls) now use realtimeCall=false, so they no longer poison the campaign burst detector or pop caller-ID overlays",
                     "Protection test no longer feeds synthetic test numbers into the campaign detector",
-                    "Backup rules referenced in manifest and properly scoped — database + DataStore included, caches excluded",
+                    "Backup rules referenced in manifest and properly scoped. Database + DataStore included, caches excluded",
                     "New data_extraction_rules.xml for API 31+ cloud backup and device transfer",
                 ),
         )
         VersionEntry(
             "1.2.12",
-            "Audit Round 6 — DB migration guard + call screener crash",
+            "Audit Round 6: DB migration guard + call screener crash",
             changes =
                 listOf(
-                    "Database destructive migration restricted to legacy versions 1-4 only — future schema upgrades that lack explicit migrations now crash during development instead of silently wiping user data in production",
-                    "Call screener role request wrapped in try-catch on all 3 launch sites (Dashboard, Settings, Onboarding) — prevents crash on OEM ROMs that remove ROLE_CALL_SCREENING",
+                    "Database destructive migration restricted to legacy versions 1-4 only. Future schema upgrades that lack explicit migrations now crash during development instead of silently wiping user data in production",
+                    "Call screener role request wrapped in try-catch on all 3 launch sites (Dashboard, Settings, Onboarding), which prevents a crash on OEM ROMs that remove ROLE_CALL_SCREENING",
                 ),
         )
         VersionEntry(
             "1.2.11",
-            "Audit Round 5 — OkHttp response leaks + cache cleanup collision",
+            "Audit Round 5: OkHttp response leaks + cache cleanup collision",
             changes =
                 listOf(
-                    "All 5 remote lookup modules (ExternalLookup, UrlSafetyChecker, NumberTypeChecker, CommunityContributor, WebLookup) now wrap OkHttp execute() in .use { } — previously the Response was leaked on non-2xx paths",
-                    "Log export cleanup now filters by filename prefix — no longer nukes in-flight blocklist exports that share the same cache directory",
+                    "All 5 remote lookup modules (ExternalLookup, UrlSafetyChecker, NumberTypeChecker, CommunityContributor, WebLookup) now wrap OkHttp execute() in .use { }. Previously the Response was leaked on non-2xx paths",
+                    "Log export cleanup now filters by filename prefix and no longer nukes in-flight blocklist exports that share the same cache directory",
                 ),
         )
         VersionEntry(
             "1.2.10",
-            "Audit Round 4 — Time windows, screener lifetime, scanner isolation",
+            "Audit Round 4: time windows, screener lifetime, scanner isolation",
             changes =
                 listOf(
-                    "Dashboard \"today / this week / last week\" counts now roll forward on a one-minute time anchor — windows no longer freeze at app start and drift as the process stays alive",
-                    "After-call \"Was this spam?\" feedback notification now fires reliably — moved off the short-lived CallScreeningService handler onto a process-lifetime scope",
+                    "Dashboard \"today / this week / last week\" counts now roll forward on a one-minute time anchor, so windows no longer freeze at app start and drift as the process stays alive",
+                    "After-call \"Was this spam?\" feedback notification now fires reliably. It moved off the short-lived CallScreeningService handler onto a process-lifetime scope",
                     "Historical Call Log and SMS Inbox scans no longer poison the live campaign-burst detector or pop caller-ID overlays for calls that already happened",
                     "Contact whitelist lookup closes its cursor on exception paths (defensive correctness)",
                 ),
         )
         VersionEntry(
             "1.2.9",
-            "Audit Round 3 — Correctness + Compose Hygiene",
+            "Audit Round 3: correctness + Compose hygiene",
             changes =
                 listOf(
                     "Campaign burst detector no longer learns from contacts/dialed/repeat callers (false-positive fix)",
                     "Backup restore closes the input stream properly (file descriptor leak fix)",
                     "Notifications honor the API 33+ POST_NOTIFICATIONS runtime permission instead of throwing SecurityException",
                     "Daily digest skips silently when notification permission is revoked",
-                    "Recent Calls list now uses stable item keys — filter changes no longer scramble per-row animation state",
-                    "Blocked Log grouped view now uses stable keys — no more scroll jumps or row-swap bugs",
-                    "Global search results use stable keys — fixes reorder glitches when re-searching",
+                    "Recent Calls list now uses stable item keys, so filter changes no longer scramble per-row animation state",
+                    "Blocked Log grouped view now uses stable keys. No more scroll jumps or row-swap bugs",
+                    "Global search results use stable keys, which fixes reorder glitches when re-searching",
                 ),
         )
         VersionEntry(
@@ -550,7 +550,7 @@ fun ChangelogScreen() {
             "Premium Redesign + Audit",
             changes =
                 listOf(
-                    "Complete premium UI overhaul — PremiumCard, accent glows, gradient dividers, refined typography",
+                    "Complete premium UI overhaul: PremiumCard, accent glows, gradient dividers, refined typography",
                     "12 bug fixes: race conditions, JSON injection, UI hangs, thread leaks, date grouping",
                     "Shimmer loading skeletons replace raw spinners",
                     "Haptic feedback on all toggles, block/unblock, profile switches, and scan buttons",
@@ -644,8 +644,8 @@ fun ChangelogScreen() {
                     "RCS notification filter via NotificationListenerService",
                     "30-minute hot list sync: trending numbers, campaign ranges, spam domains",
                     "SIT tone player for anti-autodialer during caller ID overlay",
-                    "URL safety checker (URLhaus) — phishing/malware notifications",
-                    "SMS context trust — allow known conversations automatically",
+                    "URL safety checker (URLhaus) for phishing and malware notifications",
+                    "SMS context trust allows known conversations automatically",
                     "AbstractAPI carrier/line-type enrichment (optional key)",
                     "OpenCNAM caller name lookup in overlay",
                     "Hot campaign range detection in heuristic engine",
@@ -676,10 +676,10 @@ fun ChangelogScreen() {
                     "11-layer detection engine with confidence scoring",
                     "Number Lookup with animated spam score gauge",
                     "Caller ID overlay for all incoming non-contact calls",
-                    "Smart suggestions — auto-detect area code spam patterns",
+                    "Smart suggestions auto-detect area code spam patterns",
                     "Blocking profiles: Work, Personal, Sleep, Maximum, Off",
-                    "Callback detection — don't block numbers you recently called",
-                    "Repeated call allow-through — urgent callers get through",
+                    "Callback detection doesn't block numbers you recently called",
+                    "Repeated call allow-through lets urgent callers get through",
                     "330+ US/CA area code lookup with city/state",
                     "Custom SMS keyword blocking rules",
                     "Wildcard and regex number blocking",
@@ -702,7 +702,7 @@ fun ChangelogScreen() {
                     "Reverse phone lookup via web scraping",
                     "FTC Do Not Call complaint filing",
                     "Statistics: weekly chart, type breakdown, top offenders, area code heatmap, hourly heatmap",
-                    "Protection test — validates all layers and permissions",
+                    "Protection test validates all layers and permissions",
                     "Privacy-first: all detection runs on-device",
                     "AMOLED black theme with Catppuccin Mocha accents",
                 ),

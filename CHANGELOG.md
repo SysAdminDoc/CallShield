@@ -4,6 +4,13 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+### Interface
+
+- The release history under More and the weekday schedule label read as
+  plain English now. They used em and en dashes in 37 places, and the
+  weekday preset read "Mon–Fri" where it now says "Mon to Fri". A unit test
+  keeps dashes out of the English strings and the release history.
+
 ## v1.8.0 (2026-09-25)
 
 ### Protection

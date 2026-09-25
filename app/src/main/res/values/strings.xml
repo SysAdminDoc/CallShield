@@ -260,7 +260,7 @@
     <string name="hash_wildcard_dialog_schedule_end">End</string>
     <string name="hash_wildcard_item_schedule">Active %1$s</string>
     <string name="schedule_every_day">Every day</string>
-    <string name="schedule_weekdays">Mon–Fri</string>
+    <string name="schedule_weekdays">Mon to Fri</string>
     <string name="schedule_weekends">Weekends</string>
     <string name="schedule_days_hours">%1$s · %2$s</string>
     <string name="desc_reported_not_spam">Reported as not spam</string>
