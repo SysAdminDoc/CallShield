@@ -7,6 +7,8 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.sysadmindoc.callshield.data.SpamHeuristics
 import com.sysadmindoc.callshield.data.SpamRepository
+import com.sysadmindoc.callshield.data.checker.CheckerDependencies
+import com.sysadmindoc.callshield.data.readOnlyCampaignDetector
 import com.sysadmindoc.callshield.data.repository.SpamRepositoryAdapter
 import com.sysadmindoc.callshield.domain.usecase.CheckSpamUseCase
 import kotlinx.coroutines.runBlocking
@@ -34,8 +36,10 @@ class CallScreeningDeadlineTest {
                 // A new facade leaves checker/prefix/rule caches cold while using
                 // the same Room/DataStore path as onScreenCall. Unlike the other
                 // repository tests it keeps the app's own stores on purpose: the
-                // cold path through them is what this test times.
-                val repository = SpamRepository(context)
+                // cold path through them is what this test times. Its campaign
+                // detector reads the app's observations but records none.
+                val repository =
+                    SpamRepository(context, checkerDependencies = CheckerDependencies(campaignDetector = readOnlyCampaignDetector(context)))
                 val checkSpam = CheckSpamUseCase(SpamRepositoryAdapter(repository))
                 val number = "+12125550199"
 

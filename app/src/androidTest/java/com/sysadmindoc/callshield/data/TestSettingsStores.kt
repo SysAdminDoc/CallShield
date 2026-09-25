@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import com.sysadmindoc.callshield.data.checker.CheckerDependencies
 import com.sysadmindoc.callshield.data.local.AppDatabase
+import com.sysadmindoc.callshield.data.model.CampaignObservation
 import com.sysadmindoc.callshield.data.remote.GitHubDataSource
 import com.sysadmindoc.callshield.data.remote.SpamDataSource
 import kotlinx.coroutines.CoroutineScope
@@ -69,5 +70,31 @@ internal class TestSettingsStores(
     override fun close() {
         runBlocking { job.cancelAndJoin() }
         directory.deleteRecursively()
+    }
+}
+
+/**
+ * A campaign detector that reads the installed app's observations and records
+ * none, for the tests that time the app's own cold path: the read is part of
+ * what they time, and the calls they screen must not land in the app's table.
+ */
+internal fun readOnlyCampaignDetector(context: Context): CampaignDetector {
+    val appStore = RoomCampaignObservationStore(AppDatabase.getInstance(context).spamDao())
+    return CampaignDetector().apply {
+        attachObservationStore(
+            object : CampaignObservationStore {
+                override suspend fun record(observation: CampaignObservation) = Unit
+
+                override suspend fun load(
+                    prefix: String,
+                    since: Long,
+                ): List<CampaignObservation> = appStore.load(prefix, since)
+
+                override suspend fun prune(
+                    before: Long,
+                    maxRows: Int,
+                ) = Unit
+            },
+        )
     }
 }

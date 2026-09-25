@@ -10,6 +10,8 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.sysadmindoc.callshield.CallShieldApp
 import com.sysadmindoc.callshield.data.RestoreSentinel
 import com.sysadmindoc.callshield.data.SpamRepository
+import com.sysadmindoc.callshield.data.checker.CheckerDependencies
+import com.sysadmindoc.callshield.data.readOnlyCampaignDetector
 import com.sysadmindoc.callshield.data.repository.SpamRepositoryAdapter
 import com.sysadmindoc.callshield.domain.usecase.CheckSpamUseCase
 import kotlinx.coroutines.runBlocking
@@ -40,9 +42,11 @@ class ColdStartVerdictTest {
             val processToReady = timings.readyAtElapsedRealtime - Process.getStartElapsedRealtime()
 
             // A new facade leaves every cache cold, as for the first call after a start.
-            val cold = SpamRepository(context)
+            // Its campaign detector reads the app's observations but records none.
+            val dependencies = CheckerDependencies(campaignDetector = readOnlyCampaignDetector(context))
+            val cold = SpamRepository(context, checkerDependencies = dependencies)
             val cacheLoadMillis = measureTimeMillis { cold.warmScreeningCaches() }
-            val verdictRepository = SpamRepository(context)
+            val verdictRepository = SpamRepository(context, checkerDependencies = dependencies)
             val coldVerdictMillis =
                 measureTimeMillis {
                     CheckSpamUseCase(SpamRepositoryAdapter(verdictRepository))(
