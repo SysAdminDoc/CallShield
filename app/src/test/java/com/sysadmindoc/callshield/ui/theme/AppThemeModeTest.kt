@@ -4,6 +4,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.luminance
 import com.sysadmindoc.callshield.ui.screens.main.REPEAT_BADGE_TINT
+import com.sysadmindoc.callshield.ui.screens.main.RULE_CONFLICT_TINT
 import com.sysadmindoc.callshield.ui.screens.more.LATEST_TAG_TINT
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -121,6 +122,16 @@ class AppThemeModeTest {
                     assertTrue("$mode text on a selected $name chip over surface #$index: $ratio", ratio >= 4.5f)
                 }
             }
+        }
+    }
+
+    @Test
+    fun `the rule-conflict warning keeps AA over its dialog in every theme`() {
+        listOf(AppThemeMode.Light, AppThemeMode.Graphite, AppThemeMode.Amoled).forEach { mode ->
+            val palette = paletteFor(mode, systemDark = false)
+            // The add-rule dialogs sit on surfaceBright.
+            val ratio = contrastRatio(palette.warning, palette.warning.copy(alpha = RULE_CONFLICT_TINT).compositeOver(palette.surfaceBright))
+            assertTrue("$mode rule-conflict warning: $ratio", ratio >= 4.5f)
         }
     }
 

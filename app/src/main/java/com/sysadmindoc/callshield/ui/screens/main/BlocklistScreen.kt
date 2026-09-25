@@ -1807,6 +1807,9 @@ fun AddKeywordDialog(
     )
 }
 
+/** The rule-conflict warning's tint. Warning text on a 12% tint over the dialog fell to 4.44:1 in Light. */
+internal const val RULE_CONFLICT_TINT = 0.06f
+
 @Composable
 private fun RuleConflictWarning(conflict: RuleConflict) {
     val winner =
@@ -1825,7 +1828,7 @@ private fun RuleConflictWarning(conflict: RuleConflict) {
             },
         )
     Surface(
-        color = CatYellow.copy(alpha = 0.12f),
+        color = CatYellow.copy(alpha = RULE_CONFLICT_TINT),
         shape = RoundedCornerShape(10.dp),
         modifier = Modifier.fillMaxWidth(),
     ) {

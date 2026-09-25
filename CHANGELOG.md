@@ -35,6 +35,9 @@ All notable changes to CallShield will be documented in this file.
   shows the last filter's rows as the new filter's results. They stayed on
   screen, and could be tapped or swiped, until the new filter's first page
   loaded. The list shows its loading spinner for that moment instead.
+- The warning in the add-rule dialogs that another rule overrides the new
+  one meets the AA contrast minimum in the light theme: 4.82:1, up from
+  4.44:1, with a lighter tint behind the same yellow text.
 
 ### Data pipeline
 
