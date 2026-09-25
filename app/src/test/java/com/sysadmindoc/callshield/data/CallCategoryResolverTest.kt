@@ -163,6 +163,23 @@ class CallCategoryResolverTest {
     }
 
     @Test
+    fun `a weak ml block names no category although its checker types it robocall`() {
+        // What MlScorerChecker writes: every block is typed "robocall", and the
+        // model blocks from about 65.
+        fun ml(confidence: Int) =
+            BlockResult
+                .block("ml_scorer", type = "robocall", description = "ML model: $confidence% spam likelihood", confidence = confidence)
+                .toSpamCheckResult()
+
+        assertEquals(CallCategory.Unknown, CallCategoryResolver.resolve(ml(65)))
+        assertEquals(CallCategory.Unknown, CallCategoryResolver.resolve(ml(79)))
+        assertEquals(CallCategory.Robocall, CallCategoryResolver.resolve(ml(80)))
+        // A logged ML row keeps the type, and the Blocked log labels it the same way.
+        assertEquals(CallCategory.Unknown, CallCategoryResolver.resolveFromLog("ml_scorer", "robocall", "", 72))
+        assertEquals(CallCategory.Robocall, CallCategoryResolver.resolveFromLog("ml_scorer", "robocall", "", 85))
+    }
+
+    @Test
     fun `rcs prefix matchSource resolves to Phishing`() {
         val result = SpamCheckResult(isSpam = true, matchSource = "rcs_database", type = "unknown")
         assertEquals(CallCategory.Phishing, CallCategoryResolver.resolve(result))

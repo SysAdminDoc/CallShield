@@ -4,6 +4,14 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+### Protection
+
+- Call handling by category no longer acts on a weak ML block. The on-device
+  model types every call it blocks as a robocall, so a Robocall setting of
+  Allow or Silence decided calls it scored from 65 to 79, where CallShield
+  otherwise names no category. An ML block now counts as a robocall from a
+  score of 80, and the Blocked log labels it the same way.
+
 ### Interface
 
 - The release history under More and the weekday schedule label read as

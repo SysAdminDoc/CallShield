@@ -42,6 +42,9 @@ object CallCategoryResolver {
     /** The heuristic score the default setting blocks at; below it a signal is too weak to name a category. */
     private const val HEURISTIC_CATEGORY_MIN_CONFIDENCE = 60
 
+    /** The ML score at which a block names Robocall; the model blocks from about 65. */
+    private const val ML_CATEGORY_MIN_CONFIDENCE = 80
+
     /** Convenience overload for callers holding a persisted `BlockedCall`
      *  (which doesn't carry a SpamCheckResult type field but does carry
      *  matchReason, description, and confidence). */
@@ -88,6 +91,11 @@ object CallCategoryResolver {
         // match also fires on local banks and schools. Naming either would let
         // a category rule decide the call on that alone.
         if (result.reasonCode == BlockReasonCode.HEURISTIC && result.confidence < HEURISTIC_CATEGORY_MIN_CONFIDENCE) {
+            return CallCategory.Unknown
+        }
+        // MlScorerChecker types every block "robocall", so a weak ML block
+        // would name Robocall through the type tags below.
+        if (result.reasonCode == BlockReasonCode.ML_SCORER && result.confidence < ML_CATEGORY_MIN_CONFIDENCE) {
             return CallCategory.Unknown
         }
 
@@ -147,7 +155,7 @@ object CallCategoryResolver {
         // High-confidence ML hits default to Robocall — the GBT model is
         // trained on patterns that overwhelmingly correlate with automated
         // dialers.
-        if (result.reasonCode == BlockReasonCode.ML_SCORER && result.confidence >= 80) {
+        if (result.reasonCode == BlockReasonCode.ML_SCORER && result.confidence >= ML_CATEGORY_MIN_CONFIDENCE) {
             return CallCategory.Robocall
         }
 

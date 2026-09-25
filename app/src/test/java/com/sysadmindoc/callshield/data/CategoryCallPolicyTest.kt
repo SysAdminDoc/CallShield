@@ -1,6 +1,7 @@
 package com.sysadmindoc.callshield.data
 
 import androidx.datastore.preferences.core.mutablePreferencesOf
+import com.sysadmindoc.callshield.data.checker.BlockResult
 import com.sysadmindoc.callshield.domain.model.SpamCheckResult
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -49,6 +50,21 @@ class CategoryCallPolicyTest {
         val prefs = mutablePreferencesOf(SpamRepository.KEY_CATEGORY_CALL_ACTIONS to setOf("telemarketer=allow"))
 
         assertSame(result, CategoryCallPolicy.apply(result, prefs))
+    }
+
+    @Test
+    fun `a robocall rule can't decide a weak ml block`() {
+        val prefs = mutablePreferencesOf(SpamRepository.KEY_CATEGORY_CALL_ACTIONS to setOf("robocall=allow"))
+
+        fun ml(confidence: Int) =
+            BlockResult
+                .block("ml_scorer", type = "robocall", description = "ML model", confidence = confidence)
+                .toSpamCheckResult()
+
+        val weak = ml(72)
+        assertSame(weak, CategoryCallPolicy.apply(weak, prefs))
+        val strong = CategoryCallPolicy.apply(ml(85), prefs)
+        assertEquals(CategoryCallAction.ALLOW, CategoryCallPolicy.parseMatchSource(strong.matchSource)?.action)
     }
 
     @Test
