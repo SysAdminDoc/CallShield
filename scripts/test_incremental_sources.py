@@ -305,9 +305,9 @@ def test_new_complaints_require_independent_caller_corroboration():
 
 
 def test_ftc_demo_key_run_stays_inside_the_hourly_budget():
-    # api.data.gov's shared DEMO_KEY allows 30 requests an hour. A 5,000-record
-    # run made 100, hit the limit part way through and recorded nothing, so the
-    # freshness gate read FTC as never imported.
+    # api.ftc.gov gives the shared DEMO_KEY 10 requests a day. A 5,000-record
+    # run needs 100, hit the limit part way through and recorded nothing, so
+    # the freshness gate read FTC as never imported.
     module = load_importer()
     original_get = module.requests.get
     original_sleep = module.time.sleep
@@ -342,7 +342,8 @@ def test_ftc_demo_key_run_stays_inside_the_hourly_budget():
         assert result.complete
         assert result.cursor is not None
         assert len(requests_seen) == module.FTC_DEMO_KEY_REQUEST_BUDGET, len(requests_seen)
-        assert sum(params["items_per_page"] for params in requests_seen) == 1250
+        assert module.FTC_DEMO_KEY_REQUEST_BUDGET < 10, "the FTC API allows DEMO_KEY 10 requests a day"
+        assert sum(params["items_per_page"] for params in requests_seen) == module.FTC_DEMO_KEY_REQUEST_BUDGET * module.FTC_PAGE_SIZE
         assert {params["api_key"] for params in requests_seen} == {"DEMO_KEY"}
 
         # A key of its own is not budgeted.

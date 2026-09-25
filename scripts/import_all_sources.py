@@ -66,13 +66,14 @@ SARACROCHE_PREFIX_URL = "https://saracroche.org/api/v1/lists/french-list-arcep-o
 PHONEBLOCK_MAX_LIMIT = 5000
 NOMOROBO_MAX_RECORDS = 250000
 FTC_PAGE_SIZE = 50
-# api.data.gov's shared DEMO_KEY allows 30 requests an hour. A run that asks
-# for more never finishes, and a fetch that fails records nothing, so the
-# freshness gate read FTC as never imported. Without a key of its own
-# (FTC_API_KEY) a run stays inside that budget and its cursor carries on from
-# where it stopped next time.
+# api.ftc.gov gives the shared DEMO_KEY 10 requests a day (X-Ratelimit-Limit:
+# 10, reset at 00:00 UTC). A run that asks for more never finishes, and a fetch
+# that fails records nothing, so the freshness gate read FTC as never imported.
+# Without a key of its own (FTC_API_KEY) a run stays inside that budget, with
+# two requests to spare, and its cursor carries on from where it stopped next
+# time.
 FTC_DEMO_KEY = "DEMO_KEY"
-FTC_DEMO_KEY_REQUEST_BUDGET = 25
+FTC_DEMO_KEY_REQUEST_BUDGET = 8
 FCC_PAGE_SIZE = 5000
 SOURCE_CURSOR_SCHEMA_VERSION = 1
 RETRYABLE_STATUS_CODES = {403, 429}
@@ -318,8 +319,8 @@ def fetch_ftc(
         budget = FTC_DEMO_KEY_REQUEST_BUDGET * FTC_PAGE_SIZE
         if max_records > budget:
             print(
-                f"  DEMO_KEY allows {FTC_DEMO_KEY_REQUEST_BUDGET} requests an hour; "
-                f"fetching {budget:,} records this run (set FTC_API_KEY for more)"
+                f"  DEMO_KEY allows 10 requests a day; using {FTC_DEMO_KEY_REQUEST_BUDGET} to fetch "
+                f"{budget:,} records this run (set FTC_API_KEY for more)"
             )
             max_records = budget
     numbers: dict[str, dict] = {}

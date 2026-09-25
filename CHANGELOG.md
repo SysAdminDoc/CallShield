@@ -356,11 +356,12 @@ All notable changes to CallShield will be documented in this file.
 ### Data pipeline
 
 - The FTC import stays inside the budget of api.data.gov's shared DEMO_KEY,
-  which allows 30 requests an hour. A run used to ask for 5,000 records, hit
-  the limit part way through and record nothing, so the weekly check has read
-  FTC as never imported since the freshness record began. Without a key of
-  its own a run now fetches 1,250 records, records the import and carries on
-  from its cursor next time. Set `FTC_API_KEY` for a full window.
+  which the FTC API limits to 10 requests a day. A run used to ask for 5,000
+  records, hit the limit part way through and record nothing, so the weekly
+  check has read FTC as never imported since the freshness record began.
+  Without a key of its own a run now fetches 400 records, records the import
+  and carries on from its cursor next time. Set `FTC_API_KEY` for a full
+  window.
 - The importer's summary no longer counts numbers the corroboration filter
   dropped as added. The 2026-09-25 refresh printed "Added: 294,619" while the
   database total stood still.
