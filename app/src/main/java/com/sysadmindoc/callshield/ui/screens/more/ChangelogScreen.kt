@@ -710,6 +710,9 @@ fun ChangelogScreen() {
     }
 }
 
+/** The Latest tag's tint, inside a card tinted with the same green; AppThemeModeTest checks its text. */
+internal const val LATEST_TAG_TINT = 0.12f
+
 @Composable
 fun VersionEntry(
     version: String,
@@ -828,7 +831,7 @@ fun VersionEntry(
                     if (isLatest) {
                         Spacer(Modifier.width(8.dp))
                         Surface(
-                            color = CatGreen.copy(alpha = 0.12f),
+                            color = CatGreen.copy(alpha = LATEST_TAG_TINT),
                             shape = RoundedCornerShape(6.dp),
                         ) {
                             Text(

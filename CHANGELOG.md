@@ -48,6 +48,9 @@ All notable changes to CallShield will be documented in this file.
   to the installed app's database, so test numbers from earlier runs could add
   up to a campaign burst and fail a later test. The hot-list tests also
   cleared the app's live hot ranges and spam domains around every test.
+- The contrast test also covers the changelog's Latest tag, which sits on two
+  green tints, and fails when a selected chip draws its label in its own
+  accent on a tint of 15% or more.
 
 ## v1.8.0 (2026-09-25)
 

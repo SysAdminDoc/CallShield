@@ -4,11 +4,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.luminance
 import com.sysadmindoc.callshield.ui.screens.main.REPEAT_BADGE_TINT
+import com.sysadmindoc.callshield.ui.screens.more.LATEST_TAG_TINT
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.File
 
 class AppThemeModeTest {
     @Test
@@ -104,6 +106,11 @@ class AppThemeModeTest {
                 val ratio = contrastRatio(accent, accent.copy(alpha = REPEAT_BADGE_TINT).compositeOver(card))
                 assertTrue("$mode $name repeat badge: $ratio", ratio >= 4.5f)
             }
+            // The changelog's Latest tag: green text on its tint, inside the
+            // latest release's card, which is tinted green as well.
+            val greenCard = palette.primary.copy(alpha = ACCENT_CARD_TINT).compositeOver(palette.background)
+            val latest = contrastRatio(palette.primary, palette.primary.copy(alpha = LATEST_TAG_TINT).compositeOver(greenCard))
+            assertTrue("$mode Latest tag: $latest", latest >= 4.5f)
             // Selected filter chips mark the choice with a green or blue tint of
             // up to 25% and keep body text on it.
             val surfaces =
@@ -116,6 +123,47 @@ class AppThemeModeTest {
             }
         }
     }
+
+    @Test
+    fun `no selected chip draws its accent as text on its own heavy tint`() {
+        // A selected chip tints itself with an accent. The same accent as its
+        // label fell to 4.33:1 in Light on a 20% tint (the log-cleanup chip),
+        // so from 15% up a selected chip's label is body text.
+        val tint = Regex("""selectedContainerColor\s*=\s*([\w.]+?)\.copy\(alpha\s*=\s*([0-9.]+)f\)""")
+        val label = Regex("""selectedLabelColor\s*=\s*([\w.]+)""")
+        val offenders =
+            File("src/main/java")
+                .walk()
+                .filter { it.extension == "kt" }
+                .flatMap { file ->
+                    chipColorArguments(file.readText()).mapNotNull { arguments ->
+                        val (accent, alpha) = tint.find(arguments)?.destructured ?: return@mapNotNull null
+                        "${file.name}: $accent on its own ${alpha}f tint".takeIf {
+                            label.find(arguments)?.groupValues?.get(1) == accent && alpha.toFloat() >= 0.15f
+                        }
+                    }
+                }.toList()
+
+        assertEquals(emptyList<String>(), offenders)
+    }
+
+    /** The arguments of every `filterChipColors(...)` call in [source]. */
+    private fun chipColorArguments(source: String): List<String> =
+        Regex("""filterChipColors\(""")
+            .findAll(source)
+            .map { call ->
+                val start = call.range.last + 1
+                var depth = 1
+                var end = start
+                while (depth > 0 && end < source.length) {
+                    when (source[end]) {
+                        '(' -> depth++
+                        ')' -> depth--
+                    }
+                    end++
+                }
+                source.substring(start, end - 1)
+            }.toList()
 
     private fun contrastRatio(
         first: Color,
