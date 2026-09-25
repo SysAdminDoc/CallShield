@@ -82,6 +82,7 @@ internal object LegacyDatabases {
     }
 
     private fun SupportSQLiteDatabase.seed(version: Int) {
+        seedCommonTables()
         when (version) {
             5 -> seedVersion5()
             6 -> seedVersion6()
@@ -221,6 +222,21 @@ internal object LegacyDatabases {
         } else {
             ""
         }
+
+    /**
+     * Every version has spam_prefixes and call_log, so each carries a prefix and
+     * a logged message with no body: the migrations rebuild both tables.
+     */
+    private fun SupportSQLiteDatabase.seedCommonTables() {
+        execSQL("INSERT INTO spam_prefixes (prefix, type, description) VALUES ('+1900', 'premium', 'legacy prefix')")
+        execSQL(
+            """
+            INSERT INTO call_log
+                (number, timestamp, type, wasBlocked, isCall, smsBody, matchReason, confidence)
+            VALUES ('+17770000002', 8888, 'sms_spam', 1, 0, NULL, 'sms_content', 80)
+            """.trimIndent(),
+        )
+    }
 
     private fun SupportSQLiteDatabase.seedVersion5() {
         execSQL(

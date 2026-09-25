@@ -58,6 +58,12 @@ All notable changes to CallShield will be documented in this file.
 - A unit test checks that every check in the pipeline has a Chinese name of
   its own. The Chinese sweep reached only one of the 37, so a missing or
   untranslated name passed.
+- The database upgrade tests check what each upgrade does to empty fields,
+  not only how many rows survive. An upgrade that turned a permanent allow
+  into an expired one, dropped a logged call because it shared an empty key
+  with another, or merged a number's two spellings without keeping the
+  higher report count and the user's block now fails the build. The oldest
+  hand-built databases also carry a logged message and a prefix now.
 
 ### Translations
 

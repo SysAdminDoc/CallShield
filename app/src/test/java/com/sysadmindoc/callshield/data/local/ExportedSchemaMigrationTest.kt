@@ -86,11 +86,20 @@ class ExportedSchemaMigrationTest {
         try {
             val sqlite = database.openHelper.writableDatabase
             check(sqlite.version == DB_VERSION) { "ended at version ${sqlite.version}" }
-            // Every table holds a filled row and a row with NULL in each nullable
+            // Every table holds a filled row and two rows with NULL in each nullable
             // column. A v11 database also holds the filled number twice (national and
-            // E.164), which the identity migration merges, so two rows remain.
+            // E.164), which the identity migration merges, so three rows remain.
             tables.forEach { table ->
-                check(sqlite.single("SELECT COUNT(*) FROM `$table`") == "2") { "$table doesn't hold its two rows" }
+                check(sqlite.single("SELECT COUNT(*) FROM `${table.name}`") == "3") { "${table.name} doesn't hold its three rows" }
+                // A NULL means something: a permanent allow or block has no expiresAt,
+                // and a logged call without a key has no logKey. Both NULL rows keep them.
+                val columns = sqlite.columns(table.name)
+                table.nullRowKeys.forEach { key ->
+                    table.nullableColumns.filter { it in columns }.forEach { column ->
+                        val stillNull = sqlite.single("SELECT COUNT(*) FROM `${table.name}` WHERE `${table.keyColumn}` = ? AND `$column` IS NULL", key)
+                        check(stillNull == "1") { "${table.name}.$column is no longer NULL in the row where ${table.keyColumn} = $key" }
+                    }
+                }
             }
             if (version < IDENTITY_MIGRATION_TARGET) {
                 IDENTITY_TABLES.forEach { table ->
@@ -98,9 +107,16 @@ class ExportedSchemaMigrationTest {
                         "$table didn't merge the national form into $CANONICAL_NUMBER"
                     }
                 }
+                // The national twin has more reports, the E.164 twin the user's block.
+                check(sqlite.single("SELECT reports FROM spam_numbers WHERE number = '$CANONICAL_NUMBER'") == "$NATIONAL_TWIN_REPORTS") {
+                    "the merged spam_numbers row didn't keep the higher report count"
+                }
+                check(sqlite.single("SELECT isUserBlocked FROM spam_numbers WHERE number = '$CANONICAL_NUMBER'") == "1") {
+                    "the merged spam_numbers row lost the user's block"
+                }
             }
             if (version < REASON_CODE_VERSION) {
-                check(sqlite.single("SELECT COUNT(*) FROM call_log WHERE reasonCode = '$SEEDED_MATCH_REASON'") == "2") {
+                check(sqlite.single("SELECT COUNT(*) FROM call_log WHERE reasonCode = '$SEEDED_MATCH_REASON'") == "3") {
                     "call_log reasonCode wasn't backfilled"
                 }
             }
@@ -109,57 +125,105 @@ class ExportedSchemaMigrationTest {
         }
     }
 
-    /** Creates [version] from its schema with two rows in each table, and returns the table names. */
+    /** A table as its source schema built it, with the keys of its two NULL rows. */
+    private data class SeededTable(
+        val name: String,
+        val nullableColumns: List<String>,
+        val keyColumn: String,
+        val nullRowKeys: List<String>,
+    )
+
+    /** Creates [version] from its schema with three rows in each table (four in a v11 identity table). */
     private fun createFromSchema(
         version: Int,
         schema: JsonObject,
-    ): List<String> {
+    ): List<SeededTable> {
         val database = schema.getValue("database").jsonObject
         require("views" !in database) { "schema v$version has views, which this test doesn't create" }
         val entities = database.getValue("entities").jsonArray.map { it.jsonObject }
         val file = context.getDatabasePath(TEST_DB).also { it.parentFile?.mkdirs() }
-        SQLiteDatabase.openOrCreateDatabase(file, null).use { db ->
-            entities.forEach { entity ->
-                val table = entity.string("tableName")
-                require("ftsVersion" !in entity) { "$table is an FTS table, which this test doesn't create" }
-                db.execSQL(entity.string("createSql").replace(TABLE_NAME, table))
-                entity["indices"]?.jsonArray?.forEach { index ->
-                    db.execSQL(index.jsonObject.string("createSql").replace(TABLE_NAME, table))
-                }
-                db.insertOrThrow(table, null, seedRow(entity))
-                if (version < IDENTITY_MIGRATION_TARGET && table in IDENTITY_TABLES) {
-                    val twin =
-                        seedRow(entity).apply {
-                            put("id", 2L)
-                            put("number", CANONICAL_NUMBER)
+        val seeded =
+            SQLiteDatabase.openOrCreateDatabase(file, null).use { db ->
+                val tables =
+                    entities.map { entity ->
+                        val table = entity.string("tableName")
+                        require("ftsVersion" !in entity) { "$table is an FTS table, which this test doesn't create" }
+                        db.execSQL(entity.string("createSql").replace(TABLE_NAME, table))
+                        entity["indices"]?.jsonArray?.forEach { index ->
+                            db.execSQL(index.jsonObject.string("createSql").replace(TABLE_NAME, table))
                         }
-                    db.insertOrThrow(table, null, twin)
-                }
-                db.insertOrThrow(table, null, seedRow(entity, nullsWherePossible = true))
+                        val identityTwin = version < IDENTITY_MIGRATION_TARGET && table in IDENTITY_TABLES
+                        db.insertOrThrow(
+                            table,
+                            null,
+                            seedRow(entity).apply {
+                                if (identityTwin && table == "spam_numbers") {
+                                    put("reports", NATIONAL_TWIN_REPORTS)
+                                    put("isUserBlocked", 0L)
+                                }
+                            },
+                        )
+                        if (identityTwin) {
+                            val twin =
+                                seedRow(entity).apply {
+                                    put("id", 2L)
+                                    put("number", CANONICAL_NUMBER)
+                                    if (table == "spam_numbers") {
+                                        put("reports", 2L)
+                                        put("isUserBlocked", 1L)
+                                    }
+                                }
+                            db.insertOrThrow(table, null, twin)
+                        }
+                        // Two rows with every nullable column NULL, so a unique index on a
+                        // nullable column (call_log.logKey) holds two NULLs, the way a
+                        // migration finds real rows.
+                        val keyColumn =
+                            entity
+                                .getValue("primaryKey")
+                                .jsonObject
+                                .getValue("columnNames")
+                                .jsonArray
+                                .single()
+                                .jsonPrimitive.content
+                        val nullRowKeys =
+                            listOf(NULL_ROW_A, NULL_ROW_B).map { variant ->
+                                val row = seedRow(entity, variant)
+                                db.insertOrThrow(table, null, row)
+                                row.getAsString(keyColumn)
+                            }
+                        val nullable =
+                            entity
+                                .getValue("fields")
+                                .jsonArray
+                                .map { it.jsonObject }
+                                .filter { it["notNull"]?.jsonPrimitive?.content != "true" }
+                        SeededTable(table, nullable.map { it.string("columnName") }, keyColumn, nullRowKeys)
+                    }
+                database.getValue("setupQueries").jsonArray.forEach { db.execSQL(it.jsonPrimitive.content) }
+                db.version = version
+                tables
             }
-            database.getValue("setupQueries").jsonArray.forEach { db.execSQL(it.jsonPrimitive.content) }
-            db.version = version
-        }
-        return entities.map { it.string("tableName") }
+        return seeded
     }
 
     /**
-     * One row for [entity]. The second row per table leaves every nullable column
-     * NULL and uses different keys (id 3, other text) so unique indexes hold.
+     * One row for [entity]. The NULL rows leave every nullable column NULL and
+     * use their own keys (id 3 and 4, other text) so unique indexes hold.
      */
     private fun seedRow(
         entity: JsonObject,
-        nullsWherePossible: Boolean = false,
+        variant: Int = FILLED_ROW,
     ) = ContentValues().apply {
         entity.getValue("fields").jsonArray.map { it.jsonObject }.forEach { field ->
             val column = field.string("columnName")
             val nullable = field["notNull"]?.jsonPrimitive?.content != "true"
             when {
-                nullsWherePossible && nullable -> putNull(column)
-                field.string("affinity") == "INTEGER" -> put(column, if (nullsWherePossible) 3L else 1L)
+                variant != FILLED_ROW && nullable -> putNull(column)
+                field.string("affinity") == "INTEGER" -> put(column, INTEGER_SEEDS[variant])
                 field.string("affinity") == "REAL" -> put(column, 1.0)
                 field.string("affinity") == "BLOB" -> put(column, byteArrayOf(1))
-                else -> put(column, textSeed(column, second = nullsWherePossible))
+                else -> put(column, textSeed(column, variant))
             }
         }
     }
@@ -168,15 +232,23 @@ class ExportedSchemaMigrationTest {
     // and a real match reason gives the reason-code backfill something to map.
     private fun textSeed(
         column: String,
-        second: Boolean,
+        variant: Int,
     ) = when {
         column.endsWith("Json") -> "[]"
-        column == "number" || column == "pattern" -> if (second) "212-555-0199" else "212-555-0123"
+        column == "number" || column == "pattern" -> NUMBER_SEEDS[variant]
         column == "matchReason" -> SEEDED_MATCH_REASON
-        else -> if (second) "seed-2" else "seed"
+        else -> TEXT_SEEDS[variant]
     }
 
-    private fun SupportSQLiteDatabase.single(sql: String): String? = query(sql).use { cursor -> if (cursor.moveToFirst()) cursor.getString(0) else null }
+    private fun SupportSQLiteDatabase.single(
+        sql: String,
+        vararg args: Any,
+    ): String? = query(sql, args).use { cursor -> if (cursor.moveToFirst()) cursor.getString(0) else null }
+
+    private fun SupportSQLiteDatabase.columns(table: String): Set<String> =
+        query("PRAGMA table_info(`$table`)").use { cursor ->
+            buildSet { while (cursor.moveToNext()) add(cursor.getString(cursor.getColumnIndexOrThrow("name"))) }
+        }
 
     private fun exportedSchemas(): Map<Int, JsonObject> {
         val directory = File(checkNotNull(System.getProperty("callshield.roomSchemas")) { "set by app/build.gradle.kts" })
@@ -199,6 +271,14 @@ class ExportedSchemaMigrationTest {
         const val IDENTITY_MIGRATION_TARGET = 12
         val IDENTITY_TABLES = setOf("spam_numbers", "whitelist")
         const val CANONICAL_NUMBER = "+12125550123"
+        const val NATIONAL_TWIN_REPORTS = 9L
+
+        const val FILLED_ROW = 0
+        const val NULL_ROW_A = 1
+        const val NULL_ROW_B = 2
+        val INTEGER_SEEDS = listOf(1L, 3L, 4L)
+        val NUMBER_SEEDS = listOf("212-555-0123", "212-555-0199", "212-555-0188")
+        val TEXT_SEEDS = listOf("seed", "seed-2", "seed-3")
 
         /** MIGRATION_14_15 adds reasonCode and backfills it from matchReason. */
         const val REASON_CODE_VERSION = 15

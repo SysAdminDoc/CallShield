@@ -44,6 +44,7 @@ class LegacySchemaMigrationTest {
     private fun migrateFrom(version: Int) {
         LegacyDatabases.create(context, TEST_DB, version)
         val before = rowCounts()
+        val nullsBefore = nullCounts()
         // Robolectric's native SQLite can't open WAL on Windows (SQLITE_CANTOPEN);
         // the journal mode has no bearing on migrations or Room's schema check.
         val database =
@@ -58,6 +59,13 @@ class LegacySchemaMigrationTest {
                 val after = sqlite.query("SELECT COUNT(*) FROM `$table`").use { it.firstInt() }
                 check(after == count) { "$table went from $count rows to $after" }
             }
+            // A NULL means something, such as a message with no body, so a
+            // migration keeps every one of them.
+            nullsBefore.forEach { (column, count) ->
+                val (table, name) = column.split('.')
+                val after = sqlite.query("SELECT COUNT(*) FROM `$table` WHERE `$name` IS NULL").use { it.firstInt() }
+                check(after == count) { "$column went from $count NULLs to $after" }
+            }
         } finally {
             database.close()
         }
@@ -65,14 +73,35 @@ class LegacySchemaMigrationTest {
 
     private fun rowCounts(): Map<String, Int> =
         SQLiteDatabase.openDatabase(context.getDatabasePath(TEST_DB).path, null, SQLiteDatabase.OPEN_READONLY).use { db ->
-            val tables =
-                db.rawQuery("SELECT name FROM sqlite_master WHERE type = 'table'", null).use { cursor ->
-                    buildList { while (cursor.moveToNext()) add(cursor.getString(0)) }
-                }
-            tables
-                .filterNot { it == "android_metadata" || it.startsWith("sqlite_") }
-                .associateWith { table -> db.rawQuery("SELECT COUNT(*) FROM `$table`", null).use { it.firstInt() } }
+            db.userTables().associateWith { table -> db.rawQuery("SELECT COUNT(*) FROM `$table`", null).use { it.firstInt() } }
         }
+
+    /** How many NULLs each nullable column holds, keyed `table.column`. */
+    private fun nullCounts(): Map<String, Int> =
+        SQLiteDatabase.openDatabase(context.getDatabasePath(TEST_DB).path, null, SQLiteDatabase.OPEN_READONLY).use { db ->
+            db
+                .userTables()
+                .flatMap { table ->
+                    val nullable =
+                        db.rawQuery("PRAGMA table_info(`$table`)", null).use { cursor ->
+                            buildList {
+                                while (cursor.moveToNext()) {
+                                    val notNull = cursor.getInt(cursor.getColumnIndexOrThrow("notnull")) == 1
+                                    val key = cursor.getInt(cursor.getColumnIndexOrThrow("pk")) > 0
+                                    if (!notNull && !key) add(cursor.getString(cursor.getColumnIndexOrThrow("name")))
+                                }
+                            }
+                        }
+                    nullable.map { column ->
+                        "$table.$column" to db.rawQuery("SELECT COUNT(*) FROM `$table` WHERE `$column` IS NULL", null).use { it.firstInt() }
+                    }
+                }.toMap()
+        }
+
+    private fun SQLiteDatabase.userTables(): List<String> =
+        rawQuery("SELECT name FROM sqlite_master WHERE type = 'table'", null)
+            .use { cursor -> buildList { while (cursor.moveToNext()) add(cursor.getString(0)) } }
+            .filterNot { it == "android_metadata" || it.startsWith("sqlite_") }
 
     private fun Cursor.firstInt(): Int {
         check(moveToFirst()) { "no row" }
