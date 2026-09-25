@@ -10,10 +10,12 @@ Usage:
     python update_ftc.py --max 50000  # Up to 50,000 records
 
 API docs: https://www.ftc.gov/developer/api/v0/endpoints/do-not-call-dnc-reported-calls-data-api
-No API key required (DEMO_KEY used, 1000 req/hr limit).
+Reads FTC_API_KEY from the environment. Without one it uses api.data.gov's
+shared DEMO_KEY, which allows 30 requests an hour, and stays inside that budget.
 """
 
 import json
+import os
 import sys
 import time
 import argparse
@@ -33,8 +35,13 @@ except ImportError as exc:  # pragma: no cover - environment guard
     ) from exc
 
 API_BASE = "https://api.ftc.gov/v0/dnc-complaints"
-API_KEY = "DEMO_KEY"
+DEMO_KEY = "DEMO_KEY"
+API_KEY = os.environ.get("FTC_API_KEY", "").strip() or DEMO_KEY
 PAGE_SIZE = 100  # Max allowed by FTC API
+# api.data.gov's shared DEMO_KEY allows 30 requests an hour; a run that asks
+# for more waits out the limit a minute at a time and can run for hours.
+DEMO_KEY_REQUEST_BUDGET = 25
+DEMO_KEY_MAX_RECORDS = DEMO_KEY_REQUEST_BUDGET * PAGE_SIZE
 DATA_DIR = Path(__file__).parent.parent / "data"
 DB_FILE = DATA_DIR / "spam_numbers.json"
 
@@ -67,6 +74,12 @@ def classify_subject(subject: str) -> str:
 
 def fetch_ftc_data(max_records: int = 10000) -> list[dict]:
     """Fetch DNC complaints from FTC API (newest first)."""
+    if API_KEY == DEMO_KEY and max_records > DEMO_KEY_MAX_RECORDS:
+        print(
+            f"DEMO_KEY allows {DEMO_KEY_REQUEST_BUDGET} requests an hour; "
+            f"fetching {DEMO_KEY_MAX_RECORDS:,} records (set FTC_API_KEY for more)"
+        )
+        max_records = DEMO_KEY_MAX_RECORDS
     print(f"Fetching up to {max_records:,} FTC complaints (newest first)...")
 
     all_records = []

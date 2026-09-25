@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Regression tests for bounded FTC/FCC imports and complaint promotion rules."""
 
+import contextlib
 import importlib.util
+import io
 import json
 import tempfile
 from pathlib import Path
@@ -302,6 +304,102 @@ def test_new_complaints_require_independent_caller_corroboration():
         assert numbers == {"+12125561212"}
 
 
+def test_ftc_demo_key_run_stays_inside_the_hourly_budget():
+    # api.data.gov's shared DEMO_KEY allows 30 requests an hour. A 5,000-record
+    # run made 100, hit the limit part way through and recorded nothing, so the
+    # freshness gate read FTC as never imported.
+    module = load_importer()
+    original_get = module.requests.get
+    original_sleep = module.time.sleep
+    requests_seen = []
+    try:
+        def fake_get(url, **kwargs):
+            params = kwargs["params"]
+            requests_seen.append(params)
+            first = params["offset"]
+            return FakeResponse(
+                {
+                    "data": [
+                        {
+                            "id": f"ftc-{first + n}",
+                            "attributes": {
+                                "created-date": f"2026-08-01T00:{(first + n) // 60 % 60:02d}:{(first + n) % 60:02d}Z",
+                                "company-phone-number": f"+1212556{(first + n) % 10000:04d}",
+                                "subject": "Robocall",
+                                "recorded-message-or-robocall": "Y",
+                            },
+                        }
+                        for n in range(params["items_per_page"])
+                    ]
+                }
+            )
+
+        module.requests.get = fake_get
+        module.time.sleep = lambda _seconds: None
+
+        result = module.fetch_ftc(max_records=5000, api_key=module.FTC_DEMO_KEY)
+
+        assert result.complete
+        assert result.cursor is not None
+        assert len(requests_seen) == module.FTC_DEMO_KEY_REQUEST_BUDGET, len(requests_seen)
+        assert sum(params["items_per_page"] for params in requests_seen) == 1250
+        assert {params["api_key"] for params in requests_seen} == {"DEMO_KEY"}
+
+        # A key of its own is not budgeted.
+        requests_seen.clear()
+        result = module.fetch_ftc(max_records=1300, api_key="a-key-of-its-own")
+
+        assert result.complete
+        assert len(requests_seen) == 26, len(requests_seen)
+        assert {params["api_key"] for params in requests_seen} == {"a-key-of-its-own"}
+    finally:
+        module.requests.get = original_get
+        module.time.sleep = original_sleep
+
+
+def test_merge_summary_counts_only_numbers_that_stayed():
+    # The 2026-09-25 refresh printed "Added: 294,619" while the total stood
+    # still: every one of them was a single uncorroborated complaint that the
+    # filter dropped a few lines later.
+    module = load_importer()
+    with tempfile.TemporaryDirectory() as directory:
+        directory = Path(directory)
+        db_path = directory / "spam_numbers.json"
+        db_path.write_text(
+            json.dumps({"version": 1, "updated": "2026-08-10", "numbers": [], "prefixes": []}),
+            encoding="utf-8",
+        )
+        module.DB_FILE = db_path
+        ftc = {"source_id": "ftc_complaints", "complaint_role": "caller_id", "spoof_signal": "unverified_originating_number"}
+        fcc = {"source_id": "fcc_complaints", "complaint_role": "caller_id", "spoof_signal": "unverified_caller_id"}
+        entries = [
+            {
+                "number": "+12125561221",
+                "type": "robocall",
+                "reports": 1,
+                "first_seen": "2026-08-01",
+                "last_seen": "2026-08-10",
+                "description": "One complaint",
+                "evidence": [ftc],
+            },
+            {
+                "number": "+12125561222",
+                "type": "robocall",
+                "reports": 2,
+                "first_seen": "2026-08-01",
+                "last_seen": "2026-08-10",
+                "description": "Independent complaints",
+                "evidence": [ftc, fcc],
+            },
+        ]
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            module.merge_into_database(entries, min_reports=2, source_names={"ftc_complaints", "fcc_complaints"})
+        summary = output.getvalue()
+        assert "  Added:   1\n" in summary, summary
+        assert "  Total:   1\n" in summary, summary
+
+
 def main():
     test_fcc_retains_roles_and_spoof_signals()
     test_incremental_window_retries_and_advances_cursor()
@@ -309,6 +407,8 @@ def main():
     test_source_freshness_keeps_what_a_run_did_not_fetch()
     test_merge_writes_its_records_beside_the_database()
     test_new_complaints_require_independent_caller_corroboration()
+    test_ftc_demo_key_run_stays_inside_the_hourly_budget()
+    test_merge_summary_counts_only_numbers_that_stayed()
     print("incremental source tests: OK")
 
 

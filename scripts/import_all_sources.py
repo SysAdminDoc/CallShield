@@ -6,7 +6,7 @@ Aggregates spam phone numbers from ALL available free public sources
 and merges them into data/spam_numbers.json.
 
 Sources:
-  1. FTC Do Not Call API (api.ftc.gov) — no key, DEMO_KEY
+  1. FTC Do Not Call API (api.ftc.gov) — DEMO_KEY, or FTC_API_KEY for a full window
   2. FCC Unwanted Calls Dataset (opendata.fcc.gov) — Socrata API, no key
   3. PhoneBlock.net community database — optional operator key for bulk
   4. Saracroche French telemarketing ranges — daily public JSON feed
@@ -66,6 +66,13 @@ SARACROCHE_PREFIX_URL = "https://saracroche.org/api/v1/lists/french-list-arcep-o
 PHONEBLOCK_MAX_LIMIT = 5000
 NOMOROBO_MAX_RECORDS = 250000
 FTC_PAGE_SIZE = 50
+# api.data.gov's shared DEMO_KEY allows 30 requests an hour. A run that asks
+# for more never finishes, and a fetch that fails records nothing, so the
+# freshness gate read FTC as never imported. Without a key of its own
+# (FTC_API_KEY) a run stays inside that budget and its cursor carries on from
+# where it stopped next time.
+FTC_DEMO_KEY = "DEMO_KEY"
+FTC_DEMO_KEY_REQUEST_BUDGET = 25
 FCC_PAGE_SIZE = 5000
 SOURCE_CURSOR_SCHEMA_VERSION = 1
 RETRYABLE_STATUS_CODES = {403, 429}
@@ -292,13 +299,29 @@ def _failed_fetch(
     return SourceFetchResult([], cursor=cursor, complete=False, error=error)
 
 
+def ftc_api_key() -> str:
+    """The FTC_API_KEY environment variable, or api.data.gov's shared DEMO_KEY."""
+
+    return os.environ.get("FTC_API_KEY", "").strip() or FTC_DEMO_KEY
+
+
 def fetch_ftc(
     max_records: int = 5000,
     cursor: dict[str, str] | None = None,
+    api_key: str | None = None,
 ) -> SourceFetchResult:
     """Fetch a bounded FTC window and return a commit-safe high-water mark."""
 
     print("\n[FTC Do Not Call API]")
+    key = api_key or ftc_api_key()
+    if key == FTC_DEMO_KEY:
+        budget = FTC_DEMO_KEY_REQUEST_BUDGET * FTC_PAGE_SIZE
+        if max_records > budget:
+            print(
+                f"  DEMO_KEY allows {FTC_DEMO_KEY_REQUEST_BUDGET} requests an hour; "
+                f"fetching {budget:,} records this run (set FTC_API_KEY for more)"
+            )
+            max_records = budget
     numbers: dict[str, dict] = {}
     cursor_records: list[dict] = []
     offset = 0
@@ -309,7 +332,7 @@ def fetch_ftc(
     while records_fetched < max_records:
         page_size = min(FTC_PAGE_SIZE, max_records - records_fetched)
         params = {
-            "api_key": "DEMO_KEY",
+            "api_key": key,
             "items_per_page": page_size,
             "offset": offset,
             "sort_order": "asc" if cursor else "desc",
@@ -1048,7 +1071,9 @@ def merge_into_database(
 
     print(f"\n{'='*50}")
     print(f"Database updated:")
-    print(f"  Added:   {added:,}")
+    # `added` counted every new number before the corroboration filter ran;
+    # the 2026-09-25 run printed "Added: 294,619" while the total stood still.
+    print(f"  Added:   {added - filtered:,}")
     print(f"  Updated: {updated:,}")
     print(f"  Prefixes added:   {prefix_added:,}")
     print(f"  Prefixes updated: {prefix_updated:,}")
