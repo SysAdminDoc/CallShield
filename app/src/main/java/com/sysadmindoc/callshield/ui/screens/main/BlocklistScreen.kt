@@ -122,6 +122,7 @@ import com.sysadmindoc.callshield.data.model.WhitelistEntry
 import com.sysadmindoc.callshield.data.model.WildcardRule
 import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.accessibleSwipeActions
+import com.sysadmindoc.callshield.ui.isStaleFor
 import com.sysadmindoc.callshield.ui.spamTypeLabelRes
 import com.sysadmindoc.callshield.ui.theme.CatBlue
 import com.sysadmindoc.callshield.ui.theme.CatGreen
@@ -1221,6 +1222,8 @@ private fun DatabaseTabContent(viewModel: MainViewModel) {
     val numbers = viewModel.spamNumbers.collectAsLazyPagingItems()
     val filtered = typeFilter != DatabaseTypeFilter.ALL || sourceFilter != DatabaseSourceFilter.ALL
     val refreshState = numbers.loadState.refresh
+    // Right after a chip changes, the rows on screen are still the last filter's.
+    val stale = numbers.isStaleFor(filter)
     // A new filter starts at the top of its list.
     val listState = rememberSaveable(filter, saver = LazyListState.Saver) { LazyListState() }
 
@@ -1238,7 +1241,7 @@ private fun DatabaseTabContent(viewModel: MainViewModel) {
             onSelect = { viewModel.setDatabaseFilter(typeFilter, it) },
         )
         Box(modifier = Modifier.weight(1f)) {
-            if (refreshState is LoadState.Loading && numbers.itemCount == 0) {
+            if (stale || (refreshState is LoadState.Loading && numbers.itemCount == 0)) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(color = CatBlue)
                 }
@@ -1272,9 +1275,9 @@ private fun DatabaseTabContent(viewModel: MainViewModel) {
                 ) {
                     items(
                         count = numbers.itemCount,
-                        key = numbers.itemKey { it.id },
+                        key = numbers.itemKey { it.item.id },
                     ) { index ->
-                        numbers[index]?.let { number -> DatabaseItem(number) }
+                        numbers[index]?.let { row -> DatabaseItem(row.item) }
                     }
                     when (numbers.loadState.append) {
                         LoadState.Loading -> {

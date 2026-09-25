@@ -27,6 +27,10 @@ All notable changes to CallShield will be documented in this file.
   CallShield in the background. They came back as All types and All sources
   while the list kept its scroll position, so it reopened partway down the
   unfiltered list.
+- Changing a filter chip on the Database tab or in the Blocked log no longer
+  shows the last filter's rows as the new filter's results. They stayed on
+  screen, and could be tapped or swiped, until the new filter's first page
+  loaded. The list shows its loading spinner for that moment instead.
 
 ### Data pipeline
 

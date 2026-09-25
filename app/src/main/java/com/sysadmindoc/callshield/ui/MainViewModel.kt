@@ -235,7 +235,7 @@ class MainViewModel
             _databaseFilter.value = type to source
         }
 
-        val spamNumbers: Flow<PagingData<SpamNumber>> =
+        val spamNumbers: Flow<PagingData<Filtered<Pair<DatabaseTypeFilter, DatabaseSourceFilter>, SpamNumber>>> =
             _databaseFilter.pagedWith(viewModelScope) { (type, source) ->
                 // The Trending chip also matches the current hot list, so it pages
                 // again when a new one is applied; other chips don't need it.
@@ -257,14 +257,14 @@ class MainViewModel
             logFilter.value = isCall to reasonCode
         }
 
-        val blockedCalls: Flow<PagingData<BlockedCall>> =
+        val blockedCalls: Flow<PagingData<Filtered<Pair<Int?, String?>, BlockedCall>>> =
             logFilter.pagedWith(viewModelScope) { (isCall, reasonCode) ->
                 Pager(PagingConfig(pageSize = LOG_PAGE_SIZE, initialLoadSize = LOG_PAGE_SIZE * 2, enablePlaceholders = false)) {
                     repo.pageBlockedCalls(isCall, reasonCode)
                 }.flow
             }
 
-        val groupedBlockedCalls: Flow<PagingData<BlockedCallGroup>> =
+        val groupedBlockedCalls: Flow<PagingData<Filtered<Pair<Int?, String?>, BlockedCallGroup>>> =
             logFilter.pagedWith(viewModelScope) { (isCall, reasonCode) ->
                 Pager(PagingConfig(pageSize = LOG_PAGE_SIZE, initialLoadSize = LOG_PAGE_SIZE * 2, enablePlaceholders = false)) {
                     repo.pageGroupedBlockedCalls(isCall, reasonCode)

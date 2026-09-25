@@ -57,6 +57,7 @@ import com.sysadmindoc.callshield.ui.accessibleSwipeActions
 import com.sysadmindoc.callshield.ui.blockReasonAccessibilityLabelRes
 import com.sysadmindoc.callshield.ui.expandableStateSemantics
 import com.sysadmindoc.callshield.ui.friendlyMatchReasonLabel
+import com.sysadmindoc.callshield.ui.isStaleFor
 import com.sysadmindoc.callshield.ui.rememberTemporaryDecisionDurations
 import com.sysadmindoc.callshield.ui.theme.*
 import com.sysadmindoc.callshield.util.filterAsciiDigits
@@ -99,6 +100,8 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
     val groupedListState = rememberSaveable(filterMode, selectedReasonCodeWire, saver = LazyListState.Saver) { LazyListState() }
     val activeItemCount = if (grouped) groupedCalls.itemCount else pagedCalls.itemCount
     val activeRefreshState = if (grouped) groupedCalls.loadState.refresh else pagedCalls.loadState.refresh
+    // Right after a chip changes, the rows on screen are still the last filter's.
+    val stale = if (grouped) groupedCalls.isStaleFor(mediaFilter to reasonFilter) else pagedCalls.isStaleFor(mediaFilter to reasonFilter)
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHost) },
@@ -267,7 +270,7 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
                         viewModel = viewModel,
                     )
                 }
-            } else if (activeRefreshState is LoadState.Loading && activeItemCount == 0) {
+            } else if (stale || (activeRefreshState is LoadState.Loading && activeItemCount == 0)) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(color = CatGreen)
                 }
@@ -318,9 +321,9 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
                 ) {
                     items(
                         count = groupedCalls.itemCount,
-                        key = groupedCalls.itemKey { it.call.number },
+                        key = groupedCalls.itemKey { it.item.call.number },
                     ) { index ->
-                        val group = groupedCalls[index] ?: return@items
+                        val group = groupedCalls[index]?.item ?: return@items
                         val call = group.call
                         GroupedCallItem(
                             call = call,
@@ -339,9 +342,9 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
                 ) {
                     items(
                         count = pagedCalls.itemCount,
-                        key = pagedCalls.itemKey { it.id },
+                        key = pagedCalls.itemKey { it.item.id },
                     ) { index ->
-                        val call = pagedCalls[index] ?: return@items
+                        val call = pagedCalls[index]?.item ?: return@items
                         // rememberSaveable (keyed by the item's stable id via the
                         // LazyColumn saveable registry) keeps the entrance animation
                         // from replaying every time a row scrolls off-screen and back.
