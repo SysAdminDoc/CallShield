@@ -1,10 +1,13 @@
 package com.sysadmindoc.callshield.data
 
 import android.content.Context
+import android.content.res.Configuration
 import androidx.annotation.StringRes
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.domain.model.BlockReasonCode
 import com.sysadmindoc.callshield.ui.pipelineCheckerLabelRes
+import org.xmlpull.v1.XmlPullParser
+import java.util.Locale
 
 /**
  * Generates a plain-language explanation of why a given block fired, in the
@@ -20,6 +23,8 @@ import com.sysadmindoc.callshield.ui.pipelineCheckerLabelRes
  * the number, or report a false positive.
  */
 object BlockReasoning {
+    private const val ANDROID_NAMESPACE = "http://schemas.android.com/apk/res/android"
+
     private val probabilisticReasons =
         setOf(
             BlockReasonCode.HEURISTIC,
@@ -245,7 +250,7 @@ object BlockReasoning {
                     reasoning(
                         s(R.string.reasoning_regulatory_prefix_headline),
                         s(R.string.reasoning_regulatory_prefix_detail),
-                        description.labeled(R.string.reasoning_range),
+                        rangeName(description).labeled(R.string.reasoning_range),
                     )
                 }
 
@@ -505,6 +510,38 @@ object BlockReasoning {
         private fun String.labeled(
             @StringRes format: Int,
         ): String? = takeIf { it.isNotBlank() }?.let { s(format, it) }
+
+        /**
+         * The range a regulatory block names, in the panel's language. The
+         * checker named it in its own context's language, which on API 29 to
+         * 32 is the system language when the app has a language of its own,
+         * and a logged row keeps the language it was written in.
+         */
+        private fun rangeName(description: String): String =
+            RegulatoryPrefix.entries
+                .firstOrNull { range -> shippedContexts.any { it.getString(range.descriptionRes) == description } }
+                ?.let { s(it.descriptionRes) }
+                ?: description
+
+        /** A context for each language the app ships, from res/xml/locales_config.xml. */
+        private val shippedContexts: List<Context> by lazy {
+            val parser = context.resources.getXml(R.xml.locales_config)
+            val tags =
+                try {
+                    buildList {
+                        while (parser.next() != XmlPullParser.END_DOCUMENT) {
+                            if (parser.eventType == XmlPullParser.START_TAG && parser.name == "locale") {
+                                parser.getAttributeValue(ANDROID_NAMESPACE, "name")?.let(::add)
+                            }
+                        }
+                    }
+                } finally {
+                    parser.close()
+                }
+            tags.map { tag ->
+                context.createConfigurationContext(Configuration(context.resources.configuration).apply { setLocale(Locale.forLanguageTag(tag)) })
+            }
+        }
 
         // Signal lists are joined with the app language's separator, so a
         // Chinese row uses "、" (or a full-width comma) rather than ",".

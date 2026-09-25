@@ -1,6 +1,7 @@
 package com.sysadmindoc.callshield.data
 
 import android.content.Context
+import android.content.res.Configuration
 import androidx.test.core.app.ApplicationProvider
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.checker.CheckerPriority
@@ -13,6 +14,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import java.util.Locale
 
 private const val EN_DASH = 0x2013
 private const val EM_DASH = 0x2014
@@ -246,5 +248,28 @@ class BlockReasoningTest {
         assertEquals("Scam calls are sent silently to voicemail by your category rule.", result.headline)
         assertTrue(result.bullets.any { "Underlying detection" in it })
         assertTrue(result.bullets.any { "whitelists" in it && "block rules" in it })
+    }
+
+    @Test
+    fun `a regulatory range is named in the panel's language whatever language the block was written in`() {
+        val chinese = context.createConfigurationContext(Configuration(context.resources.configuration).apply { setLocale(Locale.SIMPLIFIED_CHINESE) })
+        val english = context.getString(R.string.reg_prefix_brazil_0303_match)
+        val zh = chinese.getString(R.string.reg_prefix_brazil_0303_match)
+        assertNotEquals(english, zh)
+
+        fun rangeBullets(
+            panel: Context,
+            description: String,
+        ) = BlockReasoning
+            .explain(panel, reasonCode = BlockReasonCode.REGULATORY_PREFIX, description = description, confidence = 100)
+            .bullets
+
+        // The checker named the range in the system language, or the row is from before a switch.
+        val inEnglish = rangeBullets(context, zh)
+        assertTrue(inEnglish.toString(), inEnglish.any { english in it } && inEnglish.none { zh in it })
+        val inChinese = rangeBullets(chinese, english)
+        assertTrue(inChinese.toString(), inChinese.any { zh in it } && inChinese.none { english in it })
+        // Text that names no range CallShield knows is shown as written.
+        assertTrue(rangeBullets(context, "Range 555").any { "Range 555" in it })
     }
 }

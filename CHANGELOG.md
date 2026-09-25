@@ -56,6 +56,13 @@ All notable changes to CallShield will be documented in this file.
   green tints, and fails when a selected chip draws its label in its own
   accent on a tint of 15% or more.
 
+### Translations
+
+- The why panel names a telemarketing range in the app's language. On
+  Android 10 to 12, with CallShield set to a language other than the
+  phone's, the range came out in the phone's language, and a name written
+  before a language switch kept the old one.
+
 ## v1.8.0 (2026-09-25)
 
 ### Protection
