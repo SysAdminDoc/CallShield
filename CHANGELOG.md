@@ -6,6 +6,21 @@ All notable changes to CallShield will be documented in this file.
 
 ### Protection
 
+- Blocked calls can be answered and hung up instead of rejected, so a spam
+  caller can't leave a voicemail. The Answer & hang up blocked calls switch
+  in Settings is off by default, and it asks for the answer-calls permission
+  when you turn it on, so Setup no longer asks for it. It applies to calls
+  CallShield would reject outright. Silent voicemail mode, low-confidence
+  auto-mute and a meeting-mode silence still go to voicemail, and a call that
+  arrives while you're on another is rejected as before. The call is answered
+  without video and hung up after a delay you can set from 1 to 10 seconds,
+  since some carriers need longer before voicemail is skipped. Those short
+  answered calls never count toward trusting a caller. Answering tells
+  autodialers the line is live, so some call back. Contributed by
+  @tikkamasalla (#22). Protection Test lists the answer-calls permission as
+  not needed until that switch is on, instead of as a missing Samsung and
+  Xiaomi compatibility grant.
+
 - CallShield can stop a call you're about to make to a number it already
   flags. Callback scams only pay once you dial out, so that's where this
   catches them. It's off by default and uses Android's call redirection role,

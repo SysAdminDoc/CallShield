@@ -5,6 +5,7 @@ import com.sysadmindoc.callshield.R
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -66,6 +67,8 @@ class CallShieldPermissionsTest {
                 PermissionReadinessSnapshot(
                     callScreeningRoleAvailable = true,
                     postNotificationsRuntimeRequired = true,
+                    // With the setting off the answer-calls grant is not a gap.
+                    answerHangUpEnabled = true,
                 ),
             )
 
@@ -170,6 +173,34 @@ class CallShieldPermissionsTest {
                 readContactsGranted = false,
             ),
         )
+    }
+
+    @Test
+    fun `answer calls permission is not needed until answer and hang up is on`() {
+        fun answerCalls(snapshot: PermissionReadinessSnapshot): PermissionCapabilityState =
+            CallShieldPermissions
+                .evaluatePermissionContract(snapshot)
+                .first { state -> state.contract.id == PermissionCapabilityId.AnswerPhoneCalls }
+
+        val off = answerCalls(PermissionReadinessSnapshot())
+        assertTrue(off.passed)
+        assertEquals(R.string.permission_contract_answer_calls_not_needed, off.detailRes)
+        assertNull(off.recoveryHintRes)
+
+        val on = answerCalls(PermissionReadinessSnapshot(answerHangUpEnabled = true))
+        assertFalse(on.passed)
+        assertEquals(PermissionCapabilityStatus.Degraded, on.status)
+        assertEquals(R.string.protection_test_fix_permissions, on.recoveryHintRes)
+
+        val granted =
+            answerCalls(
+                PermissionReadinessSnapshot(
+                    grantedPermissions = setOf(Manifest.permission.ANSWER_PHONE_CALLS),
+                    answerHangUpEnabled = true,
+                ),
+            )
+        assertTrue(granted.passed)
+        assertEquals(R.string.protection_test_perm_granted, granted.detailRes)
     }
 
     @Test

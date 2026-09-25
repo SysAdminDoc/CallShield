@@ -556,7 +556,9 @@ private suspend fun runTests(context: Context): List<TestResult> =
         val results = mutableListOf<TestResult>()
         val repo = SpamRepository.getInstance(context)
 
-        CallShieldPermissions.permissionContractStates(context).forEach { state ->
+        CallShieldPermissions
+            .permissionContractStates(context, answerHangUpEnabled = repo.answerHangUpEnabled.first())
+            .forEach { state ->
             val priority =
                 when (state.contract.priority) {
                     PermissionCapabilityPriority.Required -> TestPriority.Required

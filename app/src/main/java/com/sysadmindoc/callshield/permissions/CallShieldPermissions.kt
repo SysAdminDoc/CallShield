@@ -64,6 +64,8 @@ data class PermissionReadinessSnapshot(
     val notificationAccessGranted: Boolean = false,
     val postNotificationsRuntimeRequired: Boolean = true,
     val smsInterceptionAdvisory: Boolean = false,
+    /** ANSWER_PHONE_CALLS is only needed while "Answer & hang up blocked calls" is on. */
+    val answerHangUpEnabled: Boolean = false,
 )
 
 data class PermissionCapabilityState(
@@ -192,6 +194,7 @@ object CallShieldPermissions {
                 recoveryHintRes = R.string.protection_test_fix_permissions,
                 priority = PermissionCapabilityPriority.Recommended,
                 manifestPermission = Manifest.permission.ANSWER_PHONE_CALLS,
+                advisoryDetailRes = R.string.permission_contract_answer_calls_not_needed,
             ),
             PermissionCapabilityContract(
                 id = PermissionCapabilityId.Overlay,
@@ -315,9 +318,11 @@ object CallShieldPermissions {
     fun permissionContractStates(
         context: Context,
         roleManager: RoleManager? = context.getSystemService(Context.ROLE_SERVICE) as? RoleManager,
+        answerHangUpEnabled: Boolean = false,
     ): List<PermissionCapabilityState> =
         evaluatePermissionContract(
             PermissionReadinessSnapshot(
+                answerHangUpEnabled = answerHangUpEnabled,
                 grantedPermissions =
                     permissionCapabilityContracts
                         .mapNotNull { contract -> contract.manifestPermission }
@@ -386,9 +391,15 @@ object CallShieldPermissions {
                     contract.id == PermissionCapabilityId.PostNotifications &&
                         !snapshot.postNotificationsRuntimeRequired &&
                         contract.readyWhenRuntimePermissionNotRequired
+                // Nothing answers or ends a call until the setting is on, and the
+                // setting asks for the grant itself, so a missing grant is not a gap.
+                val answerCallsNotRequired =
+                    contract.id == PermissionCapabilityId.AnswerPhoneCalls &&
+                        !snapshot.answerHangUpEnabled
 
                 contract.manifestPermission in snapshot.grantedPermissions ||
-                    notificationPermissionNotRequired
+                    notificationPermissionNotRequired ||
+                    answerCallsNotRequired
             }
 
             PermissionCapabilityKind.AndroidRole -> {
@@ -413,6 +424,11 @@ object CallShieldPermissions {
             !snapshot.postNotificationsRuntimeRequired
         ) {
             contract.unsupportedDetailRes
+        } else if (
+            contract.id == PermissionCapabilityId.AnswerPhoneCalls &&
+            contract.manifestPermission !in snapshot.grantedPermissions
+        ) {
+            contract.advisoryDetailRes
         } else {
             contract.grantedDetailRes
         }

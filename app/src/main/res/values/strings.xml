@@ -656,7 +656,7 @@
     <string name="settings_silent_voicemail">Silent voicemail mode</string>
     <string name="settings_silent_voicemail_desc">Blocked calls go to voicemail silently. Your phone stays quiet while callers hear normal ringing.</string>
     <string name="settings_answer_hang_up">Answer &amp; hang up blocked calls</string>
-    <string name="settings_answer_hang_up_desc">Instead of rejecting, CallShield answers blocked calls and hangs up so they can\'t leave a voicemail. Silent Voicemail and low-confidence auto-mute still send calls to voicemail. If you\'re already on a call, the blocked call is rejected. Your screen may light up briefly. Trade-offs: answering tells autodialers the number is live, so some callers redial; some carriers need a longer delay to skip voicemail, raise it if spam still lands in voicemail.</string>
+    <string name="settings_answer_hang_up_desc">Blocked calls are answered and hung up straight away, so the caller can\'t leave a voicemail. Silent voicemail mode, low-confidence auto-mute and meeting mode still send calls to voicemail, and a call that arrives while you\'re already on one is rejected as before. Your screen may light up for a moment. Answering tells autodialers the line is live, so some call back. Some carriers need a longer delay before voicemail is skipped, so raise it if spam still reaches your voicemail.</string>
     <string name="settings_hang_up_delay">Hang up after</string>
     <string name="settings_quiet_hours">Quiet hours</string>
     <string name="settings_quiet_hours_toggle">Block unknowns during quiet hours</string>
@@ -1058,7 +1058,8 @@
     <string name="permission_contract_call_screening_unsupported">This Android build does not expose the default call screening role.</string>
     <string name="permission_contract_fix_call_screening_unsupported">Use a phone/OEM build that supports Android call screening, or keep SMS/RCS protection enabled.</string>
     <string name="permission_contract_degraded_phone_state">Some OEM call-state compatibility paths may be unavailable without phone state access.</string>
-    <string name="permission_contract_degraded_answer_calls">Samsung/Xiaomi call-response compatibility may be reduced without answer-calls access.</string>
+    <string name="permission_contract_degraded_answer_calls">Answer &amp; hang up blocked calls is on, but calls can\'t be answered without this permission, so those calls are rejected instead.</string>
+    <string name="permission_contract_answer_calls_not_needed">Not needed until Answer &amp; hang up blocked calls is on. That setting asks for it.</string>
     <string name="permission_contract_degraded_overlay">Floating caller ID and live enrichment cards stay hidden until overlay access is allowed.</string>
     <string name="permission_contract_degraded_notification_access">RCS filtering and push-alert caller trust cannot read trusted message notifications until listener access is enabled.</string>
     <string name="permission_contract_post_notifications_name">Notification Permission</string>

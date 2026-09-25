@@ -471,6 +471,12 @@
     <string name="notification_screening_done">完成</string>
     <string name="settings_silent_voicemail">静默语音信箱模式</string>
     <string name="settings_silent_voicemail_desc">被拦截的来电静默转入语音信箱。你的手机保持安静，而来电者听到正常响铃。</string>
+    <string name="settings_answer_hang_up">接听并挂断被拦截的来电</string>
+    <string name="settings_answer_hang_up_desc">被拦截的来电会被接听后立即挂断，来电者无法留下语音留言。静默语音信箱模式、低置信度自动静音和会议模式仍会把来电转入语音信箱。如果你正在通话中，被拦截的来电会像以前一样被拒接。屏幕可能会短暂亮起。接听会让自动拨号系统知道这条线路有人接听，因此有些会再次拨打。部分运营商需要更长的延迟才能跳过语音信箱，如果垃圾来电仍进入你的语音信箱，请调高延迟。</string>
+    <string name="settings_hang_up_delay">多久后挂断</string>
+    <plurals name="settings_hang_up_delay_value">
+        <item quantity="other">%d 秒</item>
+    </plurals>
     <string name="settings_quiet_hours">勿扰时段</string>
     <string name="settings_quiet_hours_toggle">勿扰时段内拦截未知来电</string>
     <string name="settings_quiet_hours_desc">在设定时段内拦截所有非联系人来电</string>
@@ -762,7 +768,8 @@
     <string name="permission_contract_call_screening_unsupported">此 Android 版本未暴露默认来电筛查角色。</string>
     <string name="permission_contract_fix_call_screening_unsupported">使用支持 Android 来电筛查的手机/OEM 版本，或保持短信/RCS 防护开启。</string>
     <string name="permission_contract_degraded_phone_state">无电话状态权限时，部分 OEM 通话状态兼容路径可能不可用。</string>
-    <string name="permission_contract_degraded_answer_calls">无接听电话权限时，三星/小米的接听兼容可能降低。</string>
+    <string name="permission_contract_degraded_answer_calls">已开启“接听并挂断被拦截的来电”，但没有此权限就无法接听，这些来电会改为被拒接。</string>
+    <string name="permission_contract_answer_calls_not_needed">在开启“接听并挂断被拦截的来电”之前不需要此权限。开启该设置时会请求它。</string>
     <string name="permission_contract_degraded_overlay">在允许悬浮窗权限前，浮动来电识别与实时增强卡片保持隐藏。</string>
     <string name="permission_contract_degraded_notification_access">在启用监听器权限前，RCS 过滤与推送提醒主叫信任无法读取可信消息通知。</string>
     <string name="permission_contract_post_notifications_name">通知权限</string>

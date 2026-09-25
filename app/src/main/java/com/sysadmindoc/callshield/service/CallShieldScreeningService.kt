@@ -394,13 +394,7 @@ class CallShieldScreeningService : CallScreeningService() {
         val categoryAction =
             CategoryCallPolicy.parseMatchSource(reason)?.action
                 ?: CategoryCallAction.INHERIT
-        val silenceWins =
-            shouldSilence(
-                silentVoicemailEnabled = prefs[SpamRepository.KEY_SILENT_VOICEMAIL] ?: false,
-                autoMuteLowConfidenceEnabled = prefs[SpamRepository.KEY_AUTOMUTE_LOW_CONFIDENCE] ?: false,
-                confidence = confidence,
-                categoryAction = categoryAction,
-            )
+        val silenceWins = blockSilenceWins(prefs, confidence, categoryAction, reason)
         val answerHangUpEnabled = prefs[SpamRepository.KEY_ANSWER_HANG_UP] ?: false
         val answerAndHangUp =
             if (answerHangUpEnabled && !silenceWins) {
@@ -734,6 +728,26 @@ class CallShieldScreeningService : CallScreeningService() {
                             (autoMuteLowConfidenceEnabled && confidence < AUTO_MUTE_CONFIDENCE_THRESHOLD)
                     }
                 }
+
+        /**
+         * Whether a block is delivered as a silence rather than a reject, with
+         * the same inputs [buildBlockResponse] uses. A verdict that only ever
+         * silences (meeting mode) counts too: that caller may be wanted, so it
+         * is never answered and hung up.
+         */
+        internal fun blockSilenceWins(
+            prefs: androidx.datastore.preferences.core.Preferences,
+            confidence: Int,
+            categoryAction: CategoryCallAction,
+            reason: String,
+        ): Boolean =
+            shouldSilence(
+                silentVoicemailEnabled = prefs[SpamRepository.KEY_SILENT_VOICEMAIL] ?: false,
+                autoMuteLowConfidenceEnabled = prefs[SpamRepository.KEY_AUTOMUTE_LOW_CONFIDENCE] ?: false,
+                confidence = confidence,
+                categoryAction = categoryAction,
+                silenceOnly = reason == MeetingModeChecker.MATCH_SOURCE,
+            )
 
         internal fun shouldAnswerAndHangUp(
             enabled: Boolean,
