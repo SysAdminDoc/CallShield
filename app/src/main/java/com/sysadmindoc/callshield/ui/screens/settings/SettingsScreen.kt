@@ -931,7 +931,8 @@ fun SettingsScreen(viewModel: MainViewModel) {
                             label = { Text(stringResource(R.string.settings_days, days)) },
                             shape = RoundedCornerShape(8.dp),
                             border = BorderStroke(1.dp, if (cleanupDays == days) CatGreen.copy(alpha = 0.3f) else CatMuted.copy(alpha = 0.3f)),
-                            colors = FilterChipDefaults.filterChipColors(selectedContainerColor = CatGreen.copy(alpha = 0.2f), selectedLabelColor = CatGreen),
+                            // The tint marks the selection; green text on it fell to 4.33:1 in Light.
+                            colors = FilterChipDefaults.filterChipColors(selectedContainerColor = CatGreen.copy(alpha = 0.2f), selectedLabelColor = CatText),
                         )
                     }
                 }

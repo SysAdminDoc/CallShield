@@ -18,6 +18,11 @@ All notable changes to CallShield will be documented in this file.
   plain English now. They used em and en dashes in 37 places, and the
   weekday preset read "Mon–Fri" where it now says "Mon to Fri". A unit test
   keeps dashes out of the English strings and the release history.
+- The selected Keep for chip under Log cleanup and the red repeat count in
+  the grouped Blocked log now meet the AA contrast minimum in the light
+  theme. The chip's green text on its green tint came to 4.33:1 and the red
+  count to 4.30:1. The chip label now uses body text, like the other selected
+  chips, and the count badge a lighter tint (4.63:1 measured on screen).
 
 ### Data pipeline
 

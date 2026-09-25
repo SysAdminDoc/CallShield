@@ -470,6 +470,9 @@ fun CallShieldTheme(
     }
 }
 
+/** How far an accent card tints itself; AppThemeModeTest checks text drawn on it. */
+internal const val ACCENT_CARD_TINT = 0.055f
+
 // Shared quiet surface. Hierarchy comes from tone and spacing, not stacked
 // outlines, gradients, or decorative elevation.
 @Composable
@@ -486,7 +489,7 @@ fun PremiumCard(
     val baseColor = Surface
     val containerColor =
         accentColor
-            ?.copy(alpha = 0.055f)
+            ?.copy(alpha = ACCENT_CARD_TINT)
             ?.compositeOver(MaterialTheme.colorScheme.background)
             ?: baseColor
     val colors = CardDefaults.cardColors(containerColor = containerColor)

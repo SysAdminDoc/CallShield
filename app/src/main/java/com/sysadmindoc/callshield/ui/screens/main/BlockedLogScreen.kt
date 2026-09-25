@@ -840,6 +840,9 @@ fun SmallActionButton(
     PremiumCompactButton(label = label, icon = icon, color = color, onClick = onClick)
 }
 
+/** The repeat badge's tint. Its count is drawn in the same accent, which at 15% fell to 4.30:1 in Light. */
+internal const val REPEAT_BADGE_TINT = 0.10f
+
 @Suppress("LongMethod")
 @Composable
 fun GroupedCallItem(
@@ -886,7 +889,7 @@ fun GroupedCallItem(
                     Modifier
                         .size(40.dp)
                         .clip(badgeShape)
-                        .background(accentColor.copy(alpha = 0.15f))
+                        .background(accentColor.copy(alpha = REPEAT_BADGE_TINT))
                         .border(BorderStroke(1.dp, accentColor.copy(alpha = 0.3f)), badgeShape),
                 contentAlignment = Alignment.Center,
             ) {
