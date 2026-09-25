@@ -7,6 +7,7 @@ import android.net.Uri
 import android.os.Build
 import android.util.Log
 import android.widget.Toast
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.paging.Pager
@@ -97,9 +98,12 @@ class MainViewModel
         private val syncDatabase: SyncDatabaseUseCase,
         private val manageBlocklist: ManageBlocklistUseCase,
         private val exportLogs: ExportLogsUseCase,
+        private val savedStateHandle: SavedStateHandle = SavedStateHandle(),
     ) : ViewModel() {
         private companion object {
             const val TAG = "MainViewModel"
+            const val KEY_DATABASE_TYPE = "database_type_filter"
+            const val KEY_DATABASE_SOURCE = "database_source_filter"
             const val DATABASE_PAGE_SIZE = 50
             const val SEARCH_PAGE_SIZE = 50
             const val LOG_PAGE_SIZE = 50
@@ -207,7 +211,17 @@ class MainViewModel
                 }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
         // Each paged list keeps one pager that follows its filter (see pagedWith).
-        private val _databaseFilter = MutableStateFlow(DatabaseTypeFilter.ALL to DatabaseSourceFilter.ALL)
+        // The chips are saved state: after process death the tab restores its
+        // scroll offset, which only fits the filter it was saved under.
+        private val _databaseFilter =
+            run {
+                val type = savedStateHandle.get<String>(KEY_DATABASE_TYPE)
+                val source = savedStateHandle.get<String>(KEY_DATABASE_SOURCE)
+                MutableStateFlow(
+                    (DatabaseTypeFilter.entries.firstOrNull { it.name == type } ?: DatabaseTypeFilter.ALL) to
+                        (DatabaseSourceFilter.entries.firstOrNull { it.name == source } ?: DatabaseSourceFilter.ALL),
+                )
+            }
 
         /** The Database tab's type and source chips. */
         val databaseFilter: StateFlow<Pair<DatabaseTypeFilter, DatabaseSourceFilter>> = _databaseFilter
@@ -216,6 +230,8 @@ class MainViewModel
             type: DatabaseTypeFilter,
             source: DatabaseSourceFilter,
         ) {
+            savedStateHandle[KEY_DATABASE_TYPE] = type.name
+            savedStateHandle[KEY_DATABASE_SOURCE] = source.name
             _databaseFilter.value = type to source
         }
 

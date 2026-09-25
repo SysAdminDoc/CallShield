@@ -23,6 +23,10 @@ All notable changes to CallShield will be documented in this file.
   theme. The chip's green text on its green tint came to 4.33:1 and the red
   count to 4.30:1. The chip label now uses body text, like the other selected
   chips, and the count badge a lighter tint (4.63:1 measured on screen).
+- The Database tab keeps its type and source chips when Android closes
+  CallShield in the background. They came back as All types and All sources
+  while the list kept its scroll position, so it reopened partway down the
+  unfiltered list.
 
 ### Data pipeline
 
