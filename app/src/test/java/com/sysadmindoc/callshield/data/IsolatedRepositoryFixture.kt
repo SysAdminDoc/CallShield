@@ -49,6 +49,9 @@ internal class IsolatedRepositoryFixture(
             produceFile = { File(storeDirectory, "$name.preferences_pb") },
         )
 
+    /** Closes the database under the repository, so its next write throws. */
+    fun breakDatabase() = database.close()
+
     override fun close() {
         database.close()
         runBlocking {

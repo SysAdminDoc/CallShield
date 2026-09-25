@@ -64,11 +64,10 @@ import com.sysadmindoc.callshield.ui.theme.AppThemeMode
 import com.sysadmindoc.callshield.ui.theme.syncApplicationNightMode
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -99,6 +98,7 @@ class MainViewModel
         private val exportLogs: ExportLogsUseCase,
     ) : ViewModel() {
         private companion object {
+            const val TAG = "MainViewModel"
             const val DATABASE_PAGE_SIZE = 50
             const val SEARCH_PAGE_SIZE = 50
             const val LOG_PAGE_SIZE = 50
@@ -863,13 +863,17 @@ class MainViewModel
         /**
          * Block from a swipe in the block log. [undoBlock] with the result
          * reverses this block alone: removing the number's blocks would also
-         * clear one the user saved earlier in another spelling.
+         * clear one the user saved earlier in another spelling. It returns
+         * once the block is written, so the caller never reports a block
+         * that didn't happen: null when the number can't be blocked (an
+         * emergency number, which shows its own message), a failure when the
+         * write threw.
          */
-        fun blockNumberUndoable(
+        suspend fun blockNumberUndoable(
             number: String,
             type: String,
             description: String,
-        ): Deferred<BlocklistRepository.BlockUndo?>? {
+        ): Result<BlocklistRepository.BlockUndo?> {
             if (EmergencyNumberFloor.isProtected(number)) {
                 Toast
                     .makeText(
@@ -877,13 +881,29 @@ class MainViewModel
                         appContext.getString(R.string.emergency_number_block_refused),
                         Toast.LENGTH_LONG,
                     ).show()
-                return null
+                return Result.success(null)
             }
-            return viewModelScope.async { repo.blockNumberUndoable(number, type, description) }
+            return try {
+                Result.success(repo.blockNumberUndoable(number, type, description))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.e(TAG, "Swipe block failed", e)
+                Result.failure(e)
+            }
         }
 
-        fun undoBlock(block: Deferred<BlocklistRepository.BlockUndo?>) {
-            viewModelScope.launch { block.await()?.let { repo.undoBlock(it) } }
+        fun undoBlock(undo: BlocklistRepository.BlockUndo) {
+            viewModelScope.launch {
+                try {
+                    repo.undoBlock(undo)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.e(TAG, "Undo of a swipe block failed", e)
+                    Toast.makeText(appContext, appContext.getString(R.string.blocked_log_undo_failed), Toast.LENGTH_LONG).show()
+                }
+            }
         }
 
         fun deleteLogEntry(call: BlockedCall) {

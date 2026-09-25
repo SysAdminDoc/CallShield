@@ -104,6 +104,7 @@
     <string name="blocked_log_show_all">显示全部活动</string>
     <string name="blocked_log_deleted">已删除</string>
     <string name="blocked_log_undo">撤销</string>
+    <string name="blocked_log_undo_failed">无法撤销这次拦截。你可以在“拦截列表”中移除它。</string>
     <string name="blocked_log_number_blocked">%s 已拦截</string>
     <string name="blocked_log_clear_title">清空拦截日志？</string>
     <string name="blocked_log_clear_all">清空全部</string>

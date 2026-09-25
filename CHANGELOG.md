@@ -221,6 +221,10 @@ All notable changes to CallShield will be documented in this file.
   0123 against 649 555 0123), and it didn't bring back the note on your
   earlier block or an allow the swipe had replaced. Now all of that returns
   as it was.
+- That swipe now says when the block couldn't be saved. It used to show the
+  number as blocked, with an Undo that had nothing to take back, before the
+  block had been written. If Undo itself fails, a message says so and points
+  you at the Rules tab, where the app used to close instead.
 - The Database tab has filters now. One row of chips picks a type (robocall,
   telemarketer, spam, spam text or anything else), and another picks where a
   number came from: the spam database, trending numbers, a list you

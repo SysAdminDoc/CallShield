@@ -154,6 +154,7 @@
     <string name="blocked_log_show_all">Show all activity</string>
     <string name="blocked_log_deleted">Deleted</string>
     <string name="blocked_log_undo">Undo</string>
+    <string name="blocked_log_undo_failed">Couldn\'t undo that block. You can remove it from the Rules tab.</string>
     <string name="blocked_log_number_blocked">%s blocked</string>
     <string name="blocked_log_clear_title">Clear Blocked Log?</string>
     <plurals name="blocked_log_clear_message">

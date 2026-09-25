@@ -349,6 +349,7 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
                         val deletedMessage = stringResource(R.string.blocked_log_deleted)
                         val undoLabel = stringResource(R.string.blocked_log_undo)
                         val blockedFromSwipeDescription = stringResource(R.string.desc_blocked_from_log_swipe)
+                        val blockFailedMessage = stringResource(R.string.lookup_block_failed)
                         val blockedMessage =
                             stringResource(
                                 R.string.blocked_log_number_blocked,
@@ -381,9 +382,15 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
                             }
 
                             fun blockEntryWithUndo() {
-                                val block = viewModel.blockNumberUndoable(call.number, "spam", blockedFromSwipeDescription) ?: return
-                                hapticConfirm(context)
                                 scope.launch {
+                                    val block = viewModel.blockNumberUndoable(call.number, "spam", blockedFromSwipeDescription)
+                                    val undo = block.getOrNull()
+                                    if (block.isFailure) {
+                                        snackbarHost.showSnackbar(blockFailedMessage)
+                                        return@launch
+                                    }
+                                    if (undo == null) return@launch
+                                    hapticConfirm(context)
                                     // Offer Undo for assistive actions as well as the gesture.
                                     val result =
                                         snackbarHost.showSnackbar(
@@ -392,7 +399,7 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
                                             duration = SnackbarDuration.Short,
                                         )
                                     if (result == SnackbarResult.ActionPerformed) {
-                                        viewModel.undoBlock(block)
+                                        viewModel.undoBlock(undo)
                                     }
                                 }
                             }
