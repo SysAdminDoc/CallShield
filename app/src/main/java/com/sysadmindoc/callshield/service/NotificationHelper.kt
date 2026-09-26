@@ -501,6 +501,7 @@ object NotificationHelper {
             BlockReasonCode.CAMPAIGN_BURST -> R.string.stats_reason_live_campaign
             BlockReasonCode.HEURISTIC -> R.string.stats_reason_heuristic
             BlockReasonCode.SMS_CONTENT -> R.string.stats_reason_sms_content
+            BlockReasonCode.CARRIER_LABEL -> R.string.stats_reason_carrier_label
             BlockReasonCode.SPAM_DOMAIN -> R.string.stats_reason_spam_domain
             BlockReasonCode.ML_SCORER -> R.string.stats_reason_ml_scorer
             BlockReasonCode.RCS_FILTER -> R.string.stats_reason_rcs_filter

@@ -48,6 +48,7 @@ enum class BlockReasonCode(
     PUSH_ALERT("push_alert"),
     SMS_CONTEXT("sms_context"),
     SMS_BURST("sms_burst"),
+    CARRIER_LABEL("carrier_label"),
     KEYWORD("keyword"),
     SMS_CONTENT("sms_content"),
     RCS_FILTER("rcs_filter"),

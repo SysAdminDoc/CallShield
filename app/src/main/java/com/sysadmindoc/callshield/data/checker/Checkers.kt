@@ -1144,6 +1144,49 @@ internal class SmsContextTrustChecker : IChecker {
         }
 }
 
+/**
+ * Some carriers rewrite an unregistered SMS sender ID to a fixed warning label:
+ * Singapore to "Likely-SCAM", Ireland to "Likely Scam" (since 2025-07-03) and
+ * Australia to "Unverified" (since 2026-07-01). A text whose sender is exactly
+ * one of those labels is flagged. "Unverified" could be an ordinary sender name
+ * elsewhere, so it counts only on an Australian SIM. A sender the user trusts
+ * still gets through.
+ */
+internal class CarrierScamLabelChecker(
+    private val homeRegionIso: String?,
+) : IChecker {
+    override val priority = CheckerPriority.SMS_CARRIER_LABEL
+    override val name = "carrier_label"
+
+    override suspend fun isEnabled(ctx: CheckContext): Boolean = ctx.trustedAllowSource == null
+
+    override suspend fun check(ctx: CheckContext): BlockResult? {
+        val label = carrierScamLabel(ctx.number, homeRegionIso) ?: return null
+        return BlockResult.block(
+            matchSource = "carrier_label",
+            type = "sms_spam",
+            description = ctx.appContext.getString(R.string.block_reason_carrier_label, label),
+            confidence = CARRIER_LABEL_CONFIDENCE,
+        )
+    }
+
+    companion object {
+        private const val CARRIER_LABEL_CONFIDENCE = 90
+
+        /** The carrier's own spelling of the label [sender] is, or null when it isn't one. */
+        fun carrierScamLabel(
+            sender: String,
+            homeRegionIso: String?,
+        ): String? =
+            when (sender.trim().uppercase(java.util.Locale.ROOT)) {
+                "LIKELY-SCAM" -> "Likely-SCAM"
+                "LIKELY SCAM" -> "Likely Scam"
+                "UNVERIFIED" -> "Unverified".takeIf { homeRegionIso.equals("AU", ignoreCase = true) }
+                else -> null
+            }
+    }
+}
+
 internal class SmsBurstChecker(
     private val appContext: Context,
     private val smsContextChecker: SmsContextChecker,

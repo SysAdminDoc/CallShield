@@ -684,6 +684,7 @@
     <string name="stats_reason_live_campaign">实时营销号段</string>
     <string name="stats_reason_heuristic">启发式分析</string>
     <string name="stats_reason_sms_content">短信内容</string>
+    <string name="stats_reason_carrier_label">运营商诈骗标记</string>
     <string name="stats_reason_spam_domain">垃圾域名</string>
     <string name="stats_reason_ml_scorer">ML 评分器</string>
     <string name="stats_reason_rcs_filter">RCS 过滤器</string>
@@ -1184,6 +1185,7 @@
     <string name="lookup_checker_meeting_mode">会议模式</string>
     <string name="lookup_checker_sms_context">消息信任</string>
     <string name="lookup_checker_sms_burst">消息爆发</string>
+    <string name="lookup_checker_carrier_label">运营商诈骗标记</string>
     <string name="lookup_checker_keyword">关键词规则</string>
     <string name="lookup_checker_sms_content">消息内容</string>
     <string name="lookup_checker_push_alert">推送提醒报告</string>
@@ -1339,6 +1341,8 @@
     <string name="reasoning_domain_signal">域名信号：%1$s</string>
     <string name="reasoning_sms_content_headline">短信内容看起来像垃圾信息（置信度 %1$d%%）。</string>
     <string name="reasoning_sms_burst_headline">此发件人触发了短信爆发保护。</string>
+    <string name="reasoning_carrier_label_headline">你的运营商将此发件人标记为可能的诈骗。</string>
+    <string name="reasoning_carrier_label_detail">新加坡、爱尔兰和澳大利亚的运营商会把未注册发件人的名称换成警示标签，这条短信正是以这种标签发来的。</string>
     <string name="reasoning_sms_burst_detail">短时间内收到多条来自此发件人或前缀的陌生短信。</string>
     <string name="reasoning_sms_burst_action">可通过通知中的操作将发件人标记为安全，或举报这次爆发。</string>
     <string name="reasoning_rcs_headline">RCS 消息已通过通知过滤器拦截。</string>
@@ -1360,6 +1364,7 @@
     <string name="reasoning_underlying_detection">底层检测：%1$s</string>
     <string name="reasoning_category_precedence">紧急联系人和手动白名单，以及明确的个人拦截规则优先。</string>
     <string name="block_reason_keyword">关键词：%1$s</string>
+    <string name="block_reason_carrier_label">运营商诈骗标记：%1$s</string>
     <string name="block_reason_sender_provenance_unverified">发件人 ID 未在 %1$s 发件人登记中注册</string>
     <string name="block_reason_sender_provenance_unassigned">号码前缀 %1$s 在 %2$s 编号计划中未分配</string>
     <string name="notification_listener_label">CallShield RCS 过滤器</string>

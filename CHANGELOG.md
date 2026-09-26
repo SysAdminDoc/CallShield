@@ -4,6 +4,10 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+- Texts whose sender is a carrier's scam label are flagged. Singapore renames
+  unregistered senders Likely-SCAM, Ireland Likely Scam and Australia
+  Unverified, and the reason names the label. Unverified counts only on an
+  Australian SIM.
 - The getting-started guide matches the app again: setup's five steps, and a
   section for every Settings card with its settings and defaults. The README
   now says what the report Worker stores, what the widget shows and which

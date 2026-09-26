@@ -188,6 +188,7 @@ fun pipelineCheckerLabelRes(checkerName: String): Int =
         "meeting_mode" -> R.string.lookup_checker_meeting_mode
         "sms_context" -> R.string.lookup_checker_sms_context
         "sms_burst" -> R.string.lookup_checker_sms_burst
+        "carrier_label" -> R.string.lookup_checker_carrier_label
         "keyword" -> R.string.lookup_checker_keyword
         "sms_content" -> R.string.lookup_checker_sms_content
         "push_alert" -> R.string.lookup_checker_push_alert
@@ -209,6 +210,7 @@ fun reasonCodeLabelRes(reasonCode: BlockReasonCode): Int =
         BlockReasonCode.CAMPAIGN_BURST -> R.string.stats_reason_live_campaign
         BlockReasonCode.HEURISTIC -> R.string.stats_reason_heuristic
         BlockReasonCode.SMS_CONTENT -> R.string.stats_reason_sms_content
+        BlockReasonCode.CARRIER_LABEL -> R.string.stats_reason_carrier_label
         BlockReasonCode.SPAM_DOMAIN -> R.string.stats_reason_spam_domain
         BlockReasonCode.ML_SCORER -> R.string.stats_reason_ml_scorer
         BlockReasonCode.RCS_FILTER -> R.string.stats_reason_rcs_filter
@@ -269,6 +271,7 @@ fun blockReasonAccessibilityLabelRes(reasonCode: BlockReasonCode): Int =
         BlockReasonCode.PUSH_ALERT -> R.string.accessibility_reason_push_alert
         BlockReasonCode.SMS_CONTEXT -> R.string.accessibility_reason_message_trust
         BlockReasonCode.SMS_BURST -> R.string.accessibility_reason_message_burst
+        BlockReasonCode.CARRIER_LABEL -> R.string.accessibility_reason_carrier_label
         BlockReasonCode.KEYWORD -> R.string.accessibility_reason_keyword
         BlockReasonCode.SMS_CONTENT -> R.string.accessibility_reason_message_content
         BlockReasonCode.RCS_FILTER -> R.string.accessibility_reason_message_filter

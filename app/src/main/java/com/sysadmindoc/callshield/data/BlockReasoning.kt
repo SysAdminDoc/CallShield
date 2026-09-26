@@ -399,6 +399,14 @@ object BlockReasoning {
                     )
                 }
 
+                BlockReasonCode.CARRIER_LABEL -> {
+                    reasoning(
+                        s(R.string.reasoning_carrier_label_headline),
+                        s(R.string.reasoning_carrier_label_detail),
+                        description.takeIf { it.isNotBlank() },
+                    )
+                }
+
                 BlockReasonCode.SMS_BURST -> {
                     reasoning(
                         s(R.string.reasoning_sms_burst_headline),

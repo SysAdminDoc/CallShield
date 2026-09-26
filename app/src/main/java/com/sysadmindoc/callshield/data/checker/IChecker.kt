@@ -309,6 +309,7 @@ object CheckerPriority {
     // Values are chosen to preserve the historical relative ordering:
     // keyword block → trusted-sender allow → content analysis.
     const val SMS_KEYWORD = 5_400 // keyword rule block
+    const val SMS_CARRIER_LABEL = 4_750 // the carrier renamed the sender to its scam label
     const val SMS_CONTEXT_TRUST = 4_700 // trusted-sender allow (notification/context)
     const val SMS_CONTENT = 1_900 // content heuristic analysis
 
@@ -511,8 +512,10 @@ object SpamCheckers {
         repo: SpamRepositoryImpl,
         appContext: Context,
         dependencies: CheckerDependencies = CheckerDependencies(),
+        homeRegionIso: String? = null,
     ): List<IChecker> =
         buildList {
+            add(CarrierScamLabelChecker(homeRegionIso))
             add(SmsContextTrustChecker())
             add(SmsBurstChecker(appContext, dependencies.smsContextChecker))
             add(SmsKeywordChecker(repo))

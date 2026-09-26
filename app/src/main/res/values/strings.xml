@@ -473,6 +473,7 @@
     <string name="lookup_checker_meeting_mode">Meeting mode</string>
     <string name="lookup_checker_sms_context">Message trust</string>
     <string name="lookup_checker_sms_burst">Message burst</string>
+    <string name="lookup_checker_carrier_label">Carrier scam label</string>
     <string name="lookup_checker_keyword">Keyword rules</string>
     <string name="lookup_checker_sms_content">Message content</string>
     <string name="lookup_checker_push_alert">Push alert reports</string>
@@ -881,6 +882,7 @@
     <string name="stats_reason_live_campaign">Live campaign range</string>
     <string name="stats_reason_heuristic">Heuristic analysis</string>
     <string name="stats_reason_sms_content">SMS content</string>
+    <string name="stats_reason_carrier_label">Carrier scam label</string>
     <string name="stats_reason_spam_domain">Spam domain</string>
     <string name="stats_reason_ml_scorer">ML scorer</string>
     <string name="stats_reason_rcs_filter">RCS filter</string>
@@ -1618,6 +1620,7 @@
     <string name="accessibility_reason_push_alert">This item was blocked because a trusted alert identified it as spam.</string>
     <string name="accessibility_reason_message_trust">This item was allowed because you have an existing message history with the sender.</string>
     <string name="accessibility_reason_message_burst">This item was blocked because the sender sent several messages in a short time.</string>
+    <string name="accessibility_reason_carrier_label">This item was blocked because your carrier labeled the sender a likely scam.</string>
     <string name="accessibility_reason_keyword">This item was blocked because the message matched one of your keyword rules.</string>
     <string name="accessibility_reason_message_content">This item was blocked because the message content looked like spam.</string>
     <string name="accessibility_reason_message_filter">This item was blocked because the message matched a spam filter.</string>
@@ -1837,6 +1840,8 @@
     <string name="reasoning_domain_signal">Domain signal: %1$s</string>
     <string name="reasoning_sms_content_headline">The SMS content looked like spam (%1$d%% confidence).</string>
     <string name="reasoning_sms_burst_headline">This sender matched SMS burst protection.</string>
+    <string name="reasoning_carrier_label_headline">Your carrier marked this sender as a likely scam.</string>
+    <string name="reasoning_carrier_label_detail">Carriers in Singapore, Ireland and Australia replace the name of a sender that didn\'t register with a warning label, and this text came in under one.</string>
     <string name="reasoning_sms_burst_detail">Multiple unknown SMS arrived from this sender or prefix in a short window.</string>
     <string name="reasoning_sms_burst_action">Use the notification actions to mark the sender safe or report the burst.</string>
     <string name="reasoning_rcs_headline">RCS message blocked via notification filter.</string>
@@ -1858,6 +1863,7 @@
     <string name="reasoning_underlying_detection">Underlying detection: %1$s</string>
     <string name="reasoning_category_precedence">Emergency and manual whitelists, plus explicit personal block rules, take precedence.</string>
     <string name="block_reason_keyword">Keyword: %1$s</string>
+    <string name="block_reason_carrier_label">Carrier scam label: %1$s</string>
     <string name="notification_listener_label">CallShield RCS filter</string>
     <string name="model_health_title">ML model health</string>
     <string name="model_health_gbt_active">Gradient-boosted model active</string>

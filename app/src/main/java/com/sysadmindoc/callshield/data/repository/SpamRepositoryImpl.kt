@@ -219,7 +219,7 @@ class SpamRepositoryImpl(
         SpamCheckers.buildCallChain(this, context, checkerDependencies)
     }
     private val smsExtensions: List<IChecker> by lazy {
-        SpamCheckers.buildSmsExtensions(this, context, checkerDependencies)
+        SpamCheckers.buildSmsExtensions(this, context, checkerDependencies, senderRegionIso)
     }
 
     suspend fun isSpam(
