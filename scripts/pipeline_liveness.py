@@ -174,8 +174,9 @@ def evaluate_source_freshness(manifest: object, freshness: object, now: datetime
     """One message per regular-cadence source past its `stale_after_days`.
 
     `freshness` is `data/source-freshness.json`, which import_all_sources.py
-    updates with each source's last successful import. A source with no record
-    has never been imported since the record began, which is stale too.
+    updates with each source's last successful import and the newest complaint
+    date for FTC and FCC. A source with no record has never supplied data since
+    the record began, which is stale too.
 
     A source that only imports with an opt-in flag (its manifest `import_flag`)
     is held to its limit once it has been imported at all. A default import
@@ -189,6 +190,8 @@ def evaluate_source_freshness(manifest: object, freshness: object, now: datetime
         return [f"{MANIFEST_FILE.name} is missing or unreadable, so upstream freshness can't be checked"]
     recorded = freshness.get("last_success") if isinstance(freshness, dict) else None
     last_success = recorded if isinstance(recorded, dict) else {}
+    recorded_dates = freshness.get("newest_record_date") if isinstance(freshness, dict) else None
+    newest_record_date = recorded_dates if isinstance(recorded_dates, dict) else {}
     problems: list[str] = []
     for source in sources:
         if not isinstance(source, dict):
@@ -204,16 +207,20 @@ def evaluate_source_freshness(manifest: object, freshness: object, now: datetime
             continue
         flag = source.get("import_flag")
         refresh = f"run scripts/import_all_sources.py {flag}" if flag else "run scripts/import_all_sources.py"
-        stamp = _parse_instant(last_success.get(source_id))
+        record_dated = source_id in {"ftc_complaints", "fcc_complaints"}
+        stamp = _parse_instant(
+            newest_record_date.get(source_id) if record_dated else last_success.get(source_id)
+        )
         if stamp is None:
             if not flag:
                 problems.append(
-                    f"{source_id} ({cadence} source) has no successful import recorded in "
+                    f"{source_id} ({cadence} source) has no {'record date' if record_dated else 'successful import'} recorded in "
                     f"{FRESHNESS_FILE.name} - {refresh}"
                 )
         elif now - stamp > timedelta(days=limit):
+            age_description = "newest record is from" if record_dated else "was last imported"
             problems.append(
-                f"{source_id} was last imported {stamp.date().isoformat()}, {(now - stamp).days} days ago, "
+                f"{source_id} {age_description} {stamp.date().isoformat()}, {(now - stamp).days} days ago, "
                 f"past its {limit:g}-day limit - {refresh}"
             )
     return problems

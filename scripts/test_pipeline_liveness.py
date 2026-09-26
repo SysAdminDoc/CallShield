@@ -185,13 +185,17 @@ def scheduled_checks() -> None:
         "last_success": {
             "ftc_complaints": (BASE - timedelta(days=3)).isoformat(),
             "toastedspam": (BASE - timedelta(days=29)).isoformat(),
-        }
+        },
+        "newest_record_date": {"ftc_complaints": (BASE - timedelta(days=3)).date().isoformat()},
     }
     assert evaluate_source_freshness(manifest, fresh, BASE) == []
 
-    stale = {"last_success": {"ftc_complaints": "2026-08-01T21:51:56-04:00", "toastedspam": fresh["last_success"]["toastedspam"]}}
+    stale = {
+        "last_success": fresh["last_success"],
+        "newest_record_date": {"ftc_complaints": "2026-08-01T21:51:56-04:00"},
+    }
     problems = evaluate_source_freshness(manifest, stale, BASE)
-    assert len(problems) == 1 and problems[0].startswith("ftc_complaints was last imported 2026-08-02"), problems
+    assert len(problems) == 1 and problems[0].startswith("ftc_complaints newest record is from 2026-08-02"), problems
 
     # A source that has never been recorded is stale, not "unknown and fine".
     problems = evaluate_source_freshness(manifest, {"last_success": {}}, BASE)
@@ -218,8 +222,14 @@ def scheduled_checks() -> None:
     # The real manifest after the documented default import (no opt-in flags)
     # passes. It used to demand the two opt-in sources and could never go green.
     real_manifest = json.loads((Path(__file__).resolve().parent.parent / "data" / "source-manifest.json").read_text(encoding="utf-8"))
-    default_import = {"last_success": {"ftc_complaints": BASE.isoformat(), "fcc_complaints": BASE.isoformat()}}
+    default_import = {
+        "last_success": {"ftc_complaints": BASE.isoformat(), "fcc_complaints": BASE.isoformat()},
+        "newest_record_date": {"ftc_complaints": BASE.date().isoformat(), "fcc_complaints": BASE.date().isoformat()},
+    }
     assert evaluate_source_freshness(real_manifest, default_import, BASE) == []
+    default_import["newest_record_date"]["fcc_complaints"] = "2026-08-01"
+    problems = evaluate_source_freshness(real_manifest, default_import, BASE)
+    assert len(problems) == 1 and problems[0].startswith("fcc_complaints newest record is from 2026-08-01"), problems
 
     check_scheduled_switch()
 
@@ -261,7 +271,7 @@ def check_scheduled_switch() -> None:
                 assert liveness.main(["--scheduled"]) == 1
             report = scheduled.getvalue()
             assert "has waited 30 days" in report, report
-            assert "ftc_complaints (daily source) has no successful import" in report, report
+            assert "ftc_complaints (daily source) has no record date" in report, report
         finally:
             liveness.REPORTS_DIR, liveness.DB_FILE, liveness.MANIFEST_FILE, liveness.FRESHNESS_FILE = saved
 

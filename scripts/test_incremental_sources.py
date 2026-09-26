@@ -83,6 +83,41 @@ def test_fcc_retains_roles_and_spoof_signals():
         module.time.sleep = original_sleep
 
 
+def test_future_fcc_row_cannot_poison_the_cursor():
+    module = load_importer()
+    original_get = module.requests.get
+    requests_seen = []
+    try:
+        def fake_get(url, **kwargs):
+            requests_seen.append(kwargs["params"])
+            return FakeResponse([
+                {"id": "missing", "issue_date": None, "caller_id_number": "+12125561203"},
+                {"id": "46486", "issue_date": "9999-12-15T00:00:00.000", "caller_id_number": "+12125561201"},
+                {"id": "valid", "issue_date": "2026-09-24T00:00:00.000", "caller_id_number": "+12125561202"},
+            ])
+
+        module.requests.get = fake_get
+        result = module.fetch_fcc(
+            max_records=3,
+            cursor={"timestamp": "9999-12-15T00:00:00.000", "id": "46486"},
+        )
+        assert "issue_date IS NOT NULL" in requests_seen[0]["$where"], requests_seen
+        assert "issue_date >=" not in requests_seen[0]["$where"], requests_seen
+        assert [row["number"] for row in result] == ["+12125561202"], result
+        assert result.cursor == {"timestamp": "2026-09-24T00:00:00.000", "id": "valid"}, result.cursor
+
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "source-cursors.json"
+            module.save_source_cursors({"fcc_complaints": {"timestamp": "9999-12-15", "id": "46486"}}, path)
+            assert module.load_source_cursors(path) == {}, path.read_text(encoding="utf-8")
+            path.write_text(json.dumps({"schema_version": 1, "sources": {
+                "fcc_complaints": {"timestamp": "9999-12-15", "id": "46486"}
+            }}), encoding="utf-8")
+            assert module.load_source_cursors(path) == {}
+    finally:
+        module.requests.get = original_get
+
+
 def test_incremental_window_retries_and_advances_cursor():
     module = load_importer()
     original_get = module.requests.get
@@ -189,11 +224,19 @@ def test_source_freshness_keeps_what_a_run_did_not_fetch():
         "toastedspam": "2026-08-10T00:00:00+00:00",
     }, merged
 
+    dated = module.merge_source_record_dates(
+        {"fcc_complaints": "2026-08-01"},
+        {"fcc_complaints": {"newest_record_date": "2026-09-24"},
+         "ftc_complaints": {"newest_record_date": None}},
+    )
+    assert dated == {"fcc_complaints": "2026-09-24"}, dated
+
     with tempfile.TemporaryDirectory() as directory:
         path = Path(directory) / "source-freshness.json"
         assert module.load_source_freshness(path) == {}
-        module.save_source_freshness(merged, path)
+        module.save_source_freshness(merged, path, dated)
         assert module.load_source_freshness(path) == merged
+        assert module.load_source_freshness(path, "newest_record_date") == dated
         # The liveness gate reads the same file under the same key.
         assert json.loads(path.read_text(encoding="utf-8"))["last_success"] == merged
         path.write_text(json.dumps({"schema_version": 99, "last_success": merged}), encoding="utf-8")
@@ -214,7 +257,9 @@ def test_merge_writes_its_records_beside_the_database():
             encoding="utf-8",
         )
         module.DB_FILE = db_path
-        stats = {"ftc_complaints": {"status": "ok", "accepted": 0, "last_success_at": "2026-09-21T12:00:00+00:00"}}
+        stats = {"ftc_complaints": {"status": "ok", "accepted": 0,
+                                    "last_success_at": "2026-09-21T12:00:00+00:00",
+                                    "newest_record_date": "2026-08-02"}}
         module.merge_into_database([], min_reports=1, source_names={"ftc_complaints"}, source_stats=stats)
 
         snapshot = json.loads((directory / "source-snapshot.json").read_text(encoding="utf-8"))
@@ -222,6 +267,9 @@ def test_merge_writes_its_records_beside_the_database():
         assert statuses["ftc_complaints"] == "ok", statuses
         freshness = module.load_source_freshness(directory / "source-freshness.json")
         assert freshness == {"ftc_complaints": "2026-09-21T12:00:00+00:00"}, freshness
+        assert module.load_source_freshness(directory / "source-freshness.json", "newest_record_date") == {
+            "ftc_complaints": "2026-08-02"
+        }
 
 
 def test_new_complaints_require_independent_caller_corroboration():
@@ -403,6 +451,7 @@ def test_merge_summary_counts_only_numbers_that_stayed():
 
 def main():
     test_fcc_retains_roles_and_spoof_signals()
+    test_future_fcc_row_cannot_poison_the_cursor()
     test_incremental_window_retries_and_advances_cursor()
     test_cursors_and_snapshot_are_durable_and_attributed()
     test_source_freshness_keeps_what_a_run_did_not_fetch()

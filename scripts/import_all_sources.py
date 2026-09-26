@@ -59,7 +59,7 @@ SOURCE_CURSOR_FILE = DATA_DIR / "source-cursors.json"
 # when an upstream source has not been imported for longer than its manifest
 # stale_after_days allows.
 SOURCE_FRESHNESS_FILE = DATA_DIR / "source-freshness.json"
-SOURCE_FRESHNESS_SCHEMA_VERSION = 1
+SOURCE_FRESHNESS_SCHEMA_VERSION = 2
 
 PHONEBLOCK_BLOCKLIST_URL = "https://phoneblock.net/phoneblock/api/blocklist"
 SARACROCHE_PREFIX_URL = "https://saracroche.org/api/v1/lists/french-list-arcep-operators"
@@ -109,7 +109,18 @@ def _record_cursor(
     record_id = str(record.get("id", "") or "").strip()
     if not timestamp:
         return None
+    try:
+        parsed = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    parsed = (parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)).astimezone(timezone.utc)
+    if parsed > datetime.now(timezone.utc):
+        return None
     return {"timestamp": timestamp, "id": record_id}
+
+
+def _valid_cursor(cursor: dict[str, str] | None) -> dict[str, str] | None:
+    return _record_cursor(cursor, timestamp_field="timestamp") if cursor else None
 
 
 def _cursor_after(
@@ -119,7 +130,9 @@ def _cursor_after(
     timestamp_field: str,
 ) -> bool:
     candidate = _record_cursor(record, timestamp_field=timestamp_field)
-    if candidate is None or cursor is None:
+    if candidate is None:
+        return False
+    if cursor is None:
         return True
     return _cursor_key(candidate["timestamp"], candidate["id"]) > _cursor_key(
         cursor.get("timestamp", ""),
@@ -138,8 +151,8 @@ def _max_cursor(
         for record in records
         if (candidate := _record_cursor(record, timestamp_field=timestamp_field)) is not None
     ]
-    if previous:
-        candidates.append(previous)
+    if valid_previous := _valid_cursor(previous):
+        candidates.append(valid_previous)
     return max(candidates, key=lambda item: _cursor_key(item["timestamp"], item["id"]), default=None)
 
 
@@ -178,14 +191,10 @@ def load_source_cursors(path: Path = SOURCE_CURSOR_FILE) -> dict[str, dict[str, 
             return {}
         sources = payload.get("sources", {})
         return {
-            key: {
-                "timestamp": str(value.get("timestamp", "")),
-                "id": str(value.get("id", "")),
-            }
+            key: candidate
             for key, value in sources.items()
-            if isinstance(key, str)
-            and isinstance(value, dict)
-            and str(value.get("timestamp", "")).strip()
+            if isinstance(key, str) and isinstance(value, dict)
+            if (candidate := _valid_cursor(value)) is not None
         }
     except (OSError, ValueError, AttributeError):
         return {}
@@ -199,22 +208,22 @@ def save_source_cursors(
         path,
         {
             "schema_version": SOURCE_CURSOR_SCHEMA_VERSION,
-            "sources": dict(sorted(cursors.items())),
+            "sources": dict(sorted((key, candidate) for key, value in cursors.items() if (candidate := _valid_cursor(value)))),
         },
     )
 
 
-def load_source_freshness(path: Path) -> dict[str, str]:
+def load_source_freshness(path: Path, field: str = "last_success") -> dict[str, str]:
     if not path.exists():
         return {}
     try:
         with path.open(encoding="utf-8") as freshness_file:
             payload = json.load(freshness_file)
-        if payload.get("schema_version") != SOURCE_FRESHNESS_SCHEMA_VERSION:
+        if payload.get("schema_version") not in (1, SOURCE_FRESHNESS_SCHEMA_VERSION):
             return {}
         return {
             key: value
-            for key, value in payload.get("last_success", {}).items()
+            for key, value in payload.get(field, {}).items()
             if isinstance(key, str) and isinstance(value, str) and value.strip()
         }
     except (OSError, ValueError, AttributeError):
@@ -236,12 +245,24 @@ def merge_source_freshness(previous: dict[str, str], source_stats: dict) -> dict
     return dict(sorted(merged.items()))
 
 
-def save_source_freshness(last_success: dict[str, str], path: Path) -> None:
+def merge_source_record_dates(previous: dict[str, str], source_stats: dict) -> dict[str, str]:
+    merged = dict(previous)
+    for source_id, stats in source_stats.items():
+        record_date = stats.get("newest_record_date") if isinstance(stats, dict) else None
+        if isinstance(source_id, str) and isinstance(record_date, str) and record_date > merged.get(source_id, ""):
+            merged[source_id] = record_date
+    return dict(sorted(merged.items()))
+
+
+def save_source_freshness(
+    last_success: dict[str, str], path: Path, newest_record_date: dict[str, str] | None = None
+) -> None:
     atomic_write_json(
         path,
         {
             "schema_version": SOURCE_FRESHNESS_SCHEMA_VERSION,
             "last_success": dict(sorted(last_success.items())),
+            "newest_record_date": dict(sorted((newest_record_date or {}).items())),
         },
     )
 
@@ -255,6 +276,7 @@ def _fetch_stats(result: SourceFetchResult, retrieved_at: str) -> dict:
         "last_failure_at": retrieved_at if not result.complete else None,
         "error": result.error,
         "cursor": result.cursor,
+        "newest_record_date": result.cursor["timestamp"][:10] if result.complete and result.cursor else None,
     }
 
 
@@ -327,7 +349,7 @@ def fetch_ftc(
     cursor_records: list[dict] = []
     offset = 0
     records_fetched = 0
-    previous_cursor = dict(cursor) if cursor else None
+    previous_cursor = _valid_cursor(cursor)
     now = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
 
     while records_fetched < max_records:
@@ -336,13 +358,13 @@ def fetch_ftc(
             "api_key": key,
             "items_per_page": page_size,
             "offset": offset,
-            "sort_order": "asc" if cursor else "desc",
+            "sort_order": "asc" if previous_cursor else "desc",
         }
-        if cursor:
+        if previous_cursor:
             # The FTC API requires the two date filters together. Keep the
             # lower bound inclusive and filter the exact high-water tuple
             # locally so records sharing a timestamp are not lost.
-            params["created_date_from"] = f'"{cursor["timestamp"]}"'
+            params["created_date_from"] = f'"{previous_cursor["timestamp"]}"'
             params["created_date_to"] = f'"{now}"'
 
         response, error = _get_with_backoff(
@@ -375,7 +397,7 @@ def fetch_ftc(
             }
             if not _cursor_after(
                 cursor_record,
-                cursor,
+                previous_cursor,
                 timestamp_field="created-date",
             ):
                 continue
@@ -450,17 +472,19 @@ def fetch_fcc(
     cursor_records: list[dict] = []
     offset = 0
     records_fetched = 0
-    previous_cursor = dict(cursor) if cursor else None
+    previous_cursor = _valid_cursor(cursor)
+    upper_bound = datetime.now(timezone.utc).replace(microsecond=0).strftime("%Y-%m-%dT%H:%M:%S")
 
     while records_fetched < max_records:
         batch = min(FCC_PAGE_SIZE, max_records - records_fetched)
         params = {
             "$limit": batch,
             "$offset": offset,
-            "$order": "issue_date ASC, id ASC" if cursor else "issue_date DESC, id DESC",
+            "$order": "issue_date ASC, id ASC" if previous_cursor else "issue_date DESC, id DESC",
+            "$where": f"issue_date IS NOT NULL AND issue_date <= '{upper_bound}'",
         }
-        if cursor:
-            params["$where"] = f"issue_date >= '{cursor['timestamp']}'"
+        if previous_cursor:
+            params["$where"] += f" AND issue_date >= '{previous_cursor['timestamp']}'"
 
         response, error = _get_with_backoff(
             FCC_API_URL,
@@ -487,7 +511,7 @@ def fetch_fcc(
                 "id": str(record.get("id", "") or ""),
                 "issue_date": str(record.get("issue_date", "") or ""),
             }
-            if not _cursor_after(cursor_record, cursor, timestamp_field="issue_date"):
+            if not _cursor_after(cursor_record, previous_cursor, timestamp_field="issue_date"):
                 continue
             if cursor_record.get("issue_date"):
                 cursor_records.append(cursor_record)
@@ -953,6 +977,9 @@ def merge_into_database(
     save_source_freshness(
         merge_source_freshness(load_source_freshness(freshness_file), source_stats or {}),
         freshness_file,
+        merge_source_record_dates(
+            load_source_freshness(freshness_file, "newest_record_date"), source_stats or {}
+        ),
     )
 
     # Apply min_reports filter to NEWLY-ADDED entries only. Applying it to the

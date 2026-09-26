@@ -243,7 +243,7 @@ def source_audit(
         if now - generated_at > timedelta(days=max_age_days):
             issues.append(f"Source snapshot is older than the {max_age_days}-day release-review window.")
 
-    allowed_statuses = {"not_requested", "success", "partial", "failed", "unavailable", "blocked"}
+    allowed_statuses = {"not_requested", "ok", "error", "success", "partial", "failed", "unavailable", "blocked"}
     for source_id, manifest_source in manifest_by_id.items():
         if not isinstance(manifest_source, dict) or not source_id:
             continue
@@ -260,6 +260,8 @@ def source_audit(
         report["statuses"][source_id] = status
         if status not in allowed_statuses:
             issues.append(f"Source {source_id} has unsupported snapshot status {status!r}.")
+        elif status in {"error", "failed", "unavailable", "blocked"}:
+            issues.append(f"Source {source_id} did not complete its last fetch ({status}).")
         for count_name in ("accepted", "rejected"):
             count = snapshot_source.get(count_name)
             if not isinstance(count, int) or isinstance(count, bool) or count < 0:

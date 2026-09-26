@@ -30,7 +30,7 @@
 
 ---
 
-CallShield blocks spam calls and texts using a **15+ layer on-device detection engine** with a gradient-boosted tree ML scorer, bounded campaign and churn evidence, conservative carrier identity metadata signals, an RCS notification filter, and real-time caller ID. Its 51,755-number database sits alongside a trending-numbers feed the app checks every 30 minutes. There are no accounts or tracking.
+CallShield blocks spam calls and texts using a **15+ layer on-device detection engine** with a gradient-boosted tree ML scorer, bounded campaign and churn evidence, conservative carrier identity metadata signals, an RCS notification filter, and real-time caller ID. Its 51,806-number database sits alongside a trending-numbers feed the app checks every 30 minutes. There are no accounts or tracking.
 
 The database keeps `data/spam_numbers.json` as a stable legacy GitHub-raw
 endpoint for older clients, while current builds bundle a hash manifest and
@@ -315,7 +315,10 @@ can decay or remove only that community-only contribution. FTC and FCC runs
 persist bounded high-water cursors in `data/source-cursors.json`, which the
 importer creates on its first run. They keep caller-ID and callback-business
 evidence as separate roles, and don't promote unverified complaint-only rows
-without independent caller corroboration.
+without independent caller corroboration. The importer leaves out complaints
+with missing or future dates. `data/source-freshness.json` records the newest
+complaint date, and the weekly check flags an FTC or FCC feed when that date
+falls outside its freshness window.
 
 The importer also accepts a carrier-authorized Nomorobo IRS callback-scam CSV
 feed without embedding credentials in the app. Pass the HTTPS URL with

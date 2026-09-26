@@ -14,6 +14,8 @@ local.properties
 *.apk.sha256
 *.aab
 *.aab.sha256
+*.md
+!README.md
 *.jks
 *.keystore
 *.pem

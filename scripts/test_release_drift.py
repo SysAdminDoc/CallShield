@@ -171,6 +171,17 @@ class ReleaseDriftTest(unittest.TestCase):
             self.assertEqual(1, report["source_count"])
             self.assertIn("Source snapshot drift for fixture.parser_version.", issues)
 
+            snapshot["sources"][0]["parser_version"] = "fixture-v1"
+            snapshot["sources"][0]["status"] = "ok"
+            (root / "data/source-snapshot.json").write_text(json.dumps(snapshot), encoding="utf-8")
+            _, issues = verify_release_drift.source_audit(root, datetime(2026, 8, 10, 12, 0, tzinfo=timezone.utc))
+            self.assertEqual([], issues)
+
+            snapshot["sources"][0]["status"] = "error"
+            (root / "data/source-snapshot.json").write_text(json.dumps(snapshot), encoding="utf-8")
+            _, issues = verify_release_drift.source_audit(root, datetime(2026, 8, 10, 12, 0, tzinfo=timezone.utc))
+            self.assertIn("Source fixture did not complete its last fetch (error).", issues)
+
     def test_old_snapshot_fails_the_release_window(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

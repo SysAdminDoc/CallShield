@@ -4,6 +4,13 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+- The FCC import now ignores complaints with no issue date or a future date.
+  Its saved cursor advances to a valid complaint, and the weekly source check
+  uses the newest complaint date so an empty fetch can't hide a stalled feed.
+  Release checks now recognise the importer's success and failure statuses.
+- A catch-up import processed 500,000 FCC complaints and refreshed evidence on
+  7,638 existing numbers. The database still holds 51,806 numbers (feed v46).
+
 ## v1.8.1 (2026-09-25)
 
 ### Protection
