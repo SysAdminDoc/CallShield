@@ -71,7 +71,10 @@ import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
-fun BlockedLogScreen(viewModel: MainViewModel) {
+fun BlockedLogScreen(
+    viewModel: MainViewModel,
+    compactHeader: Boolean = false,
+) {
     val context = LocalContext.current
     val resources = LocalResources.current
     val dateFormat = remember(context) { localizedDateTimeFormat(context) }
@@ -123,11 +126,13 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
                     fontWeight = FontWeight.Bold,
                     color = CatText,
                 )
-                Text(
-                    stringResource(R.string.blocked_log_intro),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = CatSubtext,
-                )
+                if (!compactHeader) {
+                    Text(
+                        stringResource(R.string.blocked_log_intro),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = CatSubtext,
+                    )
+                }
             }
             // Filter chips
             Row(
@@ -280,6 +285,7 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
             if (isSearching) {
                 if (logSearchResults.isEmpty()) {
                     BlockedLogEmptyState(
+                        compact = compactHeader,
                         title = stringResource(R.string.blocked_log_search_empty),
                         subtitle = stringResource(R.string.blocked_log_search_empty_body),
                         accentColor = CatPeach,
@@ -292,6 +298,7 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
                 }
             } else if (firstPageFailed(activeRefreshState, stale, activeItemCount)) {
                 BlockedLogEmptyState(
+                    compact = compactHeader,
                     title = stringResource(R.string.blocked_log_empty_filter_title),
                     subtitle = stringResource(R.string.blocked_log_empty_filter_body),
                     accentColor = CatRed,
@@ -308,6 +315,7 @@ fun BlockedLogScreen(viewModel: MainViewModel) {
                 }
             } else if (activeItemCount == 0) {
                 BlockedLogEmptyState(
+                    compact = compactHeader,
                     title =
                         if (logCount == 0) {
                             stringResource(R.string.blocked_log_empty_all_title)
@@ -604,6 +612,7 @@ private fun BlockedLogEmptyState(
     title: String,
     subtitle: String,
     accentColor: Color,
+    compact: Boolean,
     actionLabel: String? = null,
     onAction: (() -> Unit)? = null,
 ) {
@@ -613,6 +622,7 @@ private fun BlockedLogEmptyState(
         icon = Icons.Default.CheckCircle,
         accentColor = accentColor,
         iconDescription = stringResource(R.string.cd_no_items),
+        compact = compact,
         action =
             if (actionLabel != null && onAction != null) {
                 { PremiumCompactButton(label = actionLabel, icon = Icons.Default.Refresh, color = accentColor, onClick = onAction) }

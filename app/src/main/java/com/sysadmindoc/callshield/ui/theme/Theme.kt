@@ -17,7 +17,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
@@ -600,19 +602,22 @@ fun FramedEmptyState(
     accentColor: Color,
     iconDescription: String?,
     modifier: Modifier = Modifier,
+    compact: Boolean = false,
     action: (@Composable () -> Unit)? = null,
 ) {
+    // Centered while it fits, and scrollable when it doesn't, so a short
+    // screen or large text never cuts off the title or the action.
     Box(
-        modifier = modifier.fillMaxSize().padding(16.dp),
+        modifier = modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         contentAlignment = Alignment.Center,
     ) {
         LedgerCard(modifier = Modifier.fillMaxWidth()) {
             Column(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 28.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = if (compact) 16.dp else 28.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                Icon(icon, contentDescription = iconDescription, tint = accentColor, modifier = Modifier.size(42.dp))
+                Icon(icon, contentDescription = iconDescription, tint = accentColor, modifier = Modifier.size(if (compact) 32.dp else 42.dp))
                 Text(title, style = MaterialTheme.typography.titleMedium, color = CatText, textAlign = TextAlign.Center)
                 Text(
                     subtitle,
@@ -626,6 +631,19 @@ fun FramedEmptyState(
         }
     }
 }
+
+/**
+ * Content height per unit of font scale below which a screen counts as short:
+ * a 360x780dp phone at any text size, or a 412x915dp one from font scale 1.25.
+ * Short screens drop their intro lines and tighten their empty states, so an
+ * empty state and its action fit under a fixed header.
+ */
+val ShortContentHeight = 600.dp
+
+fun isShortContent(
+    maxHeight: Dp,
+    fontScale: Float,
+): Boolean = maxHeight < ShortContentHeight * fontScale.coerceAtLeast(1f)
 
 /**
  * Bottom-sheet drag handle with a 48dp touch target. The sheet makes its

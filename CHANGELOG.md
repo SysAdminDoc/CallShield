@@ -4,6 +4,11 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+- The Blocked log and Blocklist fit a 360x780dp phone with 3-button
+  navigation and large text. When the screen is short for its text size they
+  drop their intro lines and tighten the empty card, so "Show all activity"
+  and the empty Blocklist card are no longer cut off or hidden under the Add
+  button. An empty card that still doesn't fit scrolls.
 - Home counts only the engines that can run. A toggle whose permission,
   screener role or notification access is missing no longer adds to the
   count. Home and Settings count the same two setup steps, and Home asks for

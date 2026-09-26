@@ -9,6 +9,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -89,6 +90,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -148,6 +150,7 @@ import com.sysadmindoc.callshield.ui.theme.StatusPill
 import com.sysadmindoc.callshield.ui.theme.SurfaceBright
 import com.sysadmindoc.callshield.ui.theme.hapticConfirm
 import com.sysadmindoc.callshield.ui.theme.hapticTick
+import com.sysadmindoc.callshield.ui.theme.isShortContent
 import com.sysadmindoc.callshield.util.hasMinAsciiDigits
 import com.sysadmindoc.callshield.util.normalizePhoneNumberInput
 import com.sysadmindoc.callshield.util.sanitizePhoneNumberInput
@@ -342,7 +345,8 @@ fun BlocklistScreen(viewModel: MainViewModel) {
             }
         }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        val short = isShortContent(maxHeight, LocalDensity.current.fontScale)
         Column(modifier = Modifier.fillMaxSize()) {
             Column(
                 modifier = Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 8.dp),
@@ -355,11 +359,15 @@ fun BlocklistScreen(viewModel: MainViewModel) {
                     fontWeight = FontWeight.Bold,
                     color = CatText,
                 )
-                Text(
-                    stringResource(R.string.blocklist_intro),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = CatSubtext,
-                )
+                // A short screen drops the intro and the card's explanation so an
+                // empty tab's card fits above the Add button.
+                if (!short) {
+                    Text(
+                        stringResource(R.string.blocklist_intro),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = CatSubtext,
+                    )
+                }
             }
             BlocklistOverviewCard(
                 modifier =
@@ -367,6 +375,7 @@ fun BlocklistScreen(viewModel: MainViewModel) {
                         .fillMaxWidth()
                         .padding(horizontal = 20.dp, vertical = 8.dp),
                 workspace = workspace,
+                compact = short,
             )
 
             if (ruleConflicts.isNotEmpty()) {
@@ -475,6 +484,8 @@ fun BlocklistScreen(viewModel: MainViewModel) {
                     BLOCKLIST_TAB_BLOCKED -> {
                         if (userBlocked.isEmpty()) {
                             EmptyStateCard(
+                                compact = short,
+                                clearOfAddButton = true,
                                 title = stringResource(R.string.blocklist_empty_blocked),
                                 subtitle = stringResource(R.string.blocklist_empty_blocked_sub),
                                 icon = Icons.Default.Block,
@@ -498,6 +509,8 @@ fun BlocklistScreen(viewModel: MainViewModel) {
                     BLOCKLIST_TAB_WILDCARDS -> {
                         if (wildcardRules.isEmpty()) {
                             EmptyStateCard(
+                                compact = short,
+                                clearOfAddButton = true,
                                 title = stringResource(R.string.blocklist_empty_wildcards),
                                 subtitle = stringResource(R.string.blocklist_empty_wildcards_sub),
                                 icon = Icons.Default.FilterAlt,
@@ -527,6 +540,8 @@ fun BlocklistScreen(viewModel: MainViewModel) {
                     BLOCKLIST_TAB_RANGES -> {
                         if (hashWildcardRules.isEmpty()) {
                             EmptyStateCard(
+                                compact = short,
+                                clearOfAddButton = true,
                                 title = stringResource(R.string.blocklist_empty_ranges),
                                 subtitle = stringResource(R.string.blocklist_empty_ranges_sub),
                                 icon = Icons.Default.Tune,
@@ -556,6 +571,8 @@ fun BlocklistScreen(viewModel: MainViewModel) {
                     BLOCKLIST_TAB_KEYWORDS -> {
                         if (keywordRules.isEmpty()) {
                             EmptyStateCard(
+                                compact = short,
+                                clearOfAddButton = true,
                                 title = stringResource(R.string.blocklist_empty_keywords),
                                 subtitle = stringResource(R.string.blocklist_empty_keywords_sub),
                                 icon = Icons.Default.TextFields,
@@ -585,6 +602,8 @@ fun BlocklistScreen(viewModel: MainViewModel) {
                     BLOCKLIST_TAB_WHITELIST -> {
                         if (whitelistEntries.isEmpty()) {
                             EmptyStateCard(
+                                compact = short,
+                                clearOfAddButton = true,
                                 title = stringResource(R.string.blocklist_empty_whitelist),
                                 subtitle = stringResource(R.string.blocklist_empty_whitelist_sub),
                                 icon = Icons.Default.CheckCircle,
@@ -745,6 +764,7 @@ fun BlocklistScreen(viewModel: MainViewModel) {
 private fun BlocklistOverviewCard(
     workspace: BlocklistWorkspaceModel,
     modifier: Modifier = Modifier,
+    compact: Boolean = false,
 ) {
     PremiumCard(modifier = modifier) {
         Column(
@@ -763,7 +783,9 @@ private fun BlocklistOverviewCard(
                 fontWeight = FontWeight.SemiBold,
                 color = CatText,
             )
-            Text(workspace.subtitle, style = MaterialTheme.typography.bodySmall, color = CatSubtext)
+            if (!compact) {
+                Text(workspace.subtitle, style = MaterialTheme.typography.bodySmall, color = CatSubtext)
+            }
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -906,6 +928,8 @@ private fun EmptyStateCard(
     icon: ImageVector,
     accentColor: Color,
     onRetry: (() -> Unit)? = null,
+    compact: Boolean = false,
+    clearOfAddButton: Boolean = false,
 ) {
     FramedEmptyState(
         title = title,
@@ -913,6 +937,9 @@ private fun EmptyStateCard(
         icon = icon,
         accentColor = accentColor,
         iconDescription = stringResource(R.string.cd_empty_list),
+        // The Add button is 54dp tall with 16dp below it.
+        modifier = if (clearOfAddButton) Modifier.padding(bottom = 70.dp) else Modifier,
+        compact = compact,
         action =
             onRetry?.let { retry ->
                 {

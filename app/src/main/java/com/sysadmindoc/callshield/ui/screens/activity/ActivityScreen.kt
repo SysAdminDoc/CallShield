@@ -3,6 +3,7 @@ package com.sysadmindoc.callshield.ui.screens.activity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
@@ -23,6 +24,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -35,6 +37,7 @@ import com.sysadmindoc.callshield.ui.theme.CatGreen
 import com.sysadmindoc.callshield.ui.theme.CatOverlay
 import com.sysadmindoc.callshield.ui.theme.CatSubtext
 import com.sysadmindoc.callshield.ui.theme.ShapeXl
+import com.sysadmindoc.callshield.ui.theme.isShortContent
 
 /**
  * One activity workspace keeps call history and blocked outcomes together.
@@ -57,23 +60,41 @@ fun ActivityScreen(
     }
     val stateHolder = rememberSaveableStateHolder()
 
-    Column(modifier = Modifier.fillMaxSize().background(Black)) {
-        Text(
-            stringResource(R.string.activity_intro),
-            modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp),
-            style = MaterialTheme.typography.bodyMedium,
-            color = CatSubtext,
-        )
+    BoxWithConstraints(modifier = Modifier.fillMaxSize().background(Black)) {
+        val short = isShortContent(maxHeight, LocalDensity.current.fontScale)
+        ActivityContent(viewModel, selectedView, { selectedView = it }, stateHolder, short)
+    }
+}
+
+@Composable
+private fun ActivityContent(
+    viewModel: MainViewModel,
+    selectedView: Int,
+    onSelectView: (Int) -> Unit,
+    stateHolder: androidx.compose.runtime.saveable.SaveableStateHolder,
+    short: Boolean,
+) {
+    Column(modifier = Modifier.fillMaxSize()) {
+        // The tabs say what the screen holds, so a short screen drops this line
+        // to leave the Blocked log's empty state room for its action.
+        if (!short) {
+            Text(
+                stringResource(R.string.activity_intro),
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp),
+                style = MaterialTheme.typography.bodyMedium,
+                color = CatSubtext,
+            )
+        }
         Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
             ActivityTab(
                 selected = selectedView == ACTIVITY_RECENT,
                 label = stringResource(R.string.activity_tab_recent),
-                onClick = { selectedView = ACTIVITY_RECENT },
+                onClick = { onSelectView(ACTIVITY_RECENT) },
             )
             ActivityTab(
                 selected = selectedView == ACTIVITY_BLOCKED,
                 label = stringResource(R.string.activity_tab_blocked),
-                onClick = { selectedView = ACTIVITY_BLOCKED },
+                onClick = { onSelectView(ACTIVITY_BLOCKED) },
             )
         }
         Box(modifier = Modifier.weight(1f)) {
@@ -81,7 +102,7 @@ fun ActivityScreen(
                 if (selectedView == ACTIVITY_RECENT) {
                     RecentCallsScreen(viewModel)
                 } else {
-                    BlockedLogScreen(viewModel)
+                    BlockedLogScreen(viewModel, compactHeader = short)
                 }
             }
         }
