@@ -43,6 +43,10 @@ All notable changes to CallShield will be documented in this file.
   version, Android version, phone and Protection test result.
 - Database v49 re-reads FCC's newest 500,000 complaints and adds 200 new FTC
   ones, for 51,362 numbers.
+- The hot list and the spam domain feed count reporters on one UTC day. The
+  report Worker's reporter ID changes at midnight, so two people reporting
+  either side of it counted as four and could put a number on every phone's
+  hot list.
 - Calls from outside North America no longer get a US or Caribbean place name
   in the caller-ID popup. A +65 call used to read as Birmingham, AL, and Number
   details offered to block that US area code. On a phone outside North America,

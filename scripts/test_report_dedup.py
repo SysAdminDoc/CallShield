@@ -7,6 +7,7 @@ from generate_hot_list import CAMPAIGN_MIN_UNION_REPORTERS, CAMPAIGN_REPORTERS_P
 from report_dedup import (
     BURST_DUPLICATE_SECONDS,
     MAX_DEVICES_PER_GROUP,
+    busiest_day_reporters,
     capped_reporter_count,
     find_burst_duplicates,
     find_resent_reports,
@@ -173,6 +174,18 @@ def main() -> None:
     # So one /48 must never meet a hot-list reporter minimum on its own.
     for minimum in (MIN_REPORTERS_HOT, CAMPAIGN_REPORTERS_PER_NUMBER, CAMPAIGN_MIN_UNION_REPORTERS):
         assert minimum > MAX_DEVICES_PER_GROUP, minimum
+
+    # ── buckets rotate at UTC midnight, so only one day's count as distinct ──
+    before, after = "2026-07-29", "2026-07-30"
+    one_reporter_either_side = [(before, (group, device)), (after, ("00000000000a0009", "00000000000d0009"))]
+    assert busiest_day_reporters(one_reporter_either_side) == 1
+    three_on_one_day = [(after, (f"00000000000a000{n}", f"00000000000d000{n}")) for n in range(1, 4)]
+    # The day after midnight holds the three plus the second of those buckets.
+    assert busiest_day_reporters(three_on_one_day + one_reporter_either_side) == 4
+    # The /48 cap still applies within the day.
+    assert busiest_day_reporters([(after, identity) for identity in rotating]) == MAX_DEVICES_PER_GROUP
+    assert busiest_day_reporters([(before, "a"), (after, "b"), (after, "c")], count=len) == 2
+    assert busiest_day_reporters([]) == 0
 
     print("report_dedup tests passed")
 

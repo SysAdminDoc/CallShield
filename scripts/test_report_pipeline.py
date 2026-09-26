@@ -795,6 +795,42 @@ def assert_reporters_count_per_device_with_group_cap(data_dir: Path) -> None:
         raise AssertionError(f"one /48 rotating /64s must count as two reporters at most: {hot[delegated_number]}")
 
 
+def assert_reporters_count_on_one_utc_day(data_dir: Path) -> None:
+    """The Worker's buckets change at UTC midnight, so one reporter either side of it counts once."""
+    previous_day = (datetime.fromisoformat(BASE_DAY) - timedelta(days=1)).date().isoformat()
+    straddle = [f"{previous_day}T22:00:00+00:00", f"{previous_day}T23:30:00+00:00",
+                f"{BASE_DAY}T01:00:00+00:00", f"{BASE_DAY}T03:00:00+00:00"]
+    two_either_side, third_same_day = "+12122340301", "+12122340302"
+    for number, times in ((two_either_side, straddle), (third_same_day, straddle + [f"{BASE_DAY}T05:00:00+00:00"])):
+        for index, reported_at in enumerate(times, start=1):
+            write_report(data_dir, f"{number[1:]}-{index}.json", number, f"00000000000b{index:04x}", reported_at,
+                         device=f"00000000000c{index:04x}")
+    # A domain seen by one bucket before midnight and another after, and one seen
+    # by two buckets on the same day.
+    for index, (domain, reported_at, bucket) in enumerate([
+        ("straddle.example", f"{previous_day}T23:50:00+00:00", BUCKETS[0]),
+        ("straddle.example", f"{previous_day}T23:55:00+00:00", BUCKETS[0]),
+        ("straddle.example", f"{BASE_DAY}T00:10:00+00:00", BUCKETS[1]),
+        ("sameday.example", f"{BASE_DAY}T01:00:00+00:00", BUCKETS[0]),
+        ("sameday.example", f"{BASE_DAY}T01:30:00+00:00", BUCKETS[0]),
+        ("sameday.example", f"{BASE_DAY}T02:00:00+00:00", BUCKETS[1]),
+    ]):
+        write_report(data_dir, f"domain-{index}.json", f"+1212234032{index}", bucket, reported_at,
+                     report_type="sms_spam", domains=[domain])
+
+    run_script("generate_hot_list.py", data_dir, ["--allow-collapse", "--cleared", "numbers,ranges"])
+    run_script("extract_spam_domains.py", data_dir, ["--allow-collapse", "--cleared", "domains"])
+    hot = {entry["number"]: entry for entry in json.loads((data_dir / "hot_numbers.json").read_text(encoding="utf-8"))["numbers"]}
+    if two_either_side in hot:
+        raise AssertionError(f"two reporters either side of midnight were counted as four: {hot[two_either_side]}")
+    if hot.get(third_same_day, {}).get("distinct_reporters") != 3:
+        raise AssertionError(f"three reporters on one day should trend: {hot.get(third_same_day)}")
+    review = json.loads((data_dir / "spam_domains_review.json").read_text(encoding="utf-8"))
+    reporters = {candidate["domain"]: candidate["distinct_reporters"] for candidate in review["candidates"]}
+    if "straddle.example" in reporters or reporters.get("sameday.example") != 2:
+        raise AssertionError(f"domain reporters should be counted on one UTC day: {reporters}")
+
+
 def run_drain(data_dir: Path) -> None:
     # Each drain here leaves the derived feeds empty, which their collapse
     # guards refuse to publish without being told, and an empty feed has to be
@@ -989,6 +1025,9 @@ def main() -> None:
 
     with tempfile.TemporaryDirectory() as tmp:
         assert_reporters_count_per_device_with_group_cap(Path(tmp) / "data")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        assert_reporters_count_on_one_utc_day(Path(tmp) / "data")
 
 
 if __name__ == "__main__":

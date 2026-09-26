@@ -30,7 +30,13 @@ from pipeline_io import (
     parse_cleared_feeds,
     report_queue_digest,
 )
-from report_dedup import validated_report_id, validated_reporter_bucket
+from report_dedup import (
+    busiest_day_reporters,
+    parse_reported_at,
+    reporter_day_key,
+    validated_report_id,
+    validated_reporter_bucket,
+)
 
 DATA_DIR = Path(os.environ.get("CALLSHIELD_DATA_DIR", Path(__file__).parent.parent / "data"))
 REPORTS_DIR = Path(os.environ.get("CALLSHIELD_REPORTS_DIR", DATA_DIR / "reports"))
@@ -167,8 +173,10 @@ def main(argv: list[str] | None = None) -> int:
     domain_numbers: dict[str, set[str]] = {}
     # Reporters count per /48 group here, not per /64 device as on the hot list:
     # with MIN_REPORTERS at 2, the hot list's two-devices-per-/48 cap would let
-    # one /48 meet the quorum alone.
-    domain_reporters: dict[str, set[str]] = {}
+    # one /48 meet the quorum alone. Each is kept with its UTC day, because the
+    # bucket changes at midnight and only one day's buckets are known to be
+    # different people.
+    domain_reporters: dict[str, set[tuple[str, str]]] = {}
     # A report the app resent under the same id (from another network, so from
     # another reporter bucket) must not count as a second reporter.
     seen_report_ids: set[str] = set()
@@ -188,8 +196,11 @@ def main(argv: list[str] | None = None) -> int:
                     continue
 
                 number = validated_report_number(report.get("number", ""))
-                reporter_bucket = validated_reporter_bucket(report.get("reporter_bucket"))
-                if not number or not reporter_bucket:
+                reporter_day = reporter_day_key(
+                    validated_reporter_bucket(report.get("reporter_bucket")),
+                    parse_reported_at(report.get("reported_at")),
+                )
+                if not number or reporter_day is None:
                     continue
                 report_id = validated_report_id(report.get("report_id"))
                 if report_id:
@@ -200,7 +211,7 @@ def main(argv: list[str] | None = None) -> int:
                 reports_scanned += 1
                 for domain in domains:
                     domain_numbers.setdefault(domain, set()).add(number)
-                    domain_reporters.setdefault(domain, set()).add(reporter_bucket)
+                    domain_reporters.setdefault(domain, set()).add((reporter_day[1], reporter_day[0]))
 
             except Exception as e:
                 print(f"  Skipping {report_file.name}: {e}")
@@ -212,7 +223,7 @@ def main(argv: list[str] | None = None) -> int:
     candidates = [
         domain
         for domain, count in domain_counts.most_common()
-        if count >= MIN_REPORTS and len(domain_reporters.get(domain, set())) >= MIN_REPORTERS
+        if count >= MIN_REPORTS and busiest_day_reporters(domain_reporters.get(domain, set()), count=len) >= MIN_REPORTERS
     ]
     try:
         approved = approved_domains()
@@ -229,7 +240,7 @@ def main(argv: list[str] | None = None) -> int:
             {
                 "domain": domain,
                 "distinct_numbers": domain_counts[domain],
-                "distinct_reporters": len(domain_reporters[domain]),
+                "distinct_reporters": busiest_day_reporters(domain_reporters[domain], count=len),
             }
             for domain in candidates
             if domain not in approved

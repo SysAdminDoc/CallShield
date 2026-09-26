@@ -30,7 +30,7 @@ from pipeline_io import (
 from report_dedup import (
     BURST_DUPLICATE_SECONDS,
     MAX_DEVICES_PER_GROUP,
-    capped_reporter_count,
+    busiest_day_reporters,
     find_burst_duplicates,
     find_resent_reports,
     parse_reported_at,
@@ -187,6 +187,7 @@ def main(argv: list[str] | None = None) -> int:
             collapsed_group += 1
             continue
         seen_reporter_days.add(identity_key)
+        dated_identity = (day_key[1], identity)
         entry = velocity.get(number)
         if entry is None:
             velocity[number] = {
@@ -199,13 +200,13 @@ def main(argv: list[str] | None = None) -> int:
                 "first_seen": reported_at_str,
                 "last_seen": reported_at_str,
                 "description": "Trending community report",
-                "_reporters": {identity},
+                "_reporters": {dated_identity},
                 "_devices_by_group": {group: {device}},
                 "_times": [reported_at],
             }
         else:
             entry["reports"] += 1
-            entry["_reporters"].add(identity)
+            entry["_reporters"].add(dated_identity)
             entry["_devices_by_group"].setdefault(group, set()).add(device)
             entry["_times"].append(reported_at)
             if reported_at_str > entry["last_seen"]:
@@ -263,7 +264,7 @@ def main(argv: list[str] | None = None) -> int:
         if not times:
             continue
         span_minutes = int((max(times) - min(times)).total_seconds() // 60)
-        entry["distinct_reporters"] = capped_reporter_count(reporters)
+        entry["distinct_reporters"] = busiest_day_reporters(reporters)
         entry["report_span_minutes"] = span_minutes
         if (
             entry["reports"] >= MIN_REPORTS_HOT
@@ -299,7 +300,7 @@ def main(argv: list[str] | None = None) -> int:
     for entry in hot_internal:
         if (
             entry["reports"] < CAMPAIGN_REPORTS_PER_NUMBER
-            or capped_reporter_count(entry["_reporters"]) < CAMPAIGN_REPORTERS_PER_NUMBER
+            or busiest_day_reporters(entry["_reporters"]) < CAMPAIGN_REPORTERS_PER_NUMBER
             or entry["report_span_minutes"] < CAMPAIGN_MIN_SPAN_MINUTES
         ):
             continue
@@ -310,7 +311,7 @@ def main(argv: list[str] | None = None) -> int:
     hot_ranges = []
     for npanxx, entries in sorted(npanxx_entries.items(), key=lambda item: -len(item[1])):
         # The cap applies across the range too, so one /48 can't fill the union.
-        union_reporters = capped_reporter_count(set().union(*(entry["_reporters"] for entry in entries)))
+        union_reporters = busiest_day_reporters(set().union(*(entry["_reporters"] for entry in entries)))
         if len(entries) < CAMPAIGN_THRESHOLD or union_reporters < CAMPAIGN_MIN_UNION_REPORTERS:
             continue
         hot_ranges.append(

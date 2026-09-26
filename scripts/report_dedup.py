@@ -64,6 +64,20 @@ def capped_reporter_count(identities) -> int:
     return sum(min(len(devices), MAX_DEVICES_PER_GROUP) for devices in devices_by_group.values())
 
 
+def busiest_day_reporters(dated_identities, count=capped_reporter_count) -> int:
+    """Reporters shown to be different people: the count on the busiest UTC day.
+
+    The Worker derives every bucket from the UTC day, so one reporter's reports
+    either side of midnight carry different buckets. Only identities seen on the
+    same day are known to be different reporters. `dated_identities` holds
+    `(day, identity)` pairs and `count` counts one day's identities.
+    """
+    by_day: dict[str, set] = {}
+    for day, identity in dated_identities:
+        by_day.setdefault(day, set()).add(identity)
+    return max((count(identities) for identities in by_day.values()), default=0)
+
+
 def validated_report_id(value: object) -> str:
     """Return the id the app gave a report, lowercased, or an empty string."""
     if not isinstance(value, str):
