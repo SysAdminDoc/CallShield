@@ -13,6 +13,7 @@ import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.tryPerformAccessibilityChecks
 import com.google.android.apps.common.testing.accessibility.framework.AccessibilityCheckResult
 import com.google.android.apps.common.testing.accessibility.framework.integrations.espresso.AccessibilityValidator
+import com.sysadmindoc.callshield.ui.theme.AppThemeMode
 import com.sysadmindoc.callshield.ui.theme.Black
 import com.sysadmindoc.callshield.ui.theme.CallShieldTheme
 
@@ -27,7 +28,10 @@ const val THEMED_TEST_ROOT_TAG = "callshield_themed_test_root"
  */
 fun ComposeContentTestRule.setThemedContent(content: @Composable () -> Unit) {
     setContent {
-        CallShieldTheme {
+        // Light, not the default: its accent pairs sit closest to the 4.5:1 floor
+        // (about 5.2:1 against 6 to 17:1 in AMOLED), so it's the theme where a
+        // contrast regression shows. The default moved to AMOLED on 2026-09-26.
+        CallShieldTheme(themeMode = AppThemeMode.Light) {
             Surface(
                 modifier = Modifier.fillMaxSize().testTag(THEMED_TEST_ROOT_TAG),
                 color = Black,

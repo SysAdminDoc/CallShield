@@ -1,6 +1,7 @@
 package com.sysadmindoc.callshield.data.repository
 
 import android.os.Build
+import androidx.datastore.core.DataMigration
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
@@ -39,6 +40,30 @@ import kotlinx.coroutines.flow.map
 private val validAppThemes = setOf("system", "light", "graphite", "amoled")
 
 internal fun sanitizeAppTheme(value: String?): String = value?.takeIf(validAppThemes::contains) ?: "amoled"
+
+/**
+ * A missing theme key has meant different themes: AMOLED up to v1.7.29, Light
+ * from v1.7.37 to v1.8.1 (which also saved a chosen Light as a missing key), and
+ * AMOLED again now. On the first open after the update, an install with no saved
+ * theme keeps the one it last drew, from the theme cache: v1.7.37 and later
+ * write it on every start, and v1.7.29 wrote it on every change. With nothing
+ * cached (a fresh install) the key stays missing and reads as AMOLED.
+ */
+internal class KeepShownThemeOnUpgrade(
+    private val lastShownTheme: () -> String?,
+) : DataMigration<Preferences> {
+    override suspend fun shouldMigrate(currentData: Preferences): Boolean = currentData[SpamRepository.KEY_THEME_DEFAULT_SETTLED] != true
+
+    override suspend fun migrate(currentData: Preferences): Preferences =
+        currentData.toMutablePreferences().apply {
+            if (currentData[SpamRepository.KEY_APP_THEME] == null) {
+                lastShownTheme()?.takeIf(validAppThemes::contains)?.let { this[SpamRepository.KEY_APP_THEME] = it }
+            }
+            this[SpamRepository.KEY_THEME_DEFAULT_SETTLED] = true
+        }
+
+    override suspend fun cleanUp() = Unit
+}
 
 /**
  * A certificate trust failure only describes the build that saw it: its pins
@@ -333,14 +358,10 @@ class SettingsRepository(
         return checkNotNull(previous)
     }
 
+    // Every choice is stored, Light included: a missing key reads as the AMOLED default.
     suspend fun setAppTheme(theme: String) =
         dataStore.edit { preferences ->
-            val sanitized = sanitizeAppTheme(theme)
-            if (sanitized == "light") {
-                preferences.remove(SpamRepository.KEY_APP_THEME)
-            } else {
-                preferences[SpamRepository.KEY_APP_THEME] = sanitized
-            }
+            preferences[SpamRepository.KEY_APP_THEME] = sanitizeAppTheme(theme)
         }
 
     suspend fun setAppUpdateChecksEnabled(enabled: Boolean) =

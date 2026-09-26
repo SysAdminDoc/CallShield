@@ -19,6 +19,8 @@ All notable changes to CallShield will be documented in this file.
   date written on each one. FCC's daily batches reach back years, so once a typo
   row dated September 26 moved the old cursor, every new batch was skipped: all
   535 complaints published that day. The next import picks them up.
+- Choosing Light in Settings works again. It had quietly stayed on AMOLED. The
+  update keeps whichever theme each phone was showing.
 - Protection test opens with a heading, and after a run it shows required and
   optional checks as two progress cards. Each result is an outlined row with a
   status mark and an OK, Fix or Review label.

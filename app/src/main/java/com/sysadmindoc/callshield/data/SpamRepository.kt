@@ -26,6 +26,7 @@ import com.sysadmindoc.callshield.data.remote.OkHttpExternalBlocklistDataSource
 import com.sysadmindoc.callshield.data.remote.SpamDataSource
 import com.sysadmindoc.callshield.data.repository.BlocklistRepository
 import com.sysadmindoc.callshield.data.repository.FeedMirrorSave
+import com.sysadmindoc.callshield.data.repository.KeepShownThemeOnUpgrade
 import com.sysadmindoc.callshield.data.repository.SettingsRepository
 import com.sysadmindoc.callshield.data.repository.SpamRepositoryImpl
 import com.sysadmindoc.callshield.data.repository.SyncRepository
@@ -52,6 +53,7 @@ internal fun replaceCorruptPreferences() = ReplaceFileCorruptionHandler<Preferen
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(
     name = "callshield_prefs",
     corruptionHandler = replaceCorruptPreferences(),
+    produceMigrations = { context -> listOf(KeepShownThemeOnUpgrade { SpamRepository.lastShownTheme(context) }) },
 )
 
 private object NoBackupPreferenceStores {
@@ -283,6 +285,9 @@ class SpamRepository(
         // Maximum profile (and every other profile) would visually "reset" — issue #2.
         val KEY_ACTIVE_PROFILE = stringPreferencesKey("active_profile_name")
         internal val KEY_APP_THEME = stringPreferencesKey("app_theme")
+
+        /** Set once [com.sysadmindoc.callshield.data.repository.KeepShownThemeOnUpgrade] has run. */
+        internal val KEY_THEME_DEFAULT_SETTLED = booleanPreferencesKey("theme_default_settled")
         val KEY_APP_UPDATE_CHECKS = booleanPreferencesKey("app_update_checks_enabled")
         internal val KEY_APP_UPDATE_STATUS = stringPreferencesKey("app_update_status")
         internal val KEY_APP_UPDATE_TAG = stringPreferencesKey("app_update_latest_tag")
@@ -312,28 +317,25 @@ class SpamRepository(
 
         /** SharedPreferences key for the synchronous theme mirror (cold-start flash fix). */
         private const val KEY_THEME_CACHE = "app_theme"
-        private const val KEY_THEME_CACHE_SCHEMA = "app_theme_schema"
         private const val KEY_POST_CALL_CACHE = "post_call_screen_enabled"
-        private const val THEME_CACHE_SCHEMA = 3
 
         /**
          * Static variant of [cachedAppTheme] for Activities that must resolve
          * the theme BEFORE super.onCreate (window-background selection) without
          * constructing the full repository singleton on the main thread.
          */
-        fun cachedAppTheme(context: Context): String {
-            val cache =
-                context.applicationContext
-                    .getSharedPreferences("theme_cache", Context.MODE_PRIVATE)
-            val cached = cache.getString(KEY_THEME_CACHE, null)
-            return if (cache.getInt(KEY_THEME_CACHE_SCHEMA, 1) >= THEME_CACHE_SCHEMA) {
-                cached ?: "amoled"
-            } else {
-                // In schema 1, a stored AMOLED mirror represented the old
-                // implicit theme. Preserve that migration for existing users.
-                cached?.let { if (it == "amoled") "light" else it } ?: "amoled"
-            }
-        }
+        fun cachedAppTheme(context: Context): String = lastShownTheme(context) ?: "amoled"
+
+        /**
+         * The theme this install last drew, or null when nothing was cached (a
+         * fresh install). Every cached value is a theme that was on screen, so an
+         * AMOLED cache from v1.7.29 stays AMOLED rather than turning Light as it
+         * did from v1.7.37 to v1.8.1.
+         */
+        internal fun lastShownTheme(context: Context): String? =
+            context.applicationContext
+                .getSharedPreferences("theme_cache", Context.MODE_PRIVATE)
+                .getString(KEY_THEME_CACHE, null)
 
         /** Null until the asynchronous preference has been mirrored at least once. */
         fun cachedPostCallScreenEnabled(context: Context): Boolean? {
@@ -487,21 +489,13 @@ class SpamRepository(
     }
 
     /** Last-known theme, read synchronously before DataStore emits. */
-    fun cachedAppTheme(): String {
-        val cached = themeCache.getString(KEY_THEME_CACHE, null)
-        return if (themeCache.getInt(KEY_THEME_CACHE_SCHEMA, 1) >= THEME_CACHE_SCHEMA) {
-            cached ?: "amoled"
-        } else {
-            cached?.let { if (it == "amoled") "light" else it } ?: "amoled"
-        }
-    }
+    fun cachedAppTheme(): String = themeCache.getString(KEY_THEME_CACHE, null) ?: "amoled"
 
     /** Update the synchronous theme mirror (called on writes and backfilled at start). */
     fun cacheAppTheme(theme: String) {
         themeCache
             .edit()
             .putString(KEY_THEME_CACHE, theme)
-            .putInt(KEY_THEME_CACHE_SCHEMA, THEME_CACHE_SCHEMA)
             .apply()
     }
 
