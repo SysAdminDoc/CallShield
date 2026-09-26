@@ -4,6 +4,8 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+- WorkManager is 2.12.0. The data pipeline now requires cryptography 50.0.1
+  and urllib3 2.7.0 or later, which fix published vulnerabilities.
 - Backups now carry the outgoing-call hold, the theme, the update check and
   the feed mirror, which a restore used to leave behind. Restoring an older
   backup leaves those four as they are. A test now fails when a new setting
