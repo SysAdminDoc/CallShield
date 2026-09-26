@@ -4,6 +4,8 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+- The report Worker can now deploy from a clean checkout. Wrangler provisions
+  its KV namespace and uses the current rate-limit binding format.
 - Reviewed domains in `spam_domains_approved.json` now reach the published
   feed. The extractor stops with an error if the approval file has the wrong
   shape.

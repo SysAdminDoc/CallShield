@@ -498,14 +498,12 @@ export async function recordDedup(ip, normalizedNumber, type, env, reportId = ""
  *
  * Setup:
  *   1. Create a Cloudflare account (free)
- *   2. Install wrangler: npm install -g wrangler
- *   3. wrangler login
+ *   2. Install dependencies: npm install
+ *   3. npx wrangler login
  *   4. Create a fine-grained GitHub PAT with ONLY "Contents: Read and write" on this repo
- *   5. wrangler secret put GITHUB_TOKEN (paste the PAT)
- *   6. wrangler secret put REPORTER_BUCKET_SECRET (32+ random characters)
- *   7. Create a KV namespace: wrangler kv namespace create RATE_LIMIT
- *   8. Update wrangler.toml with the returned namespace ID
- *   9. wrangler deploy
+ *   5. npx wrangler secret put GITHUB_TOKEN (paste the PAT)
+ *   6. npx wrangler secret put REPORTER_BUCKET_SECRET (32+ random characters)
+ *   7. npx wrangler deploy (automatically provisions RATE_LIMIT)
  *
  * The worker receives anonymous spam reports and creates files in data/reports/
  * via the GitHub API. The maintainer merges them into the main database

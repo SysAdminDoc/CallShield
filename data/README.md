@@ -138,6 +138,24 @@ in the `sources` array of the rows you are taking.
 - **FCC Complaints**: From FCC consumer complaint database
 - **Community Reports**: Anonymous in-app reports, stored through the report Worker
 
+### Deploying the report Worker
+
+From a clean checkout, run `npm install` in `worker/`, then:
+
+```sh
+npx wrangler login
+npx wrangler secret put REPORTER_BUCKET_SECRET
+npx wrangler deploy
+```
+
+Use at least 32 random characters for `REPORTER_BUCKET_SECRET`. An existing
+deployment keeps its `GITHUB_TOKEN` secret. For a new Worker, first create a
+fine-grained GitHub token with Contents read and write access to this repo and
+run `npx wrangler secret put GITHUB_TOKEN`. Wrangler provisions the `RATE_LIMIT`
+KV namespace from `wrangler.toml` and binds the rate limiter. A new namespace
+starts with empty seven-day report-id dedup state, so previously accepted ids
+can be sent again until that window expires.
+
 ## Regenerating the Database and Model (local)
 
 The database, hot lists, and on-device ML model are **maintained locally** and

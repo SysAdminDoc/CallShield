@@ -1,6 +1,6 @@
 name = "callshield-reports"
 main = "community-reports-worker.js"
-compatibility_date = "2024-01-01"
+compatibility_date = "2026-09-26"
 
 [vars]
 # GITHUB_TOKEN is set via `wrangler secret put GITHUB_TOKEN`
@@ -11,12 +11,11 @@ compatibility_date = "2024-01-01"
 
 # Rate-limit KV namespace (per-client+number+type dedup markers, and the
 # fallback burst counter when the limiter binding below is unavailable). A
-# client is an IPv4 address or an IPv6 /64. Create with:
-#   wrangler kv namespace create RATE_LIMIT
-# then paste the returned id below.
+# client is an IPv4 address or an IPv6 /64. Wrangler provisions the namespace
+# at deploy time when this binding has no id. Keep the generated id locally;
+# a fresh namespace starts without the previous seven-day report-id markers.
 [[kv_namespaces]]
 binding = "RATE_LIMIT"
-id = "REPLACE_WITH_KV_NAMESPACE_ID"
 
 # Atomic per-client burst control, keyed like the dedup markers above (an IPv4
 # address or an IPv6 /64). The Workers rate-limiting binding evaluates its
@@ -24,8 +23,10 @@ id = "REPLACE_WITH_KV_NAMESPACE_ID"
 # past the cap the way it can between the KV counter's read and write. The
 # namespace_id is an arbitrary account-unique integer (no dashboard
 # provisioning needed); `period` only supports 10 or 60 seconds.
-[[unsafe.bindings]]
+[[ratelimits]]
 name = "REPORT_LIMITER"
-type = "ratelimit"
 namespace_id = "5001"
-simple = { limit = 5, period = 60 }
+
+[ratelimits.simple]
+limit = 5
+period = 60

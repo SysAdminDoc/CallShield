@@ -25,6 +25,7 @@ local.properties
 *.der
 CallShield-*.apk
 .wrangler/
+node_modules/
 .kotlin/
 CLAUDE.md
 .claude/
