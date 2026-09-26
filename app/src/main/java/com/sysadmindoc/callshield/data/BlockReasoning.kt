@@ -300,7 +300,11 @@ object BlockReasoning {
         ): Reasoning? =
             when (reasonCode) {
                 BlockReasonCode.DATABASE -> {
-                    reasoning(s(R.string.reasoning_database_headline), description.labeled(R.string.reasoning_type_on_file))
+                    // The description is the database's own text, one line per kind of complaint.
+                    Reasoning(
+                        headline = s(R.string.reasoning_database_headline),
+                        bullets = SourceDescriptions.readable(context, description).lines().filter { it.isNotBlank() },
+                    )
                 }
 
                 BlockReasonCode.DB_PREFIX_EXPANSION -> {

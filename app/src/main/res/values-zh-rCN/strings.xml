@@ -1310,7 +1310,10 @@
     <string name="reasoning_hidden_number_headline">来电未附带电话号码。</string>
     <string name="reasoning_hidden_number_detail">已按你的“拦截未知号码”设置拦截。</string>
     <string name="reasoning_database_headline">此号码在 CallShield 垃圾号码库中。</string>
-    <string name="reasoning_type_on_file">记录类型：%1$s</string>
+    <string name="source_fcc_caller_id">FCC 投诉（针对来电号码）：%1$s</string>
+    <string name="source_fcc_callback">FCC 投诉（作为回拨号码）：%1$s</string>
+    <string name="source_fcc_unspecified">FCC 投诉：%1$s</string>
+    <string name="source_ftc_caller_id">FTC 投诉（针对来电号码）：%1$s</string>
     <string name="reasoning_db_prefix_headline">此号码与已确认的垃圾号码相邻。</string>
     <string name="reasoning_db_prefix_detail">除最后两位外，它与垃圾号码库中的号码完全相同，且号码库前缀扩展已开启。</string>
     <string name="reasoning_prefix_tag">前缀标记：%1$s</string>

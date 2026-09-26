@@ -33,6 +33,7 @@ import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.BlockReasoning
 import com.sysadmindoc.callshield.data.PhoneFormatter
 import com.sysadmindoc.callshield.data.SmsBodyRedactor
+import com.sysadmindoc.callshield.data.SourceDescriptions
 import com.sysadmindoc.callshield.data.SpamRepository
 import com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup
 import com.sysadmindoc.callshield.data.model.BlockedCall
@@ -388,7 +389,11 @@ fun NumberDetailScreen(
                         }
                         if (databaseEntry.description.isNotEmpty()) {
                             Spacer(Modifier.height(8.dp))
-                            Text(databaseEntry.description, color = CatSubtext, style = MaterialTheme.typography.bodyMedium)
+                            Text(
+                                SourceDescriptions.readable(context, databaseEntry.description),
+                                color = CatSubtext,
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
                         }
                     }
                 }

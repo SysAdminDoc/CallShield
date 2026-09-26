@@ -4,6 +4,9 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+- Number details, Lookup and the block explanation describe FCC and FTC
+  complaints in words, one line per kind, instead of the importer's field names
+  ("FCC callback_business") and the same complaint repeated.
 - The database is also published as data/spam_numbers.txt, one number per
   line under a short header, signed like the app's feeds, for projects that
   only want the list rather than the 51 MB JSON.

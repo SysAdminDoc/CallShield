@@ -1809,7 +1809,10 @@
     <string name="reasoning_hidden_number_headline">Call came in with no phone number attached.</string>
     <string name="reasoning_hidden_number_detail">Blocked by your \"block unknown numbers\" setting.</string>
     <string name="reasoning_database_headline">This number is in CallShield\'s spam database.</string>
-    <string name="reasoning_type_on_file">Type on file: %1$s</string>
+    <string name="source_fcc_caller_id">FCC complaints about the caller ID: %1$s</string>
+    <string name="source_fcc_callback">FCC complaints giving it as the number to call back: %1$s</string>
+    <string name="source_fcc_unspecified">FCC complaints: %1$s</string>
+    <string name="source_ftc_caller_id">FTC complaints about the caller ID: %1$s</string>
     <string name="reasoning_db_prefix_headline">This number sits next to confirmed spam numbers.</string>
     <string name="reasoning_db_prefix_detail">It shares all but its last two digits with numbers in the spam database, and database prefix expansion is on.</string>
     <string name="reasoning_prefix_tag">Prefix tag: %1$s</string>
