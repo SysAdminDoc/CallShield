@@ -23,10 +23,14 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.sysadmindoc.callshield.R
@@ -198,8 +202,14 @@ fun ProtectionTestScreen() {
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        SectionHeader(stringResource(R.string.protection_test_system_check), summaryColor)
-        if (results.isEmpty()) {
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(
+                stringResource(R.string.protection_test_system_check),
+                modifier = Modifier.semantics { heading() },
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                color = CatText,
+            )
             Text(
                 stringResource(R.string.protection_test_subtitle),
                 style = MaterialTheme.typography.bodyMedium,
@@ -256,44 +266,41 @@ fun ProtectionTestScreen() {
         }
 
         if (results.isEmpty()) {
-            PremiumCard(accentColor = CatBlue) {
-                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        stringResource(R.string.protection_test_intro_title),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = CatBlue,
-                    )
+            PremiumCard {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    SectionHeader(stringResource(R.string.protection_test_intro_title), CatGreen)
                     Text(
                         stringResource(R.string.protection_test_intro_body),
                         style = MaterialTheme.typography.bodySmall,
                         color = CatSubtext,
                     )
-                    ProtectionIntroRow(stringResource(R.string.protection_test_intro_permissions))
-                    ProtectionIntroRow(stringResource(R.string.protection_test_intro_engines))
-                    ProtectionIntroRow(stringResource(R.string.protection_test_intro_integrations))
+                    ProtectionIntroRow(stringResource(R.string.protection_test_intro_permissions), CatGreen)
+                    ProtectionIntroRow(stringResource(R.string.protection_test_intro_engines), CatGreen)
+                    ProtectionIntroRow(stringResource(R.string.protection_test_intro_integrations), CatGreen)
                 }
             }
         } else {
             val passed = results.count { it.passed }
             val total = results.size
             val allPassed = passed == total
+            val (required, optional) = remember(results) { results.partition { it.priority == TestPriority.Required } }
 
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            PremiumCard(accentColor = summaryColor) {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
-                    Icon(
-                        imageVector = if (allPassed) Icons.Default.VerifiedUser else Icons.Default.Warning,
-                        contentDescription = null,
-                        tint = summaryColor,
-                        modifier = Modifier.size(64.dp),
+                    PremiumIconTile(
+                        icon = if (allPassed) Icons.Default.VerifiedUser else Icons.Default.Warning,
+                        color = summaryColor,
+                        size = 44.dp,
+                        iconSize = 26.dp,
+                        showContainer = true,
                     )
+                    Spacer(Modifier.width(14.dp))
                     Column(
                         modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(3.dp),
+                        verticalArrangement = Arrangement.spacedBy(2.dp),
                     ) {
                         Text(
                             if (allPassed) {
@@ -302,8 +309,8 @@ fun ProtectionTestScreen() {
                                 val scorePercent = (passed * 100) / total
                                 stringResource(R.string.protection_test_summary, passed, total, scorePercent)
                             },
-                            style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.SemiBold,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
                             color = CatText,
                         )
                         Text(
@@ -312,38 +319,49 @@ fun ProtectionTestScreen() {
                             } else {
                                 stringResource(R.string.protection_test_summary_body_attention)
                             },
-                            style = MaterialTheme.typography.bodyMedium,
+                            style = MaterialTheme.typography.bodySmall,
                             color = CatSubtext,
                         )
                         Text(
                             stringResource(R.string.protection_test_last_tested_now),
-                            style = MaterialTheme.typography.bodySmall,
+                            style = MaterialTheme.typography.labelSmall,
                             color = CatOverlay,
                         )
                     }
                 }
-                Text(
-                    stringResource(R.string.protection_test_check_count, passed, total),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = CatSubtext,
-                )
-                LinearProgressIndicator(
-                    progress = { passed / total.toFloat() },
-                    modifier = Modifier.fillMaxWidth().height(5.dp).clip(RoundedCornerShape(3.dp)),
-                    color = summaryColor,
-                    trackColor = CatMuted.copy(alpha = 0.2f),
-                )
-                PremiumActionButton(
-                    label = stringResource(R.string.protection_test_run_again),
-                    icon = Icons.Default.PlayArrow,
-                    color = CatGreen,
-                    onClick = ::runAllTests,
-                    enabled = !testing,
-                    loading = testing,
-                    modifier = Modifier.fillMaxWidth().height(50.dp),
-                )
-                SectionHeader(stringResource(R.string.protection_test_check_results), summaryColor)
             }
+
+            Row(
+                modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                CheckTally(
+                    label = stringResource(R.string.protection_test_required_tally),
+                    note = stringResource(R.string.protection_test_required_note),
+                    passed = required.count { it.passed },
+                    total = required.size,
+                    shortfallColor = CatRed,
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
+                )
+                CheckTally(
+                    label = stringResource(R.string.protection_test_optional_tally),
+                    note = stringResource(R.string.protection_test_optional_note),
+                    passed = optional.count { it.passed },
+                    total = optional.size,
+                    shortfallColor = CatYellow,
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
+                )
+            }
+
+            PremiumActionButton(
+                label = stringResource(R.string.protection_test_run_again),
+                icon = Icons.Default.PlayArrow,
+                color = CatGreen,
+                onClick = ::runAllTests,
+                enabled = !testing,
+                loading = testing,
+                modifier = Modifier.fillMaxWidth().height(50.dp),
+            )
 
             if (nextSteps.isNotEmpty()) {
                 PremiumCard(accentColor = CatBlue) {
@@ -381,12 +399,7 @@ fun ProtectionTestScreen() {
             val passing = results.filter { it.passed }
 
             if (actionNeeded.isNotEmpty()) {
-                Text(
-                    stringResource(R.string.protection_test_action_needed),
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = summaryColor,
-                )
+                SectionHeader(stringResource(R.string.protection_test_action_needed), summaryColor)
             }
 
             actionNeeded.forEachIndexed { index, result ->
@@ -481,7 +494,45 @@ private fun ModelHealthCard(health: ModelHealth) {
 }
 
 @Composable
-private fun ProtectionIntroRow(text: String) {
+private fun CheckTally(
+    label: String,
+    note: String,
+    passed: Int,
+    total: Int,
+    shortfallColor: Color,
+    modifier: Modifier = Modifier,
+) {
+    val barColor = if (passed == total) CatGreen else shortfallColor
+    val tallyDescription = stringResource(R.string.protection_test_tally_description, passed, total)
+    LedgerCard(modifier = modifier) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(14.dp).semantics(mergeDescendants = true) {},
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Text(label, style = MaterialTheme.typography.labelLarge, color = CatSubtext)
+            Text(
+                stringResource(R.string.protection_test_tally, passed, total),
+                modifier = Modifier.semantics { contentDescription = tallyDescription },
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                color = CatText,
+            )
+            LinearProgressIndicator(
+                progress = { if (total == 0) 1f else passed / total.toFloat() },
+                modifier = Modifier.fillMaxWidth().height(5.dp).clip(RoundedCornerShape(ShapeXs)),
+                color = barColor,
+                trackColor = CatMuted.copy(alpha = 0.2f),
+            )
+            Text(note, style = MaterialTheme.typography.bodySmall, color = CatSubtext)
+        }
+    }
+}
+
+@Composable
+private fun ProtectionIntroRow(
+    text: String,
+    dotColor: Color = CatBlue,
+) {
     Row(verticalAlignment = Alignment.Top) {
         Box(
             modifier =
@@ -489,7 +540,7 @@ private fun ProtectionIntroRow(text: String) {
                     .padding(top = 6.dp)
                     .size(8.dp)
                     .clip(CircleShape)
-                    .background(CatBlue),
+                    .background(dotColor),
         )
         Spacer(Modifier.width(10.dp))
         Text(
@@ -502,29 +553,39 @@ private fun ProtectionIntroRow(text: String) {
 
 @Composable
 private fun TestResultCard(result: TestResult) {
-    val accentColor =
-        when {
-            result.passed -> CatGreen.copy(alpha = 0.5f)
-            result.priority == TestPriority.Required -> CatRed.copy(alpha = 0.5f)
-            else -> CatYellow.copy(alpha = 0.5f)
-        }
+    val requiredFailure = !result.passed && result.priority == TestPriority.Required
     val iconTint =
         when {
             result.passed -> CatGreen
-            result.priority == TestPriority.Required -> CatRed
+            requiredFailure -> CatRed
             else -> CatYellow
         }
+    // A text status, not a pill: the checks carry no per-row action, so nothing
+    // here may look like a button (and the product bans pill backdrops).
+    val statusLabel =
+        stringResource(
+            when {
+                result.passed -> R.string.protection_test_status_ok
+                requiredFailure -> R.string.protection_test_status_fix
+                else -> R.string.protection_test_status_review
+            },
+        )
 
-    PremiumCard(cornerRadius = 12.dp, accentColor = accentColor) {
+    LedgerCard(modifier = Modifier.fillMaxWidth()) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(14.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            PremiumIconTile(
-                icon = if (result.passed) Icons.Default.CheckCircle else Icons.Default.Warning,
-                color = iconTint,
-                size = 36.dp,
-                iconSize = 19.dp,
+            Icon(
+                imageVector =
+                    when {
+                        result.passed -> Icons.Default.CheckCircle
+                        requiredFailure -> Icons.Default.Error
+                        else -> Icons.Default.Warning
+                    },
+                contentDescription = null,
+                tint = iconTint,
+                modifier = Modifier.size(22.dp),
             )
             Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
@@ -532,6 +593,7 @@ private fun TestResultCard(result: TestResult) {
                     result.name,
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold,
+                    color = CatText,
                 )
                 Text(
                     result.detail,
@@ -547,6 +609,8 @@ private fun TestResultCard(result: TestResult) {
                     )
                 }
             }
+            Spacer(Modifier.width(8.dp))
+            StatusPill(text = statusLabel, color = iconTint)
         }
     }
 }

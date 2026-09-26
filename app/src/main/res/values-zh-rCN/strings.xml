@@ -760,6 +760,15 @@
     <string name="protection_test_action_needed">需要处理</string>
     <string name="protection_test_working">运行符合预期</string>
     <string name="protection_test_next_steps">建议后续步骤</string>
+    <string name="protection_test_required_tally">必需</string>
+    <string name="protection_test_optional_tally">可选</string>
+    <string name="protection_test_required_note">防护所需</string>
+    <string name="protection_test_optional_note">额外覆盖</string>
+    <string name="protection_test_tally">%1$d / %2$d</string>
+    <string name="protection_test_tally_description">已通过 %1$d 项，共 %2$d 项</string>
+    <string name="protection_test_status_ok">正常</string>
+    <string name="protection_test_status_fix">需修复</string>
+    <string name="protection_test_status_review">建议检查</string>
     <string name="protection_test_open_settings">打开应用设置</string>
     <string name="protection_test_fix_permissions">在 Android 应用设置中授予缺失权限，然后重新运行诊断。</string>
     <string name="protection_test_fix_screener">将 CallShield 设为默认来电筛查应用，以便实时拦截垃圾电话。</string>

@@ -4,6 +4,9 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+- Protection test opens with a heading, and after a run it shows required and
+  optional checks as two progress cards. Each result is an outlined row with a
+  status mark and an OK, Fix or Review label.
 - Insights now opens with outlined totals, then its real weekly chart and
   detail cards. Its labels describe recorded call and text events accurately.
 - Number details now groups block, report, call and area-code controls under a
