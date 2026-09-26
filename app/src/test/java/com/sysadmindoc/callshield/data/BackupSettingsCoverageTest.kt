@@ -107,6 +107,86 @@ class BackupSettingsCoverageTest {
     }
 
     @Test
+    fun `every backed-up setting is read back, not just written`() {
+        // A key writeTo writes but toBackupSettings doesn't read would come back
+        // from a restore as its default, and the coverage check above can't see it.
+        val custom =
+            BackupSettings(
+                blockCallsEnabled = false,
+                blockSmsEnabled = false,
+                blockUnknownEnabled = true,
+                stirShakenEnabled = false,
+                stirTrustedAllowEnabled = false,
+                autoMuteLowConfidenceEnabled = true,
+                neighborSpoofEnabled = false,
+                heuristicsEnabled = false,
+                smsContentEnabled = false,
+                smsBurstEnabled = false,
+                urlhausStripQueryEnabled = false,
+                urlhausRemoteLookupEnabled = true,
+                liveCallerEnrichmentEnabled = true,
+                contactWhitelistEnabled = false,
+                contactsOnlyEnabled = true,
+                dbPrefixExpansionEnabled = true,
+                aggressiveModeEnabled = true,
+                answeredCallerTrustEnabled = false,
+                answeredCallerThreshold = 5,
+                answeredCallerWindowDays = 60,
+                emergencyCallbackGraceEnabled = false,
+                emergencyCallbackWindowMinutes = 90,
+                timeBlockEnabled = true,
+                timeBlockStartHour = 21,
+                timeBlockEndHour = 6,
+                frequencyEscalationEnabled = false,
+                frequencyThreshold = 5,
+                autoCleanupEnabled = true,
+                cleanupDays = 14,
+                mlScorerEnabled = false,
+                rcsFilterEnabled = false,
+                postCallScreenEnabled = true,
+                silentVoicemailEnabled = true,
+                answerHangUpEnabled = true,
+                hangUpDelaySeconds = 4,
+                pushAlertEnabled = false,
+                pushAlertDisabledPackages = listOf("com.example.chat"),
+                regionBlockEnabled = true,
+                allowedRegions = listOf("NY"),
+                cnapTrustPatterns = listOf("PHARMACY"),
+                cnapBlockPatterns = listOf("SURVEY"),
+                categoryCallActions = CategoryCallPolicy.encode(mapOf(CallCategory.DebtCollector to CategoryCallAction.ALLOW)).toList(),
+                selectedContactGroups = ContactGroupCatalog.preserveScope(listOf("group:1")).toList(),
+                outgoingRiskWarningEnabled = true,
+                activeProfileName = "strict",
+                notificationScreeningPackages = listOf("com.google.android.apps.messaging"),
+                enabledRegulatoryPrefixes = RegulatoryPrefix.entries.map { it.key.name },
+                meetingModeEnabled = true,
+                meetingModeApps = listOf("us.zoom.videomeetings"),
+                outgoingCallHoldEnabled = true,
+                appTheme = "light",
+                appUpdateChecksEnabled = true,
+                feedMirrorUrl = "https://mirror.example/callshield/",
+            )
+        val written = mutablePreferencesOf().also { custom.sanitized().writeTo(it) }
+        val restored = mutablePreferencesOf().also { written.toBackupSettings().sanitized().writeTo(it) }
+
+        assertEquals(written.asMap(), restored.asMap())
+        // Each value differs from a phone on its defaults, so the round trip proves something.
+        val defaults =
+            mutablePreferencesOf().also {
+                BackupSettings(outgoingCallHoldEnabled = false, appTheme = "amoled", appUpdateChecksEnabled = false, feedMirrorUrl = "")
+                    .sanitized()
+                    .writeTo(it)
+            }
+        val unchanged =
+            written
+                .asMap()
+                .filter { (key, value) -> defaults.asMap()[key] == value }
+                .keys
+                .map { it.name }
+        assertEquals(emptyList<String>(), unchanged)
+    }
+
+    @Test
     fun `the settings that were missing round-trip`() {
         val source =
             mutablePreferencesOf(
