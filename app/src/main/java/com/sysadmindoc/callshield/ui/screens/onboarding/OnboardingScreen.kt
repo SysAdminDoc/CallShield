@@ -109,6 +109,8 @@ import com.sysadmindoc.callshield.ui.theme.GradientDivider
 import com.sysadmindoc.callshield.ui.theme.LedgerCard
 import com.sysadmindoc.callshield.ui.theme.PremiumActionButton
 import com.sysadmindoc.callshield.ui.theme.SectionHeader
+import com.sysadmindoc.callshield.ui.theme.ShapeMd
+import com.sysadmindoc.callshield.ui.theme.ShapeXl
 import com.sysadmindoc.callshield.util.startActivitySafely
 import kotlinx.coroutines.launch
 
@@ -736,7 +738,7 @@ private fun OnboardingStepBody(
                     Spacer(Modifier.height(18.dp))
                     Surface(
                         color = MaterialTheme.colorScheme.surfaceContainerLow,
-                        shape = RoundedCornerShape(18.dp),
+                        shape = RoundedCornerShape(ShapeXl),
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             Text(
@@ -799,7 +801,7 @@ private fun OnboardingProfileOptions(
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 Box(
-                    modifier = Modifier.size(38.dp).background(accent.copy(alpha = 0.14f), RoundedCornerShape(19.dp)),
+                    modifier = Modifier.size(38.dp).background(accent.copy(alpha = 0.14f), RoundedCornerShape(ShapeMd)),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(

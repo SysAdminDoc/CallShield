@@ -34,6 +34,7 @@ import com.sysadmindoc.callshield.ui.theme.Black
 import com.sysadmindoc.callshield.ui.theme.CatGreen
 import com.sysadmindoc.callshield.ui.theme.CatOverlay
 import com.sysadmindoc.callshield.ui.theme.CatSubtext
+import com.sysadmindoc.callshield.ui.theme.ShapeXl
 
 /**
  * One activity workspace keeps call history and blocked outcomes together.
@@ -101,8 +102,8 @@ internal fun RowScope.ActivityTab(
                 .weight(1f)
                 .padding(horizontal = 4.dp)
                 .height(48.dp)
-                .background(if (selected) CatGreen else MaterialTheme.colorScheme.surfaceContainerLow, RoundedCornerShape(24.dp))
-                .border(1.dp, if (selected) CatGreen else CatOverlay.copy(alpha = 0.35f), RoundedCornerShape(24.dp)),
+                .background(if (selected) CatGreen else MaterialTheme.colorScheme.surfaceContainerLow, RoundedCornerShape(ShapeXl))
+                .border(1.dp, if (selected) CatGreen else CatOverlay.copy(alpha = 0.35f), RoundedCornerShape(ShapeXl)),
         selectedContentColor = Black,
         unselectedContentColor = CatSubtext,
         text = {

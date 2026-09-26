@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.CallMade
@@ -514,7 +513,7 @@ fun RecentCallItem(
                         modifier =
                             Modifier
                                 .size(42.dp)
-                                .clip(CircleShape)
+                                .clip(RoundedCornerShape(ShapeMd))
                                 .background(riskColor.copy(alpha = 0.12f))
                                 .semantics { contentDescription = riskDescription },
                         contentAlignment = Alignment.Center,

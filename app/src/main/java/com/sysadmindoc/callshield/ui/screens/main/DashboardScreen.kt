@@ -1270,7 +1270,7 @@ internal fun DashboardHeroCard(
                 )
             }
             Box(
-                modifier = Modifier.size(82.dp).background(HeroGradient, RoundedCornerShape(40.dp)),
+                modifier = Modifier.size(82.dp).background(HeroGradient),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(

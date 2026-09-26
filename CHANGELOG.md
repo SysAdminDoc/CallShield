@@ -9,6 +9,9 @@ All notable changes to CallShield will be documented in this file.
   status mark and an OK, Fix or Review label.
 - What's new starts with the latest release, folds older releases behind one
   card, and ends with a short note about what CallShield sends off the phone.
+- Tabs, chips, empty-state cards and icon backdrops that had drifted back to
+  pill and circle shapes use the app's corner scale again, and a test now fails
+  if a pill shape returns.
 - Insights now opens with outlined totals, then its real weekly chart and
   detail cards. Its labels describe recorded call and text events accurately.
 - Number details now groups block, report, call and area-code controls under a
@@ -16,8 +19,8 @@ All notable changes to CallShield will be documented in this file.
 - More now opens with a "Tools & support" heading and a protection summary
   card. Protection test, Settings, Statistics and What's new are full-width
   cards, so the main tools are easier to find.
-- Blocklist now has a clearer rules heading, an outlined count card, pill tabs
-  for each rule type, and a framed empty state.
+- Blocklist now has a clearer rules heading, an outlined count card, a tab for
+  each rule type, and a framed empty state.
 - Recent calls now uses compact, neutral history cards and shows a Retry card
   when Android cannot load the call log. Calls already loaded stay visible.
 - Blocked activity now has a clear heading, a framed empty state and compact
@@ -25,7 +28,7 @@ All notable changes to CallShield will be documented in this file.
 - Lookup now opens with a clear number-check prompt and a private-check card.
   Risk results group the app's actual reasons under Evidence, and checking a
   number closes the keypad so the verdict stays visible.
-- Activity now uses clear Recent and Blocked pills and an outlined summary of
+- Activity now uses clear Recent and Blocked tabs and an outlined summary of
   actual call history. Its introduction names the history the app can show.
 - Settings now opens on grouped Basic controls, with detailed access, detection,
   lists and backup options under Advanced. Cards match the dark screen design,

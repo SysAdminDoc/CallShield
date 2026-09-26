@@ -142,6 +142,8 @@ import com.sysadmindoc.callshield.ui.theme.PremiumCard
 import com.sysadmindoc.callshield.ui.theme.PremiumCompactButton
 import com.sysadmindoc.callshield.ui.theme.PremiumIconTile
 import com.sysadmindoc.callshield.ui.theme.SectionHeader
+import com.sysadmindoc.callshield.ui.theme.ShapeLg
+import com.sysadmindoc.callshield.ui.theme.ShapeXl
 import com.sysadmindoc.callshield.ui.theme.StatusPill
 import com.sysadmindoc.callshield.ui.theme.SurfaceBright
 import com.sysadmindoc.callshield.ui.theme.hapticConfirm
@@ -883,7 +885,7 @@ private fun RuleTabLabel(
 ) {
     Surface(
         color = if (selected) CatGreen.copy(alpha = 0.12f) else SurfaceBright,
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(ShapeLg),
         border = BorderStroke(1.dp, if (selected) CatGreen else CatOverlay.copy(alpha = 0.3f)),
     ) {
         Text(
@@ -915,9 +917,9 @@ private fun EmptyStateCard(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(20.dp))
+                    .clip(RoundedCornerShape(ShapeXl))
                     .background(SurfaceBright)
-                    .border(1.dp, CatOverlay.copy(alpha = 0.35f), RoundedCornerShape(20.dp))
+                    .border(1.dp, CatOverlay.copy(alpha = 0.35f), RoundedCornerShape(ShapeXl))
                     .padding(horizontal = 20.dp, vertical = 28.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(10.dp),

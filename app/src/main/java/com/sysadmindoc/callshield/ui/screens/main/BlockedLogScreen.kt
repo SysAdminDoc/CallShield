@@ -17,7 +17,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ViewList
@@ -616,9 +615,9 @@ private fun BlockedLogEmptyState(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(20.dp))
+                    .clip(RoundedCornerShape(ShapeXl))
                     .background(SurfaceBright)
-                    .border(1.dp, CatMuted.copy(alpha = 0.35f), RoundedCornerShape(20.dp))
+                    .border(1.dp, CatMuted.copy(alpha = 0.35f), RoundedCornerShape(ShapeXl))
                     .padding(horizontal = 20.dp, vertical = 28.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -699,9 +698,9 @@ fun BlockedCallItem(
                     modifier =
                         Modifier
                             .size(44.dp)
-                            .clip(CircleShape)
+                            .clip(RoundedCornerShape(ShapeMd))
                             .background(eventColor.copy(alpha = 0.12f))
-                            .border(1.dp, eventColor.copy(alpha = 0.25f), CircleShape),
+                            .border(1.dp, eventColor.copy(alpha = 0.25f), RoundedCornerShape(ShapeMd)),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(

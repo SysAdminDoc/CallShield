@@ -283,8 +283,11 @@ val ShapeXl = 10.dp
 // ─── Gradient presets ──────────────────────────────────────────────
 val SurfaceGradient: Brush
     @Composable get() = Brush.verticalGradient(listOf(SurfaceVariant, Surface))
+
+// The default radius is the largest circle that fits the drawn area, so the glow
+// fades out inside its own box and needs no round clip (the product bans those).
 val HeroGradient: Brush
-    @Composable get() = Brush.radialGradient(listOf(CatGreen.copy(alpha = 0.08f), Color.Transparent), radius = 600f)
+    @Composable get() = Brush.radialGradient(listOf(CatGreen.copy(alpha = 0.12f), Color.Transparent))
 val DangerGradient: Brush
     @Composable get() = Brush.radialGradient(listOf(CatRed.copy(alpha = 0.06f), Color.Transparent), radius = 400f)
 
