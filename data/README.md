@@ -172,6 +172,8 @@ pip install -r scripts/requirements.txt   # requests, scikit-learn, numpy
 
 # 1. Rebuild the number database from all free public sources
 python scripts/import_all_sources.py                       # writes data/spam_numbers.json
+# Every step that rewrites spam_numbers.json (this one, update_ftc.py and the
+# merge in step 3) rewrites its shards and spam_numbers.txt with it.
 python scripts/update_ftc.py --max 50000                   # merge recent FTC complaints
 # The FTC API is read with api.data.gov's shared DEMO_KEY unless FTC_API_KEY is
 # set. api.ftc.gov gives DEMO_KEY 10 requests a day (reset at 00:00 UTC), so a

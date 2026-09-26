@@ -26,6 +26,7 @@ from report_dedup import (
     validated_reporter_bucket,
 )
 from source_registry import source_health_report
+from spam_shards import write_sharded_database
 
 DATA_DIR = Path(os.environ.get("CALLSHIELD_DATA_DIR", Path(__file__).parent.parent / "data"))
 DB_FILE = DATA_DIR / "spam_numbers.json"
@@ -680,6 +681,9 @@ def main(argv: list[str] | None = None):
         db["updated"] = today
         db["numbers"].sort(key=lambda x: x.get("reports", 0), reverse=True)
         atomic_write_json(DB_FILE, db)
+        # Devices fetch the shards, and spam_numbers.txt is written with them,
+        # so a rewrite of the database rewrites both.
+        write_sharded_database(db, DB_FILE.parent)
     else:
         print("No changes — database version left at", db["version"])
 

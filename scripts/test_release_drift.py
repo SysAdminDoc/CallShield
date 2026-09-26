@@ -88,6 +88,40 @@ class ReleaseDriftTest(unittest.TestCase):
                 issues,
             )
 
+    def test_readme_test_count_must_match_the_suite(self) -> None:
+        """The badge said 1594 JVM unit tests while the suite held 1613."""
+        version_name, version_code = verify_release_drift.parse_app_version(
+            verify_release_drift.read_text(ROOT / "app/build.gradle.kts")
+        )
+        copied = [
+            "README.md",
+            "CHANGELOG.md",
+            "app/src/main/java/com/sysadmindoc/callshield/ui/screens/more/ChangelogScreen.kt",
+            "docs/fdroid/com.sysadmindoc.callshield.yml",
+            "docs/fdroid-submission.md",
+            f"fastlane/metadata/android/en-US/changelogs/{version_code}.txt",
+            "app/src/main/res/values/strings.xml",
+            "data/spam_numbers.json",
+        ]
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for relative in copied:
+                destination = root / relative
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                destination.write_bytes((ROOT / relative).read_bytes())
+            claimed = int(re.search(r"JVM%20unit%20tests-(\d+)", (root / "README.md").read_text(encoding="utf-8")).group(1))
+            suite = root / "app/src/test/java/ExampleTest.kt"
+            suite.parent.mkdir(parents=True)
+            test_method = "    @Test\n    fun t() {}\n"
+            suite.write_text("class ExampleTest {\n" + test_method * claimed + "}\n", encoding="utf-8")
+
+            # The checked-in README against a suite of its own size is the control.
+            self.assertEqual([], verify_release_drift.release_metadata_audit(root, version_name, version_code))
+
+            suite.write_text(suite.read_text(encoding="utf-8") + "class Another {\n" + test_method + "}\n", encoding="utf-8")
+            issues = verify_release_drift.release_metadata_audit(root, version_name, version_code)
+            self.assertTrue(any("test count" in issue for issue in issues), issues)
+
     def test_getting_started_guide_must_match_the_settings_cards(self) -> None:
         """The guide listed a toggle that doesn't exist and missed about 15 settings."""
         self.assertEqual([], verify_release_drift.settings_guide_audit(ROOT))

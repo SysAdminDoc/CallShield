@@ -413,6 +413,21 @@ def release_metadata_audit(root: Path, version_name: str, version_code: int) -> 
                 f"{string_count} strings and {plural_count} plural groups."
             )
 
+    # The test count is quoted in four places, and verifyReleaseMetadata only
+    # checked that they agreed with each other, so the badge said 1594 while
+    # the suite held 1613 tests.
+    test_root = root / "app/src/test"
+    if test_root.is_dir():
+        test_count = sum(len(re.findall(r"(?m)^\s*@Test\b", read_text(path))) for path in test_root.rglob("*.kt"))
+        claims = (
+            re.findall(r"JVM%20unit%20tests-(\d+)", readme)
+            + re.findall(r"(\d+) JVM unit tests", readme)
+            + re.findall(r"testDebugUnitTest\s+#\s*(\d+) tests", readme)
+            + re.findall(r"\*\*(\d+) total JVM unit tests\*\*", readme)
+        )
+        if not claims or any(int(claim) != test_count for claim in claims):
+            issues.append(f"README test count is stale; app/src/test holds {test_count} tests.")
+
     source_marker = f"Current app source: {version_name} ({version_code});"
     if source_marker not in fdroid:
         issues.append("F-Droid metadata does not identify the current app source version/code.")

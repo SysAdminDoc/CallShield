@@ -26,6 +26,7 @@ from phone_normalization import normalize_nanp_number
 from collections import Counter
 
 from pipeline_io import atomic_write_json
+from spam_shards import write_sharded_database
 
 try:
     import requests
@@ -228,6 +229,9 @@ def merge_into_database(new_numbers: list[dict]):
     db["numbers"].sort(key=lambda x: x.get("reports", 0), reverse=True)
 
     atomic_write_json(DB_FILE, db)
+    # Devices fetch the shards, and spam_numbers.txt is written with them, so a
+    # rewrite of the database rewrites both.
+    write_sharded_database(db, DB_FILE.parent)
 
     print(f"\nDatabase updated:")
     print(f"  Added: {added:,} new numbers")
