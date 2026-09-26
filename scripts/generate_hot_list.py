@@ -23,7 +23,7 @@ from pipeline_io import (
     FeedCollapseError,
     atomic_write_json,
     ensure_feed_not_collapsed,
-    is_deliberate_clear,
+    published_clear_flag,
     parse_cleared_feeds,
     report_queue_digest,
 )
@@ -104,8 +104,9 @@ def main(argv: list[str] | None = None) -> int:
         help=(
             "comma-separated feeds whose emptiness is deliberate (numbers, ranges). "
             "Only these are published with cleared=true, which tells every device to "
-            "drop its local rows for that feed. --allow-collapse alone publishes "
-            "cleared=false, so devices keep what they have."
+            "drop its local rows for that feed. An empty feed not named here is "
+            "refused unless the feed it replaces was already cleared, because phones "
+            "treat an empty feed without cleared=true as an outage."
         ),
     )
     args = parser.parse_args(argv)
@@ -351,18 +352,20 @@ def main(argv: list[str] | None = None) -> int:
             previous_ratio=0.10,
             allow_collapse=args.allow_collapse,
         )
+        # Tell the client whether an empty feed is a decision or an accident. It
+        # keeps its local rows unless the feed says it was cleared on purpose, and
+        # an empty feed that doesn't say so is refused before either file changes.
+        numbers_cleared = published_clear_flag(
+            HOT_LIST_FILE, output, item_key="numbers", approved="numbers" in cleared_feeds
+        )
+        ranges_cleared = published_clear_flag(
+            HOT_RANGES_FILE, ranges_output, item_key="ranges", approved="ranges" in cleared_feeds
+        )
     except FeedCollapseError as error:
         print(f"ERROR: {error}", file=sys.stderr)
         return 2
-
-    # Tell the client whether an empty feed is a decision or an accident. It
-    # keeps its local rows unless the feed says it was cleared on purpose.
-    output["cleared"] = is_deliberate_clear(
-        output, item_key="numbers", approved="numbers" in cleared_feeds
-    )
-    ranges_output["cleared"] = is_deliberate_clear(
-        ranges_output, item_key="ranges", approved="ranges" in cleared_feeds
-    )
+    output["cleared"] = numbers_cleared
+    ranges_output["cleared"] = ranges_cleared
 
     # Validate both outputs before replacing either one, so a collapse in the
     # range feed cannot leave the number feed from a newer, unmergeable run.

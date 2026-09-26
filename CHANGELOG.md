@@ -4,6 +4,11 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+- Phones no longer treat the empty trending feeds as an outage. Since
+  September 25 the hot list, campaign range and spam domain feeds went out empty
+  without being marked cleared, so every phone kept retrying the refresh and
+  Protection test warned that the hot list was missing. They're republished as
+  cleared, and the generators now refuse to publish an empty feed that isn't.
 - Community rows that three separate reporters promoted stay in the database
   when their oldest reports pass 30 days. Once the report Worker records
   reporters, the old check would have dropped them about a month after

@@ -103,30 +103,50 @@ def ensure_feed_not_collapsed(
         raise FeedCollapseError(
             f"refusing to collapse {path}: {current_count} {item_key} would replace "
             f"{previous_count}; minimum is {floor}. Re-run with --allow-collapse "
-            "only after verifying the source outage or intentional clear."
+            "only after verifying the drop is real; an empty feed also needs its "
+            "name in --cleared."
         )
 
 
-def is_deliberate_clear(payload: Any, *, item_key: str, approved: bool) -> bool:
-    """Return whether this feed is being published empty on purpose.
+def published_clear_flag(path: Path, payload: Any, *, item_key: str, approved: bool) -> bool:
+    """Return the ``cleared`` flag for a feed about to replace ``path``.
 
-    The client distinguishes "the publisher says there is nothing" from "the
-    feed did not arrive": `HotDataSync.shouldApplyFeed` only replaces local rows
-    with an empty feed when the feed says it was cleared, and otherwise treats
-    the feed as unavailable and keeps what it has. Nothing on this side ever
-    wrote that flag, so the deliberate-clear path was unreachable and a healthy
-    publisher with nothing to report looked identical to an outage.
+    `HotDataSync.shouldApplyFeed` only replaces local rows with an empty feed
+    when the feed says it was cleared. An empty feed without the flag is not
+    "keep what you have" on a phone: it counts as unavailable, so
+    HotListSyncWorker retries every run and Protection test warns that the feed
+    is missing. 54589966 and 19bde793 both published that state by passing
+    ``--allow-collapse`` alone on a quiet day, so an empty feed is refused
+    unless it is cleared.
 
-    ``approved`` must be this feed's own approval, not the run's. They are not
-    the same thing: ``--allow-collapse`` forces the collapse guard for every
-    feed a run writes, so reading it here made approving a collapse of the
-    numbers feed also tell every device to delete its campaign ranges. Naming
-    the feed in ``--cleared`` is the only way to assert a deliberate clear.
+    ``approved`` must be this feed's own approval, not the run's:
+    ``--allow-collapse`` forces the collapse guard for every feed a run writes,
+    so reading it here would make approving a collapse of the numbers feed tell
+    every device to delete its campaign ranges. Naming the feed in
+    ``--cleared`` asserts the clear. The one exception is a feed that replaces
+    one already published empty and cleared: staying empty deletes nothing a
+    named clear didn't already.
 
-    Approval alone is not enough - a run that produced rows cleared nothing, so
-    the flag stays false whatever was approved.
+    A run that produced rows cleared nothing, so the flag stays false whatever
+    was approved.
     """
-    return approved and _payload_count(payload, item_key) == 0
+    if _payload_count(payload, item_key) > 0:
+        return False
+    if approved:
+        return True
+    path = Path(path)
+    try:
+        with path.open(encoding="utf-8") as existing_file:
+            previous = json.load(existing_file)
+        if isinstance(previous, dict) and previous.get("cleared") is True and _payload_count(previous, item_key) == 0:
+            return True
+    except (OSError, ValueError, FeedCollapseError):
+        pass
+    raise FeedCollapseError(
+        f"refusing to publish {path.name} empty without cleared=true: phones read that as an "
+        "outage, retry every sync and warn in Protection test. Name the feed in --cleared "
+        "when nothing qualifies, or leave the published feed alone during a source outage."
+    )
 
 
 def parse_cleared_feeds(value: str | None, *, known: frozenset[str]) -> frozenset[str]:

@@ -26,7 +26,7 @@ from pipeline_io import (
     FeedCollapseError,
     atomic_write_json,
     ensure_feed_not_collapsed,
-    is_deliberate_clear,
+    published_clear_flag,
     parse_cleared_feeds,
     report_queue_digest,
 )
@@ -146,8 +146,9 @@ def main(argv: list[str] | None = None) -> int:
         help=(
             "comma-separated feeds whose emptiness is deliberate (domains). Only these "
             "are published with cleared=true, which tells every device to drop its local "
-            "rows for that feed. --allow-collapse alone publishes cleared=false, so "
-            "devices keep what they have."
+            "rows for that feed. An empty feed not named here is refused unless the feed "
+            "it replaces was already cleared, because phones treat an empty feed without "
+            "cleared=true as an outage."
         ),
     )
     args = parser.parse_args(argv)
@@ -253,15 +254,16 @@ def main(argv: list[str] | None = None) -> int:
             previous_ratio=0.10,
             allow_collapse=args.allow_collapse,
         )
+        # Tell the client whether an empty feed is a decision or an accident. It
+        # keeps its local rows unless the feed says it was cleared on purpose, and
+        # an empty feed that doesn't say so is refused before anything is written.
+        domains_cleared = published_clear_flag(
+            OUTPUT_FILE, output, item_key="domains", approved="domains" in cleared_feeds
+        )
     except FeedCollapseError as error:
         print(f"ERROR: {error}", file=sys.stderr)
         return 2
-
-    # Tell the client whether an empty feed is a decision or an accident. It
-    # keeps its local rows unless the feed says it was cleared on purpose.
-    output["cleared"] = is_deliberate_clear(
-        output, item_key="domains", approved="domains" in cleared_feeds
-    )
+    output["cleared"] = domains_cleared
 
     # The primary feed is checked before either review or primary output is
     # replaced, preserving both artifacts if the source collapses.

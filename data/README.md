@@ -184,15 +184,14 @@ python scripts/update_ftc.py --max 50000                   # merge recent FTC co
 python scripts/generate_hot_list.py                        # trending numbers / NPA-NXX ranges
 python scripts/extract_spam_domains.py                     # trending spam domains
 
-# Use this only for a verified source outage or an intentional clear; otherwise
-# the generators fail closed and preserve the previous feed. --allow-collapse
-# forces the guard but publishes cleared=false, so devices keep their rows.
-python scripts/generate_hot_list.py --allow-collapse
-python scripts/extract_spam_domains.py --allow-collapse
-
-# Add --cleared only when the emptiness is deliberate AND you want every device
-# to DROP its local rows for that feed. It is per feed on purpose: approving a
-# collapse of the numbers feed must not silently wipe campaign ranges.
+# When a feed shrinks sharply the generators fail closed and keep the published
+# one. --allow-collapse accepts the smaller feed once you've checked the drop is
+# real. An empty feed also has to be named in --cleared, which tells every device
+# to drop its local rows for that feed. Phones treat an empty feed without
+# cleared=true as an outage (they retry every sync and Protection test warns), so
+# the generators refuse to write one. It's per feed on purpose: approving an
+# empty numbers feed must not wipe campaign ranges. A feed that was already
+# published empty and cleared stays cleared without being named again.
 python scripts/generate_hot_list.py --allow-collapse --cleared numbers,ranges
 python scripts/extract_spam_domains.py --allow-collapse --cleared domains
 

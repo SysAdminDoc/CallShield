@@ -319,7 +319,6 @@ def assert_community_promotion(data_dir: Path) -> None:
     run_drain(data_dir)
     assert reports_for(data_dir, fcc_number) == 6, "a late report for a row already in the database was thrown away"
 
-
     database = json.loads((data_dir / "spam_numbers.json").read_text(encoding="utf-8"))
     database["numbers"].append(
         {"number": old_number, "type": "spam", "reports": 1, "first_seen": BASE_DAY,
@@ -344,8 +343,8 @@ def assert_community_promotion(data_dir: Path) -> None:
 
     pending_path.write_text("not json", encoding="utf-8")
     write_report(data_dir, "after_corruption.json", old_number, None, f"{TODAY}T00:05:00+00:00")
-    run_script("extract_spam_domains.py", data_dir, ["--allow-collapse"])
-    run_script("generate_hot_list.py", data_dir, ["--allow-collapse"])
+    run_script("extract_spam_domains.py", data_dir, ["--allow-collapse", "--cleared", "domains"])
+    run_script("generate_hot_list.py", data_dir, ["--allow-collapse", "--cleared", "numbers,ranges"])
     stopped = run_script_result("merge_community_reports.py", data_dir)
     assert stopped.returncode != 0, "a corrupt pending ledger was silently treated as empty"
     assert (data_dir / "reports" / "after_corruption.json").exists(), "a failed merge consumed its input"
@@ -418,8 +417,8 @@ def assert_not_spam_requires_review(data_dir: Path) -> None:
         )
     write_report(data_dir, "anonymous_vote.json", community, None, NOW, report_type="not_spam")
 
-    run_script("extract_spam_domains.py", data_dir, ["--allow-collapse"])
-    run_script("generate_hot_list.py", data_dir, ["--allow-collapse"])
+    run_script("extract_spam_domains.py", data_dir, ["--allow-collapse", "--cleared", "domains"])
+    run_script("generate_hot_list.py", data_dir, ["--allow-collapse", "--cleared", "numbers,ranges"])
     run_script("merge_community_reports.py", data_dir)
     merged = json.loads((data_dir / "spam_numbers.json").read_text(encoding="utf-8"))
     by_number = {entry["number"]: entry for entry in merged["numbers"]}
@@ -471,13 +470,25 @@ def assert_collapse_guard(data_dir: Path) -> None:
         if (data_dir / name).read_bytes() != original:
             raise AssertionError(f"collapse guard replaced {name} before explicit approval")
 
-    run_script("generate_hot_list.py", data_dir, ["--allow-collapse"])
-    run_script("extract_spam_domains.py", data_dir, ["--allow-collapse"])
-
     # --allow-collapse forces the guard for every feed the run writes, but it
-    # is not an assertion about any of them. Approving a collapse of one feed
-    # must never tell devices to delete rows for a feed nobody mentioned, so
-    # the flag alone publishes cleared=false and devices keep what they have.
+    # is not an assertion about any of them, and an empty feed without
+    # cleared=true is what phones read as an outage: HotListSyncWorker retries
+    # every run and Protection test warns. 54589966 and 19bde793 shipped that
+    # state to every device, so the flag alone must write nothing.
+    for script in ("generate_hot_list.py", "extract_spam_domains.py"):
+        if run_script_result(script, data_dir, ["--allow-collapse"]).returncode == 0:
+            raise AssertionError(f"{script} published an empty feed without cleared=true")
+    # Naming one feed never clears another: the unnamed empty numbers feed
+    # stops the run before either hot file is replaced.
+    if run_script_result("generate_hot_list.py", data_dir, ["--allow-collapse", "--cleared", "ranges"]).returncode == 0:
+        raise AssertionError("--cleared ranges also published an empty numbers feed")
+    for name, original in before.items():
+        if (data_dir / name).read_bytes() != original:
+            raise AssertionError(f"a refused empty publish still replaced {name}")
+
+    # Naming the feed is what asserts the clear, and it is per feed.
+    run_script("generate_hot_list.py", data_dir, ["--allow-collapse", "--cleared", "numbers,ranges"])
+    run_script("extract_spam_domains.py", data_dir, ["--allow-collapse", "--cleared", "domains"])
     for name, item_key in (
         ("hot_numbers.json", "numbers"),
         ("hot_ranges.json", "ranges"),
@@ -485,20 +496,16 @@ def assert_collapse_guard(data_dir: Path) -> None:
     ):
         payload = json.loads((data_dir / name).read_text(encoding="utf-8"))
         if payload.get(item_key):
-            raise AssertionError(f"{name} was expected to be empty after the approved collapse")
-        if payload.get("cleared") is not False:
-            raise AssertionError(f"{name} claimed a deliberate clear from --allow-collapse alone")
+            raise AssertionError(f"{name} was expected to be empty after the approved clear")
+        if payload.get("cleared") is not True:
+            raise AssertionError(f"{name} named in --cleared did not publish cleared=true")
 
-    # Naming the feed is what asserts the clear, and it is per feed.
-    run_script("generate_hot_list.py", data_dir, ["--allow-collapse", "--cleared", "ranges"])
-    run_script("extract_spam_domains.py", data_dir, ["--allow-collapse", "--cleared", "domains"])
-    hot_numbers = json.loads((data_dir / "hot_numbers.json").read_text(encoding="utf-8"))
-    hot_ranges = json.loads((data_dir / "hot_ranges.json").read_text(encoding="utf-8"))
-    spam_domains = json.loads((data_dir / "spam_domains.json").read_text(encoding="utf-8"))
-    if hot_ranges.get("cleared") is not True or spam_domains.get("cleared") is not True:
-        raise AssertionError("a feed named in --cleared must publish cleared=true")
-    if hot_numbers.get("cleared") is not False:
-        raise AssertionError("a feed absent from --cleared must not claim a deliberate clear")
+    # A quiet day after a clear stays cleared without naming the feed again.
+    run_script("generate_hot_list.py", data_dir, ["--allow-collapse"])
+    run_script("extract_spam_domains.py", data_dir, ["--allow-collapse"])
+    for name in ("hot_numbers.json", "hot_ranges.json", "spam_domains.json"):
+        if json.loads((data_dir / name).read_text(encoding="utf-8")).get("cleared") is not True:
+            raise AssertionError(f"{name} lost its clear on the next quiet run")
 
     # A typo must fail loudly rather than quietly approving nothing.
     typo = run_script_result(
@@ -713,8 +720,9 @@ def assert_reporters_count_per_device_with_group_cap(data_dir: Path) -> None:
         )
 
     # An empty feed is allowed here so a counting regression reports itself below
-    # instead of tripping the collapse guard.
-    run_script("generate_hot_list.py", data_dir, ["--allow-collapse"])
+    # instead of tripping the collapse guard. Naming a feed that has rows in
+    # --cleared changes nothing; its flag stays false.
+    run_script("generate_hot_list.py", data_dir, ["--allow-collapse", "--cleared", "numbers,ranges"])
     hot = {entry["number"]: entry for entry in json.loads((data_dir / "hot_numbers.json").read_text(encoding="utf-8"))["numbers"]}
     carrier = hot.get(carrier_number)
     if carrier is None or carrier["distinct_reporters"] != 4 or carrier["reports"] != 4:
@@ -725,9 +733,10 @@ def assert_reporters_count_per_device_with_group_cap(data_dir: Path) -> None:
 
 def run_drain(data_dir: Path) -> None:
     # Each drain here leaves the derived feeds empty, which their collapse
-    # guards refuse to publish twice without being told.
-    run_script("extract_spam_domains.py", data_dir, ["--allow-collapse"])
-    run_script("generate_hot_list.py", data_dir, ["--allow-collapse"])
+    # guards refuse to publish without being told, and an empty feed has to be
+    # published cleared.
+    run_script("extract_spam_domains.py", data_dir, ["--allow-collapse", "--cleared", "domains"])
+    run_script("generate_hot_list.py", data_dir, ["--allow-collapse", "--cleared", "numbers,ranges"])
     run_script("merge_community_reports.py", data_dir)
 
 
@@ -768,8 +777,8 @@ def assert_resend_across_drains_counts_once(data_dir: Path) -> None:
 
     (data_dir / "merged_report_ids.json").write_text("not json", encoding="utf-8")
     write_report(data_dir, "later.json", number, BUCKETS[3], NOW, report_type="spam")
-    run_script("extract_spam_domains.py", data_dir, ["--allow-collapse"])
-    run_script("generate_hot_list.py", data_dir, ["--allow-collapse"])
+    run_script("extract_spam_domains.py", data_dir, ["--allow-collapse", "--cleared", "domains"])
+    run_script("generate_hot_list.py", data_dir, ["--allow-collapse", "--cleared", "numbers,ranges"])
     stopped = run_script_result("merge_community_reports.py", data_dir)
     assert stopped.returncode != 0, "an unreadable ledger must stop the merge"
     assert (data_dir / "reports" / "later.json").exists(), "a stopped merge must leave the queue alone"
@@ -834,8 +843,8 @@ def assert_not_spam_id_not_recorded(data_dir: Path) -> None:
 
     # Now submit a not_spam vote with a report_id.
     write_report(data_dir, "vote.json", number, BUCKETS[1], TIMES[1], report_type="not_spam", report_id=vote_id)
-    run_script("extract_spam_domains.py", data_dir, ["--allow-collapse"])
-    run_script("generate_hot_list.py", data_dir, ["--allow-collapse"])
+    run_script("extract_spam_domains.py", data_dir, ["--allow-collapse", "--cleared", "domains"])
+    run_script("generate_hot_list.py", data_dir, ["--allow-collapse", "--cleared", "numbers,ranges"])
     run_script("merge_community_reports.py", data_dir)
 
     ledger_path = data_dir / "merged_report_ids.json"
