@@ -406,6 +406,7 @@ class CallShieldScreeningService : CallScreeningService() {
                         silenceWins = false,
                         permissionsGranted = permissionsGranted,
                         busy = !permissionsGranted || isAnswerHangUpBusy(),
+                        roaming = isRoaming(),
                     )
                 } catch (_: RuntimeException) {
                     false
@@ -434,11 +435,12 @@ class CallShieldScreeningService : CallScreeningService() {
             AnswerHangUpController.configure(applicationContext)
             val armed =
                 AnswerHangUpController.tryArm(
-                    rawNumber = number,
+                    rawNumber = callDetails.handle?.schemeSpecificPart,
                     delaySeconds =
                         AnswerHangUpController.clampDelaySeconds(
                             prefs[SpamRepository.KEY_HANG_UP_DELAY_SECONDS],
                         ),
+                    e164 = number,
                 )
             if (armed && responseGate.hasResponded) {
                 AnswerHangUpController.disarm()
@@ -557,6 +559,14 @@ class CallShieldScreeningService : CallScreeningService() {
             android.Manifest.permission.READ_CALL_LOG,
         ).all { permission ->
             checkSelfPermission(permission) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        }
+
+    /** Answering a call abroad can be charged, so a roaming phone rejects instead. An unreadable state counts as roaming. */
+    private fun isRoaming(): Boolean =
+        try {
+            getSystemService(android.telephony.TelephonyManager::class.java)?.isNetworkRoaming ?: false
+        } catch (_: SecurityException) {
+            true
         }
 
     private fun isAnswerHangUpBusy(): Boolean =
@@ -755,7 +765,8 @@ class CallShieldScreeningService : CallScreeningService() {
             silenceWins: Boolean,
             permissionsGranted: Boolean,
             busy: Boolean,
-        ): Boolean = enabled && !silenceWins && permissionsGranted && !busy
+            roaming: Boolean,
+        ): Boolean = enabled && !silenceWins && permissionsGranted && !busy && !roaming
 
         fun shouldSuppressAfterCallFeedback(matchSource: String): Boolean = matchSource == "emergency_callback"
     }

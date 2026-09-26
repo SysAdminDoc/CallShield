@@ -12,22 +12,25 @@ import org.junit.Test
 class CallShieldScreeningServiceAnswerHangUpTest {
     @Test
     fun `answer and hang up decision has full truth table`() {
-        listOf(false, true).forEach { enabled ->
-            listOf(false, true).forEach { silenceWins ->
-                listOf(false, true).forEach { permissionsGranted ->
-                    listOf(false, true).forEach { busy ->
-                        assertEquals(
-                            enabled && !silenceWins && permissionsGranted && !busy,
-                            CallShieldScreeningService.shouldAnswerAndHangUp(
-                                enabled = enabled,
-                                silenceWins = silenceWins,
-                                permissionsGranted = permissionsGranted,
-                                busy = busy,
-                            ),
-                        )
-                    }
-                }
-            }
+        // Every combination of the five inputs, one bit each. Answering while
+        // roaming can be charged, so roaming falls back to reject.
+        for (bits in 0 until 32) {
+            val enabled = bits and 1 != 0
+            val silenceWins = bits and 2 != 0
+            val permissionsGranted = bits and 4 != 0
+            val busy = bits and 8 != 0
+            val roaming = bits and 16 != 0
+            assertEquals(
+                "combination $bits",
+                enabled && !silenceWins && permissionsGranted && !busy && !roaming,
+                CallShieldScreeningService.shouldAnswerAndHangUp(
+                    enabled = enabled,
+                    silenceWins = silenceWins,
+                    permissionsGranted = permissionsGranted,
+                    busy = busy,
+                    roaming = roaming,
+                ),
+            )
         }
     }
 

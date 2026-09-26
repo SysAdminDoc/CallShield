@@ -51,7 +51,8 @@ object AnswerHangUpController {
     }
 
     private data class PendingCall(
-        val number: String,
+        /** Digits of every spelling screening saw; empty for a withheld number. */
+        val numbers: Set<String>,
         val armedAt: Long,
         val delayMillis: Long,
         var phase: Phase,
@@ -94,10 +95,17 @@ object AnswerHangUpController {
 
     fun clampDelaySeconds(value: Int?): Int = value?.coerceIn(MIN_DELAY_SECONDS, MAX_DELAY_SECONDS) ?: DEFAULT_DELAY_SECONDS
 
-    /** Arms this process for the next matching PHONE_STATE broadcast when no call is in flight. */
+    /**
+     * Arms this process for the next matching PHONE_STATE broadcast when no call is in flight.
+     *
+     * [rawNumber] is the caller ID as Telecom delivered it and [e164] the form screening
+     * normalized it to. PHONE_STATE carries the network's spelling, which can be national
+     * (a UK 07911 number is +447911 in E.164), so the ringing call may match either.
+     */
     fun tryArm(
         rawNumber: String?,
         delaySeconds: Int,
+        e164: String? = null,
     ): Boolean =
         synchronized(lock) {
             if (pendingCall?.phase == Phase.ANSWERING || pendingCall?.phase == Phase.HANGING_UP) {
@@ -106,7 +114,7 @@ object AnswerHangUpController {
             clearLocked()
             pendingCall =
                 PendingCall(
-                    number = digitsOnly(rawNumber),
+                    numbers = setOf(digitsOnly(rawNumber), digitsOnly(e164)) - "",
                     armedAt = clock(),
                     delayMillis = clampDelaySeconds(delaySeconds) * 1_000L,
                     phase = Phase.ARMED,
@@ -121,11 +129,31 @@ object AnswerHangUpController {
         }
     }
 
-    /** A new screening callback invalidates a stale pending, unaccepted call. */
+    /**
+     * A new screening callback invalidates a stale pending, unaccepted call. A call arriving
+     * while the spam call is answered and waiting out its delay ends that call now: the new
+     * call isn't ringing yet, so endCall() still ends the spam call, and once it rings
+     * endCall() would reject the new call instead and leave the spam call connected.
+     */
     fun onIncomingScreeningStarted() {
         synchronized(lock) {
-            if (pendingCall?.phase == Phase.ARMED) {
-                clearLocked()
+            when (pendingCall?.phase) {
+                Phase.ARMED -> {
+                    clearLocked()
+                }
+
+                Phase.ANSWERING, Phase.HANGING_UP -> {
+                    try {
+                        callControl.endCall()
+                    } catch (exception: RuntimeException) {
+                        Log.w(TAG, "Unable to hang up screened call", exception)
+                    }
+                    clearLocked()
+                }
+
+                Phase.NONE, null -> {
+                    Unit
+                }
             }
         }
     }
@@ -182,7 +210,7 @@ object AnswerHangUpController {
             clearLocked()
             return
         }
-        if (!numbersMatch(pending.number, digitsOnly(incomingNumber))) return
+        if (!matchesPending(pending, digitsOnly(incomingNumber))) return
 
         pending.phase = Phase.ANSWERING
         pending.acceptedAt = clock()
@@ -204,7 +232,7 @@ object AnswerHangUpController {
         incomingNumber: String?,
     ) {
         if (pending.phase == Phase.ANSWERING &&
-            (digitsOnly(incomingNumber).isEmpty() || numbersMatch(pending.number, digitsOnly(incomingNumber)))
+            (digitsOnly(incomingNumber).isEmpty() || matchesPending(pending, digitsOnly(incomingNumber)))
         ) {
             enterHangingUpLocked(pending)
         }
@@ -267,6 +295,9 @@ object AnswerHangUpController {
 
                 Phase.HANGING_UP -> {
                     when (callState) {
+                        // A ringing call here is one screening never saw, such as a
+                        // contact waiting. endCall() would reject it rather than end
+                        // the spam call, so the spam call is left to the caller.
                         TelephonyManager.CALL_STATE_IDLE,
                         TelephonyManager.CALL_STATE_RINGING,
                         -> {
@@ -337,6 +368,11 @@ object AnswerHangUpController {
         }
 
     private fun digitsOnly(value: String?): String = value.orEmpty().filter(Char::isDigit)
+
+    private fun matchesPending(
+        pending: PendingCall,
+        incoming: String,
+    ): Boolean = if (pending.numbers.isEmpty()) incoming.isEmpty() else pending.numbers.any { numbersMatch(it, incoming) }
 
     private fun numbersMatch(
         first: String,

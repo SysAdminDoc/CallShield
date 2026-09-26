@@ -141,6 +141,53 @@ class AnswerHangUpControllerTest {
     }
 
     @Test
+    fun `a national-format caller ID matches the number screening normalized`() {
+        // Telecom handed screening 07911 123456, which it normalized to +447911123456,
+        // and PHONE_STATE can carry either spelling.
+        for (ringing in listOf("07911123456", "+447911123456")) {
+            AnswerHangUpController.resetForTest()
+            callControl = FakeCallControl()
+            AnswerHangUpController.setTestDependencies(clock::now, callControl, scheduler)
+            assertTrue(AnswerHangUpController.tryArm("07911 123456", 1, e164 = "+447911123456"))
+
+            AnswerHangUpController.onPhoneState(TelephonyManager.EXTRA_STATE_RINGING, ringing)
+
+            assertEquals(ringing, 1, callControl.audioOnlyAcceptCalls)
+        }
+    }
+
+    @Test
+    fun `a call waiting during the delay still ends the spam call`() {
+        arm("5551234567", 5)
+        AnswerHangUpController.onPhoneState(TelephonyManager.EXTRA_STATE_RINGING, "5551234567")
+        AnswerHangUpController.onPhoneState(TelephonyManager.EXTRA_STATE_OFFHOOK, "5551234567")
+        callControl.currentState = TelephonyManager.CALL_STATE_OFFHOOK
+        scheduler.advanceBy(1_000)
+
+        // A second call reaches screening before it rings, while endCall() still means the spam call.
+        AnswerHangUpController.onIncomingScreeningStarted()
+        assertEquals(1, callControl.endCalls)
+        assertFalse(AnswerHangUpController.hasPendingCall())
+
+        // Once it rings, nothing here may reject it.
+        callControl.currentState = TelephonyManager.CALL_STATE_RINGING
+        scheduler.advanceBy(10_000)
+        assertEquals(1, callControl.endCalls)
+    }
+
+    @Test
+    fun `a waiting call screening never saw is never rejected`() {
+        arm("5551234567", 2)
+        AnswerHangUpController.onPhoneState(TelephonyManager.EXTRA_STATE_RINGING, "5551234567")
+        AnswerHangUpController.onPhoneState(TelephonyManager.EXTRA_STATE_OFFHOOK, "5551234567")
+        callControl.currentState = TelephonyManager.CALL_STATE_RINGING
+
+        scheduler.advanceBy(5_000)
+
+        assertEquals(0, callControl.endCalls)
+    }
+
+    @Test
     fun `new incoming screening clears an unaccepted arm`() {
         arm("5551234567", 1)
 

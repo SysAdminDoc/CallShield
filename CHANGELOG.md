@@ -4,6 +4,10 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+- Answer and hang up works for callers whose number arrives in national format,
+  such as a UK 07911 number, instead of letting them ring out silently. While
+  roaming it rejects the call rather than answering, and a second call that
+  arrives during the hang-up delay no longer leaves the spam call connected.
 - The spam model's quality gate scores exactly the rows its training held out,
   and the pipeline checks run it every time. It used to rebuild that split
   from whatever the database held, which mixed in rows the model had trained
