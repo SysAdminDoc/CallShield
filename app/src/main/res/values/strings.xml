@@ -909,6 +909,8 @@
     <string name="more_snapshot_paused">Protection paused</string>
     <string name="more_snapshot_never_synced">Not synced yet</string>
     <string name="more_protection_status">Protection status</string>
+    <string name="more_heading">Tools &amp; support</string>
+    <string name="more_intro">Tests, settings and help that keep you in control.</string>
     <string name="more_snapshot_database">Database</string>
     <string name="more_snapshot_today">Today</string>
     <string name="more_snapshot_version">Version</string>

@@ -699,6 +699,8 @@
     <string name="more_snapshot_paused">防护已暂停</string>
     <string name="more_snapshot_never_synced">尚未同步</string>
     <string name="more_snapshot_database">号码库</string>
+    <string name="more_heading">工具与支持</string>
+    <string name="more_intro">防护测试、设置和帮助，尽在掌控。</string>
     <string name="more_snapshot_today">今日</string>
     <string name="more_snapshot_version">版本</string>
     <string name="more_statistics_subtitle">垃圾趋势、主要违规者、区号热力图</string>

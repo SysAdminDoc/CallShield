@@ -149,80 +149,73 @@ fun MoreHub(
                 .padding(horizontal = 20.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            SectionHeader(stringResource(R.string.more_protection_status))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
-                Icon(
-                    imageVector = Icons.Default.VerifiedUser,
-                    contentDescription = null,
-                    tint = CatGreen,
-                    modifier = Modifier.size(56.dp),
-                )
-                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text(
-                        protectionLabel,
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = CatText,
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            // The top bar already says "More", so the page heading names what's here.
+            Text(
+                stringResource(R.string.more_heading),
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                color = CatText,
+            )
+            Text(stringResource(R.string.more_intro), style = MaterialTheme.typography.bodyMedium, color = CatSubtext)
+        }
+        PremiumCard {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                SectionHeader(stringResource(R.string.more_protection_status))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.VerifiedUser,
+                        contentDescription = null,
+                        tint = CatGreen,
+                        modifier = Modifier.size(56.dp),
                     )
-                    Text(syncLabel, style = MaterialTheme.typography.bodyMedium, color = CatSubtext)
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text(
+                            protectionLabel,
+                            style = MaterialTheme.typography.headlineMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = CatText,
+                        )
+                        Text(syncLabel, style = MaterialTheme.typography.bodyMedium, color = CatSubtext)
+                    }
+                }
+                Spacer(Modifier.height(2.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    MoreMetric(
+                        localizedSpamCount,
+                        stringResource(R.string.more_snapshot_database),
+                        Modifier.weight(1f),
+                    )
+                    MoreMetricDivider()
+                    MoreMetric(
+                        localizedBlockedToday,
+                        stringResource(R.string.more_snapshot_today),
+                        Modifier.weight(1f),
+                    )
+                    MoreMetricDivider()
+                    MoreMetric(appVersion, stringResource(R.string.more_snapshot_version), Modifier.weight(1f))
                 }
             }
-            Spacer(Modifier.height(2.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                MoreMetric(
-                    localizedSpamCount,
-                    stringResource(R.string.more_snapshot_database),
-                    Modifier.weight(1f),
-                )
-                MoreMetricDivider()
-                MoreMetric(
-                    localizedBlockedToday,
-                    stringResource(R.string.more_snapshot_today),
-                    Modifier.weight(1f),
-                )
-                MoreMetricDivider()
-                MoreMetric(appVersion, stringResource(R.string.more_snapshot_version), Modifier.weight(1f))
-            }
-            Spacer(Modifier.height(2.dp))
-            GradientDivider()
         }
 
         AppearanceRow(theme = appTheme, onClick = onSettings)
 
         MoreSection(stringResource(R.string.more_section_tools)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                MoreNavCard(
-                    Icons.Default.BarChart,
-                    stringResource(R.string.more_statistics),
-                    stringResource(R.string.more_statistics_subtitle),
-                    CatGreen,
-                    onStats,
-                    modifier = Modifier.weight(1f),
-                    outlined = true,
-                    compact = true,
-                )
-                MoreNavCard(
-                    Icons.Default.Verified,
-                    stringResource(R.string.more_protection_test),
-                    stringResource(R.string.more_protection_test_subtitle),
-                    CatGreen,
-                    onTest,
-                    modifier = Modifier.weight(1f),
-                    outlined = true,
-                    compact = true,
-                )
-            }
+            MoreNavCard(
+                Icons.Default.Verified,
+                stringResource(R.string.more_protection_test),
+                stringResource(R.string.more_protection_test_subtitle),
+                CatGreen,
+                onTest,
+                outlined = true,
+            )
             Spacer(Modifier.height(8.dp))
             MoreNavCard(
                 Icons.Default.Settings,
@@ -231,6 +224,15 @@ fun MoreHub(
                 CatGreen,
                 onSettings,
                 modifier = Modifier.fillMaxWidth(),
+                outlined = true,
+            )
+            Spacer(Modifier.height(8.dp))
+            MoreNavCard(
+                Icons.Default.BarChart,
+                stringResource(R.string.more_statistics),
+                stringResource(R.string.more_statistics_subtitle),
+                CatGreen,
+                onStats,
                 outlined = true,
             )
         }
@@ -242,7 +244,9 @@ fun MoreHub(
                 stringResource(R.string.more_whats_new_subtitle),
                 CatSubtext,
                 onChangelog,
+                outlined = true,
             )
+            Spacer(Modifier.height(8.dp))
             AppUpdatePreferenceRow(
                 enabled = appUpdateChecksEnabled,
                 status = appUpdateState.status,
@@ -508,51 +512,7 @@ fun MoreNavCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier.fillMaxWidth(),
     outlined: Boolean = false,
-    compact: Boolean = false,
 ) {
-    if (outlined && compact) {
-        LedgerCard(
-            onClick = onClick,
-            modifier = modifier.heightIn(min = 96.dp),
-        ) {
-            Column(
-                modifier = Modifier.fillMaxWidth().padding(12.dp),
-                verticalArrangement = Arrangement.spacedBy(7.dp),
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    PremiumIconTile(icon = icon, color = color, size = 30.dp, iconSize = 17.dp)
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        title,
-                        modifier = Modifier.weight(1f),
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        color = CatText,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    Icon(
-                        Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
-                        tint = CatOverlay,
-                    )
-                }
-                Text(
-                    subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = CatSubtext,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-        }
-        return
-    }
-
     val rowContent: @Composable RowScope.() -> Unit = {
         PremiumIconTile(icon = icon, color = color, size = 34.dp, iconSize = 19.dp)
         Spacer(Modifier.width(10.dp))
@@ -562,7 +522,7 @@ fun MoreNavCard(
                 subtitle,
                 style = MaterialTheme.typography.bodySmall,
                 color = CatSubtext,
-                maxLines = 1,
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
         }
