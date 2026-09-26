@@ -2,7 +2,9 @@ package com.sysadmindoc.callshield.ui.screens.main
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -340,6 +342,22 @@ fun BlocklistScreen(viewModel: MainViewModel) {
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Text(
+                    stringResource(R.string.blocklist_heading),
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = CatText,
+                )
+                Text(
+                    stringResource(R.string.blocklist_intro),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = CatSubtext,
+                )
+            }
             BlocklistOverviewCard(
                 modifier =
                     Modifier
@@ -725,55 +743,45 @@ private fun BlocklistOverviewCard(
     workspace: BlocklistWorkspaceModel,
     modifier: Modifier = Modifier,
 ) {
-    Column(
-        modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        SectionHeader(workspace.title, CatGreen)
-        Text(
-            text =
-                if (workspace.addActionLabel == null) {
-                    pluralStringResource(
-                        R.plurals.blocklist_count_saved,
-                        workspace.count,
-                        workspace.count,
-                    )
-                } else {
-                    pluralStringResource(
-                        R.plurals.blocklist_count_active_rules,
-                        workspace.count,
-                        workspace.count,
-                    )
-                },
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.SemiBold,
-            color = CatText,
-        )
-        Text(
-            text = workspace.subtitle,
-            style = MaterialTheme.typography.bodyMedium,
-            color = CatSubtext,
-        )
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-            verticalAlignment = Alignment.CenterVertically,
+    PremiumCard(modifier = modifier) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            workspace.primaryUtilityLabel?.let { label ->
-                PremiumCompactButton(
-                    label = label,
-                    icon = Icons.Default.FileOpen,
-                    color = CatGreen,
-                    onClick = { workspace.onPrimaryUtility?.invoke() },
-                )
-            }
-            workspace.secondaryUtilityLabel?.let { label ->
-                PremiumCompactButton(
-                    label = label,
-                    icon = Icons.Default.Share,
-                    color = CatGreen,
-                    onClick = { workspace.onSecondaryUtility?.invoke() },
-                )
+            SectionHeader(workspace.title, CatGreen)
+            Text(
+                text =
+                    if (workspace.addActionLabel == null) {
+                        pluralStringResource(R.plurals.blocklist_count_saved, workspace.count, workspace.count)
+                    } else {
+                        pluralStringResource(R.plurals.blocklist_count_active_rules, workspace.count, workspace.count)
+                    },
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = CatText,
+            )
+            Text(workspace.subtitle, style = MaterialTheme.typography.bodySmall, color = CatSubtext)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                workspace.primaryUtilityLabel?.let { label ->
+                    PremiumCompactButton(
+                        label = label,
+                        icon = Icons.Default.FileOpen,
+                        color = CatGreen,
+                        onClick = { workspace.onPrimaryUtility?.invoke() },
+                    )
+                }
+                workspace.secondaryUtilityLabel?.let { label ->
+                    PremiumCompactButton(
+                        label = label,
+                        icon = Icons.Default.Share,
+                        color = CatGreen,
+                        onClick = { workspace.onSecondaryUtility?.invoke() },
+                    )
+                }
             }
         }
     }
@@ -873,19 +881,17 @@ private fun RuleTabLabel(
     label: String,
     selected: Boolean,
 ) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+    Surface(
+        color = if (selected) CatGreen.copy(alpha = 0.12f) else SurfaceBright,
+        shape = RoundedCornerShape(24.dp),
+        border = BorderStroke(1.dp, if (selected) CatGreen else CatOverlay.copy(alpha = 0.3f)),
+    ) {
         Text(
             text = label,
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
             style = MaterialTheme.typography.labelLarge,
             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
-        )
-        Spacer(Modifier.height(7.dp))
-        Box(
-            modifier =
-                Modifier
-                    .width(36.dp)
-                    .height(2.dp)
-                    .background(if (selected) CatGreen else Color.Transparent),
+            color = if (selected) CatText else CatSubtext,
         )
     }
 }
@@ -906,7 +912,13 @@ private fun EmptyStateCard(
         contentAlignment = Alignment.Center,
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 28.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(SurfaceBright)
+                    .border(1.dp, CatOverlay.copy(alpha = 0.35f), RoundedCornerShape(20.dp))
+                    .padding(horizontal = 20.dp, vertical = 28.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {

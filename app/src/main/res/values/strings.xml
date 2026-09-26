@@ -216,6 +216,8 @@
     <string name="blocked_log_sms">SMS</string>
 
     <!-- Blocklist Screen -->
+    <string name="blocklist_heading">Blocklist &amp; rules</string>
+    <string name="blocklist_intro">Control who can reach you and how CallShield handles risky calls and texts.</string>
     <string name="blocklist_tab_blocked_short">Blocked</string>
     <string name="blocklist_tab_wildcards_short">Wildcards</string>
     <string name="blocklist_tab_keywords_short">Keywords</string>

@@ -4,6 +4,8 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+- Blocklist now has a clearer rules heading, an outlined count card, pill tabs
+  for each rule type, and a framed empty state.
 - Recent calls now uses compact, neutral history cards and shows a Retry card
   when Android cannot load the call log. Calls already loaded stay visible.
 - Blocked activity now has a clear heading, a framed empty state and compact
