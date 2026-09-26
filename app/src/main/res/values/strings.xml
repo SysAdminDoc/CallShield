@@ -821,8 +821,12 @@
     <string name="settings_about_desc">Open-source spam blocker. No subscriptions, no tracking, no API keys.</string>
 
     <!-- Stats Screen -->
+    <string name="stats_heading">Your insights</string>
+    <string name="stats_intro">A quick look at the activity CallShield has recorded.</string>
+    <string name="stats_explainer_title">What these numbers include</string>
+    <string name="stats_explainer_body">Call events include screened calls and safety exceptions. Text events are messages CallShield flagged; they still arrive in your messaging app.</string>
     <string name="stats_calls">Calls</string>
-    <string name="stats_sms">SMS</string>
+    <string name="stats_sms">Texts</string>
     <string name="stats_db_size">Database</string>
     <string name="stats_by_detection_method">By Detection Method</string>
     <string name="stats_top_offenders">Top Offenders</string>
@@ -844,8 +848,8 @@
     <string name="stats_trend_same">Same as last month</string>
     <string name="stats_overview_title">Protection Snapshot</string>
     <plurals name="stats_threats_stopped">
-        <item quantity="one">%1$,d threat stopped this week</item>
-        <item quantity="other">%1$,d threats stopped this week</item>
+        <item quantity="one">%1$,d event recorded this week</item>
+        <item quantity="other">%1$,d events recorded this week</item>
     </plurals>
     <string name="stats_previous_week_more">%1$d more than the previous 7 days.</string>
     <string name="stats_previous_week_fewer">%1$d fewer than the previous 7 days.</string>
@@ -863,8 +867,8 @@
     <string name="stats_highlight_weekly_change">Momentum</string>
     <string name="stats_highlight_busiest_day">Busiest Day</string>
     <string name="stats_highlight_peak_window">Peak Window</string>
-    <string name="stats_highlight_busiest_value">%1$s • %2$d blocked</string>
-    <string name="stats_highlight_peak_value">%1$s • %2$d blocked</string>
+    <string name="stats_highlight_busiest_value">%1$s • %2$d events</string>
+    <string name="stats_highlight_peak_value">%1$s • %2$d events</string>
     <string name="stats_insight_waiting">Waiting for more activity</string>
     <string name="stats_unknown_caller">Unknown caller</string>
     <string name="stats_unknown_origin">Origin unavailable</string>
@@ -892,7 +896,7 @@
     <string name="stats_reason_pipeline_diagnostic">Protection diagnostic</string>
     <string name="stats_reason_unknown">Unknown</string>
     <string name="stats_no_data">No data yet</string>
-    <string name="stats_no_data_desc">Stats will appear after CallShield blocks its first calls or texts.</string>
+    <string name="stats_no_data_desc">Stats will appear after CallShield screens a call or flags a text.</string>
 
     <!-- More Screen -->
     <string name="more_statistics">Statistics</string>

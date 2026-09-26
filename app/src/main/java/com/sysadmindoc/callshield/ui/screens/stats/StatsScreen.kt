@@ -135,23 +135,24 @@ fun StatsScreen(viewModel: MainViewModel) {
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        StatsOverviewCard(
-            weeklyTotal = weeklyTotal,
-            weeklyDelta = weeklyDelta,
-            topSource = typeBreakdown.firstOrNull()?.key,
-            peakHour =
-                logCount.takeIf { it > 0 }?.let {
-                    val peakHourIndex = hourCounts.indices.maxByOrNull { index -> hourCounts[index] } ?: 0
-                    if (hourCounts[peakHourIndex] > 0) formatHourRange(peakHourIndex) else null
-                },
-        )
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(
+                stringResource(R.string.stats_heading),
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                color = CatText,
+            )
+            Text(stringResource(R.string.stats_intro), style = MaterialTheme.typography.bodySmall, color = CatSubtext)
+        }
 
         // Summary row
-        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             MiniStat(Modifier.weight(1f), stringResource(R.string.stats_calls), numberFormatter.format(logCallCount), CatRed)
-            Box(Modifier.width(1.dp).height(58.dp).background(CatMuted))
             MiniStat(Modifier.weight(1f), stringResource(R.string.stats_sms), numberFormatter.format(logSmsCount), CatMauve)
-            Box(Modifier.width(1.dp).height(58.dp).background(CatMuted))
             MiniStat(Modifier.weight(1f), stringResource(R.string.stats_db_size), numberFormatter.format(spamCount), CatGreen)
         }
 
@@ -170,6 +171,20 @@ fun StatsScreen(viewModel: MainViewModel) {
                     SectionHeader(stringResource(R.string.stats_weekly_activity), CatBlue)
                     Spacer(Modifier.height(8.dp))
                     WeeklyBarChart(dailyCounts = dailyCounts, modifier = Modifier.fillMaxWidth())
+                }
+            }
+
+            PremiumCard {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    StatsOverviewCard(
+                        weeklyTotal = weeklyTotal,
+                        weeklyDelta = weeklyDelta,
+                        topSource = typeBreakdown.firstOrNull()?.key,
+                        peakHour =
+                            hourCounts.indices.maxByOrNull { index -> hourCounts[index] }?.let { peakHourIndex ->
+                                if (hourCounts[peakHourIndex] > 0) formatHourRange(peakHourIndex) else null
+                            },
+                    )
                 }
             }
 
@@ -434,6 +449,17 @@ fun StatsScreen(viewModel: MainViewModel) {
                         }
                     }
                 }
+            }
+        }
+
+        PremiumCard {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                SectionHeader(stringResource(R.string.stats_explainer_title), CatGreen)
+                Text(
+                    stringResource(R.string.stats_explainer_body),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = CatSubtext,
+                )
             }
         }
     }
@@ -861,15 +887,17 @@ fun MiniStat(
     value: String,
     color: Color,
 ) {
-    Column(
-        modifier = modifier.padding(horizontal = 6.dp, vertical = 8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Text(value, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold, color = color)
-        Text(
-            label.uppercase(),
-            style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 0.7.sp),
-            color = CatSubtext,
-        )
+    PremiumCard(modifier = modifier) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(value, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold, color = color)
+            Text(
+                label.uppercase(),
+                style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 0.7.sp),
+                color = CatSubtext,
+            )
+        }
     }
 }

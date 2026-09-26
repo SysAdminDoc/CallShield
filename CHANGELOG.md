@@ -4,6 +4,8 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+- Insights now opens with outlined totals, then its real weekly chart and
+  detail cards. Its labels describe recorded call and text events accurately.
 - Blocklist now has a clearer rules heading, an outlined count card, pill tabs
   for each rule type, and a framed empty state.
 - Recent calls now uses compact, neutral history cards and shows a Retry card

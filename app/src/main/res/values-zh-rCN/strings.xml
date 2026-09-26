@@ -621,6 +621,10 @@
     <string name="external_blocklist_refresh_held">上次刷新得到的号码不到原来的一半（%1$d 个，原有 %2$d 个），因此仍在使用之前的列表。关闭后重新开启此列表即可接受新内容。</string>
     <string name="settings_save">保存</string>
     <string name="settings_about_desc">开源垃圾拦截器。无订阅、无追踪、无 API 密钥。</string>
+    <string name="stats_heading">防护洞察</string>
+    <string name="stats_intro">快速了解 CallShield 记录的活动。</string>
+    <string name="stats_explainer_title">这些数字包括什么</string>
+    <string name="stats_explainer_body">通话记录包括已筛查的来电和安全例外。短信记录是 CallShield 标记的消息；它们仍会送达您的短信应用。</string>
     <string name="stats_calls">通话</string>
     <string name="stats_sms">短信</string>
     <string name="stats_db_size">库条目数</string>
@@ -643,6 +647,10 @@
     <string name="stats_trend_down">较上月变化：-%d</string>
     <string name="stats_trend_same">与上月持平</string>
     <string name="stats_overview_title">防护快照</string>
+    <plurals name="stats_threats_stopped">
+        <item quantity="one">本周记录 %1$,d 条活动</item>
+        <item quantity="other">本周记录 %1$,d 条活动</item>
+    </plurals>
     <string name="stats_overview_week">本周</string>
     <string name="stats_overview_change">周变化</string>
     <string name="stats_overview_top_source">主要来源</string>
@@ -656,10 +664,10 @@
     <string name="stats_highlight_weekly_change">势头</string>
     <string name="stats_highlight_busiest_day">最忙的一天</string>
     <string name="stats_highlight_peak_window">高峰窗口</string>
-    <string name="stats_highlight_busiest_value">%1$s · 拦截 %2$d</string>
-    <string name="stats_highlight_peak_value">%1$s · 拦截 %2$d</string>
+    <string name="stats_highlight_busiest_value">%1$s · %2$d 条活动</string>
+    <string name="stats_highlight_peak_value">%1$s · %2$d 条活动</string>
     <string name="stats_insight_waiting">等待更多活动</string>
-    <string name="stats_unknown_caller">未知 caller</string>
+    <string name="stats_unknown_caller">未知来电者</string>
     <string name="stats_unknown_origin">来源不可用</string>
     <string name="stats_repeat_hits">%d次</string>
     <string name="stats_source_count_percent">%1$d（%2$d%%）</string>
@@ -680,7 +688,7 @@
     <string name="stats_reason_manual_block">手动拦截</string>
     <string name="stats_reason_unknown">未知</string>
     <string name="stats_no_data">暂无数据</string>
-    <string name="stats_no_data_desc">CallShield 拦截首批通话或短信后，统计将出现。</string>
+    <string name="stats_no_data_desc">CallShield 筛查来电或标记短信后，统计将显示在这里。</string>
     <string name="more_statistics">统计</string>
     <string name="more_settings">设置</string>
     <string name="more_whats_new">更新内容</string>
