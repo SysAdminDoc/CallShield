@@ -6,8 +6,8 @@ import org.junit.Test
 class SettingsThemeTest {
     @Test
     fun `theme preference rejects unknown values`() {
-        assertEquals("light", sanitizeAppTheme(null))
-        assertEquals("light", sanitizeAppTheme("neon"))
+        assertEquals("amoled", sanitizeAppTheme(null))
+        assertEquals("amoled", sanitizeAppTheme("neon"))
         assertEquals("system", sanitizeAppTheme("system"))
         assertEquals("light", sanitizeAppTheme("light"))
         assertEquals("graphite", sanitizeAppTheme("graphite"))

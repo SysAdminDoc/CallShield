@@ -14,6 +14,7 @@ import android.os.VibratorManager
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -60,7 +61,7 @@ enum class AppThemeMode(
     ;
 
     companion object {
-        fun fromStorage(value: String?): AppThemeMode = entries.firstOrNull { it.storageValue == value } ?: Light
+        fun fromStorage(value: String?): AppThemeMode = entries.firstOrNull { it.storageValue == value } ?: Amoled
     }
 }
 
@@ -142,13 +143,13 @@ data class CallShieldPalette(
 private val AmoledPalette =
     CallShieldPalette(
         background = Color(0xFF000000),
-        surface = Color(0xFF070807),
-        surfaceVariant = Color(0xFF0D0F0E),
-        surfaceBright = Color(0xFF151715),
-        surfaceElevated = Color(0xFF1A1C1A),
-        primary = Color(0xFFA6E3A1),
-        onPrimary = Color(0xFF071108),
-        error = Color(0xFFF38BA8),
+        surface = Color(0xFF101719),
+        surfaceVariant = Color(0xFF151E21),
+        surfaceBright = Color(0xFF1B272A),
+        surfaceElevated = Color(0xFF243236),
+        primary = Color(0xFF5FE8C2),
+        onPrimary = Color(0xFF05231C),
+        error = Color(0xFFFF858F),
         blue = Color(0xFF89B4FA),
         warning = Color(0xFFF9E2AF),
         mauve = Color(0xFFCBA6F7),
@@ -156,12 +157,12 @@ private val AmoledPalette =
         teal = Color(0xFF94E2D5),
         lavender = Color(0xFFB4BEFE),
         text = Color(0xFFF2F3F0),
-        subtext = Color(0xFFA8ADA8),
+        subtext = Color(0xFFB2C0C2),
         // Secondary body text. Chosen so it clears WCAG AA (4.5:1) against
         // every surface in this palette, including surfaceElevated — the
         // previous value only reached 3.90:1 there.
-        overlay = Color(0xFF828882),
-        muted = Color(0xFF2B2F2C),
+        overlay = Color(0xFF9AAEB2),
+        muted = Color(0xFF344348),
         isLight = false,
     )
 
@@ -442,7 +443,7 @@ private val CallShieldTypography =
 @Composable
 @Suppress("FunctionNaming")
 fun CallShieldTheme(
-    themeMode: AppThemeMode = AppThemeMode.Light,
+    themeMode: AppThemeMode = AppThemeMode.Amoled,
     content: @Composable () -> Unit,
 ) {
     val systemDark = isSystemInDarkTheme()
@@ -473,19 +474,16 @@ fun CallShieldTheme(
 /** How far an accent card tints itself; AppThemeModeTest checks text drawn on it. */
 internal const val ACCENT_CARD_TINT = 0.055f
 
-// Shared quiet surface. Hierarchy comes from tone and spacing, not stacked
-// outlines, gradients, or decorative elevation.
+// Shared surface for cards across the app's screens.
 @Composable
 fun PremiumCard(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
     accentColor: Color? = null,
-    cornerRadius: Dp = ShapeSm,
+    cornerRadius: Dp = ShapeXl,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val shape = RoundedCornerShape(cornerRadius)
-    // Signal Ledger uses one quiet white plane over the warm app background.
-    // Accent cards keep a very light semantic tint without adding elevation.
     val baseColor = Surface
     val containerColor =
         accentColor
@@ -494,11 +492,17 @@ fun PremiumCard(
             ?: baseColor
     val colors = CardDefaults.cardColors(containerColor = containerColor)
     val elevation = CardDefaults.cardElevation(defaultElevation = 0.dp, pressedElevation = 0.dp)
+    val cardModifier =
+        if (MaterialTheme.colorScheme.background == Color.Black) {
+            modifier.border(1.dp, CardBorderAccent, shape)
+        } else {
+            modifier
+        }
 
     if (onClick != null) {
         Card(
             onClick = onClick,
-            modifier = modifier,
+            modifier = cardModifier,
             colors = colors,
             shape = shape,
             elevation = elevation,
@@ -506,7 +510,7 @@ fun PremiumCard(
         )
     } else {
         Card(
-            modifier = modifier,
+            modifier = cardModifier,
             colors = colors,
             shape = shape,
             elevation = elevation,

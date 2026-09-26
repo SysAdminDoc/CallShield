@@ -14,12 +14,12 @@ import java.io.File
 
 class AppThemeModeTest {
     @Test
-    fun `storage values round trip and invalid values use light default`() {
+    fun `storage values round trip and invalid values use AMOLED default`() {
         AppThemeMode.entries.forEach { mode ->
             assertEquals(mode, AppThemeMode.fromStorage(mode.storageValue))
         }
-        assertEquals(AppThemeMode.Light, AppThemeMode.fromStorage(null))
-        assertEquals(AppThemeMode.Light, AppThemeMode.fromStorage("neon"))
+        assertEquals(AppThemeMode.Amoled, AppThemeMode.fromStorage(null))
+        assertEquals(AppThemeMode.Amoled, AppThemeMode.fromStorage("neon"))
     }
 
     @Test

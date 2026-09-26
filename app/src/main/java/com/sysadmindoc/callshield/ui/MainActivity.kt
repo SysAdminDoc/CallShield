@@ -8,6 +8,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -278,7 +279,28 @@ fun CallShieldApp(
         bottomBar = {
             Column {
                 HorizontalDivider(color = DividerColor)
-                NavigationBar(containerColor = Surface) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().background(Black),
+                    horizontalArrangement = Arrangement.SpaceAround,
+                ) {
+                    repeat(5) { index ->
+                        Box(
+                            modifier = Modifier.weight(1f).height(4.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            if (selectedTab == index) {
+                                Box(
+                                    modifier =
+                                        Modifier
+                                            .width(24.dp)
+                                            .height(3.dp)
+                                            .background(CatGreen, RoundedCornerShape(3.dp)),
+                                )
+                            }
+                        }
+                    }
+                }
+                NavigationBar(containerColor = Black, tonalElevation = 0.dp) {
                     NavItem(
                         selectedTab == 0,
                         { selectedTab = 0 },

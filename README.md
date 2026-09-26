@@ -61,6 +61,8 @@ shard service is unavailable.
 3. **Sync the database.** The Home screen runs a first sync on its own. After that, background syncs check every six hours.
 4. **Recommended starting profile.** Choose Recommended for the default call and text controls. Strict adds aggressive call checks, blocks hidden callers, and turns on quiet hours. Contacts only lets contacts and trusted numbers ring. Every profile change offers Undo. Turn on Notification Access if you use Google Messages or Samsung Messages and want SMS filtering through the notification listener too.
 
+New installs use the AMOLED theme. Change it to Graphite, Light or System in Settings.
+
 For a full walkthrough of every toggle with its default, see [docs/getting-started.md](docs/getting-started.md).
 
 Version highlights for each release are in [CHANGELOG.md](CHANGELOG.md).

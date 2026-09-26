@@ -4,6 +4,9 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+- Fresh installs now open in the AMOLED theme. Its graphite cards, mint controls,
+  coral warnings and thin outlines follow the new screen designs. Existing
+  theme choices remain saved, including Light and System.
 - Setup now ends with a choice of Recommended, Strict, or Contacts only. Each
   card shows what changes. Home shows the active level, and profile changes
   offer Undo. Settings can restore the recommended controls with Undo too.

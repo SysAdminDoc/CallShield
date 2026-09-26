@@ -327,12 +327,11 @@ class SpamRepository(
                     .getSharedPreferences("theme_cache", Context.MODE_PRIVATE)
             val cached = cache.getString(KEY_THEME_CACHE, null)
             return if (cache.getInt(KEY_THEME_CACHE_SCHEMA, 1) >= THEME_CACHE_SCHEMA) {
-                cached ?: "light"
+                cached ?: "amoled"
             } else {
-                // In schema 1, AMOLED was both the implicit default and the
-                // stored mirror. Treat only that legacy value as the new Light
-                // default; explicit Light/Graphite selections stay intact.
-                cached?.takeUnless { it == "amoled" } ?: "light"
+                // In schema 1, a stored AMOLED mirror represented the old
+                // implicit theme. Preserve that migration for existing users.
+                cached?.let { if (it == "amoled") "light" else it } ?: "amoled"
             }
         }
 
@@ -487,13 +486,13 @@ class SpamRepository(
         appContext.getSharedPreferences("theme_cache", Context.MODE_PRIVATE)
     }
 
-    /** Last-known theme, read synchronously. Defaults to the system-following theme. */
+    /** Last-known theme, read synchronously before DataStore emits. */
     fun cachedAppTheme(): String {
         val cached = themeCache.getString(KEY_THEME_CACHE, null)
         return if (themeCache.getInt(KEY_THEME_CACHE_SCHEMA, 1) >= THEME_CACHE_SCHEMA) {
-            cached ?: "light"
+            cached ?: "amoled"
         } else {
-            cached?.takeUnless { it == "amoled" } ?: "light"
+            cached?.let { if (it == "amoled") "light" else it } ?: "amoled"
         }
     }
 

@@ -38,7 +38,7 @@ import kotlinx.coroutines.flow.map
 
 private val validAppThemes = setOf("system", "light", "graphite", "amoled")
 
-internal fun sanitizeAppTheme(value: String?): String = value?.takeIf(validAppThemes::contains) ?: "light"
+internal fun sanitizeAppTheme(value: String?): String = value?.takeIf(validAppThemes::contains) ?: "amoled"
 
 /**
  * A certificate trust failure only describes the build that saw it: its pins

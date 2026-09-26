@@ -71,7 +71,7 @@ import kotlinx.coroutines.withContext
 /** Optional Android 11+ review surface launched by Telecom after an eligible completed call. */
 class PostCallActivity : AppCompatActivity() {
     private lateinit var details: PostCallDetails
-    private var appTheme by mutableStateOf(AppThemeMode.Light)
+    private var appTheme by mutableStateOf(AppThemeMode.Amoled)
     private var contentInstalled = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
