@@ -1063,7 +1063,7 @@
     <string name="protection_test_wangiri_fail">Wangiri detection may be disabled</string>
     <string name="protection_test_sms_pass">Correctly detected spam SMS (%s)</string>
     <string name="protection_test_sms_fail">SMS analysis may be disabled</string>
-    <string name="protection_test_ml_pass">Correctly flagged 555-0000 pattern</string>
+    <string name="protection_test_ml_pass">Correctly flagged a toll-free test number</string>
     <string name="protection_test_ml_fail">ML scorer may be disabled or weights not loaded</string>
     <string name="protection_test_ml_fp_pass">Normal number correctly passed</string>
     <string name="protection_test_ml_fp_fail">False positive. The threshold may be too low.</string>

@@ -204,6 +204,8 @@ python scripts/train_spam_model.py --output data/spam_model_weights.json
 
 # 5. Evaluate the shipped model before committing (local quality gate)
 python scripts/evaluate_model.py            # exits non-zero if CV F1 regresses
+python scripts/test_ml_feature_contract.py  # once the fixture's case scores match the new
+                                            # model, fails if Protection test's ML samples flip
 
 # 6. Sign what devices will download. The app refuses an unsigned or
 #    mismatched feed and keeps its last good copy, and the validation

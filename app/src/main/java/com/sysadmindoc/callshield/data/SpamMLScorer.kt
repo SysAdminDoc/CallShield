@@ -401,6 +401,22 @@ class SpamMLScorer
             )
         }
 
+        /**
+         * The model's call for [number] at a fixed [hourOfDay], so a self-check
+         * doesn't depend on the clock if a model ever uses the time features.
+         * [useLogisticFallback] scores with the fallback model even while the
+         * trees are loaded, which only the contract tests need.
+         */
+        internal fun isSpamAtHour(
+            number: String,
+            hourOfDay: Int,
+            useLogisticFallback: Boolean = false,
+        ): Boolean {
+            val snap = state
+            val features = extractFeaturesAtHour(number, hourOfDay) ?: return false
+            return scoreFeatures(features, snap, useLogisticFallback) >= snap.threshold
+        }
+
         /** Score using a specific model snapshot. */
         private fun scoreWith(
             number: String,
@@ -979,5 +995,20 @@ class SpamMLScorer
 
             /** Health of the most recent model load/sync. */
             fun modelHealth(): ModelHealth = shared.modelHealth
+
+            internal fun isSpamAtHour(
+                number: String,
+                hourOfDay: Int,
+            ): Boolean = shared.isSpamAtHour(number, hourOfDay)
+
+            // Protection test canaries. Both models must get them right: a phone whose
+            // trees fail to load scores with the logistic fallback. The old spam sample
+            // (+1 555 555 0000) scored 0.586 against the 0.648 threshold, so the check
+            // failed on every phone. scripts/ml_feature_fixtures.json repeats these, and
+            // test_ml_feature_contract.py fails a retrain that stops passing them.
+            internal const val ML_SPAM_CANARY = "+18002000000"
+            internal const val ML_SPAM_CANARY_HOUR = 0
+            internal const val ML_CLEAN_CANARY = "2125551234"
+            internal const val ML_CLEAN_CANARY_HOUR = 12
         }
     }

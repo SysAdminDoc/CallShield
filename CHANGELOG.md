@@ -21,6 +21,12 @@ All notable changes to CallShield will be documented in this file.
   535 complaints published that day. The next import picks them up.
 - Choosing Light in Settings works again. It had quietly stayed on AMOLED. The
   update keeps whichever theme each phone was showing.
+- Protection test's ML spam check no longer fails on every phone. Its sample
+  number scored just under the model's threshold, so the check could never
+  pass. The new samples pass under the main model and its fallback, and the
+  data checks refuse a retrained model that breaks them. Its cards span the
+  page, the database count is formatted like everywhere else, and the hot list
+  hint says what it's about.
 - Protection test opens with a heading, and after a run it shows required and
   optional checks as two progress cards. Each result is an outlined row with a
   status mark and an OK, Fix or Review label.

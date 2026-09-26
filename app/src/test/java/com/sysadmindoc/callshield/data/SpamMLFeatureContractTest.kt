@@ -3,8 +3,10 @@ package com.sysadmindoc.callshield.data
 import com.squareup.moshi.Moshi
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.io.File
@@ -25,6 +27,25 @@ class SpamMLFeatureContractTest {
         val parsed = parseModel.invoke(scorer, modelJson)
         assertNotNull("The shipped model must satisfy the feature schema", parsed)
         stateField.set(scorer, parsed)
+    }
+
+    @Test
+    fun `the protection test canaries hold under both shipped models`() {
+        // The old spam sample scored 0.586 against the 0.648 threshold at every
+        // hour, so Protection test failed on every phone. A phone whose trees fail
+        // to load scores with the logistic fallback, so both models must agree.
+        listOf(false, true).forEach { fallback ->
+            assertTrue(scorer.isSpamAtHour(SpamMLScorer.ML_SPAM_CANARY, SpamMLScorer.ML_SPAM_CANARY_HOUR, fallback))
+            assertFalse(scorer.isSpamAtHour(SpamMLScorer.ML_CLEAN_CANARY, SpamMLScorer.ML_CLEAN_CANARY_HOUR, fallback))
+        }
+        // The Python contract test checks retrains against the fixture's copy.
+        val canaries = loadFixture()["protection_test_canaries"] as Map<*, *>
+        val spam = canaries["spam"] as Map<*, *>
+        val clean = canaries["clean"] as Map<*, *>
+        assertEquals(SpamMLScorer.ML_SPAM_CANARY, spam["input"])
+        assertEquals(SpamMLScorer.ML_SPAM_CANARY_HOUR, (spam["hour"] as Number).toInt())
+        assertEquals(SpamMLScorer.ML_CLEAN_CANARY, clean["input"])
+        assertEquals(SpamMLScorer.ML_CLEAN_CANARY_HOUR, (clean["hour"] as Number).toInt())
     }
 
     @Test

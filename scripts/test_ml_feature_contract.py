@@ -40,7 +40,25 @@ def main() -> None:
             assert abs(gbt - case["gbt_score"]) <= EPSILON, f"{case['name']} GBT score drift"
             assert abs(lr - case["lr_score"]) <= EPSILON, f"{case['name']} LR score drift"
 
-    print(f"ML feature contract passed: {len(fixture['cases'])} cases, {len(FEATURE_NAMES)} features")
+    # Protection test flags the spam canary and passes the clean one on the
+    # phone. A phone whose trees fail to load scores with the logistic fallback,
+    # and the model ships over the air, so a retrain that breaks either canary
+    # under either model would fail that check on released phones.
+    threshold = model["threshold"]
+    for label, canary in fixture["protection_test_canaries"].items():
+        features = extract_features(canary["input"], canary["hour"])
+        scores = {
+            "GBT": score_gbt(features, model["trees"], model["learning_rate"], model["initial_score"]),
+            "LR": score_lr(features, model["fallback_weights"], model["fallback_bias"]),
+        }
+        for name, score in scores.items():
+            flagged = score >= threshold
+            assert flagged == (label == "spam"), (
+                f"Protection test's {label} canary {canary['input']} scores {score:.3f} under {name} "
+                f"against the {threshold} threshold"
+            )
+
+    print(f"ML feature contract passed: {len(fixture['cases'])} cases, {len(FEATURE_NAMES)} features, canaries hold")
 
 
 if __name__ == "__main__":

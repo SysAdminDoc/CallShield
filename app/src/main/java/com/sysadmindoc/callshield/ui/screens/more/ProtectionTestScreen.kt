@@ -738,9 +738,11 @@ private suspend fun runTests(context: Context): List<TestResult> =
             ),
         )
 
+        // Fixed samples at fixed hours. The old spam sample scored under the model's
+        // threshold, so this check failed on every phone; these hold under the tree
+        // model and its fallback (SpamMLFeatureContractTest).
         val mlResult =
-            com.sysadmindoc.callshield.data.SpamMLScorer
-                .isSpam("+15555550000")
+            SpamMLScorer.isSpamAtHour(SpamMLScorer.ML_SPAM_CANARY, SpamMLScorer.ML_SPAM_CANARY_HOUR)
         results.add(
             TestResult(
                 name = context.getString(R.string.protection_test_ml_spam_scorer),
@@ -756,8 +758,7 @@ private suspend fun runTests(context: Context): List<TestResult> =
         )
 
         val mlClean =
-            !com.sysadmindoc.callshield.data.SpamMLScorer
-                .isSpam("+12125551234")
+            !SpamMLScorer.isSpamAtHour(SpamMLScorer.ML_CLEAN_CANARY, SpamMLScorer.ML_CLEAN_CANARY_HOUR)
         results.add(
             TestResult(
                 name = context.getString(R.string.protection_test_ml_false_positive),

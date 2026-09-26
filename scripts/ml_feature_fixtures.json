@@ -22,6 +22,16 @@
     "short_number",
     "plus_one_prefix"
   ],
+  "protection_test_canaries": {
+    "spam": {
+      "input": "+18002000000",
+      "hour": 0
+    },
+    "clean": {
+      "input": "2125551234",
+      "hour": 12
+    }
+  },
   "cases": [
     {
       "name": "valid_us",

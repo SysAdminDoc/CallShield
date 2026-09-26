@@ -792,7 +792,7 @@
     <string name="protection_test_wangiri_fail">一键回拨检测可能已停用</string>
     <string name="protection_test_sms_pass">正确识别垃圾短信（%s）</string>
     <string name="protection_test_sms_fail">短信分析可能已停用</string>
-    <string name="protection_test_ml_pass">正确标记 555–0000 模式</string>
+    <string name="protection_test_ml_pass">正确标记免费电话测试号码</string>
     <string name="protection_test_ml_fail">ML 评分器可能已停用或权重未加载</string>
     <string name="protection_test_ml_fp_pass">正常号码正确放行</string>
     <string name="protection_test_ml_fp_fail">误判 — 阈值可能过低</string>
