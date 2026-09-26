@@ -25,6 +25,10 @@ All notable changes to CallShield will be documented in this file.
   side of midnight counted as two days. A new number now needs two reports at
   least 24 hours apart and, when reports carry reporter IDs, three different
   reporters on the same day.
+- Three community numbers that database v47 dropped by mistake are back. The
+  move to the promotion ledger only looked at their last 30 days, so rows whose
+  reports were months apart looked uncorroborated. A fourth stays out, because
+  its two reports came two hours apart.
 - Calls from outside North America no longer get a US or Caribbean place name
   in the caller-ID popup. A +65 call used to read as Birmingham, AL, and Number
   details offered to block that US area code. On a phone outside North America,

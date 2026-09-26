@@ -4267,6 +4267,50 @@
         }
       ]
     },
+    "+18445071006": {
+      "published": true,
+      "entry": {
+        "number": "+18445071006",
+        "type": "spam",
+        "reports": 2,
+        "first_seen": "2026-07-09",
+        "last_seen": "2026-07-17",
+        "description": "Community reported",
+        "sources": [
+          "community"
+        ],
+        "evidence": [
+          {
+            "source_id": "github_database",
+            "evidence_type": "aggregate_database",
+            "license": "CallShield database terms",
+            "attribution": "CallShield maintained spam database",
+            "first_seen": "2026-07-09",
+            "last_seen": "2026-07-17",
+            "retrieved_at": "2026-09-23T00:00:00+00:00",
+            "geography": "global",
+            "confidence_tier": "unverified",
+            "parser_version": "legacy-v1",
+            "expires_at_epoch_ms": 1792713600000
+          }
+        ]
+      },
+      "events": [
+        {
+          "key": "legacy:first",
+          "day": "2026-07-09",
+          "bucket": "",
+          "count": 1
+        },
+        {
+          "key": "legacy:last",
+          "day": "2026-07-17",
+          "bucket": "",
+          "count": 1
+        }
+      ],
+      "bucket_quorum": false
+    },
     "+18447571911": {
       "published": false,
       "entry": {
@@ -6901,6 +6945,49 @@
         }
       ]
     },
+    "+523338377660": {
+      "published": false,
+      "entry": {
+        "number": "+523338377660",
+        "type": "spam",
+        "reports": 2,
+        "first_seen": "2026-08-14",
+        "last_seen": "2026-08-15",
+        "description": "Community reported",
+        "sources": [
+          "community"
+        ],
+        "evidence": [
+          {
+            "source_id": "github_database",
+            "evidence_type": "aggregate_database",
+            "license": "CallShield database terms",
+            "attribution": "CallShield maintained spam database",
+            "first_seen": "2026-08-14",
+            "last_seen": "2026-08-15",
+            "retrieved_at": "2026-09-23T00:00:00+00:00",
+            "geography": "global",
+            "confidence_tier": "unverified",
+            "parser_version": "legacy-v1",
+            "expires_at_epoch_ms": 1792713600000
+          }
+        ]
+      },
+      "events": [
+        {
+          "key": "legacy:first",
+          "day": "2026-08-14",
+          "bucket": "",
+          "count": 1
+        },
+        {
+          "key": "legacy:last",
+          "day": "2026-08-15",
+          "bucket": "",
+          "count": 1
+        }
+      ]
+    },
     "+523351058243": {
       "published": false,
       "entry": {
@@ -7494,7 +7581,7 @@
       ]
     },
     "+525511638689": {
-      "published": false,
+      "published": true,
       "entry": {
         "number": "+525511638689",
         "type": "spam",
@@ -7523,12 +7610,19 @@
       },
       "events": [
         {
+          "key": "legacy:first",
+          "day": "2026-08-14",
+          "bucket": "",
+          "count": 1
+        },
+        {
           "key": "legacy:last",
           "day": "2026-09-01",
           "bucket": "",
           "count": 1
         }
-      ]
+      ],
+      "bucket_quorum": false
     },
     "+529997581016": {
       "published": false,
@@ -11281,7 +11375,7 @@
       ]
     },
     "+917003869903": {
-      "published": false,
+      "published": true,
       "entry": {
         "number": "+917003869903",
         "type": "spam",
@@ -11310,12 +11404,19 @@
       },
       "events": [
         {
+          "key": "legacy:first",
+          "day": "2026-04-06",
+          "bucket": "",
+          "count": 1
+        },
+        {
           "key": "legacy:last",
           "day": "2026-09-05",
           "bucket": "",
           "count": 3
         }
-      ]
+      ],
+      "bucket_quorum": false
     },
     "+917971792062": {
       "published": false,

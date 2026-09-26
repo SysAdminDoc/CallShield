@@ -1,6 +1,6 @@
 {
   "format_version": 1,
-  "version": 47,
+  "version": 48,
   "updated": "2026-09-26",
   "legacy_path": "data/spam_numbers.json",
   "shard_directory": "data/spam_number_shards",
@@ -633,9 +633,9 @@
     {
       "id": "4e",
       "path": "data/spam_number_shards/4e.json",
-      "sha256": "567f380f368a18eebfc350489c139f9d2fee53636ba3580f62fbefa09748663a",
-      "bytes": 220128,
-      "numbers": 214,
+      "sha256": "52eca4e8d3cc35e937bc58e81cb117218a4c50d75052da71d12e928d88ef7d9c",
+      "bytes": 220921,
+      "numbers": 215,
       "prefixes": 5
     },
     {
@@ -945,9 +945,9 @@
     {
       "id": "75",
       "path": "data/spam_number_shards/75.json",
-      "sha256": "005955324512ee5f762651537271c30bc486acc445a6e22f20489df667c14254",
-      "bytes": 173691,
-      "numbers": 178,
+      "sha256": "311847808f0a63fdcae1ffe720847184d5577195443b980ae091784ed984c1a4",
+      "bytes": 174484,
+      "numbers": 179,
       "prefixes": 1
     },
     {
@@ -2001,9 +2001,9 @@
     {
       "id": "f9",
       "path": "data/spam_number_shards/f9.json",
-      "sha256": "f6bc016a69fb5e69407997ffe012124f00a629a2cacfa95a74a7f2833ea046e7",
-      "bytes": 222814,
-      "numbers": 215,
+      "sha256": "cf2a0627556a5ed27e85449d42c3d865fc402ee12c1706e6a7f9e6ba57529594",
+      "bytes": 223606,
+      "numbers": 216,
       "prefixes": 5
     },
     {

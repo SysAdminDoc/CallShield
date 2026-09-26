@@ -127,7 +127,12 @@ def load_community_pending(today: str) -> dict[str, dict]:
 
 
 def legacy_community_state(entry: dict, today: str) -> dict:
-    """Recover only the report days a pre-ledger row can actually prove."""
+    """Recover only the report days a pre-ledger row can actually prove.
+
+    The 30-day window is for new evidence. A row that shipped before the ledger
+    existed is judged on its whole recorded span, or the migration expires rows
+    whose reports were months apart (feed v47 dropped four that way).
+    """
     reports = max(0, int(entry.get("reports", 0)))
     first, last = entry.get("first_seen"), entry.get("last_seen")
     events = []
@@ -139,8 +144,6 @@ def legacy_community_state(entry: dict, today: str) -> dict:
             ])
         else:
             events.append({"key": "legacy:last", "day": last, "bucket": "", "count": reports})
-    cutoff = (date.fromisoformat(today) - timedelta(days=COMMUNITY_PENDING_DAYS)).isoformat()
-    events = [event for event in events if event["day"] >= cutoff]
     return {"published": False, "entry": entry, "events": events}
 
 

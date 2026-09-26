@@ -377,9 +377,18 @@ def assert_community_promotion(data_dir: Path) -> None:
          "last_seen": BASE_DAY, "description": "Community reported", "sources": ["community"],
          "evidence": [{"source_id": "github_database", "evidence_type": "aggregate_database"}]}
     )
+    # A pre-ledger row whose first report is older than the 30-day window.
+    long_span_number = "+12122340680"
+    days_ago = lambda days: (datetime.now(timezone.utc) - timedelta(days=days)).date().isoformat()  # noqa: E731
+    database["numbers"].append(
+        {"number": long_span_number, "type": "spam", "reports": 4, "first_seen": days_ago(173),
+         "last_seen": days_ago(21), "description": "Community reported", "sources": ["community"],
+         "evidence": [{"source_id": "github_database", "evidence_type": "aggregate_database"}]}
+    )
     write_json(data_dir / "spam_numbers.json", database)
     run_script("merge_community_reports.py", data_dir)
     assert reports_for(data_dir, old_number) == 0, "a legacy single-report row stayed in the shipped database"
+    assert reports_for(data_dir, long_span_number) == 4, "a legacy row lost its first report to the 30-day window"
     assert reports_for(data_dir, legacy_number) == 7, "a promoted row was demoted on the next merge"
 
     pending_path = data_dir / "community_pending.json"
