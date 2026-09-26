@@ -553,7 +553,7 @@ language in [issue #7](https://github.com/SysAdminDoc/CallShield/issues/7).
 | URL Safety | Local spam-domain data; optional PhishTank and OpenPhish |
 | Verification | Local Gradle, lint, and release-artifact checks |
 | Tests | 1594 JVM unit tests (JUnit) |
-| Strings | 1668 string resources and 38 plural groups (translation-ready) |
+| Strings | 1670 string resources and 38 plural groups (translation-ready) |
 | Accessibility | 100+ content descriptions, 48dp touch targets |
 | Min SDK | 29 (Android 10) |
 | Target SDK | 36 |

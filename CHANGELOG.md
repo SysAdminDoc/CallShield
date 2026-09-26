@@ -4,6 +4,10 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+- The caller ID popup works with TalkBack. Its header and verdict are read out
+  as they change, its text is at least 14sp, every button is a 48dp target,
+  the verdict line says why a call looks risky, and Search looks the number up
+  in the phone's language.
 - A link in a text is checked against OpenPhish by its full host, so a phishing
   page on one subdomain is caught without flagging its sibling subdomains.
   OpenPhish is matched on the phone. PhishTank still receives only the site's

@@ -343,6 +343,8 @@
     <string name="overlay_header_suspicious">可疑</string>
     <string name="overlay_header_safe">看起来安全</string>
     <string name="overlay_initial_score">评分：%1$d%%</string>
+    <string name="overlay_score_with_reason">风险 %1$d%%：%2$s</string>
+    <string name="overlay_search_query">%1$s 骚扰电话</string>
     <string name="overlay_outgoing_risk_score">本地风险置信度：%1$d%%</string>
     <string name="overlay_score_loading">正在查询数据库…</string>
     <string name="overlay_spam_score">垃圾评分：%1$d%%（%2$s）</string>

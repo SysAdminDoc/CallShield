@@ -49,7 +49,37 @@ private const val OVERLAY_DESIGN_DENSITY = 3f
 /** The overlay card's bottom corners, in dp, on the app's 0/4/6/8/10/12dp scale. */
 internal const val OVERLAY_CORNER_DP = 12f
 
+/** The smallest text the overlay draws, in sp; only the number itself is larger. */
+internal const val OVERLAY_TEXT_SP = 14f
+
+/** Every overlay button's minimum touch target, in dp. */
+internal const val OVERLAY_TOUCH_TARGET_DP = 48f
+
+/** The web search the overlay's Search button opens, in the phone's language. */
+internal fun overlaySearchUrl(
+    context: Context,
+    digits: String,
+): String = "https://www.google.com/search?q=" + Uri.encode(context.getString(R.string.overlay_search_query, digits))
+
+/**
+ * The overlay's verdict line. A warning that says why is easier to act on than
+ * a bare score, so a flagged call names the reason that decided it.
+ */
+internal fun overlayVerdictLine(
+    context: Context,
+    confidence: Int,
+    reason: String,
+): String =
+    if (reason.isNotBlank()) {
+        context.getString(R.string.overlay_score_with_reason, confidence, reason)
+    } else {
+        context.getString(R.string.overlay_initial_score, confidence)
+    }
+
 private fun Context.overlayDp(designPx: Float): Int = overlayDpF(designPx).roundToInt()
+
+/** [OVERLAY_TOUCH_TARGET_DP] in real dp, not the overlay's design pixels. */
+private fun Context.touchTargetPx(): Int = (OVERLAY_TOUCH_TARGET_DP * resources.displayMetrics.density).roundToInt()
 
 private fun Context.overlayDpF(designPx: Float): Float = designPx * resources.displayMetrics.density / OVERLAY_DESIGN_DENSITY
 
@@ -334,9 +364,10 @@ class CallerIdOverlayService : Service() {
                                 context.getString(R.string.overlay_header_incoming_call)
                             }
                         setTextColor(if (confidence > 0) palette.error else palette.primary)
-                        textSize = 11f
+                        textSize = OVERLAY_TEXT_SP
                         typeface = Typeface.DEFAULT_BOLD
                         letterSpacing = 0.12f
+                        accessibilityLiveRegion = android.view.View.ACCESSIBILITY_LIVE_REGION_POLITE
                     }
                 addView(headerText)
 
@@ -351,12 +382,12 @@ class CallerIdOverlayService : Service() {
                         setPadding(0, context.overlayDp(8f), 0, context.overlayDp(2f))
                     },
                 )
-                if (displayReason.isNotEmpty()) {
+                if (displayReason.isNotEmpty() && (confidence <= 0 || outgoingRiskWarning)) {
                     addView(
                         TextView(context).apply {
                             text = displayReason
                             setTextColor(palette.subtext)
-                            textSize = 12f
+                            textSize = OVERLAY_TEXT_SP
                         },
                     )
                 }
@@ -368,16 +399,17 @@ class CallerIdOverlayService : Service() {
                             if (outgoingRiskWarning) {
                                 context.getString(R.string.overlay_outgoing_risk_score, confidence)
                             } else if (confidence > 0) {
-                                context.getString(R.string.overlay_initial_score, confidence)
+                                overlayVerdictLine(context, confidence, displayReason)
                             } else if (liveEnrichmentEnabled) {
                                 context.getString(R.string.overlay_score_loading)
                             } else {
                                 context.getString(R.string.overlay_score_local_clear)
                             }
                         setTextColor(palette.peach)
-                        textSize = 13f
+                        textSize = OVERLAY_TEXT_SP
                         typeface = Typeface.DEFAULT_BOLD
                         setPadding(0, context.overlayDp(10f), 0, 0)
+                        accessibilityLiveRegion = android.view.View.ACCESSIBILITY_LIVE_REGION_POLITE
                     }
                 addView(scoreText)
 
@@ -416,7 +448,7 @@ class CallerIdOverlayService : Service() {
                                 },
                             )
                         setTextColor(palette.overlay)
-                        textSize = 10f
+                        textSize = OVERLAY_TEXT_SP
                         letterSpacing = 0.02f
                         setPadding(0, context.overlayDp(6f), 0, 0)
                     }
@@ -434,12 +466,16 @@ class CallerIdOverlayService : Service() {
                                 text = context.getString(R.string.overlay_action_search)
                                 setTextColor(palette.blue)
                                 setBackgroundColor(palette.surfaceVariant)
-                                textSize = 11f
+                                textSize = OVERLAY_TEXT_SP
                                 isAllCaps = false
+                                minHeight = context.touchTargetPx()
+                                minimumHeight = context.touchTargetPx()
+                                minWidth = context.touchTargetPx()
+                                minimumWidth = context.touchTargetPx()
                                 setPadding(context.overlayDp(20f), context.overlayDp(8f), context.overlayDp(20f), context.overlayDp(8f))
                                 setOnClickListener {
                                     try {
-                                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/search?q=${Uri.encode("$digits phone number spam")}")).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) })
+                                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(overlaySearchUrl(context, digits))).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) })
                                     } catch (_: Exception) {
                                     }
                                     dismiss(sessionId)
@@ -455,8 +491,12 @@ class CallerIdOverlayService : Service() {
                                 text = context.getString(R.string.overlay_action_block)
                                 setTextColor(palette.error)
                                 setBackgroundColor(palette.surfaceVariant)
-                                textSize = 11f
+                                textSize = OVERLAY_TEXT_SP
                                 isAllCaps = false
+                                minHeight = context.touchTargetPx()
+                                minimumHeight = context.touchTargetPx()
+                                minWidth = context.touchTargetPx()
+                                minimumWidth = context.touchTargetPx()
                                 setPadding(context.overlayDp(20f), context.overlayDp(8f), context.overlayDp(20f), context.overlayDp(8f))
                                 visibility =
                                     if (outgoingRiskWarning) {
@@ -479,8 +519,12 @@ class CallerIdOverlayService : Service() {
                                 text = context.getString(R.string.overlay_action_dismiss)
                                 setTextColor(palette.overlay)
                                 setBackgroundColor(Color.TRANSPARENT)
-                                textSize = 11f
+                                textSize = OVERLAY_TEXT_SP
                                 isAllCaps = false
+                                minHeight = context.touchTargetPx()
+                                minimumHeight = context.touchTargetPx()
+                                minWidth = context.touchTargetPx()
+                                minimumWidth = context.touchTargetPx()
                                 setPadding(context.overlayDp(20f), context.overlayDp(8f), context.overlayDp(20f), context.overlayDp(8f))
                                 setOnClickListener { dismiss(sessionId) }
                             },
@@ -494,8 +538,10 @@ class CallerIdOverlayService : Service() {
                         text = context.getString(R.string.overlay_action_sit_tone)
                         setTextColor(palette.subtext)
                         setBackgroundColor(palette.surfaceVariant)
-                        textSize = 10f
+                        textSize = OVERLAY_TEXT_SP
                         isAllCaps = false
+                        minHeight = context.touchTargetPx()
+                        minimumHeight = context.touchTargetPx()
                         setPadding(context.overlayDp(20f), context.overlayDp(6f), context.overlayDp(20f), context.overlayDp(6f))
                         visibility =
                             if (outgoingRiskWarning) {
@@ -791,7 +837,7 @@ class CallerIdOverlayService : Service() {
                                 else -> palette.primary
                             },
                         )
-                        textSize = 11f
+                        textSize = OVERLAY_TEXT_SP
                         setPadding(0, context.overlayDp(3f), 0, context.overlayDp(3f))
                     },
                 )

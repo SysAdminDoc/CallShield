@@ -531,6 +531,8 @@
     <string name="signal_list_separator">", "</string>
     <string name="overlay_header_safe">Looks safe</string>
     <string name="overlay_initial_score">Score: %1$d%%</string>
+    <string name="overlay_score_with_reason">%1$d%% risk: %2$s</string>
+    <string name="overlay_search_query">%1$s phone number spam</string>
     <string name="overlay_outgoing_risk_score">Local risk confidence: %1$d%%</string>
     <string name="overlay_score_loading">Checking databases…</string>
     <string name="overlay_spam_score">Spam score: %1$d%% (%2$s)</string>
