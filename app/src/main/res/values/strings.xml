@@ -43,6 +43,7 @@
     <string name="dashboard_setup_call_screener_title">Call screener</string>
     <string name="dashboard_setup_overlay_title">Caller ID overlay</string>
     <string name="dashboard_setup_notifications_title">Notifications</string>
+    <string name="dashboard_setup_notification_access_title">Notification access</string>
     <string name="dashboard_permissions_ready_detail">Core permissions are granted.</string>
     <string name="dashboard_permissions_required_short">Grant required call and text access.</string>
     <plurals name="dashboard_database_ready_detail">
@@ -56,8 +57,10 @@
     <string name="dashboard_screener_optional_short">Off while call blocking is disabled.</string>
     <string name="dashboard_overlay_needed_short">Floating caller ID alerts.</string>
     <string name="dashboard_notifications_needed_short">Blocking alerts and reminders.</string>
+    <string name="dashboard_notification_access_needed_short">RCS filtering, push-alert caller trust and meeting mode read notifications.</string>
     <string name="dashboard_enable_overlay">Enable overlay</string>
     <string name="dashboard_enable_notifications">Enable notifications</string>
+    <string name="dashboard_enable_notification_access">Allow access</string>
     <string name="dashboard_optional_extras">Optional extras</string>
     <string name="dashboard_synced_just_now">Synced just now</string>
     <string name="dashboard_synced_minutes_ago">Synced %dm ago</string>
@@ -1345,12 +1348,17 @@
     <!-- Sync results -->
     <string name="sync_database_up_to_date">Database is up to date</string>
     <string name="sync_success_counts">Sync complete. Numbers: %1$d, prefixes: %2$d</string>
-    <string name="sync_unknown_error">Unknown sync error</string>
-    <string name="sync_remote_unavailable_existing">GitHub sync unavailable (%s). Your existing spam database is still active.</string>
+    <string name="sync_unknown_error">Something went wrong while updating.</string>
+    <string name="sync_remote_unavailable_existing">%s Your existing spam database is still active.</string>
     <string name="sync_bundled_snapshot_loaded">Loaded bundled protection snapshot with %1$d numbers and %2$d prefixes while GitHub was unavailable.</string>
-    <string name="sync_unavailable_prefix">Sync unavailable (%s)</string>
-    <string name="sync_bundled_fallback_failed">. Bundled fallback failed: %s</string>
-    <string name="sync_error">Error: %s</string>
+    <string name="sync_failed">Sync failed. %s</string>
+    <string name="sync_failed_no_fallback">Sync failed. %s The built-in copy couldn\'t be loaded either.</string>
+    <string name="sync_failure_offline">Couldn\'t reach the update server. Check your connection.</string>
+    <string name="sync_failure_dns">Couldn\'t look up the update server. Check that you\'re online and that Private DNS isn\'t blocking it.</string>
+    <string name="sync_failure_secure_connection">Couldn\'t make a secure connection to the update server. A Wi-Fi sign-in page can cause this.</string>
+    <string name="sync_failure_http">The update server answered with error %1$d. Try again later.</string>
+    <string name="sync_failure_signature">The downloaded update wasn\'t signed by CallShield, so it was ignored.</string>
+    <string name="sync_failure_parse">The downloaded update was damaged or didn\'t pass CallShield\'s checks, so it was ignored.</string>
 
     <!-- Backup, restore, and clipboard labels -->
     <string name="backup_subject">CallShield backup</string>

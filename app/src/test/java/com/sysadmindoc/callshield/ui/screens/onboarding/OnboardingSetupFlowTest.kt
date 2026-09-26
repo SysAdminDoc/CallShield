@@ -1,5 +1,6 @@
 package com.sysadmindoc.callshield.ui.screens.onboarding
 
+import com.sysadmindoc.callshield.ui.screens.main.requiredSetupProgress
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -37,6 +38,7 @@ class OnboardingSetupFlowTest {
         assertEquals(2, state.completedSetupCount)
         assertEquals(2, state.requiredSetupCount)
         assertEquals(2, state.requiredSetupTotal)
+        assertEquals(requiredSetupProgress(permissionsReady = true, screenerReadyForCurrentMode = true).total, state.requiredSetupTotal)
         assertFalse(state.isComplete(OnboardingSetupStep.NotificationAccess))
     }
 

@@ -168,6 +168,8 @@ fun DashboardScreen(
     val neighborSpoof by viewModel.neighborSpoofEnabled.collectAsStateWithLifecycle()
     val mlScorer by viewModel.mlScorerEnabled.collectAsStateWithLifecycle()
     val rcsFilter by viewModel.rcsFilterEnabled.collectAsStateWithLifecycle()
+    val pushAlert by viewModel.pushAlertEnabled.collectAsStateWithLifecycle()
+    val meetingMode by viewModel.meetingModeEnabled.collectAsStateWithLifecycle()
     val freqEscalation by viewModel.freqEscalationEnabled.collectAsStateWithLifecycle()
     val blockedThisWeek by viewModel.blockedThisWeek.collectAsStateWithLifecycle()
     val blockedCallsThisWeek by viewModel.blockedCallsThisWeek.collectAsStateWithLifecycle()
@@ -305,6 +307,10 @@ fun DashboardScreen(
         remember(context, permissionRefreshTick) {
             CallShieldPermissions.hasNotificationPermission(context)
         }
+    val notificationAccessGranted =
+        remember(context, permissionRefreshTick) {
+            CallShieldPermissions.hasNotificationListenerAccess(context)
+        }
     val contactsGranted =
         remember(context, permissionRefreshTick) {
             CallShieldPermissions.isPermissionGranted(context, Manifest.permission.READ_CONTACTS)
@@ -331,6 +337,12 @@ fun DashboardScreen(
         context.startActivitySafely(
             Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${context.packageName}")),
             onFailure = { openAppSettings(context) },
+        )
+    }
+    val enableNotificationAccess: () -> Unit = {
+        context.startActivitySafely(
+            CallShieldPermissions.notificationAccessIntent(context),
+            onFailure = { context.startActivitySafely(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) },
         )
     }
     val enableNotifications: () -> Unit = {
@@ -381,7 +393,7 @@ fun DashboardScreen(
         }
     val heroSubtitle =
         when {
-            dashboardStatus.heroMode == DashboardHeroMode.SetupNeeded -> {
+            dashboardStatus.heroMode == DashboardHeroMode.SetupNeeded && requiredSetupComplete < requiredSetupTotal -> {
                 stringResource(
                     R.string.dashboard_setup_progress,
                     numberFormatter.format(requiredSetupComplete),
@@ -492,14 +504,27 @@ fun DashboardScreen(
             blockedCallsThisWeek = blockedCallsThisWeek,
             blockedSmsThisWeek = blockedSmsThisWeek,
             engineCount =
-                activeEngineCount(
-                    stirShaken = stirShaken,
-                    heuristics = heuristics,
-                    smsContent = smsContent,
-                    neighborSpoof = neighborSpoof,
-                    mlScorer = mlScorer,
-                    rcsFilter = rcsFilter,
-                    freqEscalation = freqEscalation,
+                runnableEngineCount(
+                    toggles =
+                        EngineToggles(
+                            stirShaken = stirShaken,
+                            heuristics = heuristics,
+                            smsContent = smsContent,
+                            neighborSpoof = neighborSpoof,
+                            mlScorer = mlScorer,
+                            rcsFilter = rcsFilter,
+                            freqEscalation = freqEscalation,
+                        ),
+                    paths =
+                        protectionPaths(
+                            blockCallsEnabled = blockCallsEnabled,
+                            callScreenerReady = callScreenerReady,
+                            blockSmsEnabled = blockSmsEnabled,
+                            smsPermissionsReady = smsPermissionsReady,
+                            rcsFilter = rcsFilter,
+                            notificationAccessGranted = notificationAccessGranted,
+                        ),
+                    spamDatabaseReady = spamDatabaseReady,
                 ),
             databaseCount = spamCount,
             lastSync = lastSync,
@@ -734,6 +759,14 @@ fun DashboardScreen(
             callScreenerReady = callScreenerReady,
             overlayGranted = overlayGranted,
             notificationsGranted = notificationsGranted,
+            notificationAccessNeeded =
+                notificationAccessNeeded(
+                    rcsFilter = rcsFilter,
+                    blockSmsEnabled = blockSmsEnabled,
+                    pushAlert = pushAlert,
+                    meetingMode = meetingMode,
+                    notificationAccessGranted = notificationAccessGranted,
+                ),
             onReviewPermissions = openPermissions,
             onSyncDatabase = {
                 hapticTick(context)
@@ -742,6 +775,7 @@ fun DashboardScreen(
             onEnableCallScreener = enableCallScreening,
             onEnableOverlay = enableOverlay,
             onEnableNotifications = enableNotifications,
+            onEnableNotificationAccess = enableNotificationAccess,
         )
 
         if (backgroundExecutionRisk != BackgroundExecutionRisk.Ok && !backgroundWarningDismissed) {
@@ -1513,11 +1547,13 @@ internal fun DashboardSetupChecklistCard(
     callScreenerReady: Boolean,
     overlayGranted: Boolean,
     notificationsGranted: Boolean,
+    notificationAccessNeeded: Boolean,
     onReviewPermissions: () -> Unit,
     onSyncDatabase: () -> Unit,
     onEnableCallScreener: (() -> Unit)?,
     onEnableOverlay: () -> Unit,
     onEnableNotifications: () -> Unit,
+    onEnableNotificationAccess: () -> Unit,
 ) {
     val numberFormatter = remember { NumberFormat.getIntegerInstance() }
     Column(
@@ -1590,7 +1626,7 @@ internal fun DashboardSetupChecklistCard(
             actionLabel = if (spamDatabaseReady) null else stringResource(R.string.dashboard_sync),
             onAction = if (spamDatabaseReady) null else onSyncDatabase,
         )
-        if (!overlayGranted || !notificationsGranted) {
+        if (!overlayGranted || !notificationsGranted || notificationAccessNeeded) {
             GradientDivider(modifier = Modifier.padding(top = 2.dp))
             Text(
                 text = stringResource(R.string.dashboard_optional_extras),
@@ -1620,6 +1656,18 @@ internal fun DashboardSetupChecklistCard(
                     accentColor = CatBlue,
                     actionLabel = stringResource(R.string.dashboard_enable_notifications),
                     onAction = onEnableNotifications,
+                )
+            }
+            if (notificationAccessNeeded) {
+                if (!overlayGranted || !notificationsGranted) GradientDivider()
+                SetupChecklistRow(
+                    icon = Icons.Default.Notifications,
+                    title = stringResource(R.string.dashboard_setup_notification_access_title),
+                    detail = stringResource(R.string.dashboard_notification_access_needed_short),
+                    ready = false,
+                    accentColor = CatMauve,
+                    actionLabel = stringResource(R.string.dashboard_enable_notification_access),
+                    onAction = onEnableNotificationAccess,
                 )
             }
         }
@@ -1863,26 +1911,6 @@ internal data class HeroAction(
     val icon: ImageVector,
     val onClick: () -> Unit,
 )
-
-private fun activeEngineCount(
-    stirShaken: Boolean,
-    heuristics: Boolean,
-    smsContent: Boolean,
-    neighborSpoof: Boolean,
-    mlScorer: Boolean,
-    rcsFilter: Boolean,
-    freqEscalation: Boolean,
-): Int =
-    listOf(
-        true,
-        stirShaken,
-        heuristics,
-        smsContent,
-        neighborSpoof,
-        mlScorer,
-        rcsFilter,
-        freqEscalation,
-    ).count { it }
 
 private fun openAppSettings(context: Context) {
     context.startActivitySafely(

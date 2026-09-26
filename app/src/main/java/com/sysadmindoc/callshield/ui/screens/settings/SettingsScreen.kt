@@ -94,6 +94,7 @@ import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.StatusMessage
 import com.sysadmindoc.callshield.ui.rememberAllowContacts
 import com.sysadmindoc.callshield.ui.screens.main.relativeTimeText
+import com.sysadmindoc.callshield.ui.screens.main.requiredSetupProgress
 import com.sysadmindoc.callshield.ui.theme.*
 import com.sysadmindoc.callshield.util.startActivitySafely
 import kotlinx.coroutines.launch
@@ -292,8 +293,9 @@ fun SettingsScreen(viewModel: MainViewModel) {
     // Overlay and notifications add polish, but they are not required for the
     // protection engine. Keep optional enhancements out of the core setup
     // score so a configured blocker never looks unfinished.
-    val setupReadyCount = listOf(corePermissionsGranted, screenerReadyForCurrentMode).count { it }
-    val setupTotal = 2
+    val setupProgress = requiredSetupProgress(corePermissionsGranted, screenerReadyForCurrentMode)
+    val setupReadyCount = setupProgress.done
+    val setupTotal = setupProgress.total
     val permissionLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
             missingCorePermissions =

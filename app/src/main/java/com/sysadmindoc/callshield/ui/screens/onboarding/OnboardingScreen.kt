@@ -3,7 +3,6 @@ package com.sysadmindoc.callshield.ui.screens.onboarding
 import android.Manifest
 import android.app.Activity
 import android.app.role.RoleManager
-import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -95,7 +94,6 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.sysadmindoc.callshield.R
 import com.sysadmindoc.callshield.data.BlockingProfiles
 import com.sysadmindoc.callshield.permissions.CallShieldPermissions
-import com.sysadmindoc.callshield.service.RcsNotificationListener
 import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.theme.CatBlue
 import com.sysadmindoc.callshield.ui.theme.CatGreen
@@ -265,19 +263,8 @@ fun OnboardingScreen(
             )
         },
         onRequestNotificationAccess = {
-            val notificationAccessIntent =
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                    Intent(Settings.ACTION_NOTIFICATION_LISTENER_DETAIL_SETTINGS).apply {
-                        putExtra(
-                            Settings.EXTRA_NOTIFICATION_LISTENER_COMPONENT_NAME,
-                            ComponentName(context, RcsNotificationListener::class.java).flattenToString(),
-                        )
-                    }
-                } else {
-                    Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
-                }
             context.startActivitySafely(
-                notificationAccessIntent,
+                CallShieldPermissions.notificationAccessIntent(context),
                 onFailure = ::reportLaunchFailure,
             )
         },

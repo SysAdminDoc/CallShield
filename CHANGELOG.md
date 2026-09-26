@@ -4,6 +4,13 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+- Home counts only the engines that can run. A toggle whose permission,
+  screener role or notification access is missing no longer adds to the
+  count. Home and Settings count the same two setup steps, and Home asks for
+  notification access when RCS filtering, push-alert caller trust or meeting
+  mode is on without it. A failed sync says what went wrong in a sentence
+  (offline, lookup, secure connection, a server error, an unsigned or damaged
+  update) instead of the raw error.
 - The caller ID popup works with TalkBack. Its header and verdict are read out
   as they change, its text is at least 14sp, every button is a 48dp target,
   the verdict line says why a call looks risky, and Search looks the number up

@@ -134,9 +134,9 @@ class SyncRepository(
                         )
                     }
 
-                    val remoteError =
-                        result.exceptionOrNull()?.message
-                            ?: context.getString(R.string.sync_unknown_error)
+                    val remoteFailure = result.exceptionOrNull()
+                    android.util.Log.w("SyncRepository", "Spam database download failed", remoteFailure)
+                    val remoteError = SyncFailureText.sentence(context, remoteFailure)
                     if (currentCount > 0) {
                         return@withContext SyncResult(
                             success = true,
@@ -167,24 +167,17 @@ class SyncRepository(
                         )
                     }
 
-                    val bundledError = bundledDatabase.exceptionOrNull()?.message
-                    val message =
-                        buildString {
-                            append(context.getString(R.string.sync_unavailable_prefix, remoteError))
-                            if (!bundledError.isNullOrBlank()) {
-                                append(context.getString(R.string.sync_bundled_fallback_failed, bundledError))
-                            }
-                        }
-
+                    android.util.Log.w("SyncRepository", "Bundled spam database failed to load", bundledDatabase.exceptionOrNull())
                     SyncResult(
                         success = false,
-                        message = message,
-                        shouldRetry = shouldRetrySync(remoteError),
+                        message = context.getString(R.string.sync_failed_no_fallback, remoteError),
+                        shouldRetry = SyncFailureText.shouldRetry(remoteFailure),
                     )
                 } catch (e: Exception) {
+                    android.util.Log.w("SyncRepository", "Spam database sync failed", e)
                     SyncResult(
                         success = false,
-                        message = context.getString(R.string.sync_error, e.message ?: ""),
+                        message = context.getString(R.string.sync_failed, SyncFailureText.sentence(context, e)),
                         shouldRetry = true,
                     )
                 }
@@ -585,12 +578,14 @@ class SyncRepository(
         return numbers.size to prefixes.size
     }
 
-    private fun retainedDatabaseWarning(error: Throwable): SyncResult =
-        SyncResult(
+    private fun retainedDatabaseWarning(error: Throwable): SyncResult {
+        android.util.Log.w("SyncRepository", "Spam feed refused; keeping the current database", error)
+        return SyncResult(
             success = true,
-            message = context.getString(R.string.sync_remote_unavailable_existing, error.message ?: "Invalid feed metadata"),
+            message = context.getString(R.string.sync_remote_unavailable_existing, SyncFailureText.sentence(context, error)),
             warning = true,
         )
+    }
 
     private suspend fun readPreservedUserBlocks(now: Long = System.currentTimeMillis()): Map<String, Long?> =
         dao
@@ -965,11 +960,6 @@ class SyncRepository(
         preFetchSha: String?,
         path: String,
     ): String? = preFetchSha.takeUnless { remote.lastServedByMirror(path) }
-
-    private fun shouldRetrySync(message: String): Boolean {
-        val permanentFailureCodes = listOf("HTTP 400", "HTTP 401", "HTTP 403", "HTTP 404")
-        return permanentFailureCodes.none { code -> message.contains(code) }
-    }
 
     private class RemovedExternalBlocklist(
         val subscription: ExternalBlocklistSubscription,
