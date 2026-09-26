@@ -659,7 +659,15 @@ class MainViewModel
             }
         }
 
+        // "Run setup again" reviews setup without clearing onboarding_done. Clearing it
+        // made ProtectionHealthWorker treat a half-finished review as "not set up" and
+        // drop the screening-off alert, and every launch reopened setup until it was
+        // finished, which on the last step meant overwriting the user's settings.
+        private val _reviewingSetup = MutableStateFlow(false)
+        val reviewingSetup: StateFlow<Boolean> = _reviewingSetup.asStateFlow()
+
         fun completeOnboarding() {
+            _reviewingSetup.value = false
             viewModelScope.launch {
                 repo.setOnboardingDone(true)
                 // Trigger first sync after onboarding
@@ -668,7 +676,11 @@ class MainViewModel
         }
 
         fun restartOnboarding() {
-            viewModelScope.launch { repo.setOnboardingDone(false) }
+            _reviewingSetup.value = true
+        }
+
+        fun leaveSetupReview() {
+            _reviewingSetup.value = false
         }
 
         fun sync() = sync(showProgress = true)

@@ -30,6 +30,11 @@ All notable changes to CallShield will be documented in this file.
 - Contacts only mode no longer rejects every call, your contacts' included, when
   Contacts permission is off. It pauses instead, and Home, Settings and
   Protection test say so, with a button to allow Contacts.
+- Run setup again no longer forces you to pick a protection level. Finish keeps
+  your current settings and Back returns to the app. Leaving halfway also no
+  longer switches off the "call screening is off" warning.
+- Denying the Phone permission during setup no longer stops setup from
+  finishing. Phone access is recommended, not required.
 - Choosing Light in Settings works again. It had quietly stayed on AMOLED. The
   update keeps whichever theme each phone was showing.
 - Protection test's ML spam check no longer fails on every phone. Its sample
@@ -38,6 +43,7 @@ All notable changes to CallShield will be documented in this file.
   data checks refuse a retrained model that breaks them. Its cards span the
   page, the database count is formatted like everywhere else, and the hot list
   hint says what it's about.
+- The last setup step says Finish is waiting for a protection level.
 - Protection test opens with a heading, and after a run it shows required and
   optional checks as two progress cards. Each result is an outlined row with a
   status mark and an OK, Fix or Review label.

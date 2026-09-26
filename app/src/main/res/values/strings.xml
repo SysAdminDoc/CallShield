@@ -1143,6 +1143,8 @@
     <string name="onboarding_step">Step %1$d of %2$d</string>
     <string name="onboarding_screener_unavailable_detail">You can still use blocklists, scans, and lookup tools, but Android is not exposing the native screening role here.</string>
     <string name="onboarding_finish_setup">Finish setup</string>
+    <string name="onboarding_choose_level_hint">Choose a level to finish setup.</string>
+    <string name="onboarding_keep_settings_hint">Finish keeps your current settings, or choose a level to switch.</string>
     <string name="onboarding_back">Back</string>
     <string name="onboarding_skip_optional">Skip for now</string>
     <string name="onboarding_optional">Optional access</string>

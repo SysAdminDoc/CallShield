@@ -240,8 +240,6 @@ object CallShieldPermissions {
 
     fun hasCorePermissions(context: Context): Boolean = missingPermissions(context, corePermissions).isEmpty()
 
-    fun hasOnboardingRuntimePermissions(context: Context): Boolean = missingOnboardingRuntimePermissions(context).isEmpty()
-
     fun hasCallProtectionPermissions(
         context: Context,
     ): Boolean = missingPermissions(context, callProtectionPermissions).isEmpty()
@@ -251,8 +249,6 @@ object CallShieldPermissions {
     ): Boolean = missingPermissions(context, smsProtectionPermissions).isEmpty()
 
     fun missingCorePermissions(context: Context): List<String> = missingPermissions(context, corePermissions)
-
-    fun missingOnboardingRuntimePermissions(context: Context): List<String> = missingPermissions(context, onboardingRuntimePermissions)
 
     fun missingEnabledProtectionPermissions(
         context: Context,

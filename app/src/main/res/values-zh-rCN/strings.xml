@@ -852,6 +852,8 @@
     <string name="onboarding_step">第 %1$d 步 / 共 %2$d 步</string>
     <string name="onboarding_screener_unavailable_detail">你仍可使用拦截列表、扫描与查询工具，但 Android 在此未暴露原生筛查角色。</string>
     <string name="onboarding_finish_setup">完成设置</string>
+    <string name="onboarding_choose_level_hint">选择一个防护级别即可完成设置。</string>
+    <string name="onboarding_keep_settings_hint">点完成会保留当前设置，也可以选择一个级别来切换。</string>
     <string name="onboarding_back">返回</string>
     <string name="onboarding_skip_optional">暂时跳过</string>
     <string name="onboarding_optional">可选权限</string>

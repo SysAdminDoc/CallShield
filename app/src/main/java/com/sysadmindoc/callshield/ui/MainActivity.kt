@@ -123,6 +123,7 @@ fun CallShieldRoot(
     launchRequest: LaunchRequest = LaunchRequest(id = 0),
 ) {
     val onboardingDone by viewModel.onboardingDone.collectAsStateWithLifecycle()
+    val reviewingSetup by viewModel.reviewingSetup.collectAsStateWithLifecycle()
     val selectedNumber by viewModel.selectedNumber.collectAsStateWithLifecycle()
     val appTheme by viewModel.appTheme.collectAsStateWithLifecycle()
 
@@ -159,8 +160,13 @@ fun CallShieldRoot(
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {}
             }
 
-            onboardingDone == false -> {
-                OnboardingScreen(viewModel = viewModel, onComplete = { viewModel.completeOnboarding() })
+            onboardingDone == false || reviewingSetup -> {
+                OnboardingScreen(
+                    viewModel = viewModel,
+                    onComplete = { viewModel.completeOnboarding() },
+                    reviewing = reviewingSetup,
+                    onLeaveReview = viewModel::leaveSetupReview,
+                )
             }
 
             selectedNumber != null -> {

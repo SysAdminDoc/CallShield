@@ -9,6 +9,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
@@ -52,6 +53,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
@@ -130,12 +132,19 @@ internal const val ONBOARDING_PROFILE_CONTACTS_ONLY_TAG = "onboarding_profile_co
 fun OnboardingScreen(
     viewModel: MainViewModel,
     onComplete: () -> Unit,
+    // True when "Run setup again" opened this over a finished setup: Back returns
+    // to the app, and Finish without a new level keeps the current settings.
+    reviewing: Boolean = false,
+    onLeaveReview: () -> Unit = {},
 ) {
+    BackHandler(enabled = reviewing, onBack = onLeaveReview)
     val context = LocalContext.current
     val roleManager = remember { context.getSystemService(Context.ROLE_SERVICE) as? RoleManager }
     val screenerSupported = remember(roleManager) { CallShieldPermissions.isCallScreeningRoleAvailable(roleManager) }
     var runtimePermissionsGranted by remember(context) {
-        mutableStateOf(CallShieldPermissions.hasOnboardingRuntimePermissions(context))
+        // Setup asks for the Phone permission too, but only the core grants gate
+        // this step: Phone is Recommended, and denying it used to strand setup.
+        mutableStateOf(CallShieldPermissions.hasCorePermissions(context))
     }
     var notificationsGranted by remember(context) {
         mutableStateOf(CallShieldPermissions.hasNotificationPermission(context))
@@ -154,7 +163,7 @@ fun OnboardingScreen(
     val scope = rememberCoroutineScope()
 
     fun refreshReadiness() {
-        runtimePermissionsGranted = CallShieldPermissions.hasOnboardingRuntimePermissions(context)
+        runtimePermissionsGranted = CallShieldPermissions.hasCorePermissions(context)
         notificationsGranted = CallShieldPermissions.hasNotificationPermission(context)
         overlayGranted = CallShieldPermissions.canDrawOverlays(context)
         notificationAccessGranted = CallShieldPermissions.hasNotificationListenerAccess(context)
@@ -165,7 +174,7 @@ fun OnboardingScreen(
         rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
             refreshReadiness()
             val activity = context as? Activity
-            val missing = CallShieldPermissions.missingOnboardingRuntimePermissions(context)
+            val missing = CallShieldPermissions.missingCorePermissions(context)
             runtimePermissionsBlocked =
                 missing.isNotEmpty() &&
                 runtimePermissionRequestAttempts >= 2 &&
@@ -284,6 +293,7 @@ fun OnboardingScreen(
                 onFailure = ::reportLaunchFailure,
             )
         },
+        reviewing = reviewing,
     )
 }
 
@@ -301,6 +311,8 @@ internal fun OnboardingScreenContent(
     runtimePermissionsBlocked: Boolean = false,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
     onOpenAppInfo: () -> Unit = {},
+    // A "Run setup again" review can finish without picking a new level.
+    reviewing: Boolean = false,
 ) {
     var currentPage by rememberSaveable { mutableIntStateOf(0) }
     var awaitingStep by rememberSaveable { mutableStateOf<OnboardingSetupStep?>(null) }
@@ -334,7 +346,11 @@ internal fun OnboardingScreenContent(
                 profileApplying = false
                 snackbarHostState.currentSnackbarData?.dismiss()
                 if (snapshot != null &&
-                    snackbarHostState.showSnackbar(profileAppliedMessage, actionLabel = undoLabel) == SnackbarResult.ActionPerformed
+                    snackbarHostState.showSnackbar(
+                        profileAppliedMessage,
+                        actionLabel = undoLabel,
+                        duration = SnackbarDuration.Long,
+                    ) == SnackbarResult.ActionPerformed
                 ) {
                     profileApplying = true
                     onUndoProfile(snapshot)
@@ -365,7 +381,7 @@ internal fun OnboardingScreenContent(
             }
 
             OnboardingSetupStep.Profile -> {
-                if (selectedProfile != null && !profileApplying) onComplete()
+                if ((selectedProfile != null || reviewing) && !profileApplying) onComplete()
             }
 
             else -> {
@@ -424,7 +440,8 @@ internal fun OnboardingScreenContent(
         Row(
             modifier =
                 Modifier.fillMaxWidth().semantics {
-                    progressBarRangeInfo = ProgressBarRangeInfo((currentPage + 1).toFloat(), 1f..onboardingSteps.size.toFloat())
+                    // The range starts at 0 so step 1 of 8 reads as 13%, not 0%.
+                    progressBarRangeInfo = ProgressBarRangeInfo((currentPage + 1).toFloat(), 0f..onboardingSteps.size.toFloat())
                 },
             horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
@@ -434,9 +451,9 @@ internal fun OnboardingScreenContent(
                         Modifier
                             .weight(1f)
                             .height(4.dp)
+                            // Flat: a 4dp corner on a 4dp bar is a pill.
                             .background(
                                 if (index <= currentPage) presentation.accent else MaterialTheme.colorScheme.surfaceContainerHighest,
-                                RoundedCornerShape(4.dp),
                             ),
                 )
             }
@@ -507,12 +524,23 @@ internal fun OnboardingScreenContent(
                 )
             }
         }
+        if (currentStep == OnboardingSetupStep.Profile && selectedProfile == null) {
+            // On first setup Finish waits for a level; say so instead of leaving a
+            // dimmed button to explain itself. A review can finish without one.
+            Text(
+                stringResource(if (reviewing) R.string.onboarding_keep_settings_hint else R.string.onboarding_choose_level_hint),
+                modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp),
+                style = MaterialTheme.typography.bodySmall,
+                color = CatSubtext,
+                textAlign = TextAlign.Center,
+            )
+        }
         PremiumActionButton(
             label = primaryLabel(currentStep, setupState, runtimePermissionsBlocked),
             icon = primaryIcon(currentStep, setupState),
             color = presentation.accent,
             onClick = ::runPrimaryAction,
-            enabled = currentStep != OnboardingSetupStep.Profile || (selectedProfile != null && !profileApplying),
+            enabled = currentStep != OnboardingSetupStep.Profile || ((selectedProfile != null || reviewing) && !profileApplying),
             modifier =
                 Modifier
                     .fillMaxWidth()
