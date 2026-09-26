@@ -12,7 +12,7 @@
 <p align="center">
   <a href="https://github.com/SysAdminDoc/CallShield/releases/latest"><img src="https://img.shields.io/github/v/release/SysAdminDoc/CallShield?style=flat-square&color=a6e3a1" alt="Release"></a>
   <img src="https://img.shields.io/badge/Spam%20Numbers-51%2C357-f38ba8?style=flat-square" alt="51,357 Numbers">
-  <img src="https://img.shields.io/badge/Tests-1544-94e2d5?style=flat-square" alt="1544 Tests">
+  <img src="https://img.shields.io/badge/Tests-1547-94e2d5?style=flat-square" alt="1547 Tests">
   <img src="https://img.shields.io/badge/Android-10%2B-89b4fa?style=flat-square" alt="Android 10+">
   <img src="https://img.shields.io/badge/License-MIT-cba6f7?style=flat-square" alt="MIT License">
   <img src="https://img.shields.io/badge/API%20Keys-None-fab387?style=flat-square" alt="No required API keys">
@@ -145,7 +145,7 @@ SMS-specific layers (append after the shared chain, in their own priority order)
 
 ### Additional Layers
 - **Caller ID Overlay**. Suspicious calls (heuristic score 30-59) can use an explicit, default-off live enrichment option that checks SkipCalls. Clean calls never trigger it
-- **Region & caller-name rules**. Opt-in offline blocking outside the US states, Canadian provinces, area codes (`+1809`) and country calling codes (`+39`) you allow, plus bounded `*`/`?` trust and block patterns for carrier-presented caller names. Explicit number, system, prefix and wildcard blocks, and all allow layers, keep priority
+- **Region & caller-name rules**. Opt-in offline blocking outside the US states, Canadian provinces, area codes (`+1809`) and country calling codes (`+39`) you allow, plus bounded `*`/`?` trust and block patterns for carrier-presented caller names. Explicit number, system, prefix and wildcard blocks, and all allow layers, keep priority. Area codes absent from the pinned NANP table pass through this regional rule
 - **Opt-in message notification screening**. Google/Samsung Messages are enabled by default. AOSP Messages, SMS Organizer, Signal, WhatsApp, WhatsApp Business, Gmail, Outlook, and Thunderbird can be enabled individually. Private-messenger/email matches show a separate warning without removing the original notification.
 - **URL Safety**. Local spam-domain checks stay on-device. Optional URLhaus (abuse.ch) checks are off by default and disclose only the registrable domain
 - **STIR/SHAKEN**. Blocks calls failing carrier caller ID verification (Android 11+)
@@ -214,7 +214,7 @@ by locale and message type without shipping personal data:
 
 ### Number Lookup
 - Instant spam check through all 15+ detection layers, with an animated confidence gauge for probabilistic signals
-- Auto-paste from clipboard, area code lookup (330+ US/CA), haptic feedback
+- Auto-paste from clipboard, area code lookup (453 active geographic NANP codes), haptic feedback
 - Verdict cards lead with the deciding rule or causal signal, show confidence only for
   probabilistic layers, and keep “This is not spam” / “Remove my rule” actions visible
 - On-request SkipCalls spam lookup
@@ -493,12 +493,12 @@ RELEASE_KEY_PASSWORD=...
 ## Testing
 
 ```bash
-./gradlew testDebugUnitTest   # 1544 tests
+./gradlew testDebugUnitTest   # 1547 tests
 ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.sysadmindoc.callshield.platform.TargetSdkBehaviorSmokeTest
 ./gradlew verifyPipelineTests # Cloudflare Worker (node) + data-pipeline and translation checks (python)
 ```
 
-The suite is **1544 total JVM unit tests**, run with Robolectric wherever a screen, a service or the database is involved.
+The suite is **1547 total JVM unit tests**, run with Robolectric wherever a screen, a service or the database is involved.
 
 Two GitHub workflows run without building the app. **Validation** runs the Worker and
 pipeline suites on every push except report-only ones (`run-pipeline-tests.ps1 -CorrectnessOnly`),
@@ -535,7 +535,7 @@ language in [issue #7](https://github.com/SysAdminDoc/CallShield/issues/7).
 | Community API | Cloudflare Workers |
 | URL Safety | Local spam-domain data; optional URLhaus (abuse.ch) |
 | Verification | Local Gradle, lint, and release-artifact checks |
-| Tests | 1544 JVM unit tests (JUnit) |
+| Tests | 1547 JVM unit tests (JUnit) |
 | Strings | 1583 string resources and 38 plural groups (translation-ready) |
 | Accessibility | 100+ content descriptions, 48dp touch targets |
 | Min SDK | 29 (Android 10) |

@@ -1,5 +1,6 @@
 package com.sysadmindoc.callshield.data
 
+import com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup
 import com.sysadmindoc.callshield.data.checker.CallerNameBlockChecker
 import com.sysadmindoc.callshield.data.checker.CallerNameTrustChecker
 import com.sysadmindoc.callshield.data.checker.CheckerPriority
@@ -9,6 +10,9 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.util.logging.Handler
+import java.util.logging.LogRecord
+import java.util.logging.Logger
 
 class RegionRulesTest {
     @Test
@@ -38,6 +42,53 @@ class RegionRulesTest {
         assertFalse(RegionRules.isOutsideAllowedRegions("+12125550123", allowed))
         assertTrue(RegionRules.isOutsideAllowedRegions("+14155550123", allowed))
         assertTrue(RegionRules.isOutsideAllowedRegions("+442071838750", allowed))
+    }
+
+    @Test
+    fun `new active area codes use the pinned NANP region`() {
+        assertEquals("NY", RegionRules.regionCode("+14652340101"))
+        assertEquals("AL", RegionRules.regionCode("+14832340101"))
+        assertEquals("ON", RegionRules.regionCode("+19422340101"))
+        assertEquals("Jacksonville, FL", AreaCodeLookup.lookup("+13245550123"))
+        assertEquals("Roanoke, VA", AreaCodeLookup.lookup("+18265550123"))
+        assertFalse(RegionRules.isOutsideAllowedRegions("+14652340101", setOf("NY")))
+        assertNull(RegionBlockChecker.decidePure("+14652340101", setOf("NY")))
+    }
+
+    @Test
+    fun `shared Canadian area codes allow each covered province or territory`() {
+        assertEquals(setOf("NS", "PE"), AreaCodeLookup.getRegionCodes("+19022340101"))
+        assertEquals(setOf("NT", "YT", "NU"), AreaCodeLookup.getRegionCodes("+18672340101"))
+        assertFalse(RegionRules.isOutsideAllowedRegions("+19022340101", setOf("PE")))
+        assertFalse(RegionRules.isOutsideAllowedRegions("+18672340101", setOf("YT")))
+        assertTrue(RegionRules.isOutsideAllowedRegions("+19022340101", setOf("NY")))
+    }
+
+    @Test
+    fun `unknown NANP area codes do not trigger a regional block`() {
+        assertFalse(AreaCodeLookup.isKnownAreaCode("+19995550123"))
+        assertNull(RegionRules.regionCode("+19995550123"))
+        val messages = mutableListOf<String>()
+        val logger = Logger.getLogger(RegionRules::class.java.name)
+        val handler =
+            object : Handler() {
+                override fun publish(record: LogRecord) {
+                    messages.add(record.message)
+                }
+
+                override fun flush() = Unit
+
+                override fun close() = Unit
+            }
+        logger.addHandler(handler)
+        try {
+            assertFalse(RegionRules.isOutsideAllowedRegions("+19995550123", setOf("NY")))
+            assertNull(RegionBlockChecker.decidePure("+19995550123", setOf("NY")))
+            assertTrue(messages.any { it.contains("Unknown NANP area code 999") })
+        } finally {
+            logger.removeHandler(handler)
+        }
+        assertTrue(RegionRules.isOutsideAllowedRegions("+14155550123", setOf("NY")))
     }
 
     @Test

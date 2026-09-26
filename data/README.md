@@ -18,6 +18,10 @@ This directory contains the spam number database that the CallShield app pulls f
 - `merged_report_ids.json`: Ids of reports merged in the last 14 days, so a report the app resends after its original was merged counts once. The ids are random and already appear in the report files
 - `community_pending.json`: Community-only reports waiting for the two-day and reporter-bucket promotion threshold
 - `reports/*.json`: Pending community reports. `reports/rejected/` holds quarantined files
+- `nanp-area-codes.csv`: Pinned NANP registry snapshot used to generate the app's area-code table
+- `area-code-city-labels.csv`: Existing on-device city labels retained where the pinned region agrees
+
+The area-code snapshot comes from [NumberResearch.org's NANP dataset](https://github.com/infinitumcom/nanp-data/tree/9d909f4d47d59d8eec6dbdaa66257682670f3e4c), built from the NANPA file dated September 17, 2026. The dataset is licensed [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/); underlying allocation data is from NANPA and CNA. It describes initial assignments, not the current carrier or location of a ported number. Run `python scripts/generate_area_codes.py` after changing a city label, then use `--check` to verify the generated table. The generator rejects changes to the pinned upstream snapshot until its hash is updated deliberately.
 
 ## Consuming this data
 

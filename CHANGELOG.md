@@ -4,6 +4,9 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+- Region Rules now recognizes all 453 active geographic area codes in a pinned
+  NANP registry snapshot, including new 465, 483 and 942. Unknown codes no
+  longer trigger an out-of-region block. The 324 and 826 city labels are fixed.
 - SkipCalls answers marked "unknown" or "other" now read "Reported, no
   category" and leave the caller ID warning unchanged. Only its named spam
   categories can flag a caller. The number page shows the neutral result too.

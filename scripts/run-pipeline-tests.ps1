@@ -89,6 +89,10 @@ if ($python) {
         if ($LASTEXITCODE -ne 0) { $failures += $test }
         $ran++
     }
+    Write-Host 'Checking generated NANP area codes...'
+    & $python (Join-Path $PSScriptRoot 'generate_area_codes.py') --check
+    if ($LASTEXITCODE -ne 0) { $failures += 'generate_area_codes.py --check' }
+    $ran++
 } else {
     Write-Warning 'python not found on PATH - skipping Python pipeline tests.'
 }

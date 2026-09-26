@@ -5,9 +5,11 @@ import com.sysadmindoc.callshield.util.countryCallingCodeOf
 import com.sysadmindoc.callshield.util.filterAsciiDigits
 import com.sysadmindoc.callshield.util.isAsciiDigit
 import java.util.Locale
+import java.util.logging.Logger
 
 /** Pure, bounded matching helpers for the regional and carrier-name rules. */
 object RegionRules {
+    private val logger = Logger.getLogger(RegionRules::class.java.name)
     const val MAX_ALLOWED_REGIONS = 64
     const val MAX_NAME_PATTERNS = 30
     const val MAX_NAME_PATTERN_LENGTH = 60
@@ -70,7 +72,14 @@ object RegionRules {
             "WV",
             "WI",
             "WY",
+            "AS",
+            "GU",
+            "MP",
+            "NU",
+            "PE",
+            "PR",
             "VI",
+            "YT",
             "AB",
             "BC",
             "MB",
@@ -149,8 +158,17 @@ object RegionRules {
     ): Boolean {
         val normalized = normalizeRegionCodes(allowedRegions)
         if (normalized.isEmpty()) return false
-        val nanpRegion = regionCode(number, homeRegionIso)
-        if (nanpRegion != null && nanpRegion in normalized) return false
+        val nanpAreaCode =
+            if (number.startsWith("+1") || (!number.startsWith("+") && homeUsesNanp(homeRegionIso))) {
+                AreaCodeLookup.getAreaCode(number)
+            } else {
+                null
+            }
+        if (nanpAreaCode != null && !AreaCodeLookup.isKnownAreaCode(number)) {
+            logger.warning("Unknown NANP area code $nanpAreaCode; skipping regional block")
+            return false
+        }
+        if (nanpAreaCode != null && AreaCodeLookup.getRegionCodes(number).any { it in normalized }) return false
         val international = internationalForm(number, homeRegionIso) ?: return true
         return normalized.none { it.startsWith("+") && international.startsWith(it) }
     }
