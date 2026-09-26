@@ -402,11 +402,12 @@ def main(argv: list[str] | None = None):
             pending.pop(number, None)
             continue
         state = pending.setdefault(number, legacy_community_state(entry, today))
-        if state["published"]:
+        if state["published"] and not any(event["bucket"] for event in state["events"]):
             continue
         if community_has_quorum(state):
             state["published"] = True
         else:
+            state["published"] = False
             del existing[number]
             demoted += 1
 
@@ -507,6 +508,10 @@ def main(argv: list[str] | None = None):
                         if state:
                             state["events"].append({"key": key, "day": reported_at, "bucket": bucket, "count": 1})
                             state["entry"] = entry
+                            if bucket and state["published"] and not community_has_quorum(state):
+                                state["published"] = False
+                                del existing[number]
+                                demoted += 1
                         updated += 1
                     else:
                         if state is None:

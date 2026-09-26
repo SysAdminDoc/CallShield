@@ -228,6 +228,7 @@ def assert_community_promotion(data_dir: Path) -> None:
     legacy_number = "+12122340671"
     bucket_number = "+12122340672"
     old_number = "+12122340673"
+    mixed_batch_number = "+12122340674"
 
     write_report(data_dir, "first.json", legacy_number, None, TIMES[0])
     run_drain(data_dir)
@@ -242,6 +243,22 @@ def assert_community_promotion(data_dir: Path) -> None:
     write_report(data_dir, "next_day.json", legacy_number, None, f"{TODAY}T00:00:00+00:00")
     run_drain(data_dir)
     assert reports_for(data_dir, legacy_number) == 3, "two UTC days did not promote bucketless reports"
+
+    write_report(data_dir, "legacy_bucket_first.json", legacy_number, BUCKETS[0], f"{TODAY}T00:01:00+00:00")
+    run_drain(data_dir)
+    assert reports_for(data_dir, legacy_number) == 0, "one bucket left a bucketless promotion shipped"
+    write_report(data_dir, "legacy_bucket_second.json", legacy_number, BUCKETS[1], f"{TODAY}T00:02:00+00:00")
+    run_drain(data_dir)
+    assert reports_for(data_dir, legacy_number) == 0, "two buckets restored a demoted row"
+    write_report(data_dir, "legacy_bucket_third.json", legacy_number, BUCKETS[2], f"{TODAY}T00:03:00+00:00")
+    run_drain(data_dir)
+    assert reports_for(data_dir, legacy_number) == 6, "three buckets did not restore a demoted row"
+
+    write_report(data_dir, "mixed_batch_first.json", mixed_batch_number, None, TIMES[0])
+    write_report(data_dir, "mixed_batch_second.json", mixed_batch_number, None, f"{TODAY}T00:00:00+00:00")
+    write_report(data_dir, "mixed_batch_bucket.json", mixed_batch_number, BUCKETS[0], f"{TODAY}T00:02:00+00:00")
+    run_drain(data_dir)
+    assert reports_for(data_dir, mixed_batch_number) == 0, "a mixed same-drain batch shipped with one bucket"
 
     write_report(data_dir, "bucket_first.json", bucket_number, BUCKETS[0], TIMES[0])
     run_drain(data_dir)
@@ -264,7 +281,7 @@ def assert_community_promotion(data_dir: Path) -> None:
     write_json(data_dir / "spam_numbers.json", database)
     run_script("merge_community_reports.py", data_dir)
     assert reports_for(data_dir, old_number) == 0, "a legacy single-report row stayed in the shipped database"
-    assert reports_for(data_dir, legacy_number) == 3, "a promoted row was demoted on the next merge"
+    assert reports_for(data_dir, legacy_number) == 6, "a promoted row was demoted on the next merge"
 
     pending_path = data_dir / "community_pending.json"
     pending = json.loads(pending_path.read_text(encoding="utf-8"))

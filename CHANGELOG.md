@@ -6,7 +6,8 @@ All notable changes to CallShield will be documented in this file.
 
 - New community-only numbers now wait for reports on two UTC days before they
   enter the shipped database. Reports with reporter buckets also need three
-  distinct buckets. Pending reports expire after 30 days. The first pass held
+  distinct buckets, even when bucketed reports arrive after an earlier
+  bucketless promotion. Pending reports expire after 30 days. The first pass held
   449 older, uncorroborated rows, leaving 51,357 numbers in feed v47.
 - Setup now finishes once the required phone, message and call screening access
   is ready. You can skip notifications, caller ID overlay and notification
