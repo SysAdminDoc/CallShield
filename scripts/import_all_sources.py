@@ -76,6 +76,10 @@ FTC_PAGE_SIZE = 50
 # arrived between runs beyond the budget is skipped.
 FTC_DEMO_KEY = "DEMO_KEY"
 FTC_DEMO_KEY_REQUEST_BUDGET = 8
+# The budget is shared with anything else on this address, so a keyless run
+# also stops once X-Ratelimit-Remaining says this many are left. A run that
+# ran into a 429 instead recorded nothing and read as a failed import.
+FTC_DEMO_KEY_SPARE_REQUESTS = 2
 FCC_PAGE_SIZE = 5000
 SOURCE_CURSOR_SCHEMA_VERSION = 1
 RETRYABLE_STATUS_CODES = {403, 429}
@@ -451,6 +455,10 @@ def fetch_ftc(
         if len(records) < page_size:
             break
         if records_fetched >= max_records:
+            break
+        remaining = str((getattr(response, "headers", None) or {}).get("X-Ratelimit-Remaining", "")).strip()
+        if key == FTC_DEMO_KEY and remaining.isdigit() and int(remaining) <= FTC_DEMO_KEY_SPARE_REQUESTS:
+            print(f"  DEMO_KEY has {remaining} requests left today; stopping at {records_fetched:,} records")
             break
         time.sleep(0.5)
 

@@ -35,6 +35,9 @@ All notable changes to CallShield will be documented in this file.
 - The report Worker's code now limits each /48 network to 20 reports a minute
   and the whole service to 30, and refuses an oversized upload before reading
   all of it. This takes effect at its next deploy.
+- A keyless FTC import stops before the shared daily request allowance runs out
+  and keeps what it fetched. Running into the limit used to record the whole
+  import as failed.
 - Calls from outside North America no longer get a US or Caribbean place name
   in the caller-ID popup. A +65 call used to read as Birmingham, AL, and Number
   details offered to block that US area code. On a phone outside North America,

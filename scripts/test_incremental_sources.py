@@ -23,9 +23,10 @@ def load_importer():
 
 
 class FakeResponse:
-    def __init__(self, payload, status_code=200):
+    def __init__(self, payload, status_code=200, headers=None):
         self.payload = payload
         self.status_code = status_code
+        self.headers = headers or {}
         self.text = json.dumps(payload)
 
     def raise_for_status(self):
@@ -256,6 +257,44 @@ def test_keyless_ftc_run_reads_the_newest_window():
         assert sorted(row["number"] for row in result) == ["+12125561300", "+12125561301", "+12125561302"]
         assert result.cursor == {"timestamp": "2026-09-26T09:00:00Z", "id": "ftc-9"}, result.cursor
         assert module._fetch_stats(result, "2026-09-26T10:00:00+00:00")["newest_record_date"] == "2026-09-26"
+    finally:
+        module.requests.get = original_get
+        module.time.sleep = original_sleep
+
+
+def test_keyless_ftc_run_stops_before_the_shared_budget_runs_out():
+    # Something else on this address had used four of DEMO_KEY's ten requests,
+    # so the eight-page run hit a 429 and recorded a failed import.
+    module = load_importer()
+    original_get = module.requests.get
+    original_sleep = module.time.sleep
+    remaining = iter(range(5, -1, -1))
+    requests_seen = []
+    try:
+        def fake_get(url, **kwargs):
+            params = kwargs["params"]
+            requests_seen.append(params)
+            first = params["offset"]
+            records = [
+                {"id": f"ftc-{first + n}", "attributes": {"created-date": "2026-09-26T08:00:00Z",
+                                                          "company-phone-number": f"+1212557{(first + n) % 10000:04d}"}}
+                for n in range(params["items_per_page"])
+            ]
+            return FakeResponse({"data": records}, headers={"X-Ratelimit-Remaining": str(next(remaining))})
+
+        module.requests.get = fake_get
+        module.time.sleep = lambda _seconds: None
+        result = module.fetch_ftc(max_records=5000, api_key=module.FTC_DEMO_KEY)
+
+        assert result.complete, result.error
+        assert len(requests_seen) == 4, len(requests_seen)
+        assert len(result) == 4 * module.FTC_PAGE_SIZE
+
+        # A key of its own isn't stopped by the shared budget's header.
+        remaining = iter(range(5, -1, -1))
+        requests_seen.clear()
+        module.fetch_ftc(max_records=300, api_key="a-key-of-its-own")
+        assert len(requests_seen) == 6, len(requests_seen)
     finally:
         module.requests.get = original_get
         module.time.sleep = original_sleep
@@ -547,6 +586,7 @@ def main():
     test_fcc_resumes_by_arrival_so_back_dated_batches_land()
     test_incremental_window_retries_and_advances_cursor()
     test_keyless_ftc_run_reads_the_newest_window()
+    test_keyless_ftc_run_stops_before_the_shared_budget_runs_out()
     test_cursors_and_snapshot_are_durable_and_attributed()
     test_source_freshness_keeps_what_a_run_did_not_fetch()
     test_merge_writes_its_records_beside_the_database()
