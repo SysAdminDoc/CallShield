@@ -7,6 +7,8 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
@@ -309,6 +311,38 @@ fun DashboardScreen(
         }
     val allowContacts = rememberAllowContacts { permissionRefreshTick++ }
     val corePermissionsReady = missingPerms.isEmpty()
+    // The Enable buttons do what they name, as setup's do. They used to open
+    // Settings, which lands on Basic, and Basic has no overlay control at all.
+    // Review permissions still opens Settings, where each missing item has a
+    // Grant or Enable button.
+    val screeningRoleLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { permissionRefreshTick++ }
+    val notificationPermissionLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { permissionRefreshTick++ }
+    val enableCallScreening: () -> Unit = {
+        val intent = roleManager?.createRequestRoleIntent(RoleManager.ROLE_CALL_SCREENING)
+        try {
+            if (intent != null) screeningRoleLauncher.launch(intent) else openPermissions()
+        } catch (_: Exception) {
+            openPermissions()
+        }
+    }
+    val enableOverlay: () -> Unit = {
+        context.startActivitySafely(
+            Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${context.packageName}")),
+            onFailure = { openAppSettings(context) },
+        )
+    }
+    val enableNotifications: () -> Unit = {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        } else {
+            context.startActivitySafely(
+                Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName),
+                onFailure = { openAppSettings(context) },
+            )
+        }
+    }
     val dashboardStatus =
         remember(
             blockCallsEnabled,
@@ -412,7 +446,7 @@ fun DashboardScreen(
                 HeroAction(
                     label = stringResource(R.string.dashboard_enable_call_screening),
                     icon = Icons.AutoMirrored.Filled.PhoneCallback,
-                    onClick = openPermissions,
+                    onClick = enableCallScreening,
                 )
             }
 
@@ -706,9 +740,9 @@ fun DashboardScreen(
                 hapticTick(context)
                 viewModel.sync()
             },
-            onEnableCallScreener = openPermissions,
-            onEnableOverlay = openPermissions,
-            onEnableNotifications = openPermissions,
+            onEnableCallScreener = enableCallScreening,
+            onEnableOverlay = enableOverlay,
+            onEnableNotifications = enableNotifications,
         )
 
         if (backgroundExecutionRisk != BackgroundExecutionRisk.Ok && !backgroundWarningDismissed) {

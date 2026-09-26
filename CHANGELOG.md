@@ -35,6 +35,10 @@ All notable changes to CallShield will be documented in this file.
   longer switches off the "call screening is off" warning.
 - Denying the Phone permission during setup no longer stops setup from
   finishing. Phone access is recommended, not required.
+- Home's Enable call screening, Enable overlay and Enable notifications buttons
+  ask for that permission directly. They opened Settings, which could land on a
+  page without the control. While a required permission is missing, Settings
+  shows Grant and Enable buttons on Basic at any text size, not just labels.
 - Choosing Light in Settings works again. It had quietly stayed on AMOLED. The
   update keeps whichever theme each phone was showing.
 - Protection test's ML spam check no longer fails on every phone. Its sample

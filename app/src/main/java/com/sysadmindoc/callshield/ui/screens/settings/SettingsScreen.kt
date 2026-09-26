@@ -409,7 +409,10 @@ fun SettingsScreen(viewModel: MainViewModel) {
             )
         }
 
-        if (showAdvanced) {
+        // Home's Review permissions opens Settings, which starts on Basic. While
+        // anything required is missing, the access controls show there too
+        // instead of hiding behind Advanced.
+        if (showAdvanced || setupReadyCount < setupTotal) {
             Column(modifier = Modifier.fillMaxWidth()) {
                 val setupSummary =
                     if (setupReadyCount == setupTotal) {
@@ -452,7 +455,9 @@ fun SettingsScreen(viewModel: MainViewModel) {
                     onClick = viewModel::restartOnboarding,
                 )
                 Spacer(Modifier.height(12.dp))
-                if (LocalDensity.current.fontScale < 1.5f) {
+                // The side-by-side summary is only labels, so anything missing gets
+                // the rows with Grant and Enable buttons instead, at any text size.
+                if (LocalDensity.current.fontScale < 1.5f && setupReadyCount == setupTotal) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
