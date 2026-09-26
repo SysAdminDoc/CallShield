@@ -8,10 +8,10 @@ import argparse
 import json
 import os
 from collections import Counter
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
-from phone_normalization import is_plausible_number, validated_report_number
 
+from phone_normalization import is_plausible_number, validated_report_number
 from pipeline_io import (
     atomic_write_json,
     report_queue_digest,
@@ -33,6 +33,8 @@ REPORTS_DIR = Path(os.environ.get("CALLSHIELD_REPORTS_DIR", DATA_DIR / "reports"
 NOT_SPAM_REVIEW_FILE = DATA_DIR / "not_spam_review.json"
 SOURCE_SNAPSHOT_FILE = DATA_DIR / "source-snapshot.json"
 MERGED_IDS_FILE = DATA_DIR / "merged_report_ids.json"
+COMMUNITY_PENDING_FILE = DATA_DIR / "community_pending.json"
+COMMUNITY_PENDING_DAYS = 30
 # How long a merged report's id is remembered. The app resends a report whose
 # answer it never saw, and a resend that lands after its original was merged
 # and deleted is invisible to the queue.
@@ -79,6 +81,72 @@ def _is_valid_day(day: str, today: str) -> bool:
     return day <= today
 
 
+def load_community_pending(today: str) -> dict[str, dict]:
+    """Read the promotion evidence, expiring reports older than 30 UTC days."""
+    if not COMMUNITY_PENDING_FILE.exists():
+        return {}
+    try:
+        payload = json.loads(COMMUNITY_PENDING_FILE.read_text(encoding="utf-8"))
+        if payload["schema_version"] != 1 or not isinstance(payload["numbers"], dict):
+            raise ValueError("unsupported pending ledger")
+        cutoff = (date.fromisoformat(today) - timedelta(days=COMMUNITY_PENDING_DAYS)).isoformat()
+        pending = {}
+        for number, state in payload["numbers"].items():
+            if (
+                not is_plausible_number(number)
+                or not isinstance(state, dict)
+                or not isinstance(state.get("published"), bool)
+                or not isinstance(state.get("entry"), dict)
+                or not isinstance(state.get("events"), list)
+            ):
+                raise ValueError(f"invalid pending entry for {number}")
+            events = []
+            for event in state["events"]:
+                if (
+                    not isinstance(event, dict)
+                    or not isinstance(event.get("key"), str)
+                    or not event["key"]
+                    or not _is_valid_day(event.get("day"), today)
+                    or not isinstance(event.get("bucket"), str)
+                    or (event["bucket"] and validated_reporter_bucket(event["bucket"]) != event["bucket"])
+                    or type(event.get("count")) is not int
+                    or event["count"] < 1
+                ):
+                    raise ValueError(f"invalid pending event for {number}")
+                if event["day"] >= cutoff:
+                    events.append(event)
+            if events or state["published"]:
+                pending[number] = {**state, "events": events}
+        return pending
+    except (OSError, ValueError, KeyError, TypeError) as error:
+        raise SystemExit(f"{COMMUNITY_PENDING_FILE.name} can't be read ({error}). Fix or restore it before merging.") from error
+
+
+def legacy_community_state(entry: dict, today: str) -> dict:
+    """Recover only the report days a pre-ledger row can actually prove."""
+    reports = max(0, int(entry.get("reports", 0)))
+    first, last = entry.get("first_seen"), entry.get("last_seen")
+    events = []
+    if reports and _is_valid_day(first, today) and _is_valid_day(last, today):
+        if first != last and reports > 1:
+            events.extend([
+                {"key": "legacy:first", "day": first, "bucket": "", "count": 1},
+                {"key": "legacy:last", "day": last, "bucket": "", "count": reports - 1},
+            ])
+        else:
+            events.append({"key": "legacy:last", "day": last, "bucket": "", "count": reports})
+    cutoff = (date.fromisoformat(today) - timedelta(days=COMMUNITY_PENDING_DAYS)).isoformat()
+    events = [event for event in events if event["day"] >= cutoff]
+    return {"published": False, "entry": entry, "events": events}
+
+
+def community_has_quorum(state: dict) -> bool:
+    events = state["events"]
+    days = {event["day"] for event in events}
+    buckets = {event["bucket"] for event in events if event["bucket"]}
+    return len(days) >= 2 and (not buckets or len(buckets) >= 3)
+
+
 def remember_merged_report_ids(merged: dict[str, str], counted: set[str], today: str) -> None:
     """Add this run's ids and drop those past MERGED_ID_RETENTION_DAYS."""
     cutoff = (datetime.strptime(today, "%Y-%m-%d") - timedelta(days=MERGED_ID_RETENTION_DAYS)).strftime("%Y-%m-%d")
@@ -108,6 +176,8 @@ def canonical_source_ids(entry: dict) -> set[str]:
             source_ids.add("community_reports" if source == COMMUNITY_SOURCE else source)
     for evidence in entry.get("evidence", []):
         if isinstance(evidence, dict) and evidence.get("source_id"):
+            if evidence["source_id"] == "github_database" and evidence.get("evidence_type") == "aggregate_database":
+                continue  # This is a snapshot of our own database, not corroboration.
             source_ids.add(str(evidence["source_id"]))
     return source_ids
 
@@ -217,28 +287,13 @@ def main(argv: list[str] | None = None):
     args = parser.parse_args(argv)
     print("=== Merge Community Reports ===\n")
 
-    if not REPORTS_DIR.exists() and not args.apply_reviewed_corrections:
-        print("No reports directory found.")
+    if not REPORTS_DIR.exists() and not DB_FILE.exists():
+        print("No reports directory or database found.")
         return
 
     report_files = list(REPORTS_DIR.glob("*.json")) if REPORTS_DIR.exists() else []
-    if not report_files and not args.apply_reviewed_corrections:
-        if DB_FILE.exists():
-            try:
-                database = json.loads(DB_FILE.read_text(encoding="utf-8"))
-                rejected_dir = REPORTS_DIR / "rejected"
-                update_source_health_snapshot(
-                    database,
-                    load_review_candidates(),
-                    quarantined_count=len(list(rejected_dir.glob("*.json")))
-                    if rejected_dir.exists()
-                    else 0,
-                    quarantined_this_run=0,
-                )
-            except (OSError, ValueError):
-                pass
-        print("No pending reports.")
-        return
+    if not report_files:
+        print("No queued reports; checking community evidence.")
 
     if report_files:
         report_digest = report_queue_digest(REPORTS_DIR)
@@ -265,7 +320,9 @@ def main(argv: list[str] | None = None):
             "prefixes": [],
         }
 
-    today = datetime.now().strftime("%Y-%m-%d")
+    today = datetime.now(timezone.utc).date().isoformat()
+    pending_cutoff = (date.fromisoformat(today) - timedelta(days=COMMUNITY_PENDING_DAYS)).isoformat()
+    pending = load_community_pending(today)
     sanitize_dates(db, today)
 
     # Self-heal: drop fictional/implausible rows that older bulk imports let in
@@ -339,6 +396,20 @@ def main(argv: list[str] | None = None):
     burst_duplicates = find_burst_duplicates(burst_candidates)
 
     existing = {n["number"]: n for n in db["numbers"]}
+    demoted = 0
+    for number, entry in list(existing.items()):
+        if canonical_source_ids(entry) != {"community_reports"}:
+            pending.pop(number, None)
+            continue
+        state = pending.setdefault(number, legacy_community_state(entry, today))
+        if state["published"]:
+            continue
+        if community_has_quorum(state):
+            state["published"] = True
+        else:
+            del existing[number]
+            demoted += 1
+
     added = 0
     updated = 0
     skipped = 0
@@ -353,6 +424,7 @@ def main(argv: list[str] | None = None):
     processed_files = []
     counted_ids: set[str] = set()
     already_merged = 0
+    expired_reports = 0
     not_spam_votes: dict[str, set[str]] = {}
     rejected_dir = REPORTS_DIR / "rejected"
 
@@ -395,10 +467,9 @@ def main(argv: list[str] | None = None):
             report_id = validated_report_id(report.get("report_id"))
 
             spam_type = report.get("type", "unknown")
-            reported_raw = report.get("reported_at")
-            if not isinstance(reported_raw, str) or not reported_raw:
-                reported_raw = today
-            reported_at = reported_raw[:10]
+            parsed_at = parse_reported_at(report.get("reported_at"))
+            reported_at = parsed_at.astimezone(timezone.utc).date().isoformat() if parsed_at else today
+            reported_at = min(reported_at, today)
 
             # Handle false-positive reports: collect one vote per reporter for review.
             # SECURITY: anonymous not_spam votes may only weaken COMMUNITY rows.
@@ -415,31 +486,53 @@ def main(argv: list[str] | None = None):
                     # provenance was not, and reporting both under one
                     # "implausible" total hides a stale Worker.
                     unattributed_votes += 1
-            elif number in existing:
-                existing[number]["reports"] += 1
-                sources = set(existing[number].get("sources", []))
-                sources.add(COMMUNITY_SOURCE)
-                existing[number]["sources"] = sorted(sources)
-                if reported_at > existing[number].get("last_seen", ""):
-                    existing[number]["last_seen"] = reported_at
-                updated += 1
             else:
-                existing[number] = {
-                    "number": number,
-                    "type": spam_type,
-                    "reports": 1,
-                    "first_seen": reported_at,
-                    "last_seen": reported_at,
-                    "description": COMMUNITY_DESCRIPTION,
-                    "sources": [COMMUNITY_SOURCE],
-                }
-                added += 1
-
-            # Record the id only after the database was changed so a
-            # not_spam vote or unattributed report that got skipped
-            # above is not remembered as merged.
-            if report_id:
-                counted_ids.add(report_id)
+                if reported_at < pending_cutoff:
+                    expired_reports += 1
+                else:
+                    bucket = validated_reporter_bucket(report.get("reporter_bucket"))
+                    key = f"id:{report_id}" if report_id else f"file:{report_file.name}"
+                    state = pending.get(number)
+                    if state and (
+                        any(event["key"] == key for event in state["events"])
+                        or (bucket and any(event["bucket"] == bucket and event["day"] == reported_at for event in state["events"]))
+                    ):
+                        collapsed += 1
+                    elif number in existing:
+                        entry = existing[number]
+                        entry["reports"] += 1
+                        entry["sources"] = sorted(set(entry.get("sources", [])) | {COMMUNITY_SOURCE})
+                        if reported_at > entry.get("last_seen", ""):
+                            entry["last_seen"] = reported_at
+                        if state:
+                            state["events"].append({"key": key, "day": reported_at, "bucket": bucket, "count": 1})
+                            state["entry"] = entry
+                        updated += 1
+                    else:
+                        if state is None:
+                            entry = {
+                                "number": number,
+                                "type": spam_type,
+                                "reports": 0,
+                                "first_seen": reported_at,
+                                "last_seen": reported_at,
+                                "description": COMMUNITY_DESCRIPTION,
+                                "sources": [COMMUNITY_SOURCE],
+                            }
+                            state = {"published": False, "entry": entry, "events": []}
+                            pending[number] = state
+                        state["events"].append({"key": key, "day": reported_at, "bucket": bucket, "count": 1})
+                        if community_has_quorum(state):
+                            days = [event["day"] for event in state["events"]]
+                            entry = state["entry"]
+                            entry["reports"] = sum(event["count"] for event in state["events"])
+                            entry["first_seen"] = min(days)
+                            entry["last_seen"] = max(days)
+                            existing[number] = entry
+                            state["published"] = True
+                            added += 1
+                if report_id:
+                    counted_ids.add(report_id)
 
             processed_files.append(report_file)
 
@@ -484,6 +577,11 @@ def main(argv: list[str] | None = None):
     if args.apply_reviewed_corrections:
         decayed, removed = apply_approved_corrections(existing, review_candidates, today)
 
+    pending = {
+        number: state for number, state in pending.items()
+        if (state["published"] and number in existing) or (not state["published"] and state["events"])
+    }
+
     if review_candidates and (
         review_candidates != prior_candidates or args.apply_reviewed_corrections
     ):
@@ -507,6 +605,7 @@ def main(argv: list[str] | None = None):
         or provenance_migrated > 0
         or decayed > 0
         or removed > 0
+        or demoted > 0
     )
     if changed:
         db["version"] += 1
@@ -515,6 +614,11 @@ def main(argv: list[str] | None = None):
         atomic_write_json(DB_FILE, db)
     else:
         print("No changes — database version left at", db["version"])
+
+    atomic_write_json(
+        COMMUNITY_PENDING_FILE,
+        {"schema_version": 1, "retention_days": COMMUNITY_PENDING_DAYS, "numbers": dict(sorted(pending.items()))},
+    )
 
     # Before the files go, so a resend arriving later is still recognised.
     remember_merged_report_ids(merged_ids, counted_ids, today)
@@ -548,6 +652,7 @@ def main(argv: list[str] | None = None):
         f"{collapsed} collapsed (duplicate), {already_merged} already merged in an earlier drain, "
         f"{unattributed_votes} not_spam votes dropped "
         f"(no reporter identity), {rejected} quarantined, "
+        f"{expired_reports} expired reports, {demoted} uncorroborated rows held, "
         f"{decayed} corrections decayed, {removed} rows removed"
     )
     print(f"Total database: {len(db['numbers'])} numbers")

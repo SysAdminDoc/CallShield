@@ -4,6 +4,10 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+- New community-only numbers now wait for reports on two UTC days before they
+  enter the shipped database. Reports with reporter buckets also need three
+  distinct buckets. Pending reports expire after 30 days. The first pass held
+  449 older, uncorroborated rows, leaving 51,357 numbers in feed v47.
 - Setup now finishes once the required phone, message and call screening access
   is ready. You can skip notifications, caller ID overlay and notification
   access, see what each choice disables, and return through Settings later.
@@ -12,7 +16,7 @@ All notable changes to CallShield will be documented in this file.
   uses the newest complaint date so an empty fetch can't hide a stalled feed.
   Release checks now recognise the importer's success and failure statuses.
 - A catch-up import processed 500,000 FCC complaints and refreshed evidence on
-  7,638 existing numbers. The database still holds 51,806 numbers (feed v46).
+  7,638 existing numbers. That import left 51,806 numbers in feed v46.
 
 ## v1.8.1 (2026-09-25)
 

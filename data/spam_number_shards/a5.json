@@ -682,32 +682,6 @@
       ]
     },
     {
-      "number": "+13059004895",
-      "type": "spam",
-      "reports": 1,
-      "first_seen": "2026-09-23",
-      "last_seen": "2026-09-23",
-      "description": "Community reported",
-      "sources": [
-        "community"
-      ],
-      "evidence": [
-        {
-          "source_id": "github_database",
-          "evidence_type": "aggregate_database",
-          "license": "CallShield database terms",
-          "attribution": "CallShield maintained spam database",
-          "first_seen": "2026-09-23",
-          "last_seen": "2026-09-23",
-          "retrieved_at": "2026-09-25T00:00:00+00:00",
-          "geography": "global",
-          "confidence_tier": "unverified",
-          "parser_version": "legacy-v1",
-          "expires_at_epoch_ms": 1792886400000
-        }
-      ]
-    },
-    {
       "number": "+13072247007",
       "type": "robocall",
       "reports": 4,
@@ -5571,32 +5545,6 @@
           "attribution": "CallShield maintained spam database",
           "first_seen": "2015-10-19",
           "last_seen": "2016-05-11",
-          "retrieved_at": "2026-09-23T00:00:00+00:00",
-          "geography": "global",
-          "confidence_tier": "unverified",
-          "parser_version": "legacy-v1",
-          "expires_at_epoch_ms": 1792713600000
-        }
-      ]
-    },
-    {
-      "number": "+19805953352",
-      "type": "spam",
-      "reports": 2,
-      "first_seen": "2026-09-03",
-      "last_seen": "2026-09-03",
-      "description": "Community reported",
-      "sources": [
-        "community"
-      ],
-      "evidence": [
-        {
-          "source_id": "github_database",
-          "evidence_type": "aggregate_database",
-          "license": "CallShield database terms",
-          "attribution": "CallShield maintained spam database",
-          "first_seen": "2026-09-03",
-          "last_seen": "2026-09-03",
           "retrieved_at": "2026-09-23T00:00:00+00:00",
           "geography": "global",
           "confidence_tier": "unverified",

@@ -1031,32 +1031,6 @@
       ]
     },
     {
-      "number": "+13054196848",
-      "type": "spam",
-      "reports": 1,
-      "first_seen": "2026-09-23",
-      "last_seen": "2026-09-23",
-      "description": "Community reported",
-      "sources": [
-        "community"
-      ],
-      "evidence": [
-        {
-          "source_id": "github_database",
-          "evidence_type": "aggregate_database",
-          "license": "CallShield database terms",
-          "attribution": "CallShield maintained spam database",
-          "first_seen": "2026-09-23",
-          "last_seen": "2026-09-23",
-          "retrieved_at": "2026-09-25T00:00:00+00:00",
-          "geography": "global",
-          "confidence_tier": "unverified",
-          "parser_version": "legacy-v1",
-          "expires_at_epoch_ms": 1792886400000
-        }
-      ]
-    },
-    {
       "number": "+13055605953",
       "type": "robocall",
       "reports": 3,
@@ -3697,32 +3671,6 @@
       ]
     },
     {
-      "number": "+17785804001",
-      "type": "unknown",
-      "reports": 3,
-      "first_seen": "2026-07-13",
-      "last_seen": "2026-07-13",
-      "description": "Community reported",
-      "sources": [
-        "community"
-      ],
-      "evidence": [
-        {
-          "source_id": "github_database",
-          "evidence_type": "aggregate_database",
-          "license": "CallShield database terms",
-          "attribution": "CallShield maintained spam database",
-          "first_seen": "2026-07-13",
-          "last_seen": "2026-07-13",
-          "retrieved_at": "2026-09-23T00:00:00+00:00",
-          "geography": "global",
-          "confidence_tier": "unverified",
-          "parser_version": "legacy-v1",
-          "expires_at_epoch_ms": 1792713600000
-        }
-      ]
-    },
-    {
       "number": "+17862170105",
       "type": "robocall",
       "reports": 5,
@@ -4384,32 +4332,6 @@
           "attribution": "CallShield maintained spam database",
           "first_seen": "2023-05-05",
           "last_seen": "2024-08-20",
-          "retrieved_at": "2026-09-23T00:00:00+00:00",
-          "geography": "global",
-          "confidence_tier": "unverified",
-          "parser_version": "legacy-v1",
-          "expires_at_epoch_ms": 1792713600000
-        }
-      ]
-    },
-    {
-      "number": "+18337831077",
-      "type": "spam",
-      "reports": 1,
-      "first_seen": "2026-04-01",
-      "last_seen": "2026-04-01",
-      "description": "Community reported",
-      "sources": [
-        "community"
-      ],
-      "evidence": [
-        {
-          "source_id": "github_database",
-          "evidence_type": "aggregate_database",
-          "license": "CallShield database terms",
-          "attribution": "CallShield maintained spam database",
-          "first_seen": "2026-04-01",
-          "last_seen": "2026-04-01",
           "retrieved_at": "2026-09-23T00:00:00+00:00",
           "geography": "global",
           "confidence_tier": "unverified",
@@ -6079,32 +6001,6 @@
           "attribution": "CallShield maintained spam database",
           "first_seen": "2015-02-11",
           "last_seen": "2015-09-16",
-          "retrieved_at": "2026-09-23T00:00:00+00:00",
-          "geography": "global",
-          "confidence_tier": "unverified",
-          "parser_version": "legacy-v1",
-          "expires_at_epoch_ms": 1792713600000
-        }
-      ]
-    },
-    {
-      "number": "+573199660309",
-      "type": "spam",
-      "reports": 1,
-      "first_seen": "2026-08-31",
-      "last_seen": "2026-08-31",
-      "description": "Community reported",
-      "sources": [
-        "community"
-      ],
-      "evidence": [
-        {
-          "source_id": "github_database",
-          "evidence_type": "aggregate_database",
-          "license": "CallShield database terms",
-          "attribution": "CallShield maintained spam database",
-          "first_seen": "2026-08-31",
-          "last_seen": "2026-08-31",
           "retrieved_at": "2026-09-23T00:00:00+00:00",
           "geography": "global",
           "confidence_tier": "unverified",

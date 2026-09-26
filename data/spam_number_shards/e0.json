@@ -683,32 +683,6 @@
       ]
     },
     {
-      "number": "+12402049089",
-      "type": "unknown",
-      "reports": 1,
-      "first_seen": "2026-05-12",
-      "last_seen": "2026-05-12",
-      "description": "Community reported",
-      "sources": [
-        "community"
-      ],
-      "evidence": [
-        {
-          "source_id": "github_database",
-          "evidence_type": "aggregate_database",
-          "license": "CallShield database terms",
-          "attribution": "CallShield maintained spam database",
-          "first_seen": "2026-05-12",
-          "last_seen": "2026-05-12",
-          "retrieved_at": "2026-09-23T00:00:00+00:00",
-          "geography": "global",
-          "confidence_tier": "unverified",
-          "parser_version": "legacy-v1",
-          "expires_at_epoch_ms": 1792713600000
-        }
-      ]
-    },
-    {
       "number": "+12486196702",
       "type": "robocall",
       "reports": 4,
@@ -2711,32 +2685,6 @@
           "attribution": "CallShield maintained spam database",
           "first_seen": "2023-03-27",
           "last_seen": "2023-03-27",
-          "retrieved_at": "2026-09-23T00:00:00+00:00",
-          "geography": "global",
-          "confidence_tier": "unverified",
-          "parser_version": "legacy-v1",
-          "expires_at_epoch_ms": 1792713600000
-        }
-      ]
-    },
-    {
-      "number": "+15702973207",
-      "type": "spam",
-      "reports": 1,
-      "first_seen": "2026-07-30",
-      "last_seen": "2026-07-30",
-      "description": "Community reported",
-      "sources": [
-        "community"
-      ],
-      "evidence": [
-        {
-          "source_id": "github_database",
-          "evidence_type": "aggregate_database",
-          "license": "CallShield database terms",
-          "attribution": "CallShield maintained spam database",
-          "first_seen": "2026-07-30",
-          "last_seen": "2026-07-30",
           "retrieved_at": "2026-09-23T00:00:00+00:00",
           "geography": "global",
           "confidence_tier": "unverified",
@@ -5566,32 +5514,6 @@
           "attribution": "CallShield maintained spam database",
           "first_seen": "2021-02-17",
           "last_seen": "2021-02-17",
-          "retrieved_at": "2026-09-23T00:00:00+00:00",
-          "geography": "global",
-          "confidence_tier": "unverified",
-          "parser_version": "legacy-v1",
-          "expires_at_epoch_ms": 1792713600000
-        }
-      ]
-    },
-    {
-      "number": "+19204669303",
-      "type": "spam",
-      "reports": 3,
-      "first_seen": "2026-05-08",
-      "last_seen": "2026-05-08",
-      "description": "Community reported",
-      "sources": [
-        "community"
-      ],
-      "evidence": [
-        {
-          "source_id": "github_database",
-          "evidence_type": "aggregate_database",
-          "license": "CallShield database terms",
-          "attribution": "CallShield maintained spam database",
-          "first_seen": "2026-05-08",
-          "last_seen": "2026-05-08",
           "retrieved_at": "2026-09-23T00:00:00+00:00",
           "geography": "global",
           "confidence_tier": "unverified",

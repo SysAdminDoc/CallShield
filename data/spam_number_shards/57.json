@@ -2746,32 +2746,6 @@
       ]
     },
     {
-      "number": "+15162696956",
-      "type": "unknown",
-      "reports": 1,
-      "first_seen": "2026-05-16",
-      "last_seen": "2026-05-16",
-      "description": "Community reported",
-      "sources": [
-        "community"
-      ],
-      "evidence": [
-        {
-          "source_id": "github_database",
-          "evidence_type": "aggregate_database",
-          "license": "CallShield database terms",
-          "attribution": "CallShield maintained spam database",
-          "first_seen": "2026-05-16",
-          "last_seen": "2026-05-16",
-          "retrieved_at": "2026-09-23T00:00:00+00:00",
-          "geography": "global",
-          "confidence_tier": "unverified",
-          "parser_version": "legacy-v1",
-          "expires_at_epoch_ms": 1792713600000
-        }
-      ]
-    },
-    {
       "number": "+15173765025",
       "type": "robocall",
       "reports": 10,
@@ -5854,32 +5828,6 @@
           "attribution": "CallShield maintained spam database",
           "first_seen": "2023-02-09",
           "last_seen": "2024-05-21",
-          "retrieved_at": "2026-09-23T00:00:00+00:00",
-          "geography": "global",
-          "confidence_tier": "unverified",
-          "parser_version": "legacy-v1",
-          "expires_at_epoch_ms": 1792713600000
-        }
-      ]
-    },
-    {
-      "number": "+528144300226",
-      "type": "spam",
-      "reports": 1,
-      "first_seen": "2026-08-18",
-      "last_seen": "2026-08-18",
-      "description": "Community reported",
-      "sources": [
-        "community"
-      ],
-      "evidence": [
-        {
-          "source_id": "github_database",
-          "evidence_type": "aggregate_database",
-          "license": "CallShield database terms",
-          "attribution": "CallShield maintained spam database",
-          "first_seen": "2026-08-18",
-          "last_seen": "2026-08-18",
           "retrieved_at": "2026-09-23T00:00:00+00:00",
           "geography": "global",
           "confidence_tier": "unverified",

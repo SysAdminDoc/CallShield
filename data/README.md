@@ -16,6 +16,7 @@ This directory contains the spam number database that the CallShield app pulls f
 - `spam_domains_review.json`: Generated domain candidates awaiting approval
 - `not_spam_review.json`: Generated community false-positive review candidates
 - `merged_report_ids.json`: Ids of reports merged in the last 14 days, so a report the app resends after its original was merged counts once. The ids are random and already appear in the report files
+- `community_pending.json`: Community-only reports waiting for the two-day and reporter-bucket promotion threshold
 - `reports/*.json`: Pending community reports. `reports/rejected/` holds quarantined files
 
 ## Consuming this data
@@ -186,6 +187,13 @@ python scripts/evaluate_model.py            # exits non-zero if CV F1 regresses
 #    workflow fails a push that carries one.
 python scripts/feed_signing.py sign
 ```
+
+The merge holds a number supported only by community reports in
+`community_pending.json` until reports span two UTC days. If those reports have
+reporter buckets, at least three distinct buckets are also needed. Pending
+reports expire after 30 days. The merge applies this rule to older
+community-only database rows too, including a run with no queued reports.
+Rows backed by FCC, FTC or another source aren't held by this gate.
 
 `train_spam_model.py` prints the learned per-feature weights and writes a
 version-stamped `spam_model_weights.json` (GBT trees + a logistic-regression

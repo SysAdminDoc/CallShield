@@ -6,16 +6,19 @@ import os
 import subprocess
 import sys
 import tempfile
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 SCRIPTS_DIR = ROOT / "scripts"
-NOW = "2026-06-12T12:00:00+00:00"
+BASE_DAY = (datetime.now(timezone.utc) - timedelta(days=1)).date().isoformat()
+TODAY = datetime.now(timezone.utc).date().isoformat()
+NOW = f"{BASE_DAY}T12:00:00+00:00"
 TIMES = [
-    "2026-06-12T04:00:00+00:00",
-    "2026-06-12T06:00:00+00:00",
-    "2026-06-12T08:00:00+00:00",
-    "2026-06-12T10:00:00+00:00",
+    f"{BASE_DAY}T04:00:00+00:00",
+    f"{BASE_DAY}T06:00:00+00:00",
+    f"{BASE_DAY}T08:00:00+00:00",
+    f"{BASE_DAY}T10:00:00+00:00",
     NOW,
 ]
 BUCKETS = [f"{index:016x}" for index in range(1, 7)]
@@ -81,7 +84,7 @@ def seed_reports(data_dir: Path) -> None:
         data_dir / "spam_numbers.json",
         {
             "version": 1,
-            "updated": "2026-06-11",
+            "updated": BASE_DAY,
             "description": "test database",
             "sources": ["community_reports"],
             "numbers": [],
@@ -197,23 +200,90 @@ def assert_merge_cleanup(data_dir: Path) -> None:
         raise AssertionError("merge script did not remove processed report files")
 
     merged = json.loads((data_dir / "spam_numbers.json").read_text(encoding="utf-8"))
-    merged_numbers = {entry["number"]: entry for entry in merged["numbers"]}
-    if merged_numbers["+12122340101"]["reports"] != 5:
-        raise AssertionError(f"expected identity-deduped report counts, got {merged_numbers}")
-    if merged_numbers["+12122340999"]["reports"] != 2:
-        raise AssertionError(f"same-reporter daily reports were not collapsed: {merged_numbers}")
-    if merged_numbers["+12122340888"]["reports"] != 1:
-        raise AssertionError(f"legacy report was not preserved: {merged_numbers}")
-    if merged_numbers["+13129870777"]["reports"] != 3:
-        raise AssertionError(f"a report resent under its id was counted twice: {merged_numbers['+13129870777']}")
-    if any(entry.get("sources") != ["community"] for entry in merged_numbers.values()):
-        raise AssertionError(f"community provenance missing: {merged_numbers}")
+    if merged["numbers"]:
+        raise AssertionError(f"same-day community reports were shipped: {merged['numbers']}")
+    pending = json.loads((data_dir / "community_pending.json").read_text(encoding="utf-8"))["numbers"]
+    expected_counts = {
+        "+12122340101": 5,
+        "+12122340999": 2,
+        "+12122340888": 1,
+        "+13129870777": 3,
+    }
+    for number, count in expected_counts.items():
+        if len(pending[number]["events"]) != count:
+            raise AssertionError(f"pending evidence was not identity-deduped for {number}: {pending[number]}")
 
     snapshot = json.loads((data_dir / "source-snapshot.json").read_text(encoding="utf-8"))
-    if "health" not in snapshot or snapshot["health"]["summary"]["evidence_row_count"] <= 0:
+    if "health" not in snapshot:
         raise AssertionError(f"source health was not attached to the pipeline snapshot: {snapshot}")
     if "+12122340101" in json.dumps(snapshot):
         raise AssertionError("source health snapshot leaked a raw phone number")
+
+
+def assert_community_promotion(data_dir: Path) -> None:
+    write_json(
+        data_dir / "spam_numbers.json",
+        {"version": 1, "updated": BASE_DAY, "sources": ["community_reports"], "numbers": [], "prefixes": []},
+    )
+    legacy_number = "+12122340671"
+    bucket_number = "+12122340672"
+    old_number = "+12122340673"
+
+    write_report(data_dir, "first.json", legacy_number, None, TIMES[0])
+    run_drain(data_dir)
+    assert reports_for(data_dir, legacy_number) == 0, "one anonymous report was shipped"
+    pending = json.loads((data_dir / "community_pending.json").read_text(encoding="utf-8"))["numbers"]
+    assert len(pending[legacy_number]["events"]) == 1, "first report was not retained"
+
+    write_report(data_dir, "same_day.json", legacy_number, None, TIMES[2])
+    run_drain(data_dir)
+    assert reports_for(data_dir, legacy_number) == 0, "two same-day reports were shipped"
+
+    write_report(data_dir, "next_day.json", legacy_number, None, f"{TODAY}T00:00:00+00:00")
+    run_drain(data_dir)
+    assert reports_for(data_dir, legacy_number) == 3, "two UTC days did not promote bucketless reports"
+
+    write_report(data_dir, "bucket_first.json", bucket_number, BUCKETS[0], TIMES[0])
+    run_drain(data_dir)
+    write_report(data_dir, "bucket_repeat.json", bucket_number, BUCKETS[0], TIMES[2])
+    run_drain(data_dir)
+    assert pending_reports_for(data_dir, bucket_number) == 1, "a bucket counted twice across drains"
+    write_report(data_dir, "bucket_second.json", bucket_number, BUCKETS[1], f"{TODAY}T00:00:00+00:00")
+    run_drain(data_dir)
+    assert reports_for(data_dir, bucket_number) == 0, "two buckets were enough to ship"
+    write_report(data_dir, "bucket_third.json", bucket_number, BUCKETS[2], f"{TODAY}T00:02:00+00:00")
+    run_drain(data_dir)
+    assert reports_for(data_dir, bucket_number) == 3, "three buckets across two days did not promote"
+
+    database = json.loads((data_dir / "spam_numbers.json").read_text(encoding="utf-8"))
+    database["numbers"].append(
+        {"number": old_number, "type": "spam", "reports": 1, "first_seen": BASE_DAY,
+         "last_seen": BASE_DAY, "description": "Community reported", "sources": ["community"],
+         "evidence": [{"source_id": "github_database", "evidence_type": "aggregate_database"}]}
+    )
+    write_json(data_dir / "spam_numbers.json", database)
+    run_script("merge_community_reports.py", data_dir)
+    assert reports_for(data_dir, old_number) == 0, "a legacy single-report row stayed in the shipped database"
+    assert reports_for(data_dir, legacy_number) == 3, "a promoted row was demoted on the next merge"
+
+    pending_path = data_dir / "community_pending.json"
+    pending = json.loads(pending_path.read_text(encoding="utf-8"))
+    expired = (datetime.now(timezone.utc) - timedelta(days=31)).date().isoformat()
+    pending["numbers"][old_number]["events"] = [
+        {"key": "file:old.json", "day": expired, "bucket": "", "count": 1}
+    ]
+    write_json(pending_path, pending)
+    run_script("merge_community_reports.py", data_dir)
+    pending = json.loads(pending_path.read_text(encoding="utf-8"))["numbers"]
+    assert old_number not in pending, "a pending report survived past 30 days"
+
+    pending_path.write_text("not json", encoding="utf-8")
+    write_report(data_dir, "after_corruption.json", old_number, None, f"{TODAY}T00:05:00+00:00")
+    run_script("extract_spam_domains.py", data_dir, ["--allow-collapse"])
+    run_script("generate_hot_list.py", data_dir, ["--allow-collapse"])
+    stopped = run_script_result("merge_community_reports.py", data_dir)
+    assert stopped.returncode != 0, "a corrupt pending ledger was silently treated as empty"
+    assert (data_dir / "reports" / "after_corruption.json").exists(), "a failed merge consumed its input"
 
 
 def assert_not_spam_requires_review(data_dir: Path) -> None:
@@ -224,7 +294,7 @@ def assert_not_spam_requires_review(data_dir: Path) -> None:
         data_dir / "spam_numbers.json",
         {
             "version": 7,
-            "updated": "2026-06-11",
+            "updated": BASE_DAY,
             "numbers": [
                 {
                     "number": community,
@@ -232,8 +302,8 @@ def assert_not_spam_requires_review(data_dir: Path) -> None:
                     "type": "spam",
                     "description": "Community reported",
                     "sources": ["community"],
-                    "first_seen": "2026-06-01",
-                    "last_seen": "2026-06-11",
+                    "first_seen": BASE_DAY,
+                    "last_seen": TODAY,
                 },
                 {
                     "number": authoritative,
@@ -241,16 +311,16 @@ def assert_not_spam_requires_review(data_dir: Path) -> None:
                     "type": "spam",
                     "description": "Community reported",
                     "sources": ["ftc"],
-                    "first_seen": "2026-06-01",
-                    "last_seen": "2026-06-11",
+                    "first_seen": BASE_DAY,
+                    "last_seen": TODAY,
                 },
                 {
                     "number": legacy_authoritative,
                     "reports": 1,
                     "type": "spam",
                     "description": "Imported complaint",
-                    "first_seen": "2026-06-01",
-                    "last_seen": "2026-06-11",
+                    "first_seen": BASE_DAY,
+                    "last_seen": TODAY,
                 },
             ],
             "prefixes": [],
@@ -600,6 +670,11 @@ def reports_for(data_dir: Path, number: str) -> int:
     return next((row["reports"] for row in database["numbers"] if row["number"] == number), 0)
 
 
+def pending_reports_for(data_dir: Path, number: str) -> int:
+    ledger = json.loads((data_dir / "community_pending.json").read_text(encoding="utf-8"))["numbers"]
+    return sum(event["count"] for event in ledger[number]["events"])
+
+
 def assert_resend_across_drains_counts_once(data_dir: Path) -> None:
     """A resend that lands after its original was merged and deleted counts
     once. The queue alone can't see that, so merged ids are kept a while."""
@@ -611,17 +686,17 @@ def assert_resend_across_drains_counts_once(data_dir: Path) -> None:
     report_id = "3f2c1a9e-8b7d-4c6e-9f10-2a3b4c5d6e7f"
     write_report(data_dir, "original.json", number, BUCKETS[0], TIMES[0], report_type="spam", report_id=report_id)
     run_drain(data_dir)
-    assert reports_for(data_dir, number) == 1
+    assert pending_reports_for(data_dir, number) == 1
 
     write_report(data_dir, "resend.json", number, BUCKETS[1], TIMES[2], report_type="spam", report_id=report_id)
     run_drain(data_dir)
-    assert reports_for(data_dir, number) == 1, "a resend counted again in a later drain"
+    assert pending_reports_for(data_dir, number) == 1, "a resend counted again in a later drain"
     assert not (data_dir / "reports" / "resend.json").exists(), "the resend was left in the queue"
 
     other_id = "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d"
     write_report(data_dir, "other.json", number, BUCKETS[2], TIMES[3], report_type="spam", report_id=other_id)
     run_drain(data_dir)
-    assert reports_for(data_dir, number) == 2, "a different report of the same number must still count"
+    assert pending_reports_for(data_dir, number) == 2, "a different report of the same number must still count"
     ledger = json.loads((data_dir / "merged_report_ids.json").read_text(encoding="utf-8"))["ids"]
     assert {report_id, other_id} <= set(ledger), ledger
 
@@ -632,7 +707,7 @@ def assert_resend_across_drains_counts_once(data_dir: Path) -> None:
     stopped = run_script_result("merge_community_reports.py", data_dir)
     assert stopped.returncode != 0, "an unreadable ledger must stop the merge"
     assert (data_dir / "reports" / "later.json").exists(), "a stopped merge must leave the queue alone"
-    assert reports_for(data_dir, number) == 2
+    assert pending_reports_for(data_dir, number) == 2
 
 
 def assert_ledger_retention(data_dir: Path) -> None:
@@ -754,6 +829,9 @@ def main() -> None:
         assert_derived_outputs(data_dir)
         assert_min_reports_spares_existing_rows(data_dir)
         assert_external_source_parsers()
+
+    with tempfile.TemporaryDirectory() as tmp:
+        assert_community_promotion(Path(tmp) / "data")
 
     with tempfile.TemporaryDirectory() as tmp:
         assert_not_spam_requires_review(Path(tmp) / "data")
