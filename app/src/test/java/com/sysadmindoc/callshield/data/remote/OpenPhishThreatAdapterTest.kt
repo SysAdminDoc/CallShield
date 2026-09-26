@@ -1,6 +1,7 @@
 package com.sysadmindoc.callshield.data.remote
 
 import kotlinx.coroutines.runBlocking
+import okhttp3.HttpUrl
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Protocol
@@ -10,6 +11,18 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class OpenPhishThreatAdapterTest {
+    // OkHttp reads the public suffix list from an Android asset, which a JVM
+    // test can't load, so these tests use a few real entries of it.
+    private val suffixes = setOf("test", "com", "amazonaws.com", "s3.us-east-1.amazonaws.com")
+
+    private fun registrable(url: HttpUrl): String? {
+        val labels = url.host.split('.')
+        val suffixStart = labels.indices.first { labels.drop(it).joinToString(".") in suffixes }
+        return if (suffixStart == 0) null else labels.drop(suffixStart - 1).joinToString(".")
+    }
+
+    private fun adapterOf(client: OkHttpClient) = OpenPhishThreatAdapter(client, ::registrable)
+
     private fun feedOf(vararg urls: String): OkHttpClient =
         OkHttpClient
             .Builder()
@@ -29,7 +42,7 @@ class OpenPhishThreatAdapterTest {
         runBlocking {
             // Links used to reach the adapter as their registrable domain, so a
             // login.example.test entry never matched a link on login.example.test.
-            val adapter = OpenPhishThreatAdapter(feedOf("https://login.example.test/verify", "https://evil.test/"))
+            val adapter = adapterOf(feedOf("https://login.example.test/verify", "https://evil.test/"))
 
             assertEquals(UrlThreatVerdict.MALICIOUS, adapter.lookup("https://login.example.test/", 0L).verdict)
             assertEquals(UrlThreatVerdict.MALICIOUS, adapter.lookup("https://eu.login.example.test/", 0L).verdict)
@@ -38,6 +51,46 @@ class OpenPhishThreatAdapterTest {
             // An entry on a whole domain still covers its subdomains.
             assertEquals(UrlThreatVerdict.MALICIOUS, adapter.lookup("https://pay.evil.test/", 0L).verdict)
         }
+
+    @Test
+    fun `an entry on a shared host flags its bucket, not the host or every bucket under it`() =
+        runBlocking {
+            // The live feed of 2026-09-26 listed both regional S3 endpoints, which
+            // are public suffixes. Walking up from acme-invoices.s3... reached them
+            // and flagged every bucket in the region.
+            val adapter =
+                adapterOf(
+                    feedOf(
+                        "https://s3.us-east-1.amazonaws.com/evil-bucket/login.html",
+                        "https://www.victim.test/verify",
+                    ),
+                )
+
+            assertEquals(UrlThreatVerdict.CLEAN, adapter.lookup("https://acme-invoices.s3.us-east-1.amazonaws.com/x.pdf", 0L).verdict)
+            assertEquals(UrlThreatVerdict.CLEAN, adapter.lookup("https://s3.us-east-1.amazonaws.com/acme-invoices/x.pdf", 0L).verdict)
+            assertEquals(UrlThreatVerdict.MALICIOUS, adapter.lookup("https://s3.us-east-1.amazonaws.com/evil-bucket/other.html", 0L).verdict)
+            // A www. entry covers the bare domain but not its siblings.
+            assertEquals(UrlThreatVerdict.MALICIOUS, adapter.lookup("https://www.victim.test/", 0L).verdict)
+            assertEquals(UrlThreatVerdict.MALICIOUS, adapter.lookup("https://victim.test/", 0L).verdict)
+            assertEquals(UrlThreatVerdict.CLEAN, adapter.lookup("https://shop.victim.test/", 0L).verdict)
+        }
+
+    @Test
+    fun `without the suffix list an entry flags only its own host`() =
+        runBlocking {
+            val adapter = OpenPhishThreatAdapter(feedOf("https://login.example.test/verify")) { error("no suffix list") }
+
+            assertEquals(UrlThreatVerdict.MALICIOUS, adapter.lookup("https://login.example.test/", 0L).verdict)
+            assertEquals(UrlThreatVerdict.CLEAN, adapter.lookup("https://eu.login.example.test/", 0L).verdict)
+        }
+
+    @Test
+    fun `a link on a shared host still reaches the on-device feed`() {
+        val url = "https://s3.us-east-1.amazonaws.com/evil-bucket/login.html?id=1"
+
+        assertEquals("", UrlSafetyChecker.normalizeRemoteLookupUrl(url, registrableDomain = ::registrable))
+        assertEquals("https://s3.us-east-1.amazonaws.com/evil-bucket/login.html", UrlSafetyChecker.normalizeOnDeviceLookupUrl(url))
+    }
 
     @Test
     fun `only the on-device feed asks for the full host`() {
@@ -70,7 +123,7 @@ class OpenPhishThreatAdapterTest {
                             .apply { etag?.let { addHeader("ETag", it) } }
                             .build()
                     }.build()
-            val adapter = OpenPhishThreatAdapter(client)
+            val adapter = adapterOf(client)
             val bad = "https://bad.example.test/"
             val sixHours = 6L * 60L * 60L * 1_000L
 

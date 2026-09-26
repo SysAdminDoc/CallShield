@@ -17,6 +17,8 @@ All notable changes to CallShield will be documented in this file.
   in the phone's language.
 - A link in a text is checked against OpenPhish by its full host, so a phishing
   page on one subdomain is caught without flagging its sibling subdomains.
+  The match stops at the site's own domain, so an entry on a shared host such
+  as an Amazon S3 region flags only its own bucket, not every bucket there.
   OpenPhish is matched on the phone. PhishTank still receives only the site's
   base domain.
 - Number details, Lookup and the block explanation describe FCC and FTC

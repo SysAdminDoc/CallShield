@@ -78,18 +78,19 @@ object UrlSafetyChecker {
     suspend fun checkUrl(url: String): UrlCheckResult =
         withContext(Dispatchers.IO) {
             val lookupUrl = normalizeRemoteLookupUrl(url)
-            if (lookupUrl.isBlank()) {
+            val onDeviceUrl = normalizeOnDeviceLookupUrl(url)
+            if (lookupUrl.isBlank() && onDeviceUrl.isBlank()) {
                 return@withContext UrlCheckResult(
                     url = "",
                     isMalicious = false,
                     verdict = UrlThreatVerdict.UNKNOWN,
                 )
             }
-            val evidence = lookupUrlEvidence(lookupUrl, normalizeOnDeviceLookupUrl(url).ifBlank { lookupUrl })
+            val evidence = lookupUrlEvidence(lookupUrl, onDeviceUrl)
             evidence.firstOrNull(UrlThreatResult::isMalicious)?.let(::toCheckResult)
                 ?: evidence.firstOrNull()?.let(::toCheckResult)
                 ?: UrlCheckResult(
-                    url = lookupUrl,
+                    url = lookupUrl.ifBlank { onDeviceUrl },
                     isMalicious = false,
                     verdict = UrlThreatVerdict.UNKNOWN,
                 )
@@ -97,9 +98,13 @@ object UrlSafetyChecker {
 
     /** Return all malicious adapter matches for a canonical URL. */
     internal suspend fun checkUrlMatches(url: String): List<UrlCheckResult> {
+        // A link on a shared host such as s3.us-east-1.amazonaws.com has no
+        // registrable domain to send anywhere, but a list on the phone can
+        // still match it, so only the remote services skip it.
         val lookupUrl = normalizeRemoteLookupUrl(url)
-        if (lookupUrl.isBlank()) return emptyList()
-        return lookupUrlEvidence(lookupUrl, normalizeOnDeviceLookupUrl(url).ifBlank { lookupUrl })
+        val onDeviceUrl = normalizeOnDeviceLookupUrl(url)
+        if (lookupUrl.isBlank() && onDeviceUrl.isBlank()) return emptyList()
+        return lookupUrlEvidence(lookupUrl, onDeviceUrl)
             .filter(UrlThreatResult::isMalicious)
             .map(::toCheckResult)
     }
@@ -112,8 +117,8 @@ object UrlSafetyChecker {
         val nowMillis = System.currentTimeMillis()
         return coroutineScope {
             enabledAdapters
-                .map { adapter ->
-                    val lookupUrl = if (adapter.matchesOnDevice) onDeviceLookupUrl else remoteLookupUrl
+                .mapNotNull { adapter ->
+                    val lookupUrl = (if (adapter.matchesOnDevice) onDeviceLookupUrl else remoteLookupUrl).ifBlank { return@mapNotNull null }
                     async {
                         val cached = threatCache.get(adapter.source, adapter.sourceVersion, lookupUrl)
                         if (cached != null) {
@@ -221,8 +226,9 @@ object UrlSafetyChecker {
     }
 
     /**
-     * The link's scheme and full host for a list matched on the phone. The path,
-     * query, fragment and any user name or password still go.
+     * The link's scheme, full host and path for a list matched on the phone,
+     * which needs the path for an entry on a shared host. The query, fragment
+     * and any user name or password still go.
      */
     internal fun normalizeOnDeviceLookupUrl(rawUrl: String): String {
         val parsedUrl = normalizeCandidateUrl(rawUrl).toHttpUrlOrNull() ?: return ""
@@ -230,7 +236,6 @@ object UrlSafetyChecker {
             .newBuilder()
             .username("")
             .password("")
-            .encodedPath("/")
             .query(null)
             .fragment(null)
             .build()

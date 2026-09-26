@@ -3,6 +3,7 @@ package com.sysadmindoc.callshield.data.remote
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.FormBody
+import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -137,6 +138,7 @@ internal class PhishTankThreatAdapter(
 
 internal class OpenPhishThreatAdapter(
     private val client: OkHttpClient = urlThreatClient,
+    private val registrableDomain: (HttpUrl) -> String? = { it.topPrivateDomain() },
 ) : UrlThreatAdapter {
     override val source: UrlThreatSource = UrlThreatSource.OPENPHISH
     override val sourceVersion: String = source.defaultVersion
@@ -156,15 +158,13 @@ internal class OpenPhishThreatAdapter(
         val snapshot =
             loadSnapshot(nowMillis)
                 ?: return UrlThreatResult.unknown(source, sourceVersion, canonicalUrl, nowMillis, "feed_unavailable")
-        val host = canonicalUrl.toHttpUrlOrNull()?.host?.removePrefix("www.")
+        val url = canonicalUrl.toHttpUrlOrNull()
         val resultTtlMillis =
             minOf(
                 UrlThreatCache.DEFAULT_TTL_MILLIS,
                 (snapshot.expiresAtMillis - nowMillis).coerceAtLeast(1L),
             )
-        // A feed entry names the host a phishing page sits on. It flags that host
-        // and anything under it, but not a sibling on the same domain.
-        return if (host != null && host.parentHosts().any { it in snapshot.hosts }) {
+        return if (url != null && matches(snapshot, url)) {
             UrlThreatResult.malicious(
                 source = source,
                 sourceVersion = sourceVersion,
@@ -201,20 +201,27 @@ internal class OpenPhishThreatAdapter(
                     val body = response.body.readUtf8Bounded(MAX_OPENPHISH_FEED_BYTES)
                     if (body !is BoundedResponseBody.Text) return@withContext null
                     if (body.value.isBlank()) return@withContext null
-                    val hosts =
-                        body.value
-                            .lineSequence()
-                            .mapNotNull {
-                                it
-                                    .trim()
-                                    .toHttpUrlOrNull()
-                                    ?.host
-                                    ?.removePrefix("www.")
-                            }.distinct()
-                            .take(MAX_OPENPHISH_HOSTS)
-                            .toSet()
+                    val hosts = mutableSetOf<String>()
+                    val sharedHostDirectories = mutableMapOf<String, MutableSet<String>>()
+                    body.value
+                        .lineSequence()
+                        .mapNotNull { it.trim().toHttpUrlOrNull() }
+                        .take(MAX_OPENPHISH_HOSTS)
+                        .forEach { entry ->
+                            if (entry.isOnSharedHost()) {
+                                // A shared host such as s3.us-east-1.amazonaws.com
+                                // serves everyone's buckets, so the entry flags its
+                                // first path segment there, never the host.
+                                entry.pathSegments.firstOrNull()?.takeIf(String::isNotEmpty)?.let { directory ->
+                                    sharedHostDirectories.getOrPut(entry.host) { mutableSetOf() } += directory
+                                }
+                            } else {
+                                hosts += entry.host
+                            }
+                        }
                     FeedSnapshot(
                         hosts = hosts,
+                        sharedHostDirectories = sharedHostDirectories,
                         expiresAtMillis = nowMillis + OPENPHISH_FEED_TTL_MILLIS,
                         etag = response.header("ETag")?.takeIf { it.isNotBlank() && it.length <= 256 },
                     ).also {
@@ -229,15 +236,48 @@ internal class OpenPhishThreatAdapter(
         }
     }
 
-    /** This host and each parent domain of it, the host first. */
-    private fun String.parentHosts(): Sequence<String> = generateSequence(this) { it.substringAfter('.', "").ifEmpty { null } }
+    /**
+     * A feed entry names the host a phishing page sits on. It flags that host
+     * and anything under it, but not a sibling, and the walk up stops at the
+     * registrable domain so an entry can't claim a public suffix. A www. entry
+     * also covers the bare domain it stands for.
+     */
+    private fun matches(
+        snapshot: FeedSnapshot,
+        url: HttpUrl,
+    ): Boolean {
+        if (url.isOnSharedHost()) {
+            return url.pathSegments.firstOrNull() in snapshot.sharedHostDirectories[url.host].orEmpty()
+        }
+        val registrable = url.registrable() ?: return url.host in snapshot.hosts
+        return url.host.hostsDownTo(registrable).any { it in snapshot.hosts } || "www.${url.host}" in snapshot.hosts
+    }
+
+    /**
+     * The registrable domain, or null for a public suffix or an IP address. If
+     * the suffix list can't be read, the host stands for itself, so nothing
+     * walks up to a parent and nothing counts as shared.
+     */
+    private fun HttpUrl.registrable(): String? = runCatching { registrableDomain(this) }.getOrElse { host }
+
+    /** A host that is itself a public suffix, where unrelated people publish under one name. */
+    private fun HttpUrl.isOnSharedHost(): Boolean = !host.isIpLiteral() && registrable() == null
 
     private data class FeedSnapshot(
         val hosts: Set<String>,
+        val sharedHostDirectories: Map<String, Set<String>>,
         val expiresAtMillis: Long,
         val etag: String?,
     )
 }
+
+private fun String.isIpLiteral(): Boolean = ':' in this || all { it.isDigit() || it == '.' }
+
+/** This host and each parent domain of it down to [registrable], the host first. */
+private fun String.hostsDownTo(registrable: String): Sequence<String> =
+    generateSequence(this) { host ->
+        host.takeIf { it != registrable && it.length > registrable.length }?.substringAfter('.', "")?.ifEmpty { null }
+    }
 
 internal class SafeBrowsingThreatAdapter(
     private val apiKey: String? = null,
