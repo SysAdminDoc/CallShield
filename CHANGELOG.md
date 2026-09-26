@@ -4,6 +4,8 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+- Recent calls now uses compact, neutral history cards and shows a Retry card
+  when Android cannot load the call log. Calls already loaded stay visible.
 - Blocked activity now has a clear heading, a framed empty state and compact
   status icons that distinguish stopped calls, flagged texts and exceptions.
 - Lookup now opens with a clear number-check prompt and a private-check card.

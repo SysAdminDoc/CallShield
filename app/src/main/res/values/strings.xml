@@ -1175,6 +1175,11 @@
     <string name="onboarding_could_not_open_settings">Android could not open this setup screen. You can enable it later from CallShield Settings.</string>
 
     <!-- Recent Calls Screen -->
+    <string name="recent_heading">Recent calls</string>
+    <string name="recent_intro">See who called and how CallShield handled it.</string>
+    <string name="recent_load_error">Couldn\'t load recent calls</string>
+    <string name="recent_load_error_body">The phone\'s call history isn\'t available right now.</string>
+    <string name="recent_retry">Retry</string>
     <string name="recent_filter_all">All (%d)</string>
     <string name="recent_filter_incoming">Incoming (%d)</string>
     <string name="recent_filter_outgoing">Outgoing (%d)</string>

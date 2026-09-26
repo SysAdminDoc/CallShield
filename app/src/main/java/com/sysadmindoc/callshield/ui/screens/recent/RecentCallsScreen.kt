@@ -1,11 +1,13 @@
 package com.sysadmindoc.callshield.ui.screens.recent
 
 import android.Manifest
+import android.app.AppOpsManager
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Process
 import android.provider.CallLog
 import android.provider.ContactsContract
 import android.provider.Settings
@@ -30,9 +32,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
@@ -88,6 +87,7 @@ fun RecentCallsScreen(viewModel: MainViewModel) {
     var calls by remember { mutableStateOf<List<RecentCall>>(emptyList()) }
     var loading by remember { mutableStateOf(false) }
     var refreshing by remember { mutableStateOf(false) }
+    var loadFailed by remember { mutableStateOf(false) }
     var initialLoadCompleted by remember { mutableStateOf(false) }
     var filterMode by rememberSaveable { mutableIntStateOf(0) } // 0=All, 1=Incoming, 2=Outgoing, 3=Missed, 4=Spam
     var hasCallLogPermission by remember(context) {
@@ -105,6 +105,7 @@ fun RecentCallsScreen(viewModel: MainViewModel) {
             calls = emptyList()
             loading = false
             refreshing = false
+            loadFailed = false
             initialLoadCompleted = true
             return
         }
@@ -118,15 +119,11 @@ fun RecentCallsScreen(viewModel: MainViewModel) {
 
             try {
                 calls = loadRecentCalls(context.applicationContext)
+                loadFailed = false
                 initialLoadCompleted = true
             } catch (e: Exception) {
-                // loadRecentCalls swallows SecurityException itself, but a
-                // provider IllegalStateException or an SQLiteException out of
-                // repo.isSpam (corrupt DB is a handled failure class
-                // elsewhere) would otherwise escape this coroutine and kill
-                // the process just for opening the Recent tab. Show what we
-                // have (empty list ≡ the screen's empty state).
                 android.util.Log.w("RecentCalls", "Recent-calls load failed", e)
+                loadFailed = true
                 initialLoadCompleted = true
             } finally {
                 loading = false
@@ -144,6 +141,7 @@ fun RecentCallsScreen(viewModel: MainViewModel) {
             calls = emptyList()
             loading = false
             refreshing = false
+            loadFailed = false
             initialLoadCompleted = true
         }
     }
@@ -232,6 +230,22 @@ fun RecentCallsScreen(viewModel: MainViewModel) {
         )
 
     Column(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Text(
+                stringResource(R.string.recent_heading),
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                color = CatText,
+            )
+            Text(
+                stringResource(R.string.recent_intro),
+                style = MaterialTheme.typography.bodySmall,
+                color = CatSubtext,
+            )
+        }
         if (!hasCallLogPermission) {
             RecentCallsPermissionState(
                 onOpenSettings = {
@@ -244,14 +258,16 @@ fun RecentCallsScreen(viewModel: MainViewModel) {
                 },
             )
         } else if (!loading) {
-            RecentCallsSummaryCard(
-                totalCount = calls.size,
-                spamCount = spamCount,
-                missedCount = missedCount,
-                contactCount = contactCount,
-                refreshing = refreshing,
-                onRefresh = { refreshRecentCalls(false) },
-            )
+            if (!loadFailed || calls.isNotEmpty()) {
+                RecentCallsSummaryCard(
+                    totalCount = calls.size,
+                    spamCount = spamCount,
+                    missedCount = missedCount,
+                    contactCount = contactCount,
+                    refreshing = refreshing,
+                    onRefresh = { refreshRecentCalls(false) },
+                )
+            }
             if (calls.isNotEmpty()) {
                 LazyRow(
                     contentPadding = PaddingValues(horizontal = 20.dp),
@@ -276,6 +292,28 @@ fun RecentCallsScreen(viewModel: MainViewModel) {
                 }
                 Spacer(Modifier.height(4.dp))
             }
+            if (loadFailed) {
+                PremiumCard(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        Icon(Icons.Default.SyncProblem, null, tint = CatPeach, modifier = Modifier.size(28.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(stringResource(R.string.recent_load_error), color = CatText, fontWeight = FontWeight.SemiBold)
+                            Text(
+                                stringResource(R.string.recent_load_error_body),
+                                color = CatSubtext,
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                        }
+                        TextButton(onClick = { refreshRecentCalls(false) }) {
+                            Text(stringResource(R.string.recent_retry), color = CatGreen)
+                        }
+                    }
+                }
+            }
         }
 
         if (hasCallLogPermission && loading) {
@@ -286,7 +324,7 @@ fun RecentCallsScreen(viewModel: MainViewModel) {
             ) {
                 repeat(8) { SkeletonListItem(modifier = Modifier.fillMaxWidth()) }
             }
-        } else if (hasCallLogPermission && filtered.isEmpty()) {
+        } else if (hasCallLogPermission && filtered.isEmpty() && !loadFailed) {
             RecentEmptyStateCard(
                 title =
                     if (filterMode == 0) {
@@ -446,17 +484,6 @@ fun RecentCallItem(
             else -> stringResource(R.string.stats_unknown_caller)
         }
 
-    // Left accent bar color: calls get CatBlue, SMS-related types could be CatMauve
-    // Since RecentCall represents call log entries, we use CatBlue for calls
-    // and CatMauve if it were an SMS. Here type is call log type, so we differentiate
-    // by spam status for visual interest, but per spec: calls=CatBlue, SMS=CatMauve.
-    // Call log entries are always calls, so we use CatBlue as default, CatRed for spam.
-    val accentBarColor =
-        when {
-            call.isSpam -> CatRed
-            else -> CatBlue
-        }
-
     var expanded by rememberSaveable(call.number, call.date) { mutableStateOf(false) }
     val temporaryDurations = rememberTemporaryDecisionDurations()
     val copiedMessage = stringResource(R.string.recent_copied)
@@ -467,7 +494,6 @@ fun RecentCallItem(
     PremiumCard(
         onClick = onOpenDetail,
         cornerRadius = 12.dp,
-        accentColor = if (call.isSpam) CatRed else null,
     ) {
         Column {
             Box {
@@ -475,14 +501,7 @@ fun RecentCallItem(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .drawBehind {
-                                // Draw a subtle 3dp accent bar on the left side
-                                drawRect(
-                                    color = accentBarColor.copy(alpha = 0.5f),
-                                    topLeft = Offset(0f, 0f),
-                                    size = Size(3.dp.toPx(), size.height),
-                                )
-                            }.padding(start = 12.dp, end = 12.dp, top = 12.dp, bottom = 12.dp),
+                            .padding(horizontal = 12.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     val riskColor =
@@ -494,14 +513,15 @@ fun RecentCallItem(
                     Box(
                         modifier =
                             Modifier
-                                .size(8.dp)
+                                .size(42.dp)
                                 .clip(CircleShape)
-                                .background(riskColor)
+                                .background(riskColor.copy(alpha = 0.12f))
                                 .semantics { contentDescription = riskDescription },
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Icon(typeIcon, typeDescription, tint = typeColor, modifier = Modifier.size(24.dp))
-                    Spacer(Modifier.width(8.dp))
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(typeIcon, typeDescription, tint = typeColor, modifier = Modifier.size(24.dp))
+                    }
+                    Spacer(Modifier.width(10.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Column(modifier = Modifier.weight(1f)) {
@@ -528,9 +548,6 @@ fun RecentCallItem(
                                             MaterialTheme.typography.bodySmall
                                         },
                                 )
-                            }
-                            if (call.isSpam) {
-                                Icon(Icons.Default.Warning, null, tint = CatRed, modifier = Modifier.size(14.dp))
                             }
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -649,92 +666,94 @@ fun RecentActionButton(
 @Suppress("LongMethod")
 private suspend fun loadRecentCalls(context: Context): List<RecentCall> =
     withContext(Dispatchers.IO) {
+        val appOps = context.getSystemService(AppOpsManager::class.java)
+        val accessMode = appOps.checkOpNoThrow(AppOpsManager.OPSTR_READ_CALL_LOG, Process.myUid(), context.packageName)
+        if (accessMode == AppOpsManager.MODE_IGNORED || accessMode == AppOpsManager.MODE_ERRORED) {
+            throw SecurityException("Call log access disabled by the system")
+        }
         val repo = SpamRepository.getInstance(context)
         val calls = mutableListOf<RecentCall>()
-        try {
-            val cursor =
-                context.contentResolver.query(
-                    CallLog.Calls.CONTENT_URI,
-                    arrayOf(CallLog.Calls.NUMBER, CallLog.Calls.TYPE, CallLog.Calls.DATE, CallLog.Calls.DURATION),
-                    null,
-                    null,
-                    "${CallLog.Calls.DATE} DESC",
+        val cursor =
+            context.contentResolver.query(
+                CallLog.Calls.CONTENT_URI,
+                arrayOf(CallLog.Calls.NUMBER, CallLog.Calls.TYPE, CallLog.Calls.DATE, CallLog.Calls.DURATION),
+                null,
+                null,
+                "${CallLog.Calls.DATE} DESC",
+            ) ?: error("Call log provider returned no cursor")
+        cursor.use { c ->
+            val numIdx = c.getColumnIndex(CallLog.Calls.NUMBER)
+            val typeIdx = c.getColumnIndex(CallLog.Calls.TYPE)
+            val dateIdx = c.getColumnIndex(CallLog.Calls.DATE)
+            val durIdx = c.getColumnIndex(CallLog.Calls.DURATION)
+            if (numIdx < 0) error("Call log provider did not return numbers")
+
+            // First pass: collect raw call log entries
+            data class RawCall(
+                val number: String,
+                val type: Int,
+                val date: Long,
+                val duration: Int,
+            )
+            val rawCalls = mutableListOf<RawCall>()
+            while (c.moveToNext() && rawCalls.size < 100) {
+                val number = c.getString(numIdx) ?: continue
+                val clean = normalizePhoneNumberInput(number)
+                if (!hasMinAsciiDigits(clean)) continue
+                rawCalls.add(
+                    RawCall(
+                        number = clean,
+                        type = if (typeIdx >= 0) c.getInt(typeIdx) else 0,
+                        date = if (dateIdx >= 0) c.getLong(dateIdx) else 0,
+                        duration = if (durIdx >= 0) c.getInt(durIdx) else 0,
+                    ),
                 )
-            cursor?.use { c ->
-                val numIdx = c.getColumnIndex(CallLog.Calls.NUMBER)
-                val typeIdx = c.getColumnIndex(CallLog.Calls.TYPE)
-                val dateIdx = c.getColumnIndex(CallLog.Calls.DATE)
-                val durIdx = c.getColumnIndex(CallLog.Calls.DURATION)
-                if (numIdx < 0) return@use
-
-                // First pass: collect raw call log entries
-                data class RawCall(
-                    val number: String,
-                    val type: Int,
-                    val date: Long,
-                    val duration: Int,
-                )
-                val rawCalls = mutableListOf<RawCall>()
-                while (c.moveToNext() && rawCalls.size < 100) {
-                    val number = c.getString(numIdx) ?: continue
-                    val clean = normalizePhoneNumberInput(number)
-                    if (!hasMinAsciiDigits(clean)) continue
-                    rawCalls.add(
-                        RawCall(
-                            number = clean,
-                            type = if (typeIdx >= 0) c.getInt(typeIdx) else 0,
-                            date = if (dateIdx >= 0) c.getLong(dateIdx) else 0,
-                            duration = if (durIdx >= 0) c.getInt(durIdx) else 0,
-                        ),
-                    )
-                }
-
-                // Batch spam check: only check unique numbers once
-                val uniqueNumbers = rawCalls.map { it.number }.distinct()
-                val spamCache = uniqueNumbers.associateWith { repo.isSpam(it, realtimeCall = false) }
-
-                // Batch contact lookup
-                val contactCache = mutableMapOf<String, String?>()
-                for (num in uniqueNumbers) {
-                    if (num in contactCache) continue
-                    contactCache[num] =
-                        try {
-                            val uri =
-                                Uri.withAppendedPath(
-                                    ContactsContract.PhoneLookup.CONTENT_FILTER_URI,
-                                    Uri.encode(num),
-                                )
-                            val cc =
-                                context.contentResolver.query(
-                                    uri,
-                                    arrayOf(ContactsContract.PhoneLookup.DISPLAY_NAME),
-                                    null,
-                                    null,
-                                    null,
-                                )
-                            cc?.use { if (it.moveToFirst()) it.getString(0) else null }
-                        } catch (_: Exception) {
-                            null
-                        }
-                }
-
-                // Build final list
-                for (raw in rawCalls) {
-                    val spamResult = spamCache[raw.number]
-                    calls.add(
-                        RecentCall(
-                            number = raw.number,
-                            type = raw.type,
-                            date = raw.date,
-                            duration = raw.duration,
-                            isSpam = spamResult?.isSpam ?: false,
-                            spamReason = spamResult?.matchSource ?: "",
-                            contactName = contactCache[raw.number],
-                        ),
-                    )
-                }
             }
-        } catch (_: SecurityException) {
+
+            // Batch spam check: only check unique numbers once
+            val uniqueNumbers = rawCalls.map { it.number }.distinct()
+            val spamCache = uniqueNumbers.associateWith { repo.isSpam(it, realtimeCall = false) }
+
+            // Batch contact lookup
+            val contactCache = mutableMapOf<String, String?>()
+            for (num in uniqueNumbers) {
+                if (num in contactCache) continue
+                contactCache[num] =
+                    try {
+                        val uri =
+                            Uri.withAppendedPath(
+                                ContactsContract.PhoneLookup.CONTENT_FILTER_URI,
+                                Uri.encode(num),
+                            )
+                        val cc =
+                            context.contentResolver.query(
+                                uri,
+                                arrayOf(ContactsContract.PhoneLookup.DISPLAY_NAME),
+                                null,
+                                null,
+                                null,
+                            )
+                        cc?.use { if (it.moveToFirst()) it.getString(0) else null }
+                    } catch (_: Exception) {
+                        null
+                    }
+            }
+
+            // Build final list
+            for (raw in rawCalls) {
+                val spamResult = spamCache[raw.number]
+                calls.add(
+                    RecentCall(
+                        number = raw.number,
+                        type = raw.type,
+                        date = raw.date,
+                        duration = raw.duration,
+                        isSpam = spamResult?.isSpam ?: false,
+                        spamReason = spamResult?.matchSource ?: "",
+                        contactName = contactCache[raw.number],
+                    ),
+                )
+            }
         }
         calls
     }
