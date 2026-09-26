@@ -59,6 +59,7 @@ import com.sysadmindoc.callshield.ui.expandableStateSemantics
 import com.sysadmindoc.callshield.ui.firstPageFailed
 import com.sysadmindoc.callshield.ui.friendlyMatchReasonLabel
 import com.sysadmindoc.callshield.ui.isStaleFor
+import com.sysadmindoc.callshield.ui.rememberHomeRegion
 import com.sysadmindoc.callshield.ui.rememberTemporaryDecisionDurations
 import com.sysadmindoc.callshield.ui.theme.*
 import com.sysadmindoc.callshield.util.filterAsciiDigits
@@ -659,7 +660,8 @@ fun BlockedCallItem(
 ) {
     val context = LocalContext.current
     val dateFormat = remember(context) { localizedDateTimeFormat(context) }
-    val location = remember(call.number) { AreaCodeLookup.lookup(call.number) }
+    val homeRegion = rememberHomeRegion()
+    val location = remember(call.number, homeRegion) { AreaCodeLookup.lookup(call.number, homeRegion) }
     var expanded by rememberSaveable(call.id) { mutableStateOf(false) }
     val temporaryDurations = rememberTemporaryDecisionDurations()
     val copiedMessage = stringResource(R.string.blocked_log_copied, PhoneFormatter.formatIsolated(call.number))
@@ -888,7 +890,8 @@ fun GroupedCallItem(
     onTap: () -> Unit,
     onBlock: () -> Unit,
 ) {
-    val location = remember(call.number) { AreaCodeLookup.lookup(call.number) }
+    val homeRegion = rememberHomeRegion()
+    val location = remember(call.number, homeRegion) { AreaCodeLookup.lookup(call.number, homeRegion) }
 
     val accentColor =
         if (count >= 5) {

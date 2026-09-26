@@ -98,6 +98,7 @@ import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.friendlyMatchReasonLabel
 import com.sysadmindoc.callshield.ui.friendlyPipelineCheckerLabel
 import com.sysadmindoc.callshield.ui.friendlySpamTypeLabel
+import com.sysadmindoc.callshield.ui.rememberHomeRegion
 import com.sysadmindoc.callshield.ui.theme.CatBlue
 import com.sysadmindoc.callshield.ui.theme.CatGreen
 import com.sysadmindoc.callshield.ui.theme.CatOverlay
@@ -140,7 +141,8 @@ fun LookupScreen(viewModel: MainViewModel) {
     // privacy app. The actual read happens on the explicit Paste tap below.
     val clipboardHasText = remember(context) { clipboardHasText(context) }
     val normalizedNumber = remember(numberInput) { normalizeLookupNumber(numberInput) }
-    val previewLocation = remember(normalizedNumber) { AreaCodeLookup.lookup(normalizedNumber) }
+    val homeRegion = rememberHomeRegion()
+    val previewLocation = remember(normalizedNumber, homeRegion) { AreaCodeLookup.lookup(normalizedNumber, homeRegion) }
     // Lookup outcomes live in the ViewModel so they survive tab switches and
     // rotation, and so the verdict stays bound to the number that was actually
     // checked rather than to whatever is currently typed in the field.
@@ -400,7 +402,7 @@ fun LookupScreen(viewModel: MainViewModel) {
                                         style = MaterialTheme.typography.bodyLarge,
                                         color = CatText,
                                     )
-                                    AreaCodeLookup.lookup(resultNumber)?.let {
+                                    AreaCodeLookup.lookup(resultNumber, homeRegion)?.let {
                                         Text(it, style = MaterialTheme.typography.bodyMedium, color = CatSubtext)
                                     }
                                 }

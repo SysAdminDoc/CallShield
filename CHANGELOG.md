@@ -19,6 +19,11 @@ All notable changes to CallShield will be documented in this file.
   date written on each one. FCC's daily batches reach back years, so once a typo
   row dated September 26 moved the old cursor, every new batch was skipped: all
   535 complaints published that day. The next import picks them up.
+- Calls from outside North America no longer get a US or Caribbean place name
+  in the caller-ID popup. A +65 call used to read as Birmingham, AL, and Number
+  details offered to block that US area code. On a phone outside North America,
+  numbers without a + follow the phone's own region too, so a Chinese mobile in
+  Recent calls no longer reads as Rockville, MD.
 - Rapid-fire detection works for callers outside North America again. There it
   compares the whole number, so a +49 and a +1 number that share their last ten
   digits still never match.
@@ -88,8 +93,10 @@ All notable changes to CallShield will be documented in this file.
   checks now ignore international numbers whose last ten digits resemble a
   North American number. Other international risk checks still run.
 - Region Rules now recognizes all 453 active geographic area codes in a pinned
-  NANP registry snapshot, including new 465, 483 and 942. Unknown codes no
-  longer trigger an out-of-region block. The 324 and 826 city labels are fixed.
+  NANP registry snapshot, including new 465, 483 and 942. A code missing from
+  the snapshot passes only if it could have come into service since then. N11,
+  555, reserved, non-geographic and 900 codes have no region, so they stay
+  outside your allowed regions. The 324 and 826 city labels are fixed.
 - SkipCalls answers marked "unknown" or "other" now read "Reported, no
   category" and leave the caller ID warning unchanged. Only its named spam
   categories can flag a caller. The number page shows the neutral result too.

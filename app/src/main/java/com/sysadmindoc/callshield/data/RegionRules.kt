@@ -164,7 +164,10 @@ object RegionRules {
             } else {
                 null
             }
-        if (nanpAreaCode != null && !AreaCodeLookup.isKnownAreaCode(number)) {
+        // A code the table doesn't know passes only if it could have entered service
+        // since the snapshot. An N11, 555, non-geographic or reserved code has no
+        // region, so allowed regions don't cover it; it's usually a spoofed number.
+        if (nanpAreaCode != null && AreaCodeLookup.mayBeNewAreaCode(number)) {
             logger.warning("Unknown NANP area code $nanpAreaCode; skipping regional block")
             return false
         }

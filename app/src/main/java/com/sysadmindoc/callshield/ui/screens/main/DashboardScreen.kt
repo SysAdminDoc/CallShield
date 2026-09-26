@@ -1058,7 +1058,7 @@ fun DashboardScreen(
                         if (index > 0) {
                             GradientDivider(modifier = Modifier.padding(vertical = 2.dp))
                         }
-                        val loc = AreaCodeLookup.lookup("+1$ac") ?: ac
+                        val loc = AreaCodeLookup.lookup("+1$ac", homeRegionIso = null) ?: ac
                         Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                             Text(
                                 stringResource(R.string.dashboard_spam_from_area, numberFormatter.format(count), ac, loc),

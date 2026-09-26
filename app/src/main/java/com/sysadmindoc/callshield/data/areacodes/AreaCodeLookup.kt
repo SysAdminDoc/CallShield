@@ -1,5 +1,6 @@
 package com.sysadmindoc.callshield.data.areacodes
 
+import com.sysadmindoc.callshield.data.RegionCallingCodes
 import com.sysadmindoc.callshield.util.filterAsciiDigits
 
 /** In-service NANP geographic and toll-free codes, generated from NumberResearch.org. */
@@ -9,7 +10,17 @@ object AreaCodeLookup {
         val regionCode: String?,
     )
 
-    fun lookup(number: String): String? = getAreaCode(number)?.let { AREA_CODES[it]?.label }
+    /**
+     * The place name for [number]'s area code, or null. [homeRegionIso] is the
+     * phone's home region, and it has no default so no caller can forget it: a
+     * number without a `+` reads as North American only when that region uses
+     * +1 or is unknown. On a phone from China, 130 1234 5678 is a mobile number,
+     * not Rockville, MD.
+     */
+    fun lookup(
+        number: String,
+        homeRegionIso: String?,
+    ): String? = getAreaCode(number, homeRegionIso)?.let { AREA_CODES[it]?.label }
 
     fun getRegionCode(number: String): String? = getAreaCode(number)?.let { AREA_CODES[it]?.regionCode }
 
@@ -18,10 +29,31 @@ object AreaCodeLookup {
         return SHARED_REGIONS[areaCode] ?: AREA_CODES[areaCode]?.regionCode?.let { setOf(it) } ?: emptySet()
     }
 
-    fun isKnownAreaCode(number: String): Boolean = getAreaCode(number)?.let { AREA_CODES.containsKey(it) } == true
+    /**
+     * Whether [number]'s area code is missing from the table but could have
+     * entered service since the snapshot: a geographic or toll-free code that
+     * was unassigned, reserved, planned or suspended. Region rules let those
+     * through rather than block a real new code. N11, 555, non-geographic codes
+     * such as 5XX, 600 and 700, and premium 900 have no region at all.
+     */
+    fun mayBeNewAreaCode(number: String): Boolean = getAreaCode(number)?.let { it in NOT_YET_IN_SERVICE } == true
 
-    fun getAreaCode(number: String): String? {
+    /**
+     * The area code of a North American [number], or null. A `+` number is
+     * North American only as +1 and ten digits, however it's spaced: +65 9123
+     * 4567 is not area code 659 (Birmingham, AL), and + 1 415 555 0123 is still
+     * 415. A bare number follows [homeRegionIso] as in [lookup]; region rules
+     * check the home region themselves (RegionRules.regionCode).
+     */
+    fun getAreaCode(
+        number: String,
+        homeRegionIso: String? = null,
+    ): String? {
         val digits = filterAsciiDigits(number)
+        if (number.trimStart().startsWith("+")) {
+            return digits.takeIf { it.length == 11 && it.startsWith("1") }?.substring(1, 4)
+        }
+        if (RegionCallingCodes.forRegion(homeRegionIso)?.let { it != "1" } == true) return null
         return when {
             digits.length == 11 && digits.startsWith("1") -> digits.substring(1, 4)
             digits.length == 10 -> digits.substring(0, 3)
@@ -499,5 +531,159 @@ object AreaCodeLookup {
             "782" to setOf("NS", "PE"),
             "867" to setOf("NT", "YT", "NU"),
             "902" to setOf("NS", "PE"),
+        )
+
+    private val NOT_YET_IN_SERVICE =
+        setOf(
+            "221",
+            "230",
+            "232",
+            "237",
+            "238",
+            "241",
+            "243",
+            "245",
+            "247",
+            "258",
+            "259",
+            "261",
+            "265",
+            "271",
+            "273",
+            "275",
+            "278",
+            "280",
+            "282",
+            "285",
+            "286",
+            "287",
+            "328",
+            "335",
+            "338",
+            "342",
+            "348",
+            "349",
+            "356",
+            "358",
+            "359",
+            "362",
+            "381",
+            "383",
+            "384",
+            "387",
+            "389",
+            "420",
+            "421",
+            "426",
+            "427",
+            "429",
+            "439",
+            "446",
+            "449",
+            "451",
+            "452",
+            "453",
+            "454",
+            "456",
+            "459",
+            "460",
+            "461",
+            "462",
+            "467",
+            "476",
+            "481",
+            "482",
+            "485",
+            "486",
+            "487",
+            "489",
+            "536",
+            "537",
+            "560",
+            "565",
+            "568",
+            "576",
+            "583",
+            "625",
+            "627",
+            "632",
+            "634",
+            "635",
+            "637",
+            "638",
+            "642",
+            "643",
+            "648",
+            "652",
+            "653",
+            "654",
+            "663",
+            "665",
+            "668",
+            "673",
+            "674",
+            "675",
+            "676",
+            "685",
+            "687",
+            "723",
+            "734",
+            "735",
+            "736",
+            "739",
+            "741",
+            "745",
+            "746",
+            "749",
+            "750",
+            "751",
+            "752",
+            "756",
+            "759",
+            "761",
+            "764",
+            "768",
+            "776",
+            "783",
+            "789",
+            "822",
+            "823",
+            "824",
+            "827",
+            "834",
+            "836",
+            "841",
+            "842",
+            "846",
+            "851",
+            "852",
+            "853",
+            "871",
+            "874",
+            "875",
+            "880",
+            "881",
+            "882",
+            "883",
+            "884",
+            "885",
+            "886",
+            "887",
+            "889",
+            "921",
+            "923",
+            "926",
+            "927",
+            "932",
+            "935",
+            "946",
+            "953",
+            "957",
+            "958",
+            "974",
+            "976",
+            "981",
+            "982",
+            "987",
         )
 }

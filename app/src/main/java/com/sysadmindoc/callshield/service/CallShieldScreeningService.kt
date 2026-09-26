@@ -258,7 +258,8 @@ class CallShieldScreeningService : CallScreeningService() {
                             val repeatedUrgentAllow = result.matchSource == "repeated_urgent"
                             val suppressFeedback = shouldSuppressAfterCallFeedback(result.matchSource)
                             // Unknown non-contact caller — area-code-only caller ID overlay
-                            val location = AreaCodeLookup.lookup(number)
+                            val location =
+                                AreaCodeLookup.lookup(number, PhoneIdentityCanonicalizer.cachedFromContext(appContext).homeRegionIso)
                             if (location != null) {
                                 try {
                                     incomingOverlayLauncher(appContext, number, 0, location)

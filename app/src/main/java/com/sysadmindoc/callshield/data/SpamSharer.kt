@@ -17,7 +17,7 @@ object SpamSharer {
         val formatted = PhoneFormatter.format(number)
         val location =
             com.sysadmindoc.callshield.data.areacodes.AreaCodeLookup
-                .lookup(number)
+                .lookup(number, PhoneIdentityCanonicalizer.cachedFromContext(context).homeRegionIso)
         val locationText = location?.let { context.getString(R.string.share_spam_warning_location, it) }.orEmpty()
         val typeText =
             if (reason.isNotEmpty()) {

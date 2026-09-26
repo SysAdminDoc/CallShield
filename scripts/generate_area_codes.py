@@ -113,6 +113,7 @@ def generate() -> str:
     lines = [
         "package com.sysadmindoc.callshield.data.areacodes",
         "",
+        "import com.sysadmindoc.callshield.data.RegionCallingCodes",
         "import com.sysadmindoc.callshield.util.filterAsciiDigits",
         "",
         "/** In-service NANP geographic and toll-free codes, generated from NumberResearch.org. */",
@@ -122,7 +123,17 @@ def generate() -> str:
         "        val regionCode: String?,",
         "    )",
         "",
-        "    fun lookup(number: String): String? = getAreaCode(number)?.let { AREA_CODES[it]?.label }",
+        "    /**",
+        "     * The place name for [number]'s area code, or null. [homeRegionIso] is the",
+        "     * phone's home region, and it has no default so no caller can forget it: a",
+        "     * number without a `+` reads as North American only when that region uses",
+        "     * +1 or is unknown. On a phone from China, 130 1234 5678 is a mobile number,",
+        "     * not Rockville, MD.",
+        "     */",
+        "    fun lookup(",
+        "        number: String,",
+        "        homeRegionIso: String?,",
+        "    ): String? = getAreaCode(number, homeRegionIso)?.let { AREA_CODES[it]?.label }",
         "",
         "    fun getRegionCode(number: String): String? = getAreaCode(number)?.let { AREA_CODES[it]?.regionCode }",
         "",
@@ -131,10 +142,31 @@ def generate() -> str:
         "        return SHARED_REGIONS[areaCode] ?: AREA_CODES[areaCode]?.regionCode?.let { setOf(it) } ?: emptySet()",
         "    }",
         "",
-        "    fun isKnownAreaCode(number: String): Boolean = getAreaCode(number)?.let { AREA_CODES.containsKey(it) } == true",
+        "    /**",
+        "     * Whether [number]'s area code is missing from the table but could have",
+        "     * entered service since the snapshot: a geographic or toll-free code that",
+        "     * was unassigned, reserved, planned or suspended. Region rules let those",
+        "     * through rather than block a real new code. N11, 555, non-geographic codes",
+        "     * such as 5XX, 600 and 700, and premium 900 have no region at all.",
+        "     */",
+        "    fun mayBeNewAreaCode(number: String): Boolean = getAreaCode(number)?.let { it in NOT_YET_IN_SERVICE } == true",
         "",
-        "    fun getAreaCode(number: String): String? {",
+        "    /**",
+        "     * The area code of a North American [number], or null. A `+` number is",
+        "     * North American only as +1 and ten digits, however it's spaced: +65 9123",
+        "     * 4567 is not area code 659 (Birmingham, AL), and + 1 415 555 0123 is still",
+        "     * 415. A bare number follows [homeRegionIso] as in [lookup]; region rules",
+        "     * check the home region themselves (RegionRules.regionCode).",
+        "     */",
+        "    fun getAreaCode(",
+        "        number: String,",
+        "        homeRegionIso: String? = null,",
+        "    ): String? {",
         "        val digits = filterAsciiDigits(number)",
+        '        if (number.trimStart().startsWith("+")) {',
+        '            return digits.takeIf { it.length == 11 && it.startsWith("1") }?.substring(1, 4)',
+        "        }",
+        '        if (RegionCallingCodes.forRegion(homeRegionIso)?.let { it != "1" } == true) return null',
         "        return when {",
         '            digits.length == 11 && digits.startsWith("1") -> digits.substring(1, 4)',
         "            digits.length == 10 -> digits.substring(0, 3)",
@@ -161,6 +193,10 @@ def generate() -> str:
         if shared:
             codes = ", ".join(f'"{code}"' for code in shared)
             lines.append(f'            "{npa}" to setOf({codes}),')
+    lines.extend(["        )", "", "    private val NOT_YET_IN_SERVICE =", "        setOf("])
+    for row in sorted(rows, key=lambda row: row["npa"]):
+        if row["kind"] in ("geographic", "toll_free") and row["status"] != "in_service":
+            lines.append(f'            "{row["npa"]}",')
     lines.extend(["        )", "}", ""])
     return "\n".join(lines)
 

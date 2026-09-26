@@ -53,6 +53,7 @@ import com.sysadmindoc.callshield.ui.TemporaryDecisionDuration
 import com.sysadmindoc.callshield.ui.TemporaryDecisionMenu
 import com.sysadmindoc.callshield.ui.expandableStateSemantics
 import com.sysadmindoc.callshield.ui.friendlyMatchReasonLabel
+import com.sysadmindoc.callshield.ui.rememberHomeRegion
 import com.sysadmindoc.callshield.ui.rememberTemporaryDecisionDurations
 import com.sysadmindoc.callshield.ui.theme.*
 import com.sysadmindoc.callshield.util.filterAsciiDigits
@@ -439,7 +440,8 @@ fun RecentCallItem(
 ) {
     val context = LocalContext.current
     val dateFormat = remember(context) { localizedDateTimeFormat(context) }
-    val location = remember(call.number) { AreaCodeLookup.lookup(call.number) }
+    val homeRegion = rememberHomeRegion()
+    val location = remember(call.number, homeRegion) { AreaCodeLookup.lookup(call.number, homeRegion) }
 
     val typeIcon =
         when (call.type) {

@@ -41,6 +41,7 @@ import com.sysadmindoc.callshield.data.remote.RemoteLookupStatus
 import com.sysadmindoc.callshield.domain.model.SpamCheckResult
 import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.friendlyMatchReasonLabel
+import com.sysadmindoc.callshield.ui.rememberHomeRegion
 import com.sysadmindoc.callshield.ui.screens.lookup.SpamScoreGauge
 import com.sysadmindoc.callshield.ui.screens.lookup.detectionIcon
 import com.sysadmindoc.callshield.ui.theme.*
@@ -77,8 +78,9 @@ fun NumberDetailScreen(
     val firstSeen = numberCalls.minByOrNull { it.timestamp }?.timestamp
     val lastSeen = numberCalls.maxByOrNull { it.timestamp }?.timestamp
     val dateFormat = remember(context) { localizedDateTimeFormat(context, withYear = true) }
-    val location = remember(number) { AreaCodeLookup.lookup(number) }
-    val areaCode = remember(number) { AreaCodeLookup.getAreaCode(number) }
+    val homeRegion = rememberHomeRegion()
+    val location = remember(number, homeRegion) { AreaCodeLookup.lookup(number, homeRegion) }
+    val areaCode = remember(number, homeRegion) { AreaCodeLookup.getAreaCode(number, homeRegion) }
     val copiedMessage = stringResource(R.string.detail_copied)
     val numberBlockedMessage = stringResource(R.string.detail_number_blocked)
     val numberUnblockedMessage = stringResource(R.string.detail_number_unblocked)

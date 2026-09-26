@@ -37,6 +37,7 @@ import com.sysadmindoc.callshield.data.model.LogAggregate
 import com.sysadmindoc.callshield.domain.model.BlockReasonCode
 import com.sysadmindoc.callshield.ui.MainViewModel
 import com.sysadmindoc.callshield.ui.friendlyMatchReasonLabel
+import com.sysadmindoc.callshield.ui.rememberHomeRegion
 import com.sysadmindoc.callshield.ui.theme.*
 import kotlinx.coroutines.delay
 import java.text.DateFormatSymbols
@@ -55,6 +56,7 @@ private data class DailyStat(
 
 @Composable
 fun StatsScreen(viewModel: MainViewModel) {
+    val homeRegion = rememberHomeRegion()
     val logCount by viewModel.logCount.collectAsStateWithLifecycle()
     val logCallCount by viewModel.logCallCount.collectAsStateWithLifecycle()
     val logSmsCount by viewModel.logSmsCount.collectAsStateWithLifecycle()
@@ -369,7 +371,7 @@ fun StatsScreen(viewModel: MainViewModel) {
                                 number.takeIf { it.isNotBlank() }?.let(PhoneFormatter::formatIsolated)
                                     ?: stringResource(R.string.stats_unknown_caller)
                             val location =
-                                number.takeIf { it.isNotBlank() }?.let(AreaCodeLookup::lookup)
+                                number.takeIf { it.isNotBlank() }?.let { AreaCodeLookup.lookup(it, homeRegion) }
                                     ?: stringResource(R.string.stats_unknown_origin)
 
                             Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -393,7 +395,7 @@ fun StatsScreen(viewModel: MainViewModel) {
                         Spacer(Modifier.height(8.dp))
                         val maxAc = areaCodeCounts.first().second.coerceAtLeast(1)
                         areaCodeCounts.forEach { (ac, count) ->
-                            val loc = AreaCodeLookup.lookup("+1$ac") ?: ac
+                            val loc = AreaCodeLookup.lookup("+1$ac", homeRegionIso = null) ?: ac
                             val fraction = count.toFloat() / maxAc
                             Row(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Text(ac, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall, modifier = Modifier.width(36.dp), color = CatPeach)

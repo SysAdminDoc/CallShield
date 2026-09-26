@@ -49,8 +49,8 @@ class RegionRulesTest {
         assertEquals("NY", RegionRules.regionCode("+14652340101"))
         assertEquals("AL", RegionRules.regionCode("+14832340101"))
         assertEquals("ON", RegionRules.regionCode("+19422340101"))
-        assertEquals("Jacksonville, FL", AreaCodeLookup.lookup("+13245550123"))
-        assertEquals("Roanoke, VA", AreaCodeLookup.lookup("+18265550123"))
+        assertEquals("Jacksonville, FL", AreaCodeLookup.lookup("+13245550123", null))
+        assertEquals("Roanoke, VA", AreaCodeLookup.lookup("+18265550123", null))
         assertFalse(RegionRules.isOutsideAllowedRegions("+14652340101", setOf("NY")))
         assertNull(RegionBlockChecker.decidePure("+14652340101", setOf("NY")))
     }
@@ -65,9 +65,11 @@ class RegionRulesTest {
     }
 
     @Test
-    fun `unknown NANP area codes do not trigger a regional block`() {
-        assertFalse(AreaCodeLookup.isKnownAreaCode("+19995550123"))
-        assertNull(RegionRules.regionCode("+19995550123"))
+    fun `an area code that may have entered service since the snapshot does not trigger a regional block`() {
+        // 221 was unassigned in the pinned NANPA file, so a call from it may be a real new code.
+        assertNull(AreaCodeLookup.lookup("+12215550123", null))
+        assertTrue(AreaCodeLookup.mayBeNewAreaCode("+12215550123"))
+        assertNull(RegionRules.regionCode("+12215550123"))
         val messages = mutableListOf<String>()
         val logger = Logger.getLogger(RegionRules::class.java.name)
         val handler =
@@ -82,13 +84,25 @@ class RegionRulesTest {
             }
         logger.addHandler(handler)
         try {
-            assertFalse(RegionRules.isOutsideAllowedRegions("+19995550123", setOf("NY")))
-            assertNull(RegionBlockChecker.decidePure("+19995550123", setOf("NY")))
-            assertTrue(messages.any { it.contains("Unknown NANP area code 999") })
+            assertFalse(RegionRules.isOutsideAllowedRegions("+12215550123", setOf("NY")))
+            assertNull(RegionBlockChecker.decidePure("+12215550123", setOf("NY")))
+            assertTrue(messages.any { it.contains("Unknown NANP area code 221") })
         } finally {
             logger.removeHandler(handler)
         }
         assertTrue(RegionRules.isOutsideAllowedRegions("+14155550123", setOf("NY")))
+    }
+
+    @Test
+    fun `area codes that can't be assigned stay outside the allowed regions`() {
+        // Reserved 999, N11 211, 555, non-geographic 521/600/700 and premium 900
+        // have no region, and a caller showing one is usually spoofing it.
+        listOf("+19995550123", "+12115550123", "+15555550123", "+15215550123", "+16005550123", "+17005550123", "+19005550123").forEach {
+            assertFalse(it, AreaCodeLookup.mayBeNewAreaCode(it))
+            assertTrue(it, RegionRules.isOutsideAllowedRegions(it, setOf("NY")))
+        }
+        // Allowing the area code by its +1 prefix still covers it.
+        assertFalse(RegionRules.isOutsideAllowedRegions("+19995550123", setOf("NY", "+1999")))
     }
 
     @Test
