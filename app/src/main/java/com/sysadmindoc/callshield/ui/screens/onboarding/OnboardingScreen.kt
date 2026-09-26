@@ -109,6 +109,7 @@ internal const val ONBOARDING_NOTIFICATIONS_BUTTON_TAG = "onboarding_notificatio
 internal const val ONBOARDING_OVERLAY_BUTTON_TAG = "onboarding_overlay_button"
 internal const val ONBOARDING_SCREENER_BUTTON_TAG = "onboarding_screener_button"
 internal const val ONBOARDING_NOTIFICATION_ACCESS_BUTTON_TAG = "onboarding_notification_access_button"
+internal const val ONBOARDING_SKIP_OPTIONAL_BUTTON_TAG = "onboarding_skip_optional_button"
 
 @Composable
 fun OnboardingScreen(onComplete: () -> Unit) {
@@ -304,7 +305,7 @@ internal fun OnboardingScreenContent(
                 if (setupState.isReady) {
                     onComplete()
                 } else {
-                    val missingStep = setupSteps.firstOrNull { !setupState.isComplete(it) }
+                    val missingStep = setupSteps.firstOrNull { it !in optionalSetupSteps && !setupState.isComplete(it) }
                     currentPage = onboardingSteps.indexOf(missingStep).coerceAtLeast(1)
                 }
             }
@@ -441,6 +442,17 @@ internal fun OnboardingScreenContent(
                     .fillMaxWidth()
                     .testTag(primaryTag(currentStep)),
         )
+        if (currentStep in optionalSetupSteps && !setupState.isComplete(currentStep)) {
+            TextButton(
+                onClick = {
+                    awaitingStep = null
+                    currentPage++
+                },
+                modifier = Modifier.fillMaxWidth().testTag(ONBOARDING_SKIP_OPTIONAL_BUTTON_TAG),
+            ) {
+                Text(stringResource(R.string.onboarding_skip_optional))
+            }
+        }
     }
 }
 
@@ -627,6 +639,7 @@ private fun OnboardingStepBody(
                 OnboardingVerification(
                     complete = setupState.isComplete(step),
                     unsupported = step == OnboardingSetupStep.CallScreening && !setupState.screenerSupported,
+                    optional = step in optionalSetupSteps,
                     accent = presentation.accent,
                 )
                 presentation.instruction?.let { instruction ->
@@ -680,6 +693,7 @@ private fun OnboardingIntroDetails() {
 private fun OnboardingVerification(
     complete: Boolean,
     unsupported: Boolean,
+    optional: Boolean,
     accent: Color,
 ) {
     val color = if (complete) CatGreen else accent
@@ -697,6 +711,7 @@ private fun OnboardingVerification(
                     when {
                         unsupported -> stringResource(R.string.onboarding_not_supported_verified)
                         complete -> stringResource(R.string.onboarding_android_verified)
+                        optional -> stringResource(R.string.onboarding_optional)
                         else -> stringResource(R.string.onboarding_action_needed)
                     },
                 style = MaterialTheme.typography.titleSmall,
@@ -705,7 +720,7 @@ private fun OnboardingVerification(
             )
             if (!complete) {
                 Text(
-                    text = stringResource(R.string.onboarding_return_to_verify),
+                    text = stringResource(if (optional) R.string.onboarding_optional_hint else R.string.onboarding_return_to_verify),
                     style = MaterialTheme.typography.bodySmall,
                     color = CatSubtext,
                 )
@@ -728,14 +743,20 @@ private fun OnboardingReview(setupState: OnboardingSetupState) {
     OnboardingReviewRow(
         stringResource(R.string.onboarding_notifications_title),
         setupState.notificationsGranted,
+        optional = OnboardingSetupStep.Notifications in optionalSetupSteps,
+        degradedModeRes = R.string.permission_contract_degraded_post_notifications,
     )
     OnboardingReviewRow(
         stringResource(R.string.onboarding_overlay_title),
         setupState.overlayGranted,
+        optional = OnboardingSetupStep.Overlay in optionalSetupSteps,
+        degradedModeRes = R.string.permission_contract_degraded_overlay,
     )
     OnboardingReviewRow(
         stringResource(R.string.onboarding_notification_access_title),
         setupState.notificationAccessGranted,
+        optional = OnboardingSetupStep.NotificationAccess in optionalSetupSteps,
+        degradedModeRes = R.string.permission_contract_degraded_notification_access,
     )
 }
 
@@ -744,6 +765,8 @@ private fun OnboardingReviewRow(
     label: String,
     complete: Boolean,
     unsupported: Boolean = false,
+    optional: Boolean = false,
+    degradedModeRes: Int? = null,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
@@ -756,17 +779,16 @@ private fun OnboardingReviewRow(
             modifier = Modifier.size(20.dp),
         )
         Spacer(Modifier.size(12.dp))
-        Text(
-            text = label,
-            modifier = Modifier.weight(1f),
-            style = MaterialTheme.typography.bodyLarge,
-            color = CatText,
-            fontWeight = FontWeight.Medium,
-        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(label, style = MaterialTheme.typography.bodyLarge, color = CatText, fontWeight = FontWeight.Medium)
+            if (optional && !complete && degradedModeRes != null) {
+                Text(stringResource(degradedModeRes), style = MaterialTheme.typography.bodySmall, color = CatSubtext)
+            }
+        }
         Text(
             text =
                 when {
-                    unsupported -> stringResource(R.string.onboarding_skipped)
+                    unsupported || (optional && !complete) -> stringResource(R.string.onboarding_skipped)
                     complete -> stringResource(R.string.onboarding_ready)
                     else -> stringResource(R.string.onboarding_needed)
                 },

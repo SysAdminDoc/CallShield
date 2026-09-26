@@ -344,6 +344,15 @@ fun SettingsScreen(viewModel: MainViewModel) {
                 trackColor = CatMuted.copy(alpha = 0.32f),
             )
             Spacer(Modifier.height(12.dp))
+            SettingsLinkRow(
+                title = stringResource(R.string.settings_run_setup_again),
+                value = stringResource(R.string.settings_run_setup_again_detail),
+                icon = Icons.Default.Tune,
+                tintColor = CatBlue,
+                stackValue = true,
+                onClick = viewModel::restartOnboarding,
+            )
+            Spacer(Modifier.height(12.dp))
             if (LocalDensity.current.fontScale < 1.5f) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),

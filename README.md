@@ -57,7 +57,7 @@ shard service is unavailable.
 ## Getting Started
 
 1. **Install the APK** from the [latest release](https://github.com/SysAdminDoc/CallShield/releases/latest). See [Installing](#installing) for signature details.
-2. **Run the setup wizard.** It asks for the permissions CallShield needs: Call Screening role, Phone and SMS, and optionally Notification Access (for RCS filtering) and Overlay (for live caller ID).
+2. **Run the setup wizard.** Phone and SMS access and the Call Screening role are required when Android supports screening. You can skip notifications, Notification Access (for RCS filtering), and Overlay (for live caller ID). The review shows what each skipped grant disables. Open Settings and tap **Run setup again** whenever you want to enable them.
 3. **Sync the database.** The Home screen runs a first sync on its own. After that, background syncs check every six hours.
 4. **Recommended starting profile.** Leave everything at defaults: the database, heuristics, trending feed, and ML scorer all run. Turn on Notification Access if you use Google Messages or Samsung Messages and want SMS filtering through the notification listener too.
 
@@ -536,7 +536,7 @@ language in [issue #7](https://github.com/SysAdminDoc/CallShield/issues/7).
 | URL Safety | Local spam-domain data; optional URLhaus (abuse.ch) |
 | Verification | Local Gradle, lint, and release-artifact checks |
 | Tests | 1541 JVM unit tests (JUnit) |
-| Strings | 1577 string resources and 38 plural groups (translation-ready) |
+| Strings | 1582 string resources and 38 plural groups (translation-ready) |
 | Accessibility | 100+ content descriptions, 48dp touch targets |
 | Min SDK | 29 (Android 10) |
 | Target SDK | 36 |

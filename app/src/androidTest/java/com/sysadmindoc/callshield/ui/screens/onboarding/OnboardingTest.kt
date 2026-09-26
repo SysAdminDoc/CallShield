@@ -10,6 +10,7 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import com.sysadmindoc.callshield.ui.runStrictAccessibilityChecks
 import com.sysadmindoc.callshield.ui.setThemedContent
 import org.junit.Assert.assertEquals
@@ -105,11 +106,34 @@ class OnboardingTest {
         }
         assertPage(7, "Protection is ready")
 
-        composeRule.runOnIdle { state = state.copy(overlayGranted = false) }
+        composeRule.runOnIdle { state = state.copy(runtimePermissionsGranted = false) }
         composeRule.onNodeWithText("Fix missing access").performClick()
 
-        assertPage(5, "Caller ID overlay")
+        assertPage(2, "Phone & messages")
         assertEquals(0, completed)
+    }
+
+    @Test
+    fun declinedOptionalAccessIsExplainedAndDoesNotBlockFinish() {
+        var completed = 0
+        setOnboardingContent(
+            setupState = readyState().copy(notificationsGranted = false, overlayGranted = false, notificationAccessGranted = false),
+            onComplete = { completed++ },
+        )
+
+        composeRule.onNodeWithTag(ONBOARDING_PRIMARY_ACTION_TAG).performClick()
+        composeRule.onNodeWithTag(ONBOARDING_CORE_PERMISSIONS_BUTTON_TAG).performClick()
+        composeRule.onNodeWithTag(ONBOARDING_SCREENER_BUTTON_TAG).performClick()
+        repeat(3) { composeRule.onNodeWithTag(ONBOARDING_SKIP_OPTIONAL_BUTTON_TAG).performClick() }
+
+        assertPage(7, "Protection is ready")
+        composeRule.onAllNodesWithText("Skipped")[0].assertIsDisplayed()
+        composeRule
+            .onNodeWithText("Floating caller ID and live enrichment cards stay hidden until overlay access is allowed.")
+            .performScrollTo()
+            .assertIsDisplayed()
+        composeRule.onNodeWithTag(ONBOARDING_FINISH_BUTTON_TAG).performClick()
+        composeRule.runOnIdle { assertEquals(1, completed) }
     }
 
     @Test

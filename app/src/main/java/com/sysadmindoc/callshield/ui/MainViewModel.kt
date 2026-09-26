@@ -661,10 +661,14 @@ class MainViewModel
 
         fun completeOnboarding() {
             viewModelScope.launch {
-                repo.setOnboardingDone()
+                repo.setOnboardingDone(true)
                 // Trigger first sync after onboarding
                 sync()
             }
+        }
+
+        fun restartOnboarding() {
+            viewModelScope.launch { repo.setOnboardingDone(false) }
         }
 
         fun sync() = sync(showProgress = true)

@@ -354,6 +354,8 @@
     <string name="remote_lookup_status_unavailable">不可用</string>
     <string name="settings_permissions_access">权限与访问</string>
     <string name="settings_setup_progress">访问检查就绪：%1$s/%2$s</string>
+    <string name="settings_run_setup_again">重新运行设置向导</string>
+    <string name="settings_run_setup_again_detail">检查必需和可选权限</string>
     <string name="settings_setup_ready_summary">全部已连接</string>
     <string name="settings_setup_attention_summary">完成设置</string>
     <string name="settings_notifications">通知</string>
@@ -782,6 +784,9 @@
     <string name="onboarding_screener_unavailable_detail">你仍可使用拦截列表、扫描与查询工具，但 Android 在此未暴露原生筛查角色。</string>
     <string name="onboarding_finish_setup">完成设置</string>
     <string name="onboarding_back">返回</string>
+    <string name="onboarding_skip_optional">暂时跳过</string>
+    <string name="onboarding_optional">可选权限</string>
+    <string name="onboarding_optional_hint">可以跳过此步骤，稍后在设置中启用。</string>
     <string name="onboarding_restricted_settings_hint">对于从应用商店以外安装的应用，Android 可能会阻止此设置。如果系统提示该设置受限，请打开应用信息，点按右上角的三点菜单，选择“允许受限设置”，然后重试。</string>
     <string name="onboarding_open_app_info">打开应用信息</string>
     <string name="recent_filter_all">全部（%d）</string>

@@ -4,6 +4,9 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+- Setup now finishes once the required phone, message and call screening access
+  is ready. You can skip notifications, caller ID overlay and notification
+  access, see what each choice disables, and return through Settings later.
 - The FCC import now ignores complaints with no issue date or a future date.
   Its saved cursor advances to a valid complaint, and the weekly source check
   uses the newest complaint date so an empty fetch can't hide a stalled feed.

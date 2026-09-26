@@ -543,7 +543,7 @@ class SpamRepository(
 
     suspend fun resetPushAlertPackages() = settingsRepository.resetPushAlertPackages()
 
-    suspend fun setOnboardingDone() = settingsRepository.setOnboardingDone()
+    suspend fun setOnboardingDone(done: Boolean) = settingsRepository.setOnboardingDone(done)
 
     internal suspend fun setProtectionRoleLossNoticeShown(shown: Boolean) = settingsRepository.setProtectionRoleLossNoticeShown(shown)
 

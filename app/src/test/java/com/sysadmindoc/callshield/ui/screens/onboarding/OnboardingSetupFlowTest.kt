@@ -30,12 +30,18 @@ class OnboardingSetupFlowTest {
     }
 
     @Test
-    fun `all supported setup checks must pass before onboarding is ready`() {
-        val state = readyState().copy(notificationAccessGranted = false)
+    fun `required grants make onboarding ready when optional access is declined`() {
+        val state = readyState().copy(notificationsGranted = false, overlayGranted = false, notificationAccessGranted = false)
 
-        assertFalse(state.isReady)
-        assertEquals(4, state.completedSetupCount)
+        assertTrue(state.isReady)
+        assertEquals(2, state.completedSetupCount)
         assertFalse(state.isComplete(OnboardingSetupStep.NotificationAccess))
+    }
+
+    @Test
+    fun `missing runtime access or supported screening role prevents completion`() {
+        assertFalse(readyState().copy(runtimePermissionsGranted = false).isReady)
+        assertFalse(readyState().copy(screenerGranted = false).isReady)
     }
 
     @Test

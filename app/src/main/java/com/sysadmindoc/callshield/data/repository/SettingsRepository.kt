@@ -435,7 +435,7 @@ class SettingsRepository(
         }
     }
 
-    suspend fun setOnboardingDone() = dataStore.edit { it[SpamRepository.KEY_ONBOARDING_DONE] = true }
+    suspend fun setOnboardingDone(done: Boolean) = dataStore.edit { it[SpamRepository.KEY_ONBOARDING_DONE] = done }
 
     internal suspend fun setProtectionRoleLossNoticeShown(shown: Boolean) =
         privateDataStore.edit { preferences ->

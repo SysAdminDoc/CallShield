@@ -1,5 +1,9 @@
 package com.sysadmindoc.callshield.ui.screens.onboarding
 
+import com.sysadmindoc.callshield.permissions.CallShieldPermissions
+import com.sysadmindoc.callshield.permissions.PermissionCapabilityId
+import com.sysadmindoc.callshield.permissions.PermissionCapabilityPriority
+
 internal enum class OnboardingSetupStep {
     Intro,
     RuntimePermissions,
@@ -39,7 +43,7 @@ internal data class OnboardingSetupState(
         get() = setupSteps.count(::isComplete)
 
     val isReady: Boolean
-        get() = completedSetupCount == setupSteps.size
+        get() = setupSteps.filterNot { it in optionalSetupSteps }.all(::isComplete)
 }
 
 internal val onboardingSteps = OnboardingSetupStep.entries
@@ -91,3 +95,15 @@ internal val setupSteps =
         OnboardingSetupStep.Overlay,
         OnboardingSetupStep.NotificationAccess,
     )
+
+internal val optionalSetupSteps: Set<OnboardingSetupStep> =
+    CallShieldPermissions.permissionCapabilityContracts
+        .filter { it.priority == PermissionCapabilityPriority.Recommended }
+        .mapNotNull { contract ->
+            when (contract.id) {
+                PermissionCapabilityId.PostNotifications -> OnboardingSetupStep.Notifications
+                PermissionCapabilityId.Overlay -> OnboardingSetupStep.Overlay
+                PermissionCapabilityId.NotificationAccess -> OnboardingSetupStep.NotificationAccess
+                else -> null
+            }
+        }.toSet()

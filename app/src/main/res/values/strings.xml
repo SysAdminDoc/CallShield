@@ -521,6 +521,8 @@
     <!-- Settings Screen -->
     <string name="settings_permissions_access">Access status</string>
     <string name="settings_setup_progress">%1$s of %2$s required checks ready</string>
+    <string name="settings_run_setup_again">Run setup again</string>
+    <string name="settings_run_setup_again_detail">Review required and optional access</string>
     <string name="settings_setup_ready_summary">Everything connected</string>
     <string name="settings_setup_attention_summary">Finish setup</string>
     <string name="settings_notifications">Notifications</string>
@@ -1078,14 +1080,17 @@
     <string name="onboarding_screener_unavailable_detail">You can still use blocklists, scans, and lookup tools, but Android is not exposing the native screening role here.</string>
     <string name="onboarding_finish_setup">Finish Setup</string>
     <string name="onboarding_back">Back</string>
+    <string name="onboarding_skip_optional">Skip for now</string>
+    <string name="onboarding_optional">Optional access</string>
+    <string name="onboarding_optional_hint">You can skip this and enable it later from Settings.</string>
     <string name="onboarding_setup_label">GUIDED SETUP</string>
     <string name="onboarding_ready_count">%1$d of %2$d ready</string>
     <string name="onboarding_guided_title">Set up protection</string>
     <string name="onboarding_guided_body">CallShield will guide you through each Android permission it uses, one screen at a time.</string>
-    <string name="onboarding_intro_time">About 2 minutes · 5 verified checks</string>
+    <string name="onboarding_intro_time">About 2 minutes · 2 required checks</string>
     <string name="onboarding_intro_private">Your call and message data stays on this phone</string>
     <string name="onboarding_intro_guided">Every button opens the exact Android control you need</string>
-    <string name="onboarding_intro_verified">Setup advances only after Android confirms access</string>
+    <string name="onboarding_intro_verified">Required access is checked by Android. Optional steps can be skipped.</string>
     <string name="onboarding_private_by_design">Private by design</string>
     <string name="onboarding_no_account_required">No account required.</string>
     <string name="onboarding_runtime_title">Phone &amp; messages</string>
@@ -1112,7 +1117,7 @@
     <string name="onboarding_action_needed">Action needed</string>
     <string name="onboarding_return_to_verify">Return to CallShield after enabling it. This step will be checked automatically.</string>
     <string name="onboarding_review_ready_title">Protection is ready</string>
-    <string name="onboarding_review_ready_body">Android confirms that every supported CallShield capability is enabled.</string>
+    <string name="onboarding_review_ready_body">Required access is ready. You can enable any skipped features later from Settings.</string>
     <string name="onboarding_review_missing_title">One more check</string>
     <string name="onboarding_review_missing_body">A permission changed during setup. Return to the missing step before finishing.</string>
     <string name="onboarding_ready">Ready</string>
