@@ -31,6 +31,30 @@ import kotlinx.coroutines.sync.withLock
 /** Both screening paths see one text within seconds; a minute covers a slow listener. */
 internal const val TEXT_DUPLICATE_WINDOW_MS = 60_000L
 
+private val WHITESPACE_RUN = Regex("\\s+")
+
+/**
+ * Whether two sightings of a flagged text can be the same message. A
+ * notification may cut the body short or carry none at all (an encrypted RCS
+ * placeholder), so a missing body, or one the other starts with, matches.
+ */
+internal fun sameFlaggedText(
+    first: String?,
+    second: String?,
+): Boolean {
+    fun comparable(body: String?) =
+        body
+            .orEmpty()
+            .trim()
+            .removeSuffix("…")
+            .removeSuffix("...")
+            .trim()
+            .replace(WHITESPACE_RUN, " ")
+    val a = comparable(first)
+    val b = comparable(second)
+    return a.isEmpty() || b.isEmpty() || a.startsWith(b) || b.startsWith(a)
+}
+
 @Suppress("TooManyFunctions", "LongParameterList")
 class BlocklistRepository(
     private val context: Context,
@@ -317,9 +341,11 @@ class BlocklistRepository(
      * Logs a flagged text once. Google Messages and Samsung Messages are read
      * by both the SMS receiver and the notification listener, so one text
      * arrives twice, by paths that see it differently: a notification
-     * truncates the body, number formats differ, and the listener's reason
-     * carries an rcs_ prefix. So the key is the canonical sender inside
-     * [TEXT_DUPLICATE_WINDOW_MS], never the body. The lock stops two
+     * truncates the body or carries none, number formats differ, and the
+     * listener's reason carries an rcs_ prefix. So a sighting repeats one
+     * logged from the same canonical sender inside [TEXT_DUPLICATE_WINDOW_MS]
+     * when their bodies can be the same text ([sameFlaggedText]); a second,
+     * different text from that sender gets its own row. The lock stops two
      * sightings that arrive together from both passing the check.
      *
      * @return true when this sighting was logged, false when it repeated one.
@@ -335,7 +361,8 @@ class BlocklistRepository(
     ): Boolean =
         textLogLock.withLock {
             val sender = normalizeLogIdentity(number)
-            if (dao.countFlaggedTextsSince(sender, timestamp - TEXT_DUPLICATE_WINDOW_MS) > 0) return@withLock false
+            val recent = dao.flaggedTextBodiesSince(sender, timestamp - TEXT_DUPLICATE_WINDOW_MS)
+            if (recent.any { sameFlaggedText(it, smsBody) }) return@withLock false
             logBlockedCall(
                 number = number,
                 isCall = false,

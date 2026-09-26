@@ -243,14 +243,14 @@ class RcsNotificationListener : NotificationListenerService() {
 
         if (sender.isEmpty()) return
 
-        val senderDigits = filterAsciiDigits(sender)
+        val senderNumber = senderNumber(sender)
         // E2EE graceful degradation: when the body is empty or an encrypted
         // placeholder, fall back to sender-number-only analysis (database +
         // heuristics, no content rules). GSMA UP 3.0/4.0 MLS encryption
         // will progressively make RCS notification bodies opaque.
         val result =
-            senderDigits
-                .takeIf { spamBlockingEnabled && it.length >= 7 }
+            senderNumber
+                .takeIf { spamBlockingEnabled && filterAsciiDigits(it).length >= 7 }
                 ?.let { number -> checkSpamSms(number, effectiveBody.orEmpty(), prefsSnapshot = prefs) }
         val contentVerdict =
             effectiveBody?.takeIf { spamBlockingEnabled && result == null }?.let { bodyText ->
@@ -268,7 +268,7 @@ class RcsNotificationListener : NotificationListenerService() {
             cancelNotification(sbn.key)
             logFlaggedNotification(
                 repo = repo,
-                senderDigits = senderDigits,
+                senderNumber = senderNumber,
                 body = effectiveBody,
                 matchSource = result.matchSource,
                 confidence = confidence,
@@ -277,7 +277,7 @@ class RcsNotificationListener : NotificationListenerService() {
             )
         } else if (result?.screeningDiagnostics?.hasIssues == true) {
             repo.logScreeningDiagnostic(
-                number = senderDigits,
+                number = senderNumber,
                 isCall = false,
                 smsBody = effectiveBody,
                 pipelineDiagnostic = result.screeningDiagnostics.toWireValue().orEmpty(),
@@ -391,13 +391,25 @@ class RcsNotificationListener : NotificationListenerService() {
          */
         internal suspend fun logFlaggedNotification(
             repo: SpamRepository,
-            senderDigits: String,
+            senderNumber: String,
             body: String?,
             matchSource: String,
             confidence: Int,
             ruleId: Long?,
             pipelineDiagnostic: String?,
-        ): Boolean = repo.logFlaggedText(senderDigits, body, "rcs_$matchSource", confidence, ruleId, pipelineDiagnostic)
+        ): Boolean = repo.logFlaggedText(senderNumber, body, "rcs_$matchSource", confidence, ruleId, pipelineDiagnostic)
+
+        /**
+         * The number in a notification's sender, digits only but with its
+         * leading "+" kept. Without the "+", a +44 sender read as a national
+         * number: the spam check looked up the wrong line, and the text the SMS
+         * receiver had already logged under +44 was logged again.
+         */
+        internal fun senderNumber(sender: String): String {
+            val digits = filterAsciiDigits(sender)
+            val international = sender.firstOrNull { it == '+' || it in '0'..'9' } == '+'
+            return if (international && digits.isNotEmpty()) "+$digits" else digits
+        }
 
         /**
          * Prefer the structured conversation sender URI (normally `tel:`)

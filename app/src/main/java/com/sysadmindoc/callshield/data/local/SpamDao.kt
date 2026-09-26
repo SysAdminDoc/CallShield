@@ -187,12 +187,19 @@ interface SpamDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertBlockedCallIgnoringDuplicate(call: BlockedCall): Long
 
-    /** Flagged texts from [number] logged since [since], which a second sighting of one text would duplicate. */
-    @Query("SELECT COUNT(*) FROM call_log WHERE number = :number AND isCall = 0 AND wasBlocked = 1 AND timestamp >= :since")
-    suspend fun countFlaggedTextsSince(
+    /**
+     * Bodies of the flagged texts from [number] logged since [since], which a
+     * second sighting of one text would repeat. A row logged without a body
+     * comes back as "", so it still counts.
+     */
+    @Query(
+        "SELECT COALESCE(smsBody, '') FROM call_log " +
+            "WHERE number = :number AND isCall = 0 AND wasBlocked = 1 AND timestamp >= :since",
+    )
+    suspend fun flaggedTextBodiesSince(
         number: String,
         since: Long,
-    ): Int
+    ): List<String>
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertPendingBlockedCallLog(log: PendingBlockedCallLog): Long

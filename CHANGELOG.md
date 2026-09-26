@@ -4,6 +4,11 @@ All notable changes to CallShield will be documented in this file.
 
 ## Unreleased
 
+- A spam text from an international sender is logged once, with one alert.
+  The notification listener dropped the + from the sender, so a +44 text
+  the SMS receiver had already logged was logged again, and its spam check
+  looked up the wrong number. A second, different text from the same sender
+  within a minute is no longer swallowed as a duplicate.
 - A caller blocked three times by quiet hours or Contacts only no longer looks
   like a rapid-fire robocaller. Only blocks that judged the caller count now,
   not ones your own schedule or mode caused, and not calls that were let
