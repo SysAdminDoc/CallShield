@@ -86,6 +86,9 @@ All notable changes to CallShield will be documented in this file.
   page, the database count is formatted like everywhere else, and the hot list
   hint says what it's about.
 - Dialogs and bottom sheets use the same 12dp corners as the app's cards.
+- The caller ID popup is fully opaque, with 12dp corners like the rest of the
+  app. At 96% opacity, bright text in the app underneath showed through the
+  caller's name and verdict, and its 16dp corners were off the app's scale.
 - Empty Blocklist and Blocked log screens use the app's standard outlined card.
 - More's cards keep their text centered, and the update check and crash log
   share the What's new card style. The update check's privacy note is no longer

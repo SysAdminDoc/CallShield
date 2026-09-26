@@ -46,6 +46,9 @@ import kotlin.math.roundToInt
  */
 private const val OVERLAY_DESIGN_DENSITY = 3f
 
+/** The overlay card's bottom corners, in dp, on the app's 0/4/6/8/10/12dp scale. */
+internal const val OVERLAY_CORNER_DP = 12f
+
 private fun Context.overlayDp(designPx: Float): Int = overlayDpF(designPx).roundToInt()
 
 private fun Context.overlayDpF(designPx: Float): Float = designPx * resources.displayMetrics.density / OVERLAY_DESIGN_DENSITY
@@ -124,7 +127,9 @@ internal fun overlayPaletteFor(
 ): CallerIdOverlayPalette {
     val palette = paletteFor(themeMode, systemDark)
     return CallerIdOverlayPalette(
-        background = withAlpha(palette.surface.toArgb(), 0xF5),
+        // Opaque: the overlay sits over whatever app is open, and at 96% its
+        // bright text showed through the caller's name and verdict.
+        background = palette.surface.toArgb(),
         surfaceVariant = palette.surfaceVariant.toArgb(),
         primary = palette.primary.toArgb(),
         error = palette.error.toArgb(),
@@ -299,7 +304,7 @@ class CallerIdOverlayService : Service() {
                 background =
                     GradientDrawable().apply {
                         setColor(palette.background)
-                        val r = context.overlayDpF(48f)
+                        val r = context.overlayDpF(OVERLAY_CORNER_DP * OVERLAY_DESIGN_DENSITY)
                         cornerRadii = floatArrayOf(0f, 0f, 0f, 0f, r, r, r, r) // bottom-left, bottom-right
                     }
                 setPadding(context.overlayDp(52f), context.overlayDp(40f), context.overlayDp(52f), context.overlayDp(32f))

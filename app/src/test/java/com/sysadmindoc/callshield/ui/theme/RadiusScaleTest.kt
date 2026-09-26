@@ -3,6 +3,7 @@ package com.sysadmindoc.callshield.ui.theme
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
+import com.sysadmindoc.callshield.service.OVERLAY_CORNER_DP
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -41,6 +42,15 @@ class RadiusScaleTest {
         // Dozens of Compose files use rounded shapes; finding few means the scan broke.
         assertTrue("found only ${sources.size} sources", sources.size >= 30)
         assertEquals(emptyList<String>(), sources.flatMap { (name, text) -> radiusViolations(text).map { "$name: $it" } })
+    }
+
+    @Test
+    fun `the caller-ID overlay draws its corners on the scale`() {
+        // The overlay is a View, not Compose, so the source scan can't see it.
+        // It rounded its card at 16dp until 2026-09-26.
+        assertTrue("$OVERLAY_CORNER_DP", OVERLAY_CORNER_DP in CORNER_SCALE)
+        val overlay = mainSources().single { it.first == "CallerIdOverlayService.kt" }.second
+        assertEquals(emptyList<String>(), Regex("""overlayDpF\((\d+(?:\.\d+)?)f\)""").findAll(overlay).map { it.value }.toList())
     }
 
     @Test

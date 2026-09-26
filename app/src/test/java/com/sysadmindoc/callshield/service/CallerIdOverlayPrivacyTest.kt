@@ -55,7 +55,9 @@ class CallerIdOverlayPrivacyTest {
         assertFalse(graphite.isLight)
         assertNotEquals(light.background, graphite.background)
         assertNotEquals(light.text, graphite.text)
-        assertEquals(0xF5, light.background ushr 24)
+        for (mode in AppThemeMode.entries) {
+            assertEquals("$mode", 0xFF, overlayPaletteFor(mode, systemDark = true).background ushr 24)
+        }
     }
 
     @Test
